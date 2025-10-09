@@ -1224,9 +1224,9 @@ def load_all_coins_rsi():
             
             logger.info(f"[BATCH] Обработка пакета {batch_num}/{total_batches} ({len(batch)} монет)")
             
-            # Параллельная загрузка RSI для пакета (уменьшаем количество воркеров для избежания API Rate Limit)
+            # Параллельная загрузка RSI для пакета (ОДИН воркер для избежания API Rate Limit)
             batch_coins_data = {}
-            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                 future_to_symbol = {executor.submit(get_coin_rsi_data, symbol): symbol for symbol in batch}
                 
                 # Увеличиваем таймауты
@@ -1258,7 +1258,7 @@ def load_all_coins_rsi():
                 logger.info(f"[INCREMENTAL] Обновлено {len(batch_coins_data)} монет из пакета {batch_num}")
             
             # Пауза между пакетами для предотвращения rate limiting
-            time.sleep(3.0)  # 3 секунды между пакетами для избежания API Rate Limit
+            time.sleep(5.0)  # 5 секунд между пакетами для избежания API Rate Limit
             
             # Логируем прогресс каждые 5 пакетов (чаще для инкрементального обновления)
             if batch_num % 5 == 0:
