@@ -76,36 +76,37 @@ def check_and_stop_existing_bots_processes():
             
             # Ищем процесс который слушает порт 5001
             process_to_stop = None
-    try:
-        # Ищем ВСЕ процессы python с bots.py в командной строке
-        python_processes = []
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            
             try:
-                if proc.info['name'] and 'python' in proc.info['name'].lower():
-                    cmdline = proc.info['cmdline']
-                    if cmdline and any('bots.py' in arg for arg in cmdline):
-                        if proc.info['pid'] != current_pid:
-                            python_processes.append(proc.info['pid'])
-                            print(f"🎯 Найден процесс bots.py: PID {proc.info['pid']}")
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                continue
-        
-        # Также проверяем порт 5001
-        port_process = None
-        for conn in psutil.net_connections(kind='inet'):
-            if conn.laddr.port == 5001 and conn.status == 'LISTEN':
-                port_process = conn.pid
-                if port_process != current_pid and port_process not in python_processes:
-                    python_processes.append(port_process)
-                    print(f"🎯 Найден процесс на порту 5001: PID {port_process}")
-                break
-        
-        if python_processes:
-            process_to_stop = python_processes[0]  # Останавливаем первый найденный
-        else:
-            process_to_stop = None
+                # Ищем ВСЕ процессы python с bots.py в командной строке
+                python_processes = []
+                for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                    try:
+                        if proc.info['name'] and 'python' in proc.info['name'].lower():
+                            cmdline = proc.info['cmdline']
+                            if cmdline and any('bots.py' in arg for arg in cmdline):
+                                if proc.info['pid'] != current_pid:
+                                    python_processes.append(proc.info['pid'])
+                                    print(f"🎯 Найден процесс bots.py: PID {proc.info['pid']}")
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                        continue
                 
-        if process_to_stop and process_to_stop != current_pid:
+                # Также проверяем порт 5001
+                port_process = None
+                for conn in psutil.net_connections(kind='inet'):
+                    if conn.laddr.port == 5001 and conn.status == 'LISTEN':
+                        port_process = conn.pid
+                        if port_process != current_pid and port_process not in python_processes:
+                            python_processes.append(port_process)
+                            print(f"🎯 Найден процесс на порту 5001: PID {port_process}")
+                        break
+                
+                if python_processes:
+                    process_to_stop = python_processes[0]  # Останавливаем первый найденный
+                else:
+                    process_to_stop = None
+                
+                if process_to_stop and process_to_stop != current_pid:
                     try:
                         proc = psutil.Process(process_to_stop)
                         proc_info = proc.as_dict(attrs=['pid', 'name', 'cmdline', 'create_time'])
@@ -115,21 +116,17 @@ def check_and_stop_existing_bots_processes():
                         print(f"   Команда: {' '.join(proc_info['cmdline'][:3]) if proc_info['cmdline'] else 'N/A'}...")
                         print()
                         
-                        # Останавливаем процесс
                         print(f"🔧 Останавливаем процесс {process_to_stop}...")
                         proc.terminate()
                         
-                        # Ждем до 5 секунд
                         try:
                             proc.wait(timeout=5)
                             print(f"✅ Процесс {process_to_stop} остановлен")
                         except psutil.TimeoutExpired:
-                            # Принудительная остановка
                             proc.kill()
                             proc.wait()
                             print(f"🔴 Процесс {process_to_stop} принудительно остановлен")
                         
-                        # Ждем освобождения порта
                         print("\n⏳ Ожидание освобождения порта 5001...")
                         for i in range(10):
                             time.sleep(1)
