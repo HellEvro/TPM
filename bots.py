@@ -1971,8 +1971,8 @@ def check_anti_dump_pump(symbol, coin_data):
             # Вычисляем общий диапазон свечи (high - low)
             candle_range = ((high_price - low_price) / open_price) * 100
             
-            # Проверяем на экстремальные движения (>15% изменение или >20% диапазон)
-            if price_change > 15 or candle_range > 20:
+            # Проверяем на экстремальные движения (>10% изменение или >15% диапазон)
+            if price_change > 10 or candle_range > 15:
                 extreme_moves += 1
                 logger.debug(f"[ANTI_DUMP_PUMP] {symbol}: Экстремальная свеча: изменение {price_change:.1f}%, диапазон {candle_range:.1f}%")
         
@@ -2007,13 +2007,13 @@ def check_anti_dump_pump(symbol, coin_data):
             total_change += abs(candle_change)
         
         # 3. Проверка на резкие пампы/сливы
-        # Если общее изменение за 20 свечей > 200% - это подозрительно
-        if total_change > 200:
+        # Если общее изменение за 20 свечей > 150% - это подозрительно
+        if total_change > 150:
             logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: Подозрительно высокое общее изменение: {total_change:.1f}% за 20 свечей")
             return False
         
-        # Если больше 3 экстремальных движений - блокируем
-        if extreme_moves > 3:
+        # Если больше 2 экстремальных движений - блокируем
+        if extreme_moves > 2:
             logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: Слишком много экстремальных движений: {extreme_moves}")
             return False
         
@@ -2029,12 +2029,12 @@ def check_anti_dump_pump(symbol, coin_data):
             last_price = last_5_candles[-1]['close']
             five_candle_change = abs((last_price - first_price) / first_price) * 100
             
-            # Если изменение за 5 свечей > 50% - это памп/слив
-            if five_candle_change > 50:
+            # Если изменение за 5 свечей > 30% - это памп/слив
+            if five_candle_change > 30:
                 logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: Резкий памп/слив за 5 свечей: {five_candle_change:.1f}%")
                 return False
         
-        logger.debug(f"[ANTI_DUMP_PUMP] {symbol}: ✅ Фильтр пройден (экстремальных: {extreme_moves}, общее изменение: {total_change:.1f}%)")
+        logger.info(f"[ANTI_DUMP_PUMP] {symbol}: ✅ Фильтр пройден (экстремальных: {extreme_moves}, общее изменение: {total_change:.1f}%)")
         return True
         
     except Exception as e:
@@ -2143,9 +2143,55 @@ def test_anti_pump_filter(symbol):
             
             logger.info(f"[TEST_ANTI_PUMP] {symbol}: Свеча {i+1}: O={open_price:.4f} C={close_price:.4f} H={high_price:.4f} L={low_price:.4f} | Изменение: {price_change:+.1f}% | Диапазон: {candle_range:.1f}%")
         
-        # Тестируем фильтр
+        # Тестируем фильтр с детальным логированием
+        logger.info(f"[TEST_ANTI_PUMP] {symbol}: 🔍 Запускаем проверку антипамп фильтра...")
         result = check_anti_dump_pump(symbol, {})
-        logger.info(f"[TEST_ANTI_PUMP] {symbol}: Результат фильтра: {'✅ ПРОЙДЕН' if result else '❌ ЗАБЛОКИРОВАН'}")
+        
+        if result:
+            logger.info(f"[TEST_ANTI_PUMP] {symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН")
+        else:
+            logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ РЕЗУЛЬТАТ: ЗАБЛОКИРОВАН")
+        
+        # Дополнительный анализ
+        logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📊 Дополнительный анализ:")
+        
+        # Подсчитываем экстремальные свечи вручную
+        extreme_count = 0
+        total_change = 0
+        
+        for i, candle in enumerate(recent_candles):
+            open_price = candle['open']
+            close_price = candle['close']
+            high_price = candle['high']
+            low_price = candle['low']
+            
+            price_change = abs((close_price - open_price) / open_price) * 100
+            candle_range = ((high_price - low_price) / open_price) * 100
+            
+            if price_change > 10 or candle_range > 15:
+                extreme_count += 1
+                logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Экстремальная свеча {i+1}: изменение {price_change:.1f}%, диапазон {candle_range:.1f}%")
+            
+            total_change += price_change
+        
+        # 5-свечечный анализ
+        if len(recent_candles) >= 5:
+            first_price = recent_candles[-5]['open']
+            last_price = recent_candles[-1]['close']
+            five_candle_change = abs((last_price - first_price) / first_price) * 100
+            
+            logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📈 5-свечечный анализ: {five_candle_change:.1f}% (порог: 30%)")
+            if five_candle_change > 30:
+                logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ 5-свечечный памп: {five_candle_change:.1f}% > 30%")
+        
+        logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📊 Экстремальных свечей: {extreme_count} (порог: 2)")
+        logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📊 Общее изменение: {total_change:.1f}% (порог: 150%)")
+        
+        if extreme_count > 2:
+            logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Слишком много экстремальных свечей: {extreme_count} > 2")
+        
+        if total_change > 150:
+            logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Слишком высокое общее изменение: {total_change:.1f}% > 150%")
         
     except Exception as e:
         logger.error(f"[TEST_ANTI_PUMP] {symbol}: Ошибка тестирования: {e}")
@@ -6262,6 +6308,15 @@ def reload_modules_endpoint():
         import importlib
         import sys
         
+        # Объявляем глобальные переменные в начале функции
+        global exchange, system_initialized
+        
+        logger.info("[HOT_RELOAD] 🔄 Начинаем перезагрузку модулей...")
+        
+        # Сохраняем важные глобальные переменные
+        saved_exchange = exchange
+        saved_system_initialized = system_initialized
+        
         # Список модулей для перезагрузки
         modules_to_reload = []
         
@@ -6279,6 +6334,15 @@ def reload_modules_endpoint():
                     logger.info(f"[HOT_RELOAD] Перезагружен модуль: {module_name}")
             except Exception as e:
                 logger.warning(f"[HOT_RELOAD] Не удалось перезагрузить {module_name}: {e}")
+        
+        # Восстанавливаем важные переменные
+        if saved_exchange:
+            exchange = saved_exchange
+            logger.info("[HOT_RELOAD] ✅ Восстановлена переменная exchange")
+        
+        if saved_system_initialized:
+            system_initialized = saved_system_initialized
+            logger.info("[HOT_RELOAD] ✅ Восстановлен флаг system_initialized")
         
         logger.info(f"[HOT_RELOAD] ✅ Перезагружено {reloaded_count} модулей")
         
