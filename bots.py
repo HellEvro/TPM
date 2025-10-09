@@ -432,14 +432,21 @@ def load_mature_coins_storage():
     try:
         if os.path.exists(MATURE_COINS_FILE):
             with open(MATURE_COINS_FILE, 'r', encoding='utf-8') as f:
-                mature_coins_storage = json.load(f)
-                logger.info(f"[MATURITY_STORAGE] Загружено {len(mature_coins_storage)} зрелых монет из хранилища")
+                loaded_data = json.load(f)
+            
+            # ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем блокировку при обновлении глобального хранилища
+            with mature_coins_lock:
+                mature_coins_storage = loaded_data
+            
+            logger.info(f"[MATURITY_STORAGE] ✅ Загружено {len(mature_coins_storage)} зрелых монет из файла")
         else:
-            mature_coins_storage = {}
+            with mature_coins_lock:
+                mature_coins_storage = {}
             logger.info("[MATURITY_STORAGE] Файл хранилища не найден, создаем новый")
     except Exception as e:
         logger.error(f"[MATURITY_STORAGE] Ошибка загрузки хранилища: {e}")
-        mature_coins_storage = {}
+        with mature_coins_lock:
+            mature_coins_storage = {}
 
 def save_mature_coins_storage():
     """Сохраняет постоянное хранилище зрелых монет в файл"""
@@ -1125,10 +1132,11 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         with bots_data_lock:
             enable_maturity_check = bots_data.get('auto_bot_config', {}).get('enable_maturity_check', True)
         
-        # Проверяем зрелость монеты с использованием постоянного хранилища
+        # Проверяем зрелость монеты (БЕЗ добавления в хранилище при загрузке RSI!)
         if enable_maturity_check:
-            # Используем функцию с проверкой постоянного хранилища
-            maturity_check = check_coin_maturity_with_storage(symbol, candles)
+            # ✅ ИСПРАВЛЕНИЕ: Используем check_coin_maturity напрямую (без хранилища)
+            # Добавление в хранилище только при создании бота!
+            maturity_check = check_coin_maturity(symbol, candles)
             
             if maturity_check['is_mature']:
                 logger.debug(f"[MATURITY] {symbol}: Монета зрелая - {maturity_check['reason']}")
