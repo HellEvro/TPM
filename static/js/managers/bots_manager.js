@@ -873,8 +873,8 @@ class BotsManager {
         const reason = timeFilterInfo.reason;
         const lastExtremeCandlesAgo = timeFilterInfo.last_extreme_candles_ago;
         
-        // Показываем только если фильтр блокирует вход или есть информация о последнем экстремуме
-        if (isAllowed && lastExtremeCandlesAgo === null) {
+        // Показываем иконку если есть информация о временном фильтре
+        if (lastExtremeCandlesAgo === null && !reason.includes('отключен')) {
             return '';
         }
         
@@ -887,11 +887,11 @@ class BotsManager {
             icon = '⏰';
             className = 'time-filter-blocked';
             title = `Временной фильтр блокирует: ${reason}`;
-        } else if (lastExtremeCandlesAgo !== null) {
-            // Показываем сколько времени прошло с последнего экстремума
+        } else if (lastExtremeCandlesAgo !== null && lastExtremeCandlesAgo >= 0) {
+            // Показываем сколько времени прошло с последнего экстремума (для всех активных фильтров)
             icon = '⏱️';
             className = 'time-filter-active';
-            title = `Прошло ${lastExtremeCandlesAgo} свечей с последнего экстремума RSI`;
+            title = `Временной фильтр активен: ${reason}`;
         }
         
         if (icon && title) {

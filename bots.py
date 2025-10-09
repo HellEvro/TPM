@@ -76,13 +76,36 @@ def check_and_stop_existing_bots_processes():
             
             # Ищем процесс который слушает порт 5001
             process_to_stop = None
+    try:
+        # Ищем ВСЕ процессы python с bots.py в командной строке
+        python_processes = []
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
             try:
-                for conn in psutil.net_connections(kind='inet'):
-                    if conn.laddr.port == 5001 and conn.status == 'LISTEN':
-                        process_to_stop = conn.pid
-                        break
+                if proc.info['name'] and 'python' in proc.info['name'].lower():
+                    cmdline = proc.info['cmdline']
+                    if cmdline and any('bots.py' in arg for arg in cmdline):
+                        if proc.info['pid'] != current_pid:
+                            python_processes.append(proc.info['pid'])
+                            print(f"🎯 Найден процесс bots.py: PID {proc.info['pid']}")
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
+        
+        # Также проверяем порт 5001
+        port_process = None
+        for conn in psutil.net_connections(kind='inet'):
+            if conn.laddr.port == 5001 and conn.status == 'LISTEN':
+                port_process = conn.pid
+                if port_process != current_pid and port_process not in python_processes:
+                    python_processes.append(port_process)
+                    print(f"🎯 Найден процесс на порту 5001: PID {port_process}")
+                break
+        
+        if python_processes:
+            process_to_stop = python_processes[0]  # Останавливаем первый найденный
+        else:
+            process_to_stop = None
                 
-                if process_to_stop and process_to_stop != current_pid:
+        if process_to_stop and process_to_stop != current_pid:
                     try:
                         proc = psutil.Process(process_to_stop)
                         proc_info = proc.as_dict(attrs=['pid', 'name', 'cmdline', 'create_time'])
@@ -364,6 +387,17 @@ system_initialized = False  # КРИТИЧЕСКИ ВАЖНО: Флаг полн
 smart_rsi_manager = None  # Умный менеджер RSI
 async_processor = None  # Асинхронный процессор
 async_processor_task = None  # Задача асинхронного процессора
+
+# БЛОКИРОВКИ для предотвращения race conditions
+coin_processing_locks = {}  # Блокировки для обработки каждой монеты
+coin_processing_lock = threading.Lock()  # Блокировка для управления coin_processing_locks
+
+def get_coin_processing_lock(symbol):
+    """Получает блокировку для обработки конкретной монеты"""
+    with coin_processing_lock:
+        if symbol not in coin_processing_locks:
+            coin_processing_locks[symbol] = threading.Lock()
+        return coin_processing_locks[symbol]
 
 # Инициализируем биржу при импорте модуля
 def init_exchange():
@@ -1678,6 +1712,8 @@ def process_auto_bot_signals(exchange_obj=None):
                                 break
                             else:
                                 logger.info(f"[AUTO] ℹ️ {symbol}: Есть позиция {existing_side}, но сигнал {expected_side} (противоположная сторона - разрешено)")
+                                # В Hedge режиме можно иметь LONG и SHORT, но не одновременно
+                                # RSI не может быть одновременно ≤29 и ≥71, поэтому это безопасно
             except Exception as check_error:
                 logger.error(f"[AUTO] ⚠️ {symbol}: Ошибка проверки существующих позиций: {check_error}")
                 # В случае ошибки проверки - пропускаем для безопасности!
@@ -1780,6 +1816,14 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
     # КРИТИЧЕСКИ ВАЖНО: Не торгуем, пока система не инициализирована!
     if not system_initialized:
         logger.warning("[BOT_SIGNALS] ⏳ Система еще не инициализирована - пропускаем обработку")
+        return
+    
+    # КРИТИЧЕСКИ ВАЖНО: Проверяем состояние автобота!
+    with bots_data_lock:
+        auto_bot_enabled = bots_data['auto_bot_config']['enabled']
+    
+    if not auto_bot_enabled:
+        logger.info("[BOT_SIGNALS] ⏹️ Auto Bot выключен - НЕ обрабатываем торговые сигналы")
         return
     try:
         with bots_data_lock:
@@ -3989,31 +4033,36 @@ def check_trading_rules_activation():
                         logger.info(f"[TRADING_RULES] ⏭️ {symbol}: Пропускаем создание бота - есть позиция на бирже")
                         continue
                     
-                    # Создаем бота для этой монеты, если его еще нет
-                    if symbol not in bots_data['bots']:
-                        try:
-                            # Получаем конфигурацию автобота
-                            with bots_data_lock:
-                                auto_bot_config = bots_data.get('auto_bot_config', {})
-                            
-                            # Создаем бота с базовой конфигурацией
-                            bot_config = {
-                                'symbol': symbol,
-                                'status': 'running',
-                                'volume_mode': 'usdt',
-                                'volume_value': auto_bot_config.get('default_position_size', 20.0),
-                                'created_at': datetime.now().isoformat(),
-                                'last_signal_time': None
-                            }
-                            
-                            bots_data['bots'][symbol] = bot_config
-                            logger.info(f"[TRADING_RULES] ✅ Создан бот для {symbol}")
-                            activated_count += 1
-                            
-                        except Exception as e:
-                            logger.error(f"[TRADING_RULES] ❌ Ошибка создания бота для {symbol}: {e}")
-                    else:
-                        logger.debug(f"[TRADING_RULES] ⏳ Бот для {symbol} уже существует")
+                # Создаем бота для этой монеты, если его еще нет
+                if symbol not in bots_data['bots']:
+                    # КРИТИЧЕСКИ ВАЖНО: Блокируем обработку этой монеты чтобы избежать race conditions
+                    coin_lock = get_coin_processing_lock(symbol)
+                    with coin_lock:
+                        # Двойная проверка после получения блокировки
+                        if symbol not in bots_data['bots']:
+                                try:
+                                    # Получаем конфигурацию автобота
+                                    with bots_data_lock:
+                                        auto_bot_config = bots_data.get('auto_bot_config', {})
+                                
+                                    # Создаем бота с базовой конфигурацией
+                                    bot_config = {
+                                        'symbol': symbol,
+                                        'status': 'running',
+                                        'volume_mode': 'usdt',
+                                        'volume_value': auto_bot_config.get('default_position_size', 20.0),
+                                        'created_at': datetime.now().isoformat(),
+                                        'last_signal_time': None
+                                    }
+                                    
+                                    bots_data['bots'][symbol] = bot_config
+                                    logger.info(f"[TRADING_RULES] ✅ Создан бот для {symbol}")
+                                    activated_count += 1
+                                    
+                                except Exception as e:
+                                    logger.error(f"[TRADING_RULES] ❌ Ошибка создания бота для {symbol}: {e}")
+                        else:
+                            logger.debug(f"[TRADING_RULES] ⏳ Бот для {symbol} уже существует")
         
         if activated_count > 0:
             logger.info(f"[TRADING_RULES] ✅ Активированы правила торговли для {activated_count} монет")

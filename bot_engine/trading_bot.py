@@ -402,6 +402,24 @@ class TradingBot:
         """Обрабатывает состояния ARMED_UP/ARMED_DOWN"""
         self.logger.info(f"[TRADING_BOT] {self.symbol}: _handle_armed_state: status={self.status}, signal={signal}, trend={trend}")
         
+        # КРИТИЧЕСКИ ВАЖНО: Если автобот выключен - НЕ ОТКРЫВАЕМ новые позиции!
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from bots import bots_data, bots_data_lock
+            
+            with bots_data_lock:
+                auto_bot_enabled = bots_data['auto_bot_config']['enabled']
+            
+            if not auto_bot_enabled:
+                self.logger.info(f"[TRADING_BOT] {self.symbol}: ⏹️ Auto Bot выключен - НЕ открываем новую позицию из ARMED состояния")
+                return {'action': 'blocked_autobot_disabled', 'reason': 'autobot_off', 'status': self.status}
+        except Exception as e:
+            self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка проверки автобота: {e}")
+            # В случае ошибки блокируем для безопасности
+            return {'action': 'blocked_check_error', 'reason': 'autobot_check_failed'}
+        
         if self.status == BotStatus.ARMED_UP and signal == 'ENTER_LONG':
             self.logger.info(f"[TRADING_BOT] {self.symbol}: Открываем LONG позицию!")
             return self._enter_position('LONG')
@@ -421,6 +439,25 @@ class TradingBot:
     
     def _handle_position_state(self, signal: str, trend: str) -> Optional[Dict]:
         """Обрабатывает состояния IN_POSITION_LONG/SHORT"""
+        # КРИТИЧЕСКИ ВАЖНО: Если автобот выключен - НЕ ОТКРЫВАЕМ новые позиции!
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from bots import bots_data, bots_data_lock
+            
+            with bots_data_lock:
+                auto_bot_enabled = bots_data['auto_bot_config']['enabled']
+            
+            if not auto_bot_enabled:
+                # Если автобот выключен - только управляем существующими позициями (стопы, трейлинг)
+                # НЕ открываем новые позиции
+                if signal in ['ENTER_LONG', 'ENTER_SHORT']:
+                    self.logger.info(f"[TRADING_BOT] {self.symbol}: ⏹️ Auto Bot выключен - НЕ открываем новые позиции из POSITION состояния")
+                    return {'action': 'blocked_autobot_disabled', 'reason': 'autobot_off', 'status': self.status}
+        except Exception as e:
+            self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка проверки автобота: {e}")
+        
         position_type = self.position.get('side') if self.position else None
         
         if (self.status == BotStatus.IN_POSITION_LONG and 
