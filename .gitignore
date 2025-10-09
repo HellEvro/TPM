@@ -1,0 +1,11 @@
+API_KEYS_SECRET!.txt
+_stable/app/__pycache__/
+_stable/exchanges/__pycache__/
+_stable/exchanges/__pycache__/
+_work_in_progress/app/__pycache__/
+_work_in_progress/exchanges/__pycache__/
+_work_TRADING_/app/__pycache__/
+_work_TRADING_/exchanges/__pycache__/
+app/__pycache__/
+exchanges/__pycache__/
+*.log
