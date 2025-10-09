@@ -372,15 +372,15 @@ class App {
 
     async updateData() {
         try {
-            console.log('[MENU] updateData called');
+            // console.log('[MENU] updateData called');
             if (this.isUpdating) {
-                console.log('[UPDATE] Update already in progress, skipping...');
+                // console.log('[UPDATE] Update already in progress, skipping...');
                 this._logState();
                 return;
             }
 
             this.isUpdating = true;
-            console.log('[UPDATE] Starting data update...');
+            // console.log('[UPDATE] Starting data update...');
             this._logState();
             
             if (this.currentTab === 'positions') {
@@ -388,7 +388,7 @@ class App {
                 this.updateLastUpdateTime();
                 return data;
             } else {
-                console.log('[UPDATE] Skipping data update - not on positions tab');
+                // console.log('[UPDATE] Skipping data update - not on positions tab');
                 this._logState();
                 return null;
             }
