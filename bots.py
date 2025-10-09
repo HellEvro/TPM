@@ -1243,6 +1243,16 @@ def load_all_coins_rsi():
                         result = future.result(timeout=30)  # Увеличиваем до 30 секунд
                         if result:
                             batch_coins_data[result['symbol']] = result
+                            
+                            # ✅ ДОБАВЛЕНИЕ В ХРАНИЛИЩЕ: Если монета зрелая, добавляем в mature_coins_storage
+                            symbol = result['symbol']
+                            signal = result.get('signal', 'WAIT')
+                            
+                            # Проверяем, что монета прошла проверку зрелости (сигнал не WAIT из-за незрелости)
+                            # Если сигнал ENTER_LONG или ENTER_SHORT - монета точно зрелая
+                            if signal in ['ENTER_LONG', 'ENTER_SHORT']:
+                                add_mature_coin_to_storage(symbol, signal)
+                            
                             with rsi_data_lock:
                                 coins_rsi_data['successful_coins'] += 1
                         else:
@@ -1352,13 +1362,19 @@ def get_effective_signal(coin):
     rsi = coin.get('rsi6h', 50)
     trend = coin.get('trend', coin.get('trend6h', 'NEUTRAL'))
     
-    # Проверяем Enhanced RSI сигнал (приоритет)
+    # ✅ КРИТИЧЕСКАЯ ПРОВЕРКА: Если базовый сигнал WAIT (из-за незрелости) - возвращаем сразу
+    # Это блокирует Enhanced RSI от переопределения сигнала для незрелых монет
+    base_signal = coin.get('signal', 'WAIT')
+    if base_signal == 'WAIT':
+        return 'WAIT'
+    
+    # Проверяем Enhanced RSI сигнал (приоритет только для зрелых монет)
     enhanced_rsi = coin.get('enhanced_rsi', {})
     if enhanced_rsi.get('enabled') and enhanced_rsi.get('enhanced_signal'):
         signal = enhanced_rsi.get('enhanced_signal')
     else:
         # Используем базовый сигнал
-        signal = coin.get('signal', 'WAIT')
+        signal = base_signal
     
     # Если сигнал WAIT - возвращаем сразу
     if signal == 'WAIT':
@@ -5144,12 +5160,9 @@ def get_coins_with_rsi():
             # Очищаем данные от несериализуемых объектов
             cleaned_coins = {}
             for symbol, coin_data in coins_rsi_data['coins'].items():
-                # Проверяем зрелость монеты - незрелые монеты не показываем в UI
-                if not is_coin_mature_stored(symbol):
-                    # Логируем детали для монет с сигналами
-                    if coin_data.get('effective_signal') in ['ENTER_LONG', 'ENTER_SHORT']:
-                        logger.info(f"[MATURITY_FILTER] {symbol}: Монета с сигналом {coin_data.get('effective_signal')} не прошла проверку зрелости")
-                    continue
+                # ✅ ИСПРАВЛЕНИЕ: НЕ фильтруем монеты по зрелости для UI!
+                # Фильтр зрелости применяется в get_coin_rsi_data() через изменение сигнала на WAIT
+                # Здесь показываем ВСЕ монеты, независимо от зрелости
                     
                 cleaned_coin = coin_data.copy()
                 
