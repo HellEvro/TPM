@@ -386,6 +386,24 @@ class TradingBot:
             self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка проверки временного фильтра: {e}")
             # В случае ошибки разрешаем сделку (безопасность)
         
+        # КРИТИЧЕСКИ ВАЖНО: Если автобот выключен - НЕ ОТКРЫВАЕМ новые позиции!
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from bots import bots_data, bots_data_lock
+            
+            with bots_data_lock:
+                auto_bot_enabled = bots_data['auto_bot_config']['enabled']
+            
+            if not auto_bot_enabled:
+                self.logger.info(f"[TRADING_BOT] {self.symbol}: ⏹️ Auto Bot выключен - НЕ открываем новую позицию из IDLE состояния")
+                return {'action': 'blocked_autobot_disabled', 'reason': 'autobot_off'}
+        except Exception as e:
+            self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка проверки автобота: {e}")
+            # В случае ошибки блокируем для безопасности
+            return {'action': 'blocked_check_error', 'reason': 'autobot_check_failed'}
+        
         # ПРЯМАЯ ЛОГИКА: Сразу открываем сделки без промежуточных состояний
         if signal == 'ENTER_LONG':
             self.logger.info(f"[TRADING_BOT] {self.symbol}: 🚀 СРАЗУ открываем LONG позицию!")

@@ -1815,12 +1815,18 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
         logger.warning("[BOT_SIGNALS] ⏳ Система еще не инициализирована - пропускаем обработку")
         return
     
-    # КРИТИЧЕСКИ ВАЖНО: Проверяем состояние автобота!
+    # ВАЖНО: Проверяем состояние автобота для логирования
     with bots_data_lock:
         auto_bot_enabled = bots_data['auto_bot_config']['enabled']
+        existing_bots_count = len(bots_data['bots'])
     
-    if not auto_bot_enabled:
-        logger.info("[BOT_SIGNALS] ⏹️ Auto Bot выключен - НЕ обрабатываем торговые сигналы")
+    # КРИТИЧЕСКИ ВАЖНО: Даже если Auto Bot выключен - ОБРАБАТЫВАЕМ существующих ботов!
+    # Причина: Они управляют реальными позициями на бирже (стопы, трейлинг, выходы)
+    # Блокируем только СОЗДАНИЕ новых ботов (это делается в process_auto_bot_signals)
+    if not auto_bot_enabled and existing_bots_count > 0:
+        logger.info(f"[BOT_SIGNALS] ⚙️ Auto Bot выключен, но обрабатываем {existing_bots_count} существующих ботов (управление позициями)")
+    elif not auto_bot_enabled and existing_bots_count == 0:
+        # Если автобот выключен И нет ботов - пропускаем
         return
     try:
         with bots_data_lock:
