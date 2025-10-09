@@ -429,7 +429,7 @@ class PositionsManager {
         const currentTheme = document.body.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
         
         return filteredPositions.map(pos => {
-            console.log('Generating HTML for position:', pos);
+            // console.log('Generating HTML for position:', pos);
             const cacheKey = `${pos.symbol}_${currentTheme}`;
             const sma200Data = this.reduceLoad ? null : this.sma200Cache.get(pos.symbol);
             
@@ -442,13 +442,13 @@ class PositionsManager {
 
             // Логируем размер позиции
             const positionSize = pos.qty || pos.quantity || pos.size || 0;
-            console.log('Position size:', {
-                symbol: pos.symbol,
-                qty: pos.qty,
-                quantity: pos.quantity,
-                size: pos.size,
-                finalSize: positionSize
-            });
+            // console.log('Position size:', {
+            //     symbol: pos.symbol,
+            //     qty: pos.qty,
+            //     quantity: pos.quantity,
+            //     size: pos.size,
+            //     finalSize: positionSize
+            // });
             
             const positionFooter = `
                 <div class="position-footer">
@@ -651,14 +651,14 @@ function createTickerLink(symbol, exchange) {
         const exchangeManager = window.app?.exchangeManager;
         if (exchangeManager && typeof exchangeManager.getSelectedExchange === 'function') {
             currentExchange = exchangeManager.getSelectedExchange();
-            console.log('Exchange from manager:', currentExchange); // Для отладки
+            // console.log('Exchange from manager:', currentExchange); // Для отладки
         } else {
             console.warn('ExchangeManager or getSelectedExchange not available');
         }
         
         // Используем переданную биржу или полученную из менеджера
         const selectedExchange = exchange || currentExchange;
-        console.log('Using exchange:', selectedExchange); // Для отладки
+        // console.log('Using exchange:', selectedExchange); // Для отладки
         
         return getExchangeLink(symbol, selectedExchange);
     } catch (error) {
