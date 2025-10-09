@@ -4,7 +4,9 @@
   "risk_cap_percent": 10.0,
   "scope": "all",
   "whitelist": [],
-  "blacklist": [],
+  "blacklist": [
+    "ETHBTC"
+  ],
   "rsi_long_threshold": 29,
   "rsi_short_threshold": 71,
   "rsi_exit_long": 65,
