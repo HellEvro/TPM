@@ -1,0 +1,7 @@
+{
+  "bot_status_update_interval": 3,
+  "position_sync_interval": 30,
+  "inactive_bot_cleanup_interval": 600,
+  "inactive_bot_timeout": 600,
+  "stop_loss_setup_interval": 300
+}
