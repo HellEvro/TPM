@@ -2,35 +2,35 @@
   "process_state": {
     "smart_rsi_manager": {
       "active": true,
-      "last_update": "2025-10-09T23:04:52.820498",
-      "update_count": 1,
+      "last_update": "2025-10-09T23:17:07.380341",
+      "update_count": 2,
       "last_error": null
     },
     "auto_bot_worker": {
       "active": true,
-      "last_check": "2025-10-09T23:04:53.585770",
+      "last_check": "2025-10-09T23:17:07.797354",
       "check_count": 0,
       "last_error": null
     },
     "auto_save_worker": {
       "active": true,
-      "last_save": "2025-10-09T23:04:53.585388",
-      "save_count": 0,
+      "last_save": "2025-10-09T23:19:07.858428",
+      "save_count": 2,
       "last_error": null
     },
     "exchange_connection": {
       "initialized": true,
-      "last_sync": "2025-10-09T23:04:52.819346",
-      "connection_count": 1,
+      "last_sync": "2025-10-09T23:17:07.378577",
+      "connection_count": 2,
       "last_error": null
     },
     "auto_bot_signals": {
-      "last_check": null,
+      "last_check": "2025-10-09T23:18:10.114602",
       "signals_processed": 0,
       "bots_created": 0,
       "last_error": null
     }
   },
-  "last_saved": "2025-10-09T23:04:53.585775",
+  "last_saved": "2025-10-09T23:19:07.858435",
   "version": "1.0"
 }
