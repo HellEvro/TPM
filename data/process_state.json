@@ -8,7 +8,7 @@
     },
     "auto_bot_worker": {
       "active": true,
-      "last_check": "2025-10-09T14:30:39.527455",
+      "last_check": "2025-10-09T14:39:41.615065",
       "check_count": 0,
       "last_error": null,
       "enabled": false,
@@ -27,12 +27,12 @@
       "last_error": null
     },
     "auto_bot_signals": {
-      "last_check": "2025-10-09T14:02:37.947455",
+      "last_check": "2025-10-09T14:35:59.084330",
       "signals_processed": 0,
       "bots_created": 0,
       "last_error": null
     }
   },
-  "last_saved": "2025-10-09T14:30:39.527463",
+  "last_saved": "2025-10-09T14:39:41.615075",
   "version": "1.0"
 }
