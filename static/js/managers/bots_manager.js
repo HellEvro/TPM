@@ -818,9 +818,11 @@ class BotsManager {
             infoElements.push(`<span class="confirmation-divergence" title="Дивергенция: ${confirmations.divergence}">${divIcon}</span>`);
         }
         
-        if (confirmations.stoch_rsi !== undefined && confirmations.stoch_rsi !== null) {
-            const stochIcon = confirmations.stoch_rsi < 20 ? '⬇️' : confirmations.stoch_rsi > 80 ? '⬆️' : '➡️';
-            infoElements.push(`<span class="confirmation-stoch" title="Stochastic RSI: ${confirmations.stoch_rsi.toFixed(1)}">${stochIcon}</span>`);
+        if (confirmations.stoch_rsi_k !== undefined && confirmations.stoch_rsi_k !== null) {
+            const stochK = confirmations.stoch_rsi_k;
+            const stochD = confirmations.stoch_rsi_d || 0;
+            const stochIcon = stochK < 20 ? '⬇️' : stochK > 80 ? '⬆️' : '➡️';
+            infoElements.push(`<span class="confirmation-stoch" title="Stochastic RSI: %K=${stochK.toFixed(1)}, %D=${stochD.toFixed(1)}">${stochIcon}</span>`);
         }
         
         if (infoElements.length > 0) {

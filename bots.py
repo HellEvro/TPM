@@ -868,8 +868,9 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
         signal_generator = SignalGenerator()
         
         # Форматируем данные свечей для анализа
+        # Bybit отправляет свечи от новой к старой, поэтому переворачиваем массив
         formatted_candles = []
-        for candle in candles:
+        for candle in reversed(candles):  # Переворачиваем: от старой к новой
             formatted_candles.append({
                 'timestamp': candle.get('time', 0),
                 'open': float(candle.get('open', 0)),
@@ -893,7 +894,9 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
                 adaptive_levels = TechnicalIndicators.calculate_adaptive_rsi_levels(formatted_candles)
                 divergence = TechnicalIndicators.detect_rsi_divergence(closes, rsi_history)
                 volume_confirmation = TechnicalIndicators.confirm_with_volume(volumes)
-                stoch_rsi = TechnicalIndicators.calculate_stoch_rsi(rsi_history)
+                stoch_rsi_result = TechnicalIndicators.calculate_stoch_rsi(rsi_history)
+                stoch_rsi = stoch_rsi_result['k'] if stoch_rsi_result else None
+                stoch_rsi_d = stoch_rsi_result['d'] if stoch_rsi_result else None
                 
                 # Определяем продолжительность в экстремальной зоне
                 extreme_duration = 0
@@ -929,7 +932,8 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
                 confirmations = {
                     'volume': bool(volume_confirmation) if volume_confirmation is not None else False,
                     'divergence': bool(divergence) if divergence is not None else False,
-                    'stoch_rsi': float(stoch_rsi) if stoch_rsi is not None else None
+                    'stoch_rsi_k': float(stoch_rsi) if stoch_rsi is not None else None,
+                    'stoch_rsi_d': float(stoch_rsi_d) if stoch_rsi_d is not None else None
                 }
                 
                 return {
@@ -954,7 +958,8 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
                     'confirmations': {
                         'volume': False,
                         'divergence': False,
-                        'stoch_rsi': None
+                        'stoch_rsi_k': None,
+                        'stoch_rsi_d': None
                     },
                     'enhanced_signal': 'WAIT'
                 }
@@ -969,7 +974,8 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
                 'confirmations': {
                     'volume': False,
                     'divergence': False,
-                    'stoch_rsi': None
+                    'stoch_rsi_k': None,
+                    'stoch_rsi_d': None
                 },
                 'enhanced_signal': 'WAIT'
             }
@@ -1079,8 +1085,10 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             return None
         
         # Рассчитываем RSI для 6H
+        # Bybit отправляет свечи от новой к старой, поэтому переворачиваем массив
         closes = [candle['close'] for candle in candles]
-        rsi = calculate_rsi(closes, 14)
+        closes_reversed = list(reversed(closes))  # Переворачиваем: от старой к новой
+        rsi = calculate_rsi(closes_reversed, 14)
         
         if rsi is None:
             logger.warning(f"[WARNING] Не удалось рассчитать RSI для {symbol}")
