@@ -258,6 +258,8 @@ class TechnicalIndicators:
         # Шаг 1: Рассчитываем Stochastic RSI для каждой точки
         stoch_rsi_values = []
         for i in range(stoch_period - 1, len(rsi_values)):
+            # Используем СКОЛЬЗЯЩЕЕ ОКНО из последних stoch_period значений RSI
+            # period_rsi содержит RSI от позиции (i - stoch_period + 1) до позиции i
             period_rsi = rsi_values[i - stoch_period + 1:i + 1]
             highest_rsi = max(period_rsi)
             lowest_rsi = min(period_rsi)
@@ -265,6 +267,7 @@ class TechnicalIndicators:
             if highest_rsi == lowest_rsi:
                 stoch_rsi_values.append(0.5)  # Нейтральное значение
             else:
+                # Формула: (текущий RSI - min за период) / (max за период - min за период)
                 stoch_rsi = (rsi_values[i] - lowest_rsi) / (highest_rsi - lowest_rsi)
                 stoch_rsi_values.append(stoch_rsi)
         
@@ -301,19 +304,19 @@ class TechnicalIndicators:
         Args:
             candles_data: Список свечей
             period: Период RSI
-            history_length: Количество исторических значений
+            history_length: Количество исторических значений (не используется, оставлено для совместимости)
             
         Returns:
-            Список исторических значений RSI
+            Список исторических значений RSI для всех свечей
         """
-        if len(candles_data) < period + history_length:
+        if len(candles_data) < period:
             return []
             
         closes = [float(candle['close']) for candle in candles_data]
         rsi_history = []
         
-        # Рассчитываем RSI для каждой точки в истории
-        for i in range(period, len(closes) - history_length + 1):
+        # Рассчитываем RSI для каждой точки от period до конца (включая текущую свечу)
+        for i in range(period, len(closes)):
             rsi = TechnicalIndicators.calculate_rsi(closes[:i+1], period)
             if rsi is not None:
                 rsi_history.append(rsi)
@@ -445,16 +448,7 @@ class SignalGenerator:
                 'reason': 'insufficient_data'
             }
         
-        # Дополнительная проверка порядка данных
-        # Bybit отправляет свечи от новой к старой, переворачиваем их
-        if len(candles_data) > 1:
-            first_time = candles_data[0].get('timestamp', 0)
-            last_time = candles_data[-1].get('timestamp', 0)
-            if first_time > last_time:
-                # Переворачиваем массив: от старой к новой
-                candles_data = list(reversed(candles_data))
-        
-        # Извлекаем данные (после переворота)
+        # Извлекаем данные (candles_data уже перевернуты в get_coin_rsi_data)
         closes = [float(candle['close']) for candle in candles_data]
         volumes = [float(candle['volume']) for candle in candles_data]
         

@@ -1168,6 +1168,49 @@
                 </div>
 
             </div>
+            
+            <!-- Секция управления зрелыми монетами -->
+            <div class="config-section">
+                <div class="section-header">
+                    <h3 data-translate="mature_coins_management_title">🗑️ Управление зрелыми монетами</h3>
+                    <div class="section-description">
+                        <span data-translate="mature_coins_management_description">Удаление конкретных монет из списка зрелых (только при ошибке разработки)</span>
+                    </div>
+                </div>
+                
+                <div class="mature-coins-management">
+                    <div class="mature-coins-controls">
+                        <div class="mature-coins-input-group">
+                            <label class="config-label">
+                                <span class="label-icon">📝</span>
+                                <span class="label-text" data-translate="coins_to_remove_label">Монеты для удаления:</span>
+                            </label>
+                            <div class="input-with-button">
+                                <input type="text" id="coinsToRemove" class="config-input" 
+                                       placeholder="ARIA, AVNT, MIRA" 
+                                       title="Введите символы монет через запятую">
+                                <button class="btn btn-danger btn-sm" id="removeMatureCoinsBtn">
+                                    <span data-translate="remove_coins_btn">🗑️ Удалить</span>
+                                </button>
+                            </div>
+                            <small class="config-help" data-translate="coins_to_remove_help">
+                                Введите символы монет через запятую (например: ARIA, AVNT). Будьте осторожны!
+                            </small>
+                        </div>
+                        
+                        <div class="mature-coins-info">
+                            <div class="info-item">
+                                <span class="info-label" data-translate="total_mature_coins">Всего зрелых монет:</span>
+                                <span class="info-value" id="totalMatureCoinsCount">0</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label" data-translate="last_removal">Последнее удаление:</span>
+                                <span class="info-value" id="lastRemovalInfo">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Кнопки сохранения -->
             <div class="config-actions">
