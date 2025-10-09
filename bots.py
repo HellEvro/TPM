@@ -6209,32 +6209,50 @@ def auto_bot_config():
             # КРИТИЧЕСКИ ВАЖНО: При включении Auto Bot запускаем немедленную проверку
             auto_bot_enabled = bots_data['auto_bot_config']['enabled']
             if 'enabled' in data and data['enabled'] is True and auto_bot_enabled:
-                logger.info("[CONFIG] 🚀 Auto Bot включен - запускаем немедленную проверку сигналов!")
+                # ✅ ЯРКИЙ ЛОГ ВКЛЮЧЕНИЯ (ЗЕЛЕНЫЙ)
+                logger.info("=" * 80)
+                logger.info("\033[92m🟢 AUTO BOT ВКЛЮЧЕН! 🟢\033[0m")
+                logger.info("=" * 80)
+                logger.info("⚠️  ВНИМАНИЕ: Автобот будет автоматически создавать ботов!")
+                logger.info(f"⚙️  Макс. одновременных ботов: {bots_data['auto_bot_config'].get('max_concurrent', 5)}")
+                logger.info(f"📊 RSI пороги: LONG≤{bots_data['auto_bot_config'].get('rsi_long_threshold')}, SHORT≥{bots_data['auto_bot_config'].get('rsi_short_threshold')}")
+                logger.info(f"⏰ RSI Time Filter: {'ON' if bots_data['auto_bot_config'].get('rsi_time_filter_enabled') else 'OFF'} ({bots_data['auto_bot_config'].get('rsi_time_filter_candles')} свечей)")
+                logger.info("=" * 80)
+                
                 try:
                     process_auto_bot_signals(exchange_obj=exchange)
                     logger.info("[CONFIG] ✅ Немедленная проверка Auto Bot завершена")
                 except Exception as e:
                     logger.error(f"[CONFIG] ❌ Ошибка немедленной проверки Auto Bot: {e}")
             
-            # КРИТИЧЕСКИ ВАЖНО: При отключении Auto Bot очищаем все боты!
+            # КРИТИЧЕСКИ ВАЖНО: При отключении Auto Bot НЕ удаляем ботов!
             if 'enabled' in data and data['enabled'] is False:
-                logger.info("[CONFIG] 🛑 Auto Bot отключен - очищаем все боты!")
-                try:
-                    with bots_data_lock:
-                        bots_count = len(bots_data['bots'])
-                        if bots_count > 0:
-                            logger.info(f"[CONFIG] 🗑️ Удаляем {bots_count} ботов при отключении автобота")
-                            bots_data['bots'] = {}
-                            logger.info("[CONFIG] ✅ Все боты удалены при отключении автобота")
-                        else:
-                            logger.info("[CONFIG] ✅ Ботов для удаления не найдено")
-                    
-                    # Сохраняем очищенное состояние
-                    save_bots_state()
-                    logger.info("[CONFIG] 💾 Очищенное состояние ботов сохранено")
-                    
-                except Exception as e:
-                    logger.error(f"[CONFIG] ❌ Ошибка очистки ботов при отключении автобота: {e}")
+                # ✅ ЯРКИЙ ЛОГ ВЫКЛЮЧЕНИЯ (КРАСНЫЙ)
+                logger.info("=" * 80)
+                logger.info("\033[91m🔴 AUTO BOT ВЫКЛЮЧЕН! 🔴\033[0m")
+                logger.info("=" * 80)
+                
+                with bots_data_lock:
+                    bots_count = len(bots_data['bots'])
+                    bots_in_position = sum(1 for bot in bots_data['bots'].values() 
+                                          if bot.get('status') in ['IN_POSITION_LONG', 'IN_POSITION_SHORT'])
+                
+                if bots_count > 0:
+                    logger.info(f"💾 Сохранено {bots_count} ботов:")
+                    logger.info(f"   📊 В позиции: {bots_in_position}")
+                    logger.info(f"   🔄 Остальные: {bots_count - bots_in_position}")
+                    logger.info("")
+                    logger.info("✅ ЧТО БУДЕТ ДАЛЬШЕ:")
+                    logger.info("   🔄 Существующие боты продолжат работать")
+                    logger.info("   🛡️ Защитные механизмы активны (стоп-лосс, RSI выход)")
+                    logger.info("   ❌ Новые боты НЕ будут создаваться")
+                    logger.info("   🗑️ Для удаления используйте кнопку 'Удалить всё'")
+                else:
+                    logger.info("ℹ️  Нет активных ботов")
+                
+                logger.info("=" * 80)
+                logger.info("✅ АВТОБОТ ОСТАНОВЛЕН (боты сохранены)")
+                logger.info("=" * 80)
         
         return jsonify({
             'success': True,
