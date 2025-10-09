@@ -6255,6 +6255,83 @@ def test_rsi_time_filter_endpoint(symbol):
         logger.error(f"[API] Ошибка тестирования RSI временного фильтра для {symbol}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@bots_app.route('/api/bots/reload-modules', methods=['POST'])
+def reload_modules_endpoint():
+    """Перезагружает модули без перезапуска сервера"""
+    try:
+        import importlib
+        import sys
+        
+        # Список модулей для перезагрузки
+        modules_to_reload = []
+        
+        # Находим все модули, которые содержат 'bot' в имени
+        for module_name in sys.modules.keys():
+            if 'bot' in module_name.lower() and not module_name.startswith('_'):
+                modules_to_reload.append(module_name)
+        
+        reloaded_count = 0
+        for module_name in modules_to_reload:
+            try:
+                if module_name in sys.modules:
+                    importlib.reload(sys.modules[module_name])
+                    reloaded_count += 1
+                    logger.info(f"[HOT_RELOAD] Перезагружен модуль: {module_name}")
+            except Exception as e:
+                logger.warning(f"[HOT_RELOAD] Не удалось перезагрузить {module_name}: {e}")
+        
+        logger.info(f"[HOT_RELOAD] ✅ Перезагружено {reloaded_count} модулей")
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Перезагружено {reloaded_count} модулей',
+            'reloaded_modules': reloaded_count
+        })
+        
+    except Exception as e:
+        logger.error(f"[API] Ошибка перезагрузки модулей: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bots_app.route('/api/bots/restart-service', methods=['POST'])
+def restart_service_endpoint():
+    """Перезапускает сервис ботов (только основные компоненты)"""
+    try:
+        logger.info("[HOT_RELOAD] 🔄 Перезапуск сервиса ботов...")
+        
+        # Перезагружаем глобальные переменные
+        global exchange, coins_rsi_data, bots_data
+        global system_initialized
+        
+        # Сбрасываем флаг инициализации
+        system_initialized = False
+        logger.info("[HOT_RELOAD] 🔄 Сброшен флаг инициализации")
+        
+        # Перезагружаем конфигурацию
+        load_auto_bot_config()
+        load_system_config()
+        logger.info("[HOT_RELOAD] 🔄 Перезагружена конфигурация")
+        
+        # Перезагружаем состояние ботов
+        load_bots_state()
+        logger.info("[HOT_RELOAD] 🔄 Перезагружено состояние ботов")
+        
+        # Сбрасываем RSI данные (они будут перезагружены автоматически)
+        with rsi_data_lock:
+            coins_rsi_data['coins'] = {}
+            coins_rsi_data['update_in_progress'] = False
+        logger.info("[HOT_RELOAD] 🔄 Сброшены RSI данные")
+        
+        logger.info("[HOT_RELOAD] ✅ Сервис ботов перезапущен")
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Сервис ботов перезапущен успешно'
+        })
+        
+    except Exception as e:
+        logger.error(f"[API] Ошибка перезапуска сервиса: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @bots_app.route('/api/bots/process-trading-signals', methods=['POST'])
 def process_trading_signals_endpoint():
     """Принудительно обработать торговые сигналы для всех ботов"""
