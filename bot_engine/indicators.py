@@ -231,29 +231,65 @@ class TechnicalIndicators:
     
     @staticmethod
     def calculate_stoch_rsi(rsi_values: List[float], 
-                          period: int = RSI_STOCH_PERIOD) -> Optional[float]:
+                          stoch_period: int = 14,
+                          k_smooth: int = 3, 
+                          d_smooth: int = 3) -> Optional[Dict[str, float]]:
         """
-        Рассчитывает Stochastic RSI
+        Рассчитывает Stochastic RSI (%K и %D) по стандартной формуле TradingView/Bybit
+        
+        Формула:
+        1. Stoch RSI = (RSI - min(RSI, stoch_period)) / (max(RSI, stoch_period) - min(RSI, stoch_period))
+        2. %K = SMA(Stoch RSI, k_smooth)
+        3. %D = SMA(%K, d_smooth)
         
         Args:
-            rsi_values: Список значений RSI
-            period: Период для расчета
+            rsi_values: Список значений RSI (от старого к новому)
+            stoch_period: Период для нахождения min/max RSI (обычно 14)
+            k_smooth: Период сглаживания для %K (обычно 3)
+            d_smooth: Период сглаживания для %D (обычно 3)
             
         Returns:
-            Значение Stochastic RSI или None
+            Словарь с %K и %D или None
         """
-        if len(rsi_values) < period:
+        min_required = stoch_period + k_smooth + d_smooth
+        if len(rsi_values) < min_required:
             return None
-            
-        recent_rsi = rsi_values[-period:]
-        highest_rsi = max(recent_rsi)
-        lowest_rsi = min(recent_rsi)
         
-        if highest_rsi == lowest_rsi:
-            return 50.0
+        # Шаг 1: Рассчитываем Stochastic RSI для каждой точки
+        stoch_rsi_values = []
+        for i in range(stoch_period - 1, len(rsi_values)):
+            period_rsi = rsi_values[i - stoch_period + 1:i + 1]
+            highest_rsi = max(period_rsi)
+            lowest_rsi = min(period_rsi)
             
-        stoch_rsi = ((rsi_values[-1] - lowest_rsi) / (highest_rsi - lowest_rsi)) * 100
-        return float(stoch_rsi)
+            if highest_rsi == lowest_rsi:
+                stoch_rsi_values.append(0.5)  # Нейтральное значение
+            else:
+                stoch_rsi = (rsi_values[i] - lowest_rsi) / (highest_rsi - lowest_rsi)
+                stoch_rsi_values.append(stoch_rsi)
+        
+        if len(stoch_rsi_values) < k_smooth + d_smooth:
+            return None
+        
+        # Шаг 2: Рассчитываем %K как SMA от Stochastic RSI
+        k_values = []
+        for i in range(k_smooth - 1, len(stoch_rsi_values)):
+            k_sma = sum(stoch_rsi_values[i - k_smooth + 1:i + 1]) / k_smooth
+            k_values.append(k_sma * 100)  # Переводим в проценты
+        
+        if len(k_values) < d_smooth:
+            return None
+        
+        # Шаг 3: Рассчитываем %D как SMA от %K
+        d_values = []
+        for i in range(d_smooth - 1, len(k_values)):
+            d_sma = sum(k_values[i - d_smooth + 1:i + 1]) / d_smooth
+            d_values.append(d_sma)
+        
+        return {
+            'k': float(k_values[-1]),
+            'd': float(d_values[-1])
+        }
     
     @staticmethod
     def calculate_rsi_history(candles_data: List[dict], 
@@ -409,24 +445,18 @@ class SignalGenerator:
                 'reason': 'insufficient_data'
             }
         
-        # Извлекаем данные
-        closes = [float(candle['close']) for candle in candles_data]
-        volumes = [float(candle['volume']) for candle in candles_data]
-        
         # Дополнительная проверка порядка данных
+        # Bybit отправляет свечи от новой к старой, переворачиваем их
         if len(candles_data) > 1:
             first_time = candles_data[0].get('timestamp', 0)
             last_time = candles_data[-1].get('timestamp', 0)
             if first_time > last_time:
-                import logging
-                logger = logging.getLogger('SignalGenerator')
-                logger.error(f"Candles data is in wrong order! First: {first_time}, Last: {last_time}")
-                return {
-                    'trend': 'NEUTRAL',
-                    'rsi': None,
-                    'signal': 'WAIT',
-                    'reason': 'wrong_data_order'
-                }
+                # Переворачиваем массив: от старой к новой
+                candles_data = list(reversed(candles_data))
+        
+        # Извлекаем данные (после переворота)
+        closes = [float(candle['close']) for candle in candles_data]
+        volumes = [float(candle['volume']) for candle in candles_data]
         
         # Анализируем тренд
         trend, trend_analysis = self.trend_analyzer.analyze_trend(candles_data)
@@ -447,7 +477,8 @@ class SignalGenerator:
         adaptive_levels = TechnicalIndicators.calculate_adaptive_rsi_levels(candles_data)
         divergence = TechnicalIndicators.detect_rsi_divergence(closes, rsi_history + [rsi]) if rsi_history else None
         volume_confirmation = TechnicalIndicators.confirm_with_volume(volumes)
-        stoch_rsi = TechnicalIndicators.calculate_stoch_rsi(rsi_history + [rsi]) if rsi_history else None
+        stoch_rsi_result = TechnicalIndicators.calculate_stoch_rsi(rsi_history + [rsi]) if rsi_history else None
+        stoch_rsi = stoch_rsi_result['k'] if stoch_rsi_result else None
         
         # Создаем расширенный контекст для анализа
         enhanced_context = {
