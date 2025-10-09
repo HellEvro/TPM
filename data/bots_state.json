@@ -1,5 +1,57 @@
 {
-  "bots": {},
+  "bots": {
+    "1000000CHEEMS": {
+      "symbol": "1000000CHEEMS",
+      "status": "running",
+      "auto_managed": false,
+      "volume_mode": "usdt",
+      "volume_value": 10.0,
+      "position": null,
+      "entry_price": null,
+      "entry_time": null,
+      "last_signal_time": null,
+      "last_bar_timestamp": null,
+      "created_at": "2025-10-10T00:35:50.831620",
+      "scaling_enabled": false,
+      "scaling_levels": [],
+      "scaling_current_level": 0,
+      "scaling_group_id": null
+    },
+    "BAT": {
+      "symbol": "BAT",
+      "status": "running",
+      "auto_managed": false,
+      "volume_mode": "usdt",
+      "volume_value": 10.0,
+      "position": null,
+      "entry_price": null,
+      "entry_time": null,
+      "last_signal_time": null,
+      "last_bar_timestamp": null,
+      "created_at": "2025-10-10T00:35:52.891523",
+      "scaling_enabled": false,
+      "scaling_levels": [],
+      "scaling_current_level": 0,
+      "scaling_group_id": null
+    },
+    "BIO": {
+      "symbol": "BIO",
+      "status": "IDLE",
+      "auto_managed": false,
+      "volume_mode": "usdt",
+      "volume_value": 10.0,
+      "position": null,
+      "entry_price": null,
+      "entry_time": null,
+      "last_signal_time": null,
+      "last_bar_timestamp": null,
+      "created_at": "2025-10-10T00:35:55.585632",
+      "scaling_enabled": false,
+      "scaling_levels": [],
+      "scaling_current_level": 0,
+      "scaling_group_id": null
+    }
+  },
   "auto_bot_config": {
     "enabled": false,
     "max_concurrent": 5,
@@ -54,6 +106,6 @@
     "scaling_min_usdt_per_trade": 5,
     "scaling_timeout_minutes": 30
   },
-  "last_saved": "2025-10-10T00:29:36.418032",
+  "last_saved": "2025-10-10T00:36:16.004356",
   "version": "1.0"
 }
