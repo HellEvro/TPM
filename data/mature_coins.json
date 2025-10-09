@@ -1,1 +1,27 @@
-{}
+{
+  "1000000CHEEMS": {
+    "timestamp": 1760040485.492661,
+    "maturity_data": "ENTER_SHORT",
+    "last_verified": 1760040485.4926612
+  },
+  "BAT": {
+    "timestamp": 1760040571.2107282,
+    "maturity_data": "ENTER_SHORT",
+    "last_verified": 1760040571.2107286
+  },
+  "BIO": {
+    "timestamp": 1760040582.9773886,
+    "maturity_data": "ENTER_LONG",
+    "last_verified": 1760040582.9773886
+  },
+  "FLR": {
+    "timestamp": 1760040682.912386,
+    "maturity_data": "ENTER_LONG",
+    "last_verified": 1760040682.9123864
+  },
+  "KAIA": {
+    "timestamp": 1760040747.925398,
+    "maturity_data": "ENTER_LONG",
+    "last_verified": 1760040747.9253983
+  }
+}

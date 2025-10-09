@@ -347,6 +347,45 @@ class TradingBot:
                 'message': 'Ошибка проверки позиций на бирже'
             }
         
+        # ПРОВЕРКА RSI ВРЕМЕННОГО ФИЛЬТРА
+        try:
+            # Импортируем функцию проверки временного фильтра
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from bots import check_rsi_time_filter
+            
+            # Получаем свечи для анализа временного фильтра
+            candles = self.exchange.get_candles(self.symbol, '6h', 100)
+            if candles and len(candles) > 0:
+                # Получаем текущий RSI из данных монеты
+                current_rsi = getattr(self, 'current_rsi', None)
+                if current_rsi is None:
+                    # Если RSI не сохранен в боте, получаем из API
+                    try:
+                        rsi_data = self.exchange.get_rsi_data(self.symbol, '6h', 14)
+                        current_rsi = rsi_data.get('rsi', 50) if rsi_data else 50
+                    except:
+                        current_rsi = 50
+                
+                # Проверяем временной фильтр
+                time_filter_result = check_rsi_time_filter(candles, current_rsi, signal)
+                
+                if not time_filter_result['allowed']:
+                    self.logger.info(f"[TRADING_BOT] {self.symbol}: ⏰ Временной фильтр блокирует вход: {time_filter_result['reason']}")
+                    return {
+                        'action': 'blocked_time_filter',
+                        'reason': time_filter_result['reason'],
+                        'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago')
+                    }
+                else:
+                    self.logger.info(f"[TRADING_BOT] {self.symbol}: ✅ Временной фильтр разрешает вход: {time_filter_result['reason']}")
+            else:
+                self.logger.warning(f"[TRADING_BOT] {self.symbol}: ⚠️ Не удалось получить свечи для проверки временного фильтра")
+        except Exception as e:
+            self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка проверки временного фильтра: {e}")
+            # В случае ошибки разрешаем сделку (безопасность)
+        
         # ПРЯМАЯ ЛОГИКА: Сразу открываем сделки без промежуточных состояний
         if signal == 'ENTER_LONG':
             self.logger.info(f"[TRADING_BOT] {self.symbol}: 🚀 СРАЗУ открываем LONG позицию!")

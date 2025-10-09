@@ -748,6 +748,7 @@ class BotsManager {
                         <div class="coin-signal">
                             <small class="signal-text">${effectiveSignal || 'WAIT'}</small>
                             ${this.generateEnhancedSignalInfo(coin)}
+                            ${this.generateTimeFilterInfo(coin)}
                         </div>
                     </div>
                 </li>
@@ -855,6 +856,46 @@ class BotsManager {
         
         if (infoElements.length > 0) {
             return `<div class="enhanced-info">${infoElements.join('')}</div>`;
+        }
+        
+        return '';
+    }
+    
+    generateTimeFilterInfo(coin) {
+        // Генерирует информацию о временном фильтре RSI
+        const timeFilterInfo = coin.time_filter_info;
+        
+        if (!timeFilterInfo) {
+            return '';
+        }
+        
+        const isAllowed = timeFilterInfo.allowed;
+        const reason = timeFilterInfo.reason;
+        const lastExtremeCandlesAgo = timeFilterInfo.last_extreme_candles_ago;
+        
+        // Показываем только если фильтр блокирует вход или есть информация о последнем экстремуме
+        if (isAllowed && lastExtremeCandlesAgo === null) {
+            return '';
+        }
+        
+        let icon = '';
+        let className = '';
+        let title = '';
+        
+        if (!isAllowed) {
+            // Фильтр блокирует вход
+            icon = '⏰';
+            className = 'time-filter-blocked';
+            title = `Временной фильтр блокирует: ${reason}`;
+        } else if (lastExtremeCandlesAgo !== null) {
+            // Показываем сколько времени прошло с последнего экстремума
+            icon = '⏱️';
+            className = 'time-filter-active';
+            title = `Прошло ${lastExtremeCandlesAgo} свечей с последнего экстремума RSI`;
+        }
+        
+        if (icon && title) {
+            return `<div class="time-filter-info ${className}" title="${title}">${icon}</div>`;
         }
         
         return '';

@@ -1198,6 +1198,9 @@ def check_rsi_time_filter(candles, rsi, signal):
 def get_coin_rsi_data(symbol, exchange_obj=None):
     """Получает RSI данные для одной монеты (6H таймфрейм)"""
     try:
+        # Небольшая задержка для избежания API Rate Limit
+        time.sleep(0.5)
+        
         logger.debug(f"[DEBUG] Обработка {symbol}...")
         
         # Используем переданную биржу или глобальную
@@ -1245,6 +1248,23 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # Определяем RSI зоны согласно техзаданию
         rsi_zone = 'NEUTRAL'
         signal = 'WAIT'
+        
+        # Проверяем временной фильтр для потенциальных сигналов
+        time_filter_info = None
+        if rsi <= RSI_OVERSOLD:
+            time_filter_result = check_rsi_time_filter(candles, rsi, 'ENTER_LONG')
+            time_filter_info = {
+                'allowed': time_filter_result['allowed'],
+                'reason': time_filter_result['reason'],
+                'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago')
+            }
+        elif rsi >= RSI_OVERBOUGHT:
+            time_filter_result = check_rsi_time_filter(candles, rsi, 'ENTER_SHORT')
+            time_filter_info = {
+                'allowed': time_filter_result['allowed'],
+                'reason': time_filter_result['reason'],
+                'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago')
+            }
         
         # Логика с опциональным учетом тренда
         # Получаем настройки фильтров по тренду (по умолчанию включены)
@@ -1317,7 +1337,9 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                 'analysis_method': ema_periods['analysis_method']
             },
             # Добавляем результаты улучшенного анализа RSI
-            'enhanced_rsi': enhanced_analysis
+            'enhanced_rsi': enhanced_analysis,
+            # Добавляем информацию о временном фильтре
+            'time_filter_info': time_filter_info
         }
         
         # Логируем торговые сигналы и блокировки тренда
@@ -1423,7 +1445,7 @@ def load_all_coins_rsi():
                 logger.info(f"[INCREMENTAL] Обновлено {len(batch_coins_data)} монет из пакета {batch_num}")
             
             # Пауза между пакетами для предотвращения rate limiting
-            time.sleep(5.0)  # 5 секунд между пакетами для избежания API Rate Limit
+            time.sleep(10.0)  # 10 секунд между пакетами для избежания API Rate Limit
             
             # Логируем прогресс каждые 5 пакетов (чаще для инкрементального обновления)
             if batch_num % 5 == 0:
@@ -2955,7 +2977,7 @@ def load_system_config():
                     SystemConfig.RSI_UPDATE_INTERVAL = int(config_data['rsi_update_interval'])
                     logger.info(f"[SYSTEM_CONFIG] 🔄 RSI интервал изменен: {old_value} → {SystemConfig.RSI_UPDATE_INTERVAL}")
                 else:
-                    logger.warning(f"[SYSTEM_CONFIG] ⚠️ rsi_update_interval не найден в конфигурации")
+                    logger.info(f"[SYSTEM_CONFIG] 📝 rsi_update_interval не найден в конфигурации, используется значение по умолчанию: {SystemConfig.RSI_UPDATE_INTERVAL}")
                 
                 if 'auto_save_interval' in config_data:
                     SystemConfig.AUTO_SAVE_INTERVAL = int(config_data['auto_save_interval'])
@@ -7016,25 +7038,25 @@ def run_bots_service():
         else:
             logger.info("✅ Сервис ботов инициализирован")
         
+        # ДОПОЛНИТЕЛЬНО: Ждем установки флага system_initialized
+        logger.info("⏳ Ожидание установки флага system_initialized...")
+        max_wait_time = 60  # Максимум 60 секунд
+        wait_start = time.time()
+        
+        while not system_initialized and (time.time() - wait_start) < max_wait_time:
+            time.sleep(1)
+            if int(time.time() - wait_start) % 10 == 0:  # Каждые 10 секунд
+                logger.info(f"⏳ Ожидание system_initialized... ({int(time.time() - wait_start)}s)")
+        
+        if system_initialized:
+            logger.info("✅ Флаг system_initialized установлен - система готова к работе")
+        else:
+            logger.error("❌ Флаг system_initialized не установлен за {max_wait_time}s - возможны проблемы")
+        
         # Теперь настраиваем обработчики сигналов после полной инициализации
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         logger.info("✅ Обработчики сигналов настроены")
-            
-        # Проверяем, запущен ли автобот воркер
-        try:
-            process_state_response = requests.get(f"http://localhost:{SystemConfig.BOTS_SERVICE_PORT}/api/bots/process-state", timeout=5)
-            if process_state_response.status_code == 200:
-                process_data = process_state_response.json()
-                auto_bot_worker_state = process_data.get('process_state', {}).get('auto_bot_worker')
-                if auto_bot_worker_state and auto_bot_worker_state.get('active'):
-                    logger.info("✅ Автобот воркер запущен")
-                else:
-                    logger.error("❌ Автобот воркер НЕ запущен!")
-            else:
-                logger.error(f"❌ Не удалось проверить состояние процессов: {process_state_response.status_code}")
-        except Exception as e:
-            logger.error(f"❌ Ошибка проверки состояния процессов: {e}")
         
         # Запускаем воркер для обновления оптимальных EMA
         try:

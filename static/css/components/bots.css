@@ -3144,3 +3144,26 @@ input:checked + .toggle-slider:before {
         min-width: auto;
     }
 }
+
+/* СТИЛИ ДЛЯ ВРЕМЕННОГО ФИЛЬТРА RSI */
+.time-filter-info {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.time-filter-blocked {
+    color: #ff6b6b;
+    animation: pulse 2s infinite;
+}
+
+.time-filter-active {
+    color: #51cf66;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
