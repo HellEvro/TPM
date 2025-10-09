@@ -30,16 +30,41 @@ class BotsManager {
         this.BOTS_SERVICE_URL = 'http://127.0.0.1:5001';
         this.apiUrl = 'http://127.0.0.1:5001/api/bots'; // Для совместимости
         
+        // Уровень логирования: 'error' - только ошибки, 'info' - важные события, 'debug' - все
+        this.logLevel = 'info'; // По умолчанию только важные события
+        
         // Инициализация при создании
         this.init();
+    }
+    
+    // Методы логирования с уровнями
+    logDebug(...args) {
+        if (this.logLevel === 'debug') {
+            console.log(...args);
+        }
+    }
+    
+    logInfo(...args) {
+        if (this.logLevel === 'info' || this.logLevel === 'debug') {
+            console.log(...args);
+        }
+    }
+    
+    logError(...args) {
+        console.error(...args);
     }
 
     async init() {
         console.log('[BotsManager] 🚀 Инициализация менеджера ботов...');
+        console.log('[BotsManager] 💡 Для включения debug логов: window.botsManager.logLevel = "debug"');
         
         try {
             // Инициализируем интерфейс
             this.initializeInterface();
+            
+            // КРИТИЧЕСКИ ВАЖНО: Инициализируем обработчик Auto Bot переключателя
+            console.log('[BotsManager] 🤖 Инициализация обработчика Auto Bot переключателя...');
+            this.initializeGlobalAutoBotToggle();
             
             // Проверяем статус сервиса ботов
             await this.checkBotsService();
@@ -56,7 +81,7 @@ class BotsManager {
                     });
                     const syncData = await syncResponse.json();
                     if (syncData.success) {
-                        console.log('[BotsManager] ✅ Позиции синхронизированы при инициализации');
+                        this.logDebug('[BotsManager] ✅ Позиции синхронизированы при инициализации');
                     } else {
                         console.warn('[BotsManager] ⚠️ Ошибка синхронизации позиций при инициализации:', syncData.message);
                     }
@@ -76,13 +101,13 @@ class BotsManager {
             
             // Принудительное обновление состояния автобота и ботов (только при первой загрузке)
             setTimeout(() => {
-                console.log('[BotsManager] 🔄 Принудительное обновление состояния автобота...');
+                this.logDebug('[BotsManager] 🔄 Принудительное обновление состояния автобота...');
                 this.loadActiveBotsData();
             }, 1000);
             
             // Принудительное обновление подписей тренд-фильтров
             setTimeout(() => {
-                console.log('[BotsManager] 🔄 Принудительное обновление подписей тренд-фильтров...');
+                this.logDebug('[BotsManager] 🔄 Принудительное обновление подписей тренд-фильтров...');
                 this.trendLabelsUpdated = false; // Сбрасываем флаг для принудительного обновления
                 this.updateTrendFilterLabels();
             }, 3000);
@@ -591,7 +616,7 @@ class BotsManager {
             return;
         }
 
-        console.log('[BotsManager] 📊 Загрузка данных RSI 6H...');
+        this.logDebug('[BotsManager] 📊 Загрузка данных RSI 6H...');
         
         // Сохраняем текущее состояние поиска
         const searchInput = document.getElementById('coinSearchInput');
@@ -605,21 +630,21 @@ class BotsManager {
             
             if (data.success) {
                     // Преобразуем словарь в массив для совместимости с UI
-                    console.log('[BotsManager] 🔍 Данные от API:', data);
-                    console.log('[BotsManager] 🔍 Ключи coins:', Object.keys(data.coins));
+                    this.logDebug('[BotsManager] 🔍 Данные от API:', data);
+                    this.logDebug('[BotsManager] 🔍 Ключи coins:', Object.keys(data.coins));
                     this.coinsRsiData = Object.values(data.coins);
                     
                     // Получаем список ручных позиций
                     const manualPositions = data.manual_positions || [];
-                    console.log(`[BotsManager] ✋ Ручные позиции: ${manualPositions.length} - ${manualPositions.slice(0, 10)}`);
+                    this.logDebug(`[BotsManager] ✋ Ручные позиции: ${manualPositions.length} - ${manualPositions.slice(0, 10)}`);
                     
                     // Помечаем монеты с ручными позициями
                     this.coinsRsiData.forEach(coin => {
                         coin.manual_position = manualPositions.includes(coin.symbol);
                     });
                     
-                    console.log(`[BotsManager] ✅ Загружено ${this.coinsRsiData.length} монет с RSI`);
-                    console.log('[BotsManager] 🔍 Первые 3 монеты:', this.coinsRsiData.slice(0, 3));
+                    this.logDebug(`[BotsManager] ✅ Загружено ${this.coinsRsiData.length} монет с RSI`);
+                    this.logDebug('[BotsManager] 🔍 Первые 3 монеты:', this.coinsRsiData.slice(0, 3));
                     
                     // Обновляем интерфейс
                     this.renderCoinsList();
@@ -668,7 +693,7 @@ class BotsManager {
             return;
         }
 
-        console.log(`[BotsManager] 🎨 Отрисовка списка монет: ${this.coinsRsiData.length} монет`);
+        this.logDebug(`[BotsManager] 🎨 Отрисовка списка монет: ${this.coinsRsiData.length} монет`);
         
         if (this.coinsRsiData.length === 0) {
             console.warn('[BotsManager] ⚠️ Нет данных RSI для отображения');
@@ -949,7 +974,7 @@ class BotsManager {
             enterShortBtn.innerHTML = `📉 ENTER_SHORT (${shortCount})`;
         }
         
-        console.log(`[BotsManager] 📊 Счетчики сигналов: LONG=${longCount}, SHORT=${shortCount}`);
+        this.logDebug(`[BotsManager] 📊 Счетчики сигналов: LONG=${longCount}, SHORT=${shortCount}`);
     }
 
     selectCoin(symbol) {
@@ -1199,7 +1224,7 @@ class BotsManager {
             item.style.display = visible ? 'block' : 'none';
         });
         
-        console.log(`[BotsManager] 🔍 Применен фильтр: ${filter}`);
+        this.logDebug(`[BotsManager] 🔍 Применен фильтр: ${filter}`);
     }
 
     restoreFilterState() {
@@ -1214,7 +1239,7 @@ class BotsManager {
         // Применяем сохраненный фильтр
         this.applyRsiFilter(this.currentRsiFilter);
         
-        console.log(`[BotsManager] 🔄 Восстановлен фильтр: ${this.currentRsiFilter}`);
+        this.logDebug(`[BotsManager] 🔄 Восстановлен фильтр: ${this.currentRsiFilter}`);
     }
 
     // Методы управления ботами
@@ -1305,7 +1330,7 @@ class BotsManager {
                 await this.loadActiveBotsData();
                 
                 // Обновляем список монет с пометками о ботах
-                console.log('[BotsManager] 💰 Обновление списка монет с пометками...');
+                this.logDebug('[BotsManager] 💰 Обновление списка монет с пометками...');
                 this.updateCoinsListWithBotStatus();
                 
                 // Обновляем список на вкладке "Боты в работе"
@@ -2202,7 +2227,7 @@ class BotsManager {
     }
 
     updateCoinsListWithBotStatus() {
-        console.log('[BotsManager] 💰 Обновление списка монет с пометками о ботах...');
+        this.logDebug('[BotsManager] 💰 Обновление списка монет с пометками о ботах...');
         
         if (!this.activeBots) return;
         
@@ -2213,7 +2238,7 @@ class BotsManager {
                 .map(bot => bot.symbol)
         );
         
-        console.log(`[BotsManager] 🤖 Найдено ${activeBotsSymbols.size} активных ботов из ${this.activeBots.length} общих`);
+        this.logDebug(`[BotsManager] 🤖 Найдено ${activeBotsSymbols.size} активных ботов из ${this.activeBots.length} общих`);
         
         // Обновляем отображение монет в списке
         const coinItems = document.querySelectorAll('.coin-item');
@@ -3021,7 +3046,7 @@ class BotsManager {
     }
 
     async loadActiveBotsData() {
-        console.log('[BotsManager] 🤖 Загрузка данных активных ботов...');
+        this.logDebug('[BotsManager] 🤖 Загрузка данных активных ботов...');
         
         if (!this.serviceOnline) return;
         
@@ -3036,7 +3061,7 @@ class BotsManager {
                 });
                 const syncData = await syncResponse.json();
                 if (syncData.success) {
-                    console.log('[BotsManager] ✅ Позиции синхронизированы успешно');
+                    this.logDebug('[BotsManager] ✅ Позиции синхронизированы успешно');
                 } else {
                     console.warn('[BotsManager] ⚠️ Ошибка синхронизации позиций:', syncData.message);
                 }
@@ -3067,18 +3092,27 @@ class BotsManager {
             // КРИТИЧЕСКИ ВАЖНО: Синхронизируем состояние автобота ТОЛЬКО если переключатель не был изменен пользователем
             if (configData.success) {
                 const autoBotEnabled = configData.config.enabled;
-                console.log(`[BotsManager] 🔄 Синхронизация автобота: ${autoBotEnabled ? 'ВКЛ' : 'ВЫКЛ'}`);
                 
                 // Обновляем глобальный переключатель автобота ТОЛЬКО если он не был изменен пользователем
                 const globalAutoBotToggleEl = document.getElementById('globalAutoBotToggle');
-                if (globalAutoBotToggleEl && !globalAutoBotToggleEl.hasAttribute('data-user-changed')) {
-                    globalAutoBotToggleEl.checked = autoBotEnabled;
+                const hasUserChanged = globalAutoBotToggleEl?.hasAttribute('data-user-changed');
+                
+                this.logDebug(`[BotsManager] 🔄 Синхронизация автобота: сервер=${autoBotEnabled ? 'ВКЛ' : 'ВЫКЛ'}, UI=${globalAutoBotToggleEl?.checked ? 'ВКЛ' : 'ВЫКЛ'}, user-changed=${hasUserChanged}`);
+                
+                if (globalAutoBotToggleEl && !hasUserChanged) {
+                    if (globalAutoBotToggleEl.checked !== autoBotEnabled) {
+                        console.log(`[BotsManager] 🔄 Обновляем переключатель: ${globalAutoBotToggleEl.checked} → ${autoBotEnabled}`);
+                        console.log(`[BotsManager] 🔍 data-initialized: ${globalAutoBotToggleEl.getAttribute('data-initialized')}`);
+                        globalAutoBotToggleEl.checked = autoBotEnabled;
+                    }
                     
                     // Обновляем визуальное состояние
                     const toggleLabel = globalAutoBotToggleEl.closest('.auto-bot-toggle')?.querySelector('.toggle-label');
                     if (toggleLabel) {
                         toggleLabel.textContent = autoBotEnabled ? '🤖 Auto Bot (ВКЛ)' : '🤖 Auto Bot (ВЫКЛ)';
                     }
+                } else if (hasUserChanged) {
+                    console.log(`[BotsManager] 🔒 Пропускаем синхронизацию - пользователь изменил переключатель`);
                 }
             }
             
@@ -3088,7 +3122,7 @@ class BotsManager {
     }
 
         renderActiveBotsDetails() {
-        console.log('[BotsManager] 🎨 Отрисовка деталей активных ботов...');
+        this.logDebug('[BotsManager] 🎨 Отрисовка деталей активных ботов...');
         
         // Обновляем вкладку "Боты в работе"
         const detailsElement = document.getElementById('activeBotsDetailsList');
@@ -3097,8 +3131,8 @@ class BotsManager {
         const scrollListElement = document.getElementById('activeBotsScrollList');
         const emptyStateElement = document.getElementById('emptyActiveBotsState');
         
-        console.log(`[BotsManager] 📊 Количество активных ботов: ${this.activeBots ? this.activeBots.length : 0}`);
-        console.log(`[BotsManager] 🔍 Элементы найдены:`, {
+        this.logDebug(`[BotsManager] 📊 Количество активных ботов: ${this.activeBots ? this.activeBots.length : 0}`);
+        this.logDebug(`[BotsManager] 🔍 Элементы найдены:`, {
             detailsElement: !!detailsElement,
             scrollListElement: !!scrollListElement,
             emptyStateElement: !!emptyStateElement
@@ -3227,12 +3261,12 @@ class BotsManager {
         // Обновляем статистику в правой панели
         this.updateBotsSummaryStats();
         
-        console.log('[BotsManager] ✅ Активные боты отрисованы успешно');
+        this.logDebug('[BotsManager] ✅ Активные боты отрисованы успешно');
     }
 
     updateBotsSummaryStats() {
-        console.log('[BotsManager] 📊 Обновление статистики ботов...');
-        console.log('[BotsManager] 📊 Активные боты:', this.activeBots);
+        this.logDebug('[BotsManager] 📊 Обновление статистики ботов...');
+        this.logDebug('[BotsManager] 📊 Активные боты:', this.activeBots);
         
         // Вычисляем общий PnL
         let totalPnL = 0;
@@ -3258,19 +3292,19 @@ class BotsManager {
         if (totalPnLElement) {
             totalPnLElement.textContent = `$${totalPnL.toFixed(2)}`;
             totalPnLElement.style.color = totalPnL >= 0 ? '#4caf50' : '#f44336';
-            console.log(`[BotsManager] 📊 Обновлен элемент totalPnLValue: $${totalPnL.toFixed(2)}`);
+            this.logDebug(`[BotsManager] 📊 Обновлен элемент totalPnLValue: $${totalPnL.toFixed(2)}`);
         } else {
             console.warn('[BotsManager] ⚠️ Элемент totalPnLValue не найден!');
         }
         
-        console.log(`[BotsManager] 📊 Статистика обновлена: PnL=$${totalPnL.toFixed(2)}, В позиции=${inPositionCount}`);
+        this.logDebug(`[BotsManager] 📊 Статистика обновлена: PnL=$${totalPnL.toFixed(2)}, В позиции=${inPositionCount}`);
     }
 
     startPeriodicUpdate() {
         // Обновляем данные с единым интервалом
         this.updateInterval = setInterval(() => {
             if (this.serviceOnline) {
-                console.log('[BotsManager] 🔄 Автообновление данных...');
+                this.logDebug('[BotsManager] 🔄 Автообновление данных...');
                 
                 // Обновляем основные данные
                 this.loadCoinsRsiData();
@@ -3286,7 +3320,7 @@ class BotsManager {
         // Отдельный интервал для обновления данных аккаунта каждую секунду
         this.accountUpdateInterval = setInterval(() => {
             if (this.serviceOnline) {
-                console.log('[BotsManager] 💰 Обновление данных аккаунта...');
+                this.logDebug('[BotsManager] 💰 Обновление данных аккаунта...');
                 this.loadAccountInfo();
             }
         }, 1000); // Каждую секунду
@@ -3325,7 +3359,7 @@ class BotsManager {
         if (!this.serviceOnline) return;
         
         try {
-            console.log('[BotsManager] 📊 Обновление детальной информации о ботах...');
+            this.logDebug('[BotsManager] 📊 Обновление детальной информации о ботах...');
             
             // Получаем детальную информацию о всех активных ботах
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/active-detailed`);
@@ -3336,7 +3370,7 @@ class BotsManager {
             const data = await response.json();
             if (data.success && data.bots) {
                 this.updateBotsDetailedDisplay(data.bots);
-                console.log(`[BotsManager] ✅ Обновлена детальная информация для ${data.bots.length} ботов`);
+                this.logDebug(`[BotsManager] ✅ Обновлена детальная информация для ${data.bots.length} ботов`);
             }
             
         } catch (error) {
@@ -3541,12 +3575,12 @@ class BotsManager {
     }
     
     populateConfigurationForm(config) {
-        console.log('[BotsManager] 🔧 Заполнение формы конфигурации:', config);
-        console.log('[BotsManager] 🔍 DOM готовность:', document.readyState);
-        console.log('[BotsManager] 🔍 Элемент positionSyncInterval существует:', !!document.getElementById('positionSyncInterval'));
-        console.log('[BotsManager] 🔍 Детали конфигурации:');
-        console.log('   autoBot:', config.autoBot);
-        console.log('   system:', config.system);
+        this.logDebug('[BotsManager] 🔧 Заполнение формы конфигурации:', config);
+        this.logDebug('[BotsManager] 🔍 DOM готовность:', document.readyState);
+        this.logDebug('[BotsManager] 🔍 Элемент positionSyncInterval существует:', !!document.getElementById('positionSyncInterval'));
+        this.logDebug('[BotsManager] 🔍 Детали конфигурации:');
+        this.logDebug('   autoBot:', config.autoBot);
+        this.logDebug('   system:', config.system);
         
         const autoBotConfig = config.autoBot || config;
         
@@ -3808,22 +3842,22 @@ class BotsManager {
     // ==========================================
     
     async loadConfigurationData() {
-        console.log('[BotsManager] 📋 Загрузка конфигурации...');
+        this.logDebug('[BotsManager] 📋 Загрузка конфигурации...');
         
         try {
-            console.log('[BotsManager] 🌐 Запрос Auto Bot конфигурации...');
+            this.logDebug('[BotsManager] 🌐 Запрос Auto Bot конфигурации...');
             // Загружаем конфигурацию Auto Bot
             const autoBotResponse = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/auto-bot`);
-            console.log('[BotsManager] 📡 Auto Bot response status:', autoBotResponse.status);
+            this.logDebug('[BotsManager] 📡 Auto Bot response status:', autoBotResponse.status);
             const autoBotData = await autoBotResponse.json();
-            console.log('[BotsManager] 🤖 Auto Bot data:', autoBotData);
+            this.logDebug('[BotsManager] 🤖 Auto Bot data:', autoBotData);
             
-            console.log('[BotsManager] 🌐 Запрос системных настроек...');
+            this.logDebug('[BotsManager] 🌐 Запрос системных настроек...');
             // Загружаем системные настройки
             const systemResponse = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/system-config`);
-            console.log('[BotsManager] 📡 System response status:', systemResponse.status);
+            this.logDebug('[BotsManager] 📡 System response status:', systemResponse.status);
             const systemData = await systemResponse.json();
-            console.log('[BotsManager] ⚙️ System data:', systemData);
+            this.logDebug('[BotsManager] ⚙️ System data:', systemData);
             
             if (autoBotData.success && systemData.success) {
                 this.populateConfigurationForm({
@@ -4213,8 +4247,12 @@ class BotsManager {
     
     initializeGlobalAutoBotToggle() {
         const globalAutoBotToggleEl = document.getElementById('globalAutoBotToggle');
+        console.log('[BotsManager] 🔍 initializeGlobalAutoBotToggle вызван');
+        console.log('[BotsManager] 🔍 Элемент найден:', !!globalAutoBotToggleEl);
+        console.log('[BotsManager] 🔍 data-initialized:', globalAutoBotToggleEl?.getAttribute('data-initialized'));
         
         if (globalAutoBotToggleEl && !globalAutoBotToggleEl.hasAttribute('data-initialized')) {
+            console.log('[BotsManager] 🔧 Устанавливаем обработчик события...');
             globalAutoBotToggleEl.setAttribute('data-initialized', 'true');
             
             globalAutoBotToggleEl.addEventListener('change', async (e) => {
@@ -4232,9 +4270,12 @@ class BotsManager {
                 }
                 
                 try {
+                    const url = `${this.BOTS_SERVICE_URL}/api/bots/auto-bot`;
                     console.log(`[BotsManager] 📡 Отправка запроса на ${isEnabled ? 'включение' : 'выключение'} автобота...`);
+                    console.log(`[BotsManager] 🌐 URL: ${url}`);
+                    console.log(`[BotsManager] 📦 Данные: ${JSON.stringify({ enabled: isEnabled })}`);
                     // Сохраняем изменение через API
-                    const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/auto-bot`, {
+                    const response = await fetch(url, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -4244,6 +4285,8 @@ class BotsManager {
                     console.log('[BotsManager] 📡 Ответ получен:', response.status);
                     
                     const result = await response.json();
+                    console.log('[BotsManager] 📦 Результат от сервера:', result);
+                    console.log('[BotsManager] 📊 Состояние enabled в ответе:', result.config?.enabled);
                     
                     if (result.success) {
                         this.showNotification(
@@ -4256,7 +4299,7 @@ class BotsManager {
                         setTimeout(() => {
                             globalAutoBotToggleEl.removeAttribute('data-user-changed');
                             console.log('[BotsManager] 🔓 Флаг data-user-changed снят после задержки');
-                        }, 5000);  // 5 секунд - достаточно для автообновления
+                        }, 15000);  // 15 секунд - достаточно для автообновления
                         
                         console.log(`[BotsManager] ✅ Auto Bot ${isEnabled ? 'включен' : 'выключен'} и сохранен`);
                 } else {
@@ -4283,7 +4326,7 @@ class BotsManager {
     // ==========================================
     
     async loadAccountInfo() {
-        console.log('[BotsManager] 💰 Загрузка информации о едином торговом счете...');
+        this.logDebug('[BotsManager] 💰 Загрузка информации о едином торговом счете...');
         
         try {
             // Используем тот же эндпоинт, что и страница Позиции
@@ -4301,7 +4344,7 @@ class BotsManager {
                     active_bots: this.activeBots?.length || 0
                 };
                 this.updateAccountDisplay(accountData);
-                console.log('[BotsManager] ✅ Информация о счете загружена:', accountData);
+                this.logDebug('[BotsManager] ✅ Информация о счете загружена:', accountData);
             } else {
                 console.warn('[BotsManager] ⚠️ Нет данных аккаунта в ответе');
                 this.updateAccountDisplay(null);
@@ -5063,7 +5106,7 @@ class BotsManager {
      */
     async loadMatureCoinsInfo() {
         try {
-            const response = await fetch('/api/bots/mature-coins-list');
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/mature-coins-list`);
             const data = await response.json();
             
             if (data.success) {

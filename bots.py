@@ -15,6 +15,8 @@ import json
 import atexit
 import asyncio
 import requests
+import socket
+import psutil
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -30,6 +32,131 @@ except ImportError as e:
 
 # Добавляем текущую директорию в путь
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+def check_and_stop_existing_bots_processes():
+    """
+    Проверяет порт 5001 и останавливает процесс который его занимает.
+    
+    Returns:
+        bool: True если можно продолжать запуск, False если нужно остановиться
+    """
+    try:
+        print("=" * 80)
+        print("🔍 ПРОВЕРКА ПОРТА 5001 (BOTS SERVICE)")
+        print("=" * 80)
+        
+        current_pid = os.getpid()
+        print(f"📍 Текущий PID: {current_pid}")
+        
+        # ГЛАВНАЯ ПРОВЕРКА: Проверяем порт 5001
+        port_occupied = False
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(('127.0.0.1', 5001))
+            sock.close()
+            
+            if result == 0:
+                port_occupied = True
+                print("⚠️  Порт 5001 уже занят!")
+            else:
+                print("✅ Порт 5001 свободен")
+        except Exception as e:
+            print(f"⚠️  Ошибка проверки порта: {e}")
+        
+        # Если порт свободен - сразу выходим
+        if not port_occupied:
+            print("=" * 80)
+            print()
+            return True
+        
+        # Если порт занят - останавливаем процесс
+        if port_occupied:
+            print("\n⚠️  ПОРТ 5001 ЗАНЯТ - ищем процесс который его использует...")
+            
+            # Ищем процесс который слушает порт 5001
+            process_to_stop = None
+            try:
+                for conn in psutil.net_connections(kind='inet'):
+                    if conn.laddr.port == 5001 and conn.status == 'LISTEN':
+                        process_to_stop = conn.pid
+                        break
+                
+                if process_to_stop and process_to_stop != current_pid:
+                    try:
+                        proc = psutil.Process(process_to_stop)
+                        proc_info = proc.as_dict(attrs=['pid', 'name', 'cmdline', 'create_time'])
+                        
+                        print(f"🎯 Найден процесс на порту 5001:")
+                        print(f"   PID: {proc_info['pid']}")
+                        print(f"   Команда: {' '.join(proc_info['cmdline'][:3]) if proc_info['cmdline'] else 'N/A'}...")
+                        print()
+                        
+                        # Останавливаем процесс
+                        print(f"🔧 Останавливаем процесс {process_to_stop}...")
+                        proc.terminate()
+                        
+                        # Ждем до 5 секунд
+                        try:
+                            proc.wait(timeout=5)
+                            print(f"✅ Процесс {process_to_stop} остановлен")
+                        except psutil.TimeoutExpired:
+                            # Принудительная остановка
+                            proc.kill()
+                            proc.wait()
+                            print(f"🔴 Процесс {process_to_stop} принудительно остановлен")
+                        
+                        # Ждем освобождения порта
+                        print("\n⏳ Ожидание освобождения порта 5001...")
+                        for i in range(10):
+                            time.sleep(1)
+                            try:
+                                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                sock.settimeout(1)
+                                result = sock.connect_ex(('127.0.0.1', 5001))
+                                sock.close()
+                                
+                                if result != 0:
+                                    print("✅ Порт 5001 освобожден")
+                                    break
+                            except:
+                                pass
+                            
+                            if i == 9:
+                                print("❌ Порт 5001 все еще занят!")
+                                print("⚠️  Возможно нужно вручную остановить процесс")
+                                print("=" * 80)
+                                return False
+                        
+                    except Exception as e:
+                        print(f"❌ Ошибка остановки процесса {process_to_stop}: {e}")
+                        print("=" * 80)
+                        return False
+                
+                elif not process_to_stop:
+                    print("⚠️  Не удалось найти процесс на порту 5001")
+                    print("=" * 80)
+                    return False
+                        
+            except Exception as e:
+                print(f"⚠️  Ошибка поиска процесса на порту: {e}")
+                print("=" * 80)
+                return False
+            
+            print("=" * 80)
+            print("✅ ПРОВЕРКА ЗАВЕРШЕНА - ПРОДОЛЖАЕМ ЗАПУСК")
+            print("=" * 80)
+            print()
+            return True
+            
+    except Exception as e:
+        print(f"❌ КРИТИЧЕСКАЯ ОШИБКА ПРОВЕРКИ: {e}")
+        import traceback
+        traceback.print_exc()
+        print("⚠️  Продолжаем запуск без проверки...")
+        print("=" * 80)
+        print()
+        return True
 
 # Импорт цветного логирования
 from color_logger import setup_color_logging
@@ -323,8 +450,8 @@ def load_auto_bot_config():
     except Exception as e:
         logger.error(f"[CONFIG] ❌ Ошибка загрузки конфигурации: {e}")
 
-# Загружаем конфигурацию при старте
-load_auto_bot_config()
+# ВАЖНО: load_auto_bot_config() теперь вызывается в if __name__ == '__main__'
+# чтобы check_and_stop_existing_bots_processes() мог вывести свои сообщения первым
 
 def calculate_rsi(prices, period=14):
     """Рассчитывает RSI на основе массива цен (Wilder's RSI алгоритм)"""
@@ -1386,8 +1513,8 @@ def get_effective_signal(coin):
     # Это блокирует Enhanced RSI от переопределения сигнала для незрелых монет
     base_signal = coin.get('signal', 'WAIT')
     if base_signal == 'WAIT':
-        return 'WAIT'
-    
+            return 'WAIT'
+        
     # Проверяем Enhanced RSI сигнал (приоритет только для зрелых монет)
     enhanced_rsi = coin.get('enhanced_rsi', {})
     if enhanced_rsi.get('enabled') and enhanced_rsi.get('enhanced_signal'):
@@ -1435,12 +1562,6 @@ def process_auto_bot_signals(exchange_obj=None):
             if not auto_bot_enabled:
                 logger.info("[AUTO] ⏹️ Auto Bot выключен - пропускаем обработку сигналов")
                 return
-            
-            # ДОПОЛНИТЕЛЬНАЯ ЗАЩИТА: Если автобот каким-то образом включен - принудительно выключаем!
-            logger.error("[AUTO] ❌ КРИТИЧЕСКАЯ ОШИБКА: Автобот включен! Принудительно выключаем!")
-            bots_data['auto_bot_config']['enabled'] = False
-            logger.error("[AUTO] 🔒 Автобот принудительно выключен! Запуск только вручную!")
-            return
             
             max_concurrent = bots_data['auto_bot_config']['max_concurrent']
             current_active = sum(1 for bot in bots_data['bots'].values() 
@@ -1555,7 +1676,7 @@ def process_auto_bot_signals(exchange_obj=None):
                 if symbol in bots_data['bots']:
                     logger.info(f"[AUTO] ⚠️ Бот для {symbol} уже существует - пропускаем")
                     continue
-                
+            
                 # Проверяем, что автобот все еще включен (защита от race condition)
                 auto_bot_enabled = bots_data['auto_bot_config']['enabled']
                 if not auto_bot_enabled:
@@ -1570,19 +1691,19 @@ def process_auto_bot_signals(exchange_obj=None):
                     continue
                 
                 # Создаем бота АТОМАРНО - сразу добавляем в bots_data
-                logger.info(f"[AUTO] 🚀 Создаем бота для {symbol} (RSI: {coin['rsi6h']:.1f}, сигнал: {signal})")
-                
-                # Создаем временную запись бота в bots_data, чтобы предотвратить дублирование
-                temp_bot_data = {
-                    'symbol': symbol,
-                    'status': 'creating',  # Временный статус
-                    'created_at': datetime.now().isoformat(),
-                    'rsi_signal': signal,
-                    'rsi_value': coin['rsi6h']
-                }
-                bots_data['bots'][symbol] = temp_bot_data
-                bot_created = True
-                logger.info(f"[AUTO] ✅ Временная запись бота {symbol} создана в bots_data")
+            logger.info(f"[AUTO] 🚀 Создаем бота для {symbol} (RSI: {coin['rsi6h']:.1f}, сигнал: {signal})")
+            
+            # Создаем временную запись бота в bots_data, чтобы предотвратить дублирование
+            temp_bot_data = {
+                'symbol': symbol,
+                'status': 'creating',  # Временный статус
+                'created_at': datetime.now().isoformat(),
+                'rsi_signal': signal,
+                'rsi_value': coin['rsi6h']
+            }
+            bots_data['bots'][symbol] = temp_bot_data
+            bot_created = True
+            logger.info(f"[AUTO] ✅ Временная запись бота {symbol} создана в bots_data")
             
             # Теперь создаем реального бота (вне блокировки, чтобы не блокировать другие операции)
             if bot_created:
@@ -2013,6 +2134,14 @@ class LocalTradingBot:
         - НЕ открываем LONG если RSI <= 29 И тренд = DOWN
         - NEUTRAL тренд разрешает любые сделки
         """
+        
+        # КРИТИЧЕСКИ ВАЖНО: Если автобот выключен - НЕ ОТКРЫВАЕМ новые позиции!
+        with bots_data_lock:
+            auto_bot_enabled = bots_data['auto_bot_config']['enabled']
+        
+        if not auto_bot_enabled:
+            logger.info(f"[BOT] {self.symbol}: ⏹️ Auto Bot выключен - НЕ открываем новую позицию (RSI={rsi:.1f}, Trend={trend})")
+            return {'action': 'blocked_autobot_disabled', 'reason': 'autobot_off', 'rsi': rsi, 'trend': trend}
         
         # КРИТИЧЕСКАЯ ПРОВЕРКА: Проверяем, нет ли уже позиции на бирже
         try:
@@ -2516,7 +2645,7 @@ class LocalTradingBot:
             if not current_positions or not current_positions.get('success'):
                 logger.error(f"[BOT] {self.symbol}: Не удалось получить позиции для закрытия")
                 return None
-            
+                
             # ✅ НОВАЯ ЛОГИКА: Ищем НАШУ позицию по timestamp
             our_position = None
             for pos in current_positions.get('data', []):
@@ -2540,7 +2669,7 @@ class LocalTradingBot:
                 our_position = pos
                 logger.info(f"[BOT] {self.symbol}: ✅ Найдена НАША позиция (order_id: {self.order_id}, timestamp match)")
                 break
-            
+                    
             if not our_position:
                 logger.warning(f"[BOT] {self.symbol}: ⚠️ НАША позиция {position_side} не найдена для закрытия")
                 logger.warning(f"[BOT] {self.symbol}: Возможно уже закрыта или это была ручная позиция")
@@ -3014,13 +3143,11 @@ def load_bots_state():
                             failed_bots += 1
                             continue
                         
-                        # КРИТИЧЕСКИ ВАЖНО: Проверяем зрелость монеты перед восстановлением
-                        is_mature = check_coin_maturity(symbol)
-                        if not is_mature:
-                            logger.warning(f"[LOAD_STATE] 🚫 {symbol}: Монета НЕ ЗРЕЛАЯ - НЕ восстанавливаем бота!")
-                            logger.warning(f"[LOAD_STATE] 🚫 {symbol}: Бот будет пропущен (требуется полный цикл RSI)")
-                            failed_bots += 1
-                            continue
+                        # ВАЖНО: НЕ проверяем зрелость при восстановлении!
+                        # Причины:
+                        # 1. Биржа еще не инициализирована (нет данных свечей)
+                        # 2. Если бот был сохранен - он уже прошел проверку зрелости при создании
+                        # 3. Проверка зрелости будет выполнена позже при обработке сигналов
                         
                         # Восстанавливаем бота
                         bots_data['bots'][symbol] = bot_data
@@ -4335,11 +4462,11 @@ def auto_bot_worker():
         auto_bot_enabled = bots_data['auto_bot_config']['enabled']
     
     if auto_bot_enabled:
-        logger.error("[AUTO_BOT] ❌ КРИТИЧЕСКАЯ ОШИБКА: Автобот включен при запуске! Принудительно выключаем!")
+        logger.warning("[AUTO_BOT] ⚠️ Автобот включен при запуске! Принудительно выключаем для безопасности...")
         with bots_data_lock:
             bots_data['auto_bot_config']['enabled'] = False
-        logger.error("[AUTO_BOT] 🔒 Автобот принудительно выключен! Запуск только вручную!")
-        return
+            save_auto_bot_config()  # Сохраняем изменение
+        logger.warning("[AUTO_BOT] 🔒 Автобот выключен. Включите его вручную через UI.")
     
     logger.info("[AUTO_BOT] ✅ Система инициализирована, автобот выключен - воркер запущен в режиме ожидания")
     
@@ -4606,11 +4733,12 @@ def init_bot_service():
             auto_bot_config = bots_data['auto_bot_config']
             bots_count = len(bots_data['bots'])
             
-            # ПРИНУДИТЕЛЬНО выключаем автобот при старте системы!
+            # ПРИНУДИТЕЛЬНО выключаем автобот при старте системы для безопасности!
             if auto_bot_enabled:
-                logger.error("[INIT] ❌ КРИТИЧЕСКАЯ ОШИБКА: Автобот включен при старте! Принудительно выключаем!")
+                logger.warning("[INIT] ⚠️ Автобот включен при старте! Принудительно выключаем для безопасности...")
                 bots_data['auto_bot_config']['enabled'] = False
                 auto_bot_enabled = False
+                save_auto_bot_config()  # Сохраняем изменение
         
         # ✅ ИТОГОВАЯ ИНФОРМАЦИЯ О ЗАПУСКЕ
         logger.info("=" * 80)
@@ -4777,14 +4905,14 @@ def create_bot(symbol, config=None, exchange_obj=None):
         # Объединяем базовую конфигурацию с переданной (переданная имеет приоритет)
         full_config = {**base_config, **config}
         config = full_config
-        
-        logger.info(f"[BOT_INIT] Инициализация бота для {symbol}")
-        logger.info(f"[BOT_INIT] 🔍 Детальная отладка конфигурации бота:")
-        logger.info(f"[BOT_INIT] 🔍 {symbol}: config = {config}")
-        logger.info(f"[BOT_INIT] 🔍 {symbol}: volume_mode = {config.get('volume_mode')}")
-        logger.info(f"[BOT_INIT] 🔍 {symbol}: volume_value = {config.get('volume_value')}")
-        logger.info(f"[BOT_INIT] Объем торговли: {config.get('volume_mode')} = {config.get('volume_value')}")
-        logger.info(f"[BOT_INIT] RSI пороги: Long<={config.get('rsi_long_threshold')}, Short>={config.get('rsi_short_threshold')}")
+    
+    logger.info(f"[BOT_INIT] Инициализация бота для {symbol}")
+    logger.info(f"[BOT_INIT] 🔍 Детальная отладка конфигурации бота:")
+    logger.info(f"[BOT_INIT] 🔍 {symbol}: config = {config}")
+    logger.info(f"[BOT_INIT] 🔍 {symbol}: volume_mode = {config.get('volume_mode')}")
+    logger.info(f"[BOT_INIT] 🔍 {symbol}: volume_value = {config.get('volume_value')}")
+    logger.info(f"[BOT_INIT] Объем торговли: {config.get('volume_mode')} = {config.get('volume_value')}")
+    logger.info(f"[BOT_INIT] RSI пороги: Long<={config.get('rsi_long_threshold')}, Short>={config.get('rsi_short_threshold')}")
     
     # Создаем экземпляр торгового бота
     logger.info(f"[BOT_INIT] Создание экземпляра TradingBot для {symbol}...")
@@ -6024,8 +6152,8 @@ def get_mature_coins_list():
         with mature_coins_lock:
             mature_coins_list = list(mature_coins_storage.keys())
         
-        return jsonify({
-            'success': True,
+            return jsonify({
+                'success': True,
             'mature_coins': mature_coins_list,
             'total_count': len(mature_coins_list)
         })
@@ -6346,9 +6474,9 @@ def auto_bot_config():
         
         return jsonify({
             'success': True,
-                'message': 'Конфигурация Auto Bot обновлена и сохранена',
-                'config': bots_data['auto_bot_config'].copy(),
-                'saved_to_file': save_result
+            'message': 'Конфигурация Auto Bot обновлена и сохранена',
+            'config': bots_data['auto_bot_config'].copy(),
+            'saved_to_file': save_result
         })
         
     except Exception as e:
@@ -6431,7 +6559,7 @@ def get_process_state():
                 'mature_coins_storage_size': len(mature_coins_storage),
                 'optimal_ema_count': len(optimal_ema_data)
             }
-        })
+                })
         
     except Exception as e:
         logger.error(f"[ERROR] Ошибка получения состояния процессов: {str(e)}")
@@ -7121,6 +7249,15 @@ def create_demo_history():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
+    # КРИТИЧЕСКИ ВАЖНО: Проверяем и останавливаем старые процессы bots.py САМЫМ ПЕРВЫМ!
+    print()  # Пустая строка для читаемости
+    if not check_and_stop_existing_bots_processes():
+        print("❌ Запуск отменен")
+        sys.exit(0)
+    
+    # Загружаем конфигурацию Auto Bot после проверки процессов
+    load_auto_bot_config()
+    
     print("=" * 60)
     print("INFOBOT - Trading Bots Service")
     print("=" * 60)
