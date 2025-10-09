@@ -1,13 +1,13 @@
 {
   "1000000BABYDOGE": {
-    "ema_short_period": 147,
+    "ema_short_period": 151,
     "ema_long_period": 280,
     "accuracy": 99.06444906444906,
     "total_signals": 962,
     "correct_signals": 953,
-    "long_signals": 443,
-    "short_signals": 519,
-    "last_updated": "2025-10-10T02:26:50.469273",
+    "long_signals": 440,
+    "short_signals": 522,
+    "last_updated": "2025-10-10T02:29:37.825177",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -19,7 +19,7 @@
     "correct_signals": 1112,
     "long_signals": 536,
     "short_signals": 583,
-    "last_updated": "2025-10-10T02:26:52.459357",
+    "last_updated": "2025-10-10T02:29:39.829566",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -31,7 +31,7 @@
     "correct_signals": 1059,
     "long_signals": 505,
     "short_signals": 561,
-    "last_updated": "2025-10-10T02:26:54.292545",
+    "last_updated": "2025-10-10T02:29:41.738868",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -43,7 +43,7 @@
     "correct_signals": 956,
     "long_signals": 372,
     "short_signals": 591,
-    "last_updated": "2025-10-10T02:26:56.308121",
+    "last_updated": "2025-10-10T02:29:43.657698",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -67,7 +67,7 @@
     "correct_signals": 918,
     "long_signals": 450,
     "short_signals": 475,
-    "last_updated": "2025-10-10T02:26:58.420980",
+    "last_updated": "2025-10-10T02:29:45.852892",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -91,19 +91,19 @@
     "correct_signals": 883,
     "long_signals": 417,
     "short_signals": 474,
-    "last_updated": "2025-10-10T02:27:00.619797",
+    "last_updated": "2025-10-10T02:29:47.816959",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
   "10000SATS": {
     "ema_short_period": 6,
-    "ema_long_period": 15,
+    "ema_long_period": 10,
     "accuracy": 100.0,
-    "total_signals": 1,
-    "correct_signals": 1,
-    "long_signals": 1,
-    "short_signals": 0,
-    "last_updated": "2025-10-10T02:27:02.481384",
+    "total_signals": 4,
+    "correct_signals": 4,
+    "long_signals": 2,
+    "short_signals": 2,
+    "last_updated": "2025-10-10T02:29:49.869370",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -115,7 +115,7 @@
     "correct_signals": 1005,
     "long_signals": 413,
     "short_signals": 600,
-    "last_updated": "2025-10-10T02:27:04.355477",
+    "last_updated": "2025-10-10T02:29:51.765887",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -127,7 +127,7 @@
     "correct_signals": 930,
     "long_signals": 410,
     "short_signals": 524,
-    "last_updated": "2025-10-10T02:27:06.237211",
+    "last_updated": "2025-10-10T02:29:53.615852",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -139,7 +139,7 @@
     "correct_signals": 946,
     "long_signals": 243,
     "short_signals": 706,
-    "last_updated": "2025-10-10T02:27:08.432671",
+    "last_updated": "2025-10-10T02:29:55.503027",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -151,7 +151,7 @@
     "correct_signals": 1037,
     "long_signals": 498,
     "short_signals": 545,
-    "last_updated": "2025-10-10T02:27:10.282882",
+    "last_updated": "2025-10-10T02:29:57.365972",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -163,7 +163,7 @@
     "correct_signals": 990,
     "long_signals": 372,
     "short_signals": 626,
-    "last_updated": "2025-10-10T02:27:12.282689",
+    "last_updated": "2025-10-10T02:29:59.287763",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -175,7 +175,7 @@
     "correct_signals": 1055,
     "long_signals": 409,
     "short_signals": 658,
-    "last_updated": "2025-10-10T02:27:14.069838",
+    "last_updated": "2025-10-10T02:30:01.148231",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -187,7 +187,7 @@
     "correct_signals": 1047,
     "long_signals": 407,
     "short_signals": 645,
-    "last_updated": "2025-10-10T02:27:15.866938",
+    "last_updated": "2025-10-10T02:30:03.022207",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -199,7 +199,7 @@
     "correct_signals": 1061,
     "long_signals": 461,
     "short_signals": 605,
-    "last_updated": "2025-10-10T02:14:15.290755",
+    "last_updated": "2025-10-10T02:30:04.879177",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -211,7 +211,7 @@
     "correct_signals": 1126,
     "long_signals": 481,
     "short_signals": 651,
-    "last_updated": "2025-10-10T02:14:17.062558",
+    "last_updated": "2025-10-10T02:30:06.693358",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -223,7 +223,7 @@
     "correct_signals": 41,
     "long_signals": 13,
     "short_signals": 28,
-    "last_updated": "2025-10-10T02:14:22.644890",
+    "last_updated": "2025-10-10T02:30:12.320417",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -235,7 +235,7 @@
     "correct_signals": 897,
     "long_signals": 510,
     "short_signals": 391,
-    "last_updated": "2025-10-10T02:14:24.651432",
+    "last_updated": "2025-10-10T02:30:14.448798",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -247,7 +247,7 @@
     "correct_signals": 897,
     "long_signals": 318,
     "short_signals": 585,
-    "last_updated": "2025-10-10T02:14:26.433227",
+    "last_updated": "2025-10-10T02:30:16.236390",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -259,7 +259,7 @@
     "correct_signals": 885,
     "long_signals": 372,
     "short_signals": 519,
-    "last_updated": "2025-10-10T02:14:28.255666",
+    "last_updated": "2025-10-10T02:30:18.212077",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -271,7 +271,7 @@
     "correct_signals": 1030,
     "long_signals": 381,
     "short_signals": 658,
-    "last_updated": "2025-10-10T02:14:30.077791",
+    "last_updated": "2025-10-10T02:30:19.992203",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -283,7 +283,7 @@
     "correct_signals": 1048,
     "long_signals": 426,
     "short_signals": 629,
-    "last_updated": "2025-10-10T02:14:32.103472",
+    "last_updated": "2025-10-10T02:30:21.966660",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -295,7 +295,7 @@
     "correct_signals": 1288,
     "long_signals": 303,
     "short_signals": 990,
-    "last_updated": "2025-10-10T02:14:46.870081",
+    "last_updated": "2025-10-10T02:30:36.506651",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -307,7 +307,7 @@
     "correct_signals": 1738,
     "long_signals": 887,
     "short_signals": 863,
-    "last_updated": "2025-10-10T02:14:53.035129",
+    "last_updated": "2025-10-10T02:30:42.485494",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -319,7 +319,7 @@
     "correct_signals": 811,
     "long_signals": 371,
     "short_signals": 445,
-    "last_updated": "2025-10-10T02:14:54.906632",
+    "last_updated": "2025-10-10T02:30:44.341845",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -331,7 +331,7 @@
     "correct_signals": 966,
     "long_signals": 438,
     "short_signals": 532,
-    "last_updated": "2025-10-10T02:14:56.989385",
+    "last_updated": "2025-10-10T02:30:46.373320",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -343,7 +343,7 @@
     "correct_signals": 1113,
     "long_signals": 403,
     "short_signals": 719,
-    "last_updated": "2025-10-10T02:14:59.030694",
+    "last_updated": "2025-10-10T02:30:48.231005",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -355,7 +355,7 @@
     "correct_signals": 1036,
     "long_signals": 386,
     "short_signals": 659,
-    "last_updated": "2025-10-10T02:15:01.100525",
+    "last_updated": "2025-10-10T02:30:50.091426",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -367,7 +367,7 @@
     "correct_signals": 999,
     "long_signals": 303,
     "short_signals": 704,
-    "last_updated": "2025-10-10T02:15:03.984509",
+    "last_updated": "2025-10-10T02:30:51.941278",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -379,7 +379,7 @@
     "correct_signals": 998,
     "long_signals": 407,
     "short_signals": 600,
-    "last_updated": "2025-10-10T02:15:06.383483",
+    "last_updated": "2025-10-10T02:30:53.805084",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -391,7 +391,7 @@
     "correct_signals": 1061,
     "long_signals": 561,
     "short_signals": 508,
-    "last_updated": "2025-10-10T02:15:08.785537",
+    "last_updated": "2025-10-10T02:30:55.674291",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -403,7 +403,7 @@
     "correct_signals": 861,
     "long_signals": 297,
     "short_signals": 568,
-    "last_updated": "2025-10-10T02:15:12.306037",
+    "last_updated": "2025-10-10T02:30:57.533064",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -415,7 +415,7 @@
     "correct_signals": 1041,
     "long_signals": 526,
     "short_signals": 520,
-    "last_updated": "2025-10-10T02:15:16.087871",
+    "last_updated": "2025-10-10T02:31:00.086530",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -427,7 +427,7 @@
     "correct_signals": 997,
     "long_signals": 407,
     "short_signals": 599,
-    "last_updated": "2025-10-10T02:15:19.620720",
+    "last_updated": "2025-10-10T02:31:03.674017",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -439,7 +439,7 @@
     "correct_signals": 872,
     "long_signals": 335,
     "short_signals": 541,
-    "last_updated": "2025-10-10T02:15:21.612769",
+    "last_updated": "2025-10-10T02:31:07.219379",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -451,7 +451,7 @@
     "correct_signals": 853,
     "long_signals": 244,
     "short_signals": 613,
-    "last_updated": "2025-10-10T02:15:23.397685",
+    "last_updated": "2025-10-10T02:31:09.368577",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -463,7 +463,7 @@
     "correct_signals": 1178,
     "long_signals": 484,
     "short_signals": 702,
-    "last_updated": "2025-10-10T02:15:27.018094",
+    "last_updated": "2025-10-10T02:31:13.156422",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -475,19 +475,19 @@
     "correct_signals": 1073,
     "long_signals": 338,
     "short_signals": 745,
-    "last_updated": "2025-10-10T02:15:28.968117",
+    "last_updated": "2025-10-10T02:31:15.293583",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
   "AI16Z": {
-    "ema_short_period": 153,
+    "ema_short_period": 155,
     "ema_long_period": 300,
     "accuracy": 99.38271604938271,
     "total_signals": 972,
     "correct_signals": 966,
     "long_signals": 334,
     "short_signals": 638,
-    "last_updated": "2025-10-10T02:15:31.094881",
+    "last_updated": "2025-10-10T02:31:17.422470",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -499,7 +499,7 @@
     "correct_signals": 1629,
     "long_signals": 987,
     "short_signals": 652,
-    "last_updated": "2025-10-10T02:16:01.903827",
+    "last_updated": "2025-10-10T02:31:51.833591",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -6787,19 +6787,19 @@
     "correct_signals": 1518,
     "long_signals": 963,
     "short_signals": 562,
-    "last_updated": "2025-10-10T02:26:48.334728",
+    "last_updated": "2025-10-10T02:29:36.029817",
     "candles_analyzed": 3828,
     "analysis_method": "trend_confirmation"
   },
   "2Z": {
-    "ema_short_period": 87,
-    "ema_long_period": 205,
+    "ema_short_period": 137,
+    "ema_long_period": 150,
     "accuracy": 100.0,
     "total_signals": 68,
     "correct_signals": 68,
     "long_signals": 0,
     "short_signals": 68,
-    "last_updated": "2025-10-10T02:14:41.316705",
+    "last_updated": "2025-10-10T02:30:31.179952",
     "candles_analyzed": 465,
     "analysis_method": "trend_confirmation"
   },
@@ -6811,7 +6811,7 @@
     "correct_signals": 1160,
     "long_signals": 537,
     "short_signals": 628,
-    "last_updated": "2025-10-10T02:15:57.456195",
+    "last_updated": "2025-10-10T02:31:46.674554",
     "candles_analyzed": 3828,
     "analysis_method": "trend_confirmation"
   },
