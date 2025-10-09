@@ -3840,6 +3840,18 @@ class BotsManager {
             console.log('[BotsManager] 🕐 RSI временной фильтр (свечей):', rsiTimeFilterCandlesEl.value);
         }
         
+        const rsiTimeFilterUpperEl = document.getElementById('rsiTimeFilterUpper');
+        if (rsiTimeFilterUpperEl) {
+            rsiTimeFilterUpperEl.value = autoBotConfig.rsi_time_filter_upper || 65;
+            console.log('[BotsManager] 📈 RSI временной фильтр (верхняя граница):', rsiTimeFilterUpperEl.value);
+        }
+        
+        const rsiTimeFilterLowerEl = document.getElementById('rsiTimeFilterLower');
+        if (rsiTimeFilterLowerEl) {
+            rsiTimeFilterLowerEl.value = autoBotConfig.rsi_time_filter_lower || 35;
+            console.log('[BotsManager] 📉 RSI временной фильтр (нижняя граница):', rsiTimeFilterLowerEl.value);
+        }
+        
         console.log('[BotsManager] ✅ Форма заполнена данными из API');
     }
     
@@ -4000,6 +4012,8 @@ class BotsManager {
             // RSI временной фильтр
             rsi_time_filter_enabled: document.getElementById('rsiTimeFilterEnabled')?.checked !== false,
             rsi_time_filter_candles: parseInt(document.getElementById('rsiTimeFilterCandles')?.value) || 8,
+            rsi_time_filter_upper: parseInt(document.getElementById('rsiTimeFilterUpper')?.value) || 65,
+            rsi_time_filter_lower: parseInt(document.getElementById('rsiTimeFilterLower')?.value) || 35,
             trading_enabled: document.getElementById('tradingEnabled')?.checked !== false,
             use_test_server: document.getElementById('useTestServer')?.checked || false,
             max_risk_per_trade: parseFloat(document.getElementById('maxRiskPerTrade')?.value) || 2.0,

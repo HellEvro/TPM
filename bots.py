@@ -1161,9 +1161,13 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
 
 def check_rsi_time_filter(candles, rsi, signal):
     """
-    Проверяет временной фильтр для RSI сигналов.
-    Вход в сделку разрешен только если прошло минимум N свечей (настраивается)
-    с момента последнего достижения экстремальных значений RSI.
+    Проверяет сложный временной фильтр для RSI сигналов.
+    
+    СЛОЖНАЯ ЛОГИКА:
+    1. Найти последнюю свечу где RSI был в экстремальной зоне (≥71 для SHORT, ≤29 для LONG)
+    2. Отсчитать N свечей после неё (из конфига)
+    3. Проверить ВСЕ N свечей - должны быть в разрешенной зоне (≥65 для SHORT, ≤35 для LONG)
+    4. Если хотя бы одна свеча не в зоне → искать заново
     
     Args:
         candles: Список свечей
@@ -1178,49 +1182,131 @@ def check_rsi_time_filter(candles, rsi, signal):
         with bots_data_lock:
             rsi_time_filter_enabled = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_enabled', True)
             rsi_time_filter_candles = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_candles', 8)
-            rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', 29)
-            rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', 71)
+            rsi_time_filter_upper = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_upper', 65)  # Граница для SHORT
+            rsi_time_filter_lower = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_lower', 35)  # Граница для LONG
+            rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', 29)  # Экстремум для LONG
+            rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', 71)  # Экстремум для SHORT
         
         # Если фильтр отключен - разрешаем сделку
         if not rsi_time_filter_enabled:
             return {'allowed': True, 'reason': 'RSI временной фильтр отключен', 'last_extreme_candles_ago': None}
         
-        if len(candles) < 15:
+        if len(candles) < 50:  # Нужно больше свечей для сложного анализа
             return {'allowed': False, 'reason': 'Недостаточно свечей для анализа', 'last_extreme_candles_ago': None}
         
         # Рассчитываем историю RSI
         closes = [candle['close'] for candle in candles]
         rsi_history = calculate_rsi_history(closes, 14)
         
-        min_rsi_history = max(rsi_time_filter_candles, 8)  # Минимум 8 или настроенное значение
+        min_rsi_history = max(rsi_time_filter_candles * 2 + 14, 30)  # Минимум для анализа
         if not rsi_history or len(rsi_history) < min_rsi_history:
             return {'allowed': False, 'reason': f'Недостаточно RSI истории (требуется {min_rsi_history})', 'last_extreme_candles_ago': None}
         
-        # Ищем последнее достижение экстремальных значений (исключая последнюю свечу)
-        last_extreme_candles_ago = None
-        
-        if signal == 'ENTER_LONG':
-            # Для LONG ищем последний раз, когда RSI был <= порога LONG
-            for i in range(len(rsi_history) - 2, -1, -1):  # Исключаем последнюю свечу
-                if rsi_history[i] <= rsi_long_threshold:
-                    last_extreme_candles_ago = len(rsi_history) - 1 - i
-                    break
-        elif signal == 'ENTER_SHORT':
-            # Для SHORT ищем последний раз, когда RSI был >= порога SHORT
-            for i in range(len(rsi_history) - 2, -1, -1):  # Исключаем последнюю свечу
+        if signal == 'ENTER_SHORT':
+            # ЛОГИКА ДЛЯ SHORT:
+            # 1. Найти последнюю свечу где RSI был >= 71
+            # 2. Отсчитать 8 свечей после неё
+            # 3. Проверить что ВСЕ 8 свечей были >= 65
+            
+            # Ищем последнюю свечу где RSI был >= 71 (исключая текущую)
+            last_extreme_index = None
+            for i in range(len(rsi_history) - 2, -1, -1):  # Исключаем текущую свечу
                 if rsi_history[i] >= rsi_short_threshold:
-                    last_extreme_candles_ago = len(rsi_history) - 1 - i
+                    last_extreme_index = i
                     break
+            
+            if last_extreme_index is None:
+                # Не найдено экстремальных значений - разрешаем
+                return {
+                    'allowed': True, 
+                    'reason': f'Разрешено: не найдено свечей с RSI >= {rsi_short_threshold} в истории', 
+                    'last_extreme_candles_ago': len(rsi_history)
+                }
+            
+            # Проверяем, что после экстремума прошло достаточно свечей
+            candles_since_extreme = len(rsi_history) - 1 - last_extreme_index
+            
+            if candles_since_extreme < rsi_time_filter_candles:
+                # Не прошло достаточно времени
+                remaining = rsi_time_filter_candles - candles_since_extreme
+                return {
+                    'allowed': False, 
+                    'reason': f'Блокировка: прошло только {candles_since_extreme} свечей с последнего RSI >= {rsi_short_threshold} (требуется {rsi_time_filter_candles}, осталось {remaining})', 
+                    'last_extreme_candles_ago': candles_since_extreme
+                }
+            
+            # Проверяем последние N свечей на соответствие критерию (>= 65)
+            recent_candles = rsi_history[-(candles_since_extreme):]
+            valid_candles = sum(1 for rsi_val in recent_candles if rsi_val >= rsi_time_filter_upper)
+            
+            if valid_candles >= rsi_time_filter_candles:
+                # Все N свечей соответствуют критерию - разрешаем
+                return {
+                    'allowed': True, 
+                    'reason': f'Разрешено: прошло {candles_since_extreme} свечей с RSI >= {rsi_short_threshold}, последние {rsi_time_filter_candles} свечей были >= {rsi_time_filter_upper}', 
+                    'last_extreme_candles_ago': candles_since_extreme
+                }
+            else:
+                # Не все свечи соответствуют - блокируем
+                return {
+                    'allowed': False, 
+                    'reason': f'Блокировка: в последних {rsi_time_filter_candles} свечах только {valid_candles}/{rsi_time_filter_candles} были >= {rsi_time_filter_upper}', 
+                    'last_extreme_candles_ago': candles_since_extreme
+                }
+                
+        elif signal == 'ENTER_LONG':
+            # ЛОГИКА ДЛЯ LONG:
+            # 1. Найти последнюю свечу где RSI был <= 29
+            # 2. Отсчитать 8 свечей после неё
+            # 3. Проверить что ВСЕ 8 свечей были <= 35
+            
+            # Ищем последнюю свечу где RSI был <= 29 (исключая текущую)
+            last_extreme_index = None
+            for i in range(len(rsi_history) - 2, -1, -1):  # Исключаем текущую свечу
+                if rsi_history[i] <= rsi_long_threshold:
+                    last_extreme_index = i
+                    break
+            
+            if last_extreme_index is None:
+                # Не найдено экстремальных значений - разрешаем
+                return {
+                    'allowed': True, 
+                    'reason': f'Разрешено: не найдено свечей с RSI <= {rsi_long_threshold} в истории', 
+                    'last_extreme_candles_ago': len(rsi_history)
+                }
+            
+            # Проверяем, что после экстремума прошло достаточно свечей
+            candles_since_extreme = len(rsi_history) - 1 - last_extreme_index
+            
+            if candles_since_extreme < rsi_time_filter_candles:
+                # Не прошло достаточно времени
+                remaining = rsi_time_filter_candles - candles_since_extreme
+                return {
+                    'allowed': False, 
+                    'reason': f'Блокировка: прошло только {candles_since_extreme} свечей с последнего RSI <= {rsi_long_threshold} (требуется {rsi_time_filter_candles}, осталось {remaining})', 
+                    'last_extreme_candles_ago': candles_since_extreme
+                }
+            
+            # Проверяем последние N свечей на соответствие критерию (<= 35)
+            recent_candles = rsi_history[-(candles_since_extreme):]
+            valid_candles = sum(1 for rsi_val in recent_candles if rsi_val <= rsi_time_filter_lower)
+            
+            if valid_candles >= rsi_time_filter_candles:
+                # Все N свечей соответствуют критерию - разрешаем
+                return {
+                    'allowed': True, 
+                    'reason': f'Разрешено: прошло {candles_since_extreme} свечей с RSI <= {rsi_long_threshold}, последние {rsi_time_filter_candles} свечей были <= {rsi_time_filter_lower}', 
+                    'last_extreme_candles_ago': candles_since_extreme
+                }
+            else:
+                # Не все свечи соответствуют - блокируем
+                return {
+                    'allowed': False, 
+                    'reason': f'Блокировка: в последних {rsi_time_filter_candles} свечах только {valid_candles}/{rsi_time_filter_candles} были <= {rsi_time_filter_lower}', 
+                    'last_extreme_candles_ago': candles_since_extreme
+                }
         
-        # Если экстремальное значение не найдено, разрешаем сделку
-        if last_extreme_candles_ago is None:
-            return {'allowed': True, 'reason': 'Экстремальные значения RSI не найдены в истории', 'last_extreme_candles_ago': None}
-        
-        # Проверяем, прошло ли минимум требуемое количество свечей
-        if last_extreme_candles_ago >= rsi_time_filter_candles:
-            return {'allowed': True, 'reason': f'Прошло {last_extreme_candles_ago} свечей с последнего экстремума (требуется {rsi_time_filter_candles})', 'last_extreme_candles_ago': last_extreme_candles_ago}
-        else:
-            return {'allowed': False, 'reason': f'Прошло только {last_extreme_candles_ago} свечей с последнего экстремума (требуется {rsi_time_filter_candles})', 'last_extreme_candles_ago': last_extreme_candles_ago}
+        return {'allowed': True, 'reason': 'Неизвестный сигнал', 'last_extreme_candles_ago': None}
     
     except Exception as e:
         logger.error(f"[RSI_TIME_FILTER] Ошибка проверки временного фильтра: {e}")
@@ -1289,6 +1375,9 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                 'reason': time_filter_result['reason'],
                 'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago')
             }
+            # ОТЛАДКА: Логируем результат временного фильтра для LONG
+            if symbol in ['BAT']:  # Только для BAT для отладки
+                logger.info(f"[DEBUG_TIME_FILTER] {symbol}: LONG - allowed={time_filter_result['allowed']}, reason='{time_filter_result['reason']}', last_extreme={time_filter_result.get('last_extreme_candles_ago')}")
         elif rsi >= RSI_OVERBOUGHT:
             time_filter_result = check_rsi_time_filter(candles, rsi, 'ENTER_SHORT')
             time_filter_info = {
@@ -1296,6 +1385,9 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                 'reason': time_filter_result['reason'],
                 'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago')
             }
+            # ОТЛАДКА: Логируем результат временного фильтра для SHORT
+            if symbol in ['BAT']:  # Только для BAT для отладки
+                logger.info(f"[DEBUG_TIME_FILTER] {symbol}: SHORT - allowed={time_filter_result['allowed']}, reason='{time_filter_result['reason']}', last_extreme={time_filter_result.get('last_extreme_candles_ago')}")
         
         # Логика с опциональным учетом тренда
         # Получаем настройки фильтров по тренду (по умолчанию включены)
@@ -1557,7 +1649,7 @@ def get_effective_signal(coin):
         avoid_up_trend = auto_config.get('avoid_up_trend', True)
         rsi_long_threshold = auto_config.get('rsi_long_threshold', 29)
         rsi_short_threshold = auto_config.get('rsi_short_threshold', 71)
-    
+        
     # Получаем данные монеты
     rsi = coin.get('rsi6h', 50)
     trend = coin.get('trend', coin.get('trend6h', 'NEUTRAL'))
@@ -1784,15 +1876,15 @@ def process_auto_bot_signals(exchange_obj=None):
                         if symbol in bots_data['bots'] and bots_data['bots'][symbol].get('status') == 'creating':
                             del bots_data['bots'][symbol]
                             logger.info(f"[AUTO] 🧹 Удалена временная запись бота {symbol} из-за ошибки создания")
-                    
-                    # Логируем неудачную попытку создания
-                    log_bot_signal(
-                        symbol=symbol,
-                        signal=signal,
-                        rsi_data=coin,
-                        decision='bot_creation_failed',
+                
+                # Логируем неудачную попытку создания
+                log_bot_signal(
+                    symbol=symbol,
+                    signal=signal,
+                    rsi_data=coin,
+                    decision='bot_creation_failed',
                         reason=f'Ошибка: {str(create_error)}'
-                    )
+                )
         
         logger.info(f"[AUTO] 📈 Создано новых ботов: {created_bots}")
         
@@ -1814,7 +1906,7 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
     if not system_initialized:
         logger.warning("[BOT_SIGNALS] ⏳ Система еще не инициализирована - пропускаем обработку")
         return
-    
+        
     # ВАЖНО: Проверяем состояние автобота для логирования
     with bots_data_lock:
         auto_bot_enabled = bots_data['auto_bot_config']['enabled']
@@ -1827,7 +1919,7 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
         logger.info(f"[BOT_SIGNALS] ⚙️ Auto Bot выключен, но обрабатываем {existing_bots_count} существующих ботов (управление позициями)")
     elif not auto_bot_enabled and existing_bots_count == 0:
         # Если автобот выключен И нет ботов - пропускаем
-        return
+                return
     try:
         with bots_data_lock:
             # Фильтруем только активных ботов (исключаем IDLE и PAUSED)
@@ -1855,9 +1947,9 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                 if not rsi_data:
                     logger.info(f"[BOT_SIGNALS] ❌ {symbol}: RSI данные не найдены")
                     continue
-                    
+                
                 logger.info(f"[BOT_SIGNALS] ✅ {symbol}: RSI={rsi_data.get('rsi6h')}, Trend={rsi_data.get('trend6h')}, Signal={rsi_data.get('signal')}")
-                    
+                
                 # Обрабатываем торговые сигналы через метод update с внешними сигналами
                 external_signal = rsi_data.get('signal')
                 external_trend = rsi_data.get('trend6h')
@@ -4036,34 +4128,34 @@ def check_trading_rules_activation():
                         logger.info(f"[TRADING_RULES] ⏭️ {symbol}: Пропускаем создание бота - есть позиция на бирже")
                         continue
                     
-                # Создаем бота для этой монеты, если его еще нет
+                    # Создаем бота для этой монеты, если его еще нет
                 if symbol not in bots_data['bots']:
                     # КРИТИЧЕСКИ ВАЖНО: Блокируем обработку этой монеты чтобы избежать race conditions
                     coin_lock = get_coin_processing_lock(symbol)
                     with coin_lock:
                         # Двойная проверка после получения блокировки
                         if symbol not in bots_data['bots']:
-                                try:
-                                    # Получаем конфигурацию автобота
-                                    with bots_data_lock:
-                                        auto_bot_config = bots_data.get('auto_bot_config', {})
+                            try:
+                                # Получаем конфигурацию автобота
+                                with bots_data_lock:
+                                    auto_bot_config = bots_data.get('auto_bot_config', {})
                                 
-                                    # Создаем бота с базовой конфигурацией
-                                    bot_config = {
-                                        'symbol': symbol,
-                                        'status': 'running',
-                                        'volume_mode': 'usdt',
-                                        'volume_value': auto_bot_config.get('default_position_size', 20.0),
-                                        'created_at': datetime.now().isoformat(),
-                                        'last_signal_time': None
-                                    }
-                                    
-                                    bots_data['bots'][symbol] = bot_config
-                                    logger.info(f"[TRADING_RULES] ✅ Создан бот для {symbol}")
-                                    activated_count += 1
-                                    
-                                except Exception as e:
-                                    logger.error(f"[TRADING_RULES] ❌ Ошибка создания бота для {symbol}: {e}")
+                                # Создаем бота с базовой конфигурацией
+                                bot_config = {
+                                    'symbol': symbol,
+                                    'status': 'running',
+                                    'volume_mode': 'usdt',
+                                    'volume_value': auto_bot_config.get('default_position_size', 20.0),
+                                    'created_at': datetime.now().isoformat(),
+                                    'last_signal_time': None
+                                }
+                                
+                                bots_data['bots'][symbol] = bot_config
+                                logger.info(f"[TRADING_RULES] ✅ Создан бот для {symbol}")
+                                activated_count += 1
+                                
+                            except Exception as e:
+                                logger.error(f"[TRADING_RULES] ❌ Ошибка создания бота для {symbol}: {e}")
                         else:
                             logger.debug(f"[TRADING_RULES] ⏳ Бот для {symbol} уже существует")
         
@@ -4683,9 +4775,11 @@ def init_bot_service():
         load_bots_state()
         
         
-        # 5. Загружаем свежие RSI данные для всех монет
-        logger.info("[INIT] 🔄 Загружаем свежие RSI данные для всех монет...")
-        load_all_coins_rsi()
+        # 5. Запускаем загрузку RSI данных в отдельном потоке (не блокируем инициализацию!)
+        logger.info("[INIT] 🔄 Запускаем загрузку RSI данных в фоновом режиме...")
+        rsi_load_thread = threading.Thread(target=load_all_coins_rsi, daemon=True)
+        rsi_load_thread.start()
+        logger.info("[INIT] ✅ Загрузка RSI запущена в фоновом потоке")
         
         update_process_state('smart_rsi_manager', {
             'last_update': datetime.now().isoformat(),
@@ -4804,15 +4898,15 @@ def init_bot_service():
         # КРИТИЧЕСКИ ВАЖНО: Проверяем Auto Bot при старте - он ДОЛЖЕН быть выключен!
         with bots_data_lock:
             auto_bot_enabled = bots_data['auto_bot_config']['enabled']
-            auto_bot_config = bots_data['auto_bot_config']
-            bots_count = len(bots_data['bots'])
-            
-            # ПРИНУДИТЕЛЬНО выключаем автобот при старте системы для безопасности!
-            if auto_bot_enabled:
-                logger.warning("[INIT] ⚠️ Автобот включен при старте! Принудительно выключаем для безопасности...")
-                bots_data['auto_bot_config']['enabled'] = False
-                auto_bot_enabled = False
-                save_auto_bot_config()  # Сохраняем изменение
+        auto_bot_config = bots_data['auto_bot_config']
+        bots_count = len(bots_data['bots'])
+        
+        # ПРИНУДИТЕЛЬНО выключаем автобот при старте системы для безопасности!
+        if auto_bot_enabled:
+            logger.warning("[INIT] ⚠️ Автобот включен при старте! Принудительно выключаем для безопасности...")
+            bots_data['auto_bot_config']['enabled'] = False
+            auto_bot_enabled = False
+            save_auto_bot_config()  # Сохраняем изменение
         
         # ✅ ИТОГОВАЯ ИНФОРМАЦИЯ О ЗАПУСКЕ
         logger.info("=" * 80)

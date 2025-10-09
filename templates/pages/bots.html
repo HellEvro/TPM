@@ -852,6 +852,34 @@
                             </div>
                             <small class="config-help" data-translate="rsi_time_filter_candles_help">8 свечей = 2 суток на 6H таймфрейме. 0 = отключить фильтр. Диапазон: 0-24 свечей (0-6 суток)</small>
                         </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">📈</span>
+                                <span class="label-text" data-translate="rsi_time_filter_upper_label">Верхняя граница фильтра:</span>
+                            </label>
+                            <div class="config-input-with-unit">
+                                <input type="number" id="rsiTimeFilterUpper" class="config-input" 
+                                       min="50" max="100" step="1" value="65"
+                                       placeholder="65">
+                                <span class="input-unit">RSI</span>
+                            </div>
+                            <small class="config-help" data-translate="rsi_time_filter_upper_help">Проверяет что ВСЕ N свечей после экстремума были >= этого значения для разрешения SHORT</small>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">📉</span>
+                                <span class="label-text" data-translate="rsi_time_filter_lower_label">Нижняя граница фильтра:</span>
+                            </label>
+                            <div class="config-input-with-unit">
+                                <input type="number" id="rsiTimeFilterLower" class="config-input" 
+                                       min="0" max="50" step="1" value="35"
+                                       placeholder="35">
+                                <span class="input-unit">RSI</span>
+                            </div>
+                            <small class="config-help" data-translate="rsi_time_filter_lower_help">Проверяет что ВСЕ N свечей после экстремума были <= этого значения для разрешения LONG</small>
+                        </div>
                     </div>
                 </div>
 
