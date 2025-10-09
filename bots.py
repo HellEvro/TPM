@@ -1097,22 +1097,11 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # Bybit отправляет свечи в правильном порядке для RSI (от старой к новой)
         closes = [candle['close'] for candle in candles]
         
-        # Отладка для 10000WEN
-        if symbol == "10000WEN":
-            logger.info(f"[DEBUG] {symbol} - Количество свечей: {len(candles)}")
-            logger.info(f"[DEBUG] {symbol} - Первые 5 цен: {closes[:5]}")
-            logger.info(f"[DEBUG] {symbol} - Последние 5 цен: {closes[-5:]}")
-            logger.info(f"[DEBUG] {symbol} - Текущая цена (последняя): {closes[-1]}")
-        
         rsi = calculate_rsi(closes, 14)
         
         if rsi is None:
             logger.warning(f"[WARNING] Не удалось рассчитать RSI для {symbol}")
             return None
-        
-        # Отладка результата для 10000WEN
-        if symbol == "10000WEN":
-            logger.info(f"[DEBUG] {symbol} - Рассчитанный RSI: {rsi}")
         
         # Получаем полный анализ тренда 6H
         trend_analysis = analyze_trend_6h(symbol, exchange_obj=exchange_obj)

@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 import logging
 
+logger = logging.getLogger(__name__)
+
 # Глобальная настройка пула соединений для всех HTTP запросов
 def setup_global_connection_pool():
     """Настраивает глобальный пул соединений для всех HTTP запросов"""
@@ -508,7 +510,7 @@ class BybitExchange(BaseExchange):
     def get_all_pairs(self):
         """Получение списка всех доступных ессрочных фьючерсов"""
         try:
-            print("[BYBIT] Запрос списка всех торговых пар...")
+            logger.info("[BYBIT] Запрос списка всех торговых пар...")
             
             response = self.client.get_instruments_info(
                 category="linear",
@@ -518,21 +520,21 @@ class BybitExchange(BaseExchange):
             
             if response and response.get('retCode') == 0 and response['result']['list']:
                 all_instruments = response['result']['list']
-                print(f"[BYBIT] Получено {len(all_instruments)} инструментов")
+                logger.info(f"[BYBIT] Получено {len(all_instruments)} инструментов")
                 
                 # Фильтруем только бессрочные контракты (USDT)
                 usdt_pairs = [
                     item for item in all_instruments
                     if item['symbol'].endswith('USDT')
                 ]
-                print(f"[BYBIT] Найдено {len(usdt_pairs)} USDT пар")
+                logger.info(f"[BYBIT] Найдено {len(usdt_pairs)} USDT пар")
                 
                 # Дополнительная фильтрация по статусу
                 trading_pairs = [
                     item for item in usdt_pairs 
                     if item.get('status') == 'Trading'
                 ]
-                print(f"[BYBIT] В торговле: {len(trading_pairs)} пар")
+                logger.info(f"[BYBIT] В торговле: {len(trading_pairs)} пар")
                 
                 pairs = [
                     clean_symbol(item['symbol'])
@@ -540,16 +542,16 @@ class BybitExchange(BaseExchange):
                 ]
                 
                 # Логируем только общее количество пар
-                print(f"[BYBIT] ✅ Загружено {len(pairs)} торговых пар")
+                logger.info(f"[BYBIT] ✅ Загружено {len(pairs)} торговых пар")
                 
                 return sorted(pairs)
             else:
-                print(f"[BYBIT] Ошибка API: {response.get('retMsg', 'Unknown error')}")
+                logger.error(f"[BYBIT] Ошибка API: {response.get('retMsg', 'Unknown error')}")
                 return []
         except Exception as e:
-            print(f"[BYBIT] Error getting pairs: {str(e)}")
+            logger.error(f"[BYBIT] Error getting pairs: {str(e)}")
             import traceback
-            print(f"[BYBIT] Traceback: {traceback.format_exc()}")
+            logger.error(f"[BYBIT] Traceback: {traceback.format_exc()}")
             return []
 
     @with_timeout(30)  # 30 секунд таймаут для получения данных графика
