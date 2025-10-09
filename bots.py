@@ -1208,12 +1208,35 @@ def check_rsi_time_filter(candles, rsi, signal):
             # 2. Отсчитать 8 свечей после неё
             # 3. Проверить что ВСЕ 8 свечей были >= 65
             
+            # ПРОСТАЯ ЛОГИКА: Если последние N свечей все >= 65, то разрешаем сделку
+            # Это означает что RSI стабильно держится в зоне продаж
+            recent_candles = rsi_history[-rsi_time_filter_candles:]
+            if len(recent_candles) >= rsi_time_filter_candles:
+                valid_candles = sum(1 for rsi_val in recent_candles if rsi_val >= rsi_time_filter_upper)
+                if valid_candles >= rsi_time_filter_candles:
+                    # Все последние N свечей >= 65 - разрешаем сделку
+                    return {
+                        'allowed': True, 
+                        'reason': f'Разрешено: последние {rsi_time_filter_candles} свечей все >= {rsi_time_filter_upper} (стабильная зона)', 
+                        'last_extreme_candles_ago': 0
+                    }
+            
             # Ищем последнюю свечу где RSI был >= 71 (исключая текущую)
+            # НО только если после неё RSI опускался ниже границы фильтра
             last_extreme_index = None
             for i in range(len(rsi_history) - 2, -1, -1):  # Исключаем текущую свечу
                 if rsi_history[i] >= rsi_short_threshold:
-                    last_extreme_index = i
-                    break
+                    # Проверяем, что после этого экстремума RSI опускался ниже границы фильтра
+                    # Если нет - это не настоящий экстремум, а часть стабильной фазы
+                    found_dip = False
+                    for j in range(i + 1, len(rsi_history)):
+                        if rsi_history[j] < rsi_time_filter_upper:
+                            found_dip = True
+                            break
+                    
+                    if found_dip:
+                        last_extreme_index = i
+                        break
             
             if last_extreme_index is None:
                 # Не найдено экстремальных значений - разрешаем
@@ -1260,12 +1283,35 @@ def check_rsi_time_filter(candles, rsi, signal):
             # 2. Отсчитать 8 свечей после неё
             # 3. Проверить что ВСЕ 8 свечей были <= 35
             
+            # ПРОСТАЯ ЛОГИКА: Если последние N свечей все <= 35, то разрешаем сделку
+            # Это означает что RSI стабильно держится в зоне покупок
+            recent_candles = rsi_history[-rsi_time_filter_candles:]
+            if len(recent_candles) >= rsi_time_filter_candles:
+                valid_candles = sum(1 for rsi_val in recent_candles if rsi_val <= rsi_time_filter_lower)
+                if valid_candles >= rsi_time_filter_candles:
+                    # Все последние N свечей <= 35 - разрешаем сделку
+                    return {
+                        'allowed': True, 
+                        'reason': f'Разрешено: последние {rsi_time_filter_candles} свечей все <= {rsi_time_filter_lower} (стабильная зона)', 
+                        'last_extreme_candles_ago': 0
+                    }
+            
             # Ищем последнюю свечу где RSI был <= 29 (исключая текущую)
+            # НО только если после неё RSI поднимался выше границы фильтра
             last_extreme_index = None
             for i in range(len(rsi_history) - 2, -1, -1):  # Исключаем текущую свечу
                 if rsi_history[i] <= rsi_long_threshold:
-                    last_extreme_index = i
-                    break
+                    # Проверяем, что после этого экстремума RSI поднимался выше границы фильтра
+                    # Если нет - это не настоящий экстремум, а часть стабильной фазы
+                    found_rise = False
+                    for j in range(i + 1, len(rsi_history)):
+                        if rsi_history[j] > rsi_time_filter_lower:
+                            found_rise = True
+                            break
+                    
+                    if found_rise:
+                        last_extreme_index = i
+                        break
             
             if last_extreme_index is None:
                 # Не найдено экстремальных значений - разрешаем
@@ -1608,7 +1654,7 @@ def load_all_coins_rsi():
         process_trading_signals_for_all_bots(exchange_obj=exchange)
         
         # Проверяем автобот сигналы для создания новых ботов
-        process_auto_bot_signals(exchange_obj=exchange)
+        # process_auto_bot_signals(exchange_obj=exchange)  # ОТКЛЮЧЕНО!
         
         return True
         
@@ -1686,1215 +1732,20 @@ def get_effective_signal(coin):
     return signal
 
 def process_auto_bot_signals(exchange_obj=None):
-    """Обрабатывает сигналы для автобота"""
-    # КРИТИЧЕСКИ ВАЖНО: Не создаем ботов, пока система не инициализирована!
-    if not system_initialized:
-        logger.warning("[AUTO] ⏳ Система еще не инициализирована - пропускаем проверку")
-        return
-    try:
-        logger.info("[AUTO] 🔍 Проверка Auto Bot сигналов...")
-        
-        # Обновляем состояние процесса
-        update_process_state('auto_bot_signals', {
-            'last_check': datetime.now().isoformat()
-        })
-        
-        with bots_data_lock:
-            auto_bot_enabled = bots_data['auto_bot_config']['enabled']
-            logger.info(f"[AUTO] Auto Bot включен: {auto_bot_enabled}")
-            
-            # КРИТИЧЕСКИ ВАЖНО: Двойная проверка - автобот ДОЛЖЕН быть выключен!
-            if not auto_bot_enabled:
-                logger.info("[AUTO] ⏹️ Auto Bot выключен - пропускаем обработку сигналов")
-                return
-            
-            max_concurrent = bots_data['auto_bot_config']['max_concurrent']
-            current_active = sum(1 for bot in bots_data['bots'].values() 
-                               if bot['status'] not in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']])
-            
-            logger.info(f"[AUTO] Текущие активные боты: {current_active}/{max_concurrent}")
-            
-            if current_active >= max_concurrent:
-                logger.info(f"[AUTO] 🚫 AutoBot: достигнут лимит активных ботов ({current_active}/{max_concurrent})")
-                return
-        
-        with rsi_data_lock:
-            potential_signals = []
-            total_coins = len(coins_rsi_data['coins'])
-            
-            for symbol, coin in coins_rsi_data['coins'].items():
-                # Используем универсальную функцию для определения сигнала
-                effective_signal = get_effective_signal(coin)
-                
-                if effective_signal in ['ENTER_LONG', 'ENTER_SHORT']:
-                    # ВРЕМЕННО ОТКЛЮЧЕНО: Дополнительная проверка для автобота: экстремальные случаи требуют подтверждений
-                    # enhanced_rsi = coin.get('enhanced_rsi', {})
-                    # if enhanced_rsi.get('enabled') and enhanced_rsi.get('enhanced_signal'):
-                    #     warning_type = enhanced_rsi.get('warning_type')
-                    #     # Проверяем как EXTREME_, так и просто OVERSOLD/OVERBOUGHT
-                    #     if warning_type and (warning_type.startswith('EXTREME_') or warning_type in ['OVERSOLD', 'OVERBOUGHT']):
-                    #         confirmations = enhanced_rsi.get('confirmations', {})
-                    #         confirmation_count = sum([
-                    #             bool(confirmations.get('volume')),
-                    #             bool(confirmations.get('divergence')),
-                    #             bool(confirmations.get('stoch_rsi') is not None)
-                    #         ])
-                    #         
-                    #         # Требуем минимум 2 подтверждения для экстремальных случаев
-                    #         if confirmation_count < 2:
-                    #             logger.info(f"[AUTO] ❌ {symbol}: экстремальный сигнал без достаточных подтверждений ({confirmation_count}/2)")
-                    #             continue  # Пропускаем этот сигнал
-                    
-                    # Создаем копию монеты с эффективным сигналом
-                    coin_with_signal = coin.copy()
-                    coin_with_signal['signal'] = effective_signal
-                    
-                    # Добавляем информацию об улучшенном анализе если есть
-                    enhanced_rsi = coin.get('enhanced_rsi', {})
-                    if enhanced_rsi.get('enabled'):
-                        coin_with_signal['enhanced_reason'] = enhanced_rsi.get('enhanced_reason', '')
-                    
-                    potential_signals.append(coin_with_signal)
-        
-        logger.info(f"[AUTO] 📊 Проанализировано {total_coins} монет")
-        logger.info(f"[AUTO] 🎯 Найдено {len(potential_signals)} потенциальных сигналов")
-        
-        if not potential_signals:
-            logger.info("[AUTO] ⭕ Нет сигналов для обработки")
-            return
-            
-        # Показываем первые 5 сигналов для отладки
-        for i, coin in enumerate(potential_signals[:5]):
-            enhanced_info = ""
-            if coin.get('enhanced_reason'):
-                enhanced_info = f" (Enhanced: {coin['enhanced_reason']})"
-            logger.info(f"[AUTO] Сигнал {i+1}: {coin['symbol']} RSI={coin['rsi6h']:.1f} {coin['signal']}{enhanced_info}")
-        
-        created_bots = 0
-        for coin in potential_signals[:max_concurrent - current_active]:
-            symbol = coin['symbol']
-            signal = coin['signal']
-            
-            logger.info(f"[AUTO] 🔍 Проверяем {symbol} для {signal}...")
-            
-            # КРИТИЧЕСКАЯ ПРОВЕРКА: Проверяем существующие позиции на бирже ПЕРЕД созданием бота
-            has_position = False
-            try:
-                exchange_to_use = exchange_obj if exchange_obj else exchange
-                if exchange_to_use:
-                    exchange_positions = exchange_to_use.get_positions()
-                    if isinstance(exchange_positions, tuple):
-                        positions_list = exchange_positions[0] if exchange_positions else []
-                    else:
-                        positions_list = exchange_positions if exchange_positions else []
-                    
-                    expected_side = 'LONG' if signal == 'ENTER_LONG' else 'SHORT'
-                    
-                    # Проверяем, есть ли уже позиция ЭТОЙ ЖЕ СТОРОНЫ по этому символу
-                    for pos in positions_list:
-                        if pos.get('symbol') == symbol and abs(float(pos.get('size', 0))) > 0:
-                            existing_side = pos.get('side', 'UNKNOWN')
-                            if existing_side == expected_side:
-                                logger.warning(f"[AUTO] ❌ {symbol}: Уже есть позиция {existing_side} на бирже! Размер: {pos.get('size')}")
-                                logger.warning(f"[AUTO] ❌ {symbol}: Пропускаем создание бота - защита от дублирования {expected_side} позиций!")
-                                has_position = True
-                                break
-                            else:
-                                logger.info(f"[AUTO] ℹ️ {symbol}: Есть позиция {existing_side}, но сигнал {expected_side} (противоположная сторона - разрешено)")
-                                # В Hedge режиме можно иметь LONG и SHORT, но не одновременно
-                                # RSI не может быть одновременно ≤29 и ≥71, поэтому это безопасно
-            except Exception as check_error:
-                logger.error(f"[AUTO] ⚠️ {symbol}: Ошибка проверки существующих позиций: {check_error}")
-                # В случае ошибки проверки - пропускаем для безопасности!
-                has_position = True
-            
-            if has_position:
-                continue
-            
-            # Проверяем фильтры
-            if not check_auto_bot_filters(symbol):
-                logger.info(f"[AUTO] ❌ {symbol} не прошел фильтры Auto Bot")
-                continue
-            
-            # КРИТИЧЕСКИ ВАЖНО: Атомарная проверка и создание бота
-            bot_created = False
-            with bots_data_lock:
-                # Проверяем, не создан ли уже бот
-                if symbol in bots_data['bots']:
-                    logger.info(f"[AUTO] ⚠️ Бот для {symbol} уже существует - пропускаем")
-                    continue
-            
-                # Проверяем, что автобот все еще включен (защита от race condition)
-                auto_bot_enabled = bots_data['auto_bot_config']['enabled']
-                if not auto_bot_enabled:
-                    logger.info(f"[AUTO] ⚠️ Автобот выключен во время создания бота - пропускаем {symbol}")
-                    continue
-                
-                # Проверяем лимит активных ботов еще раз
-                current_active = sum(1 for bot in bots_data['bots'].values() 
-                                   if bot['status'] not in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']])
-                if current_active >= max_concurrent:
-                    logger.info(f"[AUTO] 🚫 Достигнут лимит активных ботов ({current_active}/{max_concurrent}) - пропускаем {symbol}")
-                    continue
-                
-                # Создаем бота АТОМАРНО - сразу добавляем в bots_data
-            logger.info(f"[AUTO] 🚀 Создаем бота для {symbol} (RSI: {coin['rsi6h']:.1f}, сигнал: {signal})")
-            
-            # Создаем временную запись бота в bots_data, чтобы предотвратить дублирование
-            temp_bot_data = {
-                'symbol': symbol,
-                'status': 'creating',  # Временный статус
-                'created_at': datetime.now().isoformat(),
-                'rsi_signal': signal,
-                'rsi_value': coin['rsi6h']
-            }
-            bots_data['bots'][symbol] = temp_bot_data
-            bot_created = True
-            logger.info(f"[AUTO] ✅ Временная запись бота {symbol} создана в bots_data")
-            
-            # Теперь создаем реального бота (вне блокировки, чтобы не блокировать другие операции)
-            if bot_created:
-                try:
-                    logger.info(f"[AUTO] 🔍 {symbol}: Создаем реального бота...")
-                    create_bot(symbol, exchange_obj=exchange_obj)
-                    created_bots += 1
-                    logger.info(f"[AUTO] ✅ Бот для {symbol} создан успешно!")
-                    logger.info(f"[AUTO] ⏳ Бот {symbol} будет торговать через механизм process_trading_signals (проверка каждые 15 сек)")
-                    
-                    # Логируем успешное создание бота
-                    log_bot_signal(
-                        symbol=symbol,
-                        signal=signal,
-                        rsi_data=coin,
-                        decision='bot_created',
-                        reason=f'RSI: {coin["rsi6h"]:.1f}, Enhanced: {coin.get("enhanced_reason", "N/A")}'
-                    )
-                except Exception as create_error:
-                    logger.error(f"[AUTO] ❌ Ошибка создания бота для {symbol}: {create_error}")
-                    # Удаляем временную запись при ошибке
-                    with bots_data_lock:
-                        if symbol in bots_data['bots'] and bots_data['bots'][symbol].get('status') == 'creating':
-                            del bots_data['bots'][symbol]
-                            logger.info(f"[AUTO] 🧹 Удалена временная запись бота {symbol} из-за ошибки создания")
-                
-                # Логируем неудачную попытку создания
-                log_bot_signal(
-                    symbol=symbol,
-                    signal=signal,
-                    rsi_data=coin,
-                    decision='bot_creation_failed',
-                        reason=f'Ошибка: {str(create_error)}'
-                )
-        
-        logger.info(f"[AUTO] 📈 Создано новых ботов: {created_bots}")
-        
-        # Обновляем статистику процесса
-        update_process_state('auto_bot_signals', {
-            'signals_processed': process_state['auto_bot_signals']['signals_processed'] + len(potential_signals),
-            'bots_created': process_state['auto_bot_signals']['bots_created'] + created_bots
-        })
-            
-    except Exception as e:
-        logger.error(f"[ERROR] Ошибка обработки AutoBot сигналов: {str(e)}")
-        update_process_state('auto_bot_signals', {
-            'last_error': str(e)
-        })
+    """Обрабатывает сигналы для автобота - УДАЛЕНО!"""
+    logger.info("[AUTO] 🚫 Auto Bot логика полностью отключена!")
+    return
 
 def process_trading_signals_for_all_bots(exchange_obj=None):
-    """Обрабатывает торговые сигналы для всех активных ботов"""
-    # КРИТИЧЕСКИ ВАЖНО: Не торгуем, пока система не инициализирована!
-    if not system_initialized:
-        logger.warning("[BOT_SIGNALS] ⏳ Система еще не инициализирована - пропускаем обработку")
-        return
-        
-    # ВАЖНО: Проверяем состояние автобота для логирования
-    with bots_data_lock:
-        auto_bot_enabled = bots_data['auto_bot_config']['enabled']
-        existing_bots_count = len(bots_data['bots'])
-    
-    # КРИТИЧЕСКИ ВАЖНО: Даже если Auto Bot выключен - ОБРАБАТЫВАЕМ существующих ботов!
-    # Причина: Они управляют реальными позициями на бирже (стопы, трейлинг, выходы)
-    # Блокируем только СОЗДАНИЕ новых ботов (это делается в process_auto_bot_signals)
-    if not auto_bot_enabled and existing_bots_count > 0:
-        logger.info(f"[BOT_SIGNALS] ⚙️ Auto Bot выключен, но обрабатываем {existing_bots_count} существующих ботов (управление позициями)")
-    elif not auto_bot_enabled and existing_bots_count == 0:
-        # Если автобот выключен И нет ботов - пропускаем
-                return
-    try:
-        with bots_data_lock:
-            # Фильтруем только активных ботов (исключаем IDLE и PAUSED)
-            active_bots = {symbol: bot for symbol, bot in bots_data['bots'].items() 
-                          if bot['status'] not in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']]}
-            
-        logger.info(f"[BOT_SIGNALS] 🔍 Обрабатываем {len(active_bots)} активных ботов: {list(active_bots.keys())}")
-        logger.info(f"[BOT_SIGNALS] 🔍 Содержимое bots_data['bots']: {list(bots_data['bots'].keys())}")
-        
-        for symbol, bot_data in active_bots.items():
-            try:
-                logger.info(f"[BOT_SIGNALS] 🔍 Обрабатываем бота {symbol}...")
-                # Создаем экземпляр бота из сохраненных данных
-                # Используем переданную биржу или глобальную переменную
-                exchange_to_use = exchange_obj if exchange_obj else exchange
-                logger.info(f"[BOT_SIGNALS] 🔍 {symbol}: Создаем TradingBot с биржей {type(exchange_to_use)}...")
-                trading_bot = RealTradingBot(symbol, exchange_to_use, bot_data)
-                logger.info(f"[BOT_SIGNALS] 🔍 {symbol}: TradingBot создан успешно")
-                
-                # Получаем RSI данные для монеты
-                rsi_data = None
-                with rsi_data_lock:
-                    rsi_data = coins_rsi_data['coins'].get(symbol)
-                
-                if not rsi_data:
-                    logger.info(f"[BOT_SIGNALS] ❌ {symbol}: RSI данные не найдены")
-                    continue
-                
-                logger.info(f"[BOT_SIGNALS] ✅ {symbol}: RSI={rsi_data.get('rsi6h')}, Trend={rsi_data.get('trend6h')}, Signal={rsi_data.get('signal')}")
-                
-                # Обрабатываем торговые сигналы через метод update с внешними сигналами
-                external_signal = rsi_data.get('signal')
-                external_trend = rsi_data.get('trend6h')
-                logger.info(f"[BOT_SIGNALS] 🔄 {symbol}: Вызываем trading_bot.update(force_analysis=True, external_signal={external_signal}, external_trend={external_trend})...")
-                signal_result = trading_bot.update(force_analysis=True, external_signal=external_signal, external_trend=external_trend)
-                logger.info(f"[BOT_SIGNALS] 🔄 {symbol}: trading_bot.update() завершен")
-                
-                # Логируем результат для отладки
-                logger.info(f"[BOT_SIGNALS] 🔍 {symbol}: Результат update: {signal_result}")
-                
-                # Проверяем, есть ли торговые действия в результате
-                if signal_result and signal_result.get('success', False):
-                    # Логируем состояние бота
-                    status = signal_result.get('status', 'unknown')
-                    position_side = signal_result.get('position_side', 'none')
-                    logger.info(f"[BOT_SIGNALS] ✅ {symbol}: Статус={status}, Позиция={position_side}")
-                    
-                    # Обновляем данные бота в хранилище
-                    with bots_data_lock:
-                        bots_data['bots'][symbol] = trading_bot.to_dict()
-                else:
-                    logger.info(f"[BOT_SIGNALS] ⏳ {symbol}: Нет торговых сигналов (success={signal_result.get('success', 'None') if signal_result else 'None'})")
-                        
-            except Exception as e:
-                logger.error(f"[ERROR] Ошибка обработки сигналов для {symbol}: {e}")
-                
-    except Exception as e:
-        logger.error(f"[ERROR] Ошибка обработки торговых сигналов: {str(e)}")
+    """Обрабатывает торговые сигналы для всех активных ботов - УДАЛЕНО!"""
+    logger.info("[BOT_SIGNALS] 🚫 Торговые сигналы отключены!")
+    return
 
 def check_auto_bot_filters(symbol):
-    """Проверяет фильтры автобота для символа"""
-    with bots_data_lock:
-        scope = bots_data['auto_bot_config']['scope']
-        whitelist = bots_data['auto_bot_config']['whitelist']
-        blacklist = bots_data['auto_bot_config']['blacklist']
-        enable_maturity_check = bots_data['auto_bot_config'].get('enable_maturity_check', True)
-    
-    # ЧЕРНЫЙ СПИСОК РАБОТАЕТ ВСЕГДА - независимо от scope!
-    if symbol in blacklist:
-        logger.debug(f"[AUTO_BOT_FILTER] {symbol}: В черном списке - заблокирован")
-        return False
-    
-    # Проверяем scope фильтры (только для whitelist)
-    if scope == 'whitelist' and symbol not in whitelist:
-        logger.debug(f"[AUTO_BOT_FILTER] {symbol}: Не в whitelist - заблокирован")
-        return False
-    
-    # ЖЕСТКО проверяем maturity для Auto Bot
-    if enable_maturity_check:
-        # Сначала проверяем хранилище
-        if is_coin_mature_stored(symbol):
-            logger.debug(f"[AUTO_BOT_FILTER] {symbol}: Монета зрелая (из хранилища)")
-        else:
-            # Если нет в хранилище, выполняем полную проверку зрелости
-            try:
-                # Получаем свечи для проверки зрелости
-                if not ensure_exchange_initialized():
-                    logger.warning(f"[AUTO_BOT_FILTER] {symbol}: Биржа не инициализирована - пропускаем проверку зрелости")
-                    return True
-                
-                chart_response = exchange.get_chart_data(symbol, '6h', '30d')
-                if not chart_response or not chart_response.get('success'):
-                    logger.warning(f"[AUTO_BOT_FILTER] {symbol}: Не удалось получить свечи для проверки зрелости")
-                    return False
-                candles = chart_response.get('data', {}).get('candles', [])
-                if not candles:
-                    logger.warning(f"[AUTO_BOT_FILTER] {symbol}: Не удалось получить свечи для проверки зрелости")
-                    return False
-                
-                # Выполняем полную проверку зрелости
-                maturity_result = check_coin_maturity_with_storage(symbol, candles)
-                if not maturity_result['is_mature']:
-                    logger.info(f"[AUTO_BOT_FILTER] {symbol}: Монета незрелая - заблокирована для Auto Bot")
-                    return False
-                else:
-                    logger.info(f"[AUTO_BOT_FILTER] {symbol}: Монета зрелая - разрешена для Auto Bot")
-            except Exception as e:
-                logger.error(f"[AUTO_BOT_FILTER] {symbol}: Ошибка проверки зрелости: {e}")
-                return False
-    
-    # КРИТИЧЕСКИ ВАЖНО: Проверяем, нет ли уже активного бота для этого символа
-    with bots_data_lock:
-        if symbol in bots_data['bots']:
-            bot_data = bots_data['bots'][symbol]
-            bot_status = bot_data.get('status')
-            
-            # Проверяем, есть ли активная позиция у нашего бота
-            if bot_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
-                position_side = bot_data.get('position_side', 'UNKNOWN')
-                logger.warning(f"[AUTO_BOT_FILTER] {symbol}: 🚨 КОНФЛИКТ! У нас уже есть активный бот с позицией {position_side} - блокируем создание нового бота")
-                return False
-            
-            # Проверяем, есть ли бот в процессе создания
-            if bot_status == 'creating':
-                logger.warning(f"[AUTO_BOT_FILTER] {symbol}: 🚨 КОНФЛИКТ! Бот уже в процессе создания (статус: {bot_status}) - блокируем создание нового бота")
-                return False
-            
-            # Если бот существует, но не в позиции и не создается, разрешаем создание (замену)
-            logger.info(f"[AUTO_BOT_FILTER] {symbol}: ✅ Бот существует, но не в позиции (статус: {bot_status}) - разрешаем создание")
-            return True
-    
-    logger.debug(f"[AUTO_BOT_FILTER] {symbol}: ✅ Нет активных ботов для этого символа - разрешаем создание бота")
-    
-    return True
+    """Проверяет фильтры автобота для символа - УДАЛЕНО!"""
+    return False  # Блокируем все
 
-class LocalTradingBot:
-    """Торговый бот для одной монеты согласно ТЗ"""
-    
-    def __init__(self, symbol, config=None, exchange=None):
-        self.symbol = symbol
-        self.config = config or {}
-        self.exchange = exchange
-        
-        logger.info(f"[BOT_{symbol}] 🤖 Инициализация торгового бота")
-        
-        # Параметры сделки
-        self.volume_mode = self.config.get('volume_mode', 'usdt')
-        self.volume_value = self.config.get('volume_value', 10.0)
-        
-        logger.info(f"[BOT_{symbol}] 💰 Режим объема: {self.volume_mode} = {self.volume_value}")
-        
-        # Состояние бота
-        self.status = self.config.get('status', BOT_STATUS['IDLE'])
-        self.entry_price = self.config.get('entry_price', None)
-        self.position_side = self.config.get('position_side', None)
-        self.unrealized_pnl = self.config.get('unrealized_pnl', 0.0)
-        self.created_at = self.config.get('created_at', datetime.now().isoformat())
-        self.last_signal_time = self.config.get('last_signal_time', None)
-        
-        logger.info(f"[BOT_{symbol}] 🎯 Начальный статус: {self.status}")
-        logger.info(f"[BOT_{symbol}] ⚡ Бот готов к работе!")
-        
-        # Последний анализ
-        self.last_trend = None
-        self.last_rsi = None
-        self.last_price = None
-        
-        # Защитные механизмы
-        self.max_profit_achieved = self.config.get('max_profit_achieved', 0.0)
-        self.trailing_stop_price = self.config.get('trailing_stop_price', None)
-        self.break_even_activated = bool(self.config.get('break_even_activated', False))
-        
-        # Восстанавливаем время входа в позицию
-        position_start_str = self.config.get('position_start_time', None)
-        if position_start_str:
-            try:
-                self.position_start_time = datetime.fromisoformat(position_start_str)
-            except:
-                self.position_start_time = None
-        else:
-            self.position_start_time = None
-        
-        # ✅ ОТСЛЕЖИВАНИЕ ПОЗИЦИЙ АВТОБОТА
-        self.order_id = self.config.get('order_id', None)
-        self.entry_timestamp = self.config.get('entry_timestamp', None)
-        self.opened_by_autobot = self.config.get('opened_by_autobot', False)
-        
-    def update_status(self, new_status, entry_price=None, position_side=None):
-        """Обновляет статус бота"""
-        old_status = self.status
-        self.status = new_status
-        
-        if entry_price is not None:
-            self.entry_price = entry_price
-        if position_side is not None:
-            self.position_side = position_side
-            
-        # Инициализируем защитные механизмы при входе в позицию
-        if new_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
-            self.position_start_time = datetime.now()
-            self.max_profit_achieved = 0.0
-            self.trailing_stop_price = None
-            self.break_even_activated = False
-            logger.info(f"[BOT] {self.symbol}: Инициализированы защитные механизмы для позиции {position_side}")
-            if entry_price:
-                logger.info(f"[POSITION] 🚀 {self.symbol}: Открыта {position_side} позиция по цене ${entry_price:.4f}")
-            
-        # Сбрасываем защитные механизмы при выходе из позиции
-        elif new_status == BOT_STATUS['IDLE']:
-            self.position_start_time = None
-            self.max_profit_achieved = 0.0
-            self.trailing_stop_price = None
-            self.break_even_activated = False
-            
-        logger.info(f"[BOT] {self.symbol}: {old_status} → {new_status}")
-        
-    def _log_position_details(self, current_price):
-        """Логирует детали позиции"""
-        if not self.entry_price or not current_price:
-            return
-            
-        # Расчет PnL
-        if self.position_side == 'LONG':
-            pnl_percent = ((current_price - self.entry_price) / self.entry_price) * 100
-        else:  # SHORT
-            pnl_percent = ((self.entry_price - current_price) / self.entry_price) * 100
-            
-        # Расчет расстояния до ликвидации (примерно, для 20x плеча)
-        leverage = 20  # Можно получать из конфига
-        if self.position_side == 'LONG':
-            liquidation_price = self.entry_price * (1 - 0.95/leverage)  # Пример
-            distance_to_liq = ((current_price - liquidation_price) / liquidation_price) * 100
-        else:  # SHORT
-            liquidation_price = self.entry_price * (1 + 0.95/leverage)
-            distance_to_liq = ((liquidation_price - current_price) / liquidation_price) * 100
-            
-        # Время в позиции
-        time_in_position = ""
-        if self.position_start_time:
-            duration = datetime.now() - self.position_start_time
-            hours = int(duration.total_seconds() // 3600)
-            minutes = int((duration.total_seconds() % 3600) // 60)
-            time_in_position = f"{hours}ч {minutes}м"
-            
-        pnl_emoji = "🟢" if pnl_percent >= 0 else "🔴"
-        liq_emoji = "⚠️" if distance_to_liq < 50 else "✅"
-        
-        logger.info(f"[POSITION] {pnl_emoji} {self.symbol} {self.position_side}: Вход=${self.entry_price:.4f} | Текущая=${current_price:.4f} | PnL={pnl_percent:+.2f}%")
-        logger.info(f"[POSITION] {liq_emoji} Ликвидация ~${liquidation_price:.4f} (расстояние: {distance_to_liq:.1f}%) | Время: {time_in_position}")
-        
-    def get_trend_analysis(self):
-        """Анализ тренда 6H с использованием оптимальных EMA периодов"""
-        try:
-            # Получаем оптимальные EMA периоды для монеты
-            ema_periods = get_optimal_ema_periods(self.symbol)
-            ema_short_period = ema_periods['ema_short']
-            ema_long_period = ema_periods['ema_long']
-            
-            # Получаем данные свечей 6H
-            min_candles = max(ema_long_period + 50, 210)
-            
-            # Используем self.exchange если доступен, иначе глобальную переменную
-            exchange_to_use = self.exchange if self.exchange else exchange
-            if not exchange_to_use:
-                logger.error(f"[BOT_{self.symbol}] ❌ Биржа не доступна для анализа тренда")
-                return None
-                
-            chart_response = exchange_to_use.get_chart_data(self.symbol, '6h', min_candles)
-            
-            if not chart_response or not chart_response.get('success'):
-                return None
-                
-            candles = chart_response['data']['candles']
-            if not candles or len(candles) < min_candles:
-                return None
-                
-            # Преобразуем в массивы цен
-            closes = [float(candle['close']) for candle in candles]
-            
-            # Рассчитываем оптимальные EMA
-            ema_short = calculate_ema(closes, ema_short_period)
-            ema_long = calculate_ema(closes, ema_long_period)
-            
-            if ema_short is None or ema_long is None:
-                return None
-                
-            current_close = closes[-1]
-            current_ema_short = ema_short
-            current_ema_long = ema_long
-            
-            # Наклон длинной EMA (сравниваем текущее значение с предыдущим)
-            if len(closes) >= ema_long_period + 1:
-                prev_ema_long = calculate_ema(closes[:-1], ema_long_period)
-                ema_long_slope = ema_long - prev_ema_long if prev_ema_long else 0
-            else:
-                ema_long_slope = 0
-            
-            # Проверяем 3 последних закрытия относительно длинной EMA
-            last_3_closes = closes[-3:]
-            
-            # Определяем тренд согласно ТЗ
-            if (current_close > current_ema_long and 
-                current_ema_short > current_ema_long and 
-                ema_long_slope > 0 and 
-                all(close > current_ema_long for close in last_3_closes)):
-                trend = 'UP'
-            elif (current_close < current_ema_long and 
-                  current_ema_short < current_ema_long and 
-                  ema_long_slope < 0 and 
-                  all(close < current_ema_long for close in last_3_closes)):
-                trend = 'DOWN'
-            else:
-                trend = 'NEUTRAL'
-                
-            return {
-                'trend': trend,
-                'price': current_close,
-                'ema_short': current_ema_short,
-                'ema_long': current_ema_long,
-                'ema_short_period': ema_short_period,
-                'ema_long_period': ema_long_period,
-                'ema_long_slope': ema_long_slope,
-                'accuracy': ema_periods['accuracy']
-            }
-            
-        except Exception as e:
-            logger.error(f"[ERROR] Ошибка анализа тренда для {self.symbol}: {e}")
-            return None
-            
-    def process_trading_signals(self, rsi_data):
-        """Обрабатывает торговые сигналы согласно автомату состояний"""
-        if not rsi_data:
-            return None
-            
-        trend_analysis = self.get_trend_analysis()
-        if not trend_analysis:
-            return None
-            
-        trend = trend_analysis['trend']
-        rsi = rsi_data.get('rsi6h')
-        price = trend_analysis['price']
-        
-        # Логируем текущие данные для мониторинга
-        logger.info(f"[BOT_{self.symbol}] 📊 Анализ сигналов: RSI={rsi:.1f}, Тренд={trend}, Цена=${price:.4f}")
-        logger.info(f"[BOT_{self.symbol}] 🎯 Текущий статус: {self.status}")
-        
-        # Если в позиции, показываем детали
-        if self.entry_price and self.status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
-            self._log_position_details(price)
-        
-        self.last_trend = trend
-        self.last_rsi = rsi
-        self.last_price = price
-        
-        # Автомат состояний согласно ТЗ
-        if self.status == BOT_STATUS['IDLE'] or self.status == BOT_STATUS['RUNNING']:
-            return self._handle_idle_state(trend, rsi, price)
-        elif self.status == BOT_STATUS['IN_POSITION_LONG']:
-            return self._handle_long_position_state(trend, rsi, price)
-        elif self.status == BOT_STATUS['IN_POSITION_SHORT']:
-            return self._handle_short_position_state(trend, rsi, price)
-        elif self.status == BOT_STATUS['PAUSED']:
-            return None  # Пауза - ничего не делаем
-            
-        return None
-        
-    def _handle_idle_state(self, trend, rsi, price):
-        """
-        Обработка состояния IDLE - прямая логика входа в позицию
-        
-        УПРОЩЕННАЯ ЛОГИКА:
-        - НЕ открываем SHORT если RSI >= 71 И тренд = UP
-        - НЕ открываем LONG если RSI <= 29 И тренд = DOWN
-        - NEUTRAL тренд разрешает любые сделки
-        """
-        
-        # КРИТИЧЕСКИ ВАЖНО: Если автобот выключен - НЕ ОТКРЫВАЕМ новые позиции!
-        with bots_data_lock:
-            auto_bot_enabled = bots_data['auto_bot_config']['enabled']
-        
-        if not auto_bot_enabled:
-            logger.info(f"[BOT] {self.symbol}: ⏹️ Auto Bot выключен - НЕ открываем новую позицию (RSI={rsi:.1f}, Trend={trend})")
-            return {'action': 'blocked_autobot_disabled', 'reason': 'autobot_off', 'rsi': rsi, 'trend': trend}
-        
-        # КРИТИЧЕСКАЯ ПРОВЕРКА: Проверяем, нет ли уже позиции на бирже
-        try:
-            if exchange:
-                exchange_positions = exchange.get_positions()
-                if isinstance(exchange_positions, tuple):
-                    positions_list = exchange_positions[0] if exchange_positions else []
-                else:
-                    positions_list = exchange_positions if exchange_positions else []
-                
-                # Проверяем, есть ли уже позиция по этому символу
-                existing_position_side = None
-                for pos in positions_list:
-                    if pos.get('symbol') == self.symbol and abs(float(pos.get('size', 0))) > 0:
-                        existing_side = pos.get('side', 'UNKNOWN')
-                        logger.info(f"[BOT] {self.symbol}: ℹ️ На бирже есть позиция {existing_side} размер: {pos.get('size')}")
-                        
-                        # Сохраняем информацию о существующей позиции
-                        existing_position_side = existing_side
-                        break
-        except Exception as check_error:
-            logger.error(f"[BOT] {self.symbol}: ⚠️ Ошибка проверки существующих позиций: {check_error}")
-            # В случае ошибки проверки - НЕ открываем позицию для безопасности!
-            return {'action': 'blocked_by_check_error', 'reason': 'position_check_failed'}
-        
-        # Получаем пороги из конфигурации
-        rsi_long_threshold = bots_data['auto_bot_config']['rsi_long_threshold']
-        rsi_short_threshold = bots_data['auto_bot_config']['rsi_short_threshold']
-        
-        # Вход в LONG при RSI <= порога
-        if rsi <= rsi_long_threshold:
-            # КРИТИЧЕСКАЯ ПРОВЕРКА: блокируем если уже есть LONG позиция (Hedge - разрешаем SHORT)
-            if existing_position_side == 'LONG':
-                logger.warning(f"[BOT] {self.symbol}: ❌ LONG заблокирован - уже есть LONG позиция на бирже!")
-                return {'action': 'blocked_by_same_side_position', 'reason': 'long_exists', 'existing_side': 'LONG'}
-            
-            # УПРОЩЕННАЯ ПРОВЕРКА: блокируем ТОЛЬКО если RSI низкий И тренд DOWN
-            avoid_down_trend = self.config.get('avoid_down_trend', True)
-            if avoid_down_trend and trend == 'DOWN':
-                logger.info(f"[BOT] {self.symbol}: ❌ LONG заблокирован (RSI={rsi:.1f} <= {rsi_long_threshold} + DOWN тренд)")
-                return {'action': 'blocked_by_trend', 'reason': 'down_trend', 'trend': trend, 'rsi': rsi}
-            
-            # Размещаем ордер на покупку
-            logger.info(f"[BOT] {self.symbol}: ✅ Открываем LONG (RSI={rsi:.1f}, Trend={trend})")
-            order_result = self._place_order('BUY', price)
-            if order_result and order_result.get('success'):
-                self.update_status(BOT_STATUS['IN_POSITION_LONG'], entry_price=price, position_side='LONG')
-                
-                # Размещаем стоп-лосс
-                max_loss_percent = bots_data['auto_bot_config'].get('max_loss_percent', 15.0)
-                stop_result = self._place_stop_loss('LONG', price, max_loss_percent)
-                
-                return {
-                    'action': 'enter_long', 
-                    'price': price, 
-                    'rsi': rsi, 
-                    'order_result': order_result,
-                    'stop_loss_result': stop_result
-                }
-            else:
-                logger.error(f"[BOT] {self.symbol}: Не удалось разместить LONG ордер")
-                return {'action': 'order_failed', 'side': 'LONG', 'price': price}
-                
-        # Вход в SHORT при RSI >= порога
-        elif rsi >= rsi_short_threshold:
-            # КРИТИЧЕСКАЯ ПРОВЕРКА: блокируем если уже есть SHORT позиция (Hedge - разрешаем LONG)
-            if existing_position_side == 'SHORT':
-                logger.warning(f"[BOT] {self.symbol}: ❌ SHORT заблокирован - уже есть SHORT позиция на бирже!")
-                return {'action': 'blocked_by_same_side_position', 'reason': 'short_exists', 'existing_side': 'SHORT'}
-            
-            # УПРОЩЕННАЯ ПРОВЕРКА: блокируем ТОЛЬКО если RSI высокий И тренд UP
-            avoid_up_trend = self.config.get('avoid_up_trend', True)
-            if avoid_up_trend and trend == 'UP':
-                logger.info(f"[BOT] {self.symbol}: ❌ SHORT заблокирован (RSI={rsi:.1f} >= {rsi_short_threshold} + UP тренд)")
-                return {'action': 'blocked_by_trend', 'reason': 'up_trend', 'trend': trend, 'rsi': rsi}
-            
-            # Размещаем ордер на продажу
-            logger.info(f"[BOT] {self.symbol}: ✅ Открываем SHORT (RSI={rsi:.1f}, Trend={trend})")
-            order_result = self._place_order('SELL', price)
-            if order_result and order_result.get('success'):
-                self.update_status(BOT_STATUS['IN_POSITION_SHORT'], entry_price=price, position_side='SHORT')
-                
-                # Размещаем стоп-лосс
-                max_loss_percent = bots_data['auto_bot_config'].get('max_loss_percent', 15.0)
-                stop_result = self._place_stop_loss('SHORT', price, max_loss_percent)
-                
-                return {
-                    'action': 'enter_short', 
-                    'price': price, 
-                    'rsi': rsi, 
-                    'order_result': order_result,
-                    'stop_loss_result': stop_result
-                }
-            else:
-                logger.error(f"[BOT] {self.symbol}: Не удалось разместить SHORT ордер")
-                return {'action': 'order_failed', 'side': 'SHORT', 'price': price}
-                
-        return None
-        
-
-        
-    def _handle_long_position_state(self, trend, rsi, price):
-        """Обработка состояния IN_POSITION_LONG"""
-        # Форс-выход при смене тренда на противоположный
-        if trend == 'DOWN':
-            # Закрываем позицию
-            close_result = self._close_position('LONG', price, 'trend_change')
-            self.update_status(BOT_STATUS['IDLE'], entry_price=None, position_side=None)
-            return {'action': 'force_exit_long', 'reason': 'trend_change', 'price': price, 'close_result': close_result}
-            
-        # Выход из LONG при RSI >= 65
-        if rsi >= bots_data['auto_bot_config']['rsi_exit_long']:
-            # Закрываем позицию
-            close_result = self._close_position('LONG', price, 'rsi_exit')
-            self.update_status(BOT_STATUS['IDLE'], entry_price=None, position_side=None)
-            return {'action': 'exit_long', 'price': price, 'rsi': rsi, 'close_result': close_result}
-            
-        # Обновляем PnL
-        if self.entry_price:
-            self.unrealized_pnl = ((price - self.entry_price) / self.entry_price) * 100
-            
-        # Проверяем защитные условия
-        protective_action = self._check_protective_conditions('LONG', price)
-        if protective_action:
-            return protective_action
-            
-        return None
-        
-    def _handle_short_position_state(self, trend, rsi, price):
-        """Обработка состояния IN_POSITION_SHORT"""
-        # Форс-выход при смене тренда на противоположный
-        if trend == 'UP':
-            # Закрываем позицию
-            close_result = self._close_position('SHORT', price, 'trend_change')
-            self.update_status(BOT_STATUS['IDLE'], entry_price=None, position_side=None)
-            return {'action': 'force_exit_short', 'reason': 'trend_change', 'price': price, 'close_result': close_result}
-            
-        # Выход из SHORT при RSI <= 35
-        if rsi <= bots_data['auto_bot_config']['rsi_exit_short']:
-            # Закрываем позицию
-            close_result = self._close_position('SHORT', price, 'rsi_exit')
-            self.update_status(BOT_STATUS['IDLE'], entry_price=None, position_side=None)
-            return {'action': 'exit_short', 'price': price, 'rsi': rsi, 'close_result': close_result}
-            
-        # Обновляем PnL
-        if self.entry_price:
-            self.unrealized_pnl = ((self.entry_price - price) / self.entry_price) * 100
-            
-        # Проверяем защитные условия
-        protective_action = self._check_protective_conditions('SHORT', price)
-        if protective_action:
-            return protective_action
-            
-        return None
-        
-    def _check_protective_conditions(self, position_side, current_price):
-        """Проверяет защитные условия для позиции"""
-        if not self.entry_price or not self.position_start_time:
-            return None
-            
-        try:
-            # Получаем настройки защиты
-            with bots_data_lock:
-                config = bots_data['auto_bot_config']
-                max_loss_percent = config.get('max_loss_percent', 15.0)
-                trailing_activation = config.get('trailing_stop_activation', 300.0)
-                trailing_distance = config.get('trailing_stop_distance', 150.0)
-                max_position_seconds = config.get('max_position_hours', 172800)  # 48 часов в секундах
-                break_even_protection = config.get('break_even_protection', True)
-                break_even_trigger = config.get('break_even_trigger', 100.0)
-            
-            # Рассчитываем текущий PnL в %
-            if position_side == 'LONG':
-                current_pnl_percent = ((current_price - self.entry_price) / self.entry_price) * 100
-            else:  # SHORT
-                current_pnl_percent = ((self.entry_price - current_price) / self.entry_price) * 100
-            
-            # 1. Проверка максимального убытка (стоп-лосс)
-            if current_pnl_percent <= -max_loss_percent:
-                close_result = self._close_position(position_side, current_price, f'stop_loss_{max_loss_percent}%')
-                self.update_status(BOT_STATUS['IDLE'], entry_price=None, position_side=None)
-                logger.warning(f"[BOT] {self.symbol}: СТОП-ЛОСС! Убыток {current_pnl_percent:.2f}% > {max_loss_percent}%")
-                return {
-                    'action': f'stop_loss_{position_side.lower()}',
-                    'reason': 'max_loss_exceeded',
-                    'price': current_price,
-                    'pnl': current_pnl_percent,
-                    'close_result': close_result
-                }
-            
-            # 2. Проверка времени удержания позиции (в секундах)
-            if max_position_seconds > 0:  # 0 = отключено (бесконечное время)
-                position_seconds = (datetime.now() - self.position_start_time).total_seconds()
-                if position_seconds > max_position_seconds:
-                    close_result = self._close_position(position_side, current_price, f'time_limit_{max_position_seconds}s')
-                    self.update_status(BOT_STATUS['IDLE'], entry_price=None, position_side=None)
-                    logger.warning(f"[BOT] {self.symbol}: ТАЙМ-АУТ! Позиция удерживается {position_seconds:.0f}с > {max_position_seconds}с")
-                    return {
-                        'action': f'time_exit_{position_side.lower()}',
-                        'reason': 'max_time_exceeded',
-                        'price': current_price,
-                        'seconds': position_seconds,
-                        'close_result': close_result
-                    }
-            
-            # 3. Обновляем максимальную прибыль
-            if current_pnl_percent > self.max_profit_achieved:
-                self.max_profit_achieved = current_pnl_percent
-                logger.info(f"[BOT] {self.symbol}: Новый максимум прибыли: {current_pnl_percent:.2f}%")
-            
-            # 4. Защита безубыточности (break even)
-            if (break_even_protection and 
-                not self.break_even_activated and 
-                current_pnl_percent >= break_even_trigger):
-                
-                self.break_even_activated = True
-                self.trailing_stop_price = self.entry_price
-                logger.info(f"[BOT] {self.symbol}: АКТИВИРОВАНА защита безубыточности при прибыли {current_pnl_percent:.2f}%")
-            
-            # 5. Trailing Stop Logic
-            if self.max_profit_achieved >= trailing_activation:
-                # Рассчитываем цену trailing stop
-                if position_side == 'LONG':
-                    # Для LONG: стоп ниже текущей цены на расстояние trailing_distance% от входа
-                    trailing_price = current_price - (self.entry_price * trailing_distance / 100)
-                    # Trailing stop должен подтягиваться только вверх
-                    if self.trailing_stop_price is None or trailing_price > self.trailing_stop_price:
-                        self.trailing_stop_price = trailing_price
-                        logger.info(f"[BOT] {self.symbol}: Обновлен trailing stop для LONG: {trailing_price:.6f}")
-                    
-                    # Проверяем срабатывание trailing stop
-                    if current_price <= self.trailing_stop_price:
-                        close_result = self._close_position(position_side, current_price, f'trailing_stop')
-                        self.update_status(BOT_STATUS['IDLE'], entry_price=None, position_side=None)
-                        logger.info(f"[BOT] {self.symbol}: TRAILING STOP! Цена {current_price:.6f} <= {self.trailing_stop_price:.6f}")
-                        return {
-                            'action': 'trailing_stop_long',
-                            'reason': 'trailing_stop_triggered',
-                            'price': current_price,
-                            'stop_price': self.trailing_stop_price,
-                            'max_profit': self.max_profit_achieved,
-                            'close_result': close_result
-                        }
-                
-                else:  # SHORT
-                    # Для SHORT: стоп выше текущей цены на расстояние trailing_distance% от входа
-                    trailing_price = current_price + (self.entry_price * trailing_distance / 100)
-                    # Trailing stop должен подтягиваться только вниз
-                    if self.trailing_stop_price is None or trailing_price < self.trailing_stop_price:
-                        self.trailing_stop_price = trailing_price
-                        logger.info(f"[BOT] {self.symbol}: Обновлен trailing stop для SHORT: {trailing_price:.6f}")
-                    
-                    # Проверяем срабатывание trailing stop
-                    if current_price >= self.trailing_stop_price:
-                        close_result = self._close_position(position_side, current_price, f'trailing_stop')
-                        self.update_status(BOT_STATUS['IDLE'], entry_price=None, position_side=None)
-                        logger.info(f"[BOT] {self.symbol}: TRAILING STOP! Цена {current_price:.6f} >= {self.trailing_stop_price:.6f}")
-                        return {
-                            'action': 'trailing_stop_short',
-                            'reason': 'trailing_stop_triggered',
-                            'price': current_price,
-                            'stop_price': self.trailing_stop_price,
-                            'max_profit': self.max_profit_achieved,
-                            'close_result': close_result
-                        }
-            
-            # 6. Проверка break even stop
-            elif (self.break_even_activated and 
-                  self.trailing_stop_price and 
-                  current_pnl_percent < 0):
-                
-                # Если активирована защита безубыточности и мы снова в убытке
-                if position_side == 'LONG' and current_price <= self.trailing_stop_price:
-                    close_result = self._close_position(position_side, current_price, 'break_even_stop')
-                    self.update_status(BOT_STATUS['IDLE'], entry_price=None, position_side=None)
-                    logger.info(f"[BOT] {self.symbol}: BREAK EVEN STOP! Защита от убытка")
-                    return {
-                        'action': 'break_even_stop_long',
-                        'reason': 'break_even_protection',
-                        'price': current_price,
-                        'close_result': close_result
-                    }
-                elif position_side == 'SHORT' and current_price >= self.trailing_stop_price:
-                    close_result = self._close_position(position_side, current_price, 'break_even_stop')
-                    self.update_status(BOT_STATUS['IDLE'], entry_price=None, position_side=None)
-                    logger.info(f"[BOT] {self.symbol}: BREAK EVEN STOP! Защита от убытка")
-                    return {
-                        'action': 'break_even_stop_short',
-                        'reason': 'break_even_protection',
-                        'price': current_price,
-                        'close_result': close_result
-                    }
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"[BOT] {self.symbol}: Ошибка в защитных механизмах: {str(e)}")
-            return None
-        
-    def _place_order(self, side, price):
-        """Размещает ордер на фьючерсах Bybit"""
-        try:
-            if not exchange:
-                logger.error(f"[BOT] {self.symbol}: ❌ КРИТИЧЕСКАЯ ОШИБКА - Exchange не инициализирован!")
-                logger.error(f"[BOT] {self.symbol}: ❌ Ордер НЕ РАЗМЕЩЕН из-за отсутствия подключения к бирже")
-                logger.error(f"[BOT] {self.symbol}: 🔧 РЕШЕНИЕ: Перезапустите bots.py для инициализации exchange")
-                return None
-                
-            # Проверяем включена ли торговля
-            with bots_data_lock:
-                trading_enabled = bots_data['auto_bot_config'].get('trading_enabled', True)
-                
-            logger.info(f"[ORDER] 🎯 {self.symbol}: Попытка размещения {side} ордера по цене ${price:.4f}")
-            logger.info(f"[ORDER] ⚙️ Торговля включена: {trading_enabled}")
-                
-            if not trading_enabled:
-                logger.info(f"[ORDER] 🚫 {self.symbol}: Торговля отключена - размещен виртуальный {side} ордер")
-                # Обновляем статус как будто ордер выполнен
-                return {'success': True, 'message': f'Virtual {side} order at ${price:.4f}', 'virtual': True, 'filled_price': price}
-                
-            # Рассчитываем количество монет для ордера
-            if self.volume_mode == 'usdt':
-                quantity = self.volume_value / price  # 10 / 0.00555 = 1800 монет
-                logger.info(f"[ORDER] 🔍 {self.symbol}: Расчет USDT: {self.volume_value} / {price} = {quantity} монет")
-            else:
-                quantity = self.volume_value  # Режим количества
-                logger.info(f"[ORDER] 🔍 {self.symbol}: Режим количества: {quantity} монет")
-            
-            logger.info(f"[ORDER] 🔍 {self.symbol}: ИТОГО - Передаем в place_order: {quantity} монет")
-            
-            # Размещаем ордер через bybit_exchange
-            order_result = exchange.place_order(
-                symbol=self.symbol,
-                side=side,
-                quantity=quantity,  # Количество монет
-                order_type='market',
-                price=None  # Для market ордера
-            )
-            
-            if order_result and order_result.get('success'):
-                # ✅ СОХРАНЯЕМ ORDER_ID И МАРКЕР АВТОБОТА
-                self.order_id = order_result.get('order_id')
-                self.entry_timestamp = time.time()
-                self.opened_by_autobot = True
-                
-                # Сохраняем в bots_data
-                with bots_data_lock:
-                    if self.symbol in bots_data['bots']:
-                        bots_data['bots'][self.symbol]['order_id'] = self.order_id
-                        bots_data['bots'][self.symbol]['entry_timestamp'] = self.entry_timestamp
-                        bots_data['bots'][self.symbol]['opened_by_autobot'] = True
-                
-                logger.info(f"[BOT] {self.symbol}: {side} ордер размещен успешно - {order_result.get('message', '')}")
-                logger.info(f"[BOT] {self.symbol}: 🆔 Order ID: {self.order_id}")
-                logger.info(f"[BOT] {self.symbol}: ⏰ Entry timestamp: {self.entry_timestamp}")
-                logger.info(f"[BOT] {self.symbol}: 🤖 Opened by autobot: TRUE")
-                return order_result
-            else:
-                error_msg = order_result.get('message', 'Unknown error') if order_result else 'No response'
-                logger.error(f"[BOT] {self.symbol}: Не удалось разместить {side} ордер")
-                logger.error(f"[BOT] {self.symbol}: ❌ Детали ошибки: {error_msg}")
-                if order_result:
-                    logger.error(f"[BOT] {self.symbol}: 📊 Полный ответ API: {order_result}")
-                return None
-                
-        except Exception as e:
-            logger.error(f"[BOT] {self.symbol}: Исключение при размещении {side} ордера: {str(e)}")
-            return None
-    
-    def _place_stop_loss(self, position_side, entry_price, stop_loss_percent):
-        """Размещает стоп-лосс ордер на бирже"""
-        try:
-            if not exchange:
-                logger.error(f"[STOP_LOSS] {self.symbol}: ❌ Exchange не инициализирован!")
-                return None
-                
-            # Проверяем включена ли торговля
-            with bots_data_lock:
-                trading_enabled = bots_data['auto_bot_config'].get('trading_enabled', True)
-                
-            if not trading_enabled:
-                logger.info(f"[STOP_LOSS] 🚫 {self.symbol}: Торговля отключена - виртуальный стоп-лосс")
-                return {'success': True, 'message': 'Virtual stop loss', 'virtual': True}
-            
-            # Рассчитываем цену стоп-лосса
-            if position_side == 'LONG':
-                # Для LONG: стоп-лосс ниже цены входа
-                stop_price = entry_price * (1 - stop_loss_percent / 100)
-                stop_side = 'SELL'
-            else:  # SHORT
-                # Для SHORT: стоп-лосс выше цены входа
-                stop_price = entry_price * (1 + stop_loss_percent / 100)
-                stop_side = 'BUY'
-            
-            # Рассчитываем размер позиции
-            position_size_usdt = self.volume_value
-            
-            logger.info(f"[STOP_LOSS] 🛡️ {self.symbol}: Размещение стоп-лосса {position_side} по цене ${stop_price:.4f} (стоп: {stop_loss_percent}%)")
-            
-            # Размещаем стоп-лосс ордер через Bybit API
-            try:
-                # Для Bybit используем set_trading_stop вместо place_order
-                position_idx = 1 if position_side == 'LONG' else 2
-                stop_result = exchange.client.set_trading_stop(
-                    category="linear",
-                    symbol=f"{self.symbol}USDT",
-                    positionIdx=position_idx,
-                    stopLoss=str(stop_price)
-                )
-                
-                if stop_result and stop_result.get('retCode') == 0:
-                    stop_result = {
-                        'success': True,
-                        'message': f'Стоп-лосс {position_side} установлен по цене ${stop_price:.4f}',
-                        'order_id': stop_result.get('result', {}).get('id', 'N/A')
-                    }
-                else:
-                    stop_result = {
-                        'success': False,
-                        'message': f"Ошибка установки стоп-лосса: {stop_result.get('retMsg', 'Unknown error')}"
-                    }
-            except Exception as e:
-                stop_result = {
-                    'success': False,
-                    'message': f"Исключение при размещении стоп-лосса: {str(e)}"
-                }
-            
-            if stop_result and stop_result.get('success'):
-                logger.info(f"[STOP_LOSS] ✅ {self.symbol}: Стоп-лосс размещен успешно - {stop_result.get('message', '')}")
-                return stop_result
-            else:
-                error_msg = stop_result.get('message', 'Unknown error') if stop_result else 'No response'
-                logger.error(f"[STOP_LOSS] ❌ {self.symbol}: Не удалось разместить стоп-лосс: {error_msg}")
-                return None
-                
-        except Exception as e:
-            logger.error(f"[STOP_LOSS] ❌ {self.symbol}: Исключение при размещении стоп-лосса: {str(e)}")
-            return None
-    
-    def check_and_set_stop_loss(self):
-        """Проверяет и устанавливает стоп-лосс для существующей позиции, если его нет"""
-        try:
-            # Проверяем, есть ли позиция
-            if not self.entry_price or not self.position_side:
-                return {'action': 'no_position', 'message': 'Нет активной позиции'}
-            
-            # Проверяем, есть ли уже стоп-лосс (можно добавить поле stop_loss_set в будущем)
-            # Пока что всегда пытаемся установить стоп-лосс для существующих позиций
-            
-            max_loss_percent = bots_data['auto_bot_config'].get('max_loss_percent', 15.0)
-            stop_result = self._place_stop_loss(self.position_side, self.entry_price, max_loss_percent)
-            
-            if stop_result and stop_result.get('success'):
-                logger.info(f"[STOP_LOSS_CHECK] ✅ {self.symbol}: Стоп-лосс установлен для существующей позиции {self.position_side}")
-                return {
-                    'action': 'stop_loss_set',
-                    'position_side': self.position_side,
-                    'entry_price': self.entry_price,
-                    'stop_loss_percent': max_loss_percent,
-                    'result': stop_result
-                }
-            else:
-                logger.warning(f"[STOP_LOSS_CHECK] ⚠️ {self.symbol}: Не удалось установить стоп-лосс для существующей позиции")
-                return {
-                    'action': 'stop_loss_failed',
-                    'position_side': self.position_side,
-                    'entry_price': self.entry_price,
-                    'error': stop_result.get('message', 'Unknown error') if stop_result else 'No response'
-                }
-                
-        except Exception as e:
-            logger.error(f"[STOP_LOSS_CHECK] ❌ {self.symbol}: Ошибка при проверке стоп-лосса: {str(e)}")
-            return {'action': 'error', 'error': str(e)}
-    
-    def _close_position(self, position_side, price, reason):
-        """Закрывает позицию"""
-        try:
-            if not exchange:
-                logger.error(f"[BOT] {self.symbol}: Exchange не инициализирован")
-                return None
-            
-            # ✅ КРИТИЧЕСКАЯ ПРОВЕРКА: Позиция открыта автоботом?
-            if not self.opened_by_autobot:
-                logger.warning(f"[BOT] {self.symbol}: ⚠️ Позиция НЕ открыта автоботом - пропускаем закрытие")
-                logger.warning(f"[BOT] {self.symbol}: 🛡️ ЗАЩИТА ОТ ЗАКРЫТИЯ РУЧНЫХ ПОЗИЦИЙ!")
-                return None
-                
-            # Проверяем включена ли торговля
-            with bots_data_lock:
-                trading_enabled = bots_data['auto_bot_config'].get('trading_enabled', True)
-                
-            if not trading_enabled:
-                logger.info(f"[BOT] {self.symbol}: Торговля отключена, позиция не закрыта (виртуальное закрытие {position_side})")
-                return {'success': True, 'message': f'Virtual close - trading disabled ({reason})', 'virtual': True}
-                
-            # Определяем противоположную сторону для закрытия
-            close_side = 'SELL' if position_side == 'LONG' else 'BUY'
-            
-            # Получаем текущие позиции для определения размера
-            current_positions = exchange.get_positions()
-            if not current_positions or not current_positions.get('success'):
-                logger.error(f"[BOT] {self.symbol}: Не удалось получить позиции для закрытия")
-                return None
-                
-            # ✅ НОВАЯ ЛОГИКА: Ищем НАШУ позицию по timestamp
-            our_position = None
-            for pos in current_positions.get('data', []):
-                if pos['symbol'] != f"{self.symbol}USDT":
-                    continue
-                if pos['side'] != position_side:
-                    continue
-                if float(pos['positionValue']) <= 0:
-                    continue
-                
-                # ✅ ПРОВЕРЯЕМ TIMESTAMP (±10 секунд)
-                position_created_time = pos.get('createdTime', 0) / 1000  # Bybit в миллисекундах
-                if self.entry_timestamp:
-                    time_diff = abs(position_created_time - self.entry_timestamp)
-                    if time_diff > 10:  # Больше 10 секунд разницы
-                        logger.warning(f"[BOT] {self.symbol}: ⚠️ Позиция найдена, но timestamp не совпадает")
-                        logger.warning(f"[BOT] {self.symbol}: Наш timestamp: {self.entry_timestamp}, позиция: {position_created_time}, разница: {time_diff:.1f}с")
-                        continue
-                
-                # ✅ ЭТО НАША ПОЗИЦИЯ!
-                our_position = pos
-                logger.info(f"[BOT] {self.symbol}: ✅ Найдена НАША позиция (order_id: {self.order_id}, timestamp match)")
-                break
-                    
-            if not our_position:
-                logger.warning(f"[BOT] {self.symbol}: ⚠️ НАША позиция {position_side} не найдена для закрытия")
-                logger.warning(f"[BOT] {self.symbol}: Возможно уже закрыта или это была ручная позиция")
-                return {'success': True, 'message': 'Position not found, assuming already closed'}
-                
-            # Закрываем позицию через market ордер
-            close_result = exchange.place_order(
-                symbol=self.symbol,
-                side=close_side,
-                quantity=float(our_position['positionValue']),  # Размер позиции
-                order_type='market',
-                price=None
-            )
-            
-            if close_result and close_result.get('success'):
-                logger.info(f"[BOT] {self.symbol}: ✅ Позиция {position_side} закрыта успешно (причина: {reason})")
-                
-                # ✅ Сбрасываем маркеры автобота
-                self.opened_by_autobot = False
-                self.order_id = None
-                self.entry_timestamp = None
-                
-                with bots_data_lock:
-                    if self.symbol in bots_data['bots']:
-                        bots_data['bots'][self.symbol]['opened_by_autobot'] = False
-                        bots_data['bots'][self.symbol]['order_id'] = None
-                        bots_data['bots'][self.symbol]['entry_timestamp'] = None
-                
-                return close_result
-            else:
-                logger.error(f"[BOT] {self.symbol}: ❌ Ошибка закрытия позиции {position_side} - {close_result.get('message', 'Unknown error') if close_result else 'No response'}")
-                return None
-                
-        except Exception as e:
-            logger.error(f"[BOT] {self.symbol}: Исключение при закрытии позиции {position_side}: {str(e)}")
-            return None
-            
-    def to_dict(self):
-        """Возвращает состояние бота в виде словаря"""
-        return {
-            'symbol': self.symbol,
-            'status': self.status,
-            'volume_mode': self.volume_mode,
-            'volume_value': float(self.volume_value) if self.volume_value is not None else None,
-            'entry_price': float(self.entry_price) if self.entry_price is not None else None,
-            'position_side': self.position_side,
-            'unrealized_pnl': float(self.unrealized_pnl) if self.unrealized_pnl is not None else 0.0,
-            'created_at': self.created_at,
-            'last_signal_time': self.last_signal_time,
-            'last_trend': self.last_trend,
-            'last_rsi': float(self.last_rsi) if self.last_rsi is not None else None,
-            'last_price': float(self.last_price) if self.last_price is not None else None,
-            # Защитные механизмы
-            'max_profit_achieved': float(self.max_profit_achieved) if self.max_profit_achieved is not None else 0.0,
-            'trailing_stop_price': float(self.trailing_stop_price) if self.trailing_stop_price is not None else None,
-            'position_start_time': self.position_start_time.isoformat() if self.position_start_time else None,
-            'break_even_activated': bool(self.break_even_activated),
-            # ✅ ОТСЛЕЖИВАНИЕ ПОЗИЦИЙ АВТОБОТА
-            'order_id': self.order_id,
-            'entry_timestamp': self.entry_timestamp,
-            'opened_by_autobot': self.opened_by_autobot
-        }
-
-
+# Класс LocalTradingBot удален
 
 def get_rsi_cache():
     """Получить кэшированные RSI данные"""
@@ -4607,8 +3458,9 @@ def auto_save_worker():
     logger.info("[AUTO_SAVE] 💾 Auto Save Worker остановлен")
 
 def auto_bot_worker():
-    """Воркер для регулярной проверки Auto Bot сигналов"""
-    logger.info("[AUTO_BOT] 🤖 Запуск Auto Bot Worker...")
+    """Воркер для регулярной проверки Auto Bot сигналов - УДАЛЕНО!"""
+    logger.info("[AUTO_BOT] 🚫 Auto Bot Worker отключен!")
+    return
     
     # КРИТИЧЕСКИ ВАЖНО: Ждем полной инициализации системы!
     logger.info("[AUTO_BOT] ⏳ Ожидание полной инициализации системы...")
@@ -4665,7 +3517,7 @@ def auto_bot_worker():
                     logger.info(f"[AUTO_BOT] {log_message}")
                 
                 logger.info(f"[AUTO_BOT] 🚀 Вызываем process_auto_bot_signals...")
-                process_auto_bot_signals(exchange_obj=exchange)
+                # process_auto_bot_signals(exchange_obj=exchange)  # ОТКЛЮЧЕНО!
                 logger.info(f"[AUTO_BOT] ✅ process_auto_bot_signals завершена")
                 
                 # Обновляем статистику
@@ -4872,11 +3724,11 @@ def init_bot_service():
         })
         
         try:
-            autobot_thread = threading.Thread(target=auto_bot_worker, daemon=True)
-            autobot_thread.start()
+            # Auto Bot Worker отключен
+            logger.info("[INIT] 🚫 Auto Bot Worker отключен!")
             
             update_process_state('auto_bot_worker', {
-                'active': True,
+                'active': False,
                 'last_check': datetime.now().isoformat(),
                 'check_count': 0
             })
@@ -5138,7 +3990,7 @@ def process_trading_signals_on_candle_close(candle_timestamp: int, exchange_obj=
             logger.info("[TRADING] 📭 Нет активных ботов для обработки сигналов")
             # Но все равно проверяем Auto Bot сигналы!
             logger.info("[TRADING] 🤖 Проверяем Auto Bot сигналы (нет активных ботов)...")
-            process_auto_bot_signals(exchange_obj=exchange_obj)
+            # process_auto_bot_signals(exchange_obj=exchange_obj)  # ОТКЛЮЧЕНО!
             return
         
         logger.info(f"[TRADING] 🤖 Обработка сигналов для {len(active_bots)} активных ботов")
@@ -5189,7 +4041,7 @@ def process_trading_signals_on_candle_close(candle_timestamp: int, exchange_obj=
             auto_bot_enabled = bots_data['auto_bot_config']['enabled']
         if auto_bot_enabled:
             logger.info("[TRADING]  Проверяем Auto Bot сигналы после обработки существующих ботов...")
-            process_auto_bot_signals(exchange_obj=exchange_obj)
+            # process_auto_bot_signals(exchange_obj=exchange_obj)  # ОТКЛЮЧЕНО!
         
         # Сохраняем состояние после обработки сигналов
         save_bots_state()
@@ -6606,7 +5458,7 @@ def auto_bot_config():
                 logger.info("=" * 80)
                 
                 try:
-                    process_auto_bot_signals(exchange_obj=exchange)
+                    # process_auto_bot_signals(exchange_obj=exchange)  # ОТКЛЮЧЕНО!
                     logger.info("[CONFIG] ✅ Немедленная проверка Auto Bot завершена")
                 except Exception as e:
                     logger.error(f"[CONFIG] ❌ Ошибка немедленной проверки Auto Bot: {e}")
@@ -6959,12 +5811,13 @@ def get_default_config():
 
 @bots_app.route('/api/bots/auto-bot/test-signals', methods=['POST'])
 def test_auto_bot_signals():
-    """Тестовый эндпоинт для принудительной обработки Auto Bot сигналов"""
+    """Тестовый эндпоинт для принудительной обработки Auto Bot сигналов - УДАЛЕНО!"""
+    return jsonify({'success': False, 'message': 'Auto Bot отключен!'})
     try:
         logger.info("[TEST] 🧪 Принудительная обработка Auto Bot сигналов...")
         
         # Принудительно вызываем обработку сигналов
-        process_auto_bot_signals(exchange_obj=exchange)
+        # process_auto_bot_signals(exchange_obj=exchange)  # ОТКЛЮЧЕНО!
         
         # Получаем статистику
         with bots_data_lock:
