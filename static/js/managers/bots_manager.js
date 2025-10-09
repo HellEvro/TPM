@@ -347,12 +347,19 @@ class BotsManager {
     initializeRsiFilters() {
         document.querySelectorAll('.rsi-filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                // ✅ ИСПРАВЛЕНИЕ: Используем currentTarget вместо target
+                // currentTarget = сама кнопка, target = может быть вложенный элемент (эмодзи, текст)
+                const clickedBtn = e.currentTarget;
+                const filter = clickedBtn.dataset.filter;
+                
+                console.log(`[BotsManager] 🔍 Клик на фильтр: ${filter}`);
+                
                 // Переключаем активный фильтр
                 document.querySelectorAll('.rsi-filter-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                clickedBtn.classList.add('active');
                 
                 // Применяем фильтр
-                this.applyRsiFilter(e.target.dataset.filter);
+                this.applyRsiFilter(filter);
             });
         });
         
