@@ -868,9 +868,9 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
         signal_generator = SignalGenerator()
         
         # Форматируем данные свечей для анализа
-        # Bybit отправляет свечи от новой к старой, поэтому переворачиваем массив
+        # Bybit отправляет свечи в правильном порядке для анализа
         formatted_candles = []
-        for candle in reversed(candles):  # Переворачиваем: от старой к новой
+        for candle in candles:  # Используем оригинальный порядок
             formatted_candles.append({
                 'timestamp': candle.get('time', 0),
                 'open': float(candle.get('open', 0)),
@@ -894,9 +894,18 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
                 adaptive_levels = TechnicalIndicators.calculate_adaptive_rsi_levels(formatted_candles)
                 divergence = TechnicalIndicators.detect_rsi_divergence(closes, rsi_history)
                 volume_confirmation = TechnicalIndicators.confirm_with_volume(volumes)
-                stoch_rsi_result = TechnicalIndicators.calculate_stoch_rsi(rsi_history)
+                
+                # Для Stochastic RSI используем ВСЮ историю RSI
+                # Параметры Bybit: stoch_period=14, k_smooth=3, d_smooth=3
+                stoch_rsi_result = TechnicalIndicators.calculate_stoch_rsi(
+                    rsi_history, 
+                    stoch_period=14, 
+                    k_smooth=3,
+                    d_smooth=3
+                )
                 stoch_rsi = stoch_rsi_result['k'] if stoch_rsi_result else None
                 stoch_rsi_d = stoch_rsi_result['d'] if stoch_rsi_result else None
+                
                 
                 # Определяем продолжительность в экстремальной зоне
                 extreme_duration = 0
@@ -1085,14 +1094,25 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             return None
         
         # Рассчитываем RSI для 6H
-        # Bybit отправляет свечи от новой к старой, поэтому переворачиваем массив
+        # Bybit отправляет свечи в правильном порядке для RSI (от старой к новой)
         closes = [candle['close'] for candle in candles]
-        closes_reversed = list(reversed(closes))  # Переворачиваем: от старой к новой
-        rsi = calculate_rsi(closes_reversed, 14)
+        
+        # Отладка для 10000WEN
+        if symbol == "10000WEN":
+            logger.info(f"[DEBUG] {symbol} - Количество свечей: {len(candles)}")
+            logger.info(f"[DEBUG] {symbol} - Первые 5 цен: {closes[:5]}")
+            logger.info(f"[DEBUG] {symbol} - Последние 5 цен: {closes[-5:]}")
+            logger.info(f"[DEBUG] {symbol} - Текущая цена (последняя): {closes[-1]}")
+        
+        rsi = calculate_rsi(closes, 14)
         
         if rsi is None:
             logger.warning(f"[WARNING] Не удалось рассчитать RSI для {symbol}")
             return None
+        
+        # Отладка результата для 10000WEN
+        if symbol == "10000WEN":
+            logger.info(f"[DEBUG] {symbol} - Рассчитанный RSI: {rsi}")
         
         # Получаем полный анализ тренда 6H
         trend_analysis = analyze_trend_6h(symbol, exchange_obj=exchange_obj)
@@ -1161,13 +1181,16 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # Получаем оптимальные EMA периоды для монеты
         ema_periods = get_optimal_ema_periods(symbol)
         
+        # closes[-1] - это самая НОВАЯ цена (последняя свеча в массиве)
+        current_price = closes[-1]
+        
         result = {
             'symbol': symbol,
             'rsi6h': round(rsi, 1),
             'trend6h': trend,
             'rsi_zone': rsi_zone,
             'signal': signal,
-            'price': closes[-1],
+            'price': current_price,
             'change24h': change_24h,
             'last_update': datetime.now().isoformat(),
             'trend_analysis': trend_analysis,
@@ -1185,7 +1208,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         trend_emoji = '📈' if trend == 'UP' else '📉' if trend == 'DOWN' else '➡️'
         
         if signal in ['ENTER_LONG', 'ENTER_SHORT']:
-            logger.info(f"[SIGNAL] 🎯 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend} (${closes[-1]:.4f}) → {signal}")
+            logger.info(f"[SIGNAL] 🎯 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend} (${current_price:.4f}) → {signal}")
         elif signal == 'WAIT' and rsi <= RSI_OVERSOLD and trend == 'DOWN' and avoid_down_trend:
             logger.debug(f"[FILTER] 🚫 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend} LONG заблокирован (фильтр DOWN тренда)")
         elif signal == 'WAIT' and rsi >= RSI_OVERBOUGHT and trend == 'UP' and avoid_up_trend:
@@ -3719,45 +3742,59 @@ def cleanup_inactive_bots():
         logger.error(f"[INACTIVE_CLEANUP] ❌ Ошибка очистки неактивных ботов: {e}")
         return False
 
-def cleanup_mature_coins_without_trades():
-    """Удаляет зрелые монеты, у которых нет сделок более 10 минут"""
+# УДАЛЕНО: cleanup_mature_coins_without_trades()
+# Зрелость монеты необратима - если монета стала зрелой, она не может стать незрелой!
+# Файл зрелых монет можно только дополнять новыми, но не очищать от старых
+
+def remove_mature_coins(coins_to_remove):
+    """
+    Удаляет конкретные монеты из файла зрелых монет
+    
+    Args:
+        coins_to_remove: список символов монет для удаления (например: ['ARIA', 'AVNT'])
+    
+    Returns:
+        dict: результат операции с количеством удаленных монет
+    """
     try:
-        current_time = time.time()
-        removed_count = 0
+        if not isinstance(coins_to_remove, list):
+            coins_to_remove = [coins_to_remove]
         
-        logger.info(f"[MATURE_CLEANUP] 🔍 Проверка зрелых монет без сделок более 10 минут")
+        removed_count = 0
+        not_found = []
+        
+        logger.info(f"[MATURE_REMOVE] 🗑️ Запрос на удаление монет: {coins_to_remove}")
         
         with mature_coins_lock:
-            coins_to_remove = []
-            
-            for symbol, coin_data in mature_coins_storage.items():
-                last_verified = coin_data.get('last_verified', 0)
-                time_since_verification = current_time - last_verified
-                
-                # Если монета не проверялась более 10 минут (600 секунд)
-                if time_since_verification > 600:
-                    logger.warning(f"[MATURE_CLEANUP] ⏰ Монета {symbol} не проверялась {time_since_verification//60:.0f} мин - удаляем из зрелых")
-                    coins_to_remove.append(symbol)
-                else:
-                    logger.debug(f"[MATURE_CLEANUP] ⏳ Монета {symbol} проверялась {time_since_verification//60:.0f} мин назад - оставляем")
-            
-            # Удаляем устаревшие зрелые монеты
             for symbol in coins_to_remove:
-                del mature_coins_storage[symbol]
-                removed_count += 1
+                if symbol in mature_coins_storage:
+                    del mature_coins_storage[symbol]
+                    removed_count += 1
+                    logger.info(f"[MATURE_REMOVE] ✅ Удалена монета {symbol} из зрелых")
+                else:
+                    not_found.append(symbol)
+                    logger.warning(f"[MATURE_REMOVE] ⚠️ Монета {symbol} не найдена в зрелых")
         
+        # Сохраняем изменения
         if removed_count > 0:
-            logger.info(f"[MATURE_CLEANUP] ✅ Удалено {removed_count} зрелых монет без сделок")
-            # Сохраняем состояние
             save_mature_coins_storage()
-        else:
-            logger.info(f"[MATURE_CLEANUP] ✅ Зрелых монет для удаления не найдено")
+            logger.info(f"[MATURE_REMOVE] 💾 Сохранено состояние зрелых монет")
         
-        return removed_count > 0
+        return {
+            'success': True,
+            'removed_count': removed_count,
+            'removed_coins': [coin for coin in coins_to_remove if coin not in not_found],
+            'not_found': not_found,
+            'message': f'Удалено {removed_count} монет из зрелых'
+        }
         
     except Exception as e:
-        logger.error(f"[MATURE_CLEANUP] ❌ Ошибка очистки зрелых монет: {e}")
-        return False
+        logger.error(f"[MATURE_REMOVE] ❌ Ошибка удаления монет: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'removed_count': 0
+        }
 
 def check_trading_rules_activation():
     """Проверяет и активирует правила торговли для зрелых монет"""
@@ -4410,8 +4447,7 @@ def auto_bot_worker():
                 logger.info(f"[INACTIVE_CLEANUP] 🧹 Очистка неактивных ботов (каждые {INACTIVE_BOT_CLEANUP_INTERVAL//60} мин)")
                 cleanup_inactive_bots()
                 
-                # Очищаем зрелые монеты без сделок более 10 минут
-                cleanup_mature_coins_without_trades()
+                # УДАЛЕНО: Очистка зрелых монет - зрелость необратима!
                 
                 # Активируем правила торговли для зрелых монет
                 check_trading_rules_activation()
@@ -5989,28 +6025,65 @@ def cleanup_inactive_manual():
             'error': str(e)
         }), 500
 
-@bots_app.route('/api/bots/cleanup-mature', methods=['POST'])
-def cleanup_mature_manual():
-    """Принудительная очистка зрелых монет без сделок"""
+# УДАЛЕНО: API endpoint cleanup-mature
+# Зрелость монеты необратима - нет смысла в API для удаления зрелых монет
+
+@bots_app.route('/api/bots/mature-coins-list', methods=['GET'])
+def get_mature_coins_list():
+    """Получить список всех зрелых монет"""
     try:
-        logger.info("[MANUAL_CLEANUP] 🧹 Запуск принудительной очистки зрелых монет")
-        result = cleanup_mature_coins_without_trades()
+        with mature_coins_lock:
+            mature_coins_list = list(mature_coins_storage.keys())
         
-        if result:
+        return jsonify({
+            'success': True,
+            'mature_coins': mature_coins_list,
+            'total_count': len(mature_coins_list)
+        })
+        
+    except Exception as e:
+        logger.error(f"[API_MATURE_LIST] ❌ Ошибка получения списка зрелых монет: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@bots_app.route('/api/bots/remove-mature-coins', methods=['POST'])
+def remove_mature_coins_api():
+    """API для удаления конкретных монет из зрелых"""
+    try:
+        data = request.get_json()
+        if not data or 'coins' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Не указаны монеты для удаления'
+            }), 400
+        
+        coins_to_remove = data['coins']
+        if not isinstance(coins_to_remove, list):
+            return jsonify({
+                'success': False,
+                'error': 'Параметр coins должен быть массивом'
+            }), 400
+        
+        result = remove_mature_coins(coins_to_remove)
+        
+        if result['success']:
             return jsonify({
                 'success': True,
-                'message': 'Очистка зрелых монет выполнена успешно',
-                'cleaned': True
+                'message': result['message'],
+                'removed_count': result['removed_count'],
+                'removed_coins': result['removed_coins'],
+                'not_found': result['not_found']
             })
         else:
             return jsonify({
-                'success': True,
-                'message': 'Зрелых монет для удаления не найдено',
-                'cleaned': False
-            })
+                'success': False,
+                'error': result['error']
+            }), 500
             
     except Exception as e:
-        logger.error(f"[MANUAL_CLEANUP] ❌ Ошибка принудительной очистки зрелых монет: {e}")
+        logger.error(f"[API_REMOVE_MATURE] ❌ Ошибка API удаления монет: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

@@ -122,6 +122,9 @@ class BotsManager {
         // Инициализируем кнопки конфигурации (должны работать всегда!)
         this.initializeConfigurationButtons();
         
+        // Инициализируем управление зрелыми монетами
+        this.initializeMatureCoinsManagement();
+        
         // Принудительно применяем стили для читаемости
         this.applyReadabilityStyles();
         
@@ -5038,6 +5041,121 @@ class BotsManager {
      * Теперь используется инкрементальная загрузка автоматически
      */
     
+    /**
+     * Инициализирует управление зрелыми монетами
+     */
+    initializeMatureCoinsManagement() {
+        const removeBtn = document.getElementById('removeMatureCoinsBtn');
+        const coinsInput = document.getElementById('coinsToRemove');
+        
+        if (removeBtn && coinsInput) {
+            removeBtn.addEventListener('click', () => {
+                this.removeMatureCoins();
+            });
+            
+            // Загружаем информацию о зрелых монетах
+            this.loadMatureCoinsInfo();
+        }
+    }
+    
+    /**
+     * Загружает информацию о зрелых монетах
+     */
+    async loadMatureCoinsInfo() {
+        try {
+            const response = await fetch('/api/bots/mature-coins-list');
+            const data = await response.json();
+            
+            if (data.success) {
+                const countEl = document.getElementById('totalMatureCoinsCount');
+                if (countEl) {
+                    countEl.textContent = data.total_count;
+                }
+            }
+        } catch (error) {
+            console.error('[BotsManager] Ошибка загрузки списка зрелых монет:', error);
+        }
+    }
+    
+    /**
+     * Удаляет указанные монеты из зрелых
+     */
+    async removeMatureCoins() {
+        const coinsInput = document.getElementById('coinsToRemove');
+        const removeBtn = document.getElementById('removeMatureCoinsBtn');
+        
+        if (!coinsInput || !removeBtn) return;
+        
+        const coinsText = coinsInput.value.trim();
+        if (!coinsText) {
+            this.showNotification('Введите символы монет для удаления', 'warning');
+            return;
+        }
+        
+        // Парсим список монет
+        const coinsToRemove = coinsText.split(',').map(coin => coin.trim().toUpperCase()).filter(coin => coin);
+        
+        if (coinsToRemove.length === 0) {
+            this.showNotification('Неверный формат списка монет', 'warning');
+            return;
+        }
+        
+        // Подтверждение удаления
+        const confirmMessage = `Вы уверены, что хотите удалить ${coinsToRemove.length} монет из зрелых?\n\nМонеты: ${coinsToRemove.join(', ')}\n\nЭто действие необратимо!`;
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        // Блокируем кнопку
+        removeBtn.disabled = true;
+        removeBtn.textContent = '🗑️ Удаление...';
+        
+        try {
+            const response = await fetch('/api/bots/remove-mature-coins', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    coins: coinsToRemove
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showNotification(`✅ Удалено ${data.removed_count} монет из зрелых`, 'success');
+                
+                // Обновляем информацию
+                await this.loadMatureCoinsInfo();
+                
+                // Очищаем поле ввода
+                coinsInput.value = '';
+                
+                // Обновляем информацию о последнем удалении
+                const lastRemovalEl = document.getElementById('lastRemovalInfo');
+                if (lastRemovalEl) {
+                    const now = new Date().toLocaleString('ru-RU');
+                    lastRemovalEl.textContent = `${now} (${data.removed_coins.join(', ')})`;
+                }
+                
+                // Перезагружаем данные монет
+                await this.loadCoinsRsiData();
+                
+            } else {
+                this.showNotification(`❌ Ошибка удаления: ${data.error}`, 'error');
+            }
+            
+        } catch (error) {
+            console.error('[BotsManager] Ошибка удаления зрелых монет:', error);
+            this.showNotification('❌ Ошибка соединения с сервером', 'error');
+        } finally {
+            // Разблокируем кнопку
+            removeBtn.disabled = false;
+            removeBtn.innerHTML = '<span data-translate="remove_coins_btn">🗑️ Удалить</span>';
+        }
+    }
+
     /**
      * Показывает уведомление
      */
