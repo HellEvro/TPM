@@ -4457,10 +4457,9 @@ def init_bot_service():
         load_bots_state()
         
         
-        # 5. Загружаем RSI кэш
-        cache_loaded = load_rsi_cache()
-        if not cache_loaded:
-            logger.info("[INIT] ⏳ RSI кэш не найден, будет обновлен")
+        # 5. Загружаем свежие RSI данные для всех монет
+        logger.info("[INIT] 🔄 Загружаем свежие RSI данные для всех монет...")
+        load_all_coins_rsi()
         
         update_process_state('smart_rsi_manager', {
             'last_update': datetime.now().isoformat(),
