@@ -31,6 +31,8 @@
   "rsi_time_filter_candles": 8,
   "rsi_time_filter_upper": 65,
   "rsi_time_filter_lower": 35,
+  "anti_dump_pump_enabled": true,
+  "anti_dump_pump_candles": 10,
   "min_volatility_threshold": 5,
   "max_concurrent_bots": 20,
   "maxConcurrentBots": 10,

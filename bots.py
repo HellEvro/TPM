@@ -1208,125 +1208,147 @@ def check_rsi_time_filter(candles, rsi, signal):
         current_index = len(rsi_history) - 1
         
         if signal == 'ENTER_SHORT':
-            # ЧЕТКАЯ ЛОГИКА ДЛЯ SHORT:
-            # 1. Найти последний пик (RSI >= 71)
-            # 2. От пика отсчитать N свечей вперед
-            # 3. Проверить что ВСЕ эти N свечей >= 65
+            # ПРАВИЛЬНАЯ ЛОГИКА ДЛЯ SHORT:
+            # 1. Берем последние N свечей (8)
+            # 2. Ищем среди них пик >= 71
+            #    - Если несколько пиков - берем САМЫЙ РАННИЙ (8-ую свечу)
+            #    - Если нет пиков - идем дальше в историю до 50 свечей
+            # 3. От найденного пика проверяем ВСЕ свечи до текущей
+            # 4. Все должны быть >= 65 (иначе был провал - вход упущен)
             
-            # Ищем последний пик (RSI >= 71)
-            last_peak_index = None
-            for i in range(current_index, -1, -1):
+            # Шаг 1: Проверяем последние N свечей
+            last_n_candles_start = max(0, current_index - rsi_time_filter_candles + 1)
+            last_n_candles = rsi_history[last_n_candles_start:current_index + 1]
+            
+            # Ищем пики (>= 71) в последних N свечах
+            peak_index = None
+            for i in range(last_n_candles_start, current_index + 1):
                 if rsi_history[i] >= rsi_short_threshold:
-                    last_peak_index = i
-                    break
+                    peak_index = i
+                    break  # Берем САМЫЙ РАННИЙ пик
             
-            if last_peak_index is None:
-                # Пик не найден - разрешаем (долго нет экстремума)
+            # Шаг 2: Если не нашли пик в последних N - ищем дальше в ВСЕЙ истории
+            if peak_index is None:
+                # Ищем по всей доступной истории (без ограничений)
+                for i in range(last_n_candles_start - 1, -1, -1):
+                    if rsi_history[i] >= rsi_short_threshold:
+                        peak_index = i
+                        break
+            
+            if peak_index is None:
+                # Пик не найден вообще - разрешаем (никогда не было экстремума)
                 return {
                     'allowed': True,
-                    'reason': f'Разрешено: пик RSI >= {rsi_short_threshold} не найден',
+                    'reason': f'Разрешено: пик RSI >= {rsi_short_threshold} не найден во всей истории',
                     'last_extreme_candles_ago': None,
-                    'calm_candles': None
+                    'calm_candles': len(last_n_candles)
                 }
             
-            # Проверяем сколько свечей прошло с пика
-            candles_since_peak = current_index - last_peak_index
+            # Шаг 3: Проверяем ВСЕ свечи от пика до текущей
+            candles_since_peak = current_index - peak_index
             
-            if candles_since_peak < rsi_time_filter_candles:
-                # Недостаточно свечей с пика
-                return {
-                    'allowed': False,
-                    'reason': f'Блокировка: с пика (RSI >= {rsi_short_threshold}) прошло только {candles_since_peak} свечей (требуется {rsi_time_filter_candles})',
-                    'last_extreme_candles_ago': candles_since_peak,
-                    'calm_candles': candles_since_peak
-                }
+            # Берем все свечи ПОСЛЕ пика (не включая сам пик)
+            start_check = peak_index + 1
+            check_candles = rsi_history[start_check:current_index + 1]
             
-            # Проверяем N свечей ПОСЛЕ пика (не включая сам пик)
-            start_check = last_peak_index + 1
-            end_check = last_peak_index + rsi_time_filter_candles + 1
-            
-            if end_check > len(rsi_history):
-                end_check = len(rsi_history)
-            
-            # Проверяем что ВСЕ свечи после пика >= 65
-            check_candles = rsi_history[start_check:end_check]
+            # Проверяем что ВСЕ свечи >= 65
             invalid_candles = [rsi_val for rsi_val in check_candles if rsi_val < rsi_time_filter_upper]
             
             if len(invalid_candles) > 0:
-                # Есть свечи < 65 после пика
+                # Есть провалы < 65 - вход упущен
                 return {
                     'allowed': False,
-                    'reason': f'Блокировка: {len(invalid_candles)} свечей после пика были < {rsi_time_filter_upper}',
+                    'reason': f'Блокировка: {len(invalid_candles)} свечей после пика провалились < {rsi_time_filter_upper} (вход упущен)',
                     'last_extreme_candles_ago': candles_since_peak,
                     'calm_candles': len(check_candles) - len(invalid_candles)
                 }
             
-            # Все проверки пройдены
+            # Проверяем что прошло достаточно свечей
+            if len(check_candles) < rsi_time_filter_candles:
+                return {
+                    'allowed': False,
+                    'reason': f'Блокировка: с пика прошло только {len(check_candles)} свечей (требуется {rsi_time_filter_candles})',
+                    'last_extreme_candles_ago': candles_since_peak,
+                    'calm_candles': len(check_candles)
+                }
+            
+            # Все проверки пройдены!
             return {
                 'allowed': True,
-                'reason': f'Разрешено: с пика прошло {candles_since_peak} свечей, все {len(check_candles)} свечей после пика >= {rsi_time_filter_upper}',
+                'reason': f'Разрешено: с пика (свеча -{candles_since_peak}) прошло {len(check_candles)} спокойных свечей >= {rsi_time_filter_upper}',
                 'last_extreme_candles_ago': candles_since_peak,
                 'calm_candles': len(check_candles)
             }
                 
         elif signal == 'ENTER_LONG':
-            # ЧЕТКАЯ ЛОГИКА ДЛЯ LONG:
-            # 1. Найти последний лой (RSI <= 29)
-            # 2. От лоя отсчитать N свечей вперед
-            # 3. Проверить что ВСЕ эти N свечей <= 35
+            # ПРАВИЛЬНАЯ ЛОГИКА ДЛЯ LONG:
+            # 1. Берем последние N свечей (8)
+            # 2. Ищем среди них лой <= 29
+            #    - Если несколько лоев - берем САМЫЙ РАННИЙ (8-ую свечу)
+            #    - Если нет лоев - идем дальше в историю (БЕЗ ОГРАНИЧЕНИЙ)
+            # 3. От найденного лоя проверяем ВСЕ свечи до текущей
+            # 4. Все должны быть <= 35 (иначе был провал - вход упущен)
             
-            # Ищем последний лой (RSI <= 29)
-            last_low_index = None
-            for i in range(current_index, -1, -1):
+            # Шаг 1: Проверяем последние N свечей
+            last_n_candles_start = max(0, current_index - rsi_time_filter_candles + 1)
+            last_n_candles = rsi_history[last_n_candles_start:current_index + 1]
+            
+            # Ищем лои (<= 29) в последних N свечах
+            low_index = None
+            for i in range(last_n_candles_start, current_index + 1):
                 if rsi_history[i] <= rsi_long_threshold:
-                    last_low_index = i
-                    break
+                    low_index = i
+                    break  # Берем САМЫЙ РАННИЙ лой
             
-            if last_low_index is None:
-                # Лой не найден - разрешаем (долго нет экстремума)
+            # Шаг 2: Если не нашли лой в последних N - ищем дальше в ВСЕЙ истории
+            if low_index is None:
+                # Ищем по всей доступной истории (без ограничений)
+                for i in range(last_n_candles_start - 1, -1, -1):
+                    if rsi_history[i] <= rsi_long_threshold:
+                        low_index = i
+                        break
+            
+            if low_index is None:
+                # Лой не найден вообще - разрешаем (никогда не было экстремума)
                 return {
                     'allowed': True,
-                    'reason': f'Разрешено: лой RSI <= {rsi_long_threshold} не найден',
+                    'reason': f'Разрешено: лой RSI <= {rsi_long_threshold} не найден во всей истории',
                     'last_extreme_candles_ago': None,
-                    'calm_candles': None
+                    'calm_candles': len(last_n_candles)
                 }
             
-            # Проверяем сколько свечей прошло с лоя
-            candles_since_low = current_index - last_low_index
+            # Шаг 3: Проверяем ВСЕ свечи от лоя до текущей
+            candles_since_low = current_index - low_index
             
-            if candles_since_low < rsi_time_filter_candles:
-                # Недостаточно свечей с лоя
-                return {
-                    'allowed': False,
-                    'reason': f'Блокировка: с лоя (RSI <= {rsi_long_threshold}) прошло только {candles_since_low} свечей (требуется {rsi_time_filter_candles})',
-                    'last_extreme_candles_ago': candles_since_low,
-                    'calm_candles': candles_since_low
-                }
+            # Берем все свечи ПОСЛЕ лоя (не включая сам лой)
+            start_check = low_index + 1
+            check_candles = rsi_history[start_check:current_index + 1]
             
-            # Проверяем N свечей ПОСЛЕ лоя (не включая сам лой)
-            start_check = last_low_index + 1
-            end_check = last_low_index + rsi_time_filter_candles + 1
-            
-            if end_check > len(rsi_history):
-                end_check = len(rsi_history)
-            
-            # Проверяем что ВСЕ свечи после лоя <= 35
-            check_candles = rsi_history[start_check:end_check]
+            # Проверяем что ВСЕ свечи <= 35
             invalid_candles = [rsi_val for rsi_val in check_candles if rsi_val > rsi_time_filter_lower]
             
             if len(invalid_candles) > 0:
-                # Есть свечи > 35 после лоя
+                # Есть провалы > 35 - вход упущен
                 return {
                     'allowed': False,
-                    'reason': f'Блокировка: {len(invalid_candles)} свечей после лоя были > {rsi_time_filter_lower}',
+                    'reason': f'Блокировка: {len(invalid_candles)} свечей после лоя поднялись > {rsi_time_filter_lower} (вход упущен)',
                     'last_extreme_candles_ago': candles_since_low,
                     'calm_candles': len(check_candles) - len(invalid_candles)
                 }
             
-            # Все проверки пройдены
+            # Проверяем что прошло достаточно свечей
+            if len(check_candles) < rsi_time_filter_candles:
+                return {
+                    'allowed': False,
+                    'reason': f'Блокировка: с лоя прошло только {len(check_candles)} свечей (требуется {rsi_time_filter_candles})',
+                    'last_extreme_candles_ago': candles_since_low,
+                    'calm_candles': len(check_candles)
+                }
+            
+            # Все проверки пройдены!
             return {
                 'allowed': True,
-                'reason': f'Разрешено: с лоя прошло {candles_since_low} свечей, все {len(check_candles)} свечей после лоя <= {rsi_time_filter_lower}',
+                'reason': f'Разрешено: с лоя (свеча -{candles_since_low}) прошло {len(check_candles)} спокойных свечей <= {rsi_time_filter_lower}',
                 'last_extreme_candles_ago': candles_since_low,
                 'calm_candles': len(check_candles)
             }
