@@ -28,5 +28,9 @@
   "min_rsi_low": 35,
   "max_rsi_high": 65,
   "rsi_time_filter_enabled": true,
-  "rsi_time_filter_candles": 8
+  "rsi_time_filter_candles": 8,
+  "rsi_time_filter_upper": 65,
+  "rsi_time_filter_lower": 35,
+  "anti_dump_pump_enabled": true,
+  "anti_dump_pump_candles": 10
 }

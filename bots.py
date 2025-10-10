@@ -1161,13 +1161,16 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
 
 def check_rsi_time_filter(candles, rsi, signal):
     """
-    Проверяет сложный временной фильтр для RSI сигналов.
+    ГИБРИДНЫЙ ВРЕМЕННОЙ ФИЛЬТР RSI
     
-    СЛОЖНАЯ ЛОГИКА:
-    1. Найти последнюю свечу где RSI был в экстремальной зоне (≥71 для SHORT, ≤29 для LONG)
-    2. Отсчитать N свечей после неё (из конфига)
-    3. Проверить ВСЕ N свечей - должны быть в разрешенной зоне (≥65 для SHORT, ≤35 для LONG)
-    4. Если хотя бы одна свеча не в зоне → искать заново
+    Проверяет что:
+    1. Последние N свечей (из конфига, по умолчанию 8) находятся в "спокойной зоне"
+       - Для SHORT: все свечи должны быть >= 65
+       - Для LONG: все свечи должны быть <= 35
+    2. Перед этой спокойной зоной был экстремум
+       - Для SHORT: свеча с RSI >= 71
+       - Для LONG: свеча с RSI <= 29
+    3. С момента экстремума прошло минимум N свечей
     
     Args:
         candles: Список свечей
@@ -1175,166 +1178,164 @@ def check_rsi_time_filter(candles, rsi, signal):
         signal: Торговый сигнал ('ENTER_LONG' или 'ENTER_SHORT')
     
     Returns:
-        dict: {'allowed': bool, 'reason': str, 'last_extreme_candles_ago': int}
+        dict: {'allowed': bool, 'reason': str, 'last_extreme_candles_ago': int, 'calm_candles': int}
     """
     try:
         # Получаем настройки из конфига
         with bots_data_lock:
             rsi_time_filter_enabled = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_enabled', True)
             rsi_time_filter_candles = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_candles', 8)
-            rsi_time_filter_upper = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_upper', 65)  # Граница для SHORT
-            rsi_time_filter_lower = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_lower', 35)  # Граница для LONG
+            rsi_time_filter_upper = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_upper', 65)  # Спокойная зона для SHORT
+            rsi_time_filter_lower = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_lower', 35)  # Спокойная зона для LONG
             rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', 29)  # Экстремум для LONG
             rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', 71)  # Экстремум для SHORT
         
         # Если фильтр отключен - разрешаем сделку
         if not rsi_time_filter_enabled:
-            return {'allowed': True, 'reason': 'RSI временной фильтр отключен', 'last_extreme_candles_ago': None}
+            return {'allowed': True, 'reason': 'RSI временной фильтр отключен', 'last_extreme_candles_ago': None, 'calm_candles': None}
         
-        if len(candles) < 50:  # Нужно больше свечей для сложного анализа
-            return {'allowed': False, 'reason': 'Недостаточно свечей для анализа', 'last_extreme_candles_ago': None}
+        if len(candles) < 50:
+            return {'allowed': False, 'reason': 'Недостаточно свечей для анализа', 'last_extreme_candles_ago': None, 'calm_candles': 0}
         
         # Рассчитываем историю RSI
         closes = [candle['close'] for candle in candles]
         rsi_history = calculate_rsi_history(closes, 14)
         
-        min_rsi_history = max(rsi_time_filter_candles * 2 + 14, 30)  # Минимум для анализа
+        min_rsi_history = max(rsi_time_filter_candles * 2 + 14, 30)
         if not rsi_history or len(rsi_history) < min_rsi_history:
-            return {'allowed': False, 'reason': f'Недостаточно RSI истории (требуется {min_rsi_history})', 'last_extreme_candles_ago': None}
+            return {'allowed': False, 'reason': f'Недостаточно RSI истории (требуется {min_rsi_history})', 'last_extreme_candles_ago': None, 'calm_candles': 0}
+        
+        current_index = len(rsi_history) - 1
         
         if signal == 'ENTER_SHORT':
-            # ИСПРАВЛЕННАЯ ЛОГИКА ДЛЯ SHORT:
-            # 1. Найти САМУЮ ПОСЛЕДНЮЮ свечу где RSI был >= 71
-            # 2. От этой свечи отсчитать 8 свечей ВПЕРЕД
-            # 3. Проверить что ВСЕ 8 свечей после неё имеют RSI >= 65
+            # ЧЕТКАЯ ЛОГИКА ДЛЯ SHORT:
+            # 1. Найти последний пик (RSI >= 71)
+            # 2. От пика отсчитать N свечей вперед
+            # 3. Проверить что ВСЕ эти N свечей >= 65
             
-            # Ищем САМУЮ ПОСЛЕДНЮЮ свечу с RSI >= 71
-            last_extreme_index = None
-            for i in range(len(rsi_history) - 1, -1, -1):  # Идем с конца к началу
+            # Ищем последний пик (RSI >= 71)
+            last_peak_index = None
+            for i in range(current_index, -1, -1):
                 if rsi_history[i] >= rsi_short_threshold:
-                    last_extreme_index = i
-                    break  # Нашли самую последнюю - выходим
+                    last_peak_index = i
+                    break
             
-            if last_extreme_index is None:
-                # Не найдено свечей с RSI >= 71 - разрешаем
+            if last_peak_index is None:
+                # Пик не найден - разрешаем (долго нет экстремума)
                 return {
-                    'allowed': True, 
-                    'reason': f'Разрешено: не найдено свечей с RSI >= {rsi_short_threshold}', 
-                    'last_extreme_candles_ago': None
+                    'allowed': True,
+                    'reason': f'Разрешено: пик RSI >= {rsi_short_threshold} не найден',
+                    'last_extreme_candles_ago': None,
+                    'calm_candles': None
                 }
             
-            # Проверяем, что после экстремума есть достаточно свечей для проверки
-            candles_after_extreme = len(rsi_history) - 1 - last_extreme_index
+            # Проверяем сколько свечей прошло с пика
+            candles_since_peak = current_index - last_peak_index
             
-            if candles_after_extreme < rsi_time_filter_candles:
-                # Недостаточно свечей после экстремума - блокируем
+            if candles_since_peak < rsi_time_filter_candles:
+                # Недостаточно свечей с пика
                 return {
-                    'allowed': False, 
-                    'reason': f'Блокировка: после последнего RSI >= {rsi_short_threshold} прошло только {candles_after_extreme} свечей (требуется {rsi_time_filter_candles})', 
-                    'last_extreme_candles_ago': candles_after_extreme
+                    'allowed': False,
+                    'reason': f'Блокировка: с пика (RSI >= {rsi_short_threshold}) прошло только {candles_since_peak} свечей (требуется {rsi_time_filter_candles})',
+                    'last_extreme_candles_ago': candles_since_peak,
+                    'calm_candles': candles_since_peak
                 }
             
-            # Проверяем N свечей НАЧИНАЯ С экстремума (включая его)
-            # Берем свечи от экстремума до экстремума + N
-            start_index = last_extreme_index
-            end_index = last_extreme_index + rsi_time_filter_candles
+            # Проверяем N свечей ПОСЛЕ пика (не включая сам пик)
+            start_check = last_peak_index + 1
+            end_check = last_peak_index + rsi_time_filter_candles + 1
             
-            if end_index >= len(rsi_history):
-                # Недостаточно свечей для проверки - блокируем
+            if end_check > len(rsi_history):
+                end_check = len(rsi_history)
+            
+            # Проверяем что ВСЕ свечи после пика >= 65
+            check_candles = rsi_history[start_check:end_check]
+            invalid_candles = [rsi_val for rsi_val in check_candles if rsi_val < rsi_time_filter_upper]
+            
+            if len(invalid_candles) > 0:
+                # Есть свечи < 65 после пика
                 return {
-                    'allowed': False, 
-                    'reason': f'Блокировка: недостаточно свечей для проверки после экстремума', 
-                    'last_extreme_candles_ago': candles_after_extreme
+                    'allowed': False,
+                    'reason': f'Блокировка: {len(invalid_candles)} свечей после пика были < {rsi_time_filter_upper}',
+                    'last_extreme_candles_ago': candles_since_peak,
+                    'calm_candles': len(check_candles) - len(invalid_candles)
                 }
             
-            # Проверяем все N свечей начиная с экстремума
-            check_candles = rsi_history[start_index:end_index + 1]
-            valid_candles = sum(1 for rsi_val in check_candles if rsi_val >= rsi_time_filter_upper)
-            
-            if valid_candles >= rsi_time_filter_candles:
-                # Все N свечей (включая экстремум) >= 65 - разрешаем
-                return {
-                    'allowed': True, 
-                    'reason': f'Разрешено: {rsi_time_filter_candles} свечей начиная с последнего RSI >= {rsi_short_threshold} все >= {rsi_time_filter_upper}', 
-                    'last_extreme_candles_ago': candles_after_extreme
-                }
-            else:
-                # Не все свечи соответствуют - блокируем
-                return {
-                    'allowed': False, 
-                    'reason': f'Блокировка: в последних {rsi_time_filter_candles} свечах только {valid_candles}/{rsi_time_filter_candles} были >= {rsi_time_filter_upper}', 
-                    'last_extreme_candles_ago': candles_since_extreme
-                }
+            # Все проверки пройдены
+            return {
+                'allowed': True,
+                'reason': f'Разрешено: с пика прошло {candles_since_peak} свечей, все {len(check_candles)} свечей после пика >= {rsi_time_filter_upper}',
+                'last_extreme_candles_ago': candles_since_peak,
+                'calm_candles': len(check_candles)
+            }
                 
         elif signal == 'ENTER_LONG':
-            # ИСПРАВЛЕННАЯ ЛОГИКА ДЛЯ LONG:
-            # 1. Найти САМУЮ ПОСЛЕДНЮЮ свечу где RSI был <= 29
-            # 2. От этой свечи отсчитать 8 свечей ВПЕРЕД
-            # 3. Проверить что ВСЕ 8 свечей после неё имеют RSI <= 35
+            # ЧЕТКАЯ ЛОГИКА ДЛЯ LONG:
+            # 1. Найти последний лой (RSI <= 29)
+            # 2. От лоя отсчитать N свечей вперед
+            # 3. Проверить что ВСЕ эти N свечей <= 35
             
-            # Ищем САМУЮ ПОСЛЕДНЮЮ свечу с RSI <= 29
-            last_extreme_index = None
-            for i in range(len(rsi_history) - 1, -1, -1):  # Идем с конца к началу
+            # Ищем последний лой (RSI <= 29)
+            last_low_index = None
+            for i in range(current_index, -1, -1):
                 if rsi_history[i] <= rsi_long_threshold:
-                    last_extreme_index = i
-                    break  # Нашли самую последнюю - выходим
+                    last_low_index = i
+                    break
             
-            if last_extreme_index is None:
-                # Не найдено свечей с RSI <= 29 - разрешаем
+            if last_low_index is None:
+                # Лой не найден - разрешаем (долго нет экстремума)
                 return {
-                    'allowed': True, 
-                    'reason': f'Разрешено: не найдено свечей с RSI <= {rsi_long_threshold}', 
-                    'last_extreme_candles_ago': None
+                    'allowed': True,
+                    'reason': f'Разрешено: лой RSI <= {rsi_long_threshold} не найден',
+                    'last_extreme_candles_ago': None,
+                    'calm_candles': None
                 }
             
-            # Проверяем, что после экстремума есть достаточно свечей для проверки
-            candles_after_extreme = len(rsi_history) - 1 - last_extreme_index
+            # Проверяем сколько свечей прошло с лоя
+            candles_since_low = current_index - last_low_index
             
-            if candles_after_extreme < rsi_time_filter_candles:
-                # Недостаточно свечей после экстремума - блокируем
+            if candles_since_low < rsi_time_filter_candles:
+                # Недостаточно свечей с лоя
                 return {
-                    'allowed': False, 
-                    'reason': f'Блокировка: после последнего RSI <= {rsi_long_threshold} прошло только {candles_after_extreme} свечей (требуется {rsi_time_filter_candles})', 
-                    'last_extreme_candles_ago': candles_after_extreme
+                    'allowed': False,
+                    'reason': f'Блокировка: с лоя (RSI <= {rsi_long_threshold}) прошло только {candles_since_low} свечей (требуется {rsi_time_filter_candles})',
+                    'last_extreme_candles_ago': candles_since_low,
+                    'calm_candles': candles_since_low
                 }
             
-            # Проверяем N свечей НАЧИНАЯ С экстремума (включая его)
-            # Берем свечи от экстремума до экстремума + N
-            start_index = last_extreme_index
-            end_index = last_extreme_index + rsi_time_filter_candles
+            # Проверяем N свечей ПОСЛЕ лоя (не включая сам лой)
+            start_check = last_low_index + 1
+            end_check = last_low_index + rsi_time_filter_candles + 1
             
-            if end_index >= len(rsi_history):
-                # Недостаточно свечей для проверки - блокируем
+            if end_check > len(rsi_history):
+                end_check = len(rsi_history)
+            
+            # Проверяем что ВСЕ свечи после лоя <= 35
+            check_candles = rsi_history[start_check:end_check]
+            invalid_candles = [rsi_val for rsi_val in check_candles if rsi_val > rsi_time_filter_lower]
+            
+            if len(invalid_candles) > 0:
+                # Есть свечи > 35 после лоя
                 return {
-                    'allowed': False, 
-                    'reason': f'Блокировка: недостаточно свечей для проверки после экстремума', 
-                    'last_extreme_candles_ago': candles_after_extreme
+                    'allowed': False,
+                    'reason': f'Блокировка: {len(invalid_candles)} свечей после лоя были > {rsi_time_filter_lower}',
+                    'last_extreme_candles_ago': candles_since_low,
+                    'calm_candles': len(check_candles) - len(invalid_candles)
                 }
             
-            # Проверяем все N свечей начиная с экстремума
-            check_candles = rsi_history[start_index:end_index + 1]
-            valid_candles = sum(1 for rsi_val in check_candles if rsi_val <= rsi_time_filter_lower)
-            
-            if valid_candles >= rsi_time_filter_candles:
-                # Все N свечей (включая экстремум) <= 35 - разрешаем
-                return {
-                    'allowed': True, 
-                    'reason': f'Разрешено: {rsi_time_filter_candles} свечей начиная с последнего RSI <= {rsi_long_threshold} все <= {rsi_time_filter_lower}', 
-                    'last_extreme_candles_ago': candles_after_extreme
-                }
-            else:
-                # Не все свечи соответствуют - блокируем
-                return {
-                    'allowed': False, 
-                    'reason': f'Блокировка: в последних {rsi_time_filter_candles} свечах только {valid_candles}/{rsi_time_filter_candles} были <= {rsi_time_filter_lower}', 
-                    'last_extreme_candles_ago': candles_after_extreme
-                }
+            # Все проверки пройдены
+            return {
+                'allowed': True,
+                'reason': f'Разрешено: с лоя прошло {candles_since_low} свечей, все {len(check_candles)} свечей после лоя <= {rsi_time_filter_lower}',
+                'last_extreme_candles_ago': candles_since_low,
+                'calm_candles': len(check_candles)
+            }
         
-        return {'allowed': True, 'reason': 'Неизвестный сигнал', 'last_extreme_candles_ago': None}
+        return {'allowed': True, 'reason': 'Неизвестный сигнал', 'last_extreme_candles_ago': None, 'calm_candles': 0}
     
     except Exception as e:
         logger.error(f"[RSI_TIME_FILTER] Ошибка проверки временного фильтра: {e}")
-        return {'allowed': False, 'reason': f'Ошибка анализа: {str(e)}', 'last_extreme_candles_ago': None}
+        return {'allowed': False, 'reason': f'Ошибка анализа: {str(e)}', 'last_extreme_candles_ago': None, 'calm_candles': 0}
 
 def get_coin_rsi_data(symbol, exchange_obj=None):
     """Получает RSI данные для одной монеты (6H таймфрейм)"""
@@ -1467,6 +1468,41 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # closes[-1] - это самая НОВАЯ цена (последняя свеча в массиве)
         current_price = closes[-1]
         
+        # Проверяем антипамп фильтр для монет в экстремальных зонах RSI
+        # Проверяем ВСЕГДА, даже если сигнал уже был изменен на WAIT другими фильтрами
+        anti_dump_pump_info = None
+        if rsi <= RSI_OVERSOLD or rsi >= RSI_OVERBOUGHT:
+            anti_dump_pump_passed = check_anti_dump_pump(symbol, {})
+            if not anti_dump_pump_passed:
+                # Фильтр не пройден - блокируем сигнал
+                logger.debug(f"[ANTI_PUMP_BLOCK] {symbol}: Сигнал {signal} заблокирован антипамп фильтром")
+                signal = 'WAIT'
+                rsi_zone = 'NEUTRAL'
+                
+                # Анализируем свечи для UI (используем настройку из конфига)
+                with bots_data_lock:
+                    anti_dump_pump_candles = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_candles', 10)
+                
+                recent_candles = candles[-anti_dump_pump_candles:] if len(candles) >= anti_dump_pump_candles else candles
+                extreme_count = 0
+                for candle in recent_candles:
+                    price_change = abs((candle['close'] - candle['open']) / candle['open']) * 100
+                    candle_range = ((candle['high'] - candle['low']) / candle['open']) * 100
+                    if price_change > 10 or candle_range > 15:
+                        extreme_count += 1
+                
+                anti_dump_pump_info = {
+                    'blocked': True,
+                    'reason': 'Обнаружены экстремальные движения цены',
+                    'extreme_candles_count': extreme_count,
+                    'candles_to_wait': extreme_count  # Примерно столько свечей нужно подождать
+                }
+            else:
+                anti_dump_pump_info = {
+                    'blocked': False,
+                    'reason': 'Фильтр пройден'
+                }
+        
         result = {
             'symbol': symbol,
             'rsi6h': round(rsi, 1),
@@ -1486,7 +1522,9 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             # Добавляем результаты улучшенного анализа RSI
             'enhanced_rsi': enhanced_analysis,
             # Добавляем информацию о временном фильтре
-            'time_filter_info': time_filter_info
+            'time_filter_info': time_filter_info,
+            # Добавляем информацию об антипамп фильтре
+            'anti_dump_pump_info': anti_dump_pump_info
         }
         
         # Логируем торговые сигналы и блокировки тренда
@@ -1940,8 +1978,18 @@ def check_coin_maturity_stored_or_verify(symbol):
         return False
 
 def check_anti_dump_pump(symbol, coin_data):
-    """Проверяет на сливные/памп свечи за последние 20 свечей"""
+    """Проверяет на сливные/памп свечи за последние N свечей (из конфига)"""
     try:
+        # Получаем настройки из конфига
+        with bots_data_lock:
+            anti_dump_pump_enabled = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_enabled', True)
+            anti_dump_pump_candles = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_candles', 10)
+        
+        # Если фильтр отключен - разрешаем
+        if not anti_dump_pump_enabled:
+            logger.debug(f"[ANTI_DUMP_PUMP] {symbol}: Фильтр отключен")
+            return True
+        
         # Получаем свечи
         if not ensure_exchange_initialized():
             return False
@@ -1951,11 +1999,11 @@ def check_anti_dump_pump(symbol, coin_data):
             return False
         
         candles = chart_response.get('data', {}).get('candles', [])
-        if len(candles) < 20:
+        if len(candles) < anti_dump_pump_candles:
             return False
         
-        # Проверяем последние 20 свечей
-        recent_candles = candles[-20:]
+        # Проверяем последние N свечей (из конфига)
+        recent_candles = candles[-anti_dump_pump_candles:]
         
         # 1. Проверка на экстремальные движения отдельных свечей
         extreme_moves = 0
@@ -2007,9 +2055,9 @@ def check_anti_dump_pump(symbol, coin_data):
             total_change += abs(candle_change)
         
         # 3. Проверка на резкие пампы/сливы
-        # Если общее изменение за 20 свечей > 150% - это подозрительно
-        if total_change > 150:
-            logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: Подозрительно высокое общее изменение: {total_change:.1f}% за 20 свечей")
+        # Если общее изменение за N свечей > 100% - это подозрительно
+        if total_change > 100:
+            logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: Подозрительно высокое общее изменение: {total_change:.1f}% за {anti_dump_pump_candles} свечей")
             return False
         
         # Если больше 2 экстремальных движений - блокируем
@@ -2109,7 +2157,17 @@ def check_auto_bot_filters(symbol):
 def test_anti_pump_filter(symbol):
     """Тестирует антипамп фильтр для конкретной монеты"""
     try:
+        # Получаем настройки из конфига
+        with bots_data_lock:
+            anti_dump_pump_enabled = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_enabled', True)
+            anti_dump_pump_candles = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_candles', 10)
+        
         logger.info(f"[TEST_ANTI_PUMP] 🔍 Тестируем антипамп фильтр для {symbol}")
+        logger.info(f"[TEST_ANTI_PUMP] ⚙️ Настройки: включен={anti_dump_pump_enabled}, свечей={anti_dump_pump_candles}")
+        
+        if not anti_dump_pump_enabled:
+            logger.info(f"[TEST_ANTI_PUMP] {symbol}: ⚠️ Фильтр ОТКЛЮЧЕН в конфиге")
+            return
         
         # Получаем свечи
         if not ensure_exchange_initialized():
@@ -2122,14 +2180,14 @@ def test_anti_pump_filter(symbol):
             return
         
         candles = chart_response.get('data', {}).get('candles', [])
-        if len(candles) < 20:
+        if len(candles) < anti_dump_pump_candles:
             logger.error(f"[TEST_ANTI_PUMP] {symbol}: Недостаточно свечей ({len(candles)})")
             return
         
-        # Анализируем последние 20 свечей
-        recent_candles = candles[-20:]
+        # Анализируем последние N свечей (из конфига)
+        recent_candles = candles[-anti_dump_pump_candles:]
         
-        logger.info(f"[TEST_ANTI_PUMP] {symbol}: Анализ последних 20 свечей (6H каждая)")
+        logger.info(f"[TEST_ANTI_PUMP] {symbol}: Анализ последних {anti_dump_pump_candles} свечей (6H каждая)")
         
         # Показываем детали каждой свечи
         for i, candle in enumerate(recent_candles):
@@ -2185,13 +2243,13 @@ def test_anti_pump_filter(symbol):
                 logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ 5-свечечный памп: {five_candle_change:.1f}% > 30%")
         
         logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📊 Экстремальных свечей: {extreme_count} (порог: 2)")
-        logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📊 Общее изменение: {total_change:.1f}% (порог: 150%)")
+        logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📊 Общее изменение: {total_change:.1f}% (порог: 100%)")
         
         if extreme_count > 2:
             logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Слишком много экстремальных свечей: {extreme_count} > 2")
         
-        if total_change > 150:
-            logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Слишком высокое общее изменение: {total_change:.1f}% > 150%")
+        if total_change > 100:
+            logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Слишком высокое общее изменение: {total_change:.1f}% > 100%")
         
     except Exception as e:
         logger.error(f"[TEST_ANTI_PUMP] {symbol}: Ошибка тестирования: {e}")
@@ -2226,15 +2284,28 @@ def test_rsi_time_filter(symbol):
             current_rsi = coin_data.get('rsi6h', 0)
             signal = coin_data.get('signal', 'WAIT')
         
-        logger.info(f"[TEST_RSI_TIME] {symbol}: Текущий RSI={current_rsi:.1f}, Сигнал={signal}")
+        # Определяем ОРИГИНАЛЬНЫЙ сигнал на основе только RSI (игнорируя другие фильтры)
+        with bots_data_lock:
+            rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', 29)
+            rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', 71)
         
-        # Тестируем временной фильтр
-        time_filter_result = check_rsi_time_filter(candles, current_rsi, signal)
+        original_signal = 'WAIT'
+        if current_rsi <= rsi_long_threshold:
+            original_signal = 'ENTER_LONG'
+        elif current_rsi >= rsi_short_threshold:
+            original_signal = 'ENTER_SHORT'
+        
+        logger.info(f"[TEST_RSI_TIME] {symbol}: Текущий RSI={current_rsi:.1f}, Оригинальный сигнал={original_signal}, Финальный сигнал={signal}")
+        
+        # Тестируем временной фильтр с ОРИГИНАЛЬНЫМ сигналом
+        time_filter_result = check_rsi_time_filter(candles, current_rsi, original_signal)
         
         logger.info(f"[TEST_RSI_TIME] {symbol}: Результат временного фильтра:")
         logger.info(f"[TEST_RSI_TIME] {symbol}: Разрешено: {time_filter_result['allowed']}")
         logger.info(f"[TEST_RSI_TIME] {symbol}: Причина: {time_filter_result['reason']}")
-        if 'last_extreme_candles_ago' in time_filter_result:
+        if 'calm_candles' in time_filter_result and time_filter_result['calm_candles'] is not None:
+            logger.info(f"[TEST_RSI_TIME] {symbol}: Спокойных свечей: {time_filter_result['calm_candles']}")
+        if 'last_extreme_candles_ago' in time_filter_result and time_filter_result['last_extreme_candles_ago'] is not None:
             logger.info(f"[TEST_RSI_TIME] {symbol}: Последний экстремум: {time_filter_result['last_extreme_candles_ago']} свечей назад")
         
         # Показываем историю RSI для анализа
@@ -5330,6 +5401,22 @@ def refresh_manual_positions():
 def get_coins_with_rsi():
     """Получить все монеты с RSI 6H данными"""
     try:
+        # Проверяем параметр refresh_symbol для обновления конкретной монеты
+        refresh_symbol = request.args.get('refresh_symbol')
+        if refresh_symbol:
+            logger.info(f"[API] 🔄 Запрос на обновление RSI данных для {refresh_symbol}")
+            try:
+                if ensure_exchange_initialized():
+                    coin_data = get_coin_rsi_data(refresh_symbol, exchange)
+                    if coin_data:
+                        with rsi_data_lock:
+                            coins_rsi_data['coins'][refresh_symbol] = coin_data
+                        logger.info(f"[API] ✅ RSI данные для {refresh_symbol} обновлены")
+                    else:
+                        logger.warning(f"[API] ⚠️ Не удалось обновить RSI данные для {refresh_symbol}")
+            except Exception as e:
+                logger.error(f"[API] ❌ Ошибка обновления RSI для {refresh_symbol}: {e}")
+        
         with rsi_data_lock:
             # Проверяем возраст кэша
             cache_age = None
@@ -6354,6 +6441,87 @@ def reload_modules_endpoint():
         
     except Exception as e:
         logger.error(f"[API] Ошибка перезагрузки модулей: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bots_app.route('/api/bots/refresh-rsi/<symbol>', methods=['POST'])
+def refresh_rsi_for_coin(symbol):
+    """Обновляет RSI данные для конкретной монеты (применяет новую логику)"""
+    try:
+        global coins_rsi_data, exchange
+        
+        logger.info(f"[HOT_RELOAD] 🔄 Обновление RSI данных для {symbol}...")
+        
+        # Проверяем биржу
+        if not ensure_exchange_initialized():
+            return jsonify({'success': False, 'error': 'Биржа не инициализирована'}), 500
+        
+        # Получаем новые данные монеты
+        coin_data = get_coin_rsi_data(symbol, exchange)
+        
+        if coin_data:
+            # Обновляем в глобальном кэше
+            with rsi_data_lock:
+                coins_rsi_data['coins'][symbol] = coin_data
+            
+            logger.info(f"[HOT_RELOAD] ✅ RSI данные для {symbol} обновлены")
+            
+            return jsonify({
+                'success': True,
+                'message': f'RSI данные для {symbol} обновлены',
+                'coin_data': coin_data
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Не удалось получить RSI данные для {symbol}'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"[API] Ошибка обновления RSI для {symbol}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bots_app.route('/api/bots/refresh-rsi-all', methods=['POST'])
+def refresh_rsi_for_all_coins():
+    """Обновляет RSI данные для всех монет (применяет новую логику)"""
+    try:
+        global coins_rsi_data, exchange
+        
+        logger.info("[HOT_RELOAD] 🔄 Обновление RSI данных для всех монет...")
+        
+        # Проверяем биржу
+        if not ensure_exchange_initialized():
+            return jsonify({'success': False, 'error': 'Биржа не инициализирована'}), 500
+        
+        with rsi_data_lock:
+            existing_symbols = list(coins_rsi_data['coins'].keys())
+        
+        updated_count = 0
+        failed_count = 0
+        
+        for symbol in existing_symbols:
+            try:
+                coin_data = get_coin_rsi_data(symbol, exchange)
+                if coin_data:
+                    with rsi_data_lock:
+                        coins_rsi_data['coins'][symbol] = coin_data
+                    updated_count += 1
+                else:
+                    failed_count += 1
+            except Exception as e:
+                logger.warning(f"[HOT_RELOAD] Ошибка обновления {symbol}: {e}")
+                failed_count += 1
+        
+        logger.info(f"[HOT_RELOAD] ✅ Обновлено {updated_count} монет, ошибок: {failed_count}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'RSI данные обновлены для {updated_count} монет',
+            'updated_count': updated_count,
+            'failed_count': failed_count
+        })
+        
+    except Exception as e:
+        logger.error(f"[API] Ошибка обновления всех RSI данных: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/restart-service', methods=['POST'])

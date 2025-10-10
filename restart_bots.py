@@ -64,21 +64,57 @@ def reload_modules():
         print(f"❌ Ошибка: {e}")
         return False
 
+def refresh_rsi_for_coin(symbol):
+    """Обновляет RSI данные для конкретной монеты"""
+    try:
+        print(f"🔄 Обновляем RSI данные для {symbol}...")
+        
+        response = requests.post(
+            f'http://localhost:5001/api/bots/refresh-rsi/{symbol}',
+            timeout=15
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"✅ {result.get('message', f'RSI данные для {symbol} обновлены')}")
+            return True
+        else:
+            print(f"❌ Ошибка обновления RSI: {response.status_code}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
+        return False
+
 def main():
     """Основная функция"""
+    import sys
+    
     print("🚀 Быстрый перезапуск bots.py")
     print("-" * 40)
+    
+    # Проверяем, передан ли символ монеты
+    symbol_to_refresh = None
+    if len(sys.argv) > 1:
+        symbol_to_refresh = sys.argv[1].upper()
+        print(f"🎯 Будет обновлена монета: {symbol_to_refresh}")
+        print("-" * 40)
     
     # Сначала пробуем перезагрузить модули
     if reload_modules():
         print("\n⏳ Ждем 3 секунды...")
         time.sleep(3)
         
+        # Если передан символ, обновляем RSI данные для этой монеты
+        if symbol_to_refresh:
+            print()
+            refresh_rsi_for_coin(symbol_to_refresh)
+        
         # Проверяем, работает ли сервис
         try:
             response = requests.get('http://localhost:5001/health', timeout=5)
             if response.status_code == 200:
-                print("✅ Сервис работает корректно")
+                print("\n✅ Сервис работает корректно")
                 return
         except:
             pass
