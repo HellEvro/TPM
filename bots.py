@@ -30,8 +30,64 @@ except ImportError as e:
     print(f"⚠️ Асинхронный процессор недоступен: {e}")
     ASYNC_AVAILABLE = False
 
+# Импортируем новые модули из bot_engine
+try:
+    from bot_engine.utils.rsi_utils import calculate_rsi, calculate_rsi_history
+    from bot_engine.utils.ema_utils import calculate_ema
+    from bot_engine.filters import check_rsi_time_filter, check_exit_scam_filter, check_no_existing_position
+    from bot_engine.maturity_checker import (
+        check_coin_maturity, check_coin_maturity_with_storage,
+        check_coin_maturity_stored_or_verify, is_coin_mature_stored,
+        add_mature_coin_to_storage, remove_mature_coin_from_storage,
+        update_mature_coin_verification, get_mature_coins_storage,
+        set_mature_coins_storage, clear_mature_coins_storage as clear_mature_storage,
+        mature_coins_storage, mature_coins_lock
+    )
+    from bot_engine.storage import (
+        save_rsi_cache as storage_save_rsi_cache,
+        load_rsi_cache as storage_load_rsi_cache,
+        clear_rsi_cache,
+        save_bots_state as storage_save_bots_state,
+        load_bots_state as storage_load_bots_state,
+        save_auto_bot_config as storage_save_auto_bot_config,
+        load_auto_bot_config as storage_load_auto_bot_config,
+        save_mature_coins, load_mature_coins,
+        save_optimal_ema, load_optimal_ema,
+        save_process_state as storage_save_process_state,
+        load_process_state as storage_load_process_state,
+        save_system_config as storage_save_system_config,
+        load_system_config as storage_load_system_config
+    )
+    from bot_engine.signal_processor import get_effective_signal, check_autobot_filters, process_auto_bot_signals
+    from bot_engine.optimal_ema_manager import (
+        load_optimal_ema_data, get_optimal_ema_periods,
+        update_optimal_ema_data, save_optimal_ema_periods,
+        optimal_ema_data
+    )
+    MODULES_AVAILABLE = True
+    print("[OK] New bot_engine modules loaded successfully")
+except ImportError as e:
+    print(f"[WARNING] Failed to load new bot_engine modules: {e}")
+    print("[WARNING] Using legacy functions from bots.py")
+    MODULES_AVAILABLE = False
+
 # Добавляем текущую директорию в путь
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Создаем обертки для функций если модули не загружены
+if not MODULES_AVAILABLE:
+    # Определяем заглушки для функций которые будут определены позже в файле
+    def calculate_rsi(prices, period=14):
+        """Будет определена ниже в файле"""
+        pass
+    
+    def calculate_rsi_history(prices, period=14):
+        """Будет определена ниже в файле"""
+        pass
+    
+    def calculate_ema(prices, period):
+        """Будет определена ниже в файле"""
+        pass
 
 def check_and_stop_existing_bots_processes():
     """
