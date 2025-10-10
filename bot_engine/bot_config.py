@@ -82,12 +82,12 @@ DEFAULT_AUTO_BOT_CONFIG = {
     'avoid_up_trend': True,             # Не входить в SHORT при восходящем тренде
     # Настройки зрелости монет
     'enable_maturity_check': True,      # Включить проверку зрелости монет
-    'min_candles_for_maturity': 200,    # Минимум свечей для зрелой монеты (50 дней на 6H)
+    'min_candles_for_maturity': 400,    # Минимум свечей для зрелой монеты (100 дней на 6H)
     'min_rsi_low': 35,                  # Минимальный достигнутый RSI (должен быть <= 35)
     'max_rsi_high': 65,                 # Максимальный достигнутый RSI (должен быть >= 65)
     # RSI временной фильтр
     'rsi_time_filter_enabled': True,    # Включить временной фильтр для RSI сигналов
-    'rsi_time_filter_candles': 8,       # Минимум свечей с последнего экстремума (8 = 2 суток на 6H)
+    'rsi_time_filter_candles': 4,       # Минимум свечей с последнего экстремума (4 = 1 день на 6H)
     'rsi_time_filter_upper': 65,        # Верхняя граница спокойной зоны для SHORT
     'rsi_time_filter_lower': 35,        # Нижняя граница спокойной зоны для LONG
     # ExitScam фильтр (защита от резких движений цены)

@@ -838,8 +838,12 @@ def check_coin_maturity(symbol, candles):
                 }
             }
         
-        # Извлекаем цены закрытия
-        closes = [candle['close'] for candle in candles]
+        # ✅ ИСПРАВЛЕНИЕ: Берем только последние N свечей для анализа зрелости
+        # Это означает что монета должна иметь достаточно истории в РЕЦЕНТНОЕ время
+        recent_candles = candles[-min_candles:] if len(candles) >= min_candles else candles
+        
+        # Извлекаем цены закрытия из последних свечей
+        closes = [candle['close'] for candle in recent_candles]
         
         # Рассчитываем историю RSI
         rsi_history = calculate_rsi_history(closes, 14)
@@ -1447,14 +1451,15 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         with bots_data_lock:
             enable_maturity_check = bots_data.get('auto_bot_config', {}).get('enable_maturity_check', True)
         
-        # Проверяем зрелость монеты (БЕЗ добавления в хранилище при загрузке RSI!)
+        # Проверяем зрелость монеты и добавляем в хранилище при загрузке RSI
         if enable_maturity_check:
-            # ✅ ИСПРАВЛЕНИЕ: Используем check_coin_maturity напрямую (без хранилища)
-            # Добавление в хранилище только при создании бота!
+            # Проверяем зрелость монеты
             maturity_check = check_coin_maturity(symbol, candles)
             
             if maturity_check['is_mature']:
                 logger.debug(f"[MATURITY] {symbol}: Монета зрелая - {maturity_check['reason']}")
+                # ✅ ДОБАВЛЯЕМ зрелую монету в хранилище при загрузке RSI
+                add_mature_coin_to_storage(symbol, maturity_check, auto_save=False)
             else:
                 logger.debug(f"[MATURITY] {symbol}: Монета незрелая - {maturity_check['reason']}")
             
@@ -4505,6 +4510,9 @@ def auto_save_worker():
                     logger.info(f"[AUTO_SAVE] 💾 Автосохранение состояния {bots_count} ботов...")
                     auto_save_worker._last_log_time = time.time()
                 save_result = save_bots_state()
+                
+                # Сохраняем хранилище зрелых монет
+                save_mature_coins_storage()
                 
                 # Обновляем статистику
                 update_process_state('auto_save_worker', {
