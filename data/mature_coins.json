@@ -1,1 +1,4433 @@
-{}
+{
+  "HBAR": {
+    "timestamp": 1760099334.9033563,
+    "maturity_data": {
+      "timestamp": 1760099334.9033551,
+      "rsi_data": {
+        "symbol": "HBAR",
+        "rsi6h": 45.5,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.21559,
+        "change24h": 1.84,
+        "last_update": "2025-10-10T15:28:54.903295",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.21942652768260232,
+          "ema_long": 0.22580606608282036,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00010267403098312977,
+          "current_close": 0.21559,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 31.490863215987364,
+            "stoch_rsi_d": 20.942189019912366
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_45.5"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099334.9033563
+  },
+  "HFT": {
+    "timestamp": 1760099334.9460719,
+    "maturity_data": {
+      "timestamp": 1760099334.9460702,
+      "rsi_data": {
+        "symbol": "HFT",
+        "rsi6h": 51.2,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.07441,
+        "change24h": 3.75,
+        "last_update": "2025-10-10T15:28:54.945993",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.07516796123996594,
+          "ema_long": 0.08050354691487197,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -6.124167753639165e-05,
+          "current_close": 0.07441,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 81.77718338876629,
+            "stoch_rsi_d": 59.46177215334916
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_51.2"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099334.9460719
+  },
+  "HMSTR": {
+    "timestamp": 1760099335.3578773,
+    "maturity_data": {
+      "timestamp": 1760099335.3578753,
+      "rsi_data": {
+        "symbol": "HMSTR",
+        "rsi6h": 46.7,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.000629,
+        "change24h": 2.01,
+        "last_update": "2025-10-10T15:28:55.357762",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.000640635855471271,
+          "ema_long": 0.0006929351243045883,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -6.425640633626667e-07,
+          "current_close": 0.000629,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 52.487571542527064,
+            "stoch_rsi_d": 39.30158843982544
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_46.7"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099335.3578773
+  },
+  "HIVE": {
+    "timestamp": 1760099335.3687203,
+    "maturity_data": {
+      "timestamp": 1760099335.3687189,
+      "rsi_data": {
+        "symbol": "HIVE",
+        "rsi6h": 45.6,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1835,
+        "change24h": 1.1,
+        "last_update": "2025-10-10T15:28:55.368610",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.1862162894508961,
+          "ema_long": 0.1963665586637645,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00012931214737449404,
+          "current_close": 0.1835,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 39.25828680319721,
+            "stoch_rsi_d": 32.04032012398047
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_45.6"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099335.3687203
+  },
+  "HIFI": {
+    "timestamp": 1760099335.4300177,
+    "maturity_data": {
+      "timestamp": 1760099335.4300165,
+      "rsi_data": {
+        "symbol": "HIFI",
+        "rsi6h": 37.4,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.07918,
+        "change24h": -3.83,
+        "last_update": "2025-10-10T15:28:55.429933",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.09685111743639724,
+          "ema_long": 0.11406976330728949,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00035065088751043416,
+          "current_close": 0.07918,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 39.16340549935796,
+            "stoch_rsi_d": 51.38838368542137
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_37.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099335.4300177
+  },
+  "HIPPO": {
+    "timestamp": 1760099335.7053723,
+    "maturity_data": {
+      "timestamp": 1760099335.7053702,
+      "rsi_data": {
+        "symbol": "HIPPO",
+        "rsi6h": 46.3,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.003278,
+        "change24h": -3.81,
+        "last_update": "2025-10-10T15:28:55.705250",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.00325439056515921,
+          "ema_long": 0.0026420259674660843,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 6.391698819436468e-06,
+          "current_close": 0.003278,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 10.741212977644064,
+            "stoch_rsi_d": 23.523077312297755
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_46.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099335.7053723
+  },
+  "HYPER": {
+    "timestamp": 1760099335.8495224,
+    "maturity_data": {
+      "timestamp": 1760099335.8495212,
+      "rsi_data": {
+        "symbol": "HYPER",
+        "rsi6h": 47.9,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.2652,
+        "change24h": 1.8,
+        "last_update": "2025-10-10T15:28:55.849484",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.27004619111423267,
+          "ema_long": 0.29197405167923685,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00026908594652497175,
+          "current_close": 0.2652,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 34.8176965697858,
+            "stoch_rsi_d": 26.78226236577324
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_47.9"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099335.8495224
+  },
+  "HIGH": {
+    "timestamp": 1760099336.084147,
+    "maturity_data": {
+      "timestamp": 1760099336.0841453,
+      "rsi_data": {
+        "symbol": "HIGH",
+        "rsi6h": 45.0,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.4665,
+        "change24h": 1.7,
+        "last_update": "2025-10-10T15:28:56.084079",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.47917495578841374,
+          "ema_long": 0.5129142809894707,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.000466475185823767,
+          "current_close": 0.4665,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 65.89773524763173,
+            "stoch_rsi_d": 54.92951757894122
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_45.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099336.084147
+  },
+  "IN": {
+    "timestamp": 1760099336.3276064,
+    "maturity_data": {
+      "timestamp": 1760099336.3276048,
+      "rsi_data": {
+        "symbol": "IN",
+        "rsi6h": 87.2,
+        "trend6h": "UP",
+        "rsi_zone": "SELL_ZONE",
+        "signal": "WAIT",
+        "price": 0.29616,
+        "change24h": 149.06,
+        "last_update": "2025-10-10T15:28:56.327574",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.1260073510531752,
+          "ema_long": 0.09423962268227655,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0020288480132434478,
+          "current_close": 0.29611,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": "OVERBOUGHT",
+          "warning_message": "Возможная зона для SHORT",
+          "extreme_duration": 2,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 71.32435655810369,
+            "stoch_rsi_d": 37.99102322477035
+          },
+          "enhanced_signal": "ENTER_SHORT",
+          "enhanced_reason": "fresh_overbought_87.2_base_overbought_volume_confirm_stoch_overbought"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099336.3276064
+  },
+  "HNT": {
+    "timestamp": 1760099336.9331515,
+    "maturity_data": {
+      "timestamp": 1760099336.9331503,
+      "rsi_data": {
+        "symbol": "HNT",
+        "rsi6h": 58.1,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 2.681,
+        "change24h": 1.94,
+        "last_update": "2025-10-10T15:28:56.933095",
+        "trend_analysis": {
+          "trend": "NEUTRAL",
+          "ema_short": 2.547191348121061,
+          "ema_long": 2.565872811558092,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0011570571702703702,
+          "current_close": 2.681,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 67.77372006996524,
+            "stoch_rsi_d": 64.39318086899003
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_58.1"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099336.9331515
+  },
+  "HOOK": {
+    "timestamp": 1760099339.4689791,
+    "maturity_data": {
+      "timestamp": 1760099339.4689775,
+      "rsi_data": {
+        "symbol": "HOOK",
+        "rsi6h": 47.8,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1002,
+        "change24h": 0.5,
+        "last_update": "2025-10-10T15:28:59.468871",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.10229325913322015,
+          "ema_long": 0.10628223495893124,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -6.112798953700205e-05,
+          "current_close": 0.1002,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 65.91687063389266,
+            "stoch_rsi_d": 62.0458578176312
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_47.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099339.4689794
+  },
+  "INIT": {
+    "timestamp": 1760099340.0047698,
+    "maturity_data": {
+      "timestamp": 1760099340.004768,
+      "rsi_data": {
+        "symbol": "INIT",
+        "rsi6h": 49.5,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.3195,
+        "change24h": 4.69,
+        "last_update": "2025-10-10T15:29:00.004693",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.32301657546224966,
+          "ema_long": 0.3502501669408926,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00030904690392857814,
+          "current_close": 0.3195,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 45.11074674640871,
+            "stoch_rsi_d": 27.913927604957745
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_49.5"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099340.00477
+  },
+  "HOT": {
+    "timestamp": 1760099340.1740265,
+    "maturity_data": {
+      "timestamp": 1760099340.1740253,
+      "rsi_data": {
+        "symbol": "HOT",
+        "rsi6h": 52.6,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.0008865,
+        "change24h": 3.65,
+        "last_update": "2025-10-10T15:29:00.173965",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.0008832443583413831,
+          "ema_long": 0.0009191748087828492,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -3.2839003801844475e-07,
+          "current_close": 0.0008865,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 76.79664644657848,
+            "stoch_rsi_d": 57.01469604538388
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_52.6"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099340.1740267
+  },
+  "HPOS10I": {
+    "timestamp": 1760099340.5252404,
+    "maturity_data": {
+      "timestamp": 1760099340.5252383,
+      "rsi_data": {
+        "symbol": "HPOS10I",
+        "rsi6h": 40.2,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.09109,
+        "change24h": -1.14,
+        "last_update": "2025-10-10T15:29:00.525177",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.0949084657032085,
+          "ema_long": 0.08698061446977366,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 4.1300357087700745e-05,
+          "current_close": 0.09109,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 4.618027682856642,
+            "stoch_rsi_d": 4.499474357208278
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_40.2"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099340.5252404
+  },
+  "HYPE": {
+    "timestamp": 1760099341.2521243,
+    "maturity_data": {
+      "timestamp": 1760099341.2521229,
+      "rsi_data": {
+        "symbol": "HYPE",
+        "rsi6h": 41.8,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 44.635,
+        "change24h": 3.5,
+        "last_update": "2025-10-10T15:29:01.252040",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 46.762371896008695,
+          "ema_long": 47.37120116400648,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.027499509185986426,
+          "current_close": 44.635,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 57.87761157558062,
+            "stoch_rsi_d": 40.79401156249947
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_41.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099341.2521243
+  },
+  "ICX": {
+    "timestamp": 1760099342.3900144,
+    "maturity_data": {
+      "timestamp": 1760099342.390013,
+      "rsi_data": {
+        "symbol": "ICX",
+        "rsi6h": 45.1,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.11509,
+        "change24h": 1.9,
+        "last_update": "2025-10-10T15:29:02.389938",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.11726120844432497,
+          "ema_long": 0.12314386544430436,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -8.094337129953277e-05,
+          "current_close": 0.11509,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 35.55432332302972,
+            "stoch_rsi_d": 24.92838194471959
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_45.1"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099342.3900144
+  },
+  "ICP": {
+    "timestamp": 1760099342.4307148,
+    "maturity_data": {
+      "timestamp": 1760099342.4307134,
+      "rsi_data": {
+        "symbol": "ICP",
+        "rsi6h": 48.3,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 4.434,
+        "change24h": 2.02,
+        "last_update": "2025-10-10T15:29:02.430656",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 4.454729596104941,
+          "ema_long": 4.684253985792466,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.002515115435099524,
+          "current_close": 4.434,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 38.94785845690674,
+            "stoch_rsi_d": 26.71158899161142
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_48.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099342.4307148
+  },
+  "IDEX": {
+    "timestamp": 1760099342.6659834,
+    "maturity_data": {
+      "timestamp": 1760099342.6659822,
+      "rsi_data": {
+        "symbol": "IDEX",
+        "rsi6h": 49.1,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.02467,
+        "change24h": 1.44,
+        "last_update": "2025-10-10T15:29:02.665910",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.024944195960305192,
+          "ema_long": 0.025816626951969592,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -1.1523888964519446e-05,
+          "current_close": 0.02467,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 70.10883274128186,
+            "stoch_rsi_d": 64.42475297413498
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_49.1"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099342.6659834
+  },
+  "ID": {
+    "timestamp": 1760099343.1706834,
+    "maturity_data": {
+      "timestamp": 1760099343.1706822,
+      "rsi_data": {
+        "symbol": "ID",
+        "rsi6h": 45.3,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1491,
+        "change24h": 2.05,
+        "last_update": "2025-10-10T15:29:03.170619",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.1523053761344355,
+          "ema_long": 0.15819219898326617,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -9.137888425392315e-05,
+          "current_close": 0.1491,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 38.23475813751017,
+            "stoch_rsi_d": 29.67464934515151
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_45.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099343.1706834
+  },
+  "ILV": {
+    "timestamp": 1760099343.3731048,
+    "maturity_data": {
+      "timestamp": 1760099343.3731031,
+      "rsi_data": {
+        "symbol": "ILV",
+        "rsi6h": 63.7,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 16.06,
+        "change24h": 11.3,
+        "last_update": "2025-10-10T15:29:03.373049",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 14.60888660159033,
+          "ema_long": 14.473345076311414,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.01594628064008674,
+          "current_close": 16.06,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 96.60611779694092,
+            "stoch_rsi_d": 69.69471664699964
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_63.7"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099343.3731048
+  },
+  "IMX": {
+    "timestamp": 1760099343.885177,
+    "maturity_data": {
+      "timestamp": 1760099343.8851755,
+      "rsi_data": {
+        "symbol": "IMX",
+        "rsi6h": 42.5,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.6962,
+        "change24h": 1.38,
+        "last_update": "2025-10-10T15:29:03.885102",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.7221530160575547,
+          "ema_long": 0.6680421346227954,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0002829936218814444,
+          "current_close": 0.6962,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 28.174312601235602,
+            "stoch_rsi_d": 18.24491397568599
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_42.5"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099343.8851771
+  },
+  "INJ": {
+    "timestamp": 1760099344.1461558,
+    "maturity_data": {
+      "timestamp": 1760099344.1461537,
+      "rsi_data": {
+        "symbol": "INJ",
+        "rsi6h": 44.2,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 12.264,
+        "change24h": 1.64,
+        "last_update": "2025-10-10T15:29:04.146101",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 12.543226774547321,
+          "ema_long": 12.971782091817897,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.007113387857465625,
+          "current_close": 12.264,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 31.856849639368807,
+            "stoch_rsi_d": 21.424355150208854
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_44.2"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099344.1461558
+  },
+  "K": {
+    "timestamp": 1760099344.5545273,
+    "maturity_data": {
+      "timestamp": 1760099344.5545256,
+      "rsi_data": {
+        "symbol": "K",
+        "rsi6h": 33.8,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.06077,
+        "change24h": -1.41,
+        "last_update": "2025-10-10T15:29:04.554493",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.08643926287254794,
+          "ema_long": 0.14629391902523145,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0008595368746254217,
+          "current_close": 0.06077,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 31.887518268368936,
+            "stoch_rsi_d": 28.105927953292024
+          },
+          "enhanced_signal": "EXIT_SHORT",
+          "enhanced_reason": "rsi_exit_short_33.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099344.5545273
+  },
+  "IO": {
+    "timestamp": 1760099344.8013854,
+    "maturity_data": {
+      "timestamp": 1760099344.801384,
+      "rsi_data": {
+        "symbol": "IO",
+        "rsi6h": 47.4,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.5315,
+        "change24h": 4.98,
+        "last_update": "2025-10-10T15:29:04.801301",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.5444889902961656,
+          "ema_long": 0.5810962290040933,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0004984545628551329,
+          "current_close": 0.5315,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 64.77748378669901,
+            "stoch_rsi_d": 44.11797139633953
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_47.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099344.8013854
+  },
+  "IOST": {
+    "timestamp": 1760099344.85392,
+    "maturity_data": {
+      "timestamp": 1760099344.8539186,
+      "rsi_data": {
+        "symbol": "IOST",
+        "rsi6h": 46.2,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.003047,
+        "change24h": 1.33,
+        "last_update": "2025-10-10T15:29:04.853820",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.00308567685071245,
+          "ema_long": 0.0032458350824293805,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -1.9983425369783994e-06,
+          "current_close": 0.003047,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 30.43215999248563,
+            "stoch_rsi_d": 21.12161509988164
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_46.2"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099344.85392
+  },
+  "IOTA": {
+    "timestamp": 1760099345.69767,
+    "maturity_data": {
+      "timestamp": 1760099345.697668,
+      "rsi_data": {
+        "symbol": "IOTA",
+        "rsi6h": 44.3,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1801,
+        "change24h": 0.5,
+        "last_update": "2025-10-10T15:29:05.697446",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.1818676941570398,
+          "ema_long": 0.1849222909618769,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -4.8465235797767736e-05,
+          "current_close": 0.1801,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 17.23461994560034,
+            "stoch_rsi_d": 13.684867406279965
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_44.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099345.6976702
+  },
+  "IOTX": {
+    "timestamp": 1760099347.2110322,
+    "maturity_data": {
+      "timestamp": 1760099347.2110305,
+      "rsi_data": {
+        "symbol": "IOTX",
+        "rsi6h": 61.6,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.02458,
+        "change24h": 3.32,
+        "last_update": "2025-10-10T15:29:07.210948",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.02388422535810228,
+          "ema_long": 0.02518589330913772,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -6.089379991330857e-06,
+          "current_close": 0.02458,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 88.97952020006804,
+            "stoch_rsi_d": 70.07026725672539
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_61.6"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099347.2110322
+  },
+  "IP": {
+    "timestamp": 1760099347.4187,
+    "maturity_data": {
+      "timestamp": 1760099347.4186985,
+      "rsi_data": {
+        "symbol": "IP",
+        "rsi6h": 36.8,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 8.7078,
+        "change24h": -3.1,
+        "last_update": "2025-10-10T15:29:07.418573",
+        "trend_analysis": {
+          "trend": "NEUTRAL",
+          "ema_short": 9.390213882080033,
+          "ema_long": 8.806117805729663,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0009881186505484862,
+          "current_close": 8.7078,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 4.305330902331607,
+            "stoch_rsi_d": 3.090171379637012
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_36.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099347.4187
+  },
+  "J": {
+    "timestamp": 1760099347.8757098,
+    "maturity_data": {
+      "timestamp": 1760099347.8757079,
+      "rsi_data": {
+        "symbol": "J",
+        "rsi6h": 42.8,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.09571,
+        "change24h": 0.75,
+        "last_update": "2025-10-10T15:29:07.875565",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.09862682296402918,
+          "ema_long": 0.10329497918747112,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -7.62309466077471e-05,
+          "current_close": 0.09571,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 11.461138639470013,
+            "stoch_rsi_d": 8.145519558087845
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_42.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099347.8757098
+  },
+  "JASMY": {
+    "timestamp": 1760099348.5152404,
+    "maturity_data": {
+      "timestamp": 1760099348.515239,
+      "rsi_data": {
+        "symbol": "JASMY",
+        "rsi6h": 46.3,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.012579,
+        "change24h": 1.64,
+        "last_update": "2025-10-10T15:29:08.515136",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.01280112936163335,
+          "ema_long": 0.013722534711851794,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -1.1492811174388176e-05,
+          "current_close": 0.012579,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 29.324633842462422,
+            "stoch_rsi_d": 19.530904185984642
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_46.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099348.5152404
+  },
+  "KERNEL": {
+    "timestamp": 1760099349.7312334,
+    "maturity_data": {
+      "timestamp": 1760099349.7312317,
+      "rsi_data": {
+        "symbol": "KERNEL",
+        "rsi6h": 57.5,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.2255,
+        "change24h": 4.01,
+        "last_update": "2025-10-10T15:29:09.731179",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.21095265556792928,
+          "ema_long": 0.2023511568211107,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0002326516902400877,
+          "current_close": 0.2255,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 24.97420460297087,
+            "stoch_rsi_d": 18.150887232820207
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_57.5"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099349.7312334
+  },
+  "JELLYJELLY": {
+    "timestamp": 1760099349.8686974,
+    "maturity_data": {
+      "timestamp": 1760099349.8686955,
+      "rsi_data": {
+        "symbol": "JELLYJELLY",
+        "rsi6h": 52.0,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.07686,
+        "change24h": 1.46,
+        "last_update": "2025-10-10T15:29:09.868629",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.07090622619342186,
+          "ema_long": 0.05113691215541167,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.00025852349592551255,
+          "current_close": 0.07686,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 33.4416332940645,
+            "stoch_rsi_d": 14.284522773655523
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_52.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099349.8686974
+  },
+  "LA": {
+    "timestamp": 1760099350.716756,
+    "maturity_data": {
+      "timestamp": 1760099350.7167552,
+      "rsi_data": {
+        "symbol": "LA",
+        "rsi6h": 53.9,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.3805,
+        "change24h": 1.01,
+        "last_update": "2025-10-10T15:29:10.716727",
+        "trend_analysis": {
+          "trend": "NEUTRAL",
+          "ema_short": 0.37138813488548494,
+          "ema_long": 0.3717548865781056,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 8.789058715469311e-05,
+          "current_close": 0.3805,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 36.982736705375686,
+            "stoch_rsi_d": 33.555753001412086
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_53.9"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099350.716756
+  },
+  "KAITO": {
+    "timestamp": 1760099351.3435884,
+    "maturity_data": {
+      "timestamp": 1760099351.343587,
+      "rsi_data": {
+        "symbol": "KAITO",
+        "rsi6h": 42.5,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 1.3161,
+        "change24h": 1.53,
+        "last_update": "2025-10-10T15:29:11.343538",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 1.3341047263975736,
+          "ema_long": 1.2415839347516249,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0007468951281246472,
+          "current_close": 1.3159,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 35.21455933129971,
+            "stoch_rsi_d": 23.51032838096371
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_42.5"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099351.3435884
+  },
+  "JOE": {
+    "timestamp": 1760099351.6310942,
+    "maturity_data": {
+      "timestamp": 1760099351.6310928,
+      "rsi_data": {
+        "symbol": "JOE",
+        "rsi6h": 46.0,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1569,
+        "change24h": 3.77,
+        "last_update": "2025-10-10T15:29:11.631028",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.16194211875697853,
+          "ema_long": 0.1658430835592981,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -8.988023677686252e-05,
+          "current_close": 0.1569,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 51.66373956189979,
+            "stoch_rsi_d": 36.7205575542082
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_46.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099351.6310942
+  },
+  "LAUNCHCOIN": {
+    "timestamp": 1760099351.8113406,
+    "maturity_data": {
+      "timestamp": 1760099351.8113394,
+      "rsi_data": {
+        "symbol": "LAUNCHCOIN",
+        "rsi6h": 68.4,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.13368,
+        "change24h": 21.08,
+        "last_update": "2025-10-10T15:29:11.811297",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.10554822893126246,
+          "ema_long": 0.0887872171963325,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0004511837467705282,
+          "current_close": 0.13368,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 95.2035855360122,
+            "stoch_rsi_d": 82.20130044170456
+          },
+          "enhanced_signal": "EXIT_LONG",
+          "enhanced_reason": "rsi_exit_long_68.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099351.8113406
+  },
+  "JST": {
+    "timestamp": 1760099351.8616762,
+    "maturity_data": {
+      "timestamp": 1760099351.8616748,
+      "rsi_data": {
+        "symbol": "JST",
+        "rsi6h": 39.0,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.03241,
+        "change24h": -0.15,
+        "last_update": "2025-10-10T15:29:11.861606",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.032728195083015076,
+          "ema_long": 0.03339343402019595,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -9.883758996943881e-06,
+          "current_close": 0.03241,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 6.301484193880204,
+            "stoch_rsi_d": 4.785155911200011
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_39.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099351.8616762
+  },
+  "JTO": {
+    "timestamp": 1760099351.8641546,
+    "maturity_data": {
+      "timestamp": 1760099351.8641531,
+      "rsi_data": {
+        "symbol": "JTO",
+        "rsi6h": 42.8,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 1.567,
+        "change24h": 0.84,
+        "last_update": "2025-10-10T15:29:11.864101",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 1.6202488443700842,
+          "ema_long": 1.7394736621588363,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0017334036397873565,
+          "current_close": 1.567,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 21.189324460322887,
+            "stoch_rsi_d": 16.69204219979048
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_42.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099351.8641546
+  },
+  "JUP": {
+    "timestamp": 1760099352.020833,
+    "maturity_data": {
+      "timestamp": 1760099352.020832,
+      "rsi_data": {
+        "symbol": "JUP",
+        "rsi6h": 42.3,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.4361,
+        "change24h": 1.92,
+        "last_update": "2025-10-10T15:29:12.020777",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.45273260768410306,
+          "ema_long": 0.4804302484743515,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00044553013542059094,
+          "current_close": 0.4361,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 28.10369081386277,
+            "stoch_rsi_d": 19.983760257115232
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_42.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099352.020833
+  },
+  "LIGHT": {
+    "timestamp": 1760099352.0811799,
+    "maturity_data": {
+      "timestamp": 1760099352.0811787,
+      "rsi_data": {
+        "symbol": "LIGHT",
+        "rsi6h": 50.1,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.9014,
+        "change24h": -2.97,
+        "last_update": "2025-10-10T15:29:12.081163",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 24.335850548448104,
+            "stoch_rsi_d": 33.006323622983956
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_50.1"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099352.0811799
+  },
+  "KAIA": {
+    "timestamp": 1760099352.2756994,
+    "maturity_data": {
+      "timestamp": 1760099352.275698,
+      "rsi_data": {
+        "symbol": "KAIA",
+        "rsi6h": 32.2,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1396,
+        "change24h": 0.36,
+        "last_update": "2025-10-10T15:29:12.275524",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.14753020499273625,
+          "ema_long": 0.151326281079188,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0001178520711476172,
+          "current_close": 0.1396,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 41.068907315282374,
+            "stoch_rsi_d": 31.103985621365627
+          },
+          "enhanced_signal": "EXIT_SHORT",
+          "enhanced_reason": "rsi_exit_short_32.2"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099352.2756996
+  },
+  "LINEA": {
+    "timestamp": 1760099352.362934,
+    "maturity_data": {
+      "timestamp": 1760099352.3629327,
+      "rsi_data": {
+        "symbol": "LINEA",
+        "rsi6h": 39.1,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.02518,
+        "change24h": -0.67,
+        "last_update": "2025-10-10T15:29:12.362912",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 18.025148281343203,
+            "stoch_rsi_d": 18.805362691531013
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_39.1"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099352.362934
+  },
+  "KAVA": {
+    "timestamp": 1760099352.741745,
+    "maturity_data": {
+      "timestamp": 1760099352.7417436,
+      "rsi_data": {
+        "symbol": "KAVA",
+        "rsi6h": 60.6,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.3389,
+        "change24h": 0.86,
+        "last_update": "2025-10-10T15:29:12.741682",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.32919930779537787,
+          "ema_long": 0.3467657312964079,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -7.905257584328584e-05,
+          "current_close": 0.3389,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 97.65734896712041,
+            "stoch_rsi_d": 94.10288906189352
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_60.6"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099352.741745
+  },
+  "KDA": {
+    "timestamp": 1760099352.9274542,
+    "maturity_data": {
+      "timestamp": 1760099352.927453,
+      "rsi_data": {
+        "symbol": "KDA",
+        "rsi6h": 56.8,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.3703,
+        "change24h": 5.86,
+        "last_update": "2025-10-10T15:29:12.927388",
+        "trend_analysis": {
+          "trend": "NEUTRAL",
+          "ema_short": 0.3600813340575947,
+          "ema_long": 0.37270723015188084,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -2.419326785807474e-05,
+          "current_close": 0.3703,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 93.96863007668065,
+            "stoch_rsi_d": 73.30477054389023
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_56.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099352.9274542
+  },
+  "KAS": {
+    "timestamp": 1760099353.559939,
+    "maturity_data": {
+      "timestamp": 1760099353.5599372,
+      "rsi_data": {
+        "symbol": "KAS",
+        "rsi6h": 43.5,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.07455,
+        "change24h": 0.91,
+        "last_update": "2025-10-10T15:29:13.559881",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.07682438507377684,
+          "ema_long": 0.08134791402272358,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -6.832074394697019e-05,
+          "current_close": 0.07455,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 27.732291387153435,
+            "stoch_rsi_d": 17.40347673354651
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_43.5"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099353.559939
+  },
+  "KNC": {
+    "timestamp": 1760099355.205921,
+    "maturity_data": {
+      "timestamp": 1760099355.20592,
+      "rsi_data": {
+        "symbol": "KNC",
+        "rsi6h": 47.4,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.3308,
+        "change24h": 1.47,
+        "last_update": "2025-10-10T15:29:15.205864",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.33565237570700546,
+          "ema_long": 0.3592505574279429,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0002859352505320545,
+          "current_close": 0.3308,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 53.252132032216316,
+            "stoch_rsi_d": 44.53902262565081
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_47.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099355.205921
+  },
+  "KSM": {
+    "timestamp": 1760099355.345027,
+    "maturity_data": {
+      "timestamp": 1760099355.3450258,
+      "rsi_data": {
+        "symbol": "KSM",
+        "rsi6h": 52.3,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 15.04,
+        "change24h": 3.08,
+        "last_update": "2025-10-10T15:29:15.344963",
+        "trend_analysis": {
+          "trend": "NEUTRAL",
+          "ema_short": 14.90448021624509,
+          "ema_long": 15.016186483132724,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0002393318278119949,
+          "current_close": 15.04,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 49.63793439168079,
+            "stoch_rsi_d": 34.549145592626196
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_52.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099355.345027
+  },
+  "KMNO": {
+    "timestamp": 1760099355.5469782,
+    "maturity_data": {
+      "timestamp": 1760099355.5469768,
+      "rsi_data": {
+        "symbol": "KMNO",
+        "rsi6h": 42.6,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.07272,
+        "change24h": 0.48,
+        "last_update": "2025-10-10T15:29:15.546889",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.07505222304685391,
+          "ema_long": 0.06877499208269938,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 3.96483207768944e-05,
+          "current_close": 0.07272,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 23.977487504826193,
+            "stoch_rsi_d": 14.579227076604772
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_42.6"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099355.5469782
+  },
+  "L3": {
+    "timestamp": 1760099355.9113584,
+    "maturity_data": {
+      "timestamp": 1760099355.911357,
+      "rsi_data": {
+        "symbol": "L3",
+        "rsi6h": 40.0,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.0291,
+        "change24h": 1.04,
+        "last_update": "2025-10-10T15:29:15.911277",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.03116730107806684,
+          "ema_long": 0.0348573208466409,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -5.786252107176093e-05,
+          "current_close": 0.0291,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 23.310995740691997,
+            "stoch_rsi_d": 23.194585617386256
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_40.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099355.9113584
+  },
+  "M": {
+    "timestamp": 1760099356.1474643,
+    "maturity_data": {
+      "timestamp": 1760099356.1474628,
+      "rsi_data": {
+        "symbol": "M",
+        "rsi6h": 44.8,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 2.0475,
+        "change24h": -0.55,
+        "last_update": "2025-10-10T15:29:16.147434",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 2.138114394778245,
+          "ema_long": 1.8108752972565878,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0023781377160143613,
+          "current_close": 2.0475,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 7.964003739702793,
+            "stoch_rsi_d": 8.013590338257663
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_44.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099356.1474643
+  },
+  "LYN": {
+    "timestamp": 1760099356.2770905,
+    "maturity_data": {
+      "timestamp": 1760099356.2770896,
+      "rsi_data": {
+        "symbol": "LYN",
+        "rsi6h": 27.2,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1957,
+        "change24h": -7.95,
+        "last_update": "2025-10-10T15:29:16.277081",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": "Недостаточно данных для анализа",
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": null,
+            "stoch_rsi_d": null
+          },
+          "enhanced_signal": "WAIT"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099356.2770905
+  },
+  "LDO": {
+    "timestamp": 1760099358.2536128,
+    "maturity_data": {
+      "timestamp": 1760099358.2536118,
+      "rsi_data": {
+        "symbol": "LDO",
+        "rsi6h": 49.1,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 1.183,
+        "change24h": 3.46,
+        "last_update": "2025-10-10T15:29:18.253545",
+        "trend_analysis": {
+          "trend": "NEUTRAL",
+          "ema_short": 1.1840971842497563,
+          "ema_long": 1.1849411391280902,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -1.9508935960477203e-05,
+          "current_close": 1.183,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 46.56199118916036,
+            "stoch_rsi_d": 34.352327252677696
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_49.1"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099358.2536128
+  },
+  "LISTA": {
+    "timestamp": 1760099359.355858,
+    "maturity_data": {
+      "timestamp": 1760099359.3558574,
+      "rsi_data": {
+        "symbol": "LISTA",
+        "rsi6h": 56.4,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.4377,
+        "change24h": -3.87,
+        "last_update": "2025-10-10T15:29:19.355793",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.3710707604890048,
+          "ema_long": 0.30770859607380724,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0013064462706149915,
+          "current_close": 0.4377,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 2.83328787419211,
+            "stoch_rsi_d": 1.8131863800414407
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_56.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099359.355858
+  },
+  "LINK": {
+    "timestamp": 1760099359.823965,
+    "maturity_data": {
+      "timestamp": 1760099359.8239639,
+      "rsi_data": {
+        "symbol": "LINK",
+        "rsi6h": 52.9,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 22.474,
+        "change24h": 3.25,
+        "last_update": "2025-10-10T15:29:19.823904",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 22.199693470434543,
+          "ema_long": 22.12827284182973,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0034746448057312307,
+          "current_close": 22.474,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 54.235704115677386,
+            "stoch_rsi_d": 37.5141999582082
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_52.9"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099359.823965
+  },
+  "LQTY": {
+    "timestamp": 1760099359.898733,
+    "maturity_data": {
+      "timestamp": 1760099359.8987317,
+      "rsi_data": {
+        "symbol": "LQTY",
+        "rsi6h": 53.3,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.7394,
+        "change24h": 2.25,
+        "last_update": "2025-10-10T15:29:19.898680",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.7360246335499947,
+          "ema_long": 0.8090956260745757,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0007004585535133057,
+          "current_close": 0.7394,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 90.99997535551344,
+            "stoch_rsi_d": 72.3180391971743
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_53.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099359.898733
+  },
+  "LRC": {
+    "timestamp": 1760099359.9811544,
+    "maturity_data": {
+      "timestamp": 1760099359.981153,
+      "rsi_data": {
+        "symbol": "LRC",
+        "rsi6h": 54.2,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.08854,
+        "change24h": 4.23,
+        "last_update": "2025-10-10T15:29:19.981093",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.08681685731719589,
+          "ema_long": 0.08918391693393556,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -6.471526974222153e-06,
+          "current_close": 0.08854,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 61.85759749466975,
+            "stoch_rsi_d": 53.8450798648823
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_54.2"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099359.9811544
+  },
+  "LOOKS": {
+    "timestamp": 1760099359.9914474,
+    "maturity_data": {
+      "timestamp": 1760099359.991446,
+      "rsi_data": {
+        "symbol": "LOOKS",
+        "rsi6h": 44.3,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.01363,
+        "change24h": -0.8,
+        "last_update": "2025-10-10T15:29:19.991384",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.01390768649873034,
+          "ema_long": 0.014713605826715158,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -1.0890510821258068e-05,
+          "current_close": 0.01363,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 52.6327928051829,
+            "stoch_rsi_d": 53.58205883494583
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_44.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099359.991448
+  },
+  "LPT": {
+    "timestamp": 1760099360.06229,
+    "maturity_data": {
+      "timestamp": 1760099360.062289,
+      "rsi_data": {
+        "symbol": "LPT",
+        "rsi6h": 56.7,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 6.598,
+        "change24h": 6.25,
+        "last_update": "2025-10-10T15:29:20.062234",
+        "trend_analysis": {
+          "trend": "NEUTRAL",
+          "ema_short": 6.426477289420431,
+          "ema_long": 6.568849995322515,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.00029296487113050773,
+          "current_close": 6.598,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 89.51392404573114,
+            "stoch_rsi_d": 64.68276917383635
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_56.7"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099360.06229
+  },
+  "LSK": {
+    "timestamp": 1760099360.4313066,
+    "maturity_data": {
+      "timestamp": 1760099360.4313054,
+      "rsi_data": {
+        "symbol": "LSK",
+        "rsi6h": 40.4,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.2857,
+        "change24h": 1.2,
+        "last_update": "2025-10-10T15:29:20.431242",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.29987820265388815,
+          "ema_long": 0.34159013545082595,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.000561709904028429,
+          "current_close": 0.2857,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 58.53569326578153,
+            "stoch_rsi_d": 51.69053243545843
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_40.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099360.4313066
+  },
+  "LTC": {
+    "timestamp": 1760099360.8310733,
+    "maturity_data": {
+      "timestamp": 1760099360.831072,
+      "rsi_data": {
+        "symbol": "LTC",
+        "rsi6h": 74.3,
+        "trend6h": "UP",
+        "rsi_zone": "SELL_ZONE",
+        "signal": "WAIT",
+        "price": 131.8,
+        "change24h": 11.73,
+        "last_update": "2025-10-10T15:29:20.831002",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 117.55904704953915,
+          "ema_long": 113.51573874455812,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.1837614196526829,
+          "current_close": 131.8,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 98.84412147500892,
+            "stoch_rsi_d": 93.17746574621799
+          },
+          "enhanced_signal": "ENTER_SHORT",
+          "enhanced_reason": "fresh_overbought_74.3_base_overbought_volume_confirm_stoch_overbought"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099360.8310733
+  },
+  "LUMIA": {
+    "timestamp": 1760099361.1175416,
+    "maturity_data": {
+      "timestamp": 1760099361.11754,
+      "rsi_data": {
+        "symbol": "LUMIA",
+        "rsi6h": 38.9,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.2649,
+        "change24h": 1.49,
+        "last_update": "2025-10-10T15:29:21.117442",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.2831336878844278,
+          "ema_long": 0.3004436109241022,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00035722222034273443,
+          "current_close": 0.2649,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 42.82677253733054,
+            "stoch_rsi_d": 32.825270705414205
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_38.9"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099361.1175416
+  },
+  "LUNA2": {
+    "timestamp": 1760099361.1473598,
+    "maturity_data": {
+      "timestamp": 1760099361.1473584,
+      "rsi_data": {
+        "symbol": "LUNA2",
+        "rsi6h": 43.3,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1353,
+        "change24h": 0.97,
+        "last_update": "2025-10-10T15:29:21.147299",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.13932810301621365,
+          "ema_long": 0.14656069251189588,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00011317278906428085,
+          "current_close": 0.1353,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 52.34000186611228,
+            "stoch_rsi_d": 46.15017170041651
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_43.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099361.14736
+  },
+  "MAGIC": {
+    "timestamp": 1760099362.8226857,
+    "maturity_data": {
+      "timestamp": 1760099362.8226838,
+      "rsi_data": {
+        "symbol": "MAGIC",
+        "rsi6h": 48.9,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1733,
+        "change24h": 4.4,
+        "last_update": "2025-10-10T15:29:22.822531",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.1762786628582189,
+          "ema_long": 0.18990019635438724,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00016683614426521443,
+          "current_close": 0.1733,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 65.91863370740782,
+            "stoch_rsi_d": 49.607742986438666
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_48.9"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099362.8226857
+  },
+  "MANTA": {
+    "timestamp": 1760099363.3637962,
+    "maturity_data": {
+      "timestamp": 1760099363.3637936,
+      "rsi_data": {
+        "symbol": "MANTA",
+        "rsi6h": 50.4,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1852,
+        "change24h": 3.29,
+        "last_update": "2025-10-10T15:29:23.363552",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.18621990269800456,
+          "ema_long": 0.19795578140848585,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00012819880812547924,
+          "current_close": 0.1852,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 58.412589612376685,
+            "stoch_rsi_d": 43.897194748031204
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_50.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099363.3637965
+  },
+  "MAJOR": {
+    "timestamp": 1760099363.3720949,
+    "maturity_data": {
+      "timestamp": 1760099363.3720927,
+      "rsi_data": {
+        "symbol": "MAJOR",
+        "rsi6h": 40.1,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1186,
+        "change24h": -0.25,
+        "last_update": "2025-10-10T15:29:23.371882",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.12435509259010179,
+          "ema_long": 0.14295991899767777,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00024482330650932305,
+          "current_close": 0.1186,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 30.460008034260827,
+            "stoch_rsi_d": 30.400164976135212
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_40.1"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099363.3720949
+  },
+  "MIRA": {
+    "timestamp": 1760099364.1267014,
+    "maturity_data": {
+      "timestamp": 1760099364.1266997,
+      "rsi_data": {
+        "symbol": "MIRA",
+        "rsi6h": 24.3,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.4407,
+        "change24h": -4.65,
+        "last_update": "2025-10-10T15:29:24.126685",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": true,
+            "stoch_rsi_k": 16.444586110095845,
+            "stoch_rsi_d": 17.35136976253772
+          },
+          "enhanced_signal": "ENTER_LONG",
+          "enhanced_reason": "fresh_oversold_24.3_base_oversold_volume_confirm"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099364.1267014
+  },
+  "MANA": {
+    "timestamp": 1760099364.7083046,
+    "maturity_data": {
+      "timestamp": 1760099364.7083006,
+      "rsi_data": {
+        "symbol": "MANA",
+        "rsi6h": 52.4,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.3282,
+        "change24h": 3.5,
+        "last_update": "2025-10-10T15:29:24.708147",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.3216921306640569,
+          "ema_long": 0.31247482893432815,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0001580419202580341,
+          "current_close": 0.3282,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 61.663990178557256,
+            "stoch_rsi_d": 45.25547126101085
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_52.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099364.708305
+  },
+  "MITO": {
+    "timestamp": 1760099365.0263138,
+    "maturity_data": {
+      "timestamp": 1760099365.0263119,
+      "rsi_data": {
+        "symbol": "MITO",
+        "rsi6h": 47.4,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.15742,
+        "change24h": -1.94,
+        "last_update": "2025-10-10T15:29:25.026266",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 17.296614209769604,
+            "stoch_rsi_d": 10.94685395812718
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_47.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099365.0263138
+  },
+  "MASA": {
+    "timestamp": 1760099365.9588904,
+    "maturity_data": {
+      "timestamp": 1760099365.9588885,
+      "rsi_data": {
+        "symbol": "MASA",
+        "rsi6h": 47.5,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.01218,
+        "change24h": 4.46,
+        "last_update": "2025-10-10T15:29:25.958748",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.012635584031292658,
+          "ema_long": 0.014345287766265044,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -2.1761686093114962e-05,
+          "current_close": 0.01218,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 32.97694287362623,
+            "stoch_rsi_d": 24.35562876021059
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_47.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099365.9588904
+  },
+  "MILK": {
+    "timestamp": 1760099366.0533998,
+    "maturity_data": {
+      "timestamp": 1760099366.0533984,
+      "rsi_data": {
+        "symbol": "MILK",
+        "rsi6h": 53.9,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.04379,
+        "change24h": 6.8,
+        "last_update": "2025-10-10T15:29:26.053315",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.042443573674562175,
+          "ema_long": 0.04391565196269423,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -1.2628337959161295e-06,
+          "current_close": 0.04379,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 25.052211302050516,
+            "stoch_rsi_d": 12.568329319933808
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_53.9"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099366.0533998
+  },
+  "MASK": {
+    "timestamp": 1760099368.2774987,
+    "maturity_data": {
+      "timestamp": 1760099368.2774973,
+      "rsi_data": {
+        "symbol": "MASK",
+        "rsi6h": 46.5,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 1.251,
+        "change24h": -0.08,
+        "last_update": "2025-10-10T15:29:28.277433",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 1.2588544833837398,
+          "ema_long": 1.2681522872380961,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0001723847963626124,
+          "current_close": 1.251,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 40.28907790294041,
+            "stoch_rsi_d": 33.67629714765075
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_46.5"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099368.2774987
+  },
+  "MERL": {
+    "timestamp": 1760099368.3877513,
+    "maturity_data": {
+      "timestamp": 1760099368.38775,
+      "rsi_data": {
+        "symbol": "MERL",
+        "rsi6h": 48.5,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.33923,
+        "change24h": -0.55,
+        "last_update": "2025-10-10T15:29:28.387690",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.32846650538865585,
+          "ema_long": 0.23975460785618521,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.000999752684862465,
+          "current_close": 0.33923,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 31.18070987295509,
+            "stoch_rsi_d": 31.54695919941584
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_48.5"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099368.3877513
+  },
+  "METIS": {
+    "timestamp": 1760099368.4631875,
+    "maturity_data": {
+      "timestamp": 1760099368.463186,
+      "rsi_data": {
+        "symbol": "METIS",
+        "rsi6h": 45.0,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 13.1,
+        "change24h": 1.95,
+        "last_update": "2025-10-10T15:29:28.463120",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 13.530415489697697,
+          "ema_long": 14.654756656190832,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.01562569503709277,
+          "current_close": 13.1,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 50.35309105253667,
+            "stoch_rsi_d": 44.94256643452356
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_45.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099368.4631877
+  },
+  "MAVIA": {
+    "timestamp": 1760099368.5059376,
+    "maturity_data": {
+      "timestamp": 1760099368.5059364,
+      "rsi_data": {
+        "symbol": "MAVIA",
+        "rsi6h": 45.9,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1244,
+        "change24h": -1.27,
+        "last_update": "2025-10-10T15:29:28.505878",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.12845685800385245,
+          "ema_long": 0.14370961027920565,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00019406643496686082,
+          "current_close": 0.1244,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 40.70672082205924,
+            "stoch_rsi_d": 37.05834520703333
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_45.9"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099368.5059378
+  },
+  "MAV": {
+    "timestamp": 1760099368.5752566,
+    "maturity_data": {
+      "timestamp": 1760099368.5752554,
+      "rsi_data": {
+        "symbol": "MAV",
+        "rsi6h": 34.6,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.05017,
+        "change24h": -0.52,
+        "last_update": "2025-10-10T15:29:28.575205",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.0567018424037504,
+          "ema_long": 0.06145919307803495,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00011345922691492066,
+          "current_close": 0.05017,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 39.393183092436814,
+            "stoch_rsi_d": 31.958854551038957
+          },
+          "enhanced_signal": "EXIT_SHORT",
+          "enhanced_reason": "rsi_exit_short_34.6"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099368.5752568
+  },
+  "MEW": {
+    "timestamp": 1760099368.7161791,
+    "maturity_data": {
+      "timestamp": 1760099368.7161777,
+      "rsi_data": {
+        "symbol": "MEW",
+        "rsi6h": 40.7,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.002624,
+        "change24h": 1.08,
+        "last_update": "2025-10-10T15:29:28.716133",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.0027245752946941978,
+          "ema_long": 0.002857909118946413,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -2.350845416546586e-06,
+          "current_close": 0.002624,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 20.319284415697133,
+            "stoch_rsi_d": 14.118020160119775
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_40.7"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099368.7161791
+  },
+  "ME": {
+    "timestamp": 1760099368.864656,
+    "maturity_data": {
+      "timestamp": 1760099368.8646545,
+      "rsi_data": {
+        "symbol": "ME",
+        "rsi6h": 40.6,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.5846,
+        "change24h": 1.07,
+        "last_update": "2025-10-10T15:29:28.864599",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.6135477412246133,
+          "ema_long": 0.6669329270043998,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0008274666030593236,
+          "current_close": 0.5846,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 31.385539994989937,
+            "stoch_rsi_d": 22.018615109327303
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_40.6"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099368.864656
+  },
+  "MELANIA": {
+    "timestamp": 1760099368.866352,
+    "maturity_data": {
+      "timestamp": 1760099368.866351,
+      "rsi_data": {
+        "symbol": "MELANIA",
+        "rsi6h": 48.4,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1765,
+        "change24h": 2.26,
+        "last_update": "2025-10-10T15:29:28.866293",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.17779713503317943,
+          "ema_long": 0.19046874448802198,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0001403893918394128,
+          "current_close": 0.1765,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 36.92070069286153,
+            "stoch_rsi_d": 27.40234578796053
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_48.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099368.866352
+  },
+  "MLN": {
+    "timestamp": 1760099368.9222298,
+    "maturity_data": {
+      "timestamp": 1760099368.9222286,
+      "rsi_data": {
+        "symbol": "MLN",
+        "rsi6h": 63.0,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 8.152,
+        "change24h": 4.34,
+        "last_update": "2025-10-10T15:29:28.922176",
+        "trend_analysis": {
+          "trend": "NEUTRAL",
+          "ema_short": 7.82327731247786,
+          "ema_long": 7.905334111657138,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0024790541542003552,
+          "current_close": 8.152,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 94.95790731529196,
+            "stoch_rsi_d": 76.7789412388837
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_63.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099368.9222298
+  },
+  "MEME": {
+    "timestamp": 1760099368.962221,
+    "maturity_data": {
+      "timestamp": 1760099368.9622192,
+      "rsi_data": {
+        "symbol": "MEME",
+        "rsi6h": 52.5,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.002472,
+        "change24h": 4.13,
+        "last_update": "2025-10-10T15:29:28.962159",
+        "trend_analysis": {
+          "trend": "NEUTRAL",
+          "ema_short": 0.0024462960088905174,
+          "ema_long": 0.0024501187764223295,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 2.1991179475090022e-07,
+          "current_close": 0.002472,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 63.2432388731255,
+            "stoch_rsi_d": 50.41198220111597
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_52.5"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099368.962221
+  },
+  "MBOX": {
+    "timestamp": 1760099369.176541,
+    "maturity_data": {
+      "timestamp": 1760099369.1765397,
+      "rsi_data": {
+        "symbol": "MBOX",
+        "rsi6h": 67.0,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.0672,
+        "change24h": 0.89,
+        "last_update": "2025-10-10T15:29:29.176487",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.06046604831860461,
+          "ema_long": 0.05979282902455853,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 7.44439294014243e-05,
+          "current_close": 0.0672,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": true,
+            "divergence": false,
+            "stoch_rsi_k": 97.20493554034175,
+            "stoch_rsi_d": 94.97727274018565
+          },
+          "enhanced_signal": "EXIT_LONG",
+          "enhanced_reason": "rsi_exit_long_67.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099369.176541
+  },
+  "MYX": {
+    "timestamp": 1760099369.7025285,
+    "maturity_data": {
+      "timestamp": 1760099369.7025268,
+      "rsi_data": {
+        "symbol": "MYX",
+        "rsi6h": 35.0,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 5.0446,
+        "change24h": 2.66,
+        "last_update": "2025-10-10T15:29:29.702484",
+        "trend_analysis": {
+          "trend": "NEUTRAL",
+          "ema_short": 7.705605651102786,
+          "ema_long": 6.9753448580149415,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.019404470934823337,
+          "current_close": 5.0446,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 74.01208892581161,
+            "stoch_rsi_d": 68.71539138195409
+          },
+          "enhanced_signal": "EXIT_SHORT",
+          "enhanced_reason": "rsi_exit_short_35.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099369.7025285
+  },
+  "NAORIS": {
+    "timestamp": 1760099369.7388444,
+    "maturity_data": {
+      "timestamp": 1760099369.7388422,
+      "rsi_data": {
+        "symbol": "NAORIS",
+        "rsi6h": 58.0,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.08543,
+        "change24h": 0.38,
+        "last_update": "2025-10-10T15:29:29.738802",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.07256596136948294,
+          "ema_long": 0.05488986071093983,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0003069360732568874,
+          "current_close": 0.08543,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 11.473499232850859,
+            "stoch_rsi_d": 8.393967628819043
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_58.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760099369.7388444
+  }
+}

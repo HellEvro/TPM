@@ -20,11 +20,11 @@ def test_coin_filters(symbol):
     print(f"🔍 ТЕСТИРОВАНИЕ ФИЛЬТРОВ ДЛЯ {symbol}")
     print(f"{'='*60}\n")
     
-    # 1. Тест антипамп фильтра
-    print("📊 1. Антипамп/Антидамп фильтр:")
+    # 1. Тест ExitScam фильтра
+    print("📊 1. ExitScam фильтр:")
     print("-" * 60)
     try:
-        response = requests.get(f'http://localhost:5001/api/bots/test-anti-pump/{symbol}', timeout=10)
+        response = requests.get(f'http://localhost:5001/api/bots/test-exit-scam/{symbol}', timeout=10)
         if response.status_code == 200:
             print("✅ Тест запущен, смотрите логи bots.py для детальных результатов")
         else:
@@ -79,19 +79,16 @@ def test_coin_filters(symbol):
                 print(f"Сигнал: {coin_data['signal']}")
                 print(f"Изменение 24H: {coin_data['change24h']:+.2f}%")
                 
-                # Информация об антипамп фильтре
-                anti_dump_info = coin_data.get('anti_dump_pump_info')
-                if anti_dump_info:
-                    print(f"\n🛡️ Антипамп фильтр:")
-                    if anti_dump_info.get('blocked'):
+                # Информация об ExitScam фильтре
+                exit_scam_info = coin_data.get('exit_scam_info')
+                if exit_scam_info:
+                    print(f"\n🛡️ ExitScam фильтр:")
+                    if exit_scam_info.get('blocked'):
                         print(f"  ❌ ЗАБЛОКИРОВАН")
-                        print(f"  Причина: {anti_dump_info.get('reason')}")
-                        print(f"  Экстремальных свечей: {anti_dump_info.get('extreme_candles_count')}")
-                        print(f"  Свечей до разблокировки: ~{anti_dump_info.get('candles_to_wait')} (по 6H каждая)")
-                        hours_to_wait = anti_dump_info.get('candles_to_wait', 0) * 6
-                        print(f"  Примерное время ожидания: ~{hours_to_wait} часов")
+                        print(f"  Причина: {exit_scam_info.get('reason')}")
                     else:
                         print(f"  ✅ ПРОЙДЕН")
+                        print(f"  Причина: {exit_scam_info.get('reason')}")
                 
                 # Информация о временном фильтре
                 time_filter_info = coin_data.get('time_filter_info')

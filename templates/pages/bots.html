@@ -883,12 +883,12 @@
                     </div>
                 </div>
 
-                <!-- Антипамп/Антидамп фильтр -->
+                <!-- ExitScam фильтр -->
                 <div class="config-section">
                     <div class="section-header">
-                        <h3 data-translate="anti_pump_filter_title">🛡️ Антипамп/Антидамп фильтр</h3>
+                        <h3 data-translate="exit_scam_filter_title">🛡️ ExitScam фильтр</h3>
                         <div class="section-description">
-                            <span data-translate="anti_pump_filter_description">Защита от входа в сделки после резких скачков цены</span>
+                            <span data-translate="exit_scam_filter_description">Защита от входа в сделки после резких скачков цены (памп/дамп/скам)</span>
                         </div>
                     </div>
                     
@@ -896,69 +896,69 @@
                         <div class="config-item">
                             <label class="config-label">
                                 <span class="label-icon">🛡️</span>
-                                <span class="label-text" data-translate="anti_pump_enabled_label">Включить антипамп фильтр:</span>
+                                <span class="label-text" data-translate="exit_scam_enabled_label">Включить ExitScam фильтр:</span>
                             </label>
                             <label class="toggle-switch">
-                                <input type="checkbox" id="antiPumpEnabled" checked />
+                                <input type="checkbox" id="exitScamEnabled" checked />
                                 <span class="toggle-slider"></span>
                             </label>
-                            <small class="config-help" data-translate="anti_pump_enabled_help">Блокирует вход в сделки после резких движений цены</small>
+                            <small class="config-help" data-translate="exit_scam_enabled_help">Блокирует вход в сделки после резких движений цены</small>
                         </div>
                         
                         <div class="config-item">
                             <label class="config-label">
                                 <span class="label-icon">📊</span>
-                                <span class="label-text" data-translate="anti_pump_candles_label">Анализ свечей (6H):</span>
+                                <span class="label-text" data-translate="exit_scam_candles_label">Анализ свечей (6H):</span>
                             </label>
                             <div class="config-input-with-unit">
-                                <input type="number" id="antiPumpCandles" class="config-input" 
+                                <input type="number" id="exitScamCandles" class="config-input" 
                                        min="1" max="50" step="1" value="10"
                                        placeholder="10">
                                 <span class="input-unit" data-translate="candles_unit">свечей</span>
                             </div>
-                            <small class="config-help" data-translate="anti_pump_candles_help">Количество свечей для анализа в истории. 10 свечей = 60 часов на 6H</small>
+                            <small class="config-help" data-translate="exit_scam_candles_help">Количество свечей для анализа в истории. 10 свечей = 60 часов на 6H</small>
                         </div>
                         
                         <div class="config-item">
                             <label class="config-label">
                                 <span class="label-icon">⚡</span>
-                                <span class="label-text" data-translate="anti_pump_single_candle_label">Лимит одной свечи:</span>
+                                <span class="label-text" data-translate="exit_scam_single_candle_label">Лимит одной свечи:</span>
                             </label>
                             <div class="config-input-with-unit">
-                                <input type="number" id="antiPumpSingleCandlePercent" class="config-input" 
+                                <input type="number" id="exitScamSingleCandlePercent" class="config-input" 
                                        min="1" max="100" step="0.1" value="15.0"
                                        placeholder="15.0">
                                 <span class="input-unit">%</span>
                             </div>
-                            <small class="config-help" data-translate="anti_pump_single_candle_help">Если одна свеча изменилась больше чем на этот % - блокировка входа</small>
+                            <small class="config-help" data-translate="exit_scam_single_candle_help">Если одна свеча изменилась больше чем на этот % - блокировка входа</small>
                         </div>
                         
                         <div class="config-item">
                             <label class="config-label">
                                 <span class="label-icon">📈</span>
-                                <span class="label-text" data-translate="anti_pump_multi_count_label">Свечей для суммарного анализа:</span>
+                                <span class="label-text" data-translate="exit_scam_multi_count_label">Свечей для суммарного анализа:</span>
                             </label>
                             <div class="config-input-with-unit">
-                                <input type="number" id="antiPumpMultiCandleCount" class="config-input" 
+                                <input type="number" id="exitScamMultiCandleCount" class="config-input" 
                                        min="2" max="20" step="1" value="4"
                                        placeholder="4">
                                 <span class="input-unit" data-translate="candles_unit">свечей</span>
                             </div>
-                            <small class="config-help" data-translate="anti_pump_multi_count_help">Количество свечей для проверки суммарного изменения</small>
+                            <small class="config-help" data-translate="exit_scam_multi_count_help">Количество свечей для проверки суммарного изменения</small>
                         </div>
                         
                         <div class="config-item">
                             <label class="config-label">
                                 <span class="label-icon">📊</span>
-                                <span class="label-text" data-translate="anti_pump_multi_percent_label">Лимит суммарного изменения:</span>
+                                <span class="label-text" data-translate="exit_scam_multi_percent_label">Лимит суммарного изменения:</span>
                             </label>
                             <div class="config-input-with-unit">
-                                <input type="number" id="antiPumpMultiCandlePercent" class="config-input" 
+                                <input type="number" id="exitScamMultiCandlePercent" class="config-input" 
                                        min="1" max="200" step="0.1" value="50.0"
                                        placeholder="50.0">
                                 <span class="input-unit">%</span>
                             </div>
-                            <small class="config-help" data-translate="anti_pump_multi_percent_help">Если N свечей суммарно изменились больше чем на этот % - блокировка входа</small>
+                            <small class="config-help" data-translate="exit_scam_multi_percent_help">Если N свечей суммарно изменились больше чем на этот % - блокировка входа</small>
                         </div>
                     </div>
                 </div>

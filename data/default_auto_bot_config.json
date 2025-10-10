@@ -31,9 +31,9 @@
   "rsi_time_filter_candles": 8,
   "rsi_time_filter_upper": 65,
   "rsi_time_filter_lower": 35,
-  "anti_dump_pump_enabled": true,
-  "anti_dump_pump_candles": 10,
-  "anti_dump_pump_single_candle_percent": 15.0,
-  "anti_dump_pump_multi_candle_count": 4,
-  "anti_dump_pump_multi_candle_percent": 50.0
+  "exit_scam_enabled": true,
+  "exit_scam_candles": 10,
+  "exit_scam_single_candle_percent": 15.0,
+  "exit_scam_multi_candle_count": 4,
+  "exit_scam_multi_candle_percent": 50.0
 }
