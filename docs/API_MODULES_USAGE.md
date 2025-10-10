@@ -138,3 +138,4 @@ register_health_endpoints(bots_app, lambda: {
 
 **Вывод:** API модули созданы и готовы, но для интеграции нужен State Manager.
 
+

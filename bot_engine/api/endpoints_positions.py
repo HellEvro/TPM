@@ -151,3 +151,4 @@ def register_positions_endpoints(app, state):
     
     logger.info("[API] Positions endpoints registered")
 
+
