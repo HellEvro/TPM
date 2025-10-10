@@ -88,6 +88,11 @@ DEFAULT_AUTO_BOT_CONFIG = {
     # RSI временной фильтр
     'rsi_time_filter_enabled': True,    # Включить временной фильтр для RSI сигналов
     'rsi_time_filter_candles': 8,       # Минимум свечей с последнего экстремума (8 = 2 суток на 6H)
+    'rsi_time_filter_upper': 65,        # Верхняя граница спокойной зоны для SHORT
+    'rsi_time_filter_lower': 35,        # Нижняя граница спокойной зоны для LONG
+    # Антипамп/антидамп фильтр
+    'anti_dump_pump_enabled': True,     # Включить проверку на памп/дамп
+    'anti_dump_pump_candles': 10,       # Количество свечей для проверки (10 = 60 часов на 6H)
 }
 
 # Настройки по умолчанию для отдельного бота
