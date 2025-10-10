@@ -166,3 +166,4 @@ def register_config_endpoints(app, state):
     
     logger.info("[API] Config endpoints registered")
 
+

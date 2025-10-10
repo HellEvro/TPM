@@ -344,3 +344,4 @@ def register_bots_endpoints(app, state):
     
     logger.info("[API] Bots endpoints registered")
 
+
