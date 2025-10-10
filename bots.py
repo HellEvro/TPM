@@ -1245,7 +1245,8 @@ def check_rsi_time_filter(candles, rsi, signal):
                 }
             
             # Шаг 3: Проверяем ВСЕ свечи от пика до текущей
-            candles_since_peak = current_index - peak_index
+            # candles_since_peak = количество свечей С МОМЕНТА пика (включая сам пик)
+            candles_since_peak = current_index - peak_index + 1
             
             # Берем все свечи ПОСЛЕ пика (не включая сам пик)
             start_check = peak_index + 1
@@ -1276,18 +1277,18 @@ def check_rsi_time_filter(candles, rsi, signal):
             return {
                 'allowed': True,
                 'reason': f'Разрешено: с пика (свеча -{candles_since_peak}) прошло {len(check_candles)} спокойных свечей >= {rsi_time_filter_upper}',
-                'last_extreme_candles_ago': candles_since_peak,
+                'last_extreme_candles_ago': candles_since_peak - 1,  # Для соответствия с вашим пониманием
                 'calm_candles': len(check_candles)
             }
                 
         elif signal == 'ENTER_LONG':
-            # ПРАВИЛЬНАЯ ЛОГИКА ДЛЯ LONG:
+            # ЗЕРКАЛЬНАЯ ЛОГИКА ДЛЯ LONG (как для SHORT, только наоборот):
             # 1. Берем последние N свечей (8)
             # 2. Ищем среди них лой <= 29
             #    - Если несколько лоев - берем САМЫЙ РАННИЙ (8-ую свечу)
             #    - Если нет лоев - идем дальше в историю (БЕЗ ОГРАНИЧЕНИЙ)
             # 3. От найденного лоя проверяем ВСЕ свечи до текущей
-            # 4. Все должны быть <= 35 (иначе был провал - вход упущен)
+            # 4. Все должны быть <= 35 (иначе был прорыв вверх - вход упущен)
             
             # Шаг 1: Проверяем последние N свечей
             last_n_candles_start = max(0, current_index - rsi_time_filter_candles + 1)
@@ -1318,7 +1319,8 @@ def check_rsi_time_filter(candles, rsi, signal):
                 }
             
             # Шаг 3: Проверяем ВСЕ свечи от лоя до текущей
-            candles_since_low = current_index - low_index
+            # candles_since_low = количество свечей С МОМЕНТА лоя (включая сам лой)
+            candles_since_low = current_index - low_index + 1
             
             # Берем все свечи ПОСЛЕ лоя (не включая сам лой)
             start_check = low_index + 1
@@ -1328,7 +1330,7 @@ def check_rsi_time_filter(candles, rsi, signal):
             invalid_candles = [rsi_val for rsi_val in check_candles if rsi_val > rsi_time_filter_lower]
             
             if len(invalid_candles) > 0:
-                # Есть провалы > 35 - вход упущен
+                # Есть прорывы > 35 - вход упущен
                 return {
                     'allowed': False,
                     'reason': f'Блокировка: {len(invalid_candles)} свечей после лоя поднялись > {rsi_time_filter_lower} (вход упущен)',
@@ -1349,7 +1351,7 @@ def check_rsi_time_filter(candles, rsi, signal):
             return {
                 'allowed': True,
                 'reason': f'Разрешено: с лоя (свеча -{candles_since_low}) прошло {len(check_candles)} спокойных свечей <= {rsi_time_filter_lower}',
-                'last_extreme_candles_ago': candles_since_low,
+                'last_extreme_candles_ago': candles_since_low - 1,  # Для соответствия с вашим пониманием
                 'calm_candles': len(check_candles)
             }
         
@@ -2335,9 +2337,34 @@ def test_rsi_time_filter(symbol):
         rsi_history = calculate_rsi_history(closes, 14)
         
         if rsi_history:
-            logger.info(f"[TEST_RSI_TIME] {symbol}: Последние 10 значений RSI:")
-            for i, rsi_val in enumerate(rsi_history[-10:]):
-                logger.info(f"[TEST_RSI_TIME] {symbol}: RSI {i+1}: {rsi_val:.1f}")
+            logger.info(f"[TEST_RSI_TIME] {symbol}: Последние 20 значений RSI:")
+            last_20_rsi = rsi_history[-20:] if len(rsi_history) >= 20 else rsi_history
+            
+            # Получаем пороги для подсветки
+            with bots_data_lock:
+                rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', 29)
+                rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', 71)
+                rsi_time_filter_upper = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_upper', 65)
+                rsi_time_filter_lower = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_lower', 35)
+            
+            for i, rsi_val in enumerate(last_20_rsi):
+                # Индекс от конца истории
+                index_from_end = len(last_20_rsi) - i - 1
+                
+                # Определяем маркеры для наглядности
+                markers = []
+                if rsi_val >= rsi_short_threshold:
+                    markers.append(f"🔴ПИК>={rsi_short_threshold}")
+                elif rsi_val <= rsi_long_threshold:
+                    markers.append(f"🟢ЛОЙ<={rsi_long_threshold}")
+                
+                if rsi_val >= rsi_time_filter_upper:
+                    markers.append(f"✅>={rsi_time_filter_upper}")
+                elif rsi_val <= rsi_time_filter_lower:
+                    markers.append(f"✅<={rsi_time_filter_lower}")
+                
+                marker_str = " ".join(markers) if markers else ""
+                logger.info(f"[TEST_RSI_TIME] {symbol}: Свеча -{index_from_end}: RSI={rsi_val:.1f} {marker_str}")
         
     except Exception as e:
         logger.error(f"[TEST_RSI_TIME] {symbol}: Ошибка тестирования: {e}")
