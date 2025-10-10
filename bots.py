@@ -1415,28 +1415,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         rsi_zone = 'NEUTRAL'
         signal = 'WAIT'
         
-        # Проверяем временной фильтр для потенциальных сигналов
-        time_filter_info = None
-        if rsi <= RSI_OVERSOLD:
-            time_filter_result = check_rsi_time_filter(candles, rsi, 'ENTER_LONG')
-            time_filter_info = {
-                'allowed': time_filter_result['allowed'],
-                'reason': time_filter_result['reason'],
-                'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago')
-            }
-            # ОТЛАДКА: Логируем результат временного фильтра для LONG
-            if symbol in ['BAT']:  # Только для BAT для отладки
-                logger.info(f"[DEBUG_TIME_FILTER] {symbol}: LONG - allowed={time_filter_result['allowed']}, reason='{time_filter_result['reason']}', last_extreme={time_filter_result.get('last_extreme_candles_ago')}")
-        elif rsi >= RSI_OVERBOUGHT:
-            time_filter_result = check_rsi_time_filter(candles, rsi, 'ENTER_SHORT')
-            time_filter_info = {
-                'allowed': time_filter_result['allowed'],
-                'reason': time_filter_result['reason'],
-                'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago')
-            }
-            # ОТЛАДКА: Логируем результат временного фильтра для SHORT
-            if symbol in ['BAT']:  # Только для BAT для отладки
-                logger.info(f"[DEBUG_TIME_FILTER] {symbol}: SHORT - allowed={time_filter_result['allowed']}, reason='{time_filter_result['reason']}', last_extreme={time_filter_result.get('last_extreme_candles_ago')}")
+        # Временной фильтр теперь проверяется только для монет в зонах LONG/SHORT (ниже)
         
         # Логика с опциональным учетом тренда
         # Получаем настройки фильтров по тренду (по умолчанию включены)
@@ -1492,40 +1471,41 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # closes[-1] - это самая НОВАЯ цена (последняя свеча в массиве)
         current_price = closes[-1]
         
-        # Проверяем антипамп фильтр для монет в экстремальных зонах RSI
-        # Проверяем ВСЕГДА, даже если сигнал уже был изменен на WAIT другими фильтрами
+        # Проверяем фильтры только для монет в зонах LONG/SHORT
         anti_dump_pump_info = None
-        if rsi <= RSI_OVERSOLD or rsi >= RSI_OVERBOUGHT:
+        time_filter_info = None
+        
+        # Проверяем фильтры только если монета в зоне входа (LONG/SHORT)
+        if signal in ['ENTER_LONG', 'ENTER_SHORT']:
+            # 1. Проверка антипамп фильтра
             anti_dump_pump_passed = check_anti_dump_pump(symbol, {})
             if not anti_dump_pump_passed:
-                # Фильтр не пройден - блокируем сигнал
-                logger.debug(f"[ANTI_PUMP_BLOCK] {symbol}: Сигнал {signal} заблокирован антипамп фильтром")
-                signal = 'WAIT'
-                rsi_zone = 'NEUTRAL'
-                
-                # Анализируем свечи для UI (используем настройку из конфига)
-                with bots_data_lock:
-                    anti_dump_pump_candles = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_candles', 10)
-                
-                recent_candles = candles[-anti_dump_pump_candles:] if len(candles) >= anti_dump_pump_candles else candles
-                extreme_count = 0
-                for candle in recent_candles:
-                    price_change = abs((candle['close'] - candle['open']) / candle['open']) * 100
-                    candle_range = ((candle['high'] - candle['low']) / candle['open']) * 100
-                    if price_change > 10 or candle_range > 15:
-                        extreme_count += 1
-                
                 anti_dump_pump_info = {
                     'blocked': True,
-                    'reason': 'Обнаружены экстремальные движения цены',
-                    'extreme_candles_count': extreme_count,
-                    'candles_to_wait': extreme_count  # Примерно столько свечей нужно подождать
+                    'reason': 'Обнаружены резкие движения цены (антипамп фильтр)',
+                    'filter_type': 'anti_pump'
                 }
             else:
                 anti_dump_pump_info = {
                     'blocked': False,
-                    'reason': 'Фильтр пройден'
+                    'reason': 'Антипамп фильтр пройден',
+                    'filter_type': 'anti_pump'
                 }
+            
+            # 2. Проверка RSI временного фильтра
+            time_filter_result = check_rsi_time_filter(candles, rsi, signal)
+            time_filter_info = {
+                'blocked': not time_filter_result['allowed'],
+                'reason': time_filter_result['reason'],
+                'filter_type': 'time_filter',
+                'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago'),
+                'calm_candles': time_filter_result.get('calm_candles')
+            }
+            
+            # Если любой из фильтров блокирует - меняем сигнал на WAIT
+            if not anti_dump_pump_passed or not time_filter_result['allowed']:
+                signal = 'WAIT'
+                rsi_zone = 'NEUTRAL'
         
         result = {
             'symbol': symbol,
@@ -2002,12 +1982,21 @@ def check_coin_maturity_stored_or_verify(symbol):
         return False
 
 def check_anti_dump_pump(symbol, coin_data):
-    """Проверяет на сливные/памп свечи за последние N свечей (из конфига)"""
+    """
+    НОВАЯ ЛОГИКА АНТИПАМП ФИЛЬТРА
+    
+    Проверяет:
+    1. Одна свеча превысила максимальный % изменения
+    2. N свечей суммарно превысили максимальный % изменения
+    """
     try:
         # Получаем настройки из конфига
         with bots_data_lock:
             anti_dump_pump_enabled = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_enabled', True)
             anti_dump_pump_candles = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_candles', 10)
+            single_candle_percent = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_single_candle_percent', 15.0)
+            multi_candle_count = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_multi_candle_count', 4)
+            multi_candle_percent = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_multi_candle_percent', 50.0)
         
         # Если фильтр отключен - разрешаем
         if not anti_dump_pump_enabled:
@@ -2029,84 +2018,39 @@ def check_anti_dump_pump(symbol, coin_data):
         # Проверяем последние N свечей (из конфига)
         recent_candles = candles[-anti_dump_pump_candles:]
         
-        # 1. Проверка на экстремальные движения отдельных свечей
-        extreme_moves = 0
-        for candle in recent_candles:
-            open_price = candle['open']
-            close_price = candle['close']
-            high_price = candle['high']
-            low_price = candle['low']
-            
-            # Вычисляем процент изменения от открытия до закрытия
-            price_change = abs((close_price - open_price) / open_price) * 100
-            
-            # Вычисляем общий диапазон свечи (high - low)
-            candle_range = ((high_price - low_price) / open_price) * 100
-            
-            # Проверяем на экстремальные движения (>10% изменение или >15% диапазон)
-            if price_change > 10 or candle_range > 15:
-                extreme_moves += 1
-                logger.debug(f"[ANTI_DUMP_PUMP] {symbol}: Экстремальная свеча: изменение {price_change:.1f}%, диапазон {candle_range:.1f}%")
+        logger.info(f"[ANTI_DUMP_PUMP] {symbol}: Анализ последних {anti_dump_pump_candles} свечей")
+        logger.info(f"[ANTI_DUMP_PUMP] {symbol}: Настройки - одна свеча: {single_candle_percent}%, {multi_candle_count} свечей: {multi_candle_percent}%")
         
-        # 2. Проверка на совокупные пампы/сливы за несколько свечей
-        total_change = 0
-        consecutive_moves = 0
-        max_consecutive = 0
-        
+        # 1. ПРОВЕРКА: Одна свеча превысила максимальный % изменения
         for i, candle in enumerate(recent_candles):
             open_price = candle['open']
             close_price = candle['close']
             
-            # Процент изменения свечи
-            candle_change = ((close_price - open_price) / open_price) * 100
+            # Процент изменения свечи (от открытия до закрытия)
+            price_change = abs((close_price - open_price) / open_price) * 100
             
-            # Если движение в том же направлении что и предыдущее
-            if i > 0:
-                prev_candle = recent_candles[i-1]
-                prev_change = ((prev_candle['close'] - prev_candle['open']) / prev_candle['open']) * 100
-                
-                # Если оба движения в одну сторону (оба положительные или оба отрицательные)
-                if (candle_change > 0 and prev_change > 0) or (candle_change < 0 and prev_change < 0):
-                    consecutive_moves += 1
-                else:
-                    consecutive_moves = 1
-            else:
-                consecutive_moves = 1
-            
-            max_consecutive = max(max_consecutive, consecutive_moves)
-            
-            # Суммируем общее изменение
-            total_change += abs(candle_change)
-        
-        # 3. Проверка на резкие пампы/сливы
-        # Если общее изменение за N свечей > 100% - это подозрительно
-        if total_change > 100:
-            logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: Подозрительно высокое общее изменение: {total_change:.1f}% за {anti_dump_pump_candles} свечей")
-            return False
-        
-        # Если больше 2 экстремальных движений - блокируем
-        if extreme_moves > 2:
-            logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: Слишком много экстремальных движений: {extreme_moves}")
-            return False
-        
-        # Если есть последовательные движения в одну сторону (>5 свечей подряд)
-        if max_consecutive > 5:
-            logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: Подозрительная последовательность: {max_consecutive} свечей в одну сторону")
-            return False
-        
-        # 4. Проверка на резкий памп за последние 5 свечей (30 часов)
-        last_5_candles = recent_candles[-5:]
-        if len(last_5_candles) >= 5:
-            first_price = last_5_candles[0]['open']
-            last_price = last_5_candles[-1]['close']
-            five_candle_change = abs((last_price - first_price) / first_price) * 100
-            
-            # Если изменение за 5 свечей > 30% - это памп/слив
-            if five_candle_change > 30:
-                logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: Резкий памп/слив за 5 свечей: {five_candle_change:.1f}%")
+            if price_change > single_candle_percent:
+                logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: ❌ БЛОКИРОВКА: Свеча #{i+1} превысила лимит {single_candle_percent}% (было {price_change:.1f}%)")
+                logger.info(f"[ANTI_DUMP_PUMP] {symbol}: Свеча: O={open_price:.4f} C={close_price:.4f} H={candle['high']:.4f} L={candle['low']:.4f}")
                 return False
         
-        logger.info(f"[ANTI_DUMP_PUMP] {symbol}: ✅ Фильтр пройден (экстремальных: {extreme_moves}, общее изменение: {total_change:.1f}%)")
+        # 2. ПРОВЕРКА: N свечей суммарно превысили максимальный % изменения
+        if len(recent_candles) >= multi_candle_count:
+            # Берем последние N свечей для суммарного анализа
+            multi_candles = recent_candles[-multi_candle_count:]
+            
+            first_open = multi_candles[0]['open']
+            last_close = multi_candles[-1]['close']
+            
+            # Суммарное изменение от первой свечи до последней
+            total_change = abs((last_close - first_open) / first_open) * 100
+            
+            if total_change > multi_candle_percent:
+                logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: ❌ БЛОКИРОВКА: {multi_candle_count} свечей превысили суммарный лимит {multi_candle_percent}% (было {total_change:.1f}%)")
+                logger.info(f"[ANTI_DUMP_PUMP] {symbol}: Первая свеча: {first_open:.4f}, Последняя свеча: {last_close:.4f}")
+                return False
+        
+        logger.info(f"[ANTI_DUMP_PUMP] {symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН")
         return True
         
     except Exception as e:
@@ -2185,9 +2129,16 @@ def test_anti_pump_filter(symbol):
         with bots_data_lock:
             anti_dump_pump_enabled = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_enabled', True)
             anti_dump_pump_candles = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_candles', 10)
+            single_candle_percent = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_single_candle_percent', 15.0)
+            multi_candle_count = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_multi_candle_count', 4)
+            multi_candle_percent = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_multi_candle_percent', 50.0)
         
         logger.info(f"[TEST_ANTI_PUMP] 🔍 Тестируем антипамп фильтр для {symbol}")
-        logger.info(f"[TEST_ANTI_PUMP] ⚙️ Настройки: включен={anti_dump_pump_enabled}, свечей={anti_dump_pump_candles}")
+        logger.info(f"[TEST_ANTI_PUMP] ⚙️ Настройки:")
+        logger.info(f"[TEST_ANTI_PUMP] ⚙️ - Включен: {anti_dump_pump_enabled}")
+        logger.info(f"[TEST_ANTI_PUMP] ⚙️ - Анализ свечей: {anti_dump_pump_candles}")
+        logger.info(f"[TEST_ANTI_PUMP] ⚙️ - Лимит одной свечи: {single_candle_percent}%")
+        logger.info(f"[TEST_ANTI_PUMP] ⚙️ - Лимит {multi_candle_count} свечей: {multi_candle_percent}%")
         
         if not anti_dump_pump_enabled:
             logger.info(f"[TEST_ANTI_PUMP] {symbol}: ⚠️ Фильтр ОТКЛЮЧЕН в конфиге")
@@ -2237,43 +2188,30 @@ def test_anti_pump_filter(symbol):
         # Дополнительный анализ
         logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📊 Дополнительный анализ:")
         
-        # Подсчитываем экстремальные свечи вручную
-        extreme_count = 0
-        total_change = 0
-        
+        # 1. Проверка отдельных свечей
+        extreme_single_count = 0
         for i, candle in enumerate(recent_candles):
             open_price = candle['open']
             close_price = candle['close']
-            high_price = candle['high']
-            low_price = candle['low']
             
             price_change = abs((close_price - open_price) / open_price) * 100
-            candle_range = ((high_price - low_price) / open_price) * 100
             
-            if price_change > 10 or candle_range > 15:
-                extreme_count += 1
-                logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Экстремальная свеча {i+1}: изменение {price_change:.1f}%, диапазон {candle_range:.1f}%")
+            if price_change > single_candle_percent:
+                extreme_single_count += 1
+                logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Превышение лимита одной свечи #{i+1}: {price_change:.1f}% > {single_candle_percent}%")
+        
+        # 2. Проверка суммарного изменения за N свечей
+        if len(recent_candles) >= multi_candle_count:
+            multi_candles = recent_candles[-multi_candle_count:]
+            first_open = multi_candles[0]['open']
+            last_close = multi_candles[-1]['close']
             
-            total_change += price_change
-        
-        # 5-свечечный анализ
-        if len(recent_candles) >= 5:
-            first_price = recent_candles[-5]['open']
-            last_price = recent_candles[-1]['close']
-            five_candle_change = abs((last_price - first_price) / first_price) * 100
+            total_change = abs((last_close - first_open) / first_open) * 100
             
-            logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📈 5-свечечный анализ: {five_candle_change:.1f}% (порог: 30%)")
-            if five_candle_change > 30:
-                logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ 5-свечечный памп: {five_candle_change:.1f}% > 30%")
-        
-        logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📊 Экстремальных свечей: {extreme_count} (порог: 2)")
-        logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📊 Общее изменение: {total_change:.1f}% (порог: 100%)")
-        
-        if extreme_count > 2:
-            logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Слишком много экстремальных свечей: {extreme_count} > 2")
-        
-        if total_change > 100:
-            logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Слишком высокое общее изменение: {total_change:.1f}% > 100%")
+            logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📈 {multi_candle_count}-свечечный анализ: {total_change:.1f}% (порог: {multi_candle_percent}%)")
+            
+            if total_change > multi_candle_percent:
+                logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Превышение суммарного лимита: {total_change:.1f}% > {multi_candle_percent}%")
         
     except Exception as e:
         logger.error(f"[TEST_ANTI_PUMP] {symbol}: Ошибка тестирования: {e}")

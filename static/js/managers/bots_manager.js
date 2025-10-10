@@ -749,6 +749,7 @@ class BotsManager {
                             <small class="signal-text">${effectiveSignal || 'WAIT'}</small>
                             ${this.generateEnhancedSignalInfo(coin)}
                             ${this.generateTimeFilterInfo(coin)}
+                            ${this.generateAntiPumpFilterInfo(coin)}
                         </div>
                     </div>
                 </li>
@@ -869,33 +870,69 @@ class BotsManager {
             return '';
         }
         
-        const isAllowed = timeFilterInfo.allowed;
+        const isBlocked = timeFilterInfo.blocked;
         const reason = timeFilterInfo.reason;
         const lastExtremeCandlesAgo = timeFilterInfo.last_extreme_candles_ago;
-        
-        // Показываем иконку если есть информация о временном фильтре
-        if (lastExtremeCandlesAgo === null && !reason.includes('отключен')) {
-            return '';
-        }
+        const calmCandles = timeFilterInfo.calm_candles;
         
         let icon = '';
         let className = '';
         let title = '';
         
-        if (!isAllowed) {
+        if (isBlocked) {
             // Фильтр блокирует вход
             icon = '⏰';
             className = 'time-filter-blocked';
             title = `Временной фильтр блокирует: ${reason}`;
-        } else if (lastExtremeCandlesAgo !== null && lastExtremeCandlesAgo >= 0) {
-            // Показываем сколько времени прошло с последнего экстремума (для всех активных фильтров)
+        } else {
+            // Фильтр пройден, показываем информацию
             icon = '⏱️';
             className = 'time-filter-active';
-            title = `Временной фильтр активен: ${reason}`;
+            title = `Временной фильтр: ${reason}`;
+            if (lastExtremeCandlesAgo !== null) {
+                title += ` (${lastExtremeCandlesAgo} свечей назад)`;
+            }
+            if (calmCandles !== null) {
+                title += ` (${calmCandles} спокойных свечей)`;
+            }
         }
         
         if (icon && title) {
             return `<div class="time-filter-info ${className}" title="${title}">${icon}</div>`;
+        }
+        
+        return '';
+    }
+    
+    generateAntiPumpFilterInfo(coin) {
+        // Генерирует информацию об антипамп фильтре
+        const antiPumpInfo = coin.anti_dump_pump_info;
+        
+        if (!antiPumpInfo) {
+            return '';
+        }
+        
+        const isBlocked = antiPumpInfo.blocked;
+        const reason = antiPumpInfo.reason;
+        
+        let icon = '';
+        let className = '';
+        let title = '';
+        
+        if (isBlocked) {
+            // Фильтр блокирует вход
+            icon = '🛡️';
+            className = 'anti-pump-blocked';
+            title = `Антипамп фильтр блокирует: ${reason}`;
+        } else {
+            // Фильтр пройден
+            icon = '✅';
+            className = 'anti-pump-passed';
+            title = `Антипамп фильтр: ${reason}`;
+        }
+        
+        if (icon && title) {
+            return `<div class="anti-pump-info ${className}" title="${title}">${icon}</div>`;
         }
         
         return '';
@@ -3852,6 +3889,40 @@ class BotsManager {
             console.log('[BotsManager] 📉 RSI временной фильтр (нижняя граница):', rsiTimeFilterLowerEl.value);
         }
         
+        // ==========================================
+        // АНТИПАМП/АНТИДАМП ФИЛЬТР
+        // ==========================================
+        
+        const antiPumpEnabledEl = document.getElementById('antiPumpEnabled');
+        if (antiPumpEnabledEl) {
+            antiPumpEnabledEl.checked = autoBotConfig.anti_dump_pump_enabled !== false;
+            console.log('[BotsManager] 🛡️ Антипамп фильтр:', antiPumpEnabledEl.checked);
+        }
+        
+        const antiPumpCandlesEl = document.getElementById('antiPumpCandles');
+        if (antiPumpCandlesEl) {
+            antiPumpCandlesEl.value = autoBotConfig.anti_dump_pump_candles || 10;
+            console.log('[BotsManager] 📊 Антипамп анализ свечей:', antiPumpCandlesEl.value);
+        }
+        
+        const antiPumpSingleCandlePercentEl = document.getElementById('antiPumpSingleCandlePercent');
+        if (antiPumpSingleCandlePercentEl) {
+            antiPumpSingleCandlePercentEl.value = autoBotConfig.anti_dump_pump_single_candle_percent || 15.0;
+            console.log('[BotsManager] ⚡ Антипамп лимит одной свечи:', antiPumpSingleCandlePercentEl.value);
+        }
+        
+        const antiPumpMultiCandleCountEl = document.getElementById('antiPumpMultiCandleCount');
+        if (antiPumpMultiCandleCountEl) {
+            antiPumpMultiCandleCountEl.value = autoBotConfig.anti_dump_pump_multi_candle_count || 4;
+            console.log('[BotsManager] 📈 Антипамп свечей для анализа:', antiPumpMultiCandleCountEl.value);
+        }
+        
+        const antiPumpMultiCandlePercentEl = document.getElementById('antiPumpMultiCandlePercent');
+        if (antiPumpMultiCandlePercentEl) {
+            antiPumpMultiCandlePercentEl.value = autoBotConfig.anti_dump_pump_multi_candle_percent || 50.0;
+            console.log('[BotsManager] 📊 Антипамп суммарный лимит:', antiPumpMultiCandlePercentEl.value);
+        }
+        
         console.log('[BotsManager] ✅ Форма заполнена данными из API');
     }
     
@@ -4014,6 +4085,12 @@ class BotsManager {
             rsi_time_filter_candles: parseInt(document.getElementById('rsiTimeFilterCandles')?.value) || 8,
             rsi_time_filter_upper: parseInt(document.getElementById('rsiTimeFilterUpper')?.value) || 65,
             rsi_time_filter_lower: parseInt(document.getElementById('rsiTimeFilterLower')?.value) || 35,
+            // Антипамп/Антидамп фильтр
+            anti_dump_pump_enabled: document.getElementById('antiPumpEnabled')?.checked !== false,
+            anti_dump_pump_candles: parseInt(document.getElementById('antiPumpCandles')?.value) || 10,
+            anti_dump_pump_single_candle_percent: parseFloat(document.getElementById('antiPumpSingleCandlePercent')?.value) || 15.0,
+            anti_dump_pump_multi_candle_count: parseInt(document.getElementById('antiPumpMultiCandleCount')?.value) || 4,
+            anti_dump_pump_multi_candle_percent: parseFloat(document.getElementById('antiPumpMultiCandlePercent')?.value) || 50.0,
             trading_enabled: document.getElementById('tradingEnabled')?.checked !== false,
             use_test_server: document.getElementById('useTestServer')?.checked || false,
             max_risk_per_trade: parseFloat(document.getElementById('maxRiskPerTrade')?.value) || 2.0,

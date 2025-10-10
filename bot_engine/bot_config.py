@@ -93,6 +93,9 @@ DEFAULT_AUTO_BOT_CONFIG = {
     # Антипамп/антидамп фильтр
     'anti_dump_pump_enabled': True,     # Включить проверку на памп/дамп
     'anti_dump_pump_candles': 10,       # Количество свечей для проверки (10 = 60 часов на 6H)
+    'anti_dump_pump_single_candle_percent': 15.0,  # Максимальный % изменения одной свечи (15% = блокировка)
+    'anti_dump_pump_multi_candle_count': 4,        # Количество свечей для суммарного анализа
+    'anti_dump_pump_multi_candle_percent': 50.0,   # Максимальный суммарный % за N свечей (50% = блокировка)
 }
 
 # Настройки по умолчанию для отдельного бота
