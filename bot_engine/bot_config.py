@@ -83,19 +83,19 @@ DEFAULT_AUTO_BOT_CONFIG = {
     # Настройки зрелости монет
     'enable_maturity_check': True,      # Включить проверку зрелости монет
     'min_candles_for_maturity': 200,    # Минимум свечей для зрелой монеты (50 дней на 6H)
-    'min_rsi_low': 35,                  # Минимальный достигнутый RSI
-    'max_rsi_high': 65,                 # Максимальный достигнутый RSI
+    'min_rsi_low': 35,                  # Минимальный достигнутый RSI (должен быть <= 35)
+    'max_rsi_high': 65,                 # Максимальный достигнутый RSI (должен быть >= 65)
     # RSI временной фильтр
     'rsi_time_filter_enabled': True,    # Включить временной фильтр для RSI сигналов
     'rsi_time_filter_candles': 8,       # Минимум свечей с последнего экстремума (8 = 2 суток на 6H)
     'rsi_time_filter_upper': 65,        # Верхняя граница спокойной зоны для SHORT
     'rsi_time_filter_lower': 35,        # Нижняя граница спокойной зоны для LONG
-    # Антипамп/антидамп фильтр
-    'anti_dump_pump_enabled': True,     # Включить проверку на памп/дамп
-    'anti_dump_pump_candles': 10,       # Количество свечей для проверки (10 = 60 часов на 6H)
-    'anti_dump_pump_single_candle_percent': 15.0,  # Максимальный % изменения одной свечи (15% = блокировка)
-    'anti_dump_pump_multi_candle_count': 4,        # Количество свечей для суммарного анализа
-    'anti_dump_pump_multi_candle_percent': 50.0,   # Максимальный суммарный % за N свечей (50% = блокировка)
+    # ExitScam фильтр (защита от резких движений цены)
+    'exit_scam_enabled': True,          # Включить проверку на ExitScam
+    'exit_scam_candles': 10,            # Количество свечей для проверки (10 = 60 часов на 6H)
+    'exit_scam_single_candle_percent': 15.0,  # Максимальный % изменения одной свечи (15% = блокировка)
+    'exit_scam_multi_candle_count': 4,        # Количество свечей для суммарного анализа
+    'exit_scam_multi_candle_percent': 50.0,   # Максимальный суммарный % за N свечей (50% = блокировка)
 }
 
 # Настройки по умолчанию для отдельного бота

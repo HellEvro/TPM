@@ -904,16 +904,16 @@ class BotsManager {
         return '';
     }
     
-    generateAntiPumpFilterInfo(coin) {
-        // Генерирует информацию об антипамп фильтре
-        const antiPumpInfo = coin.anti_dump_pump_info;
+    generateExitScamFilterInfo(coin) {
+        // Генерирует информацию об ExitScam фильтре
+        const exitScamInfo = coin.exit_scam_info;
         
-        if (!antiPumpInfo) {
+        if (!exitScamInfo) {
             return '';
         }
         
-        const isBlocked = antiPumpInfo.blocked;
-        const reason = antiPumpInfo.reason;
+        const isBlocked = exitScamInfo.blocked;
+        const reason = exitScamInfo.reason;
         
         let icon = '';
         let className = '';
@@ -922,20 +922,25 @@ class BotsManager {
         if (isBlocked) {
             // Фильтр блокирует вход
             icon = '🛡️';
-            className = 'anti-pump-blocked';
-            title = `Антипамп фильтр блокирует: ${reason}`;
+            className = 'exit-scam-blocked';
+            title = `ExitScam фильтр блокирует: ${reason}`;
         } else {
             // Фильтр пройден
             icon = '✅';
-            className = 'anti-pump-passed';
-            title = `Антипамп фильтр: ${reason}`;
+            className = 'exit-scam-passed';
+            title = `ExitScam фильтр: ${reason}`;
         }
         
         if (icon && title) {
-            return `<div class="anti-pump-info ${className}" title="${title}">${icon}</div>`;
+            return `<div class="exit-scam-info ${className}" title="${title}">${icon}</div>`;
         }
         
         return '';
+    }
+    
+    // Алиас для обратной совместимости
+    generateAntiPumpFilterInfo(coin) {
+        return this.generateExitScamFilterInfo(coin);
     }
 
     getRsiZoneClass(rsi) {
@@ -3890,37 +3895,37 @@ class BotsManager {
         }
         
         // ==========================================
-        // АНТИПАМП/АНТИДАМП ФИЛЬТР
+        // EXITSCAM ФИЛЬТР
         // ==========================================
         
-        const antiPumpEnabledEl = document.getElementById('antiPumpEnabled');
-        if (antiPumpEnabledEl) {
-            antiPumpEnabledEl.checked = autoBotConfig.anti_dump_pump_enabled !== false;
-            console.log('[BotsManager] 🛡️ Антипамп фильтр:', antiPumpEnabledEl.checked);
+        const exitScamEnabledEl = document.getElementById('exitScamEnabled');
+        if (exitScamEnabledEl) {
+            exitScamEnabledEl.checked = autoBotConfig.exit_scam_enabled !== false;
+            console.log('[BotsManager] 🛡️ ExitScam фильтр:', exitScamEnabledEl.checked);
         }
         
-        const antiPumpCandlesEl = document.getElementById('antiPumpCandles');
-        if (antiPumpCandlesEl) {
-            antiPumpCandlesEl.value = autoBotConfig.anti_dump_pump_candles || 10;
-            console.log('[BotsManager] 📊 Антипамп анализ свечей:', antiPumpCandlesEl.value);
+        const exitScamCandlesEl = document.getElementById('exitScamCandles');
+        if (exitScamCandlesEl) {
+            exitScamCandlesEl.value = autoBotConfig.exit_scam_candles || 10;
+            console.log('[BotsManager] 📊 ExitScam анализ свечей:', exitScamCandlesEl.value);
         }
         
-        const antiPumpSingleCandlePercentEl = document.getElementById('antiPumpSingleCandlePercent');
-        if (antiPumpSingleCandlePercentEl) {
-            antiPumpSingleCandlePercentEl.value = autoBotConfig.anti_dump_pump_single_candle_percent || 15.0;
-            console.log('[BotsManager] ⚡ Антипамп лимит одной свечи:', antiPumpSingleCandlePercentEl.value);
+        const exitScamSingleCandlePercentEl = document.getElementById('exitScamSingleCandlePercent');
+        if (exitScamSingleCandlePercentEl) {
+            exitScamSingleCandlePercentEl.value = autoBotConfig.exit_scam_single_candle_percent || 15.0;
+            console.log('[BotsManager] ⚡ ExitScam лимит одной свечи:', exitScamSingleCandlePercentEl.value);
         }
         
-        const antiPumpMultiCandleCountEl = document.getElementById('antiPumpMultiCandleCount');
-        if (antiPumpMultiCandleCountEl) {
-            antiPumpMultiCandleCountEl.value = autoBotConfig.anti_dump_pump_multi_candle_count || 4;
-            console.log('[BotsManager] 📈 Антипамп свечей для анализа:', antiPumpMultiCandleCountEl.value);
+        const exitScamMultiCandleCountEl = document.getElementById('exitScamMultiCandleCount');
+        if (exitScamMultiCandleCountEl) {
+            exitScamMultiCandleCountEl.value = autoBotConfig.exit_scam_multi_candle_count || 4;
+            console.log('[BotsManager] 📈 ExitScam свечей для анализа:', exitScamMultiCandleCountEl.value);
         }
         
-        const antiPumpMultiCandlePercentEl = document.getElementById('antiPumpMultiCandlePercent');
-        if (antiPumpMultiCandlePercentEl) {
-            antiPumpMultiCandlePercentEl.value = autoBotConfig.anti_dump_pump_multi_candle_percent || 50.0;
-            console.log('[BotsManager] 📊 Антипамп суммарный лимит:', antiPumpMultiCandlePercentEl.value);
+        const exitScamMultiCandlePercentEl = document.getElementById('exitScamMultiCandlePercent');
+        if (exitScamMultiCandlePercentEl) {
+            exitScamMultiCandlePercentEl.value = autoBotConfig.exit_scam_multi_candle_percent || 50.0;
+            console.log('[BotsManager] 📊 ExitScam суммарный лимит:', exitScamMultiCandlePercentEl.value);
         }
         
         console.log('[BotsManager] ✅ Форма заполнена данными из API');
@@ -4085,12 +4090,12 @@ class BotsManager {
             rsi_time_filter_candles: parseInt(document.getElementById('rsiTimeFilterCandles')?.value) || 8,
             rsi_time_filter_upper: parseInt(document.getElementById('rsiTimeFilterUpper')?.value) || 65,
             rsi_time_filter_lower: parseInt(document.getElementById('rsiTimeFilterLower')?.value) || 35,
-            // Антипамп/Антидамп фильтр
-            anti_dump_pump_enabled: document.getElementById('antiPumpEnabled')?.checked !== false,
-            anti_dump_pump_candles: parseInt(document.getElementById('antiPumpCandles')?.value) || 10,
-            anti_dump_pump_single_candle_percent: parseFloat(document.getElementById('antiPumpSingleCandlePercent')?.value) || 15.0,
-            anti_dump_pump_multi_candle_count: parseInt(document.getElementById('antiPumpMultiCandleCount')?.value) || 4,
-            anti_dump_pump_multi_candle_percent: parseFloat(document.getElementById('antiPumpMultiCandlePercent')?.value) || 50.0,
+            // ExitScam фильтр
+            exit_scam_enabled: document.getElementById('exitScamEnabled')?.checked !== false,
+            exit_scam_candles: parseInt(document.getElementById('exitScamCandles')?.value) || 10,
+            exit_scam_single_candle_percent: parseFloat(document.getElementById('exitScamSingleCandlePercent')?.value) || 15.0,
+            exit_scam_multi_candle_count: parseInt(document.getElementById('exitScamMultiCandleCount')?.value) || 4,
+            exit_scam_multi_candle_percent: parseFloat(document.getElementById('exitScamMultiCandlePercent')?.value) || 50.0,
             trading_enabled: document.getElementById('tradingEnabled')?.checked !== false,
             use_test_server: document.getElementById('useTestServer')?.checked || false,
             max_risk_per_trade: parseFloat(document.getElementById('maxRiskPerTrade')?.value) || 2.0,

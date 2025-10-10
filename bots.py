@@ -204,7 +204,7 @@ BOTS_STATE_FILE = 'data/bots_state.json'
 AUTO_BOT_CONFIG_FILE = 'data/auto_bot_config.json'
 
 # Константы для обновления позиций
-BOT_STATUS_UPDATE_INTERVAL = 3  # 3 секунды - интервал обновления детальной информации о состоянии ботов
+BOT_STATUS_UPDATE_INTERVAL = 30  # 30 секунд - интервал обновления детальной информации о состоянии ботов
 STOP_LOSS_SETUP_INTERVAL = 300  # 5 минут - интервал установки недостающих стоп-лоссов
 POSITION_SYNC_INTERVAL = 30  # 10 минут - интервал синхронизации позиций с биржей
 INACTIVE_BOT_CLEANUP_INTERVAL = 600  # 10 минут - интервал проверки и удаления неактивных ботов
@@ -1472,24 +1472,24 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         current_price = closes[-1]
         
         # Проверяем фильтры только для монет в зонах LONG/SHORT
-        anti_dump_pump_info = None
+        exit_scam_info = None
         time_filter_info = None
         
         # Проверяем фильтры только если монета в зоне входа (LONG/SHORT)
         if signal in ['ENTER_LONG', 'ENTER_SHORT']:
-            # 1. Проверка антипамп фильтра
-            anti_dump_pump_passed = check_anti_dump_pump(symbol, {})
-            if not anti_dump_pump_passed:
-                anti_dump_pump_info = {
+            # 1. Проверка ExitScam фильтра
+            exit_scam_passed = check_exit_scam_filter(symbol, {})
+            if not exit_scam_passed:
+                exit_scam_info = {
                     'blocked': True,
-                    'reason': 'Обнаружены резкие движения цены (антипамп фильтр)',
-                    'filter_type': 'anti_pump'
+                    'reason': 'Обнаружены резкие движения цены (ExitScam фильтр)',
+                    'filter_type': 'exit_scam'
                 }
             else:
-                anti_dump_pump_info = {
+                exit_scam_info = {
                     'blocked': False,
-                    'reason': 'Антипамп фильтр пройден',
-                    'filter_type': 'anti_pump'
+                    'reason': 'ExitScam фильтр пройден',
+                    'filter_type': 'exit_scam'
                 }
             
             # 2. Проверка RSI временного фильтра
@@ -1503,7 +1503,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             }
             
             # Если любой из фильтров блокирует - меняем сигнал на WAIT
-            if not anti_dump_pump_passed or not time_filter_result['allowed']:
+            if not exit_scam_passed or not time_filter_result['allowed']:
                 signal = 'WAIT'
                 rsi_zone = 'NEUTRAL'
         
@@ -1527,8 +1527,8 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             'enhanced_rsi': enhanced_analysis,
             # Добавляем информацию о временном фильтре
             'time_filter_info': time_filter_info,
-            # Добавляем информацию об антипамп фильтре
-            'anti_dump_pump_info': anti_dump_pump_info
+            # Добавляем информацию об ExitScam фильтре
+            'exit_scam_info': exit_scam_info
         }
         
         # Логируем торговые сигналы и блокировки тренда
@@ -1603,14 +1603,9 @@ def load_all_coins_rsi():
                             if result:
                                 batch_coins_data[result['symbol']] = result
                                 
-                                # ✅ ДОБАВЛЕНИЕ В ХРАНИЛИЩЕ: Если монета зрелая, добавляем в mature_coins_storage
+                                # Зрелость монеты проверяется в check_coin_maturity_stored_or_verify
+                                # при попытке создать бота, а не здесь
                                 symbol = result['symbol']
-                                signal = result.get('signal', 'WAIT')
-                                
-                                # Проверяем, что монета прошла проверку зрелости (сигнал не WAIT из-за незрелости)
-                                # Если сигнал ENTER_LONG или ENTER_SHORT - монета точно зрелая
-                                if signal in ['ENTER_LONG', 'ENTER_SHORT']:
-                                    add_mature_coin_to_storage(symbol, signal)
                                 
                                 with rsi_data_lock:
                                     coins_rsi_data['successful_coins'] += 1
@@ -1918,12 +1913,12 @@ def check_new_autobot_filters(symbol, signal, coin_data):
             logger.debug(f"[NEW_AUTO_FILTER] {symbol}: Монета незрелая")
             return False
         
-        # 2. Проверка антислива (сливные/памп свечи за последние 20 свечей)
-        if not check_anti_dump_pump(symbol, coin_data):
-            logger.warning(f"[NEW_AUTO_FILTER] {symbol}: ❌ БЛОКИРОВКА: Обнаружены сливные/памп свечи")
+        # 2. Проверка ExitScam (резкие движения цены)
+        if not check_exit_scam_filter(symbol, coin_data):
+            logger.warning(f"[NEW_AUTO_FILTER] {symbol}: ❌ БЛОКИРОВКА: Обнаружены резкие движения цены (ExitScam)")
             return False
         else:
-            logger.info(f"[NEW_AUTO_FILTER] {symbol}: ✅ Антипамп фильтр пройден")
+            logger.info(f"[NEW_AUTO_FILTER] {symbol}: ✅ ExitScam фильтр пройден")
         
         # 3. Проверка тренда
         trend = coin_data.get('trend6h', 'NEUTRAL')
@@ -1981,26 +1976,26 @@ def check_coin_maturity_stored_or_verify(symbol):
         logger.error(f"[MATURITY_CHECK] {symbol}: Ошибка проверки зрелости: {e}")
         return False
 
-def check_anti_dump_pump(symbol, coin_data):
+def check_exit_scam_filter(symbol, coin_data):
     """
-    НОВАЯ ЛОГИКА АНТИПАМП ФИЛЬТРА
+    EXIT SCAM ФИЛЬТР
     
-    Проверяет:
+    Защита от резких движений цены (памп/дамп/скам):
     1. Одна свеча превысила максимальный % изменения
     2. N свечей суммарно превысили максимальный % изменения
     """
     try:
         # Получаем настройки из конфига
         with bots_data_lock:
-            anti_dump_pump_enabled = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_enabled', True)
-            anti_dump_pump_candles = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_candles', 10)
-            single_candle_percent = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_single_candle_percent', 15.0)
-            multi_candle_count = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_multi_candle_count', 4)
-            multi_candle_percent = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_multi_candle_percent', 50.0)
+            exit_scam_enabled = bots_data.get('auto_bot_config', {}).get('exit_scam_enabled', True)
+            exit_scam_candles = bots_data.get('auto_bot_config', {}).get('exit_scam_candles', 10)
+            single_candle_percent = bots_data.get('auto_bot_config', {}).get('exit_scam_single_candle_percent', 15.0)
+            multi_candle_count = bots_data.get('auto_bot_config', {}).get('exit_scam_multi_candle_count', 4)
+            multi_candle_percent = bots_data.get('auto_bot_config', {}).get('exit_scam_multi_candle_percent', 50.0)
         
         # Если фильтр отключен - разрешаем
-        if not anti_dump_pump_enabled:
-            logger.debug(f"[ANTI_DUMP_PUMP] {symbol}: Фильтр отключен")
+        if not exit_scam_enabled:
+            logger.debug(f"[EXIT_SCAM] {symbol}: Фильтр отключен")
             return True
         
         # Получаем свечи
@@ -2012,14 +2007,14 @@ def check_anti_dump_pump(symbol, coin_data):
             return False
         
         candles = chart_response.get('data', {}).get('candles', [])
-        if len(candles) < anti_dump_pump_candles:
+        if len(candles) < exit_scam_candles:
             return False
         
         # Проверяем последние N свечей (из конфига)
-        recent_candles = candles[-anti_dump_pump_candles:]
+        recent_candles = candles[-exit_scam_candles:]
         
-        logger.info(f"[ANTI_DUMP_PUMP] {symbol}: Анализ последних {anti_dump_pump_candles} свечей")
-        logger.info(f"[ANTI_DUMP_PUMP] {symbol}: Настройки - одна свеча: {single_candle_percent}%, {multi_candle_count} свечей: {multi_candle_percent}%")
+        logger.info(f"[EXIT_SCAM] {symbol}: Анализ последних {exit_scam_candles} свечей")
+        logger.info(f"[EXIT_SCAM] {symbol}: Настройки - одна свеча: {single_candle_percent}%, {multi_candle_count} свечей: {multi_candle_percent}%")
         
         # 1. ПРОВЕРКА: Одна свеча превысила максимальный % изменения
         for i, candle in enumerate(recent_candles):
@@ -2030,8 +2025,8 @@ def check_anti_dump_pump(symbol, coin_data):
             price_change = abs((close_price - open_price) / open_price) * 100
             
             if price_change > single_candle_percent:
-                logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: ❌ БЛОКИРОВКА: Свеча #{i+1} превысила лимит {single_candle_percent}% (было {price_change:.1f}%)")
-                logger.info(f"[ANTI_DUMP_PUMP] {symbol}: Свеча: O={open_price:.4f} C={close_price:.4f} H={candle['high']:.4f} L={candle['low']:.4f}")
+                logger.warning(f"[EXIT_SCAM] {symbol}: ❌ БЛОКИРОВКА: Свеча #{i+1} превысила лимит {single_candle_percent}% (было {price_change:.1f}%)")
+                logger.info(f"[EXIT_SCAM] {symbol}: Свеча: O={open_price:.4f} C={close_price:.4f} H={candle['high']:.4f} L={candle['low']:.4f}")
                 return False
         
         # 2. ПРОВЕРКА: N свечей суммарно превысили максимальный % изменения
@@ -2046,16 +2041,19 @@ def check_anti_dump_pump(symbol, coin_data):
             total_change = abs((last_close - first_open) / first_open) * 100
             
             if total_change > multi_candle_percent:
-                logger.warning(f"[ANTI_DUMP_PUMP] {symbol}: ❌ БЛОКИРОВКА: {multi_candle_count} свечей превысили суммарный лимит {multi_candle_percent}% (было {total_change:.1f}%)")
-                logger.info(f"[ANTI_DUMP_PUMP] {symbol}: Первая свеча: {first_open:.4f}, Последняя свеча: {last_close:.4f}")
+                logger.warning(f"[EXIT_SCAM] {symbol}: ❌ БЛОКИРОВКА: {multi_candle_count} свечей превысили суммарный лимит {multi_candle_percent}% (было {total_change:.1f}%)")
+                logger.info(f"[EXIT_SCAM] {symbol}: Первая свеча: {first_open:.4f}, Последняя свеча: {last_close:.4f}")
                 return False
         
-        logger.info(f"[ANTI_DUMP_PUMP] {symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН")
+        logger.info(f"[EXIT_SCAM] {symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН")
         return True
         
     except Exception as e:
-        logger.error(f"[ANTI_DUMP_PUMP] {symbol}: Ошибка проверки: {e}")
+        logger.error(f"[EXIT_SCAM] {symbol}: Ошибка проверки: {e}")
         return False
+
+# Алиас для обратной совместимости
+check_anti_dump_pump = check_exit_scam_filter
 
 def check_no_existing_position(symbol, signal):
     """Проверяет, что нет существующих позиций на бирже"""
@@ -2122,47 +2120,47 @@ def check_auto_bot_filters(symbol):
     """Старая функция - оставлена для совместимости"""
     return False  # Блокируем все
 
-def test_anti_pump_filter(symbol):
-    """Тестирует антипамп фильтр для конкретной монеты"""
+def test_exit_scam_filter(symbol):
+    """Тестирует ExitScam фильтр для конкретной монеты"""
     try:
         # Получаем настройки из конфига
         with bots_data_lock:
-            anti_dump_pump_enabled = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_enabled', True)
-            anti_dump_pump_candles = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_candles', 10)
-            single_candle_percent = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_single_candle_percent', 15.0)
-            multi_candle_count = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_multi_candle_count', 4)
-            multi_candle_percent = bots_data.get('auto_bot_config', {}).get('anti_dump_pump_multi_candle_percent', 50.0)
+            exit_scam_enabled = bots_data.get('auto_bot_config', {}).get('exit_scam_enabled', True)
+            exit_scam_candles = bots_data.get('auto_bot_config', {}).get('exit_scam_candles', 10)
+            single_candle_percent = bots_data.get('auto_bot_config', {}).get('exit_scam_single_candle_percent', 15.0)
+            multi_candle_count = bots_data.get('auto_bot_config', {}).get('exit_scam_multi_candle_count', 4)
+            multi_candle_percent = bots_data.get('auto_bot_config', {}).get('exit_scam_multi_candle_percent', 50.0)
         
-        logger.info(f"[TEST_ANTI_PUMP] 🔍 Тестируем антипамп фильтр для {symbol}")
-        logger.info(f"[TEST_ANTI_PUMP] ⚙️ Настройки:")
-        logger.info(f"[TEST_ANTI_PUMP] ⚙️ - Включен: {anti_dump_pump_enabled}")
-        logger.info(f"[TEST_ANTI_PUMP] ⚙️ - Анализ свечей: {anti_dump_pump_candles}")
-        logger.info(f"[TEST_ANTI_PUMP] ⚙️ - Лимит одной свечи: {single_candle_percent}%")
-        logger.info(f"[TEST_ANTI_PUMP] ⚙️ - Лимит {multi_candle_count} свечей: {multi_candle_percent}%")
+        logger.info(f"[TEST_EXIT_SCAM] 🔍 Тестируем ExitScam фильтр для {symbol}")
+        logger.info(f"[TEST_EXIT_SCAM] ⚙️ Настройки:")
+        logger.info(f"[TEST_EXIT_SCAM] ⚙️ - Включен: {exit_scam_enabled}")
+        logger.info(f"[TEST_EXIT_SCAM] ⚙️ - Анализ свечей: {exit_scam_candles}")
+        logger.info(f"[TEST_EXIT_SCAM] ⚙️ - Лимит одной свечи: {single_candle_percent}%")
+        logger.info(f"[TEST_EXIT_SCAM] ⚙️ - Лимит {multi_candle_count} свечей: {multi_candle_percent}%")
         
-        if not anti_dump_pump_enabled:
-            logger.info(f"[TEST_ANTI_PUMP] {symbol}: ⚠️ Фильтр ОТКЛЮЧЕН в конфиге")
+        if not exit_scam_enabled:
+            logger.info(f"[TEST_EXIT_SCAM] {symbol}: ⚠️ Фильтр ОТКЛЮЧЕН в конфиге")
             return
         
         # Получаем свечи
         if not ensure_exchange_initialized():
-            logger.error(f"[TEST_ANTI_PUMP] {symbol}: Биржа не инициализирована")
+            logger.error(f"[TEST_EXIT_SCAM] {symbol}: Биржа не инициализирована")
             return
         
         chart_response = exchange.get_chart_data(symbol, '6h', '30d')
         if not chart_response or not chart_response.get('success'):
-            logger.error(f"[TEST_ANTI_PUMP] {symbol}: Не удалось получить свечи")
+            logger.error(f"[TEST_EXIT_SCAM] {symbol}: Не удалось получить свечи")
             return
         
         candles = chart_response.get('data', {}).get('candles', [])
-        if len(candles) < anti_dump_pump_candles:
-            logger.error(f"[TEST_ANTI_PUMP] {symbol}: Недостаточно свечей ({len(candles)})")
+        if len(candles) < exit_scam_candles:
+            logger.error(f"[TEST_EXIT_SCAM] {symbol}: Недостаточно свечей ({len(candles)})")
             return
         
         # Анализируем последние N свечей (из конфига)
-        recent_candles = candles[-anti_dump_pump_candles:]
+        recent_candles = candles[-exit_scam_candles:]
         
-        logger.info(f"[TEST_ANTI_PUMP] {symbol}: Анализ последних {anti_dump_pump_candles} свечей (6H каждая)")
+        logger.info(f"[TEST_EXIT_SCAM] {symbol}: Анализ последних {exit_scam_candles} свечей (6H каждая)")
         
         # Показываем детали каждой свечи
         for i, candle in enumerate(recent_candles):
@@ -2174,19 +2172,19 @@ def test_anti_pump_filter(symbol):
             price_change = ((close_price - open_price) / open_price) * 100
             candle_range = ((high_price - low_price) / open_price) * 100
             
-            logger.info(f"[TEST_ANTI_PUMP] {symbol}: Свеча {i+1}: O={open_price:.4f} C={close_price:.4f} H={high_price:.4f} L={low_price:.4f} | Изменение: {price_change:+.1f}% | Диапазон: {candle_range:.1f}%")
+            logger.info(f"[TEST_EXIT_SCAM] {symbol}: Свеча {i+1}: O={open_price:.4f} C={close_price:.4f} H={high_price:.4f} L={low_price:.4f} | Изменение: {price_change:+.1f}% | Диапазон: {candle_range:.1f}%")
         
         # Тестируем фильтр с детальным логированием
-        logger.info(f"[TEST_ANTI_PUMP] {symbol}: 🔍 Запускаем проверку антипамп фильтра...")
-        result = check_anti_dump_pump(symbol, {})
+        logger.info(f"[TEST_EXIT_SCAM] {symbol}: 🔍 Запускаем проверку ExitScam фильтра...")
+        result = check_exit_scam_filter(symbol, {})
         
         if result:
-            logger.info(f"[TEST_ANTI_PUMP] {symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН")
+            logger.info(f"[TEST_EXIT_SCAM] {symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН")
         else:
-            logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ РЕЗУЛЬТАТ: ЗАБЛОКИРОВАН")
+            logger.warning(f"[TEST_EXIT_SCAM] {symbol}: ❌ РЕЗУЛЬТАТ: ЗАБЛОКИРОВАН")
         
         # Дополнительный анализ
-        logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📊 Дополнительный анализ:")
+        logger.info(f"[TEST_EXIT_SCAM] {symbol}: 📊 Дополнительный анализ:")
         
         # 1. Проверка отдельных свечей
         extreme_single_count = 0
@@ -2198,7 +2196,7 @@ def test_anti_pump_filter(symbol):
             
             if price_change > single_candle_percent:
                 extreme_single_count += 1
-                logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Превышение лимита одной свечи #{i+1}: {price_change:.1f}% > {single_candle_percent}%")
+                logger.warning(f"[TEST_EXIT_SCAM] {symbol}: ❌ Превышение лимита одной свечи #{i+1}: {price_change:.1f}% > {single_candle_percent}%")
         
         # 2. Проверка суммарного изменения за N свечей
         if len(recent_candles) >= multi_candle_count:
@@ -2208,13 +2206,16 @@ def test_anti_pump_filter(symbol):
             
             total_change = abs((last_close - first_open) / first_open) * 100
             
-            logger.info(f"[TEST_ANTI_PUMP] {symbol}: 📈 {multi_candle_count}-свечечный анализ: {total_change:.1f}% (порог: {multi_candle_percent}%)")
+            logger.info(f"[TEST_EXIT_SCAM] {symbol}: 📈 {multi_candle_count}-свечечный анализ: {total_change:.1f}% (порог: {multi_candle_percent}%)")
             
             if total_change > multi_candle_percent:
-                logger.warning(f"[TEST_ANTI_PUMP] {symbol}: ❌ Превышение суммарного лимита: {total_change:.1f}% > {multi_candle_percent}%")
+                logger.warning(f"[TEST_EXIT_SCAM] {symbol}: ❌ Превышение суммарного лимита: {total_change:.1f}% > {multi_candle_percent}%")
         
     except Exception as e:
-        logger.error(f"[TEST_ANTI_PUMP] {symbol}: Ошибка тестирования: {e}")
+        logger.error(f"[TEST_EXIT_SCAM] {symbol}: Ошибка тестирования: {e}")
+
+# Алиас для обратной совместимости
+test_anti_pump_filter = test_exit_scam_filter
 
 def test_rsi_time_filter(symbol):
     """Тестирует RSI временной фильтр для конкретной монеты"""
@@ -3736,9 +3737,8 @@ def sync_positions_with_exchange():
                         'unrealized_pnl': bot_data.get('unrealized_pnl', 0)
                     })
         
-        # ✅ Логируем только если есть БОТЫ (несоответствия важны)
-        if len(bot_positions) > 0:
-            logger.info(f"[POSITION_SYNC] 📊 Биржа: {len(exchange_positions)}, Боты: {len(bot_positions)}")
+        # ✅ Логируем только при изменениях или ошибках (убираем спам)
+        # logger.info(f"[POSITION_SYNC] 📊 Биржа: {len(exchange_positions)}, Боты: {len(bot_positions)}")
         
         # Создаем словари для удобного сравнения
         exchange_dict = {pos['symbol']: pos for pos in exchange_positions}
@@ -6355,15 +6355,21 @@ def force_rsi_update():
         logger.error(f"[ERROR] Ошибка принудительного обновления RSI: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@bots_app.route('/api/bots/test-exit-scam/<symbol>', methods=['GET'])
+def test_exit_scam_endpoint(symbol):
+    """Тестирует ExitScam фильтр для конкретной монеты"""
+    try:
+        test_exit_scam_filter(symbol)
+        return jsonify({'success': True, 'message': f'Тест ExitScam фильтра для {symbol} выполнен'})
+    except Exception as e:
+        logger.error(f"[API] Ошибка тестирования ExitScam фильтра для {symbol}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Алиас для обратной совместимости
 @bots_app.route('/api/bots/test-anti-pump/<symbol>', methods=['GET'])
 def test_anti_pump_endpoint(symbol):
-    """Тестирует антипамп фильтр для конкретной монеты"""
-    try:
-        test_anti_pump_filter(symbol)
-        return jsonify({'success': True, 'message': f'Тест антипамп фильтра для {symbol} выполнен'})
-    except Exception as e:
-        logger.error(f"[API] Ошибка тестирования антипамп фильтра для {symbol}: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+    """Алиас для test_exit_scam_endpoint (обратная совместимость)"""
+    return test_exit_scam_endpoint(symbol)
 
 @bots_app.route('/api/bots/test-rsi-time-filter/<symbol>', methods=['GET'])
 def test_rsi_time_filter_endpoint(symbol):
