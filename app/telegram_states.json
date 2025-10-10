@@ -9,7 +9,10 @@
     "APE",
     "SYN",
     "XCH",
+    "EGLD",
     "SAGA",
+    "STRK",
+    "CHZ",
     "ICP",
     "ACX",
     "BEAM",
@@ -42,5 +45,5 @@
     "STRK"
   ],
   "high_pnl": [],
-  "last_update": "2025-10-10 14:51:10"
+  "last_update": "2025-10-10 18:21:47"
 }
