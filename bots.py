@@ -599,12 +599,12 @@ def load_mature_coins_storage():
             logger.info(f"[MATURITY_STORAGE] ✅ Загружено {len(mature_coins_storage)} зрелых монет из файла")
         else:
             with mature_coins_lock:
-            mature_coins_storage = {}
+                mature_coins_storage = {}
             logger.info("[MATURITY_STORAGE] Файл хранилища не найден, создаем новый")
     except Exception as e:
         logger.error(f"[MATURITY_STORAGE] Ошибка загрузки хранилища: {e}")
         with mature_coins_lock:
-        mature_coins_storage = {}
+            mature_coins_storage = {}
 
 def save_mature_coins_storage():
     """Сохраняет постоянное хранилище зрелых монет в файл"""
@@ -1186,7 +1186,7 @@ def check_rsi_time_filter(candles, rsi, signal):
     """
     try:
         # Получаем настройки из конфига
-            with bots_data_lock:
+        with bots_data_lock:
             rsi_time_filter_enabled = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_enabled', True)
             rsi_time_filter_candles = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_candles', 8)
             rsi_time_filter_upper = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_upper', 65)  # Спокойная зона для SHORT
@@ -1361,7 +1361,7 @@ def check_rsi_time_filter(candles, rsi, signal):
         
         return {'allowed': True, 'reason': 'Неизвестный сигнал', 'last_extreme_candles_ago': None, 'calm_candles': 0}
     
-        except Exception as e:
+    except Exception as e:
         logger.error(f"[RSI_TIME_FILTER] Ошибка проверки временного фильтра: {e}")
         return {'allowed': False, 'reason': f'Ошибка анализа: {str(e)}', 'last_extreme_candles_ago': None, 'calm_candles': 0}
 
@@ -1602,31 +1602,31 @@ def load_all_coins_rsi():
                 
                 # Уменьшаем таймауты для ускорения (2 минуты для пакета, 15 секунд на монету)
                 try:
-                for future in concurrent.futures.as_completed(future_to_symbol, timeout=120):
-                    try:
+                    for future in concurrent.futures.as_completed(future_to_symbol, timeout=120):
+                        try:
                             result = future.result(timeout=15)  # Уменьшаем до 15 секунд
-                        if result:
+                            if result:
                                 batch_coins_data[result['symbol']] = result
                                 
                                 # Зрелость монеты проверяется в check_coin_maturity_stored_or_verify
                                 # при попытке создать бота, а не здесь
                                 symbol = result['symbol']
                                 
-                            with rsi_data_lock:
-                                coins_rsi_data['successful_coins'] += 1
-                        else:
+                                with rsi_data_lock:
+                                    coins_rsi_data['successful_coins'] += 1
+                            else:
+                                with rsi_data_lock:
+                                    coins_rsi_data['failed_coins'] += 1
+                        except concurrent.futures.TimeoutError:
+                            symbol = future_to_symbol[future]
+                            # logger.warning(f"⏰ Таймаут для {symbol} (пропускаем)")  # Отключено для чистоты логов
                             with rsi_data_lock:
                                 coins_rsi_data['failed_coins'] += 1
-                    except concurrent.futures.TimeoutError:
-                        symbol = future_to_symbol[future]
-                            # logger.warning(f"⏰ Таймаут для {symbol} (пропускаем)")  # Отключено для чистоты логов
-                        with rsi_data_lock:
-                            coins_rsi_data['failed_coins'] += 1
-                    except Exception as e:
-                        symbol = future_to_symbol[future]
+                        except Exception as e:
+                            symbol = future_to_symbol[future]
                             # logger.warning(f"[WARNING] Ошибка обработки {symbol}: {e}")  # Отключено для чистоты логов
-                        with rsi_data_lock:
-                            coins_rsi_data['failed_coins'] += 1
+                            with rsi_data_lock:
+                                coins_rsi_data['failed_coins'] += 1
                 except concurrent.futures.TimeoutError:
                     # Обработка таймаута всего пакета
                     unfinished = len([f for f in future_to_symbol.keys() if not f.done()])
@@ -1716,15 +1716,15 @@ def get_effective_signal(coin):
     symbol = coin.get('symbol', 'UNKNOWN')
     
     # Получаем настройки автобота
-        with bots_data_lock:
-            auto_config = bots_data.get('auto_bot_config', {})
-            avoid_down_trend = auto_config.get('avoid_down_trend', True)
-            avoid_up_trend = auto_config.get('avoid_up_trend', True)
+    with bots_data_lock:
+        auto_config = bots_data.get('auto_bot_config', {})
+        avoid_down_trend = auto_config.get('avoid_down_trend', True)
+        avoid_up_trend = auto_config.get('avoid_up_trend', True)
         rsi_long_threshold = auto_config.get('rsi_long_threshold', 29)
         rsi_short_threshold = auto_config.get('rsi_short_threshold', 71)
         
     # Получаем данные монеты
-        rsi = coin.get('rsi6h', 50)
+    rsi = coin.get('rsi6h', 50)
     trend = coin.get('trend', coin.get('trend6h', 'NEUTRAL'))
     
     # ✅ КРИТИЧЕСКАЯ ПРОВЕРКА: Если базовый сигнал WAIT (из-за незрелости) - возвращаем сразу
@@ -1871,7 +1871,7 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                 
                 # Получаем RSI данные для монеты
                 rsi_data = None
-        with rsi_data_lock:
+                with rsi_data_lock:
                     rsi_data = coins_rsi_data['coins'].get(symbol)
                 
                 if not rsi_data:
@@ -1894,14 +1894,14 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                 
                 # Обновляем данные бота в хранилище если есть изменения
                 if signal_result and signal_result.get('success', False):
-        with bots_data_lock:
+                    with bots_data_lock:
                         bots_data['bots'][symbol] = trading_bot.to_dict()
                     
                     # Логируем торговые действия
                     action = signal_result.get('action')
                     if action in ['OPEN_LONG', 'OPEN_SHORT', 'CLOSE_LONG', 'CLOSE_SHORT']:
                         logger.info(f"[NEW_BOT_SIGNALS] 🎯 {symbol}: {action} выполнено")
-            else:
+                else:
                     logger.debug(f"[NEW_BOT_SIGNALS] ⏳ {symbol}: Нет торговых сигналов")
         
             except Exception as e:
@@ -1921,7 +1921,7 @@ def check_new_autobot_filters(symbol, signal, coin_data):
         # 2. Проверка ExitScam (резкие движения цены)
         if not check_exit_scam_filter(symbol, coin_data):
             logger.warning(f"[NEW_AUTO_FILTER] {symbol}: ❌ БЛОКИРОВКА: Обнаружены резкие движения цены (ExitScam)")
-                return False
+            return False
         else:
             logger.info(f"[NEW_AUTO_FILTER] {symbol}: ✅ ExitScam фильтр пройден")
         
@@ -2117,7 +2117,7 @@ def create_new_bot(symbol, config=None, exchange_obj=None):
         logger.info(f"[CREATE_BOT] ✅ Бот для {symbol} создан успешно")
         return new_bot
         
-            except Exception as e:
+    except Exception as e:
         logger.error(f"[CREATE_BOT] ❌ Ошибка создания бота для {symbol}: {e}")
         raise
 
@@ -2185,7 +2185,7 @@ def test_exit_scam_filter(symbol):
         
         if result:
             logger.info(f"[TEST_EXIT_SCAM] {symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН")
-                    else:
+        else:
             logger.warning(f"[TEST_EXIT_SCAM] {symbol}: ❌ РЕЗУЛЬТАТ: ЗАБЛОКИРОВАН")
         
         # Дополнительный анализ
@@ -2228,16 +2228,16 @@ def test_rsi_time_filter(symbol):
         logger.info(f"[TEST_RSI_TIME] 🔍 Тестируем RSI временной фильтр для {symbol}")
         
         # Получаем свечи
-                if not ensure_exchange_initialized():
+        if not ensure_exchange_initialized():
             logger.error(f"[TEST_RSI_TIME] {symbol}: Биржа не инициализирована")
             return
                 
-                chart_response = exchange.get_chart_data(symbol, '6h', '30d')
-                if not chart_response or not chart_response.get('success'):
+        chart_response = exchange.get_chart_data(symbol, '6h', '30d')
+        if not chart_response or not chart_response.get('success'):
             logger.error(f"[TEST_RSI_TIME] {symbol}: Не удалось получить свечи")
             return
         
-                candles = chart_response.get('data', {}).get('candles', [])
+        candles = chart_response.get('data', {}).get('candles', [])
         if len(candles) < 50:
             logger.error(f"[TEST_RSI_TIME] {symbol}: Недостаточно свечей ({len(candles)})")
             return
@@ -2253,7 +2253,7 @@ def test_rsi_time_filter(symbol):
             signal = coin_data.get('signal', 'WAIT')
         
         # Определяем ОРИГИНАЛЬНЫЙ сигнал на основе только RSI (игнорируя другие фильтры)
-    with bots_data_lock:
+        with bots_data_lock:
             rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', 29)
             rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', 71)
         
@@ -2710,7 +2710,7 @@ class NewTradingBot:
                 self.max_profit_achieved = profit_percent
                 logger.debug(f"[NEW_BOT_{self.symbol}] 📈 Обновлена максимальная прибыль: {profit_percent:.2f}%")
             
-                except Exception as e:
+        except Exception as e:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка обновления защитных механизмов: {e}")
     
     def _sync_position_with_exchange(self):
@@ -2722,7 +2722,7 @@ class NewTradingBot:
             exchange_positions = self.exchange.get_positions()
             if isinstance(exchange_positions, tuple):
                 positions_list = exchange_positions[0] if exchange_positions else []
-                else:
+            else:
                 positions_list = exchange_positions if exchange_positions else []
             
             for pos in positions_list:
@@ -3962,8 +3962,8 @@ def remove_mature_coins(coins_to_remove):
         with mature_coins_lock:
             for symbol in coins_to_remove:
                 if symbol in mature_coins_storage:
-                del mature_coins_storage[symbol]
-                removed_count += 1
+                    del mature_coins_storage[symbol]
+                    removed_count += 1
                     logger.info(f"[MATURE_REMOVE] ✅ Удалена монета {symbol} из зрелых")
                 else:
                     not_found.append(symbol)
@@ -4051,30 +4051,30 @@ def check_trading_rules_activation():
                     coin_lock = get_coin_processing_lock(symbol)
                     with coin_lock:
                         # Двойная проверка после получения блокировки
-                    if symbol not in bots_data['bots']:
-                        try:
+                        if symbol not in bots_data['bots']:
+                            try:
                                 # Получаем конфигурацию автобота
                                 with bots_data_lock:
                                     auto_bot_config = bots_data.get('auto_bot_config', {})
+                                    
+                                # Создаем бота с базовой конфигурацией
+                                bot_config = {
+                                    'symbol': symbol,
+                                    'status': 'running',
+                                    'volume_mode': 'usdt',
+                                    'volume_value': auto_bot_config.get('default_position_size', 20.0),
+                                    'created_at': datetime.now().isoformat(),
+                                    'last_signal_time': None
+                                }
                                 
-                            # Создаем бота с базовой конфигурацией
-                            bot_config = {
-                                'symbol': symbol,
-                                'status': 'running',
-                                'volume_mode': 'usdt',
-                                'volume_value': auto_bot_config.get('default_position_size', 20.0),
-                                'created_at': datetime.now().isoformat(),
-                                'last_signal_time': None
-                            }
-                            
-                            bots_data['bots'][symbol] = bot_config
-                            logger.info(f"[TRADING_RULES] ✅ Создан бот для {symbol}")
-                            activated_count += 1
-                            
-                        except Exception as e:
-                            logger.error(f"[TRADING_RULES] ❌ Ошибка создания бота для {symbol}: {e}")
-                    else:
-                        logger.debug(f"[TRADING_RULES] ⏳ Бот для {symbol} уже существует")
+                                bots_data['bots'][symbol] = bot_config
+                                logger.info(f"[TRADING_RULES] ✅ Создан бот для {symbol}")
+                                activated_count += 1
+                                
+                            except Exception as e:
+                                logger.error(f"[TRADING_RULES] ❌ Ошибка создания бота для {symbol}: {e}")
+                        else:
+                            logger.debug(f"[TRADING_RULES] ⏳ Бот для {symbol} уже существует")
         
         if activated_count > 0:
             logger.info(f"[TRADING_RULES] ✅ Активированы правила торговли для {activated_count} монет")
@@ -4702,10 +4702,10 @@ def init_bot_service():
         rsi_load_thread.start()
         logger.info("[INIT] ✅ Загрузка RSI запущена в фоновом потоке")
         
-            update_process_state('smart_rsi_manager', {
-                'last_update': datetime.now().isoformat(),
-                'update_count': process_state['smart_rsi_manager']['update_count'] + 1
-            })
+        update_process_state('smart_rsi_manager', {
+            'last_update': datetime.now().isoformat(),
+            'update_count': process_state['smart_rsi_manager']['update_count'] + 1
+        })
         
         # 5. Инициализируем биржу
         if init_exchange_sync():
@@ -4817,13 +4817,13 @@ def init_bot_service():
         system_initialized = True
         
         # КРИТИЧЕСКИ ВАЖНО: Проверяем Auto Bot при старте - он ДОЛЖЕН быть выключен!
-            with bots_data_lock:
-                auto_bot_enabled = bots_data['auto_bot_config']['enabled']
+        with bots_data_lock:
+            auto_bot_enabled = bots_data['auto_bot_config']['enabled']
         auto_bot_config = bots_data['auto_bot_config']
         bots_count = len(bots_data['bots'])
             
         # ПРИНУДИТЕЛЬНО выключаем автобот при старте системы для безопасности!
-            if auto_bot_enabled:
+        if auto_bot_enabled:
             logger.warning("[INIT] ⚠️ Автобот включен при старте! Принудительно выключаем для безопасности...")
             bots_data['auto_bot_config']['enabled'] = False
             auto_bot_enabled = False
@@ -5404,7 +5404,7 @@ def get_coins_with_rsi():
                 if ensure_exchange_initialized():
                     coin_data = get_coin_rsi_data(refresh_symbol, exchange)
                     if coin_data:
-        with rsi_data_lock:
+                        with rsi_data_lock:
                             coins_rsi_data['coins'][refresh_symbol] = coin_data
                         logger.info(f"[API] ✅ RSI данные для {refresh_symbol} обновлены")
                     else:
@@ -7395,8 +7395,8 @@ def run_bots_service():
                 # Обрабатываем ботов каждые 30 секунд
                 if current_time - last_bot_processing >= bot_processing_interval:
                     logger.info("[MAIN_LOOP] 🤖 Обработка ботов...")
-                            process_trading_signals_for_all_bots(exchange_obj=exchange)
-                        last_bot_processing = current_time
+                    process_trading_signals_for_all_bots(exchange_obj=exchange)
+                    last_bot_processing = current_time
                     logger.info("[MAIN_LOOP] ✅ Обработка ботов завершена")
                 
                 time.sleep(1)
