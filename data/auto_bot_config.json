@@ -1,5 +1,5 @@
 {
-  "enabled": true,
+  "enabled": false,
   "max_concurrent": 5,
   "risk_cap_percent": 10,
   "scope": "all",
@@ -33,9 +33,9 @@
   "rsi_time_filter_lower": 35,
   "exit_scam_enabled": true,
   "exit_scam_candles": 10,
-  "exit_scam_single_candle_percent": 50,
+  "exit_scam_single_candle_percent": 25,
   "exit_scam_multi_candle_count": 4,
-  "exit_scam_multi_candle_percent": 100,
+  "exit_scam_multi_candle_percent": 50,
   "anti_dump_pump_enabled": true,
   "anti_dump_pump_candles": 20,
   "anti_dump_pump_single_candle_percent": 20,
