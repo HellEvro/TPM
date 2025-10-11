@@ -3772,13 +3772,8 @@ def compare_bot_and_exchange_positions():
         logger.error(f"[POSITION_SYNC] ❌ Ошибка сравнения позиций: {e}")
         return None
 
-# Счетчик для уменьшения спама логов при ошибках синхронизации
-_sync_error_counter = 0
-
 def sync_positions_with_exchange():
     """Умная синхронизация позиций ботов с реальными позициями на бирже"""
-    global _sync_error_counter
-    
     try:
         # ✅ Не логируем частые синхронизации (только результаты при изменениях)
         
@@ -3787,16 +3782,8 @@ def sync_positions_with_exchange():
         
         # Если не удалось получить позиции с биржи, НЕ сбрасываем ботов
         if not exchange_positions:
-            _sync_error_counter += 1
-            # Логируем только каждый 30-й раз чтобы не спамить
-            if _sync_error_counter % 30 == 0:
-                logger.warning(f"[POSITION_SYNC] ⚠️ Не удалось получить позиции с биржи ({_sync_error_counter} раз)")
+            logger.warning("[POSITION_SYNC] ⚠️ Не удалось получить позиции с биржи - пропускаем синхронизацию")
             return False
-        
-        # Сбрасываем счетчик при успешном получении позиций
-        if _sync_error_counter > 0:
-            logger.info(f"[POSITION_SYNC] ✅ Связь с биржей восстановлена (после {_sync_error_counter} ошибок)")
-            _sync_error_counter = 0
         
         # Получаем ботов в позиции из системы
         with bots_data_lock:
