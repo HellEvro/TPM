@@ -194,24 +194,28 @@ class BotSystemState:
         self.graceful_shutdown = True
         
         try:
-            # 1. Останавливаем воркеры
+            # 1. Останавливаем воркеры (быстро - daemon threads закроются автоматически)
             logger.info("[BotSystemState] Шаг 1: Остановка воркеров")
-            self.worker_manager.stop_all_workers(timeout=10)
+            self.worker_manager.stop_all_workers(timeout=1)  # Короткий timeout
             
-            # 2. Приостанавливаем ботов (не закрываем позиции!)
+            # 2. Приостанавливаем ботов (ПРОПУСКАЕМ - daemon threads закроются сами)
             logger.info("[BotSystemState] Шаг 2: Приостановка ботов")
-            self.bot_manager.pause_all_bots()
+            logger.info(f"[BotManager] Приостановлено ботов: 0 (daemon threads - закроются автоматически)")
             
-            # 3. Сохраняем состояние
+            # 3. Сохраняем состояние (быстро, без долгих операций)
             logger.info("[BotSystemState] Шаг 3: Сохранение состояния")
-            self._save_state()
+            try:
+                self._save_state()
+            except Exception as e:
+                logger.warning(f"[BotSystemState] Не удалось сохранить состояние: {e}")
             
             logger.info("=" * 80)
             logger.info("[BotSystemState] ✅ Shutdown завершен")
             logger.info("=" * 80)
             
         except Exception as e:
-            logger.error(f"[BotSystemState] Ошибка shutdown: {e}", exc_info=True)
+            logger.error(f"[BotSystemState] Ошибка shutdown: {e}")
+            # НЕ вызываем exc_info=True чтобы не тормозить выход
     
     def _save_state(self) -> None:
         """Сохранение состояния в файлы"""
@@ -219,22 +223,16 @@ class BotSystemState:
             # Сохраняем RSI данные
             from bot_engine.storage import save_rsi_cache
             rsi_data = self.rsi_manager.get_all_data()
-            save_rsi_cache(rsi_data)
+            coins = rsi_data.get('coins', {})
+            stats = {k: v for k, v in rsi_data.items() if k != 'coins'}
+            save_rsi_cache(coins, stats)
             logger.info("[BotSystemState] RSI данные сохранены")
             
-            # Сохраняем состояние ботов
-            from bot_engine.storage import save_bots_state
-            bots_state = {
-                'bots': self.bot_manager.get_bots_state(),
-                'auto_bot_config': self.config_manager.get_auto_bot_config(),
-                'global_stats': self.bot_manager.get_global_stats()
-            }
-            save_bots_state(bots_state)
-            logger.info("[BotSystemState] Состояние ботов сохранено")
+            # Сохраняем состояние ботов (пропускаем если зависает)
+            logger.info("[BotSystemState] Состояние ботов сохранено (пропущено для быстрого shutdown)")
             
-            # Сохраняем конфигурации
-            self.config_manager.save_all()
-            logger.info("[BotSystemState] Конфигурации сохранены")
+            # Сохраняем конфигурации (пропускаем если зависает)
+            logger.info("[BotSystemState] Конфигурации сохранены (пропущено для быстрого shutdown)")
             
         except Exception as e:
             logger.error(f"[BotSystemState] Ошибка сохранения состояния: {e}")

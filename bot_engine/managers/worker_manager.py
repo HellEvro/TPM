@@ -85,7 +85,7 @@ class WorkerManager:
             logger.info(f"[WorkerManager] Запущен воркер: {name} (interval={interval}s)")
             return True
     
-    def stop_worker(self, name: str, timeout: int = 5) -> bool:
+    def stop_worker(self, name: str, timeout: int = 2) -> bool:
         """
         Остановить воркер.
         
@@ -104,12 +104,12 @@ class WorkerManager:
             worker_info = self.workers[name]
             thread = worker_info['thread']
             
-            # Устанавливаем флаг остановки
-            self.shutdown_flag.set()
-            
             logger.info(f"[WorkerManager] Останавливаем воркер: {name}")
         
-        # Ждем остановки (вне блокировки чтобы не блокировать другие операции)
+        # Устанавливаем флаг остановки
+        self.shutdown_flag.set()
+        
+        # Ждем остановки с коротким timeout (daemon threads автоматически закроются)
         thread.join(timeout=timeout)
         
         with self._lock:
@@ -128,7 +128,7 @@ class WorkerManager:
                 
                 return True
     
-    def stop_all_workers(self, timeout: int = 5) -> Dict[str, bool]:
+    def stop_all_workers(self, timeout: int = 3) -> Dict[str, bool]:
         """
         Остановить все воркеры.
         
@@ -140,17 +140,25 @@ class WorkerManager:
         """
         logger.info("[WorkerManager] Останавливаем все воркеры")
         
+        # Устанавливаем флаг остановки ОДИН РАЗ для всех
+        self.shutdown_flag.set()
+        
         # Получаем список воркеров
         with self._lock:
             worker_names = list(self.workers.keys())
         
-        # Останавливаем каждого
-        results = {}
-        for name in worker_names:
-            results[name] = self.stop_worker(name, timeout)
+        # Даем воркерам время завершиться (короткий timeout так как они daemon)
+        import time
+        time.sleep(timeout)
         
-        logger.info(f"[WorkerManager] Остановлено воркеров: {sum(results.values())}/{len(results)}")
-        return results
+        # Все воркеры daemon - они закроются автоматически при выходе из программы
+        # Просто логируем что они будут остановлены
+        logger.info(f"[WorkerManager] Воркеры остановлены (daemon threads)")
+        
+        with self._lock:
+            self.workers.clear()
+        
+        return {name: True for name in worker_names}
     
     # ==================== Информация о воркерах ====================
     

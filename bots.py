@@ -33,10 +33,13 @@ from app.config import EXCHANGES, APP_DEBUG
 from bot_engine.state_manager import BotSystemState
 
 # Импорты новых API endpoints
-from bot_engine.api.endpoints_health_new import register_health_endpoints
-from bot_engine.api.endpoints_bots_new import register_bots_endpoints
-from bot_engine.api.endpoints_config_new import register_config_endpoints
-from bot_engine.api.endpoints_rsi_new import register_rsi_endpoints
+from bot_engine.api.endpoints_health import register_health_endpoints
+from bot_engine.api.endpoints_bots import register_bots_endpoints
+from bot_engine.api.endpoints_config import register_config_endpoints
+from bot_engine.api.endpoints_rsi import register_rsi_endpoints
+from bot_engine.api.endpoints_positions import register_positions_endpoints
+from bot_engine.api.endpoints_mature import register_mature_endpoints
+from bot_engine.api.endpoints_system import register_system_endpoints
 
 # Настройка логирования
 logger = setup_color_logging()
@@ -98,7 +101,10 @@ def init_bot_service():
         register_bots_endpoints(app, bot_system_state)
         register_config_endpoints(app, bot_system_state)
         register_rsi_endpoints(app, bot_system_state)
-        logger.info("[INIT] ✅ API endpoints зарегистрированы")
+        register_positions_endpoints(app, bot_system_state)
+        register_mature_endpoints(app, bot_system_state)
+        register_system_endpoints(app, bot_system_state)
+        logger.info("[INIT] ✅ Все API endpoints зарегистрированы (7 модулей)")
         
         logger.info("=" * 80)
         logger.info("✅ СИСТЕМА ПОЛНОСТЬЮ ГОТОВА К РАБОТЕ")
@@ -255,13 +261,18 @@ def main():
         
         # Запускаем Flask сервер
         logger.info("🚀 Запуск Flask сервера на порту 5001...")
-        app.run(
-            host='0.0.0.0',
-            port=5001,
-            debug=APP_DEBUG,
-            use_reloader=False,
-            threaded=True
-        )
+        logger.info("💡 Для остановки нажмите Ctrl+C")
+        
+        try:
+            app.run(
+                host='0.0.0.0',
+                port=5001,
+                debug=APP_DEBUG,
+                use_reloader=False,
+                threaded=True
+            )
+        except KeyboardInterrupt:
+            logger.info("\n👋 Flask получил Ctrl+C, останавливаемся...")
         
     except KeyboardInterrupt:
         logger.info("\n👋 Получен сигнал остановки (Ctrl+C)")
