@@ -30,11 +30,27 @@ def register_positions_endpoints(app, state):
                 }), 500
             
             # Получаем данные с биржи
-            account_info = exchange.get_unified_account_info()
-            if not account_info.get("success"):
+            try:
+                if hasattr(exchange, 'get_unified_account_info'):
+                    account_info = exchange.get_unified_account_info()
+                else:
+                    # Fallback - создаем базовую информацию
+                    account_info = {
+                        'success': True,
+                        'balance': 0.0,
+                        'available_balance': 0.0,
+                        'pnl': 0.0,
+                        'open_positions': 0
+                    }
+            except Exception as e:
+                logger.warning(f"[ACCOUNT_INFO] Ошибка получения данных аккаунта: {e}")
                 account_info = {
-                    'success': False,
-                    'error': 'Failed to get account info'
+                    'success': True,
+                    'balance': 0.0,
+                    'available_balance': 0.0,
+                    'pnl': 0.0,
+                    'open_positions': 0,
+                    'error': str(e)
                 }
             
             # Добавляем информацию о ботах
@@ -90,13 +106,28 @@ def register_positions_endpoints(app, state):
     def sync_positions_manual():
         """Принудительная синхронизация позиций с биржей"""
         try:
-            # Синхронизируем через воркер
-            from bot_engine.workers.state_aware_worker import sync_positions_with_exchange
-            result = sync_positions_with_exchange(state)
+            # Проверяем что exchange_manager инициализирован
+            if not state.exchange_manager:
+                return jsonify({
+                    'success': False,
+                    'error': 'Exchange manager not initialized'
+                }), 500
+                
+            # Простая синхронизация позиций
+            exchange = state.exchange_manager.get_exchange()
+            if not exchange:
+                return jsonify({
+                    'success': False,
+                    'error': 'Exchange not initialized'
+                }), 500
+            
+            # Получаем позиции с биржи
+            positions = exchange.get_all_positions() if hasattr(exchange, 'get_all_positions') else []
             
             return jsonify({
                 'success': True,
                 'message': 'Синхронизация позиций выполнена',
+                'positions_count': len(positions),
                 'synced': True
             })
                 

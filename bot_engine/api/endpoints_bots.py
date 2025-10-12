@@ -256,4 +256,100 @@ def register_bots_endpoints(app, state):
             
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
+    
+    @app.route('/api/bots/resume', methods=['POST'])
+    def resume_bot():
+        """Возобновить работу приостановленного бота"""
+        try:
+            data = request.get_json()
+            symbol = data['symbol']
+            bot = state.bot_manager.get_bot(symbol)
+            
+            if not bot:
+                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
+            
+            # Возобновляем бота
+            if hasattr(bot, 'resume'):
+                bot.resume()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Бот {symbol} возобновлен'
+            })
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    @app.route('/api/bots/individual-settings/<symbol>', methods=['GET'])
+    def get_individual_settings(symbol):
+        """Получить индивидуальные настройки бота"""
+        try:
+            bot = state.bot_manager.get_bot(symbol)
+            
+            if not bot:
+                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
+            
+            # Возвращаем настройки бота
+            settings = {
+                'symbol': symbol,
+                'stop_loss': getattr(bot, 'stop_loss_percent', 15.0),
+                'trailing_stop': getattr(bot, 'trailing_stop_percent', 300.0)
+            }
+            
+            return jsonify({
+                'success': True,
+                'settings': settings
+            })
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    @app.route('/api/bots/individual-settings/<symbol>', methods=['POST'])
+    def update_individual_settings(symbol):
+        """Обновить индивидуальные настройки бота"""
+        try:
+            data = request.get_json()
+            bot = state.bot_manager.get_bot(symbol)
+            
+            if not bot:
+                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
+            
+            # Обновляем настройки
+            if 'stop_loss' in data and hasattr(bot, 'stop_loss_percent'):
+                bot.stop_loss_percent = float(data['stop_loss'])
+            
+            if 'trailing_stop' in data and hasattr(bot, 'trailing_stop_percent'):
+                bot.trailing_stop_percent = float(data['trailing_stop'])
+            
+            return jsonify({
+                'success': True,
+                'message': f'Настройки бота {symbol} обновлены'
+            })
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    @app.route('/api/bots/individual-settings/<symbol>', methods=['DELETE'])
+    def delete_individual_settings(symbol):
+        """Удалить индивидуальные настройки (вернуть к дефолтным)"""
+        try:
+            bot = state.bot_manager.get_bot(symbol)
+            
+            if not bot:
+                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
+            
+            # Возвращаем к дефолтным настройкам
+            auto_config = state.config_manager.get_auto_bot_config()
+            if hasattr(bot, 'stop_loss_percent'):
+                bot.stop_loss_percent = auto_config.get('stop_loss_percent', 15.0)
+            if hasattr(bot, 'trailing_stop_percent'):
+                bot.trailing_stop_percent = auto_config.get('trailing_stop_percent', 300.0)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Настройки бота {symbol} сброшены к дефолтным'
+            })
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
 

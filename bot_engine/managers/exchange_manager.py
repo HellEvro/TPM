@@ -323,6 +323,15 @@ class ExchangeManager:
                 logger.error(f"[ExchangeManager] Ошибка получения символов: {e}")
                 raise
     
+    def get_exchange(self):
+        """
+        Получить объект биржи.
+        
+        Returns:
+            Объект биржи или None
+        """
+        return self.exchange
+    
     def get_exchange_info(self) -> Dict[str, Any]:
         """
         Получить информацию о бирже.
@@ -331,12 +340,12 @@ class ExchangeManager:
             Словарь с информацией о бирже
         """
         return {
-            'name': self.exchange.__class__.__name__,
-            'initialized': self._initialized,
-            'has_fetch_klines': hasattr(self.exchange, 'fetch_klines'),
-            'has_create_order': hasattr(self.exchange, 'create_order'),
-            'has_fetch_balance': hasattr(self.exchange, 'fetch_balance'),
-            'has_fetch_positions': hasattr(self.exchange, 'fetch_positions'),
+            'name': self.exchange.__class__.__name__ if self.exchange else 'None',
+            'initialized': self._initialized and self.exchange is not None,
+            'has_fetch_klines': hasattr(self.exchange, 'fetch_klines') if self.exchange else False,
+            'has_create_order': hasattr(self.exchange, 'create_order') if self.exchange else False,
+            'has_fetch_balance': hasattr(self.exchange, 'fetch_balance') if self.exchange else False,
+            'has_fetch_positions': hasattr(self.exchange, 'fetch_positions') if self.exchange else False,
         }
     
     def __repr__(self) -> str:

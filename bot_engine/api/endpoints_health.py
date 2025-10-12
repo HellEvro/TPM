@@ -43,9 +43,9 @@ def register_health_endpoints(app, state):
                 'error': str(e)
             }), 500
     
-    @app.route('/api/status', methods=['GET'])
-    def api_status():
-        """Полный статус системы"""
+    @app.route('/api/system-status', methods=['GET'])
+    def system_status():
+        """Полный статус системы (детальный)"""
         try:
             # Получаем полный статус от BotSystemState
             system_status = state.get_system_status()
