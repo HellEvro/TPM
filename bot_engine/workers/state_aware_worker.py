@@ -101,11 +101,12 @@ def example_auto_bot_worker(state):
     Args:
         state: BotSystemState instance
     """
-    # Получаем конфиг через state
+    # Получаем конфиг через state (принудительно обновляем)
     config = state.config_manager.get_auto_bot_config()
+    logger.info(f"[AUTO_BOT] 🔧 Конфиг: enabled={config.get('enabled', False)}")
     
     if not config.get('enabled'):
-        logger.debug("[AUTO_BOT] Выключен, пропускаем")
+        logger.info("[AUTO_BOT] Выключен, пропускаем")
         return
     
     # Получаем активные боты
@@ -113,7 +114,7 @@ def example_auto_bot_worker(state):
     max_bots = config.get('max_concurrent_bots', 5)
     
     if active_bots >= max_bots:
-        logger.debug(f"[AUTO_BOT] Достигнут лимит ботов ({active_bots}/{max_bots})")
+        logger.info(f"[AUTO_BOT] Достигнут лимит ботов ({active_bots}/{max_bots})")
         return
     
     # Получаем сигналы через state
@@ -121,7 +122,7 @@ def example_auto_bot_worker(state):
     short_signals = state.rsi_manager.get_coins_with_signal('SHORT')
     
     logger.info(
-        f"[AUTO_BOT] Сигналы: LONG={len(long_signals)}, SHORT={len(short_signals)}, "
+        f"[AUTO_BOT] 🔍 Сигналы: LONG={len(long_signals)}, SHORT={len(short_signals)}, "
         f"Боты: {active_bots}/{max_bots}"
     )
     

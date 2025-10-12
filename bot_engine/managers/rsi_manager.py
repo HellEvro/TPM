@@ -136,9 +136,12 @@ class RSIDataManager:
     
     # ==================== Статистика обновления ====================
     
-    def start_update(self) -> bool:
+    def start_update(self, total_coins: int = 0) -> bool:
         """
         Начать процесс обновления RSI.
+        
+        Args:
+            total_coins: Общее количество монет для обновления (опционально)
         
         Returns:
             True если обновление началось, False если уже идет
@@ -149,7 +152,10 @@ class RSIDataManager:
                 return False
             
             self._data['update_in_progress'] = True
-            self._data['total_coins'] = 0
+            if total_coins > 0:
+                self._data['total_coins'] = total_coins
+            else:
+                self._data['total_coins'] = 0
             self._data['successful_coins'] = 0
             self._data['failed_coins'] = 0
             logger.info("[RSIDataManager] Начато обновление RSI")
@@ -239,6 +245,18 @@ class RSIDataManager:
             
             logger.info(f"[RSIDataManager] Восстановлено {len(self._data['coins'])} монет из сохранения")
     
+    def update_coin(self, symbol: str, coin_data: dict) -> None:
+        """
+        Обновить данные монеты.
+        
+        Args:
+            symbol: Символ монеты
+            coin_data: Данные монеты (RSI, цена, сигнал)
+        """
+        with self._lock:
+            self._data['coins'][symbol] = coin_data
+            self._data['successful_coins'] += 1
+    
     def clear_all_data(self) -> None:
         """Очистить все данные"""
         with self._lock:
@@ -247,6 +265,64 @@ class RSIDataManager:
             self._data['successful_coins'] = 0
             self._data['failed_coins'] = 0
             logger.info("[RSIDataManager] Все данные очищены")
+    
+    def load_all_coins_async(self, exchange) -> None:
+        """
+        Загрузить RSI для всех монет асинхронно.
+        
+        Args:
+            exchange: Exchange instance
+        """
+        import threading
+        
+        def load_in_background():
+            try:
+                import time
+                time.sleep(2)  # Даем системе запуститься
+                
+                logger.info("[RSI_LOAD] Начинаем загрузку RSI для всех монет...")
+                
+                # Получаем список монет через метод биржи
+                pairs = exchange.get_all_pairs()
+                logger.info(f"[RSI_LOAD] Найдено {len(pairs)} торговых пар")
+                
+                # Загружаем RSI
+                self.start_update(len(pairs))
+                
+                loaded = 0
+                for symbol in pairs:
+                    try:
+                        candles = exchange.get_klines(symbol, interval='6h', limit=100)
+                        if candles and len(candles) >= 14:
+                            closes = [float(c['close']) for c in candles]
+                            
+                            from bot_engine.utils.rsi_utils import calculate_rsi
+                            rsi = calculate_rsi(closes, period=14)
+                            
+                            if rsi is not None:
+                                coin_data = {
+                                    'rsi': rsi,
+                                    'price': closes[-1],
+                                    'timestamp': candles[-1].get('timestamp', 0),
+                                    'signal': 'long' if rsi <= 29 else ('short' if rsi >= 71 else 'neutral')
+                                }
+                                self.update_coin(symbol, coin_data)
+                                loaded += 1
+                                
+                                # Логируем прогресс каждые 50 монет
+                                if loaded % 50 == 0:
+                                    logger.info(f"[RSI_LOAD] Загружено {loaded}/{len(pairs)} монет")
+                    except Exception as e:
+                        logger.warning(f"[RSI_LOAD] Ошибка для {symbol}: {e}")  # Логируем ошибки
+                
+                self.finish_update(loaded, len(pairs) - loaded)
+                logger.info(f"[RSI_LOAD] ✅ Загрузка завершена: {loaded}/{len(pairs)} монет")
+                
+            except Exception as e:
+                logger.error(f"[RSI_LOAD] Ошибка фоновой загрузки: {e}")
+        
+        thread = threading.Thread(target=load_in_background, daemon=True)
+        thread.start()
     
     # ==================== Расширенные операции ====================
     

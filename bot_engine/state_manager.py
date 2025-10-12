@@ -35,19 +35,19 @@ class BotSystemState:
         graceful_shutdown: Флаг graceful shutdown
     """
     
-    def __init__(self, exchange):
+    def __init__(self, exchange=None):
         """
         Инициализация BotSystemState.
         
         Args:
-            exchange: Объект биржи (из ExchangeFactory)
+            exchange: Объект биржи (из ExchangeFactory), опционально
         """
         logger.info("=" * 80)
         logger.info("[BotSystemState] Инициализация системы...")
         logger.info("=" * 80)
         
         # Создаем менеджеры в правильном порядке (с учетом зависимостей)
-        self.exchange_manager = ExchangeManager(exchange)
+        self.exchange_manager = ExchangeManager(exchange) if exchange else None
         self.rsi_manager = RSIDataManager()
         self.config_manager = ConfigManager()
         
@@ -249,11 +249,11 @@ class BotSystemState:
         return {
             'initialized': self.initialized,
             'graceful_shutdown': self.graceful_shutdown,
-            'exchange': self.exchange_manager.get_exchange_info(),
-            'rsi': self.rsi_manager.get_info(),
-            'bots': self.bot_manager.get_info(),
-            'config': self.config_manager.get_info(),
-            'workers': self.worker_manager.get_info()
+            'exchange': self.exchange_manager.get_exchange_info() if self.exchange_manager else {'name': 'None', 'initialized': False},
+            'rsi': self.rsi_manager.get_info() if self.rsi_manager else {'total_coins': 0},
+            'bots': self.bot_manager.get_info() if self.bot_manager else {'total_bots': 0, 'active_bots': 0},
+            'config': self.config_manager.get_info() if self.config_manager else {},
+            'workers': self.worker_manager.get_info() if self.worker_manager else {'active_workers': 0, 'total_workers': 0}
         }
     
     def is_ready(self) -> bool:

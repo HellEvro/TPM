@@ -110,4 +110,35 @@ def register_config_endpoints(app, state):
             
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
+    
+    @app.route('/api/bots/system-config', methods=['GET', 'POST'])
+    def system_config_endpoint():
+        """Получить или обновить системную конфигурацию"""
+        try:
+            if request.method == 'GET':
+                # Получаем системную конфигурацию
+                config = state.config_manager.get_system_config()
+                
+                return jsonify({
+                    'success': True,
+                    'config': config
+                })
+            
+            else:  # POST
+                # Обновляем системную конфигурацию
+                new_config = request.get_json()
+                
+                if not new_config:
+                    return jsonify({'success': False, 'error': 'Не указана конфигурация'}), 400
+                
+                # Сохраняем через ConfigManager
+                state.config_manager.update_system_config(new_config)
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Системная конфигурация обновлена'
+                })
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
 

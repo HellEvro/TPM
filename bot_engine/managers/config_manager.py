@@ -120,10 +120,10 @@ class ConfigManager:
                         saved_config = json.load(f)
                         self.auto_bot_config.update(saved_config)
                         
-                        # ВАЖНО: Всегда отключаем автобот при загрузке!
-                        self.auto_bot_config['enabled'] = False
+                        # ✅ ИСПРАВЛЕНО: Сохраняем enabled из файла!
+                        # self.auto_bot_config['enabled'] = False  # УДАЛЕНО!
                         
-                    logger.info(f"[ConfigManager] Загружена конфигурация Auto Bot из {config_file}")
+                    logger.info(f"[ConfigManager] Загружена конфигурация Auto Bot из {config_file} (enabled={self.auto_bot_config.get('enabled')})")
                     return True
                 except Exception as e:
                     logger.error(f"[ConfigManager] Ошибка загрузки конфигурации Auto Bot: {e}")
