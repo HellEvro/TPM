@@ -181,7 +181,7 @@ class BybitExchange(BaseExchange):
                             raise
                     
                     if not all_positions:
-                        print("No active positions")
+                        # Позиций нет - это нормально, не спамим в лог
                         return [], []
 
                     if self.last_reset_day is None or datetime.now().date() != self.last_reset_day:

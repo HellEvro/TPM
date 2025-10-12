@@ -91,9 +91,10 @@ class BotSystemState:
             logger.info("[BotSystemState] Шаг 2: Восстановление состояния")
             self._restore_state()
             
-            # 3. Запускаем фоновые задачи
-            logger.info("[BotSystemState] Шаг 3: Запуск воркеров")
-            self._start_workers()
+            # 3. НЕ запускаем воркеры автоматически - они будут запущены вручную
+            # чтобы не блокировать главный поток перед запуском Flask
+            logger.info("[BotSystemState] Шаг 3: Воркеры будут запущены после старта Flask")
+            # self._start_workers()  # Закомментировано - запускать вручную!
             
             # 4. Устанавливаем флаг инициализации
             self.initialized = True
@@ -131,33 +132,47 @@ class BotSystemState:
     def _start_workers(self) -> None:
         """Запуск всех фоновых воркеров"""
         try:
-            # Импортируем воркеры
-            from bots import (
-                auto_bot_worker,
-                sync_positions_worker, 
-                bot_status_update_worker
-            )
+            # Импортируем воркеры из legacy кода или новых модулей
+            try:
+                from bots_legacy import (
+                    auto_bot_worker,
+                    auto_save_worker
+                )
+                
+                # Запускаем legacy воркеры
+                # NOTE: Legacy воркеры пока не совместимы с State Manager
+                # Они будут запущены когда bots_legacy импортируется
+                logger.info("[BotSystemState] Legacy воркеры будут запущены из bots_legacy")
+                
+            except ImportError:
+                logger.info("[BotSystemState] Legacy воркеры недоступны, используем новые")
+                
+                # Используем новые State-aware воркеры
+                from bot_engine.workers.state_aware_worker import (
+                    create_auto_bot_worker,
+                    create_sync_positions_worker,
+                    create_cache_update_worker
+                )
+                
+                self.worker_manager.start_worker(
+                    'auto_bot',
+                    create_auto_bot_worker,
+                    interval=60
+                )
+                
+                self.worker_manager.start_worker(
+                    'sync_positions',
+                    create_sync_positions_worker,
+                    interval=30
+                )
+                
+                self.worker_manager.start_worker(
+                    'cache_update',
+                    create_cache_update_worker,
+                    interval=30
+                )
             
-            # Запускаем каждого воркера
-            self.worker_manager.start_worker(
-                'auto_bot',
-                auto_bot_worker,
-                interval=60
-            )
-            
-            self.worker_manager.start_worker(
-                'sync_positions',
-                sync_positions_worker,
-                interval=30
-            )
-            
-            self.worker_manager.start_worker(
-                'bot_status_update',
-                bot_status_update_worker,
-                interval=30
-            )
-            
-            logger.info(f"[BotSystemState] Запущено воркеров: {self.worker_manager.get_workers_count()}")
+            logger.info(f"[BotSystemState] Воркеры настроены")
             
         except Exception as e:
             logger.warning(f"[BotSystemState] Ошибка запуска воркеров: {e}")

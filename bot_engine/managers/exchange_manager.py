@@ -134,14 +134,29 @@ class ExchangeManager:
         """
         with self._lock:
             try:
-                positions = self.exchange.fetch_positions()
+                # Используем метод биржи get_positions (а не fetch_positions)
+                if hasattr(self.exchange, 'get_positions'):
+                    result = self.exchange.get_positions()
+                    # Может вернуть tuple или list
+                    if isinstance(result, tuple):
+                        positions = result[0] if result and result[0] else []
+                    else:
+                        positions = result if result else []
+                elif hasattr(self.exchange, 'fetch_positions'):
+                    positions = self.exchange.fetch_positions()
+                else:
+                    logger.warning("[ExchangeManager] Метод получения позиций не найден")
+                    return []
+                
                 # Возвращаем только активные позиции
-                active_positions = [p for p in positions if float(p.get('contracts', 0)) != 0]
-                logger.debug(f"[ExchangeManager] Получено {len(active_positions)} активных позиций")
-                return active_positions
+                if positions:
+                    active_positions = [p for p in positions if abs(float(p.get('size', 0))) > 0 or abs(float(p.get('contracts', 0))) > 0]
+                    logger.debug(f"[ExchangeManager] Получено {len(active_positions)} активных позиций")
+                    return active_positions
+                return []
             except Exception as e:
                 logger.error(f"[ExchangeManager] Ошибка получения позиций: {e}")
-                raise
+                return []  # Возвращаем пустой список вместо raise
     
     def get_all_tickers(self) -> Dict[str, Dict[str, Any]]:
         """
