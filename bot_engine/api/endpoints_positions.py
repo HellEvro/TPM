@@ -1,11 +1,11 @@
 """
-API endpoints для работы с позициями
+API endpoints для работы с позициями (State Manager версия)
 """
 
 from flask import request, jsonify
 import logging
 
-logger = logging.getLogger('API_Positions')
+logger = logging.getLogger(__name__)
 
 
 def register_positions_endpoints(app, state):
@@ -14,21 +14,23 @@ def register_positions_endpoints(app, state):
     
     Args:
         app: Flask приложение
-        state: Словарь с зависимостями
+        state: BotSystemState instance
     """
     
     @app.route('/api/bots/account-info', methods=['GET'])
     def get_account_info():
         """Получает информацию о торговом счете"""
         try:
-            if not state['ensure_exchange_func']():
+            # Получаем данные с биржи через ExchangeManager
+            exchange = state.exchange_manager.get_exchange()
+            if not exchange:
                 return jsonify({
                     'success': False,
                     'error': 'Exchange not initialized'
                 }), 500
             
             # Получаем данные с биржи
-            account_info = state['exchange'].get_unified_account_info()
+            account_info = exchange.get_unified_account_info()
             if not account_info.get("success"):
                 account_info = {
                     'success': False,
@@ -36,11 +38,9 @@ def register_positions_endpoints(app, state):
                 }
             
             # Добавляем информацию о ботах
-            with state['bots_data_lock']:
-                bots_list = list(state['bots_data']['bots'].values())
-                account_info["bots_count"] = len(bots_list)
-                account_info["active_bots"] = sum(1 for bot in bots_list 
-                                                if bot.get('status') not in ['idle', 'paused'])
+            bots_list = state.bot_manager.list_bots()
+            account_info["bots_count"] = len(bots_list)
+            account_info["active_bots"] = state.bot_manager.get_active_bots_count()
             
             response = jsonify(account_info)
             response.headers.add('Access-Control-Allow-Origin', '*')
@@ -58,8 +58,10 @@ def register_positions_endpoints(app, state):
         """Обновить список монет с ручными позициями"""
         try:
             manual_positions = []
-            if state['exchange']:
-                exchange_positions = state['exchange'].get_positions()
+            exchange = state.exchange_manager.get_exchange()
+            
+            if exchange:
+                exchange_positions = exchange.get_positions()
                 if isinstance(exchange_positions, tuple):
                     positions_list = exchange_positions[0] if exchange_positions else []
                 else:
@@ -88,20 +90,15 @@ def register_positions_endpoints(app, state):
     def sync_positions_manual():
         """Принудительная синхронизация позиций с биржей"""
         try:
-            result = state['sync_positions_func']()
+            # Синхронизируем через воркер
+            from bot_engine.workers.state_aware_worker import sync_positions_with_exchange
+            result = sync_positions_with_exchange(state)
             
-            if result:
-                return jsonify({
-                    'success': True,
-                    'message': 'Синхронизация позиций выполнена',
-                    'synced': True
-                })
-            else:
-                return jsonify({
-                    'success': True,
-                    'message': 'Синхронизация не потребовалась',
-                    'synced': False
-                })
+            return jsonify({
+                'success': True,
+                'message': 'Синхронизация позиций выполнена',
+                'synced': True
+            })
                 
         except Exception as e:
             logger.error(f"[MANUAL_SYNC] Ошибка синхронизации: {e}")
@@ -114,33 +111,26 @@ def register_positions_endpoints(app, state):
     def get_active_bots_detailed():
         """Получает детальную информацию о активных ботах"""
         try:
-            with state['bots_data_lock']:
-                active_bots = []
-                for symbol, bot_data in state['bots_data']['bots'].items():
-                    if bot_data.get('status') in ['armed_up', 'armed_down', 'in_position_long', 'in_position_short']:
-                        # Получаем текущую цену
-                        current_price = None
-                        with state['rsi_data_lock']:
-                            coin_data = state['coins_rsi_data']['coins'].get(symbol)
-                            if coin_data:
-                                current_price = coin_data.get('price')
-                        
-                        active_bots.append({
-                            'symbol': symbol,
-                            'status': bot_data.get('status'),
-                            'position_size': bot_data.get('position_size', 0),
-                            'pnl': bot_data.get('pnl', 0),
-                            'current_price': current_price,
-                            'entry_price': bot_data.get('entry_price'),
-                            'created_at': bot_data.get('created_at'),
-                            'last_update': bot_data.get('last_update')
-                        })
-                
-                return jsonify({
-                    'success': True,
-                    'bots': active_bots,
-                    'total': len(active_bots)
-                })
+            all_bots = state.bot_manager.list_bots()
+            active_bots = []
+            
+            for bot in all_bots:
+                # Фильтруем только активных
+                if hasattr(bot, 'status') and bot.status not in ['idle', 'paused']:
+                    bot_dict = bot.to_dict()
+                    
+                    # Получаем текущую цену
+                    rsi_data = state.rsi_manager.get_coin(bot.symbol)
+                    if rsi_data:
+                        bot_dict['current_price'] = rsi_data.get('price')
+                    
+                    active_bots.append(bot_dict)
+            
+            return jsonify({
+                'success': True,
+                'bots': active_bots,
+                'total': len(active_bots)
+            })
                 
         except Exception as e:
             logger.error(f"[API] Ошибка получения детальной информации: {e}")
@@ -150,5 +140,4 @@ def register_positions_endpoints(app, state):
             }), 500
     
     logger.info("[API] Positions endpoints registered")
-
 

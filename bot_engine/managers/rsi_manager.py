@@ -228,7 +228,15 @@ class RSIDataManager:
             data: Словарь с данными для восстановления
         """
         with self._lock:
-            self._data = data
+            # НЕ заменяем полностью - обновляем только существующие поля
+            if 'coins' in data:
+                self._data['coins'] = data['coins']
+            if 'last_update' in data:
+                self._data['last_update'] = data['last_update']
+            if 'total_coins' in data:
+                self._data['total_coins'] = data.get('total_coins', len(data.get('coins', {})))
+            # update_in_progress, successful_coins, failed_coins - оставляем дефолтные
+            
             logger.info(f"[RSIDataManager] Восстановлено {len(self._data['coins'])} монет из сохранения")
     
     def clear_all_data(self) -> None:
