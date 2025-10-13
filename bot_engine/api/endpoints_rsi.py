@@ -1,210 +1,215 @@
 """
-API endpoints для RSI данных (новая версия для State Manager).
+API endpoints для RSI данных
 """
 
 from flask import request, jsonify
 import logging
+import os
+import time
 import threading
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('API_RSI')
 
 
 def register_rsi_endpoints(app, state):
     """
-    Регистрирует endpoints для RSI данных.
+    Регистрирует endpoints для RSI данных
     
     Args:
         app: Flask приложение
-        state: BotSystemState instance
+        state: Словарь с зависимостями
     """
     
     @app.route('/api/bots/coins-with-rsi', methods=['GET'])
     def get_coins_with_rsi():
-        """Получить все монеты с RSI данными"""
+        """Получить все монеты с RSI 6H данными"""
         try:
-            # Получаем все монеты через RSIDataManager с таймаутом
-            import threading
-            import queue
-            
-            result_queue = queue.Queue()
-            
-            def get_coins_thread():
+            # Проверяем параметр refresh_symbol
+            refresh_symbol = request.args.get('refresh_symbol')
+            if refresh_symbol:
+                logger.info(f"[API] Запрос на обновление RSI для {refresh_symbol}")
                 try:
-                    coins = state.rsi_manager.get_all_coins()
-                    result_queue.put(('success', coins))
+                    if state['ensure_exchange_func']():
+                        coin_data = state['get_coin_rsi_func'](refresh_symbol, state['exchange'])
+                        if coin_data:
+                            with state['rsi_data_lock']:
+                                state['coins_rsi_data']['coins'][refresh_symbol] = coin_data
+                            logger.info(f"[API] RSI для {refresh_symbol} обновлены")
                 except Exception as e:
-                    result_queue.put(('error', str(e)))
+                    logger.error(f"[API] Ошибка обновления RSI для {refresh_symbol}: {e}")
             
-            thread = threading.Thread(target=get_coins_thread, daemon=True)
-            thread.start()
-            thread.join(timeout=5)  # 5 секунд таймаут
-            
-            if thread.is_alive():
-                logger.error("[API] Таймаут получения RSI данных")
-                return jsonify({
-                    'success': False,
-                    'error': 'Таймаут получения данных RSI'
-                }), 408
-            
-            if result_queue.empty():
-                logger.error("[API] Не удалось получить RSI данные")
-                return jsonify({
-                    'success': False,
-                    'error': 'Не удалось получить RSI данные'
-                }), 500
-            
-            status, result = result_queue.get()
-            if status == 'error':
-                logger.error(f"[API] Ошибка получения RSI данных: {result}")
-                return jsonify({
-                    'success': False,
-                    'error': result
-                }), 500
-            
-            all_coins = result
-            
-            # Статистика обновления
-            try:
-                update_stats = state.rsi_manager.get_update_stats()
-            except Exception as stats_error:
-                logger.warning(f"[API] Не удалось получить статистику обновления: {stats_error}")
-                update_stats = {
-                    'update_in_progress': False,
-                    'last_update': None,
-                    'successful_coins': 0,
-                    'failed_coins': 0
+            with state['rsi_data_lock']:
+                # Проверяем возраст кэша
+                cache_age = None
+                RSI_CACHE_FILE = state.get('RSI_CACHE_FILE', 'data/rsi_cache.json')
+                if os.path.exists(RSI_CACHE_FILE):
+                    try:
+                        cache_stat = os.path.getmtime(RSI_CACHE_FILE)
+                        cache_age = (time.time() - cache_stat) / 60
+                    except:
+                        cache_age = None
+                
+                # Очищаем данные от несериализуемых объектов
+                cleaned_coins = {}
+                for symbol, coin_data in state['coins_rsi_data']['coins'].items():
+                    cleaned_coin = coin_data.copy()
+                    
+                    # Очищаем enhanced_rsi
+                    if 'enhanced_rsi' in cleaned_coin and cleaned_coin['enhanced_rsi']:
+                        enhanced_rsi = cleaned_coin['enhanced_rsi'].copy()
+                        
+                        if 'confirmations' in enhanced_rsi:
+                            confirmations = enhanced_rsi['confirmations'].copy()
+                            for key, value in confirmations.items():
+                                if hasattr(value, 'item'):
+                                    confirmations[key] = value.item()
+                                elif value is None:
+                                    confirmations[key] = None
+                            enhanced_rsi['confirmations'] = confirmations
+                        
+                        if 'adaptive_levels' in enhanced_rsi and enhanced_rsi['adaptive_levels']:
+                            if isinstance(enhanced_rsi['adaptive_levels'], tuple):
+                                enhanced_rsi['adaptive_levels'] = list(enhanced_rsi['adaptive_levels'])
+                        
+                        cleaned_coin['enhanced_rsi'] = enhanced_rsi
+                    
+                    # Добавляем эффективный сигнал
+                    effective_signal = state['get_effective_signal_func'](cleaned_coin)
+                    cleaned_coin['effective_signal'] = effective_signal
+                    
+                    cleaned_coins[symbol] = cleaned_coin
+                
+                # Получаем ручные позиции
+                manual_positions = []
+                try:
+                    if state['exchange']:
+                        exchange_positions = state['exchange'].get_positions()
+                        if isinstance(exchange_positions, tuple):
+                            positions_list = exchange_positions[0] if exchange_positions else []
+                        else:
+                            positions_list = exchange_positions if exchange_positions else []
+                        
+                        for pos in positions_list:
+                            if abs(float(pos.get('size', 0))) > 0:
+                                symbol = pos.get('symbol', '')
+                                clean_symbol = symbol.replace('USDT', '') if symbol else ''
+                                if clean_symbol and clean_symbol not in manual_positions:
+                                    manual_positions.append(clean_symbol)
+                except Exception as e:
+                    logger.error(f"[ERROR] Ошибка получения ручных позиций: {str(e)}")
+                
+                result = {
+                    'success': True,
+                    'coins': cleaned_coins,
+                    'total': len(cleaned_coins),
+                    'last_update': state['coins_rsi_data']['last_update'],
+                    'update_in_progress': state['coins_rsi_data']['update_in_progress'],
+                    'manual_positions': manual_positions,
+                    'cache_info': {
+                        'cache_exists': os.path.exists(RSI_CACHE_FILE),
+                        'cache_age_minutes': round(cache_age, 1) if cache_age else None,
+                        'data_source': 'cache' if cache_age and cache_age < 360 else 'live'
+                    },
+                    'stats': {
+                        'total_coins': state['coins_rsi_data']['total_coins'],
+                        'successful_coins': state['coins_rsi_data']['successful_coins'],
+                        'failed_coins': state['coins_rsi_data']['failed_coins']
+                    }
                 }
             
-            # Распределение сигналов
-            try:
-                signal_dist = state.rsi_manager.get_signal_distribution()
-            except Exception as dist_error:
-                logger.warning(f"[API] Не удалось получить распределение сигналов: {dist_error}")
-                signal_dist = {'long': 0, 'short': 0, 'neutral': 0}
-            
-            return jsonify({
-                'success': True,
-                'coins': all_coins,
-                'total_coins': len(all_coins),
-                'update_in_progress': update_stats.get('update_in_progress', False),
-                'last_update': update_stats.get('last_update'),
-                'successful_coins': update_stats.get('successful_coins', 0),
-                'failed_coins': update_stats.get('failed_coins', 0),
-                'signals': signal_dist
-            })
+            return jsonify(result)
             
         except Exception as e:
-            logger.error(f"[API] Ошибка получения RSI данных: {e}")
-            return jsonify({
-                'success': False,
-                'error': str(e),
-                'coins': {}
-            }), 500
-    
-    @app.route('/api/bots/load-rsi', methods=['POST'])
-    def load_rsi():
-        """Запустить загрузку RSI данных"""
-        try:
-            # Проверяем не идет ли уже обновление
-            if state.rsi_manager.is_update_in_progress():
-                return jsonify({
-                    'success': False,
-                    'error': 'Обновление уже идет'
-                }), 400
-            
-            # Запускаем обновление через RSIDataManager
-            def update_rsi_data():
-                try:
-                    logger.info("[RSI_UPDATE] Запуск загрузки RSI...")
-                    
-                    # Получаем биржу
-                    exchange = state.exchange_manager.get_exchange()
-                    if not exchange:
-                        logger.error("[RSI_UPDATE] Биржа не инициализирована")
-                        return
-                    
-                    # Получаем список монет
-                    pairs = exchange.get_all_pairs()
-                    logger.info(f"[RSI_UPDATE] Загрузка RSI для {len(pairs)} монет...")
-                    
-                    # Загружаем RSI для каждой монеты
-                    state.rsi_manager.start_update(len(pairs))
-                    
-                    for i, symbol in enumerate(pairs):
-                        try:
-                            # Получаем свечи
-                            candles = exchange.get_klines(symbol + 'USDT', '6h', limit=100)
-                            if candles and len(candles) >= 14:
-                                # Вычисляем RSI
-                                closes = [float(c['close']) for c in candles]
-                                
-                                # Простой RSI расчет
-                                from bot_engine.utils.rsi_utils import calculate_rsi
-                                rsi = calculate_rsi(closes, period=14)
-                                
-                                if rsi is not None:
-                                    # Сохраняем данные
-                                    coin_data = {
-                                        'rsi': rsi,
-                                        'price': closes[-1],
-                                        'timestamp': candles[-1]['timestamp'],
-                                        'signal': 'long' if rsi <= 29 else ('short' if rsi >= 71 else 'neutral')
-                                    }
-                                    state.rsi_manager.update_coin(symbol, coin_data)
-                        except Exception as e:
-                            logger.warning(f"[RSI_UPDATE] Ошибка загрузки {symbol}: {e}")
-                    
-                    state.rsi_manager.finish_update(len(pairs), 0)
-                    logger.info("[RSI_UPDATE] ✅ Загрузка RSI завершена")
-                    
-                except Exception as e:
-                    logger.error(f"[RSI_UPDATE] Ошибка: {e}")
-                    state.rsi_manager.finish_update(0, 0)
-            
-            import threading
-            thread = threading.Thread(target=update_rsi_data, daemon=True)
-            thread.start()
-            
-            return jsonify({
-                'success': True,
-                'message': 'Загрузка RSI запущена'
-            })
-            
-        except Exception as e:
+            logger.error(f"[ERROR] Ошибка получения монет с RSI: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/bots/force-rsi-update', methods=['POST'])
     def force_rsi_update():
-        """Принудительное обновление RSI"""
+        """Принудительно обновить RSI данные"""
         try:
-            # Запускаем обновление
-            if not state.rsi_manager.start_update():
-                return jsonify({
-                    'success': False,
-                    'error': 'Обновление уже идет'
-                }), 400
+            logger.info("[API] Принудительное обновление RSI данных...")
             
-            def update_rsi_data():
+            def update_rsi():
                 try:
-                    # Используем правильный метод из RSIDataManager
-                    exchange = state.exchange_manager.get_exchange()
-                    if exchange:
-                        state.rsi_manager.load_all_coins_async(exchange)
-                    else:
-                        logger.error("[RSI_UPDATE] Exchange не инициализирован")
-                        state.rsi_manager.finish_update(0, 1)
+                    state['load_all_coins_rsi_func']()
+                    logger.info("[API] RSI данные обновлены")
                 except Exception as e:
-                    logger.error(f"[RSI_UPDATE] Ошибка: {e}")
-                    state.rsi_manager.finish_update(0, 1)
+                    logger.error(f"[API] Ошибка обновления RSI: {e}")
             
-            thread = threading.Thread(target=update_rsi_data, daemon=True)
+            thread = threading.Thread(target=update_rsi, daemon=True)
             thread.start()
             
             return jsonify({
                 'success': True,
-                'message': 'Принудительное обновление RSI запущено'
+                'message': 'Обновление RSI данных запущено'
             })
             
         except Exception as e:
+            logger.error(f"[ERROR] Ошибка принудительного обновления RSI: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
+    
+    @app.route('/api/bots/refresh-rsi/<symbol>', methods=['POST'])
+    def refresh_rsi_for_coin(symbol):
+        """Обновляет RSI данные для конкретной монеты"""
+        try:
+            logger.info(f"[API] Обновление RSI для {symbol}...")
+            
+            if not state['ensure_exchange_func']():
+                return jsonify({'success': False, 'error': 'Биржа не инициализирована'}), 500
+            
+            coin_data = state['get_coin_rsi_func'](symbol, state['exchange'])
+            
+            if coin_data:
+                with state['rsi_data_lock']:
+                    state['coins_rsi_data']['coins'][symbol] = coin_data
+                
+                logger.info(f"[API] RSI для {symbol} обновлены")
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'RSI для {symbol} обновлены',
+                    'coin_data': coin_data
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'Не удалось получить RSI для {symbol}'
+                }), 500
+                
+        except Exception as e:
+            logger.error(f"[API] Ошибка обновления RSI для {symbol}: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    @app.route('/api/bots/clear-rsi-cache', methods=['POST'])
+    def clear_rsi_cache_endpoint():
+        """Очищает RSI кэш"""
+        try:
+            logger.info("[API] Очистка RSI кэша...")
+            
+            result = state['clear_rsi_cache_func']()
+            
+            if result:
+                # Очищаем также данные в памяти
+                with state['rsi_data_lock']:
+                    state['coins_rsi_data']['coins'] = {}
+                    state['coins_rsi_data']['last_update'] = None
+                
+                logger.info("[API] RSI кэш очищен")
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'RSI кэш очищен'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Кэш не найден или уже очищен'
+                })
+                
+        except Exception as e:
+            logger.error(f"[ERROR] Ошибка очистки RSI кэша: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    logger.info("[API] RSI endpoints registered")
+
 

@@ -27,13 +27,15 @@ def register_all_endpoints(app, state):
     
     Args:
         app: Flask приложение
-        state: BotSystemState instance
+        state: Словарь с зависимостями (глобальные переменные и функции)
     """
-    register_health_endpoints(app, state)
+    register_health_endpoints(app, state.get('get_state_func'))
     register_bots_endpoints(app, state)
     register_config_endpoints(app, state)
     register_rsi_endpoints(app, state)
     register_positions_endpoints(app, state)
     register_mature_endpoints(app, state)
     register_system_endpoints(app, state)
+    
+    logger.info("[API] All endpoints registered successfully")
 

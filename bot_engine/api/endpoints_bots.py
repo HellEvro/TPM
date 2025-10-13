@@ -1,45 +1,53 @@
 """
-API endpoints для управления ботами (новая версия для State Manager).
+API endpoints для управления ботами
 """
 
 from flask import request, jsonify
 import logging
-from datetime import datetime
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('API_Bots')
 
 
 def register_bots_endpoints(app, state):
     """
-    Регистрирует endpoints для управления ботами.
+    Регистрирует endpoints для управления ботами
     
     Args:
         app: Flask приложение
-        state: BotSystemState instance
+        state: Словарь с зависимостями:
+            - bots_data: данные ботов
+            - bots_data_lock: блокировка
+            - exchange: объект биржи
+            - ensure_exchange_func: функция проверки биржи
+            - create_bot_func: функция создания бота
+            - save_bots_func: функция сохранения
+            - update_cache_func: функция обновления кэша
+            - log_bot_stop_func: функция логирования
+            - check_maturity_func: функция проверки зрелости
+            - BOT_STATUS: константы статусов
     """
     
     @app.route('/api/bots/list', methods=['GET'])
     def get_bots_list():
         """Получить список всех ботов"""
         try:
-            # Получаем ботов через BotManager
-            bots = state.bot_manager.list_bots()
-            bots_list = [bot.to_dict() for bot in bots]
+            with state['bots_data_lock']:
+                bots_list = list(state['bots_data']['bots'].values())
+                auto_bot_enabled = state['bots_data'].get('auto_bot_config', {}).get('enabled', False)
+                last_update = state['bots_data'].get('last_update', 'Неизвестно')
             
-            # Получаем конфиг через ConfigManager
-            auto_config = state.config_manager.get_auto_bot_config()
-            auto_bot_enabled = auto_config.get('enabled', False)
-            
-            # Статистика через BotManager
-            stats = state.bot_manager.get_global_stats()
+            active_bots = sum(1 for bot in bots_list if bot.get('status') not in ['idle', 'paused'])
             
             return jsonify({
                 'success': True,
                 'bots': bots_list,
                 'count': len(bots_list),
                 'auto_bot_enabled': auto_bot_enabled,
-                'last_update': datetime.now().isoformat(),
-                'stats': stats
+                'last_update': last_update,
+                'stats': {
+                    'active_bots': active_bots,
+                    'total_bots': len(bots_list)
+                }
             })
             
         except Exception as e:
@@ -55,11 +63,10 @@ def register_bots_endpoints(app, state):
     def create_bot_endpoint():
         """Создать нового бота"""
         try:
-            # Проверяем инициализацию биржи
-            if not state.exchange_manager.is_initialized():
+            if not state['ensure_exchange_func']():
                 return jsonify({
-                    'success': False,
-                    'error': 'Биржа не инициализирована'
+                    'success': False, 
+                    'error': 'Биржа не инициализирована. Попробуйте позже.'
                 }), 503
             
             data = request.get_json()
@@ -69,45 +76,40 @@ def register_bots_endpoints(app, state):
             symbol = data['symbol']
             config = data.get('config', {})
             
-            logger.info(f"[BOT_CREATE] Создание бота для {symbol}")
+            logger.info(f"[BOT_CREATE] Запрос на создание бота для {symbol}")
             
-            # Проверяем зрелость если включена
+            # Проверяем зрелость если включена проверка
             enable_maturity_check = config.get('enable_maturity_check', True)
             if enable_maturity_check:
-                from bot_engine.maturity_checker import check_coin_maturity_with_storage
-                
-                # Получаем свечи
-                klines = state.exchange_manager.get_klines(symbol, '6h', 120)
-                if klines and len(klines) >= 15:
-                    auto_config = state.config_manager.get_auto_bot_config()
-                    maturity_check = check_coin_maturity_with_storage(
-                        symbol, 
-                        klines,
-                        auto_config,
-                        lambda s: state.rsi_manager.get_rsi_history(s)
-                    )
-                    
-                    if not maturity_check['is_mature']:
-                        return jsonify({
-                            'success': False,
-                            'error': f'Монета не прошла проверку зрелости: {maturity_check["reason"]}'
-                        }), 400
+                chart_response = state['exchange'].get_chart_data(symbol, '6h', '30d')
+                if chart_response and chart_response.get('success'):
+                    candles = chart_response['data']['candles']
+                    if candles and len(candles) >= 15:
+                        with state['bots_data_lock']:
+                            maturity_config = state['bots_data'].get('auto_bot_config', {})
+                        
+                        maturity_check = state['check_maturity_func'](symbol, candles, maturity_config)
+                        if not maturity_check['is_mature']:
+                            logger.warning(f"[BOT_CREATE] {symbol}: Монета не прошла проверку зрелости")
+                            return jsonify({
+                                'success': False, 
+                                'error': f'Монета {symbol} не прошла проверку зрелости: {maturity_check["reason"]}',
+                                'maturity_details': maturity_check['details']
+                            }), 400
             
-            # Создаем бота через BotManager
-            bot = state.bot_manager.create_bot(symbol, config)
+            # Создаем бота
+            bot_config = state['create_bot_func'](symbol, config, exchange_obj=state['exchange'])
             
-            logger.info(f"[BOT_CREATE] Бот создан для {symbol}")
+            logger.info(f"[BOT_CREATE] Бот для {symbol} создан")
             
             return jsonify({
                 'success': True,
-                'bot': bot.to_dict(),
-                'message': f'Бот для {symbol} создан успешно'
+                'message': f'Бот для {symbol} создан успешно',
+                'bot': bot_config
             })
             
-        except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
         except Exception as e:
-            logger.error(f"[API] Ошибка создания бота: {e}")
+            logger.error(f"[ERROR] Ошибка создания бота: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/bots/start', methods=['POST'])
@@ -119,27 +121,25 @@ def register_bots_endpoints(app, state):
                 return jsonify({'success': False, 'error': 'Symbol required'}), 400
             
             symbol = data['symbol']
-            bot = state.bot_manager.get_bot(symbol)
             
-            if not bot:
-                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
-            
-            # Запускаем бота
-            if hasattr(bot, 'start'):
-                bot.start()
-            else:
-                bot.update_status('running')
-            
-            logger.info(f"[BOT_START] Бот {symbol} запущен")
+            with state['bots_data_lock']:
+                if symbol not in state['bots_data']['bots']:
+                    return jsonify({'success': False, 'error': 'Bot not found'}), 404
+                
+                bot_data = state['bots_data']['bots'][symbol]
+                BOT_STATUS = state['BOT_STATUS']
+                
+                if bot_data['status'] in [BOT_STATUS['PAUSED'], BOT_STATUS['IDLE']]:
+                    bot_data['status'] = BOT_STATUS['RUNNING']
+                    logger.info(f"[BOT] {symbol}: Бот запущен")
             
             return jsonify({
                 'success': True,
-                'bot': bot.to_dict(),
-                'message': f'Бот {symbol} запущен'
+                'message': f'Бот для {symbol} запущен'
             })
-            
+                
         except Exception as e:
-            logger.error(f"[API] Ошибка запуска бота: {e}")
+            logger.error(f"[ERROR] Ошибка запуска бота: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/bots/stop', methods=['POST'])
@@ -151,27 +151,35 @@ def register_bots_endpoints(app, state):
                 return jsonify({'success': False, 'error': 'Symbol required'}), 400
             
             symbol = data['symbol']
-            bot = state.bot_manager.get_bot(symbol)
+            reason = data.get('reason', 'Остановлен пользователем')
             
-            if not bot:
-                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
+            with state['bots_data_lock']:
+                if symbol not in state['bots_data']['bots']:
+                    return jsonify({'success': False, 'error': 'Bot not found'}), 404
+                
+                bot_data = state['bots_data']['bots'][symbol]
+                BOT_STATUS = state['BOT_STATUS']
+                
+                bot_data['status'] = BOT_STATUS['PAUSED']
+                bot_data['position_side'] = None
+                bot_data['unrealized_pnl'] = 0.0
+                
+                logger.info(f"[BOT] {symbol}: Бот остановлен")
             
-            # Останавливаем бота
-            if hasattr(bot, 'stop'):
-                bot.stop()
-            else:
-                bot.update_status('idle')
+            # Логируем остановку
+            state['log_bot_stop_func'](symbol, reason)
             
-            logger.info(f"[BOT_STOP] Бот {symbol} остановлен")
+            # Сохраняем состояние
+            state['save_bots_func']()
+            state['update_cache_func']()
             
             return jsonify({
-                'success': True,
-                'bot': bot.to_dict(),
-                'message': f'Бот {symbol} остановлен'
+                'success': True, 
+                'message': f'Бот для {symbol} остановлен'
             })
             
         except Exception as e:
-            logger.error(f"[API] Ошибка остановки бота: {e}")
+            logger.error(f"[ERROR] Ошибка остановки бота: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/bots/pause', methods=['POST'])
@@ -183,24 +191,25 @@ def register_bots_endpoints(app, state):
                 return jsonify({'success': False, 'error': 'Symbol required'}), 400
             
             symbol = data['symbol']
-            bot = state.bot_manager.get_bot(symbol)
             
-            if not bot:
-                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
-            
-            # Приостанавливаем
-            if hasattr(bot, 'pause'):
-                bot.pause()
-            else:
-                bot.update_status('paused')
+            with state['bots_data_lock']:
+                if symbol not in state['bots_data']['bots']:
+                    return jsonify({'success': False, 'error': 'Bot not found'}), 404
+                
+                bot_data = state['bots_data']['bots'][symbol]
+                BOT_STATUS = state['BOT_STATUS']
+                old_status = bot_data['status']
+                
+                bot_data['status'] = BOT_STATUS['PAUSED']
+                logger.info(f"[BOT] {symbol}: Бот приостановлен (был: {old_status})")
             
             return jsonify({
                 'success': True,
-                'bot': bot.to_dict(),
-                'message': f'Бот {symbol} приостановлен'
+                'message': f'Бот для {symbol} приостановлен'
             })
             
         except Exception as e:
+            logger.error(f"[ERROR] Ошибка приостановки бота: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/bots/delete', methods=['POST'])
@@ -212,144 +221,127 @@ def register_bots_endpoints(app, state):
                 return jsonify({'success': False, 'error': 'Symbol required'}), 400
             
             symbol = data['symbol']
+            reason = data.get('reason', 'Удален пользователем')
             
-            # Удаляем через BotManager
-            deleted = state.bot_manager.delete_bot(symbol)
+            with state['bots_data_lock']:
+                if symbol not in state['bots_data']['bots']:
+                    return jsonify({'success': False, 'error': 'Bot not found'}), 404
+                
+                bot_data = state['bots_data']['bots'][symbol]
+                del state['bots_data']['bots'][symbol]
+                logger.info(f"[BOT] {symbol}: Бот удален")
+                
+                # Обновляем статистику
+                state['bots_data']['global_stats']['active_bots'] = len([
+                    bot for bot in state['bots_data']['bots'].values() 
+                    if bot.get('status') in ['running', 'idle']
+                ])
             
-            if not deleted:
-                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
+            # Логируем удаление
+            state['log_bot_stop_func'](symbol, f"Удален: {reason}")
             
-            logger.info(f"[BOT_DELETE] Бот {symbol} удален")
+            # Сохраняем состояние
+            state['save_bots_func']()
+            state['update_cache_func']()
             
             return jsonify({
                 'success': True,
-                'message': f'Бот {symbol} удален'
+                'message': f'Бот для {symbol} удален'
             })
             
         except Exception as e:
+            logger.error(f"[ERROR] Ошибка удаления бота: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/bots/close-position', methods=['POST'])
     def close_position_endpoint():
-        """Закрыть позицию бота"""
+        """Принудительно закрыть позицию бота"""
         try:
             data = request.get_json()
             if not data or not data.get('symbol'):
                 return jsonify({'success': False, 'error': 'Symbol required'}), 400
             
             symbol = data['symbol']
-            bot = state.bot_manager.get_bot(symbol)
             
-            if not bot:
-                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
+            if not state['exchange']:
+                return jsonify({'success': False, 'error': 'Exchange not initialized'}), 500
             
-            # Закрываем позицию
-            if hasattr(bot, 'close_position'):
-                result = bot.close_position()
+            # Получаем позиции с биржи
+            positions_response = state['exchange'].get_positions()
+            if not positions_response or not positions_response.get('success'):
+                return jsonify({'success': False, 'error': 'Failed to get positions'}), 500
+            
+            positions = positions_response.get('data', [])
+            
+            # Ищем позиции для символа
+            symbol_positions = [pos for pos in positions 
+                              if pos['symbol'] == f"{symbol}USDT" and float(pos.get('size', 0)) > 0]
+            
+            if not symbol_positions:
+                return jsonify({
+                    'success': False, 
+                    'message': f'Позиции для {symbol} не найдены'
+                }), 404
+            
+            # Закрываем позиции
+            closed_positions = []
+            errors = []
+            
+            for pos in symbol_positions:
+                try:
+                    position_side = 'LONG' if pos['side'] == 'Buy' else 'SHORT'
+                    position_size = float(pos['size'])
+                    
+                    close_result = state['exchange'].close_position(
+                        symbol=symbol,
+                        size=position_size,
+                        side=position_side,
+                        order_type="Market"
+                    )
+                    
+                    if close_result and close_result.get('success'):
+                        closed_positions.append({
+                            'side': position_side,
+                            'size': position_size
+                        })
+                        logger.info(f"[API] Позиция {position_side} для {symbol} закрыта")
+                    else:
+                        error_msg = close_result.get('message', 'Unknown error') if close_result else 'No response'
+                        errors.append(f"Позиция {position_side}: {error_msg}")
+                        
+                except Exception as e:
+                    errors.append(f"Позиция {pos['side']}: {str(e)}")
+            
+            # Обновляем данные бота
+            with state['bots_data_lock']:
+                if symbol in state['bots_data']['bots']:
+                    bot_data = state['bots_data']['bots'][symbol]
+                    if closed_positions:
+                        bot_data['position_side'] = None
+                        bot_data['unrealized_pnl'] = 0.0
+                        bot_data['status'] = state['BOT_STATUS']['IDLE']
+            
+            state['save_bots_func']()
+            state['update_cache_func']()
+            
+            if closed_positions:
+                return jsonify({
+                    'success': True,
+                    'message': f'Закрыто {len(closed_positions)} позиций для {symbol}',
+                    'closed_positions': closed_positions,
+                    'errors': errors if errors else None
+                })
             else:
-                result = state.exchange_manager.close_position(symbol)
-            
-            return jsonify({
-                'success': True,
-                'message': f'Позиция {symbol} закрыта'
-            })
-            
+                return jsonify({
+                    'success': False,
+                    'message': f'Не удалось закрыть позиции для {symbol}',
+                    'errors': errors
+                }), 500
+                
         except Exception as e:
+            logger.error(f"[ERROR] Ошибка закрытия позиций: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
-    @app.route('/api/bots/resume', methods=['POST'])
-    def resume_bot():
-        """Возобновить работу приостановленного бота"""
-        try:
-            data = request.get_json()
-            symbol = data['symbol']
-            bot = state.bot_manager.get_bot(symbol)
-            
-            if not bot:
-                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
-            
-            # Возобновляем бота
-            if hasattr(bot, 'resume'):
-                bot.resume()
-            
-            return jsonify({
-                'success': True,
-                'message': f'Бот {symbol} возобновлен'
-            })
-            
-        except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/bots/individual-settings/<symbol>', methods=['GET'])
-    def get_individual_settings(symbol):
-        """Получить индивидуальные настройки бота"""
-        try:
-            bot = state.bot_manager.get_bot(symbol)
-            
-            if not bot:
-                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
-            
-            # Возвращаем настройки бота
-            settings = {
-                'symbol': symbol,
-                'stop_loss': getattr(bot, 'stop_loss_percent', 15.0),
-                'trailing_stop': getattr(bot, 'trailing_stop_percent', 300.0)
-            }
-            
-            return jsonify({
-                'success': True,
-                'settings': settings
-            })
-            
-        except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/bots/individual-settings/<symbol>', methods=['POST'])
-    def update_individual_settings(symbol):
-        """Обновить индивидуальные настройки бота"""
-        try:
-            data = request.get_json()
-            bot = state.bot_manager.get_bot(symbol)
-            
-            if not bot:
-                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
-            
-            # Обновляем настройки
-            if 'stop_loss' in data and hasattr(bot, 'stop_loss_percent'):
-                bot.stop_loss_percent = float(data['stop_loss'])
-            
-            if 'trailing_stop' in data and hasattr(bot, 'trailing_stop_percent'):
-                bot.trailing_stop_percent = float(data['trailing_stop'])
-            
-            return jsonify({
-                'success': True,
-                'message': f'Настройки бота {symbol} обновлены'
-            })
-            
-        except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/bots/individual-settings/<symbol>', methods=['DELETE'])
-    def delete_individual_settings(symbol):
-        """Удалить индивидуальные настройки (вернуть к дефолтным)"""
-        try:
-            bot = state.bot_manager.get_bot(symbol)
-            
-            if not bot:
-                return jsonify({'success': False, 'error': f'Бот {symbol} не найден'}), 404
-            
-            # Возвращаем к дефолтным настройкам
-            auto_config = state.config_manager.get_auto_bot_config()
-            if hasattr(bot, 'stop_loss_percent'):
-                bot.stop_loss_percent = auto_config.get('stop_loss_percent', 15.0)
-            if hasattr(bot, 'trailing_stop_percent'):
-                bot.trailing_stop_percent = auto_config.get('trailing_stop_percent', 300.0)
-            
-            return jsonify({
-                'success': True,
-                'message': f'Настройки бота {symbol} сброшены к дефолтным'
-            })
-            
-        except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+    logger.info("[API] Bots endpoints registered")
+
 
