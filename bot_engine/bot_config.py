@@ -130,7 +130,7 @@ class SystemConfig:
     
     # Настройки API
     BOTS_SERVICE_PORT = 5001
-    BOTS_SERVICE_HOST = '127.0.0.1'
+    BOTS_SERVICE_HOST = '0.0.0.0'  # Доступ из сети
     MAIN_APP_PORT = 5000
     MAIN_APP_HOST = '127.0.0.1'
     REQUEST_TIMEOUT = 30
