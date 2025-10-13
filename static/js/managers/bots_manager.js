@@ -26,9 +26,9 @@ class BotsManager {
         // Debounce для поиска
         this.searchDebounceTimer = null;
         
-        // URL сервиса ботов
-        this.BOTS_SERVICE_URL = 'http://127.0.0.1:5001';
-        this.apiUrl = 'http://127.0.0.1:5001/api/bots'; // Для совместимости
+        // URL сервиса ботов - используем тот же хост что и у приложения
+        this.BOTS_SERVICE_URL = `${window.location.protocol}//${window.location.hostname}:5001`;
+        this.apiUrl = `${window.location.protocol}//${window.location.hostname}:5001/api/bots`; // Для совместимости
         
         // Уровень логирования: 'error' - только ошибки, 'info' - важные события, 'debug' - все
         this.logLevel = 'info'; // По умолчанию только важные события
