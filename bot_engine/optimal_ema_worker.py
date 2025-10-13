@@ -29,7 +29,7 @@ class OptimalEMAWorker:
         self.worker_thread = None
         self.last_update = None
         self.process = None
-        self.optimal_ema_script = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'optimal_ema.py')
+        self.optimal_ema_script = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'scripts', 'sync', 'optimal_ema.py')
         
         # Проверяем существование скрипта
         if not os.path.exists(self.optimal_ema_script):

@@ -58,7 +58,8 @@ if platform.system() == "Windows":
         pass
 
 # Добавляем путь к модулям проекта
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Добавляем путь к корню проекта для импорта модулей
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from exchanges.exchange_factory import ExchangeFactory
 from app.config import EXCHANGES
