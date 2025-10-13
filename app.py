@@ -228,7 +228,7 @@ def open_browser():
     """Открывает браузер только при первом запуске"""
     global FIRST_RUN
     if FIRST_RUN and not os.environ.get('WERKZEUG_RUN_MAIN'):
-        webbrowser.open(f'http://{APP_HOST}:{APP_PORT}')
+        webbrowser.open(f'http://localhost:{APP_PORT}')
         FIRST_RUN = False
 
 @app.route('/')
