@@ -181,7 +181,7 @@ class BybitExchange(BaseExchange):
                             raise
                     
                     if not all_positions:
-                        print("No active positions")
+                        # Нет активных позиций - это нормально, не логируем
                         return [], []
 
                     if self.last_reset_day is None or datetime.now().date() != self.last_reset_day:
@@ -239,7 +239,8 @@ class BybitExchange(BaseExchange):
                     raise
                     
         except Exception as e:
-            print("Error getting positions: {}".format(str(e)))
+            # Логируем ошибку через logger, не через print
+            # print("Error getting positions: {}".format(str(e)))
             return [], []
 
     def get_closed_pnl(self, sort_by='time'):
@@ -441,7 +442,8 @@ class BybitExchange(BaseExchange):
                         'message': f'Нет активной {side} позиции для {symbol}'
                     }
                 
-                print(f"[BYBIT] Found active position: {active_position}")
+                # Позиция найдена - не логируем для уменьшения спама
+                # print(f"[BYBIT] Found active position: {active_position}")
                 
             except Exception as e:
                 print(f"[BYBIT] Ошибка при проверке позиций: {str(e)}")

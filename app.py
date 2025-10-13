@@ -277,6 +277,17 @@ def get_positions():
     all_available_pairs = []  # Больше не используется
     
     if not positions_data['high_profitable'] and not positions_data['profitable'] and not positions_data['losing']:
+        # Получаем данные аккаунта даже если нет позиций
+        try:
+            wallet_data = current_exchange.get_wallet_balance()
+        except Exception as e:
+            print(f"[API] Error getting wallet data: {str(e)}")
+            wallet_data = {
+                'total_balance': 0,
+                'available_balance': 0,
+                'realized_pnl': 0
+            }
+        
         return jsonify({
             'high_profitable': [],
             'profitable': [],
@@ -295,7 +306,12 @@ def get_positions():
             'rapid_growth': [],
             'last_update': time.strftime('%Y-%m-%d %H:%M:%S'),
             'growth_multiplier': GROWTH_MULTIPLIER,
-            'all_pairs': []
+            'all_pairs': [],
+            'wallet_data': {
+                'total_balance': wallet_data['total_balance'],
+                'available_balance': wallet_data['available_balance'],
+                'realized_pnl': wallet_data['realized_pnl']
+            }
         })
 
     # Получаем все позиции
@@ -383,6 +399,23 @@ def get_positions():
 def api_positions():
     """API endpoint for positions - redirects to get_positions"""
     return get_positions()
+
+@app.route('/api/balance')
+def get_balance():
+    """Получение баланса"""
+    try:
+        if not current_exchange:
+            return jsonify({'error': 'Exchange not initialized'}), 500
+        
+        wallet_data = current_exchange.get_wallet_balance()
+        return jsonify({
+            'success': True,
+            'balance': wallet_data['total_balance'],
+            'available_balance': wallet_data['available_balance'],
+            'realized_pnl': wallet_data['realized_pnl']
+        })
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
 
 @app.route('/api/closed_pnl')
 def get_closed_pnl():

@@ -10,8 +10,8 @@ import sys
 import json
 import logging
 
-# Добавляем путь к модулям проекта
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Добавляем путь к корню проекта для импорта модулей
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

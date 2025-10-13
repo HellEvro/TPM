@@ -3558,7 +3558,7 @@ def get_exchange_positions():
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     continue
-                return []
+                return None
 
             # Получаем СЫРЫЕ данные напрямую от API Bybit
             response = exchange.client.get_positions(
@@ -3580,7 +3580,7 @@ def get_exchange_positions():
                     continue
                 else:
                     logger.error(f"[EXCHANGE_POSITIONS] ❌ Не удалось получить позиции после {max_retries} попыток")
-                    return []
+                    return None
             
             raw_positions = response['result']['list']
             # ✅ Не логируем частые запросы позиций (только при изменениях)
@@ -3676,11 +3676,11 @@ def get_exchange_positions():
                 continue
             else:
                 logger.error(f"[EXCHANGE_POSITIONS] ❌ Не удалось получить позиции после {max_retries} попыток")
-                return []
+                return None
     
     # Если мы дошли сюда, значит все попытки исчерпаны
     logger.error(f"[EXCHANGE_POSITIONS] ❌ Все попытки исчерпаны")
-    return []
+    return None
 
 def compare_bot_and_exchange_positions():
     """Сравнивает позиции ботов в системе с реальными позициями на бирже"""
@@ -3781,7 +3781,7 @@ def sync_positions_with_exchange():
         exchange_positions = get_exchange_positions()
         
         # Если не удалось получить позиции с биржи, НЕ сбрасываем ботов
-        if not exchange_positions:
+        if exchange_positions is None:
             logger.warning("[POSITION_SYNC] ⚠️ Не удалось получить позиции с биржи - пропускаем синхронизацию")
             return False
         
@@ -3897,7 +3897,7 @@ def cleanup_inactive_bots():
         exchange_positions = get_exchange_positions()
         
         # КРИТИЧЕСКИ ВАЖНО: Если не удалось получить позиции с биржи, НЕ УДАЛЯЕМ ботов!
-        if not exchange_positions:
+        if exchange_positions is None:
             logger.warning(f"[INACTIVE_CLEANUP] ⚠️ Не удалось получить позиции с биржи - пропускаем очистку для безопасности")
             return False
         
@@ -7066,7 +7066,7 @@ def rescan_optimal_ema(symbol):
         # Пока просто возвращаем сообщение
         return jsonify({
             'success': True,
-            'message': f'Запущено пересканирование оптимальных EMA для {symbol}. Используйте скрипт optimal_ema.py для выполнения.'
+            'message': f'Запущено пересканирование оптимальных EMA для {symbol}. Используйте скрипт scripts/sync/optimal_ema.py для выполнения.'
         })
     except Exception as e:
         logger.error(f"[API] Ошибка пересканирования EMA для {symbol}: {e}")
