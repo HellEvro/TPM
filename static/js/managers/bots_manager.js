@@ -69,13 +69,6 @@ class BotsManager {
             // Проверяем статус сервиса ботов
             await this.checkBotsService();
             
-            // ✅ КРИТИЧЕСКИ ВАЖНО: Загружаем данные монет сразу после проверки сервиса
-            if (this.serviceOnline) {
-                console.log('[BotsManager] 📊 Загрузка данных монет при инициализации...');
-                await this.loadCoinsRsiData();
-                console.log('[BotsManager] ✅ Данные монет загружены');
-            }
-            
             // Синхронизируем позиции при инициализации
             if (this.serviceOnline) {
                 console.log('[BotsManager] 🔄 Синхронизация позиций при инициализации...');
@@ -563,7 +556,7 @@ class BotsManager {
                 if (this.serviceOnline) {
                     console.log('[BotsManager] ✅ Сервис ботов онлайн');
                     this.updateServiceStatus('online', 'Сервис ботов онлайн');
-                    // ✅ Загрузка данных монет перенесена в init() для лучшего контроля
+                    await this.loadCoinsRsiData();
                 } else {
                     console.warn('[BotsManager] ⚠️ Сервис ботов недоступен');
                     this.updateServiceStatus('offline', 'Сервис ботов недоступен');
@@ -617,18 +610,6 @@ class BotsManager {
         }
     }
 
-    /**
-     * Преобразует сигнал в тренд для совместимости
-     */
-    getTrendFromSignal(signal) {
-        switch (signal) {
-            case 'long': return 'UP';
-            case 'short': return 'DOWN';
-            case 'neutral': 
-            default: return 'NEUTRAL';
-        }
-    }
-
     async loadCoinsRsiData() {
         if (!this.serviceOnline) {
             console.warn('[BotsManager] ⚠️ Сервис не онлайн, пропускаем загрузку');
@@ -651,17 +632,7 @@ class BotsManager {
                     // Преобразуем словарь в массив для совместимости с UI
                     this.logDebug('[BotsManager] 🔍 Данные от API:', data);
                     this.logDebug('[BotsManager] 🔍 Ключи coins:', Object.keys(data.coins));
-                    
-                    // Преобразуем объект в массив с символами и маппим поля
-                    this.coinsRsiData = Object.entries(data.coins).map(([symbol, coinData]) => ({
-                        symbol: symbol,
-                        rsi6h: coinData.rsi,  // Маппим rsi -> rsi6h для совместимости
-                        trend6h: this.getTrendFromSignal(coinData.signal), // Маппим signal -> trend6h
-                        price: coinData.price,
-                        signal: coinData.signal,
-                        timestamp: coinData.timestamp,
-                        ...coinData // Оставляем оригинальные поля
-                    }));
+                    this.coinsRsiData = Object.values(data.coins);
                     
                     // Получаем список ручных позиций
                     const manualPositions = data.manual_positions || [];
@@ -756,7 +727,7 @@ class BotsManager {
                             <div class="coin-header-right">
                                 ${isManualPosition ? '<span class="manual-position-indicator" title="Ручная позиция">✋</span>' : ''}
                                 ${this.generateWarningIndicator(coin)}
-                                <span class="coin-rsi ${this.getRsiZoneClass(coin.rsi6h)}">${coin.rsi6h?.toFixed(1) || '-'}</span>
+                                <span class="coin-rsi ${this.getRsiZoneClass(coin.rsi6h)}">${coin.rsi6h}</span>
                                 <a href="${this.createTickerLink(coin.symbol)}" 
                                target="_blank" 
                                class="external-link" 
@@ -1242,7 +1213,7 @@ class BotsManager {
         }
         
         if (rsiElement) {
-            const rsi = coin.enhanced_rsi?.rsi_6h || coin.rsi6h || coin.rsi || '-';
+            const rsi = coin.enhanced_rsi?.rsi_6h || coin.rsi6h || '-';
             rsiElement.textContent = rsi;
             rsiElement.className = `value rsi-indicator ${this.getRsiZoneClass(rsi)}`;
             console.log('[BotsManager] ✅ RSI обновлен:', rsi);

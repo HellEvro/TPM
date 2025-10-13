@@ -120,7 +120,7 @@ def background_update():
                 # Логирование для диагностики (только важные моменты)
                 if should_send_stats:
                     if last_stats_time is None:
-                        pass  # Убрали спам "Первый запуск"
+                        print(f"[Thread {thread_id}] Первый запуск - отправляем статистику")
                     else:
                         minutes_passed = time_since_last / 60
                         print(f"[Thread {thread_id}] Прошло {minutes_passed:.1f} минут - отправляем статистику")

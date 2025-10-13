@@ -1,96 +1,11 @@
-# ==================== Секретные данные ====================
 API_KEYS_SECRET!.txt
-app/keys.py
-app/keys — копия.py
-
-# ==================== Python ====================
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
-venv/
-env/
-ENV/
-.venv
-
-# ==================== Логи ====================
+_stable/app/__pycache__/
+_stable/exchanges/__pycache__/
+_stable/exchanges/__pycache__/
+_work_in_progress/app/__pycache__/
+_work_in_progress/exchanges/__pycache__/
+_work_TRADING_/app/__pycache__/
+_work_TRADING_/exchanges/__pycache__/
+app/__pycache__/
+exchanges/__pycache__/
 *.log
-logs/
-!logs/.gitkeep
-
-# ==================== Временные файлы ====================
-*.tmp
-*.temp
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-# ==================== Данные (чувствительные) ====================
-data/*.json
-!data/default_auto_bot_config.json
-data/*.backup
-
-# ==================== Backups ====================
-backups/
-*.backup
-*.bak
-
-# ==================== Trash ====================
-trash/
-
-# ==================== IDE ====================
-.vscode/
-.idea/
-*.code-workspace
-
-# ==================== Старые папки проекта ====================
-_stable/
-_work_in_progress/
-_work_TRADING_/
-
-# ==================== Pytest ====================
-.pytest_cache/
-.coverage
-htmlcov/
-*.cover
-
-# ==================== Jupyter ====================
-.ipynb_checkpoints/
-*.ipynb
-
-# ==================== OS ====================
-.DS_Store
-*.swp
-*.swo
-*~
-
-# ==================== Разное ====================
-# Файлы конфигурации (если содержат секреты)
-# config.json
-
-# Временные выводы
-test_output.txt
-output.txt

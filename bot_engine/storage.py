@@ -28,7 +28,7 @@ def save_json_file(filepath, data, description="данные"):
         temp_file = filepath + '.tmp'
         
         with open(temp_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+            json.dump(data, f, ensure_ascii=False, indent=2)
         
         # Заменяем оригинальный файл
         if os.name == 'nt':  # Windows

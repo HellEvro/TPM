@@ -181,7 +181,7 @@ class BybitExchange(BaseExchange):
                             raise
                     
                     if not all_positions:
-                        # Позиций нет - это нормально, не спамим в лог
+                        print("No active positions")
                         return [], []
 
                     if self.last_reset_day is None or datetime.now().date() != self.last_reset_day:
@@ -546,46 +546,13 @@ class BybitExchange(BaseExchange):
                 
                 return sorted(pairs)
             else:
-                logger.error("[BYBIT] Ошибка API: Не удалось получить список инструментов")
+                logger.error(f"[BYBIT] Ошибка API: {response.get('retMsg', 'Unknown error')}")
                 return []
         except Exception as e:
             logger.error(f"[BYBIT] Error getting pairs: {str(e)}")
+            import traceback
+            logger.error(f"[BYBIT] Traceback: {traceback.format_exc()}")
             return []
-
-    def get_klines(self, symbol, interval='6h', limit=100):
-        """Простое получение свечей для RSI расчета"""
-        try:
-            # Убираем USDT если он уже есть в символе
-            clean_sym = symbol.replace('USDT', '') if symbol.endswith('USDT') else symbol
-            
-            response = self.client.get_kline(
-                category="linear",
-                symbol=f"{clean_sym}USDT",
-                interval='360',  # 6h в минутах
-                limit=limit
-            )
-            
-            if response and response.get('retCode') == 0:
-                klines = response['result']['list']
-                # Конвертируем в нужный формат
-                candles = []
-                for kline in reversed(klines):  # Разворачиваем (новые свечи в конце)
-                    candles.append({
-                        'open': float(kline[1]),
-                        'high': float(kline[2]),
-                        'low': float(kline[3]),
-                        'close': float(kline[4]),
-                        'volume': float(kline[5]),
-                        'timestamp': int(kline[0])
-                    })
-                return candles
-            else:
-                logger.warning(f"[BYBIT] Ошибка получения свечей для {symbol}: {response}")
-                return None
-                
-        except Exception as e:
-            logger.warning(f"[BYBIT] Исключение при получении свечей {symbol}: {e}")
-            return None
 
     @with_timeout(30)  # 30 секунд таймаут для получения данных графика
     def get_chart_data(self, symbol, timeframe='1h', period='1w'):

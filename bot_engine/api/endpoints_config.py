@@ -1,144 +1,169 @@
 """
-API endpoints для управления конфигурацией (новая версия для State Manager).
+API endpoints для конфигурации Auto Bot и системы
 """
 
 from flask import request, jsonify
 import logging
+from datetime import datetime
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('API_Config')
 
 
 def register_config_endpoints(app, state):
     """
-    Регистрирует endpoints для конфигурации.
+    Регистрирует endpoints для конфигурации
     
     Args:
         app: Flask приложение
-        state: BotSystemState instance
+        state: Словарь с зависимостями
     """
     
-    @app.route('/api/bots/auto-bot', methods=['GET'])
-    def get_auto_bot_config():
-        """Получить конфигурацию Auto Bot"""
+    @app.route('/api/bots/auto-bot', methods=['GET', 'POST'])
+    def auto_bot_config():
+        """Получить или обновить конфигурацию Auto Bot"""
         try:
-            config = state.config_manager.get_auto_bot_config()
+            if request.method == 'GET':
+                with state['bots_data_lock']:
+                    config = state['bots_data']['auto_bot_config'].copy()
+                    return jsonify({
+                        'success': True,
+                        'config': config
+                    })
             
-            return jsonify({
-                'success': True,
-                'config': config
-            })
-            
+            elif request.method == 'POST':
+                data = request.get_json()
+                if not data:
+                    return jsonify({'success': False, 'error': 'No data provided'}), 400
+                
+                logger.info(f"[CONFIG] Обновление конфигурации Auto Bot")
+                
+                # Проверяем изменение критериев зрелости
+                maturity_params_changed = False
+                maturity_keys = ['min_candles_for_maturity', 'min_rsi_low', 'max_rsi_high']
+                
+                with state['bots_data_lock']:
+                    old_config = state['bots_data']['auto_bot_config'].copy()
+                    
+                    for key in maturity_keys:
+                        if key in data and data[key] != old_config.get(key):
+                            maturity_params_changed = True
+                            logger.warning(f"[MATURITY] Изменен критерий: {key} ({old_config.get(key)} -> {data[key]})")
+                    
+                    # Обновляем конфигурацию
+                    for key, value in data.items():
+                        if key in state['bots_data']['auto_bot_config']:
+                            old_value = state['bots_data']['auto_bot_config'][key]
+                            state['bots_data']['auto_bot_config'][key] = value
+                            logger.info(f"[CONFIG] {key}: {old_value} -> {value}")
+                
+                # Сохраняем конфигурацию
+                save_result = state['save_auto_bot_config_func']()
+                
+                # Очищаем зрелые монеты если критерии изменились
+                if maturity_params_changed:
+                    logger.warning("[MATURITY] Критерии зрелости изменены - очистка файла")
+                    state['clear_mature_coins_func']()
+                
+                # Логируем включение/выключение автобота
+                if 'enabled' in data:
+                    if data['enabled']:
+                        logger.info("=" * 80)
+                        logger.info("[AUTO_BOT] ВКЛЮЧЕН!")
+                        logger.info("=" * 80)
+                    else:
+                        logger.info("=" * 80)
+                        logger.info("[AUTO_BOT] ВЫКЛЮЧЕН!")
+                        logger.info("=" * 80)
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Конфигурация Auto Bot обновлена',
+                    'config': state['bots_data']['auto_bot_config'].copy(),
+                    'saved_to_file': save_result
+                })
+                
         except Exception as e:
-            logger.error(f"[API] Ошибка получения конфигурации: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/bots/auto-bot', methods=['POST'])
-    def update_auto_bot_config():
-        """Обновить конфигурацию Auto Bot"""
-        try:
-            data = request.get_json()
-            if not data:
-                return jsonify({'success': False, 'error': 'No data provided'}), 400
-            
-            # Обновляем через ConfigManager
-            state.config_manager.update_auto_bot_config(data)
-            
-            # Получаем обновленную конфигурацию
-            updated_config = state.config_manager.get_auto_bot_config()
-            
-            logger.info(f"[CONFIG] Auto Bot конфигурация обновлена")
-            
-            return jsonify({
-                'success': True,
-                'config': updated_config,
-                'message': 'Конфигурация обновлена'
-            })
-            
-        except Exception as e:
-            logger.error(f"[API] Ошибка обновления конфигурации: {e}")
+            logger.error(f"[ERROR] Ошибка конфигурации Auto Bot: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/bots/auto-bot/restore-defaults', methods=['POST'])
     def restore_auto_bot_defaults():
-        """Восстановить дефолтную конфигурацию Auto Bot"""
+        """Восстанавливает дефолтную конфигурацию Auto Bot"""
         try:
-            state.config_manager.restore_default_auto_bot_config()
+            logger.info("[API] Запрос на восстановление дефолтной конфигурации")
             
-            config = state.config_manager.get_auto_bot_config()
+            result = state['restore_default_config_func']()
             
-            logger.info("[CONFIG] Восстановлена дефолтная конфигурация Auto Bot")
-            
-            return jsonify({
-                'success': True,
-                'config': config,
-                'message': 'Конфигурация восстановлена'
-            })
-            
+            if result:
+                with state['bots_data_lock']:
+                    current_config = state['bots_data']['auto_bot_config'].copy()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Дефолтная конфигурация восстановлена',
+                    'config': current_config
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Ошибка восстановления'
+                }), 500
+                
         except Exception as e:
-            logger.error(f"[API] Ошибка восстановления конфигурации: {e}")
+            logger.error(f"[ERROR] Ошибка восстановления: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
-    @app.route('/api/bots/system-config', methods=['GET'])
-    def get_system_config():
-        """Получить системную конфигурацию"""
+    @app.route('/api/bots/default-config', methods=['GET'])
+    def get_default_config():
+        """Получить дефолтную конфигурацию Auto Bot"""
         try:
-            config = state.config_manager.get_system_config()
+            default_config = state['load_default_config_func']()
             
             return jsonify({
                 'success': True,
-                'config': config
+                'default_config': default_config,
+                'message': 'Дефолтная конфигурация загружена'
             })
             
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/bots/system-config', methods=['POST'])
-    def update_system_config():
-        """Обновить системную конфигурацию"""
-        try:
-            data = request.get_json()
-            if not data:
-                return jsonify({'success': False, 'error': 'No data provided'}), 400
-            
-            state.config_manager.update_system_config(data)
-            
-            return jsonify({
-                'success': True,
-                'config': state.config_manager.get_system_config(),
-                'message': 'Системная конфигурация обновлена'
-            })
-            
-        except Exception as e:
+            logger.error(f"[ERROR] Ошибка загрузки дефолтной конфигурации: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/bots/system-config', methods=['GET', 'POST'])
-    def system_config_endpoint():
-        """Получить или обновить системную конфигурацию"""
+    def system_config():
+        """Получить или обновить системные настройки"""
         try:
             if request.method == 'GET':
-                # Получаем системную конфигурацию
-                config = state.config_manager.get_system_config()
+                config_data = state['get_system_config_func']()
+                return jsonify({
+                    'success': True,
+                    'config': config_data
+                })
+            
+            elif request.method == 'POST':
+                data = request.get_json()
+                if not data:
+                    return jsonify({'success': False, 'error': 'No data provided'}), 400
+                
+                logger.info(f"[CONFIG] Обновление системных настроек")
+                
+                # Обновляем настройки
+                state['update_system_config_func'](data)
+                
+                # Сохраняем
+                saved = state['save_system_config_func'](data)
                 
                 return jsonify({
                     'success': True,
-                    'config': config
+                    'message': 'Системные настройки обновлены',
+                    'config': data,
+                    'saved_to_file': saved
                 })
-            
-            else:  # POST
-                # Обновляем системную конфигурацию
-                new_config = request.get_json()
                 
-                if not new_config:
-                    return jsonify({'success': False, 'error': 'Не указана конфигурация'}), 400
-                
-                # Сохраняем через ConfigManager
-                state.config_manager.update_system_config(new_config)
-                
-                return jsonify({
-                    'success': True,
-                    'message': 'Системная конфигурация обновлена'
-                })
-            
         except Exception as e:
+            logger.error(f"[ERROR] Ошибка настройки системы: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
+    
+    logger.info("[API] Config endpoints registered")
+
 
