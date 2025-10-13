@@ -1,1 +1,6066 @@
-{}
+{
+  "0G": {
+    "timestamp": 1760317148.3051765,
+    "maturity_data": {
+      "timestamp": 1760317148.3051748,
+      "rsi_data": {
+        "symbol": "0G",
+        "rsi6h": 36.9,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 2.2323,
+        "change24h": 3.7,
+        "last_update": "2025-10-13T03:59:08.305142",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 58.87083742043071,
+            "stoch_rsi_d": 49.00288252031432
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_36.9"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317148.3051767
+  },
+  "1000000CHEEMS": {
+    "timestamp": 1760317155.001787,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.09,
+        "rsi_max": 90.31,
+        "rsi_range": 74.22,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317155.0017874
+  },
+  "1000000PEIPEI": {
+    "timestamp": 1760317155.6436963,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.39,
+        "rsi_max": 83.74,
+        "rsi_range": 65.35,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317155.6436965
+  },
+  "1000TAG": {
+    "timestamp": 1760317156.5175796,
+    "maturity_data": {
+      "timestamp": 1760317156.5175786,
+      "rsi_data": {
+        "symbol": "1000TAG",
+        "rsi6h": 45.5,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.2978,
+        "change24h": 39.29,
+        "last_update": "2025-10-13T03:59:16.517541",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.36124533191685754,
+          "ema_long": 0.5604746302834474,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0026399460329994406,
+          "current_close": 0.2978,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 85.40672934741713,
+            "stoch_rsi_d": 58.89476252962166
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_45.5"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317156.5175798
+  },
+  "1000000BABYDOGE": {
+    "timestamp": 1760317156.827105,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 22.29,
+        "rsi_max": 83.21,
+        "rsi_range": 60.919999999999995,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317156.8271053
+  },
+  "10000ELON": {
+    "timestamp": 1760317157.328679,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 980,
+        "min_required": 400,
+        "rsi_min": 18.69,
+        "rsi_max": 75.85,
+        "rsi_range": 57.16,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317157.3286793
+  },
+  "1000BTT": {
+    "timestamp": 1760317157.51775,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 13.36,
+        "rsi_max": 95.03,
+        "rsi_range": 81.67,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317157.5177503
+  },
+  "1000FLOKI": {
+    "timestamp": 1760317157.6453898,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 21.12,
+        "rsi_max": 84.96,
+        "rsi_range": 63.83999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317157.6453898
+  },
+  "10000WEN": {
+    "timestamp": 1760317157.6528678,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 22.27,
+        "rsi_max": 80.2,
+        "rsi_range": 57.93000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317157.6528678
+  },
+  "1000NEIROCTO": {
+    "timestamp": 1760317157.6581,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.03,
+        "rsi_max": 81.06,
+        "rsi_range": 63.03,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317157.6581
+  },
+  "1000CAT": {
+    "timestamp": 1760317157.764487,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 28.41,
+        "rsi_max": 84.07,
+        "rsi_range": 55.66,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317157.764487
+  },
+  "1000PEPE": {
+    "timestamp": 1760317157.8178964,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.89,
+        "rsi_max": 91.69,
+        "rsi_range": 75.8,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317157.8178964
+  },
+  "1000BONK": {
+    "timestamp": 1760317157.8925617,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.28,
+        "rsi_max": 87.58,
+        "rsi_range": 70.3,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317157.8925617
+  },
+  "10000QUBIC": {
+    "timestamp": 1760317157.9110188,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 21.86,
+        "rsi_max": 84.56,
+        "rsi_range": 62.7,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317157.911019
+  },
+  "1000000MOG": {
+    "timestamp": 1760317157.928236,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.29,
+        "rsi_max": 91.54,
+        "rsi_range": 75.25,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317157.9282362
+  },
+  "1000LUNC": {
+    "timestamp": 1760317157.9414387,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 12.31,
+        "rsi_max": 88.03,
+        "rsi_range": 75.72,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317157.9414387
+  },
+  "10000SATS": {
+    "timestamp": 1760317158.0218427,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.05,
+        "rsi_max": 85.9,
+        "rsi_range": 71.85000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317158.021843
+  },
+  "2Z": {
+    "timestamp": 1760317158.376447,
+    "maturity_data": {
+      "timestamp": 1760317158.3764455,
+      "rsi_data": {
+        "symbol": "2Z",
+        "rsi6h": 19.5,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.2591,
+        "change24h": 3.1,
+        "last_update": "2025-10-13T03:59:18.376429",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": "Недостаточно данных для анализа",
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": null,
+            "stoch_rsi_d": null
+          },
+          "enhanced_signal": "WAIT"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317158.376447
+  },
+  "4": {
+    "timestamp": 1760317158.3941202,
+    "maturity_data": {
+      "timestamp": 1760317158.394119,
+      "rsi_data": {
+        "symbol": "4",
+        "rsi6h": 41.8,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1568,
+        "change24h": 55.86,
+        "last_update": "2025-10-13T03:59:18.394106",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": "Недостаточно данных для анализа",
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": null,
+            "stoch_rsi_d": null
+          },
+          "enhanced_signal": "WAIT"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317158.3941202
+  },
+  "A2Z": {
+    "timestamp": 1760317158.6235414,
+    "maturity_data": {
+      "timestamp": 1760317158.6235402,
+      "rsi_data": {
+        "symbol": "A2Z",
+        "rsi6h": 27.6,
+        "trend6h": "DOWN",
+        "rsi_zone": "BUY_ZONE",
+        "signal": "WAIT",
+        "price": 0.003526,
+        "change24h": 5.1,
+        "last_update": "2025-10-13T03:59:18.623510",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.004911072952968504,
+          "ema_long": 0.005526884783049843,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -2.01093948045206e-05,
+          "current_close": 0.003526,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 17.85187088222962,
+            "stoch_rsi_d": 12.486240569715179
+          },
+          "enhanced_signal": "ENTER_LONG",
+          "enhanced_reason": "fresh_oversold_27.6_base_oversold_stoch_oversold"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317158.6235414
+  },
+  "A": {
+    "timestamp": 1760317159.5444386,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 552,
+        "min_required": 400,
+        "rsi_min": 11.77,
+        "rsi_max": 84.39,
+        "rsi_range": 72.62,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317159.5444388
+  },
+  "1000RATS": {
+    "timestamp": 1760317163.258033,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 10.93,
+        "rsi_max": 76.1,
+        "rsi_range": 65.16999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317163.2580335
+  },
+  "1000TOSHI": {
+    "timestamp": 1760317165.4076269,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 25.62,
+        "rsi_max": 85.65,
+        "rsi_range": 60.03,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317165.407627
+  },
+  "1000TURBO": {
+    "timestamp": 1760317165.4510884,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.03,
+        "rsi_max": 85.13,
+        "rsi_range": 69.1,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317165.4510887
+  },
+  "1000X": {
+    "timestamp": 1760317165.9120905,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 11.92,
+        "rsi_max": 92.09,
+        "rsi_range": 80.17,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317165.9120908
+  },
+  "1000XEC": {
+    "timestamp": 1760317166.2554588,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.72,
+        "rsi_max": 84.65,
+        "rsi_range": 66.93,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317166.2554588
+  },
+  "ACE": {
+    "timestamp": 1760317166.4252226,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 19.41,
+        "rsi_max": 89.41,
+        "rsi_range": 70.0,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317166.4252229
+  },
+  "AAVE": {
+    "timestamp": 1760317166.4993472,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 19.16,
+        "rsi_max": 77.74,
+        "rsi_range": 58.58,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317166.4993474
+  },
+  "ACT": {
+    "timestamp": 1760317166.5283651,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 19.38,
+        "rsi_max": 85.09,
+        "rsi_range": 65.71000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317166.5283651
+  },
+  "A8": {
+    "timestamp": 1760317166.61456,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 12.79,
+        "rsi_max": 89.95,
+        "rsi_range": 77.16,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317166.61456
+  },
+  "1INCH": {
+    "timestamp": 1760317166.7544434,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.58,
+        "rsi_max": 96.24,
+        "rsi_range": 77.66,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317166.7544434
+  },
+  "ACH": {
+    "timestamp": 1760317166.7932076,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.48,
+        "rsi_max": 83.97,
+        "rsi_range": 69.49,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317166.793208
+  },
+  "ACX": {
+    "timestamp": 1760317167.0615368,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.76,
+        "rsi_max": 89.03,
+        "rsi_range": 70.27,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317167.061537
+  },
+  "AIA": {
+    "timestamp": 1760317167.2023344,
+    "maturity_data": {
+      "timestamp": 1760317167.2023332,
+      "rsi_data": {
+        "symbol": "AIA",
+        "rsi6h": 46.0,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 1.2787,
+        "change24h": -7.12,
+        "last_update": "2025-10-13T03:59:27.202316",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 90.22365471121195,
+            "stoch_rsi_d": 82.00086369749444
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_46.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317167.2023344
+  },
+  "AIO": {
+    "timestamp": 1760317167.3560998,
+    "maturity_data": {
+      "timestamp": 1760317167.356099,
+      "rsi_data": {
+        "symbol": "AIO",
+        "rsi6h": 41.6,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.12164,
+        "change24h": 1.24,
+        "last_update": "2025-10-13T03:59:27.356078",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 98.41999210981878,
+            "stoch_rsi_d": 91.05425153354072
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_41.6"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317167.3560998
+  },
+  "AGT": {
+    "timestamp": 1760317167.4669986,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 552,
+        "min_required": 400,
+        "rsi_min": 14.02,
+        "rsi_max": 77.89,
+        "rsi_range": 63.870000000000005,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317167.4669988
+  },
+  "AIN": {
+    "timestamp": 1760317167.5053732,
+    "maturity_data": {
+      "timestamp": 1760317167.5053718,
+      "rsi_data": {
+        "symbol": "AIN",
+        "rsi6h": 51.8,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.14369,
+        "change24h": 13.22,
+        "last_update": "2025-10-13T03:59:27.505342",
+        "trend_analysis": {
+          "trend": "NEUTRAL",
+          "ema_short": 0.14485641311550213,
+          "ema_long": 0.13655086077120154,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 7.175014300300764e-05,
+          "current_close": 0.14369,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 85.54436411958227,
+            "stoch_rsi_d": 66.19351203412302
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_51.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317167.5053732
+  },
+  "ADA": {
+    "timestamp": 1760317167.7128763,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.59,
+        "rsi_max": 92.69,
+        "rsi_range": 75.1,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317167.7128763
+  },
+  "AERGO": {
+    "timestamp": 1760317167.7782583,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.28,
+        "rsi_max": 76.92,
+        "rsi_range": 61.64,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317167.7782588
+  },
+  "AKE": {
+    "timestamp": 1760317167.802234,
+    "maturity_data": {
+      "timestamp": 1760317167.8022325,
+      "rsi_data": {
+        "symbol": "AKE",
+        "rsi6h": 57.2,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.001736,
+        "change24h": 9.67,
+        "last_update": "2025-10-13T03:59:27.802219",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 77.81102327620148,
+            "stoch_rsi_d": 77.55695613297358
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_57.2"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317167.802234
+  },
+  "AERO": {
+    "timestamp": 1760317168.1471987,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.24,
+        "rsi_max": 87.1,
+        "rsi_range": 68.86,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317168.1471987
+  },
+  "ALPINE": {
+    "timestamp": 1760317168.6276155,
+    "maturity_data": {
+      "timestamp": 1760317168.6276143,
+      "rsi_data": {
+        "symbol": "ALPINE",
+        "rsi6h": 33.2,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.973,
+        "change24h": 9.33,
+        "last_update": "2025-10-13T03:59:28.627591",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 63.6500770693634,
+            "stoch_rsi_d": 45.45108311405807
+          },
+          "enhanced_signal": "EXIT_SHORT",
+          "enhanced_reason": "rsi_exit_short_33.2"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317168.6276157
+  },
+  "AEVO": {
+    "timestamp": 1760317171.4850333,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.37,
+        "rsi_max": 92.5,
+        "rsi_range": 78.13,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317171.4850333
+  },
+  "AGLD": {
+    "timestamp": 1760317173.5207345,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.6,
+        "rsi_max": 76.78,
+        "rsi_range": 60.18,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317173.5207348
+  },
+  "AGI": {
+    "timestamp": 1760317174.5936847,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 13.21,
+        "rsi_max": 80.03,
+        "rsi_range": 66.82,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317174.5936847
+  },
+  "AI": {
+    "timestamp": 1760317174.7777398,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 19.06,
+        "rsi_max": 93.33,
+        "rsi_range": 74.27,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317174.7777402
+  },
+  "AI16Z": {
+    "timestamp": 1760317175.0688965,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.87,
+        "rsi_max": 81.0,
+        "rsi_range": 65.13,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317175.0688965
+  },
+  "AIOZ": {
+    "timestamp": 1760317175.3716707,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.43,
+        "rsi_max": 81.67,
+        "rsi_range": 63.24,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317175.371671
+  },
+  "AKT": {
+    "timestamp": 1760317175.4021604,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 13.13,
+        "rsi_max": 80.92,
+        "rsi_range": 67.79,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317175.4021604
+  },
+  "APEX": {
+    "timestamp": 1760317175.5166056,
+    "maturity_data": {
+      "timestamp": 1760317175.5166044,
+      "rsi_data": {
+        "symbol": "APEX",
+        "rsi6h": 37.6,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 1.2063,
+        "change24h": 14.09,
+        "last_update": "2025-10-13T03:59:35.516590",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 92.81425360948829,
+            "stoch_rsi_d": 69.95123183827592
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_37.6"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317175.5166056
+  },
+  "AIXBT": {
+    "timestamp": 1760317175.6538208,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.16,
+        "rsi_max": 80.69,
+        "rsi_range": 64.53,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317175.653821
+  },
+  "ALICE": {
+    "timestamp": 1760317175.8124318,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 22.02,
+        "rsi_max": 89.32,
+        "rsi_range": 67.3,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317175.812432
+  },
+  "ALPHA": {
+    "timestamp": 1760317175.9992251,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 10.8,
+        "rsi_max": 81.03,
+        "rsi_range": 70.23,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317175.9992251
+  },
+  "ALGO": {
+    "timestamp": 1760317176.1207006,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 22.01,
+        "rsi_max": 93.06,
+        "rsi_range": 71.05,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317176.1207008
+  },
+  "ALCH": {
+    "timestamp": 1760317176.1500933,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.89,
+        "rsi_max": 78.6,
+        "rsi_range": 62.709999999999994,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317176.1500933
+  },
+  "ALT": {
+    "timestamp": 1760317176.488142,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.52,
+        "rsi_max": 95.84,
+        "rsi_range": 79.32000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317176.4881423
+  },
+  "ALEO": {
+    "timestamp": 1760317176.5521917,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 10.75,
+        "rsi_max": 93.52,
+        "rsi_range": 82.77,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317176.552192
+  },
+  "ARIA": {
+    "timestamp": 1760317176.6185825,
+    "maturity_data": {
+      "timestamp": 1760317176.6185818,
+      "rsi_data": {
+        "symbol": "ARIA",
+        "rsi6h": 50.8,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.14851,
+        "change24h": 28.08,
+        "last_update": "2025-10-13T03:59:36.618559",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 94.5726207783173,
+            "stoch_rsi_d": 85.85419712554356
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_50.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317176.6185825
+  },
+  "ALU": {
+    "timestamp": 1760317177.3802583,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 13.69,
+        "rsi_max": 92.7,
+        "rsi_range": 79.01,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317177.3802583
+  },
+  "ASTER": {
+    "timestamp": 1760317177.4177966,
+    "maturity_data": {
+      "timestamp": 1760317177.4177957,
+      "rsi_data": {
+        "symbol": "ASTER",
+        "rsi6h": 43.4,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 1.4822,
+        "change24h": 14.53,
+        "last_update": "2025-10-13T03:59:37.417778",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 88.12474706061248,
+            "stoch_rsi_d": 75.11671892271923
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_43.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317177.4177966
+  },
+  "ASR": {
+    "timestamp": 1760317177.500989,
+    "maturity_data": {
+      "timestamp": 1760317177.5009882,
+      "rsi_data": {
+        "symbol": "ASR",
+        "rsi6h": 27.5,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 1.687,
+        "change24h": 4.98,
+        "last_update": "2025-10-13T03:59:37.500968",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 42.20269408119682,
+            "stoch_rsi_d": 33.50146788419916
+          },
+          "enhanced_signal": "ENTER_LONG",
+          "enhanced_reason": "fresh_oversold_27.5_base_oversold"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317177.5009892
+  },
+  "ASP": {
+    "timestamp": 1760317177.851302,
+    "maturity_data": {
+      "timestamp": 1760317177.8513,
+      "rsi_data": {
+        "symbol": "ASP",
+        "rsi6h": 43.2,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.0983,
+        "change24h": 11.33,
+        "last_update": "2025-10-13T03:59:37.851210",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.11573712144018752,
+          "ema_long": 0.13653996571550764,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00038432126347243134,
+          "current_close": 0.0983,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 49.60254753651765,
+            "stoch_rsi_d": 35.00800254448276
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_43.2"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317177.851302
+  },
+  "ANIME": {
+    "timestamp": 1760317180.0708556,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.98,
+        "rsi_max": 81.09,
+        "rsi_range": 66.11,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317180.0708556
+  },
+  "ANKR": {
+    "timestamp": 1760317181.7247348,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.04,
+        "rsi_max": 84.32,
+        "rsi_range": 68.28,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317181.724735
+  },
+  "APE": {
+    "timestamp": 1760317182.817217,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.48,
+        "rsi_max": 84.15,
+        "rsi_range": 66.67,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317182.817217
+  },
+  "API3": {
+    "timestamp": 1760317183.7124557,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.91,
+        "rsi_max": 89.41,
+        "rsi_range": 70.5,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317183.712456
+  },
+  "APT": {
+    "timestamp": 1760317183.780677,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 19.53,
+        "rsi_max": 84.39,
+        "rsi_range": 64.86,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317183.7806773
+  },
+  "ARB": {
+    "timestamp": 1760317183.8999152,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.79,
+        "rsi_max": 90.83,
+        "rsi_range": 73.03999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317183.8999155
+  },
+  "AR": {
+    "timestamp": 1760317184.1096437,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.93,
+        "rsi_max": 87.36,
+        "rsi_range": 69.43,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317184.109644
+  },
+  "ARC": {
+    "timestamp": 1760317184.3849196,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.88,
+        "rsi_max": 81.7,
+        "rsi_range": 62.82000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317184.3849196
+  },
+  "ARK": {
+    "timestamp": 1760317184.7951996,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.54,
+        "rsi_max": 81.9,
+        "rsi_range": 64.36000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317184.7952
+  },
+  "ARKM": {
+    "timestamp": 1760317184.8506885,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.77,
+        "rsi_max": 90.62,
+        "rsi_range": 74.85000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317184.8506885
+  },
+  "AVNT": {
+    "timestamp": 1760317184.895652,
+    "maturity_data": {
+      "timestamp": 1760317184.8956504,
+      "rsi_data": {
+        "symbol": "AVNT",
+        "rsi6h": 34.3,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.6498,
+        "change24h": -0.21,
+        "last_update": "2025-10-13T03:59:44.895629",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 91.63676913861666,
+            "stoch_rsi_d": 94.314472214546
+          },
+          "enhanced_signal": "EXIT_SHORT",
+          "enhanced_reason": "rsi_exit_short_34.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317184.895652
+  },
+  "ARPA": {
+    "timestamp": 1760317185.4352322,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.99,
+        "rsi_max": 79.5,
+        "rsi_range": 61.510000000000005,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317185.4352322
+  },
+  "ASTR": {
+    "timestamp": 1760317186.2706623,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 22.15,
+        "rsi_max": 82.24,
+        "rsi_range": 60.089999999999996,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317186.2706625
+  },
+  "ATH": {
+    "timestamp": 1760317186.3942468,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 26.48,
+        "rsi_max": 91.39,
+        "rsi_range": 64.91,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317186.3942468
+  },
+  "B2": {
+    "timestamp": 1760317186.5227885,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 504,
+        "min_required": 400,
+        "rsi_min": 22.59,
+        "rsi_max": 86.01,
+        "rsi_range": 63.42,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317186.5227885
+  },
+  "AWE": {
+    "timestamp": 1760317186.533189,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 576,
+        "min_required": 400,
+        "rsi_min": 22.95,
+        "rsi_max": 88.56,
+        "rsi_range": 65.61,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317186.5331893
+  },
+  "ATOM": {
+    "timestamp": 1760317186.548255,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.39,
+        "rsi_max": 90.42,
+        "rsi_range": 76.03,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317186.548255
+  },
+  "AUCTION": {
+    "timestamp": 1760317186.672539,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 11.21,
+        "rsi_max": 87.67,
+        "rsi_range": 76.46000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317186.672539
+  },
+  "B": {
+    "timestamp": 1760317186.878804,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 572,
+        "min_required": 400,
+        "rsi_min": 17.34,
+        "rsi_max": 83.99,
+        "rsi_range": 66.64999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317186.8788042
+  },
+  "AUDIO": {
+    "timestamp": 1760317188.7544398,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.72,
+        "rsi_max": 75.86,
+        "rsi_range": 61.14,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317188.7544403
+  },
+  "AVA": {
+    "timestamp": 1760317190.9419873,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 13.71,
+        "rsi_max": 88.84,
+        "rsi_range": 75.13,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317190.9419875
+  },
+  "BABY": {
+    "timestamp": 1760317191.56923,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 772,
+        "min_required": 400,
+        "rsi_min": 17.36,
+        "rsi_max": 73.76,
+        "rsi_range": 56.400000000000006,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317191.56923
+  },
+  "AVAAI": {
+    "timestamp": 1760317191.5999193,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.44,
+        "rsi_max": 87.13,
+        "rsi_range": 72.69,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317191.5999196
+  },
+  "BARD": {
+    "timestamp": 1760317191.8812382,
+    "maturity_data": {
+      "timestamp": 1760317191.881237,
+      "rsi_data": {
+        "symbol": "BARD",
+        "rsi6h": 37.8,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.67123,
+        "change24h": 3.44,
+        "last_update": "2025-10-13T03:59:51.881217",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 86.48570292086154,
+            "stoch_rsi_d": 77.17422094912071
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_37.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317191.8812382
+  },
+  "BANK": {
+    "timestamp": 1760317192.0622015,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 632,
+        "min_required": 400,
+        "rsi_min": 28.76,
+        "rsi_max": 92.38,
+        "rsi_range": 63.61999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317192.0622017
+  },
+  "AVL": {
+    "timestamp": 1760317192.4881563,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 940,
+        "min_required": 400,
+        "rsi_min": 15.48,
+        "rsi_max": 84.96,
+        "rsi_range": 69.47999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317192.4881566
+  },
+  "BANANAS31": {
+    "timestamp": 1760317192.6215267,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 796,
+        "min_required": 400,
+        "rsi_min": 14.37,
+        "rsi_max": 97.08,
+        "rsi_range": 82.71,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317192.6215267
+  },
+  "AVAIL": {
+    "timestamp": 1760317192.6816156,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 10.08,
+        "rsi_max": 91.57,
+        "rsi_range": 81.49,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317192.6816156
+  },
+  "AVAX": {
+    "timestamp": 1760317193.268337,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.08,
+        "rsi_max": 86.55,
+        "rsi_range": 71.47,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317193.268337
+  },
+  "BDXN": {
+    "timestamp": 1760317193.3337488,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 528,
+        "min_required": 400,
+        "rsi_min": 14.23,
+        "rsi_max": 77.83,
+        "rsi_range": 63.599999999999994,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317193.333749
+  },
+  "AXL": {
+    "timestamp": 1760317194.018559,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.87,
+        "rsi_max": 88.96,
+        "rsi_range": 72.08999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317194.018559
+  },
+  "AXS": {
+    "timestamp": 1760317194.2020674,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 19.67,
+        "rsi_max": 85.19,
+        "rsi_range": 65.52,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317194.2020676
+  },
+  "B3": {
+    "timestamp": 1760317194.7638843,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 972,
+        "min_required": 400,
+        "rsi_min": 16.14,
+        "rsi_max": 83.05,
+        "rsi_range": 66.91,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317194.7638843
+  },
+  "BADGER": {
+    "timestamp": 1760317195.1133754,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 24.12,
+        "rsi_max": 80.23,
+        "rsi_range": 56.11,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317195.1133757
+  },
+  "BAN": {
+    "timestamp": 1760317195.4056342,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 23.15,
+        "rsi_max": 76.16,
+        "rsi_range": 53.01,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317195.4056342
+  },
+  "BLESS": {
+    "timestamp": 1760317195.5456288,
+    "maturity_data": {
+      "timestamp": 1760317195.5456274,
+      "rsi_data": {
+        "symbol": "BLESS",
+        "rsi6h": 46.8,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.03689,
+        "change24h": 24.0,
+        "last_update": "2025-10-13T03:59:55.545610",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 78.70356088321331,
+            "stoch_rsi_d": 57.75016670208337
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_46.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317195.5456288
+  },
+  "BAND": {
+    "timestamp": 1760317195.5784373,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.94,
+        "rsi_max": 89.29,
+        "rsi_range": 70.35000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317195.5784376
+  },
+  "BANANA": {
+    "timestamp": 1760317195.6473556,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.81,
+        "rsi_max": 83.55,
+        "rsi_range": 66.74,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317195.6473558
+  },
+  "BCH": {
+    "timestamp": 1760317200.0068798,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 21.88,
+        "rsi_max": 74.96,
+        "rsi_range": 53.08,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317200.00688
+  },
+  "BB": {
+    "timestamp": 1760317200.8783033,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.23,
+        "rsi_max": 86.47,
+        "rsi_range": 72.24,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317200.8783033
+  },
+  "BERA": {
+    "timestamp": 1760317201.39446,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 995,
+        "min_required": 400,
+        "rsi_min": 20.3,
+        "rsi_max": 89.2,
+        "rsi_range": 68.9,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317201.3944602
+  },
+  "BAT": {
+    "timestamp": 1760317201.5712163,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 24.35,
+        "rsi_max": 91.55,
+        "rsi_range": 67.19999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317201.5712166
+  },
+  "BEL": {
+    "timestamp": 1760317201.5787272,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 12.13,
+        "rsi_max": 77.69,
+        "rsi_range": 65.56,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317201.5787275
+  },
+  "BEAM": {
+    "timestamp": 1760317201.7387419,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 20.89,
+        "rsi_max": 82.78,
+        "rsi_range": 61.89,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317201.738742
+  },
+  "BMT": {
+    "timestamp": 1760317202.2401779,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 856,
+        "min_required": 400,
+        "rsi_min": 10.94,
+        "rsi_max": 87.62,
+        "rsi_range": 76.68,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317202.240178
+  },
+  "BSU": {
+    "timestamp": 1760317202.4373436,
+    "maturity_data": {
+      "timestamp": 1760317202.4373422,
+      "rsi_data": {
+        "symbol": "BSU",
+        "rsi6h": 45.5,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.2076,
+        "change24h": 13.46,
+        "last_update": "2025-10-13T04:00:02.437322",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 96.60781330032472,
+            "stoch_rsi_d": 84.549048773031
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_45.5"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317202.4373436
+  },
+  "BICO": {
+    "timestamp": 1760317202.4797843,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.5,
+        "rsi_max": 85.76,
+        "rsi_range": 69.26,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317202.4797845
+  },
+  "BLAST": {
+    "timestamp": 1760317202.6598547,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.88,
+        "rsi_max": 81.97,
+        "rsi_range": 66.09,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317202.6598547
+  },
+  "BIGTIME": {
+    "timestamp": 1760317202.673217,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.38,
+        "rsi_max": 87.44,
+        "rsi_range": 73.06,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317202.673217
+  },
+  "BIO": {
+    "timestamp": 1760317202.893202,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 10.57,
+        "rsi_max": 85.35,
+        "rsi_range": 74.78,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317202.8932025
+  },
+  "BTR": {
+    "timestamp": 1760317203.185393,
+    "maturity_data": {
+      "timestamp": 1760317203.1853917,
+      "rsi_data": {
+        "symbol": "BTR",
+        "rsi6h": 37.0,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.05938,
+        "change24h": 5.81,
+        "last_update": "2025-10-13T04:00:03.185357",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 85.83862394083465,
+            "stoch_rsi_d": 66.20954624269837
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_37.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317203.185393
+  },
+  "C": {
+    "timestamp": 1760317203.285946,
+    "maturity_data": {
+      "timestamp": 1760317203.2859445,
+      "rsi_data": {
+        "symbol": "C",
+        "rsi6h": 33.4,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.11444,
+        "change24h": 10.53,
+        "last_update": "2025-10-13T04:00:03.285915",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.15452150708486212,
+          "ema_long": 0.2045236112585833,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.000905362927221931,
+          "current_close": 0.11444,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 67.48860867646451,
+            "stoch_rsi_d": 51.82003198881807
+          },
+          "enhanced_signal": "EXIT_SHORT",
+          "enhanced_reason": "rsi_exit_short_33.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317203.285946
+  },
+  "CAMP": {
+    "timestamp": 1760317203.9157176,
+    "maturity_data": {
+      "timestamp": 1760317203.9157166,
+      "rsi_data": {
+        "symbol": "CAMP",
+        "rsi6h": 31.1,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.02132,
+        "change24h": 4.36,
+        "last_update": "2025-10-13T04:00:03.915695",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 38.9566499038802,
+            "stoch_rsi_d": 29.994556490260198
+          },
+          "enhanced_signal": "EXIT_SHORT",
+          "enhanced_reason": "rsi_exit_short_31.1"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317203.9157176
+  },
+  "BLUR": {
+    "timestamp": 1760317204.0828333,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.21,
+        "rsi_max": 85.08,
+        "rsi_range": 68.87,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317204.0828338
+  },
+  "BNT": {
+    "timestamp": 1760317204.7418094,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 19.91,
+        "rsi_max": 86.82,
+        "rsi_range": 66.91,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317204.7418098
+  },
+  "BNB": {
+    "timestamp": 1760317204.9907634,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 29.77,
+        "rsi_max": 87.97,
+        "rsi_range": 58.2,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317204.9907634
+  },
+  "BOBA": {
+    "timestamp": 1760317205.0647705,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.67,
+        "rsi_max": 85.13,
+        "rsi_range": 67.46,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317205.0647705
+  },
+  "BR": {
+    "timestamp": 1760317205.8513007,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 827,
+        "min_required": 400,
+        "rsi_min": 1.41,
+        "rsi_max": 98.94,
+        "rsi_range": 97.53,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317205.851301
+  },
+  "BOME": {
+    "timestamp": 1760317207.742107,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.74,
+        "rsi_max": 85.18,
+        "rsi_range": 69.44000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317207.7421072
+  },
+  "BROCCOLI": {
+    "timestamp": 1760317210.209077,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 963,
+        "min_required": 400,
+        "rsi_min": 8.61,
+        "rsi_max": 89.8,
+        "rsi_range": 81.19,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317210.2090774
+  },
+  "BRETT": {
+    "timestamp": 1760317210.4452322,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 20.98,
+        "rsi_max": 89.4,
+        "rsi_range": 68.42,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317210.4452324
+  },
+  "BSV": {
+    "timestamp": 1760317210.7347207,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 19.68,
+        "rsi_max": 83.9,
+        "rsi_range": 64.22,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317210.734721
+  },
+  "CAKE": {
+    "timestamp": 1760317211.6507213,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 26.08,
+        "rsi_max": 88.62,
+        "rsi_range": 62.540000000000006,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317211.6507213
+  },
+  "C98": {
+    "timestamp": 1760317211.7335072,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.69,
+        "rsi_max": 85.09,
+        "rsi_range": 67.4,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317211.7335072
+  },
+  "CELR": {
+    "timestamp": 1760317212.3269637,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 23.7,
+        "rsi_max": 86.23,
+        "rsi_range": 62.53,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317212.3269637
+  },
+  "CELO": {
+    "timestamp": 1760317212.3498414,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 20.45,
+        "rsi_max": 90.27,
+        "rsi_range": 69.82,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317212.3498414
+  },
+  "BTC": {
+    "timestamp": 1760317212.4636142,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 22.36,
+        "rsi_max": 91.04,
+        "rsi_range": 68.68,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317212.4636142
+  },
+  "CARV": {
+    "timestamp": 1760317212.686306,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 19.7,
+        "rsi_max": 79.09,
+        "rsi_range": 59.39,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317212.686306
+  },
+  "CATI": {
+    "timestamp": 1760317213.0656714,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 21.22,
+        "rsi_max": 81.61,
+        "rsi_range": 60.39,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317213.0656717
+  },
+  "COAI": {
+    "timestamp": 1760317213.1259437,
+    "maturity_data": {
+      "timestamp": 1760317213.1259415,
+      "rsi_data": {
+        "symbol": "COAI",
+        "rsi6h": 64.4,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 9.3357,
+        "change24h": 44.73,
+        "last_update": "2025-10-13T04:00:13.125922",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": "Недостаточно данных для анализа",
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": null,
+            "stoch_rsi_d": null
+          },
+          "enhanced_signal": "WAIT"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317213.1259437
+  },
+  "CETUS": {
+    "timestamp": 1760317213.6839592,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 13.02,
+        "rsi_max": 88.27,
+        "rsi_range": 75.25,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317213.6839592
+  },
+  "CFX": {
+    "timestamp": 1760317213.8472848,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.68,
+        "rsi_max": 92.42,
+        "rsi_range": 73.74000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317213.847285
+  },
+  "CGPT": {
+    "timestamp": 1760317214.2862945,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.13,
+        "rsi_max": 78.85,
+        "rsi_range": 62.72,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317214.2862945
+  },
+  "CHESS": {
+    "timestamp": 1760317214.517091,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.91,
+        "rsi_max": 76.1,
+        "rsi_range": 61.19,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317214.5170913
+  },
+  "CLANKER": {
+    "timestamp": 1760317214.9700406,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 672,
+        "min_required": 400,
+        "rsi_min": 21.18,
+        "rsi_max": 79.13,
+        "rsi_range": 57.949999999999996,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317214.9700406
+  },
+  "CROSS": {
+    "timestamp": 1760317215.986633,
+    "maturity_data": {
+      "timestamp": 1760317215.9866316,
+      "rsi_data": {
+        "symbol": "CROSS",
+        "rsi6h": 27.9,
+        "trend6h": "DOWN",
+        "rsi_zone": "BUY_ZONE",
+        "signal": "WAIT",
+        "price": 0.13996,
+        "change24h": 1.27,
+        "last_update": "2025-10-13T04:00:15.986601",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.19583992293479122,
+          "ema_long": 0.2275774496419974,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0008805773833366615,
+          "current_close": 0.13996,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 56.652766939004884,
+            "stoch_rsi_d": 50.09294705965346
+          },
+          "enhanced_signal": "ENTER_LONG",
+          "enhanced_reason": "fresh_oversold_27.9_base_oversold"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317215.9866333
+  },
+  "CHILLGUY": {
+    "timestamp": 1760317217.3987134,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 20.88,
+        "rsi_max": 77.58,
+        "rsi_range": 56.7,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317217.3987134
+  },
+  "CHR": {
+    "timestamp": 1760317218.898601,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 22.27,
+        "rsi_max": 79.44,
+        "rsi_range": 57.17,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317218.8986013
+  },
+  "CHZ": {
+    "timestamp": 1760317219.1588016,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.63,
+        "rsi_max": 86.31,
+        "rsi_range": 69.68,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317219.158802
+  },
+  "CKB": {
+    "timestamp": 1760317219.954475,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.02,
+        "rsi_max": 86.26,
+        "rsi_range": 70.24000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317219.954475
+  },
+  "CLOUD": {
+    "timestamp": 1760317220.4154165,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 8.79,
+        "rsi_max": 82.11,
+        "rsi_range": 73.32,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317220.4154167
+  },
+  "COMP": {
+    "timestamp": 1760317220.8152614,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.04,
+        "rsi_max": 85.88,
+        "rsi_range": 69.84,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317220.8152614
+  },
+  "CUDIS": {
+    "timestamp": 1760317220.9798243,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 492,
+        "min_required": 400,
+        "rsi_min": 18.89,
+        "rsi_max": 87.87,
+        "rsi_range": 68.98,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317220.9798243
+  },
+  "COOKIE": {
+    "timestamp": 1760317221.5280006,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 22.38,
+        "rsi_max": 84.35,
+        "rsi_range": 61.97,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317221.5280008
+  },
+  "CORE": {
+    "timestamp": 1760317221.6034048,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 11.94,
+        "rsi_max": 82.74,
+        "rsi_range": 70.8,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317221.603405
+  },
+  "CPOOL": {
+    "timestamp": 1760317221.7536805,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 884,
+        "min_required": 400,
+        "rsi_min": 17.49,
+        "rsi_max": 84.35,
+        "rsi_range": 66.86,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317221.7536805
+  },
+  "COS": {
+    "timestamp": 1760317222.1350243,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.09,
+        "rsi_max": 87.82,
+        "rsi_range": 72.72999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317222.1350243
+  },
+  "COOK": {
+    "timestamp": 1760317222.161871,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 22.55,
+        "rsi_max": 86.04,
+        "rsi_range": 63.49000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317222.161871
+  },
+  "DAM": {
+    "timestamp": 1760317222.2934365,
+    "maturity_data": {
+      "timestamp": 1760317222.2934353,
+      "rsi_data": {
+        "symbol": "DAM",
+        "rsi6h": 41.9,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.04554,
+        "change24h": 26.92,
+        "last_update": "2025-10-13T04:00:22.293410",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 75.66841994187095,
+            "stoch_rsi_d": 48.5893330730979
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_41.9"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317222.2934365
+  },
+  "CRO": {
+    "timestamp": 1760317222.7384841,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 13.21,
+        "rsi_max": 88.0,
+        "rsi_range": 74.78999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317222.7384844
+  },
+  "COTI": {
+    "timestamp": 1760317222.8183851,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 21.4,
+        "rsi_max": 84.23,
+        "rsi_range": 62.830000000000005,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317222.8183854
+  },
+  "COW": {
+    "timestamp": 1760317223.022963,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.7,
+        "rsi_max": 82.22,
+        "rsi_range": 63.519999999999996,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317223.022963
+  },
+  "DIA": {
+    "timestamp": 1760317224.0631223,
+    "maturity_data": {
+      "timestamp": 1760317224.063121,
+      "rsi_data": {
+        "symbol": "DIA",
+        "rsi6h": 39.3,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.4387,
+        "change24h": 5.58,
+        "last_update": "2025-10-13T04:00:24.063093",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.5169891044937074,
+          "ema_long": 0.6310655572973233,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0019333221838926384,
+          "current_close": 0.4387,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 96.0219921754437,
+            "stoch_rsi_d": 87.36723291279996
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_39.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317224.0631223
+  },
+  "CRV": {
+    "timestamp": 1760317224.3225665,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.62,
+        "rsi_max": 92.45,
+        "rsi_range": 75.83,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317224.3225667
+  },
+  "DMC": {
+    "timestamp": 1760317224.995133,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 408,
+        "min_required": 400,
+        "rsi_min": 19.52,
+        "rsi_max": 82.0,
+        "rsi_range": 62.480000000000004,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317224.995133
+  },
+  "CTC": {
+    "timestamp": 1760317225.973587,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 11.64,
+        "rsi_max": 87.07,
+        "rsi_range": 75.42999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317225.973587
+  },
+  "CTK": {
+    "timestamp": 1760317227.129714,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 26.53,
+        "rsi_max": 82.54,
+        "rsi_range": 56.010000000000005,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317227.129714
+  },
+  "CTSI": {
+    "timestamp": 1760317227.2884352,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.5,
+        "rsi_max": 86.96,
+        "rsi_range": 70.46,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317227.2884352
+  },
+  "DOLO": {
+    "timestamp": 1760317228.7768652,
+    "maturity_data": {
+      "timestamp": 1760317228.776864,
+      "rsi_data": {
+        "symbol": "DOLO",
+        "rsi6h": 39.7,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.08303,
+        "change24h": 11.33,
+        "last_update": "2025-10-13T04:00:28.776831",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.10024107117490592,
+          "ema_long": 0.1427383347707089,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.0006000837665397774,
+          "current_close": 0.08303,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 63.641764819561566,
+            "stoch_rsi_d": 47.48390034018951
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_39.7"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317228.7768652
+  },
+  "CVC": {
+    "timestamp": 1760317229.0896695,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.44,
+        "rsi_max": 76.15,
+        "rsi_range": 60.71000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317229.0896695
+  },
+  "CVX": {
+    "timestamp": 1760317229.3506172,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.82,
+        "rsi_max": 92.5,
+        "rsi_range": 76.68,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317229.3506172
+  },
+  "CYBER": {
+    "timestamp": 1760317229.3695164,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.81,
+        "rsi_max": 91.93,
+        "rsi_range": 77.12,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317229.3695166
+  },
+  "DASH": {
+    "timestamp": 1760317230.4281142,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.76,
+        "rsi_max": 93.78,
+        "rsi_range": 75.02,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317230.4281144
+  },
+  "DENT": {
+    "timestamp": 1760317230.5019474,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.25,
+        "rsi_max": 88.77,
+        "rsi_range": 74.52,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317230.5019476
+  },
+  "DBR": {
+    "timestamp": 1760317230.5124736,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 23.73,
+        "rsi_max": 86.88,
+        "rsi_range": 63.14999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317230.5124736
+  },
+  "DEXE": {
+    "timestamp": 1760317230.6997259,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 12.85,
+        "rsi_max": 88.52,
+        "rsi_range": 75.67,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317230.699726
+  },
+  "DGB": {
+    "timestamp": 1760317230.9284475,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 21.14,
+        "rsi_max": 86.66,
+        "rsi_range": 65.52,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317230.9284475
+  },
+  "DEEP": {
+    "timestamp": 1760317230.9485629,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.41,
+        "rsi_max": 86.52,
+        "rsi_range": 68.11,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317230.9485629
+  },
+  "DEGEN": {
+    "timestamp": 1760317230.9888926,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.38,
+        "rsi_max": 85.03,
+        "rsi_range": 69.65,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317230.9888926
+  },
+  "DOOD": {
+    "timestamp": 1760317231.0113487,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 627,
+        "min_required": 400,
+        "rsi_min": 26.89,
+        "rsi_max": 84.79,
+        "rsi_range": 57.900000000000006,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317231.011349
+  },
+  "EDEN": {
+    "timestamp": 1760317231.6449075,
+    "maturity_data": {
+      "timestamp": 1760317231.644906,
+      "rsi_data": {
+        "symbol": "EDEN",
+        "rsi6h": 25.4,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1633,
+        "change24h": -5.17,
+        "last_update": "2025-10-13T04:00:31.644892",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 90.42476131828661,
+            "stoch_rsi_d": 92.98806550543414
+          },
+          "enhanced_signal": "ENTER_LONG",
+          "enhanced_reason": "fresh_oversold_25.4_base_oversold"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317231.6449077
+  },
+  "DODO": {
+    "timestamp": 1760317232.4279637,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 22.55,
+        "rsi_max": 86.95,
+        "rsi_range": 64.4,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317232.427964
+  },
+  "DOG": {
+    "timestamp": 1760317233.3276122,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 22.72,
+        "rsi_max": 80.5,
+        "rsi_range": 57.78,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317233.3276124
+  },
+  "DOGE": {
+    "timestamp": 1760317235.172505,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 21.03,
+        "rsi_max": 90.89,
+        "rsi_range": 69.86,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317235.1725051
+  },
+  "DOGS": {
+    "timestamp": 1760317235.5788836,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 13.92,
+        "rsi_max": 86.62,
+        "rsi_range": 72.7,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317235.578884
+  },
+  "DOT": {
+    "timestamp": 1760317237.0125258,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.75,
+        "rsi_max": 89.56,
+        "rsi_range": 71.81,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317237.0125258
+  },
+  "DRIFT": {
+    "timestamp": 1760317237.4876828,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.67,
+        "rsi_max": 86.61,
+        "rsi_range": 70.94,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317237.4876828
+  },
+  "DUCK": {
+    "timestamp": 1760317237.6821535,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 9.54,
+        "rsi_max": 95.23,
+        "rsi_range": 85.69,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317237.6821537
+  },
+  "ELX": {
+    "timestamp": 1760317237.7319944,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 860,
+        "min_required": 400,
+        "rsi_min": 16.99,
+        "rsi_max": 95.01,
+        "rsi_range": 78.02000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317237.7319946
+  },
+  "ERA": {
+    "timestamp": 1760317237.7985516,
+    "maturity_data": {
+      "timestamp": 1760317237.7985506,
+      "rsi_data": {
+        "symbol": "ERA",
+        "rsi6h": 42.1,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.4305,
+        "change24h": 12.28,
+        "last_update": "2025-10-13T04:00:37.798524",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.49402367707348077,
+          "ema_long": 0.6703876190283133,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00241093084450561,
+          "current_close": 0.4305,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 98.81890024874401,
+            "stoch_rsi_d": 80.39767759157853
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_42.1"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317237.7985516
+  },
+  "ESPORTS": {
+    "timestamp": 1760317238.4715457,
+    "maturity_data": {
+      "timestamp": 1760317238.4715443,
+      "rsi_data": {
+        "symbol": "ESPORTS",
+        "rsi6h": 65.7,
+        "trend6h": "UP",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.21978,
+        "change24h": 35.14,
+        "last_update": "2025-10-13T04:00:38.471508",
+        "trend_analysis": {
+          "trend": "UP",
+          "ema_short": 0.1793762182074689,
+          "ema_long": 0.15472352099678155,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": 0.0006538339598313458,
+          "current_close": 0.21978,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 97.18948570382734,
+            "stoch_rsi_d": 88.8035612452024
+          },
+          "enhanced_signal": "EXIT_LONG",
+          "enhanced_reason": "rsi_exit_long_65.7"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317238.4715457
+  },
+  "ES": {
+    "timestamp": 1760317238.534887,
+    "maturity_data": {
+      "timestamp": 1760317238.5348854,
+      "rsi_data": {
+        "symbol": "ES",
+        "rsi6h": 41.6,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.0981,
+        "change24h": 7.21,
+        "last_update": "2025-10-13T04:00:38.534842",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.11352065687012246,
+          "ema_long": 0.14107656377001884,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00043192526402027753,
+          "current_close": 0.0981,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 98.66349171856929,
+            "stoch_rsi_d": 88.84740015241398
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_41.6"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317238.534887
+  },
+  "EPT": {
+    "timestamp": 1760317238.8093724,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 699,
+        "min_required": 400,
+        "rsi_min": 29.35,
+        "rsi_max": 90.44,
+        "rsi_range": 61.089999999999996,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317238.8093724
+  },
+  "DUSK": {
+    "timestamp": 1760317238.8316386,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 22.24,
+        "rsi_max": 79.89,
+        "rsi_range": 57.650000000000006,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317238.8316386
+  },
+  "DYM": {
+    "timestamp": 1760317239.1349275,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.0,
+        "rsi_max": 90.94,
+        "rsi_range": 74.94,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317239.134928
+  },
+  "DYDX": {
+    "timestamp": 1760317239.2819204,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 12.38,
+        "rsi_max": 87.62,
+        "rsi_range": 75.24000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317239.2819204
+  },
+  "EDU": {
+    "timestamp": 1760317239.6553817,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.99,
+        "rsi_max": 88.62,
+        "rsi_range": 69.63000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317239.655382
+  },
+  "EIGEN": {
+    "timestamp": 1760317239.8132145,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 23.06,
+        "rsi_max": 86.77,
+        "rsi_range": 63.709999999999994,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317239.8132148
+  },
+  "FF": {
+    "timestamp": 1760317240.1076863,
+    "maturity_data": {
+      "timestamp": 1760317240.107685,
+      "rsi_data": {
+        "symbol": "FF",
+        "rsi6h": 44.4,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1335,
+        "change24h": 18.56,
+        "last_update": "2025-10-13T04:00:40.107668",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 99.40314366847439,
+            "stoch_rsi_d": 99.03217504504651
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_44.4"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317240.1076863
+  },
+  "EGLD": {
+    "timestamp": 1760317240.453784,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.61,
+        "rsi_max": 87.44,
+        "rsi_range": 72.83,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317240.453784
+  },
+  "ENA": {
+    "timestamp": 1760317240.8709283,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.71,
+        "rsi_max": 92.74,
+        "rsi_range": 76.03,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317240.8709285
+  },
+  "EPIC": {
+    "timestamp": 1760317240.9149454,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 852,
+        "min_required": 400,
+        "rsi_min": 20.91,
+        "rsi_max": 97.5,
+        "rsi_range": 76.59,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317240.9149454
+  },
+  "ENJ": {
+    "timestamp": 1760317240.9994473,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.75,
+        "rsi_max": 85.94,
+        "rsi_range": 69.19,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317240.9994473
+  },
+  "ENS": {
+    "timestamp": 1760317241.8163424,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.21,
+        "rsi_max": 89.28,
+        "rsi_range": 72.07,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317241.8163426
+  },
+  "FIS": {
+    "timestamp": 1760317242.0128074,
+    "maturity_data": {
+      "timestamp": 1760317242.0128064,
+      "rsi_data": {
+        "symbol": "FIS",
+        "rsi6h": 42.3,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.07338,
+        "change24h": 6.78,
+        "last_update": "2025-10-13T04:00:42.012780",
+        "trend_analysis": {
+          "trend": "DOWN",
+          "ema_short": 0.08042856426886298,
+          "ema_long": 0.09694856240302857,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -0.00023686997389978093,
+          "current_close": 0.07338,
+          "confirmations": 3,
+          "accuracy": 0
+        },
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 88.31275289652545,
+            "stoch_rsi_d": 75.79362230862395
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_42.3"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317242.0128074
+  },
+  "FHE": {
+    "timestamp": 1760317243.5435176,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 720,
+        "min_required": 400,
+        "rsi_min": 15.48,
+        "rsi_max": 83.31,
+        "rsi_range": 67.83,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317243.5435176
+  },
+  "FLUID": {
+    "timestamp": 1760317244.3580184,
+    "maturity_data": {
+      "timestamp": 1760317244.3580172,
+      "rsi_data": {
+        "symbol": "FLUID",
+        "rsi6h": 40.0,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 5.485,
+        "change24h": 6.17,
+        "last_update": "2025-10-13T04:00:44.358004",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 91.92214709025352,
+            "stoch_rsi_d": 64.65840036570096
+          },
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "enhanced_neutral_40.0"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317244.3580184
+  },
+  "ETH": {
+    "timestamp": 1760317247.1091816,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.44,
+        "rsi_max": 92.31,
+        "rsi_range": 76.87,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317247.1091816
+  },
+  "ETC": {
+    "timestamp": 1760317247.182126,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 20.75,
+        "rsi_max": 88.61,
+        "rsi_range": 67.86,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317247.1821265
+  },
+  "F": {
+    "timestamp": 1760317248.0296478,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 19.17,
+        "rsi_max": 90.72,
+        "rsi_range": 71.55,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317248.0296478
+  },
+  "ETHW": {
+    "timestamp": 1760317248.399043,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.23,
+        "rsi_max": 90.23,
+        "rsi_range": 76.0,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317248.399043
+  },
+  "ETHFI": {
+    "timestamp": 1760317248.459433,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.47,
+        "rsi_max": 88.07,
+        "rsi_range": 70.6,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317248.4594333
+  },
+  "FIDA": {
+    "timestamp": 1760317248.4699955,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.16,
+        "rsi_max": 86.91,
+        "rsi_range": 69.75,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317248.4699957
+  },
+  "ETHBTC": {
+    "timestamp": 1760317248.6175842,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.03,
+        "rsi_max": 88.65,
+        "rsi_range": 72.62,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317248.6175845
+  },
+  "FARTCOIN": {
+    "timestamp": 1760317248.7126913,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 19.57,
+        "rsi_max": 72.63,
+        "rsi_range": 53.059999999999995,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317248.7126915
+  },
+  "FIL": {
+    "timestamp": 1760317248.9433315,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 19.1,
+        "rsi_max": 86.8,
+        "rsi_range": 67.69999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317248.9433315
+  },
+  "FRAG": {
+    "timestamp": 1760317249.0787733,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 416,
+        "min_required": 400,
+        "rsi_min": 18.92,
+        "rsi_max": 77.58,
+        "rsi_range": 58.66,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317249.0787735
+  },
+  "FLM": {
+    "timestamp": 1760317249.7626126,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.48,
+        "rsi_max": 80.71,
+        "rsi_range": 62.22999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317249.7626128
+  },
+  "FLOCK": {
+    "timestamp": 1760317249.8790634,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.45,
+        "rsi_max": 88.61,
+        "rsi_range": 73.16,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317249.8790636
+  },
+  "GIGGLE": {
+    "timestamp": 1760317250.6509166,
+    "maturity_data": {
+      "timestamp": 1760317250.6509151,
+      "rsi_data": {
+        "symbol": "GIGGLE",
+        "rsi6h": 68.7,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 146.13,
+        "change24h": 8.53,
+        "last_update": "2025-10-13T04:00:50.650901",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": "Недостаточно данных для анализа",
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": null,
+            "stoch_rsi_d": null
+          },
+          "enhanced_signal": "WAIT"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317250.6509166
+  },
+  "FIO": {
+    "timestamp": 1760317250.6853957,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.13,
+        "rsi_max": 76.68,
+        "rsi_range": 62.550000000000004,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317250.685396
+  },
+  "FLR": {
+    "timestamp": 1760317250.7793658,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.3,
+        "rsi_max": 89.75,
+        "rsi_range": 74.45,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317250.7793663
+  },
+  "FLOW": {
+    "timestamp": 1760317250.8037372,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.16,
+        "rsi_max": 90.53,
+        "rsi_range": 76.37,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317250.8037372
+  },
+  "FORM": {
+    "timestamp": 1760317252.323242,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 832,
+        "min_required": 400,
+        "rsi_min": 11.84,
+        "rsi_max": 82.95,
+        "rsi_range": 71.11,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317252.3232422
+  },
+  "FLUX": {
+    "timestamp": 1760317253.124865,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.53,
+        "rsi_max": 88.68,
+        "rsi_range": 74.15,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317253.124865
+  },
+  "FORTH": {
+    "timestamp": 1760317255.4482431,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.43,
+        "rsi_max": 87.06,
+        "rsi_range": 71.63,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317255.4482431
+  },
+  "FUEL": {
+    "timestamp": 1760317257.0134685,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 10.87,
+        "rsi_max": 81.9,
+        "rsi_range": 71.03,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317257.0134685
+  },
+  "FWOG": {
+    "timestamp": 1760317257.0746298,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.18,
+        "rsi_max": 77.42,
+        "rsi_range": 59.24,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317257.0746298
+  },
+  "G": {
+    "timestamp": 1760317257.6700819,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 11.87,
+        "rsi_max": 73.43,
+        "rsi_range": 61.56000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317257.6700819
+  },
+  "FXS": {
+    "timestamp": 1760317258.0600162,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 12.77,
+        "rsi_max": 91.76,
+        "rsi_range": 78.99000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317258.0600162
+  },
+  "GALA": {
+    "timestamp": 1760317258.2084079,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 18.54,
+        "rsi_max": 90.26,
+        "rsi_range": 71.72,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317258.208408
+  },
+  "GAS": {
+    "timestamp": 1760317258.310643,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.82,
+        "rsi_max": 80.47,
+        "rsi_range": 64.65,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317258.3106432
+  },
+  "GIGA": {
+    "timestamp": 1760317258.4565952,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.25,
+        "rsi_max": 75.07,
+        "rsi_range": 60.81999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317258.4565952
+  },
+  "GORK": {
+    "timestamp": 1760317258.5027535,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 644,
+        "min_required": 400,
+        "rsi_min": 30.96,
+        "rsi_max": 81.44,
+        "rsi_range": 50.48,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317258.5027537
+  },
+  "GLM": {
+    "timestamp": 1760317259.3132584,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.15,
+        "rsi_max": 85.05,
+        "rsi_range": 67.9,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317259.3132584
+  },
+  "H": {
+    "timestamp": 1760317259.4951315,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 440,
+        "min_required": 400,
+        "rsi_min": 10.48,
+        "rsi_max": 84.75,
+        "rsi_range": 74.27,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317259.4951315
+  },
+  "GLMR": {
+    "timestamp": 1760317259.6193833,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 13.62,
+        "rsi_max": 91.47,
+        "rsi_range": 77.85,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317259.6193836
+  },
+  "GNO": {
+    "timestamp": 1760317259.8637102,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.64,
+        "rsi_max": 90.84,
+        "rsi_range": 75.2,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317259.8637104
+  },
+  "GMT": {
+    "timestamp": 1760317259.8812659,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.67,
+        "rsi_max": 85.92,
+        "rsi_range": 71.25,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317259.8812659
+  },
+  "GMX": {
+    "timestamp": 1760317259.9296896,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.34,
+        "rsi_max": 89.77,
+        "rsi_range": 75.42999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317259.9296896
+  },
+  "GOAT": {
+    "timestamp": 1760317260.18406,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.54,
+        "rsi_max": 89.45,
+        "rsi_range": 71.91,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317260.18406
+  },
+  "GODS": {
+    "timestamp": 1760317260.3388357,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.24,
+        "rsi_max": 80.23,
+        "rsi_range": 62.99000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317260.3388357
+  },
+  "HEMI": {
+    "timestamp": 1760317260.3736618,
+    "maturity_data": {
+      "timestamp": 1760317260.3736606,
+      "rsi_data": {
+        "symbol": "HEMI",
+        "rsi6h": 32.8,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.06658,
+        "change24h": -0.48,
+        "last_update": "2025-10-13T04:01:00.373645",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 23.757639893940677,
+            "stoch_rsi_d": 19.634708628115074
+          },
+          "enhanced_signal": "EXIT_SHORT",
+          "enhanced_reason": "rsi_exit_short_32.8"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317260.3736618
+  },
+  "HAEDAL": {
+    "timestamp": 1760317261.5047414,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 663,
+        "min_required": 400,
+        "rsi_min": 18.99,
+        "rsi_max": 89.09,
+        "rsi_range": 70.10000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317261.5047414
+  },
+  "GUN": {
+    "timestamp": 1760317262.1710105,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 783,
+        "min_required": 400,
+        "rsi_min": 19.57,
+        "rsi_max": 82.87,
+        "rsi_range": 63.300000000000004,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317262.1710107
+  },
+  "HOLO": {
+    "timestamp": 1760317262.8977122,
+    "maturity_data": {
+      "timestamp": 1760317262.8977108,
+      "rsi_data": {
+        "symbol": "HOLO",
+        "rsi6h": 31.2,
+        "trend6h": "NEUTRAL",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 0.1426,
+        "change24h": 1.06,
+        "last_update": "2025-10-13T04:01:02.897689",
+        "trend_analysis": null,
+        "ema_periods": {
+          "ema_short": 50,
+          "ema_long": 200,
+          "accuracy": 0,
+          "analysis_method": "default"
+        },
+        "enhanced_rsi": {
+          "enabled": true,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
+          "adaptive_levels": [
+            29,
+            71
+          ],
+          "confirmations": {
+            "volume": false,
+            "divergence": false,
+            "stoch_rsi_k": 81.78092974600811,
+            "stoch_rsi_d": 72.60840086118161
+          },
+          "enhanced_signal": "EXIT_SHORT",
+          "enhanced_reason": "rsi_exit_short_31.2"
+        },
+        "time_filter_info": null,
+        "exit_scam_info": null
+      }
+    },
+    "last_verified": 1760317262.8977122
+  },
+  "GPS": {
+    "timestamp": 1760317263.5872653,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 948,
+        "min_required": 400,
+        "rsi_min": 23.6,
+        "rsi_max": 82.09,
+        "rsi_range": 58.49,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317263.5872655
+  },
+  "HOME": {
+    "timestamp": 1760317264.1922038,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 500,
+        "min_required": 400,
+        "rsi_min": 18.27,
+        "rsi_max": 81.98,
+        "rsi_range": 63.71000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317264.192204
+  },
+  "GRASS": {
+    "timestamp": 1760317265.1630557,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.09,
+        "rsi_max": 74.78,
+        "rsi_range": 59.69,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317265.1630557
+  },
+  "GRIFFAIN": {
+    "timestamp": 1760317265.8665142,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.04,
+        "rsi_max": 85.09,
+        "rsi_range": 69.05000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317265.8665142
+  },
+  "GTC": {
+    "timestamp": 1760317265.9206686,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 21.65,
+        "rsi_max": 89.01,
+        "rsi_range": 67.36000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317265.9206688
+  },
+  "GRT": {
+    "timestamp": 1760317266.0120997,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 16.29,
+        "rsi_max": 88.02,
+        "rsi_range": 71.72999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317266.0121
+  },
+  "HEI": {
+    "timestamp": 1760317267.4735632,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 964,
+        "min_required": 400,
+        "rsi_min": 10.58,
+        "rsi_max": 94.86,
+        "rsi_range": 84.28,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317267.4735632
+  },
+  "HUMA": {
+    "timestamp": 1760317267.8503594,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 559,
+        "min_required": 400,
+        "rsi_min": 17.78,
+        "rsi_max": 84.33,
+        "rsi_range": 66.55,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317267.8503594
+  },
+  "HIFI": {
+    "timestamp": 1760317268.0913062,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 13.9,
+        "rsi_max": 94.78,
+        "rsi_range": 80.88,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317268.0913064
+  },
+  "HFT": {
+    "timestamp": 1760317268.1705518,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 17.92,
+        "rsi_max": 90.0,
+        "rsi_range": 72.08,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317268.1705525
+  },
+  "HBAR": {
+    "timestamp": 1760317268.2124178,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 15.87,
+        "rsi_max": 91.4,
+        "rsi_range": 75.53,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317268.2124178
+  },
+  "ICNT": {
+    "timestamp": 1760317268.3543441,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 407,
+        "min_required": 400,
+        "rsi_min": 19.02,
+        "rsi_max": 79.18,
+        "rsi_range": 60.16000000000001,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317268.3543441
+  },
+  "HIPPO": {
+    "timestamp": 1760317268.4579558,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.17,
+        "rsi_max": 78.87,
+        "rsi_range": 64.7,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317268.457956
+  },
+  "HIGH": {
+    "timestamp": 1760317268.533403,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 13.73,
+        "rsi_max": 83.82,
+        "rsi_range": 70.08999999999999,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317268.533403
+  },
+  "HIVE": {
+    "timestamp": 1760317268.8700874,
+    "maturity_data": {
+      "is_mature": true,
+      "reason": "Монета зрелая для торговли",
+      "details": {
+        "candles_count": 1000,
+        "min_required": 400,
+        "rsi_min": 14.77,
+        "rsi_max": 74.72,
+        "rsi_range": 59.95,
+        "checks": {
+          "sufficient_candles": true,
+          "rsi_reached_low": true,
+          "rsi_reached_high": true
+        }
+      }
+    },
+    "last_verified": 1760317268.8700874
+  }
+}
