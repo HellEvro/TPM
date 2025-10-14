@@ -38,11 +38,13 @@ try:
         STOP_LOSS_SETUP_INTERVAL, POSITION_SYNC_INTERVAL,
         INACTIVE_BOT_CLEANUP_INTERVAL, BOT_STATUS_UPDATE_INTERVAL
     )
+    from bots_modules.imports_and_globals import INACTIVE_BOT_TIMEOUT
 except ImportError:
     STOP_LOSS_SETUP_INTERVAL = 300
     POSITION_SYNC_INTERVAL = 30
     INACTIVE_BOT_CLEANUP_INTERVAL = 600
     BOT_STATUS_UPDATE_INTERVAL = 30
+    INACTIVE_BOT_TIMEOUT = 600
 
 # Импорт функций из других модулей
 try:
@@ -950,7 +952,7 @@ def close_position_endpoint():
 @bots_app.route('/api/bots/system-config', methods=['GET', 'POST'])
 def system_config():
     """Получить или обновить системные настройки"""
-    global STOP_LOSS_SETUP_INTERVAL, POSITION_SYNC_INTERVAL, INACTIVE_BOT_CLEANUP_INTERVAL, INACTIVE_BOT_TIMEOUT
+    global STOP_LOSS_SETUP_INTERVAL, POSITION_SYNC_INTERVAL, INACTIVE_BOT_CLEANUP_INTERVAL, INACTIVE_BOT_TIMEOUT, BOT_STATUS_UPDATE_INTERVAL
     try:
         if request.method == 'GET':
             return jsonify({
@@ -1029,9 +1031,9 @@ def system_config():
                 logger.info(f"[CONFIG] Inactive Bot Cleanup интервал обновлен: {old_value} → {INACTIVE_BOT_CLEANUP_INTERVAL} сек")
             
             if 'inactive_bot_timeout' in data:
-                old_value = INACTIVE_BOT_TIMEOUT
-                INACTIVE_BOT_TIMEOUT = int(data['inactive_bot_timeout'])
-                logger.info(f"[CONFIG] Inactive Bot Timeout обновлен: {old_value} → {INACTIVE_BOT_TIMEOUT} сек")
+                old_value = globals_module.INACTIVE_BOT_TIMEOUT
+                globals_module.INACTIVE_BOT_TIMEOUT = int(data['inactive_bot_timeout'])
+                logger.info(f"[CONFIG] Inactive Bot Timeout обновлен: {old_value} → {globals_module.INACTIVE_BOT_TIMEOUT} сек")
             
             # Настройки улучшенного RSI
             if 'enhanced_rsi_enabled' in data:
@@ -1071,7 +1073,7 @@ def system_config():
                 # Интервалы синхронизации и очистки
                 'position_sync_interval': POSITION_SYNC_INTERVAL,
                 'inactive_bot_cleanup_interval': INACTIVE_BOT_CLEANUP_INTERVAL,
-                'inactive_bot_timeout': INACTIVE_BOT_TIMEOUT,
+                'inactive_bot_timeout': globals_module.INACTIVE_BOT_TIMEOUT,
                 'stop_loss_setup_interval': STOP_LOSS_SETUP_INTERVAL,
                 # Настройки улучшенного RSI
                 'enhanced_rsi_enabled': SystemConfig.ENHANCED_RSI_ENABLED,
@@ -2151,7 +2153,7 @@ def cleanup_bot_service():
             'bot_status_update_interval': BOT_STATUS_UPDATE_INTERVAL,
             'position_sync_interval': POSITION_SYNC_INTERVAL,
             'inactive_bot_cleanup_interval': INACTIVE_BOT_CLEANUP_INTERVAL,
-            'inactive_bot_timeout': INACTIVE_BOT_TIMEOUT,
+            'inactive_bot_timeout': globals_module.INACTIVE_BOT_TIMEOUT,
             'stop_loss_setup_interval': STOP_LOSS_SETUP_INTERVAL
         }
         save_system_config(system_config_data)
