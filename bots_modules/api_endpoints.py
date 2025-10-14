@@ -32,6 +32,18 @@ from bots_modules.imports_and_globals import (
     BOT_STATUS, ASYNC_AVAILABLE, RSI_CACHE_FILE
 )
 
+# Импорт констант интервалов
+try:
+    from bots_modules.sync_and_cache import (
+        STOP_LOSS_SETUP_INTERVAL, POSITION_SYNC_INTERVAL,
+        INACTIVE_BOT_CLEANUP_INTERVAL, BOT_STATUS_UPDATE_INTERVAL
+    )
+except ImportError:
+    STOP_LOSS_SETUP_INTERVAL = 300
+    POSITION_SYNC_INTERVAL = 30
+    INACTIVE_BOT_CLEANUP_INTERVAL = 600
+    BOT_STATUS_UPDATE_INTERVAL = 30
+
 # Импорт функций из других модулей
 try:
     from bots_modules.sync_and_cache import (
