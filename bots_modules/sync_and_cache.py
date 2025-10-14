@@ -39,7 +39,7 @@ try:
         mature_coins_storage, mature_coins_lock, BOT_STATUS,
         DEFAULT_AUTO_BOT_CONFIG, RSI_CACHE_FILE, PROCESS_STATE_FILE,
         SYSTEM_CONFIG_FILE, BOTS_STATE_FILE, AUTO_BOT_CONFIG_FILE,
-        DEFAULT_CONFIG_FILE, INACTIVE_BOT_TIMEOUT
+        DEFAULT_CONFIG_FILE, INACTIVE_BOT_TIMEOUT, should_log_message
     )
     # MATURE_COINS_FILE определен в maturity.py
     try:
@@ -80,6 +80,8 @@ except ImportError as e:
     MATURE_COINS_FILE = 'data/mature_coins.json'
     DEFAULT_CONFIG_FILE = 'data/default_auto_bot_config.json'
     INACTIVE_BOT_TIMEOUT = 600
+    def should_log_message(cat, msg, interval=60):
+        return (True, msg)
 
 def get_rsi_cache():
     """Получить кэшированные RSI данные"""

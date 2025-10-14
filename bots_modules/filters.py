@@ -71,7 +71,8 @@ except ImportError as e:
 try:
     from bots_modules.imports_and_globals import (
         bots_data_lock, bots_data, rsi_data_lock, coins_rsi_data, exchange,
-        RSI_OVERSOLD, RSI_OVERBOUGHT, RSI_EXIT_LONG, RSI_EXIT_SHORT, BOT_STATUS
+        RSI_OVERSOLD, RSI_OVERBOUGHT, RSI_EXIT_LONG, RSI_EXIT_SHORT, BOT_STATUS,
+        system_initialized
     )
 except ImportError:
     bots_data_lock = threading.Lock()
@@ -84,6 +85,7 @@ except ImportError:
     RSI_EXIT_LONG = 65
     RSI_EXIT_SHORT = 35
     BOT_STATUS = {}
+    system_initialized = False
 
 def check_rsi_time_filter(candles, rsi, signal):
     """
