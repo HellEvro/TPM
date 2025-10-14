@@ -188,6 +188,17 @@ if __name__ == '__main__':
             import traceback
             traceback.print_exc()
         
+        # Запускаем воркер Optimal EMA
+        try:
+            from bot_engine.optimal_ema_worker import start_optimal_ema_worker
+            optimal_ema_worker = start_optimal_ema_worker(update_interval=21600)  # 6 часов
+            if optimal_ema_worker:
+                logger.info("📊 Optimal EMA Worker запущен (обновление каждые 6 часов)")
+            else:
+                logger.warning("⚠️ Optimal EMA Worker не запущен (скрипт не найден)")
+        except Exception as ema_error:
+            logger.warning(f"⚠️ Не удалось запустить Optimal EMA Worker: {ema_error}")
+        
         auto_save_thread = threading.Thread(target=auto_save_worker, daemon=True)
         auto_save_thread.start()
         logger.info("Auto Save Worker запущен")
