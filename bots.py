@@ -30,31 +30,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
 # Импорт цветного логирования
-from color_logger import setup_color_logging
-
-# Импорт системы истории ботов
-try:
-    from bot_history import (
-        bot_history_manager, log_bot_start, log_bot_stop, log_bot_signal,
-        log_position_opened, log_position_closed
-    )
-    BOT_HISTORY_AVAILABLE = True
-except ImportError as e:
-    print(f"Модуль bot_history недоступен: {e}")
-    # Создаем заглушки
-    class DummyHistoryManager:
-        def get_bot_history(self, *args, **kwargs): return []
-        def get_bot_trades(self, *args, **kwargs): return []
-        def get_bot_statistics(self, *args, **kwargs): return {}
-        def clear_history(self, *args, **kwargs): pass
-    
-    bot_history_manager = DummyHistoryManager()
-    def log_bot_start(*args, **kwargs): pass
-    def log_bot_stop(*args, **kwargs): pass
-    def log_bot_signal(*args, **kwargs): pass
-    def log_position_opened(*args, **kwargs): pass
-    def log_position_closed(*args, **kwargs): pass
-    BOT_HISTORY_AVAILABLE = False
+from utils.color_logger import setup_color_logging
 
 # Импортируем все модули
 print("Загрузка модулей...")
@@ -70,6 +46,32 @@ from bots_modules.init_functions import *
 from bots_modules.api_endpoints import *
 
 print("Все модули загружены!")
+
+# Импорт системы истории ботов (после импорта модулей, чтобы логирование было настроено)
+try:
+    from bot_engine.bot_history import (
+        bot_history_manager, log_bot_start, log_bot_stop, log_bot_signal,
+        log_position_opened, log_position_closed
+    )
+    BOT_HISTORY_AVAILABLE = True
+    logger = logging.getLogger('BotsService')
+    logger.info("[BOT_HISTORY] ✅ Модуль bot_history загружен успешно")
+except ImportError as e:
+    print(f"[WARNING] Модуль bot_history недоступен: {e}")
+    # Создаем заглушки
+    class DummyHistoryManager:
+        def get_bot_history(self, *args, **kwargs): return []
+        def get_bot_trades(self, *args, **kwargs): return []
+        def get_bot_statistics(self, *args, **kwargs): return {}
+        def clear_history(self, *args, **kwargs): pass
+    
+    bot_history_manager = DummyHistoryManager()
+    def log_bot_start(*args, **kwargs): pass
+    def log_bot_stop(*args, **kwargs): pass
+    def log_bot_signal(*args, **kwargs): pass
+    def log_position_opened(*args, **kwargs): pass
+    def log_position_closed(*args, **kwargs): pass
+    BOT_HISTORY_AVAILABLE = False
 
 # Настройка логирования
 setup_color_logging()

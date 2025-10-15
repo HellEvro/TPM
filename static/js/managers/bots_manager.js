@@ -2154,8 +2154,7 @@ class BotsManager {
     getBotControlButtonsHtml(bot) {
         // Бот активен если running, idle, или в позиции
         const isRunning = bot.status === 'running' || bot.status === 'idle' || 
-                         bot.status === 'in_position_long' || bot.status === 'in_position_short' ||
-                         bot.status === 'armed_up' || bot.status === 'armed_down';
+                         bot.status === 'in_position_long' || bot.status === 'in_position_short';
         const isStopped = bot.status === 'stopped' || bot.status === 'paused';
         
         let buttons = [];
@@ -2177,8 +2176,7 @@ class BotsManager {
     getBotDetailButtonsHtml(bot) {
         // Бот активен если running, idle, или в позиции
         const isRunning = bot.status === 'running' || bot.status === 'idle' || 
-                         bot.status === 'in_position_long' || bot.status === 'in_position_short' ||
-                         bot.status === 'armed_up' || bot.status === 'armed_down';
+                         bot.status === 'in_position_long' || bot.status === 'in_position_short';
         const isStopped = bot.status === 'stopped' || bot.status === 'paused';
         
         let buttons = [];
@@ -4666,8 +4664,7 @@ class BotsManager {
         
         const runningBots = this.activeBots.filter(bot => 
             bot.status === 'running' || bot.status === 'idle' || 
-            bot.status === 'in_position_long' || bot.status === 'in_position_short' ||
-            bot.status === 'armed_up' || bot.status === 'armed_down'
+            bot.status === 'in_position_long' || bot.status === 'in_position_short'
         );
         
         if (runningBots.length === 0) {
@@ -4951,14 +4948,6 @@ class BotsManager {
                 statusText = 'SHORT (закрыта)';
                 statusColor = '#f44336';
                 statusIcon = '📉';
-            } else if (bot.status === 'armed_up') {
-                statusText = 'Готов к LONG';
-                statusColor = '#ff9800';
-                statusIcon = '⏳';
-            } else if (bot.status === 'armed_down') {
-                statusText = 'Готов к SHORT';
-                statusColor = '#ff9800';
-                statusIcon = '⏳';
             } else if (bot.status === 'running') {
                 statusText = 'Ожидание сигнала';
                 statusColor = '#2196f3';

@@ -32,8 +32,6 @@ TIMEFRAME = '6h'
 # Статусы бота
 class BotStatus:
     IDLE = 'IDLE'
-    ARMED_UP = 'ARMED_UP'
-    ARMED_DOWN = 'ARMED_DOWN'
     IN_POSITION_LONG = 'IN_POSITION_LONG'
     IN_POSITION_SHORT = 'IN_POSITION_SHORT'
     PAUSED = 'PAUSED'

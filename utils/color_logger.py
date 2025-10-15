@@ -154,7 +154,7 @@ class ColorFormatter(logging.Formatter):
         message = re.sub(r'(\d+\.?\d*)', f'{Colors.BRIGHT_CYAN}\\1{Colors.RESET}', message)
         
         # Выделяем статусы
-        statuses = ['running', 'idle', 'in_position_long', 'in_position_short', 'paused', 'armed_up', 'armed_down']
+        statuses = ['running', 'idle', 'in_position_long', 'in_position_short', 'paused']
         for status in statuses:
             message = message.replace(status, f'{Colors.BRIGHT_GREEN}{status}{Colors.RESET}')
         

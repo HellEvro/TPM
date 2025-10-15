@@ -1583,7 +1583,7 @@ def check_startup_position_conflicts():
                         # Проверяем конфликт
                         if has_position:
                             # Есть позиция на бирже
-                            if bot_status in [BOT_STATUS['RUNNING'], BOT_STATUS['ARMED_UP'], BOT_STATUS['ARMED_DOWN']]:
+                            if bot_status in [BOT_STATUS['RUNNING']]:
                                 # КОНФЛИКТ: бот активен, но позиция уже есть на бирже
                                 logger.warning(f"[STARTUP_CONFLICTS] 🚨 {symbol}: КОНФЛИКТ! Бот {bot_status}, но позиция {side} уже есть на бирже!")
                                 

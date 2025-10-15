@@ -272,8 +272,6 @@ class TradingBot:
         if self.status in [BotStatus.IDLE, 'running']:
             return self._handle_idle_state(signal, trend)
         
-        elif self.status in [BotStatus.ARMED_UP, BotStatus.ARMED_DOWN]:
-            return self._handle_armed_state(signal, trend)
         
         elif self.status in [BotStatus.IN_POSITION_LONG, BotStatus.IN_POSITION_SHORT]:
             # Проверяем, есть ли реальная позиция
@@ -416,44 +414,6 @@ class TradingBot:
         self.logger.info(f"[TRADING_BOT] {self.symbol}: Нет сигналов для входа: signal={signal}, trend={trend}")
         return None
     
-    def _handle_armed_state(self, signal: str, trend: str) -> Optional[Dict]:
-        """Обрабатывает состояния ARMED_UP/ARMED_DOWN"""
-        self.logger.info(f"[TRADING_BOT] {self.symbol}: _handle_armed_state: status={self.status}, signal={signal}, trend={trend}")
-        
-        # КРИТИЧЕСКИ ВАЖНО: Если автобот выключен - НЕ ОТКРЫВАЕМ новые позиции!
-        try:
-            import sys
-            import os
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            from bots import bots_data, bots_data_lock
-            
-            with bots_data_lock:
-                auto_bot_enabled = bots_data['auto_bot_config']['enabled']
-            
-            if not auto_bot_enabled:
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: ⏹️ Auto Bot выключен - НЕ открываем новую позицию из ARMED состояния")
-                return {'action': 'blocked_autobot_disabled', 'reason': 'autobot_off', 'status': self.status}
-        except Exception as e:
-            self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка проверки автобота: {e}")
-            # В случае ошибки блокируем для безопасности
-            return {'action': 'blocked_check_error', 'reason': 'autobot_check_failed'}
-        
-        if self.status == BotStatus.ARMED_UP and signal == 'ENTER_LONG':
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Открываем LONG позицию!")
-            return self._enter_position('LONG')
-        
-        elif self.status == BotStatus.ARMED_DOWN and signal == 'ENTER_SHORT':
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Открываем SHORT позицию!")
-            return self._enter_position('SHORT')
-        
-        # Если сигнал пропал, возвращаемся в IDLE
-        elif signal == 'WAIT':
-            self.status = BotStatus.IDLE
-            self.logger.info("Signal lost, returning to IDLE")
-            return {'action': 'disarmed'}
-        
-        self.logger.info(f"[TRADING_BOT] {self.symbol}: Нет действий в armed состоянии: status={self.status}, signal={signal}")
-        return None
     
     def _handle_position_state(self, signal: str, trend: str) -> Optional[Dict]:
         """Обрабатывает состояния IN_POSITION_LONG/SHORT"""
