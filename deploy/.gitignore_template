@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Личные данные и логи
+logs/
+*.log
+data/*.json
+!data/default_auto_bot_config.json
+
+# Конфигурация с секретами
+app/config.py
+app/keys.py
+app/telegram_states.json
+app/current_language.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Резервные копии
+backups/
+
+# Временные файлы
+*.tmp
+*.bak
+*.old
+
