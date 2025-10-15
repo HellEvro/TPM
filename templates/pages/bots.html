@@ -13,6 +13,60 @@
     <!-- Таб 1: Управление -->
     <div class="bots-tab-content active" id="managementTab">
         <div class="management-layout">
+            <!-- МОБИЛЬНЫЙ БЛОК СТАТИСТИКИ (ТЕПЕРЬ ВСЕГДА ВИДЕН НА МОБИЛЬНЫХ) -->
+            <div class="mobile-stats-block">
+                <!-- БЛОК 1: БАЛАНС СЧЕТА -->
+                <div class="mobile-balance-block">
+                    <h4 data-translate="account_balance">💼 Баланс счета</h4>
+                    <div class="mobile-balance-stats">
+                        <div class="mobile-balance-item">
+                            <span class="label" data-translate="balance">Баланс:</span>
+                            <span class="value" id="mobileAccountBalance">$100.06</span>
+                        </div>
+                        <div class="mobile-balance-item">
+                            <span class="label" data-translate="remaining">Остаток:</span>
+                            <span class="value" id="mobileAccountRemaining">$100.06</span>
+                        </div>
+                        <div class="mobile-balance-item">
+                            <span class="label" data-translate="pnl">PnL:</span>
+                            <span class="value" id="mobileAccountPnL">$-56881.99</span>
+                        </div>
+                        <div class="mobile-balance-item">
+                            <span class="label" data-translate="open_positions">Открытых позиций:</span>
+                            <span class="value" id="mobileAccountPositions">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- БЛОК 2: AUTO BOT И АКТИВНЫЕ БОТЫ -->
+                <div class="mobile-autobot-block">
+                    <div class="mobile-autobot-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="mobileAutobotToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="mobile-autobot-label" data-translate="auto_bot">Auto Bot</span>
+                        <span class="mobile-autobot-status" id="mobileAutobotStatusText" data-translate="disabled">ВЫКЛ</span>
+                    </div>
+                    
+                    <!-- БЛОК АКТИВНЫХ БОТОВ -->
+                    <div class="mobile-active-bots">
+                        <div class="mobile-bots-header">
+                            <span class="bots-icon">🤖</span>
+                            <span class="bots-title" data-translate="active_bots">Активные боты</span>
+                        </div>
+                        <div class="mobile-bots-content" id="mobileActiveBotsContent">
+                            <div class="mobile-no-bots">
+                                <div class="no-bots-icon">🤖</div>
+                                <div class="no-bots-text">
+                                    <p data-translate="no_active_bots">Нет активных ботов</p>
+                                    <small data-translate="create_bots_for_trading">Создайте ботов для торговли</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
             <!-- Левая панель - список монет с RSI 6H -->
         <div class="coins-panel">
