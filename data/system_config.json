@@ -3,5 +3,14 @@
   "position_sync_interval": 30,
   "inactive_bot_cleanup_interval": 600,
   "inactive_bot_timeout": 600,
-  "stop_loss_setup_interval": 300
+  "stop_loss_setup_interval": 300,
+  "rsi_update_interval": 300,
+  "auto_save_interval": 30,
+  "debug_mode": false,
+  "auto_refresh_ui": true,
+  "refresh_interval": 3,
+  "enhanced_rsi_enabled": true,
+  "enhanced_rsi_require_volume_confirmation": true,
+  "enhanced_rsi_require_divergence_confirmation": false,
+  "enhanced_rsi_use_stoch_rsi": true
 }

@@ -965,6 +965,53 @@ def close_position_endpoint():
         logger.error(f"[ERROR] Ошибка закрытия позиций: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# Словарь человекочитаемых названий параметров конфигурации
+CONFIG_NAMES = {
+    # Auto Bot Configuration
+    'enabled': 'Auto Bot включен',
+    'max_concurrent': 'Максимум одновременных ботов',
+    'default_position_size': 'Размер позиции по умолчанию (USDT)',
+    'rsi_long_threshold': 'RSI порог для LONG',
+    'rsi_short_threshold': 'RSI порог для SHORT',
+    'rsi_time_filter_enabled': 'RSI Time Filter (фильтр по времени)',
+    'rsi_time_filter_candles': 'RSI Time Filter - количество свечей',
+    'avoid_down_trend': 'Фильтр DOWN тренда для LONG',
+    'avoid_up_trend': 'Фильтр UP тренда для SHORT',
+    'trend_detection_enabled': 'Определение тренда включено',
+    'min_candles_for_maturity': 'Минимум свечей для зрелости',
+    'min_rsi_low': 'Минимальный RSI Low для зрелости',
+    'max_rsi_high': 'Максимальный RSI High для зрелости',
+    'tp_percent': 'Take Profit (%)',
+    'sl_percent': 'Stop Loss (%)',
+    'leverage': 'Плечо',
+    
+    # System Configuration
+    'rsi_update_interval': 'Интервал обновления RSI (сек)',
+    'auto_save_interval': 'Интервал автосохранения (сек)',
+    'debug_mode': 'Режим отладки',
+    'auto_refresh_ui': 'Автообновление UI',
+    'refresh_interval': 'Интервал обновления UI (сек)',
+    'position_sync_interval': 'Интервал синхронизации позиций (сек)',
+    'inactive_bot_cleanup_interval': 'Интервал очистки неактивных ботов (сек)',
+    'inactive_bot_timeout': 'Таймаут неактивного бота (сек)',
+    'stop_loss_setup_interval': 'Интервал установки Stop Loss (сек)',
+    'enhanced_rsi_enabled': 'Улучшенная система RSI',
+    'enhanced_rsi_require_volume_confirmation': 'Подтверждение объемом',
+    'enhanced_rsi_require_divergence_confirmation': 'Строгий режим (дивергенции)',
+    'enhanced_rsi_use_stoch_rsi': 'Использовать Stochastic RSI',
+}
+
+def log_config_change(key, old_value, new_value, description=""):
+    """Логирует изменение конфигурации только если значение изменилось"""
+    if old_value != new_value:
+        arrow = '→'
+        # Используем понятное название из словаря или техническое название
+        display_name = description or CONFIG_NAMES.get(key, key)
+        # Используем print напрямую для ANSI кодов, чтобы обойти логгер
+        print(f"\033[92m[CONFIG] ✓ {display_name}: {old_value} {arrow} {new_value}\033[0m")
+        return True
+    return False
+
 @bots_app.route('/api/bots/system-config', methods=['GET', 'POST'])
 def system_config():
     """Получить или обновить системные настройки"""
@@ -1002,71 +1049,105 @@ def system_config():
             if not data:
                 return jsonify({'success': False, 'error': 'No data provided'}), 400
             
-            logger.info(f"[CONFIG] Обновление системных настроек: {data}")
+            # Счетчик изменений
+            changes_count = 0
             
             # Обновляем настройки
             if 'rsi_update_interval' in data:
-                SystemConfig.RSI_UPDATE_INTERVAL = int(data['rsi_update_interval'])
-                logger.info(f"[CONFIG] RSI интервал обновлен: {SystemConfig.RSI_UPDATE_INTERVAL} сек")
-                
-                # Обновляем интервал в SmartRSIManager если он активен
-                if 'smart_rsi_manager' in globals() and smart_rsi_manager:
-                    smart_rsi_manager.update_monitoring_interval(SystemConfig.RSI_UPDATE_INTERVAL)
-                    logger.info(f"[CONFIG] ✅ SmartRSIManager обновлен с новым интервалом")
+                old_value = SystemConfig.RSI_UPDATE_INTERVAL
+                new_value = int(data['rsi_update_interval'])
+                if log_config_change('rsi_update_interval', old_value, new_value):
+                    SystemConfig.RSI_UPDATE_INTERVAL = new_value
+                    changes_count += 1
+                    # Обновляем интервал в SmartRSIManager если он активен
+                    if 'smart_rsi_manager' in globals() and smart_rsi_manager:
+                        smart_rsi_manager.update_monitoring_interval(SystemConfig.RSI_UPDATE_INTERVAL)
             
             if 'auto_save_interval' in data:
-                SystemConfig.AUTO_SAVE_INTERVAL = int(data['auto_save_interval'])
-                logger.info(f"[CONFIG] Автосохранение интервал обновлен: {SystemConfig.AUTO_SAVE_INTERVAL} сек")
+                old_value = SystemConfig.AUTO_SAVE_INTERVAL
+                new_value = int(data['auto_save_interval'])
+                if log_config_change('auto_save_interval', old_value, new_value):
+                    SystemConfig.AUTO_SAVE_INTERVAL = new_value
+                    changes_count += 1
             
             if 'debug_mode' in data:
-                SystemConfig.DEBUG_MODE = bool(data['debug_mode'])
-                logger.info(f"[CONFIG] Режим отладки: {SystemConfig.DEBUG_MODE}")
+                old_value = SystemConfig.DEBUG_MODE
+                new_value = bool(data['debug_mode'])
+                if log_config_change('debug_mode', old_value, new_value):
+                    SystemConfig.DEBUG_MODE = new_value
+                    changes_count += 1
             
             if 'auto_refresh_ui' in data:
-                SystemConfig.AUTO_REFRESH_UI = bool(data['auto_refresh_ui'])
-                logger.info(f"[CONFIG] Автообновление UI: {SystemConfig.AUTO_REFRESH_UI}")
+                old_value = SystemConfig.AUTO_REFRESH_UI
+                new_value = bool(data['auto_refresh_ui'])
+                if log_config_change('auto_refresh_ui', old_value, new_value):
+                    SystemConfig.AUTO_REFRESH_UI = new_value
+                    changes_count += 1
             
             if 'refresh_interval' in data:
-                SystemConfig.UI_REFRESH_INTERVAL = int(data['refresh_interval'])
-                logger.info(f"[CONFIG] Интервал обновления UI: {SystemConfig.UI_REFRESH_INTERVAL} сек")
+                old_value = SystemConfig.UI_REFRESH_INTERVAL
+                new_value = int(data['refresh_interval'])
+                if log_config_change('refresh_interval', old_value, new_value):
+                    SystemConfig.UI_REFRESH_INTERVAL = new_value
+                    changes_count += 1
             
             # Интервалы синхронизации и очистки
             if 'stop_loss_setup_interval' in data:
                 old_value = STOP_LOSS_SETUP_INTERVAL
-                STOP_LOSS_SETUP_INTERVAL = int(data['stop_loss_setup_interval'])
-                logger.info(f"[CONFIG] Stop Loss интервал обновлен: {old_value} → {STOP_LOSS_SETUP_INTERVAL} сек")
+                new_value = int(data['stop_loss_setup_interval'])
+                if log_config_change('stop_loss_setup_interval', old_value, new_value):
+                    STOP_LOSS_SETUP_INTERVAL = new_value
+                    changes_count += 1
             
             if 'position_sync_interval' in data:
                 old_value = POSITION_SYNC_INTERVAL
-                POSITION_SYNC_INTERVAL = int(data['position_sync_interval'])
-                logger.info(f"[CONFIG] Position Sync интервал обновлен: {old_value} → {POSITION_SYNC_INTERVAL} сек")
+                new_value = int(data['position_sync_interval'])
+                if log_config_change('position_sync_interval', old_value, new_value):
+                    POSITION_SYNC_INTERVAL = new_value
+                    changes_count += 1
             
             if 'inactive_bot_cleanup_interval' in data:
                 old_value = INACTIVE_BOT_CLEANUP_INTERVAL
-                INACTIVE_BOT_CLEANUP_INTERVAL = int(data['inactive_bot_cleanup_interval'])
-                logger.info(f"[CONFIG] Inactive Bot Cleanup интервал обновлен: {old_value} → {INACTIVE_BOT_CLEANUP_INTERVAL} сек")
+                new_value = int(data['inactive_bot_cleanup_interval'])
+                if log_config_change('inactive_bot_cleanup_interval', old_value, new_value):
+                    INACTIVE_BOT_CLEANUP_INTERVAL = new_value
+                    changes_count += 1
             
             if 'inactive_bot_timeout' in data:
                 old_value = globals_module.INACTIVE_BOT_TIMEOUT
-                globals_module.INACTIVE_BOT_TIMEOUT = int(data['inactive_bot_timeout'])
-                logger.info(f"[CONFIG] Inactive Bot Timeout обновлен: {old_value} → {globals_module.INACTIVE_BOT_TIMEOUT} сек")
+                new_value = int(data['inactive_bot_timeout'])
+                if log_config_change('inactive_bot_timeout', old_value, new_value):
+                    globals_module.INACTIVE_BOT_TIMEOUT = new_value
+                    changes_count += 1
             
             # Настройки улучшенного RSI
             if 'enhanced_rsi_enabled' in data:
-                SystemConfig.ENHANCED_RSI_ENABLED = bool(data['enhanced_rsi_enabled'])
-                logger.info(f"[CONFIG] Улучшенная система RSI: {SystemConfig.ENHANCED_RSI_ENABLED}")
+                old_value = SystemConfig.ENHANCED_RSI_ENABLED
+                new_value = bool(data['enhanced_rsi_enabled'])
+                if log_config_change('enhanced_rsi_enabled', old_value, new_value):
+                    SystemConfig.ENHANCED_RSI_ENABLED = new_value
+                    changes_count += 1
             
             if 'enhanced_rsi_require_volume_confirmation' in data:
-                SystemConfig.ENHANCED_RSI_REQUIRE_VOLUME_CONFIRMATION = bool(data['enhanced_rsi_require_volume_confirmation'])
-                logger.info(f"[CONFIG] Подтверждение объемом: {SystemConfig.ENHANCED_RSI_REQUIRE_VOLUME_CONFIRMATION}")
+                old_value = SystemConfig.ENHANCED_RSI_REQUIRE_VOLUME_CONFIRMATION
+                new_value = bool(data['enhanced_rsi_require_volume_confirmation'])
+                if log_config_change('enhanced_rsi_require_volume_confirmation', old_value, new_value):
+                    SystemConfig.ENHANCED_RSI_REQUIRE_VOLUME_CONFIRMATION = new_value
+                    changes_count += 1
             
             if 'enhanced_rsi_require_divergence_confirmation' in data:
-                SystemConfig.ENHANCED_RSI_REQUIRE_DIVERGENCE_CONFIRMATION = bool(data['enhanced_rsi_require_divergence_confirmation'])
-                logger.info(f"[CONFIG] Строгий режим (дивергенции): {SystemConfig.ENHANCED_RSI_REQUIRE_DIVERGENCE_CONFIRMATION}")
+                old_value = SystemConfig.ENHANCED_RSI_REQUIRE_DIVERGENCE_CONFIRMATION
+                new_value = bool(data['enhanced_rsi_require_divergence_confirmation'])
+                if log_config_change('enhanced_rsi_require_divergence_confirmation', old_value, new_value):
+                    SystemConfig.ENHANCED_RSI_REQUIRE_DIVERGENCE_CONFIRMATION = new_value
+                    changes_count += 1
             
             if 'enhanced_rsi_use_stoch_rsi' in data:
-                SystemConfig.ENHANCED_RSI_USE_STOCH_RSI = bool(data['enhanced_rsi_use_stoch_rsi'])
-                logger.info(f"[CONFIG] Использовать Stochastic RSI: {SystemConfig.ENHANCED_RSI_USE_STOCH_RSI}")
+                old_value = SystemConfig.ENHANCED_RSI_USE_STOCH_RSI
+                new_value = bool(data['enhanced_rsi_use_stoch_rsi'])
+                if log_config_change('enhanced_rsi_use_stoch_rsi', old_value, new_value):
+                    SystemConfig.ENHANCED_RSI_USE_STOCH_RSI = new_value
+                    changes_count += 1
         
             # КРИТИЧЕСКИ ВАЖНО: Сохраняем системные настройки в файл
             # Сначала загружаем существующие настройки, чтобы не потерять другие поля
@@ -1099,14 +1180,16 @@ def system_config():
             })
             
             saved_to_file = save_system_config(system_config_data)
-            if saved_to_file:
-                logger.info("[CONFIG] ✅ Системные настройки сохранены в файл")
-                # Перезагружаем конфигурацию, чтобы применить изменения
-                logger.info("[CONFIG] 🔄 Перезагружаем конфигурацию из файла...")
-                load_system_config()
-                logger.info("[CONFIG] ✅ Конфигурация успешно перезагружена")
+            
+            # Выводим итоговое сообщение
+            if changes_count > 0:
+                print(f"\033[92m[CONFIG] ✅ Изменено параметров: {changes_count}, конфигурация сохранена\033[0m")
             else:
-                logger.error("[CONFIG] ❌ Ошибка сохранения системных настроек")
+                logger.info("[CONFIG] ℹ️  Изменений не обнаружено")
+            
+            if saved_to_file and changes_count > 0:
+                # Перезагружаем конфигурацию, чтобы применить изменения
+                load_system_config()
         
         return jsonify({
             'success': True,
@@ -1635,11 +1718,10 @@ def auto_bot_config():
             if not data:
                 return jsonify({'success': False, 'error': 'No data provided'}), 400
             
-            logger.info(f"[CONFIG] Обновление конфигурации Auto Bot: {data}")
-            
             # Проверяем изменение критериев зрелости
             maturity_params_changed = False
             maturity_keys = ['min_candles_for_maturity', 'min_rsi_low', 'max_rsi_high']
+            changes_count = 0
             
             with bots_data_lock:
                 old_config = bots_data['auto_bot_config'].copy()
@@ -1652,23 +1734,23 @@ def auto_bot_config():
                 for key, value in data.items():
                     if key in bots_data['auto_bot_config']:
                         old_value = bots_data['auto_bot_config'][key]
-                        bots_data['auto_bot_config'][key] = value
-                        logger.info(f"[CONFIG] {key}: {old_value} → {value}")
                         
-                        # Специальное логирование для фильтров тренда
-                        if key == 'avoid_down_trend':
-                            trend_status = "включен" if value else "выключен"
-                            logger.info(f"[TREND_FILTER] 🔻 Фильтр DOWN тренда для LONG позиций: {trend_status}")
-                        elif key == 'avoid_up_trend':
-                            trend_status = "включен" if value else "выключен"
-                            logger.info(f"[TREND_FILTER] 📈 Фильтр UP тренда для SHORT позиций: {trend_status}")
+                        # Проверяем реальное изменение
+                        if old_value != value:
+                            bots_data['auto_bot_config'][key] = value
+                            changes_count += 1
+                            
+                            # Используем log_config_change с названием из словаря
+                            log_config_change(key, old_value, value)
             
             # КРИТИЧЕСКИ ВАЖНО: Сохраняем конфигурацию в файл!
             save_result = save_auto_bot_config()
-            if save_result:
-                logger.info("[CONFIG] ✅ Конфигурация Auto Bot сохранена в файл")
+            
+            # Выводим итоговое сообщение
+            if changes_count > 0:
+                print(f"\033[92m[CONFIG] ✅ Auto Bot: изменено параметров: {changes_count}, конфигурация сохранена\033[0m")
             else:
-                logger.error("[CONFIG] ❌ Ошибка сохранения конфигурации Auto Bot")
+                logger.info("[CONFIG] ℹ️  Auto Bot: изменений не обнаружено")
             
             # ✅ АВТОМАТИЧЕСКАЯ ОЧИСТКА при изменении критериев зрелости
             if maturity_params_changed:
@@ -1686,11 +1768,11 @@ def auto_bot_config():
                     logger.error(f"[MATURITY] ❌ Ошибка очистки файла зрелых монет: {e}")
             
             # КРИТИЧЕСКИ ВАЖНО: При включении Auto Bot запускаем немедленную проверку
-            auto_bot_enabled = bots_data['auto_bot_config']['enabled']
-            if 'enabled' in data and data['enabled'] is True and auto_bot_enabled:
+            # Показываем блок только если enabled реально изменился с False на True
+            if 'enabled' in data and old_config.get('enabled') == False and data['enabled'] == True:
                 # ✅ ЯРКИЙ ЛОГ ВКЛЮЧЕНИЯ (ЗЕЛЕНЫЙ)
                 logger.info("=" * 80)
-                logger.info("\033[92m🟢 AUTO BOT ВКЛЮЧЕН! 🟢\033[0m")
+                print("\033[92m🟢 AUTO BOT ВКЛЮЧЕН! 🟢\033[0m")
                 logger.info("=" * 80)
                 logger.info("⚠️  ВНИМАНИЕ: Автобот будет автоматически создавать ботов!")
                 logger.info(f"⚙️  Макс. одновременных ботов: {bots_data['auto_bot_config'].get('max_concurrent', 5)}")
@@ -1705,10 +1787,11 @@ def auto_bot_config():
                     logger.error(f"[CONFIG] ❌ Ошибка немедленной проверки Auto Bot: {e}")
             
             # КРИТИЧЕСКИ ВАЖНО: При отключении Auto Bot НЕ удаляем ботов!
-            if 'enabled' in data and data['enabled'] is False:
+            # Показываем блок только если enabled реально изменился с True на False
+            if 'enabled' in data and old_config.get('enabled') == True and data['enabled'] == False:
                 # ✅ ЯРКИЙ ЛОГ ВЫКЛЮЧЕНИЯ (КРАСНЫЙ)
                 logger.info("=" * 80)
-                logger.info("\033[91m🔴 AUTO BOT ВЫКЛЮЧЕН! 🔴\033[0m")
+                print("\033[91m🔴 AUTO BOT ВЫКЛЮЧЕН! 🔴\033[0m")
                 logger.info("=" * 80)
                 
                 with bots_data_lock:
