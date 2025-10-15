@@ -31,7 +31,7 @@ class BotsManager {
         this.apiUrl = `${window.location.protocol}//${window.location.hostname}:5001/api/bots`; // Для совместимости
         
         // Уровень логирования: 'error' - только ошибки, 'info' - важные события, 'debug' - все
-        this.logLevel = 'info'; // По умолчанию только важные события
+        this.logLevel = 'debug'; // Временно включаем debug для отладки ручных позиций
         
         // Инициализация при создании
         this.init();
@@ -637,14 +637,21 @@ class BotsManager {
                     
                     // Получаем список ручных позиций
                     const manualPositions = data.manual_positions || [];
-                    this.logDebug(`[BotsManager] ✋ Ручные позиции: ${manualPositions.length} - ${manualPositions.slice(0, 10)}`);
+                    console.log(`[BotsManager] ✋ Ручные позиции получены:`, manualPositions);
+                    console.log(`[BotsManager] ✋ Всего ручных позиций: ${manualPositions.length}`);
                     
                     // Помечаем монеты с ручными позициями
+                    let markedCount = 0;
                     this.coinsRsiData.forEach(coin => {
                         coin.manual_position = manualPositions.includes(coin.symbol);
+                        if (coin.manual_position) {
+                            markedCount++;
+                            console.log(`[BotsManager] ✋ Монета ${coin.symbol} помечена как ручная позиция`);
+                        }
                     });
                     
-                    this.logDebug(`[BotsManager] ✅ Загружено ${this.coinsRsiData.length} монет с RSI`);
+                    console.log(`[BotsManager] ✅ Загружено ${this.coinsRsiData.length} монет с RSI`);
+                    console.log(`[BotsManager] ✅ Помечено ${markedCount} монет с ручными позициями`);
                     this.logDebug('[BotsManager] 🔍 Первые 3 монеты:', this.coinsRsiData.slice(0, 3));
                     
                     // Обновляем интерфейс
@@ -719,6 +726,10 @@ class BotsManager {
             // Проверяем, есть ли ручная позиция
             const isManualPosition = coin.manual_position || false;
             const manualClass = isManualPosition ? 'manual-position' : '';
+            
+            if (isManualPosition) {
+                console.log(`[BotsManager] 🎨 Рендер монеты ${coin.symbol} с классом manual-position`);
+            }
             
             return `
                 <li class="coin-item ${rsiClass} ${trendClass} ${signalClass} ${manualClass}" data-symbol="${coin.symbol}">
