@@ -1,5 +1,5 @@
 {
-  "enabled": false,
+  "enabled": true,
   "max_concurrent": 5,
   "risk_cap_percent": 10,
   "scope": "all",
@@ -9,7 +9,7 @@
   "rsi_short_threshold": 71,
   "rsi_exit_long": 65,
   "rsi_exit_short": 35,
-  "default_position_size": 10,
+  "default_position_size": 5,
   "check_interval": 180,
   "monitoring_interval": 10,
   "trading_enabled": true,

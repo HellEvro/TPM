@@ -24,7 +24,8 @@ try:
     from bots_modules.imports_and_globals import (
         exchange, smart_rsi_manager, async_processor, async_processor_task,
         system_initialized, shutdown_flag, bots_data_lock, bots_data,
-        process_state, mature_coins_storage, ASYNC_AVAILABLE, BOT_STATUS
+        process_state, mature_coins_storage, ASYNC_AVAILABLE, BOT_STATUS,
+        RealTradingBot
     )
     # Импорт optimal_ema_data из модуля
     try:
@@ -146,45 +147,58 @@ def init_bot_service():
             
             # 5.1. Инициализируем загруженных ботов (после инициализации биржи)
             with bots_data_lock:
-                for symbol, bot_data in bots_data['bots'].items():
-                    try:
-                        # Создаем объект бота из сохраненных данных
-                        bot_config = {
-                            'volume_mode': bot_data.get('volume_mode', 'usdt'),
-                            'volume_value': bot_data.get('volume_value', 10),
-                            'status': bot_data.get('status', 'paused')
-                        }
-                        
-                        trading_bot = RealTradingBot(
-                            symbol=bot_data['symbol'],
-                            exchange=exchange,
-                            config=bot_config
-                        )
-                        
-                        # Восстанавливаем состояние бота
-                        trading_bot.status = bot_data.get('status', 'paused')
-                        trading_bot.created_at = bot_data.get('created_at', datetime.now().isoformat())
-                        trading_bot.entry_price = bot_data.get('entry_price', '')
-                        trading_bot.last_price = bot_data.get('last_price', '')
-                        trading_bot.last_rsi = bot_data.get('last_rsi', '')
-                        trading_bot.last_signal_time = bot_data.get('last_signal_time', '')
-                        trading_bot.last_trend = bot_data.get('last_trend', '')
-                        trading_bot.position_side = bot_data.get('position_side', '')
-                        trading_bot.position_start_time = bot_data.get('position_start_time', '')
-                        trading_bot.unrealized_pnl = bot_data.get('unrealized_pnl', 0)
-                        trading_bot.max_profit_achieved = bot_data.get('max_profit_achieved', 0)
-                        trading_bot.trailing_stop_price = bot_data.get('trailing_stop_price', '')
-                        trading_bot.break_even_activated = bot_data.get('break_even_activated', False)
-                        trading_bot.rsi_data = bot_data.get('rsi_data', {})
-                        
-                        # Обновляем данные в bots_data
+                # Создаем копию списка ботов для безопасной итерации
+                bots_to_init = list(bots_data['bots'].items())
+                
+            # Инициализируем ботов вне блокировки для избежания deadlock
+            bots_to_remove = []
+            for symbol, bot_data in bots_to_init:
+                try:
+                    # Создаем объект бота из сохраненных данных
+                    bot_config = {
+                        'volume_mode': bot_data.get('volume_mode', 'usdt'),
+                        'volume_value': bot_data.get('volume_value', 10),
+                        'status': bot_data.get('status', 'paused')
+                    }
+                    
+                    trading_bot = RealTradingBot(
+                        symbol=bot_data['symbol'],
+                        exchange=exchange,
+                        config=bot_config
+                    )
+                    
+                    # Восстанавливаем состояние бота
+                    trading_bot.status = bot_data.get('status', 'paused')
+                    trading_bot.created_at = bot_data.get('created_at', datetime.now().isoformat())
+                    trading_bot.entry_price = bot_data.get('entry_price', '')
+                    trading_bot.last_price = bot_data.get('last_price', '')
+                    trading_bot.last_rsi = bot_data.get('last_rsi', '')
+                    trading_bot.last_signal_time = bot_data.get('last_signal_time', '')
+                    trading_bot.last_trend = bot_data.get('last_trend', '')
+                    trading_bot.position_side = bot_data.get('position_side', '')
+                    trading_bot.position_start_time = bot_data.get('position_start_time', '')
+                    trading_bot.unrealized_pnl = bot_data.get('unrealized_pnl', 0)
+                    trading_bot.max_profit_achieved = bot_data.get('max_profit_achieved', 0)
+                    trading_bot.trailing_stop_price = bot_data.get('trailing_stop_price', '')
+                    trading_bot.break_even_activated = bot_data.get('break_even_activated', False)
+                    trading_bot.rsi_data = bot_data.get('rsi_data', {})
+                    
+                    # Обновляем данные в bots_data
+                    with bots_data_lock:
                         bots_data['bots'][symbol] = trading_bot.to_dict()
-                        
-                    except Exception as e:
-                        logger.error(f"[INIT] ❌ Ошибка инициализации бота {symbol}: {e}")
-                        # Удаляем некорректного бота
+                    
+                except Exception as e:
+                    logger.error(f"[INIT] ❌ Ошибка инициализации бота {symbol}: {e}")
+                    # Помечаем бота для удаления
+                    bots_to_remove.append(symbol)
+            
+            # Удаляем некорректных ботов после итерации
+            if bots_to_remove:
+                with bots_data_lock:
+                    for symbol in bots_to_remove:
                         if symbol in bots_data['bots']:
                             del bots_data['bots'][symbol]
+                logger.info(f"[INIT] 🗑️ Удалено {len(bots_to_remove)} некорректных ботов")
             
             # 6. Запускаем Smart RSI Manager (после инициализации биржи)
             global smart_rsi_manager
