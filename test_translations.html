@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Тест переводов</title>
+    <script src="static/js/config.js"></script>
+    <script src="static/js/language.js"></script>
+</head>
+<body>
+    <h1>Тест системы переводов</h1>
+    
+    <div>
+        <h2>Текущий язык: <span id="lang">-</span></h2>
+        <button onclick="toggleLanguage()">Переключить язык</button>
+    </div>
+    
+    <h3>Тестовые элементы:</h3>
+    <ul>
+        <li data-translate="position_sync_interval_label">НЕ ПЕРЕВЕДЕНО</li>
+        <li data-translate="position_sync_interval_help">НЕ ПЕРЕВЕДЕНО</li>
+        <li data-translate="inactive_bot_timeout_label">НЕ ПЕРЕВЕДЕНО</li>
+        <li data-translate="rsi_time_filter_title">НЕ ПЕРЕВЕДЕНО</li>
+        <li data-translate="exit_scam_enabled_help">НЕ ПЕРЕВЕДЕНО</li>
+        <li data-translate="enhanced_rsi_enabled_help">НЕ ПЕРЕВЕДЕНО</li>
+        <li data-translate="max_position_time_help">НЕ ПЕРЕВЕДЕНО</li>
+        <li data-translate="avoid_down_trend_help">НЕ ПЕРЕВЕДЕНО</li>
+    </ul>
+    
+    <h3>Консоль (откройте F12):</h3>
+    <pre id="console"></pre>
+    
+    <script>
+        // Показываем текущий язык
+        document.getElementById('lang').textContent = document.documentElement.lang;
+        
+        // Проверяем TRANSLATIONS
+        console.log('=== ПРОВЕРКА TRANSLATIONS ===');
+        console.log('TRANSLATIONS существует:', typeof TRANSLATIONS !== 'undefined');
+        if (typeof TRANSLATIONS !== 'undefined') {
+            console.log('TRANSLATIONS.ru существует:', typeof TRANSLATIONS.ru !== 'undefined');
+            console.log('TRANSLATIONS.en существует:', typeof TRANSLATIONS.en !== 'undefined');
+            if (TRANSLATIONS.ru) {
+                console.log('TRANSLATIONS.ru ключей:', Object.keys(TRANSLATIONS.ru).length);
+                console.log('Примеры RU ключей:', Object.keys(TRANSLATIONS.ru).slice(0, 10));
+                console.log('position_sync_interval_label в RU:', TRANSLATIONS.ru.position_sync_interval_label);
+            }
+            if (TRANSLATIONS.en) {
+                console.log('TRANSLATIONS.en ключей:', Object.keys(TRANSLATIONS.en).length);
+                console.log('Примеры EN ключей:', Object.keys(TRANSLATIONS.en).slice(0, 10));
+                console.log('position_sync_interval_label в EN:', TRANSLATIONS.en.position_sync_interval_label);
+            }
+        }
+        
+        // Применяем переводы
+        console.log('=== ПРИМЕНЕНИЕ ПЕРЕВОДОВ ===');
+        updateInterface();
+        
+        // Обновляем при переключении
+        setInterval(() => {
+            document.getElementById('lang').textContent = document.documentElement.lang;
+        }, 100);
+    </script>
+</body>
+</html>
+
