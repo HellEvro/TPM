@@ -32,6 +32,19 @@ from bots_modules.imports_and_globals import (
     BOT_STATUS, ASYNC_AVAILABLE, RSI_CACHE_FILE
 )
 
+# Импорт RSI констант из bot_config
+try:
+    from bot_engine.bot_config import (
+        RSI_EXTREME_ZONE_TIMEOUT, RSI_EXTREME_OVERSOLD, RSI_EXTREME_OVERBOUGHT,
+        RSI_VOLUME_CONFIRMATION_MULTIPLIER, RSI_DIVERGENCE_LOOKBACK
+    )
+except ImportError:
+    RSI_EXTREME_ZONE_TIMEOUT = 4
+    RSI_EXTREME_OVERSOLD = 20
+    RSI_EXTREME_OVERBOUGHT = 80
+    RSI_VOLUME_CONFIRMATION_MULTIPLIER = 1.5
+    RSI_DIVERGENCE_LOOKBACK = 14
+
 # Импорт констант интервалов
 try:
     from bots_modules.sync_and_cache import (
@@ -2333,7 +2346,7 @@ def get_active_bots_detailed():
         with bots_data_lock:
             active_bots = []
             for symbol, bot_data in bots_data['bots'].items():
-                if bot_data.get('status') in ['armed_up', 'armed_down', 'in_position_long', 'in_position_short']:
+                if bot_data.get('status') in ['in_position_long', 'in_position_short']:
                     # Получаем текущую цену из RSI данных
                     current_price = None
                     with rsi_data_lock:
@@ -2475,7 +2488,7 @@ def clear_bot_history():
 def create_demo_history():
     """Создает демо-данные для истории ботов"""
     try:
-        from bot_history import create_demo_data
+        from bot_engine.bot_history import create_demo_data
         
         success = create_demo_data()
         

@@ -21,8 +21,6 @@ coins_rsi_data = {}
 BOT_STATUS = {
     'IDLE': 'idle',
     'RUNNING': 'running',
-    'ARMED_UP': 'armed_up', 
-    'ARMED_DOWN': 'armed_down',
     'IN_POSITION_LONG': 'in_position_long',
     'IN_POSITION_SHORT': 'in_position_short',
     'PAUSED': 'paused'

@@ -893,11 +893,12 @@ def check_coin_maturity_stored_or_verify(symbol):
             return True
         
         # Если нет в хранилище, выполняем проверку
-        if not ensure_exchange_initialized():
+        exch = get_exchange()
+        if not exch:
             logger.warning(f"[MATURITY_CHECK] {symbol}: Биржа не инициализирована")
             return False
         
-        chart_response = exchange.get_chart_data(symbol, '6h', '30d')
+        chart_response = exch.get_chart_data(symbol, '6h', '30d')
         if not chart_response or not chart_response.get('success'):
             logger.warning(f"[MATURITY_CHECK] {symbol}: Не удалось получить свечи")
             return False
@@ -937,10 +938,11 @@ def check_exit_scam_filter(symbol, coin_data):
             return True
         
         # Получаем свечи
-        if not ensure_exchange_initialized():
+        exch = get_exchange()
+        if not exch:
             return False
         
-        chart_response = exchange.get_chart_data(symbol, '6h', '30d')
+        chart_response = exch.get_chart_data(symbol, '6h', '30d')
         if not chart_response or not chart_response.get('success'):
             return False
         
@@ -996,10 +998,11 @@ check_anti_dump_pump = check_exit_scam_filter
 def check_no_existing_position(symbol, signal):
     """Проверяет, что нет существующих позиций на бирже"""
     try:
-        if not ensure_exchange_initialized():
+        exch = get_exchange()
+        if not exch:
             return False
         
-        exchange_positions = exchange.get_positions()
+        exchange_positions = exch.get_positions()
         if isinstance(exchange_positions, tuple):
             positions_list = exchange_positions[0] if exchange_positions else []
         else:
@@ -1081,11 +1084,12 @@ def test_exit_scam_filter(symbol):
             return
         
         # Получаем свечи
-        if not ensure_exchange_initialized():
+        exch = get_exchange()
+        if not exch:
             logger.error(f"[TEST_EXIT_SCAM] {symbol}: Биржа не инициализирована")
             return
         
-        chart_response = exchange.get_chart_data(symbol, '6h', '30d')
+        chart_response = exch.get_chart_data(symbol, '6h', '30d')
         if not chart_response or not chart_response.get('success'):
             logger.error(f"[TEST_EXIT_SCAM] {symbol}: Не удалось получить свечи")
             return
@@ -1161,11 +1165,12 @@ def test_rsi_time_filter(symbol):
         logger.info(f"[TEST_RSI_TIME] 🔍 Тестируем RSI временной фильтр для {symbol}")
         
         # Получаем свечи
-        if not ensure_exchange_initialized():
+        exch = get_exchange()
+        if not exch:
             logger.error(f"[TEST_RSI_TIME] {symbol}: Биржа не инициализирована")
             return
                 
-        chart_response = exchange.get_chart_data(symbol, '6h', '30d')
+        chart_response = exch.get_chart_data(symbol, '6h', '30d')
         if not chart_response or not chart_response.get('success'):
             logger.error(f"[TEST_RSI_TIME] {symbol}: Не удалось получить свечи")
             return

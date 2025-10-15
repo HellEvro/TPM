@@ -230,7 +230,7 @@ def check_and_stop_existing_bots_processes():
         return True
 
 # Импорт цветного логирования
-from color_logger import setup_color_logging
+from utils.color_logger import setup_color_logging
 
 # Импорт системы истории ботов - ПЕРЕНЕСЕН В ГЛАВНЫЙ bots.py
 # Здесь только объявляем переменные как None, они будут установлены в main файле
@@ -501,8 +501,6 @@ TREND_CONFIRMATION_BARS = 3
 BOT_STATUS = {
     'IDLE': 'idle',
     'RUNNING': 'running',
-    'ARMED_UP': 'armed_up', 
-    'ARMED_DOWN': 'armed_down',
     'IN_POSITION_LONG': 'in_position_long',
     'IN_POSITION_SHORT': 'in_position_short',
     'PAUSED': 'paused'
