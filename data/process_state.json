@@ -8,10 +8,10 @@
     },
     "auto_bot_worker": {
       "active": false,
-      "last_check": "2025-10-15T14:23:14.745964",
+      "last_check": "2025-10-15T14:29:15.377008",
       "check_count": 1,
       "last_error": null,
-      "enabled": true,
+      "enabled": false,
       "interval_seconds": 180
     },
     "auto_save_worker": {
@@ -33,6 +33,6 @@
       "last_error": null
     }
   },
-  "last_saved": "2025-10-15T14:23:14.745972",
+  "last_saved": "2025-10-15T14:29:15.377023",
   "version": "1.0"
 }
