@@ -270,7 +270,7 @@ def get_account_info():
             bots_list = list(bots_data['bots'].values())
             account_info["bots_count"] = len(bots_list)
             account_info["active_bots"] = sum(1 for bot in bots_list 
-                                            if bot.get('status') not in ['idle', 'paused'])
+                                            if bot.get('status') not in ['paused'])
         
         response = jsonify(account_info)
         response.headers.add('Access-Control-Allow-Origin', '*')
@@ -287,7 +287,7 @@ def get_account_info():
 
 @bots_app.route('/api/bots/manual-positions/refresh', methods=['POST'])
 def refresh_manual_positions():
-    """Обновить список монет с ручными позициями на бирже"""
+    """Обновить список монет с ручными позициями на бирже (позиции БЕЗ ботов)"""
     try:
         manual_positions = []
         if exchange:
@@ -297,16 +297,23 @@ def refresh_manual_positions():
             else:
                 positions_list = exchange_positions if exchange_positions else []
             
-            # Извлекаем символы с активными позициями
+            # Получаем список символов с активными ботами
+            with bots_data_lock:
+                system_bot_symbols = set(bots_data['bots'].keys())
+            
+            # Извлекаем символы с активными позициями, для которых НЕТ ботов
             for pos in positions_list:
                 if abs(float(pos.get('size', 0))) > 0:
                     symbol = pos.get('symbol', '')
                     # Убираем USDT из символа для сопоставления с coins_rsi_data
                     clean_symbol = symbol.replace('USDT', '') if symbol else ''
-                    if clean_symbol and clean_symbol not in manual_positions:
-                        manual_positions.append(clean_symbol)
+                    
+                    # ✅ КРИТИЧЕСКИ ВАЖНО: добавляем только если НЕТ бота для этой монеты
+                    if clean_symbol and clean_symbol not in system_bot_symbols:
+                        if clean_symbol not in manual_positions:
+                            manual_positions.append(clean_symbol)
             
-            logger.info(f"[MANUAL_POSITIONS] ✋ Обновлено {len(manual_positions)} монет с позициями")
+            logger.info(f"[MANUAL_POSITIONS] ✋ Обновлено {len(manual_positions)} ручных позиций БЕЗ ботов")
             
         return jsonify({
             'success': True,
@@ -385,7 +392,7 @@ def get_coins_with_rsi():
                 
                 cleaned_coins[symbol] = cleaned_coin
             
-            # Получаем список монет с ручными позициями на бирже
+            # Получаем список монет с ручными позициями на бирже (позиции БЕЗ ботов)
             manual_positions = []
             try:
                 if exchange:
@@ -395,18 +402,25 @@ def get_coins_with_rsi():
                     else:
                         positions_list = exchange_positions if exchange_positions else []
                     
-                    # Извлекаем символы с активными позициями
+                    # Получаем список символов с активными ботами
+                    with bots_data_lock:
+                        system_bot_symbols = set(bots_data['bots'].keys())
+                    
+                    # Извлекаем символы с активными позициями, для которых НЕТ ботов
                     for pos in positions_list:
                         if abs(float(pos.get('size', 0))) > 0:
                             symbol = pos.get('symbol', '')
                             # Убираем USDT из символа для сопоставления с coins_rsi_data
                             clean_symbol = symbol.replace('USDT', '') if symbol else ''
-                            if clean_symbol and clean_symbol not in manual_positions:
-                                manual_positions.append(clean_symbol)
+                            
+                            # ✅ КРИТИЧЕСКИ ВАЖНО: добавляем только если НЕТ бота для этой монеты
+                            if clean_symbol and clean_symbol not in system_bot_symbols:
+                                if clean_symbol not in manual_positions:
+                                    manual_positions.append(clean_symbol)
                     
                     # ✅ Логируем только если есть изменения
                     if len(manual_positions) > 0:
-                        logger.debug(f"[MANUAL_POSITIONS] ✋ {len(manual_positions)} монет с позициями")
+                        logger.debug(f"[MANUAL_POSITIONS] ✋ {len(manual_positions)} ручных позиций БЕЗ ботов")
             except Exception as e:
                 logger.error(f"[ERROR] Ошибка получения ручных позиций: {str(e)}")
             
@@ -473,8 +487,8 @@ def get_bots_list():
             auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
             last_update = bots_data.get('last_update', 'Неизвестно')
         
-        # Подсчитываем статистику
-        active_bots = sum(1 for bot in bots_list if bot.get('status') not in ['idle', 'paused'])
+        # Подсчитываем статистику (idle боты считаются активными для UI)
+        active_bots = sum(1 for bot in bots_list if bot.get('status') not in ['paused'])
         
         response_data = {
             'success': True,
@@ -690,7 +704,7 @@ def stop_bot_endpoint():
             logger.error(f"[BOT] {symbol}: Биржа не инициализирована, позиция {position_to_close} не может быть закрыта")
         
         # Логируем остановку бота в историю
-        log_bot_stop(symbol, reason)
+        # log_bot_stop(symbol, reason)  # TODO: Функция не определена
         
         # Сохраняем состояние после остановки
         save_bots_state()
