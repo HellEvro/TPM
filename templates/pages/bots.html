@@ -137,13 +137,13 @@
                 
                 <!-- Фильтры RSI -->
                 <div class="rsi-filters-container">
-                    <button class="rsi-filter-btn active" data-filter="all"><span data-translate="all_filter">🌐 Все</span></button>
-                    <button class="rsi-filter-btn buy-filter" data-filter="buy-zone">🟢 ≤29</button>
-                    <button class="rsi-filter-btn sell-filter" data-filter="sell-zone">🔴 ≥71</button>
-                    <button class="rsi-filter-btn trend-up-filter" data-filter="trend-up">📈 UP</button>
-                    <button class="rsi-filter-btn trend-down-filter" data-filter="trend-down">📉 DOWN</button>
-                    <button class="rsi-filter-btn enter-long-filter" data-filter="enter-long">🚀 ENTER_LONG</button>
-                    <button class="rsi-filter-btn enter-short-filter" data-filter="enter-short">📉 ENTER_SHORT</button>
+                    <button class="rsi-filter-btn active" data-filter="all">🌐 Все (<span id="filterAllCount">0</span>)</button>
+                    <button class="rsi-filter-btn buy-filter" data-filter="buy-zone">🟢 ≤29 (<span id="filterBuyZoneCount">0</span>)</button>
+                    <button class="rsi-filter-btn sell-filter" data-filter="sell-zone">🔴 ≥71 (<span id="filterSellZoneCount">0</span>)</button>
+                    <button class="rsi-filter-btn trend-up-filter" data-filter="trend-up">📈 UP (<span id="filterTrendUpCount">0</span>)</button>
+                    <button class="rsi-filter-btn trend-down-filter" data-filter="trend-down">📉 DOWN (<span id="filterTrendDownCount">0</span>)</button>
+                    <button class="rsi-filter-btn enter-long-filter" data-filter="enter-long">🚀 LONG (<span id="filterLongCount">0</span>)</button>
+                    <button class="rsi-filter-btn enter-short-filter" data-filter="enter-short">📉 SHORT (<span id="filterShortCount">0</span>)</button>
                     <button class="rsi-filter-btn manual-position-filter" data-filter="manual-position">
                         <span class="filter-icon">✋</span>
                         <span class="filter-text">Ручные позиции</span>

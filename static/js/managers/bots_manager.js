@@ -1042,23 +1042,36 @@ class BotsManager {
     }
 
     updateSignalCounters() {
-        // Используем универсальную функцию для подсчета
+        // Подсчитываем все категории
+        const allCount = this.coinsRsiData.length;
         const longCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'ENTER_LONG').length;
         const shortCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'ENTER_SHORT').length;
+        const buyZoneCount = this.coinsRsiData.filter(coin => coin.rsi6h && coin.rsi6h <= 29).length;
+        const sellZoneCount = this.coinsRsiData.filter(coin => coin.rsi6h && coin.rsi6h >= 71).length;
+        const trendUpCount = this.coinsRsiData.filter(coin => coin.trend6h === 'UP').length;
+        const trendDownCount = this.coinsRsiData.filter(coin => coin.trend6h === 'DOWN').length;
+        const manualPositionCount = this.coinsRsiData.filter(coin => coin.manual_position === true).length;
         
-        // Обновляем текст кнопок фильтров с количеством
-        const enterLongBtn = document.querySelector('.rsi-filter-btn[data-filter="enter-long"]');
-        const enterShortBtn = document.querySelector('.rsi-filter-btn[data-filter="enter-short"]');
+        // Обновляем счетчики в HTML
+        const allCountEl = document.getElementById('filterAllCount');
+        const buyZoneCountEl = document.getElementById('filterBuyZoneCount');
+        const sellZoneCountEl = document.getElementById('filterSellZoneCount');
+        const trendUpCountEl = document.getElementById('filterTrendUpCount');
+        const trendDownCountEl = document.getElementById('filterTrendDownCount');
+        const longCountEl = document.getElementById('filterLongCount');
+        const shortCountEl = document.getElementById('filterShortCount');
+        const manualCountEl = document.getElementById('manualCount');
         
-        if (enterLongBtn) {
-            enterLongBtn.innerHTML = `🚀 ENTER_LONG (${longCount})`;
-        }
+        if (allCountEl) allCountEl.textContent = allCount;
+        if (buyZoneCountEl) buyZoneCountEl.textContent = buyZoneCount;
+        if (sellZoneCountEl) sellZoneCountEl.textContent = sellZoneCount;
+        if (trendUpCountEl) trendUpCountEl.textContent = trendUpCount;
+        if (trendDownCountEl) trendDownCountEl.textContent = trendDownCount;
+        if (longCountEl) longCountEl.textContent = longCount;
+        if (shortCountEl) shortCountEl.textContent = shortCount;
+        if (manualCountEl) manualCountEl.textContent = `(${manualPositionCount})`;
         
-        if (enterShortBtn) {
-            enterShortBtn.innerHTML = `📉 ENTER_SHORT (${shortCount})`;
-        }
-        
-        this.logDebug(`[BotsManager] 📊 Счетчики сигналов: LONG=${longCount}, SHORT=${shortCount}`);
+        this.logDebug(`[BotsManager] 📊 Счетчики фильтров: ALL=${allCount}, BUY=${buyZoneCount}, SELL=${sellZoneCount}, UP=${trendUpCount}, DOWN=${trendDownCount}, LONG=${longCount}, SHORT=${shortCount}, MANUAL=${manualPositionCount}`);
     }
 
     selectCoin(symbol) {

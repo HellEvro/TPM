@@ -155,9 +155,13 @@ def init_bot_service():
             for symbol, bot_data in bots_to_init:
                 try:
                     # Создаем объект бота из сохраненных данных
+                    # Получаем настройки из конфига для fallback
+                    with bots_data_lock:
+                        auto_bot_config = bots_data['auto_bot_config']
+                    
                     bot_config = {
                         'volume_mode': bot_data.get('volume_mode', 'usdt'),
-                        'volume_value': bot_data.get('volume_value', 10),
+                        'volume_value': bot_data.get('volume_value', auto_bot_config['default_position_size']),  # Fallback из конфига для старых ботов
                         'status': bot_data.get('status', 'paused')
                     }
                     
@@ -373,7 +377,7 @@ def create_bot(symbol, config=None, exchange_obj=None):
         # Получаем default_position_size из конфигурации Auto Bot
         with bots_data_lock:
             auto_bot_config = bots_data['auto_bot_config']
-            default_volume = auto_bot_config.get('default_position_size', 20.0)
+            default_volume = auto_bot_config['default_position_size']
         
         config = {
             'volume_mode': 'usdt',
@@ -391,7 +395,7 @@ def create_bot(symbol, config=None, exchange_obj=None):
         auto_bot_config = bots_data['auto_bot_config']
         base_config = {
             'volume_mode': 'usdt',
-            'volume_value': auto_bot_config.get('default_position_size', 20.0),
+            'volume_value': auto_bot_config['default_position_size'],
             'status': BOT_STATUS['RUNNING'],
             'entry_price': None,
             'position_side': None,
@@ -448,7 +452,7 @@ def create_bot(symbol, config=None, exchange_obj=None):
         logger.info(f"[BOT_ACTIVE] Статус {symbol}: {trading_bot.status}")
     
     # Логируем создание бота в историю
-    log_bot_start(symbol, config)
+    # log_bot_start(symbol, config)  # TODO: Функция не определена
     
     # Автоматически сохраняем состояние после создания бота
     save_bots_state()

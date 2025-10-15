@@ -1,24 +1,7 @@
 {
-  "bots": {
-    "CAMP": {
-      "symbol": "CAMP",
-      "status": "idle",
-      "entry_price": null,
-      "position_side": null,
-      "unrealized_pnl": 0.0,
-      "created_at": "2025-10-16T01:35:36.695976",
-      "last_signal_time": null,
-      "max_profit_achieved": 0.0,
-      "trailing_stop_price": null,
-      "break_even_activated": false,
-      "position_start_time": null,
-      "order_id": null,
-      "entry_timestamp": null,
-      "opened_by_autobot": true
-    }
-  },
+  "bots": {},
   "auto_bot_config": {
-    "enabled": true,
+    "enabled": false,
     "max_concurrent": 5,
     "risk_cap_percent": 10,
     "scope": "all",
@@ -81,6 +64,6 @@
     "scaling_min_usdt_per_trade": 5,
     "scaling_timeout_minutes": 30
   },
-  "last_saved": "2025-10-16T01:35:39.377314",
+  "last_saved": "2025-10-16T02:19:42.040176",
   "version": "1.0"
 }

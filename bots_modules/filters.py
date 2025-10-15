@@ -1071,19 +1071,19 @@ def create_new_bot(symbol, config=None, exchange_obj=None):
     try:
         exchange_to_use = exchange_obj if exchange_obj else exchange
         
+        # Получаем размер позиции из конфига
+        with bots_data_lock:
+            default_volume = bots_data['auto_bot_config']['default_position_size']
+        
         # Создаем конфигурацию бота
         bot_config = {
             'symbol': symbol,
-            'status': BOT_STATUS['IDLE'],
+            'status': BOT_STATUS['RUNNING'],  # ✅ ИСПРАВЛЕНО: бот должен быть активным
             'created_at': datetime.now().isoformat(),
             'opened_by_autobot': True,
             'volume_mode': 'usdt',
-            'volume_value': 10.0  # Будет браться из конфига
+            'volume_value': default_volume  # ✅ ИСПРАВЛЕНО: используем значение из конфига
         }
-        
-        # Получаем размер позиции из конфига
-        with bots_data_lock:
-            bot_config['volume_value'] = bots_data['auto_bot_config'].get('default_position_size', 10.0)
         
         # Создаем бота
         new_bot = NewTradingBot(symbol, bot_config, exchange_to_use)
