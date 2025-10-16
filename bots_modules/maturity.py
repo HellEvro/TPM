@@ -86,9 +86,55 @@ def save_mature_coins_storage():
         return False
 
 def is_coin_mature_stored(symbol):
-    """Проверяет, есть ли монета в постоянном хранилище зрелых монет"""
+    """Проверяет, есть ли монета в постоянном хранилище зрелых монет с актуальными настройками"""
     with mature_coins_lock:
-        return symbol in mature_coins_storage
+        if symbol not in mature_coins_storage:
+            return False
+        
+        # ✅ НОВАЯ ЛОГИКА: Сравниваем настройки зрелости
+        stored_data = mature_coins_storage[symbol]
+        maturity_data = stored_data.get('maturity_data', {})
+        stored_details = maturity_data.get('details', {})
+        
+        # Получаем текущие настройки
+        with bots_data_lock:
+            config = bots_data.get('auto_bot_config', {})
+        
+        current_min_candles = config.get('min_candles_for_maturity', MIN_CANDLES_FOR_MATURITY)
+        current_min_rsi_low = config.get('min_rsi_low', MIN_RSI_LOW)
+        current_max_rsi_high = config.get('max_rsi_high', MAX_RSI_HIGH)
+        
+        # Сравниваем настройки
+        stored_min_candles = stored_details.get('min_required', 0)
+        
+        # ✅ УЛУЧШЕННАЯ ЛОГИКА: Проверяем, соответствуют ли сохраненные данные текущим настройкам
+        # Если количество свечей изменилось - перепроверяем
+        if stored_min_candles != current_min_candles:
+            logger.debug(f"[MATURITY_STORAGE] {symbol}: изменилось min_candles ({stored_min_candles} → {current_min_candles})")
+            return False
+        
+        # Если RSI критерии изменились - перепроверяем
+        # Получаем фактические значения RSI из сохраненных данных
+        stored_rsi_min = stored_details.get('rsi_min', 0)
+        stored_rsi_max = stored_details.get('rsi_max', 0)
+        
+        # Проверяем, соответствовала ли монета старым критериям и соответствует ли новым
+        old_criteria_met = stored_details.get('checks', {}).get('sufficient_candles', False)
+        if not old_criteria_met:
+            return False
+        
+        # Проверяем новые RSI критерии
+        new_rsi_low_ok = stored_rsi_min <= current_min_rsi_low
+        new_rsi_high_ok = stored_rsi_max >= current_max_rsi_high
+        
+        if not (new_rsi_low_ok and new_rsi_high_ok):
+            logger.debug(f"[MATURITY_STORAGE] {symbol}: RSI критерии изменились (min: {stored_rsi_min:.1f}≤{current_min_rsi_low}, max: {stored_rsi_max:.1f}≥{current_max_rsi_high})")
+            # Удаляем монету из хранилища для перепроверки
+            del mature_coins_storage[symbol]
+            return False
+        
+        logger.debug(f"[MATURITY_STORAGE] {symbol}: найдена в хранилище с актуальными настройками")
+        return True
 
 def add_mature_coin_to_storage(symbol, maturity_data, auto_save=True):
     """Добавляет монету в постоянное хранилище зрелых монет (только если её там еще нет)"""

@@ -251,6 +251,7 @@ from bot_engine.trading_bot import TradingBot as RealTradingBot
 
 # Константы для файлов состояния
 BOTS_STATE_FILE = 'data/bots_state.json'
+BOTS_POSITIONS_REGISTRY_FILE = 'data/bot_positions_registry.json'  # Реестр позиций открытых ботами
 AUTO_BOT_CONFIG_FILE = 'data/auto_bot_config.json'
 
 # Константы для обновления позиций
@@ -561,4 +562,104 @@ def load_auto_bot_config(force_disable=False):
 
 # ВАЖНО: load_auto_bot_config() теперь вызывается в if __name__ == '__main__'
 # чтобы check_and_stop_existing_bots_processes() мог вывести свои сообщения первым
+
+
+# ===== РЕЕСТР ПОЗИЦИЙ БОТОВ =====
+
+def load_bot_positions_registry():
+    """Загружает реестр позиций, открытых ботами"""
+    try:
+        if os.path.exists(BOTS_POSITIONS_REGISTRY_FILE):
+            with open(BOTS_POSITIONS_REGISTRY_FILE, 'r', encoding='utf-8') as f:
+                registry = json.load(f)
+                logger.info(f"[REGISTRY] ✅ Загружен реестр позиций: {len(registry)} записей")
+                return registry
+        else:
+            logger.info(f"[REGISTRY] 📁 Реестр позиций не найден, создаём новый")
+            return {}
+    except Exception as e:
+        logger.error(f"[REGISTRY] ❌ Ошибка загрузки реестра: {e}")
+        return {}
+
+
+def save_bot_positions_registry(registry):
+    """Сохраняет реестр позиций ботов"""
+    try:
+        with open(BOTS_POSITIONS_REGISTRY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(registry, f, indent=2, ensure_ascii=False)
+        logger.debug(f"[REGISTRY] ✅ Реестр позиций сохранён: {len(registry)} записей")
+        return True
+    except Exception as e:
+        logger.error(f"[REGISTRY] ❌ Ошибка сохранения реестра: {e}")
+        return False
+
+
+def register_bot_position(symbol, order_id, side, entry_price, quantity):
+    """
+    Регистрирует позицию, открытую ботом
+    
+    Args:
+        symbol: Символ монеты
+        order_id: ID ордера на бирже
+        side: Сторона (LONG/SHORT)
+        entry_price: Цена входа
+        quantity: Количество
+    """
+    try:
+        registry = load_bot_positions_registry()
+        
+        # Ключ — order_id, значение — информация о позиции
+        registry[order_id] = {
+            'symbol': symbol,
+            'side': side,
+            'entry_price': entry_price,
+            'quantity': quantity,
+            'opened_at': datetime.now().isoformat(),
+            'managed_by_bot': True
+        }
+        
+        save_bot_positions_registry(registry)
+        logger.info(f"[REGISTRY] ✅ Зарегистрирована позиция: {symbol} {side}, order_id={order_id}")
+        return True
+    except Exception as e:
+        logger.error(f"[REGISTRY] ❌ Ошибка регистрации позиции: {e}")
+        return False
+
+
+def unregister_bot_position(order_id):
+    """Удаляет позицию из реестра (когда позиция закрыта)"""
+    try:
+        registry = load_bot_positions_registry()
+        
+        if order_id in registry:
+            position_info = registry.pop(order_id)
+            save_bot_positions_registry(registry)
+            logger.info(f"[REGISTRY] ✅ Удалена позиция из реестра: {position_info.get('symbol')} (order_id={order_id})")
+            return True
+        else:
+            logger.debug(f"[REGISTRY] ⚠️ Позиция с order_id={order_id} не найдена в реестре")
+            return False
+    except Exception as e:
+        logger.error(f"[REGISTRY] ❌ Ошибка удаления позиции из реестра: {e}")
+        return False
+
+
+def is_bot_position(order_id):
+    """Проверяет, является ли позиция с данным order_id позицией бота"""
+    try:
+        registry = load_bot_positions_registry()
+        return order_id in registry
+    except Exception as e:
+        logger.error(f"[REGISTRY] ❌ Ошибка проверки позиции: {e}")
+        return False
+
+
+def get_bot_position_info(order_id):
+    """Получает информацию о позиции бота из реестра"""
+    try:
+        registry = load_bot_positions_registry()
+        return registry.get(order_id)
+    except Exception as e:
+        logger.error(f"[REGISTRY] ❌ Ошибка получения информации о позиции: {e}")
+        return None
 
