@@ -104,32 +104,24 @@ def is_coin_mature_stored(symbol):
         current_min_rsi_low = config.get('min_rsi_low', MIN_RSI_LOW)
         current_max_rsi_high = config.get('max_rsi_high', MAX_RSI_HIGH)
         
-        # Сравниваем настройки
+        # ✅ СРАВНИВАЕМ С СОХРАНЕННЫМИ ПАРАМЕТРАМИ КОНФИГА
         stored_min_candles = stored_details.get('min_required', 0)
+        stored_config_min_rsi_low = stored_details.get('config_min_rsi_low', 0)
+        stored_config_max_rsi_high = stored_details.get('config_max_rsi_high', 0)
         
-        # ✅ УЛУЧШЕННАЯ ЛОГИКА: Проверяем, соответствуют ли сохраненные данные текущим настройкам
-        # Если количество свечей изменилось - перепроверяем
+        # Если параметры конфига изменились - перепроверяем монету
         if stored_min_candles != current_min_candles:
             logger.debug(f"[MATURITY_STORAGE] {symbol}: изменилось min_candles ({stored_min_candles} → {current_min_candles})")
+            del mature_coins_storage[symbol]
             return False
         
-        # Если RSI критерии изменились - перепроверяем
-        # Получаем фактические значения RSI из сохраненных данных
-        stored_rsi_min = stored_details.get('rsi_min', 0)
-        stored_rsi_max = stored_details.get('rsi_max', 0)
-        
-        # Проверяем, соответствовала ли монета старым критериям и соответствует ли новым
-        old_criteria_met = stored_details.get('checks', {}).get('sufficient_candles', False)
-        if not old_criteria_met:
+        if stored_config_min_rsi_low != current_min_rsi_low:
+            logger.debug(f"[MATURITY_STORAGE] {symbol}: изменилось config_min_rsi_low ({stored_config_min_rsi_low} → {current_min_rsi_low})")
+            del mature_coins_storage[symbol]
             return False
         
-        # Проверяем новые RSI критерии
-        new_rsi_low_ok = stored_rsi_min <= current_min_rsi_low
-        new_rsi_high_ok = stored_rsi_max >= current_max_rsi_high
-        
-        if not (new_rsi_low_ok and new_rsi_high_ok):
-            logger.debug(f"[MATURITY_STORAGE] {symbol}: RSI критерии изменились (min: {stored_rsi_min:.1f}≤{current_min_rsi_low}, max: {stored_rsi_max:.1f}≥{current_max_rsi_high})")
-            # Удаляем монету из хранилища для перепроверки
+        if stored_config_max_rsi_high != current_max_rsi_high:
+            logger.debug(f"[MATURITY_STORAGE] {symbol}: изменилось config_max_rsi_high ({stored_config_max_rsi_high} → {current_max_rsi_high})")
             del mature_coins_storage[symbol]
             return False
         
@@ -143,16 +135,14 @@ def add_mature_coin_to_storage(symbol, maturity_data, auto_save=True):
     with mature_coins_lock:
         # Проверяем, есть ли уже монета в хранилище
         if symbol in mature_coins_storage:
-            # Обновляем только время последней проверки
-            mature_coins_storage[symbol]['last_verified'] = time.time()
-            logger.debug(f"[MATURITY_STORAGE] {symbol}: обновлено время последней проверки")
+            # Монета уже есть - ничего не делаем
+            logger.debug(f"[MATURITY_STORAGE] {symbol}: уже есть в хранилище")
             return
         
         # Добавляем новую монету в хранилище
         mature_coins_storage[symbol] = {
             'timestamp': time.time(),
-            'maturity_data': maturity_data,
-            'last_verified': time.time()
+            'maturity_data': maturity_data
         }
     
     if auto_save:
@@ -168,14 +158,6 @@ def remove_mature_coin_from_storage(symbol):
         del mature_coins_storage[symbol]
         # Отключаем автоматическое сохранение - будет сохранено пакетно
         logger.debug(f"[MATURITY_STORAGE] Монета {symbol} удалена из хранилища (без автосохранения)")
-
-def update_mature_coin_verification(symbol):
-    """Обновляет время последней проверки зрелости монеты"""
-    global mature_coins_storage
-    if symbol in mature_coins_storage:
-        mature_coins_storage[symbol]['last_verified'] = time.time()
-        # Отключаем автоматическое сохранение - будет сохранено пакетно
-        logger.debug(f"[MATURITY_STORAGE] Обновлено время проверки для {symbol} (без автосохранения)")
 
 def load_optimal_ema_data():
     """Загружает данные об оптимальных EMA из файла"""
@@ -260,11 +242,8 @@ def check_coin_maturity_with_storage(symbol, candles):
     # Сначала проверяем постоянное хранилище
     if is_coin_mature_stored(symbol):
         logger.debug(f"[MATURITY_STORAGE] {symbol}: найдена в постоянном хранилище зрелых монет")
-        # Обновляем время последней проверки
-        update_mature_coin_verification(symbol)
         return {
             'is_mature': True,
-            'reason': 'Монета зрелая (из постоянного хранилища)',
             'details': {'stored': True, 'from_storage': True}
         }
     
@@ -337,31 +316,35 @@ def check_coin_maturity(symbol, candles):
         # Детальное логирование для отладки (отключено для уменьшения спама)
         # logger.info(f"[MATURITY_DEBUG] {symbol}: свечи={maturity_checks['sufficient_candles']} ({len(candles)}/{min_candles}), RSI_low={maturity_checks['rsi_reached_low']} (min={rsi_min:.1f}<=>{min_rsi_low}), RSI_high={maturity_checks['rsi_reached_high']} (max={rsi_max:.1f}>={max_rsi_high}), зрелая={is_mature}")
         
-        # Формируем детальную информацию
+        # Формируем детальную информацию с параметрами конфига
         details = {
             'candles_count': len(candles),
             'min_required': min_candles,
-            'rsi_min': rsi_min,
-            'rsi_max': rsi_max,
-            'rsi_range': rsi_range,
-            'checks': maturity_checks
+            'config_min_rsi_low': min_rsi_low,
+            'config_max_rsi_high': max_rsi_high,
+            'rsi_min': round(rsi_min, 1),
+            'rsi_max': round(rsi_max, 1)
         }
         
-        # Определяем причину незрелости
+        # Определяем причину незрелости (только для незрелых монет)
         if not is_mature:
             failed_checks = [check for check, passed in maturity_checks.items() if not passed]
             reason = f'Не пройдены проверки: {", ".join(failed_checks)}'
+            logger.debug(f"[MATURITY] {symbol}: {reason}")
+            logger.debug(f"[MATURITY] {symbol}: Свечи={len(candles)}, RSI={rsi_min:.1f}-{rsi_max:.1f}")
         else:
-            reason = 'Монета зрелая для торговли'
+            reason = None  # Для зрелых монет reason не нужен
         
-        logger.debug(f"[MATURITY] {symbol}: {reason}")
-        logger.debug(f"[MATURITY] {symbol}: Свечи={len(candles)}, RSI={rsi_min:.1f}-{rsi_max:.1f}")
-        
-        return {
+        result = {
             'is_mature': is_mature,
-            'reason': reason,
             'details': details
         }
+        
+        # Добавляем reason только для незрелых монет
+        if reason:
+            result['reason'] = reason
+        
+        return result
         
     except Exception as e:
         logger.error(f"[MATURITY] Ошибка проверки зрелости {symbol}: {e}")
