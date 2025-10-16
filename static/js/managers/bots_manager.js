@@ -650,6 +650,9 @@ class BotsManager {
                         }
                     });
                     
+                    // Загружаем список зрелых монет и помечаем их
+                    await this.loadMatureCoinsAndMark();
+                    
                     console.log(`[BotsManager] ✅ Загружено ${this.coinsRsiData.length} монет с RSI`);
                     console.log(`[BotsManager] ✅ Помечено ${markedCount} монет с ручными позициями`);
                     this.logDebug('[BotsManager] 🔍 Первые 3 монеты:', this.coinsRsiData.slice(0, 3));
@@ -727,12 +730,19 @@ class BotsManager {
             const isManualPosition = coin.manual_position || false;
             const manualClass = isManualPosition ? 'manual-position' : '';
             
+            // Проверяем, зрелая ли монета
+            const isMature = coin.is_mature || false;
+            const matureClass = isMature ? 'mature-coin' : '';
+            
             if (isManualPosition) {
                 console.log(`[BotsManager] 🎨 Рендер монеты ${coin.symbol} с классом manual-position`);
             }
+            if (isMature) {
+                console.log(`[BotsManager] 💎 Рендер монеты ${coin.symbol} с классом mature-coin`);
+            }
             
             return `
-                <li class="coin-item ${rsiClass} ${trendClass} ${signalClass} ${manualClass}" data-symbol="${coin.symbol}">
+                <li class="coin-item ${rsiClass} ${trendClass} ${signalClass} ${manualClass} ${matureClass}" data-symbol="${coin.symbol}">
                     <div class="coin-item-content">
                         <div class="coin-header">
                             <span class="coin-symbol">${coin.symbol}</span>
@@ -1331,6 +1341,9 @@ class BotsManager {
                     break;
                 case 'manual-position':
                     visible = item.classList.contains('manual-position');
+                    break;
+                case 'mature-coins':
+                    visible = item.classList.contains('mature-coin');
                     break;
                 case 'all':
                 default:
@@ -5543,6 +5556,32 @@ class BotsManager {
             }
         } catch (error) {
             console.error('[BotsManager] Ошибка загрузки счётчика зрелых монет:', error);
+        }
+    }
+    
+    /**
+     * Загружает список зрелых монет и помечает их в данных
+     */
+    async loadMatureCoinsAndMark() {
+        try {
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/mature-coins-list`);
+            const data = await response.json();
+            
+            if (data.success && data.mature_coins) {
+                // Помечаем зрелые монеты в данных
+                let markedCount = 0;
+                this.coinsRsiData.forEach(coin => {
+                    coin.is_mature = data.mature_coins.includes(coin.symbol);
+                    if (coin.is_mature) {
+                        markedCount++;
+                        console.log(`[BotsManager] 💎 Монета ${coin.symbol} помечена как зрелая`);
+                    }
+                });
+                
+                console.log(`[BotsManager] 💎 Помечено ${markedCount} зрелых монет из ${data.mature_coins.length} в файле`);
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка загрузки зрелых монет:', error);
         }
     }
 
