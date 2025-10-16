@@ -302,10 +302,10 @@ _work_TRADING_/
 InfoBot_Public/
 
 # Test files
-test_*.py
-*_test.py
-tests/
-test_output.txt
+#test_*.py
+#*_test.py
+#tests/
+#test_output.txt
 
 # Documentation drafts
 *.md.tmp

@@ -560,7 +560,9 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             'exit_scam_info': exit_scam_info,
             # ✅ ДОБАВЛЯЕМ флаги блокировки (для UI)
             'blocked_by_scope': is_blocked_by_scope,
-            'has_existing_position': has_existing_position
+            'has_existing_position': has_existing_position,
+            # ✅ ДОБАВЛЯЕМ флаг зрелости монеты
+            'is_mature': is_mature if enable_maturity_check else True
         }
         
         # Логируем торговые сигналы и блокировки тренда
