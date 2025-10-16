@@ -748,6 +748,7 @@ class BotsManager {
                             <span class="coin-symbol">${coin.symbol}</span>
                             <div class="coin-header-right">
                                 ${isManualPosition ? '<span class="manual-position-indicator" title="Ручная позиция">✋</span>' : ''}
+                                ${isMature ? '<span class="mature-coin-indicator" title="Зрелая монета">💎</span>' : ''}
                                 ${this.generateWarningIndicator(coin)}
                                 <span class="coin-rsi ${this.getRsiZoneClass(coin.rsi6h)}">${coin.rsi6h}</span>
                                 <a href="${this.createTickerLink(coin.symbol)}" 
