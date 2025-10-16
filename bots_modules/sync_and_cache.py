@@ -39,7 +39,8 @@ try:
         mature_coins_storage, mature_coins_lock, BOT_STATUS,
         DEFAULT_AUTO_BOT_CONFIG, RSI_CACHE_FILE, PROCESS_STATE_FILE,
         SYSTEM_CONFIG_FILE, BOTS_STATE_FILE, AUTO_BOT_CONFIG_FILE,
-        DEFAULT_CONFIG_FILE, INACTIVE_BOT_TIMEOUT, should_log_message
+        DEFAULT_CONFIG_FILE, INACTIVE_BOT_TIMEOUT, should_log_message,
+        get_coin_processing_lock
     )
     # MATURE_COINS_FILE определен в maturity.py
     try:
