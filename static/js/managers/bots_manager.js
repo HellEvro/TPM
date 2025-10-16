@@ -1052,6 +1052,27 @@ class BotsManager {
         const buyZoneCountEl = document.getElementById('filterBuyZoneCount');
         const sellZoneCountEl = document.getElementById('filterSellZoneCount');
         
+        // Если элементы не найдены, создаем их динамически
+        if (!buyZoneCountEl || !sellZoneCountEl) {
+            // Попробуем найти кнопки фильтров и добавить элементы динамически
+            const buyFilterBtn = document.querySelector('button[data-filter="buy-zone"]');
+            const sellFilterBtn = document.querySelector('button[data-filter="sell-zone"]');
+            
+            if (buyFilterBtn && !buyFilterBtn.querySelector('#filterBuyZoneCount')) {
+                const buySpan = document.createElement('span');
+                buySpan.id = 'filterBuyZoneCount';
+                buySpan.textContent = ` (${buyZoneCount})`;
+                buyFilterBtn.appendChild(buySpan);
+            }
+            
+            if (sellFilterBtn && !sellFilterBtn.querySelector('#filterSellZoneCount')) {
+                const sellSpan = document.createElement('span');
+                sellSpan.id = 'filterSellZoneCount';
+                sellSpan.textContent = ` (${sellZoneCount})`;
+                sellFilterBtn.appendChild(sellSpan);
+            }
+        }
+        
         const trendUpCountEl = document.getElementById('filterTrendUpCount');
         const trendDownCountEl = document.getElementById('filterTrendDownCount');
         const longCountEl = document.getElementById('filterLongCount');
@@ -1062,8 +1083,8 @@ class BotsManager {
         // Обновляем счетчики фильтров
         if (allCountEl) allCountEl.textContent = allCount;
         
-        if (buyZoneCountEl) buyZoneCountEl.textContent = buyZoneCount;
-        if (sellZoneCountEl) sellZoneCountEl.textContent = sellZoneCount;
+        if (buyZoneCountEl) buyZoneCountEl.textContent = ` (${buyZoneCount})`;
+        if (sellZoneCountEl) sellZoneCountEl.textContent = ` (${sellZoneCount})`;
         if (trendUpCountEl) trendUpCountEl.textContent = trendUpCount;
         if (trendDownCountEl) trendDownCountEl.textContent = trendDownCount;
         if (longCountEl) longCountEl.textContent = longCount;
