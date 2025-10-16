@@ -16,16 +16,14 @@ import threading
 # Импорты из bot_engine
 try:
     from bot_engine.indicators import SignalGenerator, TechnicalIndicators
-    from bot_engine.bot_config import (
-        RSI_EXTREME_ZONE_TIMEOUT, RSI_EXTREME_OVERSOLD, RSI_EXTREME_OVERBOUGHT,
-        SystemConfig
-    )
+    from bot_engine.bot_config import SystemConfig
 except ImportError:
     pass
 
 # Импорт констант из imports_and_globals
 try:
-    from bots_modules.imports_and_globals import TREND_CONFIRMATION_BARS
+    from bot_engine.bot_config import SystemConfig
+    TREND_CONFIRMATION_BARS = SystemConfig.TREND_CONFIRMATION_BARS
 except ImportError:
     TREND_CONFIRMATION_BARS = 3  # Значение по умолчанию
 
@@ -591,7 +589,7 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
                 extreme_duration = 0
                 if rsi_history:
                     for rsi_val in reversed(rsi_history):
-                        if rsi_val <= RSI_EXTREME_OVERSOLD or rsi_val >= RSI_EXTREME_OVERBOUGHT:
+                        if rsi_val <= SystemConfig.RSI_EXTREME_OVERSOLD or rsi_val >= SystemConfig.RSI_EXTREME_OVERBOUGHT:
                             extreme_duration += 1
                         else:
                             break
@@ -601,16 +599,16 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
                 warning_message = None
             
                 # Проверяем экстремальные условия
-                if current_rsi <= RSI_EXTREME_OVERSOLD:
-                    if extreme_duration > RSI_EXTREME_ZONE_TIMEOUT:
+                if current_rsi <= SystemConfig.RSI_EXTREME_OVERSOLD:
+                    if extreme_duration > SystemConfig.RSI_EXTREME_ZONE_TIMEOUT:
                         warning_type = 'EXTREME_OVERSOLD_LONG'
                         warning_message = f'RSI в экстремальной зоне {extreme_duration} свечей'
                     else:
                         warning_type = 'OVERSOLD'
                         warning_message = 'Возможная зона для LONG'
                         
-                elif current_rsi >= RSI_EXTREME_OVERBOUGHT:
-                    if extreme_duration > RSI_EXTREME_ZONE_TIMEOUT:
+                elif current_rsi >= SystemConfig.RSI_EXTREME_OVERBOUGHT:
+                    if extreme_duration > SystemConfig.RSI_EXTREME_ZONE_TIMEOUT:
                         warning_type = 'EXTREME_OVERBOUGHT_LONG'
                         warning_message = f'RSI в экстремальной зоне {extreme_duration} свечей'
                     else:
