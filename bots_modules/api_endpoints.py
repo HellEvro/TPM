@@ -100,7 +100,9 @@ except ImportError as e:
     def save_auto_bot_config():
         pass
     def get_effective_signal(coin):
-        return 'WAIT'
+        # Используем настоящую функцию из filters.py
+        from bots_modules.filters import get_effective_signal as real_get_effective_signal
+        return real_get_effective_signal(coin)
     def check_auto_bot_filters(symbol):
         return {'allowed': True}
     def process_auto_bot_signals(exchange_obj=None):
@@ -1609,8 +1611,8 @@ def restart_service_endpoint():
         system_initialized = False
         logger.info("[HOT_RELOAD] 🔄 Сброшен флаг инициализации")
         
-        # Перезагружаем конфигурацию
-        load_auto_bot_config()
+        # Перезагружаем конфигурацию (БЕЗ принудительного выключения автобота)
+        load_auto_bot_config(force_disable=False)
         load_system_config()
         logger.info("[HOT_RELOAD] 🔄 Перезагружена конфигурация")
         
@@ -2661,8 +2663,8 @@ if __name__ == '__main__':
         print("❌ Запуск отменен")
         sys.exit(0)
     
-    # Загружаем конфигурацию Auto Bot после проверки процессов
-    load_auto_bot_config()
+    # Загружаем конфигурацию Auto Bot после проверки процессов (С принудительным выключением при запуске)
+    load_auto_bot_config(force_disable=True)
     
     print("=" * 60)
     print("INFOBOT - Trading Bots Service")

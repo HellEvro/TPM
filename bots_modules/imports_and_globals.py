@@ -539,7 +539,7 @@ rsi_data_lock = threading.Lock()
 bots_data_lock = threading.Lock()
 
 # Загружаем сохраненную конфигурацию Auto Bot
-def load_auto_bot_config():
+def load_auto_bot_config(force_disable=False):
     """Загружает конфигурацию Auto Bot из файла"""
     try:
         config_file = 'data/auto_bot_config.json'
@@ -548,10 +548,11 @@ def load_auto_bot_config():
                 saved_config = json.load(f)
                 with bots_data_lock:
                     bots_data['auto_bot_config'].update(saved_config)
-                    # ВАЖНО: Всегда отключаем автобот при запуске!
-                    bots_data['auto_bot_config']['enabled'] = False
+                    # Отключаем автобот только при принудительном вызове (при запуске сервера)
+                    if force_disable:
+                        bots_data['auto_bot_config']['enabled'] = False
+                        logger.info(f"[CONFIG] 🔒 Auto Bot принудительно выключен при запуске")
                 logger.info(f"[CONFIG] ✅ Загружена конфигурация Auto Bot из {config_file}")
-                logger.info(f"[CONFIG] 🔒 Auto Bot принудительно выключен при запуске")
         else:
             logger.info(f"[CONFIG] 📁 Файл конфигурации {config_file} не найден, используем дефолтные настройки")
             # Auto Bot уже выключен в дефолтной конфигурации

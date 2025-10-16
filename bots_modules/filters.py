@@ -303,6 +303,34 @@ def check_rsi_time_filter(candles, rsi, signal):
 def get_coin_rsi_data(symbol, exchange_obj=None):
     """Получает RSI данные для одной монеты (6H таймфрейм)"""
     try:
+        # ✅ ФИЛЬТР 1: Whitelist/Blacklist/Scope - САМЫЙ ПЕРВЫЙ!
+        # Проверяем ДО загрузки данных с биржи (экономим API запросы)
+        with bots_data_lock:
+            auto_config = bots_data.get('auto_bot_config', {})
+            scope = auto_config.get('scope', 'all')
+            whitelist = auto_config.get('whitelist', [])
+            blacklist = auto_config.get('blacklist', [])
+        
+        is_blocked_by_scope = False
+        
+        if scope == 'whitelist':
+            # Режим ТОЛЬКО whitelist - работаем ТОЛЬКО с монетами из белого списка
+            if symbol not in whitelist:
+                is_blocked_by_scope = True
+                logger.debug(f"[SCOPE_FILTER] {symbol}: ❌ Режим WHITELIST - монета не в белом списке")
+        
+        elif scope == 'blacklist':
+            # Режим ТОЛЬКО blacklist - работаем со ВСЕМИ монетами КРОМЕ черного списка
+            if symbol in blacklist:
+                is_blocked_by_scope = True
+                logger.debug(f"[SCOPE_FILTER] {symbol}: ❌ Режим BLACKLIST - монета в черном списке")
+        
+        elif scope == 'all':
+            # Режим ALL - работаем со ВСЕМИ монетами, но проверяем черный список
+            if symbol in blacklist:
+                is_blocked_by_scope = True
+                logger.debug(f"[SCOPE_FILTER] {symbol}: ❌ Монета в черном списке")
+        
         # Минимальная задержка для избежания API Rate Limit
         time.sleep(0.1)  # Было 0.5 сек, стало 0.1 сек
         
@@ -347,24 +375,15 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         if len(closes) >= 5:
             change_24h = round(((closes[-1] - closes[-5]) / closes[-5]) * 100, 2)
         
-        # Выполняем улучшенный анализ RSI
-        enhanced_analysis = perform_enhanced_rsi_analysis(candles, rsi, symbol)
-        
         # Определяем RSI зоны согласно техзаданию
         rsi_zone = 'NEUTRAL'
         signal = 'WAIT'
         
-        # Временной фильтр теперь проверяется только для монет в зонах LONG/SHORT (ниже)
-        
-        # Логика с опциональным учетом тренда
+        # ✅ ФИЛЬТР 2: Базовый RSI + Тренд
         # Получаем настройки фильтров по тренду (по умолчанию включены)
         with bots_data_lock:
             avoid_down_trend = bots_data.get('auto_bot_config', {}).get('avoid_down_trend', True)
             avoid_up_trend = bots_data.get('auto_bot_config', {}).get('avoid_up_trend', True)
-        
-        # Восстанавливаем правильную логику фильтров по тренду
-        # avoid_down_trend = False  # УБРАНО - используем настройки
-        # avoid_up_trend = False    # УБРАНО - используем настройки
         
         if rsi <= RSI_OVERSOLD:  # RSI ≤ 29 
             rsi_zone = 'BUY_ZONE'
@@ -382,6 +401,23 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                 signal = 'ENTER_SHORT'  # Входим независимо от тренда или при хорошем тренде
         # RSI между 30 и 70 - нейтральная зона
         
+        # ✅ ФИЛЬТР 3: Enhanced RSI (СРАЗУ после базового RSI, ДО зрелости!)
+        # Проверяем волатильность, дивергенции, объемы
+        enhanced_analysis = perform_enhanced_rsi_analysis(candles, rsi, symbol)
+        
+        # Если Enhanced RSI включен и дает другой сигнал - используем его
+        if signal in ['ENTER_LONG', 'ENTER_SHORT']:
+            if enhanced_analysis.get('enabled') and enhanced_analysis.get('enhanced_signal'):
+                original_signal = signal
+                enhanced_signal = enhanced_analysis.get('enhanced_signal')
+                if enhanced_signal != original_signal:
+                    logger.info(f"[ENHANCED_RSI] {symbol}: Сигнал изменен {original_signal} → {enhanced_signal}")
+                    signal = enhanced_signal
+                    # Если Enhanced RSI говорит WAIT - блокируем
+                    if signal == 'WAIT':
+                        rsi_zone = 'NEUTRAL'
+        
+        # ✅ ФИЛЬТР 4: Зрелость монеты (проверяем ПОСЛЕ Enhanced RSI)
         # Проверяем зрелость монеты ДЛЯ ВСЕХ МОНЕТ при каждой загрузке
         with bots_data_lock:
             enable_maturity_check = bots_data.get('auto_bot_config', {}).get('enable_maturity_check', True)
@@ -411,13 +447,21 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # closes[-1] - это самая НОВАЯ цена (последняя свеча в массиве)
         current_price = closes[-1]
         
-        # Проверяем фильтры только для монет в зонах LONG/SHORT
+        # ✅ ПРАВИЛЬНЫЙ ПОРЯДОК ФИЛЬТРОВ согласно логике:
+        # 1. Whitelist/Blacklist/Scope → уже проверено в начале
+        # 2. Базовый RSI + Тренд → уже проверено выше
+        # 3. Enhanced RSI → уже проверено выше
+        # 4. Зрелость монеты → уже проверено выше
+        # 5. ExitScam фильтр → проверяем здесь
+        # 6. RSI временной фильтр → проверяем здесь
+        # 7. Существующие позиции → проверяется в check_new_autobot_filters()
+        
         exit_scam_info = None
         time_filter_info = None
         
         # Проверяем фильтры только если монета в зоне входа (LONG/SHORT)
         if signal in ['ENTER_LONG', 'ENTER_SHORT']:
-            # 1. Проверка ExitScam фильтра
+            # 5. Проверка ExitScam фильтра
             exit_scam_passed = check_exit_scam_filter(symbol, {})
             if not exit_scam_passed:
                 exit_scam_info = {
@@ -425,6 +469,8 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     'reason': 'Обнаружены резкие движения цены (ExitScam фильтр)',
                     'filter_type': 'exit_scam'
                 }
+                signal = 'WAIT'
+                rsi_zone = 'NEUTRAL'
             else:
                 exit_scam_info = {
                     'blocked': False,
@@ -432,20 +478,27 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     'filter_type': 'exit_scam'
                 }
             
-            # 2. Проверка RSI временного фильтра
-            time_filter_result = check_rsi_time_filter(candles, rsi, signal)
-            time_filter_info = {
-                'blocked': not time_filter_result['allowed'],
-                'reason': time_filter_result['reason'],
-                'filter_type': 'time_filter',
-                'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago'),
-                'calm_candles': time_filter_result.get('calm_candles')
-            }
-            
-            # Если любой из фильтров блокирует - меняем сигнал на WAIT
-            if not exit_scam_passed or not time_filter_result['allowed']:
-                signal = 'WAIT'
-                rsi_zone = 'NEUTRAL'
+            # 6. Проверка RSI временного фильтра (только если ExitScam пройден)
+            if signal in ['ENTER_LONG', 'ENTER_SHORT']:
+                time_filter_result = check_rsi_time_filter(candles, rsi, signal)
+                time_filter_info = {
+                    'blocked': not time_filter_result['allowed'],
+                    'reason': time_filter_result['reason'],
+                    'filter_type': 'time_filter',
+                    'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago'),
+                    'calm_candles': time_filter_result.get('calm_candles')
+                }
+                
+                # Если временной фильтр блокирует - меняем сигнал на WAIT
+                if not time_filter_result['allowed']:
+                    signal = 'WAIT'
+                    rsi_zone = 'NEUTRAL'
+        
+        # ✅ ПРИМЕНЯЕМ БЛОКИРОВКУ ПО SCOPE
+        # Scope фильтр (если монета в черном списке или не в белом)
+        if is_blocked_by_scope:
+            signal = 'WAIT'
+            rsi_zone = 'NEUTRAL'
         
         result = {
             'symbol': symbol,
@@ -468,7 +521,9 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             # Добавляем информацию о временном фильтре
             'time_filter_info': time_filter_info,
             # Добавляем информацию об ExitScam фильтре
-            'exit_scam_info': exit_scam_info
+            'exit_scam_info': exit_scam_info,
+            # ✅ ДОБАВЛЯЕМ флаг блокировки по scope (для серого цвета в UI)
+            'blocked_by_scope': is_blocked_by_scope
         }
         
         # Логируем торговые сигналы и блокировки тренда
@@ -671,13 +726,14 @@ def get_effective_signal(coin):
     rsi = coin.get('rsi6h', 50)
     trend = coin.get('trend', coin.get('trend6h', 'NEUTRAL'))
     
-    # ✅ КРИТИЧЕСКАЯ ПРОВЕРКА: Если базовый сигнал WAIT (из-за незрелости) - возвращаем сразу
-    # Это блокирует Enhanced RSI от переопределения сигнала для незрелых монет
+    # ✅ КРИТИЧНО: Проверяем зрелость монеты ПЕРВЫМ ДЕЛОМ
+    # Незрелые монеты НЕ МОГУТ иметь активных ботов и НЕ ДОЛЖНЫ показываться в LONG/SHORT фильтрах!
     base_signal = coin.get('signal', 'WAIT')
     if base_signal == 'WAIT':
-            return 'WAIT'
-        
-    # Проверяем Enhanced RSI сигнал (приоритет только для зрелых монет)
+        # Монета незрелая - не показываем её в фильтрах
+        return 'WAIT'
+    
+    # ✅ Монета зрелая - проверяем Enhanced RSI сигнал
     enhanced_rsi = coin.get('enhanced_rsi', {})
     if enhanced_rsi.get('enabled') and enhanced_rsi.get('enhanced_signal'):
         signal = enhanced_rsi.get('enhanced_signal')
@@ -733,20 +789,16 @@ def process_auto_bot_signals(exchange_obj=None):
                 if rsi is None:
                     continue
                 
-                # Проверяем сигналы
-                with bots_data_lock:
-                    auto_config = bots_data['auto_bot_config']
-                    rsi_long_threshold = auto_config.get('rsi_long_threshold', 29)
-                    rsi_short_threshold = auto_config.get('rsi_short_threshold', 71)
+                # ✅ ИСПОЛЬЗУЕМ get_effective_signal() который учитывает ВСЕ проверки:
+                # - RSI временной фильтр
+                # - Enhanced RSI
+                # - Зрелость монеты (base_signal)
+                # - Тренды
+                signal = get_effective_signal(coin_data)
                 
-                signal = None
-                if rsi <= rsi_long_threshold:
-                    signal = 'ENTER_LONG'
-                elif rsi >= rsi_short_threshold:
-                    signal = 'ENTER_SHORT'
-                
-                if signal:
-                    # Проверяем дополнительные условия
+                # Если сигнал ENTER_LONG или ENTER_SHORT - проверяем остальные фильтры
+                if signal in ['ENTER_LONG', 'ENTER_SHORT']:
+                    # Проверяем дополнительные условия (whitelist/blacklist, ExitScam, позиции)
                     if check_new_autobot_filters(symbol, signal, coin_data):
                         potential_coins.append({
                             'symbol': symbol,
@@ -857,65 +909,31 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
 def check_new_autobot_filters(symbol, signal, coin_data):
     """Проверяет фильтры для нового автобота"""
     try:
-        # 0. Проверка whitelist/blacklist/scope
-        with bots_data_lock:
-            auto_config = bots_data['auto_bot_config']
-            scope = auto_config.get('scope', 'all')
-            whitelist = auto_config.get('whitelist', [])
-            blacklist = auto_config.get('blacklist', [])
+        # ✅ БОЛЬШИНСТВО ФИЛЬТРОВ УЖЕ ПРОВЕРЕНО в get_coin_rsi_data():
+        # 1. Whitelist/blacklist/scope
+        # 2. Базовый RSI + Тренд
+        # 3. Enhanced RSI
+        # 4. Зрелость монеты
+        # 5. ExitScam фильтр
+        # 6. RSI временной фильтр
         
-        # Проверяем scope
-        if scope == 'whitelist':
-            # Режим ТОЛЬКО whitelist - работаем ТОЛЬКО с монетами из белого списка
-            if symbol not in whitelist:
-                logger.debug(f"[NEW_AUTO_FILTER] {symbol}: ❌ Режим WHITELIST - монета не в белом списке")
-                return False
-            logger.debug(f"[NEW_AUTO_FILTER] {symbol}: ✅ В белом списке (режим whitelist)")
+        # Здесь проверяем:
+        # - Дубль-проверку зрелости и ExitScam
+        # - Существующие позиции на бирже (один раз для всех монет)
         
-        elif scope == 'blacklist':
-            # Режим ТОЛЬКО blacklist - работаем со ВСЕМИ монетами КРОМЕ черного списка
-            if symbol in blacklist:
-                logger.debug(f"[NEW_AUTO_FILTER] {symbol}: ❌ Режим BLACKLIST - монета в черном списке")
-                return False
-            logger.debug(f"[NEW_AUTO_FILTER] {symbol}: ✅ Не в черном списке (режим blacklist)")
-        
-        elif scope == 'all':
-            # Режим ALL - работаем со ВСЕМИ монетами, но проверяем оба списка
-            if symbol in blacklist:
-                logger.debug(f"[NEW_AUTO_FILTER] {symbol}: ❌ Монета в черном списке")
-                return False
-            # Если в whitelist - приоритет (но не обязательно)
-            if whitelist and symbol in whitelist:
-                logger.debug(f"[NEW_AUTO_FILTER] {symbol}: ⭐ В белом списке (приоритет)")
-        
-        # 1. Проверка зрелости монеты
+        # Дубль-проверка зрелости монеты (на всякий случай)
         if not check_coin_maturity_stored_or_verify(symbol):
             logger.debug(f"[NEW_AUTO_FILTER] {symbol}: Монета незрелая")
             return False
         
-        # 2. Проверка ExitScam (резкие движения цены)
+        # Дубль-проверка ExitScam (на всякий случай)
         if not check_exit_scam_filter(symbol, coin_data):
             logger.warning(f"[NEW_AUTO_FILTER] {symbol}: ❌ БЛОКИРОВКА: Обнаружены резкие движения цены (ExitScam)")
             return False
         else:
             logger.info(f"[NEW_AUTO_FILTER] {symbol}: ✅ ExitScam фильтр пройден")
         
-        # 3. Проверка тренда
-        trend = coin_data.get('trend6h', 'NEUTRAL')
-        with bots_data_lock:
-            auto_config = bots_data['auto_bot_config']
-            avoid_down_trend = auto_config.get('avoid_down_trend', True)
-            avoid_up_trend = auto_config.get('avoid_up_trend', True)
-        
-        if signal == 'ENTER_LONG' and avoid_down_trend and trend == 'DOWN':
-            logger.debug(f"[NEW_AUTO_FILTER] {symbol}: DOWN тренд - не открываем LONG")
-            return False
-            
-        if signal == 'ENTER_SHORT' and avoid_up_trend and trend == 'UP':
-            logger.debug(f"[NEW_AUTO_FILTER] {symbol}: UP тренд - не открываем SHORT")
-            return False
-        
-        # 4. Проверка существующих позиций на бирже
+        # 7. Проверка существующих позиций на бирже
         if not check_no_existing_position(symbol, signal):
             logger.debug(f"[NEW_AUTO_FILTER] {symbol}: Уже есть позиция на бирже")
             return False
