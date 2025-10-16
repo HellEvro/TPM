@@ -1,7 +1,7 @@
 {
   "bots": {},
   "auto_bot_config": {
-    "enabled": false,
+    "enabled": true,
     "max_concurrent": 5,
     "risk_cap_percent": 10,
     "scope": "all",
@@ -26,7 +26,7 @@
     "avoid_down_trend": true,
     "avoid_up_trend": true,
     "enable_maturity_check": true,
-    "min_candles_for_maturity": 200,
+    "min_candles_for_maturity": 400,
     "min_rsi_low": 35,
     "max_rsi_high": 65,
     "rsi_time_filter_enabled": true,
@@ -64,6 +64,6 @@
     "scaling_min_usdt_per_trade": 5,
     "scaling_timeout_minutes": 30
   },
-  "last_saved": "2025-10-16T04:01:33.716595",
+  "last_saved": "2025-10-16T04:46:46.984163",
   "version": "1.0"
 }

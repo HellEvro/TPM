@@ -2,14 +2,14 @@
   "process_state": {
     "smart_rsi_manager": {
       "active": true,
-      "last_update": "2025-10-16T04:01:33.316635",
+      "last_update": "2025-10-16T04:38:41.835624",
       "update_count": 49,
       "last_error": null
     },
     "auto_bot_worker": {
       "active": false,
-      "last_check": "2025-10-16T04:00:34.127696",
-      "check_count": 8,
+      "last_check": "2025-10-16T04:44:42.874631",
+      "check_count": 13,
       "last_error": null,
       "enabled": false,
       "interval_seconds": 180
@@ -22,8 +22,8 @@
     },
     "exchange_connection": {
       "initialized": true,
-      "last_sync": "2025-10-16T04:01:33.315275",
-      "connection_count": 93,
+      "last_sync": "2025-10-16T04:38:41.834675",
+      "connection_count": 96,
       "last_error": null
     },
     "auto_bot_signals": {
@@ -33,6 +33,6 @@
       "last_error": null
     }
   },
-  "last_saved": "2025-10-16T04:01:33.316641",
+  "last_saved": "2025-10-16T04:44:42.874647",
   "version": "1.0"
 }

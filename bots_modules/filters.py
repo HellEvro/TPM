@@ -326,10 +326,13 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                 logger.debug(f"[SCOPE_FILTER] {symbol}: ❌ Режим BLACKLIST - монета в черном списке")
         
         elif scope == 'all':
-            # Режим ALL - работаем со ВСЕМИ монетами, но проверяем черный список
+            # Режим ALL - работаем со ВСЕМИ монетами, но проверяем оба списка
             if symbol in blacklist:
                 is_blocked_by_scope = True
                 logger.debug(f"[SCOPE_FILTER] {symbol}: ❌ Монета в черном списке")
+            # Если в whitelist - даем приоритет (логируем, но не блокируем)
+            if whitelist and symbol in whitelist:
+                logger.debug(f"[SCOPE_FILTER] {symbol}: ⭐ В белом списке (приоритет)")
         
         # Минимальная задержка для избежания API Rate Limit
         time.sleep(0.1)  # Было 0.5 сек, стало 0.1 сек
@@ -399,9 +402,48 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                 signal = 'WAIT'  # Ждем ослабления тренда
             else:
                 signal = 'ENTER_SHORT'  # Входим независимо от тренда или при хорошем тренде
-        # RSI между 30 и 70 - нейтральная зона
+        # RSI между 30 and 70 - нейтральная зона
         
-        # ✅ ФИЛЬТР 3: Enhanced RSI (СРАЗУ после базового RSI, ДО зрелости!)
+        # ✅ ФИЛЬТР 3: Существующие позиции (СРАЗУ после базового RSI, экономим время!)
+        # Проверяем: есть ли позиция на бирже БЕЗ активного бота в системе
+        has_existing_position = False
+        if signal in ['ENTER_LONG', 'ENTER_SHORT']:
+            try:
+                exch = get_exchange()
+                if exch:
+                    exchange_positions = exch.get_positions()
+                    if isinstance(exchange_positions, tuple):
+                        positions_list = exchange_positions[0] if exchange_positions else []
+                    else:
+                        positions_list = exchange_positions if exchange_positions else []
+                    
+                    # Проверяем, есть ли позиция для этой монеты
+                    for pos in positions_list:
+                        pos_symbol = pos.get('symbol', '').replace('USDT', '')
+                        if pos_symbol == symbol and abs(float(pos.get('size', 0))) > 0:
+                            # Нашли позицию! Теперь проверяем, есть ли бот для неё
+                            has_bot_for_position = False
+                            
+                            with bots_data_lock:
+                                if symbol in bots_data.get('bots', {}):
+                                    bot_data = bots_data['bots'][symbol]
+                                    bot_status = bot_data.get('status')
+                                    # Бот считается активным если он не IDLE и не PAUSED
+                                    if bot_status not in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']]:
+                                        has_bot_for_position = True
+                                        logger.debug(f"[POSITION_FILTER] {symbol}: ✅ Есть позиция на бирже, но есть и активный бот (статус: {bot_status})")
+                            
+                            if not has_bot_for_position:
+                                # Позиция есть, но бота нет - это ручная позиция или бот был удалён
+                                has_existing_position = True
+                                signal = 'WAIT'  # Блокируем
+                                rsi_zone = 'NEUTRAL'
+                                logger.debug(f"[POSITION_FILTER] {symbol}: ❌ Есть позиция БЕЗ активного бота - блокируем создание нового бота")
+                            break
+            except Exception as e:
+                logger.warning(f"[POSITION_FILTER] {symbol}: Ошибка проверки позиций: {e}")
+        
+        # ✅ ФИЛЬТР 4: Enhanced RSI (после проверки позиций)
         # Проверяем волатильность, дивергенции, объемы
         enhanced_analysis = perform_enhanced_rsi_analysis(candles, rsi, symbol)
         
@@ -417,26 +459,18 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     if signal == 'WAIT':
                         rsi_zone = 'NEUTRAL'
         
-        # ✅ ФИЛЬТР 4: Зрелость монеты (проверяем ПОСЛЕ Enhanced RSI)
+        # ✅ ФИЛЬТР 5: Зрелость монеты (проверяем ПОСЛЕ Enhanced RSI)
         # Проверяем зрелость монеты ДЛЯ ВСЕХ МОНЕТ при каждой загрузке
         with bots_data_lock:
             enable_maturity_check = bots_data.get('auto_bot_config', {}).get('enable_maturity_check', True)
         
-        # Проверяем зрелость монеты и добавляем в хранилище при загрузке RSI
+        # Проверяем зрелость монеты из хранилища или выполняем проверку
         if enable_maturity_check:
-            # Проверяем зрелость монеты
-            maturity_check = check_coin_maturity(symbol, candles)
+            # ✅ ИСПОЛЬЗУЕМ хранилище зрелых монет для быстрой проверки
+            is_mature = check_coin_maturity_stored_or_verify(symbol)
             
-            if maturity_check['is_mature']:
-                logger.debug(f"[MATURITY] {symbol}: Монета зрелая - {maturity_check['reason']}")
-                # ✅ ДОБАВЛЯЕМ зрелую монету в хранилище при загрузке RSI
-                add_mature_coin_to_storage(symbol, maturity_check, auto_save=False)
-            else:
-                logger.debug(f"[MATURITY] {symbol}: Монета незрелая - {maturity_check['reason']}")
-            
-            # Блокируем сигналы только для незрелых монет
-            if not maturity_check['is_mature'] and signal in ['ENTER_LONG', 'ENTER_SHORT']:
-                logger.debug(f"[MATURITY] {symbol}: {maturity_check['reason']} - сигнал {signal} заблокирован")
+            if not is_mature and signal in ['ENTER_LONG', 'ENTER_SHORT']:
+                logger.debug(f"[MATURITY] {symbol}: Монета незрелая - сигнал {signal} заблокирован")
                 # Меняем сигнал на WAIT, но не исключаем монету из списка
                 signal = 'WAIT'
                 rsi_zone = 'NEUTRAL'
@@ -450,18 +484,18 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # ✅ ПРАВИЛЬНЫЙ ПОРЯДОК ФИЛЬТРОВ согласно логике:
         # 1. Whitelist/Blacklist/Scope → уже проверено в начале
         # 2. Базовый RSI + Тренд → уже проверено выше
-        # 3. Enhanced RSI → уже проверено выше
-        # 4. Зрелость монеты → уже проверено выше
-        # 5. ExitScam фильтр → проверяем здесь
-        # 6. RSI временной фильтр → проверяем здесь
-        # 7. Существующие позиции → проверяется в check_new_autobot_filters()
+        # 3. Существующие позиции → уже проверено выше (РАННИЙ выход!)
+        # 4. Enhanced RSI → уже проверено выше
+        # 5. Зрелость монеты → уже проверено выше
+        # 6. ExitScam фильтр → проверяем здесь
+        # 7. RSI временной фильтр → проверяем здесь
         
         exit_scam_info = None
         time_filter_info = None
         
         # Проверяем фильтры только если монета в зоне входа (LONG/SHORT)
         if signal in ['ENTER_LONG', 'ENTER_SHORT']:
-            # 5. Проверка ExitScam фильтра
+            # 6. Проверка ExitScam фильтра
             exit_scam_passed = check_exit_scam_filter(symbol, {})
             if not exit_scam_passed:
                 exit_scam_info = {
@@ -478,7 +512,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     'filter_type': 'exit_scam'
                 }
             
-            # 6. Проверка RSI временного фильтра (только если ExitScam пройден)
+            # 7. Проверка RSI временного фильтра (только если ExitScam пройден)
             if signal in ['ENTER_LONG', 'ENTER_SHORT']:
                 time_filter_result = check_rsi_time_filter(candles, rsi, signal)
                 time_filter_info = {
@@ -522,8 +556,9 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             'time_filter_info': time_filter_info,
             # Добавляем информацию об ExitScam фильтре
             'exit_scam_info': exit_scam_info,
-            # ✅ ДОБАВЛЯЕМ флаг блокировки по scope (для серого цвета в UI)
-            'blocked_by_scope': is_blocked_by_scope
+            # ✅ ДОБАВЛЯЕМ флаги блокировки (для UI)
+            'blocked_by_scope': is_blocked_by_scope,
+            'has_existing_position': has_existing_position
         }
         
         # Логируем торговые сигналы и блокировки тренда
@@ -909,36 +944,30 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
 def check_new_autobot_filters(symbol, signal, coin_data):
     """Проверяет фильтры для нового автобота"""
     try:
-        # ✅ БОЛЬШИНСТВО ФИЛЬТРОВ УЖЕ ПРОВЕРЕНО в get_coin_rsi_data():
+        # ✅ ВСЕ ФИЛЬТРЫ УЖЕ ПРОВЕРЕНЫ в get_coin_rsi_data():
         # 1. Whitelist/blacklist/scope
         # 2. Базовый RSI + Тренд
-        # 3. Enhanced RSI
-        # 4. Зрелость монеты
-        # 5. ExitScam фильтр
-        # 6. RSI временной фильтр
+        # 3. Существующие позиции (РАННИЙ выход!)
+        # 4. Enhanced RSI
+        # 5. Зрелость монеты
+        # 6. ExitScam фильтр
+        # 7. RSI временной фильтр
         
-        # Здесь проверяем:
-        # - Дубль-проверку зрелости и ExitScam
-        # - Существующие позиции на бирже (один раз для всех монет)
+        # Здесь делаем только дубль-проверку зрелости и ExitScam на всякий случай
         
-        # Дубль-проверка зрелости монеты (на всякий случай)
+        # Дубль-проверка зрелости монеты
         if not check_coin_maturity_stored_or_verify(symbol):
             logger.debug(f"[NEW_AUTO_FILTER] {symbol}: Монета незрелая")
             return False
         
-        # Дубль-проверка ExitScam (на всякий случай)
+        # Дубль-проверка ExitScam
         if not check_exit_scam_filter(symbol, coin_data):
             logger.warning(f"[NEW_AUTO_FILTER] {symbol}: ❌ БЛОКИРОВКА: Обнаружены резкие движения цены (ExitScam)")
             return False
         else:
             logger.info(f"[NEW_AUTO_FILTER] {symbol}: ✅ ExitScam фильтр пройден")
         
-        # 7. Проверка существующих позиций на бирже
-        if not check_no_existing_position(symbol, signal):
-            logger.debug(f"[NEW_AUTO_FILTER] {symbol}: Уже есть позиция на бирже")
-            return False
-        
-        logger.debug(f"[NEW_AUTO_FILTER] {symbol}: ✅ Все фильтры пройдены")
+        logger.debug(f"[NEW_AUTO_FILTER] {symbol}: ✅ Все дубль-проверки пройдены")
         return True
         
     except Exception as e:
