@@ -75,7 +75,7 @@ try:
     from bots_modules.maturity import load_mature_coins_storage
     from bots_modules.optimal_ema import load_optimal_ema_data
     from bots_modules.imports_and_globals import load_auto_bot_config
-    from bots_modules.filters import load_all_coins_rsi
+    from bots_modules.filters import load_all_coins_rsi, process_trading_signals_for_all_bots
     from bots_modules.sync_and_cache import (
         save_default_config, load_system_config,
         load_bots_state, load_process_state, check_startup_position_conflicts,

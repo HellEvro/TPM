@@ -79,7 +79,8 @@ try:
     )
     from bots_modules.filters import (
         get_effective_signal, check_auto_bot_filters,
-        process_auto_bot_signals, test_exit_scam_filter, test_rsi_time_filter
+        process_auto_bot_signals, test_exit_scam_filter, test_rsi_time_filter,
+        process_trading_signals_for_all_bots
     )
     # Для clear_mature_coins_storage может быть в разных модулях
     try:
@@ -290,30 +291,54 @@ def refresh_manual_positions():
     """Обновить список монет с ручными позициями на бирже (позиции БЕЗ ботов)"""
     try:
         manual_positions = []
+        
+        # Получаем exchange объект
+        try:
+            from bots_modules.imports_and_globals import get_exchange
+            exchange = get_exchange()
+        except ImportError:
+            exchange = None
+        
         if exchange:
             exchange_positions = exchange.get_positions()
+            
             if isinstance(exchange_positions, tuple):
                 positions_list = exchange_positions[0] if exchange_positions else []
             else:
                 positions_list = exchange_positions if exchange_positions else []
             
-            # Получаем список символов с активными ботами
+            # Получаем список символов с ботами (включая сохраненных)
             with bots_data_lock:
-                system_bot_symbols = set(bots_data['bots'].keys())
+                active_bot_symbols = set(bots_data['bots'].keys())
             
-            # Извлекаем символы с активными позициями, для которых НЕТ ботов
+            # Также загружаем сохраненных ботов из файла
+            saved_bot_symbols = set()
+            try:
+                import json
+                bots_state_file = 'data/bots_state.json'
+                if os.path.exists(bots_state_file):
+                    with open(bots_state_file, 'r', encoding='utf-8') as f:
+                        saved_data = json.load(f)
+                        if 'bots' in saved_data:
+                            saved_bot_symbols = set(saved_data['bots'].keys())
+            except Exception as e:
+                logger.warning(f"[MANUAL_POSITIONS] ⚠️ Не удалось загрузить сохраненных ботов: {e}")
+            
+            # Объединяем активных и сохраненных ботов
+            system_bot_symbols = active_bot_symbols.union(saved_bot_symbols)
+            
+            # Извлекаем символы с активными позициями, для которых НЕТ бота в системе
             for pos in positions_list:
                 if abs(float(pos.get('size', 0))) > 0:
                     symbol = pos.get('symbol', '')
                     # Убираем USDT из символа для сопоставления с coins_rsi_data
                     clean_symbol = symbol.replace('USDT', '') if symbol else ''
                     
-                    # ✅ КРИТИЧЕСКИ ВАЖНО: добавляем только если НЕТ бота для этой монеты
+                    # ✅ РУЧНЫЕ ПОЗИЦИИ = позиции на бирже БЕЗ бота в системе
                     if clean_symbol and clean_symbol not in system_bot_symbols:
                         if clean_symbol not in manual_positions:
                             manual_positions.append(clean_symbol)
             
-            logger.info(f"[MANUAL_POSITIONS] ✋ Обновлено {len(manual_positions)} ручных позиций БЕЗ ботов")
             
         return jsonify({
             'success': True,
@@ -322,7 +347,9 @@ def refresh_manual_positions():
         })
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка обновления ручных позиций: {str(e)}")
+        logger.error(f"[MANUAL_POSITIONS] ❌ Ошибка обновления ручных позиций: {str(e)}")
+        import traceback
+        logger.error(f"[MANUAL_POSITIONS] ❌ Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/coins-with-rsi', methods=['GET'])
@@ -395,6 +422,13 @@ def get_coins_with_rsi():
             # Получаем список монет с ручными позициями на бирже (позиции БЕЗ ботов)
             manual_positions = []
             try:
+                # Получаем exchange объект
+                try:
+                    from bots_modules.imports_and_globals import get_exchange
+                    exchange = get_exchange()
+                except ImportError:
+                    exchange = None
+                
                 if exchange:
                     exchange_positions = exchange.get_positions()
                     if isinstance(exchange_positions, tuple):
@@ -402,25 +436,38 @@ def get_coins_with_rsi():
                     else:
                         positions_list = exchange_positions if exchange_positions else []
                     
-                    # Получаем список символов с активными ботами
+                    # Получаем список символов с ботами (включая сохраненных)
                     with bots_data_lock:
-                        system_bot_symbols = set(bots_data['bots'].keys())
+                        active_bot_symbols = set(bots_data['bots'].keys())
                     
-                    # Извлекаем символы с активными позициями, для которых НЕТ ботов
+                    # Также загружаем сохраненных ботов из файла
+                    saved_bot_symbols = set()
+                    try:
+                        bots_state_file = 'data/bots_state.json'
+                        if os.path.exists(bots_state_file):
+                            with open(bots_state_file, 'r', encoding='utf-8') as f:
+                                saved_data = json.load(f)
+                                if 'bots' in saved_data:
+                                    saved_bot_symbols = set(saved_data['bots'].keys())
+                    except Exception as e:
+                        logger.warning(f"[MANUAL_POSITIONS] ⚠️ Не удалось загрузить сохраненных ботов: {e}")
+                    
+                    # Объединяем активных и сохраненных ботов
+                    system_bot_symbols = active_bot_symbols.union(saved_bot_symbols)
+                    
+                    # Извлекаем символы с активными позициями, для которых НЕТ бота в системе
                     for pos in positions_list:
                         if abs(float(pos.get('size', 0))) > 0:
                             symbol = pos.get('symbol', '')
                             # Убираем USDT из символа для сопоставления с coins_rsi_data
                             clean_symbol = symbol.replace('USDT', '') if symbol else ''
                             
-                            # ✅ КРИТИЧЕСКИ ВАЖНО: добавляем только если НЕТ бота для этой монеты
+                            # ✅ РУЧНЫЕ ПОЗИЦИИ = позиции на бирже БЕЗ бота в системе
                             if clean_symbol and clean_symbol not in system_bot_symbols:
                                 if clean_symbol not in manual_positions:
                                     manual_positions.append(clean_symbol)
                     
-                    # ✅ Логируем только если есть изменения
-                    if len(manual_positions) > 0:
-                        logger.debug(f"[MANUAL_POSITIONS] ✋ {len(manual_positions)} ручных позиций БЕЗ ботов")
+                    # ✅ Детальное логирование для отладки
             except Exception as e:
                 logger.error(f"[ERROR] Ошибка получения ручных позиций: {str(e)}")
             

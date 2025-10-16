@@ -997,22 +997,6 @@ class BotsManager {
     }
 
         updateCoinsCounter() {
-        const totalElement = document.getElementById('totalCoinsCount');
-        const buyZoneElement = document.getElementById('buyZoneCount');
-        const sellZoneElement = document.getElementById('sellZoneCount');
-        
-        if (totalElement) totalElement.textContent = this.coinsRsiData.length;
-        
-        if (buyZoneElement) {
-            const buyZoneCount = this.coinsRsiData.filter(coin => coin.effective_signal === 'ENTER_LONG').length;
-            buyZoneElement.textContent = buyZoneCount;
-        }
-        
-        if (sellZoneElement) {
-            const sellZoneCount = this.coinsRsiData.filter(coin => coin.effective_signal === 'ENTER_SHORT').length;
-            sellZoneElement.textContent = sellZoneCount;
-        }
-        
         // Обновляем счетчики для новых фильтров сигналов
         this.updateSignalCounters();
         
@@ -1063,17 +1047,21 @@ class BotsManager {
         const trendDownCount = this.coinsRsiData.filter(coin => coin.trend6h === 'DOWN').length;
         const manualPositionCount = this.coinsRsiData.filter(coin => coin.manual_position === true).length;
         
-        // Обновляем счетчики в HTML
+        // Обновляем счетчики в HTML (фильтры)
         const allCountEl = document.getElementById('filterAllCount');
         const buyZoneCountEl = document.getElementById('filterBuyZoneCount');
         const sellZoneCountEl = document.getElementById('filterSellZoneCount');
+        
         const trendUpCountEl = document.getElementById('filterTrendUpCount');
         const trendDownCountEl = document.getElementById('filterTrendDownCount');
         const longCountEl = document.getElementById('filterLongCount');
         const shortCountEl = document.getElementById('filterShortCount');
         const manualCountEl = document.getElementById('manualCount');
         
+        
+        // Обновляем счетчики фильтров
         if (allCountEl) allCountEl.textContent = allCount;
+        
         if (buyZoneCountEl) buyZoneCountEl.textContent = buyZoneCount;
         if (sellZoneCountEl) sellZoneCountEl.textContent = sellZoneCount;
         if (trendUpCountEl) trendUpCountEl.textContent = trendUpCount;
