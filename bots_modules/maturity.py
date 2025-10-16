@@ -53,19 +53,21 @@ def load_mature_coins_storage():
             with open(MATURE_COINS_FILE, 'r', encoding='utf-8') as f:
                 loaded_data = json.load(f)
             
-            # ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем блокировку при обновлении глобального хранилища
+            # ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Изменяем словарь in-place, а не переприсваиваем
+            # Это важно, т.к. mature_coins_storage импортируется в другие модули
             with mature_coins_lock:
-                mature_coins_storage = loaded_data
+                mature_coins_storage.clear()
+                mature_coins_storage.update(loaded_data)
             
             logger.info(f"[MATURITY_STORAGE] ✅ Загружено {len(mature_coins_storage)} зрелых монет из файла")
         else:
             with mature_coins_lock:
-                mature_coins_storage = {}
+                mature_coins_storage.clear()
             logger.info("[MATURITY_STORAGE] Файл хранилища не найден, создаем новый")
     except Exception as e:
         logger.error(f"[MATURITY_STORAGE] Ошибка загрузки хранилища: {e}")
         with mature_coins_lock:
-            mature_coins_storage = {}
+            mature_coins_storage.clear()
 
 def save_mature_coins_storage():
     """Сохраняет постоянное хранилище зрелых монет в файл"""
