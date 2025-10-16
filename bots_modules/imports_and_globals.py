@@ -30,13 +30,12 @@ try:
     from bot_engine.utils.rsi_utils import calculate_rsi, calculate_rsi_history
     from bot_engine.utils.ema_utils import calculate_ema
     from bot_engine.filters import check_rsi_time_filter, check_exit_scam_filter, check_no_existing_position
-    from bot_engine.maturity_checker import (
-        check_coin_maturity, check_coin_maturity_with_storage,
-        check_coin_maturity_stored_or_verify, is_coin_mature_stored,
-        add_mature_coin_to_storage, remove_mature_coin_from_storage,
-        update_mature_coin_verification, get_mature_coins_storage,
-        set_mature_coins_storage, clear_mature_coins_storage as clear_mature_storage,
-        mature_coins_storage, mature_coins_lock
+    # ✅ ИСПРАВЛЕНО: Используем модуль bots_modules.maturity вместо bot_engine.maturity_checker
+    from bots_modules.maturity import (
+        mature_coins_storage, mature_coins_lock,
+        load_mature_coins_storage, save_mature_coins_storage,
+        is_coin_mature_stored, add_mature_coin_to_storage,
+        remove_mature_coin_from_storage
     )
     from bot_engine.storage import (
         save_rsi_cache as storage_save_rsi_cache,
