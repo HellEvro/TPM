@@ -654,6 +654,12 @@
                             <input type="hidden" id="autoBotScope" value="all">
                         </div>
                     </div>
+                    
+                    <div class="config-section-actions">
+                        <button class="btn btn-success config-section-save-btn" data-section="basic">
+                            <span data-translate="save_basic_section_btn">💾 Сохранить основные настройки</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Системные настройки -->
@@ -773,6 +779,12 @@
                             <small class="config-help" data-translate="stop_loss_setup_interval_help">Рекомендуется: 300 сек (5 мин). Установка недостающих стоп-лоссов</small>
                         </div>
                     </div>
+                    
+                    <div class="config-section-actions">
+                        <button class="btn btn-success config-section-save-btn" data-section="system">
+                            <span data-translate="save_system_section_btn">💾 Сохранить системные настройки</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Торговые параметры -->
@@ -837,6 +849,12 @@
                             <small class="config-help" data-translate="refresh_interval_help">Управляет обновлением блока с балансом, PnL, позициями и мониторингом ботов. Рекомендуется: 30 сек, минимум: 3 сек</small>
                         </div>
                     </div>
+                    
+                    <div class="config-section-actions">
+                        <button class="btn btn-success config-section-save-btn" data-section="trading">
+                            <span data-translate="save_trading_section_btn">💾 Сохранить торговые параметры</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- RSI выходы из позиций -->
@@ -868,6 +886,12 @@
                         </div>
                         
 
+                    </div>
+                    
+                    <div class="config-section-actions">
+                        <button class="btn btn-success config-section-save-btn" data-section="rsi-exits">
+                            <span data-translate="save_rsi_exits_section_btn">💾 Сохранить RSI выходы</span>
+                        </button>
                     </div>
                 </div>
 
@@ -934,6 +958,12 @@
                             </div>
                             <small class="config-help" data-translate="rsi_time_filter_lower_help">Проверяет что ВСЕ N свечей после экстремума были <= этого значения для разрешения LONG</small>
                         </div>
+                    </div>
+                    
+                    <div class="config-section-actions">
+                        <button class="btn btn-success config-section-save-btn" data-section="rsi-time-filter">
+                            <span data-translate="save_rsi_time_filter_section_btn">💾 Сохранить RSI временной фильтр</span>
+                        </button>
                     </div>
                 </div>
 
@@ -1014,6 +1044,12 @@
                             </div>
                             <small class="config-help" data-translate="exit_scam_multi_percent_help">Если N свечей суммарно изменились больше чем на этот % - блокировка входа</small>
                         </div>
+                    </div>
+                    
+                    <div class="config-section-actions">
+                        <button class="btn btn-success config-section-save-btn" data-section="exit-scam">
+                            <span data-translate="save_exit_scam_section_btn">💾 Сохранить ExitScam фильтр</span>
+                        </button>
                     </div>
                 </div>
 
@@ -1145,6 +1181,12 @@
                             <small class="config-help" data-translate="divergence_lookback_help">Количество свечей для анализа дивергенций между ценой и RSI</small>
                         </div>
                     </div>
+                    
+                    <div class="config-section-actions">
+                        <button class="btn btn-success config-section-save-btn" data-section="enhanced-rsi">
+                            <span data-translate="save_enhanced_rsi_section_btn">💾 Сохранить Enhanced RSI</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Торговые настройки -->
@@ -1186,6 +1228,12 @@
                             </label>
                             <input type="number" id="maxRiskPerTrade" value="2.0" min="0.1" max="10" step="0.1" class="config-input" />
                         </div>
+                    </div>
+                    
+                    <div class="config-section-actions">
+                        <button class="btn btn-success config-section-save-btn" data-section="trading-settings">
+                            <span data-translate="save_trading_settings_section_btn">💾 Сохранить торговые настройки</span>
+                        </button>
                     </div>
                 </div>
 
@@ -1276,6 +1324,12 @@
                             <small class="config-help" data-translate="break_even_trigger_description">При x1 прибыли (100%) активируется защита</small>
                         </div>
                     </div>
+                    
+                    <div class="config-section-actions">
+                        <button class="btn btn-success config-section-save-btn" data-section="protective">
+                            <span data-translate="save_protective_section_btn">💾 Сохранить защитные механизмы</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- 🧪 Настройки зрелости монет -->
@@ -1326,6 +1380,86 @@
                             <small class="config-help" data-translate="max_rsi_high_help">RSI должен был подниматься до этого уровня (близко к перекупленности)</small>
                         </div>
                         
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">📊</span>
+                                <span class="label-text" data-translate="min_volatility_threshold_label">Мин. волатильность:</span>
+                            </label>
+                            <div class="config-input-with-unit">
+                                <input type="number" id="minVolatilityThreshold" class="config-input" 
+                                       min="0.01" max="0.5" step="0.01" value="0.05"
+                                       placeholder="0.05">
+                                <span class="input-unit">%</span>
+                            </div>
+                            <small class="config-help" data-translate="min_volatility_threshold_help">Минимальная историческая волатильность монеты (5% = 0.05)</small>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="config-section-actions">
+                        <button class="btn btn-success config-section-save-btn" data-section="maturity">
+                            <span data-translate="save_maturity_section_btn">💾 Сохранить настройки зрелости</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- EMA параметры тренда -->
+                <div class="config-section">
+                    <div class="section-header">
+                        <h3 data-translate="ema_params_title">📊 EMA параметры тренда</h3>
+                        <div class="section-description" data-translate="ema_params_desc">
+                            Настройки экспоненциальных скользящих средних для определения тренда
+                        </div>
+                    </div>
+                    
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">⚡</span>
+                                <span class="label-text" data-translate="ema_fast_label">Быстрая EMA:</span>
+                            </label>
+                            <div class="config-input-with-unit">
+                                <input type="number" id="emaFast" class="config-input" 
+                                       min="10" max="100" step="5" value="50"
+                                       placeholder="50">
+                                <span class="input-unit" data-translate="periods_unit">периодов</span>
+                            </div>
+                            <small class="config-help" data-translate="ema_fast_help">Рекомендуется: 50 периодов. Используется для краткосрочного тренда</small>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">🐌</span>
+                                <span class="label-text" data-translate="ema_slow_label">Медленная EMA:</span>
+                            </label>
+                            <div class="config-input-with-unit">
+                                <input type="number" id="emaSlow" class="config-input" 
+                                       min="50" max="300" step="10" value="200"
+                                       placeholder="200">
+                                <span class="input-unit" data-translate="periods_unit">периодов</span>
+                            </div>
+                            <small class="config-help" data-translate="ema_slow_help">Рекомендуется: 200 периодов. Используется для долгосрочного тренда</small>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">✅</span>
+                                <span class="label-text" data-translate="trend_confirmation_bars_label">Подтверждение тренда:</span>
+                            </label>
+                            <div class="config-input-with-unit">
+                                <input type="number" id="trendConfirmationBars" class="config-input" 
+                                       min="1" max="10" step="1" value="3"
+                                       placeholder="3">
+                                <span class="input-unit" data-translate="candles_unit">свечей</span>
+                            </div>
+                            <small class="config-help" data-translate="trend_confirmation_help">Рекомендуется: 3 свечи. Количество свечей для подтверждения смены тренда</small>
+                        </div>
+                    </div>
+                    
+                    <div class="config-section-actions">
+                        <button class="btn btn-success config-section-save-btn" data-section="ema">
+                            <span data-translate="save_section_btn">💾 Сохранить EMA параметры</span>
+                        </button>
                     </div>
                 </div>
 
