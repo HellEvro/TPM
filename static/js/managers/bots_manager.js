@@ -5303,7 +5303,47 @@ class BotsManager {
             console.log('[BotsManager] ✅ Кнопка "Сохранить EMA параметры" инициализирована');
         }
         
+        // Hot Reload кнопка
+        const reloadModulesBtn = document.getElementById('reloadModulesBtn');
+        if (reloadModulesBtn && !reloadModulesBtn.hasAttribute('data-initialized')) {
+            reloadModulesBtn.setAttribute('data-initialized', 'true');
+            reloadModulesBtn.addEventListener('click', () => this.reloadModules());
+            console.log('[BotsManager] ✅ Кнопка "Hot Reload" инициализирована');
+        }
+        
         console.log('[BotsManager] ✅ Все кнопки конфигурации инициализированы');
+    }
+    
+    async reloadModules() {
+        console.log('[BotsManager] 🔄 Перезагрузка модулей...');
+        
+        try {
+            const response = await fetch('/api/system/reload-modules', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showNotification(`✅ ${data.message}. Модули перезагружены без перезапуска сервера!`, 'success');
+                console.log('[BotsManager] ✅ Перезагружено модулей:', data.reloaded);
+                if (data.failed && data.failed.length > 0) {
+                    console.error('[BotsManager] ❌ Ошибки при перезагрузке:', data.failed);
+                }
+                
+                // Обновляем данные после перезагрузки
+                await this.loadConfiguration();
+                await this.loadCoinsRsiData();
+            } else {
+                this.showNotification(`❌ Ошибка перезагрузки: ${data.error}`, 'error');
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка Hot Reload:', error);
+            this.showNotification('❌ Ошибка перезагрузки модулей', 'error');
+        }
     }
     
     async startAllBots() {
