@@ -3827,6 +3827,62 @@ class BotsManager {
         }
         
         // ==========================================
+        // ЗАЩИТНЫЕ МЕХАНИЗМЫ
+        // ==========================================
+        
+        const maxLossPercentEl = document.getElementById('maxLossPercent');
+        if (maxLossPercentEl) {
+            maxLossPercentEl.value = autoBotConfig.max_loss_percent || 15.0;
+            console.log('[BotsManager] 🛡️ Макс. убыток (стоп-лосс):', maxLossPercentEl.value);
+        }
+        
+        const trailingStopActivationEl = document.getElementById('trailingStopActivation');
+        if (trailingStopActivationEl) {
+            trailingStopActivationEl.value = autoBotConfig.trailing_stop_activation || 300.0;
+            console.log('[BotsManager] 📈 Активация trailing stop:', trailingStopActivationEl.value);
+        }
+        
+        const trailingStopDistanceEl = document.getElementById('trailingStopDistance');
+        if (trailingStopDistanceEl) {
+            trailingStopDistanceEl.value = autoBotConfig.trailing_stop_distance || 150.0;
+            console.log('[BotsManager] 📉 Расстояние trailing stop:', trailingStopDistanceEl.value);
+        }
+        
+        const maxPositionHoursEl = document.getElementById('maxPositionHours');
+        if (maxPositionHoursEl) {
+            maxPositionHoursEl.value = autoBotConfig.max_position_hours || 0;
+            console.log('[BotsManager] ⏰ Макс. время позиции (часов):', maxPositionHoursEl.value);
+        }
+        
+        const breakEvenProtectionEl = document.getElementById('breakEvenProtection');
+        if (breakEvenProtectionEl) {
+            breakEvenProtectionEl.checked = autoBotConfig.break_even_protection !== false;
+            console.log('[BotsManager] 🛡️ Защита безубыточности:', breakEvenProtectionEl.checked);
+        }
+        
+        const breakEvenTriggerEl = document.getElementById('breakEvenTrigger');
+        if (breakEvenTriggerEl) {
+            breakEvenTriggerEl.value = autoBotConfig.break_even_trigger || 100.0;
+            console.log('[BotsManager] 🎯 Триггер безубыточности:', breakEvenTriggerEl.value);
+        }
+        
+        // ==========================================
+        // ФИЛЬТРЫ ПО ТРЕНДУ
+        // ==========================================
+        
+        const avoidDownTrendEl = document.getElementById('avoidDownTrend');
+        if (avoidDownTrendEl) {
+            avoidDownTrendEl.checked = autoBotConfig.avoid_down_trend !== false;
+            console.log('[BotsManager] 📉 Избегать DOWN тренд:', avoidDownTrendEl.checked);
+        }
+        
+        const avoidUpTrendEl = document.getElementById('avoidUpTrend');
+        if (avoidUpTrendEl) {
+            avoidUpTrendEl.checked = autoBotConfig.avoid_up_trend !== false;
+            console.log('[BotsManager] 📈 Избегать UP тренд:', avoidUpTrendEl.checked);
+        }
+        
+        // ==========================================
         // СИСТЕМНЫЕ НАСТРОЙКИ
         // ==========================================
         const systemConfig = config.system || {};
@@ -3986,6 +4042,92 @@ class BotsManager {
         if (exitScamMultiCandlePercentEl) {
             exitScamMultiCandlePercentEl.value = autoBotConfig.exit_scam_multi_candle_percent || 50.0;
             console.log('[BotsManager] 📊 ExitScam суммарный лимит:', exitScamMultiCandlePercentEl.value);
+        }
+        
+        // ==========================================
+        // НАСТРОЙКИ ЗРЕЛОСТИ МОНЕТ
+        // ==========================================
+        
+        const enableMaturityCheckEl = document.getElementById('enableMaturityCheck');
+        if (enableMaturityCheckEl) {
+            enableMaturityCheckEl.checked = autoBotConfig.enable_maturity_check !== false;
+            console.log('[BotsManager] 🔍 Проверка зрелости:', enableMaturityCheckEl.checked);
+        }
+        
+        const minCandlesForMaturityEl = document.getElementById('minCandlesForMaturity');
+        if (minCandlesForMaturityEl) {
+            minCandlesForMaturityEl.value = autoBotConfig.min_candles_for_maturity || 200;
+            console.log('[BotsManager] 📊 Мин. свечей для зрелости:', minCandlesForMaturityEl.value);
+        }
+        
+        const minRsiLowEl = document.getElementById('minRsiLow');
+        if (minRsiLowEl) {
+            minRsiLowEl.value = autoBotConfig.min_rsi_low || 35;
+            console.log('[BotsManager] 📉 Мин. RSI low:', minRsiLowEl.value);
+        }
+        
+        const maxRsiHighEl = document.getElementById('maxRsiHigh');
+        if (maxRsiHighEl) {
+            maxRsiHighEl.value = autoBotConfig.max_rsi_high || 65;
+            console.log('[BotsManager] 📈 Макс. RSI high:', maxRsiHighEl.value);
+        }
+        
+        // ==========================================
+        // ENHANCED RSI (УЛУЧШЕННАЯ СИСТЕМА RSI)
+        // ==========================================
+        
+        const enhancedRsiEnabledEl = document.getElementById('enhancedRsiEnabled');
+        if (enhancedRsiEnabledEl) {
+            enhancedRsiEnabledEl.checked = autoBotConfig.enhanced_rsi_enabled !== false;
+            console.log('[BotsManager] 🧠 Enhanced RSI включен:', enhancedRsiEnabledEl.checked);
+        }
+        
+        const enhancedRsiVolumeConfirmEl = document.getElementById('enhancedRsiVolumeConfirm');
+        if (enhancedRsiVolumeConfirmEl) {
+            enhancedRsiVolumeConfirmEl.checked = autoBotConfig.enhanced_rsi_require_volume_confirmation !== false;
+            console.log('[BotsManager] 📊 Enhanced RSI требует подтверждение объёмом:', enhancedRsiVolumeConfirmEl.checked);
+        }
+        
+        const enhancedRsiDivergenceConfirmEl = document.getElementById('enhancedRsiDivergenceConfirm');
+        if (enhancedRsiDivergenceConfirmEl) {
+            enhancedRsiDivergenceConfirmEl.checked = autoBotConfig.enhanced_rsi_require_divergence_confirmation || false;
+            console.log('[BotsManager] 📈 Enhanced RSI требует дивергенцию:', enhancedRsiDivergenceConfirmEl.checked);
+        }
+        
+        const enhancedRsiUseStochRsiEl = document.getElementById('enhancedRsiUseStochRsi');
+        if (enhancedRsiUseStochRsiEl) {
+            enhancedRsiUseStochRsiEl.checked = autoBotConfig.enhanced_rsi_use_stoch_rsi !== false;
+            console.log('[BotsManager] 📊 Enhanced RSI использует Stoch RSI:', enhancedRsiUseStochRsiEl.checked);
+        }
+        
+        const rsiExtremeZoneTimeoutEl = document.getElementById('rsiExtremeZoneTimeout');
+        if (rsiExtremeZoneTimeoutEl) {
+            rsiExtremeZoneTimeoutEl.value = autoBotConfig.rsi_extreme_zone_timeout || 3;
+            console.log('[BotsManager] ⏰ RSI экстремальная зона таймаут:', rsiExtremeZoneTimeoutEl.value);
+        }
+        
+        const rsiExtremeOversoldEl = document.getElementById('rsiExtremeOversold');
+        if (rsiExtremeOversoldEl) {
+            rsiExtremeOversoldEl.value = autoBotConfig.rsi_extreme_oversold || 20;
+            console.log('[BotsManager] 📉 RSI экстремальный oversold:', rsiExtremeOversoldEl.value);
+        }
+        
+        const rsiExtremeOverboughtEl = document.getElementById('rsiExtremeOverbought');
+        if (rsiExtremeOverboughtEl) {
+            rsiExtremeOverboughtEl.value = autoBotConfig.rsi_extreme_overbought || 80;
+            console.log('[BotsManager] 📈 RSI экстремальный overbought:', rsiExtremeOverboughtEl.value);
+        }
+        
+        const rsiVolumeMultiplierEl = document.getElementById('rsiVolumeMultiplier');
+        if (rsiVolumeMultiplierEl) {
+            rsiVolumeMultiplierEl.value = autoBotConfig.rsi_volume_confirmation_multiplier || 1.2;
+            console.log('[BotsManager] 📊 RSI множитель объёма:', rsiVolumeMultiplierEl.value);
+        }
+        
+        const rsiDivergenceLookbackEl = document.getElementById('rsiDivergenceLookback');
+        if (rsiDivergenceLookbackEl) {
+            rsiDivergenceLookbackEl.value = autoBotConfig.rsi_divergence_lookback || 10;
+            console.log('[BotsManager] 🔍 RSI период поиска дивергенций:', rsiDivergenceLookbackEl.value);
         }
         
         console.log('[BotsManager] ✅ Форма заполнена данными из API');
