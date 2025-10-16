@@ -201,6 +201,22 @@ def init_bot_service():
                 with bots_data_lock:
                     for symbol in bots_to_remove:
                         if symbol in bots_data['bots']:
+                            bot_data = bots_data['bots'][symbol]
+                            
+                            # ✅ УДАЛЯЕМ ПОЗИЦИЮ ИЗ РЕЕСТРА ПРИ УДАЛЕНИИ НЕКОРРЕКТНОГО БОТА
+                            try:
+                                from bots_modules.imports_and_globals import unregister_bot_position
+                                position = bot_data.get('position')
+                                if position and position.get('order_id'):
+                                    order_id = position['order_id']
+                                    unregister_bot_position(order_id)
+                                    logger.info(f"[INIT] ✅ Позиция удалена из реестра при удалении некорректного бота {symbol}: order_id={order_id}")
+                                else:
+                                    logger.info(f"[INIT] ℹ️ У некорректного бота {symbol} нет позиции в реестре")
+                            except Exception as registry_error:
+                                logger.error(f"[INIT] ❌ Ошибка удаления позиции из реестра для бота {symbol}: {registry_error}")
+                                # Не блокируем удаление бота из-за ошибки реестра
+                            
                             del bots_data['bots'][symbol]
                 logger.info(f"[INIT] 🗑️ Удалено {len(bots_to_remove)} некорректных ботов")
             
@@ -282,6 +298,18 @@ def init_bot_service():
         logger.info("🎯 СИСТЕМА ГОТОВА К РАБОТЕ!")
         logger.info("💡 Логи будут показывать только важные события")
         logger.info("=" * 80)
+        
+        # ✅ ВОССТАНАВЛИВАЕМ ПОТЕРЯННЫХ БОТОВ ИЗ РЕЕСТРА
+        try:
+            from bots_modules.imports_and_globals import restore_lost_bots
+            restored_bots = restore_lost_bots()
+            if restored_bots:
+                logger.info(f"[INIT] 🎯 Восстановлено {len(restored_bots)} ботов из реестра позиций")
+            else:
+                logger.info("[INIT] ℹ️ Ботов для восстановления не найдено")
+        except Exception as restore_error:
+            logger.error(f"[INIT] ❌ Ошибка восстановления ботов: {restore_error}")
+            # Не блокируем запуск системы из-за ошибки восстановления
         
         return True
         
