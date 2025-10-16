@@ -882,6 +882,21 @@ def delete_bot_endpoint():
             
             # Получаем данные бота перед удалением для истории
             bot_data = bots_data['bots'][symbol]
+            
+            # ✅ УДАЛЯЕМ ПОЗИЦИЮ ИЗ РЕЕСТРА ПРИ УДАЛЕНИИ БОТА
+            try:
+                from bots_modules.imports_and_globals import unregister_bot_position
+                position = bot_data.get('position')
+                if position and position.get('order_id'):
+                    order_id = position['order_id']
+                    unregister_bot_position(order_id)
+                    logger.info(f"[API] ✅ Позиция удалена из реестра при удалении бота {symbol}: order_id={order_id}")
+                else:
+                    logger.info(f"[API] ℹ️ У бота {symbol} нет позиции в реестре")
+            except Exception as registry_error:
+                logger.error(f"[API] ❌ Ошибка удаления позиции из реестра для бота {symbol}: {registry_error}")
+                # Не блокируем удаление бота из-за ошибки реестра
+            
             del bots_data['bots'][symbol]
             logger.info(f"[BOT] {symbol}: Бот удален")
             
