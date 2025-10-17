@@ -95,14 +95,24 @@ class PremiumModuleLoader:
             return False
         
         try:
-            # TODO: Реализовать реальную проверку лицензии
-            # Пока заглушка для разработки
+            # Импортируем license_manager из Premium модуля
+            sys.path.insert(0, 'InfoBot_AI_Premium')
+            from license.license_manager import LicenseManager
             
-            logger.warning("[AI_Premium] ⚠️ Проверка лицензии не реализована (в разработке)")
-            logger.info("[AI_Premium] 💡 Для разработки установите AI_DEV_MODE=1")
+            # Создаем менеджер и проверяем лицензию
+            manager = LicenseManager()
+            is_valid, result = manager.verify_license(license_path)
             
-            self.license_valid = False
-            return False
+            if is_valid:
+                self.license_valid = True
+                self.license_info = result
+                logger.info(f"[AI_Premium] ✅ Лицензия валидна: {result['type']}")
+                logger.info(f"[AI_Premium] 📅 Действительна до: {result['expires_at']}")
+                return True
+            else:
+                logger.warning(f"[AI_Premium] ⚠️ Лицензия невалидна: {result}")
+                self.license_valid = False
+                return False
             
         except Exception as e:
             logger.error(f"[AI_Premium] ❌ Ошибка проверки лицензии: {e}")
