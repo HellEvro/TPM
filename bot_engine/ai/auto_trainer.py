@@ -30,7 +30,8 @@ class AutoTrainer:
         # Путь к скриптам
         self.scripts_dir = Path('scripts/ai')
         self.collect_script = self.scripts_dir / 'collect_historical_data.py'
-        self.train_script = self.scripts_dir / 'train_anomaly_on_real_data.py'
+        self.train_anomaly_script = self.scripts_dir / 'train_anomaly_on_real_data.py'
+        self.train_lstm_script = self.scripts_dir / 'train_lstm_predictor.py'
     
     def start(self):
         """Запускает автоматический тренер в фоновом режиме"""
@@ -226,44 +227,50 @@ class AutoTrainer:
     
     def _retrain(self) -> bool:
         """
-        Переобучает модель на обновленных данных
+        Переобучает модели на обновленных данных
         
         Returns:
             True если успешно
         """
         try:
-            logger.info("[AutoTrainer] 🧠 Переобучение модели...")
+            logger.info("[AutoTrainer] 🧠 Переобучение моделей...")
             
-            # Запускаем скрипт обучения
-            cmd = [
-                sys.executable,
-                str(self.train_script)
-            ]
+            all_success = True
             
-            logger.info(f"[AutoTrainer] Запуск: {' '.join(cmd)}")
+            # 1. Обучаем Anomaly Detector
+            if AIConfig.AI_ANOMALY_DETECTION_ENABLED:
+                logger.info("[AutoTrainer] 📊 Обучение Anomaly Detector...")
+                success = self._train_model(
+                    self.train_anomaly_script,
+                    "Anomaly Detector",
+                    timeout=600
+                )
+                if not success:
+                    all_success = False
             
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=600  # 10 минут таймаут
-            )
+            # 2. Обучаем LSTM Predictor
+            if AIConfig.AI_LSTM_ENABLED:
+                logger.info("[AutoTrainer] 🧠 Обучение LSTM Predictor...")
+                success = self._train_model(
+                    self.train_lstm_script,
+                    "LSTM Predictor",
+                    timeout=1800  # 30 минут для LSTM
+                )
+                if not success:
+                    all_success = False
             
-            if result.returncode == 0:
-                logger.info("[AutoTrainer] ✅ Модель успешно переобучена")
+            if all_success:
+                logger.info("[AutoTrainer] ✅ Все модели успешно переобучены")
                 self.last_training = time.time()
                 
-                # Перезагружаем модель в AI Manager
-                self._reload_model()
+                # Перезагружаем модели в AI Manager
+                self._reload_models()
                 
                 return True
             else:
-                logger.error(f"[AutoTrainer] ❌ Ошибка обучения: {result.stderr}")
+                logger.warning("[AutoTrainer] ⚠️ Не все модели обучены успешно")
                 return False
         
-        except subprocess.TimeoutExpired:
-            logger.error("[AutoTrainer] ❌ Таймаут при обучении")
-            return False
         except KeyboardInterrupt:
             logger.warning("[AutoTrainer] ⚠️ Переобучение прервано пользователем")
             # Останавливаем Auto Trainer
@@ -273,26 +280,77 @@ class AutoTrainer:
             logger.error(f"[AutoTrainer] ❌ Ошибка обучения: {e}")
             return False
     
-    def _reload_model(self):
-        """Перезагружает модель в AI Manager без перезапуска бота"""
+    def _train_model(self, script_path: Path, model_name: str, timeout: int = 600) -> bool:
+        """
+        Обучает конкретную модель
+        
+        Args:
+            script_path: Путь к скрипту обучения
+            model_name: Название модели для логов
+            timeout: Таймаут в секундах
+        
+        Returns:
+            True если успешно
+        """
+        try:
+            cmd = [sys.executable, str(script_path)]
+            
+            logger.info(f"[AutoTrainer] Запуск: {' '.join(cmd)}")
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout
+            )
+            
+            if result.returncode == 0:
+                logger.info(f"[AutoTrainer] ✅ {model_name} успешно обучен")
+                return True
+            else:
+                logger.error(f"[AutoTrainer] ❌ Ошибка обучения {model_name}: {result.stderr}")
+                return False
+        
+        except subprocess.TimeoutExpired:
+            logger.error(f"[AutoTrainer] ❌ Таймаут при обучении {model_name}")
+            return False
+        except Exception as e:
+            logger.error(f"[AutoTrainer] ❌ Ошибка обучения {model_name}: {e}")
+            return False
+    
+    def _reload_models(self):
+        """Перезагружает все модели в AI Manager без перезапуска бота"""
         try:
             from bot_engine.ai.ai_manager import get_ai_manager
             
             ai_manager = get_ai_manager()
             
-            if ai_manager and ai_manager.anomaly_detector:
-                # Перезагружаем модель
-                model_path = AIConfig.AI_ANOMALY_MODEL_PATH
-                scaler_path = AIConfig.AI_ANOMALY_SCALER_PATH
-                
-                success = ai_manager.anomaly_detector.load_model(model_path, scaler_path)
-                
-                if success:
-                    logger.info("[AutoTrainer] ✅ Модель перезагружена (hot reload)")
-                else:
-                    logger.error("[AutoTrainer] ❌ Ошибка перезагрузки модели")
-            else:
+            if not ai_manager:
                 logger.debug("[AutoTrainer] AI Manager не инициализирован")
+                return
+            
+            # 1. Перезагружаем Anomaly Detector
+            if ai_manager.anomaly_detector:
+                try:
+                    model_path = AIConfig.AI_ANOMALY_MODEL_PATH
+                    scaler_path = AIConfig.AI_ANOMALY_SCALER_PATH
+                    
+                    success = ai_manager.anomaly_detector.load_model(model_path, scaler_path)
+                    
+                    if success:
+                        logger.info("[AutoTrainer] ✅ Anomaly Detector перезагружен (hot reload)")
+                    else:
+                        logger.error("[AutoTrainer] ❌ Ошибка перезагрузки Anomaly Detector")
+                except Exception as e:
+                    logger.error(f"[AutoTrainer] Ошибка hot reload Anomaly Detector: {e}")
+            
+            # 2. Перезагружаем LSTM Predictor
+            if ai_manager.lstm_predictor:
+                try:
+                    ai_manager.lstm_predictor.load_model()
+                    logger.info("[AutoTrainer] ✅ LSTM Predictor перезагружен (hot reload)")
+                except Exception as e:
+                    logger.error(f"[AutoTrainer] Ошибка hot reload LSTM Predictor: {e}")
         
         except Exception as e:
             logger.error(f"[AutoTrainer] Ошибка hot reload: {e}")

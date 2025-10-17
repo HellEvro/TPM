@@ -1142,6 +1142,89 @@ def check_exit_scam_filter(symbol, coin_data):
 # Алиас для обратной совместимости
 check_anti_dump_pump = check_exit_scam_filter
 
+
+def get_lstm_prediction(symbol, signal, current_price):
+    """
+    Получает предсказание LSTM для монеты
+    
+    Args:
+        symbol: Символ монеты
+        signal: Сигнал ('LONG' или 'SHORT')
+        current_price: Текущая цена
+    
+    Returns:
+        Dict с предсказанием или None
+    """
+    try:
+        from bot_engine.bot_config import AIConfig
+        
+        # Проверяем, включен ли LSTM
+        if not (AIConfig.AI_ENABLED and AIConfig.AI_LSTM_ENABLED):
+            return None
+        
+        try:
+            from bot_engine.ai.ai_manager import get_ai_manager
+            
+            ai_manager = get_ai_manager()
+            
+            # Проверяем доступность LSTM
+            if not ai_manager.is_available() or not ai_manager.lstm_predictor:
+                return None
+            
+            # Получаем свечи для анализа
+            exch = get_exchange()
+            if not exch:
+                return None
+            
+            chart_response = exch.get_chart_data(symbol, '6h', '30d')
+            if not chart_response or not chart_response.get('success'):
+                return None
+            
+            candles = chart_response.get('data', {}).get('candles', [])
+            if len(candles) < 60:  # LSTM требует минимум 60 свечей
+                return None
+            
+            # Получаем предсказание
+            prediction = ai_manager.lstm_predictor.predict(candles, current_price)
+            
+            if prediction and prediction.get('confidence', 0) >= AIConfig.AI_LSTM_MIN_CONFIDENCE:
+                # Проверяем совпадение направлений
+                lstm_direction = "LONG" if prediction['direction'] > 0 else "SHORT"
+                confidence = prediction['confidence']
+                
+                if lstm_direction == signal:
+                    logger.info(
+                        f"[LSTM] {symbol}: ✅ ПОДТВЕРЖДЕНИЕ: "
+                        f"LSTM предсказывает {lstm_direction} "
+                        f"(изменение: {prediction['change_percent']:+.2f}%, "
+                        f"уверенность: {confidence:.1f}%)"
+                    )
+                else:
+                    logger.warning(
+                        f"[LSTM] {symbol}: ⚠️ ПРОТИВОРЕЧИЕ: "
+                        f"Сигнал {signal}, но LSTM предсказывает {lstm_direction} "
+                        f"(изменение: {prediction['change_percent']:+.2f}%, "
+                        f"уверенность: {confidence:.1f}%)"
+                    )
+                
+                return {
+                    **prediction,
+                    'lstm_direction': lstm_direction,
+                    'matches_signal': lstm_direction == signal
+                }
+            
+            return None
+            
+        except ImportError as e:
+            logger.debug(f"[LSTM] {symbol}: AI модуль не доступен: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"[LSTM] {symbol}: Ошибка LSTM предсказания: {e}")
+            return None
+    
+    except ImportError:
+        return None  # AIConfig не доступен
+
 def check_no_existing_position(symbol, signal):
     """Проверяет, что нет существующих позиций на бирже"""
     try:
