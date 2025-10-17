@@ -112,8 +112,21 @@ class AIManager:
                 logger.info("[AI] ✅ Risk Manager загружен")
             except Exception as e:
                 logger.error(f"[AI] ❌ Ошибка загрузки Risk Manager: {e}")
+                # Пробуем загрузить как обычный модуль (не premium)
+                try:
+                    from bot_engine.ai.risk_manager import DynamicRiskManager
+                    self.risk_manager = DynamicRiskManager()
+                    logger.info("[AI] ✅ Risk Manager загружен (встроенная версия)")
+                except Exception as e2:
+                    logger.error(f"[AI] ❌ Ошибка загрузки встроенного Risk Manager: {e2}")
         elif AIConfig.AI_RISK_MANAGEMENT_ENABLED:
-            logger.warning("[AI] ⚠️ Risk Management недоступен в вашей лицензии")
+            # Пробуем загрузить встроенную версию даже без premium
+            try:
+                from bot_engine.ai.risk_manager import DynamicRiskManager
+                self.risk_manager = DynamicRiskManager()
+                logger.info("[AI] ✅ Risk Manager загружен (встроенная версия, без premium)")
+            except Exception as e:
+                logger.warning("[AI] ⚠️ Risk Management недоступен")
         
         # Итоговая статистика
         loaded_count = sum([
