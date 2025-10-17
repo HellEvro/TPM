@@ -56,17 +56,17 @@ def prepare_training_data(
         df = pd.read_csv(csv_file)
         
         if len(df) < sequence_length + prediction_horizon + 20:
-            print(f"  ⚠️ Недостаточно данных ({len(df)} свечей)")
+            print(f"  [SKIP] Not enough data ({len(df)} candles)")
             return []
         
         # Проверяем наличие необходимых колонок
         required_cols = ['close', 'volume', 'high', 'low']
         if not all(col in df.columns for col in required_cols):
-            print(f"  ❌ Отсутствуют необходимые колонки")
+            print(f"  [ERROR] Missing required columns")
             return []
         
         # Вычисляем дополнительные признаки
-        print("  📊 Вычисление признаков...")
+        print("  Calculating features...")
         
         # RSI
         df['rsi'] = calculate_rsi(df['close'].values, period=14)
@@ -79,7 +79,7 @@ def prepare_training_data(
         df = df.dropna()
         
         if len(df) < sequence_length + prediction_horizon + 20:
-            print(f"  ⚠️ Недостаточно данных после обработки ({len(df)} свечей)")
+            print(f"  [SKIP] Not enough data after processing ({len(df)} candles)")
             return []
         
         # Подготавливаем признаки
@@ -114,11 +114,11 @@ def prepare_training_data(
             
             training_samples.append((X, y))
         
-        print(f"  ✅ Подготовлено образцов: {len(training_samples)}")
+        print(f"  [OK] Prepared samples: {len(training_samples)}")
         return training_samples
         
     except Exception as e:
-        print(f"  ❌ Ошибка обработки файла: {e}")
+        print(f"  [ERROR] File processing error: {e}")
         return []
 
 
@@ -141,7 +141,7 @@ def load_all_historical_data(
     data_path = Path(data_dir)
     
     if not data_path.exists():
-        print(f"❌ Директория не найдена: {data_dir}")
+        print(f"[ERROR] Directory not found: {data_dir}")
         return []
     
     # Получаем список всех CSV файлов
@@ -150,8 +150,8 @@ def load_all_historical_data(
     if max_coins > 0:
         csv_files = csv_files[:max_coins]
     
-    print(f"\n📊 Найдено CSV файлов: {len(csv_files)}")
-    print(f"🔄 Загрузка исторических данных...")
+    print(f"\nFound CSV files: {len(csv_files)}")
+    print(f"Loading historical data...")
     print("=" * 60)
     
     all_training_data = []
@@ -173,9 +173,9 @@ def load_all_historical_data(
             failed += 1
     
     print("\n" + "=" * 60)
-    print(f"✅ Успешно обработано: {successful} монет")
-    print(f"❌ Ошибок: {failed} монет")
-    print(f"📦 Всего обучающих образцов: {len(all_training_data)}")
+    print(f"[OK] Successfully processed: {successful} coins")
+    print(f"[FAILED] Errors: {failed} coins")
+    print(f"[TOTAL] Training samples: {len(all_training_data)}")
     
     return all_training_data
 
@@ -190,20 +190,20 @@ def main():
     args = parser.parse_args()
     
     print("=" * 60)
-    print("🧠 ОБУЧЕНИЕ LSTM PREDICTOR")
+    print("LSTM PREDICTOR TRAINING")
     print("=" * 60)
     
     # Проверяем TensorFlow
     if not TENSORFLOW_AVAILABLE:
-        print("❌ TensorFlow не установлен!")
-        print("Установите: pip install tensorflow")
+        print("[ERROR] TensorFlow not installed!")
+        print("Install: pip install tensorflow")
         return 1
     
-    print(f"\n⚙️ Параметры:")
-    print(f"  Монет для обучения: {'все' if args.coins == 0 else args.coins}")
-    print(f"  Эпох: {args.epochs}")
-    print(f"  Размер батча: {args.batch_size}")
-    print(f"  Длина последовательности: {args.sequence_length} свечей")
+    print(f"\nParameters:")
+    print(f"  Coins for training: {'all' if args.coins == 0 else args.coins}")
+    print(f"  Epochs: {args.epochs}")
+    print(f"  Batch size: {args.batch_size}")
+    print(f"  Sequence length: {args.sequence_length} candles")
     
     # Загружаем исторические данные
     training_data = load_all_historical_data(
@@ -212,19 +212,19 @@ def main():
     )
     
     if not training_data:
-        print("\n❌ Нет данных для обучения!")
-        print("Сначала запустите: python scripts/ai/collect_historical_data.py")
+        print("\n[ERROR] No training data!")
+        print("Run first: python scripts/ai/collect_historical_data.py")
         return 1
     
     # Создаем и обучаем модель
     print("\n" + "=" * 60)
-    print("🚀 ЗАПУСК ОБУЧЕНИЯ")
+    print("STARTING TRAINING")
     print("=" * 60)
     
     predictor = LSTMPredictor()
     
     # Подготавливаем данные для scaler
-    print("\n📊 Подготовка данных для нормализации...")
+    print("\nPreparing data for normalization...")
     
     # Собираем все X для обучения scaler
     X_list = [x for x, _ in training_data]
@@ -232,19 +232,19 @@ def main():
     
     # Обучаем scaler
     predictor.scaler.fit(X_all.reshape(-1, X_all.shape[-1]))
-    print("✅ Scaler обучен")
+    print("[OK] Scaler trained")
     
     # Нормализуем данные
-    print("📊 Нормализация данных...")
+    print("Normalizing data...")
     normalized_data = []
     for X, y in training_data:
         X_scaled = predictor.scaler.transform(X)
         normalized_data.append((X_scaled, y))
     
-    print(f"✅ Нормализовано: {len(normalized_data)} образцов")
+    print(f"[OK] Normalized: {len(normalized_data)} samples")
     
     # Обучаем модель
-    print("\n🧠 Обучение нейронной сети...")
+    print("\nTraining neural network...")
     result = predictor.train(
         training_data=normalized_data,
         validation_split=0.2,
@@ -255,16 +255,16 @@ def main():
     # Выводим результаты
     print("\n" + "=" * 60)
     if result.get('success'):
-        print("✅ ОБУЧЕНИЕ ЗАВЕРШЕНО УСПЕШНО!")
+        print("[SUCCESS] TRAINING COMPLETED!")
         print("=" * 60)
-        print(f"📊 Финальная ошибка (train): {result['final_loss']:.6f}")
-        print(f"📊 Финальная ошибка (val): {result['final_val_loss']:.6f}")
-        print(f"📈 Эпох обучено: {result['epochs_trained']}")
-        print(f"📦 Обучающих образцов: {result['training_samples']}")
-        print(f"\n💾 Модель сохранена в: data/ai/models/lstm_predictor.h5")
+        print(f"Final loss (train): {result['final_loss']:.6f}")
+        print(f"Final loss (val): {result['final_val_loss']:.6f}")
+        print(f"Epochs trained: {result['epochs_trained']}")
+        print(f"Training samples: {result['training_samples']}")
+        print(f"\n[SAVED] Model saved to: data/ai/models/lstm_predictor.h5")
         return 0
     else:
-        print("❌ ОШИБКА ОБУЧЕНИЯ!")
+        print("[ERROR] TRAINING FAILED!")
         print("=" * 60)
         print(f"Error: {result.get('error', 'Unknown')}")
         return 1
