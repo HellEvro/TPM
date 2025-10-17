@@ -56,7 +56,7 @@ class VolumeMode:
 
 # Настройки Auto Bot по умолчанию
 DEFAULT_AUTO_BOT_CONFIG = {
-    'enabled': False,
+    'enabled': True,
     'max_concurrent': 5,
     'risk_cap_percent': 10,
     'scope': 'all',  # all | whitelist | blacklist
