@@ -227,11 +227,11 @@ class AIConfig:
     """
     
     # Общие настройки
-    AI_ENABLED = False  # Мастер-переключатель для всех ИИ модулей
+    AI_ENABLED = True  # Мастер-переключатель для всех ИИ модулей
     AI_CONFIDENCE_THRESHOLD = 0.65  # Минимальная уверенность для применения рекомендации ИИ (0.0-1.0)
     
     # Anomaly Detection - обнаружение аномалий (pump/dump)
-    AI_ANOMALY_DETECTION_ENABLED = False
+    AI_ANOMALY_DETECTION_ENABLED = True
     AI_ANOMALY_MODEL_PATH = 'data/ai/models/anomaly_detector.pkl'
     AI_ANOMALY_SCALER_PATH = 'data/ai/models/anomaly_scaler.pkl'
     AI_ANOMALY_BLOCK_THRESHOLD = 0.7  # Блокировать вход если severity > 70%
