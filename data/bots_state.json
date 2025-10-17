@@ -1,7 +1,7 @@
 {
   "bots": {},
   "auto_bot_config": {
-    "enabled": true,
+    "enabled": false,
     "max_concurrent": 5,
     "risk_cap_percent": 10,
     "scope": "all",
@@ -39,6 +39,6 @@
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50
   },
-  "last_saved": "2025-10-17T04:37:06.786017",
+  "last_saved": "2025-10-17T04:39:36.031522",
   "version": "1.0"
 }
