@@ -2746,6 +2746,14 @@ def get_active_bots_detailed():
 def get_bot_history():
     """Получает историю действий ботов"""
     try:
+        # Проверяем, что bot_history_manager доступен
+        if bot_history_manager is None:
+            logger.error("[API] bot_history_manager is None!")
+            return jsonify({
+                'success': False,
+                'error': 'Bot history manager not initialized'
+            }), 500
+        
         symbol = request.args.get('symbol')
         action_type = request.args.get('action_type')
         limit = int(request.args.get('limit', 100))

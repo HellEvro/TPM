@@ -139,16 +139,15 @@ from bots_modules.bot_class import *
 from bots_modules.sync_and_cache import *
 from bots_modules.workers import *
 from bots_modules.init_functions import *
-from bots_modules.api_endpoints import *
 
-print("Все модули загружены!")
-
-# Импорт системы истории ботов (после импорта модулей, чтобы логирование было настроено)
+# Импорт системы истории ботов (ПЕРЕД импортом API endpoints!)
 try:
+    print("[BOT_HISTORY] 🔄 Попытка импорта bot_history...")
     from bot_engine.bot_history import (
         bot_history_manager, log_bot_start, log_bot_stop, log_bot_signal,
         log_position_opened, log_position_closed
     )
+    print(f"[BOT_HISTORY] ✅ Импорт успешен, bot_history_manager: {bot_history_manager}")
     BOT_HISTORY_AVAILABLE = True
     logger = logging.getLogger('BotsService')
     logger.info("[BOT_HISTORY] ✅ Модуль bot_history загружен успешно")
@@ -157,6 +156,7 @@ try:
     import bots_modules.imports_and_globals as globals_module
     globals_module.bot_history_manager = bot_history_manager
     globals_module.BOT_HISTORY_AVAILABLE = True
+    print(f"[BOT_HISTORY] ✅ Установлен в глобальный модуль: {globals_module.bot_history_manager}")
 except ImportError as e:
     print(f"[WARNING] Модуль bot_history недоступен: {e}")
     # Создаем заглушки
@@ -178,6 +178,16 @@ except ImportError as e:
     import bots_modules.imports_and_globals as globals_module
     globals_module.bot_history_manager = bot_history_manager
     globals_module.BOT_HISTORY_AVAILABLE = False
+    print(f"[BOT_HISTORY] ⚠️ Установлена заглушка в глобальный модуль: {globals_module.bot_history_manager}")
+except Exception as e:
+    print(f"[ERROR] Неожиданная ошибка при импорте bot_history: {e}")
+    import traceback
+    traceback.print_exc()
+
+# Теперь импортируем API endpoints (после установки bot_history_manager)
+from bots_modules.api_endpoints import *
+
+print("Все модули загружены!")
 
 # Настройка логирования
 setup_color_logging()
