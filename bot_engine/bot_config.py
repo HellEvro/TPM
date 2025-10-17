@@ -76,8 +76,8 @@ DEFAULT_AUTO_BOT_CONFIG = {
     'break_even_protection': True,      # Защита безубыточности
     'break_even_trigger': 100.0,        # Триггер для break even в % (x1 = 100%)
     # Фильтры по тренду
-    'avoid_down_trend': True,           # Не входить в LONG при нисходящем тренде
-    'avoid_up_trend': True,             # Не входить в SHORT при восходящем тренде
+    'avoid_down_trend': False,          # Не входить в LONG при нисходящем тренде (ОТКЛЮЧЕНО для тестирования)
+    'avoid_up_trend': False,            # Не входить в SHORT при восходящем тренде (ОТКЛЮЧЕНО для тестирования)
     # Настройки зрелости монет
     'enable_maturity_check': True,      # Включить проверку зрелости монет
     'min_candles_for_maturity': 400,    # Минимум свечей для зрелой монеты (100 дней на 6H)
