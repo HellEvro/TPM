@@ -159,17 +159,26 @@ class AutoTrainer:
             if initial:
                 # Первичная настройка - собираем больше данных
                 limit = AIConfig.AI_INITIAL_COINS_COUNT
+                days = 730  # 2 года для первичной настройки
             else:
-                # Обновление - только топ монеты
+                # Обновление
                 limit = AIConfig.AI_UPDATE_COINS_COUNT
+                days = 30  # Обновляем только последние 30 дней
             
             # Запускаем скрипт сбора данных
             cmd = [
                 sys.executable,
                 str(self.collect_script),
-                '--limit', str(limit),
-                '--days', '30'  # Обновляем только последние 30 дней
+                '--days', str(days)
             ]
+            
+            # Если limit=0, собираем все монеты (флаг --all)
+            if limit == 0:
+                cmd.append('--all')
+                logger.info("[AutoTrainer] Режим: ВСЕ монеты с биржи")
+            else:
+                cmd.extend(['--limit', str(limit)])
+                logger.info(f"[AutoTrainer] Режим: Топ {limit} монет")
             
             logger.info(f"[AutoTrainer] Запуск: {' '.join(cmd)}")
             

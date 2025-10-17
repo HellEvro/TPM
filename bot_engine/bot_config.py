@@ -56,7 +56,7 @@ class VolumeMode:
 
 # Настройки Auto Bot по умолчанию
 DEFAULT_AUTO_BOT_CONFIG = {
-    'enabled': False,
+    'enabled': True,
     'max_concurrent': 5,
     'risk_cap_percent': 10,
     'scope': 'all',  # all | whitelist | blacklist
@@ -268,7 +268,7 @@ class AIConfig:
     # ==========================================
     
     # Включить автоматическое обучение
-    AI_AUTO_TRAIN_ENABLED = False  # True = автоматическое обновление данных и переобучение
+    AI_AUTO_TRAIN_ENABLED = True  # True = автоматическое обновление данных и переобучение
     
     # Первичная настройка при старте (если модель не найдена)
     AI_AUTO_TRAIN_ON_STARTUP = True  # True = автоматически собрать данные и обучить модель
@@ -276,8 +276,8 @@ class AIConfig:
     # Частота обновления данных
     AI_AUTO_UPDATE_DATA = True  # True = автоматически обновлять данные
     AI_DATA_UPDATE_INTERVAL = 86400  # 24 часа (ежедневное обновление)
-    AI_UPDATE_COINS_COUNT = 50  # Количество монет для обновления (топ N)
-    AI_INITIAL_COINS_COUNT = 100  # Количество монет при первичной настройке
+    AI_UPDATE_COINS_COUNT = 0  # 0 = ВСЕ монеты с биржи (инкрементальное обновление)
+    AI_INITIAL_COINS_COUNT = 0  # 0 = ВСЕ монеты при первичной настройке (полная история)
     
     # Частота переобучения модели
     AI_AUTO_RETRAIN = True  # True = автоматически переобучать модель
