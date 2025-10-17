@@ -214,6 +214,18 @@ logs/
 
 # Data files (trading data, positions, etc.)
 data/
+# Исключения: ИИ данные ДОЛЖНЫ быть в git
+!data/ai/
+!data/ai/models/
+!data/ai/models/*.pkl
+!data/ai/historical/
+!data/ai/historical/*.csv
+!data/ai/training/
+!data/ai/.gitkeep
+!data/ai/historical/.gitkeep
+!data/ai/training/.gitkeep
+!data/ai/models/.gitkeep
+
 *.json.backup
 *.json.bak
 *.json.tmp
@@ -343,11 +355,15 @@ infobot_ai_premium.so
 *.pyd
 *.so
 
-# AI data files
+# AI data files (large files that shouldn't be in git)
 data/ai/historical/*.csv
 data/ai/training/*.npz
-data/ai/training/*.pkl
-data/ai/models/*.pkl
+
+# NOTE: Обученные модели (.pkl) ДОЛЖНЫ быть в git!
+# Они небольшие (~1 MB) и критичны для работы
+# data/ai/models/*.pkl - КОММИТИМ!
+
+# Большие deep learning модели (если появятся)
 data/ai/models/*.h5
 data/ai/models/*.pt
 data/ai/models/*.pth
