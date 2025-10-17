@@ -72,19 +72,30 @@ class AutoTrainer:
                 current_time = time.time()
                 
                 # 1. Проверяем нужно ли обновить данные
+                data_updated = False
                 if self._should_update_data(current_time):
-                    self._update_data()
+                    data_updated = self._update_data()
                 
                 # 2. Проверяем нужно ли переобучить модель
+                # ВАЖНО: Переобучаем только если данные НЕ обновлялись или обновились успешно
                 if self._should_retrain(current_time):
-                    self._retrain()
+                    if not data_updated or data_updated == True:  # Данные не обновлялись или обновились успешно
+                        self._retrain()
+                    else:
+                        logger.warning("[AutoTrainer] ⚠️ Переобучение отложено из-за ошибки обновления данных")
                 
                 # Спим до следующей проверки (каждые 10 минут)
                 time.sleep(600)
                 
+            except KeyboardInterrupt:
+                logger.info("[AutoTrainer] ⚠️ Получен сигнал остановки (Ctrl+C)")
+                self.running = False
+                break
             except Exception as e:
                 logger.error(f"[AutoTrainer] Ошибка в цикле: {e}")
                 time.sleep(60)
+        
+        logger.info("[AutoTrainer] 🛑 Auto Trainer остановлен")
     
     def _check_initial_training(self):
         """Проверяет нужно ли обучение при старте"""
@@ -125,8 +136,10 @@ class AutoTrainer:
         if not AIConfig.AI_AUTO_UPDATE_DATA:
             return False
         
+        # При первом запуске НЕ обновляем сразу (данные уже есть)
         if self.last_data_update is None:
-            return True
+            self.last_data_update = current_time  # Инициализируем текущим временем
+            return False
         
         elapsed = current_time - self.last_data_update
         return elapsed >= AIConfig.AI_DATA_UPDATE_INTERVAL
@@ -136,8 +149,10 @@ class AutoTrainer:
         if not AIConfig.AI_AUTO_RETRAIN:
             return False
         
+        # При первом запуске НЕ переобучаем сразу (модель уже обучена)
         if self.last_training is None:
-            return True
+            self.last_training = current_time  # Инициализируем текущим временем
+            return False
         
         elapsed = current_time - self.last_training
         return elapsed >= AIConfig.AI_RETRAIN_INTERVAL
@@ -200,6 +215,11 @@ class AutoTrainer:
         except subprocess.TimeoutExpired:
             logger.error("[AutoTrainer] ❌ Таймаут при обновлении данных")
             return False
+        except KeyboardInterrupt:
+            logger.warning("[AutoTrainer] ⚠️ Обновление данных прервано пользователем")
+            # Останавливаем Auto Trainer
+            self.running = False
+            return False
         except Exception as e:
             logger.error(f"[AutoTrainer] ❌ Ошибка обновления данных: {e}")
             return False
@@ -243,6 +263,11 @@ class AutoTrainer:
         
         except subprocess.TimeoutExpired:
             logger.error("[AutoTrainer] ❌ Таймаут при обучении")
+            return False
+        except KeyboardInterrupt:
+            logger.warning("[AutoTrainer] ⚠️ Переобучение прервано пользователем")
+            # Останавливаем Auto Trainer
+            self.running = False
             return False
         except Exception as e:
             logger.error(f"[AutoTrainer] ❌ Ошибка обучения: {e}")
