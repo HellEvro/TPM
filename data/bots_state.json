@@ -1,7 +1,7 @@
 {
   "bots": {},
   "auto_bot_config": {
-    "enabled": true,
+    "enabled": false,
     "max_concurrent": 10,
     "risk_cap_percent": 10,
     "scope": "all",
@@ -9,9 +9,9 @@
     "blacklist": [],
     "rsi_long_threshold": 29,
     "rsi_short_threshold": 71,
-    "rsi_exit_long": 65,
-    "rsi_exit_short": 35,
-    "default_position_size": 10,
+    "rsi_exit_long": 55,
+    "rsi_exit_short": 45,
+    "default_position_size": 5,
     "check_interval": 180,
     "monitoring_interval": 10,
     "trading_enabled": true,
@@ -34,11 +34,11 @@
     "rsi_time_filter_upper": 65,
     "rsi_time_filter_lower": 35,
     "exit_scam_enabled": true,
-    "exit_scam_candles": 10,
+    "exit_scam_candles": 8,
     "exit_scam_single_candle_percent": 15,
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50
   },
-  "last_saved": "2025-10-17T18:45:55.172215",
+  "last_saved": "2025-10-18T00:14:46.275107",
   "version": "1.0"
 }

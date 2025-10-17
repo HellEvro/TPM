@@ -56,7 +56,7 @@ class VolumeMode:
 
 # Настройки Auto Bot по умолчанию
 DEFAULT_AUTO_BOT_CONFIG = {
-    'enabled': True,
+    'enabled': False,
     'max_concurrent': 10,
     'risk_cap_percent': 10,
     'scope': 'all',  # all | whitelist | blacklist
@@ -65,9 +65,9 @@ DEFAULT_AUTO_BOT_CONFIG = {
     # RSI параметры согласно ТЗ
     'rsi_long_threshold': 29,   # Вход в LONG при RSI <= 29
     'rsi_short_threshold': 71,  # Вход в SHORT при RSI >= 71
-    'rsi_exit_long': 65,        # Выход из LONG при RSI >= 65
-    'rsi_exit_short': 35,       # Выход из SHORT при RSI <= 35
-    'default_position_size': 10,  # Размер позиции в USDT
+    'rsi_exit_long': 55,        # Выход из LONG при RSI >= 65
+    'rsi_exit_short': 45,       # Выход из SHORT при RSI <= 35
+    'default_position_size': 5,  # Размер позиции в USDT
     'check_interval': 180,      # Интервал проверки в секундах (3 мин = 180 сек)
     'monitoring_interval': 10,  # Интервал мониторинга активных ботов в секундах
     # Торговые настройки
@@ -96,7 +96,7 @@ DEFAULT_AUTO_BOT_CONFIG = {
     'rsi_time_filter_lower': 35,        # Нижняя граница спокойной зоны для LONG
     # ExitScam фильтр (защита от резких движений цены)
     'exit_scam_enabled': True,          # Включить проверку на ExitScam
-    'exit_scam_candles': 10,            # Количество свечей для проверки (10 = 60 часов на 6H)
+    'exit_scam_candles': 8,            # Количество свечей для проверки (10 = 60 часов на 6H)
     'exit_scam_single_candle_percent': 15,  # Максимальный % изменения одной свечи (15% = блокировка)
     'exit_scam_multi_candle_count': 4,        # Количество свечей для суммарного анализа
     'exit_scam_multi_candle_percent': 50,   # Максимальный суммарный % за N свечей (50% = блокировка)
