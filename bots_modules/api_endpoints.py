@@ -25,7 +25,7 @@ from bots_modules.imports_and_globals import (
     bots_cache_data, bots_cache_lock, process_state,
     system_initialized, shutdown_flag, mature_coins_storage,
     mature_coins_lock, optimal_ema_data, coin_processing_locks,
-    BOT_STATUS, ASYNC_AVAILABLE, RSI_CACHE_FILE
+    BOT_STATUS, ASYNC_AVAILABLE, RSI_CACHE_FILE, bot_history_manager
 )
 import bots_modules.imports_and_globals as globals_module
 

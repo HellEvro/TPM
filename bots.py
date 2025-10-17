@@ -152,6 +152,11 @@ try:
     BOT_HISTORY_AVAILABLE = True
     logger = logging.getLogger('BotsService')
     logger.info("[BOT_HISTORY] ✅ Модуль bot_history загружен успешно")
+    
+    # Устанавливаем bot_history_manager в глобальный модуль
+    import bots_modules.imports_and_globals as globals_module
+    globals_module.bot_history_manager = bot_history_manager
+    globals_module.BOT_HISTORY_AVAILABLE = True
 except ImportError as e:
     print(f"[WARNING] Модуль bot_history недоступен: {e}")
     # Создаем заглушки
@@ -168,6 +173,11 @@ except ImportError as e:
     def log_position_opened(*args, **kwargs): pass
     def log_position_closed(*args, **kwargs): pass
     BOT_HISTORY_AVAILABLE = False
+    
+    # Устанавливаем заглушку в глобальный модуль
+    import bots_modules.imports_and_globals as globals_module
+    globals_module.bot_history_manager = bot_history_manager
+    globals_module.BOT_HISTORY_AVAILABLE = False
 
 # Настройка логирования
 setup_color_logging()

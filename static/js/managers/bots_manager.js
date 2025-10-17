@@ -683,7 +683,7 @@ class BotsManager {
                     }
                     
                     // Обновляем статус
-                    this.updateServiceStatus('online', `Обновлено: ${data.last_update ? new Date(data.last_update).toLocaleTimeString() : 'неизвестно'}`);
+                    this.updateServiceStatus('online', `${window.languageUtils.translate('updated')}: ${data.last_update ? new Date(data.last_update).toLocaleTimeString() : 'неизвестно'}`);
                 } else {
                     throw new Error(data.error || 'Ошибка загрузки данных');
                 }
@@ -5997,7 +5997,7 @@ class BotsManager {
                         
                         // Показываем уведомление
                         if (window.showToast) {
-                            window.showToast(`Обновлено ${result.count} ручных позиций`, 'success');
+                            window.showToast(`${window.languageUtils.translate('updated')} ${result.count} ${window.languageUtils.translate('manual_positions')}`, 'success');
                         }
                     } else {
                         throw new Error(`HTTP error! status: ${response.status}`);
@@ -6077,6 +6077,500 @@ class BotsManager {
     showNotification(message, type = 'info') {
         // Простое уведомление в консоли, можно заменить на toast
         console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    // ==================== ИСТОРИЯ БОТОВ ====================
+
+    /**
+     * Инициализирует вкладку истории ботов
+     */
+    initializeHistoryTab() {
+        console.log('[BotsManager] 📊 Инициализация вкладки истории ботов...');
+        
+        // Инициализируем фильтры
+        this.initializeHistoryFilters();
+        
+        // Инициализируем подвкладки истории
+        this.initializeHistorySubTabs();
+        
+        // Загружаем данные
+        this.loadHistoryData();
+        
+        // Инициализируем кнопки действий
+        this.initializeHistoryActionButtons();
+    }
+
+    /**
+     * Инициализирует фильтры истории
+     */
+    initializeHistoryFilters() {
+        // Фильтр по боту
+        const botFilter = document.getElementById('historyBotFilter');
+        if (botFilter) {
+            botFilter.addEventListener('change', () => this.loadHistoryData());
+        }
+
+        // Фильтр по типу действия
+        const actionFilter = document.getElementById('historyActionFilter');
+        if (actionFilter) {
+            actionFilter.addEventListener('change', () => this.loadHistoryData());
+        }
+
+        // Фильтр по периоду
+        const dateFilter = document.getElementById('historyDateFilter');
+        if (dateFilter) {
+            dateFilter.addEventListener('change', () => this.loadHistoryData());
+        }
+
+        // Кнопки фильтров
+        const applyBtn = document.querySelector('.history-filters .btn-primary');
+        if (applyBtn) {
+            applyBtn.addEventListener('click', () => this.loadHistoryData());
+        }
+
+        const clearBtn = document.querySelector('.history-filters .btn-secondary');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => this.clearHistoryFilters());
+        }
+
+        const exportBtn = document.querySelector('.history-filters .btn-info');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => this.exportHistoryData());
+        }
+    }
+
+    /**
+     * Инициализирует подвкладки истории
+     */
+    initializeHistorySubTabs() {
+        const tabButtons = document.querySelectorAll('.history-tab-btn');
+        const tabContents = document.querySelectorAll('.history-tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.dataset.historyTab;
+                
+                // Убираем активный класс со всех кнопок и контента
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // Добавляем активный класс к выбранной кнопке и контенту
+                button.classList.add('active');
+                const targetContent = document.getElementById(`${tabName}History`);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+                
+                // Загружаем данные для выбранной вкладки
+                this.loadHistoryData(tabName);
+            });
+        });
+    }
+
+    /**
+     * Инициализирует кнопки действий истории
+     */
+    initializeHistoryActionButtons() {
+        // Кнопка обновления
+        const refreshBtn = document.querySelector('.history-actions .btn-primary');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => this.loadHistoryData());
+        }
+
+        // Кнопка создания демо-данных
+        const demoBtn = document.querySelector('.history-actions .btn-success');
+        if (demoBtn) {
+            demoBtn.addEventListener('click', () => this.createDemoHistoryData());
+        }
+
+        // Кнопка очистки истории
+        const clearBtn = document.querySelector('.history-actions .btn-warning');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => this.clearAllHistory());
+        }
+    }
+
+    /**
+     * Загружает данные истории
+     */
+    async loadHistoryData(tabName = 'actions') {
+        try {
+            console.log(`[BotsManager] 📊 Загрузка данных истории: ${tabName}`);
+            
+            // Получаем параметры фильтров
+            const filters = this.getHistoryFilters();
+            
+            // Загружаем данные в зависимости от вкладки
+            switch (tabName) {
+                case 'actions':
+                    await this.loadBotActions(filters);
+                    break;
+                case 'trades':
+                    await this.loadBotTrades(filters);
+                    break;
+                case 'signals':
+                    await this.loadBotSignals(filters);
+                    break;
+            }
+            
+            // Загружаем статистику
+            await this.loadHistoryStatistics(filters.symbol);
+            
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка загрузки данных истории:', error);
+            this.showNotification(`Ошибка загрузки истории: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Получает параметры фильтров
+     */
+    getHistoryFilters() {
+        const botFilter = document.getElementById('historyBotFilter');
+        const actionFilter = document.getElementById('historyActionFilter');
+        const dateFilter = document.getElementById('historyDateFilter');
+        
+        return {
+            symbol: botFilter ? botFilter.value : null,
+            action_type: actionFilter ? actionFilter.value : null,
+            trade_type: actionFilter ? actionFilter.value : null,
+            period: dateFilter ? dateFilter.value : null,
+            limit: 100
+        };
+    }
+
+    /**
+     * Загружает действия ботов
+     */
+    async loadBotActions(filters) {
+        try {
+            const params = new URLSearchParams();
+            if (filters.symbol && filters.symbol !== 'all') params.append('symbol', filters.symbol);
+            if (filters.action_type && filters.action_type !== 'all') params.append('action_type', filters.action_type);
+            params.append('limit', filters.limit);
+            
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/history?${params}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.displayBotActions(data.history);
+            } else {
+                throw new Error(data.error || 'Ошибка загрузки действий');
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка загрузки действий ботов:', error);
+            this.displayBotActions([]);
+        }
+    }
+
+    /**
+     * Загружает сделки ботов
+     */
+    async loadBotTrades(filters) {
+        try {
+            const params = new URLSearchParams();
+            if (filters.symbol && filters.symbol !== 'all') params.append('symbol', filters.symbol);
+            if (filters.trade_type && filters.trade_type !== 'all') params.append('trade_type', filters.trade_type);
+            params.append('limit', filters.limit);
+            
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/trades?${params}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.displayBotTrades(data.trades);
+            } else {
+                throw new Error(data.error || 'Ошибка загрузки сделок');
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка загрузки сделок ботов:', error);
+            this.displayBotTrades([]);
+        }
+    }
+
+    /**
+     * Загружает сигналы ботов
+     */
+    async loadBotSignals(filters) {
+        try {
+            const params = new URLSearchParams();
+            if (filters.symbol && filters.symbol !== 'all') params.append('symbol', filters.symbol);
+            params.append('action_type', 'SIGNAL');
+            params.append('limit', filters.limit);
+            
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/history?${params}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.displayBotSignals(data.history);
+            } else {
+                throw new Error(data.error || 'Ошибка загрузки сигналов');
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка загрузки сигналов ботов:', error);
+            this.displayBotSignals([]);
+        }
+    }
+
+    /**
+     * Загружает статистику истории
+     */
+    async loadHistoryStatistics(symbol = null) {
+        try {
+            const params = new URLSearchParams();
+            if (symbol && symbol !== 'all') params.append('symbol', symbol);
+            
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/statistics?${params}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.displayHistoryStatistics(data.statistics);
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка загрузки статистики:', error);
+        }
+    }
+
+    /**
+     * Отображает действия ботов
+     */
+    displayBotActions(actions) {
+        const container = document.getElementById('botActionsList');
+        if (!container) return;
+        
+        if (actions.length === 0) {
+            container.innerHTML = `
+                <div class="empty-history-state">
+                    <div class="empty-icon">📊</div>
+                    <p data-translate="no_actions_found">История действий не найдена</p>
+                    <p data-translate="actions_will_appear">Действия ботов будут отображаться здесь</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const html = actions.map(action => `
+            <div class="history-item">
+                <div class="history-item-header">
+                    <span class="history-action-type">${this.getActionIcon(action.action_type)} ${action.action_name}</span>
+                    <span class="history-timestamp">${this.formatTimestamp(action.timestamp)}</span>
+                </div>
+                <div class="history-item-content">
+                    <div class="history-symbol">${action.symbol || 'N/A'}</div>
+                    <div class="history-details">${action.details}</div>
+                    ${action.bot_id ? `<div class="history-bot-id">Bot ID: ${action.bot_id}</div>` : ''}
+                </div>
+            </div>
+        `).join('');
+        
+        container.innerHTML = html;
+    }
+
+    /**
+     * Отображает сделки ботов
+     */
+    displayBotTrades(trades) {
+        const container = document.getElementById('botTradesList');
+        if (!container) return;
+        
+        if (trades.length === 0) {
+            container.innerHTML = `
+                <div class="empty-history-state">
+                    <div class="empty-icon">💼</div>
+                    <p data-translate="no_trades_found">История сделок не найдена</p>
+                    <p data-translate="trades_will_appear">Сделки ботов будут отображаться здесь</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const html = trades.map(trade => `
+            <div class="history-item trade-item ${trade.status === 'CLOSED' ? 'closed' : 'open'}">
+                <div class="history-item-header">
+                    <span class="history-trade-direction ${trade.direction.toLowerCase()}">${trade.direction}</span>
+                    <span class="history-timestamp">${this.formatTimestamp(trade.timestamp)}</span>
+                </div>
+                <div class="history-item-content">
+                    <div class="history-symbol">${trade.symbol}</div>
+                    <div class="trade-details">
+                        <div class="trade-price">Вход: ${trade.entry_price?.toFixed(4) || 'N/A'}</div>
+                        ${trade.exit_price ? `<div class="trade-price">Выход: ${trade.exit_price.toFixed(4)}</div>` : ''}
+                        <div class="trade-size">Размер: ${trade.size}</div>
+                        ${trade.pnl !== null ? `<div class="trade-pnl ${trade.pnl >= 0 ? 'profit' : 'loss'}">PnL: ${trade.pnl.toFixed(2)} USDT</div>` : ''}
+                        ${trade.roi !== null ? `<div class="trade-roi ${trade.roi >= 0 ? 'profit' : 'loss'}">ROI: ${trade.roi.toFixed(2)}%</div>` : ''}
+                    </div>
+                    <div class="trade-status">Статус: ${trade.status === 'OPEN' ? 'Открыта' : 'Закрыта'}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        container.innerHTML = html;
+    }
+
+    /**
+     * Отображает сигналы ботов
+     */
+    displayBotSignals(signals) {
+        const container = document.getElementById('botSignalsList');
+        if (!container) return;
+        
+        if (signals.length === 0) {
+            container.innerHTML = `
+                <div class="empty-history-state">
+                    <div class="empty-icon">⚡</div>
+                    <p data-translate="no_signals_found">История сигналов не найдена</p>
+                    <p data-translate="signals_will_appear">Сигналы ботов будут отображаться здесь</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const html = signals.map(signal => `
+            <div class="history-item signal-item">
+                <div class="history-item-header">
+                    <span class="history-signal-type">⚡ ${signal.signal_type || 'SIGNAL'}</span>
+                    <span class="history-timestamp">${this.formatTimestamp(signal.timestamp)}</span>
+                </div>
+                <div class="history-item-content">
+                    <div class="history-symbol">${signal.symbol}</div>
+                    <div class="signal-details">
+                        <div class="signal-rsi">RSI: ${signal.rsi?.toFixed(2) || 'N/A'}</div>
+                        <div class="signal-price">Цена: ${signal.price?.toFixed(4) || 'N/A'}</div>
+                    </div>
+                    <div class="signal-description">${signal.details}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        container.innerHTML = html;
+    }
+
+    /**
+     * Отображает статистику истории
+     */
+    displayHistoryStatistics(stats) {
+        // Обновляем карточки статистики
+        const totalActionsEl = document.querySelector('.history-stats .stat-card:nth-child(1) .stat-value');
+        const totalTradesEl = document.querySelector('.history-stats .stat-card:nth-child(2) .stat-value');
+        const totalPnlEl = document.querySelector('.history-stats .stat-card:nth-child(3) .stat-value');
+        const successRateEl = document.querySelector('.history-stats .stat-card:nth-child(4) .stat-value');
+        
+        if (totalActionsEl) totalActionsEl.textContent = stats.total_trades || 0;
+        if (totalTradesEl) totalTradesEl.textContent = stats.total_trades || 0;
+        if (totalPnlEl) totalPnlEl.textContent = `$${stats.total_pnl?.toFixed(2) || '0.00'}`;
+        if (successRateEl) successRateEl.textContent = `${stats.win_rate?.toFixed(1) || '0'}%`;
+    }
+
+    /**
+     * Очищает фильтры истории
+     */
+    clearHistoryFilters() {
+        const botFilter = document.getElementById('historyBotFilter');
+        const actionFilter = document.getElementById('historyActionFilter');
+        const dateFilter = document.getElementById('historyDateFilter');
+        
+        if (botFilter) botFilter.value = 'all';
+        if (actionFilter) actionFilter.value = 'all';
+        if (dateFilter) dateFilter.value = 'today';
+        
+        this.loadHistoryData();
+    }
+
+    /**
+     * Экспортирует данные истории
+     */
+    exportHistoryData() {
+        console.log('[BotsManager] 📤 Экспорт данных истории (функция в разработке)');
+        this.showNotification('Функция экспорта в разработке', 'info');
+    }
+
+    /**
+     * Создает демо-данные истории
+     */
+    async createDemoHistoryData() {
+        try {
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/history/demo`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showNotification('Демо-данные созданы успешно', 'success');
+                this.loadHistoryData();
+            } else {
+                throw new Error(data.error || 'Ошибка создания демо-данных');
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка создания демо-данных:', error);
+            this.showNotification(`Ошибка создания демо-данных: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Очищает всю историю
+     */
+    async clearAllHistory() {
+        if (!confirm('Вы уверены, что хотите очистить всю историю? Это действие нельзя отменить.')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/history/clear`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showNotification('История очищена', 'success');
+                this.loadHistoryData();
+            } else {
+                throw new Error(data.error || 'Ошибка очистки истории');
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка очистки истории:', error);
+            this.showNotification(`Ошибка очистки истории: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Получает иконку для типа действия
+     */
+    getActionIcon(actionType) {
+        const icons = {
+            'BOT_START': '🚀',
+            'BOT_STOP': '🛑',
+            'SIGNAL': '⚡',
+            'POSITION_OPENED': '📈',
+            'POSITION_CLOSED': '📉',
+            'STOP_LOSS': '🛡️',
+            'TAKE_PROFIT': '🎯',
+            'TRAILING_STOP': '📊',
+            'ERROR': '❌'
+        };
+        return icons[actionType] || '📋';
+    }
+
+    /**
+     * Форматирует timestamp
+     */
+    formatTimestamp(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleString('ru-RU', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
     }
 }
 

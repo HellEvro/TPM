@@ -1,5 +1,5 @@
 {
-  "enabled": false,
+  "enabled": true,
   "max_concurrent": 10,
   "risk_cap_percent": 10,
   "scope": "all",
@@ -32,7 +32,7 @@
   "rsi_time_filter_upper": 65,
   "rsi_time_filter_lower": 35,
   "exit_scam_enabled": true,
-  "exit_scam_candles": 10,
+  "exit_scam_candles": 8,
   "exit_scam_single_candle_percent": 15,
   "exit_scam_multi_candle_count": 4,
   "exit_scam_multi_candle_percent": 50
