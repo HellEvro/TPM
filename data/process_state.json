@@ -8,8 +8,8 @@
     },
     "auto_bot_worker": {
       "active": false,
-      "last_check": "2025-10-17T04:03:19.945093",
-      "check_count": 39,
+      "last_check": "2025-10-17T04:30:24.103467",
+      "check_count": 48,
       "last_error": "name 'STOP_LOSS_SETUP_INTERVAL' is not defined",
       "enabled": true,
       "interval_seconds": 180
@@ -33,6 +33,6 @@
       "last_error": null
     }
   },
-  "last_saved": "2025-10-17T04:03:19.945103",
+  "last_saved": "2025-10-17T04:30:24.103476",
   "version": "1.0"
 }
