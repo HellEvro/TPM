@@ -330,13 +330,27 @@ def main():
     # Итоговая статистика
     elapsed_total = time.time() - start_time
     
+    # Подсчитываем РЕАЛЬНОЕ количество свечей во всех файлах
+    print("\nПодсчет общего количества свечей...")
+    actual_total_candles = 0
+    historical_dir = Path("data/ai/historical")
+    
+    if historical_dir.exists():
+        for csv_file in historical_dir.glob("*.csv"):
+            try:
+                df = pd.read_csv(csv_file)
+                actual_total_candles += len(df) - 1  # -1 для заголовка
+            except:
+                pass
+    
     print()
     print("=" * 60)
     print("COLLECTION COMPLETE")
     print("=" * 60)
     print(f"Успешно: {successful}/{len(symbols)} монет")
     print(f"Ошибок: {failed}/{len(symbols)}")
-    print(f"Всего свечей: {total_candles:,}")
+    print(f"Новых свечей добавлено: {total_candles:,}")
+    print(f"Всего свечей в базе: {actual_total_candles:,}")
     print(f"Время выполнения: {elapsed_total:.0f} секунд ({elapsed_total/60:.1f} минут)")
     print()
     print(f"Данные сохранены в: data/ai/historical/")

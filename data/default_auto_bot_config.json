@@ -1,5 +1,5 @@
 {
-  "enabled": true,
+  "enabled": false,
   "max_concurrent": 10,
   "risk_cap_percent": 10,
   "scope": "all",
