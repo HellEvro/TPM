@@ -86,12 +86,34 @@ class AIManager:
         if AIConfig.AI_LSTM_ENABLED and features.get('lstm_predictor'):
             try:
                 lstm_module = self.premium_loader.get_ai_module('lstm_predictor')
-                self.lstm_predictor = lstm_module.LSTMPricePredictor()
+                self.lstm_predictor = lstm_module.LSTMPredictor(
+                    model_path=AIConfig.AI_LSTM_MODEL_PATH,
+                    scaler_path=AIConfig.AI_LSTM_SCALER_PATH
+                )
                 logger.info("[AI] ✅ LSTM Predictor загружен")
             except Exception as e:
-                logger.error(f"[AI] ❌ Ошибка загрузки LSTM Predictor: {e}")
+                logger.error(f"[AI] ❌ Ошибка загрузки LSTM Predictor (premium): {e}")
+                # Пробуем загрузить встроенную версию
+                try:
+                    from bot_engine.ai.lstm_predictor import LSTMPredictor
+                    self.lstm_predictor = LSTMPredictor(
+                        model_path=AIConfig.AI_LSTM_MODEL_PATH,
+                        scaler_path=AIConfig.AI_LSTM_SCALER_PATH
+                    )
+                    logger.info("[AI] ✅ LSTM Predictor загружен (встроенная версия)")
+                except Exception as e2:
+                    logger.error(f"[AI] ❌ Ошибка загрузки встроенного LSTM Predictor: {e2}")
         elif AIConfig.AI_LSTM_ENABLED:
-            logger.warning("[AI] ⚠️ LSTM Predictor недоступен в вашей лицензии")
+            # Пробуем загрузить встроенную версию даже без premium
+            try:
+                from bot_engine.ai.lstm_predictor import LSTMPredictor
+                self.lstm_predictor = LSTMPredictor(
+                    model_path=AIConfig.AI_LSTM_MODEL_PATH,
+                    scaler_path=AIConfig.AI_LSTM_SCALER_PATH
+                )
+                logger.info("[AI] ✅ LSTM Predictor загружен (встроенная версия, без premium)")
+            except Exception as e:
+                logger.warning("[AI] ⚠️ LSTM Predictor недоступен")
         
         # Загружаем Pattern Detector
         if AIConfig.AI_PATTERN_ENABLED and features.get('pattern_recognition'):
@@ -212,10 +234,19 @@ class AIManager:
         # LSTM Prediction
         if self.lstm_predictor:
             try:
-                # TODO: Реализовать LSTM предсказание
-                # lstm_pred = self.lstm_predictor.predict(candles)
-                # analysis['lstm_prediction'] = lstm_pred
-                pass
+                current_price = coin_data.get('current_price') or (candles[-1].get('close') if candles else None)
+                if current_price:
+                    lstm_pred = self.lstm_predictor.predict(candles, current_price)
+                    if lstm_pred and lstm_pred.get('confidence', 0) >= AIConfig.AI_LSTM_MIN_CONFIDENCE:
+                        analysis['lstm_prediction'] = lstm_pred
+                        
+                        if AIConfig.AI_LOG_PREDICTIONS:
+                            direction_str = "↑ ВВЕРХ" if lstm_pred['direction'] > 0 else "↓ ВНИЗ"
+                            logger.info(
+                                f"[AI] {symbol} 🧠 LSTM: {direction_str} "
+                                f"({lstm_pred['change_percent']:+.2f}%, "
+                                f"уверенность: {lstm_pred['confidence']:.1f}%)"
+                            )
             except Exception as e:
                 logger.error(f"[AI] Ошибка LSTM для {symbol}: {e}")
         

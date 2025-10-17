@@ -59,6 +59,17 @@ def load_mature_coins_storage():
                 mature_coins_storage.clear()
                 mature_coins_storage.update(loaded_data)
             
+            # ✅ ДОПОЛНИТЕЛЬНОЕ ИСПРАВЛЕНИЕ: Обновляем глобальную переменную в imports_and_globals
+            try:
+                import bots_modules.imports_and_globals as ig_module
+                if hasattr(ig_module, 'mature_coins_storage'):
+                    with ig_module.mature_coins_lock:
+                        ig_module.mature_coins_storage.clear()
+                        ig_module.mature_coins_storage.update(loaded_data)
+                    logger.debug(f"[MATURITY_STORAGE] ✅ Обновлена глобальная копия в imports_and_globals")
+            except Exception as sync_error:
+                logger.warning(f"[MATURITY_STORAGE] ⚠️ Не удалось синхронизировать с imports_and_globals: {sync_error}")
+            
             logger.info(f"[MATURITY_STORAGE] ✅ Загружено {len(mature_coins_storage)} зрелых монет из файла")
         else:
             with mature_coins_lock:

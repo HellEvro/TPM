@@ -1434,11 +1434,20 @@ def cleanup_inactive_manual():
 def get_mature_coins_list():
     """Получить список всех зрелых монет"""
     try:
-        with mature_coins_lock:
-            mature_coins_list = list(mature_coins_storage.keys())
+        # ✅ ИСПРАВЛЕНИЕ: Читаем данные напрямую из файла, а не из памяти
+        import json
+        import os
         
-            return jsonify({
-                'success': True,
+        mature_coins_file = 'data/mature_coins.json'
+        if os.path.exists(mature_coins_file):
+            with open(mature_coins_file, 'r', encoding='utf-8') as f:
+                mature_coins_data = json.load(f)
+            mature_coins_list = list(mature_coins_data.keys())
+        else:
+            mature_coins_list = []
+        
+        return jsonify({
+            'success': True,
             'mature_coins': mature_coins_list,
             'total_count': len(mature_coins_list)
         })
@@ -2403,6 +2412,7 @@ def reload_modules():
             'bots_modules.calculations',
             'bots_modules.maturity',
             'bots_modules.sync_and_cache',
+            'bots_modules.api_endpoints',
             'bot_engine.indicators',
         ]
         
