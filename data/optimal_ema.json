@@ -1759,19 +1759,19 @@
     "correct_signals": 991,
     "long_signals": 388,
     "short_signals": 608,
-    "last_updated": "2025-10-17T06:36:36.991449",
+    "last_updated": "2025-10-17T06:58:15.375407",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
   "CTK": {
     "ema_short_period": 155,
-    "ema_long_period": 215,
+    "ema_long_period": 220,
     "accuracy": 99.3103448275862,
     "total_signals": 1015,
     "correct_signals": 1008,
     "long_signals": 454,
     "short_signals": 561,
-    "last_updated": "2025-10-17T06:36:38.898435",
+    "last_updated": "2025-10-17T06:58:17.320422",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
@@ -1783,7 +1783,7 @@
     "correct_signals": 1032,
     "long_signals": 386,
     "short_signals": 654,
-    "last_updated": "2025-10-17T06:36:41.165931",
+    "last_updated": "2025-10-17T06:58:19.259706",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
   },
