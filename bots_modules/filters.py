@@ -1012,11 +1012,12 @@ def check_coin_maturity_stored_or_verify(symbol):
 
 def check_exit_scam_filter(symbol, coin_data):
     """
-    EXIT SCAM ФИЛЬТР
+    EXIT SCAM ФИЛЬТР + AI ANOMALY DETECTION
     
     Защита от резких движений цены (памп/дамп/скам):
     1. Одна свеча превысила максимальный % изменения
     2. N свечей суммарно превысили максимальный % изменения
+    3. ИИ обнаружил аномалию (если включен)
     """
     try:
         # Получаем настройки из конфига
@@ -1080,7 +1081,52 @@ def check_exit_scam_filter(symbol, coin_data):
                 logger.info(f"[EXIT_SCAM] {symbol}: Первая свеча: {first_open:.4f}, Последняя свеча: {last_close:.4f}")
                 return False
         
-        logger.info(f"[EXIT_SCAM] {symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН")
+        logger.info(f"[EXIT_SCAM] {symbol}: ✅ Базовые проверки пройдены")
+        
+        # 3. ПРОВЕРКА: AI Anomaly Detection (если включен)
+        try:
+            from bot_engine.bot_config import AIConfig
+            
+            if AIConfig.AI_ENABLED and AIConfig.AI_ANOMALY_DETECTION_ENABLED:
+                try:
+                    from bot_engine.ai.ai_manager import get_ai_manager
+                    
+                    ai_manager = get_ai_manager()
+                    
+                    if ai_manager and ai_manager.anomaly_detector:
+                        # Анализируем свечи с помощью ИИ
+                        anomaly_result = ai_manager.anomaly_detector.detect(candles)
+                        
+                        if anomaly_result.get('is_anomaly'):
+                            severity = anomaly_result.get('severity', 0)
+                            anomaly_type = anomaly_result.get('anomaly_type', 'UNKNOWN')
+                            
+                            # Блокируем если severity > threshold
+                            if severity > AIConfig.AI_ANOMALY_BLOCK_THRESHOLD:
+                                logger.warning(
+                                    f"[EXIT_SCAM] {symbol}: ❌ БЛОКИРОВКА (AI): "
+                                    f"Обнаружена аномалия {anomaly_type} "
+                                    f"(severity: {severity:.2%})"
+                                )
+                                return False
+                            else:
+                                logger.warning(
+                                    f"[EXIT_SCAM] {symbol}: ⚠️ ПРЕДУПРЕЖДЕНИЕ (AI): "
+                                    f"Аномалия {anomaly_type} "
+                                    f"(severity: {severity:.2%} - ниже порога {AIConfig.AI_ANOMALY_BLOCK_THRESHOLD:.2%})"
+                                )
+                        else:
+                            logger.debug(f"[EXIT_SCAM] {symbol}: ✅ AI: Аномалий не обнаружено")
+                    
+                except ImportError as e:
+                    logger.debug(f"[EXIT_SCAM] {symbol}: AI модуль не доступен: {e}")
+                except Exception as e:
+                    logger.error(f"[EXIT_SCAM] {symbol}: Ошибка AI проверки: {e}")
+        
+        except ImportError:
+            pass  # AIConfig не доступен - пропускаем AI проверку
+        
+        logger.info(f"[EXIT_SCAM] {symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН (включая AI)")
         return True
         
     except Exception as e:

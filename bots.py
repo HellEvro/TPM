@@ -305,6 +305,21 @@ if __name__ == '__main__':
         auto_bot_thread.start()
         logger.info("Auto Bot Worker запущен")
         
+        # Запускаем AI Auto Trainer (если включен)
+        try:
+            from bot_engine.bot_config import AIConfig
+            
+            if AIConfig.AI_ENABLED and AIConfig.AI_AUTO_TRAIN_ENABLED:
+                from bot_engine.ai.auto_trainer import start_auto_trainer
+                start_auto_trainer()
+                logger.info("🤖 AI Auto Trainer запущен (автообновление данных и переобучение)")
+            elif AIConfig.AI_ENABLED:
+                logger.info("🤖 AI модули включены (автообучение отключено)")
+        except ImportError as ai_import_error:
+            logger.debug(f"AI модули не доступны: {ai_import_error}")
+        except Exception as ai_error:
+            logger.warning(f"⚠️ Не удалось запустить AI Auto Trainer: {ai_error}")
+        
         run_bots_service()
         
     except KeyboardInterrupt:
@@ -316,6 +331,13 @@ if __name__ == '__main__':
         traceback.print_exc()
     finally:
         try:
+            # Останавливаем AI Auto Trainer
+            try:
+                from bot_engine.ai.auto_trainer import stop_auto_trainer
+                stop_auto_trainer()
+            except:
+                pass
+            
             cleanup_bot_service()
             print("✅ Сервис остановлен\n")
         except:
