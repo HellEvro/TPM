@@ -305,20 +305,31 @@ if __name__ == '__main__':
         auto_bot_thread.start()
         logger.info("Auto Bot Worker запущен")
         
-        # Запускаем AI Auto Trainer (если включен)
+        # Инициализируем AI Manager (проверка лицензии и загрузка модулей)
+        ai_manager = None
         try:
             from bot_engine.bot_config import AIConfig
             
-            if AIConfig.AI_ENABLED and AIConfig.AI_AUTO_TRAIN_ENABLED:
-                from bot_engine.ai.auto_trainer import start_auto_trainer
-                start_auto_trainer()
-                logger.info("🤖 AI Auto Trainer запущен (автообновление данных и переобучение)")
-            elif AIConfig.AI_ENABLED:
-                logger.info("🤖 AI модули включены (автообучение отключено)")
+            if AIConfig.AI_ENABLED:
+                logger.info("🤖 Инициализация AI модулей...")
+                from bot_engine.ai.ai_manager import get_ai_manager
+                ai_manager = get_ai_manager()
+                
+                # Если лицензия валидна и модули загружены, запускаем Auto Trainer
+                if ai_manager.is_available() and AIConfig.AI_AUTO_TRAIN_ENABLED:
+                    from bot_engine.ai.auto_trainer import start_auto_trainer
+                    start_auto_trainer()
+                    logger.info("🤖 AI Auto Trainer запущен (автообновление данных и переобучение)")
+                elif ai_manager.is_available():
+                    logger.info("🤖 AI модули активны (автообучение отключено)")
+                else:
+                    logger.warning("⚠️ AI модули не загружены (проверьте лицензию)")
+            else:
+                logger.info("ℹ️ AI модули отключены в конфигурации")
         except ImportError as ai_import_error:
             logger.debug(f"AI модули не доступны: {ai_import_error}")
         except Exception as ai_error:
-            logger.warning(f"⚠️ Не удалось запустить AI Auto Trainer: {ai_error}")
+            logger.warning(f"⚠️ Ошибка инициализации AI: {ai_error}")
         
         run_bots_service()
         

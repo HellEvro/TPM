@@ -28,6 +28,9 @@ class AIManager:
         # Кэш предсказаний
         self._predictions_cache = {}
         
+        # Кэш доступности (чтобы не проверять каждый раз)
+        self._availability_cache = None
+        
         # Загружаем модули
         self.load_modules()
     
@@ -46,6 +49,7 @@ class AIManager:
             logger.info("[AI]    1. Приобретите лицензию")
             logger.info("[AI]    2. Установите модуль: pip install infobot-ai-premium")
             logger.info("[AI]    3. Активируйте: python scripts/activate_premium.py")
+            logger.info("[AI] ⚠️ AI функции будут отключены до активации лицензии")
             return
         
         # Проверяем лицензию
@@ -53,6 +57,7 @@ class AIManager:
             logger.warning("[AI] ⚠️ Лицензия недействительна или отсутствует")
             logger.info("[AI] 💡 Активируйте лицензию: python scripts/activate_premium.py")
             logger.info("[AI] 💡 Или включите режим разработки: set AI_DEV_MODE=1")
+            logger.info("[AI] ⚠️ AI функции будут отключены до активации лицензии")
             return
         
         # Получаем информацию о лицензии
@@ -121,19 +126,25 @@ class AIManager:
     
     def is_available(self) -> bool:
         """
-        Проверяет доступность ИИ функций
+        Проверяет доступность ИИ функций (кэшированная проверка)
         
         Returns:
             True если хотя бы один модуль доступен
         """
-        return (self.premium_loader.premium_available and 
+        # Используем кэш для быстрой проверки
+        if self._availability_cache is None:
+            self._availability_cache = (
+                self.premium_loader.premium_available and 
                 self.premium_loader.license_valid and
                 any([
                     self.anomaly_detector is not None,
                     self.lstm_predictor is not None,
                     self.pattern_detector is not None,
                     self.risk_manager is not None
-                ]))
+                ])
+            )
+        
+        return self._availability_cache
     
     def analyze_coin(self, symbol: str, coin_data: dict, candles: list) -> Dict[str, Any]:
         """
