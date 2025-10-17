@@ -598,8 +598,9 @@ def load_all_coins_rsi():
         try:
             from bots_modules.imports_and_globals import get_exchange
             current_exchange = get_exchange()
-        except:
-            current_exchange = exchange
+        except Exception as e:
+            logger.error(f"[RSI] ❌ Ошибка получения биржи: {e}")
+            current_exchange = None
         
         # Получаем список всех пар
         if not current_exchange:
@@ -716,10 +717,10 @@ def load_all_coins_rsi():
         save_rsi_cache()
         
         # Обрабатываем торговые сигналы для существующих ботов
-        process_trading_signals_for_all_bots(exchange_obj=exchange)
+        process_trading_signals_for_all_bots(exchange_obj=current_exchange)
         
         # Проверяем автобот сигналы для создания новых ботов
-        process_auto_bot_signals(exchange_obj=exchange)  # ВКЛЮЧЕНО!
+        process_auto_bot_signals(exchange_obj=current_exchange)  # ВКЛЮЧЕНО!
         
         return True
         
@@ -899,7 +900,8 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                 logger.debug(f"[NEW_BOT_SIGNALS] 🔍 Обрабатываем бота {symbol}...")
                 
                 # Используем переданную биржу или глобальную переменную
-                exchange_to_use = exchange_obj if exchange_obj else exchange
+                from bots_modules.imports_and_globals import get_exchange
+                exchange_to_use = exchange_obj if exchange_obj else get_exchange()
                 
                 # Создаем экземпляр нового бота из сохраненных данных
                 trading_bot = NewTradingBot(symbol, bot_data, exchange_to_use)
@@ -1120,7 +1122,8 @@ def check_no_existing_position(symbol, signal):
 def create_new_bot(symbol, config=None, exchange_obj=None):
     """Создает нового бота"""
     try:
-        exchange_to_use = exchange_obj if exchange_obj else exchange
+        from bots_modules.imports_and_globals import get_exchange
+        exchange_to_use = exchange_obj if exchange_obj else get_exchange()
         
         # Получаем размер позиции из конфига
         with bots_data_lock:

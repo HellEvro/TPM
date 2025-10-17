@@ -329,3 +329,35 @@ InfoBot_Public/
 *.pfx
 *.p7b
 *.p7s
+
+# ===========================================
+# AI Premium Module
+# ===========================================
+# License files
+license.lic
+*.lic
+
+# Compiled premium modules
+infobot_ai_premium.pyd
+infobot_ai_premium.so
+*.pyd
+*.so
+
+# AI data files
+data/ai/historical/*.csv
+data/ai/training/*.npz
+data/ai/training/*.pkl
+data/ai/models/*.pkl
+data/ai/models/*.h5
+data/ai/models/*.pt
+data/ai/models/*.pth
+data/ai/models/*.onnx
+
+# Encrypted models
+*.encrypted
+
+# Premium build artifacts
+InfoBot_AI_Premium/dist/
+InfoBot_AI_Premium/build/
+InfoBot_AI_Premium/*.pyd
+InfoBot_AI_Premium/*.so

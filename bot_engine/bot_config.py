@@ -56,7 +56,7 @@ class VolumeMode:
 
 # Настройки Auto Bot по умолчанию
 DEFAULT_AUTO_BOT_CONFIG = {
-    'enabled': True,
+    'enabled': False,
     'max_concurrent': 5,
     'risk_cap_percent': 10,
     'scope': 'all',  # all | whitelist | blacklist
@@ -213,3 +213,52 @@ class ExchangeConfig:
     DEFAULT_EXCHANGE = 'bybit'
     SUPPORTED_EXCHANGES = ['bybit', 'binance', 'okx']
     FUTURES_ONLY = True
+
+# ==========================================
+# ИИ МОДУЛИ (ПРЕМИУМ ФУНКЦИИ)
+# ==========================================
+
+class AIConfig:
+    """
+    Настройки ИИ модулей
+    
+    ИИ функции являются премиум дополнением и требуют лицензии.
+    Для активации лицензии: python scripts/activate_premium.py
+    """
+    
+    # Общие настройки
+    AI_ENABLED = False  # Мастер-переключатель для всех ИИ модулей
+    AI_CONFIDENCE_THRESHOLD = 0.65  # Минимальная уверенность для применения рекомендации ИИ (0.0-1.0)
+    
+    # Anomaly Detection - обнаружение аномалий (pump/dump)
+    AI_ANOMALY_DETECTION_ENABLED = False
+    AI_ANOMALY_MODEL_PATH = 'data/ai/models/anomaly_detector.pkl'
+    AI_ANOMALY_SCALER_PATH = 'data/ai/models/anomaly_scaler.pkl'
+    AI_ANOMALY_BLOCK_THRESHOLD = 0.7  # Блокировать вход если severity > 70%
+    
+    # LSTM Predictor - предсказание движения цены
+    AI_LSTM_ENABLED = False
+    AI_LSTM_MODEL_PATH = 'data/ai/models/lstm_predictor.h5'
+    AI_LSTM_SCALER_PATH = 'data/ai/models/lstm_scaler.pkl'
+    AI_LSTM_WEIGHT = 1.5  # Вес в голосовании (если уверенность > 0.7)
+    AI_LSTM_MIN_CONFIDENCE = 0.6  # Минимальная уверенность для применения
+    
+    # Pattern Recognition - распознавание графических паттернов
+    AI_PATTERN_ENABLED = False
+    AI_PATTERN_MODEL_PATH = 'data/ai/models/pattern_detector.h5'
+    AI_PATTERN_WEIGHT = 1.0
+    AI_PATTERN_MIN_CONFIDENCE = 0.7
+    
+    # Dynamic Risk Management - умный SL/TP
+    AI_RISK_MANAGEMENT_ENABLED = False
+    AI_RISK_MODEL_PATH = 'data/ai/models/risk_manager.h5'
+    AI_RISK_UPDATE_INTERVAL = 300  # Обновление каждые 5 минут (в секундах)
+    
+    # Кэширование предсказаний
+    AI_CACHE_PREDICTIONS = True
+    AI_CACHE_TTL = 300  # Время жизни кэша в секундах (5 минут)
+    
+    # Логирование ИИ решений
+    AI_LOG_PREDICTIONS = True
+    AI_LOG_ANOMALIES = True
+    AI_LOG_PATTERNS = True
