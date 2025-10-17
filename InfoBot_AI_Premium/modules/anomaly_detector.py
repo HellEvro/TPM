@@ -19,12 +19,13 @@ logger = logging.getLogger('AI.AnomalyDetector')
 class AnomalyDetector:
     """Детектор аномалий для обнаружения pump/dump"""
     
-    def __init__(self, model_path: Optional[str] = None):
+    def __init__(self, model_path: Optional[str] = None, scaler_path: Optional[str] = None):
         """
         Инициализация детектора
         
         Args:
             model_path: Путь к сохраненной модели (если None, создается новая)
+            scaler_path: Путь к scaler (если None, определяется автоматически)
         """
         self.model = None
         self.scaler = None
@@ -36,7 +37,7 @@ class AnomalyDetector:
         
         # Пытаемся загрузить существующую модель
         if model_path and os.path.exists(model_path):
-            self.load_model(model_path)
+            self.load_model(model_path, scaler_path)
         else:
             # Создаем новую модель
             self.model = IsolationForest(
