@@ -683,7 +683,7 @@ class BotsManager {
                     }
                     
                     // Обновляем статус
-                    this.updateServiceStatus('online', `${window.languageUtils.translate('updated')}: ${data.last_update ? new Date(data.last_update).toLocaleTimeString() : 'неизвестно'}`);
+                    this.updateServiceStatus('online', `${window.languageUtils.translate('updated')}: ${data.last_update ? new Date(data.last_update).toLocaleTimeString() : window.languageUtils.translate('unknown')}`);
                 } else {
                     throw new Error(data.error || 'Ошибка загрузки данных');
                 }
@@ -710,8 +710,8 @@ class BotsManager {
             console.warn('[BotsManager] ⚠️ Нет данных RSI для отображения');
             coinsListElement.innerHTML = `
                 <div class="loading-state">
-                    <p>⏳ Загрузка данных RSI...</p>
-                    <small>Первая загрузка может занять несколько минут</small>
+                    <p>⏳ ${window.languageUtils.translate('loading_rsi_data')}</p>
+                    <small>${window.languageUtils.translate('first_load_warning')}</small>
                 </div>
             `;
             return;
