@@ -7903,5 +7903,33 @@
       }
     },
     "last_verified": 1760654873.7934802
+  },
+  "B2": {
+    "timestamp": 1760659296.1202404,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 520,
+        "min_required": 200,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 31.7,
+        "rsi_max": 86.0
+      }
+    }
+  },
+  "CAMP": {
+    "timestamp": 1760659314.4511766,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 200,
+        "min_required": 200,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 19.0,
+        "rsi_max": 68.7
+      }
+    }
   }
 }

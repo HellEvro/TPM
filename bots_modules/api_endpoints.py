@@ -2315,7 +2315,7 @@ def signal_handler(signum, frame):
         logger.error(f"[SHUTDOWN] ⚠️ Ошибка при graceful shutdown: {e}")
         os._exit(1)
 
-@app.route('/api/system/reload-modules', methods=['POST'])
+@bots_app.route('/api/system/reload-modules', methods=['POST'])
 def reload_modules():
     """Перезагружает модули без перезапуска сервера (Hot Reload)"""
     try:
