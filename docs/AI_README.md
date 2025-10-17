@@ -66,19 +66,26 @@ python bots.py
 
 ## 📚 ДОКУМЕНТАЦИЯ
 
-### Главные документы:
+### 📖 Руководства пользователя (ai_guides/):
 
-- **AI_QUICK_START.md** - Начните отсюда
-- **AI_IMPLEMENTATION_COMPLETE_SUMMARY.md** - Полная сводка
-- **AI_RISK_MANAGER.md** - Детали Risk Manager
-- **AI_CURRENT_VS_PLANNED.md** - Что работает vs планы
+- **[📖_START_HERE.md](ai_guides/📖_START_HERE.md)** - ⭐ НАЧНИТЕ С ЭТОГО!
+- **[AI_QUICK_START.md](ai_guides/AI_QUICK_START.md)** - Быстрый старт
 
-### Технические:
+### 🔧 Технические детали (ai_technical/):
 
-- **AI_INITIALIZATION.md** - Инициализация
-- **AI_DATA_COLLECTION_LOGIC.md** - Сбор данных
-- **AI_AUTO_TRAINING_CONFIG.md** - Автообучение
-- **AI_IMPLEMENTATION_CHECKLIST.md** - Прогресс
+- **[AI_INITIALIZATION.md](ai_technical/AI_INITIALIZATION.md)** - Инициализация AI
+- **[AI_RISK_MANAGER.md](ai_technical/AI_RISK_MANAGER.md)** - Dynamic Risk Manager
+- **[AI_DATA_COLLECTION_LOGIC.md](ai_technical/AI_DATA_COLLECTION_LOGIC.md)** - Сбор данных
+- **[AI_AUTO_TRAINING_CONFIG.md](ai_technical/AI_AUTO_TRAINING_CONFIG.md)** - Автообучение
+- **[AI_UI_CONFIGURATION.md](ai_technical/AI_UI_CONFIGURATION.md)** - UI управление
+
+### 🚧 Разработка (ai_development/):
+
+- **[AI_IMPLEMENTATION_CHECKLIST.md](ai_development/AI_IMPLEMENTATION_CHECKLIST.md)** - Прогресс (42%)
+- **[AI_IMPLEMENTATION_COMPLETE_SUMMARY.md](ai_development/AI_IMPLEMENTATION_COMPLETE_SUMMARY.md)** - Полная сводка
+- **[AI_CURRENT_VS_PLANNED.md](ai_development/AI_CURRENT_VS_PLANNED.md)** - Что работает vs планы
+- **[AI_PREMIUM_ARCHITECTURE.md](ai_development/AI_PREMIUM_ARCHITECTURE.md)** - Premium архитектура
+- **[AI_COMPLETE_WORK_SUMMARY.md](ai_development/AI_COMPLETE_WORK_SUMMARY.md)** - Итоги работы
 
 ---
 

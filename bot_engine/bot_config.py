@@ -227,14 +227,14 @@ class AIConfig:
     """
     
     # Общие настройки
-    AI_ENABLED = True  # Мастер-переключатель для всех ИИ модулей
+    AI_ENABLED = True
     AI_CONFIDENCE_THRESHOLD = 0.65  # Минимальная уверенность для применения рекомендации ИИ (0.0-1.0)
     
     # Anomaly Detection - обнаружение аномалий (pump/dump)
     AI_ANOMALY_DETECTION_ENABLED = True
     AI_ANOMALY_MODEL_PATH = 'data/ai/models/anomaly_detector.pkl'
     AI_ANOMALY_SCALER_PATH = 'data/ai/models/anomaly_scaler.pkl'
-    AI_ANOMALY_BLOCK_THRESHOLD = 0.7  # Блокировать вход если severity > 70%
+    AI_ANOMALY_BLOCK_THRESHOLD = 0.7
     
     # LSTM Predictor - предсказание движения цены
     AI_LSTM_ENABLED = False
@@ -250,9 +250,9 @@ class AIConfig:
     AI_PATTERN_MIN_CONFIDENCE = 0.7
     
     # Dynamic Risk Management - умный SL/TP
-    AI_RISK_MANAGEMENT_ENABLED = True  # ✅ Включён (встроенная версия)
+    AI_RISK_MANAGEMENT_ENABLED = True
     AI_RISK_MODEL_PATH = 'data/ai/models/risk_manager.h5'
-    AI_RISK_UPDATE_INTERVAL = 300  # Обновление каждые 5 минут (в секундах)
+    AI_RISK_UPDATE_INTERVAL = 300
     
     # Кэширование предсказаний
     AI_CACHE_PREDICTIONS = True
@@ -268,20 +268,20 @@ class AIConfig:
     # ==========================================
     
     # Включить автоматическое обучение
-    AI_AUTO_TRAIN_ENABLED = True  # True = автоматическое обновление данных и переобучение
+    AI_AUTO_TRAIN_ENABLED = True
     
     # Первичная настройка при старте (если модель не найдена)
     AI_AUTO_TRAIN_ON_STARTUP = True  # True = автоматически собрать данные и обучить модель
     
     # Частота обновления данных
-    AI_AUTO_UPDATE_DATA = True  # True = автоматически обновлять данные
-    AI_DATA_UPDATE_INTERVAL = 86400  # 24 часа (ежедневное обновление)
+    AI_AUTO_UPDATE_DATA = True
+    AI_DATA_UPDATE_INTERVAL = 86400
     AI_UPDATE_COINS_COUNT = 0  # 0 = ВСЕ монеты с биржи (инкрементальное обновление)
     AI_INITIAL_COINS_COUNT = 0  # 0 = ВСЕ монеты при первичной настройке (полная история)
     
     # Частота переобучения модели
-    AI_AUTO_RETRAIN = True  # True = автоматически переобучать модель
-    AI_RETRAIN_INTERVAL = 604800  # 7 дней (еженедельное переобучение)
+    AI_AUTO_RETRAIN = True
+    AI_RETRAIN_INTERVAL = 604800
     
     # Время запуска обучения (по умолчанию - ночью)
-    AI_RETRAIN_HOUR = 3  # 3:00 AM (когда меньше активности)
+    AI_RETRAIN_HOUR = 3
