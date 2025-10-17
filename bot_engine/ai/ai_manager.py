@@ -71,7 +71,11 @@ class AIManager:
         if AIConfig.AI_ANOMALY_DETECTION_ENABLED and features.get('anomaly_detection'):
             try:
                 anomaly_module = self.premium_loader.get_ai_module('anomaly_detector')
-                self.anomaly_detector = anomaly_module.AnomalyDetector()
+                # Передаём пути к обученной модели и scaler
+                self.anomaly_detector = anomaly_module.AnomalyDetector(
+                    model_path=AIConfig.AI_ANOMALY_MODEL_PATH,
+                    scaler_path=AIConfig.AI_ANOMALY_SCALER_PATH
+                )
                 logger.info("[AI] ✅ Anomaly Detector загружен")
             except Exception as e:
                 logger.error(f"[AI] ❌ Ошибка загрузки Anomaly Detector: {e}")
