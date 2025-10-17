@@ -367,6 +367,61 @@ const TRANSLATIONS = {
         'min_volatility_label': 'Мин. волатильность (%):',
         'min_volatility_help': 'Минимальная волатильность для торговли (защита от мертвых монет)',
         
+        // AI Модули
+        'ai_modules_title': 'AI Модули (Premium)',
+        'ai_modules_description': 'Умное управление торговлей с помощью машинного обучения',
+        'license_active': 'Лицензия активна',
+        'license_invalid': 'Лицензия недействительна',
+        'ai_master_switch': '🤖 Включить AI модули:',
+        'ai_master_help': 'Мастер-переключатель для всех AI функций',
+        
+        // Anomaly Detection
+        'anomaly_detection_title': 'Anomaly Detection',
+        'anomaly_enabled_label': 'Обнаружение аномалий:',
+        'anomaly_enabled_help': 'Блокировать входы при обнаружении PUMP/DUMP',
+        'anomaly_threshold_label': 'Порог блокировки:',
+        'anomaly_threshold_help': 'Блокировать если severity > этого значения (0.7 = 70%)',
+        'anomaly_log_label': 'Логировать аномалии:',
+        'anomaly_log_help': 'Записывать обнаруженные аномалии в логи',
+        
+        // Risk Management
+        'risk_management_title': 'Risk Management',
+        'risk_enabled_label': 'Умное управление рисками:',
+        'risk_enabled_help': 'Адаптивные SL/TP и размер позиции',
+        'risk_update_interval_label': 'Интервал обновления:',
+        'risk_update_help': 'Частота мониторинга открытых позиций (рекомендуется 300 сек = 5 минут)',
+        
+        // Auto Training
+        'auto_training_title': 'Auto Training',
+        'auto_train_enabled_label': 'Автоматическое обучение:',
+        'auto_train_help': 'Автоматическое обновление данных и переобучение модели',
+        'auto_update_data_label': 'Обновление данных:',
+        'auto_update_help': 'Ежедневное обновление исторических данных',
+        'data_update_interval_label': 'Интервал обновления данных:',
+        'data_update_interval_help': '24 часа (86400 сек) = ежедневное обновление',
+        'auto_retrain_label': 'Автоматическое переобучение:',
+        'auto_retrain_help': 'Еженедельное переобучение модели',
+        'retrain_interval_label': 'Интервал переобучения:',
+        'retrain_interval_help': '7 дней (604800 сек) = еженедельное переобучение',
+        'retrain_hour_label': 'Время переобучения:',
+        'retrain_hour_help': 'Час для запуска переобучения (3 = 3:00 AM, минимальная нагрузка)',
+        
+        // AI Logging
+        'ai_logging_title': 'Логирование AI',
+        'log_predictions_label': 'Логировать предсказания:',
+        'log_predictions_help': 'Записывать все AI решения в логи',
+        'log_anomalies_label': 'Логировать аномалии:',
+        'log_anomalies_help': 'Записывать обнаруженные аномалии в логи',
+        
+        // Кнопки
+        'save_ai_section_btn': '💾 Сохранить AI настройки',
+        
+        // Единицы измерения
+        'seconds_unit': 'сек',
+        'hours_unit': 'часов',
+        'days_unit': 'дней',
+        'hour_unit': 'час',
+        
         rapidGrowth: 'Быстрорастущие позиции',
         clear: 'Очистить',
         noPositions: 'Нет позиций',
@@ -1013,6 +1068,61 @@ const TRANSLATIONS = {
         'max_rsi_high_help': 'RSI should have risen to this level (close to overbought)',
         'min_volatility_label': 'Min volatility (%):',
         'min_volatility_help': 'Minimum volatility for trading (protection from dead coins)',
+        
+        // AI Modules
+        'ai_modules_title': 'AI Modules (Premium)',
+        'ai_modules_description': 'Smart trading management using machine learning',
+        'license_active': 'License Active',
+        'license_invalid': 'License Invalid',
+        'ai_master_switch': '🤖 Enable AI modules:',
+        'ai_master_help': 'Master switch for all AI features',
+        
+        // Anomaly Detection
+        'anomaly_detection_title': 'Anomaly Detection',
+        'anomaly_enabled_label': 'Anomaly detection:',
+        'anomaly_enabled_help': 'Block entries when PUMP/DUMP detected',
+        'anomaly_threshold_label': 'Block threshold:',
+        'anomaly_threshold_help': 'Block if severity > this value (0.7 = 70%)',
+        'anomaly_log_label': 'Log anomalies:',
+        'anomaly_log_help': 'Write detected anomalies to logs',
+        
+        // Risk Management
+        'risk_management_title': 'Risk Management',
+        'risk_enabled_label': 'Smart risk management:',
+        'risk_enabled_help': 'Adaptive SL/TP and position sizing',
+        'risk_update_interval_label': 'Update interval:',
+        'risk_update_help': 'Frequency of open positions monitoring (recommended 300 sec = 5 minutes)',
+        
+        // Auto Training
+        'auto_training_title': 'Auto Training',
+        'auto_train_enabled_label': 'Automatic training:',
+        'auto_train_help': 'Automatic data update and model retraining',
+        'auto_update_data_label': 'Data update:',
+        'auto_update_help': 'Daily update of historical data',
+        'data_update_interval_label': 'Data update interval:',
+        'data_update_interval_help': '24 hours (86400 sec) = daily update',
+        'auto_retrain_label': 'Automatic retraining:',
+        'auto_retrain_help': 'Weekly model retraining',
+        'retrain_interval_label': 'Retrain interval:',
+        'retrain_interval_help': '7 days (604800 sec) = weekly retraining',
+        'retrain_hour_label': 'Retrain time:',
+        'retrain_hour_help': 'Hour to start retraining (3 = 3:00 AM, minimal load)',
+        
+        // AI Logging
+        'ai_logging_title': 'AI Logging',
+        'log_predictions_label': 'Log predictions:',
+        'log_predictions_help': 'Write all AI decisions to logs',
+        'log_anomalies_label': 'Log anomalies:',
+        'log_anomalies_help': 'Write detected anomalies to logs',
+        
+        // Buttons
+        'save_ai_section_btn': '💾 Save AI Settings',
+        
+        // Units
+        'seconds_unit': 'sec',
+        'hours_unit': 'hours',
+        'days_unit': 'days',
+        'hour_unit': 'hour',
         
         rapidGrowth: 'Rapid Growth Positions',
         clear: 'Clear',
