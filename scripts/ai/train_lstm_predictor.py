@@ -221,36 +221,33 @@ def main():
     print("STARTING TRAINING")
     print("=" * 60)
     
-    predictor = LSTMPredictor()
+    # Создаем новый предиктор БЕЗ загрузки существующей модели
+    predictor = LSTMPredictor(
+        model_path="data/ai/models/lstm_predictor_new.h5",  # Временный путь
+        scaler_path="data/ai/models/lstm_scaler_new.pkl"
+    )
     
-    # Подготавливаем данные для scaler
-    print("\nPreparing data for normalization...")
-    
-    # Собираем все X для обучения scaler
-    X_list = [x for x, _ in training_data]
-    X_all = np.vstack(X_list)
-    
-    # Обучаем scaler
-    predictor.scaler.fit(X_all.reshape(-1, X_all.shape[-1]))
-    print("[OK] Scaler trained")
-    
-    # Нормализуем данные
-    print("Normalizing data...")
-    normalized_data = []
-    for X, y in training_data:
-        X_scaled = predictor.scaler.transform(X)
-        normalized_data.append((X_scaled, y))
-    
-    print(f"[OK] Normalized: {len(normalized_data)} samples")
-    
-    # Обучаем модель
+    # Обучаем модель (она сама нормализует данные внутри)
     print("\nTraining neural network...")
+    print(f"Training samples: {len(training_data)}")
+    
     result = predictor.train(
-        training_data=normalized_data,
+        training_data=training_data,  # Передаем ненормализованные данные
         validation_split=0.2,
         epochs=args.epochs,
         batch_size=args.batch_size
     )
+    
+    # Переименовываем модель в финальную версию
+    if result.get('success'):
+        import shutil
+        final_model = "data/ai/models/lstm_predictor.h5"
+        final_scaler = "data/ai/models/lstm_scaler.pkl"
+        
+        if os.path.exists("data/ai/models/lstm_predictor_new.h5"):
+            shutil.move("data/ai/models/lstm_predictor_new.h5", final_model)
+        if os.path.exists("data/ai/models/lstm_scaler_new.pkl"):
+            shutil.move("data/ai/models/lstm_scaler_new.pkl", final_scaler)
     
     # Выводим результаты
     print("\n" + "=" * 60)

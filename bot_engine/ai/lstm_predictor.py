@@ -27,7 +27,7 @@ try:
     from tensorflow import keras
     from tensorflow.keras import layers
     from tensorflow.keras.models import Sequential, load_model
-    from tensorflow.keras.layers import LSTM, Dense, Dropout, BatchNormalization
+    from tensorflow.keras.layers import Input, LSTM, Dense, Dropout, BatchNormalization
     from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
     from sklearn.preprocessing import MinMaxScaler
     TENSORFLOW_AVAILABLE = True
@@ -89,10 +89,13 @@ class LSTMPredictor:
         sequence_length = self.config['sequence_length']
         n_features = len(self.config['features'])
         
-        # Архитектура LSTM модели
+        # Архитектура LSTM модели (современный подход)
         self.model = Sequential([
+            # Входной слой
+            Input(shape=(sequence_length, n_features)),
+            
             # Первый LSTM слой с возвратом последовательностей
-            LSTM(128, return_sequences=True, input_shape=(sequence_length, n_features)),
+            LSTM(128, return_sequences=True),
             Dropout(0.2),
             BatchNormalization(),
             
