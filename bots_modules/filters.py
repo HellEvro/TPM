@@ -1087,13 +1087,19 @@ def check_exit_scam_filter(symbol, coin_data):
         try:
             from bot_engine.bot_config import AIConfig
             
+            # Быстрая проверка: AI включен и Anomaly Detection включен
             if AIConfig.AI_ENABLED and AIConfig.AI_ANOMALY_DETECTION_ENABLED:
                 try:
                     from bot_engine.ai.ai_manager import get_ai_manager
                     
                     ai_manager = get_ai_manager()
                     
-                    if ai_manager and ai_manager.anomaly_detector:
+                    # Быстрая проверка доступности: если AI недоступен, пропускаем
+                    if not ai_manager.is_available():
+                        # AI модули не загружены (нет лицензии или не установлены)
+                        # Не логируем каждый раз, чтобы не спамить
+                        pass
+                    elif ai_manager.anomaly_detector:
                         # Анализируем свечи с помощью ИИ
                         anomaly_result = ai_manager.anomaly_detector.detect(candles)
                         
