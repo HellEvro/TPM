@@ -452,7 +452,8 @@ def analyze_trend_6h(symbol, exchange_obj=None):
         
         # Получаем свечи 6H для анализа тренда (нужно больше данных для длинной EMA)
         # Используем переданную биржу или глобальную переменную
-        exchange_to_use = exchange_obj if exchange_obj else exchange
+        from bots_modules.imports_and_globals import get_exchange
+        exchange_to_use = exchange_obj if exchange_obj else get_exchange()
         if not exchange_to_use:
             logger.error(f"[TREND] ❌ Биржа не доступна для анализа тренда {symbol}")
             return None

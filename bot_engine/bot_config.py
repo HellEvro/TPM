@@ -50,7 +50,7 @@ class VolumeMode:
 
 # Настройки Auto Bot по умолчанию
 DEFAULT_AUTO_BOT_CONFIG = {
-    'enabled': False,
+    'enabled': True,
     'max_concurrent': 5,
     'risk_cap_percent': 10,
     'scope': 'all',  # all | whitelist | blacklist
@@ -61,23 +61,23 @@ DEFAULT_AUTO_BOT_CONFIG = {
     'rsi_short_threshold': 71,  # Вход в SHORT при RSI >= 71
     'rsi_exit_long': 65,        # Выход из LONG при RSI >= 65
     'rsi_exit_short': 35,       # Выход из SHORT при RSI <= 35
-    'default_position_size': 10.0,  # Размер позиции в USDT
+    'default_position_size': 10,  # Размер позиции в USDT
     'check_interval': 180,      # Интервал проверки в секундах (3 мин = 180 сек)
     'monitoring_interval': 10,  # Интервал мониторинга активных ботов в секундах
     # Торговые настройки
     'trading_enabled': True,    # Включить реальную торговлю
     'use_test_server': False,   # Использовать тестовый сервер
-    'max_risk_per_trade': 2.0,  # Максимальный риск на сделку в %
+    'max_risk_per_trade': 2,  # Максимальный риск на сделку в %
     # Защитные механизмы
-    'max_loss_percent': 15.0,   # Максимальный убыток в % от входа (стоп-лосс)
-    'trailing_stop_activation': 300.0,  # Активация trailing stop при прибыли в % (x3 = 300%)
-    'trailing_stop_distance': 150.0,    # Расстояние trailing stop в % (x1.5 = 150%)
+    'max_loss_percent': 15,   # Максимальный убыток в % от входа (стоп-лосс)
+    'trailing_stop_activation': 300,  # Активация trailing stop при прибыли в % (x3 = 300%)
+    'trailing_stop_distance': 150,    # Расстояние trailing stop в % (x1.5 = 150%)
     'max_position_hours': 0,     # Максимальное время удержания позиции в часах (0 = отключено)
     'break_even_protection': True,      # Защита безубыточности
-    'break_even_trigger': 100.0,        # Триггер для break even в % (x1 = 100%)
+    'break_even_trigger': 100,        # Триггер для break even в % (x1 = 100%)
     # Фильтры по тренду
-    'avoid_down_trend': False,          # Не входить в LONG при нисходящем тренде (ОТКЛЮЧЕНО для тестирования)
-    'avoid_up_trend': False,            # Не входить в SHORT при восходящем тренде (ОТКЛЮЧЕНО для тестирования)
+    'avoid_down_trend': True,          # Не входить в LONG при нисходящем тренде (КРИТИЧЕСКИ ВАЖНО!)
+    'avoid_up_trend': True,            # Не входить в SHORT при восходящем тренде (КРИТИЧЕСКИ ВАЖНО!)
     # Настройки зрелости монет
     'enable_maturity_check': True,      # Включить проверку зрелости монет
     'min_candles_for_maturity': 400,    # Минимум свечей для зрелой монеты (100 дней на 6H)
@@ -91,9 +91,9 @@ DEFAULT_AUTO_BOT_CONFIG = {
     # ExitScam фильтр (защита от резких движений цены)
     'exit_scam_enabled': True,          # Включить проверку на ExitScam
     'exit_scam_candles': 10,            # Количество свечей для проверки (10 = 60 часов на 6H)
-    'exit_scam_single_candle_percent': 15.0,  # Максимальный % изменения одной свечи (15% = блокировка)
+    'exit_scam_single_candle_percent': 15,  # Максимальный % изменения одной свечи (15% = блокировка)
     'exit_scam_multi_candle_count': 4,        # Количество свечей для суммарного анализа
-    'exit_scam_multi_candle_percent': 50.0,   # Максимальный суммарный % за N свечей (50% = блокировка)
+    'exit_scam_multi_candle_percent': 50,   # Максимальный суммарный % за N свечей (50% = блокировка)
 }
 
 # Настройки по умолчанию для отдельного бота
@@ -123,7 +123,7 @@ class SystemConfig:
     RSI_CANDLE_CHECK_INTERVAL = 300  # 5 минут для проверки изменений текущей свечи
     
     # Улучшенная система RSI
-    ENHANCED_RSI_ENABLED = True  # Включить улучшенную систему RSI для сильных трендов
+    ENHANCED_RSI_ENABLED = False  # Включить улучшенную систему RSI для сильных трендов (ОТКЛЮЧЕНО для тестирования)
     ENHANCED_RSI_REQUIRE_VOLUME_CONFIRMATION = True  # Требовать подтверждение объемом
     ENHANCED_RSI_REQUIRE_DIVERGENCE_CONFIRMATION = True  # Требовать подтверждение дивергенцией (строгий режим)
     ENHANCED_RSI_USE_STOCH_RSI = True  # Использовать Stochastic RSI для дополнительного подтверждения
