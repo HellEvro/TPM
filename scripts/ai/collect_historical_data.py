@@ -120,24 +120,49 @@ def collect_data_for_coin(exchange, symbol, days=730):
     
     # Сохраняем данные
     if all_candles:
-        df = pd.DataFrame(all_candles)
+        new_df = pd.DataFrame(all_candles)
         
-        # Убираем дубликаты по timestamp
-        df = df.drop_duplicates(subset=['timestamp'], keep='first')
+        # Убираем дубликаты в новых данных
+        new_df = new_df.drop_duplicates(subset=['timestamp'], keep='first')
         
-        # Сортируем от старых к новым
-        df = df.sort_values('timestamp')
-        
-        # Сохраняем в CSV
+        # Подготавливаем путь к файлу
         output_dir = Path('data/ai/historical')
         output_dir.mkdir(parents=True, exist_ok=True)
-        
         output_file = output_dir / f'{symbol}_6h_historical.csv'
-        df.to_csv(output_file, index=False)
         
-        # Выводим только итоговую информацию
-        print(f"  Saved: {len(df)} candles")
-        return len(df)
+        # ИНКРЕМЕНТАЛЬНОЕ ОБНОВЛЕНИЕ: объединяем со старыми данными
+        if output_file.exists():
+            try:
+                # Загружаем существующие данные
+                old_df = pd.read_csv(output_file)
+                
+                # Объединяем старые + новые
+                combined_df = pd.concat([old_df, new_df], ignore_index=True)
+                
+                # Убираем дубликаты (оставляем более новую запись)
+                combined_df = combined_df.drop_duplicates(subset=['timestamp'], keep='last')
+                
+                # Сортируем от старых к новым
+                combined_df = combined_df.sort_values('timestamp')
+                
+                # Сохраняем объединённые данные
+                combined_df.to_csv(output_file, index=False)
+                
+                new_count = len(combined_df) - len(old_df)
+                print(f"  Updated: {len(old_df)} -> {len(combined_df)} (+{new_count} new candles)")
+                return new_count
+            except Exception as e:
+                print(f"  [WARNING] Error loading old data: {e}, overwriting...")
+                # Если ошибка при чтении старого файла, перезаписываем
+                new_df.to_csv(output_file, index=False)
+                print(f"  Saved: {len(new_df)} candles (overwritten)")
+                return len(new_df)
+        else:
+            # Файл не существует, создаём новый
+            new_df = new_df.sort_values('timestamp')
+            new_df.to_csv(output_file, index=False)
+            print(f"  Created: {len(new_df)} candles")
+            return len(new_df)
     
     print(f"  [WARNING] No data to save")
     return 0
