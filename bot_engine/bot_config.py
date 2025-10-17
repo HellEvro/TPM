@@ -56,8 +56,8 @@ class VolumeMode:
 
 # Настройки Auto Bot по умолчанию
 DEFAULT_AUTO_BOT_CONFIG = {
-    'enabled': True,
-    'max_concurrent': 5,
+    'enabled': False,
+    'max_concurrent': 10,
     'risk_cap_percent': 10,
     'scope': 'all',  # all | whitelist | blacklist
     'whitelist': [],
@@ -250,7 +250,7 @@ class AIConfig:
     AI_PATTERN_MIN_CONFIDENCE = 0.7
     
     # Dynamic Risk Management - умный SL/TP
-    AI_RISK_MANAGEMENT_ENABLED = False
+    AI_RISK_MANAGEMENT_ENABLED = True  # ✅ Включён (встроенная версия)
     AI_RISK_MODEL_PATH = 'data/ai/models/risk_manager.h5'
     AI_RISK_UPDATE_INTERVAL = 300  # Обновление каждые 5 минут (в секундах)
     

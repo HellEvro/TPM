@@ -2,7 +2,7 @@
   "bots": {},
   "auto_bot_config": {
     "enabled": false,
-    "max_concurrent": 5,
+    "max_concurrent": 10,
     "risk_cap_percent": 10,
     "scope": "all",
     "whitelist": [],
@@ -39,6 +39,6 @@
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50
   },
-  "last_saved": "2025-10-17T06:59:47.498368",
+  "last_saved": "2025-10-17T14:39:11.709294",
   "version": "1.0"
 }

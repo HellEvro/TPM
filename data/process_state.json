@@ -2,14 +2,14 @@
   "process_state": {
     "smart_rsi_manager": {
       "active": true,
-      "last_update": "2025-10-17T06:59:47.135882",
+      "last_update": "2025-10-17T14:38:11.103046",
       "update_count": 49,
       "last_error": null
     },
     "auto_bot_worker": {
       "active": false,
-      "last_check": "2025-10-17T06:57:49.658911",
-      "check_count": 55,
+      "last_check": "2025-10-17T14:32:58.064801",
+      "check_count": 202,
       "last_error": "name 'STOP_LOSS_SETUP_INTERVAL' is not defined",
       "enabled": true,
       "interval_seconds": 180
@@ -22,8 +22,8 @@
     },
     "exchange_connection": {
       "initialized": true,
-      "last_sync": "2025-10-17T06:59:47.134960",
-      "connection_count": 138,
+      "last_sync": "2025-10-17T14:38:11.102078",
+      "connection_count": 140,
       "last_error": null
     },
     "auto_bot_signals": {
@@ -33,6 +33,6 @@
       "last_error": null
     }
   },
-  "last_saved": "2025-10-17T06:59:47.135888",
+  "last_saved": "2025-10-17T14:38:11.103052",
   "version": "1.0"
 }
