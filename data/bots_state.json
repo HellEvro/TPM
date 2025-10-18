@@ -1,5 +1,23 @@
 {
-  "bots": {},
+  "bots": {
+    "CAMP": {
+      "symbol": "CAMP",
+      "status": "running",
+      "auto_managed": false,
+      "volume_mode": "usdt",
+      "volume_value": 5,
+      "position": null,
+      "entry_price": null,
+      "entry_time": null,
+      "last_signal_time": null,
+      "last_bar_timestamp": null,
+      "created_at": "2025-10-19T00:32:51.764273",
+      "scaling_enabled": false,
+      "scaling_levels": [],
+      "scaling_current_level": 0,
+      "scaling_group_id": null
+    }
+  },
   "auto_bot_config": {
     "enabled": true,
     "max_concurrent": 10,
@@ -39,6 +57,6 @@
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50
   },
-  "last_saved": "2025-10-18T21:26:28.812165",
+  "last_saved": "2025-10-19T00:35:22.301550",
   "version": "1.0"
 }
