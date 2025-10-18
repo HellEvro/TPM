@@ -76,6 +76,8 @@ except ImportError as e:
         return {}
     def save_auto_bot_config():
         pass
+    def save_bots_state():
+        pass
     def get_effective_signal(coin):
         # Используем настоящую функцию из filters.py
         from bots_modules.filters import get_effective_signal as real_get_effective_signal

@@ -6070,7 +6070,7 @@ class BotsManager {
             console.error('[BotsManager] ❌ Ошибка загрузки зрелых монет:', error);
         }
     }
-
+    
     /**
      * Показывает уведомление
      */
@@ -6286,7 +6286,7 @@ class BotsManager {
             this.displayBotTrades([]);
         }
     }
-
+    
     /**
      * Загружает сигналы ботов
      */
