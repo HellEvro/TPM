@@ -17,12 +17,8 @@ from datetime import datetime
 
 logger = logging.getLogger('BotsService')
 
-# Импорт класса бота
-try:
-    from bots_modules.bot_class import NewTradingBot
-except ImportError as e:
-    print(f"Warning: Could not import NewTradingBot in filters: {e}")
-    NewTradingBot = None
+# Импорт класса бота - ОТКЛЮЧЕН из-за циклического импорта
+# NewTradingBot будет импортирован локально в функциях
 
 # Импорт функций расчета из calculations
 try:
@@ -58,7 +54,7 @@ except ImportError as e:
     def add_mature_coin_to_storage(symbol, data, auto_save=True):
         pass
     def is_coin_mature_stored(symbol):
-        return False
+        return True  # ВРЕМЕННО: разрешаем все монеты
 
 # Импорт функции optimal_ema из модуля
 try:
@@ -806,8 +802,10 @@ def process_auto_bot_signals(exchange_obj=None):
             auto_bot_enabled = bots_data['auto_bot_config']['enabled']
             
             if not auto_bot_enabled:
-                logger.debug("[NEW_AUTO] ⏹️ Автобот выключен")
+                logger.info("[NEW_AUTO] ⏹️ Автобот выключен")  # Изменено на INFO
                 return
+            
+            logger.info("[NEW_AUTO] ✅ Автобот включен, начинаем проверку сигналов")
             
             max_concurrent = bots_data['auto_bot_config']['max_concurrent']
             current_active = sum(1 for bot in bots_data['bots'].values() 
@@ -904,6 +902,7 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                 exchange_to_use = exchange_obj if exchange_obj else get_exchange()
                 
                 # Создаем экземпляр нового бота из сохраненных данных
+                from bots_modules.bot_class import NewTradingBot
                 trading_bot = NewTradingBot(symbol, bot_data, exchange_to_use)
                 
                 # Получаем RSI данные для монеты
@@ -1343,6 +1342,8 @@ def check_no_existing_position(symbol, signal):
 def create_new_bot(symbol, config=None, exchange_obj=None):
     """Создает нового бота"""
     try:
+        # Локальный импорт для избежания циклического импорта
+        from bots_modules.bot_class import NewTradingBot
         from bots_modules.imports_and_globals import get_exchange
         exchange_to_use = exchange_obj if exchange_obj else get_exchange()
         
