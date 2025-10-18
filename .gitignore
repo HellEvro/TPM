@@ -213,11 +213,15 @@ logs/
 *.log.*
 
 # Data files (trading data, positions, etc.)
-data/
+# data/
 # Исключения: ИИ данные ДОЛЖНЫ быть в git
 !data/ai/
 !data/ai/models/
 !data/ai/models/*.pkl
+!data/ai/models/*.h5
+!data/ai/models/*.pt
+!data/ai/models/*.pth
+!data/ai/models/*.onnx
 !data/ai/historical/
 !data/ai/historical/*.csv
 !data/ai/training/
@@ -243,9 +247,9 @@ temp/
 tmp/
 
 # Database files
-*.db
-*.sqlite
-*.sqlite3
+# *.db
+#*.sqlite
+# *.sqlite3
 
 # Backup files
 *.backup
@@ -356,18 +360,18 @@ infobot_ai_premium.so
 *.so
 
 # AI data files (large files that shouldn't be in git)
-data/ai/historical/*.csv
-data/ai/training/*.npz
+# data/ai/historical/*.csv
+# data/ai/training/*.npz
 
-# NOTE: Обученные модели (.pkl) ДОЛЖНЫ быть в git!
-# Они небольшие (~1 MB) и критичны для работы
+# NOTE: ВСЕ обученные модели ДОЛЖНЫ быть в git!
+# Все модели критичны для работы системы
 # data/ai/models/*.pkl - КОММИТИМ!
+# data/ai/models/*.h5 - КОММИТИМ!
+# data/ai/models/*.pt - КОММИТИМ!
 
-# Большие deep learning модели (если появятся)
-data/ai/models/*.h5
-data/ai/models/*.pt
-data/ai/models/*.pth
-data/ai/models/*.onnx
+# Большие deep learning модели - ВКЛЮЧАЕМ В GIT!
+# Все обученные модели критичны для работы
+# Правила уже добавлены выше в разделе data/ исключений
 
 # Encrypted models
 *.encrypted
