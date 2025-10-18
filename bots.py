@@ -283,6 +283,17 @@ def run_bots_service():
         )
     except KeyboardInterrupt:
         raise
+    except SystemExit as e:
+        if e.code == 42:
+            # Специальный код для горячей перезагрузки
+            logger.info("🔄 Горячая перезагрузка: перезапуск сервера...")
+            print("🔄 Горячая перезагрузка: перезапуск сервера...")
+            # Запускаем новый процесс
+            import subprocess
+            subprocess.Popen([sys.executable] + sys.argv)
+            sys.exit(0)
+        else:
+            raise
     except Exception as e:
         logger.error(f"Ошибка запуска Flask сервера: {e}")
         raise
