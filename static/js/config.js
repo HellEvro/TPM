@@ -393,6 +393,24 @@ const TRANSLATIONS = {
         'anomaly_log_label': 'Логировать аномалии:',
         'anomaly_log_help': 'Записывать обнаруженные аномалии в логи',
         
+        // LSTM Predictor
+        'lstm_predictor_title': 'LSTM Predictor',
+        'lstm_enabled_label': 'LSTM предсказание цены:',
+        'lstm_enabled_help': 'Использовать нейронную сеть для предсказания движения цены',
+        'lstm_min_confidence_label': 'Минимальная уверенность:',
+        'lstm_min_confidence_help': 'Минимальная уверенность LSTM для применения (0.6 = 60%)',
+        'lstm_weight_label': 'Вес в голосовании:',
+        'lstm_weight_help': 'Влияние LSTM на общее решение (1.5 = повышенный вес)',
+        
+        // Pattern Recognition
+        'pattern_recognition_title': 'Pattern Recognition',
+        'pattern_enabled_label': 'Распознавание паттернов:',
+        'pattern_enabled_help': 'Анализ классических графических паттернов (H&S, Double Top, и др.)',
+        'pattern_min_confidence_label': 'Минимальная уверенность:',
+        'pattern_min_confidence_help': 'Минимальная уверенность паттернов для применения (0.6 = 60%)',
+        'pattern_weight_label': 'Вес в голосовании:',
+        'pattern_weight_help': 'Влияние паттернов на общее решение (1.2 = повышенный вес)',
+        
         // Risk Management
         'risk_management_title': 'Risk Management',
         'risk_enabled_label': 'Умное управление рисками:',
@@ -421,6 +439,8 @@ const TRANSLATIONS = {
         'log_predictions_help': 'Записывать все AI решения в логи',
         'log_anomalies_label': 'Логировать аномалии:',
         'log_anomalies_help': 'Записывать обнаруженные аномалии в логи',
+        'log_patterns_label': 'Логировать паттерны:',
+        'log_patterns_help': 'Записывать найденные графические паттерны в логи',
         
         // Кнопки
         'save_ai_section_btn': '💾 Сохранить AI настройки',
@@ -1104,6 +1124,24 @@ const TRANSLATIONS = {
         'anomaly_log_label': 'Log anomalies:',
         'anomaly_log_help': 'Write detected anomalies to logs',
         
+        // LSTM Predictor
+        'lstm_predictor_title': 'LSTM Predictor',
+        'lstm_enabled_label': 'LSTM price prediction:',
+        'lstm_enabled_help': 'Use neural network for price movement prediction',
+        'lstm_min_confidence_label': 'Minimum confidence:',
+        'lstm_min_confidence_help': 'Minimum LSTM confidence for application (0.6 = 60%)',
+        'lstm_weight_label': 'Voting weight:',
+        'lstm_weight_help': 'LSTM influence on final decision (1.5 = higher weight)',
+        
+        // Pattern Recognition
+        'pattern_recognition_title': 'Pattern Recognition',
+        'pattern_enabled_label': 'Pattern recognition:',
+        'pattern_enabled_help': 'Analysis of classic chart patterns (H&S, Double Top, etc.)',
+        'pattern_min_confidence_label': 'Minimum confidence:',
+        'pattern_min_confidence_help': 'Minimum pattern confidence for application (0.6 = 60%)',
+        'pattern_weight_label': 'Voting weight:',
+        'pattern_weight_help': 'Pattern influence on final decision (1.2 = higher weight)',
+        
         // Risk Management
         'risk_management_title': 'Risk Management',
         'risk_enabled_label': 'Smart risk management:',
@@ -1132,6 +1170,8 @@ const TRANSLATIONS = {
         'log_predictions_help': 'Write all AI decisions to logs',
         'log_anomalies_label': 'Log anomalies:',
         'log_anomalies_help': 'Write detected anomalies to logs',
+        'log_patterns_label': 'Log patterns:',
+        'log_patterns_help': 'Write detected chart patterns to logs',
         
         // Buttons
         'save_ai_section_btn': '💾 Save AI Settings',

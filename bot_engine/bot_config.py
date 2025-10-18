@@ -244,10 +244,11 @@ class AIConfig:
     AI_LSTM_MIN_CONFIDENCE = 0.6  # Минимальная уверенность для применения
     
     # Pattern Recognition - распознавание графических паттернов
-    AI_PATTERN_ENABLED = False
-    AI_PATTERN_MODEL_PATH = 'data/ai/models/pattern_detector.h5'
-    AI_PATTERN_WEIGHT = 1.0
-    AI_PATTERN_MIN_CONFIDENCE = 0.7
+    AI_PATTERN_ENABLED = True  # Включено для увеличения прибыли
+    AI_PATTERN_MODEL_PATH = 'data/ai/models/pattern_detector.pkl'
+    AI_PATTERN_SCALER_PATH = 'data/ai/models/pattern_scaler.pkl'
+    AI_PATTERN_WEIGHT = 1.2  # Вес в голосовании
+    AI_PATTERN_MIN_CONFIDENCE = 0.6  # Минимальная уверенность для применения
     
     # Dynamic Risk Management - умный SL/TP
     AI_RISK_MANAGEMENT_ENABLED = True
