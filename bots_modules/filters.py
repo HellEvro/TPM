@@ -1368,6 +1368,26 @@ def create_new_bot(symbol, config=None, exchange_obj=None):
         with bots_data_lock:
             bots_data['bots'][symbol] = new_bot.to_dict()
         
+        # ВХОДИМ В ПОЗИЦИЮ СРАЗУ ПОСЛЕ СОЗДАНИЯ БОТА!
+        logger.info(f"[CREATE_BOT] 🚀 Входим в позицию для {symbol}...")
+        entry_result = new_bot.enter_position('LONG')
+        
+        if entry_result and entry_result.get('success'):
+            logger.info(f"[CREATE_BOT] ✅ Бот {symbol} успешно вошел в LONG позицию!")
+            # Обновляем время последнего обновления
+            with bots_data_lock:
+                bots_data['bots'][symbol]['last_update_time'] = datetime.now().isoformat()
+            
+            # Сохраняем состояние ботов
+            try:
+                from bots_modules.sync_and_cache import save_bots_state
+                save_bots_state()
+                logger.info(f"[CREATE_BOT] 💾 Состояние бота {symbol} сохранено")
+            except Exception as e:
+                logger.warning(f"[CREATE_BOT] ⚠️ Не удалось сохранить состояние: {e}")
+        else:
+            logger.error(f"[CREATE_BOT] ❌ Бот {symbol} не смог войти в позицию: {entry_result}")
+        
         logger.info(f"[CREATE_BOT] ✅ Бот для {symbol} создан успешно")
         return new_bot
         
