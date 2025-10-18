@@ -107,20 +107,14 @@ class SmartRSIManager:
     def should_process_trading_signals_after_update(self) -> tuple[bool, str, int]:
         """
         Определяет, нужно ли обрабатывать торговые сигналы после обновления RSI
-        (только если свеча недавно закрылась)
+        ВСЕГДА обрабатываем сигналы - убираем глупое условие закрытия свечи!
         """
         current_time = int(time.time())
         last_candle_close = self.get_last_6h_candle_close()
         
-        # Проверяем, закрылась ли свеча недавно (в пределах допуска)
-        time_since_close = current_time - last_candle_close
-        
-        if 0 <= time_since_close <= self.candle_close_tolerance:
-            # Проверяем, что эту свечу мы еще не обрабатывали
-            if last_candle_close not in self.processed_candles:
-                return True, f"свеча закрылась {time_since_close//60}м назад", last_candle_close
-        
-        return False, f"свеча закрылась {time_since_close//60}м назад (слишком давно или уже обработана)", last_candle_close
+        # ВСЕГДА обрабатываем торговые сигналы!
+        # Убираем глупое условие ожидания закрытия свечи
+        return True, f"обработка сигналов включена всегда", last_candle_close
     
     def check_significant_price_changes(self) -> bool:
         """

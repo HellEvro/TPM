@@ -74,7 +74,7 @@ try:
     from bots_modules.filters import load_all_coins_rsi, process_trading_signals_for_all_bots, process_auto_bot_signals
     from bots_modules.sync_and_cache import (
         save_default_config, load_system_config,
-        load_bots_state, load_process_state, check_startup_position_conflicts,
+        load_bots_state, save_bots_state, load_process_state, check_startup_position_conflicts,
         sync_bots_with_exchange, update_process_state, save_auto_bot_config
     )
 except ImportError as e:
@@ -91,6 +91,8 @@ except ImportError as e:
     def load_auto_bot_config():
         pass
     def load_bots_state():
+        pass
+    def save_bots_state():
         pass
     def load_process_state():
         pass
@@ -257,18 +259,17 @@ def init_bot_service():
         global system_initialized
         system_initialized = True
         
-        # КРИТИЧЕСКИ ВАЖНО: Проверяем Auto Bot при старте - он ДОЛЖЕН быть выключен!
+        # Проверяем статус Auto Bot при старте
         with bots_data_lock:
             auto_bot_enabled = bots_data['auto_bot_config']['enabled']
         auto_bot_config = bots_data['auto_bot_config']
         bots_count = len(bots_data['bots'])
             
-        # ПРИНУДИТЕЛЬНО выключаем автобот при старте системы для безопасности!
+        # Логируем статус Auto Bot
         if auto_bot_enabled:
-            logger.warning("[INIT] ⚠️ Автобот включен при старте! Принудительно выключаем для безопасности...")
-            bots_data['auto_bot_config']['enabled'] = False
-            auto_bot_enabled = False
-            save_auto_bot_config()  # Сохраняем изменение
+            logger.info("[INIT] ✅ Автобот включен и готов к работе")
+        else:
+            logger.info("[INIT] ⏹️ Автобот выключен. Включите через UI при необходимости.")
         
         # ✅ ИТОГОВАЯ ИНФОРМАЦИЯ О ЗАПУСКЕ
         logger.info("=" * 80)
