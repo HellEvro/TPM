@@ -46,9 +46,10 @@ try:
         save_optimal_ema_periods,
         restore_default_config, load_default_config
     )
+    from bots_modules.init_functions import ensure_exchange_initialized, create_bot
     from bots_modules.maturity import (
         save_mature_coins_storage, load_mature_coins_storage,
-        remove_mature_coin_from_storage
+        remove_mature_coin_from_storage, check_coin_maturity_with_storage
     )
     from bots_modules.optimal_ema import (
         load_optimal_ema_data, update_optimal_ema_data

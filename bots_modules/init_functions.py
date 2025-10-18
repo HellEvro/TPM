@@ -71,7 +71,7 @@ try:
     from bots_modules.maturity import load_mature_coins_storage
     from bots_modules.optimal_ema import load_optimal_ema_data
     from bots_modules.imports_and_globals import load_auto_bot_config
-    from bots_modules.filters import load_all_coins_rsi, process_trading_signals_for_all_bots
+    from bots_modules.filters import load_all_coins_rsi, process_trading_signals_for_all_bots, process_auto_bot_signals
     from bots_modules.sync_and_cache import (
         save_default_config, load_system_config,
         load_bots_state, load_process_state, check_startup_position_conflicts,
@@ -512,7 +512,7 @@ def process_trading_signals_on_candle_close(candle_timestamp: int, exchange_obj=
             logger.info("[TRADING] 📭 Нет активных ботов для обработки сигналов")
             # Но все равно проверяем Auto Bot сигналы!
             logger.info("[TRADING] 🤖 Проверяем Auto Bot сигналы (нет активных ботов)...")
-            # process_auto_bot_signals(exchange_obj=exchange_obj)  # ОТКЛЮЧЕНО!
+            process_auto_bot_signals(exchange_obj=exchange_obj)  # ВКЛЮЧЕНО!
             return
         
         logger.info(f"[TRADING] 🤖 Обработка сигналов для {len(active_bots)} активных ботов")
@@ -563,7 +563,7 @@ def process_trading_signals_on_candle_close(candle_timestamp: int, exchange_obj=
             auto_bot_enabled = bots_data['auto_bot_config']['enabled']
         if auto_bot_enabled:
             logger.info("[TRADING]  Проверяем Auto Bot сигналы после обработки существующих ботов...")
-            # process_auto_bot_signals(exchange_obj=exchange_obj)  # ОТКЛЮЧЕНО!
+            process_auto_bot_signals(exchange_obj=exchange_obj)  # ВКЛЮЧЕНО!
         
         # Сохраняем состояние после обработки сигналов
         save_bots_state()
