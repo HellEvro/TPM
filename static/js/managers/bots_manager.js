@@ -841,36 +841,50 @@ class BotsManager {
     generateEnhancedSignalInfo(coin) {
         // Генерирует дополнительную информацию о сигнале
         const enhancedRsi = coin.enhanced_rsi;
-        
-        if (!enhancedRsi || !enhancedRsi.enabled) {
-            return '';
-        }
-        
-        const extremeDuration = enhancedRsi.extreme_duration;
-        const confirmations = enhancedRsi.confirmations || {};
-        
         let infoElements = [];
         
-        // Показываем продолжительность в экстремальной зоне
-        if (extremeDuration > 0) {
-            infoElements.push(`<span class="extreme-duration" title="Время в экстремальной зоне">${extremeDuration}🕐</span>`);
+        // console.log(`[DEBUG] ${coin.symbol}: enhanced_rsi =`, enhancedRsi);
+        
+        // СТОХАСТИК - показываем ВСЕГДА если есть данные!
+        let stochK = null;
+        let stochD = null;
+        
+        // Проверяем разные источники данных стохастика
+        if (coin.stoch_rsi_k !== undefined && coin.stoch_rsi_k !== null) {
+            stochK = coin.stoch_rsi_k;
+            stochD = coin.stoch_rsi_d || 0;
+        } else if (enhancedRsi && enhancedRsi.confirmations) {
+            stochK = enhancedRsi.confirmations.stoch_rsi_k;
+            stochD = enhancedRsi.confirmations.stoch_rsi_d || 0;
         }
         
-        // Показываем подтверждения
-        if (confirmations.volume) {
-            infoElements.push(`<span class="confirmation-volume" title="Подтверждение объемом">📊</span>`);
-        }
-        
-        if (confirmations.divergence) {
-            const divIcon = confirmations.divergence === 'BULLISH_DIVERGENCE' ? '📈' : '📉';
-            infoElements.push(`<span class="confirmation-divergence" title="Дивергенция: ${confirmations.divergence}">${divIcon}</span>`);
-        }
-        
-        if (confirmations.stoch_rsi_k !== undefined && confirmations.stoch_rsi_k !== null) {
-            const stochK = confirmations.stoch_rsi_k;
-            const stochD = confirmations.stoch_rsi_d || 0;
+        if (stochK !== null && stochK !== undefined) {
             const stochIcon = stochK < 20 ? '⬇️' : stochK > 80 ? '⬆️' : '➡️';
+            console.log(`[DEBUG] ${coin.symbol}: ГЕНЕРИРУЮ СТОХАСТИК %K=${stochK}, %D=${stochD}, icon=${stochIcon}`);
             infoElements.push(`<span class="confirmation-stoch" title="Stochastic RSI: %K=${stochK.toFixed(1)}, %D=${stochD.toFixed(1)}">${stochIcon}</span>`);
+        } else {
+            console.log(`[DEBUG] ${coin.symbol}: НЕТ СТОХАСТИКА - stoch_rsi_k=${coin.stoch_rsi_k}, enhanced_rsi=${!!enhancedRsi}`);
+        }
+        
+        // Enhanced RSI данные - только если включен
+        if (enhancedRsi && enhancedRsi.enabled) {
+            const extremeDuration = enhancedRsi.extreme_duration;
+            const confirmations = enhancedRsi.confirmations || {};
+            
+            // Показываем продолжительность в экстремальной зоне
+            if (extremeDuration > 0) {
+                infoElements.push(`<span class="extreme-duration" title="Время в экстремальной зоне">${extremeDuration}🕐</span>`);
+            }
+            
+            // Показываем подтверждения
+            if (confirmations.volume) {
+                infoElements.push(`<span class="confirmation-volume" title="Подтверждение объемом">📊</span>`);
+            }
+            
+            if (confirmations.divergence) {
+                const divIcon = confirmations.divergence === 'BULLISH_DIVERGENCE' ? '📈' : '📉';
+                infoElements.push(`<span class="confirmation-divergence" title="Дивергенция: ${confirmations.divergence}">${divIcon}</span>`);
+            }
         }
         
         if (infoElements.length > 0) {
@@ -885,8 +899,11 @@ class BotsManager {
         const timeFilterInfo = coin.time_filter_info;
         
         if (!timeFilterInfo) {
+            console.log(`[DEBUG] ${coin.symbol}: НЕТ time_filter_info`);
             return '';
         }
+        
+        console.log(`[DEBUG] ${coin.symbol}: time_filter_info =`, timeFilterInfo);
         
         const isBlocked = timeFilterInfo.blocked;
         const reason = timeFilterInfo.reason;
@@ -915,10 +932,14 @@ class BotsManager {
             }
         }
         
+        console.log(`[DEBUG] ${coin.symbol}: isBlocked=${isBlocked}, reason="${reason}", icon="${icon}", title="${title}"`);
+        
         if (icon && title) {
+            console.log(`[DEBUG] ${coin.symbol}: ГЕНЕРИРУЮ ИКОНКУ RSI Time Filter`);
             return `<div class="time-filter-info ${className}" title="${title}">${icon}</div>`;
         }
         
+        console.log(`[DEBUG] ${coin.symbol}: НЕ ГЕНЕРИРУЮ ИКОНКУ - icon="${icon}", title="${title}"`);
         return '';
     }
     
@@ -1294,6 +1315,410 @@ class BotsManager {
         }
         
         console.log('[BotsManager] ✅ Информация о монете обновлена полностью');
+        
+        // Обновляем активные иконки монеты
+        this.updateActiveCoinIcons();
+        
+        // ПРИНУДИТЕЛЬНО ПОКАЗЫВАЕМ СТАТУС БОТА
+        setTimeout(() => {
+            const botStatusItem = document.getElementById('botStatusItem');
+            if (botStatusItem) {
+                botStatusItem.style.display = 'flex';
+                console.log('[BotsManager] 🔧 ПРИНУДИТЕЛЬНО ПОКАЗАН СТАТУС БОТА');
+            }
+        }, 100);
+    }
+    
+    updateActiveCoinIcons() {
+        if (!this.selectedCoin) return;
+        
+        const coin = this.selectedCoin;
+        const activeStatusData = {};
+        
+        // Тренд убираем - он уже показан выше в ТРЕНД 6Н
+        
+        // Зону RSI убираем - она уже показана выше в ЗОНА RSI
+        
+        // 2. Статус бота - показываем всегда
+        activeStatusData.bot = coin.bot_status || 'Нет бота';
+        
+        // 3. ФИЛЬТРЫ - проверяем ВСЕ возможные поля
+        
+        // Подтверждение объемом (Volume Confirmation) - проверяем разные поля
+        if (coin.volume_confirmation && coin.volume_confirmation !== 'NONE' && coin.volume_confirmation !== null) {
+            activeStatusData.volume_confirmation = coin.volume_confirmation;
+        } else if (coin.volume_confirmation_status && coin.volume_confirmation_status !== 'NONE') {
+            activeStatusData.volume_confirmation = coin.volume_confirmation_status;
+        } else if (coin.volume_status && coin.volume_status !== 'NONE') {
+            activeStatusData.volume_confirmation = coin.volume_status;
+        }
+        
+        // Стохастик (Stochastic) - проверяем разные поля
+        let stochValue = null;
+        if (coin.stochastic_rsi && coin.stochastic_rsi !== 'NONE' && coin.stochastic_rsi !== null) {
+            stochValue = coin.stochastic_rsi;
+        } else if (coin.stochastic_status && coin.stochastic_status !== 'NONE') {
+            stochValue = coin.stochastic_status;
+        } else if (coin.stochastic && coin.stochastic !== 'NONE') {
+            stochValue = coin.stochastic;
+        } else if (coin.stoch_rsi_k !== undefined && coin.stoch_rsi_k !== null) {
+            // Используем числовые значения стохастика
+            const stochK = coin.stoch_rsi_k;
+            const stochD = coin.stoch_rsi_d || 0;
+            stochValue = `%K=${stochK.toFixed(1)}, %D=${stochD.toFixed(1)}`;
+        } else if (coin.enhanced_rsi && coin.enhanced_rsi.confirmations) {
+            const stochK = coin.enhanced_rsi.confirmations.stoch_rsi_k;
+            const stochD = coin.enhanced_rsi.confirmations.stoch_rsi_d || 0;
+            if (stochK !== undefined && stochK !== null) {
+                stochValue = `%K=${stochK.toFixed(1)}, %D=${stochD.toFixed(1)}`;
+            }
+        }
+        
+        if (stochValue) {
+            activeStatusData.stochastic_rsi = stochValue;
+        }
+        
+        // ExitScam защита (ExitScam Protection) - проверяем разные поля
+        if (coin.exit_scam_status && coin.exit_scam_status !== 'NONE' && coin.exit_scam_status !== null) {
+            activeStatusData.exit_scam = coin.exit_scam_status;
+        } else if (coin.exit_scam && coin.exit_scam !== 'NONE') {
+            activeStatusData.exit_scam = coin.exit_scam;
+        } else if (coin.scam_status && coin.scam_status !== 'NONE') {
+            activeStatusData.exit_scam = coin.scam_status;
+        }
+        
+        // RSI Time Filter - проверяем разные поля
+        if (coin.rsi_time_filter && coin.rsi_time_filter !== 'NONE' && coin.rsi_time_filter !== null) {
+            activeStatusData.rsi_time_filter = coin.rsi_time_filter;
+        } else if (coin.time_filter && coin.time_filter !== 'NONE') {
+            activeStatusData.rsi_time_filter = coin.time_filter;
+        } else if (coin.rsi_time_status && coin.rsi_time_status !== 'NONE') {
+            activeStatusData.rsi_time_filter = coin.rsi_time_status;
+        }
+        
+        // Enhanced RSI Warning (если есть)
+        if (coin.enhanced_rsi?.warning_type && coin.enhanced_rsi.warning_type !== 'ERROR') {
+            activeStatusData.enhanced_warning = coin.enhanced_rsi.warning_type;
+        }
+        
+        // Manual Position (если есть)
+        if (coin.is_manual_position) {
+            activeStatusData.manual_position = 'MANUAL';
+        }
+        
+        // Maturity (если незрелая)
+        if (coin.is_mature === false) {
+            activeStatusData.maturity = 'IMMATURE';
+        }
+        
+        console.log('[BotsManager] 🎯 Обновление активных иконок:', activeStatusData);
+        console.log('[BotsManager] 🔍 ВСЕ ДАННЫЕ МОНЕТЫ:', coin);
+        
+        // Обновляем иконки в верхнем блоке
+        this.updateCoinStatusIcons(activeStatusData);
+        
+        // ОТЛАДКА: Принудительно показываем ВСЕ фильтры для тестирования
+        this.forceShowAllFilters();
+    }
+    
+    getRsiZone(rsi) {
+        if (rsi === '-' || rsi === null || rsi === undefined) return 'NEUTRAL';
+        if (rsi <= 30) return 'OVERSOLD';
+        if (rsi >= 70) return 'OVERBOUGHT';
+        return 'NEUTRAL';
+    }
+    
+    updateCoinStatusIcons(activeStatusData) {
+        // Обновляем основные иконки
+        this.updateStatusIcon('rsiIcon', activeStatusData.zone);
+        this.updateStatusIcon('trendIcon', activeStatusData.trend);
+        this.updateStatusIcon('zoneIcon', activeStatusData.zone);
+        this.updateStatusIcon('signalIcon', activeStatusData.signal);
+        
+        // Обновляем дополнительные фильтры
+        this.updateFilterItem('volumeConfirmationItem', 'selectedCoinVolumeConfirmation', 'volumeConfirmationIcon', 
+                             activeStatusData.volume_confirmation, 'Подтверждение объемом');
+        
+        this.updateFilterItem('stochasticItem', 'selectedCoinStochastic', 'stochasticIcon', 
+                             activeStatusData.stochastic_rsi, 'Стохастик');
+        
+        this.updateFilterItem('exitScamItem', 'selectedCoinExitScam', 'exitScamIcon', 
+                             activeStatusData.exit_scam, 'ExitScam защита');
+        
+        this.updateFilterItem('rsiTimeFilterItem', 'selectedCoinRsiTimeFilter', 'rsiTimeFilterIcon', 
+                             activeStatusData.rsi_time_filter, 'RSI Time Filter');
+        
+        this.updateFilterItem('botStatusItem', 'selectedCoinBotStatus', 'botStatusIcon', 
+                             activeStatusData.bot, 'Статус бота');
+    }
+    
+    updateStatusIcon(iconId, statusValue) {
+        const iconElement = document.getElementById(iconId);
+        if (iconElement && statusValue) {
+            const icon = this.getStatusIcon('zone', statusValue); // Используем зону как базовую
+            iconElement.textContent = icon;
+            iconElement.style.display = 'inline';
+        } else if (iconElement) {
+            iconElement.style.display = 'none';
+        }
+    }
+    
+    updateFilterItem(itemId, valueId, iconId, statusValue, label) {
+        const itemElement = document.getElementById(itemId);
+        const valueElement = document.getElementById(valueId);
+        const iconElement = document.getElementById(iconId);
+        
+        if (itemElement && valueElement && iconElement) {
+            if (statusValue && statusValue !== 'NONE' && statusValue !== null && statusValue !== undefined) {
+                itemElement.style.display = 'flex';
+                valueElement.textContent = statusValue;
+                
+                // Получаем правильную иконку для каждого типа статуса
+                let icon = '❓';
+                let description = '';
+                
+                if (label === 'Подтверждение объемом') {
+                    if (statusValue.includes('CONFIRMED')) { icon = '📊'; description = 'Объем подтвержден'; }
+                    else if (statusValue.includes('NOT_CONFIRMED')) { icon = '❌'; description = 'Объем не подтвержден'; }
+                    else if (statusValue.includes('LOW_VOLUME')) { icon = '⚠️'; description = 'Низкий объем'; }
+                    else if (statusValue.includes('HIGH_VOLUME')) { icon = '📈'; description = 'Высокий объем'; }
+                }
+                else if (label === 'Стохастик') {
+                    if (statusValue.includes('OVERSOLD')) { icon = '🔴'; description = 'Stochastic перепродан'; }
+                    else if (statusValue.includes('OVERBOUGHT')) { icon = '🟢'; description = 'Stochastic перекуплен'; }
+                    else if (statusValue.includes('NEUTRAL')) { icon = '🟡'; description = 'Stochastic нейтральный'; }
+                    else if (statusValue.includes('BULLISH')) { icon = '📈'; description = 'Stochastic бычий сигнал'; }
+                    else if (statusValue.includes('BEARISH')) { icon = '📉'; description = 'Stochastic медвежий сигнал'; }
+                }
+                else if (label === 'ExitScam защита') {
+                    if (statusValue.includes('SAFE')) { icon = '🛡️'; description = 'ExitScam: Безопасно'; }
+                    else if (statusValue.includes('RISK')) { icon = '⚠️'; description = 'ExitScam: Риск обнаружен'; }
+                    else if (statusValue.includes('SCAM')) { icon = '🚨'; description = 'ExitScam: Возможный скам'; }
+                    else if (statusValue.includes('CHECKING')) { icon = '🔍'; description = 'ExitScam: Проверка'; }
+                }
+                else if (label === 'RSI Time Filter') {
+                    if (statusValue.includes('ALLOWED')) { icon = '✅'; description = 'RSI Time Filter разрешен'; }
+                    else if (statusValue.includes('BLOCKED')) { icon = '❌'; description = 'RSI Time Filter заблокирован'; }
+                    else if (statusValue.includes('WAITING')) { icon = '⏳'; description = 'RSI Time Filter ожидание'; }
+                    else if (statusValue.includes('TIMEOUT')) { icon = '⏰'; description = 'RSI Time Filter таймаут'; }
+                }
+                else if (label === 'Статус бота') {
+                    if (statusValue === 'Нет бота') { icon = '❓'; description = 'Бот не создан'; }
+                    else if (statusValue.includes('running')) { icon = '🟢'; description = 'Бот активен и работает'; }
+                    else if (statusValue.includes('waiting')) { icon = '🔵'; description = 'Ожидание сигнала'; }
+                    else if (statusValue.includes('error')) { icon = '🔴'; description = 'Ошибка в работе'; }
+                    else if (statusValue.includes('stopped')) { icon = '🔴'; description = 'Бот остановлен'; }
+                    else if (statusValue.includes('in_position')) { icon = '🟣'; description = 'В позиции'; }
+                    else if (statusValue.includes('paused')) { icon = '⚪'; description = 'Приостановлен'; }
+                }
+                
+                iconElement.textContent = icon;
+                iconElement.title = `${label}: ${description || statusValue}`;
+                valueElement.title = `${label}: ${description || statusValue}`;
+            } else {
+                itemElement.style.display = 'none';
+            }
+        }
+    }
+    
+    getStatusIcon(statusType, statusValue) {
+        const iconMap = {
+            'OVERSOLD': '🔴',
+            'OVERBOUGHT': '🟢',
+            'NEUTRAL': '🟡',
+            'UP': '📈',
+            'DOWN': '📉'
+        };
+        
+        return iconMap[statusValue] || '';
+    }
+    
+    forceShowAllFilters() {
+        console.log('[BotsManager] 🔧 ПРИНУДИТЕЛЬНО ПОКАЗЫВАЕМ ВСЕ ФИЛЬТРЫ');
+        
+        if (!this.selectedCoin) return;
+        const coin = this.selectedCoin;
+        
+        // Получаем РЕАЛЬНЫЕ данные из объекта coin и конфига
+        const realFilters = [];
+        
+        // 1. Ручная позиция
+        if (coin.is_manual_position) {
+            realFilters.push({
+                itemId: 'manualPositionItem',
+                valueId: 'selectedCoinManualPosition',
+                iconId: 'manualPositionIcon',
+                value: 'Ручная позиция',
+                icon: '✋',
+                description: 'Монета в ручной позиции'
+            });
+        }
+        
+        // 2. Зрелость монеты
+        if (coin.is_mature) {
+            realFilters.push({
+                itemId: 'maturityDiamondItem',
+                valueId: 'selectedCoinMaturityDiamond',
+                iconId: 'maturityDiamondIcon',
+                value: `Зрелая (${coin.candles_count || 'N/A'} свечей)`,
+                icon: '💎',
+                description: 'Монета имеет достаточно истории'
+            });
+        }
+        
+        // 3. Enhanced RSI данные
+        if (coin.enhanced_rsi && coin.enhanced_rsi.enabled) {
+            const enhancedRsi = coin.enhanced_rsi;
+            
+            // Время в экстремальной зоне
+            if (enhancedRsi.extreme_duration > 0) {
+                realFilters.push({
+                    itemId: 'extremeDurationItem',
+                    valueId: 'selectedCoinExtremeDuration',
+                    iconId: 'extremeDurationIcon',
+                    value: `${enhancedRsi.extreme_duration}🕐`,
+                    icon: '🕐',
+                    description: 'Время в экстремальной зоне RSI'
+                });
+            }
+            
+            // Подтверждения
+            if (enhancedRsi.confirmations) {
+                const conf = enhancedRsi.confirmations;
+                
+                // Подтверждение объемом
+                if (conf.volume) {
+                    realFilters.push({
+                        itemId: 'volumeConfirmationItem',
+                        valueId: 'selectedCoinVolumeConfirmation',
+                        iconId: 'volumeConfirmationIcon',
+                        value: 'Подтвержден объемом',
+                        icon: '📊',
+                        description: 'Объем подтверждает сигнал'
+                    });
+                }
+                
+                // Дивергенция
+                if (conf.divergence) {
+                    const divIcon = conf.divergence === 'BULLISH_DIVERGENCE' ? '📈' : '📉';
+                    realFilters.push({
+                        itemId: 'divergenceItem',
+                        valueId: 'selectedCoinDivergence',
+                        iconId: 'divergenceIcon',
+                        value: conf.divergence,
+                        icon: divIcon,
+                        description: `Дивергенция: ${conf.divergence}`
+                    });
+                }
+                
+                // Stochastic RSI
+                if (conf.stoch_rsi_k !== undefined && conf.stoch_rsi_k !== null) {
+                    const stochK = conf.stoch_rsi_k;
+                    const stochD = conf.stoch_rsi_d || 0;
+                    const stochIcon = stochK < 20 ? '⬇️' : stochK > 80 ? '⬆️' : '➡️';
+                    realFilters.push({
+                        itemId: 'stochasticRsiItem',
+                        valueId: 'selectedCoinStochasticRsi',
+                        iconId: 'stochasticRsiIcon',
+                        value: `%K=${stochK.toFixed(1)}, %D=${stochD.toFixed(1)}`,
+                        icon: stochIcon,
+                        description: `Stochastic RSI: %K=${stochK.toFixed(1)}, %D=${stochD.toFixed(1)}`
+                    });
+                }
+            }
+            
+            // Warning типы
+            if (enhancedRsi.warning_type && enhancedRsi.warning_type !== 'ERROR') {
+                const warningType = enhancedRsi.warning_type;
+                const warningMessage = enhancedRsi.warning_message || '';
+                
+                if (warningType === 'EXTREME_OVERSOLD_LONG') {
+                    realFilters.push({
+                        itemId: 'extremeOversoldItem',
+                        valueId: 'selectedCoinExtremeOversold',
+                        iconId: 'extremeOversoldIcon',
+                        value: 'EXTREME_OVERSOLD_LONG',
+                        icon: '⚠️',
+                        description: `ВНИМАНИЕ: ${warningMessage}. Требуются дополнительные подтверждения для LONG`
+                    });
+                } else if (warningType === 'EXTREME_OVERBOUGHT_LONG') {
+                    realFilters.push({
+                        itemId: 'extremeOverboughtItem',
+                        valueId: 'selectedCoinExtremeOverbought',
+                        iconId: 'extremeOverboughtIcon',
+                        value: 'EXTREME_OVERBOUGHT_LONG',
+                        icon: '⚠️',
+                        description: `ВНИМАНИЕ: ${warningMessage}. Требуются дополнительные подтверждения для SHORT`
+                    });
+                } else if (warningType === 'OVERSOLD') {
+                    realFilters.push({
+                        itemId: 'oversoldWarningItem',
+                        valueId: 'selectedCoinOversoldWarning',
+                        iconId: 'oversoldWarningIcon',
+                        value: 'OVERSOLD',
+                        icon: '🟢',
+                        description: warningMessage
+                    });
+                } else if (warningType === 'OVERBOUGHT') {
+                    realFilters.push({
+                        itemId: 'overboughtWarningItem',
+                        valueId: 'selectedCoinOverboughtWarning',
+                        iconId: 'overboughtWarningIcon',
+                        value: 'OVERBOUGHT',
+                        icon: '🔴',
+                        description: warningMessage
+                    });
+                }
+            }
+        }
+        
+        // 4. RSI Time Filter
+        if (coin.time_filter_info) {
+            const timeFilter = coin.time_filter_info;
+            const isBlocked = timeFilter.blocked;
+            const reason = timeFilter.reason || '';
+            const calmCandles = timeFilter.calm_candles || 0;
+            
+            realFilters.push({
+                itemId: 'rsiTimeFilterItem',
+                valueId: 'selectedCoinRsiTimeFilter',
+                iconId: 'rsiTimeFilterIcon',
+                value: isBlocked ? `Блокирует: ${reason}` : `Разрешено: ${reason}`,
+                icon: isBlocked ? '⏰' : '⏱️',
+                description: `RSI Time Filter: ${reason}${calmCandles > 0 ? ` (${calmCandles} спокойных свечей)` : ''}`
+            });
+        }
+        
+        // 5. ExitScam фильтр
+        if (coin.exit_scam_info) {
+            const exitScam = coin.exit_scam_info;
+            const isBlocked = exitScam.blocked;
+            const reason = exitScam.reason || '';
+            
+            realFilters.push({
+                itemId: 'exitScamItem',
+                valueId: 'selectedCoinExitScam',
+                iconId: 'exitScamIcon',
+                value: isBlocked ? `Блокирует: ${reason}` : `Безопасно: ${reason}`,
+                icon: isBlocked ? '🛡️' : '✅',
+                description: `ExitScam фильтр: ${reason}`
+            });
+        }
+        
+        realFilters.forEach(filter => {
+            const itemElement = document.getElementById(filter.itemId);
+            const valueElement = document.getElementById(filter.valueId);
+            const iconElement = document.getElementById(filter.iconId);
+            
+            if (itemElement && valueElement && iconElement) {
+                itemElement.style.display = 'flex';
+                valueElement.textContent = filter.value;
+                iconElement.textContent = filter.icon;
+                iconElement.title = filter.description;
+                valueElement.title = filter.description;
+                console.log(`[BotsManager] ✅ Показан фильтр: ${filter.itemId}`);
+            }
+        });
     }
 
     filterCoins(searchTerm) {

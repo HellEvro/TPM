@@ -2404,55 +2404,98 @@ def signal_handler(signum, frame):
 
 @bots_app.route('/api/system/reload-modules', methods=['POST'])
 def reload_modules():
-    """Перезагружает модули без перезапуска сервера (Hot Reload)"""
+    """Умная горячая перезагрузка модулей с поддержкой Flask"""
     try:
         import importlib
         import sys
+        import os
+        import threading
+        import time
         
+        # Определяем модули для перезагрузки в порядке зависимостей
         modules_to_reload = [
             'bot_engine.bot_config',
-            'bots_modules.filters',
-            'bots_modules.calculations',
+            'bot_engine.indicators',
             'bots_modules.maturity',
             'bots_modules.sync_and_cache',
+            'bots_modules.calculations',
+            'bots_modules.filters',
+        ]
+        
+        # Модули которые требуют перезапуска Flask сервера
+        flask_restart_modules = [
             'bots_modules.api_endpoints',
-            'bot_engine.indicators',
+            'bots_modules.init_functions',
         ]
         
         reloaded = []
         failed = []
+        flask_restart_required = False
         
+        logger.info("[HOT_RELOAD] 🔄 Начинаем умную горячую перезагрузку...")
+        
+        # Этап 1: Перезагружаем безопасные модули
         for module_name in modules_to_reload:
             try:
                 if module_name in sys.modules:
-                    logger.info(f"[RELOAD] 🔄 Перезагрузка модуля {module_name}...")
+                    logger.info(f"[HOT_RELOAD] 🔄 Перезагрузка модуля {module_name}...")
                     module = sys.modules[module_name]
                     importlib.reload(module)
                     reloaded.append(module_name)
-                    logger.info(f"[RELOAD] ✅ Модуль {module_name} перезагружен")
+                    logger.info(f"[HOT_RELOAD] ✅ Модуль {module_name} перезагружен")
                 else:
-                    logger.warning(f"[RELOAD] ⚠️ Модуль {module_name} не был загружен")
+                    logger.warning(f"[HOT_RELOAD] ⚠️ Модуль {module_name} не был загружен")
             except Exception as e:
-                logger.error(f"[RELOAD] ❌ Ошибка перезагрузки {module_name}: {e}")
+                logger.error(f"[HOT_RELOAD] ❌ Ошибка перезагрузки {module_name}: {e}")
                 failed.append({'module': module_name, 'error': str(e)})
         
-        # Перезагружаем конфигурацию
+        # Этап 2: Проверяем нужен ли перезапуск Flask сервера
+        request_data = request.get_json() or {}
+        force_flask_restart = request_data.get('force_flask_restart', False)
+        
+        if force_flask_restart or any(module in sys.modules for module in flask_restart_modules):
+            flask_restart_required = True
+            logger.info("[HOT_RELOAD] 🔄 Требуется перезапуск Flask сервера...")
+            
+            # Сохраняем состояние перед перезапуском
+            save_bots_state()
+            logger.info("[HOT_RELOAD] 💾 Состояние ботов сохранено")
+            
+            # Запускаем перезапуск сервера в отдельном потоке
+            def restart_server():
+                time.sleep(2)  # Даем время для ответа клиенту
+                logger.info("[HOT_RELOAD] 🔄 Перезапуск Flask сервера...")
+                os._exit(42)  # Специальный код для перезапуска
+            
+            restart_thread = threading.Thread(target=restart_server, daemon=True)
+            restart_thread.start()
+        
+        # Этап 3: Перезагружаем конфигурацию
         try:
             from bots_modules.imports_and_globals import load_auto_bot_config
             load_auto_bot_config()
-            logger.info(f"[RELOAD] ✅ Конфигурация Auto Bot перезагружена")
+            logger.info("[HOT_RELOAD] ✅ Конфигурация Auto Bot перезагружена")
         except Exception as e:
-            logger.error(f"[RELOAD] ❌ Ошибка перезагрузки конфигурации: {e}")
+            logger.error(f"[HOT_RELOAD] ❌ Ошибка перезагрузки конфигурации: {e}")
         
-        return jsonify({
+        # Формируем ответ
+        response_data = {
             'success': True,
             'reloaded': reloaded,
             'failed': failed,
-            'message': f'Перезагружено {len(reloaded)} модулей, ошибок: {len(failed)}'
-        })
+            'flask_restart_required': flask_restart_required,
+            'message': f'Перезагружено {len(reloaded)} модулей'
+        }
+        
+        if flask_restart_required:
+            response_data['message'] += '. Сервер будет перезапущен через 2 секунды...'
+            response_data['restart_in_seconds'] = 2
+        
+        logger.info(f"[HOT_RELOAD] ✅ Горячая перезагрузка завершена: {len(reloaded)} модулей")
+        return jsonify(response_data)
         
     except Exception as e:
-        logger.error(f"[RELOAD] ❌ Общая ошибка перезагрузки: {e}")
+        logger.error(f"[HOT_RELOAD] ❌ Общая ошибка горячей перезагрузки: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

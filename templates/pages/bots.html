@@ -187,29 +187,298 @@
                         <div class="data-item">
                                 <span class="label" data-translate="coin_info_rsi">📊 RSI 6H:</span>
                                 <span class="value rsi-indicator" id="selectedCoinRSI">-</span>
+                                <span class="status-icon" id="rsiIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
                         <div class="data-item">
                                 <span class="label" data-translate="coin_info_trend">📈 Тренд 6H:</span>
                                 <span class="value trend-indicator" id="selectedCoinTrend">-</span>
+                                <span class="status-icon" id="trendIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
                         <div class="data-item">
                                 <span class="label" data-translate="coin_info_ema">📊 EMA:</span>
                                 <span class="value ema-indicator" id="selectedCoinEMA">-</span>
+                                <span class="status-icon" id="emaIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
                         <div class="data-item">
                                 <span class="label" data-translate="coin_info_zone">🎯 Зона RSI:</span>
                                 <span class="value rsi-zone" id="selectedCoinZone">-</span>
+                                <span class="status-icon" id="zoneIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
                         <div class="data-item">
                                 <span class="label" data-translate="coin_info_signal">⚡ Сигнал:</span>
                                 <span class="value signal-indicator" id="selectedCoinSignal">-</span>
+                                <span class="status-icon" id="signalIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
                         <div class="data-item">
                                 <span class="label" data-translate="coin_info_change">📊 Изм. 24H:</span>
                                 <span class="value change-indicator" id="selectedCoinChange">-</span>
                         </div>
+                        <!-- Дополнительные фильтры -->
+                        <div class="data-item" id="volumeConfirmationItem" style="display: none;">
+                                <span class="label">📊 Подтверждение объемом:</span>
+                                <span class="value" id="selectedCoinVolumeConfirmation">-</span>
+                                <span class="status-icon" id="volumeConfirmationIcon" style="margin-left: 8px; font-size: 16px;"></span>
+                        </div>
+                        <div class="data-item" id="stochasticItem" style="display: none;">
+                                <span class="label">📈 Стохастик:</span>
+                                <span class="value" id="selectedCoinStochastic">-</span>
+                                <span class="status-icon" id="stochasticIcon" style="margin-left: 8px; font-size: 16px;"></span>
+                        </div>
+                        <div class="data-item" id="exitScamItem" style="display: none;">
+                                <span class="label">🛡️ ExitScam защита:</span>
+                                <span class="value" id="selectedCoinExitScam">-</span>
+                                <span class="status-icon" id="exitScamIcon" style="margin-left: 8px; font-size: 16px;"></span>
+                        </div>
+                        <div class="data-item" id="rsiTimeFilterItem" style="display: none;">
+                                <span class="label">⏰ RSI Time Filter:</span>
+                                <span class="value" id="selectedCoinRsiTimeFilter">-</span>
+                                <span class="status-icon" id="rsiTimeFilterIcon" style="margin-left: 8px; font-size: 16px;"></span>
+                        </div>
+                        <div class="data-item" id="botStatusItem" style="display: none;">
+                                <span class="label">🤖 Статус бота:</span>
+                                <span class="value" id="selectedCoinBotStatus">-</span>
+                                <span class="status-icon" id="botStatusIcon" style="margin-left: 8px; font-size: 16px;"></span>
+                        </div>
                     </div>
                 </div>
+
+
+                    <!-- Справочник статусов и иконок (свернутый по умолчанию) -->
+                    <div class="status-guide" style="margin-top: 20px;">
+                        <div class="status-guide-header" onclick="toggleStatusGuide()" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px; background: #2a2a2a; border-radius: 8px; margin-bottom: 10px;">
+                            <span class="toggle-arrow">▼</span>
+                            <h3 style="color: #fff; margin: 0; font-size: 16px;">📚 Справочник статусов и иконок</h3>
+                            <span style="color: #888; font-size: 12px; margin-left: auto;">(кликните чтобы развернуть)</span>
+                        </div>
+                        <div class="status-guide-content" id="statusGuideContent" style="display: none;">
+                            <div class="status-categories">
+                                <!-- Статусы ботов -->
+                                <div class="status-category">
+                                    <h4 style="color: #4CAF50; margin-bottom: 10px;">Статусы ботов:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item"><span class="status-indicator running">🟢</span> <span class="status-text">running</span> - Бот активен и работает</div>
+                                        <div class="status-item"><span class="status-indicator waiting">🔵</span> <span class="status-text">waiting</span> - Ожидание сигнала</div>
+                                        <div class="status-item"><span class="status-indicator error">🔴</span> <span class="status-text">error</span> - Ошибка в работе</div>
+                                        <div class="status-item"><span class="status-indicator stopped">🔴</span> <span class="status-text">stopped</span> - Бот остановлен</div>
+                                        <div class="status-item"><span class="status-indicator in-position">🟣</span> <span class="status-text">in_position</span> - В позиции</div>
+                                        <div class="status-item"><span class="status-indicator paused">⚪</span> <span class="status-text">paused</span> - Приостановлен</div>
+                                    </div>
+                                </div>
+
+                                <!-- Иконки управления -->
+                                <div class="status-category">
+                                    <h4 style="color: #FF9800; margin-bottom: 10px;">Иконки управления:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">✅ - Бот активен (зеленая галочка)</div>
+                                        <div class="status-item">⏸️ - Приостановить (оранжевая пауза)</div>
+                                        <div class="status-item">🔄 - Перезапустить бота</div>
+                                        <div class="status-item">▶️ - Запустить бота (синий play)</div>
+                                        <div class="status-item">⏹️ - Остановить бота (красный стоп)</div>
+                                        <div class="status-item">⚙️ - Настройки бота</div>
+                                    </div>
+                                </div>
+
+                                <!-- Торговые сигналы -->
+                                <div class="status-category">
+                                    <h4 style="color: #2196F3; margin-bottom: 10px;">Торговые сигналы:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">📈 ENTER_LONG - Сигнал на покупку (RSI ≤ 29)</div>
+                                        <div class="status-item">📉 EXIT_LONG - Выход из LONG (RSI ≥ 55)</div>
+                                        <div class="status-item">➖ NEUTRAL - Нейтральная зона (29 < RSI < 71)</div>
+                                        <div class="status-item">📉 ENTER_SHORT - Сигнал на продажу (RSI ≥ 71)</div>
+                                        <div class="status-item">📈 EXIT_SHORT - Выход из SHORT (RSI ≤ 45)</div>
+                                        <div class="status-item">⏸️ HOLD - Удерживать позицию</div>
+                                    </div>
+                                </div>
+
+                                <!-- Статусы позиций -->
+                                <div class="status-category">
+                                    <h4 style="color: #9C27B0; margin-bottom: 10px;">Статусы позиций:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">📈 LONG - Длинная позиция (покупка)</div>
+                                        <div class="status-item">❌ None - Нет открытой позиции</div>
+                                        <div class="status-item">📉 SHORT - Короткая позиция (продажа)</div>
+                                        <div class="status-item">🔄 Closing - Закрытие позиции</div>
+                                    </div>
+                                </div>
+
+                                <!-- Stochastic RSI -->
+                                <div class="status-category">
+                                    <h4 style="color: #FF5722; margin-bottom: 10px;">Stochastic RSI:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">🔴 OVERSOLD - Stochastic RSI перепродан</div>
+                                        <div class="status-item">🟢 OVERBOUGHT - Stochastic RSI перекуплен</div>
+                                        <div class="status-item">🟡 NEUTRAL - Stochastic RSI нейтральный</div>
+                                        <div class="status-item">📈 BULLISH - Stochastic RSI бычий сигнал</div>
+                                        <div class="status-item">📉 BEARISH - Stochastic RSI медвежий сигнал</div>
+                                    </div>
+                                </div>
+
+                                <!-- RSI Time Filter -->
+                                <div class="status-category">
+                                    <h4 style="color: #3F51B5; margin-bottom: 10px;">RSI Time Filter:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">✅ ALLOWED - RSI Time Filter разрешен</div>
+                                        <div class="status-item">❌ BLOCKED - RSI Time Filter заблокирован</div>
+                                        <div class="status-item">⏳ WAITING - RSI Time Filter ожидание</div>
+                                    </div>
+                                </div>
+
+                                <!-- ExitScam -->
+                                <div class="status-category">
+                                    <h4 style="color: #E91E63; margin-bottom: 10px;">ExitScam:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">✅ SAFE - ExitScam: Безопасно</div>
+                                        <div class="status-item">⚠️ RISK - ExitScam: Риск обнаружен</div>
+                                        <div class="status-item">🚨 SCAM - ExitScam: Возможный скам</div>
+                                        <div class="status-item">🔍 CHECKING - ExitScam: Проверка</div>
+                                    </div>
+                                </div>
+
+                                <!-- Зрелость монеты -->
+                                <div class="status-category">
+                                    <h4 style="color: #795548; margin-bottom: 10px;">Зрелость монеты:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">✅ MATURE - Монета зрелая (>400 свечей)</div>
+                                        <div class="status-item">❌ IMMATURE - Монета незрелая (<400 свечей)</div>
+                                        <div class="status-item">🔍 CHECKING - Проверка зрелости</div>
+                                    </div>
+                                </div>
+
+                                <!-- Уровни риска -->
+                                <div class="status-category">
+                                    <h4 style="color: #607D8B; margin-bottom: 10px;">Уровни риска:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">🟢 LOW - Низкий риск</div>
+                                        <div class="status-item">🟡 MEDIUM - Средний риск</div>
+                                        <div class="status-item">🔴 HIGH - Высокий риск</div>
+                                        <div class="status-item">🚨 EXTREME - Экстремальный риск</div>
+                                    </div>
+                                </div>
+
+                                <!-- Белый список -->
+                                <div class="status-category">
+                                    <h4 style="color: #4CAF50; margin-bottom: 10px;">Белый список:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">✅ ALLOWED - В белом списке</div>
+                                        <div class="status-item">❌ BLOCKED - Не в белом списке</div>
+                                    </div>
+                                </div>
+
+                                <!-- Черный список -->
+                                <div class="status-category">
+                                    <h4 style="color: #F44336; margin-bottom: 10px;">Черный список:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">✅ ALLOWED - Не в черном списке</div>
+                                        <div class="status-item">❌ BLOCKED - В черном списке</div>
+                                    </div>
+                                </div>
+
+                                <!-- Enhanced RSI Warning -->
+                                <div class="status-category">
+                                    <h4 style="color: #FFC107; margin-bottom: 10px;">Enhanced RSI Warning:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">⚠️ EXTREME_OVERSOLD_LONG - ВНИМАНИЕ: Экстремальная перепроданность</div>
+                                        <div class="status-item">⚠️ EXTREME_OVERBOUGHT_LONG - ВНИМАНИЕ: Экстремальная перекупленность</div>
+                                        <div class="status-item">🟢 OVERSOLD - Перепроданность</div>
+                                        <div class="status-item">🔴 OVERBOUGHT - Перекупленность</div>
+                                    </div>
+                                </div>
+
+                                <!-- Ручные позиции -->
+                                <div class="status-category">
+                                    <h4 style="color: #FF9800; margin-bottom: 10px;">Ручные позиции:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">✋ MANUAL - Ручная позиция</div>
+                                    </div>
+                                </div>
+
+                                <!-- Подтверждение объемом -->
+                                <div class="status-category">
+                                    <h4 style="color: #00BCD4; margin-bottom: 10px;">Подтверждение объемом:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">📊 CONFIRMED - Объем подтвержден</div>
+                                        <div class="status-item">❌ NOT_CONFIRMED - Объем не подтвержден</div>
+                                        <div class="status-item">⚠️ LOW_VOLUME - Низкий объем</div>
+                                        <div class="status-item">📈 HIGH_VOLUME - Высокий объем</div>
+                                    </div>
+                                </div>
+
+                                <!-- Стохастик -->
+                                <div class="status-category">
+                                    <h4 style="color: #FF5722; margin-bottom: 10px;">Стохастик:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">🔴 OVERSOLD - Stochastic перепродан</div>
+                                        <div class="status-item">🟢 OVERBOUGHT - Stochastic перекуплен</div>
+                                        <div class="status-item">🟡 NEUTRAL - Stochastic нейтральный</div>
+                                        <div class="status-item">📈 BULLISH - Stochastic бычий сигнал</div>
+                                        <div class="status-item">📉 BEARISH - Stochastic медвежий сигнал</div>
+                                    </div>
+                                </div>
+
+                                <!-- ExitScam защита -->
+                                <div class="status-category">
+                                    <h4 style="color: #E91E63; margin-bottom: 10px;">🛡️ ExitScam защита:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">🛡️ SAFE - ExitScam: Безопасно</div>
+                                        <div class="status-item">⚠️ RISK - ExitScam: Риск обнаружен</div>
+                                        <div class="status-item">🚨 SCAM - ExitScam: Возможный скам</div>
+                                        <div class="status-item">🔍 CHECKING - ExitScam: Проверка</div>
+                                    </div>
+                                </div>
+
+                                <!-- RSI Time Filter -->
+                                <div class="status-category">
+                                    <h4 style="color: #3F51B5; margin-bottom: 10px;">RSI Time Filter:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">✅ ALLOWED - RSI Time Filter разрешен</div>
+                                        <div class="status-item">❌ BLOCKED - RSI Time Filter заблокирован</div>
+                                        <div class="status-item">⏳ WAITING - RSI Time Filter ожидание</div>
+                                        <div class="status-item">⏰ TIMEOUT - RSI Time Filter таймаут</div>
+                                    </div>
+                                </div>
+
+                                <!-- Зрелость монеты -->
+                                <div class="status-category">
+                                    <h4 style="color: #795548; margin-bottom: 10px;">Зрелость монеты:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">✅ MATURE - Монета зрелая (>400 свечей)</div>
+                                        <div class="status-item">❌ IMMATURE - Монета незрелая (<400 свечей)</div>
+                                        <div class="status-item">🔍 CHECKING - Проверка зрелости</div>
+                                    </div>
+                                </div>
+
+                                <!-- Уровни риска -->
+                                <div class="status-category">
+                                    <h4 style="color: #607D8B; margin-bottom: 10px;">Уровни риска:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">🟢 LOW - Низкий риск</div>
+                                        <div class="status-item">🟡 MEDIUM - Средний риск</div>
+                                        <div class="status-item">🔴 HIGH - Высокий риск</div>
+                                        <div class="status-item">🚨 EXTREME - Экстремальный риск</div>
+                                    </div>
+                                </div>
+
+                                <!-- Белый список -->
+                                <div class="status-category">
+                                    <h4 style="color: #4CAF50; margin-bottom: 10px;">Белый список:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">✅ ALLOWED - В белом списке</div>
+                                        <div class="status-item">❌ BLOCKED - Не в белом списке</div>
+                                    </div>
+                                </div>
+
+                                <!-- Черный список -->
+                                <div class="status-category">
+                                    <h4 style="color: #F44336; margin-bottom: 10px;">Черный список:</h4>
+                                    <div class="status-items">
+                                        <div class="status-item">✅ ALLOWED - Не в черном списке</div>
+                                        <div class="status-item">❌ BLOCKED - В черном списке</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Объединенная секция: Активные сделки + Статус бота + Управление -->
                     <div class="trades-info" id="tradesInfoSection" style="display: none;">
@@ -2031,3 +2300,307 @@
     </div>
 
 </div>
+
+<script>
+// Функция для сворачивания/разворачивания справочника статусов
+function toggleStatusGuide() {
+    const content = document.getElementById('statusGuideContent');
+    const arrow = document.querySelector('.toggle-arrow');
+    
+    if (content.style.display === 'none' || content.style.display === '') {
+        content.style.display = 'block';
+        arrow.textContent = '▲';
+    } else {
+        content.style.display = 'none';
+        arrow.textContent = '▼';
+    }
+}
+
+// Функция для обновления активных иконок монеты
+function updateActiveCoinIcons(activeStatusData) {
+    const container = document.getElementById('activeIconsContainer');
+    const section = document.getElementById('activeCoinIcons');
+    
+    if (!activeStatusData || Object.keys(activeStatusData).length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+    
+    section.style.display = 'block';
+    container.innerHTML = '';
+    
+    // Добавляем активные иконки с описаниями
+    for (const [statusType, statusValue] of Object.entries(activeStatusData)) {
+        if (statusValue && statusValue !== 'None' && statusValue !== 'WAIT') {
+            // Получаем детальную информацию для каждого типа статуса
+            const detailedData = getDetailedStatusInfo(statusType, statusValue, activeStatusData);
+            const iconElement = createStatusIcon(statusType, statusValue, detailedData);
+            container.appendChild(iconElement);
+        }
+    }
+}
+
+// Функция для создания иконки статуса
+function createStatusIcon(statusType, statusValue, detailedData) {
+    const iconDiv = document.createElement('div');
+    iconDiv.className = 'active-status-item';
+    iconDiv.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 12px; margin: 5px 0; background: #2a2a2a; border-radius: 8px; border-left: 4px solid #4CAF50;';
+    
+    const icon = getStatusIcon(statusType, statusValue);
+    const description = getStatusDescription(statusType, statusValue);
+    
+    // Создаем детальную информацию
+    let detailedInfo = '';
+    if (detailedData) {
+        detailedInfo = `<div class="detailed-info" style="color: #888; font-size: 11px; margin-top: 4px; line-height: 1.3;">${detailedData}</div>`;
+    }
+    
+    iconDiv.innerHTML = `
+        <span class="status-icon" style="font-size: 20px; min-width: 24px;">${icon}</span>
+        <div class="status-info" style="flex: 1;">
+            <div class="status-label" style="color: #4CAF50; font-weight: bold; font-size: 13px; margin-bottom: 2px;">${statusType.toUpperCase()}</div>
+            <div class="status-value" style="color: #fff; font-size: 14px; font-weight: 500;">${statusValue}</div>
+            ${detailedInfo}
+        </div>
+        <div class="status-description" style="color: #ccc; font-size: 12px; text-align: right; max-width: 200px;">${description}</div>
+    `;
+    
+    return iconDiv;
+}
+
+// Функция для получения иконки статуса
+function getStatusIcon(statusType, statusValue) {
+    const iconMap = {
+        'trend': {
+            'UP': '📈',
+            'DOWN': '📉',
+            'NEUTRAL': '➖'
+        },
+        'signal': {
+            'ENTER_LONG': '📈',
+            'ENTER_SHORT': '📉',
+            'EXIT_LONG': '📉',
+            'EXIT_SHORT': '📈',
+            'NEUTRAL': '➖',
+            'WAIT': '⏸️',
+            'HOLD': '⏸️'
+        },
+        'zone': {
+            'OVERSOLD': '🔴',
+            'OVERBOUGHT': '🟢',
+            'NEUTRAL': '🟡'
+        },
+        'bot': {
+            'running': '🟢',
+            'waiting': '🔵',
+            'error': '🔴',
+            'stopped': '🔴',
+            'in_position': '🟣',
+            'paused': '⚪'
+        },
+        'stochastic_rsi': {
+            'OVERSOLD': '🔴',
+            'OVERBOUGHT': '🟢',
+            'NEUTRAL': '🟡',
+            'BULLISH': '📈',
+            'BEARISH': '📉'
+        },
+        'rsi_time_filter': {
+            'ALLOWED': '✅',
+            'BLOCKED': '❌',
+            'WAITING': '⏳'
+        },
+        'exit_scam': {
+            'SAFE': '✅',
+            'RISK': '⚠️',
+            'SCAM': '🚨',
+            'CHECKING': '🔍'
+        },
+        'maturity': {
+            'MATURE': '✅',
+            'IMMATURE': '❌',
+            'CHECKING': '🔍'
+        },
+        'risk': {
+            'LOW': '🟢',
+            'MEDIUM': '🟡',
+            'HIGH': '🔴',
+            'EXTREME': '🚨'
+        },
+        'whitelist': {
+            'ALLOWED': '✅',
+            'BLOCKED': '❌'
+        },
+        'blacklist': {
+            'ALLOWED': '✅',
+            'BLOCKED': '❌'
+        },
+        'enhanced_warning': {
+            'EXTREME_OVERSOLD_LONG': '⚠️',
+            'EXTREME_OVERBOUGHT_LONG': '⚠️',
+            'OVERSOLD': '🟢',
+            'OVERBOUGHT': '🔴'
+        },
+        'manual_position': {
+            'MANUAL': '✋'
+        },
+        'volume_confirmation': {
+            'CONFIRMED': '📊',
+            'NOT_CONFIRMED': '❌',
+            'LOW_VOLUME': '⚠️',
+            'HIGH_VOLUME': '📈'
+        },
+        'exit_scam': {
+            'SAFE': '✅',
+            'RISK': '⚠️',
+            'SCAM': '🚨',
+            'CHECKING': '🔍'
+        },
+        'rsi_time_filter': {
+            'ALLOWED': '✅',
+            'BLOCKED': '❌',
+            'WAITING': '⏳',
+            'TIMEOUT': '⏰'
+        },
+        'maturity': {
+            'MATURE': '✅',
+            'IMMATURE': '❌',
+            'CHECKING': '🔍'
+        },
+        'risk': {
+            'LOW': '🟢',
+            'MEDIUM': '🟡',
+            'HIGH': '🔴',
+            'EXTREME': '🚨'
+        },
+        'whitelist': {
+            'ALLOWED': '✅',
+            'BLOCKED': '❌'
+        },
+        'blacklist': {
+            'ALLOWED': '✅',
+            'BLOCKED': '❌'
+        }
+    };
+    
+    return iconMap[statusType]?.[statusValue] || '❓';
+}
+
+// Функция для получения описания статуса
+function getStatusDescription(statusType, statusValue) {
+    const descriptionMap = {
+        'trend': {
+            'UP': 'Восходящий тренд',
+            'DOWN': 'Нисходящий тренд',
+            'NEUTRAL': 'Боковой тренд'
+        },
+        'signal': {
+            'ENTER_LONG': 'Сигнал на покупку (RSI ≤ 29)',
+            'ENTER_SHORT': 'Сигнал на продажу (RSI ≥ 71)',
+            'EXIT_LONG': 'Выход из LONG (RSI ≥ 55)',
+            'EXIT_SHORT': 'Выход из SHORT (RSI ≤ 45)',
+            'NEUTRAL': 'Нейтральная зона (29 < RSI < 71)',
+            'WAIT': 'Ожидание сигнала',
+            'HOLD': 'Удерживать позицию'
+        },
+        'zone': {
+            'OVERSOLD': 'Зона перепроданности',
+            'OVERBOUGHT': 'Зона перекупленности',
+            'NEUTRAL': 'Нейтральная зона RSI'
+        },
+        'bot': {
+            'running': 'Бот активен и работает',
+            'waiting': 'Ожидание сигнала',
+            'error': 'Ошибка в работе',
+            'stopped': 'Бот остановлен',
+            'in_position': 'В позиции',
+            'paused': 'Приостановлен'
+        },
+        'stochastic_rsi': {
+            'OVERSOLD': 'Stochastic RSI перепродан',
+            'OVERBOUGHT': 'Stochastic RSI перекуплен',
+            'NEUTRAL': 'Stochastic RSI нейтральный',
+            'BULLISH': 'Stochastic RSI бычий сигнал',
+            'BEARISH': 'Stochastic RSI медвежий сигнал'
+        },
+        'rsi_time_filter': {
+            'ALLOWED': 'RSI Time Filter разрешен',
+            'BLOCKED': 'RSI Time Filter заблокирован',
+            'WAITING': 'RSI Time Filter ожидание'
+        },
+        'exit_scam': {
+            'SAFE': 'ExitScam: Безопасно',
+            'RISK': 'ExitScam: Риск обнаружен',
+            'SCAM': 'ExitScam: Возможный скам',
+            'CHECKING': 'ExitScam: Проверка'
+        },
+        'maturity': {
+            'MATURE': 'Монета зрелая (>400 свечей)',
+            'IMMATURE': 'Монета незрелая (<400 свечей)',
+            'CHECKING': 'Проверка зрелости'
+        },
+        'risk': {
+            'LOW': 'Низкий риск',
+            'MEDIUM': 'Средний риск',
+            'HIGH': 'Высокий риск',
+            'EXTREME': 'Экстремальный риск'
+        },
+        'whitelist': {
+            'ALLOWED': 'В белом списке',
+            'BLOCKED': 'Не в белом списке'
+        },
+        'blacklist': {
+            'ALLOWED': 'Не в черном списке',
+            'BLOCKED': 'В черном списке'
+        },
+        'enhanced_warning': {
+            'EXTREME_OVERSOLD_LONG': 'ВНИМАНИЕ: Экстремальная перепроданность',
+            'EXTREME_OVERBOUGHT_LONG': 'ВНИМАНИЕ: Экстремальная перекупленность',
+            'OVERSOLD': 'Перепроданность',
+            'OVERBOUGHT': 'Перекупленность'
+        },
+        'manual_position': {
+            'MANUAL': 'Ручная позиция'
+        },
+        'volume_confirmation': {
+            'CONFIRMED': 'Объем подтвержден',
+            'NOT_CONFIRMED': 'Объем не подтвержден',
+            'LOW_VOLUME': 'Низкий объем',
+            'HIGH_VOLUME': 'Высокий объем'
+        },
+        'exit_scam': {
+            'SAFE': 'ExitScam: Безопасно',
+            'RISK': 'ExitScam: Риск обнаружен',
+            'SCAM': 'ExitScam: Возможный скам',
+            'CHECKING': 'ExitScam: Проверка'
+        },
+        'rsi_time_filter': {
+            'ALLOWED': 'RSI Time Filter разрешен',
+            'BLOCKED': 'RSI Time Filter заблокирован',
+            'WAITING': 'RSI Time Filter ожидание',
+            'TIMEOUT': 'RSI Time Filter таймаут'
+        },
+        'maturity': {
+            'MATURE': 'Монета зрелая (>400 свечей)',
+            'IMMATURE': 'Монета незрелая (<400 свечей)',
+            'CHECKING': 'Проверка зрелости'
+        },
+        'risk': {
+            'LOW': 'Низкий риск',
+            'MEDIUM': 'Средний риск',
+            'HIGH': 'Высокий риск',
+            'EXTREME': 'Экстремальный риск'
+        },
+        'whitelist': {
+            'ALLOWED': 'В белом списке',
+            'BLOCKED': 'Не в белом списке'
+        },
+        'blacklist': {
+            'ALLOWED': 'Не в черном списке',
+            'BLOCKED': 'В черном списке'
+        }
+    };
+    
+    return descriptionMap[statusType]?.[statusValue] || 'Неизвестный статус';
+}
+</script>
