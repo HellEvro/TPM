@@ -122,9 +122,22 @@ class AIManager:
                 self.pattern_detector = pattern_module.PatternDetector()
                 logger.info("[AI] ✅ Pattern Detector загружен")
             except Exception as e:
-                logger.error(f"[AI] ❌ Ошибка загрузки Pattern Detector: {e}")
+                logger.error(f"[AI] ❌ Ошибка загрузки Pattern Detector (premium): {e}")
+                # Пробуем загрузить встроенную версию
+                try:
+                    from bot_engine.ai.pattern_detector import PatternDetector
+                    self.pattern_detector = PatternDetector()
+                    logger.info("[AI] ✅ Pattern Detector загружен (встроенная версия)")
+                except Exception as e2:
+                    logger.error(f"[AI] ❌ Ошибка загрузки встроенного Pattern Detector: {e2}")
         elif AIConfig.AI_PATTERN_ENABLED:
-            logger.warning("[AI] ⚠️ Pattern Recognition недоступен в вашей лицензии")
+            # Пробуем загрузить встроенную версию даже без premium
+            try:
+                from bot_engine.ai.pattern_detector import PatternDetector
+                self.pattern_detector = PatternDetector()
+                logger.info("[AI] ✅ Pattern Detector загружен (встроенная версия, без premium)")
+            except Exception as e:
+                logger.warning("[AI] ⚠️ Pattern Recognition недоступен")
         
         # Загружаем Risk Manager
         if AIConfig.AI_RISK_MANAGEMENT_ENABLED and features.get('risk_management'):
@@ -253,10 +266,27 @@ class AIManager:
         # Pattern Recognition
         if self.pattern_detector:
             try:
-                # TODO: Реализовать распознавание паттернов
-                # pattern = self.pattern_detector.detect(candles)
-                # analysis['pattern_analysis'] = pattern
-                pass
+                current_price = coin_data.get('current_price') or (candles[-1].get('close') if candles else None)
+                if current_price:
+                    pattern_result = self.pattern_detector.detect_patterns(candles, current_price)
+                    
+                    if pattern_result['patterns']:
+                        analysis['pattern_analysis'] = pattern_result
+                        
+                        if AIConfig.AI_LOG_PREDICTIONS:
+                            signal_icon = "🟢" if pattern_result['signal'] == 'BULLISH' else "🔴" if pattern_result['signal'] == 'BEARISH' else "⚪"
+                            logger.info(
+                                f"[AI] {symbol} 📊 Паттерны: {signal_icon} {pattern_result['signal']} "
+                                f"(найдено: {len(pattern_result['patterns'])}, "
+                                f"уверенность: {pattern_result['confidence']:.1f}%)"
+                            )
+                            
+                            if pattern_result['strongest_pattern']:
+                                strongest = pattern_result['strongest_pattern']
+                                logger.info(
+                                    f"[AI] {symbol}    └─ Сильнейший: {strongest['name']} "
+                                    f"({strongest['confidence']:.1f}%)"
+                                )
             except Exception as e:
                 logger.error(f"[AI] Ошибка Pattern Detection для {symbol}: {e}")
         

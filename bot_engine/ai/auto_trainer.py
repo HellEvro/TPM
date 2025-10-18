@@ -32,6 +32,7 @@ class AutoTrainer:
         self.collect_script = self.scripts_dir / 'collect_historical_data.py'
         self.train_anomaly_script = self.scripts_dir / 'train_anomaly_on_real_data.py'
         self.train_lstm_script = self.scripts_dir / 'train_lstm_predictor.py'
+        self.train_pattern_script = self.scripts_dir / 'train_pattern_detector.py'
     
     def start(self):
         """Запускает автоматический тренер в фоновом режиме"""
@@ -254,7 +255,20 @@ class AutoTrainer:
                 success = self._train_model(
                     self.train_lstm_script,
                     "LSTM Predictor",
-                    timeout=1800  # 30 минут для LSTM
+                    timeout=1800,  # 30 минут для LSTM
+                    args=['--coins', '0', '--epochs', '50']
+                )
+                if not success:
+                    all_success = False
+            
+            # 3. Обучаем Pattern Detector
+            if AIConfig.AI_PATTERN_ENABLED:
+                logger.info("[AutoTrainer] 📊 Обучение Pattern Detector...")
+                success = self._train_model(
+                    self.train_pattern_script,
+                    "Pattern Detector",
+                    timeout=600,
+                    args=['--coins', '0']
                 )
                 if not success:
                     all_success = False
@@ -280,7 +294,7 @@ class AutoTrainer:
             logger.error(f"[AutoTrainer] ❌ Ошибка обучения: {e}")
             return False
     
-    def _train_model(self, script_path: Path, model_name: str, timeout: int = 600) -> bool:
+    def _train_model(self, script_path: Path, model_name: str, timeout: int = 600, args: list = None) -> bool:
         """
         Обучает конкретную модель
         
@@ -288,12 +302,15 @@ class AutoTrainer:
             script_path: Путь к скрипту обучения
             model_name: Название модели для логов
             timeout: Таймаут в секундах
+            args: Дополнительные аргументы для скрипта
         
         Returns:
             True если успешно
         """
         try:
             cmd = [sys.executable, str(script_path)]
+            if args:
+                cmd.extend([str(arg) for arg in args])
             
             logger.info(f"[AutoTrainer] Запуск: {' '.join(cmd)}")
             
@@ -351,6 +368,14 @@ class AutoTrainer:
                     logger.info("[AutoTrainer] ✅ LSTM Predictor перезагружен (hot reload)")
                 except Exception as e:
                     logger.error(f"[AutoTrainer] Ошибка hot reload LSTM Predictor: {e}")
+            
+            # 3. Перезагружаем Pattern Detector
+            if ai_manager.pattern_detector:
+                try:
+                    ai_manager.pattern_detector.load_model()
+                    logger.info("[AutoTrainer] ✅ Pattern Detector перезагружен (hot reload)")
+                except Exception as e:
+                    logger.error(f"[AutoTrainer] Ошибка hot reload Pattern Detector: {e}")
         
         except Exception as e:
             logger.error(f"[AutoTrainer] Ошибка hot reload: {e}")

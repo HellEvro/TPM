@@ -85,6 +85,16 @@ class AIConfigManager {
         this.setValue('anomalyBlockThreshold', config.anomaly_block_threshold);
         this.setCheckbox('anomalyLogEnabled', config.anomaly_log_enabled);
         
+        // LSTM Predictor
+        this.setCheckbox('lstmEnabled', config.lstm_enabled);
+        this.setValue('lstmMinConfidence', config.lstm_min_confidence);
+        this.setValue('lstmWeight', config.lstm_weight);
+        
+        // Pattern Recognition
+        this.setCheckbox('patternEnabled', config.pattern_enabled);
+        this.setValue('patternMinConfidence', config.pattern_min_confidence);
+        this.setValue('patternWeight', config.pattern_weight);
+        
         // Risk Management
         this.setCheckbox('riskManagementEnabled', config.risk_management_enabled);
         this.setValue('riskUpdateInterval', config.risk_update_interval);
@@ -100,6 +110,7 @@ class AIConfigManager {
         // Logging
         this.setCheckbox('logPredictions', config.log_predictions);
         this.setCheckbox('logAnomalies', config.log_anomalies);
+        this.setCheckbox('logPatterns', config.log_patterns);
         
         console.log('[AIConfigManager] ✅ Форма заполнена');
     }
@@ -121,6 +132,16 @@ class AIConfigManager {
                 anomaly_block_threshold: parseFloat(this.getValue('anomalyBlockThreshold')),
                 anomaly_log_enabled: this.getCheckbox('anomalyLogEnabled'),
                 
+                // LSTM Predictor
+                lstm_enabled: this.getCheckbox('lstmEnabled'),
+                lstm_min_confidence: parseFloat(this.getValue('lstmMinConfidence')),
+                lstm_weight: parseFloat(this.getValue('lstmWeight')),
+                
+                // Pattern Recognition
+                pattern_enabled: this.getCheckbox('patternEnabled'),
+                pattern_min_confidence: parseFloat(this.getValue('patternMinConfidence')),
+                pattern_weight: parseFloat(this.getValue('patternWeight')),
+                
                 // Risk Management
                 risk_management_enabled: this.getCheckbox('riskManagementEnabled'),
                 risk_update_interval: parseInt(this.getValue('riskUpdateInterval')),
@@ -135,7 +156,8 @@ class AIConfigManager {
                 
                 // Logging
                 log_predictions: this.getCheckbox('logPredictions'),
-                log_anomalies: this.getCheckbox('logAnomalies')
+                log_anomalies: this.getCheckbox('logAnomalies'),
+                log_patterns: this.getCheckbox('logPatterns')
             };
             
             console.log('[AIConfigManager] Данные для сохранения:', configData);
