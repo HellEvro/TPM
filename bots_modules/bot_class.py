@@ -456,6 +456,42 @@ class NewTradingBot:
         except Exception as e:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка синхронизации с биржей: {e}")
     
+    def enter_position(self, direction):
+        """
+        Публичный метод для входа в позицию
+        
+        Args:
+            direction (str): Направление сделки ('LONG' или 'SHORT')
+            
+        Returns:
+            bool: True если вход успешен, False иначе
+        """
+        try:
+            # Получаем текущую цену
+            price = self.exchange.get_current_price(self.symbol) if self.exchange else 0
+            
+            logger.info(f"[NEW_BOT_{self.symbol}] 📈 Входим в {direction} позицию @ {price}")
+            
+            # Открываем позицию
+            if self._open_position_on_exchange(direction, price):
+                # Обновляем статус
+                status_key = 'IN_POSITION_LONG' if direction == 'LONG' else 'IN_POSITION_SHORT'
+                self.update_status(BOT_STATUS[status_key], price, direction)
+                
+                # Сохраняем состояние
+                with bots_data_lock:
+                    bots_data['bots'][self.symbol] = self.to_dict()
+                
+                logger.info(f"[NEW_BOT_{self.symbol}] ✅ Вход в {direction} позицию успешен")
+                return True
+            else:
+                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось войти в {direction} позицию")
+                return False
+                
+        except Exception as e:
+            logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка входа в позицию: {e}")
+            return False
+    
     def _open_position_on_exchange(self, side, price):
         """Открывает позицию на бирже"""
         try:

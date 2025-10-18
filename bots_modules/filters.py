@@ -862,7 +862,14 @@ def process_auto_bot_signals(exchange_obj=None):
             # Создаем нового бота
             try:
                 logger.info(f"[NEW_AUTO] 🚀 Создаем бота для {symbol} ({coin['signal']}, RSI: {coin['rsi']:.1f})")
-                create_new_bot(symbol, exchange_obj=exchange_obj)
+                new_bot = create_new_bot(symbol, exchange_obj=exchange_obj)
+                
+                # ✅ КРИТИЧНО: Сразу входим в позицию!
+                signal = coin['signal']
+                direction = 'LONG' if signal == 'ENTER_LONG' else 'SHORT'
+                logger.info(f"[NEW_AUTO] 📈 Входим в позицию {direction} для {symbol}")
+                new_bot.enter_position(direction)
+                
                 created_bots += 1
                 
             except Exception as e:
