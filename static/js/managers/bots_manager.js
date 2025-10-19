@@ -1367,8 +1367,23 @@ class BotsManager {
         
         // Зону RSI убираем - она уже показана выше в ЗОНА RSI
         
-        // 2. Статус бота - показываем всегда
-        activeStatusData.bot = coin.bot_status || 'Нет бота';
+        // 2. Статус бота - проверяем активные боты
+        let botStatus = 'Нет бота';
+        if (this.activeBots && this.activeBots[coin.symbol]) {
+            const bot = this.activeBots[coin.symbol];
+            if (bot.status === 'running') {
+                botStatus = 'Активен';
+            } else if (bot.status === 'waiting') {
+                botStatus = 'Ожидание сигнала';
+            } else if (bot.status === 'in_position_long') {
+                botStatus = 'В позиции LONG';
+            } else if (bot.status === 'in_position_short') {
+                botStatus = 'В позиции SHORT';
+            } else {
+                botStatus = bot.status || 'Нет бота';
+            }
+        }
+        activeStatusData.bot = botStatus;
         
         // 3. ФИЛЬТРЫ - проверяем ВСЕ возможные поля
         
@@ -1585,8 +1600,28 @@ class BotsManager {
                     else if (statusValue.includes('TIMEOUT')) { icon = '⏰'; description = 'RSI Time Filter таймаут'; }
                 }
                 else if (label === 'Статус бота') {
-                    if (statusValue === 'Нет бота') { icon = '❓'; description = 'Бот не создан'; }
-                    else if (statusValue.includes('running')) { icon = '🟢'; description = 'Бот активен и работает'; }
+                    if (statusValue === 'Нет бота') { 
+                        icon = '❓'; 
+                        description = 'Бот не создан';
+                        
+                        // Показываем кнопку "Включить" только для монет с сигналами LONG/SHORT
+                        const enableBotBtn = document.getElementById('enableBotBtn');
+                        if (enableBotBtn && this.selectedCoin) {
+                            const signal = this.selectedCoin.signal;
+                            if (signal === 'ENTER_LONG' || signal === 'ENTER_SHORT') {
+                                enableBotBtn.style.display = 'inline-block';
+                            } else {
+                                enableBotBtn.style.display = 'none';
+                            }
+                        }
+                    }
+                    else if (statusValue.includes('running')) { 
+                        icon = '🟢'; 
+                        description = 'Бот активен и работает';
+                        // Скрываем кнопку для активных ботов
+                        const enableBotBtn = document.getElementById('enableBotBtn');
+                        if (enableBotBtn) enableBotBtn.style.display = 'none';
+                    }
                     else if (statusValue.includes('waiting')) { icon = '🔵'; description = 'Ожидание сигнала'; }
                     else if (statusValue.includes('error')) { icon = '🔴'; description = 'Ошибка в работе'; }
                     else if (statusValue.includes('stopped')) { icon = '🔴'; description = 'Бот остановлен'; }
@@ -1594,7 +1629,7 @@ class BotsManager {
                     else if (statusValue.includes('paused')) { icon = '⚪'; description = 'Приостановлен'; }
                 }
                 
-                iconElement.textContent = '';
+                iconElement.textContent = icon;
                 iconElement.title = `${label}: ${description || statusValue}`;
                 valueElement.title = `${label}: ${description || statusValue}`;
             } else {
@@ -5543,7 +5578,7 @@ class BotsManager {
         }
     }
     
-    initializeGlobalAutoBotToggle() {
+    async initializeGlobalAutoBotToggle() {
         const globalAutoBotToggleEl = document.getElementById('globalAutoBotToggle');
         console.log('[BotsManager] 🔍 initializeGlobalAutoBotToggle вызван');
         console.log('[BotsManager] 🔍 Элемент найден:', !!globalAutoBotToggleEl);
@@ -5552,6 +5587,33 @@ class BotsManager {
         if (globalAutoBotToggleEl && !globalAutoBotToggleEl.hasAttribute('data-initialized')) {
             console.log('[BotsManager] 🔧 Устанавливаем обработчик события...');
             globalAutoBotToggleEl.setAttribute('data-initialized', 'true');
+            
+            // КРИТИЧЕСКИ ВАЖНО: Загружаем текущее состояние Auto Bot с сервера
+            try {
+                console.log('[BotsManager] 🔄 Загрузка текущего состояния Auto Bot...');
+                const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/auto-bot`);
+                const data = await response.json();
+                
+                if (data.success && data.config) {
+                    const autoBotEnabled = data.config.enabled;
+                    console.log('[BotsManager] 🤖 Текущее состояние Auto Bot с сервера:', autoBotEnabled ? 'ВКЛ' : 'ВЫКЛ');
+                    
+                    // Устанавливаем состояние переключателя
+                    globalAutoBotToggleEl.checked = autoBotEnabled;
+                    
+                    // Обновляем визуальное состояние
+                    const toggleLabel = globalAutoBotToggleEl.closest('.auto-bot-toggle')?.querySelector('.toggle-label');
+                    if (toggleLabel) {
+                        toggleLabel.textContent = autoBotEnabled ? '🤖 Auto Bot (ВКЛ)' : '🤖 Auto Bot (ВЫКЛ)';
+                    }
+                    
+                    console.log('[BotsManager] ✅ Переключатель Auto Bot инициализирован с состоянием:', autoBotEnabled);
+                } else {
+                    console.error('[BotsManager] ❌ Ошибка загрузки состояния Auto Bot:', data.message);
+                }
+            } catch (error) {
+                console.error('[BotsManager] ❌ Ошибка запроса состояния Auto Bot:', error);
+            }
             
             globalAutoBotToggleEl.addEventListener('change', async (e) => {
                 const isEnabled = e.target.checked;

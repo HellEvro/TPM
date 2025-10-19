@@ -407,6 +407,7 @@ def create_bot(symbol, config=None, exchange_obj=None):
             default_volume = auto_bot_config['default_position_size']
         
         config = {
+            'id': f"{symbol}_{int(time.time())}",  # Генерируем уникальный ID
             'volume_mode': 'usdt',
             'volume_value': default_volume,
             'status': BOT_STATUS['RUNNING'],
@@ -421,6 +422,7 @@ def create_bot(symbol, config=None, exchange_obj=None):
     with bots_data_lock:
         auto_bot_config = bots_data['auto_bot_config']
         base_config = {
+            'id': f"{symbol}_{int(time.time())}",  # Генерируем уникальный ID
             'volume_mode': 'usdt',
             'volume_value': auto_bot_config['default_position_size'],
             'status': BOT_STATUS['RUNNING'],
