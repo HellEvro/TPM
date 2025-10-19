@@ -234,6 +234,11 @@
                                 <span class="value" id="selectedCoinRsiTimeFilter">-</span>
                                 <span class="status-icon" id="rsiTimeFilterIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
+                        <div class="data-item" id="maturityDiamondItem" style="display: none;">
+                                <span class="label">💎 Зрелость монеты:</span>
+                                <span class="value" id="selectedCoinMaturityDiamond">-</span>
+                                <span class="status-icon" id="maturityDiamondIcon" style="margin-left: 8px; font-size: 16px;">💎</span>
+                        </div>
                         <div class="data-item" id="botStatusItem" style="display: none;">
                                 <span class="label">🤖 Статус бота:</span>
                                 <span class="value" id="selectedCoinBotStatus">-</span>
@@ -304,13 +309,20 @@
 
                                 <!-- Stochastic RSI -->
                                 <div class="status-category">
-                                    <h4 style="color: #FF5722; margin-bottom: 10px;">Stochastic RSI:</h4>
+                                    <h4 style="color: #FF5722; margin-bottom: 10px;">📈 Stochastic RSI (Стохастический RSI):</h4>
                                     <div class="status-items">
-                                        <div class="status-item">🔴 OVERSOLD - Stochastic RSI перепродан</div>
-                                        <div class="status-item">🟢 OVERBOUGHT - Stochastic RSI перекуплен</div>
-                                        <div class="status-item">🟡 NEUTRAL - Stochastic RSI нейтральный</div>
-                                        <div class="status-item">📈 BULLISH - Stochastic RSI бычий сигнал</div>
-                                        <div class="status-item">📉 BEARISH - Stochastic RSI медвежий сигнал</div>
+                                        <div class="status-item">⬇️ OVERSOLD - %K ниже 20, возможен разворот вверх</div>
+                                        <div class="status-item">⬆️ OVERBOUGHT - %K выше 80, возможен разворот вниз</div>
+                                        <div class="status-item">➡️ NEUTRAL - %K между 20-80, тренд продолжается</div>
+                                        <div class="status-item">📈 BULLISH - %K выше %D, бычий сигнал</div>
+                                        <div class="status-item">📉 BEARISH - %K ниже %D, медвежий сигнал</div>
+                                    </div>
+                                    <div style="margin-top: 10px; padding: 8px; background: rgba(255, 87, 34, 0.1); border-radius: 4px; font-size: 12px; color: #FF5722;">
+                                        <strong>Объяснение:</strong><br>
+                                        • <strong>%K</strong> - основной индикатор Stochastic RSI<br>
+                                        • <strong>%D</strong> - сглаженная линия %K<br>
+                                        • <strong>Пересечение %K и %D</strong> - сигнал на покупку/продажу<br>
+                                        • <strong>Экстремальные зоны</strong> (0-20, 80-100) - сигналы разворота
                                     </div>
                                 </div>
 
@@ -406,13 +418,13 @@
 
                                 <!-- Стохастик -->
                                 <div class="status-category">
-                                    <h4 style="color: #FF5722; margin-bottom: 10px;">Стохастик:</h4>
+                                    <h4 style="color: #FF5722; margin-bottom: 10px;">📈 Стохастик:</h4>
                                     <div class="status-items">
-                                        <div class="status-item">🔴 OVERSOLD - Stochastic перепродан</div>
-                                        <div class="status-item">🟢 OVERBOUGHT - Stochastic перекуплен</div>
-                                        <div class="status-item">🟡 NEUTRAL - Stochastic нейтральный</div>
-                                        <div class="status-item">📈 BULLISH - Stochastic бычий сигнал</div>
-                                        <div class="status-item">📉 BEARISH - Stochastic медвежий сигнал</div>
+                                        <div class="status-item">⬇️ OVERSOLD - %K ниже 20, возможен разворот вверх</div>
+                                        <div class="status-item">⬆️ OVERBOUGHT - %K выше 80, возможен разворот вниз</div>
+                                        <div class="status-item">➡️ NEUTRAL - %K между 20-80, тренд продолжается</div>
+                                        <div class="status-item">📈 BULLISH - %K выше %D, бычий сигнал</div>
+                                        <div class="status-item">📉 BEARISH - %K ниже %D, медвежий сигнал</div>
                                     </div>
                                 </div>
 

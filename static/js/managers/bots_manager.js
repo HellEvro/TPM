@@ -859,9 +859,37 @@ class BotsManager {
         }
         
         if (stochK !== null && stochK !== undefined) {
-            const stochIcon = stochK < 20 ? '⬇️' : stochK > 80 ? '⬆️' : '➡️';
-            console.log(`[DEBUG] ${coin.symbol}: ГЕНЕРИРУЮ СТОХАСТИК %K=${stochK}, %D=${stochD}, icon=${stochIcon}`);
-            infoElements.push(`<span class="confirmation-stoch" title="Stochastic RSI: %K=${stochK.toFixed(1)}, %D=${stochD.toFixed(1)}">${stochIcon}</span>`);
+            let stochIcon, stochStatus, stochDescription;
+            
+            // Определяем статус и описание стохастика
+            if (stochK < 20) {
+                stochIcon = '⬇️';
+                stochStatus = 'OVERSOLD';
+                stochDescription = 'Перепроданность: %K ниже 20 - возможен разворот вверх';
+            } else if (stochK > 80) {
+                stochIcon = '⬆️';
+                stochStatus = 'OVERBOUGHT';
+                stochDescription = 'Перекупленность: %K выше 80 - возможен разворот вниз';
+            } else {
+                stochIcon = '➡️';
+                stochStatus = 'NEUTRAL';
+                stochDescription = 'Нейтральная зона: %K между 20-80 - тренд продолжается';
+            }
+            
+            // Добавляем информацию о пересечении %K и %D
+            let crossoverInfo = '';
+            if (stochK > stochD) {
+                crossoverInfo = ' (%K выше %D - бычий сигнал)';
+            } else if (stochK < stochD) {
+                crossoverInfo = ' (%K ниже %D - медвежий сигнал)';
+            } else {
+                crossoverInfo = ' (%K = %D - нейтрально)';
+            }
+            
+            const fullDescription = `${stochDescription}${crossoverInfo}`;
+            
+            console.log(`[DEBUG] ${coin.symbol}: ГЕНЕРИРУЮ СТОХАСТИК %K=${stochK}, %D=${stochD}, статус=${stochStatus}, icon=${stochIcon}`);
+            infoElements.push(`<span class="confirmation-stoch" title="${fullDescription}">${stochIcon}</span>`);
         } else {
             console.log(`[DEBUG] ${coin.symbol}: НЕТ СТОХАСТИКА - stoch_rsi_k=${coin.stoch_rsi_k}, enhanced_rsi=${!!enhancedRsi}`);
         }
@@ -1362,15 +1390,45 @@ class BotsManager {
         } else if (coin.stochastic && coin.stochastic !== 'NONE') {
             stochValue = coin.stochastic;
         } else if (coin.stoch_rsi_k !== undefined && coin.stoch_rsi_k !== null) {
-            // Используем числовые значения стохастика
+            // Используем числовые значения стохастика с подробным описанием
             const stochK = coin.stoch_rsi_k;
             const stochD = coin.stoch_rsi_d || 0;
-            stochValue = `%K=${stochK.toFixed(1)}, %D=${stochD.toFixed(1)}`;
+            let stochStatus = '';
+            let crossoverInfo = '';
+            
+            if (stochK < 20) {
+                stochStatus = 'OVERSOLD';
+                crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
+                stochValue = `Перепроданность: %K=${stochK.toFixed(1)} ниже 20 - возможен разворот вверх. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+            } else if (stochK > 80) {
+                stochStatus = 'OVERBOUGHT';
+                crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
+                stochValue = `Перекупленность: %K=${stochK.toFixed(1)} выше 80 - возможен разворот вниз. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+            } else {
+                stochStatus = 'NEUTRAL';
+                crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
+                stochValue = `Нейтральная зона: %K=${stochK.toFixed(1)} между 20-80 - тренд продолжается. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+            }
         } else if (coin.enhanced_rsi && coin.enhanced_rsi.confirmations) {
             const stochK = coin.enhanced_rsi.confirmations.stoch_rsi_k;
             const stochD = coin.enhanced_rsi.confirmations.stoch_rsi_d || 0;
             if (stochK !== undefined && stochK !== null) {
-                stochValue = `%K=${stochK.toFixed(1)}, %D=${stochD.toFixed(1)}`;
+                let stochStatus = '';
+                let crossoverInfo = '';
+                
+                if (stochK < 20) {
+                    stochStatus = 'OVERSOLD';
+                    crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
+                    stochValue = `Перепроданность: %K=${stochK.toFixed(1)} ниже 20 - возможен разворот вверх. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                } else if (stochK > 80) {
+                    stochStatus = 'OVERBOUGHT';
+                    crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
+                    stochValue = `Перекупленность: %K=${stochK.toFixed(1)} выше 80 - возможен разворот вниз. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                } else {
+                    stochStatus = 'NEUTRAL';
+                    crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
+                    stochValue = `Нейтральная зона: %K=${stochK.toFixed(1)} между 20-80 - тренд продолжается. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                }
             }
         }
         
@@ -1406,9 +1464,15 @@ class BotsManager {
             activeStatusData.manual_position = 'MANUAL';
         }
         
-        // Maturity (если незрелая)
-        if (coin.is_mature === false) {
-            activeStatusData.maturity = 'IMMATURE';
+        // Maturity (зрелость монеты)
+        if (coin.is_mature === true) {
+            const actualCandles = coin.candles_count || 'N/A';
+            const minCandles = this.autoBotConfig?.min_candles_for_maturity || 400;
+            activeStatusData.maturity = `Зрелая монета: ${actualCandles} свечей (требуется ≥${minCandles}) - достаточно истории для торговли`;
+        } else if (coin.is_mature === false) {
+            const actualCandles = coin.candles_count || 'N/A';
+            const minCandles = this.autoBotConfig?.min_candles_for_maturity || 400;
+            activeStatusData.maturity = `Незрелая монета: ${actualCandles} свечей (требуется ≥${minCandles}) - недостаточно истории`;
         }
         
         console.log('[BotsManager] 🎯 Обновление активных иконок:', activeStatusData);
@@ -1447,6 +1511,9 @@ class BotsManager {
         
         this.updateFilterItem('rsiTimeFilterItem', 'selectedCoinRsiTimeFilter', 'rsiTimeFilterIcon', 
                              activeStatusData.rsi_time_filter, 'RSI Time Filter');
+        
+        this.updateFilterItem('maturityDiamondItem', 'selectedCoinMaturityDiamond', 'maturityDiamondIcon', 
+                             activeStatusData.maturity, 'Зрелость монеты');
         
         this.updateFilterItem('botStatusItem', 'selectedCoinBotStatus', 'botStatusIcon', 
                              activeStatusData.bot, 'Статус бота');
@@ -1556,13 +1623,26 @@ class BotsManager {
         
         // 2. Зрелость монеты
         if (coin.is_mature) {
+            const actualCandles = coin.candles_count || 'N/A';
+            const minCandles = this.autoBotConfig?.min_candles_for_maturity || 400;
             realFilters.push({
                 itemId: 'maturityDiamondItem',
                 valueId: 'selectedCoinMaturityDiamond',
                 iconId: 'maturityDiamondIcon',
-                value: `Зрелая (${coin.candles_count || 'N/A'} свечей)`,
+                value: `Зрелая монета: ${actualCandles} свечей (требуется ≥${minCandles}) - достаточно истории для торговли`,
                 icon: '💎',
-                description: 'Монета имеет достаточно истории'
+                description: 'Монета имеет достаточно истории для надежного анализа'
+            });
+        } else if (coin.is_mature === false) {
+            const actualCandles = coin.candles_count || 'N/A';
+            const minCandles = this.autoBotConfig?.min_candles_for_maturity || 400;
+            realFilters.push({
+                itemId: 'maturityDiamondItem',
+                valueId: 'selectedCoinMaturityDiamond',
+                iconId: 'maturityDiamondIcon',
+                value: `Незрелая монета: ${actualCandles} свечей (требуется ≥${minCandles}) - недостаточно истории`,
+                icon: '💎',
+                description: 'Монета не имеет достаточно истории для надежного анализа'
             });
         }
         
@@ -1615,14 +1695,53 @@ class BotsManager {
                 if (conf.stoch_rsi_k !== undefined && conf.stoch_rsi_k !== null) {
                     const stochK = conf.stoch_rsi_k;
                     const stochD = conf.stoch_rsi_d || 0;
-                    const stochIcon = stochK < 20 ? '⬇️' : stochK > 80 ? '⬆️' : '➡️';
+                    
+                    let stochIcon, stochStatus, stochDescription;
+                    
+                    // Определяем статус и описание
+                    if (stochK < 20) {
+                        stochIcon = '⬇️';
+                        stochStatus = 'OVERSOLD';
+                        stochDescription = 'Перепроданность: %K ниже 20 - возможен разворот вверх';
+                    } else if (stochK > 80) {
+                        stochIcon = '⬆️';
+                        stochStatus = 'OVERBOUGHT';
+                        stochDescription = 'Перекупленность: %K выше 80 - возможен разворот вниз';
+                    } else {
+                        stochIcon = '➡️';
+                        stochStatus = 'NEUTRAL';
+                        stochDescription = 'Нейтральная зона: %K между 20-80 - тренд продолжается';
+                    }
+                    
+                    // Добавляем информацию о пересечении
+                    let crossoverInfo = '';
+                    if (stochK > stochD) {
+                        crossoverInfo = ' (%K выше %D - бычий сигнал)';
+                    } else if (stochK < stochD) {
+                        crossoverInfo = ' (%K ниже %D - медвежий сигнал)';
+                    } else {
+                        crossoverInfo = ' (%K = %D - нейтрально)';
+                    }
+                    
+                    const fullDescription = `Stochastic RSI: ${stochDescription}${crossoverInfo}`;
+                    
+                    // Создаем подробное описание для отображения на странице
+                    let detailedValue = '';
+                    if (stochStatus === 'OVERSOLD') {
+                        detailedValue = `Перепроданность: %K=${stochK.toFixed(1)} ниже 20 - возможен разворот цены вверх. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                    } else if (stochStatus === 'OVERBOUGHT') {
+                        detailedValue = `Перекупленность: %K=${stochK.toFixed(1)} выше 80 - возможен разворот цены вниз. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                    } else {
+                        detailedValue = `Нейтральная зона: %K=${stochK.toFixed(1)} между 20-80 - тренд продолжается. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                    }
+                    
                     realFilters.push({
                         itemId: 'stochasticRsiItem',
                         valueId: 'selectedCoinStochasticRsi',
                         iconId: 'stochasticRsiIcon',
-                        value: `%K=${stochK.toFixed(1)}, %D=${stochD.toFixed(1)}`,
+                        value: detailedValue,
                         icon: stochIcon,
-                        description: `Stochastic RSI: %K=${stochK.toFixed(1)}, %D=${stochD.toFixed(1)}`
+                        description: fullDescription
                     });
                 }
             }

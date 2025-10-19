@@ -406,6 +406,19 @@ def get_coins_with_rsi():
                 effective_signal = get_effective_signal(cleaned_coin)
                 cleaned_coin['effective_signal'] = effective_signal
                 
+                # ✅ ИСПРАВЛЕНИЕ: Добавляем количество свечей из данных зрелых монет
+                try:
+                    from bots_modules.imports_and_globals import mature_coins_storage
+                    if symbol in mature_coins_storage:
+                        maturity_data = mature_coins_storage[symbol].get('maturity_data', {})
+                        details = maturity_data.get('details', {})
+                        cleaned_coin['candles_count'] = details.get('candles_count')
+                    else:
+                        cleaned_coin['candles_count'] = None
+                except Exception as e:
+                    logger.debug(f"[API] Ошибка получения candles_count для {symbol}: {e}")
+                    cleaned_coin['candles_count'] = None
+                
                 cleaned_coins[symbol] = cleaned_coin
             
             # Получаем список монет с ручными позициями на бирже (позиции БЕЗ ботов)

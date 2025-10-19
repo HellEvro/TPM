@@ -53,6 +53,39 @@ def load_mature_coins_storage():
             with open(MATURE_COINS_FILE, 'r', encoding='utf-8') as f:
                 loaded_data = json.load(f)
             
+            # ✅ ПРОВЕРКА КОНФИГУРАЦИИ: Сравниваем настройки из файла с текущими
+            need_recalculation = False
+            if loaded_data:
+                # Берем первую монету для проверки настроек
+                first_coin = list(loaded_data.values())[0]
+                if 'maturity_data' in first_coin and 'details' in first_coin['maturity_data']:
+                    file_min_required = first_coin['maturity_data']['details'].get('min_required')
+                    
+                    # Получаем текущие настройки
+                    from bots_modules.imports_and_globals import bots_data, bots_data_lock
+                    with bots_data_lock:
+                        config = bots_data.get('auto_bot_config', {})
+                    
+                    current_min_candles = config.get('min_candles_for_maturity', MIN_CANDLES_FOR_MATURITY)
+                    current_min_rsi_low = config.get('min_rsi_low', MIN_RSI_LOW)
+                    current_max_rsi_high = config.get('max_rsi_high', MAX_RSI_HIGH)
+                    
+                    # Проверяем, изменились ли настройки
+                    if (file_min_required != current_min_candles or 
+                        first_coin['maturity_data']['details'].get('config_min_rsi_low') != current_min_rsi_low or
+                        first_coin['maturity_data']['details'].get('config_max_rsi_high') != current_max_rsi_high):
+                        
+                        logger.warning(f"[MATURITY_STORAGE] ⚠️ Настройки зрелости изменились!")
+                        logger.warning(f"[MATURITY_STORAGE] Файл: min_candles={file_min_required}, min_rsi={first_coin['maturity_data']['details'].get('config_min_rsi_low')}, max_rsi={first_coin['maturity_data']['details'].get('config_max_rsi_high')}")
+                        logger.warning(f"[MATURITY_STORAGE] Текущие: min_candles={current_min_candles}, min_rsi={current_min_rsi_low}, max_rsi={current_max_rsi_high}")
+                        logger.warning(f"[MATURITY_STORAGE] 🔄 Пересчитываем данные зрелости...")
+                        
+                        need_recalculation = True
+                        
+                        # Очищаем файл для пересчета
+                        os.remove(MATURE_COINS_FILE)
+                        loaded_data = {}
+            
             # ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Изменяем словарь in-place, а не переприсваиваем
             # Это важно, т.к. mature_coins_storage импортируется в другие модули
             with mature_coins_lock:
@@ -70,7 +103,10 @@ def load_mature_coins_storage():
             except Exception as sync_error:
                 logger.warning(f"[MATURITY_STORAGE] ⚠️ Не удалось синхронизировать с imports_and_globals: {sync_error}")
             
-            logger.info(f"[MATURITY_STORAGE] ✅ Загружено {len(mature_coins_storage)} зрелых монет из файла")
+            if need_recalculation:
+                logger.info(f"[MATURITY_STORAGE] 🔄 Данные будут пересчитаны при следующей проверке зрелости")
+            else:
+                logger.info(f"[MATURITY_STORAGE] ✅ Загружено {len(mature_coins_storage)} зрелых монет из файла")
         else:
             with mature_coins_lock:
                 mature_coins_storage.clear()
