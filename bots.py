@@ -7,6 +7,26 @@
 import os
 import sys
 
+# 🔍 ТРЕЙСИНГ из конфига (после импорта sys, но до остальных импортов)
+try:
+    # Читаем настройку трейсинга из конфига
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from bot_engine.bot_config import SystemConfig
+    ENABLE_TRACE = SystemConfig.ENABLE_CODE_TRACING
+    
+    if ENABLE_TRACE:
+        from trace_debug import enable_trace
+        enable_trace()
+        print("=" * 80)
+        print("TRACE: ENABLED - all code execution will be logged with timing")
+        print("WARNING: This will slow down the system significantly!")
+        print("=" * 80, flush=True)
+    else:
+        print("[INFO] Code tracing DISABLED (set SystemConfig.ENABLE_CODE_TRACING = True to enable)")
+except Exception as e:
+    print(f"[WARNING] Could not initialize tracing: {e}")
+    ENABLE_TRACE = False
+
 # Настройка кодировки для Windows консоли
 if os.name == 'nt':
     try:
@@ -242,6 +262,11 @@ def cleanup_bot_service():
     logger.info("=" * 80)
     
     try:
+        # 🔄 Останавливаем непрерывный загрузчик данных
+        logger.info("🔄 Останавливаем непрерывный загрузчик данных...")
+        from bots_modules.continuous_data_loader import stop_continuous_loader
+        stop_continuous_loader()
+        
         if async_processor:
             logger.info("Остановка асинхронного процессора...")
             stop_async_processor()
@@ -249,6 +274,7 @@ def cleanup_bot_service():
         logger.info("Сохранение состояния ботов...")
         save_bots_state()
         
+        # ✅ ВОССТАНОВЛЕНО: Сохранение зрелых монет при завершении (ТОЛЬКО если данные валидны)
         logger.info("Сохранение хранилища зрелых монет...")
         save_mature_coins_storage()
         
@@ -306,7 +332,7 @@ if __name__ == '__main__':
     atexit.register(cleanup_bot_service)
     
     try:
-        from bots_modules.workers import auto_save_worker, auto_bot_worker
+        from bots_modules.workers import auto_save_worker, auto_bot_worker, positions_monitor_worker
         
         load_auto_bot_config()
         
@@ -317,16 +343,9 @@ if __name__ == '__main__':
             import traceback
             traceback.print_exc()
         
-        # Запускаем воркер Optimal EMA
-        try:
-            from bot_engine.optimal_ema_worker import start_optimal_ema_worker
-            optimal_ema_worker = start_optimal_ema_worker(update_interval=21600)  # 6 часов
-            if optimal_ema_worker:
-                logger.info("📊 Optimal EMA Worker запущен (обновление каждые 6 часов)")
-            else:
-                logger.warning("⚠️ Optimal EMA Worker не запущен (скрипт не найден)")
-        except Exception as ema_error:
-            logger.warning(f"⚠️ Не удалось запустить Optimal EMA Worker: {ema_error}")
+        # ✅ Optimal EMA Worker ОТКЛЮЧЕН - расчет выполняется только в init_functions.py при старте
+        # Периодические обновления не нужны, так как Optimal EMA меняется редко
+        logger.info("📊 Optimal EMA Worker отключен - используется только начальный расчет")
         
         auto_save_thread = threading.Thread(target=auto_save_worker, daemon=True)
         auto_save_thread.start()
@@ -335,6 +354,11 @@ if __name__ == '__main__':
         auto_bot_thread = threading.Thread(target=auto_bot_worker, daemon=True)
         auto_bot_thread.start()
         logger.info("Auto Bot Worker запущен")
+        
+        # ✅ Positions Monitor Worker - мониторинг позиций каждые 5 секунд
+        positions_monitor_thread = threading.Thread(target=positions_monitor_worker, daemon=True)
+        positions_monitor_thread.start()
+        logger.info("📊 Positions Monitor Worker запущен (обновление каждые 5с)")
         
         # Инициализируем AI Manager (проверка лицензии и загрузка модулей)
         ai_manager = None

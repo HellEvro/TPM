@@ -90,16 +90,16 @@ def get_rsi_cache():
 def save_rsi_cache():
     """Сохранить кэш RSI данных в файл"""
     try:
-        with rsi_data_lock:
-            cache_data = {
-                'timestamp': datetime.now().isoformat(),
-                'coins': coins_rsi_data.get('coins', {}),
-                'stats': {
-                    'total_coins': len(coins_rsi_data.get('coins', {})),
-                    'successful_coins': coins_rsi_data.get('successful_coins', 0),
-                    'failed_coins': coins_rsi_data.get('failed_coins', 0)
-                }
+        # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция в Python
+        cache_data = {
+            'timestamp': datetime.now().isoformat(),
+            'coins': coins_rsi_data.get('coins', {}),
+            'stats': {
+                'total_coins': len(coins_rsi_data.get('coins', {})),
+                'successful_coins': coins_rsi_data.get('successful_coins', 0),
+                'failed_coins': coins_rsi_data.get('failed_coins', 0)
             }
+        }
         
         with open(RSI_CACHE_FILE, 'w', encoding='utf-8') as f:
             json.dump(cache_data, f, indent=2, ensure_ascii=False)
@@ -1699,20 +1699,31 @@ def check_startup_position_conflicts():
 
 def sync_bots_with_exchange():
     """Синхронизирует состояние ботов с открытыми позициями на бирже"""
+    import time
+    start_time = time.time()
+    
     try:
+        logger.info(f"[SYNC_EXCHANGE] 🔄 [0.0с] Начало синхронизации")
+        
         if not ensure_exchange_initialized():
             logger.warning("[SYNC_EXCHANGE] ⚠️ Биржа не инициализирована, пропускаем синхронизацию")
             return False
         
-        logger.info("[SYNC_EXCHANGE] 🔄 Синхронизация с биржей...")
+        logger.info(f"[SYNC_EXCHANGE] ✅ [{time.time()-start_time:.1f}с] Биржа инициализирована")
         
         # Получаем ВСЕ открытые позиции с биржи (с пагинацией)
         try:
             exchange_positions = {}
             cursor = ""
             total_positions = 0
+            iteration = 0
+            
+            logger.info(f"[SYNC_EXCHANGE] 📋 [{time.time()-start_time:.1f}с] Начало пагинации позиций")
             
             while True:
+                iteration += 1
+                iter_start = time.time()
+                
                 # Запрашиваем позиции с cursor для получения всех страниц
                 params = {
                     "category": "linear", 
@@ -1722,47 +1733,70 @@ def sync_bots_with_exchange():
                 if cursor:
                     params["cursor"] = cursor
                 
+                logger.info(f"[SYNC_EXCHANGE] 🔄 [{time.time()-start_time:.1f}с] Итерация {iteration}: формирование параметров")
+                
                 from bots_modules.imports_and_globals import get_exchange
                 current_exchange = get_exchange() or exchange
                 
-                # Добавляем таймаут для API запроса (Windows compatible)
-                import threading
-                import time
+                logger.info(f"[SYNC_EXCHANGE] 🔗 [{time.time()-start_time:.1f}с] Получен exchange объект")
                 
+                # Проверяем что биржа инициализирована
+                if not current_exchange or not hasattr(current_exchange, 'client'):
+                    logger.error(f"[SYNC_EXCHANGE] ❌ Биржа не инициализирована")
+                    return False
+                
+                logger.info(f"[SYNC_EXCHANGE] 📡 [{time.time()-start_time:.1f}с] СТАРТ API вызова get_positions()")
+                
+                # 🔥 УПРОЩЕННЫЙ ПОДХОД: быстрый таймаут на уровне SDK
                 positions_response = None
-                timeout_error = None
+                timeout_seconds = 8  # Короткий таймаут
+                max_retries = 2
                 
-                def api_call():
-                    nonlocal positions_response, timeout_error
+                logger.info(f"[SYNC_EXCHANGE] 🔧 [{time.time()-start_time:.1f}с] Попытка получить позиции (таймаут {timeout_seconds}с)")
+                
+                for retry in range(max_retries):
+                    retry_start = time.time()
                     try:
+                        # Устанавливаем короткий таймаут на уровне клиента
+                        old_timeout = getattr(current_exchange.client, 'timeout', None)
+                        current_exchange.client.timeout = timeout_seconds
+                        
+                        logger.info(f"[SYNC_EXCHANGE] 🌐 [{time.time()-start_time:.1f}с] Попытка {retry + 1}/{max_retries}: вызов get_positions")
                         positions_response = current_exchange.client.get_positions(**params)
+                        
+                        # Восстанавливаем таймаут
+                        if old_timeout is not None:
+                            current_exchange.client.timeout = old_timeout
+                        
+                        logger.info(f"[SYNC_EXCHANGE] ✅ [{time.time()-start_time:.1f}с] get_positions завершен за {time.time()-retry_start:.1f}с")
+                        break  # Успех!
+                        
                     except Exception as e:
-                        timeout_error = e
+                        logger.warning(f"[SYNC_EXCHANGE] ⚠️ [{time.time()-start_time:.1f}с] Ошибка попытки {retry + 1}: {e}")
+                        
+                        if retry < max_retries - 1:
+                            logger.info(f"[SYNC_EXCHANGE] 🔁 Повтор через 2с...")
+                            time.sleep(2)
+                        else:
+                            logger.error(f"[SYNC_EXCHANGE] ❌ Все {max_retries} попытки провалились, пропускаем синхронизацию")
+                            return False
                 
-                # Запускаем API вызов в отдельном потоке
-                api_thread = threading.Thread(target=api_call)
-                api_thread.daemon = True
-                api_thread.start()
-                api_thread.join(timeout=10)  # 10 секунд таймаут
-                
-                if api_thread.is_alive():
-                    logger.error(f"[SYNC_EXCHANGE] ❌ Таймаут получения позиций с биржи")
-                    return False
-                
-                if timeout_error:
-                    logger.error(f"[SYNC_EXCHANGE] ❌ Ошибка получения позиций: {timeout_error}")
-                    return False
-                
+                # Проверяем что получили ответ
                 if positions_response is None:
-                    logger.error(f"[SYNC_EXCHANGE] ❌ Пустой ответ от биржи")
+                    logger.error(f"[SYNC_EXCHANGE] ❌ [{time.time()-start_time:.1f}с] Пустой ответ")
                     return False
                 
+                logger.info(f"[SYNC_EXCHANGE] 🔍 [{time.time()-start_time:.1f}с] Проверка retCode")
                 if positions_response["retCode"] != 0:
-                    logger.error(f"[SYNC_EXCHANGE] ❌ Ошибка получения позиций: {positions_response['retMsg']}")
+                    logger.error(f"[SYNC_EXCHANGE] ❌ [{time.time()-start_time:.1f}с] Ошибка: {positions_response['retMsg']}")
                     return False
                 
+                logger.info(f"[SYNC_EXCHANGE] 📊 [{time.time()-start_time:.1f}с] Начало обработки позиций")
                 # Обрабатываем позиции на текущей странице
-                for position in positions_response["result"]["list"]:
+                positions_count = len(positions_response["result"]["list"])
+                logger.info(f"[SYNC_EXCHANGE] 📋 [{time.time()-start_time:.1f}с] Получено {positions_count} позиций для обработки")
+                
+                for idx, position in enumerate(positions_response["result"]["list"]):
                     symbol = position.get("symbol")
                     size = float(position.get("size", 0))
                     
@@ -1777,11 +1811,14 @@ def sync_bots_with_exchange():
                             'position_value': float(position.get("positionValue", 0))
                         }
                         total_positions += 1
-                        # logger.info(f"[SYNC_EXCHANGE] 📊 Найдена позиция: {symbol} -> {clean_symbol}, размер={abs(size)}, сторона={position.get('side')}, PnL=${float(position.get('unrealisedPnl', 0)):.2f}")
+                
+                logger.info(f"[SYNC_EXCHANGE] ✅ [{time.time()-start_time:.1f}с] Обработано {positions_count} позиций, найдено активных: {total_positions}")
                 
                 # Проверяем есть ли еще страницы
                 next_page_cursor = positions_response["result"].get("nextPageCursor", "")
+                logger.info(f"[SYNC_EXCHANGE] 📄 [{time.time()-start_time:.1f}с] Следующий cursor: {'ДА' if next_page_cursor else 'НЕТ'}")
                 if not next_page_cursor:
+                    logger.info(f"[SYNC_EXCHANGE] 🏁 [{time.time()-start_time:.1f}с] Пагинация завершена после {iteration} итераций")
                     break
                 cursor = next_page_cursor
             

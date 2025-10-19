@@ -135,9 +135,15 @@ class SmartRSIManager:
         try:
             self.last_update_time = int(time.time())
             
-            # Вызываем функцию обновления RSI
-            logger.info(f"[SMART_RSI] 📊 Плановое обновление RSI данных...")
-            self.rsi_update_callback()
+            # ⚡ БЫСТРАЯ ЗАГРУЗКА: Сначала грузим ТОЛЬКО свечи
+            logger.info(f"[SMART_RSI] 🚀 Быстрая загрузка свечей...")
+            from bots_modules.filters import load_all_coins_candles_fast
+            if load_all_coins_candles_fast():
+                logger.info(f"[SMART_RSI] ✅ Свечи загружены! Теперь локальные расчеты...")
+                # Потом вызываем полную загрузку с расчетами (она будет использовать кэш свечей)
+                self.rsi_update_callback()
+            else:
+                logger.error(f"[SMART_RSI] ❌ Не удалось загрузить свечи")
             
             time_to_close = self.get_time_to_candle_close()
             hours = time_to_close // 3600
@@ -182,6 +188,15 @@ class SmartRSIManager:
     
     def run_smart_worker(self):
         """Основной цикл умного обновления RSI и проверки торговых сигналов"""
+        # ⚡ АКТИВИРУЕМ ТРЕЙСИНГ для этого потока (если включен)
+        if SystemConfig.ENABLE_CODE_TRACING:
+            try:
+                from trace_debug import enable_trace
+                enable_trace()
+                logger.info("[SMART_RSI] 🔍 Трейсинг активирован в потоке Smart RSI")
+            except:
+                pass
+        
         logger.info("=" * 80)
         logger.info("[SMART_RSI] 🚀 ЗАПУСК ОПТИМИЗИРОВАННОЙ СИСТЕМЫ RSI")
         logger.info("[SMART_RSI] 📊 Режим: Плановое обновление каждые 60 минут")
@@ -190,7 +205,9 @@ class SmartRSIManager:
         logger.info("=" * 80)
         
         # Первое обновление сразу
+        logger.info("[SMART_RSI] 📡 Начинаем первое обновление RSI...")
         self.update_rsi_data()
+        logger.info("[SMART_RSI] ✅ Первое обновление RSI завершено")
         
         while not self.shutdown_flag.is_set():
             try:

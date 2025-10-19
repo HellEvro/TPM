@@ -149,7 +149,9 @@ def auto_bot_worker():
                 if should_log:
                     logger.info(f"[AUTO_BOT] {log_message}")
                 
-                logger.info(f"[AUTO_BOT] 🚀 Вызываем process_auto_bot_signals...")
+                # 💡 ДАННЫЕ ОБНОВЛЯЮТСЯ НЕПРЕРЫВНЫМ ЗАГРУЗЧИКОМ
+                # Автобот просто использует актуальные данные из глобального хранилища
+                logger.info(f"[AUTO_BOT] 🚀 Проверяем сигналы на актуальных данных из хранилища...")
                 from bots_modules.imports_and_globals import get_exchange
                 process_auto_bot_signals(exchange_obj=get_exchange())
                 logger.info(f"[AUTO_BOT] ✅ process_auto_bot_signals завершена")
@@ -192,14 +194,19 @@ def auto_bot_worker():
                 if should_log:
                     logger.info(f"[BOTS_CACHE] {log_message}")
                 
+                logger.info(f"[WORKER] 🔄 [1/3] НАЧАЛО: update_bots_cache_data()")
+                worker_t_start = time.time()  # time уже импортирован в начале файла
                 update_bots_cache_data()
+                logger.info(f"[WORKER] ✅ [1/3] КОНЕЦ: update_bots_cache_data() за {time.time()-worker_t_start:.1f}с")
                 last_position_update = current_time
             
             # Устанавливаем недостающие стоп-лоссы каждые SystemConfig.STOP_LOSS_SETUP_INTERVAL секунд
             time_since_stop_setup = current_time - last_stop_loss_setup
             if time_since_stop_setup >= SystemConfig.STOP_LOSS_SETUP_INTERVAL:
-                logger.info(f"[STOP_LOSS_SETUP] 🔧 Установка недостающих стоп-лоссов (каждые {SystemConfig.STOP_LOSS_SETUP_INTERVAL//60} мин)")
+                logger.info(f"[WORKER] 🔧 [2/3] НАЧАЛО: check_missing_stop_losses()")
+                worker_t_start2 = time.time()
                 check_missing_stop_losses()
+                logger.info(f"[WORKER] ✅ [2/3] КОНЕЦ: check_missing_stop_losses() за {time.time()-worker_t_start2:.1f}с")
                 last_stop_loss_setup = current_time
             
             # Умная синхронизация позиций с биржей каждые SystemConfig.POSITION_SYNC_INTERVAL секунд - ВРЕМЕННО ОТКЛЮЧЕНА
@@ -212,13 +219,18 @@ def auto_bot_worker():
             # Очищаем неактивные боты каждые SystemConfig.INACTIVE_BOT_CLEANUP_INTERVAL секунд
             time_since_cleanup = current_time - last_inactive_cleanup
             if time_since_cleanup >= SystemConfig.INACTIVE_BOT_CLEANUP_INTERVAL:
-                logger.info(f"[INACTIVE_CLEANUP] 🧹 Очистка неактивных ботов (каждые {SystemConfig.INACTIVE_BOT_CLEANUP_INTERVAL//60} мин)")
+                logger.info(f"[WORKER] 🧹 [3a/3] НАЧАЛО: cleanup_inactive_bots()")
+                t_start = time.time()
                 cleanup_inactive_bots()
+                logger.info(f"[WORKER] ✅ [3a/3] КОНЕЦ: cleanup_inactive_bots() за {time.time()-t_start:.1f}с")
                 
                 # УДАЛЕНО: Очистка зрелых монет - зрелость необратима!
                 
                 # Активируем правила торговли для зрелых монет
+                logger.info(f"[WORKER] 🎯 [3b/3] НАЧАЛО: check_trading_rules_activation()")
+                t_start = time.time()
                 check_trading_rules_activation()
+                logger.info(f"[WORKER] ✅ [3b/3] КОНЕЦ: check_trading_rules_activation() за {time.time()-t_start:.1f}с")
                 
                 last_inactive_cleanup = current_time
             
@@ -230,4 +242,73 @@ def auto_bot_worker():
             })
     
     logger.info("[AUTO_BOT] 🛑 Auto Bot Worker остановлен")
+
+
+def positions_monitor_worker():
+    """
+    📊 Мониторинг позиций на бирже (каждые 5 секунд)
+    
+    Загружает все позиции с биржи и сохраняет в кэш для быстрого доступа.
+    Это позволяет определять ручные позиции и избегать конфликтов.
+    """
+    logger.info("[POSITIONS_MONITOR] 🚀 Запуск мониторинга позиций...")
+    
+    # Создаем глобальный кэш позиций
+    global positions_cache
+    positions_cache = {
+        'positions': [],
+        'last_update': None,
+        'symbols_with_positions': set()
+    }
+    
+    while not shutdown_flag.is_set():
+        try:
+            from bots_modules.imports_and_globals import get_exchange
+            
+            exchange_obj = get_exchange()
+            if not exchange_obj:
+                logger.warning("[POSITIONS_MONITOR] ⚠️ Exchange не инициализирован")
+                time.sleep(5)
+                continue
+            
+            # Загружаем позиции с биржи
+            try:
+                exchange_positions = exchange_obj.get_positions()
+                if isinstance(exchange_positions, tuple):
+                    positions_list = exchange_positions[0] if exchange_positions else []
+                else:
+                    positions_list = exchange_positions if exchange_positions else []
+                
+                # Обновляем кэш
+                symbols_with_positions = set()
+                for pos in positions_list:
+                    if abs(float(pos.get('size', 0))) > 0:
+                        symbol = pos.get('symbol', '').replace('USDT', '')
+                        symbols_with_positions.add(symbol)
+                
+                positions_cache['positions'] = positions_list
+                positions_cache['last_update'] = datetime.now().isoformat()
+                positions_cache['symbols_with_positions'] = symbols_with_positions
+                
+                logger.debug(f"[POSITIONS_MONITOR] ✅ Обновлено: {len(positions_list)} позиций, активных: {len(symbols_with_positions)}")
+                
+            except Exception as e:
+                logger.warning(f"[POSITIONS_MONITOR] ⚠️ Ошибка загрузки позиций: {e}")
+            
+            # Ждем 5 секунд перед следующей проверкой
+            time.sleep(5)
+            
+        except Exception as e:
+            logger.error(f"[POSITIONS_MONITOR] ❌ Критическая ошибка: {e}")
+            time.sleep(10)
+    
+    logger.info("[POSITIONS_MONITOR] 🛑 Мониторинг позиций остановлен")
+
+
+# Глобальный кэш позиций
+positions_cache = {
+    'positions': [],
+    'last_update': None,
+    'symbols_with_positions': set()
+}
 

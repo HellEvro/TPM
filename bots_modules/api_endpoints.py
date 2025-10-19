@@ -135,6 +135,7 @@ def stop_async_processor():
 def health_check():
     """Проверка состояния сервиса"""
     try:
+        logger.info(f"[HEALTH_CHECK] ✅ Flask работает, запрос обработан")
         return jsonify({
             'status': 'ok',
             'service': 'bots',
