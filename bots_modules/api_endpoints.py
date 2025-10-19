@@ -406,6 +406,15 @@ def get_coins_with_rsi():
                 effective_signal = get_effective_signal(cleaned_coin)
                 cleaned_coin['effective_signal'] = effective_signal
                 
+                # ✅ ИСПРАВЛЕНИЕ: Копируем Stochastic RSI из enhanced_rsi в основные поля
+                if 'enhanced_rsi' in cleaned_coin and cleaned_coin['enhanced_rsi']:
+                    enhanced_rsi = cleaned_coin['enhanced_rsi']
+                    if 'confirmations' in enhanced_rsi:
+                        confirmations = enhanced_rsi['confirmations']
+                        # Копируем Stochastic RSI данные в основные поля для совместимости с UI
+                        cleaned_coin['stoch_rsi_k'] = confirmations.get('stoch_rsi_k')
+                        cleaned_coin['stoch_rsi_d'] = confirmations.get('stoch_rsi_d')
+                
                 # ✅ ИСПРАВЛЕНИЕ: Добавляем количество свечей из данных зрелых монет
                 try:
                     from bots_modules.imports_and_globals import mature_coins_storage
@@ -2462,9 +2471,26 @@ def reload_modules():
                 logger.error(f"[HOT_RELOAD] ❌ Ошибка перезагрузки {module_name}: {e}")
                 failed.append({'module': module_name, 'error': str(e)})
         
+        # Этап 1.5: Проверяем состояние Flask после перезагрузки
+        try:
+            logger.info("[HOT_RELOAD] 🔍 Проверка состояния Flask после перезагрузки...")
+            # Простая проверка что Flask все еще работает
+            if hasattr(request, 'method') and hasattr(request, 'get_json'):
+                logger.info("[HOT_RELOAD] ✅ Flask состояние корректно")
+            else:
+                logger.warning("[HOT_RELOAD] ⚠️ Flask состояние может быть нарушено")
+        except Exception as e:
+            logger.error(f"[HOT_RELOAD] ❌ Ошибка проверки Flask: {e}")
+        
         # Этап 2: Проверяем нужен ли перезапуск Flask сервера
-        request_data = request.get_json() or {}
-        force_flask_restart = request_data.get('force_flask_restart', False)
+        try:
+            request_data = request.get_json() or {}
+            force_flask_restart = request_data.get('force_flask_restart', False)
+            logger.info(f"[HOT_RELOAD] 📋 Данные запроса: {request_data}")
+        except Exception as e:
+            logger.error(f"[HOT_RELOAD] ❌ Ошибка парсинга JSON запроса: {e}")
+            request_data = {}
+            force_flask_restart = False
         
         if force_flask_restart or any(module in sys.modules for module in flask_restart_modules):
             flask_restart_required = True

@@ -243,6 +243,7 @@
                                 <span class="label">🤖 Статус бота:</span>
                                 <span class="value" id="selectedCoinBotStatus">-</span>
                                 <span class="status-icon" id="botStatusIcon" style="margin-left: 8px; font-size: 16px;"></span>
+                                <button id="enableBotBtn" class="btn btn-success btn-sm" style="margin-left: 10px; display: none;" onclick="enableBotForCurrentCoin()">Включить</button>
                         </div>
                     </div>
                 </div>
@@ -2610,5 +2611,42 @@ function getStatusDescription(statusType, statusValue) {
     };
     
     return descriptionMap[statusType]?.[statusValue] || 'Неизвестный статус';
+}
+
+// Функция для включения бота для текущей монеты
+function enableBotForCurrentCoin() {
+    if (window.botsManager && window.botsManager.selectedCoin) {
+        const coin = window.botsManager.selectedCoin;
+        console.log('[EnableBot] Включение бота для монеты:', coin.symbol);
+        
+        // Отправляем запрос на создание бота
+        fetch('/api/bots/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                symbol: coin.symbol,
+                signal: coin.signal || 'ENTER_LONG'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('[EnableBot] Бот успешно создан:', data);
+                // Обновляем интерфейс
+                window.botsManager.updateCoinInfo(coin);
+                // Скрываем кнопку
+                document.getElementById('enableBotBtn').style.display = 'none';
+            } else {
+                console.error('[EnableBot] Ошибка создания бота:', data.error);
+                alert('Ошибка создания бота: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('[EnableBot] Ошибка:', error);
+            alert('Ошибка создания бота: ' + error.message);
+        });
+    }
 }
 </script>

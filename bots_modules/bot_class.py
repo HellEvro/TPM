@@ -13,18 +13,31 @@ import threading
 
 logger = logging.getLogger('BotsService')
 
-# Глобальные переменные (импортируются из главного файла)
-bots_data_lock = threading.Lock()
-bots_data = {}
-rsi_data_lock = threading.Lock()
-coins_rsi_data = {}
-BOT_STATUS = {
-    'IDLE': 'idle',
-    'RUNNING': 'running',
-    'IN_POSITION_LONG': 'in_position_long',
-    'IN_POSITION_SHORT': 'in_position_short',
-    'PAUSED': 'paused'
-}
+# Импортируем глобальные переменные
+try:
+    from bots_modules.imports_and_globals import (
+        bots_data_lock, bots_data, rsi_data_lock, coins_rsi_data,
+        BOT_STATUS, get_exchange, system_initialized
+    )
+except ImportError:
+    # Fallback если импорт не удался
+    bots_data_lock = threading.Lock()
+    bots_data = {}
+    rsi_data_lock = threading.Lock()
+    coins_rsi_data = {}
+    BOT_STATUS = {
+        'IDLE': 'idle',
+        'RUNNING': 'running',
+        'IN_POSITION_LONG': 'in_position_long',
+        'IN_POSITION_SHORT': 'in_position_short',
+        'WAITING': 'waiting',
+        'STOPPED': 'stopped',
+        'ERROR': 'error',
+        'PAUSED': 'paused'
+    }
+    def get_exchange():
+        return None
+    system_initialized = False
 
 # Импорт функций фильтров (будут доступны после импорта)
 try:
@@ -235,7 +248,17 @@ class NewTradingBot:
             current_trend = external_trend
             
             # Получаем RSI данные
-            with rsi_data_lock:
+            try:
+                # Пытаемся использовать lock
+                with rsi_data_lock:
+                    coin_data = coins_rsi_data['coins'].get(self.symbol)
+                    if coin_data:
+                        current_rsi = coin_data.get('rsi6h')
+                        current_price = coin_data.get('price')
+                        if not current_trend:
+                            current_trend = coin_data.get('trend6h', 'NEUTRAL')
+            except NameError:
+                # Fallback если lock не определен
                 coin_data = coins_rsi_data['coins'].get(self.symbol)
                 if coin_data:
                     current_rsi = coin_data.get('rsi6h')
@@ -468,7 +491,8 @@ class NewTradingBot:
         """
         try:
             # Получаем текущую цену
-            price = self.exchange.get_current_price(self.symbol) if self.exchange else 0
+            ticker = self.exchange.get_ticker(self.symbol) if self.exchange else None
+            price = ticker['last'] if ticker and 'last' in ticker else 0
             
             logger.info(f"[NEW_BOT_{self.symbol}] 📈 Входим в {direction} позицию @ {price}")
             
