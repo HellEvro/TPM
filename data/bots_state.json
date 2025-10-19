@@ -11,13 +11,30 @@
       "entry_time": null,
       "last_signal_time": null,
       "last_bar_timestamp": null,
-      "created_at": "2025-10-19T05:00:40.363348",
+      "created_at": "2025-10-19T23:46:28.383228",
       "scaling_enabled": false,
       "scaling_levels": [],
       "scaling_current_level": 0,
       "scaling_group_id": null,
-      "unrealized_pnl": 0.0007,
+      "unrealized_pnl": 0.1736,
       "position_side": "LONG"
+    },
+    "SAROS": {
+      "symbol": "SAROS",
+      "status": "running",
+      "auto_managed": false,
+      "volume_mode": "usdt",
+      "volume_value": 5,
+      "position": null,
+      "entry_price": null,
+      "entry_time": null,
+      "last_signal_time": null,
+      "last_bar_timestamp": null,
+      "created_at": "2025-10-19T23:46:28.383632",
+      "scaling_enabled": false,
+      "scaling_levels": [],
+      "scaling_current_level": 0,
+      "scaling_group_id": null
     }
   },
   "auto_bot_config": {
@@ -59,6 +76,6 @@
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50
   },
-  "last_saved": "2025-10-19T05:00:40.762706",
+  "last_saved": "2025-10-19T23:46:28.788158",
   "version": "1.0"
 }
