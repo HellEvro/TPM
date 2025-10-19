@@ -29,7 +29,8 @@ try:
 except ImportError:
     bots_data_lock = threading.Lock()
     bots_data = {}
-    MIN_CANDLES_FOR_MATURITY = 200
+    # ✅ ВАЖНО: Fallback значения должны совпадать с default_auto_bot_config.json
+    MIN_CANDLES_FOR_MATURITY = 400  # Было 200, теперь 400
     MIN_RSI_LOW = 35
     MAX_RSI_HIGH = 65
 
@@ -44,10 +45,11 @@ except ImportError:
 mature_coins_storage = {}
 MATURE_COINS_FILE = 'data/mature_coins.json'
 mature_coins_lock = threading.Lock()
+maturity_data_invalidated = False  # Флаг: True если данные были сброшены и не должны сохраняться
 
 def load_mature_coins_storage():
     """Загружает постоянное хранилище зрелых монет из файла"""
-    global mature_coins_storage
+    global mature_coins_storage, maturity_data_invalidated
     try:
         if os.path.exists(MATURE_COINS_FILE):
             with open(MATURE_COINS_FILE, 'r', encoding='utf-8') as f:
@@ -85,6 +87,10 @@ def load_mature_coins_storage():
                         # Очищаем файл для пересчета
                         os.remove(MATURE_COINS_FILE)
                         loaded_data = {}
+                        
+                        # ✅ УСТАНАВЛИВАЕМ ФЛАГ: данные недействительны и не должны сохраняться
+                        maturity_data_invalidated = True
+                        logger.warning(f"[MATURITY_STORAGE] 🚫 Данные зрелости сброшены - сохранение ЗАПРЕЩЕНО до пересчета")
             
             # ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Изменяем словарь in-place, а не переприсваиваем
             # Это важно, т.к. mature_coins_storage импортируется в другие модули
@@ -118,6 +124,13 @@ def load_mature_coins_storage():
 
 def save_mature_coins_storage():
     """Сохраняет постоянное хранилище зрелых монет в файл"""
+    global maturity_data_invalidated
+    
+    # ✅ ПРОВЕРКА: Если данные были сброшены, не сохраняем их
+    if maturity_data_invalidated:
+        logger.warning(f"[MATURITY_STORAGE] 🚫 Сохранение пропущено - данные недействительны (ждем пересчета)")
+        return False
+    
     try:
         with mature_coins_lock:
             # Создаем копию для безопасной сериализации
@@ -179,7 +192,7 @@ def is_coin_mature_stored(symbol):
 
 def add_mature_coin_to_storage(symbol, maturity_data, auto_save=True):
     """Добавляет монету в постоянное хранилище зрелых монет (только если её там еще нет)"""
-    global mature_coins_storage
+    global mature_coins_storage, maturity_data_invalidated
     
     with mature_coins_lock:
         # Проверяем, есть ли уже монета в хранилище
@@ -187,6 +200,11 @@ def add_mature_coin_to_storage(symbol, maturity_data, auto_save=True):
             # Монета уже есть - ничего не делаем
             logger.debug(f"[MATURITY_STORAGE] {symbol}: уже есть в хранилище")
             return
+        
+        # ✅ СБРАСЫВАЕМ ФЛАГ: Если добавляем первую монету после сброса, данные снова валидны
+        if maturity_data_invalidated:
+            maturity_data_invalidated = False
+            logger.info(f"[MATURITY_STORAGE] ✅ Начат пересчет зрелости - сохранение разрешено")
         
         # Добавляем новую монету в хранилище
         mature_coins_storage[symbol] = {
