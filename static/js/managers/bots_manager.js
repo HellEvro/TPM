@@ -1468,11 +1468,10 @@ class BotsManager {
         if (coin.is_mature === true) {
             const actualCandles = coin.candles_count || 'N/A';
             const minCandles = this.autoBotConfig?.min_candles_for_maturity || 400;
-            activeStatusData.maturity = `Зрелая монета: ${actualCandles} свечей (требуется ≥${minCandles}) - достаточно истории для торговли`;
+            activeStatusData.maturity = `Зрелая монета: ${actualCandles} > ${minCandles} свечей - достаточно истории для торговли`;
         } else if (coin.is_mature === false) {
-            const actualCandles = coin.candles_count || 'N/A';
             const minCandles = this.autoBotConfig?.min_candles_for_maturity || 400;
-            activeStatusData.maturity = `Незрелая монета: ${actualCandles} свечей (требуется ≥${minCandles}) - недостаточно истории`;
+            activeStatusData.maturity = `Незрелая монета, менее ${minCandles} свечей - недостаточно истории`;
         }
         
         console.log('[BotsManager] 🎯 Обновление активных иконок:', activeStatusData);
@@ -1579,7 +1578,7 @@ class BotsManager {
                     else if (statusValue.includes('paused')) { icon = '⚪'; description = 'Приостановлен'; }
                 }
                 
-                iconElement.textContent = icon;
+                iconElement.textContent = '';
                 iconElement.title = `${label}: ${description || statusValue}`;
                 valueElement.title = `${label}: ${description || statusValue}`;
             } else {
@@ -1629,19 +1628,18 @@ class BotsManager {
                 itemId: 'maturityDiamondItem',
                 valueId: 'selectedCoinMaturityDiamond',
                 iconId: 'maturityDiamondIcon',
-                value: `Зрелая монета: ${actualCandles} свечей (требуется ≥${minCandles}) - достаточно истории для торговли`,
-                icon: '💎',
+                value: `Зрелая монета: ${actualCandles} > ${minCandles} свечей - достаточно истории для торговли`,
+                icon: '',
                 description: 'Монета имеет достаточно истории для надежного анализа'
             });
         } else if (coin.is_mature === false) {
-            const actualCandles = coin.candles_count || 'N/A';
             const minCandles = this.autoBotConfig?.min_candles_for_maturity || 400;
             realFilters.push({
                 itemId: 'maturityDiamondItem',
                 valueId: 'selectedCoinMaturityDiamond',
                 iconId: 'maturityDiamondIcon',
-                value: `Незрелая монета: ${actualCandles} свечей (требуется ≥${minCandles}) - недостаточно истории`,
-                icon: '💎',
+                value: `Незрелая монета, менее ${minCandles} свечей - недостаточно истории`,
+                icon: '',
                 description: 'Монета не имеет достаточно истории для надежного анализа'
             });
         }
@@ -1740,7 +1738,7 @@ class BotsManager {
                         valueId: 'selectedCoinStochasticRsi',
                         iconId: 'stochasticRsiIcon',
                         value: detailedValue,
-                        icon: stochIcon,
+                        icon: '',
                         description: fullDescription
                     });
                 }
@@ -1819,7 +1817,7 @@ class BotsManager {
                 valueId: 'selectedCoinExitScam',
                 iconId: 'exitScamIcon',
                 value: isBlocked ? `Блокирует: ${reason}` : `Безопасно: ${reason}`,
-                icon: isBlocked ? '🛡️' : '✅',
+                icon: '',
                 description: `ExitScam фильтр: ${reason}`
             });
         }
