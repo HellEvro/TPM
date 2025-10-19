@@ -3934,7 +3934,7 @@ class BotsManager {
                             <div class="bot-details" style="font-size: 12px; color: #ccc; margin-bottom: 10px;">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                                     <span>💰 Объем:</span>
-                                    <span style="color: #fff; font-weight: 500;">${bot.volume_value} ${bot.volume_mode.toUpperCase()}</span>
+                                    <span style="color: #fff; font-weight: 500;">${bot.volume_value} ${(bot.volume_mode || 'USDT').toUpperCase()}</span>
                                 </div>
                                 
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -4007,7 +4007,7 @@ class BotsManager {
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; color: #ccc;">
                                 <div>📊 PnL: <span style="color: ${bot.unrealized_pnl >= 0 ? '#4caf50' : '#f44336'};">$${(bot.unrealized_pnl || 0).toFixed(2)}</span></div>
-                                <div>💰 Объем: ${bot.volume_value} ${bot.volume_mode.toUpperCase()}</div>
+                                <div>💰 Объем: ${bot.volume_value} ${(bot.volume_mode || 'USDT').toUpperCase()}</div>
                                 <div>📅 Создан: ${new Date(bot.created_at).toLocaleString('ru-RU')}</div>
                                 <div>🎯 RSI: ${bot.rsi_data ? bot.rsi_data.rsi6h?.toFixed(1) : 'загрузка...'}</div>
                             </div>

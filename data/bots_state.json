@@ -3,19 +3,18 @@
     "AWE": {
       "symbol": "AWE",
       "status": "running",
-      "auto_managed": false,
-      "volume_mode": "usdt",
-      "volume_value": 5,
-      "position": null,
       "entry_price": null,
-      "entry_time": null,
+      "position_side": null,
+      "unrealized_pnl": 0.0,
+      "created_at": "2025-10-19T04:52:39.432811",
       "last_signal_time": null,
-      "last_bar_timestamp": null,
-      "created_at": "2025-10-19T04:23:35.888206",
-      "scaling_enabled": false,
-      "scaling_levels": [],
-      "scaling_current_level": 0,
-      "scaling_group_id": null
+      "max_profit_achieved": 0.0,
+      "trailing_stop_price": null,
+      "break_even_activated": false,
+      "position_start_time": null,
+      "order_id": null,
+      "entry_timestamp": null,
+      "opened_by_autobot": true
     }
   },
   "auto_bot_config": {
@@ -57,6 +56,6 @@
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50
   },
-  "last_saved": "2025-10-19T04:25:06.391000",
+  "last_saved": "2025-10-19T04:52:39.892799",
   "version": "1.0"
 }

@@ -249,15 +249,25 @@ class NewTradingBot:
             
             # Получаем RSI данные
             try:
-                # Пытаемся использовать lock
-                with rsi_data_lock:
+                # Проверяем, определен ли rsi_data_lock
+                if 'rsi_data_lock' in globals():
+                    with rsi_data_lock:
+                        coin_data = coins_rsi_data['coins'].get(self.symbol)
+                        if coin_data:
+                            current_rsi = coin_data.get('rsi6h')
+                            current_price = coin_data.get('price')
+                            if not current_trend:
+                                current_trend = coin_data.get('trend6h', 'NEUTRAL')
+                else:
+                    # Fallback если lock не определен
                     coin_data = coins_rsi_data['coins'].get(self.symbol)
                     if coin_data:
                         current_rsi = coin_data.get('rsi6h')
                         current_price = coin_data.get('price')
                         if not current_trend:
                             current_trend = coin_data.get('trend6h', 'NEUTRAL')
-            except NameError:
+            except Exception as e:
+                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка получения RSI данных: {e}")
                 # Fallback если lock не определен
                 coin_data = coins_rsi_data['coins'].get(self.symbol)
                 if coin_data:
@@ -526,11 +536,14 @@ class NewTradingBot:
             logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Открываем позицию {side} @ {price}")
             
             # Открываем позицию на бирже
-            order_result = self.exchange.place_market_order(
+            # Рассчитываем количество монет на основе volume_value в USDT
+            qty_in_coins = self.volume_value / price if price > 0 else 0
+            
+            order_result = self.exchange.place_order(
                 symbol=self.symbol,
                 side=side,
-                qty=None,  # Будет рассчитано по volume_value
-                qty_in_usdt=self.volume_value
+                quantity=qty_in_coins,  # Количество в монетах
+                order_type='market'
             )
             
             if order_result and order_result.get('success'):

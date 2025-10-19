@@ -410,7 +410,7 @@ def create_bot(symbol, config=None, exchange_obj=None):
             'id': f"{symbol}_{int(time.time())}",  # Генерируем уникальный ID
             'volume_mode': 'usdt',
             'volume_value': default_volume,
-            'status': BOT_STATUS['RUNNING'],
+            'status': BOT_STATUS['RUNNING'],  # ✅ Бот должен сразу работать
             'entry_price': None,
             'position_side': None,
             'unrealized_pnl': 0.0,
