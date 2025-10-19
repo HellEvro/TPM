@@ -311,11 +311,11 @@
                                 <div class="status-category">
                                     <h4 style="color: #FF5722; margin-bottom: 10px;">📈 Stochastic RSI (Стохастический RSI):</h4>
                                     <div class="status-items">
-                                        <div class="status-item">⬇️ OVERSOLD - %K ниже 20, возможен разворот вверх</div>
-                                        <div class="status-item">⬆️ OVERBOUGHT - %K выше 80, возможен разворот вниз</div>
-                                        <div class="status-item">➡️ NEUTRAL - %K между 20-80, тренд продолжается</div>
-                                        <div class="status-item">📈 BULLISH - %K выше %D, бычий сигнал</div>
-                                        <div class="status-item">📉 BEARISH - %K ниже %D, медвежий сигнал</div>
+                                        <div class="status-item">Перепроданность: %K ниже 20 - возможен разворот цены вверх</div>
+                                        <div class="status-item">Перекупленность: %K выше 80 - возможен разворот цены вниз</div>
+                                        <div class="status-item">Нейтральная зона: %K между 20-80 - тренд продолжается</div>
+                                        <div class="status-item" style="color: #44ff44;">%K выше %D - бычий сигнал пересечения (зеленый)</div>
+                                        <div class="status-item" style="color: #ff4444;">%K ниже %D - медвежий сигнал пересечения (красный)</div>
                                     </div>
                                     <div style="margin-top: 10px; padding: 8px; background: rgba(255, 87, 34, 0.1); border-radius: 4px; font-size: 12px; color: #FF5722;">
                                         <strong>Объяснение:</strong><br>
@@ -340,20 +340,17 @@
                                 <div class="status-category">
                                     <h4 style="color: #E91E63; margin-bottom: 10px;">ExitScam:</h4>
                                     <div class="status-items">
-                                        <div class="status-item">✅ SAFE - ExitScam: Безопасно</div>
-                                        <div class="status-item">⚠️ RISK - ExitScam: Риск обнаружен</div>
-                                        <div class="status-item">🚨 SCAM - ExitScam: Возможный скам</div>
-                                        <div class="status-item">🔍 CHECKING - ExitScam: Проверка</div>
+                                        <div class="status-item" style="color: #ff4444;">Блокирует: Обнаружены резкие движения цены (ExitScam фильтр) - красный</div>
+                                        <div class="status-item" style="color: #44ff44;">Безопасно: Нет подозрительной активности - зеленый</div>
                                     </div>
                                 </div>
 
                                 <!-- Зрелость монеты -->
                                 <div class="status-category">
-                                    <h4 style="color: #795548; margin-bottom: 10px;">Зрелость монеты:</h4>
+                                    <h4 style="color: #795548; margin-bottom: 10px;">💎 Зрелость монеты:</h4>
                                     <div class="status-items">
-                                        <div class="status-item">✅ MATURE - Монета зрелая (>400 свечей)</div>
-                                        <div class="status-item">❌ IMMATURE - Монета незрелая (<400 свечей)</div>
-                                        <div class="status-item">🔍 CHECKING - Проверка зрелости</div>
+                                        <div class="status-item">Зрелая монета: X > 400 свечей - достаточно истории для торговли</div>
+                                        <div class="status-item">Незрелая монета, менее 400 свечей - недостаточно истории</div>
                                     </div>
                                 </div>
 
@@ -401,7 +398,7 @@
                                 <div class="status-category">
                                     <h4 style="color: #FF9800; margin-bottom: 10px;">Ручные позиции:</h4>
                                     <div class="status-items">
-                                        <div class="status-item">✋ MANUAL - Ручная позиция</div>
+                                        <div class="status-item">MANUAL - Ручная позиция</div>
                                     </div>
                                 </div>
 
@@ -409,7 +406,7 @@
                                 <div class="status-category">
                                     <h4 style="color: #00BCD4; margin-bottom: 10px;">Подтверждение объемом:</h4>
                                     <div class="status-items">
-                                        <div class="status-item">📊 CONFIRMED - Объем подтвержден</div>
+                                        <div class="status-item">Подтвержден объемом - объем подтверждает сигнал</div>
                                         <div class="status-item">❌ NOT_CONFIRMED - Объем не подтвержден</div>
                                         <div class="status-item">⚠️ LOW_VOLUME - Низкий объем</div>
                                         <div class="status-item">📈 HIGH_VOLUME - Высокий объем</div>
@@ -420,11 +417,11 @@
                                 <div class="status-category">
                                     <h4 style="color: #FF5722; margin-bottom: 10px;">📈 Стохастик:</h4>
                                     <div class="status-items">
-                                        <div class="status-item">⬇️ OVERSOLD - %K ниже 20, возможен разворот вверх</div>
-                                        <div class="status-item">⬆️ OVERBOUGHT - %K выше 80, возможен разворот вниз</div>
-                                        <div class="status-item">➡️ NEUTRAL - %K между 20-80, тренд продолжается</div>
-                                        <div class="status-item">📈 BULLISH - %K выше %D, бычий сигнал</div>
-                                        <div class="status-item">📉 BEARISH - %K ниже %D, медвежий сигнал</div>
+                                        <div class="status-item">Перепроданность: %K ниже 20 - возможен разворот цены вверх</div>
+                                        <div class="status-item">Перекупленность: %K выше 80 - возможен разворот цены вниз</div>
+                                        <div class="status-item">Нейтральная зона: %K между 20-80 - тренд продолжается</div>
+                                        <div class="status-item" style="color: #44ff44;">%K выше %D - бычий сигнал пересечения (зеленый)</div>
+                                        <div class="status-item" style="color: #ff4444;">%K ниже %D - медвежий сигнал пересечения (красный)</div>
                                     </div>
                                 </div>
 
@@ -452,11 +449,10 @@
 
                                 <!-- Зрелость монеты -->
                                 <div class="status-category">
-                                    <h4 style="color: #795548; margin-bottom: 10px;">Зрелость монеты:</h4>
+                                    <h4 style="color: #795548; margin-bottom: 10px;">💎 Зрелость монеты:</h4>
                                     <div class="status-items">
-                                        <div class="status-item">✅ MATURE - Монета зрелая (>400 свечей)</div>
-                                        <div class="status-item">❌ IMMATURE - Монета незрелая (<400 свечей)</div>
-                                        <div class="status-item">🔍 CHECKING - Проверка зрелости</div>
+                                        <div class="status-item">Зрелая монета: X > 400 свечей - достаточно истории для торговли</div>
+                                        <div class="status-item">Незрелая монета, менее 400 свечей - недостаточно истории</div>
                                     </div>
                                 </div>
 

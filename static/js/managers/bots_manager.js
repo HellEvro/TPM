@@ -1399,15 +1399,15 @@ class BotsManager {
             if (stochK < 20) {
                 stochStatus = 'OVERSOLD';
                 crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
-                stochValue = `Перепроданность: %K=${stochK.toFixed(1)} ниже 20 - возможен разворот вверх. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                stochValue = `<span style="color: #44ff44;">Перепроданность: %K=${stochK.toFixed(1)} (ниже 20) - возможен разворот цены вверх.</span><br><span style="color: ${stochK > stochD ? '#44ff44' : '#ff4444'};">${stochK > stochD ? 'Бычий сигнал' : 'Медвежий сигнал'}: %D=${stochD.toFixed(1)} (${stochK > stochD ? '%K выше %D' : '%K ниже %D'})</span>`;
             } else if (stochK > 80) {
                 stochStatus = 'OVERBOUGHT';
                 crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
-                stochValue = `Перекупленность: %K=${stochK.toFixed(1)} выше 80 - возможен разворот вниз. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                stochValue = `<span style="color: #ff4444;">Перекупленность: %K=${stochK.toFixed(1)} (выше 80) - возможен разворот цены вниз.</span><br><span style="color: ${stochK > stochD ? '#44ff44' : '#ff4444'};">${stochK > stochD ? 'Бычий сигнал' : 'Медвежий сигнал'}: %D=${stochD.toFixed(1)} (${stochK > stochD ? '%K выше %D' : '%K ниже %D'})</span>`;
             } else {
                 stochStatus = 'NEUTRAL';
                 crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
-                stochValue = `Нейтральная зона: %K=${stochK.toFixed(1)} между 20-80 - тренд продолжается. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                stochValue = `<span style="color: #ffff44;">Нейтральная зона: %K=${stochK.toFixed(1)} (между 20-80) - тренд продолжается.</span><br><span style="color: ${stochK > stochD ? '#44ff44' : '#ff4444'};">${stochK > stochD ? 'Бычий сигнал' : 'Медвежий сигнал'}: %D=${stochD.toFixed(1)} (${stochK > stochD ? '%K выше %D' : '%K ниже %D'})</span>`;
             }
         } else if (coin.enhanced_rsi && coin.enhanced_rsi.confirmations) {
             const stochK = coin.enhanced_rsi.confirmations.stoch_rsi_k;
@@ -1419,15 +1419,15 @@ class BotsManager {
                 if (stochK < 20) {
                     stochStatus = 'OVERSOLD';
                     crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
-                    stochValue = `Перепроданность: %K=${stochK.toFixed(1)} ниже 20 - возможен разворот вверх. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                    stochValue = `<span style="color: #44ff44;">Перепроданность: %K=${stochK.toFixed(1)} (ниже 20) - возможен разворот цены вверх.</span><br><span style="color: ${stochK > stochD ? '#44ff44' : '#ff4444'};">${stochK > stochD ? 'Бычий сигнал' : 'Медвежий сигнал'}: %D=${stochD.toFixed(1)} (${stochK > stochD ? '%K выше %D' : '%K ниже %D'})</span>`;
                 } else if (stochK > 80) {
                     stochStatus = 'OVERBOUGHT';
                     crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
-                    stochValue = `Перекупленность: %K=${stochK.toFixed(1)} выше 80 - возможен разворот вниз. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                    stochValue = `<span style="color: #ff4444;">Перекупленность: %K=${stochK.toFixed(1)} (выше 80) - возможен разворот цены вниз.</span><br><span style="color: ${stochK > stochD ? '#44ff44' : '#ff4444'};">${stochK > stochD ? 'Бычий сигнал' : 'Медвежий сигнал'}: %D=${stochD.toFixed(1)} (${stochK > stochD ? '%K выше %D' : '%K ниже %D'})</span>`;
                 } else {
                     stochStatus = 'NEUTRAL';
                     crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
-                    stochValue = `Нейтральная зона: %K=${stochK.toFixed(1)} между 20-80 - тренд продолжается. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                    stochValue = `<span style="color: #ffff44;">Нейтральная зона: %K=${stochK.toFixed(1)} (между 20-80) - тренд продолжается.</span><br><span style="color: ${stochK > stochD ? '#44ff44' : '#ff4444'};">${stochK > stochD ? 'Бычий сигнал' : 'Медвежий сигнал'}: %D=${stochD.toFixed(1)} (${stochK > stochD ? '%K выше %D' : '%K ниже %D'})</span>`;
                 }
             }
         }
@@ -1550,6 +1550,13 @@ class BotsManager {
                     else if (statusValue.includes('HIGH_VOLUME')) { icon = '📈'; description = 'Высокий объем'; }
                 }
                 else if (label === 'Стохастик') {
+                    // Специальная обработка для стохастика с HTML и цветами
+                    if (statusValue.includes('<br>') || statusValue.includes('<span')) {
+                        // Это HTML контент с цветовым кодированием
+                        valueElement.innerHTML = statusValue;
+                        return; // Выходим рано для HTML контента
+                    }
+                    
                     if (statusValue.includes('OVERSOLD')) { icon = '🔴'; description = 'Stochastic перепродан'; }
                     else if (statusValue.includes('OVERBOUGHT')) { icon = '🟢'; description = 'Stochastic перекуплен'; }
                     else if (statusValue.includes('NEUTRAL')) { icon = '🟡'; description = 'Stochastic нейтральный'; }
@@ -1557,6 +1564,15 @@ class BotsManager {
                     else if (statusValue.includes('BEARISH')) { icon = '📉'; description = 'Stochastic медвежий сигнал'; }
                 }
                 else if (label === 'ExitScam защита') {
+                    // Специальная обработка для ExitScam с цветами
+                    if (statusValue.includes('Блокирует:')) {
+                        valueElement.innerHTML = `<span style="color: #ff4444;">${statusValue}</span>`;
+                        return; // Выходим рано для цветного контента
+                    } else if (statusValue.includes('Безопасно:')) {
+                        valueElement.innerHTML = `<span style="color: #44ff44;">${statusValue}</span>`;
+                        return; // Выходим рано для цветного контента
+                    }
+                    
                     if (statusValue.includes('SAFE')) { icon = '🛡️'; description = 'ExitScam: Безопасно'; }
                     else if (statusValue.includes('RISK')) { icon = '⚠️'; description = 'ExitScam: Риск обнаружен'; }
                     else if (statusValue.includes('SCAM')) { icon = '🚨'; description = 'ExitScam: Возможный скам'; }
@@ -1615,7 +1631,7 @@ class BotsManager {
                 valueId: 'selectedCoinManualPosition',
                 iconId: 'manualPositionIcon',
                 value: 'Ручная позиция',
-                icon: '✋',
+                icon: '',
                 description: 'Монета в ручной позиции'
             });
         }
@@ -1655,7 +1671,7 @@ class BotsManager {
                     valueId: 'selectedCoinExtremeDuration',
                     iconId: 'extremeDurationIcon',
                     value: `${enhancedRsi.extreme_duration}🕐`,
-                    icon: '🕐',
+                    icon: '',
                     description: 'Время в экстремальной зоне RSI'
                 });
             }
@@ -1725,12 +1741,23 @@ class BotsManager {
                     
                     // Создаем подробное описание для отображения на странице
                     let detailedValue = '';
-                    if (stochStatus === 'OVERSOLD') {
-                        detailedValue = `Перепроданность: %K=${stochK.toFixed(1)} ниже 20 - возможен разворот цены вверх. %D=${stochD.toFixed(1)}${crossoverInfo}`;
-                    } else if (stochStatus === 'OVERBOUGHT') {
-                        detailedValue = `Перекупленность: %K=${stochK.toFixed(1)} выше 80 - возможен разворот цены вниз. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                    
+                    // Определяем сигнал пересечения с цветами
+                    let signalInfo = '';
+                    if (stochK > stochD) {
+                        signalInfo = `<span style="color: #44ff44;">Бычий сигнал: %D=${stochD.toFixed(1)} (%K выше %D)</span>`;
+                    } else if (stochK < stochD) {
+                        signalInfo = `<span style="color: #ff4444;">Медвежий сигнал: %D=${stochD.toFixed(1)} (%K ниже %D)</span>`;
                     } else {
-                        detailedValue = `Нейтральная зона: %K=${stochK.toFixed(1)} между 20-80 - тренд продолжается. %D=${stochD.toFixed(1)}${crossoverInfo}`;
+                        signalInfo = `<span style="color: #ffff44;">Нейтральный сигнал: %D=${stochD.toFixed(1)} (%K = %D)</span>`;
+                    }
+                    
+                    if (stochStatus === 'OVERSOLD') {
+                        detailedValue = `<span style="color: #44ff44;">Перепроданность: %K=${stochK.toFixed(1)} (ниже 20) - возможен разворот цены вверх.</span><br>${signalInfo}`;
+                    } else if (stochStatus === 'OVERBOUGHT') {
+                        detailedValue = `<span style="color: #ff4444;">Перекупленность: %K=${stochK.toFixed(1)} (выше 80) - возможен разворот цены вниз.</span><br>${signalInfo}`;
+                    } else {
+                        detailedValue = `<span style="color: #ffff44;">Нейтральная зона: %K=${stochK.toFixed(1)} (между 20-80) - тренд продолжается.</span><br>${signalInfo}`;
                     }
                     
                     realFilters.push({
@@ -1812,11 +1839,19 @@ class BotsManager {
             const isBlocked = exitScam.blocked;
             const reason = exitScam.reason || '';
             
+            // Добавляем цветовое кодирование
+            let coloredValue = '';
+            if (isBlocked) {
+                coloredValue = `<span style="color: #ff4444;">Блокирует: ${reason}</span>`;
+            } else {
+                coloredValue = `<span style="color: #44ff44;">Безопасно: ${reason}</span>`;
+            }
+            
             realFilters.push({
                 itemId: 'exitScamItem',
                 valueId: 'selectedCoinExitScam',
                 iconId: 'exitScamIcon',
-                value: isBlocked ? `Блокирует: ${reason}` : `Безопасно: ${reason}`,
+                value: coloredValue,
                 icon: '',
                 description: `ExitScam фильтр: ${reason}`
             });
@@ -1829,8 +1864,9 @@ class BotsManager {
             
             if (itemElement && valueElement && iconElement) {
                 itemElement.style.display = 'flex';
-                valueElement.textContent = filter.value;
-                iconElement.textContent = filter.icon;
+                // Используем innerHTML для поддержки цветного HTML контента
+                valueElement.innerHTML = filter.value;
+                iconElement.textContent = '';
                 iconElement.title = filter.description;
                 valueElement.title = filter.description;
                 console.log(`[BotsManager] ✅ Показан фильтр: ${filter.itemId}`);
