@@ -1279,9 +1279,27 @@ def cleanup_inactive_bots():
                         # Если не можем распарсить время, считаем бота неактивным
                         bots_to_remove.append(symbol)
                 else:
-                    # Если нет времени последнего обновления, считаем бота неактивным
-                    logger.warning(f"[INACTIVE_CLEANUP] ⚠️ Бот {symbol} без времени последнего обновления")
-                    bots_to_remove.append(symbol)
+                    # ✅ КРИТИЧНО: Если нет last_update, проверяем created_at
+                    # Свежесозданные боты не должны удаляться!
+                    created_at_str = bot_data.get('created_at')
+                    if created_at_str:
+                        try:
+                            created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+                            time_since_creation = current_time - created_at.timestamp()
+                            
+                            if time_since_creation < 300:  # 5 минут
+                                logger.info(f"[INACTIVE_CLEANUP] ⏳ Бот {symbol} создан {time_since_creation//60:.0f} мин назад, нет last_update - пропускаем удаление")
+                                continue
+                            else:
+                                logger.warning(f"[INACTIVE_CLEANUP] ⏰ Бот {symbol} без last_update и создан {time_since_creation//60:.0f} мин назад - удаляем")
+                                bots_to_remove.append(symbol)
+                        except Exception as e:
+                            logger.error(f"[INACTIVE_CLEANUP] ❌ Ошибка парсинга created_at для {symbol}: {e}")
+                            # Если не можем распарсить, НЕ УДАЛЯЕМ (безопаснее)
+                            logger.warning(f"[INACTIVE_CLEANUP] ⚠️ Бот {symbol} без времени - НЕ УДАЛЯЕМ для безопасности")
+                    else:
+                        # Нет ни last_update, ни created_at - очень странная ситуация
+                        logger.warning(f"[INACTIVE_CLEANUP] ⚠️ Бот {symbol} без времени обновления и создания - НЕ УДАЛЯЕМ для безопасности")
             
             # Удаляем неактивных ботов
             for symbol in bots_to_remove:
@@ -1706,7 +1724,38 @@ def sync_bots_with_exchange():
                 
                 from bots_modules.imports_and_globals import get_exchange
                 current_exchange = get_exchange() or exchange
-                positions_response = current_exchange.client.get_positions(**params)
+                
+                # Добавляем таймаут для API запроса (Windows compatible)
+                import threading
+                import time
+                
+                positions_response = None
+                timeout_error = None
+                
+                def api_call():
+                    nonlocal positions_response, timeout_error
+                    try:
+                        positions_response = current_exchange.client.get_positions(**params)
+                    except Exception as e:
+                        timeout_error = e
+                
+                # Запускаем API вызов в отдельном потоке
+                api_thread = threading.Thread(target=api_call)
+                api_thread.daemon = True
+                api_thread.start()
+                api_thread.join(timeout=10)  # 10 секунд таймаут
+                
+                if api_thread.is_alive():
+                    logger.error(f"[SYNC_EXCHANGE] ❌ Таймаут получения позиций с биржи")
+                    return False
+                
+                if timeout_error:
+                    logger.error(f"[SYNC_EXCHANGE] ❌ Ошибка получения позиций: {timeout_error}")
+                    return False
+                
+                if positions_response is None:
+                    logger.error(f"[SYNC_EXCHANGE] ❌ Пустой ответ от биржи")
+                    return False
                 
                 if positions_response["retCode"] != 0:
                     logger.error(f"[SYNC_EXCHANGE] ❌ Ошибка получения позиций: {positions_response['retMsg']}")

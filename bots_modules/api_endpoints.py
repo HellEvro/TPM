@@ -633,6 +633,35 @@ def create_bot_endpoint():
         from bots_modules.imports_and_globals import get_exchange
         bot_config = create_bot(symbol, config, exchange_obj=get_exchange())
         
+        # ✅ КРИТИЧНО: Немедленно входим в позицию если есть сигнал!
+        try:
+            # Получаем текущий сигнал для монеты
+            with rsi_data_lock:
+                coin_data = coins_rsi_data['coins'].get(symbol)
+                if coin_data and coin_data.get('signal') in ['ENTER_LONG', 'ENTER_SHORT']:
+                    signal = coin_data.get('signal')
+                    direction = 'LONG' if signal == 'ENTER_LONG' else 'SHORT'
+                    
+                    logger.info(f"[BOT_CREATE] 🚀 НЕМЕДЛЕННО входим в {direction} позицию для {symbol}")
+                    
+                    # ✅ ПРЯМОЙ ВЫЗОВ: Создаем объект бота и сразу входим в позицию
+                    from bots_modules.bot_class import NewTradingBot
+                    bot_instance = NewTradingBot(symbol, bot_config, get_exchange())
+                    
+                    # НЕМЕДЛЕННО входим в позицию
+                    result = bot_instance.enter_position(direction)
+                    if result:
+                        logger.info(f"[BOT_CREATE] ✅ Успешно вошли в {direction} позицию для {symbol}")
+                        # Обновляем bots_data с новым состоянием
+                        with bots_data_lock:
+                            bots_data['bots'][symbol] = bot_instance.to_dict()
+                    else:
+                        logger.error(f"[BOT_CREATE] ❌ НЕ УДАЛОСЬ войти в {direction} позицию для {symbol}")
+                else:
+                    logger.info(f"[BOT_CREATE] ℹ️ Нет активного сигнала для {symbol}, бот будет ждать")
+        except Exception as e:
+            logger.error(f"[BOT_CREATE] ❌ Ошибка немедленного входа в позицию: {e}")
+        
         logger.info(f"[BOT_CREATE] ✅ Бот для {symbol} создан и запущен")
         logger.info(f"[BOT_CREATE] Статус: {bot_config.get('status', 'UNKNOWN')}")
         logger.info(f"[BOT_CREATE] ID бота: {bot_config.get('id', 'UNKNOWN')}")
