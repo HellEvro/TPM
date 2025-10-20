@@ -482,24 +482,25 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         has_existing_position = False
         # ПРОПУСКАЕМ ПРОВЕРКУ ПОЗИЦИЙ ЗДЕСЬ - экономим ~50 API запросов к бирже!
         
-        # ✅ ФИЛЬТР 4: Enhanced RSI (после проверки позиций)
-        # ⚡ ОПТИМИЗАЦИЯ: Проверяем ТОЛЬКО если есть базовый сигнал (экономим 90% вычислений!)
+        # ✅ ФИЛЬТР 4: Enhanced RSI (для ВСЕХ монет, чтобы получить Stochastic RSI)
+        # ⚡ ИЗМЕНЕНИЕ: Рассчитываем Enhanced RSI для всех монет, не только сигнальных
+        # Это нужно для получения Stochastic RSI данных для UI
         enhanced_analysis = None
         
-        if signal in ['ENTER_LONG', 'ENTER_SHORT']:
-            # Проверяем волатильность, дивергенции, объемы
-            enhanced_analysis = perform_enhanced_rsi_analysis(candles, rsi, symbol)
-            
-            # Если Enhanced RSI включен и дает другой сигнал - используем его
-            if enhanced_analysis.get('enabled') and enhanced_analysis.get('enhanced_signal'):
-                original_signal = signal
-                enhanced_signal = enhanced_analysis.get('enhanced_signal')
-                if enhanced_signal != original_signal:
-                    logger.info(f"[ENHANCED_RSI] {symbol}: Сигнал изменен {original_signal} → {enhanced_signal}")
-                    signal = enhanced_signal
-                    # Если Enhanced RSI говорит WAIT - блокируем
-                    if signal == 'WAIT':
-                        rsi_zone = 'NEUTRAL'
+        # Рассчитываем Enhanced RSI для всех монет (включая нейтральные)
+        # Это обеспечивает наличие Stochastic RSI данных для всех монет в UI
+        enhanced_analysis = perform_enhanced_rsi_analysis(candles, rsi, symbol)
+        
+        # Если Enhanced RSI включен и дает другой сигнал - используем его
+        if enhanced_analysis.get('enabled') and enhanced_analysis.get('enhanced_signal'):
+            original_signal = signal
+            enhanced_signal = enhanced_analysis.get('enhanced_signal')
+            if enhanced_signal != original_signal:
+                logger.info(f"[ENHANCED_RSI] {symbol}: Сигнал изменен {original_signal} → {enhanced_signal}")
+                signal = enhanced_signal
+                # Если Enhanced RSI говорит WAIT - блокируем
+                if signal == 'WAIT':
+                    rsi_zone = 'NEUTRAL'
         
         # ✅ ФИЛЬТР 5: Зрелость монеты (проверяем ПОСЛЕ Enhanced RSI)
         # ⚡ ОПТИМИЗАЦИЯ: Проверяем ТОЛЬКО если есть сигнал входа (экономим 95% проверок!)
@@ -517,13 +518,14 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     signal = 'WAIT'
                     rsi_zone = 'NEUTRAL'
         
-        # ⚡ ОПТИМИЗАЦИЯ: Получаем EMA ТОЛЬКО если есть сигнал (экономим вычисления!)
-        # EMA нужны для trend_analysis, но trend_analysis уже рассчитан выше
+        # ⚡ ИЗМЕНЕНИЕ: Получаем оптимальные EMA для ВСЕХ монет (не только сигнальных)
+        # Это нужно для отображения правильных EMA данных в UI
         ema_periods = None
-        if signal in ['ENTER_LONG', 'ENTER_SHORT']:
+        try:
             ema_periods = get_optimal_ema_periods(symbol)
-        else:
-            # Для монет без сигнала используем дефолтные значения
+        except Exception as e:
+            logger.debug(f"[EMA] Ошибка получения оптимальных EMA для {symbol}: {e}")
+            # Если не удалось получить оптимальные EMA, используем дефолтные значения
             ema_periods = {'ema_short': 50, 'ema_long': 200, 'accuracy': 0, 'analysis_method': 'default'}
         
         # closes[-1] - это самая НОВАЯ цена (последняя свеча в массиве)
