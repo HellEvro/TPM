@@ -32,7 +32,7 @@ try:
         DEFAULT_AUTO_BOT_CONFIG, RSI_CACHE_FILE, PROCESS_STATE_FILE,
         SYSTEM_CONFIG_FILE, BOTS_STATE_FILE, AUTO_BOT_CONFIG_FILE,
         DEFAULT_CONFIG_FILE, should_log_message,
-        get_coin_processing_lock
+        get_coin_processing_lock, get_exchange
     )
     # MATURE_COINS_FILE определен в maturity.py
     try:
@@ -80,6 +80,8 @@ except ImportError as e:
         return threading.Lock()
     def ensure_exchange_initialized():
         return exchange is not None
+    def get_exchange():
+        return exchange
 
 def get_rsi_cache():
     """Получить кэшированные RSI данные"""
@@ -618,69 +620,86 @@ def update_bots_cache_data():
         timeout_thread.start()
         
         # Получаем актуальные данные ботов
-        with bots_data_lock:
-            bots_list = []
-            for symbol, bot_data in bots_data['bots'].items():
-                # Проверяем таймаут
-                if timeout_occurred.is_set():
-                    logger.warning("[BOTS_CACHE] ⚠️ Таймаут достигнут, прерываем обновление")
-                    break
-                # Обновляем данные бота в реальном времени
-                if bot_data.get('status') in ['in_position_long', 'in_position_short']:
-                    try:
-                        # Получаем текущую цену
-                        current_exchange = get_exchange()
-                        if not current_exchange:
-                            continue
-                        ticker_data = current_exchange.get_ticker(symbol)
-                        if ticker_data and 'last_price' in ticker_data:
-                            current_price = float(ticker_data['last_price'])
-                            entry_price = bot_data.get('entry_price')
-                            position_side = bot_data.get('position_side')
-                            
-                            if entry_price and position_side:
-                                # Рассчитываем PnL
-                                if position_side == 'LONG':
-                                    pnl_percent = ((current_price - entry_price) / entry_price) * 100
-                                else:  # SHORT
-                                    pnl_percent = ((entry_price - current_price) / entry_price) * 100
-                                
-                                # Обновляем данные бота
-                                bot_data['unrealized_pnl'] = pnl_percent
-                                bot_data['position_details'] = {
-                                    'current_price': current_price,
-                                    'pnl_percent': pnl_percent,
-                                    'price_change': pnl_percent
-                                }
-                                bot_data['last_update'] = datetime.now().isoformat()
-                    except Exception as e:
-                        logger.error(f"[BOTS_CACHE] Ошибка обновления данных для {symbol}: {e}")
-                
-                # Добавляем RSI данные к боту (используем кэшированные данные)
+        # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает чтение атомарным
+        bots_list = []
+        for symbol, bot_data in bots_data['bots'].items():
+            # Проверяем таймаут
+            if timeout_occurred.is_set():
+                logger.warning("[BOTS_CACHE] ⚠️ Таймаут достигнут, прерываем обновление")
+                break
+            
+            # Обновляем данные бота в реальном времени
+            if bot_data.get('status') in ['in_position_long', 'in_position_short']:
                 try:
-                    # Используем кэшированные RSI данные вместо повторного вычисления
-                    rsi_cache = get_rsi_cache()
-                    if symbol in rsi_cache:
-                        rsi_data = rsi_cache[symbol]
-                        bot_data['rsi_data'] = rsi_data
-                    else:
-                        bot_data['rsi_data'] = {'rsi': 'N/A', 'signal': 'N/A'}
+                    # Получаем текущую цену
+                    current_exchange = get_exchange()
+                    if not current_exchange:
+                        continue
+                    ticker_data = current_exchange.get_ticker(symbol)
+                    if ticker_data and 'last_price' in ticker_data:
+                        current_price = float(ticker_data['last_price'])
+                        entry_price = bot_data.get('entry_price')
+                        position_side = bot_data.get('position_side')
+                        
+                        if entry_price and position_side:
+                            # Рассчитываем PnL
+                            if position_side == 'LONG':
+                                pnl_percent = ((current_price - entry_price) / entry_price) * 100
+                            else:  # SHORT
+                                pnl_percent = ((entry_price - current_price) / entry_price) * 100
+                            
+                            # Обновляем данные бота
+                            bot_data['unrealized_pnl'] = pnl_percent
+                            bot_data['position_details'] = {
+                                'current_price': current_price,
+                                'pnl_percent': pnl_percent,
+                                'price_change': pnl_percent
+                            }
+                            bot_data['last_update'] = datetime.now().isoformat()
                 except Exception as e:
-                    logger.error(f"[BOTS_CACHE] Ошибка получения RSI для {symbol}: {e}")
+                    logger.error(f"[BOTS_CACHE] Ошибка обновления данных для {symbol}: {e}")
+            
+            # Добавляем RSI данные к боту (используем кэшированные данные)
+            try:
+                # Используем кэшированные RSI данные вместо повторного вычисления
+                rsi_cache = get_rsi_cache()
+                if symbol in rsi_cache:
+                    rsi_data = rsi_cache[symbol]
+                    bot_data['rsi_data'] = rsi_data
+                else:
                     bot_data['rsi_data'] = {'rsi': 'N/A', 'signal': 'N/A'}
-                
-                # Добавляем информацию о позиции с биржи (будет добавлено позже для всех ботов сразу)
-                # Стоп-лоссы будут получены вместе с позициями
-                
-                # Добавляем бота в список
-                bots_list.append(bot_data)
+            except Exception as e:
+                logger.error(f"[BOTS_CACHE] Ошибка получения RSI для {symbol}: {e}")
+                bot_data['rsi_data'] = {'rsi': 'N/A', 'signal': 'N/A'}
+            
+            # Добавляем информацию о позиции с биржи (будет добавлено позже для всех ботов сразу)
+            # Стоп-лоссы будут получены вместе с позициями
+            
+            # Добавляем бота в список
+            bots_list.append(bot_data)
         
         # Получаем информацию о позициях с биржи один раз для всех ботов
+        # ✅ ИСПОЛЬЗУЕМ КЭШ ПОЗИЦИЙ из positions_monitor_worker вместо прямого API вызова
         try:
-            position_info = get_exchange_positions()
-            if position_info and 'positions' in position_info:
+            # Импортируем positions_cache из workers.py
+            import bots_modules.workers as workers_module
+            positions_cache = getattr(workers_module, 'positions_cache', None)
+            
+            logger.info(f"[BOTS_CACHE] positions_cache: {positions_cache}")
+            
+            if positions_cache and 'positions' in positions_cache:
+                positions_list = positions_cache['positions']
+                logger.info(f"[BOTS_CACHE] Используем кэшированные позиции: {len(positions_list)} позиций")
+            else:
+                # Fallback: получаем позиции напрямую если кэш недоступен
+                logger.warning(f"[BOTS_CACHE] Кэш позиций недоступен, используем fallback")
+                position_info = get_exchange_positions()
+                positions_list = position_info['positions'] if position_info and 'positions' in position_info else []
+                logger.info(f"[BOTS_CACHE] Fallback: получено {len(positions_list)} позиций напрямую")
+            
+            if positions_list:
                 # Создаем словарь позиций для быстрого поиска
-                positions_dict = {pos.get('symbol'): pos for pos in position_info['positions']}
+                positions_dict = {pos.get('symbol'): pos for pos in positions_list}
                 
                 # Добавляем информацию о позициях к ботам (включая стоп-лоссы)
                 for bot_data in bots_list:
@@ -703,7 +722,7 @@ def update_bots_cache_data():
                         exchange_take_profit = pos.get('takeProfit', '')
                         exchange_entry_price = float(pos.get('avgPrice', 0))
                         exchange_size = float(pos.get('size', 0))
-                        exchange_unrealized_pnl = float(pos.get('unrealisedPnl', 0))
+                        exchange_unrealized_pnl = float(pos.get('unrealizedPnl', pos.get('unrealisedPnl', 0)))
                         
                         # Синхронизируем стоп-лосс
                         current_stop_loss = bot_data.get('trailing_stop_price')
@@ -742,13 +761,18 @@ def update_bots_cache_data():
             logger.error(f"[BOTS_CACHE] Ошибка получения позиций с биржи: {e}")
         
         # Обновляем кэш (только данные ботов, account_info больше не кэшируется)
+        current_time = datetime.now().isoformat()
         with bots_cache_lock:
             bots_cache_data.update({
                 'bots': bots_list,
-                'last_update': datetime.now().isoformat()
+                'last_update': current_time
             })
         
-        logger.info(f"[BOTS_CACHE] ✅ Кэш обновлен: {len(bots_list)} ботов")
+        # ✅ КРИТИЧНО: Обновляем last_update в bots_data для UI
+        # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает запись атомарной
+        bots_data['last_update'] = current_time
+        
+        logger.info(f"[BOTS_CACHE] ✅ Кэш обновлен: {len(bots_list)} ботов (last_update: {current_time})")
         return True
         
     except Exception as e:
@@ -845,11 +869,7 @@ def get_exchange_positions():
     for attempt in range(max_retries):
         try:
             # Получаем актуальную ссылку на биржу
-            try:
-                from bots_modules.imports_and_globals import get_exchange
-                current_exchange = get_exchange()
-            except:
-                current_exchange = exchange
+            current_exchange = get_exchange()
             
             if not current_exchange:
                 logger.warning(f"[EXCHANGE_POSITIONS] Биржа не инициализирована (попытка {attempt + 1}/{max_retries})")
@@ -1446,8 +1466,15 @@ def check_missing_stop_losses():
             
             # Получаем все позиции с биржи
             try:
-                from bots_modules.imports_and_globals import get_exchange
-                current_exchange = get_exchange() or exchange
+                # Безопасное получение exchange объекта
+                try:
+                    current_exchange = get_exchange()
+                except NameError:
+                    current_exchange = exchange
+                
+                if not current_exchange:
+                    logger.warning(f"[STOP_LOSS_SETUP] ⚠️ Exchange объект недоступен")
+                    return False
                 
                 positions_response = current_exchange.client.get_positions(
                     category="linear",

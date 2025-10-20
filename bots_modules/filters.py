@@ -439,41 +439,106 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             logger.warning(f"[WARNING] Не удалось рассчитать RSI для {symbol}")
             return None
         
-        # ⚡ ОПТИМИЗАЦИЯ: НЕ вызываем analyze_trend_6h() здесь!
-        # Это делало дополнительный API запрос для каждой монеты (569 запросов!)
-        # Тренд будет рассчитан позже в analyze_trends_for_signal_coins() только для сигнальных монет
-        trend = 'NEUTRAL'  # Временное значение, будет обновлено позже
-        trend_analysis = None  # Временное значение, будет обновлено позже
+        # ✅ РАСЧИТЫВАЕМ ТРЕНД СРАЗУ для всех монет - избегаем "гуляния" данных
+        # НЕ УСТАНАВЛИВАЕМ ДЕФОЛТНЫХ ЗНАЧЕНИЙ! Только рассчитанные данные!
+        trend = None  # Изначально None
+        trend_analysis = None
+        try:
+            from bots_modules.calculations import analyze_trend_6h
+            trend_analysis = analyze_trend_6h(symbol, exchange_obj=exchange_obj)
+            if trend_analysis:
+                trend = trend_analysis['trend']  # ТОЛЬКО рассчитанное значение!
+            # НЕ устанавливаем дефолт если анализ не удался - оставляем None
+        except Exception as e:
+            logger.debug(f"[TREND] {symbol}: Ошибка анализа тренда: {e}")
+            # НЕ устанавливаем дефолт при ошибке - оставляем None
         
         # Рассчитываем изменение за 24h (примерно 4 свечи 6H)
         change_24h = 0
         if len(closes) >= 5:
             change_24h = round(((closes[-1] - closes[-5]) / closes[-5]) * 100, 2)
         
+        # ✅ КРИТИЧНО: Получаем оптимальные EMA периоды ДО определения сигнала!
+        # Это нужно для правильного расчета базового сигнала на основе EMA
+        ema_periods = None
+        try:
+            ema_periods = get_optimal_ema_periods(symbol)
+        except Exception as e:
+            logger.debug(f"[EMA] Ошибка получения оптимальных EMA для {symbol}: {e}")
+            # Если не удалось получить оптимальные EMA, используем дефолтные значения
+            ema_periods = {'ema_short': 50, 'ema_long': 200, 'accuracy': 0, 'analysis_method': 'default'}
+        
         # Определяем RSI зоны согласно техзаданию
         rsi_zone = 'NEUTRAL'
         signal = 'WAIT'
         
-        # ✅ ФИЛЬТР 2: Базовый RSI + Тренд
+        # ✅ ФИЛЬТР 2: Базовый сигнал НА ОСНОВЕ OPTIMAL EMA ПЕРИОДОВ!
         # Получаем настройки фильтров по тренду (по умолчанию включены)
         # ⚡ БЕЗ БЛОКИРОВКИ: конфиг не меняется во время выполнения, безопасно читать
         avoid_down_trend = bots_data.get('auto_bot_config', {}).get('avoid_down_trend', True)
         avoid_up_trend = bots_data.get('auto_bot_config', {}).get('avoid_up_trend', True)
         
-        if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
-            rsi_zone = 'BUY_ZONE'
-            # Проверяем нужно ли избегать DOWN тренда для LONG
-            if avoid_down_trend and trend == 'DOWN':
-                signal = 'WAIT'  # Ждем улучшения тренда
-            else:
-                signal = 'ENTER_LONG'  # Входим независимо от тренда или при хорошем тренде
-        elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71
-            rsi_zone = 'SELL_ZONE'
-            # Проверяем нужно ли избегать UP тренда для SHORT
-            if avoid_up_trend and trend == 'UP':
-                signal = 'WAIT'  # Ждем ослабления тренда
-            else:
-                signal = 'ENTER_SHORT'  # Входим независимо от тренда или при хорошем тренде
+        # ✅ КРИТИЧНО: Определяем сигнал на основе Optimal EMA периодов!
+        if ema_periods and ema_periods.get('ema_short') and ema_periods.get('ema_long'):
+            # Рассчитываем EMA на основе оптимальных периодов
+            ema_short = ema_periods['ema_short']
+            ema_long = ema_periods['ema_long']
+            
+            # Рассчитываем EMA значения
+            try:
+                from bots_modules.calculations import calculate_ema
+                ema_short_value = calculate_ema(closes, ema_short)[-1] if len(closes) >= ema_short else closes[-1]
+                ema_long_value = calculate_ema(closes, ema_long)[-1] if len(closes) >= ema_long else closes[-1]
+                
+                # Определяем сигнал на основе пересечения EMA
+                if ema_short_value > ema_long_value:
+                    # Короткая EMA выше длинной - восходящий тренд
+                    if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
+                        rsi_zone = 'BUY_ZONE'
+                        # ✅ ИСПРАВЛЕНИЕ: Если тренд еще не рассчитан (None), не блокируем сигнал
+                        if avoid_down_trend and trend == 'DOWN':
+                            signal = 'WAIT'  # Ждем улучшения тренда
+                        else:
+                            signal = 'ENTER_LONG'  # Входим в лонг при восходящем тренде EMA
+                elif ema_short_value < ema_long_value:
+                    # Короткая EMA ниже длинной - нисходящий тренд
+                    if rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71
+                        rsi_zone = 'SELL_ZONE'
+                        # ✅ ИСПРАВЛЕНИЕ: Если тренд еще не рассчитан (None), не блокируем сигнал
+                        if avoid_up_trend and trend == 'UP':
+                            signal = 'WAIT'  # Ждем ослабления тренда
+                        else:
+                            signal = 'ENTER_SHORT'  # Входим в шорт при нисходящем тренде EMA
+                # Если EMA пересекаются или равны - нейтральная зона
+            except Exception as e:
+                logger.debug(f"[EMA_SIGNAL] {symbol}: Ошибка расчета EMA сигнала: {e}")
+                # Fallback к старой логике при ошибке
+                if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
+                    rsi_zone = 'BUY_ZONE'
+                    if avoid_down_trend and trend == 'DOWN':
+                        signal = 'WAIT'
+                    else:
+                        signal = 'ENTER_LONG'
+                elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71
+                    rsi_zone = 'SELL_ZONE'
+                    if avoid_up_trend and trend == 'UP':
+                        signal = 'WAIT'
+                    else:
+                        signal = 'ENTER_SHORT'
+        else:
+            # Fallback к старой логике если EMA периоды недоступны
+            if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
+                rsi_zone = 'BUY_ZONE'
+                if avoid_down_trend and trend == 'DOWN':
+                    signal = 'WAIT'
+                else:
+                    signal = 'ENTER_LONG'
+            elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71
+                rsi_zone = 'SELL_ZONE'
+                if avoid_up_trend and trend == 'UP':
+                    signal = 'WAIT'
+                else:
+                    signal = 'ENTER_SHORT'
         # RSI между 30 and 70 - нейтральная зона
         
         # ✅ ФИЛЬТР 3: Существующие позиции (ОТКЛЮЧЕН для ускорения RSI расчета)
@@ -518,15 +583,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     signal = 'WAIT'
                     rsi_zone = 'NEUTRAL'
         
-        # ⚡ ИЗМЕНЕНИЕ: Получаем оптимальные EMA для ВСЕХ монет (не только сигнальных)
-        # Это нужно для отображения правильных EMA данных в UI
-        ema_periods = None
-        try:
-            ema_periods = get_optimal_ema_periods(symbol)
-        except Exception as e:
-            logger.debug(f"[EMA] Ошибка получения оптимальных EMA для {symbol}: {e}")
-            # Если не удалось получить оптимальные EMA, используем дефолтные значения
-            ema_periods = {'ema_short': 50, 'ema_long': 200, 'accuracy': 0, 'analysis_method': 'default'}
+        # ✅ EMA периоды уже получены выше - ДО определения сигнала!
         
         # closes[-1] - это самая НОВАЯ цена (последняя свеча в массиве)
         current_price = closes[-1]
@@ -606,18 +663,31 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             'exit_scam_info': exit_scam_info,
             'blocked_by_scope': is_blocked_by_scope,
             'has_existing_position': has_existing_position,
-            'is_mature': is_mature if enable_maturity_check else True
+            'is_mature': is_mature if enable_maturity_check else True,
+            # ✅ КРИТИЧНО: Флаги блокировки для get_effective_signal
+            'blocked_by_exit_scam': exit_scam_info.get('blocked', False) if exit_scam_info else False,
+            'blocked_by_rsi_time': time_filter_info.get('blocked', False) if time_filter_info else False
         }
         
         # Логируем торговые сигналы и блокировки тренда
-        trend_emoji = '📈' if trend == 'UP' else '📉' if trend == 'DOWN' else '➡️'
+        # НЕ показываем дефолтные значения! Только рассчитанные данные!
+        trend_display = trend if trend is not None else None
+        # НЕ показываем дефолтные emoji! Только для рассчитанных данных!
+        if trend == 'UP':
+            trend_emoji = '📈'
+        elif trend == 'DOWN':
+            trend_emoji = '📉'
+        elif trend == 'NEUTRAL':
+            trend_emoji = '➡️'
+        else:
+            trend_emoji = None
         
         if signal in ['ENTER_LONG', 'ENTER_SHORT']:
-            logger.info(f"[SIGNAL] 🎯 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend} (${current_price:.4f}) → {signal}")
+            logger.info(f"[SIGNAL] 🎯 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} (${current_price:.4f}) → {signal}")
         elif signal == 'WAIT' and rsi <= SystemConfig.RSI_OVERSOLD and trend == 'DOWN' and avoid_down_trend:
-            logger.debug(f"[FILTER] 🚫 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend} LONG заблокирован (фильтр DOWN тренда)")
+            logger.debug(f"[FILTER] 🚫 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} LONG заблокирован (фильтр DOWN тренда)")
         elif signal == 'WAIT' and rsi >= SystemConfig.RSI_OVERBOUGHT and trend == 'UP' and avoid_up_trend:
-            logger.debug(f"[FILTER] 🚫 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend} SHORT заблокирован (фильтр UP тренда)")
+            logger.debug(f"[FILTER] 🚫 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} SHORT заблокирован (фильтр UP тренда)")
         
         return result
         
@@ -703,8 +773,13 @@ def load_all_coins_rsi():
             logger.info("Обновление RSI уже выполняется...")
             return False
         
-        # ⚡ УСТАНАВЛИВАЕМ флаг БЕЗ блокировки
+        # ⚡ УСТАНАВЛИВАЕМ флаги БЕЗ блокировки
         coins_rsi_data['update_in_progress'] = True
+        # ✅ UI блокировка уже установлена в continuous_data_loader
+        
+        # ✅ КРИТИЧНО: Создаем ВРЕМЕННОЕ хранилище для всех монет
+        # Обновляем coins_rsi_data ТОЛЬКО после завершения всех проверок!
+        temp_coins_data = {}
         
         logger.info("[RSI] 🔄 Начинаем загрузку RSI 6H для всех монет...")
         
@@ -771,11 +846,10 @@ def load_all_coins_rsi():
                     logger.warning(f"[ERROR] ❌ {symbol}: {str(e)[:100]}")
                     coins_rsi_data['failed_coins'] += 1
             
-            # ИНКРЕМЕНТАЛЬНОЕ ОБНОВЛЕНИЕ: Обновляем данные после каждого пакета
-            # ⚡ БЕЗ БЛОКИРОВКИ: update() - атомарная операция
-            coins_rsi_data['coins'].update(batch_coins_data)
-            coins_rsi_data['last_update'] = datetime.now().isoformat()
-            logger.info(f"[INCREMENTAL] Обновлено {len(batch_coins_data)} монет из пакета {batch_num}")
+            # ✅ КРИТИЧНО: Сохраняем во ВРЕМЕННОЕ хранилище вместо прямого обновления!
+            # НЕ обновляем coins_rsi_data['coins'] до завершения ВСЕХ пакетов!
+            temp_coins_data.update(batch_coins_data)
+            logger.info(f"[BATCH] ✅ Сохранено {len(batch_coins_data)} монет во временное хранилище (всего: {len(temp_coins_data)})")
             
             # Пауза между пакетами для предотвращения rate limiting (УСКОРЕННАЯ ВЕРСИЯ)
             time.sleep(0.1)  # ⚡ МАКСИМАЛЬНОЕ УСКОРЕНИЕ: 0.1 сек между пакетами
@@ -789,6 +863,13 @@ def load_all_coins_rsi():
                 progress_percent = round((total_processed / len(pairs)) * 100, 1)
                 coins_count = len(coins_rsi_data['coins'])
                 logger.info(f"[RSI] ⏳ Прогресс: {progress_percent}% ({total_processed}/{len(pairs)}) - В UI доступно {coins_count} монет")
+        
+        # ✅ КРИТИЧНО: АТОМАРНОЕ обновление всех данных ОДНИМ МАХОМ!
+        # Только СЕЙЧАС обновляем coins_rsi_data['coins'] всеми собранными данными
+        logger.info(f"[RSI] 🎯 Атомарное обновление {len(temp_coins_data)} монет...")
+        coins_rsi_data['coins'] = temp_coins_data  # ✅ Полная замена - атомарная операция
+        coins_rsi_data['last_update'] = datetime.now().isoformat()
+        logger.info(f"[RSI] ✅ Атомарное обновление завершено - UI теперь видит финальные данные!")
         
         # Финальное обновление флага
         # ⚡ БЕЗ БЛОКИРОВКИ: атомарная операция
@@ -830,6 +911,46 @@ def load_all_coins_rsi():
         if coins_rsi_data['update_in_progress']:
             logger.warning(f"[RSI] ⚠️ Принудительный сброс флага update_in_progress")
             coins_rsi_data['update_in_progress'] = False
+
+def _recalculate_signal_with_trend(rsi, trend, symbol):
+    """Пересчитывает сигнал с учетом нового тренда"""
+    try:
+        # Получаем настройки автобота
+        auto_config = bots_data.get('auto_bot_config', {})
+        avoid_down_trend = auto_config.get('avoid_down_trend', True)
+        avoid_up_trend = auto_config.get('avoid_up_trend', True)
+        
+        logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI={rsi:.1f}, тренд={trend}, avoid_down={avoid_down_trend}, avoid_up={avoid_up_trend}")
+        
+        # Определяем базовый сигнал по RSI
+        if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
+            # Проверяем нужно ли избегать DOWN тренда для LONG
+            if avoid_down_trend and trend == 'DOWN':
+                logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI {rsi:.1f} ≤ 29, тренд DOWN, избегаем DOWN → WAIT")
+                return 'WAIT'  # Ждем улучшения тренда
+            else:
+                # НЕ показываем дефолтные значения! Только рассчитанные данные!
+                trend_display = trend if trend is not None else None
+                logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI {rsi:.1f} ≤ 29, тренд {trend_display}, не избегаем → ENTER_LONG")
+                return 'ENTER_LONG'  # Входим независимо от тренда или при хорошем тренде
+        elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71
+            # Проверяем нужно ли избегать UP тренда для SHORT
+            if avoid_up_trend and trend == 'UP':
+                logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI {rsi:.1f} ≥ 71, тренд UP, избегаем UP → WAIT")
+                return 'WAIT'  # Ждем ослабления тренда
+            else:
+                # НЕ показываем дефолтные значения! Только рассчитанные данные!
+                trend_display = trend if trend is not None else None
+                logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI {rsi:.1f} ≥ 71, тренд {trend_display}, не избегаем → ENTER_SHORT")
+                return 'ENTER_SHORT'  # Входим независимо от тренда или при хорошем тренде
+        else:
+            # RSI между 30-70 - нейтральная зона
+            logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI {rsi:.1f} между 30-70 → WAIT")
+            return 'WAIT'
+            
+    except Exception as e:
+        logger.error(f"[RECALC_SIGNAL] ❌ Ошибка пересчета сигнала для {symbol}: {e}")
+        return 'WAIT'
 
 def get_effective_signal(coin):
     """
@@ -879,6 +1000,24 @@ def get_effective_signal(coin):
     # Если сигнал WAIT - возвращаем сразу
     if signal == 'WAIT':
         return signal
+    
+    # ✅ КРИТИЧНО: Проверяем результаты ВСЕХ фильтров!
+    # Если любой фильтр заблокировал сигнал - возвращаем WAIT
+    
+    # Проверяем ExitScam фильтр
+    if coin.get('blocked_by_exit_scam', False):
+        logger.debug(f"[SIGNAL] {symbol}: ❌ {signal} заблокирован ExitScam фильтром")
+        return 'WAIT'
+    
+    # Проверяем RSI Time фильтр
+    if coin.get('blocked_by_rsi_time', False):
+        logger.debug(f"[SIGNAL] {symbol}: ❌ {signal} заблокирован RSI Time фильтром")
+        return 'WAIT'
+    
+    # Проверяем зрелость монеты
+    if not coin.get('is_mature', True):
+        logger.debug(f"[SIGNAL] {symbol}: ❌ {signal} заблокирован - монета незрелая")
+        return 'WAIT'
     
     # УПРОЩЕННАЯ ПРОВЕРКА ТРЕНДОВ - только экстремальные случаи
     if signal == 'ENTER_SHORT' and avoid_up_trend and rsi >= rsi_short_threshold and trend == 'UP':
@@ -1119,7 +1258,11 @@ def analyze_trends_for_signal_coins():
             logger.error("[TREND_ANALYSIS] ❌ Биржа не инициализирована")
             return False
         
-        # Находим монеты с сигналами
+        # ✅ КРИТИЧНО: Создаем ВРЕМЕННОЕ хранилище для обновлений
+        # Не изменяем coins_rsi_data до завершения всех расчетов!
+        temp_updates = {}
+        
+        # Находим монеты с сигналами для анализа тренда
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
         signal_coins = []
         for symbol, coin_data in coins_rsi_data['coins'].items():
@@ -1147,11 +1290,40 @@ def analyze_trends_for_signal_coins():
                 logger.debug(f"[TREND_ANALYSIS] 🌐 {symbol}: analyze_trend_6h() вернула: {trend_analysis is not None}")
                 
                 if trend_analysis:
-                    # Обновляем данные монеты с трендом
-                    # ⚡ БЕЗ БЛОКИРОВКИ: присваивание - атомарная операция
+                    # ✅ СОБИРАЕМ обновления во временном хранилище
                     if symbol in coins_rsi_data['coins']:
-                        coins_rsi_data['coins'][symbol]['trend6h'] = trend_analysis['trend']
-                        coins_rsi_data['coins'][symbol]['trend_analysis'] = trend_analysis
+                        coin_data = coins_rsi_data['coins'][symbol]
+                        rsi = coin_data.get('rsi6h')
+                        new_trend = trend_analysis['trend']
+                        
+                        # Пересчитываем сигнал с учетом нового тренда
+                        old_signal = coin_data.get('signal')
+                        
+                        # ✅ КРИТИЧНО: НЕ пересчитываем сигнал если он WAIT из-за блокировки фильтров!
+                        blocked_by_exit_scam = coin_data.get('blocked_by_exit_scam', False)
+                        blocked_by_rsi_time = coin_data.get('blocked_by_rsi_time', False)
+                        
+                        if blocked_by_exit_scam or blocked_by_rsi_time:
+                            logger.info(f"[TREND_ANALYSIS] 🚫 {symbol}: Сигнал заблокирован фильтрами - пропускаем пересчет")
+                            new_signal = 'WAIT'  # Оставляем WAIT
+                        else:
+                            new_signal = _recalculate_signal_with_trend(rsi, new_trend, symbol)
+                        
+                        # ✅ ВСЕГДА логируем пересчет сигнала для отладки
+                        logger.info(f"[TREND_ANALYSIS] 🔄 {symbol}: Пересчет сигнала: RSI={rsi:.1f}, тренд={new_trend}, старый={old_signal} → новый={new_signal}")
+                        
+                        # Сохраняем обновления во временном хранилище
+                        temp_updates[symbol] = {
+                            'trend6h': new_trend,
+                            'trend_analysis': trend_analysis,
+                            'signal': new_signal,
+                            'old_signal': old_signal
+                        }
+                        
+                        if new_signal != old_signal:
+                            logger.info(f"[TREND_ANALYSIS] 🔄 {symbol}: Сигнал будет обновлен {old_signal} → {new_signal} (тренд: {new_trend})")
+                        else:
+                            logger.info(f"[TREND_ANALYSIS] ✅ {symbol}: Сигнал не изменится ({old_signal}) - тренд не влияет")
                     
                     analyzed_count += 1
                     logger.info(f"[TREND_ANALYSIS] ✅ {symbol}: Тренд {trend_analysis['trend']}")
@@ -1166,10 +1338,18 @@ def analyze_trends_for_signal_coins():
                 logger.error(f"[TREND_ANALYSIS] ❌ {symbol}: Ошибка анализа тренда: {e}")
                 failed_count += 1
         
+        # ✅ АТОМАРНО применяем ВСЕ обновления одним махом!
+        logger.info(f"[TREND_ANALYSIS] 🎯 Применяем {len(temp_updates)} обновлений атомарно...")
+        for symbol, updates in temp_updates.items():
+            coins_rsi_data['coins'][symbol]['trend6h'] = updates['trend6h']
+            coins_rsi_data['coins'][symbol]['trend_analysis'] = updates['trend_analysis']
+            coins_rsi_data['coins'][symbol]['signal'] = updates['signal']
+        
         logger.info(f"[TREND_ANALYSIS] ✅ Анализ трендов завершен:")
         logger.info(f"[TREND_ANALYSIS] 📊 Проанализировано: {analyzed_count}")
         logger.info(f"[TREND_ANALYSIS] 📊 Ошибок: {failed_count}")
         logger.info(f"[TREND_ANALYSIS] 📊 Всего обработано: {analyzed_count + failed_count}")
+        logger.info(f"[TREND_ANALYSIS] 🎯 Применено обновлений: {len(temp_updates)}")
         
         return True
         

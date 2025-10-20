@@ -25,7 +25,8 @@ from bots_modules.imports_and_globals import (
     bots_cache_data, bots_cache_lock, process_state,
     system_initialized, shutdown_flag, mature_coins_storage,
     mature_coins_lock, optimal_ema_data, coin_processing_locks,
-    BOT_STATUS, ASYNC_AVAILABLE, RSI_CACHE_FILE, bot_history_manager
+    BOT_STATUS, ASYNC_AVAILABLE, RSI_CACHE_FILE, bot_history_manager,
+    get_exchange
 )
 import bots_modules.imports_and_globals as globals_module
 
@@ -309,7 +310,6 @@ def get_account_info():
             }), 500
         
         # Получаем актуальные данные с биржи
-        from bots_modules.imports_and_globals import get_exchange
         current_exchange = get_exchange()
         if not current_exchange:
             return jsonify({
@@ -351,7 +351,6 @@ def refresh_manual_positions():
         
         # Получаем exchange объект
         try:
-            from bots_modules.imports_and_globals import get_exchange
             exchange = get_exchange()
         except ImportError:
             exchange = None
@@ -419,11 +418,10 @@ def get_coins_with_rsi():
             logger.info(f"[API] 🔄 Запрос на обновление RSI данных для {refresh_symbol}")
             try:
                 if ensure_exchange_initialized():
-                    from bots_modules.imports_and_globals import get_exchange
                     coin_data = get_coin_rsi_data(refresh_symbol, get_exchange())
                     if coin_data:
-                        with rsi_data_lock:
-                            coins_rsi_data['coins'][refresh_symbol] = coin_data
+                        # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает запись атомарной
+                        coins_rsi_data['coins'][refresh_symbol] = coin_data
                         logger.info(f"[API] ✅ RSI данные для {refresh_symbol} обновлены")
                     else:
                         logger.warning(f"[API] ⚠️ Не удалось обновить RSI данные для {refresh_symbol}")
@@ -504,7 +502,6 @@ def get_coins_with_rsi():
         try:
             # Получаем exchange объект
             try:
-                from bots_modules.imports_and_globals import get_exchange
                 exchange = get_exchange()
             except ImportError:
                 exchange = None
@@ -548,6 +545,7 @@ def get_coins_with_rsi():
                                 manual_positions.append(clean_symbol)
                 
                 # ✅ Детальное логирование для отладки
+                logger.debug(f"[MANUAL_POSITIONS] Найдено {len(manual_positions)} ручных позиций: {manual_positions}")
         except Exception as e:
             logger.error(f"[ERROR] Ошибка получения ручных позиций: {str(e)}")
         
@@ -609,10 +607,31 @@ def get_bots_list():
     """Получить список всех ботов (использует bots_data напрямую)"""
     try:
         # Используем bots_data напрямую для актуальности
-        with bots_data_lock:
-            bots_list = list(bots_data['bots'].values())
-            auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
-            last_update = bots_data.get('last_update', 'Неизвестно')
+        # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает чтение атомарным
+        bots_list = list(bots_data['bots'].values())
+        auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
+        last_update = bots_data.get('last_update', 'Неизвестно')
+        
+        # Добавляем расчет времени работы для каждого бота
+        current_time = datetime.now()
+        for bot in bots_list:
+            created_at_str = bot.get('created_at')
+            if created_at_str:
+                try:
+                    created_at = datetime.fromisoformat(created_at_str)
+                    work_duration = current_time - created_at
+                    work_minutes = int(work_duration.total_seconds() / 60)
+                    work_seconds = int(work_duration.total_seconds() % 60)
+                    
+                    # Форматируем время работы
+                    if work_minutes > 0:
+                        bot['work_time'] = f"{work_minutes}м {work_seconds}с"
+                    else:
+                        bot['work_time'] = f"{work_seconds}с"
+                except (ValueError, TypeError):
+                    bot['work_time'] = "0с"
+            else:
+                bot['work_time'] = "0с"
         
         # Подсчитываем статистику (idle боты считаются активными для UI)
         active_bots = sum(1 for bot in bots_list if bot.get('status') not in ['paused'])
@@ -666,7 +685,6 @@ def create_bot_endpoint():
         enable_maturity_check_coin = config.get('enable_maturity_check', True)
         if enable_maturity_check_coin:
             # Получаем данные свечей для проверки зрелости
-            from bots_modules.imports_and_globals import get_exchange
             current_exchange = get_exchange()
             if not current_exchange:
                 return jsonify({
@@ -699,7 +717,6 @@ def create_bot_endpoint():
                 }), 400
         
         # Создаем бота
-        from bots_modules.imports_and_globals import get_exchange
         bot_config = create_bot(symbol, config, exchange_obj=get_exchange())
         
         # ✅ КРИТИЧНО: Немедленно входим в позицию если есть сигнал!
@@ -831,7 +848,6 @@ def stop_bot_endpoint():
         bots_data['global_stats']['bots_in_position'] = len([bot for bot in bots_data['bots'].values() if bot.get('position_side')])
         
         # Закрываем позицию на бирже, если она была открыта
-        from bots_modules.imports_and_globals import get_exchange
         current_exchange = get_exchange()
         if position_to_close and current_exchange:
             try:
@@ -920,7 +936,6 @@ def pause_bot_endpoint():
             logger.info(f"[BOT] {symbol}: Бот приостановлен (был: {old_status})")
         
         # Закрываем позицию на бирже, если она была открыта
-        from bots_modules.imports_and_globals import get_exchange
         current_exchange = get_exchange()
         if position_to_close and current_exchange:
             try:
@@ -1072,7 +1087,6 @@ def close_position_endpoint():
         symbol = data['symbol']
         force_close = data.get('force', False)  # Принудительное закрытие даже если бот не в позиции
         
-        from bots_modules.imports_and_globals import get_exchange
         current_exchange = get_exchange()
         if not current_exchange:
             logger.error(f"[API] ❌ Биржа не инициализирована")
@@ -1770,7 +1784,6 @@ def refresh_rsi_for_coin(symbol):
             return jsonify({'success': False, 'error': 'Биржа не инициализирована'}), 500
         
         # Получаем новые данные монеты
-        from bots_modules.imports_and_globals import get_exchange
         coin_data = get_coin_rsi_data(symbol, get_exchange())
         
         if coin_data:
@@ -1813,7 +1826,6 @@ def refresh_rsi_for_all_coins():
         updated_count = 0
         failed_count = 0
         
-        from bots_modules.imports_and_globals import get_exchange
         current_exchange = get_exchange()
         
         for symbol in existing_symbols:
@@ -1891,7 +1903,6 @@ def process_trading_signals_endpoint():
         logger.info("[API] 🔄 Принудительная обработка торговых сигналов...")
         
         # Вызываем process_trading_signals_for_all_bots в основном процессе
-        from bots_modules.imports_and_globals import get_exchange
         process_trading_signals_for_all_bots(exchange_obj=get_exchange())
         
         # Получаем количество активных ботов для отчета
@@ -2828,7 +2839,6 @@ def run_bots_service():
                 # Обрабатываем ботов каждые 30 секунд
                 if current_time - last_bot_processing >= bot_processing_interval:
                     logger.info("[MAIN_LOOP] 🤖 Обработка ботов...")
-                    from bots_modules.imports_and_globals import get_exchange
                     process_trading_signals_for_all_bots(exchange_obj=get_exchange())
                     last_bot_processing = current_time
                     logger.info("[MAIN_LOOP] ✅ Обработка ботов завершена")
@@ -3042,6 +3052,27 @@ if __name__ == '__main__':
     
     # Инициализация биржи будет выполнена в init_bot_service()
     print("*** ОСНОВНЫЕ ФУНКЦИИ:")
+    print("  - Постоянный мониторинг RSI 6H для всех монет")
+    print("  - Анализ тренда 6H (EMA50/EMA200)")
+    print("  - Торговые боты с Auto Bot режимом")
+    print("  - Автовход: RSI ≤29 = LONG, RSI ≥71 = SHORT")
+    print()
+    print(f"*** Порт: {SystemConfig.BOTS_SERVICE_PORT}")
+    print("*** API Эндпоинты:")
+    print("  GET  /health                    - Проверка статуса")
+    print("  GET  /api/bots/coins-with-rsi   - Все монеты с RSI 6H")
+    print("  GET  /api/bots/list             - Список ботов")
+    print("  POST /api/bots/create           - Создать бота")
+    print("  GET  /api/bots/auto-bot         - Конфигурация Auto Bot")
+    print("  POST /api/bots/auto-bot         - Обновить Auto Bot")
+    print("  GET  /api/bots/optimal-ema      - Оптимальные EMA периоды")
+    print("  GET  /api/bots/optimal-ema-worker/status - Статус воркера EMA")
+    print("  POST /api/bots/optimal-ema-worker/force-update - Принудительное обновление")
+    print("=" * 60)
+    print("*** Запуск...")
+    
+    run_bots_service()
+
     print("  - Постоянный мониторинг RSI 6H для всех монет")
     print("  - Анализ тренда 6H (EMA50/EMA200)")
     print("  - Торговые боты с Auto Bot режимом")

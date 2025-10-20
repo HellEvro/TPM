@@ -90,6 +90,12 @@ class ContinuousDataLoader:
                 cycle_start = time.time()
                 self.update_count += 1
                 
+                # ✅ КРИТИЧНО: ПОЛНАЯ БЛОКИРОВКА UI ОБНОВЛЕНИЙ с самого начала цикла
+                from bots_modules.imports_and_globals import coins_rsi_data
+                coins_rsi_data['ui_update_paused'] = True
+                coins_rsi_data['processing_cycle'] = True  # ✅ Дополнительный флаг для полной блокировки
+                logger.info("[CONTINUOUS] 🎨 UI обновления ПОЛНОСТЬЮ заблокированы - начинаем обработку данных")
+                
                 logger.info("=" * 80)
                 logger.info(f"[CONTINUOUS] 🔄 РАУНД #{self.update_count} НАЧАТ")
                 logger.info(f"[CONTINUOUS] 🕐 Время: {datetime.now().strftime('%H:%M:%S')}")
@@ -133,6 +139,14 @@ class ContinuousDataLoader:
                 logger.info(f"[CONTINUOUS] 🎯 Отфильтровано монет: {len(filtered_coins)}")
                 logger.info("=" * 80)
                 
+                # ✅ ПОЛНОСТЬЮ СНИМАЕМ БЛОКИРОВКУ UI И УВЕЛИЧИВАЕМ ВЕРСИЮ ДАННЫХ - все этапы завершены!
+                # Теперь UI может безопасно обновляться с финальными данными
+                from bots_modules.imports_and_globals import coins_rsi_data
+                coins_rsi_data['ui_update_paused'] = False
+                coins_rsi_data['processing_cycle'] = False  # ✅ Снимаем дополнительный флаг
+                coins_rsi_data['data_version'] += 1  # ✅ Увеличиваем версию данных
+                logger.info(f"[CONTINUOUS] 🎨 UI обновления ПОЛНОСТЬЮ разблокированы - все этапы завершены (версия данных: {coins_rsi_data['data_version']})")
+                
                 # 🚀 БЕЗ ПАУЗ: Раунды идут максимально быстро один за другим!
                 # Чем быстрее железо - тем быстрее обновляются данные
                 logger.info(f"[CONTINUOUS] 🚀 Сразу запускаем следующий раунд...")
@@ -144,6 +158,14 @@ class ContinuousDataLoader:
             except Exception as e:
                 logger.error(f"[CONTINUOUS] ❌ Ошибка в цикле обновления: {e}")
                 self.error_count += 1
+                
+                # ✅ ПОЛНОСТЬЮ СНИМАЕМ БЛОКИРОВКУ UI даже при ошибке - чтобы UI не завис
+                from bots_modules.imports_and_globals import coins_rsi_data
+                coins_rsi_data['ui_update_paused'] = False
+                coins_rsi_data['processing_cycle'] = False  # ✅ Снимаем дополнительный флаг даже при ошибке
+                coins_rsi_data['data_version'] += 1  # ✅ Увеличиваем версию даже при ошибке
+                logger.info(f"[CONTINUOUS] 🎨 UI обновления ПОЛНОСТЬЮ разблокированы (после ошибки, версия данных: {coins_rsi_data['data_version']})")
+                
                 time.sleep(30)  # Пауза перед следующей попыткой
                 
         logger.info("[CONTINUOUS] 🏁 Выход из непрерывного цикла")

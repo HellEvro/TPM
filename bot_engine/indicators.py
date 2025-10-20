@@ -550,11 +550,9 @@ class SignalGenerator:
             else:
                 return {'action': 'ENTER_SHORT', 'reason': f'rsi_overbought_{rsi:.1f}'}
         
-        # Выходы зависят от текущих позиций и RSI уровней
-        elif rsi >= RSI_EXIT_LONG:
-            return {'action': 'EXIT_LONG', 'reason': f'rsi_exit_long_{rsi:.1f}'}
-        elif rsi <= RSI_EXIT_SHORT:
-            return {'action': 'EXIT_SHORT', 'reason': f'rsi_exit_short_{rsi:.1f}'}
+        # ❌ ИСПРАВЛЕНИЕ: EXIT сигналы НЕ должны показываться для монет без ботов!
+        # EXIT сигналы должны определяться только в контексте активных ботов
+        # Здесь мы определяем только сигналы входа (ENTER_LONG, ENTER_SHORT, WAIT)
         
         # RSI между 30-70 - ждем
         else:
@@ -676,10 +674,9 @@ class SignalGenerator:
                     }
         
         # Логика выхода (остается как было, но с адаптивными уровнями)
-        elif rsi >= RSI_EXIT_LONG:
-            return {'action': 'EXIT_LONG', 'reason': f'rsi_exit_long_{rsi:.1f}'}
-        elif rsi <= RSI_EXIT_SHORT:
-            return {'action': 'EXIT_SHORT', 'reason': f'rsi_exit_short_{rsi:.1f}'}
+        # ❌ ИСПРАВЛЕНИЕ: EXIT сигналы НЕ должны показываться для монет без ботов!
+        # EXIT сигналы должны определяться только в контексте активных ботов
+        # Здесь мы определяем только сигналы входа (ENTER_LONG, ENTER_SHORT, WAIT)
         
         # По умолчанию ждем
         return {'action': 'WAIT', 'reason': f'enhanced_neutral_{rsi:.1f}'}

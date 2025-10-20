@@ -11,23 +11,35 @@
       "entry_time": null,
       "last_signal_time": null,
       "last_bar_timestamp": null,
-      "created_at": "2025-10-20T21:01:52.897498",
+      "created_at": "2025-10-21T02:09:36.932099",
       "scaling_enabled": false,
       "scaling_levels": [],
       "scaling_current_level": 0,
       "scaling_group_id": null,
-      "unrealized_pnl": 0.105,
+      "unrealized_pnl": 0.1239,
       "position_side": "LONG",
+      "work_time": "4м 59с",
       "rsi_data": {
         "symbol": "AWE",
-        "rsi6h": 38.3,
+        "rsi6h": 39.5,
         "trend6h": "NEUTRAL",
         "rsi_zone": "NEUTRAL",
         "signal": "WAIT",
-        "price": 0.0755,
-        "change24h": 0.53,
-        "last_update": "2025-10-20T21:16:47.157767",
-        "trend_analysis": null,
+        "price": 0.07596,
+        "change24h": 1.15,
+        "last_update": "2025-10-21T02:10:19.261672",
+        "trend_analysis": {
+          "trend": "NEUTRAL",
+          "ema_short": 0.084275951181555,
+          "ema_long": 0.08215117841285487,
+          "ema_short_period": 50,
+          "ema_long_period": 200,
+          "ema_long_slope": -6.222289862166386e-05,
+          "current_close": 0.07596,
+          "confirmations": 3,
+          "min_confirmations": 2,
+          "accuracy": 0
+        },
         "ema_periods": {
           "ema_short": 133,
           "ema_long": 295,
@@ -46,21 +58,33 @@
           "confirmations": {
             "volume": false,
             "divergence": false,
-            "stoch_rsi_k": 81.15328635681753,
-            "stoch_rsi_d": 88.00960754139989
+            "stoch_rsi_k": 83.82926933693676,
+            "stoch_rsi_d": 88.90160186810631
           },
           "enhanced_signal": "WAIT",
-          "enhanced_reason": "enhanced_neutral_38.3"
+          "enhanced_reason": "enhanced_neutral_39.5"
         },
         "time_filter_info": null,
         "exit_scam_info": null,
         "blocked_by_scope": false,
         "has_existing_position": false,
-        "is_mature": true
+        "is_mature": true,
+        "blocked_by_exit_scam": false,
+        "blocked_by_rsi_time": false
       },
-      "stop_loss_price": 0.07048,
-      "trailing_stop_price": 0.0,
-      "last_update": "2025-10-20T21:16:54.757633"
+      "exchange_position": {
+        "size": 70.0,
+        "side": "Long",
+        "unrealized_pnl": 0,
+        "mark_price": 0,
+        "entry_price": 0,
+        "leverage": 1,
+        "stop_loss": "",
+        "take_profit": ""
+      },
+      "take_profit_price": null,
+      "position_size": 70.0,
+      "last_update": "2025-10-21T02:12:37.510874"
     }
   },
   "auto_bot_config": {
@@ -102,8 +126,8 @@
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50,
     "filtered_coins": [],
-    "last_filter_update": "2025-10-20T21:17:50.389337"
+    "last_filter_update": "2025-10-21T02:12:34.638006"
   },
-  "last_saved": "2025-10-20T21:17:53.515565",
+  "last_saved": "2025-10-21T02:14:37.092635",
   "version": "1.0"
 }
