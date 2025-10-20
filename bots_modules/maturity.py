@@ -44,11 +44,38 @@ except ImportError:
 # Глобальные переменные (будут импортированы из главного файла)
 mature_coins_storage = {}
 MATURE_COINS_FILE = 'data/mature_coins.json'
+MATURITY_CHECK_CACHE_FILE = 'data/maturity_check_cache.json'  # 🚀 Кэш последней проверки
 mature_coins_lock = threading.Lock()
 
-# 🚀 Кэш последней проверки зрелости (для оптимизации)
+# 🚀 Кэш последней проверки зрелости (загружается из файла)
 last_maturity_check = {'coins_count': 0, 'config_hash': None}
 maturity_data_invalidated = False  # Флаг: True если данные были сброшены и не должны сохраняться
+
+def load_maturity_check_cache():
+    """🚀 Загружает кэш последней проверки зрелости из файла"""
+    global last_maturity_check
+    try:
+        if os.path.exists(MATURITY_CHECK_CACHE_FILE):
+            with open(MATURITY_CHECK_CACHE_FILE, 'r', encoding='utf-8') as f:
+                cached_data = json.load(f)
+                last_maturity_check['coins_count'] = cached_data.get('coins_count', 0)
+                last_maturity_check['config_hash'] = cached_data.get('config_hash', None)
+                logger.info(f"[MATURITY_CACHE] 💾 Загружен кэш: {last_maturity_check['coins_count']} монет")
+        else:
+            logger.info("[MATURITY_CACHE] 📝 Файл кэша не найден, создаем новый")
+    except Exception as e:
+        logger.error(f"[MATURITY_CACHE] ❌ Ошибка загрузки кэша: {e}")
+        last_maturity_check = {'coins_count': 0, 'config_hash': None}
+
+def save_maturity_check_cache():
+    """🚀 Сохраняет кэш последней проверки зрелости в файл"""
+    try:
+        os.makedirs(os.path.dirname(MATURITY_CHECK_CACHE_FILE), exist_ok=True)
+        with open(MATURITY_CHECK_CACHE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(last_maturity_check, f, indent=2, ensure_ascii=False)
+        logger.debug(f"[MATURITY_CACHE] 💾 Кэш сохранен: {last_maturity_check['coins_count']} монет")
+    except Exception as e:
+        logger.error(f"[MATURITY_CACHE] ❌ Ошибка сохранения кэша: {e}")
 
 def load_mature_coins_storage(expected_coins_count=None):
     """Загружает постоянное хранилище зрелых монет из файла"""
@@ -452,10 +479,6 @@ def calculate_all_coins_maturity():
         
         # 🚀 СУПЕР-ОПТИМИЗАЦИЯ: Пропускаем если конфиг + количество монет не изменились!
         global last_maturity_check
-        try:
-            last_maturity_check
-        except NameError:
-            last_maturity_check = {'coins_count': 0, 'config_hash': None}
         
         # Получаем текущий конфиг зрелости
         config = bots_data.get('auto_bot_config', {})
@@ -552,10 +575,11 @@ def calculate_all_coins_maturity():
         logger.info(f"[MATURITY_BATCH] 📊 Всего зрелых: {already_mature_count + mature_count}")
         logger.info(f"[MATURITY_BATCH] 📊 Всего проверили: {len(coins_to_check)}")
         
-        # 🚀 Обновляем кэш для следующего раза
+        # 🚀 Обновляем кэш для следующего раза И СОХРАНЯЕМ В ФАЙЛ
         last_maturity_check['coins_count'] = current_coins_count
         last_maturity_check['config_hash'] = current_config_hash
-        logger.info(f"[MATURITY_BATCH] 💾 Кэш обновлен: {current_coins_count} монет")
+        save_maturity_check_cache()  # 💾 Сохраняем в файл!
+        logger.info(f"[MATURITY_BATCH] 💾 Кэш обновлен и сохранен: {current_coins_count} монет")
         
         return True
         

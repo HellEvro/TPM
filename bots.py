@@ -343,9 +343,13 @@ if __name__ == '__main__':
             import traceback
             traceback.print_exc()
         
-        # ✅ Optimal EMA Worker ОТКЛЮЧЕН - расчет выполняется только в init_functions.py при старте
-        # Периодические обновления не нужны, так как Optimal EMA меняется редко
-        logger.info("📊 Optimal EMA Worker отключен - используется только начальный расчет")
+        # ✅ Optimal EMA Worker - расчет оптимальных EMA в фоне
+        from bot_engine.optimal_ema_worker import start_optimal_ema_worker
+        optimal_ema_worker = start_optimal_ema_worker(update_interval=21600) # 6 часов
+        if optimal_ema_worker:
+            logger.info("✅ Optimal EMA Worker запущен (обновление каждые 6 часов)")
+        else:
+            logger.warning("⚠️ Не удалось запустить Optimal EMA Worker")
         
         auto_save_thread = threading.Thread(target=auto_save_worker, daemon=True)
         auto_save_thread.start()

@@ -82,7 +82,10 @@ class ContinuousDataLoader:
         # Небольшая задержка перед первым обновлением (даем системе запуститься)
         time.sleep(5)
         
-        while self.is_running:
+        # Импортируем shutdown_flag для корректной остановки
+        from bots_modules.imports_and_globals import shutdown_flag
+        
+        while self.is_running and not shutdown_flag.is_set():
             try:
                 cycle_start = time.time()
                 self.update_count += 1
@@ -134,8 +137,9 @@ class ContinuousDataLoader:
                 # Чем быстрее железо - тем быстрее обновляются данные
                 logger.info(f"[CONTINUOUS] 🚀 Сразу запускаем следующий раунд...")
                 
-                # Минимальная пауза 1 секунда для стабильности
-                time.sleep(1)
+                # Минимальная пауза 1 секунда для стабильности (с проверкой shutdown)
+                if shutdown_flag.wait(1):  # Прерываемый sleep
+                    break
                     
             except Exception as e:
                 logger.error(f"[CONTINUOUS] ❌ Ошибка в цикле обновления: {e}")

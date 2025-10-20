@@ -463,6 +463,7 @@ system_initialized = _state.system_initialized
 smart_rsi_manager = _state.smart_rsi_manager
 async_processor = _state.async_processor
 async_processor_task = _state.async_processor_task
+service_start_time = time.time()  # Время запуска сервиса для расчета uptime
 
 # БЛОКИРОВКИ для предотвращения race conditions
 coin_processing_locks = {}  # Блокировки для обработки каждой монеты
