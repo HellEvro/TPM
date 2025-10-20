@@ -79,8 +79,8 @@ def auto_save_worker():
                 break
             
             # Сохраняем состояние
-            with bots_data_lock:
-                bots_count = len(bots_data['bots'])
+            # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает чтение атомарным
+            bots_count = len(bots_data['bots'])
             
             if bots_count > 0:
                 # Логируем только при первом сохранении или если прошло 5 минут
@@ -112,8 +112,8 @@ def auto_bot_worker():
     logger.info("[AUTO_BOT] 💡 Включите его ВРУЧНУЮ через UI когда будете готовы")
     
     # Проверяем статус Auto Bot
-    with bots_data_lock:
-        auto_bot_enabled = bots_data['auto_bot_config']['enabled']
+    # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает чтение атомарным
+    auto_bot_enabled = bots_data['auto_bot_config']['enabled']
     
     if auto_bot_enabled:
         logger.info("[AUTO_BOT] ✅ Автобот включен и готов к работе")
@@ -127,12 +127,21 @@ def auto_bot_worker():
     last_inactive_cleanup = time.time() - SystemConfig.INACTIVE_BOT_CLEANUP_INTERVAL
     
     logger.info("[AUTO_BOT] 🔄 Входим в основной цикл (автобот выключен, ждем ручного включения)...")
+    
+    # ✅ КРИТИЧНО: Логируем первый запуск цикла
+    cycle_count = 0
+    
     while not shutdown_flag.is_set():
         try:
+            cycle_count += 1
+            logger.info(f"[AUTO_BOT] 🔄 ЦИКЛ #{cycle_count} НАЧАТ")
+            
             # Получаем интервал проверки из конфигурации (в секундах)
-            with bots_data_lock:
-                check_interval_seconds = bots_data['auto_bot_config']['check_interval']
-                auto_bot_enabled = bots_data['auto_bot_config']['enabled']
+            # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает чтение атомарным
+            check_interval_seconds = bots_data['auto_bot_config']['check_interval']
+            auto_bot_enabled = bots_data['auto_bot_config']['enabled']
+            
+            logger.info(f"[AUTO_BOT] ⏳ Ждем {check_interval_seconds} секунд...")
             
             # Ждем согласно конфигурации
             if shutdown_flag.wait(check_interval_seconds):
@@ -273,11 +282,14 @@ def positions_monitor_worker():
             
             # Загружаем позиции с биржи
             try:
+                logger.info(f"[POSITIONS_MONITOR] 🔄 Загружаем позиции с биржи...")
                 exchange_positions = exchange_obj.get_positions()
                 if isinstance(exchange_positions, tuple):
                     positions_list = exchange_positions[0] if exchange_positions else []
                 else:
                     positions_list = exchange_positions if exchange_positions else []
+                
+                logger.info(f"[POSITIONS_MONITOR] 📊 Получено {len(positions_list)} позиций с биржи")
                 
                 # Обновляем кэш
                 symbols_with_positions = set()
@@ -285,15 +297,18 @@ def positions_monitor_worker():
                     if abs(float(pos.get('size', 0))) > 0:
                         symbol = pos.get('symbol', '').replace('USDT', '')
                         symbols_with_positions.add(symbol)
+                        logger.info(f"[POSITIONS_MONITOR] 📈 Активная позиция: {symbol} (размер: {pos.get('size')})")
                 
                 positions_cache['positions'] = positions_list
                 positions_cache['last_update'] = datetime.now().isoformat()
                 positions_cache['symbols_with_positions'] = symbols_with_positions
                 
-                logger.debug(f"[POSITIONS_MONITOR] ✅ Обновлено: {len(positions_list)} позиций, активных: {len(symbols_with_positions)}")
+                logger.info(f"[POSITIONS_MONITOR] ✅ Обновлено: {len(positions_list)} позиций, активных: {len(symbols_with_positions)}")
                 
             except Exception as e:
-                logger.warning(f"[POSITIONS_MONITOR] ⚠️ Ошибка загрузки позиций: {e}")
+                logger.error(f"[POSITIONS_MONITOR] ❌ Ошибка загрузки позиций: {e}")
+                import traceback
+                traceback.print_exc()
             
             # Ждем 5 секунд перед следующей проверкой
             time.sleep(5)

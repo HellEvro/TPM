@@ -888,10 +888,10 @@ class BotsManager {
             
             const fullDescription = `${stochDescription}${crossoverInfo}`;
             
-            console.log(`[DEBUG] ${coin.symbol}: ГЕНЕРИРУЮ СТОХАСТИК %K=${stochK}, %D=${stochD}, статус=${stochStatus}, icon=${stochIcon}`);
+            // console.log(`[DEBUG] ${coin.symbol}: ГЕНЕРИРУЮ СТОХАСТИК %K=${stochK}, %D=${stochD}, статус=${stochStatus}, icon=${stochIcon}`);
             infoElements.push(`<span class="confirmation-stoch" title="${fullDescription}">${stochIcon}</span>`);
         } else {
-            console.log(`[DEBUG] ${coin.symbol}: НЕТ СТОХАСТИКА - stoch_rsi_k=${coin.stoch_rsi_k}, enhanced_rsi=${!!enhancedRsi}`);
+            // console.log(`[DEBUG] ${coin.symbol}: НЕТ СТОХАСТИКА - stoch_rsi_k=${coin.stoch_rsi_k}, enhanced_rsi=${!!enhancedRsi}`);
         }
         
         // Enhanced RSI данные - только если включен
@@ -927,11 +927,11 @@ class BotsManager {
         const timeFilterInfo = coin.time_filter_info;
         
         if (!timeFilterInfo) {
-            console.log(`[DEBUG] ${coin.symbol}: НЕТ time_filter_info`);
+            // console.log(`[DEBUG] ${coin.symbol}: НЕТ time_filter_info`);
             return '';
         }
         
-        console.log(`[DEBUG] ${coin.symbol}: time_filter_info =`, timeFilterInfo);
+        // console.log(`[DEBUG] ${coin.symbol}: time_filter_info =`, timeFilterInfo);
         
         const isBlocked = timeFilterInfo.blocked;
         const reason = timeFilterInfo.reason;

@@ -517,7 +517,9 @@ coins_rsi_data = {
     'update_in_progress': False,
     'total_coins': 0,
     'successful_coins': 0,
-    'failed_coins': 0
+    'failed_coins': 0,
+    'data_version': 0,  # ✅ Версия данных для предотвращения "гуляющих" данных
+    'ui_update_paused': False  # ✅ Флаг паузы UI обновлений
 }
 
 # Модель данных для ботов
