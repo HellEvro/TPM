@@ -1918,11 +1918,26 @@ def sync_bots_with_exchange():
                             # logger.info(f"[SYNC_EXCHANGE] 📊 {symbol}: Вход=${entry_price:.4f} | Текущая=${current_price:.4f} | Размер={position_size}")
                             
                         else:
-                            # Нет позиции на бирже - УДАЛЯЕМ бота
+                            # Нет позиции на бирже - проверяем статус инструмента
                             old_status = bot_data.get('status', 'UNKNOWN')
                             old_position_size = bot_data.get('position_size', 0)
                             
-                            logger.info(f"[SYNC_EXCHANGE] 🗑️ {symbol}: Удаляем бота (позиция закрыта на бирже, статус: {old_status})")
+                            # ✅ ПРОВЕРЯЕМ ДЕЛИСТИНГ: Получаем статус инструмента
+                            try:
+                                from bots_modules.imports_and_globals import get_exchange
+                                exchange_obj = get_exchange()
+                                if exchange_obj and hasattr(exchange_obj, 'get_instrument_status'):
+                                    status_info = exchange_obj.get_instrument_status(f"{symbol}USDT")
+                                    if status_info and status_info.get('is_delisting'):
+                                        logger.warning(f"[SYNC_EXCHANGE] ⚠️ {symbol}: ДЕЛИСТИНГ обнаружен! Статус: {status_info.get('status')}")
+                                        logger.info(f"[SYNC_EXCHANGE] 🗑️ {symbol}: Удаляем бота (делистинг: {status_info.get('status')})")
+                                    else:
+                                        logger.info(f"[SYNC_EXCHANGE] 🗑️ {symbol}: Удаляем бота (позиция закрыта на бирже, статус: {old_status})")
+                                else:
+                                    logger.info(f"[SYNC_EXCHANGE] 🗑️ {symbol}: Удаляем бота (позиция закрыта на бирже, статус: {old_status})")
+                            except Exception as e:
+                                logger.error(f"[SYNC_EXCHANGE] ❌ Ошибка проверки статуса {symbol}: {e}")
+                                logger.info(f"[SYNC_EXCHANGE] 🗑️ {symbol}: Удаляем бота (позиция закрыта на бирже)")
                             
                             # Удаляем бота из системы
                             del bots_data['bots'][symbol]
