@@ -368,6 +368,9 @@ class BybitExchange(BaseExchange):
     def get_ticker(self, symbol):
         """Получение текущих данных тикера"""
         try:
+            # Добавляем задержку для предотвращения rate limiting
+            time.sleep(0.1)  # 100ms задержка для тикеров
+            
             # Получаем данные тикера
             response = self.client.get_tickers(
                 category="linear",
@@ -428,6 +431,9 @@ class BybitExchange(BaseExchange):
             dict: {'status': str, 'is_tradeable': bool, 'is_delisting': bool}
         """
         try:
+            # Добавляем небольшую задержку для предотвращения rate limiting
+            time.sleep(0.02)  # 20ms задержка для проверки статуса инструмента
+            
             response = self.client.get_instruments_info(
                 category="linear",
                 symbol=symbol
@@ -622,7 +628,7 @@ class BybitExchange(BaseExchange):
             dict: Данные для построения графика
         """
         # Добавляем задержку для предотвращения rate limiting
-        time.sleep(0.01)  # 10ms задержка между запросами для ускорения
+        time.sleep(0.2)  # 200ms задержка между запросами для предотвращения превышения лимита
         
         try:
             # Специальная обработка для таймфрейма "all"
