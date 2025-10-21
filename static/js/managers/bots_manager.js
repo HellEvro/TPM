@@ -6723,9 +6723,13 @@ class BotsManager {
     renderTradesInfo(coinSymbol) {
         console.log(`[DEBUG] renderTradesInfo для ${coinSymbol}`);
         console.log(`[DEBUG] this.activeBots:`, this.activeBots);
+        console.log(`[DEBUG] this.selectedCoin:`, this.selectedCoin);
         
         const tradesSection = document.getElementById('tradesInfoSection');
         const tradesContainer = document.getElementById('tradesContainer');
+        
+        console.log(`[DEBUG] tradesSection:`, tradesSection);
+        console.log(`[DEBUG] tradesContainer:`, tradesContainer);
         
         if (!tradesSection || !tradesContainer) {
             console.log(`[DEBUG] Не найдены элементы tradesSection или tradesContainer`);
@@ -6744,6 +6748,7 @@ class BotsManager {
         }
         
         // Показываем секцию сделок
+        console.log(`[DEBUG] Показываем секцию сделок для ${coinSymbol}`);
         tradesSection.style.display = 'block';
         
         // Получаем информацию о сделках
@@ -6939,13 +6944,13 @@ class BotsManager {
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: #888;">🛡️ Стоп-лосс:</span>
-                        <span class="trade-detail-value" style="color: #ff9800; font-weight: 600;">$${trade.stopLossPrice.toFixed(6)} (${trade.stopLossPercent}%)</span>
+                        <span class="trade-detail-value" style="color: #ff9800; font-weight: 600;">$${parseFloat(trade.stopLossPrice).toFixed(6)} (${trade.stopLossPercent}%)</span>
                     </div>
                     
                     ${trade.takeProfitPrice ? `
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: #888;">🎯 Тейк-профит:</span>
-                        <span class="trade-detail-value" style="color: #4caf50; font-weight: 600;">$${trade.takeProfitPrice.toFixed(6)}</span>
+                        <span class="trade-detail-value" style="color: #4caf50; font-weight: 600;">$${parseFloat(trade.takeProfitPrice).toFixed(6)}</span>
                     </div>
                     ` : ''}
                     
