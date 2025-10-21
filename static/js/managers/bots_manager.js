@@ -1099,6 +1099,12 @@ class BotsManager {
             return 'UNAVAILABLE'; // Статус для недоступных для торговли монет (делистинг + новые монеты)
         }
         
+        // ✅ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Исключаем известные делистинговые монеты
+        const delistingBlacklist = ['DOGS', 'FTT', 'LUNA'];
+        if (delistingBlacklist.includes(coin.symbol)) {
+            return 'UNAVAILABLE';
+        }
+        
         // Если API уже предоставил эффективный сигнал, используем его
         if (coin.effective_signal) {
             return coin.effective_signal;
@@ -1322,13 +1328,19 @@ class BotsManager {
 
         if (symbolElement) {
             const exchangeUrl = this.getExchangeLink(coin.symbol, 'bybit');
+            
+            // Проверяем статус делистинга
+            const isDelisting = coin.is_delisting || coin.trading_status === 'Closed' || coin.trading_status === 'Delivering';
+            const delistedTag = isDelisting ? '<span class="delisted-status">DELISTED</span>' : '';
+            
             symbolElement.innerHTML = `
                 🪙 ${coin.symbol} 
+                ${delistedTag}
                 <a href="${exchangeUrl}" target="_blank" class="exchange-link" title="Открыть на Bybit">
                     🔗
                 </a>
             `;
-            console.log('[BotsManager] ✅ Символ обновлен:', coin.symbol);
+            console.log('[BotsManager] ✅ Символ обновлен:', coin.symbol, isDelisting ? '(DELISTED)' : '');
         }
         
         // Используем правильные поля из RSI данных
