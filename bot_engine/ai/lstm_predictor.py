@@ -43,7 +43,7 @@ class LSTMPredictor:
     
     def __init__(
         self,
-        model_path: str = "data/ai/models/lstm_predictor.h5",
+        model_path: str = "data/ai/models/lstm_predictor.keras",  # ✅ Keras 3 формат
         scaler_path: str = "data/ai/models/lstm_scaler.pkl",
         config_path: str = "data/ai/models/lstm_config.json"
     ):
