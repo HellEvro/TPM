@@ -551,12 +551,22 @@ class NewTradingBot:
                     coin_data = coins_rsi_data['coins'].get(self.symbol)
                     current_rsi = coin_data.get('rsi6h') if coin_data else None
                 
+                logger.info(f"[NEW_BOT_{self.symbol}] 🔍 TP SETUP: current_rsi={current_rsi}, side={side}, price={price}")
+                
                 if current_rsi:
                     take_profit_price = self.calculate_dynamic_take_profit(side, price, current_rsi)
                     if take_profit_price:
-                        logger.info(f"[NEW_BOT_{self.symbol}] 🎯 TP рассчитан: {price:.6f} → {take_profit_price:.6f}")
+                        logger.info(f"[NEW_BOT_{self.symbol}] ✅ TP рассчитан и будет установлен: {price:.6f} → {take_profit_price:.6f}")
+                    else:
+                        logger.warning(f"[NEW_BOT_{self.symbol}] ❌ TP НЕ рассчитан - функция вернула None")
+                else:
+                    logger.warning(f"[NEW_BOT_{self.symbol}] ❌ TP НЕ рассчитан - нет RSI данных")
             except Exception as tp_error:
-                logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось рассчитать TP: {tp_error}")
+                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка расчета TP: {tp_error}")
+                import traceback
+                traceback.print_exc()
+            
+            logger.info(f"[NEW_BOT_{self.symbol}] 🚀 ОТПРАВЛЯЕМ ОРДЕР: symbol={self.symbol}, side={side}, quantity={qty_in_coins}, take_profit={take_profit_price}")
             
             order_result = self.exchange.place_order(
                 symbol=self.symbol,
@@ -621,13 +631,19 @@ class NewTradingBot:
             float: Цена Take Profit или None если не нужен
         """
         try:
+            # ОТЛАДКА: Логируем входные параметры
+            logger.info(f"[NEW_BOT_{self.symbol}] 🔍 TP CALC DEBUG: direction={direction}, price={current_price}, rsi={current_rsi}")
+            
             # Получаем настройки RSI из конфигурации
             rsi_exit_long = self.config.get('rsi_exit_long', 55)
             rsi_exit_short = self.config.get('rsi_exit_short', 45)
             
+            logger.info(f"[NEW_BOT_{self.symbol}] 🔍 TP CONFIG: rsi_exit_long={rsi_exit_long}, rsi_exit_short={rsi_exit_short}")
+            
             if direction == 'LONG':
                 # Для LONG: TP когда RSI достигнет rsi_exit_long
                 if current_rsi >= rsi_exit_long:
+                    logger.info(f"[NEW_BOT_{self.symbol}] ❌ TP для LONG: RSI {current_rsi} уже >= {rsi_exit_long}, TP не нужен")
                     return None  # Основное условие уже сработало
                 
                 # Рассчитываем примерную цену для достижения целевого RSI
@@ -637,7 +653,7 @@ class NewTradingBot:
                 price_multiplier = 1 + (rsi_ratio - 1) * 0.6
                 tp_price = current_price * price_multiplier
                 
-                logger.info(f"[NEW_BOT_{self.symbol}] 📈 TP для LONG: RSI {current_rsi}→{rsi_exit_long}, цена {current_price:.6f}→{tp_price:.6f}")
+                logger.info(f"[NEW_BOT_{self.symbol}] ✅ TP для LONG: RSI {current_rsi}→{rsi_exit_long}, цена {current_price:.6f}→{tp_price:.6f} (множитель: {price_multiplier:.3f})")
                 return tp_price
                 
             elif direction == 'SHORT':
