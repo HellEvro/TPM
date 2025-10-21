@@ -19,6 +19,9 @@ class BotsManager {
         // Флаг для предотвращения множественных обновлений подписей
         this.trendLabelsUpdated = false;
         
+        // Версия данных для отслеживания изменений
+        this.lastDataVersion = 0;
+        
         // Единый интервал обновления UI и мониторинга ботов
         this.refreshInterval = 3000; // 3 секунды по умолчанию
         this.monitoringTimer = null;
@@ -630,6 +633,16 @@ class BotsManager {
             const data = await response.json();
             
             if (data.success) {
+                    // ✅ ОПТИМИЗАЦИЯ: Проверяем версию данных - обновляем UI только при изменениях
+                    const currentDataVersion = data.data_version || 0;
+                    if (currentDataVersion === this.lastDataVersion && this.coinsRsiData.length > 0) {
+                        this.logDebug('[BotsManager] ⏭️ Данные не изменились (version=' + currentDataVersion + '), пропускаем обновление UI');
+                        return;
+                    }
+                    
+                    this.logDebug('[BotsManager] 🔄 Данные обновились (version: ' + this.lastDataVersion + ' → ' + currentDataVersion + ')');
+                    this.lastDataVersion = currentDataVersion;
+                    
                     // Преобразуем словарь в массив для совместимости с UI
                     this.logDebug('[BotsManager] 🔍 Данные от API:', data);
                     this.logDebug('[BotsManager] 🔍 Ключи coins:', Object.keys(data.coins));

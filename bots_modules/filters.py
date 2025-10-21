@@ -820,9 +820,11 @@ def load_all_coins_candles_fast():
         # ⚡ ИСПРАВЛЕНИЕ DEADLOCK: Сохраняем в глобальный кэш БЕЗ блокировки
         # rsi_data_lock может быть захвачен ContinuousDataLoader в другом потоке
         try:
+            logger.info(f"[CANDLES_FAST] 💾 Сохраняем кэш в глобальное хранилище...")
             coins_rsi_data['candles_cache'] = candles_cache
             coins_rsi_data['last_candles_update'] = datetime.now().isoformat()
             logger.info(f"[CANDLES_FAST] ✅ Кэш сохранен: {len(candles_cache)} монет")
+            logger.info(f"[CANDLES_FAST] ✅ Проверка: в глобальном кэше сейчас {len(coins_rsi_data.get('candles_cache', {}))} монет")
         except Exception as cache_error:
             logger.warning(f"[CANDLES_FAST] ⚠️ Ошибка сохранения кэша: {cache_error}")
         
@@ -851,6 +853,10 @@ def load_all_coins_rsi():
         temp_coins_data = {}
         
         logger.info("[RSI] 🔄 Начинаем загрузку RSI 6H для всех монет...")
+        
+        # Проверяем кэш свечей перед началом
+        candles_cache_size = len(coins_rsi_data.get('candles_cache', {}))
+        logger.info(f"[RSI] 📦 Размер кэша свечей на старте: {candles_cache_size} монет")
         
         # Получаем актуальную ссылку на биржу
         try:
@@ -882,7 +888,7 @@ def load_all_coins_rsi():
         coins_rsi_data['failed_coins'] = 0
         
         # Получаем RSI данные для всех пар пакетно с инкрементальным обновлением (УСКОРЕННАЯ ВЕРСИЯ)
-        batch_size = 50  # ⚡ Увеличили обратно после исправления deadlock
+        batch_size = 100  # ⚡ Увеличили до 100 для ускорения первой загрузки
         
         for i in range(0, len(pairs), batch_size):
             batch = pairs[i:i + batch_size]
@@ -902,7 +908,7 @@ def load_all_coins_rsi():
             logger.info(f"[BATCH] 🚀 Параллельная обработка с ThreadPoolExecutor")
             
             # Используем ThreadPoolExecutor для параллельной обработки
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with ThreadPoolExecutor(max_workers=50) as executor:  # Увеличили до 50 для максимального ускорения
                 # Отправляем все задачи
                 future_to_symbol = {
                     executor.submit(get_coin_rsi_data, symbol, current_exchange): symbol 
