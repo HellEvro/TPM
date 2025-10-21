@@ -726,6 +726,16 @@ class BotsManager {
             const signalClass = effectiveSignal === 'ENTER_LONG' ? 'enter-long' : 
                                effectiveSignal === 'ENTER_SHORT' ? 'enter-short' : '';
             
+            // ✅ Проверяем недоступность для торговли
+            const isUnavailable = effectiveSignal === 'UNAVAILABLE';
+            const isDelisting = isUnavailable && (coin.trading_status === 'Closed' || coin.is_delisting);
+            const isNewCoin = isUnavailable && coin.trading_status === 'Delivering';
+            
+            // Формируем классы
+            const unavailableClass = isUnavailable ? 'unavailable-coin' : '';
+            const delistingClass = isDelisting ? 'delisting-coin' : '';
+            const newCoinClass = isNewCoin ? 'new-coin' : '';
+            
             // Проверяем, есть ли ручная позиция
             const isManualPosition = coin.manual_position || false;
             const manualClass = isManualPosition ? 'manual-position' : '';
@@ -737,13 +747,15 @@ class BotsManager {
             // Убраны спам логи для лучшей отладки
             
             return `
-                <li class="coin-item ${rsiClass} ${trendClass} ${signalClass} ${manualClass} ${matureClass}" data-symbol="${coin.symbol}">
+                <li class="coin-item ${rsiClass} ${trendClass} ${signalClass} ${manualClass} ${matureClass} ${unavailableClass} ${delistingClass} ${newCoinClass}" data-symbol="${coin.symbol}">
                     <div class="coin-item-content">
                         <div class="coin-header">
                             <span class="coin-symbol">${coin.symbol}</span>
                             <div class="coin-header-right">
                                 ${isManualPosition ? '<span class="manual-position-indicator" title="Ручная позиция">✋</span>' : ''}
                                 ${isMature ? '<span class="mature-coin-indicator" title="Зрелая монета">💎</span>' : ''}
+                                ${isDelisting ? '<span class="delisting-indicator" title="Монета на делистинге">⚠️</span>' : ''}
+                                ${isNewCoin ? '<span class="new-coin-indicator" title="Новая монета (включение в листинг)">🆕</span>' : ''}
                                 ${this.generateWarningIndicator(coin)}
                                 <span class="coin-rsi ${this.getRsiZoneClass(coin.rsi6h)}">${coin.rsi6h}</span>
                                 <a href="${this.createTickerLink(coin.symbol)}" 
@@ -1079,9 +1091,14 @@ class BotsManager {
      * Универсальная функция для определения эффективного сигнала монеты
      * Используется и автоботом, и фильтрами для единообразия
      * @param {Object} coin - Данные монеты
-     * @returns {string} - Эффективный сигнал (ENTER_LONG, ENTER_SHORT, WAIT)
+     * @returns {string} - Эффективный сигнал (ENTER_LONG, ENTER_SHORT, WAIT, UNAVAILABLE)
      */
     getEffectiveSignal(coin) {
+        // ✅ ПРОВЕРКА СТАТУСА ТОРГОВЛИ: Исключаем монеты недоступные для торговли
+        if (coin.is_delisting || coin.trading_status === 'Closed' || coin.trading_status === 'Delivering') {
+            return 'UNAVAILABLE'; // Статус для недоступных для торговли монет (делистинг + новые монеты)
+        }
+        
         // Если API уже предоставил эффективный сигнал, используем его
         if (coin.effective_signal) {
             return coin.effective_signal;
@@ -1106,6 +1123,7 @@ class BotsManager {
         const trendUpCount = this.coinsRsiData.filter(coin => coin.trend6h === 'UP').length;
         const trendDownCount = this.coinsRsiData.filter(coin => coin.trend6h === 'DOWN').length;
         const manualPositionCount = this.coinsRsiData.filter(coin => coin.manual_position === true).length;
+        const unavailableCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'UNAVAILABLE').length;
         
         // Обновляем счетчики в HTML (фильтры)
         const allCountEl = document.getElementById('filterAllCount');
@@ -1151,7 +1169,21 @@ class BotsManager {
         if (shortCountEl) shortCountEl.textContent = shortCount;
         if (manualCountEl) manualCountEl.textContent = `(${manualPositionCount})`;
         
-        this.logDebug(`[BotsManager] 📊 Счетчики фильтров: ALL=${allCount}, BUY=${buyZoneCount}, SELL=${sellZoneCount}, UP=${trendUpCount}, DOWN=${trendDownCount}, LONG=${longCount}, SHORT=${shortCount}, MANUAL=${manualPositionCount}`);
+        // ✅ Логируем недоступные для торговли монеты
+        if (unavailableCount > 0) {
+            const unavailableCoins = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'UNAVAILABLE');
+            const delistingCoins = unavailableCoins.filter(coin => coin.trading_status === 'Closed' || coin.is_delisting);
+            const newCoins = unavailableCoins.filter(coin => coin.trading_status === 'Delivering');
+            
+            if (delistingCoins.length > 0) {
+                console.warn(`[BotsManager] ⚠️ Найдено ${delistingCoins.length} монет на делистинге:`, delistingCoins.map(coin => coin.symbol));
+            }
+            if (newCoins.length > 0) {
+                console.info(`[BotsManager] ℹ️ Найдено ${newCoins.length} новых монет (Delivering):`, newCoins.map(coin => coin.symbol));
+            }
+        }
+        
+        this.logDebug(`[BotsManager] 📊 Счетчики фильтров: ALL=${allCount}, BUY=${buyZoneCount}, SELL=${sellZoneCount}, UP=${trendUpCount}, DOWN=${trendDownCount}, LONG=${longCount}, SHORT=${shortCount}, MANUAL=${manualPositionCount}, UNAVAILABLE=${unavailableCount}`);
     }
 
     selectCoin(symbol) {
