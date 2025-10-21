@@ -1296,7 +1296,7 @@ class BotsManager {
         
         // Используем правильные поля из RSI данных
         if (priceElement) {
-            const price = coin.last_price || coin.price || 0;
+            const price = coin.current_price || coin.mark_price || coin.last_price || coin.price || 0;
             priceElement.textContent = `$${price.toFixed(6)}`;
             console.log('[BotsManager] ✅ Цена обновлена:', price);
         }
@@ -3934,12 +3934,12 @@ class BotsManager {
                             <div class="bot-details" style="font-size: 12px; color: #ccc; margin-bottom: 10px;">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                                     <span>💰 Объем:</span>
-                                    <span style="color: #fff; font-weight: 500;">${bot.volume_value} ${(bot.volume_mode || 'USDT').toUpperCase()}</span>
+                                    <span style="color: #fff; font-weight: 500;">${bot.position_size || bot.volume_value} ${(bot.volume_mode || 'USDT').toUpperCase()}</span>
                                 </div>
                                 
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                                     <span>📊 PnL:</span>
-                                    <span style="color: ${bot.unrealized_pnl >= 0 ? '#4caf50' : '#f44336'}; font-weight: 500;">$${(bot.unrealized_pnl || 0).toFixed(2)}</span>
+                                    <span style="color: ${(bot.unrealized_pnl || bot.unrealized_pnl_usdt || 0) >= 0 ? '#4caf50' : '#f44336'}; font-weight: 500;">$${(bot.unrealized_pnl_usdt || bot.unrealized_pnl || 0).toFixed(3)}</span>
                                 </div>
                                 
                                 ${positionInfo}
@@ -6423,21 +6423,22 @@ class BotsManager {
             </div>
         `;
         
-        // Используем current_price из position_details (обновляется каждые 5 секунд)
-        if (bot.position_details && bot.position_details.current_price) {
-            const currentPrice = bot.position_details.current_price;
-            const priceChange = bot.position_details.price_change || 0;
+        // ✅ ИСПРАВЛЕНО: Используем current_price напрямую из bot (обновляется каждую секунду)
+        if (bot.current_price || bot.mark_price) {
+            const currentPrice = bot.current_price || bot.mark_price;
+            const entryPrice = bot.entry_price || 0;
+            const priceChange = entryPrice > 0 ? ((currentPrice - entryPrice) / entryPrice) * 100 : 0;
             const priceChangeColor = priceChange >= 0 ? '#4caf50' : '#f44336';
             const priceChangeIcon = priceChange >= 0 ? '↗️' : '↘️';
             
             positionHtml += `
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                     <span>📊 Текущая:</span>
-                    <span style="color: #fff; font-weight: 500;">$${currentPrice.toFixed(6)}</span>
+                    <span style="color: ${priceChangeColor}; font-weight: 500;">$${currentPrice.toFixed(6)} ${priceChangeIcon}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                    <span>${priceChangeIcon} Изменение:</span>
-                    <span style="color: ${priceChangeColor}; font-weight: 500;">${priceChange.toFixed(2)}%</span>
+                    <span>📊 PnL:</span>
+                    <span style="color: ${(bot.unrealized_pnl_usdt || bot.unrealized_pnl || 0) >= 0 ? '#4caf50' : '#f44336'}; font-weight: 500;">$${(bot.unrealized_pnl_usdt || bot.unrealized_pnl || 0).toFixed(3)}</span>
                 </div>
             `;
         }
@@ -6446,29 +6447,64 @@ class BotsManager {
     }
     
     getBotTimeInfo(bot) {
-        if (!bot.created_at) {
-            return '';
+        let timeInfoHtml = '';
+        
+        // Время работы бота
+        if (bot.created_at) {
+            const createdTime = new Date(bot.created_at);
+            const now = new Date();
+            const timeDiff = now - createdTime;
+            const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+            const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            let timeText = '';
+            if (hours > 0) {
+                timeText = `${hours}ч ${minutes}м`;
+            } else {
+                timeText = `${minutes}м`;
+            }
+            
+            timeInfoHtml += `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span>⏱️ Время:</span>
+                    <span style="color: #888; font-weight: 500;">${timeText}</span>
+                </div>
+            `;
         }
         
-        const createdTime = new Date(bot.created_at);
-        const now = new Date();
-        const timeDiff = now - createdTime;
-        const hours = Math.floor(timeDiff / (1000 * 60 * 60));
-        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-        
-        let timeText = '';
-        if (hours > 0) {
-            timeText = `${hours}ч ${minutes}м`;
-        } else {
-            timeText = `${minutes}м`;
+        // Время обновления данных позиции (если бот в позиции)
+        if (bot.status && (bot.status.includes('position') || bot.status.includes('in_position')) && bot.last_update) {
+            const lastUpdateTime = new Date(bot.last_update);
+            const now = new Date();
+            const updateDiff = now - lastUpdateTime;
+            const updateMinutes = Math.floor(updateDiff / (1000 * 60));
+            const updateSeconds = Math.floor((updateDiff % (1000 * 60)) / 1000);
+            
+            let updateTimeText = '';
+            if (updateMinutes > 0) {
+                updateTimeText = `${updateMinutes}м ${updateSeconds}с назад`;
+            } else {
+                updateTimeText = `${updateSeconds}с назад`;
+            }
+            
+            // Цвет в зависимости от давности обновления
+            let updateColor = '#4caf50'; // зеленый - свежие данные
+            if (updateMinutes > 1) {
+                updateColor = '#ff9800'; // оранжевый - данные старше минуты
+            }
+            if (updateMinutes > 5) {
+                updateColor = '#f44336'; // красный - данные старше 5 минут
+            }
+            
+            timeInfoHtml += `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span>🔄 Обновлено:</span>
+                    <span style="color: ${updateColor}; font-weight: 500;">${updateTimeText}</span>
+                </div>
+            `;
         }
         
-        return `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                <span>⏱️ Время:</span>
-                <span style="color: #888; font-weight: 500;">${timeText}</span>
-            </div>
-        `;
+        return timeInfoHtml;
     }
     
     renderTradesInfo(coinSymbol) {
@@ -6515,7 +6551,7 @@ class BotsManager {
             trades.push({
                 side: 'LONG',
                 entryPrice: bot.entry_price,
-                currentPrice: bot.position_details?.current_price || bot.entry_price,
+                currentPrice: bot.current_price || bot.mark_price || bot.entry_price,
                 stopLossPrice: stopLossPrice,
                 stopLossPercent: stopLossPercent,
                 pnl: bot.unrealized_pnl || 0,
@@ -6535,7 +6571,7 @@ class BotsManager {
             trades.push({
                 side: 'SHORT',
                 entryPrice: bot.entry_price,
-                currentPrice: bot.position_details?.current_price || bot.entry_price,
+                currentPrice: bot.current_price || bot.mark_price || bot.entry_price,
                 stopLossPrice: stopLossPrice,
                 stopLossPercent: stopLossPercent,
                 pnl: bot.unrealized_pnl || 0,
@@ -6602,7 +6638,7 @@ class BotsManager {
                 
                 <div class="trade-pnl ${pnlClass}">
                     <span>${pnlIcon} PnL:</span>
-                    <span>${trade.pnl.toFixed(2)}%</span>
+                    <span>$${trade.pnl.toFixed(3)}</span>
                 </div>
             </div>
         `;
