@@ -125,6 +125,7 @@ def auto_bot_worker():
     last_stop_loss_setup = time.time() - SystemConfig.STOP_LOSS_SETUP_INTERVAL
     last_position_sync = time.time() - SystemConfig.POSITION_SYNC_INTERVAL
     last_inactive_cleanup = time.time() - SystemConfig.INACTIVE_BOT_CLEANUP_INTERVAL
+    last_auto_bot_check = time.time()  # Время последней проверки сигналов автобота
     
     logger.info("[AUTO_BOT] 🔄 Входим в основной цикл (автобот выключен, ждем ручного включения)...")
     
@@ -141,14 +142,19 @@ def auto_bot_worker():
             check_interval_seconds = bots_data['auto_bot_config']['check_interval']
             auto_bot_enabled = bots_data['auto_bot_config']['enabled']
             
-            logger.info(f"[AUTO_BOT] ⏳ Ждем {check_interval_seconds} секунд...")
+            # ✅ КРИТИЧНО: Обновляем позиции каждую секунду независимо от check_interval!
+            # Не ждем check_interval_seconds - это только для проверки сигналов автобота
+            logger.info(f"[AUTO_BOT] ⏳ Обновляем позиции каждую секунду...")
             
-            # Ждем согласно конфигурации
-            if shutdown_flag.wait(check_interval_seconds):
+            # Ждем только 1 секунду для обновления позиций
+            if shutdown_flag.wait(1):
                 break
             
-            # Проверяем сигналы только если Auto Bot включен
-            if auto_bot_enabled:
+            # Проверяем сигналы только если Auto Bot включен И прошло достаточно времени
+            current_time = time.time()
+            time_since_auto_bot_check = current_time - last_auto_bot_check
+            
+            if auto_bot_enabled and time_since_auto_bot_check >= check_interval_seconds:
                 # Подавляем частые сообщения о проверке сигналов
                 should_log, log_message = should_log_message(
                     'auto_bot_signals', 
@@ -164,6 +170,9 @@ def auto_bot_worker():
                 from bots_modules.imports_and_globals import get_exchange
                 process_auto_bot_signals(exchange_obj=get_exchange())
                 logger.info(f"[AUTO_BOT] ✅ process_auto_bot_signals завершена")
+                
+                # Обновляем время последней проверки сигналов
+                last_auto_bot_check = current_time
                 
                 # Обновляем статистику
                 current_count = process_state.get('auto_bot_worker', {}).get('check_count', 0)
@@ -255,10 +264,11 @@ def auto_bot_worker():
 
 def positions_monitor_worker():
     """
-    📊 Мониторинг позиций на бирже (каждые 5 секунд)
+    📊 Мониторинг позиций на бирже (каждую секунду)
     
     Загружает все позиции с биржи и сохраняет в кэш для быстрого доступа.
     Это позволяет определять ручные позиции и избегать конфликтов.
+    КРИТИЧНО: Обновляется каждую секунду для быстрой реакции ботов!
     """
     logger.info("[POSITIONS_MONITOR] 🚀 Запуск мониторинга позиций...")
     
@@ -282,36 +292,45 @@ def positions_monitor_worker():
             
             # Загружаем позиции с биржи
             try:
-                logger.info(f"[POSITIONS_MONITOR] 🔄 Загружаем позиции с биржи...")
+                # Логируем только каждые 30 секунд чтобы не спамить
+                should_log = (int(time.time()) % 30 == 0)
+                if should_log:
+                    logger.info(f"[POSITIONS_MONITOR] 🔄 Загружаем позиции с биржи...")
+                
                 exchange_positions = exchange_obj.get_positions()
                 if isinstance(exchange_positions, tuple):
                     positions_list = exchange_positions[0] if exchange_positions else []
                 else:
                     positions_list = exchange_positions if exchange_positions else []
                 
-                logger.info(f"[POSITIONS_MONITOR] 📊 Получено {len(positions_list)} позиций с биржи")
-                
                 # Обновляем кэш
                 symbols_with_positions = set()
+                active_positions_log = []
                 for pos in positions_list:
                     if abs(float(pos.get('size', 0))) > 0:
                         symbol = pos.get('symbol', '').replace('USDT', '')
                         symbols_with_positions.add(symbol)
-                        logger.info(f"[POSITIONS_MONITOR] 📈 Активная позиция: {symbol} (размер: {pos.get('size')})")
+                        if should_log:
+                            active_positions_log.append(f"{symbol} (размер: {pos.get('size')})")
                 
                 positions_cache['positions'] = positions_list
                 positions_cache['last_update'] = datetime.now().isoformat()
                 positions_cache['symbols_with_positions'] = symbols_with_positions
                 
-                logger.info(f"[POSITIONS_MONITOR] ✅ Обновлено: {len(positions_list)} позиций, активных: {len(symbols_with_positions)}")
+                # Логируем только каждые 30 секунд
+                if should_log:
+                    logger.info(f"[POSITIONS_MONITOR] 📊 Получено {len(positions_list)} позиций с биржи")
+                    if active_positions_log:
+                        logger.info(f"[POSITIONS_MONITOR] 📈 Активные позиции: {', '.join(active_positions_log)}")
+                    logger.info(f"[POSITIONS_MONITOR] ✅ Обновлено: {len(positions_list)} позиций, активных: {len(symbols_with_positions)}")
                 
             except Exception as e:
                 logger.error(f"[POSITIONS_MONITOR] ❌ Ошибка загрузки позиций: {e}")
                 import traceback
                 traceback.print_exc()
             
-            # Ждем 5 секунд перед следующей проверкой
-            time.sleep(5)
+            # Ждем 1 секунду перед следующей проверкой - КАЖДУЮ СЕКУНДУ!
+            time.sleep(1)
             
         except Exception as e:
             logger.error(f"[POSITIONS_MONITOR] ❌ Критическая ошибка: {e}")

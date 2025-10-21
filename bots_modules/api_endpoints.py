@@ -610,9 +610,23 @@ def get_bots_list():
         # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает чтение атомарным
         bots_list = list(bots_data['bots'].values())
         auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
-        last_update = bots_data.get('last_update', 'Неизвестно')
         
-        # Добавляем расчет времени работы для каждого бота
+        # Получаем время последнего обновления
+        last_update_raw = bots_data.get('last_update')
+        if last_update_raw:
+            try:
+                # Если это datetime объект, форматируем его
+                if hasattr(last_update_raw, 'isoformat'):
+                    last_update = last_update_raw.isoformat()
+                else:
+                    # Если это строка, используем как есть
+                    last_update = str(last_update_raw)
+            except:
+                last_update = 'Ошибка форматирования'
+        else:
+            last_update = 'Никогда не обновлялся'
+        
+        # Добавляем расчет времени работы и last_update для каждого бота
         current_time = datetime.now()
         for bot in bots_list:
             created_at_str = bot.get('created_at')
@@ -632,6 +646,19 @@ def get_bots_list():
                     bot['work_time'] = "0с"
             else:
                 bot['work_time'] = "0с"
+            
+            # Добавляем last_update для каждого бота
+            bot_last_update = bot.get('last_update')
+            if bot_last_update:
+                try:
+                    if hasattr(bot_last_update, 'isoformat'):
+                        bot['last_update'] = bot_last_update.isoformat()
+                    else:
+                        bot['last_update'] = str(bot_last_update)
+                except:
+                    bot['last_update'] = 'Ошибка'
+            else:
+                bot['last_update'] = 'Никогда'
         
         # Подсчитываем статистику (idle боты считаются активными для UI)
         active_bots = sum(1 for bot in bots_list if bot.get('status') not in ['paused'])

@@ -13,6 +13,7 @@ import logging
 import time
 import threading
 import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 logger = logging.getLogger('BotsService')
@@ -829,22 +830,35 @@ def load_all_coins_rsi():
             batch_start = time.time()
             logger.info(f"[BATCH] 🚀 НАЧАЛО пакета {batch_num}")
             
-            # ⚡ ВРЕМЕННО: ПОСЛЕДОВАТЕЛЬНАЯ обработка (БЕЗ потоков) для диагностики
-            # Параллельные потоки зависают в Windows - проверяем работает ли вообще логика
-            logger.info(f"[BATCH] 🔄 Последовательная обработка (БЕЗ потоков для диагностики)")
-            for coin_num, symbol in enumerate(batch, 1):
-                try:
-                    result = get_coin_rsi_data(symbol, current_exchange)
-                    if result:
-                        batch_coins_data[result['symbol']] = result
-                        coins_rsi_data['successful_coins'] += 1
-                        if coin_num % 10 == 0:
-                            logger.info(f"[BATCH] 📊 Обработано {coin_num}/{len(batch)} монет из пакета {batch_num}")
-                    else:
+            # ✅ ВОЗВРАЩАЕМ ПАРАЛЛЕЛЬНУЮ обработку для скорости
+            logger.info(f"[BATCH] 🚀 Параллельная обработка с ThreadPoolExecutor")
+            
+            # Используем ThreadPoolExecutor для параллельной обработки
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                # Отправляем все задачи
+                future_to_symbol = {
+                    executor.submit(get_coin_rsi_data, symbol, current_exchange): symbol 
+                    for symbol in batch
+                }
+                
+                # Собираем результаты
+                completed_count = 0
+                for future in concurrent.futures.as_completed(future_to_symbol, timeout=60):
+                    symbol = future_to_symbol[future]
+                    completed_count += 1
+                    try:
+                        result = future.result(timeout=20)
+                        if result:
+                            batch_coins_data[result['symbol']] = result
+                            coins_rsi_data['successful_coins'] += 1
+                        else:
+                            coins_rsi_data['failed_coins'] += 1
+                        
+                        if completed_count % 10 == 0:
+                            logger.info(f"[BATCH] 📊 Обработано {completed_count}/{len(batch)} монет из пакета {batch_num}")
+                    except Exception as e:
+                        logger.error(f"[BATCH] ❌ Ошибка обработки {symbol}: {e}")
                         coins_rsi_data['failed_coins'] += 1
-                except Exception as e:
-                    logger.warning(f"[ERROR] ❌ {symbol}: {str(e)[:100]}")
-                    coins_rsi_data['failed_coins'] += 1
             
             # ✅ КРИТИЧНО: Сохраняем во ВРЕМЕННОЕ хранилище вместо прямого обновления!
             # НЕ обновляем coins_rsi_data['coins'] до завершения ВСЕХ пакетов!

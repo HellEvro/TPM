@@ -679,23 +679,21 @@ def update_bots_cache_data():
             bots_list.append(bot_data)
         
         # Получаем информацию о позициях с биржи один раз для всех ботов
-        # ✅ ИСПОЛЬЗУЕМ КЭШ ПОЗИЦИЙ из positions_monitor_worker вместо прямого API вызова
+        # ✅ КРИТИЧНО: Используем тот же способ что и positions_monitor_worker!
         try:
-            # Импортируем positions_cache из workers.py
-            import bots_modules.workers as workers_module
-            positions_cache = getattr(workers_module, 'positions_cache', None)
-            
-            logger.info(f"[BOTS_CACHE] positions_cache: {positions_cache}")
-            
-            if positions_cache and 'positions' in positions_cache:
-                positions_list = positions_cache['positions']
-                logger.info(f"[BOTS_CACHE] Используем кэшированные позиции: {len(positions_list)} позиций")
+            # Получаем позиции тем же способом что и positions_monitor_worker
+            logger.info(f"[BOTS_CACHE] Получаем позиции с биржи...")
+            exchange_obj = get_exchange()
+            if exchange_obj:
+                exchange_positions = exchange_obj.get_positions()
+                if isinstance(exchange_positions, tuple):
+                    positions_list = exchange_positions[0] if exchange_positions else []
+                else:
+                    positions_list = exchange_positions if exchange_positions else []
+                logger.info(f"[BOTS_CACHE] Получено {len(positions_list)} позиций с биржи")
             else:
-                # Fallback: получаем позиции напрямую если кэш недоступен
-                logger.warning(f"[BOTS_CACHE] Кэш позиций недоступен, используем fallback")
-                position_info = get_exchange_positions()
-                positions_list = position_info['positions'] if position_info and 'positions' in position_info else []
-                logger.info(f"[BOTS_CACHE] Fallback: получено {len(positions_list)} позиций напрямую")
+                positions_list = []
+                logger.warning(f"[BOTS_CACHE] Exchange не инициализирован")
             
             if positions_list:
                 # Создаем словарь позиций для быстрого поиска
@@ -706,23 +704,56 @@ def update_bots_cache_data():
                     symbol = bot_data.get('symbol')
                     if symbol in positions_dict and bot_data.get('status') in ['in_position_long', 'in_position_short']:
                         pos = positions_dict[symbol]
+                        
                         bot_data['exchange_position'] = {
                             'size': pos.get('size', 0),
                             'side': pos.get('side', ''),
-                            'unrealized_pnl': pos.get('unrealizedPnl', 0),
-                            'mark_price': pos.get('markPrice', 0),
-                            'entry_price': pos.get('avgPrice', 0),
+                            'unrealized_pnl': float(pos.get('pnl', 0)),  # ✅ Используем правильное поле 'pnl'
+                            'mark_price': float(pos.get('markPrice', 0)),  # ❌ НЕТ в данных биржи
+                            'entry_price': float(pos.get('avgPrice', 0)),   # ❌ НЕТ в данных биржи
                             'leverage': pos.get('leverage', 1),
                             'stop_loss': pos.get('stopLoss', ''),  # Стоп-лосс с биржи
-                            'take_profit': pos.get('takeProfit', '')  # Тейк-профит с биржи
+                            'take_profit': pos.get('takeProfit', ''),  # Тейк-профит с биржи
+                            'roi': float(pos.get('roi', 0))  # ✅ ROI есть в данных
                         }
                         
-                        # Синхронизируем все данные позиции с биржей
+                        # ✅ КРИТИЧНО: Синхронизируем ВСЕ данные позиции с биржей
                         exchange_stop_loss = pos.get('stopLoss', '')
                         exchange_take_profit = pos.get('takeProfit', '')
-                        exchange_entry_price = float(pos.get('avgPrice', 0))
+                        exchange_entry_price = float(pos.get('avgPrice', 0))  # ❌ НЕТ в данных биржи
                         exchange_size = float(pos.get('size', 0))
-                        exchange_unrealized_pnl = float(pos.get('unrealizedPnl', pos.get('unrealisedPnl', 0)))
+                        exchange_unrealized_pnl = float(pos.get('pnl', 0))  # ✅ Используем правильное поле 'pnl'
+                        exchange_mark_price = float(pos.get('markPrice', 0))  # ❌ НЕТ в данных биржи
+                        exchange_roi = float(pos.get('roi', 0))  # ✅ ROI есть в данных
+                        
+                        # ✅ КРИТИЧНО: Обновляем данные бота актуальными данными с биржи
+                        if exchange_entry_price > 0:
+                            bot_data['entry_price'] = exchange_entry_price
+                        if exchange_size > 0:
+                            bot_data['position_size'] = exchange_size
+                        if exchange_mark_price > 0:
+                            bot_data['current_price'] = exchange_mark_price
+                            bot_data['mark_price'] = exchange_mark_price  # Дублируем для UI
+                        else:
+                            # ❌ НЕТ mark_price с биржи - получаем текущую цену напрямую с биржи
+                            try:
+                                exchange_obj = get_exchange()
+                                if exchange_obj:
+                                    ticker_data = exchange_obj.get_ticker(symbol)
+                                    if ticker_data and ticker_data.get('last'):
+                                        current_price = float(ticker_data.get('last'))
+                                        bot_data['current_price'] = current_price
+                                        bot_data['mark_price'] = current_price
+                            except Exception as e:
+                                logger.error(f"[BOTS_CACHE] ❌ {symbol} - Ошибка получения цены с биржи: {e}")
+                        
+                        if exchange_unrealized_pnl != 0:
+                            bot_data['unrealized_pnl'] = exchange_unrealized_pnl
+                            bot_data['unrealized_pnl_usdt'] = exchange_unrealized_pnl  # Точное значение в USDT
+                        
+                        # ✅ Обновляем ROI
+                        if exchange_roi != 0:
+                            bot_data['roi'] = exchange_roi
                         
                         # Синхронизируем стоп-лосс
                         current_stop_loss = bot_data.get('trailing_stop_price')
