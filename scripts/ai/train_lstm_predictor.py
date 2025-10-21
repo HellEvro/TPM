@@ -223,7 +223,7 @@ def main():
     
     # Создаем новый предиктор БЕЗ загрузки существующей модели
     predictor = LSTMPredictor(
-        model_path="data/ai/models/lstm_predictor_new.h5",  # Временный путь
+        model_path="data/ai/models/lstm_predictor_new.keras",  # ✅ Временный путь в Keras 3 формате
         scaler_path="data/ai/models/lstm_scaler_new.pkl"
     )
     
@@ -241,11 +241,11 @@ def main():
     # Переименовываем модель в финальную версию
     if result.get('success'):
         import shutil
-        final_model = "data/ai/models/lstm_predictor.h5"
+        final_model = "data/ai/models/lstm_predictor.keras"  # ✅ Keras 3 формат
         final_scaler = "data/ai/models/lstm_scaler.pkl"
         
-        if os.path.exists("data/ai/models/lstm_predictor_new.h5"):
-            shutil.move("data/ai/models/lstm_predictor_new.h5", final_model)
+        if os.path.exists("data/ai/models/lstm_predictor_new.keras"):
+            shutil.move("data/ai/models/lstm_predictor_new.keras", final_model)
         if os.path.exists("data/ai/models/lstm_scaler_new.pkl"):
             shutil.move("data/ai/models/lstm_scaler_new.pkl", final_scaler)
     
@@ -258,7 +258,7 @@ def main():
         print(f"Final loss (val): {result['final_val_loss']:.6f}")
         print(f"Epochs trained: {result['epochs_trained']}")
         print(f"Training samples: {result['training_samples']}")
-        print(f"\n[SAVED] Model saved to: data/ai/models/lstm_predictor.h5")
+        print(f"\n[SAVED] Model saved to: data/ai/models/lstm_predictor.keras")
         return 0
     else:
         print("[ERROR] TRAINING FAILED!")

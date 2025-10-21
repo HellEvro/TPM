@@ -766,6 +766,14 @@ def update_bots_cache_data():
                 'last_update': current_time
             })
         
+        # ✅ СИНХРОНИЗАЦИЯ: Проверяем закрытые позиции на бирже
+        try:
+            logger.info(f"[BOTS_CACHE] 🔄 Запускаем синхронизацию с биржей...")
+            sync_bots_with_exchange()
+            logger.info(f"[BOTS_CACHE] ✅ Синхронизация с биржей завершена")
+        except Exception as e:
+            logger.error(f"[BOTS_CACHE] ❌ Ошибка синхронизации с биржей: {e}")
+        
         # ✅ КРИТИЧНО: Обновляем last_update в bots_data для UI
         # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает запись атомарной
         bots_data['last_update'] = current_time
@@ -1910,16 +1918,19 @@ def sync_bots_with_exchange():
                             # logger.info(f"[SYNC_EXCHANGE] 📊 {symbol}: Вход=${entry_price:.4f} | Текущая=${current_price:.4f} | Размер={position_size}")
                             
                         else:
-                            # Нет позиции на бирже - если бот думает что в позиции, сбрасываем
-                            if bot_data.get('status') in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
-                                old_status = bot_data['status']
-                                bot_data['status'] = BOT_STATUS['IDLE']
-                                bot_data['entry_price'] = None
-                                bot_data['position_side'] = None
-                                bot_data['unrealized_pnl'] = 0.0
-                                
-                                synchronized_bots += 1
-                                # logger.info(f"[SYNC_EXCHANGE] 🔄 {symbol}: {old_status}→IDLE (позиция закрыта на бирже)")
+                            # Нет позиции на бирже - УДАЛЯЕМ бота
+                            old_status = bot_data.get('status', 'UNKNOWN')
+                            old_position_size = bot_data.get('position_size', 0)
+                            
+                            logger.info(f"[SYNC_EXCHANGE] 🗑️ {symbol}: Удаляем бота (позиция закрыта на бирже, статус: {old_status})")
+                            
+                            # Удаляем бота из системы
+                            del bots_data['bots'][symbol]
+                            
+                            # Сохраняем состояние после удаления
+                            save_bots_state()
+                            
+                            synchronized_bots += 1
                         
                     except Exception as e:
                         logger.error(f"[SYNC_EXCHANGE] ❌ Ошибка синхронизации бота {symbol}: {e}")
