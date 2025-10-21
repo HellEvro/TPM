@@ -743,8 +743,8 @@ class NewTradingBot:
                 logger.error(f"[NEW_BOT_{self.symbol}] ❌ Биржа не инициализирована")
                 return False
             
-            # Обновляем TP через биржу
-            result = self.exchange.update_take_profit(self.symbol, tp_price)
+            # Обновляем TP через биржу, передавая направление позиции
+            result = self.exchange.update_take_profit(self.symbol, tp_price, self.position_side)
             
             if result and result.get('success'):
                 logger.info(f"[NEW_BOT_{self.symbol}] ✅ TP обновлен на бирже: {tp_price:.6f}")
