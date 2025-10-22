@@ -7258,5 +7258,53 @@
     "last_updated": "2025-10-20T11:58:59.090098",
     "candles_analyzed": 210,
     "analysis_method": "trend_confirmation"
+  },
+  "CLO": {
+    "ema_short_period": 141,
+    "ema_long_period": 150,
+    "accuracy": 100.0,
+    "total_signals": 6,
+    "correct_signals": 6,
+    "long_signals": 0,
+    "short_signals": 6,
+    "last_updated": "2025-10-22T21:50:55.079680",
+    "candles_analyzed": 253,
+    "analysis_method": "trend_confirmation"
+  },
+  "EVAA": {
+    "ema_short_period": 58,
+    "ema_long_period": 60,
+    "accuracy": 97.01492537313433,
+    "total_signals": 67,
+    "correct_signals": 65,
+    "long_signals": 57,
+    "short_signals": 10,
+    "last_updated": "2025-10-22T21:51:05.511680",
+    "candles_analyzed": 253,
+    "analysis_method": "trend_confirmation"
+  },
+  "HANA": {
+    "ema_short_period": 7,
+    "ema_long_period": 90,
+    "accuracy": 100.0,
+    "total_signals": 20,
+    "correct_signals": 20,
+    "long_signals": 0,
+    "short_signals": 20,
+    "last_updated": "2025-10-22T21:51:13.410331",
+    "candles_analyzed": 253,
+    "analysis_method": "trend_confirmation"
+  },
+  "ZBT": {
+    "ema_short_period": 27,
+    "ema_long_period": 100,
+    "accuracy": 100.0,
+    "total_signals": 16,
+    "correct_signals": 16,
+    "long_signals": 0,
+    "short_signals": 16,
+    "last_updated": "2025-10-22T21:51:22.770063",
+    "candles_analyzed": 253,
+    "analysis_method": "trend_confirmation"
   }
 }
