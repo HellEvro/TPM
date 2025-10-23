@@ -9,10 +9,10 @@
     },
     "auto_bot_worker": {
       "active": false,
-      "last_check": "2025-10-22T22:02:50.306385",
-      "check_count": 1259,
+      "last_check": "2025-10-23T15:40:48.554888",
+      "check_count": 1609,
       "last_error": "name 'STOP_LOSS_SETUP_INTERVAL' is not defined",
-      "enabled": false,
+      "enabled": true,
       "interval_seconds": 180
     },
     "auto_save_worker": {
@@ -23,8 +23,8 @@
     },
     "exchange_connection": {
       "initialized": true,
-      "last_sync": "2025-10-22T21:50:42.619914",
-      "connection_count": 410,
+      "last_sync": "2025-10-22T22:04:52.646791",
+      "connection_count": 411,
       "last_error": null
     },
     "auto_bot_signals": {
@@ -34,6 +34,6 @@
       "last_error": null
     }
   },
-  "last_saved": "2025-10-22T22:02:50.306394",
+  "last_saved": "2025-10-23T15:40:48.554902",
   "version": "1.0"
 }
