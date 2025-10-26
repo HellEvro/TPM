@@ -19,25 +19,78 @@ INCLUDE = [
 
 # Что НЕ копируем
 EXCLUDE_DIRS = [
-    ".git", "__pycache__", "*.pyc", "node_modules",
-    "license_generator/source",
+    ".git", "__pycache__", "node_modules",
+    "license_generator",  # ВСЯ папка license_generator - там исходники генерации!
     "scripts/fix", "scripts/check",
+    "backups",
+    "docs/ai_development",
+    "docs/ai_technical",
+    "docs/ai_guides",
 ]
 
 EXCLUDE_FILES = [
-    "app/keys.py", "app/config.py",
+    "app/keys.py", "app/config.py", "app/current_language.txt", "app/telegram_states.json",
     "scripts/test_*.py", "scripts/verify_*.py",
+    "*.pyc",  # Скомпилированные файлы
+]
+
+# Файлы которые генерируются системой при работе
+GENERATED_FILES = [
+    "data/async_state.json",
+    "data/bot_history.json", 
+    "data/process_state.json",
+    "data/bots_state.json",
+    "data/telegram_states.json",
+    "logs/*.log",
+    "license_generator/*.pyc",
+]
+
+# Документы разработки (не для пользователей)
+DEV_DOCS = [
+    "docs/AI_*.md",
+    "docs/GIT_*.md",
+    "docs/LSTM_*.md",
+    "docs/SYNC_REPORT*.md",
+    "docs/LOG_ROTATION.md",
+    "docs/BOT_SIGNAL*.md",
+    "docs/CONFIGURATION.md",
+    "docs/DEPLOYMENT.md",
+    "docs/FILTER_LOGIC*.md",
+    "docs/DOCUMENTATION_COMPLETE.md",
+    "docs/READY_FOR_YOU.md",
+    "docs/READ_ME_FIRST.txt",
+    "docs/GITIGNORE*.md",
+    "docs/ARCHITECTURE.md",
+    "docs/BOT_HISTORY.md",
+    "docs/Bots_TZ.md",
+    "docs/FUTURE_FEATURES.md",
+    "docs/CHANGELOG.md",
 ]
 
 def should_exclude(path_str):
     """Проверяет нужно ли исключить путь"""
+    import fnmatch
+    
+    # Проверяем директории
     for exc in EXCLUDE_DIRS:
         if exc in path_str:
             return True
+    
+    # Проверяем файлы для исключения
     for exc in EXCLUDE_FILES:
-        import fnmatch
-        if fnmatch.fnmatch(path_str, exc):
+        if fnmatch.fnmatch(path_str, exc) or exc == path_str:
             return True
+    
+    # Проверяем генерируемые файлы
+    for gen in GENERATED_FILES:
+        if fnmatch.fnmatch(path_str, gen) or gen == path_str:
+            return True
+    
+    # Проверяем документы разработки
+    for doc in DEV_DOCS:
+        if fnmatch.fnmatch(path_str, doc) or doc == path_str:
+            return True
+    
     return False
 
 def sync_file(src: Path, dst: Path):
