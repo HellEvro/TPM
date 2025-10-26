@@ -540,7 +540,7 @@ rsi_data_lock = threading.Lock()
 bots_data_lock = threading.Lock()
 
 # Загружаем сохраненную конфигурацию Auto Bot
-def load_auto_bot_config(force_disable=False):
+def load_auto_bot_config():
     """Загружает конфигурацию Auto Bot из bot_config.py
     
     ✅ ЕДИНСТВЕННЫЙ источник истины: bot_engine/bot_config.py
@@ -554,11 +554,6 @@ def load_auto_bot_config(force_disable=False):
         with bots_data_lock:
             # Загружаем конфигурацию напрямую из bot_config.py
             bots_data['auto_bot_config'] = DEFAULT_AUTO_BOT_CONFIG.copy()
-            
-            # Отключаем автобот только при принудительном вызове (при запуске сервера)
-            if force_disable:
-                bots_data['auto_bot_config']['enabled'] = False
-                logger.info(f"[CONFIG] 🔒 Auto Bot принудительно выключен при запуске")
         
         logger.info(f"[CONFIG] ✅ Загружена конфигурация Auto Bot из bot_config.py")
             
