@@ -33,9 +33,6 @@ class AIManager:
         # Кэш предсказаний
         self._predictions_cache = {}
         
-        # Кэш доступности (чтобы не проверять каждый раз)
-        self._availability_cache = None
-        
         # Проверяем лицензию
         self._license_valid = False
         self._license_info = None
@@ -221,7 +218,8 @@ class AIManager:
         # Используем кэш для быстрой проверки
         if self._availability_cache is None:
             self._availability_cache = (
-                self._license_valid and
+                self.premium_loader.premium_available and 
+                self.premium_loader.license_valid and
                 any([
                     self.anomaly_detector is not None,
                     self.lstm_predictor is not None,
@@ -413,13 +411,15 @@ class AIManager:
         Returns:
             Словарь со статусом всех компонентов
         """
+        license_info = self.premium_loader.get_license_info()
+        
         return {
             'enabled': AIConfig.AI_ENABLED,
             'available': self.is_available(),
             'license': {
-                'valid': self._license_valid,
-                'type': self._license_info.get('type') if self._license_info else None,
-                'expires_at': self._license_info.get('expires_at') if self._license_info else None
+                'valid': self.premium_loader.license_valid,
+                'type': license_info.get('type'),
+                'expires_at': license_info.get('expires_at')
             },
             'modules': {
                 'anomaly_detector': self.anomaly_detector is not None,

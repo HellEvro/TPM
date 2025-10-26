@@ -3,8 +3,6 @@ InfoBot AI Premium License Activation
 """
 
 import sys
-sys.path.append('.')
-
 import os
 from pathlib import Path
 
@@ -31,8 +29,14 @@ def activate_premium_license():
         
         # Try to import license system
         try:
-            sys.path.insert(0, 'InfoBot_AI_Premium')
-            from license.hardware_id import get_hardware_id, get_short_hardware_id
+            # Импортируем локальный hardware_id (работает везде)
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("hardware_id", Path(__file__).parent / "hardware_id.pyc")
+            hardware_id = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(hardware_id)
+            
+            get_hardware_id = hardware_id.get_hardware_id
+            get_short_hardware_id = hardware_id.get_short_hardware_id
             
             hw_id = get_short_hardware_id()
             full_hw_id = get_hardware_id()

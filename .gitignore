@@ -376,8 +376,6 @@ infobot_ai_premium.so
 # Encrypted models
 *.encrypted
 
-# Premium build artifacts
-InfoBot_AI_Premium/dist/
-InfoBot_AI_Premium/build/
-InfoBot_AI_Premium/*.pyd
-InfoBot_AI_Premium/*.so
+# Premium build artifacts (УДАЛЕНО)
+# InfoBot_AI_Premium/ больше не используется
+

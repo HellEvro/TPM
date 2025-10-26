@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='utf8'?>
+<nuitka-compilation-report nuitka_version="2.8.4" nuitka_commercial_version="not installed" mode="module" completion="error exit message (1)" exit_message="Failed unexpectedly in Scons C backend compilation.">
+  <module name="hardware_id" kind="CompiledPythonModule" usage="root_module" reason="Root module" source_path="${cwd}\hardware_id.py">
+    <optimization-time pass="1" time="0.04" micro_passes="5" max_branch_merge="35" merged_total="1331" />
+    <optimization-time pass="2" time="0.00" micro_passes="1" max_branch_merge="34" merged_total="258" />
+    <module_usages>
+      <module_usage name="platform" finding="excluded" line="5" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="hashlib" finding="excluded" line="6" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="subprocess" finding="excluded" line="7" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="uuid" finding="excluded" line="8" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="logging" finding="excluded" line="9" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+    </module_usages>
+  </module>
+  <performance>
+    <memory_usage name="after_launch" value="44584960" />
+    <memory_usage name="before_c_code_generation" value="46227456" />
+    <memory_usage name="before_running_scons" value="49033216" />
+  </performance>
+  <data_composer blob_size="3472" total="201">
+    <module_data filename="__bytecode.const" blob_name=".bytecode" blob_size="3" input_size="0" />
+    <module_data filename="__constants.const" blob_name="" blob_size="830" input_size="2106" />
+    <module_data filename="module.hardware_id.const" blob_name="hardware_id" blob_size="2596" input_size="3960" />
+  </data_composer>
+  <command_line>
+    <option value="--module" />
+    <option value="hardware_id.py" />
+    <option value="--output-dir=../scripts" />
+  </command_line>
+  <plugins>
+    <plugin name="anti-bloat" user_enabled="no" />
+    <plugin name="eventlet" user_enabled="no" />
+    <plugin name="gi" user_enabled="no" />
+    <plugin name="implicit-imports" user_enabled="no" />
+    <plugin name="options-nanny" user_enabled="no" />
+    <plugin name="pkg-resources" user_enabled="no" />
+    <plugin name="transformers" user_enabled="no" />
+  </plugins>
+  <distributions />
+  <python python_exe="${sys.prefix}\python.exe" python_flavor="CPython Official" python_version="3.13.8" os_name="Windows" os_release="10" arch_name="x86_64" filesystem_encoding="utf-8" gil="yes">
+    <search_path>
+      <path value="${cwd}" />
+      <path value="${sys.prefix}\DLLs" />
+      <path value="${sys.prefix}\Lib" />
+      <path value="${sys.prefix}" />
+      <path value="~\AppData\Roaming\Python\Python313\site-packages" />
+      <path value="${sys.prefix}\Lib\site-packages" />
+      <path value="${sys.prefix}\Lib\site-packages\setuptools\_vendor" />
+    </search_path>
+  </python>
+  <output run_filename="E:\Drive\TRADEBOT\InfoBot\scripts\hardware_id.cp313-win_amd64.pyd" />
+</nuitka-compilation-report>
