@@ -13,8 +13,12 @@ from cryptography.fernet import Fernet
 from typing import Tuple, Dict, Any
 import logging
 
-from .license_types import LicenseType, LicenseFeatures
-from .hardware_id import get_hardware_id
+try:
+    from .license_types import LicenseType, LicenseFeatures
+    from .hardware_id import get_hardware_id
+except ImportError:
+    from license_types import LicenseType, LicenseFeatures
+    from hardware_id import get_hardware_id
 
 logger = logging.getLogger('LicenseManager')
 

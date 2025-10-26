@@ -6,9 +6,16 @@
 """
 
 import logging
+import os
+import json
+from pathlib import Path
+from datetime import datetime
 from typing import Dict, Any, Optional
 from bot_engine.bot_config import AIConfig
-from ._premium_loader import get_premium_loader
+from cryptography.fernet import Fernet
+from base64 import urlsafe_b64encode
+import hmac
+import hashlib
 
 logger = logging.getLogger('AI')
 
@@ -17,8 +24,6 @@ class AIManager:
     """Управление всеми ИИ модулями"""
     
     def __init__(self):
-        self.premium_loader = get_premium_loader()
-        
         # ИИ модули (будут None если недоступны)
         self.anomaly_detector = None
         self.lstm_predictor = None
@@ -31,94 +36,159 @@ class AIManager:
         # Кэш доступности (чтобы не проверять каждый раз)
         self._availability_cache = None
         
+        # Проверяем лицензию
+        self._license_valid = False
+        self._license_info = None
+        self._check_license()
+        
         # Загружаем модули
         self.load_modules()
+    
+    def _check_license(self):
+        """Встроенная проверка лицензии (защищенная)"""
+        if not AIConfig.AI_ENABLED:
+            return
+        
+        # Проверяем .lic файл в корне
+        root = Path(__file__).parent.parent.parent
+        lic_files = [f for f in os.listdir(root) if f.endswith('.lic')]
+        
+        if not lic_files:
+            self._license_valid = False
+            return
+        
+        # Расшифровка и проверка лицензии
+        try:
+            lic_file = root / lic_files[0]
+            with open(lic_file, 'rb') as f:
+                d = f.read()
+            
+            # Ключи шифрования (обфусцированы)
+            k1 = 'InfoBot' + 'AI2024'
+            k2 = 'Premium' + 'License'
+            k3 = 'Key_SECRET'
+            sk = (k1 + k2 + k3 + '_DO_NOT_SHARE').encode()[:32]
+            x = urlsafe_b64encode(sk)
+            cf = Fernet(x)
+            
+            # Расшифровка
+            dec = cf.decrypt(d)
+            ld = json.loads(dec.decode())
+            
+            # Проверка подписи
+            sk2 = 'SECRET' + '_SIGNATURE_' + 'KEY_2024_PREMIUM'
+            dtv = json.dumps({k:v for k,v in ld.items() if k != 'signature'}, sort_keys=True)
+            es = hmac.new(sk2.encode(), dtv.encode(), hashlib.sha256).hexdigest()
+            
+            if not hmac.compare_digest(ld.get('signature', ''), es):
+                self._license_valid = False
+                logger.warning("[AI] Invalid license signature")
+                return
+            
+            # Проверка срока
+            ea = datetime.fromisoformat(ld['expires_at'])
+            if datetime.now() > ea:
+                self._license_valid = False
+                logger.warning("[AI] License expired")
+                return
+            
+            # Лицензия валидна
+            self._license_valid = True
+            self._license_info = {
+                'type': ld.get('type', 'premium'),
+                'expires_at': ld['expires_at'],
+                'features': ld.get('features', {
+                    'anomaly_detection': True,
+                    'lstm_predictor': True,
+                    'pattern_recognition': True,
+                    'risk_management': True,
+                })
+            }
+            logger.info(f"[AI] License validated: {ld.get('type', 'premium')}")
+            
+        except Exception as e:
+            self._license_valid = False
+            logger.warning(f"[AI] License check failed: {e}")
     
     def load_modules(self):
         """Загружает ИИ модули согласно настройкам и лицензии"""
         
         if not AIConfig.AI_ENABLED:
             logger.info("[AI] ℹ️ ИИ модули отключены в конфигурации")
-            logger.info("[AI] 💡 Для включения установите AIConfig.AI_ENABLED = True")
             return
         
-        # Проверяем наличие premium модулей
-        if not self.premium_loader.premium_available:
-            logger.warning("[AI] ⚠️ Premium модули не установлены")
-            logger.info("[AI] 💡 Для использования ИИ функций:")
-            logger.info("[AI]    1. Приобретите лицензию")
-            logger.info("[AI]    2. Установите модуль: pip install infobot-ai-premium")
-            logger.info("[AI]    3. Активируйте: python scripts/activate_premium.py")
-            logger.info("[AI] ⚠️ AI функции будут отключены до активации лицензии")
+        # Если нет лицензии - базовый функционал
+        if not self._license_valid:
+            logger.info("[AI] ⚠️ AI функции недоступны без лицензии")
             return
         
-        # Проверяем лицензию
-        if not self.premium_loader.license_valid:
-            logger.warning("[AI] ⚠️ Лицензия недействительна или отсутствует")
-            logger.info("[AI] 💡 Активируйте лицензию: python scripts/activate_premium.py")
-            logger.info("[AI] 💡 Или включите режим разработки: set AI_DEV_MODE=1")
-            logger.info("[AI] ⚠️ AI функции будут отключены до активации лицензии")
-            return
+        features = self._license_info.get('features', {}) if self._license_info else {}
         
-        # Получаем информацию о лицензии
-        license_info = self.premium_loader.get_license_info()
-        features = license_info.get('features', {})
+        if self._license_info:
+            logger.info(f"[AI] 🎫 Лицензия: {self._license_info['type']}")
+            logger.info(f"[AI] 📅 Действительна до: {self._license_info['expires_at']}")
         
-        logger.info(f"[AI] 🎫 Лицензия: {license_info['type']}")
-        logger.info(f"[AI] 📅 Действительна до: {license_info['expires_at']}")
-        
+        # Загружаем модули напрямую
         # Загружаем Anomaly Detector
         if AIConfig.AI_ANOMALY_DETECTION_ENABLED and features.get('anomaly_detection'):
             try:
-                anomaly_module = self.premium_loader.get_ai_module('anomaly_detector')
-                # Передаём пути к обученной модели и scaler
-                self.anomaly_detector = anomaly_module.AnomalyDetector(
+                from bot_engine.ai.anomaly_detector import AnomalyDetector
+                self.anomaly_detector = AnomalyDetector(
                     model_path=AIConfig.AI_ANOMALY_MODEL_PATH,
                     scaler_path=AIConfig.AI_ANOMALY_SCALER_PATH
                 )
                 logger.info("[AI] ✅ Anomaly Detector загружен")
             except Exception as e:
                 logger.error(f"[AI] ❌ Ошибка загрузки Anomaly Detector: {e}")
-        elif AIConfig.AI_ANOMALY_DETECTION_ENABLED:
-            logger.warning("[AI] ⚠️ Anomaly Detection недоступен в вашей лицензии")
         
         # Загружаем LSTM Predictor
         if AIConfig.AI_LSTM_ENABLED and features.get('lstm_predictor'):
             try:
-                lstm_module = self.premium_loader.get_ai_module('lstm_predictor')
-                self.lstm_predictor = lstm_module.LSTMPricePredictor()
+                from bot_engine.ai.lstm_predictor import LSTMPredictor
+                self.lstm_predictor = LSTMPredictor(
+                    model_path=AIConfig.AI_LSTM_MODEL_PATH,
+                    scaler_path=AIConfig.AI_LSTM_SCALER_PATH
+                )
                 logger.info("[AI] ✅ LSTM Predictor загружен")
             except Exception as e:
                 logger.error(f"[AI] ❌ Ошибка загрузки LSTM Predictor: {e}")
         elif AIConfig.AI_LSTM_ENABLED:
-            logger.warning("[AI] ⚠️ LSTM Predictor недоступен в вашей лицензии")
+            # Пробуем загрузить встроенную версию даже без premium
+            try:
+                from bot_engine.ai.lstm_predictor import LSTMPredictor
+                self.lstm_predictor = LSTMPredictor(
+                    model_path=AIConfig.AI_LSTM_MODEL_PATH,
+                    scaler_path=AIConfig.AI_LSTM_SCALER_PATH
+                )
+                logger.info("[AI] ✅ LSTM Predictor загружен (встроенная версия, без premium)")
+            except Exception as e:
+                logger.warning("[AI] ⚠️ LSTM Predictor недоступен")
         
         # Загружаем Pattern Detector
         if AIConfig.AI_PATTERN_ENABLED and features.get('pattern_recognition'):
             try:
-                pattern_module = self.premium_loader.get_ai_module('pattern_detector')
-                self.pattern_detector = pattern_module.PatternDetector()
+                from bot_engine.ai.pattern_detector import PatternDetector
+                self.pattern_detector = PatternDetector()
                 logger.info("[AI] ✅ Pattern Detector загружен")
             except Exception as e:
                 logger.error(f"[AI] ❌ Ошибка загрузки Pattern Detector: {e}")
         elif AIConfig.AI_PATTERN_ENABLED:
-            logger.warning("[AI] ⚠️ Pattern Recognition недоступен в вашей лицензии")
+            # Пробуем загрузить встроенную версию даже без premium
+            try:
+                from bot_engine.ai.pattern_detector import PatternDetector
+                self.pattern_detector = PatternDetector()
+                logger.info("[AI] ✅ Pattern Detector загружен (встроенная версия, без premium)")
+            except Exception as e:
+                logger.warning("[AI] ⚠️ Pattern Recognition недоступен")
         
         # Загружаем Risk Manager
         if AIConfig.AI_RISK_MANAGEMENT_ENABLED and features.get('risk_management'):
             try:
-                risk_module = self.premium_loader.get_ai_module('risk_manager')
-                self.risk_manager = risk_module.DynamicRiskManager()
+                from bot_engine.ai.risk_manager import DynamicRiskManager
+                self.risk_manager = DynamicRiskManager()
                 logger.info("[AI] ✅ Risk Manager загружен")
             except Exception as e:
                 logger.error(f"[AI] ❌ Ошибка загрузки Risk Manager: {e}")
-                # Пробуем загрузить как обычный модуль (не premium)
-                try:
-                    from bot_engine.ai.risk_manager import DynamicRiskManager
-                    self.risk_manager = DynamicRiskManager()
-                    logger.info("[AI] ✅ Risk Manager загружен (встроенная версия)")
-                except Exception as e2:
-                    logger.error(f"[AI] ❌ Ошибка загрузки встроенного Risk Manager: {e2}")
         elif AIConfig.AI_RISK_MANAGEMENT_ENABLED:
             # Пробуем загрузить встроенную версию даже без premium
             try:
@@ -151,8 +221,7 @@ class AIManager:
         # Используем кэш для быстрой проверки
         if self._availability_cache is None:
             self._availability_cache = (
-                self.premium_loader.premium_available and 
-                self.premium_loader.license_valid and
+                self._license_valid and
                 any([
                     self.anomaly_detector is not None,
                     self.lstm_predictor is not None,
@@ -212,20 +281,46 @@ class AIManager:
         # LSTM Prediction
         if self.lstm_predictor:
             try:
-                # TODO: Реализовать LSTM предсказание
-                # lstm_pred = self.lstm_predictor.predict(candles)
-                # analysis['lstm_prediction'] = lstm_pred
-                pass
+                current_price = coin_data.get('current_price') or (candles[-1].get('close') if candles else None)
+                if current_price:
+                    lstm_pred = self.lstm_predictor.predict(candles, current_price)
+                    if lstm_pred and lstm_pred.get('confidence', 0) >= AIConfig.AI_LSTM_MIN_CONFIDENCE:
+                        analysis['lstm_prediction'] = lstm_pred
+                        
+                        if AIConfig.AI_LOG_PREDICTIONS:
+                            direction_str = "↑ ВВЕРХ" if lstm_pred['direction'] > 0 else "↓ ВНИЗ"
+                            logger.info(
+                                f"[AI] {symbol} 🧠 LSTM: {direction_str} "
+                                f"({lstm_pred['change_percent']:+.2f}%, "
+                                f"уверенность: {lstm_pred['confidence']:.1f}%)"
+                            )
             except Exception as e:
                 logger.error(f"[AI] Ошибка LSTM для {symbol}: {e}")
         
         # Pattern Recognition
         if self.pattern_detector:
             try:
-                # TODO: Реализовать распознавание паттернов
-                # pattern = self.pattern_detector.detect(candles)
-                # analysis['pattern_analysis'] = pattern
-                pass
+                current_price = coin_data.get('current_price') or (candles[-1].get('close') if candles else None)
+                if current_price:
+                    pattern_result = self.pattern_detector.detect_patterns(candles, current_price)
+                    
+                    if pattern_result['patterns']:
+                        analysis['pattern_analysis'] = pattern_result
+                        
+                        if AIConfig.AI_LOG_PREDICTIONS:
+                            signal_icon = "🟢" if pattern_result['signal'] == 'BULLISH' else "🔴" if pattern_result['signal'] == 'BEARISH' else "⚪"
+                            logger.info(
+                                f"[AI] {symbol} 📊 Паттерны: {signal_icon} {pattern_result['signal']} "
+                                f"(найдено: {len(pattern_result['patterns'])}, "
+                                f"уверенность: {pattern_result['confidence']:.1f}%)"
+                            )
+                            
+                            if pattern_result['strongest_pattern']:
+                                strongest = pattern_result['strongest_pattern']
+                                logger.info(
+                                    f"[AI] {symbol}    └─ Сильнейший: {strongest['name']} "
+                                    f"({strongest['confidence']:.1f}%)"
+                                )
             except Exception as e:
                 logger.error(f"[AI] Ошибка Pattern Detection для {symbol}: {e}")
         
@@ -318,15 +413,13 @@ class AIManager:
         Returns:
             Словарь со статусом всех компонентов
         """
-        license_info = self.premium_loader.get_license_info()
-        
         return {
             'enabled': AIConfig.AI_ENABLED,
             'available': self.is_available(),
             'license': {
-                'valid': self.premium_loader.license_valid,
-                'type': license_info.get('type'),
-                'expires_at': license_info.get('expires_at')
+                'valid': self._license_valid,
+                'type': self._license_info.get('type') if self._license_info else None,
+                'expires_at': self._license_info.get('expires_at') if self._license_info else None
             },
             'modules': {
                 'anomaly_detector': self.anomaly_detector is not None,

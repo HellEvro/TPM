@@ -11,8 +11,14 @@
 import os
 import sys
 import logging
+import json
+import hmac
+import hashlib
 from pathlib import Path
 from typing import Optional, Dict, Any
+from datetime import datetime
+from cryptography.fernet import Fernet
+from base64 import urlsafe_b64encode
 
 logger = logging.getLogger('AI_Premium')
 
@@ -57,19 +63,16 @@ class PremiumModuleLoader:
                 self.premium_available = False
                 return False
     
-    def verify_license(self, license_path: str = 'license.lic') -> bool:
+    def verify_license(self, license_path: str = None) -> bool:
         """
         Проверяет валидность лицензии
         
         Args:
-            license_path: Путь к файлу лицензии
+            license_path: Путь к файлу лицензии (если None, ищет *.lic в корне)
         
         Returns:
             True если лицензия валидна
         """
-        if not self.premium_available:
-            return False
-        
         # В режиме разработки - пропускаем проверку лицензии
         if os.getenv('AI_DEV_MODE') == '1':
             logger.info("[AI_Premium] 🔧 Режим разработки - проверка лицензии отключена")
@@ -88,60 +91,112 @@ class PremiumModuleLoader:
             }
             return True
         
+        # Если путь не указан, ищем любой .lic файл в корне проекта
+        if license_path is None:
+            # Определяем корень проекта (где находится bots.py)
+            project_root = Path(__file__).parent.parent.parent
+            logger.info(f"[AI_Premium] Looking for licenses in: {project_root}")
+            license_files = [f for f in os.listdir(project_root) if f.endswith('.lic')]
+            if license_files:
+                license_path = str(project_root / license_files[0])
+                logger.info(f"[AI_Premium] Found license file: {license_files[0]}")
+            else:
+                license_path = str(project_root / 'license.lic')
+                logger.warning(f"[AI_Premium] No .lic files found in {project_root}")
+        
         # Проверяем наличие файла лицензии
         if not os.path.exists(license_path):
-            logger.warning("[AI_Premium] ⚠️ Файл лицензии не найден")
-            logger.info("[AI_Premium] 💡 Активируйте лицензию: python scripts/activate_premium.py")
+            if self.premium_available:
+                logger.warning("[AI_Premium] ⚠️ Файл лицензии не найден")
+                logger.info("[AI_Premium] 💡 Активируйте лицензию: python scripts/activate_premium.py")
+            return False
+        
+        # Если модули не установлены, но лицензия есть - просто возвращаем True
+        # (модули могут быть установлены отдельно)
+        if not self.premium_available:
+            logger.info("[AI_Premium] ℹ️ Файл лицензии найден, но модули не установлены")
+            logger.info("[AI_Premium] 💡 Установите модули для использования AI функций")
             return False
         
         try:
-            # Простая проверка для разработки
-            with open(license_path, 'r') as f:
-                content = f.read().strip()
-            
-            # Если это dev лицензия - принимаем
-            if content == 'DEVELOPER_LICENSE_DO_NOT_COMMIT':
-                self.license_valid = True
-                self.license_info = {
-                    'type': 'developer',
-                    'expires_at': '9999-12-31',
-                    'features': {
-                        'anomaly_detection': True,
-                        'lstm_predictor': True,
-                        'pattern_recognition': True,
-                        'risk_management': True,
-                        'max_bots': 999,
-                        'debug_mode': True
-                    }
-                }
-                logger.info(f"[AI_Premium] ✅ Developer лицензия активна")
-                logger.info(f"[AI_Premium] 📅 Действительна до: 9999-12-31")
-                return True
-            
-            # Иначе пытаемся загрузить через license_manager
+            # Попытка загрузить из InfoBot_AI_Premium (только для разработки)
+            is_valid = False
+            result = None
             try:
                 sys.path.insert(0, 'InfoBot_AI_Premium')
                 from license.license_manager import LicenseManager
-                
                 manager = LicenseManager()
                 is_valid, result = manager.verify_license(license_path)
-                
-                if is_valid:
-                    self.license_valid = True
-                    self.license_info = result
-                    logger.info(f"[AI_Premium] ✅ Лицензия валидна: {result['type']}")
-                    logger.info(f"[AI_Premium] 📅 Действительна до: {result['expires_at']}")
-                    return True
-                else:
-                    logger.warning(f"[AI_Premium] ⚠️ Лицензия невалидна: {result}")
-                    return False
             except ImportError:
-                logger.warning("[AI_Premium] ⚠️ License manager не найден")
+                # Если InfoBot_AI_Premium нет - используем встроенный декодер
+                is_valid, result = self._verify_license_inline(license_path)
+            
+            if is_valid:
+                self.license_valid = True
+                self.license_info = result
+                logger.info(f"[AI_Premium] ✅ Лицензия валидна: {result['type']}")
+                logger.info(f"[AI_Premium] 📅 Действительна до: {result['expires_at']}")
+                return True
+            else:
+                logger.warning(f"[AI_Premium] ⚠️ Лицензия невалидна: {result}")
                 return False
             
         except Exception as e:
             logger.error(f"[AI_Premium] ❌ Ошибка проверки лицензии: {e}")
             return False
+    
+    def _verify_license_inline(self, license_path: str):
+        """Обфусцированный декодер лицензии"""
+        try:
+            # Чтение файла
+            f = open(license_path, 'rb')
+            d = f.read()
+            f.close()
+            
+            # Расшифровка
+            k1 = 'InfoBotAI2024'
+            k2 = 'PremiumLicense'
+            k3 = 'Key_SECRET'
+            sk = (k1 + k2 + k3 + '_DO_NOT_SHARE').encode()[:32]
+            x = urlsafe_b64encode(sk)
+            cf = Fernet(x)
+            
+            # Расшифровка
+            dec = cf.decrypt(d)
+            ld = json.loads(dec.decode())
+            
+            # Проверка подписи (обфусцировано)
+            sk2 = 'SECRET' + '_SIGNATURE_' + 'KEY_2024_PREMIUM'
+            dtv = json.dumps({k:v for k,v in ld.items() if k != 'signature'}, sort_keys=True)
+            es = hmac.new(sk2.encode(), dtv.encode(), hashlib.sha256).hexdigest()
+            
+            if not hmac.compare_digest(ld.get('signature', ''), es):
+                return False, "Invalid signature"
+            
+            # Проверка срока
+            ea = datetime.fromisoformat(ld['expires_at'])
+            if datetime.now() > ea:
+                de = (datetime.now() - ea).days
+                return False, f"License expired {de} days ago"
+            
+            # Проверка HWID (если есть)
+            if ld.get('hardware_id'):
+                try:
+                    from InfoBot_AI_Premium.license.hardware_id import get_hardware_id
+                    ch = get_hardware_id()
+                    lh = ld['hardware_id']
+                    
+                    if ch[:16].upper() != lh[:16].upper():
+                        return False, "License bound to different hardware"
+                except ImportError:
+                    pass
+            
+            return True, ld
+            
+        except FileNotFoundError:
+            return False, "License file not found"
+        except Exception as e:
+            return False, f"License verification failed: {e}"
     
     def get_ai_module(self, module_name: str):
         """
