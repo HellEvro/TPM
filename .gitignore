@@ -392,3 +392,6 @@ bot_engine/ai/_premium_loader.py
 # Build artifacts
 scripts/hardware_id.build/
 
+# Source files should not be in public (keep only compiled .pyc)
+license_generator/source/
+
