@@ -9,10 +9,15 @@
     },
     "auto_bot_worker": {
       "active": false,
+<<<<<<< HEAD
       "last_check": "2025-10-27T01:28:12.413139",
       "check_count": 4,
+=======
+      "last_check": "2025-10-27T00:46:11.648941",
+      "check_count": 12,
+>>>>>>> cd849a23a693247c714abd1c38109c0b5c805b16
       "last_error": null,
-      "enabled": false,
+      "enabled": true,
       "interval_seconds": 180
     },
     "auto_save_worker": {
@@ -23,8 +28,13 @@
     },
     "exchange_connection": {
       "initialized": true,
+<<<<<<< HEAD
       "last_sync": "2025-10-27T01:26:53.467233",
       "connection_count": 7,
+=======
+      "last_sync": "2025-10-27T00:22:03.434169",
+      "connection_count": 6,
+>>>>>>> cd849a23a693247c714abd1c38109c0b5c805b16
       "last_error": null
     },
     "auto_bot_signals": {
@@ -34,6 +44,10 @@
       "last_error": null
     }
   },
+<<<<<<< HEAD
   "last_saved": "2025-10-27T01:28:12.413149",
+=======
+  "last_saved": "2025-10-27T00:46:11.648953",
+>>>>>>> cd849a23a693247c714abd1c38109c0b5c805b16
   "version": "1.0"
 }

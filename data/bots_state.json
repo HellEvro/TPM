@@ -39,10 +39,19 @@
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50,
     "filtered_coins": [
+<<<<<<< HEAD
       "OG"
     ],
     "last_filter_update": "2025-10-27T01:27:44.329614"
   },
   "last_saved": "2025-10-27T01:28:18.579853",
+=======
+      "JUP",
+      "OG"
+    ],
+    "last_filter_update": "2025-10-27T00:46:07.756986"
+  },
+  "last_saved": "2025-10-27T00:46:09.687681",
+>>>>>>> cd849a23a693247c714abd1c38109c0b5c805b16
   "version": "1.0"
 }
