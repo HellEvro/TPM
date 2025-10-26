@@ -46,9 +46,8 @@ class AIManager:
         if not self.premium_loader.premium_available:
             logger.warning("[AI] ⚠️ Premium модули не установлены")
             logger.info("[AI] 💡 Для использования ИИ функций:")
-            logger.info("[AI]    1. Приобретите лицензию")
-            logger.info("[AI]    2. Установите модуль: pip install infobot-ai-premium")
-            logger.info("[AI]    3. Активируйте: python scripts/activate_premium.py")
+            logger.info("[AI]    1. Приобретите лицензию - gci.company.ou@gmail.com")
+            logger.info("[AI]    2. Активируйте: python scripts/activate_premium.py")
             logger.info("[AI] ⚠️ AI функции будут отключены до активации лицензии")
             return
         

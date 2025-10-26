@@ -57,12 +57,12 @@ class PremiumModuleLoader:
                 self.premium_available = False
                 return False
     
-    def verify_license(self, license_path: str = 'license.lic') -> bool:
+    def verify_license(self, license_path: str = None) -> bool:
         """
         Проверяет валидность лицензии
         
         Args:
-            license_path: Путь к файлу лицензии
+            license_path: Путь к файлу лицензии (если None, ищет *.lic в корне)
         
         Returns:
             True если лицензия валидна
@@ -87,6 +87,15 @@ class PremiumModuleLoader:
                 }
             }
             return True
+        
+        # Если путь не указан, ищем любой .lic файл в корне
+        if license_path is None:
+            license_files = [f for f in os.listdir('.') if f.endswith('.lic')]
+            if license_files:
+                license_path = license_files[0]
+                logger.info(f"[AI_Premium] Found license file: {license_path}")
+            else:
+                license_path = 'license.lic'
         
         # Проверяем наличие файла лицензии
         if not os.path.exists(license_path):

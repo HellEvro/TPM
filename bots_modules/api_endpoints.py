@@ -1131,9 +1131,16 @@ def close_position_endpoint():
             logger.error(f"[API] ❌ Биржа не инициализирована")
             return jsonify({'success': False, 'error': 'Exchange not initialized'}), 500
         
-        # ⚡ ОПТИМИЗАЦИЯ: Используем кэш позиций вместо медленного API вызова!
-        from bots_modules.workers import positions_cache
-        positions = positions_cache.get('positions', [])
+        # ⚡ ИСПРАВЛЕНИЕ: Получаем актуальные позиции с биржи вместо кэша
+        try:
+            positions_response = current_exchange.get_positions()
+            if isinstance(positions_response, tuple):
+                positions = positions_response[0] if positions_response else []
+            else:
+                positions = positions_response if positions_response else []
+        except Exception as e:
+            logger.error(f"[API] ❌ Ошибка получения позиций с биржи: {e}")
+            positions = []
         
         # Ищем позиции для данного символа
         symbol_positions = []
