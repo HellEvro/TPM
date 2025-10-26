@@ -26,9 +26,11 @@ logger = logging.getLogger('LicenseManager')
 class LicenseManager:
     """Управление лицензиями"""
     
-    # КРИТИЧЕСКИ ВАЖНО: Этот ключ должен храниться ТОЛЬКО у вас!
-    # В production используйте environment variable или защищенное хранилище
-    SECRET_KEY = b'YOUR_SECRET_KEY_CHANGE_THIS_IN_PRODUCTION_123456789'
+    # КРИТИЧЕСКИ ВАЖНО: Ключ подписи (ДОЛЖЕН СОВПАДАТЬ С КЛЮЧОМ В ai_manager.py!)
+    # Этот ключ использует ai_manager.py для проверки подписи:
+    # sk2 = 'SECRET' + '_SIGNATURE_' + 'KEY_2024_PREMIUM' 
+    # В ai_manager.py используется: 'SECRET' + '_SIGNATURE_' + 'KEY_2024_PREMIUM'
+    SECRET_KEY = ('SECRET' + '_SIGNATURE_' + 'KEY_2024_PREMIUM').encode()
     
     def __init__(self, secret_key: bytes = None):
         """
@@ -44,10 +46,15 @@ class LicenseManager:
         # В production храните ключ в защищенном месте
         from base64 import urlsafe_b64encode
         
-        # Фиксированный ключ шифрования (base64 url-safe encoded 32 bytes key)
-        fixed_key_bytes = b'InfoBot_AI_Premium_2024_License_Key_32_Byte_Fixed_For_All_Licenses_Do_Not_Change_!!!'
-        # Берем первые 32 байта и кодируем для Fernet
-        self.encryption_key = urlsafe_b64encode(fixed_key_bytes[:32])
+        # Фиксированный ключ шифрования (ДОЛЖЕН СОВПАДАТЬ С КЛЮЧОМ В ai_manager.py!)
+        # Этот ключ использует ai_manager.py для расшифровки:
+        # k1 = 'InfoBot' + 'AI2024'
+        # k2 = 'Premium' + 'License'  
+        # k3 = 'Key_SECRET'
+        # sk = (k1 + k2 + k3 + '_DO_NOT_SHARE').encode()[:32]
+        fixed_key_string = 'InfoBot' + 'AI2024' + 'Premium' + 'License' + 'Key_SECRET' + '_DO_NOT_SHARE'
+        fixed_key_bytes = fixed_key_string.encode()[:32]
+        self.encryption_key = urlsafe_b64encode(fixed_key_bytes)
         self.cipher = Fernet(self.encryption_key)
     
     def generate_license(self, 

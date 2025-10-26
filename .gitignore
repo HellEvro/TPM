@@ -379,3 +379,16 @@ infobot_ai_premium.so
 # Premium build artifacts (УДАЛЕНО)
 # InfoBot_AI_Premium/ больше не используется
 
+# Dev scripts and tests (не нужны в публичной версии)
+scripts/fix/
+scripts/check/
+scripts/test_*.py
+scripts/verify_ai_ready.py
+scripts/quick_import_test.py
+
+# Old premium loader (не используется, заменен на ai_manager.pyc)
+bot_engine/ai/_premium_loader.py
+
+# Build artifacts
+scripts/hardware_id.build/
+
