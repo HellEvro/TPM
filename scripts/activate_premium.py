@@ -1,7 +1,8 @@
 """
-Активация InfoBot AI Premium лицензии
+Активация InfoBot AI Premium лицензии / InfoBot AI Premium License Activation
 
-Этот скрипт помогает пользователям активировать их премиум лицензию.
+Этот скрипт показывает Hardware ID пользователя и инструкции по активации.
+This script shows user's Hardware ID and activation instructions.
 """
 
 import sys
@@ -12,20 +13,21 @@ from pathlib import Path
 
 
 def activate_premium_license():
-    """Активирует премиум лицензию"""
+    """Показывает Hardware ID и инструкции по активации"""
     
     print("=" * 60)
     print("InfoBot AI Premium - License Activation")
     print("=" * 60)
     print()
     
-    # Получаем hardware ID
     try:
         # В режиме разработки показываем hardware ID
         if os.getenv('AI_DEV_MODE') == '1':
             print("[DEV MODE] Development mode active - no license needed")
+            print("[РЕЖИМ РАЗРАБОТКИ] Режим разработки активен - лицензия не требуется")
             print()
             print("To use AI modules in dev mode:")
+            print("Чтобы использовать ИИ модули в режиме разработки:")
             print("  1. set AI_DEV_MODE=1")
             print("  2. Edit bot_config.py: AI_ENABLED = True")
             print("  3. python bots.py")
@@ -36,100 +38,66 @@ def activate_premium_license():
         try:
             sys.path.insert(0, 'InfoBot_AI_Premium')
             from license.hardware_id import get_hardware_id, get_short_hardware_id
-            from license.license_manager import LicenseManager
             
             hw_id = get_short_hardware_id()
-            print(f"Hardware ID: {hw_id}")
+            full_hw_id = get_hardware_id()
+            
+            print("=" * 60)
+            print("YOUR HARDWARE ID / ВАШ HARDWARE ID")
+            print("=" * 60)
             print()
-            print("Please provide this Hardware ID when purchasing your license.")
+            print(f"Short HWID:    {hw_id}")
+            print(f"Full HWID:     {full_hw_id}")
+            print()
+            print("=" * 60)
+            print("HOW TO ACTIVATE / КАК АКТИВИРОВАТЬ")
+            print("=" * 60)
+            print()
+            print("1. Send your Hardware ID to:")
+            print("   1. Отправьте ваш Hardware ID на:")
+            print("   Email: gci.company.ou@gmail.com")
+            print()
+            print("2. Wait for your license file (.lic)")
+            print("   2. Дождитесь файла лицензии (.lic)")
+            print()
+            print("3. Place the .lic file in the root folder of InfoBot")
+            print("   3. Поместите файл .lic в корневую папку InfoBot")
+            print("   (Any file with .lic extension will work)")
+            print("   (Подойдет любой файл с расширением .lic)")
+            print()
+            print("4. Restart the bot:")
+            print("   4. Перезапустите бота:")
+            print("   python bots.py")
+            print()
+            print("=" * 60)
+            print()
+            print("Your license will be automatically detected and activated!")
+            print("Ваша лицензия будет автоматически обнаружена и активирована!")
             print()
             
         except ImportError:
             print("[ERROR] Premium license system not found")
+            print("[ОШИБКА] Система премиум лицензий не найдена")
             print()
             print("InfoBot AI Premium is not installed.")
+            print("InfoBot AI Premium не установлен.")
             print()
-            print("Options:")
+            print("Options / Варианты:")
             print("  1. Use development mode (free, for testing):")
+            print("     Используйте режим разработки (бесплатно, для тестирования):")
             print("     set AI_DEV_MODE=1")
             print()
             print("  2. Purchase a license:")
-            print("     Visit: https://infobot.ai/premium")
+            print("     Приобретите лицензию:")
+            print("     Email: gci.company.ou@gmail.com")
             print()
             return
-        
-        # Запрашиваем ключ активации
-        print("Enter your activation key (format: XXXX-XXXX-XXXX-XXXX)")
-        print("or press Enter to cancel:")
-        print()
-        
-        activation_key = input("Activation key: ").strip()
-        
-        if not activation_key:
-            print()
-            print("Activation cancelled")
-            return
-        
-        # Проверяем формат ключа
-        if len(activation_key.replace('-', '')) != 16:
-            print()
-            print("[ERROR] Invalid activation key format")
-            print("Expected: XXXX-XXXX-XXXX-XXXX")
-            return
-        
-        print()
-        print("Activating license...")
-        print()
-        
-        # TODO: В production здесь будет запрос к серверу активации
-        # Сейчас для разработки создаем локальную лицензию
-        
-        print("[INFO] Online activation not available yet")
-        print("[INFO] Creating local developer license...")
-        print()
-        
-        # Создаем тестовую лицензию для разработки
-        manager = LicenseManager()
-        
-        full_hw_id = get_hardware_id()
-        
-        license = manager.generate_license(
-            user_email='developer@local',
-            license_type='developer',
-            hardware_id=full_hw_id
-        )
-        
-        # Сохраняем файл лицензии
-        license_path = Path('license.lic')
-        
-        with open(license_path, 'wb') as f:
-            f.write(license['encrypted_license'])
-        
-        print("[OK] License activated successfully!")
-        print()
-        print(f"License type: {license['license_data']['type']}")
-        print(f"Expires: {license['license_data']['expires_at']}")
-        print(f"License file: {license_path}")
-        print()
-        print("Next steps:")
-        print("  1. Edit bot_config.py:")
-        print("     AI_ENABLED = True")
-        print("     AI_ANOMALY_DETECTION_ENABLED = True")
-        print()
-        print("  2. Restart the bot:")
-        print("     python bots.py")
-        print()
-        print("  3. Check logs for:")
-        print("     [AI] License: developer")
-        print("     [AI] Anomaly Detector loaded")
-        print()
     
     except Exception as e:
-        print(f"[ERROR] Activation failed: {e}")
+        print(f"[ERROR] Failed to get hardware ID / Не удалось получить HWID: {e}")
         import traceback
         traceback.print_exc()
 
 
 if __name__ == '__main__':
     activate_premium_license()
-

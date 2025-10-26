@@ -1,0 +1,14 @@
+CUSTOMER LICENSE INFORMATION
+===================
+
+Hardware ID:  CB286F975D4A8194
+Duration:     9999 days
+Expires:      2053-03-12T16:16:41.684984
+
+Activation Key:
+50F6-DEBC-A523-D285
+
+Instructions:
+1. Copy the .lic file to your InfoBot folder
+2. Restart the bot
+3. Premium features will be activated!

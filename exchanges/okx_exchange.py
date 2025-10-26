@@ -308,6 +308,54 @@ class OkxExchange(BaseExchange):
             print(f"Ошибка получения тикера для {symbol}: {e}")
             return None
 
+    def get_instrument_status(self, symbol):
+        """
+        Получает статус торговли для символа
+        
+        Возможные статусы OKX:
+        - live: Активная торговля
+        - suspend: Торговля приостановлена
+        - preopen: Предварительная торговля
+        
+        Returns:
+            dict: {'status': str, 'is_tradeable': bool, 'is_delisting': bool}
+        """
+        try:
+            # Добавляем небольшую задержку для предотвращения rate limiting
+            time.sleep(0.02)  # 20ms задержка для проверки статуса инструмента
+            
+            market_symbol = f"{symbol}-USDT-SWAP"
+            instruments = self.client.fetch_markets()
+            
+            for instrument in instruments:
+                if instrument['id'] == market_symbol:
+                    status = instrument.get('status', 'Unknown')
+                    
+                    return {
+                        'status': status,
+                        'is_tradeable': status == 'live',
+                        'is_delisting': status in ['suspend', 'preopen'],
+                        'symbol': market_symbol
+                    }
+            
+            logger.warning(f"[OKX] ⚠️ Не удалось получить статус инструмента {symbol}")
+            return {
+                'status': 'Unknown',
+                'is_tradeable': False,
+                'is_delisting': False,
+                'symbol': market_symbol
+            }
+                
+        except Exception as e:
+            logger.error(f"[OKX] ❌ Ошибка получения статуса инструмента {symbol}: {e}")
+            return {
+                'status': 'Error',
+                'is_tradeable': False,
+                'is_delisting': False,
+                'symbol': f"{symbol}-USDT-SWAP",
+                'error': str(e)
+            }
+
     def close_position(self, symbol, size, side, order_type="Limit"):
         """Закрытие позиции
         Args:

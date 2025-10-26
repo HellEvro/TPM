@@ -235,6 +235,55 @@ class BinanceExchange(BaseExchange):
             print(f"Ошибка получения тикера для {symbol}: {e}")
             return None
 
+    def get_instrument_status(self, symbol):
+        """
+        Получает статус торговли для символа
+        
+        Возможные статусы Binance:
+        - TRADING: Активная торговля
+        - BREAK: Торговля приостановлена
+        - PRE_TRADING: Предварительная торговля
+        - POST_TRADING: После торговли
+        
+        Returns:
+            dict: {'status': str, 'is_tradeable': bool, 'is_delisting': bool}
+        """
+        try:
+            # Добавляем небольшую задержку для предотвращения rate limiting
+            time.sleep(0.02)  # 20ms задержка для проверки статуса инструмента
+            
+            response = self.client.futures_exchange_info()
+            
+            if response and 'symbols' in response:
+                for instrument in response['symbols']:
+                    if instrument['symbol'] == f"{symbol}USDT":
+                        status = instrument.get('status', 'Unknown')
+                        
+                        return {
+                            'status': status,
+                            'is_tradeable': status == 'TRADING',
+                            'is_delisting': status in ['BREAK', 'POST_TRADING'],
+                            'symbol': f"{symbol}USDT"
+                        }
+            
+            logger.warning(f"[BINANCE] ⚠️ Не удалось получить статус инструмента {symbol}")
+            return {
+                'status': 'Unknown',
+                'is_tradeable': False,
+                'is_delisting': False,
+                'symbol': f"{symbol}USDT"
+            }
+                
+        except Exception as e:
+            logger.error(f"[BINANCE] ❌ Ошибка получения статуса инструмента {symbol}: {e}")
+            return {
+                'status': 'Error',
+                'is_tradeable': False,
+                'is_delisting': False,
+                'symbol': f"{symbol}USDT",
+                'error': str(e)
+            }
+
     def close_position(self, symbol, size, side, order_type="Limit"):
         try:
             # Проверяем существование позиции
