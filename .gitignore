@@ -3,6 +3,9 @@
 # ===========================================
 __pycache__/
 *.py[cod]
+# ВАЖНО: Скомпилированные .pyc файлы для лицензирования НУЖНЫ
+!scripts/hardware_id.pyc
+!bot_engine/ai/ai_manager.pyc
 *$py.class
 *.so
 .Python
