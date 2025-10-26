@@ -56,11 +56,15 @@ def create_customer_license():
         # Создаем менеджер лицензий
         manager = LicenseManager()
         
-        # Генерируем лицензию
+        # КРИТИЧЕСКИ ВАЖНО: Сохраняем короткий HWID в лицензии
+        # Проверка в license_manager.py будет использовать short_hw_id для сравнения
+        
+        # Генерируем лицензию с коротким HWID (16 символов)
+        short_hw_id = hw_id[:16] if len(hw_id) > 16 else hw_id
         license_data = manager.generate_license(
             user_email=email,
             license_type=license_type,
-            hardware_id=hw_id,
+            hardware_id=short_hw_id,
             custom_duration_days=custom_days
         )
         
@@ -71,7 +75,9 @@ def create_customer_license():
         output_dir = Path('generated_licenses')
         output_dir.mkdir(exist_ok=True)
         
-        filename = f"{hw_id}_{custom_days}days_{datetime.now().strftime('%Y%m%d_%H%M%S')}.lic"
+        # Используем короткий HWID в имени файла
+        short_hw_id_for_filename = hw_id[:16] if len(hw_id) > 16 else hw_id
+        filename = f"{short_hw_id_for_filename}_{custom_days}days_{datetime.now().strftime('%Y%m%d_%H%M%S')}.lic"
         license_path = output_dir / filename
         
         with open(license_path, 'wb') as f:
@@ -80,30 +86,9 @@ def create_customer_license():
         print(f"[OK] License saved: {license_path}")
         print()
         
-        # Также создаем активационный файл для клиента
-        activation_file = output_dir / f"ACTIVATION_KEY_{filename.replace('.lic', '.txt')}"
-        with open(activation_file, 'w', encoding='utf-8') as f:
-            f.write(f"CUSTOMER LICENSE INFORMATION\n")
-            f.write(f"===================\n\n")
-            f.write(f"Hardware ID:  {hw_id}\n")
-            f.write(f"Duration:     {custom_days} days\n")
-            f.write(f"Expires:      {license_data['license_data']['expires_at']}\n")
-            f.write(f"\nActivation Key:\n")
-            f.write(f"{license_data['activation_key']}\n")
-            f.write(f"\nInstructions:\n")
-            f.write(f"1. Copy the .lic file to your InfoBot folder\n")
-            f.write(f"2. Restart the bot\n")
-            f.write(f"3. Premium features will be activated!\n")
-        
-        print(f"[OK] Activation file saved: {activation_file}")
-        print()
-        
         print("=" * 60)
-        print("LICENSE SUMMARY")
+        print("LICENSE GENERATED")
         print("=" * 60)
-        print(f"Activation Key (format: XXXX-XXXX-XXXX-XXXX):")
-        print(f"  {license_data['activation_key']}")
-        print()
         print(f"Hardware ID:    {hw_id}")
         print(f"Duration:       {custom_days} days")
         print(f"Expires:        {license_data['license_data']['expires_at']}")
@@ -111,11 +96,8 @@ def create_customer_license():
         print(f"License file:   {license_path}")
         print("=" * 60)
         print()
-        print("✅ License is ready to send to customer!")
-        print()
-        print("Send to customer:")
-        print(f"  1. The .lic file: {license_path}")
-        print(f"  2. Activation key: {license_data['activation_key']}")
+        print("Send this .lic file to customer!")
+        print(f"File: {license_path}")
         print()
         
     except Exception as e:
