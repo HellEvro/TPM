@@ -29,11 +29,7 @@
       "source": "manual"
     }
   },
-<<<<<<< HEAD
   "last_scan": "2025-10-26T16:46:14.746157",
-=======
-  "last_scan": "2025-10-26T17:43:57.383239",
->>>>>>> b1a336a3f85e0a8bed02a7aa9b59789cd365490e
   "scan_enabled": true,
   "scan_interval_minutes": 10
 }
