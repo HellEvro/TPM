@@ -9,7 +9,11 @@
     },
     "auto_bot_worker": {
       "active": false,
+<<<<<<< HEAD
       "last_check": "2025-10-26T16:46:13.806131",
+=======
+      "last_check": "2025-10-26T17:44:10.624881",
+>>>>>>> b1a336a3f85e0a8bed02a7aa9b59789cd365490e
       "check_count": 1609,
       "last_error": "name 'STOP_LOSS_SETUP_INTERVAL' is not defined",
       "enabled": false,
@@ -23,8 +27,13 @@
     },
     "exchange_connection": {
       "initialized": true,
+<<<<<<< HEAD
       "last_sync": "2025-10-26T16:46:12.764689",
       "connection_count": 413,
+=======
+      "last_sync": "2025-10-26T17:43:55.183731",
+      "connection_count": 418,
+>>>>>>> b1a336a3f85e0a8bed02a7aa9b59789cd365490e
       "last_error": null
     },
     "auto_bot_signals": {
@@ -34,6 +43,10 @@
       "last_error": null
     }
   },
+<<<<<<< HEAD
   "last_saved": "2025-10-26T16:46:13.806149",
+=======
+  "last_saved": "2025-10-26T17:44:10.624887",
+>>>>>>> b1a336a3f85e0a8bed02a7aa9b59789cd365490e
   "version": "1.0"
 }

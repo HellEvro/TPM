@@ -13,16 +13,20 @@ import os
 import json
 import pickle
 import logging
+import warnings
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-logger = logging.getLogger('AI')
+logger = logging.getLogger('LSTM')
+
+# Отключаем предупреждения TensorFlow
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+warnings.filterwarnings('ignore', category=UserWarning, module='keras')
 
 # Проверяем доступность TensorFlow
 try:
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Отключаем предупреждения TF
     import tensorflow as tf
     from tensorflow import keras
     from tensorflow.keras import layers
