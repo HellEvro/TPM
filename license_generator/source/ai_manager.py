@@ -92,6 +92,26 @@ class AIManager:
                 logger.warning("[AI] License expired")
                 return
             
+            # Проверка привязки к железу
+            if ld.get('hardware_id'):
+                try:
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("hardware_id", Path(__file__).parent.parent.parent / "scripts" / "hardware_id.pyc")
+                    hardware_id = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(hardware_id)
+                    get_short_hardware_id = hardware_id.get_short_hardware_id
+                    current_hw_id = get_short_hardware_id()
+                    license_hw_id = ld['hardware_id']
+                    
+                    if current_hw_id[:16].upper() != license_hw_id[:16].upper():
+                        self._license_valid = False
+                        logger.warning(f"[AI] License is bound to different hardware (current: {current_hw_id[:16]}, license: {license_hw_id[:16]})")
+                        return
+                except Exception as e:
+                    logger.error(f"[AI] Failed to check hardware ID: {e}")
+                    self._license_valid = False
+                    return
+            
             # Лицензия валидна
             self._license_valid = True
             self._license_info = {
