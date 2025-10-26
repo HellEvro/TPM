@@ -88,14 +88,18 @@ class PremiumModuleLoader:
             }
             return True
         
-        # Если путь не указан, ищем любой .lic файл в корне
+        # Если путь не указан, ищем любой .lic файл в корне проекта
         if license_path is None:
-            license_files = [f for f in os.listdir('.') if f.endswith('.lic')]
+            # Определяем корень проекта (где находится bots.py)
+            project_root = Path(__file__).parent.parent.parent
+            logger.info(f"[AI_Premium] Looking for licenses in: {project_root}")
+            license_files = [f for f in os.listdir(project_root) if f.endswith('.lic')]
             if license_files:
-                license_path = license_files[0]
-                logger.info(f"[AI_Premium] Found license file: {license_path}")
+                license_path = str(project_root / license_files[0])
+                logger.info(f"[AI_Premium] Found license file: {license_files[0]}")
             else:
-                license_path = 'license.lic'
+                license_path = str(project_root / 'license.lic')
+                logger.warning(f"[AI_Premium] No .lic files found in {project_root}")
         
         # Проверяем наличие файла лицензии
         if not os.path.exists(license_path):
