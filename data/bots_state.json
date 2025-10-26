@@ -39,6 +39,10 @@
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50
   },
+<<<<<<< HEAD
   "last_saved": "2025-10-26T16:46:17.782483",
+=======
+  "last_saved": "2025-10-26T17:44:11.416563",
+>>>>>>> b1a336a3f85e0a8bed02a7aa9b59789cd365490e
   "version": "1.0"
 }
