@@ -104,30 +104,7 @@ class PremiumModuleLoader:
             return False
         
         try:
-            # Простая проверка для разработки
-            with open(license_path, 'r') as f:
-                content = f.read().strip()
-            
-            # Если это dev лицензия - принимаем
-            if content == 'DEVELOPER_LICENSE_DO_NOT_COMMIT':
-                self.license_valid = True
-                self.license_info = {
-                    'type': 'developer',
-                    'expires_at': '9999-12-31',
-                    'features': {
-                        'anomaly_detection': True,
-                        'lstm_predictor': True,
-                        'pattern_recognition': True,
-                        'risk_management': True,
-                        'max_bots': 999,
-                        'debug_mode': True
-                    }
-                }
-                logger.info(f"[AI_Premium] ✅ Developer лицензия активна")
-                logger.info(f"[AI_Premium] 📅 Действительна до: 9999-12-31")
-                return True
-            
-            # Иначе пытаемся загрузить через license_manager
+            # Пытаемся загрузить через license_manager из InfoBot_AI_Premium
             try:
                 sys.path.insert(0, 'InfoBot_AI_Premium')
                 from license.license_manager import LicenseManager
@@ -144,8 +121,8 @@ class PremiumModuleLoader:
                 else:
                     logger.warning(f"[AI_Premium] ⚠️ Лицензия невалидна: {result}")
                     return False
-            except ImportError:
-                logger.warning("[AI_Premium] ⚠️ License manager не найден")
+            except ImportError as e:
+                logger.warning(f"[AI_Premium] ⚠️ License manager не найден: {e}")
                 return False
             
         except Exception as e:
