@@ -37,8 +37,10 @@
     "exit_scam_candles": 8,
     "exit_scam_single_candle_percent": 15,
     "exit_scam_multi_candle_count": 4,
-    "exit_scam_multi_candle_percent": 50
+    "exit_scam_multi_candle_percent": 50,
+    "filtered_coins": [],
+    "last_filter_update": "2025-10-27T00:17:43.615659"
   },
-  "last_saved": "2025-10-26T21:01:37.788502",
+  "last_saved": "2025-10-27T00:18:17.338353",
   "version": "1.0"
 }
