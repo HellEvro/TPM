@@ -58,14 +58,13 @@ print("СИНХРОНИЗАЦИЯ В ПУБЛИЧНУЮ ВЕРСИЮ")
 print("=" * 80)
 print()
 
-# Удаляем ненужные папки
+# Удаляем ненужные папки (ВАЖНО: НЕ ТРОГАЕМ .git!)
 for item in PUBLIC.iterdir():
+    # КРИТИЧЕСКИ ВАЖНО: НИКОГДА НЕ УДАЛЯЕМ .git!!!
     if item.name == '.git':
         continue
-    if item.is_dir():
-        if should_exclude(item.name):
-            print(f"Удаление папки: {item}")
-            shutil.rmtree(item, ignore_errors=True)
+    if item.is_dir() and should_exclude(item.name):
+        print(f"[SKIP] Пропускаем папку: {item.name}")
 
 # Копируем нужные файлы
 copied = 0
