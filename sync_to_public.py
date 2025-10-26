@@ -4,7 +4,20 @@
 
 import os
 import shutil
+import sys
 from pathlib import Path
+
+# Настройка кодировки для Windows консоли
+if os.name == 'nt':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except:
+        try:
+            import subprocess
+            subprocess.run(['chcp', '65001'], shell=True, capture_output=True)
+        except:
+            pass
 
 ROOT = Path(__file__).parent
 PUBLIC = ROOT / "InfoBot_Public"
