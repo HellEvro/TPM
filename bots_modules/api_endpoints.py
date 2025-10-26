@@ -3140,8 +3140,8 @@ if __name__ == '__main__':
         print("❌ Запуск отменен")
         sys.exit(0)
     
-    # Загружаем конфигурацию Auto Bot после проверки процессов (С принудительным выключением при запуске)
-    load_auto_bot_config(force_disable=True)
+    # Загружаем конфигурацию Auto Bot после проверки процессов
+    load_auto_bot_config()
     
     print("=" * 60)
     print("INFOBOT - Trading Bots Service")
