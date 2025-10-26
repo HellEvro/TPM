@@ -35,9 +35,15 @@ class LicenseManager:
         """
         self.secret_key = secret_key if secret_key else self.SECRET_KEY
         
-        # Генерируем ключ шифрования (должен быть один и тот же!)
-        # В production храните в защищенном месте
-        self.encryption_key = Fernet.generate_key()
+        # КРИТИЧЕСКИ ВАЖНО: Используем фиксированный ключ шифрования!
+        # Если менять ключ - старые лицензии не будут работать!
+        # В production храните ключ в защищенном месте
+        from base64 import urlsafe_b64encode
+        
+        # Фиксированный ключ шифрования (base64 url-safe encoded 32 bytes key)
+        fixed_key_bytes = b'InfoBot_AI_Premium_2024_License_Key_32_Byte_Fixed_For_All_Licenses_Do_Not_Change_!!!'
+        # Берем первые 32 байта и кодируем для Fernet
+        self.encryption_key = urlsafe_b64encode(fixed_key_bytes[:32])
         self.cipher = Fernet(self.encryption_key)
     
     def generate_license(self, 
@@ -122,7 +128,10 @@ class LicenseManager:
             # Проверяем привязку к железу (если есть)
             if license_data.get('hardware_id'):
                 current_hw_id = get_hardware_id()
-                if current_hw_id != license_data['hardware_id']:
+                license_hw_id = license_data['hardware_id']
+                
+                # Сравниваем только первые 16 символов для совместимости
+                if current_hw_id[:16].upper() != license_hw_id[:16].upper():
                     return False, "License is bound to different hardware"
             
             logger.info(f"[License] ✅ Валидная лицензия: {license_data['type']}")

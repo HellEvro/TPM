@@ -36,11 +36,12 @@ def get_hardware_id() -> str:
         except Exception as e:
             logger.warning(f"Не удалось получить MAC адрес: {e}")
         
-        # 2. UUID машины
+        # 2. UUID машины (фиксированный)
         try:
-            machine_uuid = str(uuid.uuid1())
+            # Используем uuid.getnode() для получения MAC адреса который преобразуем в UUID
+            machine_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, platform.node()))
             components.append(f"UUID:{machine_uuid}")
-            logger.debug(f"UUID машины получен")
+            logger.debug(f"UUID машины получен: {machine_uuid}")
         except Exception as e:
             logger.warning(f"Не удалось получить UUID: {e}")
         
