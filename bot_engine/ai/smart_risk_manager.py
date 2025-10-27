@@ -818,6 +818,53 @@ class SmartRiskManager:
         except Exception as e:
             logger.error(f"[SmartRiskManager] Ошибка сохранения параметров: {e}")
     
+    def collect_entry_data(self, symbol: str, current_price: float, side: str, 
+                          rsi: float, candles: List[Dict], **kwargs) -> None:
+        """
+        🤖 Собирает данные для обучения ИИ (даже если функция отключена)
+        
+        Args:
+            symbol: Символ монеты
+            current_price: Текущая цена
+            side: 'LONG' или 'SHORT'
+            rsi: Текущий RSI
+            candles: История свечей для анализа
+            **kwargs: Дополнительные параметры
+        """
+        try:
+            # Сохраняем данные для обучения
+            entry_data = {
+                'symbol': symbol,
+                'price': current_price,
+                'side': side,
+                'rsi': rsi,
+                'timestamp': datetime.now().isoformat(),
+                'candles': candles[:10],  # Последние 10 свечей
+                **kwargs
+            }
+            
+            # Сохраняем для последующего анализа
+            training_file = self.feedback_data_path / f"{symbol}_entry_data.json"
+            training_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Загружаем существующие данные
+            if training_file.exists():
+                with open(training_file, 'r') as f:
+                    data = json.load(f)
+            else:
+                data = []
+            
+            data.append(entry_data)
+            
+            # Сохраняем
+            with open(training_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            logger.debug(f"[SmartRiskManager] 📊 Собраны данные для {symbol}")
+            
+        except Exception as e:
+            logger.error(f"[SmartRiskManager] Ошибка сбора данных входа: {e}")
+    
     def should_enter_now(self, symbol: str, current_price: float, side: str, 
                         rsi: float, candles: List[Dict], **kwargs) -> Dict[str, Any]:
         """

@@ -616,6 +616,69 @@ class NewTradingBot:
             
             logger.info(f"[NEW_BOT_{self.symbol}] 📈 Входим в {direction} позицию @ {price}")
             
+            # 🤖 Сбор данных для ИИ и проверка оптимальной точки входа (если включено)
+            try:
+                from bot_engine.bot_config import RiskConfig
+                from bot_engine.ai.smart_risk_manager import SmartRiskManager
+                from bots_modules.imports_and_globals import get_auto_bot_config, coins_rsi_data, rsi_data_lock
+                
+                auto_config = get_auto_bot_config()
+                ai_optimal_entry_enabled = auto_config.get('ai_optimal_entry_enabled', False)
+                
+                # Получаем RSI
+                rsi = 0
+                with rsi_data_lock:
+                    coin_data = coins_rsi_data['coins'].get(self.symbol)
+                    if coin_data:
+                        rsi = coin_data.get('rsi6h', 50)
+                
+                # Получаем свечи для анализа
+                chart_response = self.exchange.get_chart_data(self.symbol, '6h', limit=30) if self.exchange else None
+                candles = []
+                if chart_response and chart_response.get('success'):
+                    candles_data = chart_response.get('data', {}).get('candles', [])
+                    candles = [{'open': float(c.get('open', 0)), 'high': float(c.get('high', 0)),
+                                'low': float(c.get('low', 0)), 'close': float(c.get('close', 0)),
+                                'volume': float(c.get('volume', 0))} for c in candles_data[-10:]] if candles_data else []
+                
+                # 📊 ВСЕГДА собираем данные для обучения ИИ (если есть лицензия)
+                try:
+                    smart_risk = SmartRiskManager()
+                    smart_risk.collect_entry_data(
+                        symbol=self.symbol,
+                        current_price=price,
+                        side=direction,
+                        rsi=rsi,
+                        candles=candles
+                    )
+                except Exception as collect_error:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось собрать данные ИИ: {collect_error}")
+                
+                # 🔍 Проверяем оптимальную точку входа (только если включено в конфиге)
+                if ai_optimal_entry_enabled:
+                    # Проверяем, стоит ли входить сейчас
+                    smart_risk = SmartRiskManager()
+                    decision = smart_risk.should_enter_now(
+                        symbol=self.symbol,
+                        current_price=price,
+                        side=direction,
+                        rsi=rsi,
+                        candles=candles
+                    )
+                    
+                    if not decision.get('should_enter', True):
+                        logger.info(f"[NEW_BOT_{self.symbol}] ⏳ ИИ рекомендует подождать: {decision.get('reason', 'Неизвестная причина')}")
+                        return False
+                    else:
+                        logger.info(f"[NEW_BOT_{self.symbol}] ✅ ИИ рекомендует вход: {decision.get('reason', 'Всё ок')}")
+                
+            except ImportError:
+                # ИИ функция недоступна (нет лицензии) - продолжаем как обычно
+                pass
+            except Exception as ai_error:
+                logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка проверки ИИ входа: {ai_error}")
+                # Продолжаем обычный вход при ошибке ИИ
+            
             # Открываем позицию
             if self._open_position_on_exchange(direction, price):
                 # Обновляем статус
