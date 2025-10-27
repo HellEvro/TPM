@@ -1326,15 +1326,7 @@ class BybitExchange(BaseExchange):
                 order_params["takeProfit"] = str(round(take_profit, 6))
                 print(f"[BYBIT_BOT] 🎯 Take Profit установлен: {take_profit:.6f} (цена)")
             
-            # 🛑 Добавляем Stop Loss если указан или вычисляем из конфига
-            if stop_loss is None and max_loss_percent and current_price:
-                # Вычисляем стоп-лосс из процента
-                if bybit_side == 'Buy':
-                    stop_loss = current_price * (1 - max_loss_percent / 100)  # Для LONG - ниже цены входа
-                else:
-                    stop_loss = current_price * (1 + max_loss_percent / 100)  # Для SHORT - выше цены входа
-                print(f"[BYBIT_BOT] 🛑 Стоп-лосс вычислен: {stop_loss:.6f} (max_loss_percent={max_loss_percent}%)")
-            
+            # 🛑 Добавляем Stop Loss если указан
             if stop_loss is not None and stop_loss > 0:
                 # Bybit API: stopLoss принимает абсолютную цену (НЕ процент!)
                 order_params["stopLoss"] = str(round(stop_loss, 6))
@@ -1545,4 +1537,90 @@ class BybitExchange(BaseExchange):
             return {
                 'success': False,
                 'message': f"Ошибка обновления SL: {str(e)}"
+            }
+    
+    @with_timeout(15)  # 15 секунд таймаут для установки SL по ROI
+    def update_stop_loss_by_roi(self, symbol, roi_percent, position_side=None):
+        """
+        Устанавливает Stop Loss по ROI (% потери от маржи)
+        
+        Args:
+            symbol (str): Символ торговой пары (например, 'BTC')
+            roi_percent (float): ROI в % (например, -15.0 для потери 15%)
+            position_side (str, optional): Направление позиции ('LONG' или 'SHORT')
+            
+        Returns:
+            dict: Результат установки SL
+        """
+        try:
+            print(f"[BYBIT_BOT] Установка Stop Loss по ROI: {symbol} → {roi_percent}% (side: {position_side})")
+            
+            # Определяем positionIdx в зависимости от режима и направления позиции
+            if position_side:
+                position_idx = 1 if position_side.upper() == 'LONG' else 2
+            else:
+                position_idx = 0  # One-way mode fallback
+            
+            # Параметры для установки SL по ROI
+            # Bybit API: slSize - размер стопа в % (отрицательный для стоп-лосса)
+            sl_params = {
+                "category": "linear",
+                "symbol": f"{symbol}USDT",
+                "slTriggerBy": "LastPrice",  # Триггер по последней цене
+                "slSize": str(roi_percent),  # ROI в % (например, "-15.0")
+                "positionIdx": position_idx
+            }
+            
+            logger.info(f"[BYBIT_BOT] Параметры SL по ROI: {sl_params}")
+            
+            # Устанавливаем SL через API - используем метод set_trading_stop
+            try:
+                response = self.client.set_trading_stop(**sl_params)
+                print(f"[BYBIT_BOT] Ответ API SL по ROI: {response}")
+                
+                if response['retCode'] == 0:
+                    return {
+                        'success': True,
+                        'message': f'Stop Loss установлен по ROI: {roi_percent}%',
+                        'roi_percent': roi_percent
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'message': f"Ошибка установки SL: {response['retMsg']}"
+                    }
+            except Exception as e:
+                # Проверяем код ошибки 34040 (not modified) - это нормально, SL уже установлен
+                error_str = str(e)
+                if "34040" in error_str or "not modified" in error_str:
+                    print(f"[BYBIT_BOT] ✅ SL уже установлен на {roi_percent}%")
+                    return {
+                        'success': True,
+                        'message': f'Stop Loss уже установлен по ROI: {roi_percent}%',
+                        'roi_percent': roi_percent
+                    }
+                
+                # Для других ошибок - логируем и возвращаем ошибку
+                print(f"[BYBIT_BOT] Ошибка установки Stop Loss по ROI: {e}")
+                import traceback
+                print(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
+                return {
+                    'success': False,
+                    'message': f"Ошибка установки SL: {error_str}"
+                }
+            except AttributeError:
+                # Если метод set_trading_stop не существует
+                print(f"[BYBIT_BOT] ⚠️ Метод set_trading_stop не найден")
+                return {
+                    'success': False,
+                    'message': f"Метод set_trading_stop не поддерживается"
+                }
+                
+        except Exception as e:
+            print(f"[BYBIT_BOT] Ошибка установки Stop Loss по ROI: {str(e)}")
+            import traceback
+            print(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
+            return {
+                'success': False,
+                'message': f"Ошибка установки SL: {str(e)}"
             }
