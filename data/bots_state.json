@@ -7,37 +7,32 @@
       "volume_mode": "usdt",
       "volume_value": 5,
       "position": null,
-      "entry_price": 13.957404,
+      "entry_price": 14.385336,
       "entry_time": null,
       "last_signal_time": null,
       "last_bar_timestamp": null,
-      "created_at": "2025-10-27T06:07:40.058317",
+      "created_at": "2025-10-28T02:10:53.273265",
       "scaling_enabled": false,
       "scaling_levels": [],
       "scaling_current_level": 0,
       "scaling_group_id": null,
-      "unrealized_pnl": -0.38852,
-      "position_side": "LONG",
-      "stop_loss": "13.1304",
-      "take_profit": "15.074",
-      "current_price": "13.8797",
       "rsi_data": {
         "symbol": "OG",
-        "rsi6h": 17.0,
+        "rsi6h": 27.4,
         "trend6h": "NEUTRAL",
         "rsi_zone": "BUY_ZONE",
         "signal": "ENTER_LONG",
-        "price": 13.8731,
-        "change24h": -10.99,
-        "last_update": "2025-10-27T06:11:13.130886",
+        "price": 14.371,
+        "change24h": 2.36,
+        "last_update": "2025-10-28T02:13:39.617740",
         "trend_analysis": {
           "trend": "NEUTRAL",
-          "ema_short": 16.825341942358868,
-          "ema_long": 16.04677616079356,
+          "ema_short": 16.531055396994933,
+          "ema_long": 15.992768152082984,
           "ema_short_period": 50,
           "ema_long_period": 200,
-          "ema_long_slope": -0.021855036791894378,
-          "current_close": 13.8722,
+          "ema_long_slope": -0.0161906346943006,
+          "current_close": 14.3818,
           "confirmations": 3,
           "min_confirmations": 2,
           "accuracy": 0
@@ -50,21 +45,21 @@
         },
         "enhanced_rsi": {
           "enabled": true,
-          "warning_type": "OVERSOLD",
-          "warning_message": "Возможная зона для LONG",
-          "extreme_duration": 3,
+          "warning_type": null,
+          "warning_message": null,
+          "extreme_duration": 0,
           "adaptive_levels": [
             29,
             71
           ],
           "confirmations": {
-            "volume": true,
+            "volume": false,
             "divergence": false,
-            "stoch_rsi_k": 6.974638679581948,
-            "stoch_rsi_d": 3.5574195354480653
+            "stoch_rsi_k": 46.32719653564619,
+            "stoch_rsi_d": 30.574276005307297
           },
           "enhanced_signal": "ENTER_LONG",
-          "enhanced_reason": "enhanced_oversold_17.0_confirmed_base_oversold_volume_confirm_stoch_oversold"
+          "enhanced_reason": "rsi_oversold_27.4"
         },
         "time_filter_info": {
           "blocked": false,
@@ -86,25 +81,30 @@
         "trading_status": "Trading",
         "is_delisting": false
       },
+      "unrealized_pnl": 0.03132,
+      "position_side": "LONG",
+      "stop_loss": "14.1711",
+      "take_profit": "15.8257",
+      "current_price": "14.3916",
       "exchange_position": {
         "size": 5.0,
         "side": "Long",
-        "unrealized_pnl": -0.38902,
-        "mark_price": 13.8796,
-        "entry_price": 13.957404,
+        "unrealized_pnl": 0.03132,
+        "mark_price": 14.3916,
+        "entry_price": 14.385336,
         "leverage": 1,
-        "stop_loss": "13.1304",
-        "take_profit": "15.074",
-        "roi": -0.5574389048278605
+        "stop_loss": "14.1711",
+        "take_profit": "15.8257",
+        "roi": 0.043544342655604286
       },
       "position_size": 5,
       "position_size_coins": 5.0,
-      "mark_price": 13.8741,
-      "unrealized_pnl_usdt": -0.38902,
-      "roi": -0.5574389048278605,
+      "mark_price": 14.3916,
+      "unrealized_pnl_usdt": 0.03132,
+      "roi": 0.043544342655604286,
       "take_profit_price": null,
-      "last_update": "2025-10-27T06:11:40.418806",
-      "work_time": "4м 0с",
+      "last_update": "2025-10-28T02:14:16.074265",
+      "work_time": "3м 21с",
       "bot_status": "Активен"
     }
   },
@@ -150,8 +150,8 @@
     "filtered_coins": [
       "OG"
     ],
-    "last_filter_update": "2025-10-27T06:11:34.575054"
+    "last_filter_update": "2025-10-28T02:13:50.054344"
   },
-  "last_saved": "2025-10-27T06:11:45.835934",
+  "last_saved": "2025-10-28T02:14:16.461941",
   "version": "1.0"
 }

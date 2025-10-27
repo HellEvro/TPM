@@ -147,6 +147,9 @@ def register_ai_endpoints(app):
                     'risk_management_enabled': AIConfig.AI_RISK_MANAGEMENT_ENABLED,
                     'risk_update_interval': AIConfig.AI_RISK_UPDATE_INTERVAL,
                     
+                    # Optimal Entry Detection
+                    'optimal_entry_enabled': getattr(AIConfig, 'AI_OPTIMAL_ENTRY_ENABLED', False),
+                    
                     # LSTM Predictor
                     'lstm_enabled': AIConfig.AI_LSTM_ENABLED,
                     'lstm_min_confidence': AIConfig.AI_LSTM_MIN_CONFIDENCE,
