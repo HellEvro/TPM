@@ -1,11 +1,9 @@
 {
   "high_roi": [],
   "high_loss": [],
-  "rapid_growth": [],
+  "rapid_growth": [
+    "OG"
+  ],
   "high_pnl": [],
-<<<<<<< HEAD
-  "last_update": "2025-10-27 01:23:45"
-=======
-  "last_update": "2025-10-27 01:28:00"
->>>>>>> cd849a23a693247c714abd1c38109c0b5c805b16
+  "last_update": "2025-10-27 02:36:21"
 }
