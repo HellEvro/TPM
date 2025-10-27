@@ -870,6 +870,10 @@ class NewTradingBot:
             
             if close_result and close_result.get('success'):
                 logger.info(f"[NEW_BOT_{self.symbol}] ✅ Позиция закрыта успешно")
+                
+                # Сохраняем историю закрытия позиции (для обучения ИИ)
+                self._log_position_closed(reason, close_result)
+                
                 self.update_status(BOT_STATUS['IDLE'])
                 return True
             else:
@@ -974,6 +978,64 @@ class NewTradingBot:
         except Exception as e:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка расчета TP: {e}")
             return None
+    
+    def _log_position_closed(self, reason, close_result):
+        """Сохраняет детальные данные о закрытии позиции (для обучения ИИ)"""
+        try:
+            from bot_engine.bot_history import bot_history_manager
+            from bot_engine.ai import check_premium_license
+            
+            # Получаем данные о закрытии
+            exit_price = close_result.get('price', self.entry_price) if close_result else self.entry_price
+            pnl = close_result.get('realized_pnl', self.unrealized_pnl) if close_result else self.unrealized_pnl
+            pnl_pct = close_result.get('roi', 0) if close_result else 0
+            
+            # Подготавливаем данные для обучения ИИ (только если стоп И есть лицензия)
+            entry_data = None
+            market_data = None
+            
+            if 'STOP' in reason.upper():
+                try:
+                    is_premium = check_premium_license()
+                    
+                    if is_premium:
+                        # Получаем входные данные для обучения ИИ
+                        entry_data = {
+                            'entry_price': self.entry_price,
+                            'volatility': getattr(self, 'entry_volatility', None),
+                            'trend': getattr(self, 'entry_trend', None),
+                            'duration_hours': (self.position_start_time and 
+                                             (datetime.now() - self.position_start_time).total_seconds() / 3600) if self.position_start_time else 0,
+                            'max_profit_achieved': self.max_profit_achieved
+                        }
+                        
+                        # Получаем рыночные данные при выходе
+                        market_data = {
+                            'exit_price': exit_price,
+                            'volatility': None,  # TODO: Получить текущую волатильность
+                            'trend': None,  # TODO: Получить текущий тренд
+                            'price_movement': ((exit_price - self.entry_price) / self.entry_price * 100) if self.entry_price else 0
+                        }
+                except Exception as e:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] Лицензия проверка не удалась: {e}")
+                    entry_data = None
+                    market_data = None
+            
+            # Сохраняем в историю
+            bot_history_manager.log_position_closed(
+                bot_id=self.symbol,
+                symbol=self.symbol,
+                direction=self.position_side,
+                exit_price=exit_price,
+                pnl=pnl,
+                roi=pnl_pct,
+                reason=reason,
+                entry_data=entry_data,
+                market_data=market_data
+            )
+            
+        except Exception as e:
+            logger.debug(f"[NEW_BOT_{self.symbol}] Не удалось сохранить историю: {e}")
     
     def to_dict(self):
         """Преобразует бота в словарь для сохранения"""
