@@ -201,6 +201,11 @@ class RiskConfig:
     # Auto Bot ограничения
     MAX_CONCURRENT_POSITIONS = 10
     MAX_RISK_PERCENT = 20.0
+    
+    # Премиум функции (требуют лицензии)
+    STOP_ANALYSIS_ENABLED = True       # Анализ стопов для обучения ИИ
+    BACKTEST_ENABLED = True            # Бэктестинг перед входом
+    SMART_RISK_MANAGEMENT = True       # Умный риск-менеджмент с бэктестом
 
 # Настройки фильтров
 class FilterConfig:
