@@ -1,5 +1,9 @@
 {
   "delisted_coins": {},
+<<<<<<< HEAD
   "last_scan": "2025-10-27T05:50:48.908386",
+=======
+  "last_scan": "2025-10-27T05:49:38.434980",
+>>>>>>> 35a0eb7d85c90f27680c1a5cd18981b43830b3ff
   "scan_enabled": true
 }
