@@ -764,8 +764,12 @@ class NewTradingBot:
                                 )
                                 
                                 logger.info(f"[NEW_BOT_{self.symbol}] 🤖 Бэктест завершен: SL={backtest_result.get('optimal_sl_percent')}%, TP={backtest_result.get('optimal_tp_percent')}%, confidence={backtest_result.get('confidence', 0):.1%}")
+                                
+                                # Сохраняем для обратной связи
+                                self._last_backtest_result = backtest_result
                 except Exception as ai_error:
                     logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Premium бэктест недоступен: {ai_error}")
+                    self._last_backtest_result = None
                 
                 # ШАГ 3: Рассчитываем Stop Loss
                 stop_loss_price = None
@@ -784,32 +788,32 @@ class NewTradingBot:
                             if AI_RISK_MANAGER_AVAILABLE and DynamicRiskManager:
                                 # Получаем свечи для AI анализа
                                 chart_response = self.exchange.get_chart_data(self.symbol, '6h', limit=50)
-                            candles_for_ai = []
-                            
-                            if chart_response and chart_response.get('success'):
-                                candles_data = chart_response.get('data', {}).get('candles', [])
-                                if candles_data and len(candles_data) >= 20:
-                                    # Конвертируем свечи в формат для AI
-                                    for c in candles_data[-30:]:  # Последние 30 свечей
-                                        candles_for_ai.append({
-                                            'open': float(c.get('open', 0)),
-                                            'high': float(c.get('high', 0)),
-                                            'low': float(c.get('low', 0)),
-                                            'close': float(c.get('close', 0)),
-                                            'volume': float(c.get('volume', 0))
-                                        })
-                                    
-                                    # Используем AI Risk Manager
-                                    risk_manager = DynamicRiskManager()
-                                    ai_sl_result = risk_manager.calculate_dynamic_sl(
-                                        self.symbol, candles_for_ai, side
-                                    )
-                                    
-                                    # Берем AI адаптированный SL
-                                    sl_percent_from_config = ai_sl_result['sl_percent']
-                                    logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI адаптировал SL: {max_loss_percent}% → {sl_percent_from_config}% ({ai_sl_result['reason']})")
-                    except Exception as ai_error:
-                        logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ AI SL недоступен: {ai_error}, используем базовый расчет")
+                                candles_for_ai = []
+                                
+                                if chart_response and chart_response.get('success'):
+                                    candles_data = chart_response.get('data', {}).get('candles', [])
+                                    if candles_data and len(candles_data) >= 20:
+                                        # Конвертируем свечи в формат для AI
+                                        for c in candles_data[-30:]:  # Последние 30 свечей
+                                            candles_for_ai.append({
+                                                'open': float(c.get('open', 0)),
+                                                'high': float(c.get('high', 0)),
+                                                'low': float(c.get('low', 0)),
+                                                'close': float(c.get('close', 0)),
+                                                'volume': float(c.get('volume', 0))
+                                            })
+                                        
+                                        # Используем AI Risk Manager
+                                        risk_manager = DynamicRiskManager()
+                                        ai_sl_result = risk_manager.calculate_dynamic_sl(
+                                            self.symbol, candles_for_ai, side
+                                        )
+                                        
+                                        # Берем AI адаптированный SL
+                                        sl_percent_from_config = ai_sl_result['sl_percent']
+                                        logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI адаптировал SL: {max_loss_percent}% → {sl_percent_from_config}% ({ai_sl_result['reason']})")
+                        except Exception as ai_error:
+                            logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ AI SL недоступен: {ai_error}, используем базовый расчет")
                     
                     # Рассчитываем стоп на основе реальных данных
                     position_value = abs(actual_qty) * actual_entry_price if actual_qty else (self.volume_value)
@@ -839,32 +843,32 @@ class NewTradingBot:
                         if AI_RISK_MANAGER_AVAILABLE and DynamicRiskManager:
                             # Получаем свечи для AI анализа
                             chart_response = self.exchange.get_chart_data(self.symbol, '6h', limit=50)
-                        candles_for_ai = []
-                        
-                        if chart_response and chart_response.get('success'):
-                            candles_data = chart_response.get('data', {}).get('candles', [])
-                            if candles_data and len(candles_data) >= 20:
-                                # Конвертируем свечи в формат для AI
-                                for c in candles_data[-30:]:  # Последние 30 свечей
-                                    candles_for_ai.append({
-                                        'open': float(c.get('open', 0)),
-                                        'high': float(c.get('high', 0)),
-                                        'low': float(c.get('low', 0)),
-                                        'close': float(c.get('close', 0)),
-                                        'volume': float(c.get('volume', 0))
-                                    })
-                                
-                                # Используем AI Risk Manager для TP
-                                risk_manager = DynamicRiskManager()
-                                ai_tp_result = risk_manager.calculate_dynamic_tp(
-                                    self.symbol, candles_for_ai, side
-                                )
-                                
-                                # Берем AI адаптированный TP процент
-                                tp_percent_from_config = ai_tp_result['tp_percent']
-                                logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI адаптировал TP: → {tp_percent_from_config}% ({ai_tp_result['reason']})")
-                except Exception as ai_error:
-                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ AI TP недоступен: {ai_error}, используем базовый расчет")
+                            candles_for_ai = []
+                            
+                            if chart_response and chart_response.get('success'):
+                                candles_data = chart_response.get('data', {}).get('candles', [])
+                                if candles_data and len(candles_data) >= 20:
+                                    # Конвертируем свечи в формат для AI
+                                    for c in candles_data[-30:]:  # Последние 30 свечей
+                                        candles_for_ai.append({
+                                            'open': float(c.get('open', 0)),
+                                            'high': float(c.get('high', 0)),
+                                            'low': float(c.get('low', 0)),
+                                            'close': float(c.get('close', 0)),
+                                            'volume': float(c.get('volume', 0))
+                                        })
+                                    
+                                    # Используем AI Risk Manager для TP
+                                    risk_manager = DynamicRiskManager()
+                                    ai_tp_result = risk_manager.calculate_dynamic_tp(
+                                        self.symbol, candles_for_ai, side
+                                    )
+                                    
+                                    # Берем AI адаптированный TP процент
+                                    tp_percent_from_config = ai_tp_result['tp_percent']
+                                    logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI адаптировал TP: → {tp_percent_from_config}% ({ai_tp_result['reason']})")
+                    except Exception as ai_error:
+                        logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ AI TP недоступен: {ai_error}, используем базовый расчет")
                 
                 # Рассчитываем TP от маржи
                 if tp_percent_from_config:
@@ -924,6 +928,10 @@ class NewTradingBot:
                 
                 # Сохраняем историю закрытия позиции (для обучения ИИ)
                 self._log_position_closed(reason, close_result)
+                
+                # 🎓 Обратная связь для обучения ИИ (если есть backtest_result)
+                if hasattr(self, '_last_backtest_result') and self._last_backtest_result:
+                    self._evaluate_ai_prediction(reason, close_result)
                 
                 self.update_status(BOT_STATUS['IDLE'])
                 return True
@@ -1087,6 +1095,38 @@ class NewTradingBot:
             
         except Exception as e:
             logger.debug(f"[NEW_BOT_{self.symbol}] Не удалось сохранить историю: {e}")
+    
+    def _evaluate_ai_prediction(self, reason, close_result):
+        """Оценивает предсказание ИИ и сохраняет для обучения"""
+        try:
+            from bot_engine.ai.smart_risk_manager import SmartRiskManager
+            from bot_engine.bot_history import bot_history_manager
+            
+            # Получаем данные о реальном результате
+            exit_price = close_result.get('price', self.entry_price) if close_result else self.entry_price
+            pnl = close_result.get('realized_pnl', self.unrealized_pnl) if close_result else self.unrealized_pnl
+            pnl_pct = close_result.get('roi', 0) if close_result else 0
+            
+            actual_outcome = {
+                'entry_price': self.entry_price,
+                'exit_price': exit_price,
+                'pnl': pnl,
+                'roi': pnl_pct,
+                'reason': reason
+            }
+            
+            # Оцениваем предсказание
+            smart_risk = SmartRiskManager()
+            evaluation = smart_risk.evaluate_prediction(
+                self.symbol,
+                self._last_backtest_result,
+                actual_outcome
+            )
+            
+            logger.info(f"[NEW_BOT_{self.symbol}] 🎓 ИИ оценен: score={evaluation.get('score', 0):.2f}")
+            
+        except Exception as e:
+            logger.debug(f"[NEW_BOT_{self.symbol}] Не удалось оценить ИИ: {e}")
     
     def to_dict(self):
         """Преобразует бота в словарь для сохранения"""
