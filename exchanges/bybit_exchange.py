@@ -1227,7 +1227,7 @@ class BybitExchange(BaseExchange):
             }
 
     @with_timeout(15)  # 15 секунд таймаут для размещения ордера
-    def place_order(self, symbol, side, quantity, order_type='market', price=None, take_profit=None):
+    def place_order(self, symbol, side, quantity, order_type='market', price=None, take_profit=None, stop_loss=None, max_loss_percent=None):
         """Размещение ордера для бота
         
         Args:
@@ -1237,6 +1237,8 @@ class BybitExchange(BaseExchange):
             order_type (str): Тип ордера ('market' или 'limit')
             price (float, optional): Цена для лимитного ордера
             take_profit (float, optional): Цена Take Profit
+            stop_loss (float, optional): Цена Stop Loss
+            max_loss_percent (float, optional): Максимальный убыток в % (если не указана цена стоп-лосса)
             
         Returns:
             dict: Результат размещения ордера
@@ -1244,6 +1246,19 @@ class BybitExchange(BaseExchange):
         try:
             print(f"[BYBIT_BOT] Размещение ордера: {symbol} {side} {quantity} USDT ({order_type})")
             
+            # ⚡ ПОЛУЧАЕМ ТЕКУЩУЮ ЦЕНУ для лимитных ордеров
+            current_price = None
+            try:
+                ticker = self.client.get_tickers(category="linear", symbol=f"{symbol}USDT")
+                if ticker.get('retCode') == 0 and ticker.get('result', {}).get('list'):
+                    current_price = float(ticker['result']['list'][0].get('lastPrice', 0))
+                    print(f"[BYBIT_BOT] 📊 Текущая цена {symbol}: {current_price}")
+            except Exception as e:
+                print(f"[BYBIT_BOT] ⚠️ Не удалось получить текущую цену: {e}")
+            
+                         # ⚠️ ПЛЕЧО НЕ УСТАНАВЛИВАЕТСЯ ЧЕРЕЗ API!
+             # Плечо должно быть установлено ВРУЧНУЮ в настройках аккаунта на бирже
+                         
             # Конвертируем side для ботов
             if side.upper() == 'LONG':
                 bybit_side = 'Buy'
@@ -1263,40 +1278,67 @@ class BybitExchange(BaseExchange):
                     'message': f'Неизвестная сторона ордера: {side}'
                 }
             
-            # ⚡ УПРОЩЕНИЕ: Используем marketUnit="quoteCoin" для указания стоимости в USDT напрямую!
-            # Больше не нужно рассчитывать количество монет и округлять - биржа сама всё сделает!
+            # ⚡ Для LINEAR фьючерсов Bybit не поддерживает marketUnit
+            # Поэтому рассчитываем количество в монетах на основе qty_usdt
             qty_usdt = quantity  # quantity это стоимость в USDT
             
-            print(f"[BYBIT_BOT] 💰 {symbol}: Открываем ордер на {qty_usdt:.2f} USDT")
-            print(f"[BYBIT_BOT] 💡 {symbol}: Используем marketUnit='quoteCoin' (биржа сама рассчитает количество монет)")
+            # Проверяем минимум USDT
+            if qty_usdt < 5:
+                qty_usdt = 5
+                print(f"[BYBIT_BOT] ⚠️ Сумма меньше 5 USDT, устанавливаем минимум: {qty_usdt} USDT")
             
-            # Базовые параметры ордера (используем marketUnit для указания стоимости в USDT)
+            print(f"[BYBIT_BOT] 💰 {symbol}: Запрашиваем {qty_usdt:.2f} USDT")
+            
+            # ⚡ ДЛЯ LINEAR - пробуем marketUnit='quoteCoin' для USDT
             order_params = {
                 "category": "linear",
                 "symbol": f"{symbol}USDT",
                 "side": bybit_side,
-                "orderType": order_type.title(),  # Market или Limit
-                "qty": str(qty_usdt),  # Стоимость в USDT
-                "marketUnit": "quoteCoin",  # ⚡ Указываем что qty в USDT, а не в монетах!
+                "orderType": order_type.title(),
+                "qty": str(qty_usdt),  # Количество в USDT (без умножения на плечо!)
                 "positionIdx": position_idx
             }
             
+            # Добавляем marketUnit='quoteCoin' для указания что qty в USDT
+            if order_type.lower() == 'market':
+                order_params["marketUnit"] = "quoteCoin"  # ⚡ Указываем что qty в USDT!
+                print(f"[BYBIT_BOT] 🎯 marketUnit='quoteCoin': qty в USDT")
+            
+            # ⚠️ НЕ добавляем leverage в order_params - Bybit не поддерживает это при размещении ордера!
+            # Плечо должно быть установлено ВРУЧНУЮ в настройках аккаунта на бирже
+            
             # Добавляем цену для лимитных ордеров
             if order_type.lower() == 'limit':
-                if price is None:
+                if price is None and current_price:
                     # Используем текущую цену с небольшим отступом
                     if bybit_side == 'Buy':
                         price = current_price * 0.999  # Покупаем чуть ниже рынка
                     else:
                         price = current_price * 1.001  # Продаем чуть выше рынка
                 
-                order_params["price"] = str(round(price, 2))
-                order_params["timeInForce"] = "GTC"
+                if price:
+                    order_params["price"] = str(round(price, 2))
+                    order_params["timeInForce"] = "GTC"
             
             # 🎯 Добавляем Take Profit если указан
             if take_profit is not None and take_profit > 0:
+                # Bybit API: takeProfit принимает абсолютную цену (НЕ процент!)
                 order_params["takeProfit"] = str(round(take_profit, 6))
-                print(f"[BYBIT_BOT] 🎯 Take Profit установлен: {take_profit:.6f}")
+                print(f"[BYBIT_BOT] 🎯 Take Profit установлен: {take_profit:.6f} (цена)")
+            
+            # 🛑 Добавляем Stop Loss если указан или вычисляем из конфига
+            if stop_loss is None and max_loss_percent and current_price:
+                # Вычисляем стоп-лосс из процента
+                if bybit_side == 'Buy':
+                    stop_loss = current_price * (1 - max_loss_percent / 100)  # Для LONG - ниже цены входа
+                else:
+                    stop_loss = current_price * (1 + max_loss_percent / 100)  # Для SHORT - выше цены входа
+                print(f"[BYBIT_BOT] 🛑 Стоп-лосс вычислен: {stop_loss:.6f} (max_loss_percent={max_loss_percent}%)")
+            
+            if stop_loss is not None and stop_loss > 0:
+                # Bybit API: stopLoss принимает абсолютную цену (НЕ процент!)
+                order_params["stopLoss"] = str(round(stop_loss, 6))
+                print(f"[BYBIT_BOT] 🛑 Stop Loss установлен: {stop_loss:.6f} (цена)")
             
             print(f"[BYBIT_BOT] Параметры ордера: {order_params}")
             
@@ -1305,12 +1347,19 @@ class BybitExchange(BaseExchange):
             print(f"[BYBIT_BOT] Ответ API: {response}")
             
             if response['retCode'] == 0:
+                # Рассчитываем qty_in_coins для возврата
+                # Биржа применит плечо автоматически согласно настройкам аккаунта
+                qty_in_coins = (qty_usdt / current_price) if (current_price) else 0
+                
+                print(f"[BYBIT_BOT] ✅ Расчёт: {qty_usdt} USDT / {current_price} = {qty_in_coins:.6f} монет")
+                
                 return {
                     'success': True,
                     'order_id': response['result']['orderId'],
                     'message': f'{order_type.title()} ордер успешно размещён',
-                    'price': price or current_price,
-                    'quantity': qty
+                    'price': price or current_price or 0,
+                    'quantity': qty_in_coins,  # Возвращаем количество в монетах
+                    'quantity_usdt': qty_usdt  # Возвращаем сумму в USDT из конфига
                 }
             else:
                 return {
@@ -1412,4 +1461,88 @@ class BybitExchange(BaseExchange):
             return {
                 'success': False,
                 'message': f"Ошибка обновления TP: {str(e)}"
+            }
+    
+    @with_timeout(15)  # 15 секунд таймаут для обновления SL
+    def update_stop_loss(self, symbol, stop_loss_price, position_side=None):
+        """
+        Обновляет Stop Loss для существующей позиции (программный трейлинг)
+        
+        Args:
+            symbol (str): Символ торговой пары (например, 'BTC')
+            stop_loss_price (float): Новая цена Stop Loss
+            position_side (str, optional): Направление позиции ('LONG' или 'SHORT')
+            
+        Returns:
+            dict: Результат обновления SL
+        """
+        try:
+            print(f"[BYBIT_BOT] Обновление Stop Loss: {symbol} → {stop_loss_price:.6f} (side: {position_side})")
+            
+            # Определяем positionIdx в зависимости от режима и направления позиции
+            if position_side:
+                position_idx = 1 if position_side.upper() == 'LONG' else 2
+            else:
+                position_idx = 0  # One-way mode fallback
+            
+            # Параметры для обновления SL (используем Trading Stop API)
+            sl_params = {
+                "category": "linear",
+                "symbol": f"{symbol}USDT",
+                "stopLoss": str(round(stop_loss_price, 6)),
+                "positionIdx": position_idx
+            }
+            
+            logger.info(f"[BYBIT_BOT] Параметры SL: {sl_params}")
+            
+            # Обновляем SL через API - используем метод set_trading_stop
+            try:
+                response = self.client.set_trading_stop(**sl_params)
+                print(f"[BYBIT_BOT] Ответ API SL: {response}")
+                
+                if response['retCode'] == 0:
+                    return {
+                        'success': True,
+                        'message': f'Stop Loss обновлен: {stop_loss_price:.6f}',
+                        'stop_loss': stop_loss_price
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'message': f"Ошибка обновления SL: {response['retMsg']}"
+                    }
+            except Exception as e:
+                # Проверяем код ошибки 34040 (not modified) - это нормально, SL уже установлен
+                error_str = str(e)
+                if "34040" in error_str or "not modified" in error_str:
+                    print(f"[BYBIT_BOT] ✅ SL уже установлен на {stop_loss_price:.6f}")
+                    return {
+                        'success': True,
+                        'message': f'Stop Loss уже установлен: {stop_loss_price:.6f}',
+                        'stop_loss': stop_loss_price
+                    }
+                
+                # Для других ошибок - логируем и возвращаем ошибку
+                print(f"[BYBIT_BOT] Ошибка обновления Stop Loss: {e}")
+                import traceback
+                print(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
+                return {
+                    'success': False,
+                    'message': f"Ошибка обновления SL: {error_str}"
+                }
+            except AttributeError:
+                # Если метод set_trading_stop не существует
+                print(f"[BYBIT_BOT] ⚠️ Метод set_trading_stop не найден")
+                return {
+                    'success': False,
+                    'message': f"Метод set_trading_stop не поддерживается"
+                }
+                
+        except Exception as e:
+            print(f"[BYBIT_BOT] Ошибка обновления Stop Loss: {str(e)}")
+            import traceback
+            print(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
+            return {
+                'success': False,
+                'message': f"Ошибка обновления SL: {str(e)}"
             }

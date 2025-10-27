@@ -9,32 +9,22 @@
     },
     "auto_bot_worker": {
       "active": false,
-<<<<<<< HEAD
-      "last_check": "2025-10-27T01:28:12.413139",
-      "check_count": 4,
-=======
-      "last_check": "2025-10-27T00:46:11.648941",
-      "check_count": 12,
->>>>>>> cd849a23a693247c714abd1c38109c0b5c805b16
+      "last_check": "2025-10-27T03:32:22.419888",
+      "check_count": 15,
       "last_error": null,
-      "enabled": true,
+      "enabled": false,
       "interval_seconds": 180
     },
     "auto_save_worker": {
       "active": false,
-      "last_save": null,
-      "save_count": 0,
+      "last_save": "2025-10-27T03:32:16.603310",
+      "save_count": 82,
       "last_error": null
     },
     "exchange_connection": {
       "initialized": true,
-<<<<<<< HEAD
-      "last_sync": "2025-10-27T01:26:53.467233",
-      "connection_count": 7,
-=======
-      "last_sync": "2025-10-27T00:22:03.434169",
-      "connection_count": 6,
->>>>>>> cd849a23a693247c714abd1c38109c0b5c805b16
+      "last_sync": "2025-10-27T03:10:15.610245",
+      "connection_count": 18,
       "last_error": null
     },
     "auto_bot_signals": {
@@ -44,10 +34,6 @@
       "last_error": null
     }
   },
-<<<<<<< HEAD
-  "last_saved": "2025-10-27T01:28:12.413149",
-=======
-  "last_saved": "2025-10-27T00:46:11.648953",
->>>>>>> cd849a23a693247c714abd1c38109c0b5c805b16
+  "last_saved": "2025-10-27T03:32:22.419895",
   "version": "1.0"
 }

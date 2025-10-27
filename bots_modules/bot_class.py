@@ -17,7 +17,7 @@ logger = logging.getLogger('BotsService')
 try:
     from bots_modules.imports_and_globals import (
         bots_data_lock, bots_data, rsi_data_lock, coins_rsi_data,
-        BOT_STATUS, get_exchange, system_initialized
+        BOT_STATUS, get_exchange, system_initialized, get_auto_bot_config
     )
 except ImportError:
     # Fallback если импорт не удался
@@ -394,6 +394,14 @@ class NewTradingBot:
             # 3. Обновляем защитные механизмы
             self._update_protection_mechanisms(price)
             
+            # 4. Обновляем трейлинг Take Profit (если сервер работает)
+            try:
+                tp_updated = self.update_trailing_take_profit(price, rsi)
+                if tp_updated:
+                    logger.info(f"[NEW_BOT_{self.symbol}] ✅ Трейлинг TP обновлен (цена: {price:.6f}, RSI: {rsi:.1f})")
+            except Exception as tp_error:
+                logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка обновления трейлинг TP: {tp_error}")
+            
             logger.debug(f"[NEW_BOT_{self.symbol}] 📊 В позиции {self.position_side} (RSI: {rsi:.1f}, Цена: {price})")
             return {'success': True, 'status': self.status, 'position_side': self.position_side}
             
@@ -478,13 +486,95 @@ class NewTradingBot:
             else:  # SHORT
                 profit_percent = ((self.entry_price - current_price) / self.entry_price) * 100
             
-            # Обновляем максимальную прибыль
+                        # Обновляем максимальную прибыль
             if profit_percent > self.max_profit_achieved:
                 self.max_profit_achieved = profit_percent
                 logger.debug(f"[NEW_BOT_{self.symbol}] 📈 Обновлена максимальная прибыль: {profit_percent:.2f}%")
+                
+                # Обновляем стоп-лосс на бирже (программный трейлинг)
+                self._update_stop_loss_on_exchange(current_price, profit_percent)
             
         except Exception as e:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка обновления защитных механизмов: {e}")
+    
+    def _update_stop_loss_on_exchange(self, current_price, profit_percent):
+        """
+        Обновляет стоп-лосс на бирже для программного трейлинга
+        
+        Args:
+            current_price (float): Текущая цена
+            profit_percent (float): Текущая прибыль в %
+        """
+        try:
+            # Получаем настройки из конфига
+            with bots_data_lock:
+                auto_config = bots_data.get('auto_bot_config', {})
+                stop_loss_percent = auto_config.get('stop_loss_percent', 15.0)
+                trailing_activation_percent = auto_config.get('trailing_activation_percent', 300.0)
+                trailing_distance_percent = auto_config.get('trailing_distance_percent', 150.0)
+            
+            # Программный trailing stop активируется при достижении trailing_activation_percent
+            if profit_percent < trailing_activation_percent:
+                return  # Еще рано активировать трейлинг
+            
+            # Рассчитываем новую цену стоп-лосса
+            if self.position_side == 'LONG':
+                # Для LONG: стоп ниже максимальной цены
+                max_price = self.entry_price * (1 + self.max_profit_achieved / 100)
+                new_stop_loss = max_price * (1 - trailing_distance_percent / 100)
+                
+                # Проверяем, что новый стоп выше текущего
+                current_stop = self.entry_price * (1 - stop_loss_percent / 100)
+                if new_stop_loss <= current_stop:
+                    return  # Не обновляем, если новый стоп ниже базового
+            else:  # SHORT
+                # Для SHORT: стоп выше минимальной цены
+                min_price = self.entry_price * (1 - self.max_profit_achieved / 100)
+                new_stop_loss = min_price * (1 + trailing_distance_percent / 100)
+                
+                # Проверяем, что новый стоп ниже текущего
+                current_stop = self.entry_price * (1 + stop_loss_percent / 100)
+                if new_stop_loss >= current_stop:
+                    return  # Не обновляем, если новый стоп выше базового
+            
+            # Устанавливаем биржевой трейлинг-стоп (страховка) через API только при первой активации
+            if not hasattr(self, '_trailing_stop_activated'):
+                self._trailing_stop_activated = False
+            
+            if not self._trailing_stop_activated:
+                try:
+                    from bots_modules.imports_and_globals import get_exchange
+                    current_exchange = get_exchange()
+                    if current_exchange:
+                        # Устанавливаем trailingStop через Bybit API (один раз)
+                        trailing_result = current_exchange.client.set_trading_stop(
+                            category="linear",
+                            symbol=f"{self.symbol}USDT",
+                            positionIdx=1 if self.position_side == 'LONG' else 2,
+                            trailingStop=str(trailing_distance_percent / 100)  # Конвертируем в десятичную дробь
+                        )
+                        
+                        if trailing_result and trailing_result.get('retCode') == 0:
+                            logger.info(f"[NEW_BOT_{self.symbol}] ✅ Биржевой trailing stop АКТИВИРОВАН: {trailing_distance_percent}%")
+                            self._trailing_stop_activated = True
+                        else:
+                            logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка установки биржевого trailing stop: {trailing_result.get('retMsg') if trailing_result else 'Unknown'}")
+                except Exception as e:
+                    logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка API биржевого trailing stop: {e}")
+            
+            # Обновляем стоп-лосс на бирже (программный трейлинг)
+            if self.exchange:
+                try:
+                    result = self.exchange.update_stop_loss(self.symbol, new_stop_loss, self.position_side)
+                    if result and result.get('success'):
+                        logger.info(f"[NEW_BOT_{self.symbol}] 📈 Программный trailing stop обновлен: {new_stop_loss:.6f} (прибыль: {profit_percent:.2f}%)")
+                    else:
+                        logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось обновить программный trailing stop: {result.get('message', 'Unknown error') if result else 'No response'}")
+                except Exception as e:
+                    logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка обновления программного trailing stop: {e}")
+            
+        except Exception as e:
+            logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка расчета программного trailing stop: {e}")
     
     def _sync_position_with_exchange(self):
         """Синхронизирует данные бота с позицией на бирже"""
@@ -586,14 +676,19 @@ class NewTradingBot:
                 import traceback
                 traceback.print_exc()
             
-            logger.info(f"[NEW_BOT_{self.symbol}] 🚀 ОТПРАВЛЯЕМ ОРДЕР: symbol={self.symbol}, side={side}, quantity={qty_in_coins}, take_profit={take_profit_price}")
+            # Получаем max_loss_percent из конфига Auto Bot для стоп-лосса
+            auto_bot_config = get_auto_bot_config()
+            max_loss_percent = auto_bot_config.get('max_loss_percent', 15.0)
+            
+            logger.info(f"[NEW_BOT_{self.symbol}] 🚀 ОТПРАВЛЯЕМ ОРДЕР: symbol={self.symbol}, side={side}, quantity={self.volume_value} USDT, take_profit={take_profit_price}, max_loss_percent={max_loss_percent}%")
             
             order_result = self.exchange.place_order(
                 symbol=self.symbol,
                 side=side,
-                quantity=qty_in_coins,  # Количество в монетах
+                quantity=self.volume_value,  # ⚡ Количество в USDT (не в монетах!)
                 order_type='market',
-                take_profit=take_profit_price  # ✅ Передаем TP
+                take_profit=take_profit_price,  # ✅ Передаем TP
+                max_loss_percent=max_loss_percent  # 🛑 Передаем max_loss_percent для автоматического расчета стоп-лосса
             )
             
             if order_result and order_result.get('success'):

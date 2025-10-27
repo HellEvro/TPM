@@ -21,6 +21,7 @@
   "max_position_hours": 0,
   "break_even_protection": true,
   "break_even_trigger": 100,
+  "trend_detection_enabled": true,
   "avoid_down_trend": true,
   "avoid_up_trend": true,
   "enable_maturity_check": true,

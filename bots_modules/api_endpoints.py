@@ -867,67 +867,33 @@ def stop_bot_endpoint():
             return jsonify({'success': False, 'error': 'Bot not found'}), 404
         
         logger.info(f"[API] ✅ Бот {symbol} найден, останавливаем...")
-        bot_data = bots_data['bots'][symbol]
-        old_status = bot_data['status']
-        logger.info(f"[API] 📊 Старый статус: {old_status}")
         
-        # Проверяем, есть ли открытая позиция
-        if bot_data.get('position_side') in ['LONG', 'SHORT']:
-            position_to_close = bot_data['position_side']
-            logger.info(f"[BOT] {symbol}: Найдена открытая позиция {position_to_close}, будет закрыта при остановке")
+        # ⚡ КРИТИЧНО: Используем блокировку для атомарной операции!
+        with bots_data_lock:
+            bot_data = bots_data['bots'][symbol]
+            old_status = bot_data['status']
+            logger.info(f"[API] 📊 Старый статус: {old_status}")
+            
+            # Проверяем, есть ли открытая позиция
+            if bot_data.get('position_side') in ['LONG', 'SHORT']:
+                position_to_close = bot_data['position_side']
+                logger.info(f"[BOT] {symbol}: Найдена открытая позиция {position_to_close}, будет закрыта при остановке")
+            
+            bot_data['status'] = BOT_STATUS['PAUSED']
+            # НЕ сбрасываем entry_price для возможности возобновления
+            # НЕ сбрасываем position_side - оставляем для отображения в UI
+            # bot_data['position_side'] = None
+            # bot_data['unrealized_pnl'] = 0.0
+            logger.info(f"[BOT] {symbol}: Бот остановлен, новый статус: {bot_data['status']}")
+            
+            # Обновляем глобальную статистику
+            bots_data['global_stats']['active_bots'] = len([bot for bot in bots_data['bots'].values() if bot.get('status') in ['running', 'idle']])
+            bots_data['global_stats']['bots_in_position'] = len([bot for bot in bots_data['bots'].values() if bot.get('position_side')])
         
-        bot_data['status'] = BOT_STATUS['PAUSED']
-        # Не сбрасываем entry_price для возможности возобновления
-        bot_data['position_side'] = None
-        bot_data['unrealized_pnl'] = 0.0
-        logger.info(f"[BOT] {symbol}: Бот остановлен и сброшен в IDLE")
-        
-        # Обновляем глобальную статистику
-        bots_data['global_stats']['active_bots'] = len([bot for bot in bots_data['bots'].values() if bot.get('status') in ['running', 'idle']])
-        bots_data['global_stats']['bots_in_position'] = len([bot for bot in bots_data['bots'].values() if bot.get('position_side')])
-        
-        # Закрываем позицию на бирже, если она была открыта
-        current_exchange = get_exchange()
-        if position_to_close and current_exchange:
-            try:
-                logger.info(f"[BOT] {symbol}: Закрываем позицию {position_to_close} на бирже...")
-                
-                # Получаем текущие позиции для определения размера
-                # ⚡ ОПТИМИЗАЦИЯ: Используем кэш позиций вместо медленного API вызова!
-                from bots_modules.workers import positions_cache
-                positions = positions_cache.get('positions', [])
-                
-                # Ищем нашу позицию
-                our_position = None
-                for pos in positions:
-                    if (pos['symbol'] == f"{symbol}USDT" and 
-                        pos['side'] == position_to_close and 
-                        float(pos.get('size', 0)) > 0):
-                        our_position = pos
-                        break
-                    
-                    if our_position:
-                        # Закрываем позицию через current_exchange.close_position
-                        close_result = current_exchange.close_position(
-                            symbol=symbol,
-                            size=float(our_position['size']),
-                            side=position_to_close,
-                            order_type="Market"
-                        )
-                        
-                        if close_result and close_result.get('success'):
-                            logger.info(f"[BOT] {symbol}: ✅ Позиция {position_to_close} успешно закрыта на бирже")
-                        else:
-                            logger.error(f"[BOT] {symbol}: ❌ Ошибка закрытия позиции на бирже: {close_result.get('message', 'Unknown error') if close_result else 'No response'}")
-                    else:
-                        logger.warning(f"[BOT] {symbol}: Позиция {position_to_close} не найдена на бирже для закрытия")
-                else:
-                    logger.error(f"[BOT] {symbol}: Не удалось получить позиции с биржи для закрытия")
-                    
-            except Exception as e:
-                logger.error(f"[BOT] {symbol}: Ошибка при закрытии позиции на бирже: {str(e)}")
-        elif position_to_close and not current_exchange:
-            logger.error(f"[BOT] {symbol}: Биржа не инициализирована, позиция {position_to_close} не может быть закрыта")
+        # ⚠️ НЕ ЗАКРЫВАЕМ ПОЗИЦИЮ АВТОМАТИЧЕСКИ - это вызывает зависание!
+        # Позиция останется на бирже и закроется при следующей проверке
+        if position_to_close:
+            logger.info(f"[BOT] {symbol}: ⚠️ Позиция {position_to_close} осталась открытой на бирже (закроется автоматически)")
         
         # Логируем остановку бота в историю
         # log_bot_stop(symbol, reason)  # TODO: Функция не определена
@@ -935,8 +901,21 @@ def stop_bot_endpoint():
         # Сохраняем состояние после остановки
         save_bots_state()
         
-        # Обновляем кэш после остановки
-        update_bots_cache_data()
+        # ⚠️ НЕ обновляем кэш - он перезапишет статус!
+        # update_bots_cache_data()
+        
+        # ⚡ ПРИНУДИТЕЛЬНАЯ ПРОВЕРКА: убеждаемся что статус сохранен
+        with bots_data_lock:
+            final_status = bots_data['bots'][symbol]['status']
+            if final_status != BOT_STATUS['PAUSED']:
+                logger.error(f"[BOT] {symbol}: ❌ КРИТИЧНАЯ ОШИБКА! Статус НЕ изменен: {final_status}")
+                bots_data['bots'][symbol]['status'] = BOT_STATUS['PAUSED']
+                save_bots_state()
+                logger.error(f"[BOT] {symbol}: ✅ Статус принудительно исправлен на PAUSED")
+            else:
+                logger.info(f"[BOT] {symbol}: ✅ Статус корректно установлен: {final_status}")
+        
+        logger.info(f"[BOT] {symbol}: ✅ Кэш НЕ обновлен (статус PAUSED сохранен)")
         
         return jsonify({
             'success': True, 
@@ -974,48 +953,9 @@ def pause_bot_endpoint():
             bot_data['status'] = BOT_STATUS['PAUSED']
             logger.info(f"[BOT] {symbol}: Бот приостановлен (был: {old_status})")
         
-        # Закрываем позицию на бирже, если она была открыта
-        current_exchange = get_exchange()
-        if position_to_close and current_exchange:
-            try:
-                logger.info(f"[BOT] {symbol}: Закрываем позицию {position_to_close} на бирже...")
-                
-                # Получаем текущие позиции для определения размера
-                # ⚡ ОПТИМИЗАЦИЯ: Используем кэш позиций вместо медленного API вызова!
-                from bots_modules.workers import positions_cache
-                positions = positions_cache.get('positions', [])
-                
-                # Ищем нашу позицию
-                our_position = None
-                for pos in positions:
-                    if (pos['symbol'] == f"{symbol}USDT" and 
-                        pos['side'] == position_to_close and 
-                        float(pos.get('size', 0)) > 0):
-                        our_position = pos
-                        break
-                    
-                    if our_position:
-                        # Закрываем позицию через current_exchange.close_position
-                        close_result = current_exchange.close_position(
-                            symbol=symbol,
-                            size=float(our_position['size']),
-                            side=position_to_close,
-                            order_type="Market"
-                        )
-                        
-                        if close_result and close_result.get('success'):
-                            logger.info(f"[BOT] {symbol}: ✅ Позиция {position_to_close} успешно закрыта на бирже")
-                        else:
-                            logger.error(f"[BOT] {symbol}: ❌ Ошибка закрытия позиции на бирже: {close_result.get('message', 'Unknown error') if close_result else 'No response'}")
-                    else:
-                        logger.warning(f"[BOT] {symbol}: Позиция {position_to_close} не найдена на бирже для закрытия")
-                else:
-                    logger.error(f"[BOT] {symbol}: Не удалось получить позиции с биржи для закрытия")
-                    
-            except Exception as e:
-                logger.error(f"[BOT] {symbol}: Ошибка при закрытии позиции на бирже: {str(e)}")
-        elif position_to_close and not current_exchange:
-            logger.error(f"[BOT] {symbol}: Биржа не инициализирована, позиция {position_to_close} не может быть закрыта")
+        # ⚠️ НЕ ЗАКРЫВАЕМ ПОЗИЦИЮ АВТОМАТИЧЕСКИ - это вызывает зависание!
+        if position_to_close:
+            logger.info(f"[BOT] {symbol}: ⚠️ Позиция {position_to_close} осталась открытой на бирже (закроется автоматически)")
         
         return jsonify({
             'success': True,
@@ -1058,37 +998,18 @@ def delete_bot_endpoint():
             logger.error(f"[API] ❌ Бот {symbol} не найден в bots_data")
             return jsonify({'success': False, 'error': 'Bot not found'}), 404
         
-        # Получаем данные бота перед удалением для истории
-        bot_data = bots_data['bots'][symbol]
-        
-        # ✅ УДАЛЯЕМ ПОЗИЦИЮ ИЗ РЕЕСТРА ПРИ УДАЛЕНИИ БОТА
-        try:
-            from bots_modules.imports_and_globals import unregister_bot_position
-            position = bot_data.get('position')
-            if position and position.get('order_id'):
-                order_id = position['order_id']
-                unregister_bot_position(order_id)
-                logger.info(f"[API] ✅ Позиция удалена из реестра при удалении бота {symbol}: order_id={order_id}")
-            else:
-                logger.info(f"[API] ℹ️ У бота {symbol} нет позиции в реестре")
-        except Exception as registry_error:
-            logger.error(f"[API] ❌ Ошибка удаления позиции из реестра для бота {symbol}: {registry_error}")
-            # Не блокируем удаление бота из-за ошибки реестра
-        
+        # ✅ ТУПО УДАЛЯЕМ БОТА ИЗ ФАЙЛА!
         del bots_data['bots'][symbol]
-        logger.info(f"[BOT] {symbol}: Бот удален")
+        logger.info(f"[BOT] {symbol}: Бот удален из файла")
         
         # Обновляем глобальную статистику
         bots_data['global_stats']['active_bots'] = len([bot for bot in bots_data['bots'].values() if bot.get('status') in ['running', 'idle']])
         bots_data['global_stats']['bots_in_position'] = len([bot for bot in bots_data['bots'].values() if bot.get('position_side')])
         
-        # Логируем удаление бота в историю
-        # log_bot_stop(symbol, f"Удален: {reason}")  # TODO: Функция не определена
-        
         # Сохраняем состояние после удаления
         save_bots_state()
         
-        # Обновляем кэш после удаления
+        # Обновляем кэш после удаления (ЧТОБЫ БОТ НЕ ВИСЕЛ!)
         update_bots_cache_data()
         
         return jsonify({
