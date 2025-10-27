@@ -729,16 +729,61 @@ class NewTradingBot:
                 if not actual_leverage:
                     actual_leverage = 10.0  # Дефолт
                 
-                # ШАГ 3: Рассчитываем Stop Loss с учетом реального плеча
+                # 🔄 ШАГ 2.5: PREMIUM - Бэктest перед расчетом SL/TP
+                backtest_result = None
+                try:
+                    from bot_engine.ai import check_premium_license
+                    is_premium = check_premium_license()
+                    
+                    if is_premium:
+                        from bot_engine.ai.smart_risk_manager import SmartRiskManager
+                        smart_risk = SmartRiskManager()
+                        
+                        # Получаем свечи для бэктеста
+                        chart_response = self.exchange.get_chart_data(self.symbol, '6h', limit=50)
+                        candles_for_backtest = []
+                        
+                        if chart_response and chart_response.get('success'):
+                            candles_data = chart_response.get('data', {}).get('candles', [])
+                            if candles_data and len(candles_data) >= 20:
+                                for c in candles_data:
+                                    candles_for_backtest.append({
+                                        'open': float(c.get('open', 0)),
+                                        'high': float(c.get('high', 0)),
+                                        'low': float(c.get('low', 0)),
+                                        'close': float(c.get('close', 0)),
+                                        'volume': float(c.get('volume', 0))
+                                    })
+                                
+                                # Запускаем бэктест
+                                backtest_result = smart_risk.backtest_coin(
+                                    self.symbol, 
+                                    candles_for_backtest, 
+                                    side,
+                                    actual_entry_price
+                                )
+                                
+                                logger.info(f"[NEW_BOT_{self.symbol}] 🤖 Бэктест завершен: SL={backtest_result.get('optimal_sl_percent')}%, TP={backtest_result.get('optimal_tp_percent')}%, confidence={backtest_result.get('confidence', 0):.1%}")
+                except Exception as ai_error:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Premium бэктест недоступен: {ai_error}")
+                
+                # ШАГ 3: Рассчитываем Stop Loss
                 stop_loss_price = None
                 sl_percent_from_config = max_loss_percent
                 
+                # 🤖 Если есть результат бэктеста - используем его значения
+                if backtest_result and backtest_result.get('confidence', 0) > 0.7:
+                    optimal_sl_pct = backtest_result.get('optimal_sl_percent', max_loss_percent)
+                    sl_percent_from_config = optimal_sl_pct
+                    logger.info(f"[NEW_BOT_{self.symbol}] 🤖 Используем SL из бэктеста: {optimal_sl_pct}%")
+                
                 if max_loss_percent:
-                    # 🤖 Пытаемся использовать AI для адаптивного SL
-                    try:
-                        if AI_RISK_MANAGER_AVAILABLE and DynamicRiskManager:
-                            # Получаем свечи для AI анализа
-                            chart_response = self.exchange.get_chart_data(self.symbol, '6h', limit=50)
+                    # 🤖 Пытаемся использовать AI для адаптивного SL (если бэктест не дал результат)
+                    if not backtest_result:
+                        try:
+                            if AI_RISK_MANAGER_AVAILABLE and DynamicRiskManager:
+                                # Получаем свечи для AI анализа
+                                chart_response = self.exchange.get_chart_data(self.symbol, '6h', limit=50)
                             candles_for_ai = []
                             
                             if chart_response and chart_response.get('success'):
@@ -783,11 +828,17 @@ class NewTradingBot:
                 take_profit_price = None
                 tp_percent_from_config = None
                 
-                # 🤖 Пытаемся использовать AI для расчета TP
-                try:
-                    if AI_RISK_MANAGER_AVAILABLE and DynamicRiskManager:
-                        # Получаем свечи для AI анализа
-                        chart_response = self.exchange.get_chart_data(self.symbol, '6h', limit=50)
+                # 🤖 Если есть результат бэктеста - используем его значения для TP
+                if backtest_result and backtest_result.get('confidence', 0) > 0.7:
+                    optimal_tp_pct = backtest_result.get('optimal_tp_percent', 100.0)
+                    tp_percent_from_config = optimal_tp_pct
+                    logger.info(f"[NEW_BOT_{self.symbol}] 🤖 Используем TP из бэктеста: {optimal_tp_pct}%")
+                else:
+                    # 🤖 Пытаемся использовать AI для расчета TP (если бэктест не дал результат)
+                    try:
+                        if AI_RISK_MANAGER_AVAILABLE and DynamicRiskManager:
+                            # Получаем свечи для AI анализа
+                            chart_response = self.exchange.get_chart_data(self.symbol, '6h', limit=50)
                         candles_for_ai = []
                         
                         if chart_response and chart_response.get('success'):
