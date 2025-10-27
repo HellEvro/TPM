@@ -31,6 +31,9 @@ AI_CONFIG_NAMES = {
     'risk_management_enabled': 'Умное управление рисками',
     'risk_update_interval': 'Интервал обновления рисков (сек)',
     
+    # Optimal Entry Detection
+    'optimal_entry_enabled': 'Определение оптимальной точки входа',
+    
     # Auto Training
     'auto_train_enabled': 'Автоматическое обучение',
     'auto_update_data': 'Обновление данных',
@@ -66,7 +69,7 @@ def register_ai_endpoints(app):
         try:
             from bot_engine.ai.ai_manager import get_ai_manager
             from bot_engine.ai.auto_trainer import get_auto_trainer
-            from bot_engine.bot_config import AIConfig
+            from bot_engine.bot_config import AIConfig, RiskConfig
             
             ai_manager = get_ai_manager()
             auto_trainer = get_auto_trainer()
@@ -117,7 +120,7 @@ def register_ai_endpoints(app):
     def get_ai_config():
         """Получить конфигурацию AI"""
         try:
-            from bot_engine.bot_config import AIConfig
+            from bot_engine.bot_config import AIConfig, RiskConfig
             from bot_engine.ai.ai_manager import get_ai_manager
             
             ai_manager = get_ai_manager()
@@ -148,7 +151,7 @@ def register_ai_endpoints(app):
                     'risk_update_interval': AIConfig.AI_RISK_UPDATE_INTERVAL,
                     
                     # Optimal Entry Detection
-                    'optimal_entry_enabled': getattr(AIConfig, 'AI_OPTIMAL_ENTRY_ENABLED', False),
+                    'optimal_entry_enabled': RiskConfig.AI_OPTIMAL_ENTRY_ENABLED,
                     
                     # LSTM Predictor
                     'lstm_enabled': AIConfig.AI_LSTM_ENABLED,
@@ -223,7 +226,7 @@ def register_ai_endpoints(app):
             logger.info(f"[AI_CONFIG] Получены данные: {data}")
             
             # Получаем текущие значения для сравнения
-            from bot_engine.bot_config import AIConfig
+            from bot_engine.bot_config import AIConfig, RiskConfig
             old_config = {
                 'ai_enabled': AIConfig.AI_ENABLED,
                 'ai_confidence_threshold': AIConfig.AI_CONFIDENCE_THRESHOLD,
@@ -237,7 +240,7 @@ def register_ai_endpoints(app):
                 'pattern_weight': AIConfig.AI_PATTERN_WEIGHT,
                 'risk_management_enabled': AIConfig.AI_RISK_MANAGEMENT_ENABLED,
                 'risk_update_interval': AIConfig.AI_RISK_UPDATE_INTERVAL,
-                'optimal_entry_enabled': getattr(AIConfig, 'AI_OPTIMAL_ENTRY_ENABLED', False),
+                'optimal_entry_enabled': RiskConfig.AI_OPTIMAL_ENTRY_ENABLED,
                 'auto_train_enabled': AIConfig.AI_AUTO_TRAIN_ENABLED,
                 'auto_update_data': AIConfig.AI_AUTO_UPDATE_DATA,
                 'auto_retrain': AIConfig.AI_AUTO_RETRAIN,
@@ -255,8 +258,9 @@ def register_ai_endpoints(app):
             with open(config_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
             
-            # Находим блок AIConfig и обновляем значения
+            # Находим блок AIConfig и RiskConfig и обновляем значения
             in_ai_config = False
+            in_risk_config = False
             updated_lines = []
             changes_count = 0
             
@@ -264,8 +268,13 @@ def register_ai_endpoints(app):
                 # Определяем начало и конец AIConfig
                 if 'class AIConfig:' in line:
                     in_ai_config = True
-                elif in_ai_config and line.strip() and not line.startswith(' ') and not line.startswith('\t'):
+                    in_risk_config = False
+                elif 'class RiskConfig:' in line:
                     in_ai_config = False
+                    in_risk_config = True
+                elif (in_ai_config or in_risk_config) and line.strip() and not line.startswith(' ') and not line.startswith('\t'):
+                    in_ai_config = False
+                    in_risk_config = False
                 
                 # Обновляем значения в AIConfig
                 if in_ai_config:
@@ -294,10 +303,6 @@ def register_ai_endpoints(app):
                         if log_ai_config_change('risk_management_enabled', old_config['risk_management_enabled'], data['risk_management_enabled']):
                             changes_count += 1
                         line = f"    AI_RISK_MANAGEMENT_ENABLED = {data['risk_management_enabled']}\n"
-                    elif 'AI_OPTIMAL_ENTRY_ENABLED =' in line and 'optimal_entry_enabled' in data:
-                        if log_ai_config_change('optimal_entry_enabled', old_config['optimal_entry_enabled'], data['optimal_entry_enabled']):
-                            changes_count += 1
-                        line = f"    AI_OPTIMAL_ENTRY_ENABLED = {data['optimal_entry_enabled']}\n"
                     elif 'AI_RISK_UPDATE_INTERVAL =' in line and 'risk_update_interval' in data:
                         if log_ai_config_change('risk_update_interval', old_config['risk_update_interval'], data['risk_update_interval']):
                             changes_count += 1
@@ -377,6 +382,14 @@ def register_ai_endpoints(app):
                         if log_ai_config_change('log_patterns', old_value, data['log_patterns']):
                             changes_count += 1
                         line = f"    AI_LOG_PATTERNS = {data['log_patterns']}\n"
+                
+                # Обновляем значения в RiskConfig
+                if in_risk_config and 'AI_OPTIMAL_ENTRY_ENABLED =' in line and 'optimal_entry_enabled' in data:
+                    logger.debug(f"[AI_CONFIG] 📝 Найдена строка AI_OPTIMAL_ENTRY_ENABLED, старое: {old_config['optimal_entry_enabled']}, новое: {data['optimal_entry_enabled']}")
+                    if log_ai_config_change('optimal_entry_enabled', old_config['optimal_entry_enabled'], data['optimal_entry_enabled']):
+                        changes_count += 1
+                    line = f"    AI_OPTIMAL_ENTRY_ENABLED = {data['optimal_entry_enabled']}\n"
+                    logger.debug(f"[AI_CONFIG] ✅ Заменена строка на: {line.strip()}")
                 
                 updated_lines.append(line)
             

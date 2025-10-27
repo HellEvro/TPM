@@ -11,28 +11,33 @@
       "entry_time": null,
       "last_signal_time": null,
       "last_bar_timestamp": null,
-      "created_at": "2025-10-28T02:10:53.273265",
+      "created_at": "2025-10-28T02:39:44.878940",
       "scaling_enabled": false,
       "scaling_levels": [],
       "scaling_current_level": 0,
       "scaling_group_id": null,
+      "unrealized_pnl": 0.15082,
+      "position_side": "LONG",
+      "stop_loss": "14.1711",
+      "take_profit": "15.8257",
+      "current_price": "14.4155",
       "rsi_data": {
         "symbol": "OG",
-        "rsi6h": 27.4,
+        "rsi6h": 28.0,
         "trend6h": "NEUTRAL",
         "rsi_zone": "BUY_ZONE",
         "signal": "ENTER_LONG",
-        "price": 14.371,
-        "change24h": 2.36,
-        "last_update": "2025-10-28T02:13:39.617740",
+        "price": 14.4013,
+        "change24h": 2.58,
+        "last_update": "2025-10-28T02:50:46.021032",
         "trend_analysis": {
           "trend": "NEUTRAL",
-          "ema_short": 16.531055396994933,
-          "ema_long": 15.992768152082984,
+          "ema_short": 16.53227500483807,
+          "ema_long": 15.993077604819304,
           "ema_short_period": 50,
           "ema_long_period": 200,
-          "ema_long_slope": -0.0161906346943006,
-          "current_close": 14.3818,
+          "ema_long_slope": -0.015881181957981383,
+          "current_close": 14.4129,
           "confirmations": 3,
           "min_confirmations": 2,
           "accuracy": 0
@@ -55,11 +60,11 @@
           "confirmations": {
             "volume": false,
             "divergence": false,
-            "stoch_rsi_k": 46.32719653564619,
-            "stoch_rsi_d": 30.574276005307297
+            "stoch_rsi_k": 47.17475479930225,
+            "stoch_rsi_d": 30.85679542652598
           },
           "enhanced_signal": "ENTER_LONG",
-          "enhanced_reason": "rsi_oversold_27.4"
+          "enhanced_reason": "rsi_oversold_28.0"
         },
         "time_filter_info": {
           "blocked": false,
@@ -81,30 +86,25 @@
         "trading_status": "Trading",
         "is_delisting": false
       },
-      "unrealized_pnl": 0.03132,
-      "position_side": "LONG",
-      "stop_loss": "14.1711",
-      "take_profit": "15.8257",
-      "current_price": "14.3916",
       "exchange_position": {
         "size": 5.0,
         "side": "Long",
-        "unrealized_pnl": 0.03132,
-        "mark_price": 14.3916,
+        "unrealized_pnl": 0.15082,
+        "mark_price": 14.4155,
         "entry_price": 14.385336,
         "leverage": 1,
         "stop_loss": "14.1711",
         "take_profit": "15.8257",
-        "roi": 0.043544342655604286
+        "roi": 0.20968575221322602
       },
       "position_size": 5,
       "position_size_coins": 5.0,
-      "mark_price": 14.3916,
-      "unrealized_pnl_usdt": 0.03132,
-      "roi": 0.043544342655604286,
+      "mark_price": 14.4129,
+      "unrealized_pnl_usdt": 0.15082,
+      "roi": 0.20968575221322602,
       "take_profit_price": null,
-      "last_update": "2025-10-28T02:14:16.074265",
-      "work_time": "3м 21с",
+      "last_update": "2025-10-28T02:51:04.397238",
+      "work_time": "11м 18с",
       "bot_status": "Активен"
     }
   },
@@ -147,11 +147,12 @@
     "exit_scam_single_candle_percent": 15,
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50,
+    "ai_optimal_entry_enabled": false,
     "filtered_coins": [
       "OG"
     ],
-    "last_filter_update": "2025-10-28T02:13:50.054344"
+    "last_filter_update": "2025-10-28T02:51:01.181579"
   },
-  "last_saved": "2025-10-28T02:14:16.461941",
+  "last_saved": "2025-10-28T02:51:04.795716",
   "version": "1.0"
 }
