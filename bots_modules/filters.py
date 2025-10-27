@@ -771,7 +771,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
 def load_all_coins_candles_fast():
     """⚡ БЫСТРАЯ загрузка ТОЛЬКО свечей для всех монет БЕЗ расчетов"""
     try:
-        logger.info("[CANDLES_FAST] 🚀 Быстрая загрузка свечей для всех монет...")
+        logger.debug("[CANDLES_FAST] Загрузка свечей...")
         
         from bots_modules.imports_and_globals import get_exchange
         current_exchange = get_exchange()
@@ -786,8 +786,6 @@ def load_all_coins_candles_fast():
             logger.error("[CANDLES_FAST] ❌ Не удалось получить список пар")
             return False
         
-        logger.info(f"[CANDLES_FAST] 📊 Найдено {len(pairs)} пар для загрузки")
-        
         # Загружаем ТОЛЬКО свечи пакетами (УСКОРЕННАЯ ВЕРСИЯ)
         batch_size = 100  # Увеличили с 50 до 100
         candles_cache = {}
@@ -798,22 +796,20 @@ def load_all_coins_candles_fast():
             batch_num = i//batch_size + 1
             total_batches = (len(pairs) + batch_size - 1)//batch_size
             
-            logger.info(f"[CANDLES_FAST] 📦 Пакет {batch_num}/{total_batches}: загрузка {len(batch)} монет...")
+            logger.debug(f"[CANDLES_FAST] Пакет {batch_num}/{total_batches}: загрузка {len(batch)} монет...")
             
-            with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:  # Увеличили с 10 до 20
+            with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
                 future_to_symbol = {executor.submit(get_coin_candles_only, symbol, current_exchange): symbol for symbol in batch}
                 
                 completed = 0
-                for future in concurrent.futures.as_completed(future_to_symbol, timeout=90):  # Увеличили timeout
+                for future in concurrent.futures.as_completed(future_to_symbol, timeout=90):
                     try:
-                        result = future.result(timeout=30)  # Увеличили timeout
+                        result = future.result(timeout=30)
                         if result:
                             candles_cache[result['symbol']] = result
                             completed += 1
                     except Exception as e:
                         pass
-                
-                logger.info(f"[CANDLES_FAST] ✅ Пакет {batch_num}: загружено {completed}/{len(batch)} монет")
                 
                 # Уменьшили паузу между пакетами
                 import time
@@ -933,7 +929,7 @@ def load_all_coins_rsi():
                             coins_rsi_data['failed_coins'] += 1
                         
                         if completed_count % 10 == 0:
-                            logger.info(f"[BATCH] 📊 Обработано {completed_count}/{len(batch)} монет из пакета {batch_num}")
+                            logger.debug(f"[BATCH] Обработано {completed_count}/{len(batch)} монет")
                     except Exception as e:
                         logger.error(f"[BATCH] ❌ Ошибка обработки {symbol}: {e}")
                         coins_rsi_data['failed_coins'] += 1
@@ -1644,8 +1640,7 @@ def check_exit_scam_filter(symbol, coin_data):
         # Проверяем последние N свечей (из конфига)
         recent_candles = candles[-exit_scam_candles:]
         
-        logger.info(f"[EXIT_SCAM] {symbol}: Анализ последних {exit_scam_candles} свечей")
-        logger.info(f"[EXIT_SCAM] {symbol}: Настройки - одна свеча: {single_candle_percent}%, {multi_candle_count} свечей: {multi_candle_percent}%")
+        logger.debug(f"[EXIT_SCAM] {symbol}: Анализ последних {exit_scam_candles} свечей")
         
         # 1. ПРОВЕРКА: Одна свеча превысила максимальный % изменения
         for i, candle in enumerate(recent_candles):
@@ -1657,7 +1652,7 @@ def check_exit_scam_filter(symbol, coin_data):
             
             if price_change > single_candle_percent:
                 logger.warning(f"[EXIT_SCAM] {symbol}: ❌ БЛОКИРОВКА: Свеча #{i+1} превысила лимит {single_candle_percent}% (было {price_change:.1f}%)")
-                logger.info(f"[EXIT_SCAM] {symbol}: Свеча: O={open_price:.4f} C={close_price:.4f} H={candle['high']:.4f} L={candle['low']:.4f}")
+                logger.debug(f"[EXIT_SCAM] {symbol}: Свеча: O={open_price:.4f} C={close_price:.4f} H={candle['high']:.4f} L={candle['low']:.4f}")
                 return False
         
         # 2. ПРОВЕРКА: N свечей суммарно превысили максимальный % изменения
@@ -1673,10 +1668,10 @@ def check_exit_scam_filter(symbol, coin_data):
             
             if total_change > multi_candle_percent:
                 logger.warning(f"[EXIT_SCAM] {symbol}: ❌ БЛОКИРОВКА: {multi_candle_count} свечей превысили суммарный лимит {multi_candle_percent}% (было {total_change:.1f}%)")
-                logger.info(f"[EXIT_SCAM] {symbol}: Первая свеча: {first_open:.4f}, Последняя свеча: {last_close:.4f}")
+                logger.debug(f"[EXIT_SCAM] {symbol}: Первая свеча: {first_open:.4f}, Последняя свеча: {last_close:.4f}")
                 return False
         
-        logger.info(f"[EXIT_SCAM] {symbol}: ✅ Базовые проверки пройдены")
+        logger.debug(f"[EXIT_SCAM] {symbol}: ✅ Базовые проверки пройдены")
         
         # 3. ПРОВЕРКА: AI Anomaly Detection (если включен)
         ai_check_enabled = True  # Включаем обратно - проблема была не в AI!
@@ -1730,7 +1725,7 @@ def check_exit_scam_filter(symbol, coin_data):
             except ImportError:
                 pass  # AIConfig не доступен - пропускаем AI проверку
         
-        logger.info(f"[EXIT_SCAM] {symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН (включая AI)")
+                logger.debug(f"[EXIT_SCAM] {symbol}: ✅ ПРОЙДЕН")
         return True
         
     except Exception as e:
