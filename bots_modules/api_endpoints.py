@@ -2239,11 +2239,35 @@ def auto_bot_config():
                     except Exception as optimal_ema_error:
                         logger.error(f"[TIMEFRAME] ⚠️ Не удалось запустить расчет Optimal EMA: {optimal_ema_error}")
                     
+                    # 7. 🎯 ЗАПУСКАЕМ РАСЧЕТ ЗРЕЛОСТИ ДЛЯ НОВОГО ТАЙМФРЕЙМА!
+                    try:
+                        from bots_modules.maturity import calculate_all_coins_maturity
+                        
+                        # Запускаем расчет зрелости в отдельном потоке
+                        def run_maturity_calculation():
+                            try:
+                                logger.info("[TIMEFRAME] 🚀 Начинаем расчет зрелости для нового таймфрейма...")
+                                result = calculate_all_coins_maturity()
+                                if result:
+                                    logger.info("[TIMEFRAME] ✅ Расчет зрелости завершен успешно")
+                                else:
+                                    logger.warning("[TIMEFRAME] ⚠️ Расчет зрелости завершился с ошибками")
+                            except Exception as maturity_error:
+                                logger.error(f"[TIMEFRAME] ❌ Ошибка расчета зрелости: {maturity_error}")
+                        
+                        import threading
+                        maturity_thread = threading.Thread(target=run_maturity_calculation, daemon=True)
+                        maturity_thread.start()
+                        logger.info("[TIMEFRAME] ✅ Расчет зрелости запущен в фоновом режиме")
+                        
+                    except Exception as maturity_error:
+                        logger.error(f"[TIMEFRAME] ⚠️ Не удалось запустить расчет зрелости: {maturity_error}")
+                    
                     logger.info("=" * 80)
                     logger.info("[TIMEFRAME] ✅ ВСЕ ДАННЫЕ БУДУТ ПЕРЕСЧИТАНЫ ДЛЯ НОВОГО ТАЙМФРЕЙМА!")
                     logger.info("[TIMEFRAME] 📊 RSI - пересчитается автоматически")
                     logger.info("[TIMEFRAME] 📈 EMA - БУДЕТ РАСЧИТАН для нового TF в фоне")
-                    logger.info("[TIMEFRAME] 🎯 Зрелость - перепроверяется автоматически")
+                    logger.info("[TIMEFRAME] 🎯 Зрелость - БУДЕТ ПРОВЕРЕНА для нового TF в фоне")
                     logger.info("[TIMEFRAME] 🤖 AI модели - используют отдельные базы для каждого TF")
                     logger.info("[TIMEFRAME] 📏 Параметры фильтров - остаются БЕЗ ИЗМЕНЕНИЙ (это СВЕЧИ, не время!)")
                     logger.info("=" * 80)

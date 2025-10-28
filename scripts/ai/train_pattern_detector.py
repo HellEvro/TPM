@@ -264,7 +264,18 @@ def main():
     print("STARTING TRAINING")
     print("=" * 60)
     
-    detector = PatternDetector()
+    # ✅ Получаем динамический путь с учётом таймфрейма
+    from bot_engine.bot_config import AIConfig
+    model_path = AIConfig.get_model_path('pattern_detector', 'pkl')
+    scaler_path = AIConfig.get_model_path('pattern_scaler', 'pkl')
+    
+    # Создаём директорию если её нет
+    os.makedirs(os.path.dirname(model_path), exist_ok=True)
+    
+    detector = PatternDetector(
+        model_path=model_path,
+        scaler_path=scaler_path
+    )
     
     print("\nTraining pattern recognition model...")
     print(f"Training samples: {len(training_data)}")
@@ -282,7 +293,7 @@ def main():
         print(f"Train accuracy: {result['train_accuracy']:.3f}")
         print(f"Validation accuracy: {result['val_accuracy']:.3f}")
         print(f"Training samples: {result['training_samples']}")
-        print(f"\n[SAVED] Model saved to: data/ai/models/pattern_detector.pkl")
+        print(f"\n[SAVED] Model saved to: {model_path}")
         return 0
     else:
         print("[ERROR] TRAINING FAILED!")

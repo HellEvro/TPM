@@ -558,3 +558,32 @@ def calculate_all_coins_maturity():
         logger.error(f"[MATURITY_BATCH] ❌ Ошибка умного расчета зрелости: {e}")
         return False
 
+def clear_mature_coins_storage():
+    """Очищает хранилище зрелых монет (используется при смене таймфрейма)"""
+    global mature_coins_storage
+    try:
+        logger.info("[CLEAR_MATURITY] 🗑️ Очистка хранилища зрелых монет...")
+        with mature_coins_lock:
+            mature_coins_storage = {}
+        
+        # Очищаем файлы для текущего таймфрейма
+        try:
+            mature_file = get_mature_coins_file()
+            if os.path.exists(mature_file):
+                os.remove(mature_file)
+                logger.info(f"[CLEAR_MATURITY] ✅ Удален файл: {mature_file}")
+            
+            cache_file = get_maturity_cache_file()
+            if os.path.exists(cache_file):
+                os.remove(cache_file)
+                logger.info(f"[CLEAR_MATURITY] ✅ Удален кэш: {cache_file}")
+        except Exception as file_error:
+            logger.warning(f"[CLEAR_MATURITY] ⚠️ Ошибка удаления файлов: {file_error}")
+        
+        logger.info("[CLEAR_MATURITY] ✅ Хранилище зрелых монет очищено")
+        return True
+        
+    except Exception as e:
+        logger.error(f"[CLEAR_MATURITY] ❌ Ошибка очистки хранилища: {e}")
+        return False
+

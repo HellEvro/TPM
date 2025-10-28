@@ -4594,11 +4594,19 @@ class BotsManager {
             currentTfEl.textContent = displayTf;
         }
         
-        // Обновляем таймфрейм в панели выбранной монеты
+        // Обновляем таймфрейм в панели выбранной монеты (RSI)
         const selectedCoinRSITfEl = document.getElementById('selectedCoinRSITimeframe');
         if (selectedCoinRSITfEl) {
             selectedCoinRSITfEl.textContent = displayTf;
         }
+        
+        // Обновляем таймфрейм в панели выбранной монеты (Тренд)
+        const selectedCoinTrendTfEl = document.getElementById('selectedCoinTrendTimeframe');
+        if (selectedCoinTrendTfEl) {
+            selectedCoinTrendTfEl.textContent = displayTf;
+        }
+        
+        console.log('[BotsManager] ✅ Таймфрейм обновлен в UI:', displayTf);
     }
     
     populateConfigurationForm(config) {
@@ -4658,11 +4666,14 @@ class BotsManager {
         // Таймфрейм
         const timeframeEl = document.getElementById('timeframe');
         if (timeframeEl) {
-            timeframeEl.value = autoBotConfig.timeframe || '6h';
-            console.log('[BotsManager] ⏱️ Таймфрейм:', timeframeEl.value);
+            const timeframe = autoBotConfig.timeframe || '6h';
+            timeframeEl.value = timeframe;
+            console.log('[BotsManager] ⏱️ Таймфрейм:', timeframe);
             
-            // Обновляем таймфрейм в UI заголовках
-            this.updateTimeframeInUI(timeframeEl.value);
+            // Обновляем таймфрейм в UI заголовках (в следующем кадре для гарантии)
+            requestAnimationFrame(() => {
+                this.updateTimeframeInUI(timeframe);
+            });
         }
         
         // Торговые параметры

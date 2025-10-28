@@ -45,7 +45,14 @@ def load_historical_data(data_dir: str = "data/ai/historical", symbols: list = N
     print("=" * 60)
     
     for csv_file in csv_files:
-        symbol = csv_file.stem.replace('_6h_historical', '')
+        # ✅ Получаем текущий таймфрейм
+        try:
+            from bots_modules.imports_and_globals import get_timeframe
+            timeframe = get_timeframe()
+        except Exception:
+            timeframe = '6h'  # Fallback
+        
+        symbol = csv_file.stem.replace(f'_{timeframe}_historical', '')
         
         # Фильтруем по списку символов
         if symbols and symbol not in symbols:

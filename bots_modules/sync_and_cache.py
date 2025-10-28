@@ -2033,6 +2033,7 @@ def sync_bots_with_exchange():
             
             # Синхронизируем только с позициями, для которых есть боты
             synchronized_bots = 0
+            bots_to_delete = []  # 🔥 НАКОПЛЕНИЕ символов для удаления ВНЕ цикла
             
             with bots_data_lock:
                 for symbol, bot_data in bots_data['bots'].items():
@@ -2101,16 +2102,23 @@ def sync_bots_with_exchange():
                                 logger.error(f"[SYNC_EXCHANGE] ❌ Ошибка проверки статуса {symbol}: {e}")
                                 logger.info(f"[SYNC_EXCHANGE] 🗑️ {symbol}: Удаляем бота (позиция закрыта на бирже)")
                             
-                            # Удаляем бота из системы
-                            del bots_data['bots'][symbol]
-                            
-                            # Сохраняем состояние после удаления
-                            save_bots_state()
+                            # 🔥 НЕ УДАЛЯЕМ СРАЗУ - добавляем в список для удаления ПОСЛЕ цикла
+                            bots_to_delete.append(symbol)
                             
                             synchronized_bots += 1
                         
                     except Exception as e:
                         logger.error(f"[SYNC_EXCHANGE] ❌ Ошибка синхронизации бота {symbol}: {e}")
+                
+                # 🔥 УДАЛЯЕМ ботов ВНЕ цикла итерации
+                for symbol_to_delete in bots_to_delete:
+                    if symbol_to_delete in bots_data['bots']:
+                        del bots_data['bots'][symbol_to_delete]
+                        logger.info(f"[SYNC_EXCHANGE] 🗑️ Удален бот: {symbol_to_delete}")
+                
+                # Сохраняем состояние после удаления (если были удаления)
+                if bots_to_delete:
+                    save_bots_state()
             
             if synchronized_bots > 0:
                 elapsed = time.time() - start_time
