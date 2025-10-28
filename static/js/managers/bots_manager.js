@@ -4580,6 +4580,27 @@ class BotsManager {
         }
     }
     
+    updateTimeframeInUI(timeframe) {
+        /**Обновляет отображение таймфрейма в заголовках UI*/
+        const tfMap = {
+            '1m': '1M', '5m': '5M', '15m': '15M', '30m': '30M',
+            '1h': '1H', '4h': '4H', '6h': '6H', '1d': '1D', '1w': '1W'
+        };
+        const displayTf = tfMap[timeframe] || '6H';
+        
+        // Обновляем заголовок списка монет
+        const currentTfEl = document.getElementById('currentTimeframe');
+        if (currentTfEl) {
+            currentTfEl.textContent = displayTf;
+        }
+        
+        // Обновляем таймфрейм в панели выбранной монеты
+        const selectedCoinRSITfEl = document.getElementById('selectedCoinRSITimeframe');
+        if (selectedCoinRSITfEl) {
+            selectedCoinRSITfEl.textContent = displayTf;
+        }
+    }
+    
     populateConfigurationForm(config) {
         this.logDebug('[BotsManager] 🔧 Заполнение формы конфигурации:', config);
         this.logDebug('[BotsManager] 🔍 DOM готовность:', document.readyState);
@@ -4670,29 +4691,6 @@ class BotsManager {
         } else if (checkIntervalEl) {
             console.warn('[BotsManager] ⚠️ Интервал проверки не найден в API, оставляем поле пустым');
         }
-        
-
-        
-    updateTimeframeInUI(timeframe) {
-        /**Обновляет отображение таймфрейма в заголовках UI*/
-        const tfMap = {
-            '1m': '1M', '5m': '5M', '15m': '15M', '30m': '30M',
-            '1h': '1H', '4h': '4H', '6h': '6H', '1d': '1D', '1w': '1W'
-        };
-        const displayTf = tfMap[timeframe] || '6H';
-        
-        // Обновляем заголовок списка монет
-        const currentTfEl = document.getElementById('currentTimeframe');
-        if (currentTfEl) {
-            currentTfEl.textContent = displayTf;
-        }
-        
-        // Обновляем таймфрейм в панели выбранной монеты
-        const selectedCoinRSITfEl = document.getElementById('selectedCoinRSITimeframe');
-        if (selectedCoinRSITfEl) {
-            selectedCoinRSITfEl.textContent = displayTf;
-        }
-    }
 
         const rsiExitLongEl = document.getElementById('rsiExitLong');
         if (rsiExitLongEl) {

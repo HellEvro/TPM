@@ -148,200 +148,42 @@ OPTIMAL_EMA_FILE = 'data/optimal_ema.json'
 
 # ✅ УДАЛЕНЫ ДУБЛИРОВАННЫЕ ФУНКЦИИ ЗРЕЛОСТИ - они есть в bots_modules/maturity.py
 # Эти функции дублировались и создавали конфликты данных
-
-def load_optimal_ema_data():
-    """Загружает данные об оптимальных EMA из файла"""
-    global optimal_ema_data
-    try:
-        if os.path.exists(OPTIMAL_EMA_FILE):
-            with open(OPTIMAL_EMA_FILE, 'r', encoding='utf-8') as f:
-                optimal_ema_data = json.load(f)
-                logger.info(f"[OPTIMAL_EMA] Загружено {len(optimal_ema_data)} записей об оптимальных EMA")
-        else:
-            optimal_ema_data = {}
-            logger.info("[OPTIMAL_EMA] Файл с оптимальными EMA не найден")
-    except Exception as e:
-        logger.error(f"[OPTIMAL_EMA] Ошибка загрузки данных об оптимальных EMA: {e}")
-        optimal_ema_data = {}
-
-def get_optimal_ema_periods(symbol):
-    """Получает оптимальные EMA периоды для монеты"""
-    global optimal_ema_data
-    if symbol in optimal_ema_data:
-        data = optimal_ema_data[symbol]
-        
-        # Поддержка нового формата (ema_short_period, ema_long_period)
-        if 'ema_short_period' in data and 'ema_long_period' in data:
-            return {
-                'ema_short': data['ema_short_period'],
-                'ema_long': data['ema_long_period'],
-                'accuracy': data.get('accuracy', 0),
-                'long_signals': data.get('long_signals', 0),
-                'short_signals': data.get('short_signals', 0),
-                'analysis_method': data.get('analysis_method', 'unknown')
-            }
-        # Поддержка старого формата (ema_short, ema_long)
-        elif 'ema_short' in data and 'ema_long' in data:
-            return {
-                'ema_short': data['ema_short'],
-                'ema_long': data['ema_long'],
-                'accuracy': data.get('accuracy', 0),
-                'long_signals': 0,
-                'short_signals': 0,
-                'analysis_method': 'legacy'
-            }
-        else:
-            # Неизвестный формат данных
-            logger.warning(f"[OPTIMAL_EMA] Неизвестный формат данных для {symbol}")
-            return {
-                'ema_short': 50,
-                'ema_long': 200,
-                'accuracy': 0,
-                'long_signals': 0,
-                'short_signals': 0,
-                'analysis_method': 'default'
-            }
-    else:
-        # Возвращаем дефолтные значения
-        return {
-            'ema_short': 50,
-            'ema_long': 200,
-            'accuracy': 0,
-            'long_signals': 0,
-            'short_signals': 0,
-            'analysis_method': 'default'
-        }
+# Теперь импортируем из оптимального модуля
+try:
+    from bots_modules.optimal_ema import (
+        load_optimal_ema_data,
+        get_optimal_ema_periods
+    )
+except ImportError:
+    # Fallback на случай если модуль не загружен
+    def load_optimal_ema_data():
+        pass
+    
+    def get_optimal_ema_periods(symbol):
+        return {'ema_short': 50, 'ema_long': 200, 'accuracy': 0, 'long_signals': 0, 'short_signals': 0, 'analysis_method': 'default'}
 
 def update_optimal_ema_data(new_data):
     """Обновляет данные об оптимальных EMA из внешнего источника"""
-    global optimal_ema_data
     try:
-        if isinstance(new_data, dict):
-            optimal_ema_data.update(new_data)
-            logger.info(f"[OPTIMAL_EMA] Обновлено {len(new_data)} записей об оптимальных EMA")
-            return True
-        else:
-            logger.error("[OPTIMAL_EMA] Неверный формат данных для обновления")
-            return False
+        from bots_modules.optimal_ema import optimal_ema_data as global_ema_data
+        global_ema_data.update(new_data)
+        logger.info(f"[OPTIMAL_EMA] Обновлено {len(new_data)} записей об оптимальных EMA")
+        return True
     except Exception as e:
         logger.error(f"[OPTIMAL_EMA] Ошибка обновления данных: {e}")
         return False
 
-def check_coin_maturity_with_storage(symbol, candles):
-    """Проверяет зрелость монеты с использованием постоянного хранилища"""
-    # Сначала проверяем постоянное хранилище
-    if is_coin_mature_stored(symbol):
-        logger.debug(f"[MATURITY_STORAGE] {symbol}: найдена в постоянном хранилище зрелых монет")
-        # Обновляем время последней проверки
-        update_mature_coin_verification(symbol)
-        return {
-            'is_mature': True,
-            'reason': 'Монета зрелая (из постоянного хранилища)',
-            'details': {'stored': True, 'from_storage': True}
-        }
-    
-    # Если не в хранилище, выполняем полную проверку
-    maturity_result = check_coin_maturity(symbol, candles)
-    
-    # Если монета зрелая, добавляем в постоянное хранилище (без автосохранения)
-    if maturity_result['is_mature']:
-        add_mature_coin_to_storage(symbol, maturity_result, auto_save=False)
-    
-    return maturity_result
-
-def check_coin_maturity(symbol, candles):
-    """Проверяет зрелость монеты для торговли"""
-    try:
-        # Получаем настройки зрелости из конфигурации
-        with bots_data_lock:
-            config = bots_data.get('auto_bot_config', {})
-        
-        min_candles = config.get('min_candles_for_maturity', MIN_CANDLES_FOR_MATURITY)
-        min_rsi_low = config.get('min_rsi_low', MIN_RSI_LOW)
-        max_rsi_high = config.get('max_rsi_high', MAX_RSI_HIGH)
-        # Убрали min_volatility - больше не проверяем волатильность
-        
-        if not candles or len(candles) < min_candles:
-            return {
-                'is_mature': False,
-                'reason': f'Недостаточно свечей: {len(candles) if candles else 0}/{min_candles}',
-                'details': {
-                    'candles_count': len(candles) if candles else 0,
-                    'min_required': min_candles
-                }
-            }
-        
-        # ✅ ИСПРАВЛЕНИЕ: Берем только последние N свечей для анализа зрелости
-        # Это означает что монета должна иметь достаточно истории в РЕЦЕНТНОЕ время
-        recent_candles = candles[-min_candles:] if len(candles) >= min_candles else candles
-        
-        # Извлекаем цены закрытия из последних свечей
-        closes = [candle['close'] for candle in recent_candles]
-        
-        # Рассчитываем историю RSI
-        rsi_history = calculate_rsi_history(closes, 14)
-        if not rsi_history:
-            return {
-                'is_mature': False,
-                'reason': 'Не удалось рассчитать историю RSI',
-                'details': {}
-            }
-        
-        # Анализируем диапазон RSI
-        rsi_min = min(rsi_history)
-        rsi_max = max(rsi_history)
-        rsi_range = rsi_max - rsi_min
-        
-        # Проверяем критерии зрелости (убрали проверку волатильности)
-        maturity_checks = {
-            'sufficient_candles': len(candles) >= min_candles,
-            'rsi_reached_low': rsi_min <= min_rsi_low,
-            'rsi_reached_high': rsi_max >= max_rsi_high
-        }
-        
-        # Убрали проверку волатильности - она была слишком строгой
-        volatility = 0  # Для совместимости с детальной информацией
-        
-        # Определяем общую зрелость
-        # Монета зрелая, если достаточно свечей И RSI достигал низких И высоких значений (полный цикл)
-        is_mature = maturity_checks['sufficient_candles'] and maturity_checks['rsi_reached_low'] and maturity_checks['rsi_reached_high']
-        
-        # Детальное логирование для отладки (отключено для уменьшения спама)
-        # logger.info(f"[MATURITY_DEBUG] {symbol}: свечи={maturity_checks['sufficient_candles']} ({len(candles)}/{min_candles}), RSI_low={maturity_checks['rsi_reached_low']} (min={rsi_min:.1f}<=>{min_rsi_low}), RSI_high={maturity_checks['rsi_reached_high']} (max={rsi_max:.1f}>={max_rsi_high}), зрелая={is_mature}")
-        
-        # Формируем детальную информацию
-        details = {
-            'candles_count': len(candles),
-            'min_required': min_candles,
-            'rsi_min': rsi_min,
-            'rsi_max': rsi_max,
-            'rsi_range': rsi_range,
-            'checks': maturity_checks
-        }
-        
-        # Определяем причину незрелости
-        if not is_mature:
-            failed_checks = [check for check, passed in maturity_checks.items() if not passed]
-            reason = f'Не пройдены проверки: {", ".join(failed_checks)}'
-        else:
-            reason = 'Монета зрелая для торговли'
-        
-        logger.debug(f"[MATURITY] {symbol}: {reason}")
-        logger.debug(f"[MATURITY] {symbol}: Свечи={len(candles)}, RSI={rsi_min:.1f}-{rsi_max:.1f}")
-        
-        return {
-            'is_mature': is_mature,
-            'reason': reason,
-            'details': details
-        }
-        
-    except Exception as e:
-        logger.error(f"[MATURITY] Ошибка проверки зрелости {symbol}: {e}")
-        return {
-            'is_mature': False,
-            'reason': f'Ошибка анализа: {str(e)}',
-            'details': {}
-        }
+# Импортируем функции зрелости из maturity.py
+try:
+    from bots_modules.maturity import (
+        check_coin_maturity_with_storage,
+        check_coin_maturity
+    )
+except ImportError:
+    def check_coin_maturity_with_storage(symbol, candles):
+        return {'is_mature': False, 'reason': 'Maturity check unavailable'}
+    def check_coin_maturity(symbol, candles):
+        return {'is_mature': False, 'reason': 'Maturity check unavailable'}
 
 def calculate_ema(prices, period):
     """Рассчитывает EMA для массива цен"""

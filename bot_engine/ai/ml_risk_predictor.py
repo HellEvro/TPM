@@ -58,9 +58,13 @@ class MLRiskPredictor:
         self.scaler = StandardScaler()
         self.entry_timing_scaler = StandardScaler()
         
-        self.model_path = Path('data/ai/models/risk_predictor.pkl')
-        self.scaler_path = Path('data/ai/models/risk_scaler.pkl')
-        self.training_data_path = Path('data/ai/training/ml_training_data.json')
+        # ✅ Динамическое определение путей на основе таймфрейма
+        from bots_modules.imports_and_globals import get_timeframe
+        timeframe = get_timeframe()
+        
+        self.model_path = Path(f'data/ai/models/{timeframe}/risk_predictor.pkl')
+        self.scaler_path = Path(f'data/ai/models/{timeframe}/risk_scaler.pkl')
+        self.training_data_path = Path(f'data/ai/training/{timeframe}/ml_training_data.json')
         
         # Создаем директории
         self.model_path.parent.mkdir(parents=True, exist_ok=True)

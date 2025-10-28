@@ -107,7 +107,7 @@ DEFAULT_AUTO_BOT_CONFIG = {
     # 🤖 ИИ настройки (премиум функции)
     'ai_optimal_entry_enabled': False,  # ИИ определение оптимальной точки входа (выкл. по умолчанию)
     # Таймфрейм для анализа
-    'timeframe': '5m',  # 1m, 5m, 15m, 30m, 1h, 4h, 6h, 1d, 1w
+    'timeframe': '6h',  # 1m, 5m, 15m, 30m, 1h, 4h, 6h, 1d, 1w
 }
 
 # Настройки по умолчанию для отдельного бота
@@ -244,6 +244,9 @@ class AIConfig:
     
     ИИ функции являются премиум дополнением и требуют лицензии.
     Для активации лицензии: python scripts/activate_premium.py
+    
+    ✅ Все AI модели теперь поддерживают индивидуальные файлы для каждого таймфрейма!
+    Структура: data/ai/models/{timeframe}/model.pkl
     """
     
     # Общие настройки
@@ -252,28 +255,49 @@ class AIConfig:
     
     # Anomaly Detection - обнаружение аномалий (pump/dump)
     AI_ANOMALY_DETECTION_ENABLED = True
-    AI_ANOMALY_MODEL_PATH = 'data/ai/models/anomaly_detector.pkl'
-    AI_ANOMALY_SCALER_PATH = 'data/ai/models/anomaly_scaler.pkl'
+    AI_ANOMALY_MODEL_PATH = None  # ✅ Будет определён динамически на основе таймфрейма
+    AI_ANOMALY_SCALER_PATH = None
     AI_ANOMALY_BLOCK_THRESHOLD = 0.7
     
     # LSTM Predictor - предсказание движения цены
     AI_LSTM_ENABLED = True
-    AI_LSTM_MODEL_PATH = 'data/ai/models/lstm_predictor.keras'  # ✅ Keras 3 формат
-    AI_LSTM_SCALER_PATH = 'data/ai/models/lstm_scaler.pkl'
+    AI_LSTM_MODEL_PATH = None  # ✅ Будет определён динамически на основе таймфрейма
+    AI_LSTM_SCALER_PATH = None
     AI_LSTM_WEIGHT = 1.5
     AI_LSTM_MIN_CONFIDENCE = 0.6
     
     # Pattern Recognition - распознавание графических паттернов
     AI_PATTERN_ENABLED = True
-    AI_PATTERN_MODEL_PATH = 'data/ai/models/pattern_detector.pkl'
-    AI_PATTERN_SCALER_PATH = 'data/ai/models/pattern_scaler.pkl'
+    AI_PATTERN_MODEL_PATH = None  # ✅ Будет определён динамически на основе таймфрейма
+    AI_PATTERN_SCALER_PATH = None
     AI_PATTERN_WEIGHT = 1.2
     AI_PATTERN_MIN_CONFIDENCE = 0.6
     
     # Dynamic Risk Management - умный SL/TP
     AI_RISK_MANAGEMENT_ENABLED = True
-    AI_RISK_MODEL_PATH = 'data/ai/models/risk_manager.h5'
+    AI_RISK_MODEL_PATH = None  # ✅ Будет определён динамически на основе таймфрейма
     AI_RISK_UPDATE_INTERVAL = 300
+    
+    @staticmethod
+    def get_model_path(model_name: str, file_extension: str = 'pkl') -> str:
+        """
+        Возвращает путь к модели с учётом текущего таймфрейма
+        
+        Args:
+            model_name: Имя модели (например, 'anomaly_detector', 'lstm_predictor')
+            file_extension: Расширение файла ('pkl', 'keras', 'h5')
+            
+        Returns:
+            Путь к файлу модели для текущего таймфрейма
+        """
+        try:
+            # Получаем текущий таймфрейм
+            from bots_modules.imports_and_globals import get_timeframe
+            timeframe = get_timeframe()
+            return f'data/ai/models/{timeframe}/{model_name}.{file_extension}'
+        except Exception:
+            # Fallback на дефолтный таймфрейм
+            return f'data/ai/models/6h/{model_name}.{file_extension}'
     
     # Кэширование предсказаний
     AI_CACHE_PREDICTIONS = True

@@ -41,10 +41,44 @@ except ImportError:
     def calculate_rsi_history(prices, period=14):
         return None
 
+# Импорт функций оптимальных EMA
+try:
+    from bots_modules.optimal_ema import (
+        load_optimal_ema_data,
+        get_optimal_ema_periods,
+        update_optimal_ema_data,
+        optimal_ema_data
+    )
+except ImportError:
+    def load_optimal_ema_data():
+        pass
+    def get_optimal_ema_periods(symbol):
+        return {'ema_short': 50, 'ema_long': 200, 'accuracy': 0, 'long_signals': 0, 'short_signals': 0, 'analysis_method': 'default'}
+    def update_optimal_ema_data(new_data):
+        return False
+    optimal_ema_data = {}
+
 # Глобальные переменные (будут импортированы из главного файла)
 mature_coins_storage = {}
-MATURE_COINS_FILE = 'data/mature_coins.json'
-MATURITY_CHECK_CACHE_FILE = 'data/maturity_check_cache.json'  # 🚀 Кэш последней проверки
+# ✅ ИСПРАВЛЕНО: Динамическое определение файла в зависимости от таймфрейма
+def get_mature_coins_file():
+    """Возвращает путь к файлу зрелых монет для текущего таймфрейма"""
+    try:
+        from bots_modules.imports_and_globals import get_timeframe
+        timeframe = get_timeframe()
+        return f'data/mature_coins_{timeframe}.json'
+    except Exception:
+        return 'data/mature_coins_6h.json'  # Fallback
+MATURE_COINS_FILE_DYNAMIC = True  # Флаг что используется динамический путь
+# ✅ ИСПРАВЛЕНО: Динамическое определение кэша в зависимости от таймфрейма
+def get_maturity_cache_file():
+    """Возвращает путь к файлу кэша зрелости для текущего таймфрейма"""
+    try:
+        from bots_modules.imports_and_globals import get_timeframe
+        timeframe = get_timeframe()
+        return f'data/maturity_check_cache_{timeframe}.json'
+    except Exception:
+        return 'data/maturity_check_cache_6h.json'  # Fallback
 mature_coins_lock = threading.Lock()
 
 # 🚀 Кэш последней проверки зрелости (загружается из файла)
@@ -55,8 +89,9 @@ def load_maturity_check_cache():
     """🚀 Загружает кэш последней проверки зрелости из файла"""
     global last_maturity_check
     try:
-        if os.path.exists(MATURITY_CHECK_CACHE_FILE):
-            with open(MATURITY_CHECK_CACHE_FILE, 'r', encoding='utf-8') as f:
+        cache_file = get_maturity_cache_file()  # ✅ Динамический путь
+        if os.path.exists(cache_file):
+            with open(cache_file, 'r', encoding='utf-8') as f:
                 cached_data = json.load(f)
                 last_maturity_check['coins_count'] = cached_data.get('coins_count', 0)
                 last_maturity_check['config_hash'] = cached_data.get('config_hash', None)
@@ -70,8 +105,9 @@ def load_maturity_check_cache():
 def save_maturity_check_cache():
     """🚀 Сохраняет кэш последней проверки зрелости в файл"""
     try:
-        os.makedirs(os.path.dirname(MATURITY_CHECK_CACHE_FILE), exist_ok=True)
-        with open(MATURITY_CHECK_CACHE_FILE, 'w', encoding='utf-8') as f:
+        cache_file = get_maturity_cache_file()  # ✅ Динамический путь
+        os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+        with open(cache_file, 'w', encoding='utf-8') as f:
             json.dump(last_maturity_check, f, indent=2, ensure_ascii=False)
         logger.debug(f"[MATURITY_CACHE] 💾 Кэш сохранен: {last_maturity_check['coins_count']} монет")
     except Exception as e:
@@ -81,8 +117,9 @@ def load_mature_coins_storage(expected_coins_count=None):
     """Загружает постоянное хранилище зрелых монет из файла"""
     global mature_coins_storage, maturity_data_invalidated
     try:
-        if os.path.exists(MATURE_COINS_FILE):
-            with open(MATURE_COINS_FILE, 'r', encoding='utf-8') as f:
+        mature_coins_file = get_mature_coins_file()  # ✅ Динамический путь
+        if os.path.exists(mature_coins_file):
+            with open(mature_coins_file, 'r', encoding='utf-8') as f:
                 loaded_data = json.load(f)
             
             # ✅ ПРОВЕРКА КОНФИГУРАЦИИ: Сравниваем настройки из файла с текущими
@@ -120,7 +157,7 @@ def load_mature_coins_storage(expected_coins_count=None):
                         need_recalculation = True
                         
                         # Очищаем файл для пересчета
-                        os.remove(MATURE_COINS_FILE)
+                        os.remove(mature_coins_file)
                         loaded_data = {}
                         
                         # ✅ УСТАНАВЛИВАЕМ ФЛАГ: данные недействительны и не должны сохраняться
@@ -171,11 +208,12 @@ def save_mature_coins_storage():
             # Создаем копию для безопасной сериализации
             storage_copy = mature_coins_storage.copy()
         
-        os.makedirs(os.path.dirname(MATURE_COINS_FILE), exist_ok=True)
+        mature_coins_file = get_mature_coins_file()  # ✅ Динамический путь
+        os.makedirs(os.path.dirname(mature_coins_file), exist_ok=True)
         
         # Используем стандартную функцию сохранения из bot_engine.storage
         from bot_engine.storage import save_json_file
-        save_json_file(MATURE_COINS_FILE, storage_copy)
+        save_json_file(mature_coins_file, storage_copy)
         logger.debug(f"[MATURITY_STORAGE] Хранилище сохранено: {len(storage_copy)} монет")
         return True  # Успешно сохранили
     except Exception as e:
@@ -260,84 +298,6 @@ def remove_mature_coin_from_storage(symbol):
         del mature_coins_storage[symbol]
         # Отключаем автоматическое сохранение - будет сохранено пакетно
         logger.debug(f"[MATURITY_STORAGE] Монета {symbol} удалена из хранилища (без автосохранения)")
-
-def load_optimal_ema_data():
-    """Загружает данные об оптимальных EMA из файла"""
-    global optimal_ema_data
-    try:
-        if os.path.exists(OPTIMAL_EMA_FILE):
-            with open(OPTIMAL_EMA_FILE, 'r', encoding='utf-8') as f:
-                optimal_ema_data = json.load(f)
-                logger.info(f"[OPTIMAL_EMA] Загружено {len(optimal_ema_data)} записей об оптимальных EMA")
-        else:
-            optimal_ema_data = {}
-            logger.info("[OPTIMAL_EMA] Файл с оптимальными EMA не найден")
-    except Exception as e:
-        logger.error(f"[OPTIMAL_EMA] Ошибка загрузки данных об оптимальных EMA: {e}")
-        optimal_ema_data = {}
-
-def get_optimal_ema_periods(symbol):
-    """Получает оптимальные EMA периоды для монеты"""
-    global optimal_ema_data
-    if symbol in optimal_ema_data:
-        data = optimal_ema_data[symbol]
-        
-        # Поддержка нового формата (ema_short_period, ema_long_period)
-        if 'ema_short_period' in data and 'ema_long_period' in data:
-            return {
-                'ema_short': data['ema_short_period'],
-                'ema_long': data['ema_long_period'],
-                'accuracy': data.get('accuracy', 0),
-                'long_signals': data.get('long_signals', 0),
-                'short_signals': data.get('short_signals', 0),
-                'analysis_method': data.get('analysis_method', 'unknown')
-            }
-        # Поддержка старого формата (ema_short, ema_long)
-        elif 'ema_short' in data and 'ema_long' in data:
-            return {
-                'ema_short': data['ema_short'],
-                'ema_long': data['ema_long'],
-                'accuracy': data.get('accuracy', 0),
-                'long_signals': 0,
-                'short_signals': 0,
-                'analysis_method': 'legacy'
-            }
-        else:
-            # Неизвестный формат данных
-            logger.warning(f"[OPTIMAL_EMA] Неизвестный формат данных для {symbol}")
-            return {
-                'ema_short': 50,
-                'ema_long': 200,
-                'accuracy': 0,
-                'long_signals': 0,
-                'short_signals': 0,
-                'analysis_method': 'default'
-            }
-    else:
-        # Возвращаем дефолтные значения
-        return {
-            'ema_short': 50,
-            'ema_long': 200,
-            'accuracy': 0,
-            'long_signals': 0,
-            'short_signals': 0,
-            'analysis_method': 'default'
-        }
-
-def update_optimal_ema_data(new_data):
-    """Обновляет данные об оптимальных EMA из внешнего источника"""
-    global optimal_ema_data
-    try:
-        if isinstance(new_data, dict):
-            optimal_ema_data.update(new_data)
-            logger.info(f"[OPTIMAL_EMA] Обновлено {len(new_data)} записей об оптимальных EMA")
-            return True
-        else:
-            logger.error("[OPTIMAL_EMA] Неверный формат данных для обновления")
-            return False
-    except Exception as e:
-        logger.error(f"[OPTIMAL_EMA] Ошибка обновления данных: {e}")
-        return False
 
 def check_coin_maturity_with_storage(symbol, candles):
     """Проверяет зрелость монеты с использованием постоянного хранилища"""

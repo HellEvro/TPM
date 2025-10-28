@@ -38,5 +38,5 @@
   "exit_scam_multi_candle_count": 4,
   "exit_scam_multi_candle_percent": 50,
   "ai_optimal_entry_enabled": false,
-  "timeframe": "5m"
+  "timeframe": "6h"
 }

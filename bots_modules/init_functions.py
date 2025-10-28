@@ -125,8 +125,8 @@ def init_bot_service():
         from bots_modules.maturity import load_maturity_check_cache
         load_maturity_check_cache()
         
-        # 0.1. Загружаем данные об оптимальных EMA
-        load_optimal_ema_data()
+        # 0.1. Загружаем данные об оптимальных EMA (отложено, загрузится позже)
+        # load_optimal_ema_data()  # ✅ ВРЕМЕННО ОТКЛЮЧЕНО - загрузится после инициализации биржи
         
         # 1. Создаем дефолтную конфигурацию если её нет
         save_default_config()
@@ -148,6 +148,13 @@ def init_bot_service():
                 'last_sync': datetime.now().isoformat(),
                 'connection_count': process_state['exchange_connection']['connection_count'] + 1
             })
+            
+            # 5.0. Загружаем данные об оптимальных EMA (после инициализации биржи)
+            try:
+                load_optimal_ema_data()
+                logger.info("[INIT] ✅ Загружены данные об оптимальных EMA")
+            except Exception as ema_error:
+                logger.error(f"[INIT] ⚠️ Не удалось загрузить оптимальные EMA: {ema_error}")
             
             # 5.1. Инициализируем загруженных ботов (после инициализации биржи)
             with bots_data_lock:
