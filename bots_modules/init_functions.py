@@ -151,8 +151,40 @@ def init_bot_service():
             
             # 5.0. Загружаем данные об оптимальных EMA (после инициализации биржи)
             try:
-                load_optimal_ema_data()
-                logger.info("[INIT] ✅ Загружены данные об оптимальных EMA")
+                # Получаем текущий таймфрейм
+                current_tf = '6h'  # По умолчанию
+                try:
+                    with bots_data_lock:
+                        config = bots_data.get('auto_bot_config', {})
+                        current_tf = config.get('timeframe', '6h')
+                except Exception:
+                    pass
+                
+                # Проверяем наличие файла для текущего TF
+                optimal_ema_file = f'data/optimal_ema_{current_tf}.json'
+                import os
+                
+                if not os.path.exists(optimal_ema_file):
+                    logger.warning(f"[INIT] ⚠️ Файл оптимальных EMA для TF {current_tf} не найден")
+                    logger.info(f"[INIT] 🚀 Запускаем расчет оптимальных EMA для TF {current_tf}...")
+                    
+                    # Запускаем расчет в фоне
+                    def calculate_optimal_ema():
+                        try:
+                            from bots_modules.optimal_ema import calculate_all_coins_optimal_ema
+                            calculate_all_coins_optimal_ema(mode='auto', timeframe=current_tf)
+                            logger.info(f"[INIT] ✅ Расчет оптимальных EMA для TF {current_tf} завершен")
+                            # Перезагружаем данные
+                            from bots_modules.optimal_ema import load_optimal_ema_data
+                            load_optimal_ema_data()
+                        except Exception as calc_error:
+                            logger.error(f"[INIT] ❌ Ошибка расчета оптимальных EMA: {calc_error}")
+                    
+                    thread = threading.Thread(target=calculate_optimal_ema, daemon=True)
+                    thread.start()
+                else:
+                    load_optimal_ema_data()
+                    logger.info("[INIT] ✅ Загружены данные об оптимальных EMA")
             except Exception as ema_error:
                 logger.error(f"[INIT] ⚠️ Не удалось загрузить оптимальные EMA: {ema_error}")
             
