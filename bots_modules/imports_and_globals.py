@@ -569,6 +569,17 @@ def get_auto_bot_config():
         logger.error(f"[CONFIG] ❌ Ошибка получения конфигурации: {e}")
         return DEFAULT_AUTO_BOT_CONFIG.copy()
 
+def get_timeframe():
+    """Получает текущий таймфрейм из конфигурации Auto Bot"""
+    try:
+        config = get_auto_bot_config()
+        timeframe = config.get('timeframe', '6h')
+        logger.debug(f"[TIMEFRAME] Текущий таймфрейм: {timeframe}")
+        return timeframe
+    except Exception as e:
+        logger.error(f"[TIMEFRAME] ❌ Ошибка получения таймфрейма: {e}")
+        return '6h'
+
 # ВАЖНО: load_auto_bot_config() теперь вызывается в if __name__ == '__main__'
 # чтобы check_and_stop_existing_bots_processes() мог вывести свои сообщения первым
 

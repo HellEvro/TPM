@@ -2058,6 +2058,13 @@ def auto_bot_config():
             # Проверяем изменение критериев зрелости
             maturity_params_changed = False
             maturity_keys = ['min_candles_for_maturity', 'min_rsi_low', 'max_rsi_high']
+            
+            # Проверяем изменение таймфрейма
+            timeframe_changed = False
+            if 'timeframe' in data and data['timeframe'] != old_config.get('timeframe'):
+                timeframe_changed = True
+                logger.warning(f"[TIMEFRAME] ⚠️ Таймфрейм изменен: {old_config.get('timeframe')} → {data['timeframe']}")
+            
             changes_count = 0
             
             # ✅ Сохраняем старую конфигурацию для сравнения
@@ -2110,6 +2117,40 @@ def auto_bot_config():
                     logger.info("[MATURITY] 🔄 Монеты будут перепроверены при следующей загрузке RSI")
                 except Exception as e:
                     logger.error(f"[MATURITY] ❌ Ошибка очистки файла зрелых монет: {e}")
+            
+            # ✅ АВТОМАТИЧЕСКИЙ ПЕРЕСЧЕТ при изменении таймфрейма
+            if timeframe_changed:
+                logger.warning("=" * 80)
+                logger.warning(f"[TIMEFRAME] 🔄 ТАЙМФРЕЙМ ИЗМЕНЕН: {old_config.get('timeframe')} → {data['timeframe']}")
+                logger.warning("[TIMEFRAME] 🔄 Запуск пересчета данных...")
+                logger.warning("=" * 80)
+                
+                try:
+                    # Очищаем кэши для пересчета
+                    from bots_modules.imports_and_globals import clear_rsi_cache, clear_mature_coins_storage
+                    
+                    # Очищаем RSI кэш
+                    clear_rsi_cache()
+                    logger.info("[TIMEFRAME] ✅ RSI кэш очищен")
+                    
+                    # Очищаем зрелые монеты (нужно перепроверить с новым таймфреймом)
+                    clear_mature_coins_storage()
+                    logger.info("[TIMEFRAME] ✅ Файл зрелых монет очищен")
+                    
+                    # Очищаем оптимальные EMA (привязаны к таймфрейму)
+                    try:
+                        # Очищаем файл оптимальных EMA
+                        import os
+                        if os.path.exists('data/optimal_ema.json'):
+                            with open('data/optimal_ema.json', 'w', encoding='utf-8') as f:
+                                json.dump({}, f)
+                            logger.info("[TIMEFRAME] ✅ Оптимальные EMA очищены")
+                    except Exception as ema_error:
+                        logger.error(f"[TIMEFRAME] ⚠️ Не удалось очистить оптимальные EMA: {ema_error}")
+                    
+                    logger.info("[TIMEFRAME] ✅ Все данные будут пересчитаны для нового таймфрейма")
+                except Exception as e:
+                    logger.error(f"[TIMEFRAME] ❌ Ошибка пересчета данных: {e}")
             
             # КРИТИЧЕСКИ ВАЖНО: При включении Auto Bot запускаем немедленную проверку
             # Показываем блок только если enabled реально изменился с False на True

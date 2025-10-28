@@ -18,6 +18,15 @@ from datetime import datetime
 
 logger = logging.getLogger('BotsService')
 
+def get_current_timeframe():
+    """Получает текущий таймфрейм из конфигурации Auto Bot"""
+    try:
+        from bots_modules.imports_and_globals import get_timeframe
+        return get_timeframe()
+    except Exception as e:
+        logger.error(f"[FILTERS] ❌ Ошибка получения таймфрейма: {e}")
+        return '6h'  # Fallback
+
 # Импорт класса бота - ОТКЛЮЧЕН из-за циклического импорта
 # NewTradingBot будет импортирован локально в функциях
 
@@ -316,7 +325,8 @@ def get_coin_candles_only(symbol, exchange_obj=None):
             return None
         
         # Получаем ТОЛЬКО свечи
-        chart_response = exchange_to_use.get_chart_data(symbol, '6h', '30d')
+        timeframe = get_current_timeframe()
+        chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '30d')
         
         if not chart_response or not chart_response.get('success'):
             return None
