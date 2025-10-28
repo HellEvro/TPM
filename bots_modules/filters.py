@@ -329,8 +329,23 @@ def get_coin_candles_only(symbol, exchange_obj=None):
         # Получаем текущий таймфрейм
         timeframe = get_current_timeframe()
         
-        # ✅ ИСПРАВЛЕНО: Получаем ВСЕ доступные свечи через пагинацию (до 5000)
-        candles = get_candles_with_pagination(exchange_to_use, symbol, timeframe, target_candles=5000)
+        # ✅ ИСПРАВЛЕНО: Определяем разумный максимум свечей в зависимости от таймфрейма
+        # Для недельного TF 5000 свечей = 96 лет - невозможно! Для новичков будет ~5-50 свечей
+        # Для других TF можно больше, но не хардкод
+        if timeframe == '1w':
+            # Недельный TF: максимум ~104 свечи за 2 года или сколько есть
+            target_candles = 500  # Разумный максимум
+        elif timeframe in ['1d', '6h', '4h']:
+            # Средние TF: можем получить много данных
+            target_candles = 2000
+        elif timeframe in ['1h', '30m', '15m']:
+            # Короткие TF: можем получить еще больше
+            target_candles = 5000
+        else:
+            # Минутные TF: максимум
+            target_candles = 5000
+        
+        candles = get_candles_with_pagination(exchange_to_use, symbol, timeframe, target_candles=target_candles)
         
         if not candles or len(candles) < 15:
             return None
@@ -372,8 +387,9 @@ def get_candles_with_pagination(exchange, symbol, timeframe, target_candles=5000
         all_candles = []
         limit = 1000  # Максимум за запрос
         end_time = None  # Для пагинации
+        last_batch_size = 0  # Для отслеживания зацикливания
         
-        logger.debug(f"[CANDLES_PAGINATION] Запрашиваем данные для {symbol} (цель: {target_candles} свечей)")
+        logger.info(f"[CANDLES_PAGINATION] Запрашиваем данные для {symbol} (TF: {timeframe}, цель: {target_candles} свечей)")
         
         while len(all_candles) < target_candles:
             try:
@@ -415,13 +431,30 @@ def get_candles_with_pagination(exchange, symbol, timeframe, target_candles=5000
                         }
                         batch_candles.append(candle)
                     
+                    logger.debug(f"[CANDLES_PAGINATION] {symbol}: Получено {len(batch_candles)} свечей из API")
+                    
                     # Добавляем к общему списку
                     all_candles.extend(batch_candles)
+                    
+                    logger.info(f"[CANDLES_PAGINATION] {symbol}: После добавления батча всего: {len(all_candles)} свечей")
+                    
+                    # ✅ ПРОВЕРКА НА ЗАЦИКЛИВАНИЕ: Если получили 0 свечей - это конец данных
+                    if len(batch_candles) == 0:
+                        logger.info(f"[CANDLES_PAGINATION] {symbol}: Больше данных нет (получено: 0 свечей)")
+                        break
+                    
+                    # Если получили меньше лимита - данных больше нет
+                    if len(batch_candles) < limit and len(all_candles) < target_candles:
+                        logger.info(f"[CANDLES_PAGINATION] {symbol}: Больше данных нет (получено меньше лимита: {len(batch_candles)}/{limit}, всего: {len(all_candles)}/{target_candles})")
+                        break
+                    
+                    # Обновляем last_batch_size после добавления
+                    last_batch_size = len(batch_candles)
                     
                     # Обновляем end_time для следующего запроса (берем время первой свечи - 1)
                     end_time = int(klines[0][0]) - 1
                     
-                    logger.debug(f"[CANDLES_PAGINATION] {symbol}: Получено {len(batch_candles)} свечей, всего: {len(all_candles)}")
+                    logger.debug(f"[CANDLES_PAGINATION] {symbol}: Получено {len(batch_candles)} свечей, всего: {len(all_candles)} (TF: {timeframe})")
                     
                     # Небольшая пауза между запросами
                     import time
@@ -438,7 +471,7 @@ def get_candles_with_pagination(exchange, symbol, timeframe, target_candles=5000
             # Сортируем свечи от старых к новым
             all_candles.sort(key=lambda x: x['time'])
             
-            logger.info(f"[CANDLES_PAGINATION] {symbol}: Получено {len(all_candles)} свечей через пагинацию")
+            logger.info(f"[CANDLES_PAGINATION] {symbol}: Получено {len(all_candles)} свечей через пагинацию (TF: {timeframe})")
             return all_candles
         else:
             logger.warning(f"[CANDLES_PAGINATION] Не удалось получить данные для {symbol}")

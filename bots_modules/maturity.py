@@ -431,9 +431,13 @@ def calculate_all_coins_maturity():
         
         # Получаем все монеты с RSI данными
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
+        from bots_modules.imports_and_globals import get_timeframe
+        current_tf = get_timeframe()
+        rsi_key = f'rsi{current_tf}'
+        
         all_coins = []
         for symbol, coin_data in coins_rsi_data['coins'].items():
-            if coin_data.get('rsi6h') is not None:
+            if coin_data.get(rsi_key) is not None:
                 all_coins.append(symbol)
         
         logger.info(f"[MATURITY_BATCH] 📊 Найдено {len(all_coins)} монет с RSI данными")
