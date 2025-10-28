@@ -353,13 +353,8 @@ class OptimalEMAFinder:
         self.rsi_cache = {}  # Кэш для RSI значений
     
     def _get_ema_file_path(self) -> str:
-        """Возвращает путь к файлу в зависимости от таймфрейма"""
-        if self.timeframe == DEFAULT_TIMEFRAME:
-            # Для 6h используем стандартное имя файла
-            return f"{OPTIMAL_EMA_BASE_FILE}.json"
-        else:
-            # Для других таймфреймов добавляем суффикс
-            return f"{OPTIMAL_EMA_BASE_FILE}_{self.timeframe}.json"
+        """Возвращает путь к файлу в зависимости от таймфрейма (всегда с суффиксом)"""
+        return f"{OPTIMAL_EMA_BASE_FILE}_{self.timeframe}.json"
     
     def _init_exchange(self):
         """Инициализирует exchange"""

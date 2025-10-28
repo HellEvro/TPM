@@ -72,7 +72,7 @@
         <div class="coins-panel">
             <div class="panel-header">
                 <div class="title-row">
-                        <h3 data-translate="coins_rsi_6h">📊 Монеты (RSI 6H)</h3>
+                        <h3 data-translate="coins_rsi_6h">📊 Монеты (RSI <span id="currentTimeframe">6H</span>)</h3>
                         <span class="status-dot" id="rsiStatusDot">●</span>
                     </div>
                     <div class="service-status" id="botsServiceStatus">
@@ -185,7 +185,7 @@
                                 <span class="value" id="selectedCoinPrice">$0</span>
                         </div>
                         <div class="data-item">
-                                <span class="label" data-translate="coin_info_rsi">📊 RSI 6H:</span>
+                                <span class="label" data-translate="coin_info_rsi">📊 RSI <span id="selectedCoinRSITimeframe">6H</span>:</span>
                                 <span class="value rsi-indicator" id="selectedCoinRSI">-</span>
                                 <span class="status-icon" id="rsiIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>

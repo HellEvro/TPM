@@ -11,16 +11,19 @@
       "entry_time": null,
       "last_signal_time": null,
       "last_bar_timestamp": null,
-      "created_at": "2025-10-28T03:29:42.822047",
+      "created_at": "2025-10-28T03:56:16.513705",
       "scaling_enabled": false,
       "scaling_levels": [],
       "scaling_current_level": 0,
       "scaling_group_id": null,
-      "unrealized_pnl": -0.303,
+      "unrealized_pnl": 0.001,
       "position_side": "LONG",
       "stop_loss": "13.9663",
       "take_profit": "15.5969",
-      "current_price": "14.1299",
+      "current_price": "14.1907",
+      "work_time": "3м 20с",
+      "last_update": "2025-10-28T04:00:04.128075",
+      "bot_status": "Активен",
       "rsi_data": {
         "symbol": "OG",
         "rsi6h": 25.9,
@@ -29,15 +32,15 @@
         "signal": "ENTER_LONG",
         "price": 14.1132,
         "change24h": 2.02,
-        "last_update": "2025-10-28T03:54:39.498839",
+        "last_update": "2025-10-28T03:59:55.638011",
         "trend_analysis": {
           "trend": "NEUTRAL",
-          "ema_short": 16.437280137289633,
-          "ema_long": 15.974334911954916,
+          "ema_short": 16.43942131376022,
+          "ema_long": 15.974878195537004,
           "ema_short_period": 50,
           "ema_long_period": 200,
-          "ema_long_slope": -0.018564169969394584,
-          "current_close": 14.1272,
+          "ema_long_slope": -0.01802088638730659,
+          "current_close": 14.1818,
           "confirmations": 3,
           "min_confirmations": 2,
           "accuracy": 0
@@ -64,7 +67,7 @@
             "stoch_rsi_d": 43.87124991591969
           },
           "enhanced_signal": "ENTER_LONG",
-          "enhanced_reason": "fresh_oversold_25.9_base_oversold_bullish_divergence"
+          "enhanced_reason": "rsi_oversold_25.9"
         },
         "time_filter_info": {
           "blocked": false,
@@ -89,23 +92,20 @@
       "exchange_position": {
         "size": 5.0,
         "side": "Long",
-        "unrealized_pnl": -0.3025,
-        "mark_price": 14.13,
+        "unrealized_pnl": -0.0215,
+        "mark_price": 14.1862,
         "entry_price": 14.1905,
         "leverage": 1,
         "stop_loss": "13.9663",
         "take_profit": "15.5969",
-        "roi": -0.42634156654099575
+        "roi": -0.030301962580599695
       },
       "position_size": 5,
       "position_size_coins": 5.0,
-      "mark_price": 14.1272,
-      "unrealized_pnl_usdt": -0.3025,
-      "roi": -0.42634156654099575,
-      "take_profit_price": null,
-      "last_update": "2025-10-28T03:54:48.741256",
-      "work_time": "25м 5с",
-      "bot_status": "Активен"
+      "mark_price": 14.1946,
+      "unrealized_pnl_usdt": -0.0215,
+      "roi": -0.030301962580599695,
+      "take_profit_price": null
     }
   },
   "auto_bot_config": {
@@ -152,8 +152,8 @@
     "filtered_coins": [
       "OG"
     ],
-    "last_filter_update": "2025-10-28T03:54:13.871311"
+    "last_filter_update": "2025-10-28T04:00:06.210168"
   },
-  "last_saved": "2025-10-28T03:54:49.136432",
+  "last_saved": "2025-10-28T04:00:06.210992",
   "version": "1.0"
 }

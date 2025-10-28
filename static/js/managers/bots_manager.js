@@ -4639,6 +4639,9 @@ class BotsManager {
         if (timeframeEl) {
             timeframeEl.value = autoBotConfig.timeframe || '6h';
             console.log('[BotsManager] ⏱️ Таймфрейм:', timeframeEl.value);
+            
+            // Обновляем таймфрейм в UI заголовках
+            this.updateTimeframeInUI(timeframeEl.value);
         }
         
         // Торговые параметры
@@ -4670,6 +4673,27 @@ class BotsManager {
         
 
         
+    updateTimeframeInUI(timeframe) {
+        /**Обновляет отображение таймфрейма в заголовках UI*/
+        const tfMap = {
+            '1m': '1M', '5m': '5M', '15m': '15M', '30m': '30M',
+            '1h': '1H', '4h': '4H', '6h': '6H', '1d': '1D', '1w': '1W'
+        };
+        const displayTf = tfMap[timeframe] || '6H';
+        
+        // Обновляем заголовок списка монет
+        const currentTfEl = document.getElementById('currentTimeframe');
+        if (currentTfEl) {
+            currentTfEl.textContent = displayTf;
+        }
+        
+        // Обновляем таймфрейм в панели выбранной монеты
+        const selectedCoinRSITfEl = document.getElementById('selectedCoinRSITimeframe');
+        if (selectedCoinRSITfEl) {
+            selectedCoinRSITfEl.textContent = displayTf;
+        }
+    }
+
         const rsiExitLongEl = document.getElementById('rsiExitLong');
         if (rsiExitLongEl) {
             rsiExitLongEl.value = autoBotConfig.rsi_exit_long || 65;
@@ -5297,7 +5321,8 @@ class BotsManager {
                 enabled: config.autoBot.enabled,
                 max_concurrent: config.autoBot.max_concurrent,
                 risk_cap_percent: config.autoBot.risk_cap_percent,
-                scope: config.autoBot.scope
+                scope: config.autoBot.scope,
+                timeframe: config.autoBot.timeframe
             };
             
             await this.sendConfigUpdate('auto-bot', basicSettings, 'Основные настройки');
