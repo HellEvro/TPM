@@ -22,9 +22,18 @@ def load_optimal_ema_data():
     """Загружает данные об оптимальных EMA из файла (для текущего таймфрейма)"""
     global optimal_ema_data
     try:
-        # Получаем текущий таймфрейм из конфига
-        from bots_modules.imports_and_globals import get_timeframe
-        timeframe = get_timeframe()
+        # ✅ ИСПРАВЛЕНИЕ: Не импортируем get_timeframe при импорте модуля!
+        # Получаем текущий таймфрейм из конфига (с fallback на 6h)
+        try:
+            from bots_modules.imports_and_globals import get_timeframe, auto_bot_config
+            # Безопасная проверка: если конфиг не загружен, используем дефолт
+            if auto_bot_config and isinstance(auto_bot_config, dict):
+                timeframe = auto_bot_config.get('timeframe', '6h')
+            else:
+                timeframe = '6h'
+        except (ImportError, AttributeError):
+            # Если что-то пошло не так, используем дефолтный таймфрейм
+            timeframe = '6h'
         
         # Формируем имя файла с учетом таймфрейма (всегда с суффиксом)
         optimal_ema_file = f'data/optimal_ema_{timeframe}.json'

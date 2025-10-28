@@ -2065,6 +2065,10 @@ def auto_bot_config():
                 logger.error("[CONFIG_API] ❌ Пустые данные!")
                 return jsonify({'success': False, 'error': 'No data provided'}), 400
             
+            # ✅ Сохраняем старую конфигурацию для сравнения (ПЕРВЫМ ДЕЛОМ!)
+            with bots_data_lock:
+                old_config = bots_data['auto_bot_config'].copy()
+            
             # Проверяем изменение критериев зрелости
             maturity_params_changed = False
             maturity_keys = ['min_candles_for_maturity', 'min_rsi_low', 'max_rsi_high']
@@ -2076,10 +2080,6 @@ def auto_bot_config():
                 logger.warning(f"[TIMEFRAME] ⚠️ Таймфрейм изменен: {old_config.get('timeframe')} → {data['timeframe']}")
             
             changes_count = 0
-            
-            # ✅ Сохраняем старую конфигурацию для сравнения
-            with bots_data_lock:
-                old_config = bots_data['auto_bot_config'].copy()
             
             # ✅ Сначала проверяем какие изменения будут
             for key in maturity_keys:
@@ -2137,62 +2137,66 @@ def auto_bot_config():
                 
                 try:
                     # Очищаем кэши для пересчета
-                    from bots_modules.imports_and_globals import clear_rsi_cache, clear_mature_coins_storage
+                    from bots_modules.imports_and_globals import clear_rsi_cache
+                    from bots_modules.maturity import clear_mature_coins_storage
                     import os
                     
                     # 1. Очищаем RSI кэш (пересчитается при следующей загрузке)
                     clear_rsi_cache()
                     logger.info("[TIMEFRAME] ✅ RSI кэш очищен - будет пересчитан для нового TF")
                     
-                    # 2. Очищаем зрелые монеты (нужно перепроверить с новым таймфреймом)
-                    clear_mature_coins_storage()
-                    logger.info("[TIMEFRAME] ✅ Файл зрелых монет очищен - перепроверка для нового TF")
+                    # 2. ✅ ИСПРАВЛЕНО: НЕ очищаем зрелые монеты - они для старого TF остаются в файле!
+                    # При переключении на новый TF система просто начнет использовать новый файл
+                    logger.info("[TIMEFRAME] ✅ Зрелые монеты для нового TF будут вычисляться независимо")
                     
-                    # 3. Очищаем оптимальные EMA (полностью зависят от таймфрейма!)
-                    try:
-                        old_tf = old_config.get('timeframe', '6h')
-                        old_ema_file = f'data/optimal_ema_{old_tf}.json'
-                        if os.path.exists(old_ema_file):
-                            with open(old_ema_file, 'w', encoding='utf-8') as f:
-                                json.dump({}, f)
-                            logger.info(f"[TIMEFRAME] ✅ Оптимальные EMA для {old_tf} очищены - пересчитаются для нового TF")
-                    except Exception as ema_error:
-                        logger.error(f"[TIMEFRAME] ⚠️ Не удалось очистить оптимальные EMA: {ema_error}")
+                    # 3. ✅ ИСПРАВЛЕНО: НЕ очищаем оптимальные EMA - они для старого TF остаются в файле!
+                    # При переключении на новый TF система просто начнет использовать новый файл
+                    logger.info("[TIMEFRAME] ✅ Optimal EMA для нового TF будут вычисляться независимо")
                     
                     # 4. 🤖 AI МОДЕЛИ - СОЗДАЕМ ОТДЕЛЬНЫЕ БАЗЫ ДЛЯ КАЖДОГО ТАЙМФРЕЙМА!
                     try:
-                        old_tf = old_config.get('timeframe')
                         new_tf = data['timeframe']
+                        
+                        # Структура директорий для нового таймфрейма
                         ai_base_dir = 'data/ai/models'
                         ai_training_dir = 'data/ai/training'
+                        ai_historical_dir = 'data/ai/historical'
+                        
+                        new_tf_models_dir = os.path.join(ai_base_dir, new_tf)
+                        new_tf_training_dir = os.path.join(ai_training_dir, new_tf)
+                        new_tf_historical_dir = os.path.join(ai_historical_dir, new_tf)
                         
                         # Создаем отдельные директории для нового таймфрейма если их нет
-                        new_tf_dir = os.path.join(ai_base_dir, new_tf)
-                        new_tf_training_dir = os.path.join(ai_training_dir, new_tf)
-                        
-                        if not os.path.exists(new_tf_dir):
-                            os.makedirs(new_tf_dir, exist_ok=True)
-                            logger.info(f"[TIMEFRAME] ✅ Создана директория для AI моделей: {new_tf_dir}")
+                        if not os.path.exists(new_tf_models_dir):
+                            os.makedirs(new_tf_models_dir, exist_ok=True)
+                            logger.info(f"[TIMEFRAME] ✅ Создана директория для AI моделей: {new_tf_models_dir}")
+                        else:
+                            logger.info(f"[TIMEFRAME] ✅ Директория AI моделей уже существует: {new_tf_models_dir}")
                         
                         if not os.path.exists(new_tf_training_dir):
                             os.makedirs(new_tf_training_dir, exist_ok=True)
                             logger.info(f"[TIMEFRAME] ✅ Создана директория для AI обучающих данных: {new_tf_training_dir}")
+                        else:
+                            logger.info(f"[TIMEFRAME] ✅ Директория AI обучения уже существует: {new_tf_training_dir}")
                         
-                        # Если файл с историческими данными есть - копируем для нового TF
-                        historical_dir = 'data/ai/historical'
-                        if old_tf and os.path.exists(os.path.join(historical_dir, old_tf)):
-                            try:
-                                # Копируем базовую историческую информацию (если есть)
-                                logger.info(f"[TIMEFRAME] 📊 Копируем исторические данные с {old_tf} на {new_tf}...")
-                            except:
-                                pass  # Не критично
+                        if not os.path.exists(new_tf_historical_dir):
+                            os.makedirs(new_tf_historical_dir, exist_ok=True)
+                            logger.info(f"[TIMEFRAME] ✅ Создана директория для исторических данных: {new_tf_historical_dir}")
+                        else:
+                            logger.info(f"[TIMEFRAME] ✅ Директория исторических данных уже существует: {new_tf_historical_dir}")
                         
+                        logger.info("=" * 80)
                         logger.info(f"[TIMEFRAME] ✅ AI системы готовы для таймфрейма {new_tf}")
-                        logger.info(f"[TIMEFRAME] 📁 Модели: {new_tf_dir}")
+                        logger.info(f"[TIMEFRAME] 📁 Модели: {new_tf_models_dir}")
                         logger.info(f"[TIMEFRAME] 📊 Обучение: {new_tf_training_dir}")
+                        logger.info(f"[TIMEFRAME] 📈 Исторические данные: {new_tf_historical_dir}")
+                        logger.info("[TIMEFRAME] 💡 Каждый таймфрейм имеет СВОЮ ИНДИВИДУАЛЬНУЮ базу данных AI!")
+                        logger.info("=" * 80)
                         
                     except Exception as ai_error:
                         logger.error(f"[TIMEFRAME] ⚠️ Ошибка настройки AI для нового таймфрейма: {ai_error}")
+                        import traceback
+                        logger.error(traceback.format_exc())
                     
                     # 5. 📊 ПАРАМЕТРЫ ОСТАЮТСЯ ТАКИЕ ЖЕ (количество свечей, не время!)
                     logger.info("[TIMEFRAME] ✅ Параметры остаются без изменений:")

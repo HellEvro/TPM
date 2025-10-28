@@ -163,32 +163,22 @@ def load_rsi_cache():
         return False
 
 def save_default_config():
-    """Сохраняет дефолтную конфигурацию в файл для восстановления"""
-    try:
-        with open(DEFAULT_CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(DEFAULT_AUTO_BOT_CONFIG, f, indent=2, ensure_ascii=False)
-        
-        logger.info(f"[DEFAULT_CONFIG] ✅ Дефолтная конфигурация сохранена в {DEFAULT_CONFIG_FILE}")
-        return True
-        
-    except Exception as e:
-        logger.error(f"[DEFAULT_CONFIG] ❌ Ошибка сохранения дефолтной конфигурации: {e}")
-        return False
+    """✅ ИСПРАВЛЕНО: Больше НЕ сохраняем в JSON - используем только bot_config.py"""
+    # Больше не сохраняем default_auto_bot_config.json
+    # Единственный источник: bot_engine/bot_config.py
+    logger.info(f"[DEFAULT_CONFIG] ✅ Конфигурация в bot_config.py")
+    return True
 
 def load_default_config():
-    """Загружает дефолтную конфигурацию из файла"""
+    """✅ ИСПРАВЛЕНО: Загружает дефолтную конфигурацию ИЗ bot_config.py"""
     try:
-        if os.path.exists(DEFAULT_CONFIG_FILE):
-            with open(DEFAULT_CONFIG_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        else:
-            # Если файла нет, создаем его с текущими дефолтными значениями
-            save_default_config()
-            return DEFAULT_AUTO_BOT_CONFIG.copy()
+        # Импортируем напрямую из bot_config.py
+        from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
+        return DEFAULT_AUTO_BOT_CONFIG.copy()
             
     except Exception as e:
         logger.error(f"[DEFAULT_CONFIG] ❌ Ошибка загрузки дефолтной конфигурации: {e}")
-        return DEFAULT_AUTO_BOT_CONFIG.copy()
+        return {}
 
 def restore_default_config():
     """Восстанавливает дефолтную конфигурацию Auto Bot"""
@@ -482,7 +472,8 @@ def save_auto_bot_config():
 def save_optimal_ema_periods():
     """Сохраняет оптимальные EMA периоды (для текущего таймфрейма)"""
     try:
-        global optimal_ema_data
+        # Импортируем оптимальные EMA данные
+        from bots_modules.optimal_ema import optimal_ema_data
         
         # Проверяем, что есть данные для сохранения
         if not optimal_ema_data:
@@ -524,11 +515,11 @@ def load_bots_state():
         logger.info(f"[LOAD_STATE] 📊 Версия состояния: {version}, последнее сохранение: {last_saved}")
         
         # ✅ ИСПРАВЛЕНИЕ: НЕ перезаписываем конфигурацию Auto Bot из bots_state.json!
-        # Конфигурация должна загружаться ТОЛЬКО из auto_bot_config.json
+        # Конфигурация должна загружаться ТОЛЬКО из bot_engine/bot_config.py
         # bots_state.json содержит только состояние ботов и глобальную статистику
         
         logger.info(f"[LOAD_STATE] ⚙️ Конфигурация Auto Bot НЕ загружается из bots_state.json")
-        logger.info(f"[LOAD_STATE] 💡 Конфигурация загружается только из auto_bot_config.json")
+        logger.info(f"[LOAD_STATE] 💡 Конфигурация загружается только из bot_engine/bot_config.py")
         
         # Восстанавливаем ботов
         restored_bots = 0

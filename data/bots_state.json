@@ -11,39 +11,31 @@
       "entry_time": null,
       "last_signal_time": null,
       "last_bar_timestamp": null,
-      "created_at": "2025-10-28T03:56:16.513705",
+      "created_at": "2025-10-28T04:39:58.842498",
       "scaling_enabled": false,
       "scaling_levels": [],
       "scaling_current_level": 0,
       "scaling_group_id": null,
-      "unrealized_pnl": 0.001,
-      "position_side": "LONG",
-      "stop_loss": "13.9663",
-      "take_profit": "15.5969",
-      "current_price": "14.1907",
-      "work_time": "3м 20с",
-      "last_update": "2025-10-28T04:00:04.128075",
-      "bot_status": "Активен",
       "rsi_data": {
         "symbol": "OG",
-        "rsi6h": 25.9,
+        "rsi6h": 50.0,
         "trend6h": "NEUTRAL",
-        "rsi_zone": "BUY_ZONE",
-        "signal": "ENTER_LONG",
-        "price": 14.1132,
-        "change24h": 2.02,
-        "last_update": "2025-10-28T03:59:55.638011",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 14.1979,
+        "change24h": 0.6,
+        "last_update": "2025-10-28T04:48:38.525391",
         "trend_analysis": {
           "trend": "NEUTRAL",
-          "ema_short": 16.43942131376022,
-          "ema_long": 15.974878195537004,
-          "ema_short_period": 50,
-          "ema_long_period": 200,
-          "ema_long_slope": -0.01802088638730659,
-          "current_close": 14.1818,
+          "ema_short": 16.353450394643176,
+          "ema_long": 14.858704319008096,
+          "ema_short_period": 155,
+          "ema_long_period": 305,
+          "ema_long_slope": -0.004347396835578721,
+          "current_close": 14.1979,
           "confirmations": 3,
           "min_confirmations": 2,
-          "accuracy": 0
+          "accuracy": 99.3849938499385
         },
         "ema_periods": {
           "ema_short": 155,
@@ -63,24 +55,14 @@
           "confirmations": {
             "volume": false,
             "divergence": false,
-            "stoch_rsi_k": 55.4873259018226,
-            "stoch_rsi_d": 43.87124991591969
+            "stoch_rsi_k": 98.25326948505077,
+            "stoch_rsi_d": 97.47284676372823
           },
-          "enhanced_signal": "ENTER_LONG",
-          "enhanced_reason": "rsi_oversold_25.9"
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "rsi_neutral_50.0"
         },
-        "time_filter_info": {
-          "blocked": false,
-          "reason": "Разрешено: с лоя (свеча -5) прошло 4 спокойных свечей <= 35",
-          "filter_type": "time_filter",
-          "last_extreme_candles_ago": 4,
-          "calm_candles": 4
-        },
-        "exit_scam_info": {
-          "blocked": false,
-          "reason": "ExitScam фильтр пройден",
-          "filter_type": "exit_scam"
-        },
+        "time_filter_info": null,
+        "exit_scam_info": null,
         "blocked_by_scope": false,
         "has_existing_position": false,
         "is_mature": true,
@@ -89,23 +71,31 @@
         "trading_status": "Trading",
         "is_delisting": false
       },
+      "unrealized_pnl": 0.037,
+      "position_side": "LONG",
+      "stop_loss": "13.9663",
+      "take_profit": "15.5969",
+      "current_price": "14.1979",
       "exchange_position": {
         "size": 5.0,
         "side": "Long",
-        "unrealized_pnl": -0.0215,
-        "mark_price": 14.1862,
+        "unrealized_pnl": 0.037,
+        "mark_price": 14.1979,
         "entry_price": 14.1905,
         "leverage": 1,
         "stop_loss": "13.9663",
         "take_profit": "15.5969",
-        "roi": -0.030301962580599695
+        "roi": 0.05214756351079947
       },
       "position_size": 5,
       "position_size_coins": 5.0,
-      "mark_price": 14.1946,
-      "unrealized_pnl_usdt": -0.0215,
-      "roi": -0.030301962580599695,
-      "take_profit_price": null
+      "mark_price": 14.1979,
+      "unrealized_pnl_usdt": 0.037,
+      "roi": 0.05214756351079947,
+      "take_profit_price": null,
+      "last_update": "2025-10-28T04:48:50.269756",
+      "work_time": "8м 50с",
+      "bot_status": "Активен"
     }
   },
   "auto_bot_config": {
@@ -148,12 +138,13 @@
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50,
     "ai_optimal_entry_enabled": false,
-    "timeframe": "6h",
+    "timeframe": "5m",
     "filtered_coins": [
-      "OG"
+      "HBAR",
+      "JUP"
     ],
-    "last_filter_update": "2025-10-28T04:00:06.210168"
+    "last_filter_update": "2025-10-28T04:48:53.342455"
   },
-  "last_saved": "2025-10-28T04:00:06.210992",
+  "last_saved": "2025-10-28T04:48:53.343586",
   "version": "1.0"
 }
