@@ -141,69 +141,77 @@ def check_and_stop_existing_bots_processes():
                     except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                         continue
                 
-                # Также проверяем порт 5001
+                # Также проверяем порт 5001 (ОЧЕНЬ ВАЖНО: только порт 5001, НЕ 5000!)
                 port_process = None
                 for conn in psutil.net_connections(kind='inet'):
                     if conn.laddr.port == 5001 and conn.status == 'LISTEN':
                         port_process = conn.pid
-                        if port_process != current_pid and port_process not in python_processes:
-                            python_processes.append(port_process)
-                            print(f"🎯 Найден процесс на порту 5001: PID {port_process}")
+                        # ✅ ДВОЙНАЯ ПРОВЕРКА: проверим что это точно bots.py
+                        try:
+                            proc_check = psutil.Process(port_process)
+                            cmdline_check = proc_check.cmdline()
+                            # ✅ ТОЛЬКО если это bots.py
+                            if cmdline_check and any('bots.py' in arg for arg in cmdline_check):
+                                if port_process != current_pid and port_process not in python_processes:
+                                    python_processes.append(port_process)
+                                    print(f"🎯 Найден процесс bots.py на порту 5001: PID {port_process}")
+                            else:
+                                print(f"⚠️  На порту 5001 не bots.py (пропускаем): PID {port_process}")
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            pass
                         break
                 
+                # ✅ ИСПРАВЛЕНО: Убиваем ВСЕ найденные процессы, а не только первый!
                 if python_processes:
-                    process_to_stop = python_processes[0]  # Останавливаем первый найденный
-                else:
-                    process_to_stop = None
-                
-                if process_to_stop and process_to_stop != current_pid:
-                    try:
-                        proc = psutil.Process(process_to_stop)
-                        proc_info = proc.as_dict(attrs=['pid', 'name', 'cmdline', 'create_time'])
-                        
-                        print(f"🎯 Найден процесс на порту 5001:")
-                        print(f"   PID: {proc_info['pid']}")
-                        print(f"   Команда: {' '.join(proc_info['cmdline'][:3]) if proc_info['cmdline'] else 'N/A'}...")
-                        print()
-                        
-                        print(f"🔧 Останавливаем процесс {process_to_stop}...")
-                        proc.terminate()
-                        
+                    print(f"🎯 Найдено {len(python_processes)} процессов для остановки")
+                    for pid in python_processes:
                         try:
-                            proc.wait(timeout=5)
-                            print(f"✅ Процесс {process_to_stop} остановлен")
-                        except psutil.TimeoutExpired:
-                            proc.kill()
-                            proc.wait()
-                            print(f"🔴 Процесс {process_to_stop} принудительно остановлен")
-                        
-                        print("\n⏳ Ожидание освобождения порта 5001...")
-                        for i in range(10):
-                            time.sleep(1)
-                            try:
-                                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                                sock.settimeout(1)
-                                result = sock.connect_ex(('127.0.0.1', 5001))
-                                sock.close()
-                                
-                                if result != 0:
-                                    print("✅ Порт 5001 освобожден")
-                                    break
-                            except:
-                                pass
+                            proc = psutil.Process(pid)
+                            proc_info = proc.as_dict(attrs=['pid', 'name', 'cmdline', 'create_time'])
                             
-                            if i == 9:
-                                print("❌ Порт 5001 все еще занят!")
-                                print("⚠️  Возможно нужно вручную остановить процесс")
-                                print("=" * 80)
-                                return False
+                            print(f"🎯 Останавливаем процесс:")
+                            print(f"   PID: {proc_info['pid']}")
+                            print(f"   Команда: {' '.join(proc_info['cmdline'][:3]) if proc_info['cmdline'] else 'N/A'}...")
+                            print()
+                            
+                            print(f"🔧 Останавливаем процесс {pid}...")
+                            proc.terminate()
+                            
+                            try:
+                                proc.wait(timeout=5)
+                                print(f"✅ Процесс {pid} остановлен")
+                            except psutil.TimeoutExpired:
+                                proc.kill()
+                                proc.wait()
+                                print(f"🔴 Процесс {pid} принудительно остановлен")
+                        except psutil.NoSuchProcess:
+                            print(f"⚠️  Процесс {pid} уже завершен")
+                        except Exception as e:
+                            print(f"❌ Ошибка остановки процесса {pid}: {e}")
+                    
+                    # Проверяем что все процессы остановлены
+                    print("\n⏳ Ожидание освобождения порта 5001...")
+                    for i in range(10):
+                        time.sleep(1)
+                        try:
+                            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                            sock.settimeout(1)
+                            result = sock.connect_ex(('127.0.0.1', 5001))
+                            sock.close()
+                            
+                            if result != 0:
+                                print("✅ Порт 5001 освобожден")
+                                break
+                        except:
+                            pass
                         
-                    except Exception as e:
-                        print(f"❌ Ошибка остановки процесса {process_to_stop}: {e}")
-                        print("=" * 80)
-                        return False
+                        if i == 9:
+                            print("❌ Порт 5001 все еще занят!")
+                            print("⚠️  Возможно нужно вручную остановить процесс")
+                            print("=" * 80)
+                            return False
                 
-                elif not process_to_stop:
+                else:
                     print("⚠️  Не удалось найти процесс на порту 5001")
                     print("=" * 80)
                     return False

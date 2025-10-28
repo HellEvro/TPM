@@ -12,13 +12,20 @@ from datetime import datetime
 def check_collected_data():
     """Проверяет собранные данные"""
     
-    data_dir = Path('data/ai/historical')
+    # ✅ Получаем текущий таймфрейм
+    try:
+        from bots_modules.imports_and_globals import get_timeframe
+        timeframe = get_timeframe()
+    except Exception:
+        timeframe = '6h'  # Fallback
+    
+    data_dir = Path('data/ai/historical') / timeframe
     
     if not data_dir.exists():
-        print("Directory not found: data/ai/historical")
+        print(f"Directory not found: {data_dir}")
         return
     
-    csv_files = list(data_dir.glob('*_6h_historical.csv'))
+    csv_files = list(data_dir.glob(f'*_{timeframe}_historical.csv'))
     
     if not csv_files:
         print("No CSV files found")
@@ -31,7 +38,7 @@ def check_collected_data():
     
     for csv_file in csv_files:
         df = pd.read_csv(csv_file)
-        symbol = csv_file.stem.replace('_6h_historical', '')
+        symbol = csv_file.stem.replace(f'_{timeframe}_historical', '')
         
         # Проверяем наличие поля timestamp или time
         timestamp_field = 'timestamp' if 'timestamp' in df.columns else 'time'
