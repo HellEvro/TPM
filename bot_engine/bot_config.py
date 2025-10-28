@@ -32,12 +32,6 @@ TREND_REQUIRE_SLOPE = False  # Требовать наклон EMA_long (False =
 TREND_REQUIRE_PRICE = True   # Требовать цену выше/ниже EMA_long (True = обязательный)
 TREND_REQUIRE_CANDLES = True # Требовать N свечей подряд (True = обязательный)
 
-# Таймфрейм для анализа
-TIMEFRAME = '6h'
-
-# Доступные таймфреймы (Bybit поддерживает все эти)
-AVAILABLE_TIMEFRAMES = ['1m', '5m', '15m', '30m', '1h', '4h', '6h', '1d', '1w']
-
 # Статусы бота
 class BotStatus:
     IDLE = 'IDLE'
@@ -330,3 +324,6 @@ class AIConfig:
     
     # Время запуска обучения (по умолчанию - ночью)
     AI_RETRAIN_HOUR = 3
+
+# ✅ Таймфрейм из конфигурации (динамически берётся из DEFAULT_AUTO_BOT_CONFIG)
+TIMEFRAME = DEFAULT_AUTO_BOT_CONFIG['timeframe']
