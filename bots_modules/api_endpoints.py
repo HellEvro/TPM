@@ -815,16 +815,50 @@ def create_bot_endpoint():
             thread.daemon = True
             thread.start()
         else:
-            # ✅ Для существующей позиции - просто запускаем синхронизацию
-            logger.info(f"[BOT_CREATE] 🔄 {symbol}: Запускаем синхронизацию существующей позиции...")
+            # ✅ Для существующей позиции - обновляем бота немедленно с данными позиции
+            logger.info(f"[BOT_CREATE] 🔄 {symbol}: Обнаружена существующая позиция на бирже")
             
             def sync_existing_position():
                 try:
+                    # 1. Немедленная синхронизация бота с позицией на бирже
                     from bots_modules.sync_and_cache import sync_bots_with_exchange
                     sync_bots_with_exchange()
+                    
+                    # 2. Устанавливаем корректный статус бота на основе позиции
+                    with bots_data_lock:
+                        if symbol in bots_data['bots']:
+                            bot_data = bots_data['bots'][symbol]
+                            # Проверяем данные позиции из биржи
+                            current_exchange = get_exchange()
+                            if current_exchange:
+                                positions_response = current_exchange.get_positions()
+                                if isinstance(positions_response, tuple):
+                                    positions_list = positions_response[0] if positions_response else []
+                                else:
+                                    positions_list = positions_response if positions_response else []
+                                
+                                # Ищем позицию для этой монеты
+                                for pos in positions_list:
+                                    pos_symbol = pos.get('symbol', '').replace('USDT', '')
+                                    if pos_symbol == symbol and abs(float(pos.get('size', 0))) > 0:
+                                        # Обновляем статус бота
+                                        bot_data['entry_price'] = float(pos.get('avgPrice', 0))
+                                        bot_data['position_side'] = 'LONG' if pos.get('side') == 'Buy' else 'SHORT'
+                                        bot_data['unrealized_pnl'] = float(pos.get('unrealisedPnl', 0))
+                                        bot_data['status'] = BOT_STATUS['IN_POSITION_LONG'] if bot_data['position_side'] == 'LONG' else BOT_STATUS['IN_POSITION_SHORT']
+                                        
+                                        logger.info(f"[BOT_CREATE_ASYNC] ✅ Бот {symbol} синхронизирован с позицией: {bot_data['position_side']} @ {bot_data['entry_price']}")
+                                        break
+                    
+                    # Сохраняем состояние
+                    from bots_modules.sync_and_cache import save_bots_state
+                    save_bots_state()
+                    
                     logger.info(f"[BOT_CREATE_ASYNC] ✅ Синхронизация позиции {symbol} завершена")
                 except Exception as e:
                     logger.error(f"[BOT_CREATE_ASYNC] ❌ Ошибка синхронизации: {e}")
+                    import traceback
+                    traceback.print_exc()
             
             thread = threading.Thread(target=sync_existing_position)
             thread.daemon = True
