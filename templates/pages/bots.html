@@ -931,6 +931,25 @@
                             </div>
                             <input type="hidden" id="autoBotScope" value="all">
                         </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">⏱️</span>
+                                <span class="label-text" data-translate="timeframe_label">Таймфрейм анализа:</span>
+                            </label>
+                            <select id="timeframe" class="config-input">
+                                <option value="1m">1 минута</option>
+                                <option value="5m">5 минут</option>
+                                <option value="15m">15 минут</option>
+                                <option value="30m">30 минут</option>
+                                <option value="1h">1 час</option>
+                                <option value="4h">4 часа</option>
+                                <option value="6h" selected>6 часов</option>
+                                <option value="1d">1 день</option>
+                                <option value="1w">1 неделя</option>
+                            </select>
+                            <small class="config-help" data-translate="timeframe_help">Таймфрейм для расчета RSI, EMA и анализа тренда. Влияет на LSTM и другие AI модули</small>
+                        </div>
                     </div>
                     
                     <div class="config-section-actions">

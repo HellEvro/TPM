@@ -4634,6 +4634,13 @@ class BotsManager {
             console.error('[BotsManager] ❌ Элемент autoBotScope не найден!');
         }
         
+        // Таймфрейм
+        const timeframeEl = document.getElementById('timeframe');
+        if (timeframeEl) {
+            timeframeEl.value = autoBotConfig.timeframe || '6h';
+            console.log('[BotsManager] ⏱️ Таймфрейм:', timeframeEl.value);
+        }
+        
         // Торговые параметры
         const rsiLongEl = document.getElementById('rsiLongThreshold');
         if (rsiLongEl) {
@@ -5168,6 +5175,7 @@ class BotsManager {
             max_concurrent: parseInt(document.getElementById('autoBotMaxConcurrent')?.value) || 5,
             risk_cap_percent: parseFloat(document.getElementById('autoBotRiskCap')?.value) || 10,
             scope: document.getElementById('autoBotScope')?.value || 'all',
+            timeframe: document.getElementById('timeframe')?.value || '6h',
             rsi_long_threshold: parseInt(document.getElementById('rsiLongThreshold')?.value) || 29,
             rsi_short_threshold: parseInt(document.getElementById('rsiShortThreshold')?.value) || 71,
             rsi_exit_long: parseInt(document.getElementById('rsiExitLong')?.value) || 65,

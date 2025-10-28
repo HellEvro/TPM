@@ -539,7 +539,10 @@ def calculate_all_coins_maturity():
                     logger.info(f"[MATURITY_BATCH] 📊 Прогресс: {i}/{len(coins_to_check)} монет ({round(i/len(coins_to_check)*100)}%)")
                 
                 # Получаем свечи для проверки зрелости
-                chart_response = exchange.get_chart_data(symbol, '6h', '30d')
+                # Получаем текущий таймфрейм из конфигурации
+                from bots_modules.imports_and_globals import get_timeframe
+                timeframe = get_timeframe()
+                chart_response = exchange.get_chart_data(symbol, timeframe, '30d')
                 if not chart_response or not chart_response.get('success'):
                     logger.debug(f"[MATURITY_BATCH] ⚠️ {symbol}: Не удалось получить свечи")
                     immature_count += 1

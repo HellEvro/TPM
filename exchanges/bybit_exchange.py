@@ -786,6 +786,20 @@ class BybitExchange(BaseExchange):
                 'error': str(e)
             }
 
+    def get_available_timeframes(self):
+        """Получает список всех доступных таймфреймов"""
+        return {
+            '1m': '1 минута',
+            '5m': '5 минут',
+            '15m': '15 минут',
+            '30m': '30 минут',
+            '1h': '1 час',
+            '4h': '4 часа',
+            '6h': '6 часов',
+            '1d': '1 день',
+            '1w': '1 неделя'
+        }
+    
     def get_indicators(self, symbol, timeframe='1h'):
         """Получение значений индикаторов
         
@@ -807,6 +821,7 @@ class BybitExchange(BaseExchange):
                 '30m': '30',
                 '1h': '60',
                 '4h': '240',
+                '6h': '360',
                 '1d': 'D',
                 '1w': 'W'
             }
