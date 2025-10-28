@@ -781,12 +781,9 @@ def restore_lost_bots():
         logger.error(f"[REGISTRY] ❌ Ошибка восстановления ботов: {e}")
         return []
 
-# ✅ ИСПРАВЛЕНИЕ: Загружаем зрелые монеты при импорте модуля
-try:
-    load_mature_coins_storage()
-    logger.info(f"[IMPORTS] ✅ Загружено {len(mature_coins_storage)} зрелых монет при импорте")
-except Exception as e:
-    logger.error(f"[IMPORTS] ❌ Ошибка загрузки зрелых монет: {e}")
+# ✅ ИСПРАВЛЕНО: Зрелые монеты загружаются в init_bot_service() ПОСЛЕ загрузки конфигурации
+# При импорте модуля НЕ загружаем, т.к. get_timeframe() еще не верен
+# load_mature_coins_storage() - будет вызвана в init_bot_service() с правильным таймфреймом
 
 
 def open_position_for_bot(symbol, side, volume_value, current_price, take_profit_price=None):

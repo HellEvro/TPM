@@ -259,11 +259,13 @@ def check_rsi_time_filter(candles, rsi, signal):
             
             if low_index is None:
                 # Лой не найден вообще - разрешаем (никогда не было экстремума)
+                # Используем размер последних N свечей вместо неинициализированной переменной
+                last_n_candles_for_long = rsi_history[max(0, current_index - rsi_time_filter_candles + 1):current_index + 1]
                 return {
                     'allowed': True,
                     'reason': f'Разрешено: лой RSI <= {rsi_long_threshold} не найден во всей истории',
                     'last_extreme_candles_ago': None,
-                    'calm_candles': len(last_n_candles)
+                    'calm_candles': len(last_n_candles_for_long)
                 }
             
             # Шаг 3: Проверяем ВСЕ свечи от лоя до текущей

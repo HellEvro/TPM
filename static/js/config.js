@@ -126,8 +126,8 @@ const TRANSLATIONS = {
         
         // Переводы для модального окна монеты
         'coin_info_price': 'ЦЕНА:',
-        'coin_info_rsi': 'RSI 6H:',
-        'coin_info_trend': 'ТРЕНД 6H:',
+        'coin_info_rsi': 'RSI:',
+        'coin_info_trend': 'ТРЕНД:',
         'coin_info_zone': 'ЗОНА RSI:',
         'coin_info_signal': 'СИГНАЛ:',
         'coin_info_change': 'ИЗМ. 24H:',
@@ -153,7 +153,7 @@ const TRANSLATIONS = {
         'to_black_list': 'В черный список',
         'remove_from_lists': 'Удалить из списков',
         'not_in_filters': 'Не в фильтрах',
-        'coins_rsi_6h': 'Монеты (RSI 6H)',
+        'coins_rsi_6h': 'Монеты',
         
         // Недостающие переводы для всех вкладок
         'volume_mode_label': 'Режим объёма:',
@@ -255,7 +255,7 @@ const TRANSLATIONS = {
         'select_coin_from_left': 'Выберите монету из списка слева для создания или управления ботом',
         'page_bots_management': 'Страница управления ботами',
         'navigation_tabs': 'Навигация по табам',
-        'left_panel_coins': 'Левая панель - список монет с RSI 6H',
+        'left_panel_coins': 'Левая панель - список монет',
         'smart_filters_found': 'Умные фильтры для найденных монет',
         'rsi_filters': 'Фильтры RSI',
         'coins_list': 'Список монет',
@@ -914,8 +914,8 @@ const TRANSLATIONS = {
         
         // Переводы для модального окна монеты
         'coin_info_price': 'PRICE:',
-        'coin_info_rsi': 'RSI 6H:',
-        'coin_info_trend': 'TREND 6H:',
+        'coin_info_rsi': 'RSI:',
+        'coin_info_trend': 'TREND:',
         'coin_info_zone': 'RSI ZONE:',
         'coin_info_signal': 'SIGNAL:',
         'coin_info_change': 'CHANGE 24H:',
@@ -941,7 +941,7 @@ const TRANSLATIONS = {
         'to_black_list': 'To black list',
         'remove_from_lists': 'Remove from lists',
         'not_in_filters': 'Not in filters',
-        'coins_rsi_6h': 'Coins (RSI 6H)',
+        'coins_rsi_6h': 'Coins',
         
         // Недостающие переводы для всех вкладок
         'volume_mode_label': 'Volume mode:',
@@ -1043,7 +1043,7 @@ const TRANSLATIONS = {
         'select_coin_from_left': 'Select a coin from the left list to create or manage a bot',
         'page_bots_management': 'Bot management page',
         'navigation_tabs': 'Navigation tabs',
-        'left_panel_coins': 'Left panel - coin list with RSI 6H',
+        'left_panel_coins': 'Left panel - coin list',
         'smart_filters_found': 'Smart filters for found coins',
         'rsi_filters': 'RSI filters',
         'coins_list': 'Coins list',

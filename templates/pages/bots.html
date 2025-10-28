@@ -72,7 +72,7 @@
         <div class="coins-panel">
             <div class="panel-header">
                 <div class="title-row">
-                        <h3 data-translate="coins_rsi_6h">📊 Монеты (RSI <span id="currentTimeframe">6H</span>)</h3>
+                        <h3 data-translate="coins_rsi_6h">📊 Монеты RSI<span id="currentTimeframe"></span></h3>
                         <span class="status-dot" id="rsiStatusDot">●</span>
                     </div>
                     <div class="service-status" id="botsServiceStatus">
@@ -185,12 +185,12 @@
                                 <span class="value" id="selectedCoinPrice">$0</span>
                         </div>
                         <div class="data-item">
-                                <span class="label" data-translate="coin_info_rsi">📊 RSI <span id="selectedCoinRSITimeframe">6H</span>:</span>
+                                <span class="label" data-translate="coin_info_rsi">📊 RSI<span id="selectedCoinRSITimeframe"></span>:</span>
                                 <span class="value rsi-indicator" id="selectedCoinRSI">-</span>
                                 <span class="status-icon" id="rsiIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
                         <div class="data-item">
-                                <span class="label" data-translate="coin_info_trend">📈 Тренд <span id="selectedCoinTrendTimeframe">6H</span>:</span>
+                                <span class="label" data-translate="coin_info_trend">📈 Тренд<span id="selectedCoinTrendTimeframe"></span>:</span>
                                 <span class="value trend-indicator" id="selectedCoinTrend">-</span>
                                 <span class="status-icon" id="trendIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
@@ -944,9 +944,9 @@
                                 <option value="30m">30 минут</option>
                                 <option value="1h">1 час</option>
                                 <option value="4h">4 часа</option>
-                                <option value="6h" selected>6 часов</option>
+                                <option value="6h">6 часов</option>
                                 <option value="1d">1 день</option>
-                                <option value="1w">1 неделя</option>
+                                <option value="1w" selected>1 неделя</option>
                             </select>
                             <small class="config-help" data-translate="timeframe_help">Таймфрейм для расчета RSI, EMA и анализа тренда. Влияет на LSTM и другие AI модули</small>
                         </div>
@@ -2663,7 +2663,20 @@ function getStatusDescription(statusType, statusValue) {
 function enableBotForCurrentCoin() {
     if (window.botsManager && window.botsManager.selectedCoin) {
         const coin = window.botsManager.selectedCoin;
-        console.log('[EnableBot] Включение бота для монеты:', coin.symbol);
+        const isManualPosition = coin.manual_position || false;
+        console.log('[EnableBot] Включение бота для монеты:', coin.symbol, 'isManualPosition:', isManualPosition);
+        
+        // Определяем параметры в зависимости от типа позиции
+        const requestData = {
+            symbol: coin.symbol,
+            signal: coin.signal || 'ENTER_LONG'
+        };
+        
+        // Для ручных позиций добавляем флаг синхронизации
+        if (isManualPosition) {
+            requestData.sync_with_existing_position = true;
+            console.log('[EnableBot] 🔗 Синхронизация с существующей позицией');
+        }
         
         // Отправляем запрос на создание бота
         fetch('/api/bots/create', {
@@ -2671,10 +2684,7 @@ function enableBotForCurrentCoin() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                symbol: coin.symbol,
-                signal: coin.signal || 'ENTER_LONG'
-            })
+            body: JSON.stringify(requestData)
         })
         .then(response => response.json())
         .then(data => {
@@ -2682,8 +2692,15 @@ function enableBotForCurrentCoin() {
                 console.log('[EnableBot] Бот успешно создан:', data);
                 // Обновляем интерфейс
                 window.botsManager.updateCoinInfo(coin);
+                window.botsManager.loadActiveBotsData();
                 // Скрываем кнопку
                 document.getElementById('enableBotBtn').style.display = 'none';
+                // Показываем уведомление
+                if (isManualPosition) {
+                    alert('✅ Бот синхронизирован с позицией на бирже');
+                } else {
+                    alert('✅ Бот успешно создан');
+                }
             } else {
                 console.error('[EnableBot] Ошибка создания бота:', data.error);
                 alert('Ошибка создания бота: ' + data.error);

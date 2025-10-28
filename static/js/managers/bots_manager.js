@@ -174,6 +174,14 @@ class BotsManager {
         // Загружаем счётчик зрелых монет
         this.loadMatureCoinsCount();
         
+        // ✅ Обновляем таймфрейм в UI СРАЗУ при инициализации
+        const timeframeEl = document.getElementById('timeframe');
+        if (timeframeEl) {
+            const currentTf = timeframeEl.value || '6h';
+            console.log('[BotsManager] 🔄 Устанавливаем начальный таймфрейм из HTML:', currentTf);
+            this.updateTimeframeInUI(currentTf);
+        }
+        
         // Принудительно применяем стили для читаемости
         this.applyReadabilityStyles();
         
@@ -1721,12 +1729,23 @@ class BotsManager {
                         icon = '❓'; 
                         description = 'Бот не создан';
                         
-                        // Показываем кнопку "Включить" только для монет с сигналами LONG/SHORT
+                        // ✅ ПОКАЗЫВАЕМ КНОПКУ "Включить" для ручных позиций или монет с сигналами
                         const enableBotBtn = document.getElementById('enableBotBtn');
                         if (enableBotBtn && this.selectedCoin) {
+                            const isManualPosition = this.selectedCoin.manual_position || false;
                             const signal = this.selectedCoin.signal;
-                            if (signal === 'ENTER_LONG' || signal === 'ENTER_SHORT') {
+                            
+                            // Показываем кнопку если:
+                            // 1. Это ручная позиция (независимо от сигнала)
+                            // 2. Или есть сигнал для входа
+                            if (isManualPosition || signal === 'ENTER_LONG' || signal === 'ENTER_SHORT') {
                                 enableBotBtn.style.display = 'inline-block';
+                                // Меняем текст кнопки для ручных позиций
+                                if (isManualPosition) {
+                                    enableBotBtn.textContent = '🔗 Синхронизировать';
+                                } else {
+                                    enableBotBtn.textContent = 'Включить';
+                                }
                             } else {
                                 enableBotBtn.style.display = 'none';
                             }
@@ -4590,10 +4609,10 @@ class BotsManager {
     updateTimeframeInUI(timeframe) {
         /**Обновляет отображение таймфрейма в заголовках UI*/
         const tfMap = {
-            '1m': '1M', '5m': '5M', '15m': '15M', '30m': '30M',
-            '1h': '1H', '4h': '4H', '6h': '6H', '1d': '1D', '1w': '1W'
+            '1m': ' 1M', '5m': ' 5M', '15m': ' 15M', '30m': ' 30M',
+            '1h': ' 1H', '4h': ' 4H', '6h': ' 6H', '1d': ' 1D', '1w': ' 1W'
         };
-        const displayTf = tfMap[timeframe] || '6H';
+        const displayTf = timeframe ? tfMap[timeframe] || ' 6H' : '';
         
         // Обновляем заголовок списка монет
         const currentTfEl = document.getElementById('currentTimeframe');
@@ -4680,6 +4699,13 @@ class BotsManager {
             // Обновляем таймфрейм в UI заголовках (в следующем кадре для гарантии)
             requestAnimationFrame(() => {
                 this.updateTimeframeInUI(timeframe);
+            });
+            
+            // ✅ Добавляем обработчик события для немедленного обновления UI при смене
+            timeframeEl.addEventListener('change', (e) => {
+                const newTf = e.target.value;
+                console.log('[BotsManager] 🔄 Таймфрейм изменен в UI:', newTf);
+                this.updateTimeframeInUI(newTf);
             });
         }
         
