@@ -19,16 +19,23 @@ optimal_ema_data = {}
 OPTIMAL_EMA_FILE = 'data/optimal_ema.json'
 
 def load_optimal_ema_data():
-    """Загружает данные об оптимальных EMA из файла"""
+    """Загружает данные об оптимальных EMA из файла (для текущего таймфрейма)"""
     global optimal_ema_data
     try:
-        if os.path.exists(OPTIMAL_EMA_FILE):
-            with open(OPTIMAL_EMA_FILE, 'r', encoding='utf-8') as f:
+        # Получаем текущий таймфрейм из конфига
+        from bots_modules.imports_and_globals import get_timeframe
+        timeframe = get_timeframe()
+        
+        # Формируем имя файла с учетом таймфрейма (всегда с суффиксом)
+        optimal_ema_file = f'data/optimal_ema_{timeframe}.json'
+        
+        if os.path.exists(optimal_ema_file):
+            with open(optimal_ema_file, 'r', encoding='utf-8') as f:
                 optimal_ema_data = json.load(f)
-                logger.info(f"[OPTIMAL_EMA] Загружено {len(optimal_ema_data)} записей об оптимальных EMA")
+                logger.info(f"[OPTIMAL_EMA] Загружено {len(optimal_ema_data)} записей об оптимальных EMA для TF {timeframe}")
         else:
             optimal_ema_data = {}
-            logger.info("[OPTIMAL_EMA] Файл с оптимальными EMA не найден")
+            logger.info(f"[OPTIMAL_EMA] Файл с оптимальными EMA для TF {timeframe} не найден")
     except Exception as e:
         logger.error(f"[OPTIMAL_EMA] Ошибка загрузки данных об оптимальных EMA: {e}")
         optimal_ema_data = {}
@@ -81,7 +88,7 @@ def get_optimal_ema_periods(symbol):
             'analysis_method': 'default'
         }
 
-def calculate_all_coins_optimal_ema(mode='auto', force_symbols=None):
+def calculate_all_coins_optimal_ema(mode='auto', force_symbols=None, timeframe=None):
     """📊 ПАКЕТНЫЙ расчет Optimal EMA через скрипт с параметрами
     
     Args:
@@ -90,6 +97,7 @@ def calculate_all_coins_optimal_ema(mode='auto', force_symbols=None):
             - 'force': --force (все монеты принудительно)
             - 'symbols': --force --coins LIST (конкретные монеты)
         force_symbols (list): Список монет для принудительного расчета (если mode='symbols')
+        timeframe (str): Таймфрейм для расчета (по умолчанию из конфига)
     """
     try:
         logger.info(f"[OPTIMAL_EMA_BATCH] 📊 Начинаем расчет Optimal EMA (режим: {mode})...")
@@ -133,17 +141,22 @@ def calculate_all_coins_optimal_ema(mode='auto', force_symbols=None):
             logger.error(f"[OPTIMAL_EMA_BATCH] ❌ Скрипт не найден: {script_path}")
             return False
         
+        # Определяем таймфрейм (если не указан - берем из конфига)
+        if not timeframe:
+            from bots_modules.imports_and_globals import get_timeframe
+            timeframe = get_timeframe()
+        
         # Формируем команду в зависимости от режима
         if mode == 'auto':
-            cmd = ['python', script_path, '--all']
-            logger.info("[OPTIMAL_EMA_BATCH] 🚀 Запускаем скрипт с параметром --all (только новые монеты)...")
+            cmd = ['python', script_path, '--all', '--timeframe', timeframe]
+            logger.info(f"[OPTIMAL_EMA_BATCH] 🚀 Запускаем скрипт с параметрами --all --timeframe {timeframe}...")
         elif mode == 'force':
-            cmd = ['python', script_path, '--force']
-            logger.info("[OPTIMAL_EMA_BATCH] 🚀 Запускаем скрипт с параметром --force (все монеты принудительно)...")
+            cmd = ['python', script_path, '--force', '--timeframe', timeframe]
+            logger.info(f"[OPTIMAL_EMA_BATCH] 🚀 Запускаем скрипт с параметрами --force --timeframe {timeframe}...")
         elif mode == 'symbols' and force_symbols:
             symbols_str = ','.join(force_symbols)
-            cmd = ['python', script_path, '--force', '--coins', symbols_str]
-            logger.info(f"[OPTIMAL_EMA_BATCH] 🚀 Запускаем скрипт с параметрами --force --coins {symbols_str}...")
+            cmd = ['python', script_path, '--force', '--coins', symbols_str, '--timeframe', timeframe]
+            logger.info(f"[OPTIMAL_EMA_BATCH] 🚀 Запускаем скрипт с параметрами --force --coins {symbols_str} --timeframe {timeframe}...")
         else:
             logger.error(f"[OPTIMAL_EMA_BATCH] ❌ Неверный режим или отсутствуют монеты: mode={mode}, symbols={force_symbols}")
             return False

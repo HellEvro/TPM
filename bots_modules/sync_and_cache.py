@@ -480,7 +480,7 @@ def save_auto_bot_config():
         return False
 
 def save_optimal_ema_periods():
-    """Сохраняет оптимальные EMA периоды"""
+    """Сохраняет оптимальные EMA периоды (для текущего таймфрейма)"""
     try:
         global optimal_ema_data
         
@@ -489,10 +489,17 @@ def save_optimal_ema_periods():
             logger.warning("[SAVE_EMA] ⚠️ Нет данных об оптимальных EMA для сохранения")
             return False
         
-        with open(OPTIMAL_EMA_FILE, 'w', encoding='utf-8') as f:
+        # Получаем текущий таймфрейм из конфига
+        from bots_modules.imports_and_globals import get_timeframe
+        timeframe = get_timeframe()
+        
+        # Формируем имя файла с учетом таймфрейма (всегда с суффиксом)
+        optimal_ema_file = f'data/optimal_ema_{timeframe}.json'
+        
+        with open(optimal_ema_file, 'w', encoding='utf-8') as f:
             json.dump(optimal_ema_data, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"[SAVE_EMA] ✅ Оптимальные EMA периоды сохранены в {OPTIMAL_EMA_FILE} ({len(optimal_ema_data)} записей)")
+        logger.info(f"[SAVE_EMA] ✅ Оптимальные EMA периоды сохранены в {optimal_ema_file} ({len(optimal_ema_data)} записей для TF {timeframe})")
         return True
         
     except Exception as e:

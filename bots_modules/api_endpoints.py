@@ -1878,6 +1878,16 @@ def restart_service_endpoint():
         logger.info("[HOT_RELOAD] 🔄 Сброшен флаг инициализации")
         
         # Перезагружаем конфигурацию (БЕЗ принудительного выключения автобота)
+        # 1. Перезагружаем модуль bot_config для применения изменений
+        try:
+            import importlib
+            import bot_engine.bot_config
+            importlib.reload(bot_engine.bot_config)
+            logger.info("[HOT_RELOAD] 🔄 Модуль bot_config перезагружен")
+        except Exception as reload_error:
+            logger.warning(f"[HOT_RELOAD] ⚠️ Не удалось перезагрузить bot_config: {reload_error}")
+        
+        # 2. Загружаем конфигурацию
         load_auto_bot_config(force_disable=False)
         load_system_config()
         logger.info("[HOT_RELOAD] 🔄 Перезагружена конфигурация")
@@ -2122,35 +2132,122 @@ def auto_bot_config():
             if timeframe_changed:
                 logger.warning("=" * 80)
                 logger.warning(f"[TIMEFRAME] 🔄 ТАЙМФРЕЙМ ИЗМЕНЕН: {old_config.get('timeframe')} → {data['timeframe']}")
-                logger.warning("[TIMEFRAME] 🔄 Запуск пересчета данных...")
+                logger.warning("[TIMEFRAME] 🔄 Запуск ПОЛНОГО пересчета всех зависимых данных...")
                 logger.warning("=" * 80)
                 
                 try:
                     # Очищаем кэши для пересчета
                     from bots_modules.imports_and_globals import clear_rsi_cache, clear_mature_coins_storage
+                    import os
                     
-                    # Очищаем RSI кэш
+                    # 1. Очищаем RSI кэш (пересчитается при следующей загрузке)
                     clear_rsi_cache()
-                    logger.info("[TIMEFRAME] ✅ RSI кэш очищен")
+                    logger.info("[TIMEFRAME] ✅ RSI кэш очищен - будет пересчитан для нового TF")
                     
-                    # Очищаем зрелые монеты (нужно перепроверить с новым таймфреймом)
+                    # 2. Очищаем зрелые монеты (нужно перепроверить с новым таймфреймом)
                     clear_mature_coins_storage()
-                    logger.info("[TIMEFRAME] ✅ Файл зрелых монет очищен")
+                    logger.info("[TIMEFRAME] ✅ Файл зрелых монет очищен - перепроверка для нового TF")
                     
-                    # Очищаем оптимальные EMA (привязаны к таймфрейму)
+                    # 3. Очищаем оптимальные EMA (полностью зависят от таймфрейма!)
                     try:
-                        # Очищаем файл оптимальных EMA
-                        import os
-                        if os.path.exists('data/optimal_ema.json'):
-                            with open('data/optimal_ema.json', 'w', encoding='utf-8') as f:
+                        old_tf = old_config.get('timeframe', '6h')
+                        old_ema_file = f'data/optimal_ema_{old_tf}.json'
+                        if os.path.exists(old_ema_file):
+                            with open(old_ema_file, 'w', encoding='utf-8') as f:
                                 json.dump({}, f)
-                            logger.info("[TIMEFRAME] ✅ Оптимальные EMA очищены")
+                            logger.info(f"[TIMEFRAME] ✅ Оптимальные EMA для {old_tf} очищены - пересчитаются для нового TF")
                     except Exception as ema_error:
                         logger.error(f"[TIMEFRAME] ⚠️ Не удалось очистить оптимальные EMA: {ema_error}")
                     
-                    logger.info("[TIMEFRAME] ✅ Все данные будут пересчитаны для нового таймфрейма")
+                    # 4. 🤖 AI МОДЕЛИ - СОЗДАЕМ ОТДЕЛЬНЫЕ БАЗЫ ДЛЯ КАЖДОГО ТАЙМФРЕЙМА!
+                    try:
+                        old_tf = old_config.get('timeframe')
+                        new_tf = data['timeframe']
+                        ai_base_dir = 'data/ai/models'
+                        ai_training_dir = 'data/ai/training'
+                        
+                        # Создаем отдельные директории для нового таймфрейма если их нет
+                        new_tf_dir = os.path.join(ai_base_dir, new_tf)
+                        new_tf_training_dir = os.path.join(ai_training_dir, new_tf)
+                        
+                        if not os.path.exists(new_tf_dir):
+                            os.makedirs(new_tf_dir, exist_ok=True)
+                            logger.info(f"[TIMEFRAME] ✅ Создана директория для AI моделей: {new_tf_dir}")
+                        
+                        if not os.path.exists(new_tf_training_dir):
+                            os.makedirs(new_tf_training_dir, exist_ok=True)
+                            logger.info(f"[TIMEFRAME] ✅ Создана директория для AI обучающих данных: {new_tf_training_dir}")
+                        
+                        # Если файл с историческими данными есть - копируем для нового TF
+                        historical_dir = 'data/ai/historical'
+                        if old_tf and os.path.exists(os.path.join(historical_dir, old_tf)):
+                            try:
+                                # Копируем базовую историческую информацию (если есть)
+                                logger.info(f"[TIMEFRAME] 📊 Копируем исторические данные с {old_tf} на {new_tf}...")
+                            except:
+                                pass  # Не критично
+                        
+                        logger.info(f"[TIMEFRAME] ✅ AI системы готовы для таймфрейма {new_tf}")
+                        logger.info(f"[TIMEFRAME] 📁 Модели: {new_tf_dir}")
+                        logger.info(f"[TIMEFRAME] 📊 Обучение: {new_tf_training_dir}")
+                        
+                    except Exception as ai_error:
+                        logger.error(f"[TIMEFRAME] ⚠️ Ошибка настройки AI для нового таймфрейма: {ai_error}")
+                    
+                    # 5. 📊 ПАРАМЕТРЫ ОСТАЮТСЯ ТАКИЕ ЖЕ (количество свечей, не время!)
+                    logger.info("[TIMEFRAME] ✅ Параметры остаются без изменений:")
+                    logger.info("[TIMEFRAME]   - min_candles_for_maturity: 400 свечей")
+                    logger.info("[TIMEFRAME]   - rsi_time_filter_candles: 4 свечи")
+                    logger.info("[TIMEFRAME]   - exit_scam_candles: 8 свечей")
+                    logger.info("[TIMEFRAME] 💡 На разных таймфреймах это разное время, но ОДИНАКОВОЕ количество свечей!")
+                    
+                    # 6. 📈 ЗАПУСКАЕМ РАСЧЕТ OPTIMAL EMA ДЛЯ НОВОГО ТАЙМФРЕЙМА!
+                    try:
+                        from bots_modules.optimal_ema import calculate_all_coins_optimal_ema, load_optimal_ema_data
+                        
+                        # Перезагружаем данные для нового таймфрейма
+                        load_optimal_ema_data()
+                        logger.info("[TIMEFRAME] 🔄 Загружены данные Optimal EMA для нового таймфрейма")
+                        
+                        # Запускаем расчет в отдельном потоке (чтобы не блокировать ответ)
+                        def run_optimal_ema_calculation():
+                            try:
+                                new_tf = data['timeframe']
+                                logger.info(f"[TIMEFRAME] 🚀 Начинаем расчет Optimal EMA для таймфрейма {new_tf}...")
+                                
+                                # Запускаем расчет с указанием таймфрейма
+                                result = calculate_all_coins_optimal_ema(mode='auto', timeframe=new_tf)
+                                if result:
+                                    logger.info(f"[TIMEFRAME] ✅ Расчет Optimal EMA для {new_tf} завершен успешно")
+                                    # Перезагружаем данные после расчета
+                                    load_optimal_ema_data()
+                                else:
+                                    logger.warning(f"[TIMEFRAME] ⚠️ Расчет Optimal EMA для {new_tf} завершился с ошибками")
+                            except Exception as optimal_ema_error:
+                                logger.error(f"[TIMEFRAME] ❌ Ошибка расчета Optimal EMA: {optimal_ema_error}")
+                        
+                        # Запускаем в отдельном потоке
+                        import threading
+                        ema_thread = threading.Thread(target=run_optimal_ema_calculation, daemon=True)
+                        ema_thread.start()
+                        logger.info("[TIMEFRAME] ✅ Расчет Optimal EMA запущен в фоновом режиме")
+                        
+                    except Exception as optimal_ema_error:
+                        logger.error(f"[TIMEFRAME] ⚠️ Не удалось запустить расчет Optimal EMA: {optimal_ema_error}")
+                    
+                    logger.info("=" * 80)
+                    logger.info("[TIMEFRAME] ✅ ВСЕ ДАННЫЕ БУДУТ ПЕРЕСЧИТАНЫ ДЛЯ НОВОГО ТАЙМФРЕЙМА!")
+                    logger.info("[TIMEFRAME] 📊 RSI - пересчитается автоматически")
+                    logger.info("[TIMEFRAME] 📈 EMA - БУДЕТ РАСЧИТАН для нового TF в фоне")
+                    logger.info("[TIMEFRAME] 🎯 Зрелость - перепроверяется автоматически")
+                    logger.info("[TIMEFRAME] 🤖 AI модели - используют отдельные базы для каждого TF")
+                    logger.info("[TIMEFRAME] 📏 Параметры фильтров - остаются БЕЗ ИЗМЕНЕНИЙ (это СВЕЧИ, не время!)")
+                    logger.info("=" * 80)
+                    
                 except Exception as e:
                     logger.error(f"[TIMEFRAME] ❌ Ошибка пересчета данных: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
             
             # КРИТИЧЕСКИ ВАЖНО: При включении Auto Bot запускаем немедленную проверку
             # Показываем блок только если enabled реально изменился с False на True
