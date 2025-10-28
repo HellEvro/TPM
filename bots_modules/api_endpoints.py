@@ -2243,56 +2243,77 @@ def auto_bot_config():
                     try:
                         from bots_modules.optimal_ema import calculate_all_coins_optimal_ema, load_optimal_ema_data
                         
-                        # Перезагружаем данные для нового таймфрейма
-                        load_optimal_ema_data()
-                        logger.info("[TIMEFRAME] 🔄 Загружены данные Optimal EMA для нового таймфрейма")
+                        new_tf = data['timeframe']
+                        optimal_ema_file = f'data/optimal_ema_{new_tf}.json'
                         
-                        # Запускаем расчет в отдельном потоке (чтобы не блокировать ответ)
-                        def run_optimal_ema_calculation():
-                            try:
-                                new_tf = data['timeframe']
-                                logger.info(f"[TIMEFRAME] 🚀 Начинаем расчет Optimal EMA для таймфрейма {new_tf}...")
-                                
-                                # Запускаем расчет с указанием таймфрейма
-                                result = calculate_all_coins_optimal_ema(mode='auto', timeframe=new_tf)
-                                if result:
-                                    logger.info(f"[TIMEFRAME] ✅ Расчет Optimal EMA для {new_tf} завершен успешно")
-                                    # Перезагружаем данные после расчета
-                                    load_optimal_ema_data()
-                                else:
-                                    logger.warning(f"[TIMEFRAME] ⚠️ Расчет Optimal EMA для {new_tf} завершился с ошибками")
-                            except Exception as optimal_ema_error:
-                                logger.error(f"[TIMEFRAME] ❌ Ошибка расчета Optimal EMA: {optimal_ema_error}")
-                        
-                        # Запускаем в отдельном потоке
-                        import threading
-                        ema_thread = threading.Thread(target=run_optimal_ema_calculation, daemon=True)
-                        ema_thread.start()
-                        logger.info("[TIMEFRAME] ✅ Расчет Optimal EMA запущен в фоновом режиме")
+                        # Проверяем наличие файла
+                        if os.path.exists(optimal_ema_file):
+                            # Файл существует - загружаем
+                            load_optimal_ema_data()
+                            logger.info(f"[TIMEFRAME] 🔄 Загружены данные Optimal EMA для таймфрейма {new_tf}")
+                        else:
+                            # Файла нет - запускаем расчет
+                            logger.warning(f"[TIMEFRAME] ⚠️ Файл Optimal EMA для таймфрейма {new_tf} не найден")
+                            logger.info(f"[TIMEFRAME] 🚀 Запускаем расчет Optimal EMA для таймфрейма {new_tf}...")
+                            
+                            # Запускаем расчет в отдельном потоке (чтобы не блокировать ответ)
+                            def run_optimal_ema_calculation():
+                                try:
+                                    logger.info(f"[TIMEFRAME] 🚀 Начинаем расчет Optimal EMA для таймфрейма {new_tf}...")
+                                    
+                                    # Запускаем расчет с указанием таймфрейма
+                                    result = calculate_all_coins_optimal_ema(mode='auto', timeframe=new_tf)
+                                    if result:
+                                        logger.info(f"[TIMEFRAME] ✅ Расчет Optimal EMA для {new_tf} завершен успешно")
+                                        # Перезагружаем данные после расчета
+                                        load_optimal_ema_data()
+                                    else:
+                                        logger.warning(f"[TIMEFRAME] ⚠️ Расчет Optimal EMA для {new_tf} завершился с ошибками")
+                                except Exception as optimal_ema_error:
+                                    logger.error(f"[TIMEFRAME] ❌ Ошибка расчета Optimal EMA: {optimal_ema_error}")
+                            
+                            # Запускаем в отдельном потоке
+                            import threading
+                            ema_thread = threading.Thread(target=run_optimal_ema_calculation, daemon=True)
+                            ema_thread.start()
+                            logger.info("[TIMEFRAME] ✅ Расчет Optimal EMA запущен в фоновом режиме")
                         
                     except Exception as optimal_ema_error:
                         logger.error(f"[TIMEFRAME] ⚠️ Не удалось запустить расчет Optimal EMA: {optimal_ema_error}")
                     
                     # 7. 🎯 ЗАПУСКАЕМ РАСЧЕТ ЗРЕЛОСТИ ДЛЯ НОВОГО ТАЙМФРЕЙМА!
                     try:
-                        from bots_modules.maturity import calculate_all_coins_maturity
+                        from bots_modules.maturity import calculate_all_coins_maturity, load_mature_coins_storage
                         
-                        # Запускаем расчет зрелости в отдельном потоке
-                        def run_maturity_calculation():
-                            try:
-                                logger.info("[TIMEFRAME] 🚀 Начинаем расчет зрелости для нового таймфрейма...")
-                                result = calculate_all_coins_maturity()
-                                if result:
-                                    logger.info("[TIMEFRAME] ✅ Расчет зрелости завершен успешно")
-                                else:
-                                    logger.warning("[TIMEFRAME] ⚠️ Расчет зрелости завершился с ошибками")
-                            except Exception as maturity_error:
-                                logger.error(f"[TIMEFRAME] ❌ Ошибка расчета зрелости: {maturity_error}")
+                        new_tf = data['timeframe']
+                        mature_coins_file = f'data/mature_coins_{new_tf}.json'
                         
-                        import threading
-                        maturity_thread = threading.Thread(target=run_maturity_calculation, daemon=True)
-                        maturity_thread.start()
-                        logger.info("[TIMEFRAME] ✅ Расчет зрелости запущен в фоновом режиме")
+                        # Проверяем наличие файла
+                        if os.path.exists(mature_coins_file):
+                            # Файл существует - загружаем
+                            load_mature_coins_storage()
+                            logger.info(f"[TIMEFRAME] 🔄 Загружены данные зрелых монет для таймфрейма {new_tf}")
+                        else:
+                            # Файла нет - запускаем расчет
+                            logger.warning(f"[TIMEFRAME] ⚠️ Файл зрелых монет для таймфрейма {new_tf} не найден")
+                            logger.info(f"[TIMEFRAME] 🚀 Запускаем расчет зрелых монет для таймфрейма {new_tf}...")
+                            
+                            # Запускаем расчет зрелости в отдельном потоке
+                            def run_maturity_calculation():
+                                try:
+                                    logger.info("[TIMEFRAME] 🚀 Начинаем расчет зрелости для нового таймфрейма...")
+                                    result = calculate_all_coins_maturity()
+                                    if result:
+                                        logger.info("[TIMEFRAME] ✅ Расчет зрелости завершен успешно")
+                                    else:
+                                        logger.warning("[TIMEFRAME] ⚠️ Расчет зрелости завершился с ошибками")
+                                except Exception as maturity_error:
+                                    logger.error(f"[TIMEFRAME] ❌ Ошибка расчета зрелости: {maturity_error}")
+                            
+                            import threading
+                            maturity_thread = threading.Thread(target=run_maturity_calculation, daemon=True)
+                            maturity_thread.start()
+                            logger.info("[TIMEFRAME] ✅ Расчет зрелости запущен в фоновом режиме")
                         
                     except Exception as maturity_error:
                         logger.error(f"[TIMEFRAME] ⚠️ Не удалось запустить расчет зрелости: {maturity_error}")
