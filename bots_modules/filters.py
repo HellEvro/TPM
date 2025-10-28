@@ -318,7 +318,7 @@ def check_rsi_time_filter(candles, rsi, signal):
         return {'allowed': False, 'reason': f'Ошибка анализа: {str(e)}', 'last_extreme_candles_ago': None, 'calm_candles': 0}
 
 def get_coin_candles_only(symbol, exchange_obj=None):
-    """⚡ БЫСТРАЯ загрузка ТОЛЬКО свечей БЕЗ расчетов"""
+    """⚡ БЫСТРАЯ загрузка ТОЛЬКО свечей БЕЗ расчетов С ПАГИНАЦИЕЙ"""
     try:
         from bots_modules.imports_and_globals import get_exchange
         exchange_to_use = exchange_obj if exchange_obj is not None else get_exchange()
@@ -326,14 +326,12 @@ def get_coin_candles_only(symbol, exchange_obj=None):
         if exchange_to_use is None:
             return None
         
-        # Получаем ТОЛЬКО свечи
+        # Получаем текущий таймфрейм
         timeframe = get_current_timeframe()
-        chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '30d')
         
-        if not chart_response or not chart_response.get('success'):
-            return None
+        # ✅ ИСПРАВЛЕНО: Получаем ВСЕ доступные свечи через пагинацию (до 5000)
+        candles = get_candles_with_pagination(exchange_to_use, symbol, timeframe, target_candles=5000)
         
-        candles = chart_response['data']['candles']
         if not candles or len(candles) < 15:
             return None
         
@@ -345,6 +343,126 @@ def get_coin_candles_only(symbol, exchange_obj=None):
         }
         
     except Exception as e:
+        return None
+
+def get_candles_with_pagination(exchange, symbol, timeframe, target_candles=5000):
+    """Получает свечи через пагинацию для получения максимального количества данных"""
+    try:
+        # Маппинг таймфреймов для Bybit API
+        timeframe_map = {
+            '1m': '1',
+            '5m': '5',
+            '15m': '15',
+            '30m': '30',
+            '1h': '60',
+            '4h': '240',
+            '6h': '360',
+            '1d': 'D',
+            '1w': 'W'
+        }
+        
+        interval = timeframe_map.get(timeframe)
+        if not interval:
+            logger.warning(f"[CANDLES_PAGINATION] Неподдерживаемый таймфрейм: {timeframe}")
+            return None
+        
+        # Очищаем символ от USDT если есть
+        clean_symbol = symbol.replace('USDT', '') if symbol.endswith('USDT') else symbol
+        
+        all_candles = []
+        limit = 1000  # Максимум за запрос
+        end_time = None  # Для пагинации
+        
+        logger.debug(f"[CANDLES_PAGINATION] Запрашиваем данные для {symbol} (цель: {target_candles} свечей)")
+        
+        while len(all_candles) < target_candles:
+            try:
+                # Параметры запроса
+                params = {
+                    'category': 'linear',
+                    'symbol': f'{clean_symbol}USDT',
+                    'interval': interval,
+                    'limit': min(limit, target_candles - len(all_candles))
+                }
+                
+                # Добавляем end_time для пагинации (если не первый запрос)
+                if end_time:
+                    params['end'] = end_time
+                
+                # Используем прямой вызов клиента
+                if hasattr(exchange, 'client'):
+                    response = exchange.client.get_kline(**params)
+                else:
+                    logger.error(f"[CANDLES_PAGINATION] Exchange не имеет client")
+                    break
+                
+                if response['retCode'] == 0:
+                    klines = response['result']['list']
+                    if not klines:
+                        logger.debug(f"[CANDLES_PAGINATION] Больше данных нет для {symbol}")
+                        break
+                    
+                    # Конвертируем в наш формат
+                    batch_candles = []
+                    for k in klines:
+                        candle = {
+                            'time': int(k[0]),
+                            'open': float(k[1]),
+                            'high': float(k[2]),
+                            'low': float(k[3]),
+                            'close': float(k[4]),
+                            'volume': float(k[5])
+                        }
+                        batch_candles.append(candle)
+                    
+                    # Добавляем к общему списку
+                    all_candles.extend(batch_candles)
+                    
+                    # Обновляем end_time для следующего запроса (берем время первой свечи - 1)
+                    end_time = int(klines[0][0]) - 1
+                    
+                    logger.debug(f"[CANDLES_PAGINATION] {symbol}: Получено {len(batch_candles)} свечей, всего: {len(all_candles)}")
+                    
+                    # Небольшая пауза между запросами
+                    import time
+                    time.sleep(0.1)
+                else:
+                    logger.warning(f"[CANDLES_PAGINATION] Ошибка API для {symbol}: {response.get('retMsg', 'Неизвестная ошибка')}")
+                    break
+                    
+            except Exception as e:
+                logger.error(f"[CANDLES_PAGINATION] Ошибка запроса пагинации для {symbol}: {e}")
+                break
+        
+        if all_candles:
+            # Сортируем свечи от старых к новым
+            all_candles.sort(key=lambda x: x['time'])
+            
+            logger.info(f"[CANDLES_PAGINATION] {symbol}: Получено {len(all_candles)} свечей через пагинацию")
+            return all_candles
+        else:
+            logger.warning(f"[CANDLES_PAGINATION] Не удалось получить данные для {symbol}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"[CANDLES_PAGINATION] Ошибка получения данных для {symbol}: {e}")
+        return None
+
+def get_candles_from_cache(symbol):
+    """Получает свечи из кэша coins_rsi_data['candles_cache']"""
+    try:
+        candles_cache = coins_rsi_data.get('candles_cache', {})
+        if symbol in candles_cache:
+            cached_data = candles_cache[symbol]
+            candles = cached_data.get('candles')
+            if candles:
+                logger.debug(f"[CACHE_HIT] {symbol}: Найдено {len(candles)} свечей в кэше")
+                return candles
+        
+        logger.debug(f"[CACHE_MISS] {symbol}: Нет в кэше")
+        return None
+    except Exception as e:
+        logger.error(f"[CACHE] Ошибка получения свечей из кэша для {symbol}: {e}")
         return None
 
 def get_coin_rsi_data(symbol, exchange_obj=None):
@@ -459,7 +577,9 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                 api_start = time_module.time()
                 logger.info(f"[API_START] 🌐 {symbol}: Начало запроса get_chart_data()...")
                 
-                chart_response = exchange_to_use.get_chart_data(symbol, '6h', '30d')
+                # Получаем текущий таймфрейм
+                timeframe = get_current_timeframe()
+                chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '1w')
                 
                 api_duration = time_module.time() - api_start
                 logger.info(f"[API_END] 🌐 {symbol}: get_chart_data() завершен за {api_duration:.1f}с")

@@ -391,7 +391,8 @@ if __name__ == '__main__':
     try:
         from bots_modules.workers import auto_save_worker, auto_bot_worker, positions_monitor_worker
         
-        load_auto_bot_config()
+        # Конфигурация теперь загружается внутри init_bot_service()
+        # load_auto_bot_config()
         
         # Инициализируем ботов в отдельном потоке, чтобы не блокировать запуск сервера
         def init_bots_async():

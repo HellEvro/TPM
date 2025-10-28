@@ -422,6 +422,7 @@ def calculate_all_coins_maturity():
         logger.info("[MATURITY_BATCH] 🧮 Начинаем УМНЫЙ расчет зрелости...")
         
         from bots_modules.imports_and_globals import rsi_data_lock, coins_rsi_data, get_exchange, bots_data
+        # ✅ coins_rsi_data теперь используется для доступа к кэшу свечей
         
         exchange = get_exchange()
         if not exchange:
@@ -498,21 +499,32 @@ def calculate_all_coins_maturity():
                 if i == 1 or i % 10 == 0 or i == len(coins_to_check):
                     logger.info(f"[MATURITY_BATCH] 📊 Прогресс: {i}/{len(coins_to_check)} монет ({round(i/len(coins_to_check)*100)}%)")
                 
-                # Получаем свечи для проверки зрелости
-                # Получаем текущий таймфрейм из конфигурации
-                from bots_modules.imports_and_globals import get_timeframe
-                timeframe = get_timeframe()
-                chart_response = exchange.get_chart_data(symbol, timeframe, '30d')
-                if not chart_response or not chart_response.get('success'):
-                    logger.debug(f"[MATURITY_BATCH] ⚠️ {symbol}: Не удалось получить свечи")
-                    immature_count += 1
-                    continue
+                # ✅ ИСПРАВЛЕНО: Используем УЖЕ ЗАГРУЖЕННЫЕ свечи из кэша, а не делаем новый запрос!
+                # Проверяем кэш свечей ПЕРЕД запросом к бирже
+                candles = None
+                candles_cache = coins_rsi_data.get('candles_cache', {})
+                if symbol in candles_cache:
+                    cached_data = candles_cache[symbol]
+                    candles = cached_data.get('candles')
+                    logger.debug(f"[MATURITY_BATCH] ⚡ {symbol}: Используем кэш свечей ({len(candles) if candles else 0} свечей)")
                 
-                candles = chart_response.get('data', {}).get('candles', [])
+                # Если нет в кэше - загружаем с биржи (НО ЭТО ДОЛЖНО БЫТЬ ИСКЛЮЧЕНИЕМ!)
                 if not candles:
-                    logger.debug(f"[MATURITY_BATCH] ⚠️ {symbol}: Нет свечей")
-                    immature_count += 1
-                    continue
+                    logger.warning(f"[MATURITY_BATCH] ⚠️ {symbol}: НЕТ в кэше свечей! Загружаем с биржи...")
+                    from bots_modules.imports_and_globals import get_timeframe
+                    from bots_modules.filters import get_candles_with_pagination
+                    
+                    timeframe = get_timeframe()
+                    
+                    # ✅ ИСПРАВЛЕНО: Загружаем РОВНО столько свечей, сколько нужно для проверки зрелости (из конфига + 10 для уверенности)
+                    min_candles = config.get('min_candles_for_maturity', MIN_CANDLES_FOR_MATURITY)
+                    target_candles = min_candles + 10  # +10 для уверенности
+                    
+                    candles = get_candles_with_pagination(exchange, symbol, timeframe, target_candles=target_candles)
+                    if not candles:
+                        logger.debug(f"[MATURITY_BATCH] ⚠️ {symbol}: Не удалось получить свечи с биржи")
+                        immature_count += 1
+                        continue
                 
                 # Проверяем зрелость с сохранением в хранилище
                 maturity_result = check_coin_maturity_with_storage(symbol, candles)
