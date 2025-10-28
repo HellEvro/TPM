@@ -113,7 +113,14 @@ class BotsManager {
             // Принудительная загрузка конфигурации
             setTimeout(() => {
                 console.log('[BotsManager] 🔄 Принудительная загрузка конфигурации...');
-                this.loadConfigurationData();
+                this.loadConfigurationData().then(() => {
+                    // После загрузки конфигурации - обновляем таймфрейм в UI
+                    const timeframeEl = document.getElementById('timeframe');
+                    if (timeframeEl && timeframeEl.value) {
+                        console.log('[BotsManager] 🔄 Обновляем таймфрейм в UI после загрузки конфигурации:', timeframeEl.value);
+                        this.updateTimeframeInUI(timeframeEl.value);
+                    }
+                });
             }, 2000);
             
             // Принудительное обновление состояния автобота и ботов (только при первой загрузке)

@@ -452,11 +452,12 @@ def save_auto_bot_config():
                     importlib.reload(bot_engine.bot_config)
                     
                     # Перечитываем конфигурацию из обновленного модуля
-                    from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
+                    from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG, TIMEFRAME
                     with bots_data_lock:
                         bots_data['auto_bot_config'] = DEFAULT_AUTO_BOT_CONFIG.copy()
                     
                     logger.info(f"[SAVE_CONFIG] ✅ Модуль перезагружен, изменения применены БЕЗ перезапуска!")
+                    logger.info(f"[SAVE_CONFIG] 📊 Новый таймфрейм: {TIMEFRAME}")
                 else:
                     logger.warning(f"[SAVE_CONFIG] ⚠️ Модуль bot_config не был загружен")
             except Exception as reload_error:
