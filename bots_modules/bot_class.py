@@ -287,27 +287,42 @@ class NewTradingBot:
                     with rsi_data_lock:
                         coin_data = coins_rsi_data['coins'].get(self.symbol)
                         if coin_data:
-                            current_rsi = coin_data.get('rsi6h')
+                            # ✅ ДИНАМИЧЕСКИЕ КЛЮЧИ
+                            from bots_modules.filters import get_rsi_key, get_trend_key
+                            rsi_key = get_rsi_key()
+                            trend_key = get_trend_key()
+                            
+                            current_rsi = coin_data.get(rsi_key)
                             current_price = coin_data.get('price')
                             if not current_trend:
-                                current_trend = coin_data.get('trend6h', 'NEUTRAL')
+                                current_trend = coin_data.get(trend_key, 'NEUTRAL')
                 else:
                     # Fallback если lock не определен
                     coin_data = coins_rsi_data['coins'].get(self.symbol)
                     if coin_data:
-                        current_rsi = coin_data.get('rsi6h')
+                        # ✅ ДИНАМИЧЕСКИЕ КЛЮЧИ
+                        from bots_modules.filters import get_rsi_key, get_trend_key
+                        rsi_key = get_rsi_key()
+                        trend_key = get_trend_key()
+                        
+                        current_rsi = coin_data.get(rsi_key)
                         current_price = coin_data.get('price')
                         if not current_trend:
-                            current_trend = coin_data.get('trend6h', 'NEUTRAL')
+                            current_trend = coin_data.get(trend_key, 'NEUTRAL')
             except Exception as e:
                 logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка получения RSI данных: {e}")
                 # Fallback если lock не определен
                 coin_data = coins_rsi_data['coins'].get(self.symbol)
                 if coin_data:
-                    current_rsi = coin_data.get('rsi6h')
+                    # ✅ ДИНАМИЧЕСКИЕ КЛЮЧИ
+                    from bots_modules.filters import get_rsi_key, get_trend_key
+                    rsi_key = get_rsi_key()
+                    trend_key = get_trend_key()
+                    
+                    current_rsi = coin_data.get(rsi_key)
                     current_price = coin_data.get('price')
                     if not current_trend:
-                        current_trend = coin_data.get('trend6h', 'NEUTRAL')
+                        current_trend = coin_data.get(trend_key, 'NEUTRAL')
             
             if current_rsi is None or current_price is None:
                 logger.warning(f"[NEW_BOT_{self.symbol}] ❌ Нет RSI данных")
@@ -635,7 +650,11 @@ class NewTradingBot:
                 with rsi_data_lock:
                     coin_data = coins_rsi_data['coins'].get(self.symbol)
                     if coin_data:
-                        rsi = coin_data.get('rsi6h', 50)
+                        # ✅ ДИНАМИЧЕСКИЙ КЛЮЧ для RSI
+                        from bots_modules.filters import get_rsi_key
+                        rsi_key = get_rsi_key()
+                        
+                        rsi = coin_data.get(rsi_key, 50)
                 
                 # Получаем свечи для анализа
                 chart_response = self.exchange.get_chart_data(self.symbol, '6h', limit=30) if self.exchange else None

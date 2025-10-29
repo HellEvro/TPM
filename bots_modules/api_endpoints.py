@@ -410,7 +410,7 @@ def refresh_manual_positions():
 
 @bots_app.route('/api/bots/coins-with-rsi', methods=['GET'])
 def get_coins_with_rsi():
-    """Получить все монеты с RSI 6H данными"""
+    """Получить все монеты с RSI данными (использует текущий таймфрейм из конфига)"""
     try:
         # Проверяем параметр refresh_symbol для обновления конкретной монеты
         refresh_symbol = request.args.get('refresh_symbol')
@@ -494,6 +494,24 @@ def get_coins_with_rsi():
             except Exception as e:
                 logger.debug(f"[API] Ошибка получения candles_count для {symbol}: {e}")
                 cleaned_coin['candles_count'] = None
+            
+            # ✅ ИСПРАВЛЕНИЕ: Нормализуем RSI и Trend ключи для фронтенда
+            # Добавляем универсальные ключи 'rsi' и 'trend' со значением из динамических ключей
+            from bots_modules.filters import get_rsi_key, get_trend_key
+            rsi_key = get_rsi_key()
+            trend_key = get_trend_key()
+            
+            # Нормализация RSI
+            if rsi_key in cleaned_coin and cleaned_coin[rsi_key] is not None:
+                cleaned_coin['rsi'] = cleaned_coin[rsi_key]
+            elif 'rsi' not in cleaned_coin:
+                cleaned_coin['rsi'] = None
+            
+            # Нормализация Trend
+            if trend_key in cleaned_coin and cleaned_coin[trend_key] is not None:
+                cleaned_coin['trend'] = cleaned_coin[trend_key]
+            elif 'trend' not in cleaned_coin:
+                cleaned_coin['trend'] = 'NEUTRAL'
             
             cleaned_coins[symbol] = cleaned_coin
         
@@ -2171,11 +2189,17 @@ def auto_bot_config():
                 
                 try:
                     # Очищаем кэши для пересчета
-                    from bots_modules.imports_and_globals import clear_rsi_cache
+                    from bots_modules.imports_and_globals import clear_rsi_cache, coins_rsi_data, rsi_data_lock
                     from bots_modules.maturity import clear_mature_coins_storage
                     import os
                     
-                    # 1. Очищаем RSI кэш (пересчитается при следующей загрузке)
+                    # 1. КРИТИЧНО: Очищаем кэш свечей (он был от СТАРОГО таймфрейма!)
+                    with rsi_data_lock:
+                        if 'candles_cache' in coins_rsi_data:
+                            coins_rsi_data['candles_cache'].clear()
+                            logger.info("[TIMEFRAME] ✅ Кэш свечей очищен (был от другого таймфрейма)")
+                    
+                    # 2. Очищаем RSI кэш (пересчитается при следующей загрузке)
                     clear_rsi_cache()
                     logger.info("[TIMEFRAME] ✅ RSI кэш очищен - будет пересчитан для нового TF")
                     

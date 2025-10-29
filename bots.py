@@ -13,8 +13,18 @@ try:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from bot_engine.bot_config import SystemConfig
     ENABLE_TRACE = SystemConfig.ENABLE_CODE_TRACING
+    DEBUG_MODE = SystemConfig.DEBUG_MODE
+    
+    print("=" * 80)
+    print(f"[DEBUG] DEBUG_MODE = {DEBUG_MODE}")
+    print(f"[DEBUG] ENABLE_CODE_TRACING = {ENABLE_TRACE}")
+    print("=" * 80)
     
     if ENABLE_TRACE:
+        # Исправляем путь к trace_debug
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'tests'))
         from trace_debug import enable_trace
         enable_trace()
         print("=" * 80)
@@ -25,6 +35,8 @@ try:
         print("[INFO] Code tracing DISABLED (set SystemConfig.ENABLE_CODE_TRACING = True to enable)")
 except Exception as e:
     print(f"[WARNING] Could not initialize tracing: {e}")
+    import traceback
+    traceback.print_exc()
     ENABLE_TRACE = False
 
 # Настройка кодировки для Windows консоли

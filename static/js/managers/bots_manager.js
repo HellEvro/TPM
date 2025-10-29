@@ -513,7 +513,9 @@ class BotsManager {
                 item.classList.remove('buy-zone', 'sell-zone', 'enter-long', 'enter-short');
                 
                 // Добавляем новые классы на основе обновленных порогов
-                const rsiClass = this.getRsiZoneClass(coinData.rsi6h);
+                // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI (динамический таймфрейм)
+                const rsiValue = coinData.rsi6h || coinData.rsi5m || coinData.rsi15m || coinData.rsi1h || coinData.rsi4h || coinData.rsi1d || coinData.rsi1w;
+                const rsiClass = this.getRsiZoneClass(rsiValue);
                 if (rsiClass) {
                     item.classList.add(rsiClass);
                 }
@@ -789,8 +791,14 @@ class BotsManager {
         }
         
         const coinsHtml = this.coinsRsiData.map(coin => {
-            const rsiClass = this.getRsiZoneClass(coin.rsi6h);
-            const trendClass = coin.trend6h ? `trend-${coin.trend6h.toLowerCase()}` : 'trend-none';
+            // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI и Trend (динамический таймфрейм)
+            // ✅ Используем нормализованный ключ 'rsi' (добавлен в API для совместимости)
+            // Fallback на старые ключи для обратной совместимости
+            const rsiValue = coin.rsi || coin.rsi6h || coin.rsi5m || coin.rsi15m || coin.rsi1h || coin.rsi4h || coin.rsi1d || coin.rsi1w;
+            const trendValue = coin.trend || coin.trend6h || coin.trend5m || coin.trend15m || coin.trend1h || coin.trend4h || coin.trend1d || coin.trend1w;
+            
+            const rsiClass = this.getRsiZoneClass(rsiValue);
+            const trendClass = trendValue ? `trend-${trendValue.toLowerCase()}` : 'trend-none';
             
             // Используем универсальную функцию для определения сигнала
             const effectiveSignal = this.getEffectiveSignal(coin);
@@ -828,7 +836,7 @@ class BotsManager {
                                 ${isDelisting ? '<span class="delisting-indicator" title="Монета на делистинге">⚠️</span>' : ''}
                                 ${isNewCoin ? '<span class="new-coin-indicator" title="Новая монета (включение в листинг)">🆕</span>' : ''}
                                 ${this.generateWarningIndicator(coin)}
-                                <span class="coin-rsi ${this.getRsiZoneClass(coin.rsi6h)}">${coin.rsi6h}</span>
+                                <span class="coin-rsi ${this.getRsiZoneClass(rsiValue)}">${rsiValue}</span>
                                 <a href="${this.createTickerLink(coin.symbol)}" 
                                target="_blank" 
                                class="external-link" 
@@ -843,7 +851,7 @@ class BotsManager {
                         </div>
                         </div>
                         <div class="coin-details">
-                            <span class="coin-trend ${coin.trend6h}">${coin.trend6h || 'NEUTRAL'}</span>
+                            <span class="coin-trend ${trendValue}">${trendValue || 'NEUTRAL'}</span>
                             <span class="coin-price">$${coin.price?.toFixed(6) || '0'}</span>
                         </div>
                         <div class="coin-signal">
@@ -1195,10 +1203,25 @@ class BotsManager {
         const allCount = this.coinsRsiData.length;
         const longCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'ENTER_LONG').length;
         const shortCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'ENTER_SHORT').length;
-        const buyZoneCount = this.coinsRsiData.filter(coin => coin.rsi6h && coin.rsi6h <= 29).length;
-        const sellZoneCount = this.coinsRsiData.filter(coin => coin.rsi6h && coin.rsi6h >= 71).length;
-        const trendUpCount = this.coinsRsiData.filter(coin => coin.trend6h === 'UP').length;
-        const trendDownCount = this.coinsRsiData.filter(coin => coin.trend6h === 'DOWN').length;
+        // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI и Trend
+        const buyZoneCount = this.coinsRsiData.filter(coin => {
+            // ✅ Используем нормализованный ключ 'rsi' (добавлен в API для совместимости)
+            const rsi = coin.rsi || coin.rsi6h || coin.rsi5m || coin.rsi15m || coin.rsi1h || coin.rsi4h || coin.rsi1d || coin.rsi1w;
+            return rsi && rsi <= 29;
+        }).length;
+        const sellZoneCount = this.coinsRsiData.filter(coin => {
+            // ✅ Используем нормализованный ключ 'rsi' (добавлен в API для совместимости)
+            const rsi = coin.rsi || coin.rsi6h || coin.rsi5m || coin.rsi15m || coin.rsi1h || coin.rsi4h || coin.rsi1d || coin.rsi1w;
+            return rsi && rsi >= 71;
+        }).length;
+        const trendUpCount = this.coinsRsiData.filter(coin => {
+            const trend = coin.trend6h || coin.trend5m || coin.trend15m || coin.trend1h || coin.trend4h || coin.trend1d || coin.trend1w;
+            return trend === 'UP';
+        }).length;
+        const trendDownCount = this.coinsRsiData.filter(coin => {
+            const trend = coin.trend6h || coin.trend5m || coin.trend15m || coin.trend1h || coin.trend4h || coin.trend4h || coin.trend1d || coin.trend1w;
+            return trend === 'DOWN';
+        }).length;
         const manualPositionCount = this.coinsRsiData.filter(coin => coin.manual_position === true).length;
         const unavailableCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'UNAVAILABLE').length;
         
@@ -1422,14 +1445,18 @@ class BotsManager {
         }
         
         if (rsiElement) {
-            const rsi = coin.enhanced_rsi?.rsi_6h || coin.rsi6h || '-';
+            // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI
+            // ✅ Используем нормализованный ключ 'rsi' (добавлен в API для совместимости)
+            const rsi = coin.rsi || coin.enhanced_rsi?.rsi_6h || coin.rsi6h || coin.rsi5m || coin.rsi15m || coin.rsi1h || coin.rsi4h || coin.rsi1d || coin.rsi1w || '-';
             rsiElement.textContent = rsi;
             rsiElement.className = `value rsi-indicator ${this.getRsiZoneClass(rsi)}`;
             console.log('[BotsManager] ✅ RSI обновлен:', rsi);
         }
         
         if (trendElement) {
-            const trend = coin.trend6h || 'NEUTRAL';
+            // ✅ УНИВЕРСАЛЬНО: используем нормализованный ключ 'trend' (добавлен в API)
+            // Fallback на старые ключи для обратной совместимости
+            const trend = coin.trend || coin.trend6h || coin.trend5m || coin.trend15m || coin.trend1h || coin.trend4h || coin.trend1d || coin.trend1w || 'NEUTRAL';
             trendElement.textContent = trend;
             trendElement.className = `value trend-indicator ${trend}`;
             console.log('[BotsManager] ✅ Тренд обновлен:', trend);
@@ -2128,7 +2155,9 @@ class BotsManager {
         }
         
         console.log(`[BotsManager] 🤖 Создание бота для ${this.selectedCoin.symbol}`);
-        console.log(`[BotsManager] 📊 RSI текущий: ${this.selectedCoin.rsi6h || 'неизвестно'}`);
+        // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI
+        const currentRsi = this.selectedCoin.rsi6h || this.selectedCoin.rsi5m || this.selectedCoin.rsi15m || this.selectedCoin.rsi1h || this.selectedCoin.rsi4h || this.selectedCoin.rsi1d || this.selectedCoin.rsi1w || 'неизвестно';
+        console.log(`[BotsManager] 📊 RSI текущий: ${currentRsi}`);
         
         // Показываем уведомление о начале процесса
         this.showNotification(`🔄 ${this.translate('creating_bot_for')} ${this.selectedCoin.symbol}...`, 'info');
@@ -6780,7 +6809,8 @@ class BotsManager {
         if (!takeProfit && bot.entry_price) {
             const rsiExitLong = bot.rsi_exit_long || 55;
             const rsiExitShort = bot.rsi_exit_short || 45;
-            const currentRsi = bot.rsi_data?.rsi6h || 50;
+            // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI
+            const currentRsi = bot.rsi_data?.rsi6h || bot.rsi_data?.rsi5m || bot.rsi_data?.rsi15m || bot.rsi_data?.rsi1h || bot.rsi_data?.rsi4h || bot.rsi_data?.rsi1d || bot.rsi_data?.rsi1w || 50;
             
             if (bot.position_side === 'LONG' && currentRsi < rsiExitLong) {
                 const takeProfitPercent = (rsiExitLong - currentRsi) * 0.5;
@@ -6804,8 +6834,9 @@ class BotsManager {
         
         // Добавляем RSI данные если есть
         if (bot.rsi_data) {
-            const rsi = bot.rsi_data.rsi6h;
-            const trend = bot.rsi_data.trend6h;
+            // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI и Trend
+            const rsi = bot.rsi_data.rsi6h || bot.rsi_data.rsi5m || bot.rsi_data.rsi15m || bot.rsi_data.rsi1h || bot.rsi_data.rsi4h || bot.rsi_data.rsi1d || bot.rsi_data.rsi1w;
+            const trend = bot.rsi_data.trend6h || bot.rsi_data.trend5m || bot.rsi_data.trend15m || bot.rsi_data.trend1h || bot.rsi_data.trend4h || bot.rsi_data.trend1d || bot.rsi_data.trend1w;
             
             if (rsi) {
                 let rsiColor = '#888';
@@ -6959,7 +6990,8 @@ class BotsManager {
         const trades = [];
         
         // Определяем currentRsi в начале функции для использования во всех блоках
-        const currentRsi = bot.rsi_data?.rsi6h || 50;
+        // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI
+        const currentRsi = bot.rsi_data?.rsi6h || bot.rsi_data?.rsi5m || bot.rsi_data?.rsi15m || bot.rsi_data?.rsi1h || bot.rsi_data?.rsi4h || bot.rsi_data?.rsi1d || bot.rsi_data?.rsi1w || 50;
         
         // Проверяем, есть ли позиция LONG
         if (bot.position_side === 'LONG' && bot.entry_price) {
@@ -7013,7 +7045,8 @@ class BotsManager {
                 volumeMode: 'USDT',
                 startTime: bot.created_at,
                 rsi: currentRsi,
-                trend: bot.trend6h || 'NEUTRAL',
+                // ✅ УНИВЕРСАЛЬНО: используем любой доступный Trend
+                trend: bot.trend6h || bot.trend5m || bot.trend15m || bot.trend1h || bot.trend4h || bot.trend1d || bot.trend1w || 'NEUTRAL',
                 workTime: bot.work_time || '0м',
                 lastUpdate: bot.last_update || 'Неизвестно'
             });
@@ -7067,7 +7100,8 @@ class BotsManager {
                 volumeMode: 'USDT',
                 startTime: bot.created_at,
                 rsi: currentRsi,
-                trend: bot.trend6h || 'NEUTRAL',
+                // ✅ УНИВЕРСАЛЬНО: используем любой доступный Trend
+                trend: bot.trend6h || bot.trend5m || bot.trend15m || bot.trend1h || bot.trend4h || bot.trend1d || bot.trend1w || 'NEUTRAL',
                 workTime: bot.work_time || '0м',
                 lastUpdate: bot.last_update || 'Неизвестно'
             });

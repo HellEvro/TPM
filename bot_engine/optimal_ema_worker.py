@@ -98,8 +98,14 @@ class OptimalEMAWorker:
             logger.info("[OPTIMAL_EMA_WORKER] 🔄 Запуск обновления оптимальных EMA...")
             
             # ⚡ ИСПРАВЛЕНИЕ: Команда для запуска optimal_ema.py с параметром --all (ТОЛЬКО новые, не все!)
-            # --force блокирует систему на 30+ минут! Используем --all для добавления только новых монет
-            cmd = [sys.executable, self.optimal_ema_script, '--all']  # Было: '--force'
+            # ✅ Добавляем параметр --timeframe для передачи текущего таймфрейма
+            from bots_modules.imports_and_globals import get_timeframe
+            current_timeframe = get_timeframe()
+            
+            logger.info(f"[OPTIMAL_EMA_WORKER] Используется таймфрейм: {current_timeframe}")
+            logger.info(f"[OPTIMAL_EMA_WORKER] Файл данных: data/optimal_ema_{current_timeframe}.json")
+            
+            cmd = [sys.executable, self.optimal_ema_script, '--all', '--timeframe', current_timeframe]
             
             # Запускаем процесс
             self.process = subprocess.Popen(

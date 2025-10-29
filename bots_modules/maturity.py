@@ -117,7 +117,26 @@ def load_mature_coins_storage(expected_coins_count=None):
     """Загружает постоянное хранилище зрелых монет из файла"""
     global mature_coins_storage, maturity_data_invalidated
     try:
+        # ✅ КРИТИЧНО: Получаем текущий таймфрейм
+        from bots_modules.imports_and_globals import get_timeframe, bots_data, bots_data_lock
+        current_tf = get_timeframe()
+        
+        # ✅ КРИТИЧНО: Проверяем метку таймфрейма в файле
         mature_coins_file = get_mature_coins_file()  # ✅ Динамический путь
+        
+        # Если файл существует и метка времени старше чем текущий запуск - сбрасываем!
+        if os.path.exists(mature_coins_file):
+            file_mod_time = os.path.getmtime(mature_coins_file)
+            # Проверяем что файл был обновлен недавно (за последние 5 минут)
+            import time
+            if (time.time() - file_mod_time) > 300:  # Более 5 минут назад
+                logger.warning(f"[MATURITY_STORAGE] ⚠️ Файл старый (>5мин), принудительно удаляем для пересчета")
+                os.remove(mature_coins_file)
+                with mature_coins_lock:
+                    mature_coins_storage.clear()
+                maturity_data_invalidated = True
+                return
+        
         if os.path.exists(mature_coins_file):
             with open(mature_coins_file, 'r', encoding='utf-8') as f:
                 loaded_data = json.load(f)
@@ -347,6 +366,9 @@ def check_coin_maturity(symbol, candles):
         # Извлекаем цены закрытия из последних свечей
         closes = [candle['close'] for candle in recent_candles]
         
+        # ✅ ДОБАВЛЯЕМ ЛОГ ФАКТИЧЕСКОГО КОЛИЧЕСТВА СВЕЧЕЙ
+        actual_candles_for_analysis = len(closes)
+        
         # Рассчитываем историю RSI
         rsi_history = calculate_rsi_history(closes, 14)
         if not rsi_history:
@@ -375,8 +397,8 @@ def check_coin_maturity(symbol, candles):
         # Монета зрелая, если достаточно свечей И RSI достигал низких И высоких значений (полный цикл)
         is_mature = maturity_checks['sufficient_candles'] and maturity_checks['rsi_reached_low'] and maturity_checks['rsi_reached_high']
         
-        # Детальное логирование для отладки (отключено для уменьшения спама)
-        # logger.info(f"[MATURITY_DEBUG] {symbol}: свечи={maturity_checks['sufficient_candles']} ({len(candles)}/{min_candles}), RSI_low={maturity_checks['rsi_reached_low']} (min={rsi_min:.1f}<=>{min_rsi_low}), RSI_high={maturity_checks['rsi_reached_high']} (max={rsi_max:.1f}>={max_rsi_high}), зрелая={is_mature}")
+        # ✅ Детальное логирование для отладки (ВКЛЮЧЕНО!)
+        logger.info(f"[MATURITY_DEBUG] {symbol}: всего_свечей={len(candles)}, для_анализа={actual_candles_for_analysis}, свечи={maturity_checks['sufficient_candles']} ({len(candles)}/{min_candles}), RSI_low={maturity_checks['rsi_reached_low']} (min={rsi_min:.1f}<=>{min_rsi_low}), RSI_high={maturity_checks['rsi_reached_high']} (max={rsi_max:.1f}>={max_rsi_high}), зрелая={is_mature}")
         
         # Формируем детальную информацию с параметрами конфига
         details = {
@@ -435,12 +457,23 @@ def calculate_all_coins_maturity():
         current_tf = get_timeframe()
         rsi_key = f'rsi{current_tf}'
         
+        logger.info(f"[MATURITY_BATCH] 🔍 Используем RSI ключ: {rsi_key} (TF: {current_tf})")
+        
         all_coins = []
+        sample_symbols = []
         for symbol, coin_data in coins_rsi_data['coins'].items():
             if coin_data.get(rsi_key) is not None:
                 all_coins.append(symbol)
+            elif len(sample_symbols) < 3:
+                sample_symbols.append((symbol, list(coin_data.keys())))
         
-        logger.info(f"[MATURITY_BATCH] 📊 Найдено {len(all_coins)} монет с RSI данными")
+        # 🔍 ОТЛАДКА: Показываем образец ключей для первых 3 монет
+        if sample_symbols:
+            logger.info(f"[MATURITY_BATCH] 🔍 Образец ключей для отладки:")
+            for sym, keys in sample_symbols[:3]:
+                logger.info(f"[MATURITY_BATCH] 🔍 {sym}: ключи={keys}")
+        
+        logger.info(f"[MATURITY_BATCH] 📊 Найдено {len(all_coins)} монет с RSI данными (ищем ключ: {rsi_key})")
         
         # 🚀 СУПЕР-ОПТИМИЗАЦИЯ: Пропускаем если конфиг + количество монет не изменились!
         global last_maturity_check
@@ -448,6 +481,7 @@ def calculate_all_coins_maturity():
         # Получаем текущий конфиг зрелости
         config = bots_data.get('auto_bot_config', {})
         current_config_params = {
+            'timeframe': current_tf,  # ✅ КРИТИЧНО: Включаем таймфрейм в хэш!
             'min_candles': config.get('min_candles_for_maturity', MIN_CANDLES_FOR_MATURITY),
             'min_rsi_low': config.get('min_rsi_low', MIN_RSI_LOW),
             'max_rsi_high': config.get('max_rsi_high', MAX_RSI_HIGH)
@@ -503,32 +537,25 @@ def calculate_all_coins_maturity():
                 if i == 1 or i % 10 == 0 or i == len(coins_to_check):
                     logger.info(f"[MATURITY_BATCH] 📊 Прогресс: {i}/{len(coins_to_check)} монет ({round(i/len(coins_to_check)*100)}%)")
                 
-                # ✅ ИСПРАВЛЕНО: Используем УЖЕ ЗАГРУЖЕННЫЕ свечи из кэша, а не делаем новый запрос!
-                # Проверяем кэш свечей ПЕРЕД запросом к бирже
-                candles = None
-                candles_cache = coins_rsi_data.get('candles_cache', {})
-                if symbol in candles_cache:
-                    cached_data = candles_cache[symbol]
-                    candles = cached_data.get('candles')
-                    logger.debug(f"[MATURITY_BATCH] ⚡ {symbol}: Используем кэш свечей ({len(candles) if candles else 0} свечей)")
+                # ✅ ТОЛЬКО ИЗ БД! Не используем кэш памяти
+                from bots_modules.candles_db import get_candles
+                from bots_modules.imports_and_globals import get_timeframe
                 
-                # Если нет в кэше - загружаем с биржи (НО ЭТО ДОЛЖНО БЫТЬ ИСКЛЮЧЕНИЕМ!)
+                timeframe = get_timeframe()
+                candles = get_candles(symbol, timeframe)
+                
+                # 🔍 ОТЛАДКА: Логируем для ПЕРВЫХ 10 монет
+                if i <= 10:
+                    if candles:
+                        logger.info(f"[MATURITY_BATCH] ⚡ {symbol}: Найдено {len(candles)} свечей из БД (TF: {timeframe})")
+                    else:
+                        logger.warning(f"[MATURITY_BATCH] ⚠️ {symbol}: Нет свечей в БД!")
+                
+                # Если нет в БД - пропускаем (НЕ загружаем с биржи!)
                 if not candles:
-                    logger.warning(f"[MATURITY_BATCH] ⚠️ {symbol}: НЕТ в кэше свечей! Загружаем с биржи...")
-                    from bots_modules.imports_and_globals import get_timeframe
-                    from bots_modules.filters import get_candles_with_pagination
-                    
-                    timeframe = get_timeframe()
-                    
-                    # ✅ ИСПРАВЛЕНО: Загружаем РОВНО столько свечей, сколько нужно для проверки зрелости (из конфига + 10 для уверенности)
-                    min_candles = config.get('min_candles_for_maturity', MIN_CANDLES_FOR_MATURITY)
-                    target_candles = min_candles + 10  # +10 для уверенности
-                    
-                    candles = get_candles_with_pagination(exchange, symbol, timeframe, target_candles=target_candles)
-                    if not candles:
-                        logger.debug(f"[MATURITY_BATCH] ⚠️ {symbol}: Не удалось получить свечи с биржи")
-                        immature_count += 1
-                        continue
+                    logger.warning(f"[MATURITY_BATCH] ⚠️ {symbol}: НЕТ в БД свечей! Пропускаем...")
+                    immature_count += 1
+                    continue
                 
                 # Проверяем зрелость с сохранением в хранилище
                 maturity_result = check_coin_maturity_with_storage(symbol, candles)
