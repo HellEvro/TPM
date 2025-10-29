@@ -1,0 +1,17 @@
+{
+  "symbol": "LAB",
+  "timeframe": "1w",
+  "candles": [
+    {
+      "time": 1761523200000,
+      "open": 0.2048,
+      "high": 0.219,
+      "low": 0.1365,
+      "close": 0.1382,
+      "volume": 119248078.0,
+      "turnover": 21233396.9662
+    }
+  ],
+  "count": 1,
+  "last_update": "2025-10-29T19:54:20.097952"
+}

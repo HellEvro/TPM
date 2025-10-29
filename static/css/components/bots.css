@@ -133,6 +133,12 @@
     color: #4caf50;
 }
 
+.timeframe-display {
+    color: var(--text-color); /* Такой же белый цвет как и "Монеты" */
+    font-weight: 600;
+    margin-left: 4px;
+}
+
 .search-row {
     margin-bottom: 0;
 }

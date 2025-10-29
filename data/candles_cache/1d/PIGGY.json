@@ -1,0 +1,17 @@
+{
+  "symbol": "PIGGY",
+  "timeframe": "1d",
+  "candles": [
+    {
+      "time": 1761696000000,
+      "open": 2.0911,
+      "high": 2.3108,
+      "low": 1.5929,
+      "close": 1.8925,
+      "volume": 6020108.7,
+      "turnover": 11857372.77921
+    }
+  ],
+  "count": 1,
+  "last_update": "2025-10-29T23:40:16.721256"
+}

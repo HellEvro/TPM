@@ -6478,5 +6478,17 @@
     "last_updated": "2025-10-28T08:02:10.711938",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
+  },
+  "MET": {
+    "ema_short_period": 35,
+    "ema_long_period": 100,
+    "accuracy": 100.0,
+    "total_signals": 9,
+    "correct_signals": 9,
+    "long_signals": 0,
+    "short_signals": 9,
+    "last_updated": "2025-10-29T19:58:28.551036",
+    "candles_analyzed": 210,
+    "analysis_method": "trend_confirmation"
   }
 }

@@ -168,23 +168,10 @@ def load_all_coins_candles_fast():
         missing = total_requested - total_loaded
         logger.info(f"[CANDLES_FAST] ✅ Загрузка завершена: {total_loaded}/{total_requested} монет (не загружено: {missing})")
         
-        # ✅ ПАКЕТНОЕ сохранение - САМОЕ БЫСТРОЕ!
+        # ✅ ФАЙЛЫ УЖЕ СОХРАНЕНЫ! Каждый файл сохранялся сразу после загрузки через get_coin_candles_only()
+        # Больше не нужна пакетная запись - это ускоряет процесс и не блокирует систему
         current_tf = get_timeframe()
-        
-        # Формируем словарь {symbol: candles_list} для БД
-        db_data = {}
-        for symbol, candle_data in candles_cache.items():
-            # candle_data может быть либо {'candles': [...]}, либо уже [...]
-            if isinstance(candle_data, dict) and 'candles' in candle_data:
-                db_data[symbol] = candle_data['candles']
-            elif isinstance(candle_data, list):
-                db_data[symbol] = candle_data
-            else:
-                logger.warning(f"[CANDLES_FAST] ⚠️ Неизвестный формат для {symbol}: {type(candle_data)}")
-        
-        # Сохраняем одним запросом в режиме append
-        # Это обновляет существующие свечи и добавляет новые, включая последнюю незакрытую
-        save_candles_batch(current_tf, db_data, update_mode='append')
+        logger.info(f"[CANDLES_FAST] ✅ Все файлы сохранены по отдельности при загрузке (TF: {current_tf})")
         
         # ⚡ КРИТИЧНО: Сохраняем В ТОМ ЖЕ ФОРМАТЕ {symbol: [candles]} в память!
         try:
@@ -200,7 +187,8 @@ def load_all_coins_candles_fast():
             
             coins_rsi_data['candles_cache'] = memory_cache
             coins_rsi_data['last_candles_update'] = datetime.now().isoformat()
-            logger.info(f"[CANDLES_FAST] ✅ Кэш сохранен: {len(memory_cache)} монет")
+            coins_rsi_data['candles_timeframe'] = current_tf  # ✅ Сохраняем метку таймфрейма
+            logger.info(f"[CANDLES_FAST] ✅ Кэш сохранен: {len(memory_cache)} монет (TF: {current_tf})")
         except Exception as cache_error:
             logger.warning(f"[CANDLES_FAST] ⚠️ Ошибка сохранения кэша: {cache_error}")
         

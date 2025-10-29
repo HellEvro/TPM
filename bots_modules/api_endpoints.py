@@ -482,18 +482,25 @@ def get_coins_with_rsi():
                     cleaned_coin['stoch_rsi_k'] = confirmations.get('stoch_rsi_k')
                     cleaned_coin['stoch_rsi_d'] = confirmations.get('stoch_rsi_d')
             
-            # ✅ ИСПРАВЛЕНИЕ: Добавляем количество свечей из данных зрелых монет
+            # ✅ ИСПРАВЛЕНИЕ: Добавляем количество свечей и зрелость из данных зрелых монет
             try:
-                from bots_modules.imports_and_globals import mature_coins_storage
+                from bots_modules.imports_and_globals import mature_coins_storage, is_coin_mature_stored
+                # ✅ КРИТИЧНО: Проверяем зрелость из хранилища и добавляем в cleaned_coin
+                is_mature = is_coin_mature_stored(symbol)
+                cleaned_coin['is_mature'] = is_mature
+                
                 if symbol in mature_coins_storage:
                     maturity_data = mature_coins_storage[symbol].get('maturity_data', {})
                     details = maturity_data.get('details', {})
-                    cleaned_coin['candles_count'] = details.get('candles_count')
+                    cleaned_coin['candles_count'] = details.get('candles_count', coin_data.get('candles_count'))
                 else:
-                    cleaned_coin['candles_count'] = None
+                    # Если нет в хранилище, используем candles_count из coin_data
+                    cleaned_coin['candles_count'] = coin_data.get('candles_count')
             except Exception as e:
-                logger.debug(f"[API] Ошибка получения candles_count для {symbol}: {e}")
-                cleaned_coin['candles_count'] = None
+                logger.debug(f"[API] Ошибка получения maturity данных для {symbol}: {e}")
+                # Fallback: используем данные из coin_data если есть
+                cleaned_coin['is_mature'] = coin_data.get('is_mature', False)
+                cleaned_coin['candles_count'] = coin_data.get('candles_count')
             
             # ✅ ИСПРАВЛЕНИЕ: Нормализуем RSI и Trend ключи для фронтенда
             # Добавляем универсальные ключи 'rsi' и 'trend' со значением из динамических ключей
@@ -1631,19 +1638,27 @@ def cleanup_inactive_manual():
 
 @bots_app.route('/api/bots/mature-coins-list', methods=['GET'])
 def get_mature_coins_list():
-    """Получить список всех зрелых монет"""
+    """Получить список всех зрелых монет (использует динамический таймфрейм)"""
     try:
-        # ✅ ИСПРАВЛЕНИЕ: Читаем данные напрямую из файла, а не из памяти
+        # ✅ ИСПРАВЛЕНИЕ: Используем динамический путь для текущего таймфрейма
+        from bots_modules.imports_and_globals import get_timeframe
+        from bots_modules.maturity import get_mature_coins_file
         import json
         import os
         
-        mature_coins_file = 'data/mature_coins.json'
+        # Получаем файл для текущего таймфрейма
+        mature_coins_file = get_mature_coins_file()
+        logger.debug(f"[API_MATURE_LIST] Читаем файл: {mature_coins_file}")
+        
         if os.path.exists(mature_coins_file):
             with open(mature_coins_file, 'r', encoding='utf-8') as f:
                 mature_coins_data = json.load(f)
             mature_coins_list = list(mature_coins_data.keys())
         else:
             mature_coins_list = []
+            logger.debug(f"[API_MATURE_LIST] Файл не существует: {mature_coins_file}")
+        
+        logger.info(f"[API_MATURE_LIST] ✅ Найдено {len(mature_coins_list)} зрелых монет")
         
         return jsonify({
             'success': True,
@@ -2198,6 +2213,12 @@ def auto_bot_config():
                         if 'candles_cache' in coins_rsi_data:
                             coins_rsi_data['candles_cache'].clear()
                             logger.info("[TIMEFRAME] ✅ Кэш свечей очищен (был от другого таймфрейма)")
+                        
+                        # ✅ КРИТИЧНО: Сбрасываем метки времени для ПРИНУДИТЕЛЬНОЙ загрузки нового таймфрейма
+                        coins_rsi_data['last_candles_update'] = None
+                        coins_rsi_data['last_rsi_update'] = None
+                        coins_rsi_data['candles_timeframe'] = data['timeframe']  # Обновляем метку таймфрейма
+                        logger.info("[TIMEFRAME] ✅ Метки времени сброшены - следующая загрузка будет принудительной")
                     
                     # 2. Очищаем RSI кэш (пересчитается при следующей загрузке)
                     clear_rsi_cache()
