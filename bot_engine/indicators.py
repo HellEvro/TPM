@@ -230,6 +230,36 @@ class TechnicalIndicators:
         return bool(recent_volume > avg_volume * RSI_VOLUME_CONFIRMATION_MULTIPLIER)
     
     @staticmethod
+    def confirm_with_turnover(candles: List[dict], lookback: int = 5) -> bool:
+        """
+        ✅ Подтверждает сигнал анализом turnover (оборота в USDT)
+        
+        Более точная метрика чем volume, так как показывает реальную сумму денег.
+        
+        Args:
+            candles: Список свечей с полем 'turnover'
+            lookback: Период для сравнения
+            
+        Returns:
+            True если turnover подтверждает сигнал
+        """
+        if len(candles) < lookback * 2:
+            return False
+        
+        # Извлекаем turnover, пропуская свечи без turnover
+        turnovers = [c.get('turnover') for c in candles if c.get('turnover') is not None]
+        
+        if len(turnovers) < lookback * 2:
+            # Если недостаточно данных turnover - возвращаем True (не блокируем)
+            return True
+            
+        recent_turnover = np.mean(turnovers[-lookback:])
+        avg_turnover = np.mean(turnovers[-lookback*2:-lookback])
+        
+        # Turnover должен быть выше среднего для подтверждения
+        return bool(recent_turnover > avg_turnover * RSI_VOLUME_CONFIRMATION_MULTIPLIER)
+    
+    @staticmethod
     def calculate_stoch_rsi(rsi_values: List[float], 
                           stoch_period: int = 14,
                           k_smooth: int = 3, 

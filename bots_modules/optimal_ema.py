@@ -117,9 +117,13 @@ def calculate_all_coins_optimal_ema(mode='auto', force_symbols=None, timeframe=N
         
         # Получаем все монеты с RSI данными
         coins_to_check = []
+        # ✅ ДИНАМИЧЕСКИЙ КЛЮЧ для RSI
+        from bots_modules.filters import get_rsi_key
+        rsi_key = get_rsi_key()
+        
         with rsi_data_lock:
             for symbol, coin_data in coins_rsi_data['coins'].items():
-                if coin_data.get('rsi6h') is not None:
+                if coin_data.get(rsi_key) is not None:
                     coins_to_check.append(symbol)
         
         logger.info(f"[OPTIMAL_EMA_BATCH] 📊 Найдено {len(coins_to_check)} монет для расчета Optimal EMA")

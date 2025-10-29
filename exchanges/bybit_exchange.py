@@ -762,6 +762,9 @@ class BybitExchange(BaseExchange):
                             'close': float(k[4]),
                             'volume': float(k[5])
                         }
+                        # ✅ Сохраняем turnover (оборот в USDT), если доступен
+                        if len(k) > 6:
+                            candle['turnover'] = float(k[6])
                         candles.append(candle)
                     
                     # Сортируем свечи от старых к новым

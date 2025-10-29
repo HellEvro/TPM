@@ -1,7 +1,7 @@
 {
   "bots": {},
   "auto_bot_config": {
-    "enabled": true,
+    "enabled": false,
     "max_concurrent": 10,
     "risk_cap_percent": 10,
     "scope": "all",
@@ -41,12 +41,9 @@
     "exit_scam_multi_candle_percent": 50,
     "ai_optimal_entry_enabled": false,
     "timeframe": "1w",
-    "filtered_coins": [
-      "LA",
-      "ZEREBRO"
-    ],
-    "last_filter_update": "2025-10-28T14:31:38.903958"
+    "filtered_coins": [],
+    "last_filter_update": "2025-10-29T16:39:10.012310"
   },
-  "last_saved": "2025-10-28T14:31:50.491782",
+  "last_saved": "2025-10-29T16:39:10.706735",
   "version": "1.0"
 }

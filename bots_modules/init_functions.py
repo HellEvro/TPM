@@ -121,6 +121,33 @@ def init_bot_service():
         # 0. Загружаем конфигурацию СНАЧАЛА (чтобы знать текущий таймфрейм!)
         load_auto_bot_config()
         
+        # ✅ НЕ ОЧИЩАЕМ кэш! Пусть candle_loader решит - загружать из БД или с биржи
+        from bots_modules.imports_and_globals import coins_rsi_data, rsi_data_lock, get_timeframe
+        from bots_modules.candles_db import init_candles_db, clear_timeframe_cache
+        
+        current_tf = get_timeframe()
+        
+        # ✅ Инициализируем БД свечей
+        init_candles_db()
+        
+        with rsi_data_lock:
+            # Проверяем метку таймфрейма в кэше
+            cache_tf = coins_rsi_data.get('candles_timeframe')
+            cached_count = len(coins_rsi_data.get('candles_cache', {}))
+            
+            # Если таймфрейм изменился - очищаем кэш только для старого TF
+            if cache_tf and cache_tf != current_tf:
+                logger.warning(f"[INIT] 🧹 Таймфрейм изменился: {cache_tf} -> {current_tf}")
+                clear_timeframe_cache(cache_tf)
+                coins_rsi_data['candles_cache'] = {}  # Очищаем память
+            elif not cache_tf:
+                # Первый запуск
+                coins_rsi_data['candles_cache'] = {}
+            
+            coins_rsi_data['last_candles_update'] = None  # Сбрасываем метку времени
+            coins_rsi_data['candles_timeframe'] = current_tf  # Устанавливаем новый таймфрейм
+            logger.info(f"[INIT] ✅ Кэш инициализирован для таймфрейма: {current_tf}")
+        
         # 1. Создаем дефолтную конфигурацию если её нет
         save_default_config()
         
@@ -614,8 +641,13 @@ def process_trading_signals_on_candle_close(candle_timestamp: int, exchange_obj=
                     logger.warning(f"[TRADING] ⚠️ Нет RSI данных для {symbol}")
                     continue
                 
-                rsi = coin_rsi_data.get('rsi6h')
-                trend = coin_rsi_data.get('trend6h', 'NEUTRAL')
+                # ✅ ДИНАМИЧЕСКИЕ КЛЮЧИ
+                from bots_modules.filters import get_rsi_key, get_trend_key
+                rsi_key = get_rsi_key()
+                trend_key = get_trend_key()
+                
+                rsi = coin_rsi_data.get(rsi_key)
+                trend = coin_rsi_data.get(trend_key, 'NEUTRAL')
                 price = coin_rsi_data.get('price', 0)
                 
                 if not rsi or not price:

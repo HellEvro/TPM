@@ -97,7 +97,18 @@ RSI_OVERBOUGHT = 71
 MAX_WORKERS = mp.cpu_count()
 MIN_CANDLES_FOR_ANALYSIS = 200
 MAX_CANDLES_TO_REQUEST = 5000
-DEFAULT_TIMEFRAME = '6h'  # Таймфрейм по умолчанию
+
+# ✅ Получаем таймфрейм из конфигурации
+def get_timeframe_from_config():
+    """Получает таймфрейм из конфигурации"""
+    try:
+        from bots_modules.imports_and_globals import get_timeframe
+        return get_timeframe()
+    except Exception:
+        # Fallback
+        return '1w'
+
+DEFAULT_TIMEFRAME = get_timeframe_from_config()  # ✅ Динамический таймфрейм из конфига
 
 # На Windows используем ThreadPoolExecutor вместо ProcessPoolExecutor для совместимости с numba
 USE_MULTIPROCESSING = os.environ.get('OPTIMAL_EMA_NO_MP', '').lower() not in ['1', 'true', 'yes']

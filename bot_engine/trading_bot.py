@@ -38,6 +38,10 @@ class TradingBot:
         self.entry_time = self.config.get('entry_time')
         self.last_signal_time = self.config.get('last_signal_time')
         
+        # ✅ ЗАЩИТА ОТ ПОВТОРНОГО ВХОДА ПОСЛЕ СТОПА
+        self.last_stop_time = self.config.get('last_stop_time')
+        self.stop_protection_minutes = self.config.get('stop_protection_minutes', 30)  # 30 минут после стопа
+        
         # Масштабирование (лесенка)
         self.scaling_enabled = self.config.get('scaling_enabled', False)
         self.scaling_levels = self.config.get('scaling_levels', [])
@@ -76,7 +80,10 @@ class TradingBot:
             'scaling_enabled': self.scaling_enabled,
             'scaling_levels': self.scaling_levels,
             'scaling_current_level': self.scaling_current_level,
-            'scaling_group_id': self.scaling_group_id
+            'scaling_group_id': self.scaling_group_id,
+            # ✅ Сохраняем время последнего стопа
+            'last_stop_time': self.last_stop_time.isoformat() if self.last_stop_time and hasattr(self.last_stop_time, 'isoformat') else self.last_stop_time,
+            'stop_protection_minutes': self.stop_protection_minutes
         }
     
     def update(self, force_analysis: bool = False, external_signal: str = None, external_trend: str = None) -> Dict:
@@ -402,6 +409,24 @@ class TradingBot:
             # В случае ошибки блокируем для безопасности
             return {'action': 'blocked_check_error', 'reason': 'autobot_check_failed'}
         
+        # ✅ ЗАЩИТА: Проверяем, не было ли недавнего стопа
+        if self.last_stop_time:
+            try:
+                if isinstance(self.last_stop_time, str):
+                    last_stop_dt = datetime.fromisoformat(self.last_stop_time)
+                else:
+                    last_stop_dt = self.last_stop_time
+                
+                time_since_stop = datetime.now() - last_stop_dt
+                minutes_since_stop = time_since_stop.total_seconds() / 60
+                
+                if minutes_since_stop < self.stop_protection_minutes:
+                    remaining_minutes = self.stop_protection_minutes - minutes_since_stop
+                    self.logger.info(f"[TRADING_BOT] {self.symbol}: 🛡️ Защита от повторного входа! Стоп был {minutes_since_stop:.1f}м назад. Ждем еще {remaining_minutes:.1f}м")
+                    return {'action': 'blocked_recent_stop', 'reason': f'stop_protection_{remaining_minutes:.0f}m'}
+            except Exception as e:
+                self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка проверки стопа: {e}")
+        
         # ПРЯМАЯ ЛОГИКА: Сразу открываем сделки без промежуточных состояний
         if signal == 'ENTER_LONG':
             self.logger.info(f"[TRADING_BOT] {self.symbol}: 🚀 СРАЗУ открываем LONG позицию!")
@@ -686,6 +711,12 @@ class TradingBot:
                 except Exception as registry_error:
                     self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка удаления позиции из реестра: {registry_error}")
                     # Не блокируем торговлю из-за ошибки реестра
+                
+                # ✅ ФИКСИРУЕМ ВРЕМЯ СТОПА для защиты от повторного входа
+                # Только если это стоп-лосс (убыточный выход)
+                if pnl < 0:
+                    self.last_stop_time = datetime.now()
+                    self.logger.info(f"[TRADING_BOT] {self.symbol}: 🛡️ Фиксируем время стопа (P&L: {pnl:.2f}%)")
                 
                 # Сбрасываем состояние
                 self.position = None
