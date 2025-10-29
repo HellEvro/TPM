@@ -328,7 +328,16 @@ def check_rsi_time_filter(candles, rsi, signal):
         return {'allowed': False, 'reason': f'Ошибка анализа: {str(e)}', 'last_extreme_candles_ago': None, 'calm_candles': 0}
 
 def get_coin_candles_only(symbol, exchange_obj=None):
-    """⚡ БЫСТРАЯ загрузка ТОЛЬКО свечей БЕЗ расчетов С ПАГИНАЦИЕЙ"""
+    """⚡ ОПТИМИЗИРОВАННАЯ загрузка: свечи + зрелость + RSI в одном цикле
+    
+    Выполняет:
+    1. Загрузку свечей с биржи
+    2. Сохранение свечей в файл сразу (не ждет конца пакета)
+    3. Расчет зрелости монеты (если достаточно свечей)
+    4. Расчет RSI по последним 14 свечам (если >= 14 свечей)
+    
+    Все в одном такте для максимальной эффективности!
+    """
     try:
         from bots_modules.imports_and_globals import get_exchange
         exchange_to_use = exchange_obj if exchange_obj is not None else get_exchange()
@@ -339,25 +348,84 @@ def get_coin_candles_only(symbol, exchange_obj=None):
         # Получаем текущий таймфрейм
         timeframe = get_current_timeframe()
         
-        # ✅ БЕЗ ОГРАНИЧЕНИЙ! Загружаем ВСЕ свечи сколько отдаёт биржа!
-        candles = get_candles_with_pagination(exchange_to_use, symbol, timeframe, target_candles=None)
+        # ✅ Используем лимит из конфига для ограничения загрузки свечей
+        from bots_modules.imports_and_globals import bots_data
+        max_candles_limit = bots_data.get('auto_bot_config', {}).get('max_candles_limit', 2000)
+        candles = get_candles_with_pagination(exchange_to_use, symbol, timeframe, target_candles=max_candles_limit)
         
         # ✅ ПРИНИМАЕМ ЛЮБОЕ КОЛИЧЕСТВО СВЕЧЕЙ! Даже 1 свеча - лучше чем ничего!
         if not candles or len(candles) < 1:
             return None
         
-        # Возвращаем ТОЛЬКО свечи и символ
-        return {
+        candles_count = len(candles)
+        
+        # ✅ ШАГ 1: Рассчитываем RSI ПЕРЕД сохранением (чтобы сохранить его в файл)
+        rsi_value = None
+        rsi_key = f'rsi{timeframe}'
+        if candles_count >= 14:
+            try:
+                # Берем последние 14+ свечей для расчета RSI
+                closes = [candle['close'] for candle in candles[-50:]]  # Берем последние 50 для надежности
+                if len(closes) >= 14:
+                    rsi_value = calculate_rsi(closes, 14)
+                    if rsi_value is not None:
+                        logger.debug(f"[CANDLES_FAST] 📊 {symbol}: RSI = {rsi_value:.2f}")
+            except Exception as e:
+                logger.debug(f"[CANDLES_FAST] ⚠️ {symbol}: Ошибка расчета RSI: {e}")
+        
+        # ✅ ШАГ 2: СРАЗУ сохраняем свечи в файл С RSI (не ждем конца пакета!)
+        from bots_modules.candles_db import save_candles
+        if save_candles(symbol, timeframe, candles, update_mode='append', rsi_value=rsi_value):
+            logger.debug(f"[CANDLES_FAST] 💾 {symbol}: Свечи сохранены ({len(candles)} шт.)" + (f", RSI={rsi_value:.2f}" if rsi_value else ""))
+        else:
+            logger.warning(f"[CANDLES_FAST] ⚠️ {symbol}: Не удалось сохранить свечи")
+        
+        # ✅ ШАГ 3: Рассчитываем зрелость (если достаточно свечей для проверки)
+        maturity_result = None
+        
+        # Для расчета зрелости нужно минимум 200 свечей (из конфига)
+        min_candles_for_maturity = bots_data.get('auto_bot_config', {}).get('min_candles_for_maturity', 400)
+        if candles_count >= min_candles_for_maturity:
+            try:
+                from bots_modules.maturity import check_coin_maturity_with_storage
+                maturity_result = check_coin_maturity_with_storage(symbol, candles)
+                logger.debug(f"[CANDLES_FAST] 🧮 {symbol}: Зрелость = {maturity_result.get('is_mature', False)}")
+            except Exception as e:
+                logger.debug(f"[CANDLES_FAST] ⚠️ {symbol}: Ошибка расчета зрелости: {e}")
+        
+        # Возвращаем ВСЕ данные: свечи + зрелость + RSI
+        result = {
             'symbol': symbol,
             'candles': candles,
-            'last_update': datetime.now().isoformat()
+            'last_update': datetime.now().isoformat(),
+            'candles_count': candles_count,
+            # Зрелость
+            'maturity': maturity_result.get('is_mature', False) if maturity_result else None,
+            'maturity_reason': maturity_result.get('reason', '') if maturity_result else None,
+            # RSI (сохраняем с динамическим ключом)
+            rsi_key: rsi_value,
+            'rsi_available': rsi_value is not None
         }
         
+        return result
+        
     except Exception as e:
+        logger.error(f"[CANDLES_FAST] ❌ {symbol}: Ошибка загрузки: {e}")
         return None
 
 def get_candles_with_pagination(exchange, symbol, timeframe, target_candles=5000):
-    """Получает свечи через пагинацию для получения максимального количества данных"""
+    """Получает свечи через пагинацию.
+    
+    Загружает ПОСЛЕДНИЕ N свечей (начиная с текущего момента и идя назад во времени).
+    После загрузки возвращает последние target_candles свечей (самые свежие).
+    
+    Args:
+        exchange: Объект биржи
+        symbol: Символ монеты (без USDT)
+        timeframe: Таймфрейм ('1m', '5m', '1h', '1d', '1w' и т.д.)
+        target_candles: Количество последних свечей для загрузки (по умолчанию 5000)
+                        Если None - загружает все доступные свечи
+    """
     try:
         # Маппинг таймфреймов для Bybit API
         timeframe_map = {
@@ -423,15 +491,23 @@ def get_candles_with_pagination(exchange, symbol, timeframe, target_candles=5000
                                 candle['turnover'] = float(k[6])
                             batch_candles.append(candle)
                         
+                        # ✅ Сортируем свечи от старых к новым
                         batch_candles.sort(key=lambda x: x['time'])
                         
-                        # ✅ НЕ ОБРЕЗАЕМ! Возвращаем ВСЕ свечи что есть!
-                        logger.info(f"[CANDLES_PAGINATION] {symbol}: Получено {len(batch_candles)} свечей через ЕДИНСТВЕННЫЙ запрос (TF: {timeframe})")
+                        # ✅ ПРИМЕНЯЕМ ЛИМИТ: берем ПОСЛЕДНИЕ N свечей (самые свежие)
+                        # Используем срез [-N:] чтобы взять последние N элементов из отсортированного списка
+                        if target_candles is not None and len(batch_candles) > target_candles:
+                            batch_candles = batch_candles[-target_candles:]
+                            logger.info(f"[CANDLES_PAGINATION] {symbol}: Обрезано до ПОСЛЕДНИХ {len(batch_candles)} свечей (лимит: {target_candles})")
+                        logger.info(f"[CANDLES_PAGINATION] {symbol}: Получено {len(batch_candles)} ПОСЛЕДНИХ свечей через ЕДИНСТВЕННЫЙ запрос (TF: {timeframe})")
                         return batch_candles
             
             logger.warning(f"[CANDLES_PAGINATION] Не удалось получить данные для {symbol} (1W простой запрос)")
             return None
         
+        # ✅ ПАГИНАЦИЯ: Загружаем последние свечи начиная с текущего момента
+        # Первый запрос без end_time вернет последние N свечей (самые свежие)
+        # Последующие запросы с end_time идут назад во времени
         while len(all_candles) < target_candles:
             try:
                 # Параметры запроса
@@ -442,7 +518,8 @@ def get_candles_with_pagination(exchange, symbol, timeframe, target_candles=5000
                     'limit': min(limit, target_candles - len(all_candles))
                 }
                 
-                # Добавляем end_time для пагинации (если не первый запрос)
+                # ✅ Добавляем end_time для пагинации в прошлое (если не первый запрос)
+                # Без end_time API возвращает последние N свечей (самые свежие)
                 if end_time:
                     params['end'] = end_time
                 
@@ -458,6 +535,10 @@ def get_candles_with_pagination(exchange, symbol, timeframe, target_candles=5000
                     if not klines:
                         logger.debug(f"[CANDLES_PAGINATION] Больше данных нет для {symbol}")
                         break
+                    
+                    # ✅ Bybit API возвращает свечи в обратном порядке (от новых к старым)
+                    # Первая свеча в списке - самая свежая, последняя - самая старая
+                    # Поэтому при первом запросе (без end_time) мы получаем последние свечи
                     
                     # Конвертируем в наш формат
                     batch_candles = []
@@ -477,7 +558,7 @@ def get_candles_with_pagination(exchange, symbol, timeframe, target_candles=5000
                     
                     logger.debug(f"[CANDLES_PAGINATION] {symbol}: Получено {len(batch_candles)} свечей из API")
                     
-                    # Добавляем к общему списку
+                    # ✅ Добавляем к общему списку (пока без сортировки - сортировка будет в конце)
                     all_candles.extend(batch_candles)
                     
                     # ✅ БЕЗ ОБРЕЗКИ! Продолжаем загружать пока есть данные!
@@ -497,7 +578,9 @@ def get_candles_with_pagination(exchange, symbol, timeframe, target_candles=5000
                     # Обновляем last_batch_size после добавления
                     last_batch_size = len(batch_candles)
                     
-                    # Обновляем end_time для следующего запроса (берем время первой свечи - 1)
+                    # ✅ Обновляем end_time для следующего запроса: идем В ПРОШЛОЕ
+                    # Берем время первой (самой старой) свечи из текущего батча - 1 мс
+                    # Это позволяет получить предыдущие свечи при следующем запросе
                     end_time = int(klines[0][0]) - 1
                     
                     logger.debug(f"[CANDLES_PAGINATION] {symbol}: Получено {len(batch_candles)} свечей, всего: {len(all_candles)} (TF: {timeframe})")
@@ -514,11 +597,16 @@ def get_candles_with_pagination(exchange, symbol, timeframe, target_candles=5000
                 break
         
         if all_candles:
-            # Сортируем свечи от старых к новым
+            # ✅ Сортируем свечи от старых к новым (по времени открытия)
             all_candles.sort(key=lambda x: x['time'])
             
-            # ✅ НЕ ОБРЕЗАЕМ! Возвращаем ВСЕ что загрузили!
-            logger.info(f"[CANDLES_PAGINATION] {symbol}: Получено {len(all_candles)} свечей через пагинацию (TF: {timeframe})")
+            # ✅ ПРИМЕНЯЕМ ЛИМИТ: берем ПОСЛЕДНИЕ N свечей (самые свежие)
+            # Используем срез [-N:] чтобы взять последние N элементов из отсортированного списка
+            if target_candles is not None and len(all_candles) > target_candles:
+                all_candles = all_candles[-target_candles:]
+                logger.info(f"[CANDLES_PAGINATION] {symbol}: Обрезано до ПОСЛЕДНИХ {len(all_candles)} свечей (лимит: {target_candles})")
+            
+            logger.info(f"[CANDLES_PAGINATION] {symbol}: Получено {len(all_candles)} ПОСЛЕДНИХ свечей через пагинацию (TF: {timeframe})")
             return all_candles
         else:
             logger.warning(f"[CANDLES_PAGINATION] Не удалось получить данные для {symbol}")
@@ -995,13 +1083,33 @@ def calculate_only_rsi(symbol, candles):
     """ЭТАП 1: Рассчитывает ТОЛЬКО RSI для монеты
     
     ✅ Использует динамический ключ rsi_{timeframe} для совместимости с фронтендом!
+    ✅ ОПТИМИЗАЦИЯ: Сначала пытается получить RSI из файла свечей (быстрее!)
     """
     try:
         # ✅ Получаем динамический ключ для текущего таймфрейма
         from bots_modules.imports_and_globals import get_timeframe
+        from bots_modules.candles_db import get_candles
         timeframe = get_timeframe()
         rsi_key = f'rsi{timeframe}'
         
+        # ✅ ОПТИМИЗАЦИЯ: Пытаемся получить RSI из файла свечей (быстро!)
+        try:
+            candles_from_file, rsi_from_file = get_candles(symbol, timeframe, return_rsi=True)
+            if rsi_from_file is not None and candles_from_file:
+                # Используем свечи из файла (могут быть свежее) и RSI
+                logger.debug(f"[RSI_FAST] ✅ {symbol}: RSI из файла = {rsi_from_file:.2f} (пропускаем пересчет)")
+                return {
+                    'symbol': symbol,
+                    rsi_key: rsi_from_file,
+                    'rsi_available': True,
+                    'closes': [c['close'] for c in candles_from_file],
+                    'candles': candles_from_file,
+                    'candles_count': len(candles_from_file)
+                }
+        except Exception as e:
+            logger.debug(f"[RSI_FAST] ⚠️ {symbol}: Не удалось получить RSI из файла: {e}")
+        
+        # Если RSI нет в файле - рассчитываем как обычно
         if not candles or len(candles) < 14:
             return {
                 'symbol': symbol,
@@ -1020,6 +1128,16 @@ def calculate_only_rsi(symbol, candles):
                 'rsi_available': False,
                 'candles_count': len(candles)
             }
+        
+        # ✅ ЗАПИСЫВАЕМ RSI В ФАЙЛ если его там не было (для следующего раза)
+        try:
+            from bots_modules.candles_db import save_candles
+            # Сохраняем только RSI (свечи уже есть в файле, обновлять не нужно)
+            # Используем режим append с существующими свечами чтобы просто добавить RSI
+            save_candles(symbol, timeframe, candles, update_mode='append', rsi_value=rsi)
+            logger.debug(f"[RSI_FAST] 💾 {symbol}: RSI={rsi:.2f} записан в файл для следующего раза")
+        except Exception as e:
+            logger.debug(f"[RSI_FAST] ⚠️ {symbol}: Не удалось записать RSI в файл: {e}")
         
         return {
             'symbol': symbol,
@@ -1165,8 +1283,15 @@ def calculate_signals_for_coin(symbol, coin_data):
                             coin_data['signal'] = 'WAIT'
                         else:
                             coin_data['signal'] = 'ENTER_SHORT'
-            except Exception as e:
-                logger.error(f"[SIGNALS] Ошибка расчета сигналов для {symbol}: {e}")
+        
+        # ✅ БЛОКИРУЕМ СИГНАЛЫ ДЛЯ НЕЗРЕЛЫХ МОНЕТ
+        if coin_data.get('signal') in ['ENTER_LONG', 'ENTER_SHORT']:
+            is_mature = coin_data.get('is_mature', False)
+            enable_maturity_check = bots_data.get('auto_bot_config', {}).get('enable_maturity_check', True)
+            if enable_maturity_check and not is_mature:
+                logger.debug(f"[MATURITY] {symbol}: Монета незрелая - сигнал {coin_data['signal']} заблокирован")
+                coin_data['signal'] = 'WAIT'
+                coin_data['rsi_zone'] = 'NEUTRAL'
         
         return coin_data
     except Exception as e:
@@ -1263,6 +1388,9 @@ def load_all_coins_rsi():
                 
                 # ✅ ВСЕГДА добавляем монету в список (даже если RSI не рассчитан)!
                 if rsi_data is not None:
+                    # ✅ Добавляем флаг зрелости из хранилища сразу
+                    from bots_modules.imports_and_globals import is_coin_mature_stored
+                    rsi_data['is_mature'] = is_coin_mature_stored(symbol)
                     temp_coins_data[symbol] = rsi_data
                     coins_rsi_data['successful_coins'] += 1
                     
@@ -1271,28 +1399,30 @@ def load_all_coins_rsi():
                 else:
                     # Если функция вернула None, добавляем базовую структуру
                     # ✅ Используем динамический ключ!
-                    from bots_modules.imports_and_globals import get_timeframe
+                    from bots_modules.imports_and_globals import get_timeframe, is_coin_mature_stored
                     timeframe = get_timeframe()
                     rsi_key = f'rsi{timeframe}'
                     temp_coins_data[symbol] = {
                         'symbol': symbol,
                         rsi_key: None,  # ✅ Динамический ключ!
                         'rsi_available': False,
-                        'candles_count': len(candles) if candles else 0
+                        'candles_count': len(candles) if candles else 0,
+                        'is_mature': is_coin_mature_stored(symbol)  # ✅ Добавляем зрелость
                     }
                     coins_rsi_data['failed_coins'] += 1
             except Exception as e:
                 logger.error(f"[RSI] ❌ Ошибка расчета RSI для {symbol}: {e}")
                 # Добавляем базовую структуру даже при ошибке
                 # ✅ Используем динамический ключ!
-                from bots_modules.imports_and_globals import get_timeframe
+                from bots_modules.imports_and_globals import get_timeframe, is_coin_mature_stored
                 timeframe = get_timeframe()
                 rsi_key = f'rsi{timeframe}'
                 temp_coins_data[symbol] = {
                     'symbol': symbol,
                     rsi_key: None,  # ✅ Динамический ключ!
                     'rsi_available': False,
-                    'error': str(e)
+                    'error': str(e),
+                    'is_mature': is_coin_mature_stored(symbol)  # ✅ Добавляем зрелость
                 }
                 coins_rsi_data['failed_coins'] += 1
         
@@ -1372,10 +1502,11 @@ def load_all_coins_rsi():
         if failed_count > 0:
             logger.warning(f"[RSI] ⚠️ Ошибок: {failed_count} монет")
         
-        # Обновляем флаги is_mature
+        # ✅ Обновляем флаги is_mature (уже добавлены на этапе 1, но обновляем для консистентности)
         try:
             update_is_mature_flags_in_rsi_data()
-            logger.debug(f"[RSI] Флаги is_mature обновлены")
+            mature_count = sum(1 for coin in coins_rsi_data['coins'].values() if coin.get('is_mature', False))
+            logger.info(f"[RSI] 💎 Флаги зрелости обновлены: {mature_count} зрелых монет")
         except Exception as update_error:
             logger.warning(f"[RSI] ⚠️ Не удалось обновить is_mature: {update_error}")
         return True

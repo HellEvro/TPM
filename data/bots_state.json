@@ -39,11 +39,18 @@
     "exit_scam_single_candle_percent": 15,
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50,
+    "turnover_pump_threshold": 5.0,
+    "turnover_drop_threshold": 0.3,
+    "turnover_price_mismatch": 3.0,
     "ai_optimal_entry_enabled": false,
-    "timeframe": "1w",
-    "filtered_coins": [],
-    "last_filter_update": "2025-10-29T16:39:10.012310"
+    "timeframe": "1d",
+    "max_candles_limit": 2000,
+    "filtered_coins": [
+      "JST",
+      "TRX"
+    ],
+    "last_filter_update": "2025-10-29T23:43:19.777096"
   },
-  "last_saved": "2025-10-29T16:39:10.706735",
+  "last_saved": "2025-10-29T23:43:19.778082",
   "version": "1.0"
 }

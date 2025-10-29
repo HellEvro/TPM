@@ -1,0 +1,17 @@
+{
+  "symbol": "AT",
+  "timeframe": "1d",
+  "candles": [
+    {
+      "time": 1761696000000,
+      "open": 0.381,
+      "high": 0.4,
+      "low": 0.3522,
+      "close": 0.3882,
+      "volume": 8066539.0,
+      "turnover": 3026631.9623
+    }
+  ],
+  "count": 1,
+  "last_update": "2025-10-29T23:39:54.896669"
+}

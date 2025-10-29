@@ -113,13 +113,27 @@ class BotsManager {
             // Принудительная загрузка конфигурации
             setTimeout(() => {
                 console.log('[BotsManager] 🔄 Принудительная загрузка конфигурации...');
-                this.loadConfigurationData().then(() => {
+                this.loadConfigurationData().then((config) => {
                     // После загрузки конфигурации - обновляем таймфрейм в UI
-                    const timeframeEl = document.getElementById('timeframe');
-                    if (timeframeEl && timeframeEl.value) {
-                        console.log('[BotsManager] 🔄 Обновляем таймфрейм в UI после загрузки конфигурации:', timeframeEl.value);
-                        this.updateTimeframeInUI(timeframeEl.value);
+                    // Берем таймфрейм прямо из конфига, а не из поля (которое могло не обновиться)
+                    if (config && config.autoBot) {
+                        const systemConfig = config.system || {};
+                        const timeframe = systemConfig.timeframe || config.autoBot.timeframe || '6h';
+                        console.log('[BotsManager] 🔄 Обновляем таймфрейм в UI после загрузки конфигурации:', timeframe);
+                        
+                        // Обновляем поле тоже
+                        const timeframeEl = document.getElementById('timeframe');
+                        if (timeframeEl) {
+                            timeframeEl.value = timeframe;
+                        }
+                        
+                        // Обновляем UI заголовок
+                        setTimeout(() => {
+                            this.updateTimeframeInUI(timeframe);
+                        }, 200);
                     }
+                }).catch((error) => {
+                    console.error('[BotsManager] ❌ Ошибка загрузки конфигурации в init:', error);
                 });
             }, 2000);
             
@@ -4637,16 +4651,32 @@ class BotsManager {
     
     updateTimeframeInUI(timeframe) {
         /**Обновляет отображение таймфрейма в заголовках UI*/
-        const tfMap = {
-            '1m': ' 1M', '5m': ' 5M', '15m': ' 15M', '30m': ' 30M',
-            '1h': ' 1H', '4h': ' 4H', '6h': ' 6H', '1d': ' 1D', '1w': ' 1W'
-        };
-        const displayTf = timeframe ? tfMap[timeframe] || ' 6H' : '';
+        if (!timeframe) {
+            console.warn('[BotsManager] ⚠️ updateTimeframeInUI вызвана без таймфрейма');
+            return;
+        }
         
-        // Обновляем заголовок списка монет
+        const tfMap = {
+            '1m': '1M', '5m': '5M', '15m': '15M', '30m': '30M',
+            '1h': '1H', '4h': '4H', '6h': '6H', '1d': '1Д', '1w': '1Н'
+        };
+        const displayTf = tfMap[timeframe] || '6H';
+        
+        // Обновляем заголовок списка монет - таймфрейм отображается рядом с "Монеты"
         const currentTfEl = document.getElementById('currentTimeframe');
         if (currentTfEl) {
-            currentTfEl.textContent = displayTf;
+            currentTfEl.textContent = ' ' + displayTf;
+            console.log('[BotsManager] ✅ Обновлен currentTimeframe:', displayTf);
+        } else {
+            console.warn('[BotsManager] ⚠️ Элемент currentTimeframe не найден!');
+            // Попробуем еще раз через небольшую задержку
+            setTimeout(() => {
+                const retryEl = document.getElementById('currentTimeframe');
+                if (retryEl) {
+                    retryEl.textContent = ' ' + displayTf;
+                    console.log('[BotsManager] ✅ Обновлен currentTimeframe (повторная попытка):', displayTf);
+                }
+            }, 500);
         }
         
         // Обновляем таймфрейм в панели выбранной монеты (RSI)
@@ -4661,7 +4691,7 @@ class BotsManager {
             selectedCoinTrendTfEl.textContent = displayTf;
         }
         
-        console.log('[BotsManager] ✅ Таймфрейм обновлен в UI:', displayTf);
+        console.log('[BotsManager] ✅ Таймфрейм обновлен в UI:', displayTf, 'для timeframe:', timeframe);
     }
     
     populateConfigurationForm(config) {
@@ -4718,24 +4748,43 @@ class BotsManager {
             console.error('[BotsManager] ❌ Элемент autoBotScope не найден!');
         }
         
-        // Таймфрейм
+        // Таймфрейм - приоритет системным настройкам
         const timeframeEl = document.getElementById('timeframe');
         if (timeframeEl) {
-            const timeframe = autoBotConfig.timeframe || '6h';
+            // ✅ Сначала берем из system config, потом из autoBot config
+            const systemConfig = config.system || {};
+            const timeframe = systemConfig.timeframe || autoBotConfig.timeframe || '6h';
             timeframeEl.value = timeframe;
-            console.log('[BotsManager] ⏱️ Таймфрейм:', timeframe);
+            console.log('[BotsManager] ⏱️ Таймфрейм установлен в поле:', timeframe);
             
-            // Обновляем таймфрейм в UI заголовках (в следующем кадре для гарантии)
-            requestAnimationFrame(() => {
+            // ✅ СРАЗУ обновляем таймфрейм в UI заголовках (после небольшой задержки для гарантии что элемент существует)
+            setTimeout(() => {
                 this.updateTimeframeInUI(timeframe);
-            });
+            }, 100);
             
             // ✅ Добавляем обработчик события для немедленного обновления UI при смене
-            timeframeEl.addEventListener('change', (e) => {
-                const newTf = e.target.value;
-                console.log('[BotsManager] 🔄 Таймфрейм изменен в UI:', newTf);
-                this.updateTimeframeInUI(newTf);
-            });
+            // Убираем старые обработчики чтобы избежать дублирования
+            const newTimeframeEl = document.getElementById('timeframe');
+            if (newTimeframeEl) {
+                // Клонируем элемент чтобы убрать все старые обработчики
+                const newEl = newTimeframeEl.cloneNode(true);
+                newTimeframeEl.parentNode.replaceChild(newEl, newTimeframeEl);
+                
+                newEl.addEventListener('change', (e) => {
+                    const newTf = e.target.value;
+                    console.log('[BotsManager] 🔄 Таймфрейм изменен в UI:', newTf);
+                    this.updateTimeframeInUI(newTf);
+                });
+            }
+        } else {
+            console.warn('[BotsManager] ⚠️ Элемент timeframe не найден!');
+        }
+        
+        // Лимит загрузки свечей
+        const maxCandlesLimitEl = document.getElementById('maxCandlesLimit');
+        if (maxCandlesLimitEl) {
+            maxCandlesLimitEl.value = autoBotConfig.max_candles_limit || 2000;
+            console.log('[BotsManager] 📈 Лимит свечей:', maxCandlesLimitEl.value);
         }
         
         // Торговые параметры
@@ -5269,6 +5318,7 @@ class BotsManager {
             enabled: document.getElementById('globalAutoBotToggle')?.checked || false,
             max_concurrent: parseInt(document.getElementById('autoBotMaxConcurrent')?.value) || 5,
             risk_cap_percent: parseFloat(document.getElementById('autoBotRiskCap')?.value) || 10,
+            max_candles_limit: parseInt(document.getElementById('maxCandlesLimit')?.value) || 2000,
             scope: document.getElementById('autoBotScope')?.value || 'all',
             timeframe: document.getElementById('timeframe')?.value || '6h',
             rsi_long_threshold: parseInt(document.getElementById('rsiLongThreshold')?.value) || 29,
@@ -7265,10 +7315,17 @@ class BotsManager {
                 const countEl = document.getElementById('matureCoinsCount');
                 if (countEl) {
                     countEl.textContent = `(${data.total_count})`;
+                    console.log(`[BotsManager] 💎 Счетчик зрелых монет обновлен: ${data.total_count}`);
+                }
+                
+                // ✅ Также обновляем счетчик на основе данных из coinsRsiData (если загружены)
+                if (this.coinsRsiData && this.coinsRsiData.length > 0) {
+                    const matureCountInList = this.coinsRsiData.filter(coin => coin.is_mature === true).length;
+                    console.log(`[BotsManager] 💎 Зрелых монет в списке: ${matureCountInList}`);
                 }
             }
         } catch (error) {
-            console.error('[BotsManager] Ошибка загрузки счётчика зрелых монет:', error);
+            console.error('[BotsManager] ❌ Ошибка загрузки счётчика зрелых монет:', error);
         }
     }
     
@@ -7284,14 +7341,25 @@ class BotsManager {
                 // Помечаем зрелые монеты в данных
                 let markedCount = 0;
                 this.coinsRsiData.forEach(coin => {
+                    const wasMature = coin.is_mature || false;
                     coin.is_mature = data.mature_coins.includes(coin.symbol);
                     if (coin.is_mature) {
                         markedCount++;
                     }
+                    // Если статус изменился - перерисовываем
+                    if ((wasMature !== coin.is_mature) && this.selectedCoin && this.selectedCoin.symbol === coin.symbol) {
+                        this.updateSelectedCoinInfo();
+                    }
                 });
                 
-                // ✅ ИСПРАВЛЕНИЕ: Обновляем счетчик зрелых монет в UI
-                await this.loadMatureCoinsCount();
+                // ✅ Обновляем счетчик зрелых монет в UI
+                const countEl = document.getElementById('matureCoinsCount');
+                if (countEl) {
+                    countEl.textContent = `(${data.total_count})`;
+                }
+                
+                // ✅ Перерисовываем список чтобы показать/скрыть индикаторы зрелости
+                this.renderCoinsList();
                 
                 this.logDebug(`[BotsManager] 💎 Помечено ${markedCount} зрелых монет из ${data.total_count} общих`);
             }
