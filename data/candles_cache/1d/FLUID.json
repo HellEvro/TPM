@@ -330,13 +330,13 @@
       "time": 1761782400000,
       "open": 4.613,
       "high": 4.659,
-      "low": 4.402,
-      "close": 4.435,
-      "volume": 93434.1,
-      "turnover": 423385.6372
+      "low": 4.269,
+      "close": 4.279,
+      "volume": 132432.7,
+      "turnover": 593253.9353
     }
   ],
   "count": 37,
-  "last_update": "2025-10-30T15:25:41.209428",
-  "rsi_last_candle": 36.09
+  "last_update": "2025-10-30T18:45:18.814681",
+  "rsi_last_candle": 34.22
 }

@@ -2481,13 +2481,13 @@
       "time": 1761782400000,
       "open": 1.602,
       "high": 1.622,
-      "low": 1.536,
-      "close": 1.539,
-      "volume": 357858.3,
-      "turnover": 564753.11593
+      "low": 1.485,
+      "close": 1.488,
+      "volume": 576469.27,
+      "turnover": 894967.0646
     }
   ],
   "count": 276,
-  "last_update": "2025-10-30T15:25:48.839112",
-  "rsi_last_candle": 42.64
+  "last_update": "2025-10-30T18:45:38.401411",
+  "rsi_last_candle": 40.9
 }

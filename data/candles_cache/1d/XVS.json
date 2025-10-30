@@ -7053,13 +7053,13 @@
       "time": 1761782400000,
       "open": 4.653,
       "high": 4.726,
-      "low": 4.527,
-      "close": 4.547,
-      "volume": 10930.5,
-      "turnover": 50768.428
+      "low": 4.42,
+      "close": 4.431,
+      "volume": 15552.5,
+      "turnover": 71509.7873
     }
   ],
   "count": 784,
-  "last_update": "2025-10-30T15:25:49.120883",
-  "rsi_last_candle": 35.04
+  "last_update": "2025-10-30T18:45:39.250474",
+  "rsi_last_candle": 33.49
 }

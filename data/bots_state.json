@@ -45,9 +45,13 @@
     "ai_optimal_entry_enabled": false,
     "timeframe": "1d",
     "max_candles_limit": 2000,
-    "filtered_coins": [],
-    "last_filter_update": "2025-10-30T15:25:53.637011"
+    "filtered_coins": [
+      "JST",
+      "TRX",
+      "XLM"
+    ],
+    "last_filter_update": "2025-10-30T18:47:23.703297"
   },
-  "last_saved": "2025-10-30T15:25:54.565211",
+  "last_saved": "2025-10-30T18:47:24.012518",
   "version": "1.0"
 }
