@@ -74,7 +74,9 @@ def save_candles(symbol, timeframe, candles, update_mode='replace', rsi_value=No
                         old_times = {c['time']: c for c in old_candles}
                         new_times = {c['time']: c for c in candles}
                         
-                        # Объединяем, новые перезаписывают старые
+                        # ✅ КРИТИЧНО: Объединяем, новые перезаписывают старые по времени
+                        # Это означает, что последняя незакрытая свеча ОБНОВЛЯЕТСЯ при каждом цикле
+                        # Например: дневная свеча обновляется весь день, часовая - каждый час
                         merged_times = {**old_times, **new_times}
                         candles = sorted(merged_times.values(), key=lambda x: x['time'])
                         
@@ -82,7 +84,7 @@ def save_candles(symbol, timeframe, candles, update_mode='replace', rsi_value=No
                         new_count = len(set(new_times.keys()) - set(old_times.keys()))
                         updated_count = len(new_times) - new_count
                         
-                        logger.debug(f"[CANDLES_DB] 🔄 {symbol}: +{new_count} новых, обновлено {updated_count}, всего {len(candles)}")
+                        logger.debug(f"[CANDLES_DB] 🔄 {symbol}: +{new_count} новых, обновлено {updated_count} (включая последнюю незакрытую), всего {len(candles)}")
                 except Exception as e:
                     logger.warning(f"[CANDLES_DB] ⚠️ Ошибка чтения старых свечей для {symbol}: {e}")
             

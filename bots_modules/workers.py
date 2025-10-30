@@ -231,7 +231,7 @@ def auto_bot_worker():
                 
                 # Предупреждение только если ОЧЕНЬ медленно
                 if execution_time > 2.0:  # Если больше 2 секунд
-                    logger.warning(f"[WORKER] ⚠️ Очень медленное обновление: {execution_time:.1f}с")
+                    logger.debug(f"[WORKER] ⚠️ Медленное обновление позиций: {execution_time:.1f}с")  # ✅ DEBUG вместо WARNING
                 
                 last_position_update = current_time
             

@@ -378,7 +378,7 @@ def refresh_manual_positions():
                         if 'bots' in saved_data:
                             saved_bot_symbols = set(saved_data['bots'].keys())
             except Exception as e:
-                logger.warning(f"[MANUAL_POSITIONS] ⚠️ Не удалось загрузить сохраненных ботов: {e}")
+                logger.debug(f"[MANUAL_POSITIONS] ⚠️ Не удалось загрузить сохраненных ботов (файл не существует или пустой): {e}")  # ✅ DEBUG - не критично
             
             # Объединяем активных и сохраненных ботов
             system_bot_symbols = active_bot_symbols.union(saved_bot_symbols)
