@@ -7781,14 +7781,14 @@
     {
       "time": 1761782400000,
       "open": 81.11,
-      "high": 81.97,
-      "low": 80.64,
-      "close": 81.7,
-      "volume": 472.88,
-      "turnover": 38532.4834
+      "high": 82.24,
+      "low": 79.44,
+      "close": 79.53,
+      "volume": 4821.38,
+      "turnover": 389776.2651
     }
   ],
   "count": 865,
-  "last_update": "2025-10-30T03:42:57.779948",
-  "rsi_last_candle": 39.72
+  "last_update": "2025-10-30T15:25:45.035127",
+  "rsi_last_candle": 36.4
 }

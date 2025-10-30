@@ -6647,14 +6647,14 @@
     {
       "time": 1761782400000,
       "open": 2.587,
-      "high": 2.591,
-      "low": 2.565,
-      "close": 2.588,
-      "volume": 2814.4,
-      "turnover": 7266.2503
+      "high": 2.618,
+      "low": 2.513,
+      "close": 2.525,
+      "volume": 79949.9,
+      "turnover": 204649.826
     }
   ],
   "count": 739,
-  "last_update": "2025-10-30T03:42:23.800090",
-  "rsi_last_candle": 42.65
+  "last_update": "2025-10-30T15:25:41.258323",
+  "rsi_last_candle": 40.24
 }

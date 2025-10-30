@@ -7259,14 +7259,14 @@
     {
       "time": 1761782400000,
       "open": 1.019,
-      "high": 1.024,
-      "low": 1.013,
-      "close": 1.023,
-      "volume": 17688.9,
-      "turnover": 18035.6088
+      "high": 1.03,
+      "low": 0.971,
+      "close": 0.974,
+      "volume": 362978.1,
+      "turnover": 361763.8232
     }
   ],
   "count": 807,
-  "last_update": "2025-10-30T03:49:15.903015",
-  "rsi_last_candle": 35.17
+  "last_update": "2025-10-30T15:25:39.373832",
+  "rsi_last_candle": 32.82
 }

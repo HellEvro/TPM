@@ -7880,14 +7880,14 @@
     {
       "time": 1761782400000,
       "open": 1.111,
-      "high": 1.12,
-      "low": 1.106,
-      "close": 1.118,
-      "volume": 14955.7,
-      "turnover": 16646.6545
+      "high": 1.132,
+      "low": 1.072,
+      "close": 1.077,
+      "volume": 288024.9,
+      "turnover": 316667.9108
     }
   ],
   "count": 876,
-  "last_update": "2025-10-30T03:43:18.028075",
-  "rsi_last_candle": 46.51
+  "last_update": "2025-10-30T15:25:47.862127",
+  "rsi_last_candle": 44.05
 }
