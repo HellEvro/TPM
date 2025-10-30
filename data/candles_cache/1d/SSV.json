@@ -8772,13 +8772,13 @@
       "time": 1761782400000,
       "open": 5.146,
       "high": 5.216,
-      "low": 4.882,
-      "close": 4.898,
-      "volume": 44770.18,
-      "turnover": 224538.63482
+      "low": 4.654,
+      "close": 4.672,
+      "volume": 82467.76,
+      "turnover": 405410.71322
     }
   ],
   "count": 975,
-  "last_update": "2025-10-30T15:25:46.794385",
-  "rsi_last_candle": 33.71
+  "last_update": "2025-10-30T18:45:33.523834",
+  "rsi_last_candle": 31.69
 }

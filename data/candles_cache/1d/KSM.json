@@ -9006,13 +9006,13 @@
       "time": 1761782400000,
       "open": 10.03,
       "high": 10.18,
-      "low": 9.65,
-      "close": 9.75,
-      "volume": 47910.76,
-      "turnover": 473404.8514
+      "low": 9.17,
+      "close": 9.22,
+      "volume": 104630.48,
+      "turnover": 1008370.7625
     }
   ],
   "count": 1001,
-  "last_update": "2025-10-30T15:25:42.850462",
-  "rsi_last_candle": 24.57
+  "last_update": "2025-10-30T18:45:23.731138",
+  "rsi_last_candle": 19.3
 }

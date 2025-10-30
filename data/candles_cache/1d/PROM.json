@@ -7081,12 +7081,12 @@
       "open": 10.183,
       "high": 10.572,
       "low": 10.154,
-      "close": 10.294,
-      "volume": 29013.4,
-      "turnover": 299538.1019
+      "close": 10.332,
+      "volume": 42360.3,
+      "turnover": 437917.6225
     }
   ],
   "count": 787,
-  "last_update": "2025-10-30T15:25:44.879455",
-  "rsi_last_candle": 57.93
+  "last_update": "2025-10-30T18:45:29.832942",
+  "rsi_last_candle": 58.49
 }

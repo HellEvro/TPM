@@ -542,17 +542,31 @@ def get_coins_with_rsi():
                 # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
                 active_bot_symbols = set(bots_data['bots'].keys())
                 
-                # Также загружаем сохраненных ботов из файла
+                # Также загружаем сохраненных ботов из файла (устойчиво к пустому/битому JSON)
                 saved_bot_symbols = set()
+                bots_state_invalid = False
+                bots_state_empty = False
                 try:
                     bots_state_file = 'data/bots_state.json'
                     if os.path.exists(bots_state_file):
-                        with open(bots_state_file, 'r', encoding='utf-8') as f:
-                            saved_data = json.load(f)
-                            if 'bots' in saved_data:
-                                saved_bot_symbols = set(saved_data['bots'].keys())
+                        try:
+                            # Пустой файл — просто пропускаем
+                            if os.path.getsize(bots_state_file) == 0:
+                                logger.debug("[MANUAL_POSITIONS] Пустой bots_state.json — пропускаем")
+                                bots_state_empty = True
+                            else:
+                                with open(bots_state_file, 'r', encoding='utf-8') as f:
+                                    saved_data = json.load(f)
+                                bots_block = saved_data.get('bots', {}) if isinstance(saved_data, dict) else {}
+                                if isinstance(bots_block, dict):
+                                    saved_bot_symbols = set(bots_block.keys())
+                        except json.JSONDecodeError as je:
+                            logger.debug(f"[MANUAL_POSITIONS] Некорректный JSON в bots_state.json — пропускаем: {je}")
+                            bots_state_invalid = True
+                        except Exception as re:
+                            logger.debug(f"[MANUAL_POSITIONS] Ошибка чтения bots_state.json — пропускаем: {re}")
                 except Exception as e:
-                    logger.warning(f"[MANUAL_POSITIONS] ⚠️ Не удалось загрузить сохраненных ботов: {e}")
+                    logger.debug(f"[MANUAL_POSITIONS] Ошибка доступа к bots_state.json: {e}")
                 
                 # Объединяем активных и сохраненных ботов
                 system_bot_symbols = active_bot_symbols.union(saved_bot_symbols)
@@ -571,6 +585,17 @@ def get_coins_with_rsi():
                 
                 # ✅ Детальное логирование для отладки
                 logger.debug(f"[MANUAL_POSITIONS] Найдено {len(manual_positions)} ручных позиций: {manual_positions}")
+
+                # Если файл состояния пустой/битый и есть ручные позиции — перезаписываем корректной структурой
+                try:
+                    bots_state_file = 'data/bots_state.json'
+                    if (bots_state_invalid or bots_state_empty) and manual_positions:
+                        os.makedirs(os.path.dirname(bots_state_file), exist_ok=True)
+                        with open(bots_state_file, 'w', encoding='utf-8') as f:
+                            json.dump({'bots': {}}, f, ensure_ascii=False, indent=2)
+                        logger.info("[MANUAL_POSITIONS] Восстановлен bots_state.json (перезаписан корректной структурой)")
+                except Exception as e:
+                    logger.debug(f"[MANUAL_POSITIONS] Не удалось восстановить bots_state.json: {e}")
         except Exception as e:
             logger.error(f"[ERROR] Ошибка получения ручных позиций: {str(e)}")
         

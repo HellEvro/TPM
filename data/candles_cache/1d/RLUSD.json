@@ -311,14 +311,14 @@
     {
       "time": 1761782400000,
       "open": 0.9983,
-      "high": 0.9988,
+      "high": 0.9989,
       "low": 0.9975,
-      "close": 0.9978,
-      "volume": 11532.0,
-      "turnover": 11510.4671
+      "close": 0.9979,
+      "volume": 19561.0,
+      "turnover": 19525.3297
     }
   ],
   "count": 35,
-  "last_update": "2025-10-30T15:25:45.994827",
-  "rsi_last_candle": 47.94
+  "last_update": "2025-10-30T18:45:31.740365",
+  "rsi_last_candle": 48.35
 }

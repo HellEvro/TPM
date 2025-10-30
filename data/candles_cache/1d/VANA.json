@@ -2869,12 +2869,12 @@
       "open": 2.764,
       "high": 3.045,
       "low": 2.67,
-      "close": 2.955,
-      "volume": 3736537.5,
-      "turnover": 10714061.21598
+      "close": 2.825,
+      "volume": 5335957.18,
+      "turnover": 15308080.76487
     }
   ],
   "count": 319,
-  "last_update": "2025-10-30T15:25:47.655020",
-  "rsi_last_candle": 47.94
+  "last_update": "2025-10-30T18:45:36.423576",
+  "rsi_last_candle": 44.4
 }

@@ -7260,13 +7260,13 @@
       "time": 1761782400000,
       "open": 1.019,
       "high": 1.03,
-      "low": 0.971,
-      "close": 0.974,
-      "volume": 362978.1,
-      "turnover": 361763.8232
+      "low": 0.922,
+      "close": 0.928,
+      "volume": 845192.2,
+      "turnover": 820791.4316
     }
   ],
   "count": 807,
-  "last_update": "2025-10-30T15:25:39.373832",
-  "rsi_last_candle": 32.82
+  "last_update": "2025-10-30T18:45:14.770039",
+  "rsi_last_candle": 30.72
 }
