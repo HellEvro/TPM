@@ -1,10 +1,10 @@
 {
   "1000000BABYDOGE": {
-    "timestamp": 1761769697.2935328,
+    "timestamp": 1761784570.2147977,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 506,
+        "candles_count": 507,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -14,7 +14,7 @@
     }
   },
   "1INCH": {
-    "timestamp": 1761769697.5771024,
+    "timestamp": 1761784570.821846,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -28,11 +28,11 @@
     }
   },
   "A8": {
-    "timestamp": 1761769697.9905264,
+    "timestamp": 1761784571.0296588,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 465,
+        "candles_count": 466,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -42,11 +42,11 @@
     }
   },
   "ACE": {
-    "timestamp": 1761769698.2117715,
+    "timestamp": 1761784571.2418478,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 682,
+        "candles_count": 683,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -55,12 +55,68 @@
       }
     }
   },
-  "1000NEIROCTO": {
-    "timestamp": 1761769698.2973707,
+  "1000FLOKI": {
+    "timestamp": 1761784571.5480607,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 409,
+        "candles_count": 980,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 25.8,
+        "rsi_max": 81.2
+      }
+    }
+  },
+  "AAVE": {
+    "timestamp": 1761784571.644779,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 19.1,
+        "rsi_max": 87.0
+      }
+    }
+  },
+  "1000CAT": {
+    "timestamp": 1761784571.667921,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 413,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 19.4,
+        "rsi_max": 78.3
+      }
+    }
+  },
+  "1000RATS": {
+    "timestamp": 1761784571.6997414,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 709,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 24.3,
+        "rsi_max": 71.9
+      }
+    }
+  },
+  "1000NEIROCTO": {
+    "timestamp": 1761784571.7115378,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 410,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -70,11 +126,11 @@
     }
   },
   "1000000MOG": {
-    "timestamp": 1761769698.3107035,
+    "timestamp": 1761784571.7228322,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 532,
+        "candles_count": 533,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -83,40 +139,12 @@
       }
     }
   },
-  "1000PEPE": {
-    "timestamp": 1761769698.3415112,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 911,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 25.1,
-        "rsi_max": 88.5
-      }
-    }
-  },
-  "1000FLOKI": {
-    "timestamp": 1761769698.3607326,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 979,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 25.8,
-        "rsi_max": 81.2
-      }
-    }
-  },
   "10000SATS": {
-    "timestamp": 1761769698.3854382,
+    "timestamp": 1761784571.7330196,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 714,
+        "candles_count": 715,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -125,232 +153,8 @@
       }
     }
   },
-  "1000CAT": {
-    "timestamp": 1761769698.3945014,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 412,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.4,
-        "rsi_max": 78.3
-      }
-    }
-  },
-  "1000RATS": {
-    "timestamp": 1761769698.4066138,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 708,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 24.3,
-        "rsi_max": 71.9
-      }
-    }
-  },
-  "1000TURBO": {
-    "timestamp": 1761769698.423886,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 609,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 25.3,
-        "rsi_max": 84.9
-      }
-    }
-  },
-  "AERO": {
-    "timestamp": 1761769698.5092177,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 472,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 23.4,
-        "rsi_max": 81.9
-      }
-    }
-  },
-  "AERGO": {
-    "timestamp": 1761769698.5193565,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 714,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.7,
-        "rsi_max": 96.3
-      }
-    }
-  },
-  "AEVO": {
-    "timestamp": 1761769698.5279908,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 596,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.4,
-        "rsi_max": 77.3
-      }
-    }
-  },
-  "AGI": {
-    "timestamp": 1761769698.5657272,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 713,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 20.4,
-        "rsi_max": 73.3
-      }
-    }
-  },
-  "1000XEC": {
-    "timestamp": 1761769698.598769,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 16.2,
-        "rsi_max": 92.2
-      }
-    }
-  },
-  "AI": {
-    "timestamp": 1761769698.611435,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 652,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.2,
-        "rsi_max": 73.6
-      }
-    }
-  },
-  "AIOZ": {
-    "timestamp": 1761769698.6376517,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 504,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 25.1,
-        "rsi_max": 83.6
-      }
-    }
-  },
-  "AAVE": {
-    "timestamp": 1761769698.706192,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 19.1,
-        "rsi_max": 86.5
-      }
-    }
-  },
-  "AKT": {
-    "timestamp": 1761769698.7313242,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 491,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.1,
-        "rsi_max": 77.1
-      }
-    }
-  },
-  "ALEO": {
-    "timestamp": 1761769698.7414813,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 406,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.4,
-        "rsi_max": 85.2
-      }
-    }
-  },
-  "1000BTT": {
-    "timestamp": 1761769698.796314,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 9.7,
-        "rsi_max": 89.2
-      }
-    }
-  },
-  "1000LUNC": {
-    "timestamp": 1761769698.8089406,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 12.9,
-        "rsi_max": 87.3
-      }
-    }
-  },
-  "ALT": {
-    "timestamp": 1761769698.8413193,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 644,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.7,
-        "rsi_max": 77.6
-      }
-    }
-  },
   "ACH": {
-    "timestamp": 1761769698.8635905,
+    "timestamp": 1761784571.87117,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -363,22 +167,176 @@
       }
     }
   },
-  "ARB": {
-    "timestamp": 1761769698.9726436,
+  "AERO": {
+    "timestamp": 1761784571.8795063,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 952,
+        "candles_count": 473,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 25.9,
-        "rsi_max": 80.6
+        "rsi_min": 23.4,
+        "rsi_max": 81.9
+      }
+    }
+  },
+  "AEVO": {
+    "timestamp": 1761784571.8898504,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 597,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.4,
+        "rsi_max": 77.3
+      }
+    }
+  },
+  "AERGO": {
+    "timestamp": 1761784571.9019961,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 715,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.7,
+        "rsi_max": 96.3
+      }
+    }
+  },
+  "AI": {
+    "timestamp": 1761784571.9397058,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 653,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.2,
+        "rsi_max": 73.6
+      }
+    }
+  },
+  "1000TURBO": {
+    "timestamp": 1761784571.9670293,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 610,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 25.3,
+        "rsi_max": 84.9
+      }
+    }
+  },
+  "1000BTT": {
+    "timestamp": 1761784571.9978433,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 9.7,
+        "rsi_max": 88.0
+      }
+    }
+  },
+  "1000PEPE": {
+    "timestamp": 1761784572.0363104,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 912,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 25.1,
+        "rsi_max": 88.4
+      }
+    }
+  },
+  "1000LUNC": {
+    "timestamp": 1761784572.054635,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 12.9,
+        "rsi_max": 87.3
+      }
+    }
+  },
+  "AGI": {
+    "timestamp": 1761784572.0670469,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 714,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 20.4,
+        "rsi_max": 73.3
+      }
+    }
+  },
+  "AKT": {
+    "timestamp": 1761784572.1058507,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 492,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.1,
+        "rsi_max": 76.8
+      }
+    }
+  },
+  "ALEO": {
+    "timestamp": 1761784572.1536243,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 407,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.4,
+        "rsi_max": 85.2
+      }
+    }
+  },
+  "AIOZ": {
+    "timestamp": 1761784572.2317069,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 505,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 25.1,
+        "rsi_max": 83.5
       }
     }
   },
   "AGLD": {
-    "timestamp": 1761769699.0230052,
+    "timestamp": 1761784572.2958426,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -391,50 +349,22 @@
       }
     }
   },
-  "ARK": {
-    "timestamp": 1761769699.0313563,
+  "ARB": {
+    "timestamp": 1761784572.325856,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 821,
+        "candles_count": 953,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 27.8,
-        "rsi_max": 74.7
-      }
-    }
-  },
-  "ADA": {
-    "timestamp": 1761769699.0711706,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 14.3,
-        "rsi_max": 93.8
-      }
-    }
-  },
-  "ARKM": {
-    "timestamp": 1761769699.0825136,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 825,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 23.7,
-        "rsi_max": 75.1
+        "rsi_min": 25.9,
+        "rsi_max": 80.6
       }
     }
   },
   "1000BONK": {
-    "timestamp": 1761769699.1353426,
+    "timestamp": 1761784572.3732812,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -447,8 +377,22 @@
       }
     }
   },
-  "ALGO": {
-    "timestamp": 1761769699.1891196,
+  "ARK": {
+    "timestamp": 1761784572.3898635,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 822,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 27.8,
+        "rsi_max": 74.7
+      }
+    }
+  },
+  "1000XEC": {
+    "timestamp": 1761784572.415147,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -456,27 +400,13 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 18.9,
-        "rsi_max": 96.0
-      }
-    }
-  },
-  "ATH": {
-    "timestamp": 1761769699.2158954,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 504,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.3,
-        "rsi_max": 86.6
+        "rsi_min": 16.2,
+        "rsi_max": 92.2
       }
     }
   },
   "ALICE": {
-    "timestamp": 1761769699.2292411,
+    "timestamp": 1761784572.5829144,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -490,11 +420,11 @@
     }
   },
   "AUCTION": {
-    "timestamp": 1761769699.2421572,
+    "timestamp": 1761784572.6043458,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 825,
+        "candles_count": 826,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -503,22 +433,8 @@
       }
     }
   },
-  "APE": {
-    "timestamp": 1761769699.3014803,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 16.3,
-        "rsi_max": 85.1
-      }
-    }
-  },
   "ANKR": {
-    "timestamp": 1761769699.313906,
+    "timestamp": 1761784572.6400704,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -527,12 +443,26 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 16.4,
-        "rsi_max": 92.4
+        "rsi_max": 92.6
+      }
+    }
+  },
+  "APE": {
+    "timestamp": 1761784572.6952085,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 16.3,
+        "rsi_max": 91.0
       }
     }
   },
   "API3": {
-    "timestamp": 1761769699.3282368,
+    "timestamp": 1761784572.7132854,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -545,22 +475,8 @@
       }
     }
   },
-  "AR": {
-    "timestamp": 1761769699.3625474,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.2,
-        "rsi_max": 90.2
-      }
-    }
-  },
   "APT": {
-    "timestamp": 1761769699.374481,
+    "timestamp": 1761784572.7291088,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -573,12 +489,40 @@
       }
     }
   },
-  "AXL": {
-    "timestamp": 1761769699.476607,
+  "AR": {
+    "timestamp": 1761784572.7468596,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 693,
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.2,
+        "rsi_max": 90.2
+      }
+    }
+  },
+  "ARKM": {
+    "timestamp": 1761784572.7763362,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 826,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 23.7,
+        "rsi_max": 75.1
+      }
+    }
+  },
+  "AXL": {
+    "timestamp": 1761784572.8676322,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 694,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -587,8 +531,36 @@
       }
     }
   },
-  "ARPA": {
-    "timestamp": 1761769699.5036776,
+  "ALT": {
+    "timestamp": 1761784572.8942752,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 645,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.7,
+        "rsi_max": 77.5
+      }
+    }
+  },
+  "ATH": {
+    "timestamp": 1761784572.9191575,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 505,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.3,
+        "rsi_max": 86.6
+      }
+    }
+  },
+  "ALGO": {
+    "timestamp": 1761784572.9465728,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -596,41 +568,27 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 14.8,
-        "rsi_max": 89.7
+        "rsi_min": 18.9,
+        "rsi_max": 96.0
       }
     }
   },
-  "BANANA": {
-    "timestamp": 1761769699.5314841,
+  "ADA": {
+    "timestamp": 1761784572.9739008,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 468,
+        "candles_count": 2000,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 21.6,
-        "rsi_max": 80.9
-      }
-    }
-  },
-  "BB": {
-    "timestamp": 1761769699.592771,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 534,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.4,
-        "rsi_max": 77.8
+        "rsi_min": 14.3,
+        "rsi_max": 93.8
       }
     }
   },
   "ATOM": {
-    "timestamp": 1761769699.653285,
+    "timestamp": 1761784573.0131006,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -643,22 +601,8 @@
       }
     }
   },
-  "BEAM": {
-    "timestamp": 1761769699.6914687,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 716,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.9,
-        "rsi_max": 78.5
-      }
-    }
-  },
   "AUDIO": {
-    "timestamp": 1761769699.7083323,
+    "timestamp": 1761784573.047734,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -667,12 +611,54 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 11.0,
-        "rsi_max": 87.1
+        "rsi_max": 93.5
+      }
+    }
+  },
+  "BEAM": {
+    "timestamp": 1761784573.1362696,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 717,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.9,
+        "rsi_max": 78.5
+      }
+    }
+  },
+  "BANANA": {
+    "timestamp": 1761784573.1523914,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 469,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.6,
+        "rsi_max": 80.9
+      }
+    }
+  },
+  "ARPA": {
+    "timestamp": 1761784573.2087789,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 14.8,
+        "rsi_max": 96.5
       }
     }
   },
   "ASTR": {
-    "timestamp": 1761769699.878182,
+    "timestamp": 1761784573.29082,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -685,22 +671,8 @@
       }
     }
   },
-  "AXS": {
-    "timestamp": 1761769699.888152,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 18.6,
-        "rsi_max": 87.7
-      }
-    }
-  },
   "BAND": {
-    "timestamp": 1761769700.0328653,
+    "timestamp": 1761784573.4127355,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -709,12 +681,26 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 18.8,
-        "rsi_max": 89.7
+        "rsi_max": 92.3
+      }
+    }
+  },
+  "BB": {
+    "timestamp": 1761784573.4473531,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 535,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.4,
+        "rsi_max": 77.8
       }
     }
   },
   "AVAX": {
-    "timestamp": 1761769700.0540133,
+    "timestamp": 1761784573.4646292,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -727,8 +713,36 @@
       }
     }
   },
+  "BAT": {
+    "timestamp": 1761784573.5317762,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.1,
+        "rsi_max": 95.5
+      }
+    }
+  },
+  "AXS": {
+    "timestamp": 1761784573.650202,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 18.6,
+        "rsi_max": 87.7
+      }
+    }
+  },
   "BCH": {
-    "timestamp": 1761769700.096353,
+    "timestamp": 1761784574.2240684,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -742,7 +756,7 @@
     }
   },
   "BEL": {
-    "timestamp": 1761769700.3105671,
+    "timestamp": 1761784574.5952609,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -755,26 +769,40 @@
       }
     }
   },
-  "BAT": {
-    "timestamp": 1761769701.4024982,
+  "BLAST": {
+    "timestamp": 1761784574.9441674,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 2000,
+        "candles_count": 491,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 17.1,
-        "rsi_max": 94.1
+        "rsi_min": 19.1,
+        "rsi_max": 77.7
+      }
+    }
+  },
+  "BLUR": {
+    "timestamp": 1761784574.9879162,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 989,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 24.3,
+        "rsi_max": 81.2
       }
     }
   },
   "BIGTIME": {
-    "timestamp": 1761769701.7353678,
+    "timestamp": 1761784575.0005474,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 749,
+        "candles_count": 750,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -783,12 +811,26 @@
       }
     }
   },
-  "BRETT": {
-    "timestamp": 1761769701.765468,
+  "BNT": {
+    "timestamp": 1761784575.0146024,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 552,
+        "candles_count": 816,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 27.6,
+        "rsi_max": 91.1
+      }
+    }
+  },
+  "BRETT": {
+    "timestamp": 1761784575.0258443,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 553,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -798,11 +840,11 @@
     }
   },
   "BOME": {
-    "timestamp": 1761769701.7701836,
+    "timestamp": 1761784575.038421,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 594,
+        "candles_count": 595,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -811,68 +853,26 @@
       }
     }
   },
-  "BNT": {
-    "timestamp": 1761769701.7845545,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 815,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 27.6,
-        "rsi_max": 91.1
-      }
-    }
-  },
-  "BLAST": {
-    "timestamp": 1761769701.9063225,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 490,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 19.1,
-        "rsi_max": 77.8
-      }
-    }
-  },
-  "CAKE": {
-    "timestamp": 1761769701.9630923,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 727,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.8,
-        "rsi_max": 86.2
-      }
-    }
-  },
   "CATI": {
-    "timestamp": 1761769701.9718878,
+    "timestamp": 1761784575.1739671,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 414,
+        "candles_count": 415,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 19.1,
-        "rsi_max": 76.5
+        "rsi_min": 22.0,
+        "rsi_max": 76.8
       }
     }
   },
   "CETUS": {
-    "timestamp": 1761769701.9829395,
+    "timestamp": 1761784575.18729,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 633,
+        "candles_count": 634,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -882,11 +882,11 @@
     }
   },
   "CFX": {
-    "timestamp": 1761769702.006578,
+    "timestamp": 1761784575.2341528,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 982,
+        "candles_count": 983,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -896,49 +896,21 @@
     }
   },
   "CHESS": {
-    "timestamp": 1761769702.0150816,
+    "timestamp": 1761784575.2745314,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 423,
+        "candles_count": 424,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 20.9,
-        "rsi_max": 82.4
-      }
-    }
-  },
-  "BLUR": {
-    "timestamp": 1761769702.0780144,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 988,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 24.3,
-        "rsi_max": 81.2
-      }
-    }
-  },
-  "BICO": {
-    "timestamp": 1761769702.1652565,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 16.9,
-        "rsi_max": 89.4
+        "rsi_max": 82.3
       }
     }
   },
   "BNB": {
-    "timestamp": 1761769702.1787581,
+    "timestamp": 1761784575.3767807,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -952,7 +924,7 @@
     }
   },
   "BOBA": {
-    "timestamp": 1761769702.1933038,
+    "timestamp": 1761784575.394027,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -965,36 +937,8 @@
       }
     }
   },
-  "CLOUD": {
-    "timestamp": 1761769702.2163198,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 468,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.1,
-        "rsi_max": 80.8
-      }
-    }
-  },
-  "C98": {
-    "timestamp": 1761769702.319732,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 14.3,
-        "rsi_max": 81.3
-      }
-    }
-  },
   "BTC": {
-    "timestamp": 1761769702.491517,
+    "timestamp": 1761784575.4074347,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1003,12 +947,26 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 23.4,
-        "rsi_max": 86.0
+        "rsi_max": 91.2
+      }
+    }
+  },
+  "CAKE": {
+    "timestamp": 1761784575.510122,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 728,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.8,
+        "rsi_max": 86.2
       }
     }
   },
   "BSV": {
-    "timestamp": 1761769702.5114112,
+    "timestamp": 1761784575.5276427,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1017,12 +975,12 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 15.2,
-        "rsi_max": 93.2
+        "rsi_max": 97.6
       }
     }
   },
-  "CHR": {
-    "timestamp": 1761769702.535864,
+  "CELR": {
+    "timestamp": 1761784575.5944984,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1030,27 +988,41 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 17.4,
-        "rsi_max": 86.2
+        "rsi_min": 22.3,
+        "rsi_max": 89.5
       }
     }
   },
   "CORE": {
-    "timestamp": 1761769702.5606105,
+    "timestamp": 1761784575.625337,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 994,
+        "candles_count": 995,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 23.1,
-        "rsi_max": 86.0
+        "rsi_max": 85.9
+      }
+    }
+  },
+  "BICO": {
+    "timestamp": 1761784575.692884,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 16.9,
+        "rsi_max": 94.5
       }
     }
   },
   "CHZ": {
-    "timestamp": 1761769702.5741248,
+    "timestamp": 1761784575.710426,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1064,7 +1036,7 @@
     }
   },
   "CKB": {
-    "timestamp": 1761769702.5892634,
+    "timestamp": 1761784575.791542,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1077,8 +1049,22 @@
       }
     }
   },
+  "CYBER": {
+    "timestamp": 1761784575.8530781,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 807,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 23.4,
+        "rsi_max": 79.2
+      }
+    }
+  },
   "COMP": {
-    "timestamp": 1761769702.6465726,
+    "timestamp": 1761784575.9379625,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1092,7 +1078,7 @@
     }
   },
   "CELO": {
-    "timestamp": 1761769702.7433202,
+    "timestamp": 1761784575.969485,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1105,8 +1091,8 @@
       }
     }
   },
-  "CELR": {
-    "timestamp": 1761769702.7725723,
+  "C98": {
+    "timestamp": 1761784575.994338,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1114,17 +1100,31 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 22.3,
-        "rsi_max": 86.4
+        "rsi_min": 14.3,
+        "rsi_max": 82.4
+      }
+    }
+  },
+  "CLOUD": {
+    "timestamp": 1761784576.0070007,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 469,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.1,
+        "rsi_max": 80.8
       }
     }
   },
   "DEGEN": {
-    "timestamp": 1761769702.792953,
+    "timestamp": 1761784576.0211742,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 577,
+        "candles_count": 578,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -1133,12 +1133,40 @@
       }
     }
   },
-  "DEXE": {
-    "timestamp": 1761769702.801029,
+  "CHR": {
+    "timestamp": 1761784576.0399945,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 462,
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.4,
+        "rsi_max": 91.1
+      }
+    }
+  },
+  "COTI": {
+    "timestamp": 1761784576.056337,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 20.7,
+        "rsi_max": 86.0
+      }
+    }
+  },
+  "DEXE": {
+    "timestamp": 1761784576.0703142,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 463,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -1147,36 +1175,8 @@
       }
     }
   },
-  "CRO": {
-    "timestamp": 1761769702.8212736,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 12.2,
-        "rsi_max": 94.3
-      }
-    }
-  },
-  "CTK": {
-    "timestamp": 1761769702.848237,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.2,
-        "rsi_max": 88.3
-      }
-    }
-  },
   "CRV": {
-    "timestamp": 1761769702.8638654,
+    "timestamp": 1761784576.0875142,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1190,7 +1190,7 @@
     }
   },
   "CTC": {
-    "timestamp": 1761769702.8750093,
+    "timestamp": 1761784576.1080863,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1199,30 +1199,16 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 14.8,
-        "rsi_max": 87.5
-      }
-    }
-  },
-  "COTI": {
-    "timestamp": 1761769702.932736,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 20.7,
-        "rsi_max": 86.0
+        "rsi_max": 90.0
       }
     }
   },
   "DOG": {
-    "timestamp": 1761769702.9514463,
+    "timestamp": 1761784576.1900427,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 513,
+        "candles_count": 514,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -1231,36 +1217,106 @@
       }
     }
   },
-  "CYBER": {
-    "timestamp": 1761769703.0128822,
+  "CTSI": {
+    "timestamp": 1761784576.308509,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 806,
+        "candles_count": 2000,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 23.4,
-        "rsi_max": 79.2
+        "rsi_min": 17.9,
+        "rsi_max": 95.3
+      }
+    }
+  },
+  "DYM": {
+    "timestamp": 1761784576.3209815,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 632,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.1,
+        "rsi_max": 75.8
+      }
+    }
+  },
+  "EDU": {
+    "timestamp": 1761784576.3679936,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 910,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.1,
+        "rsi_max": 75.6
       }
     }
   },
   "DRIFT": {
-    "timestamp": 1761769703.0211446,
+    "timestamp": 1761784576.4449992,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 527,
+        "candles_count": 528,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 25.6,
-        "rsi_max": 88.8
+        "rsi_min": 21.0,
+        "rsi_max": 88.7
+      }
+    }
+  },
+  "DGB": {
+    "timestamp": 1761784576.4835439,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 14.9,
+        "rsi_max": 85.7
+      }
+    }
+  },
+  "CRO": {
+    "timestamp": 1761784576.586839,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 12.2,
+        "rsi_max": 94.3
+      }
+    }
+  },
+  "EIGEN": {
+    "timestamp": 1761784576.6020455,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 450,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.4,
+        "rsi_max": 75.1
       }
     }
   },
   "CVX": {
-    "timestamp": 1761769703.036286,
+    "timestamp": 1761784576.6152434,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1274,7 +1330,7 @@
     }
   },
   "CVC": {
-    "timestamp": 1761769703.0486853,
+    "timestamp": 1761784576.6297202,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1287,78 +1343,8 @@
       }
     }
   },
-  "EDU": {
-    "timestamp": 1761769703.08926,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 909,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.1,
-        "rsi_max": 75.6
-      }
-    }
-  },
-  "DASH": {
-    "timestamp": 1761769703.1332548,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.5,
-        "rsi_max": 91.3
-      }
-    }
-  },
-  "EIGEN": {
-    "timestamp": 1761769703.170871,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 449,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.4,
-        "rsi_max": 75.1
-      }
-    }
-  },
-  "ENA": {
-    "timestamp": 1761769703.2462308,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 576,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 26.1,
-        "rsi_max": 83.3
-      }
-    }
-  },
-  "DENT": {
-    "timestamp": 1761769703.3681526,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 12.6,
-        "rsi_max": 90.8
-      }
-    }
-  },
   "DOGE": {
-    "timestamp": 1761769703.383823,
+    "timestamp": 1761784576.6524577,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1372,7 +1358,7 @@
     }
   },
   "DOT": {
-    "timestamp": 1761769703.405544,
+    "timestamp": 1761784576.669262,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1385,22 +1371,8 @@
       }
     }
   },
-  "ETHBTC": {
-    "timestamp": 1761769703.4617038,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 510,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 20.3,
-        "rsi_max": 87.5
-      }
-    }
-  },
-  "DYDX": {
-    "timestamp": 1761769703.4801738,
+  "DUSK": {
+    "timestamp": 1761784576.7025764,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1408,27 +1380,13 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 13.6,
-        "rsi_max": 86.0
-      }
-    }
-  },
-  "ETHFI": {
-    "timestamp": 1761769703.504383,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 591,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 23.8,
-        "rsi_max": 85.0
+        "rsi_min": 19.3,
+        "rsi_max": 91.4
       }
     }
   },
   "EGLD": {
-    "timestamp": 1761769703.578574,
+    "timestamp": 1761784576.7982354,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1441,8 +1399,8 @@
       }
     }
   },
-  "DUSK": {
-    "timestamp": 1761769703.5973713,
+  "DENT": {
+    "timestamp": 1761784576.829618,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1450,13 +1408,41 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 19.3,
-        "rsi_max": 89.6
+        "rsi_min": 12.6,
+        "rsi_max": 92.2
       }
     }
   },
-  "DGB": {
-    "timestamp": 1761769703.6203723,
+  "ETHBTC": {
+    "timestamp": 1761784576.845619,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 511,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 20.3,
+        "rsi_max": 87.5
+      }
+    }
+  },
+  "ETHFI": {
+    "timestamp": 1761784576.8729365,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 592,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 23.8,
+        "rsi_max": 85.0
+      }
+    }
+  },
+  "DODO": {
+    "timestamp": 1761784576.9422803,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1464,13 +1450,27 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 14.9,
-        "rsi_max": 85.7
+        "rsi_min": 18.2,
+        "rsi_max": 86.2
+      }
+    }
+  },
+  "ENJ": {
+    "timestamp": 1761784576.9630272,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 13.9,
+        "rsi_max": 89.3
       }
     }
   },
   "ENS": {
-    "timestamp": 1761769703.6651022,
+    "timestamp": 1761784576.9778259,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1484,21 +1484,21 @@
     }
   },
   "FIDA": {
-    "timestamp": 1761769703.6860023,
+    "timestamp": 1761784576.991586,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 400,
+        "candles_count": 401,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 17.9,
+        "rsi_min": 20.6,
         "rsi_max": 83.1
       }
     }
   },
-  "DODO": {
-    "timestamp": 1761769703.7093673,
+  "CTK": {
+    "timestamp": 1761784577.0038886,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1506,13 +1506,13 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 18.2,
-        "rsi_max": 86.2
+        "rsi_min": 17.2,
+        "rsi_max": 88.3
       }
     }
   },
-  "CTSI": {
-    "timestamp": 1761769703.755471,
+  "DASH": {
+    "timestamp": 1761784577.0261598,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1520,27 +1520,13 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 17.9,
-        "rsi_max": 88.8
+        "rsi_min": 17.5,
+        "rsi_max": 91.3
       }
     }
   },
-  "DYM": {
-    "timestamp": 1761769703.776983,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 631,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.1,
-        "rsi_max": 75.8
-      }
-    }
-  },
-  "ENJ": {
-    "timestamp": 1761769703.8315463,
+  "DYDX": {
+    "timestamp": 1761784577.0750995,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1548,13 +1534,41 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 13.9,
-        "rsi_max": 89.3
+        "rsi_min": 13.6,
+        "rsi_max": 91.5
+      }
+    }
+  },
+  "ENA": {
+    "timestamp": 1761784577.2254224,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 577,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 26.1,
+        "rsi_max": 83.3
+      }
+    }
+  },
+  "ETHW": {
+    "timestamp": 1761784577.4615562,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 15.1,
+        "rsi_max": 100.0
       }
     }
   },
   "ETC": {
-    "timestamp": 1761769703.8663373,
+    "timestamp": 1761784577.6080468,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1568,7 +1582,7 @@
     }
   },
   "ETH": {
-    "timestamp": 1761769703.8807588,
+    "timestamp": 1761784577.6210487,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1581,54 +1595,26 @@
       }
     }
   },
-  "ETHW": {
-    "timestamp": 1761769703.9562676,
+  "FIO": {
+    "timestamp": 1761784577.9912333,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 2000,
+        "candles_count": 400,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 15.1,
-        "rsi_max": 95.7
-      }
-    }
-  },
-  "FLUX": {
-    "timestamp": 1761769704.3068004,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 421,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 23.4,
-        "rsi_max": 78.8
-      }
-    }
-  },
-  "GLM": {
-    "timestamp": 1761769704.3210247,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 812,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 23.5,
-        "rsi_max": 77.0
+        "rsi_min": 20.8,
+        "rsi_max": 85.7
       }
     }
   },
   "FORTH": {
-    "timestamp": 1761769704.3343794,
+    "timestamp": 1761784578.0069954,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 821,
+        "candles_count": 822,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -1637,26 +1623,54 @@
       }
     }
   },
-  "FLR": {
-    "timestamp": 1761769704.565064,
+  "FLUX": {
+    "timestamp": 1761784578.0194685,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 958,
+        "candles_count": 422,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 25.5,
-        "rsi_max": 86.1
+        "rsi_min": 23.4,
+        "rsi_max": 78.8
+      }
+    }
+  },
+  "GAS": {
+    "timestamp": 1761784578.0469017,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 739,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.8,
+        "rsi_max": 79.4
+      }
+    }
+  },
+  "GLM": {
+    "timestamp": 1761784578.0615108,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 813,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 23.5,
+        "rsi_max": 77.0
       }
     }
   },
   "GNO": {
-    "timestamp": 1761769704.6065319,
+    "timestamp": 1761784578.1322742,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 534,
+        "candles_count": 535,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -1666,11 +1680,11 @@
     }
   },
   "GODS": {
-    "timestamp": 1761769704.6322718,
+    "timestamp": 1761784578.196626,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 708,
+        "candles_count": 709,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -1679,50 +1693,8 @@
       }
     }
   },
-  "GAS": {
-    "timestamp": 1761769704.6478229,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 738,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.8,
-        "rsi_max": 79.4
-      }
-    }
-  },
-  "FIL": {
-    "timestamp": 1761769704.7062922,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 16.5,
-        "rsi_max": 88.8
-      }
-    }
-  },
-  "FLM": {
-    "timestamp": 1761769704.7282665,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 18.4,
-        "rsi_max": 89.5
-      }
-    }
-  },
   "FLOW": {
-    "timestamp": 1761769704.7481813,
+    "timestamp": 1761784578.364436,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1735,36 +1707,8 @@
       }
     }
   },
-  "FXS": {
-    "timestamp": 1761769704.7636197,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 14.4,
-        "rsi_max": 96.3
-      }
-    }
-  },
-  "GMX": {
-    "timestamp": 1761769704.7794504,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 13.8,
-        "rsi_max": 89.3
-      }
-    }
-  },
   "GMT": {
-    "timestamp": 1761769704.7997377,
+    "timestamp": 1761784578.3934445,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1777,8 +1721,78 @@
       }
     }
   },
+  "GMX": {
+    "timestamp": 1761784578.410383,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 13.8,
+        "rsi_max": 89.3
+      }
+    }
+  },
+  "HFT": {
+    "timestamp": 1761784578.438252,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 962,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 25.1,
+        "rsi_max": 86.0
+      }
+    }
+  },
+  "HIGH": {
+    "timestamp": 1761784578.462189,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 987,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 20.2,
+        "rsi_max": 82.3
+      }
+    }
+  },
+  "FLM": {
+    "timestamp": 1761784578.5362923,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 18.4,
+        "rsi_max": 94.1
+      }
+    }
+  },
+  "HMSTR": {
+    "timestamp": 1761784578.5440652,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 413,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 11.3,
+        "rsi_max": 71.3
+      }
+    }
+  },
   "GLMR": {
-    "timestamp": 1761769704.8153346,
+    "timestamp": 1761784578.5637965,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1791,26 +1805,12 @@
       }
     }
   },
-  "HFT": {
-    "timestamp": 1761769704.8618882,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 961,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 25.2,
-        "rsi_max": 86.0
-      }
-    }
-  },
   "HIFI": {
-    "timestamp": 1761769704.8730443,
+    "timestamp": 1761784578.6106384,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 794,
+        "candles_count": 795,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -1819,22 +1819,36 @@
       }
     }
   },
-  "HIGH": {
-    "timestamp": 1761769704.9358943,
+  "HOOK": {
+    "timestamp": 1761784578.787899,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 986,
+        "candles_count": 991,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 20.2,
-        "rsi_max": 82.3
+        "rsi_min": 20.5,
+        "rsi_max": 77.4
+      }
+    }
+  },
+  "FXS": {
+    "timestamp": 1761784578.801506,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 14.4,
+        "rsi_max": 96.3
       }
     }
   },
   "GRT": {
-    "timestamp": 1761769704.9829915,
+    "timestamp": 1761784578.8147466,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1843,72 +1857,44 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 16.6,
-        "rsi_max": 90.2
+        "rsi_max": 92.5
       }
     }
   },
-  "GTC": {
-    "timestamp": 1761769705.0064592,
+  "FLR": {
+    "timestamp": 1761784578.8351965,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 2000,
+        "candles_count": 959,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 16.9,
-        "rsi_max": 89.7
-      }
-    }
-  },
-  "HMSTR": {
-    "timestamp": 1761769705.0194707,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 412,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 10.4,
-        "rsi_max": 71.3
-      }
-    }
-  },
-  "HOOK": {
-    "timestamp": 1761769705.0523167,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 990,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 20.5,
-        "rsi_max": 77.5
+        "rsi_min": 25.5,
+        "rsi_max": 86.1
       }
     }
   },
   "ID": {
-    "timestamp": 1761769705.0936525,
+    "timestamp": 1761784578.8573847,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 951,
+        "candles_count": 952,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 20.8,
-        "rsi_max": 75.7
+        "rsi_max": 75.6
       }
     }
   },
   "IDEX": {
-    "timestamp": 1761769705.144773,
+    "timestamp": 1761784578.8728297,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 891,
+        "candles_count": 892,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -1917,50 +1903,8 @@
       }
     }
   },
-  "JOE": {
-    "timestamp": 1761769705.308967,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 946,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.3,
-        "rsi_max": 74.6
-      }
-    }
-  },
-  "JTO": {
-    "timestamp": 1761769705.3581,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 692,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 24.0,
-        "rsi_max": 70.5
-      }
-    }
-  },
-  "HBAR": {
-    "timestamp": 1761769705.406719,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 11.7,
-        "rsi_max": 93.7
-      }
-    }
-  },
   "GALA": {
-    "timestamp": 1761769705.421876,
+    "timestamp": 1761784578.8911405,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -1973,120 +1917,50 @@
       }
     }
   },
-  "IO": {
-    "timestamp": 1761769705.4298327,
+  "GTC": {
+    "timestamp": 1761784578.9098835,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 506,
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 16.9,
+        "rsi_max": 89.7
+      }
+    }
+  },
+  "HBAR": {
+    "timestamp": 1761784578.9276154,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 11.7,
+        "rsi_max": 93.7
+      }
+    }
+  },
+  "IO": {
+    "timestamp": 1761784579.027346,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 507,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 21.8,
-        "rsi_max": 74.8
-      }
-    }
-  },
-  "JUP": {
-    "timestamp": 1761769705.4397497,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 638,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 27.0,
-        "rsi_max": 76.3
-      }
-    }
-  },
-  "ICP": {
-    "timestamp": 1761769705.4614494,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 14.6,
-        "rsi_max": 83.8
-      }
-    }
-  },
-  "ICX": {
-    "timestamp": 1761769705.4916708,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 12.4,
-        "rsi_max": 89.0
-      }
-    }
-  },
-  "KAS": {
-    "timestamp": 1761769705.5800395,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 818,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 23.8,
-        "rsi_max": 79.6
-      }
-    }
-  },
-  "INJ": {
-    "timestamp": 1761769705.6726801,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.1,
-        "rsi_max": 86.4
-      }
-    }
-  },
-  "L3": {
-    "timestamp": 1761769705.6858373,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 456,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 24.4,
-        "rsi_max": 78.9
-      }
-    }
-  },
-  "JASMY": {
-    "timestamp": 1761769705.7528834,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.2,
-        "rsi_max": 87.3
+        "rsi_max": 74.4
       }
     }
   },
   "HNT": {
-    "timestamp": 1761769705.7726157,
+    "timestamp": 1761784579.0786142,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2099,8 +1973,22 @@
       }
     }
   },
-  "IOTA": {
-    "timestamp": 1761769705.8212843,
+  "JTO": {
+    "timestamp": 1761784579.1388385,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 693,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 24.0,
+        "rsi_max": 70.4
+      }
+    }
+  },
+  "FIL": {
+    "timestamp": 1761784579.1642706,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2108,45 +1996,171 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 17.4,
-        "rsi_max": 92.8
+        "rsi_min": 16.5,
+        "rsi_max": 88.8
       }
     }
   },
-  "LISTA": {
-    "timestamp": 1761769705.885658,
+  "ICP": {
+    "timestamp": 1761784579.201756,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 496,
+        "candles_count": 2000,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 22.4,
-        "rsi_max": 80.5
+        "rsi_min": 14.6,
+        "rsi_max": 83.8
       }
     }
   },
-  "LQTY": {
-    "timestamp": 1761769705.9134285,
+  "ILV": {
+    "timestamp": 1761784579.2450483,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 962,
+        "candles_count": 2000,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 23.0,
-        "rsi_max": 84.9
+        "rsi_min": 15.9,
+        "rsi_max": 94.6
+      }
+    }
+  },
+  "KAS": {
+    "timestamp": 1761784579.2609267,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 819,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 23.8,
+        "rsi_max": 79.6
+      }
+    }
+  },
+  "JOE": {
+    "timestamp": 1761784579.2799294,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 947,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.3,
+        "rsi_max": 74.1
+      }
+    }
+  },
+  "INJ": {
+    "timestamp": 1761784579.4360044,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.1,
+        "rsi_max": 90.2
+      }
+    }
+  },
+  "L3": {
+    "timestamp": 1761784579.4469435,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 457,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 24.4,
+        "rsi_max": 78.9
+      }
+    }
+  },
+  "IOST": {
+    "timestamp": 1761784579.4724588,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 13.6,
+        "rsi_max": 89.3
+      }
+    }
+  },
+  "JUP": {
+    "timestamp": 1761784579.492358,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 639,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 27.0,
+        "rsi_max": 76.3
+      }
+    }
+  },
+  "JST": {
+    "timestamp": 1761784579.543062,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.8,
+        "rsi_max": 93.9
+      }
+    }
+  },
+  "ICX": {
+    "timestamp": 1761784579.565443,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 12.4,
+        "rsi_max": 89.0
+      }
+    }
+  },
+  "JASMY": {
+    "timestamp": 1761784579.6469285,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.2,
+        "rsi_max": 87.3
       }
     }
   },
   "LSK": {
-    "timestamp": 1761769705.9677498,
+    "timestamp": 1761784579.727909,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 666,
+        "candles_count": 667,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2156,7 +2170,7 @@
     }
   },
   "KAVA": {
-    "timestamp": 1761769705.9846447,
+    "timestamp": 1761784579.7456353,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2165,26 +2179,12 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 10.6,
-        "rsi_max": 78.3
-      }
-    }
-  },
-  "IOST": {
-    "timestamp": 1761769706.0119414,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 13.6,
-        "rsi_max": 86.3
+        "rsi_max": 80.7
       }
     }
   },
   "IOTX": {
-    "timestamp": 1761769706.0315332,
+    "timestamp": 1761784579.8189507,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2198,7 +2198,7 @@
     }
   },
   "KNC": {
-    "timestamp": 1761769706.0653174,
+    "timestamp": 1761784579.8415663,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2211,106 +2211,8 @@
       }
     }
   },
-  "MANTA": {
-    "timestamp": 1761769706.1881936,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 651,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 23.0,
-        "rsi_max": 73.8
-      }
-    }
-  },
-  "ILV": {
-    "timestamp": 1761769706.2879252,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 15.9,
-        "rsi_max": 90.3
-      }
-    }
-  },
-  "IMX": {
-    "timestamp": 1761769706.3020108,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 11.3,
-        "rsi_max": 92.9
-      }
-    }
-  },
-  "LPT": {
-    "timestamp": 1761769706.3202074,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.6,
-        "rsi_max": 92.7
-      }
-    }
-  },
-  "LRC": {
-    "timestamp": 1761769706.3330848,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.3,
-        "rsi_max": 90.3
-      }
-    }
-  },
-  "LDO": {
-    "timestamp": 1761769706.357328,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.3,
-        "rsi_max": 93.0
-      }
-    }
-  },
-  "LTC": {
-    "timestamp": 1761769706.3975677,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.2,
-        "rsi_max": 93.4
-      }
-    }
-  },
   "KSM": {
-    "timestamp": 1761769706.426525,
+    "timestamp": 1761784579.8677833,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2323,8 +2225,50 @@
       }
     }
   },
+  "LISTA": {
+    "timestamp": 1761784579.876572,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 497,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.4,
+        "rsi_max": 80.5
+      }
+    }
+  },
+  "MANTA": {
+    "timestamp": 1761784579.9230208,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 652,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 23.0,
+        "rsi_max": 73.8
+      }
+    }
+  },
+  "IMX": {
+    "timestamp": 1761784579.9570386,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 11.3,
+        "rsi_max": 92.9
+      }
+    }
+  },
   "LINK": {
-    "timestamp": 1761769706.4970849,
+    "timestamp": 1761784579.9849994,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2337,8 +2281,92 @@
       }
     }
   },
+  "LQTY": {
+    "timestamp": 1761784580.049956,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 963,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 23.0,
+        "rsi_max": 84.9
+      }
+    }
+  },
+  "LDO": {
+    "timestamp": 1761784580.0760417,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.3,
+        "rsi_max": 93.0
+      }
+    }
+  },
+  "LPT": {
+    "timestamp": 1761784580.0941184,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.6,
+        "rsi_max": 92.8
+      }
+    }
+  },
+  "LTC": {
+    "timestamp": 1761784580.150208,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.2,
+        "rsi_max": 93.4
+      }
+    }
+  },
+  "LRC": {
+    "timestamp": 1761784580.164328,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.3,
+        "rsi_max": 90.3
+      }
+    }
+  },
+  "IOTA": {
+    "timestamp": 1761784580.1863034,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.4,
+        "rsi_max": 93.1
+      }
+    }
+  },
   "MAGIC": {
-    "timestamp": 1761769706.5154743,
+    "timestamp": 1761784580.3025384,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2347,12 +2375,12 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 13.7,
-        "rsi_max": 95.1
+        "rsi_max": 98.2
       }
     }
   },
   "MANA": {
-    "timestamp": 1761769706.5918279,
+    "timestamp": 1761784580.3211017,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2365,36 +2393,8 @@
       }
     }
   },
-  "MASK": {
-    "timestamp": 1761769706.6267424,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 14.5,
-        "rsi_max": 87.5
-      }
-    }
-  },
-  "JST": {
-    "timestamp": 1761769706.7688394,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.8,
-        "rsi_max": 94.7
-      }
-    }
-  },
   "LUNA2": {
-    "timestamp": 1761769706.7858996,
+    "timestamp": 1761784580.4126666,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2407,40 +2407,26 @@
       }
     }
   },
-  "MAV": {
-    "timestamp": 1761769707.1074479,
+  "MASK": {
+    "timestamp": 1761784580.7149727,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 855,
+        "candles_count": 2000,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 21.4,
-        "rsi_max": 76.3
-      }
-    }
-  },
-  "MEW": {
-    "timestamp": 1761769707.138194,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 555,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.5,
-        "rsi_max": 77.9
+        "rsi_min": 14.5,
+        "rsi_max": 87.5
       }
     }
   },
   "MAVIA": {
-    "timestamp": 1761769707.147148,
+    "timestamp": 1761784581.0479627,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 631,
+        "candles_count": 632,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2449,40 +2435,54 @@
       }
     }
   },
-  "MEME": {
-    "timestamp": 1761769707.1601226,
+  "MAV": {
+    "timestamp": 1761784581.0757668,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 727,
+        "candles_count": 856,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 20.3,
-        "rsi_max": 83.0
+        "rsi_min": 21.4,
+        "rsi_max": 76.2
       }
     }
   },
   "MERL": {
-    "timestamp": 1761769707.1680973,
+    "timestamp": 1761784581.1052155,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 559,
+        "candles_count": 560,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 22.5,
+        "rsi_min": 21.9,
         "rsi_max": 84.8
       }
     }
   },
-  "METIS": {
-    "timestamp": 1761769707.1844156,
+  "MOCA": {
+    "timestamp": 1761784581.129202,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 666,
+        "candles_count": 476,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 26.1,
+        "rsi_max": 86.7
+      }
+    }
+  },
+  "METIS": {
+    "timestamp": 1761784581.1461976,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 667,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2491,54 +2491,40 @@
       }
     }
   },
-  "MBOX": {
-    "timestamp": 1761769707.1943939,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 650,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 15.8,
-        "rsi_max": 80.0
-      }
-    }
-  },
   "MNT": {
-    "timestamp": 1761769707.2055237,
+    "timestamp": 1761784581.158279,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 759,
+        "candles_count": 760,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 24.4,
-        "rsi_max": 85.1
+        "rsi_max": 85.0
       }
     }
   },
-  "MOCA": {
-    "timestamp": 1761769707.213723,
+  "MEME": {
+    "timestamp": 1761784581.2091496,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 475,
+        "candles_count": 728,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 22.1,
-        "rsi_max": 86.7
+        "rsi_min": 20.3,
+        "rsi_max": 83.0
       }
     }
   },
   "MOVR": {
-    "timestamp": 1761769707.3445382,
+    "timestamp": 1761784581.2687254,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 707,
+        "candles_count": 708,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2547,40 +2533,12 @@
       }
     }
   },
-  "MYRO": {
-    "timestamp": 1761769707.3621223,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 650,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 20.9,
-        "rsi_max": 81.0
-      }
-    }
-  },
-  "NFP": {
-    "timestamp": 1761769707.3812928,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 673,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 23.1,
-        "rsi_max": 78.9
-      }
-    }
-  },
   "NMR": {
-    "timestamp": 1761769707.399009,
+    "timestamp": 1761784581.3481116,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 787,
+        "candles_count": 788,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2590,11 +2548,11 @@
     }
   },
   "NKN": {
-    "timestamp": 1761769707.42321,
+    "timestamp": 1761784581.370766,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 982,
+        "candles_count": 983,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2603,40 +2561,68 @@
       }
     }
   },
-  "NTRN": {
-    "timestamp": 1761769707.445096,
+  "NOT": {
+    "timestamp": 1761784581.400296,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 751,
+        "candles_count": 533,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 20.7,
-        "rsi_max": 70.8
+        "rsi_min": 18.4,
+        "rsi_max": 76.0
       }
     }
   },
-  "MINA": {
-    "timestamp": 1761769707.5368083,
+  "MBOX": {
+    "timestamp": 1761784581.415935,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 2000,
+        "candles_count": 651,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 13.9,
-        "rsi_max": 89.5
+        "rsi_min": 15.8,
+        "rsi_max": 80.0
+      }
+    }
+  },
+  "MEW": {
+    "timestamp": 1761784581.4281824,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 556,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.5,
+        "rsi_max": 77.9
+      }
+    }
+  },
+  "MYRO": {
+    "timestamp": 1761784581.4693842,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 651,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 20.9,
+        "rsi_max": 81.0
       }
     }
   },
   "OM": {
-    "timestamp": 1761769707.602773,
+    "timestamp": 1761784581.5879498,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 591,
+        "candles_count": 592,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2646,105 +2632,63 @@
     }
   },
   "ONDO": {
-    "timestamp": 1761769707.6402922,
+    "timestamp": 1761784581.6128242,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 646,
+        "candles_count": 647,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 27.6,
-        "rsi_max": 86.4
+        "rsi_max": 86.3
       }
     }
   },
   "ONG": {
-    "timestamp": 1761769707.6584003,
+    "timestamp": 1761784581.628562,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 702,
+        "candles_count": 703,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 22.3,
-        "rsi_max": 85.2
+        "rsi_max": 85.1
       }
     }
   },
   "ORBS": {
-    "timestamp": 1761769707.6743853,
+    "timestamp": 1761784581.6972094,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 748,
+        "candles_count": 749,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 20.6,
-        "rsi_max": 74.0
+        "rsi_max": 73.9
       }
     }
   },
-  "ORDI": {
-    "timestamp": 1761769707.759538,
+  "NFP": {
+    "timestamp": 1761784581.7216713,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 892,
+        "candles_count": 674,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 24.0,
-        "rsi_max": 78.1
-      }
-    }
-  },
-  "NOT": {
-    "timestamp": 1761769707.772939,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 532,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 18.4,
-        "rsi_max": 76.0
-      }
-    }
-  },
-  "NEAR": {
-    "timestamp": 1761769707.788485,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 19.9,
-        "rsi_max": 89.5
-      }
-    }
-  },
-  "OXT": {
-    "timestamp": 1761769707.802505,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 812,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 27.0,
-        "rsi_max": 82.5
+        "rsi_min": 23.1,
+        "rsi_max": 78.9
       }
     }
   },
   "MTL": {
-    "timestamp": 1761769707.8680003,
+    "timestamp": 1761784581.743738,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2758,11 +2702,11 @@
     }
   },
   "ORCA": {
-    "timestamp": 1761769707.894978,
+    "timestamp": 1761784581.757851,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 577,
+        "candles_count": 578,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2771,36 +2715,22 @@
       }
     }
   },
-  "PENDLE": {
-    "timestamp": 1761769707.91086,
+  "NEAR": {
+    "timestamp": 1761784581.778982,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 848,
+        "candles_count": 2000,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 28.0,
-        "rsi_max": 74.1
-      }
-    }
-  },
-  "OG": {
-    "timestamp": 1761769707.9316602,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 794,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 26.1,
-        "rsi_max": 96.4
+        "rsi_min": 19.9,
+        "rsi_max": 89.5
       }
     }
   },
   "NEO": {
-    "timestamp": 1761769707.9537013,
+    "timestamp": 1761784581.8015745,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2814,11 +2744,11 @@
     }
   },
   "ORDER": {
-    "timestamp": 1761769707.9648023,
+    "timestamp": 1761784581.813146,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 429,
+        "candles_count": 430,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2827,12 +2757,82 @@
       }
     }
   },
-  "PHA": {
-    "timestamp": 1761769707.9945173,
+  "ORDI": {
+    "timestamp": 1761784581.834737,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 517,
+        "candles_count": 893,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 24.0,
+        "rsi_max": 78.1
+      }
+    }
+  },
+  "MINA": {
+    "timestamp": 1761784581.8573377,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 13.9,
+        "rsi_max": 89.5
+      }
+    }
+  },
+  "OXT": {
+    "timestamp": 1761784581.875487,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 813,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 27.0,
+        "rsi_max": 82.5
+      }
+    }
+  },
+  "PENDLE": {
+    "timestamp": 1761784581.951531,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 849,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 28.0,
+        "rsi_max": 74.1
+      }
+    }
+  },
+  "PERP": {
+    "timestamp": 1761784581.9917896,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 786,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 20.9,
+        "rsi_max": 80.3
+      }
+    }
+  },
+  "PHA": {
+    "timestamp": 1761784582.0090177,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 518,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2841,12 +2841,26 @@
       }
     }
   },
-  "PHB": {
-    "timestamp": 1761769708.0155442,
+  "ONE": {
+    "timestamp": 1761784582.050427,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 896,
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 14.1,
+        "rsi_max": 89.6
+      }
+    }
+  },
+  "PHB": {
+    "timestamp": 1761784582.073903,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 897,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2856,7 +2870,7 @@
     }
   },
   "ONT": {
-    "timestamp": 1761769708.0547369,
+    "timestamp": 1761784582.099928,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -2865,44 +2879,16 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 13.8,
-        "rsi_max": 90.3
-      }
-    }
-  },
-  "ONE": {
-    "timestamp": 1761769708.069791,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 14.1,
-        "rsi_max": 85.6
-      }
-    }
-  },
-  "OP": {
-    "timestamp": 1761769708.0909588,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.2,
-        "rsi_max": 91.1
+        "rsi_max": 92.8
       }
     }
   },
   "PIXEL": {
-    "timestamp": 1761769708.1056008,
+    "timestamp": 1761784582.1224911,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 618,
+        "candles_count": 619,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2911,40 +2897,26 @@
       }
     }
   },
-  "POL": {
-    "timestamp": 1761769708.1343508,
+  "NTRN": {
+    "timestamp": 1761784582.1583464,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 420,
+        "candles_count": 752,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 23.9,
-        "rsi_max": 78.2
-      }
-    }
-  },
-  "PERP": {
-    "timestamp": 1761769708.1539476,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 785,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 20.9,
-        "rsi_max": 80.3
+        "rsi_min": 20.7,
+        "rsi_max": 70.8
       }
     }
   },
   "PONKE": {
-    "timestamp": 1761769708.1667354,
+    "timestamp": 1761784582.179979,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 510,
+        "candles_count": 511,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2953,26 +2925,40 @@
       }
     }
   },
-  "PORTAL": {
-    "timestamp": 1761769708.1850085,
+  "POLYX": {
+    "timestamp": 1761784582.1982594,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 608,
+        "candles_count": 738,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 23.9,
-        "rsi_max": 78.8
+        "rsi_min": 20.5,
+        "rsi_max": 75.8
+      }
+    }
+  },
+  "OG": {
+    "timestamp": 1761784582.219725,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 795,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 26.1,
+        "rsi_max": 96.4
       }
     }
   },
   "POPCAT": {
-    "timestamp": 1761769708.1952097,
+    "timestamp": 1761784582.2330916,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 581,
+        "candles_count": 582,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2981,12 +2967,26 @@
       }
     }
   },
-  "POWR": {
-    "timestamp": 1761769708.2135518,
+  "PORTAL": {
+    "timestamp": 1761784582.2459555,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 737,
+        "candles_count": 609,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 23.9,
+        "rsi_max": 78.7
+      }
+    }
+  },
+  "POWR": {
+    "timestamp": 1761784582.2609835,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 738,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -2995,22 +2995,8 @@
       }
     }
   },
-  "PRCL": {
-    "timestamp": 1761769708.2240894,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 470,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 24.1,
-        "rsi_max": 80.0
-      }
-    }
-  },
   "PAXG": {
-    "timestamp": 1761769708.2493963,
+    "timestamp": 1761784582.2872303,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3023,162 +3009,22 @@
       }
     }
   },
-  "POLYX": {
-    "timestamp": 1761769708.3169506,
+  "PRCL": {
+    "timestamp": 1761784582.2965186,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 737,
+        "candles_count": 471,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 20.5,
-        "rsi_max": 75.8
-      }
-    }
-  },
-  "PYTH": {
-    "timestamp": 1761769708.3591063,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 709,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 20.9,
-        "rsi_max": 79.6
-      }
-    }
-  },
-  "QNT": {
-    "timestamp": 1761769708.3858225,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 864,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 24.7,
-        "rsi_max": 85.4
-      }
-    }
-  },
-  "RARE": {
-    "timestamp": 1761769708.435495,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 703,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 19.6,
-        "rsi_max": 74.2
-      }
-    }
-  },
-  "RAD": {
-    "timestamp": 1761769708.4564645,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 875,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.6,
-        "rsi_max": 78.9
-      }
-    }
-  },
-  "RAYDIUM": {
-    "timestamp": 1761769708.470976,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 513,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 24.0,
-        "rsi_max": 83.6
-      }
-    }
-  },
-  "RDNT": {
-    "timestamp": 1761769708.4885857,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 927,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.0,
-        "rsi_max": 79.1
-      }
-    }
-  },
-  "RENDER": {
-    "timestamp": 1761769708.55304,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 461,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.8,
-        "rsi_max": 78.1
-      }
-    }
-  },
-  "PROM": {
-    "timestamp": 1761769708.5800793,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 786,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 20.6,
-        "rsi_max": 84.4
-      }
-    }
-  },
-  "QUICK": {
-    "timestamp": 1761769708.5911946,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 415,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 18.5,
-        "rsi_max": 82.4
-      }
-    }
-  },
-  "PEOPLE": {
-    "timestamp": 1761769708.6620877,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 19.2,
-        "rsi_max": 95.2
+        "rsi_min": 24.1,
+        "rsi_max": 79.8
       }
     }
   },
   "OGN": {
-    "timestamp": 1761769708.685053,
+    "timestamp": 1761784582.3184922,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3191,8 +3037,176 @@
       }
     }
   },
+  "POL": {
+    "timestamp": 1761784582.331414,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 421,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.3,
+        "rsi_max": 78.2
+      }
+    }
+  },
+  "PEOPLE": {
+    "timestamp": 1761784582.4010513,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 19.2,
+        "rsi_max": 95.4
+      }
+    }
+  },
+  "PYTH": {
+    "timestamp": 1761784582.42367,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 710,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 20.9,
+        "rsi_max": 79.6
+      }
+    }
+  },
+  "QNT": {
+    "timestamp": 1761784582.4644444,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 865,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 20.7,
+        "rsi_max": 85.4
+      }
+    }
+  },
+  "PROM": {
+    "timestamp": 1761784582.48208,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 787,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 20.6,
+        "rsi_max": 84.4
+      }
+    }
+  },
+  "QUICK": {
+    "timestamp": 1761784582.490606,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 416,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 25.1,
+        "rsi_max": 82.4
+      }
+    }
+  },
+  "RAD": {
+    "timestamp": 1761784582.5133703,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 876,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.6,
+        "rsi_max": 78.9
+      }
+    }
+  },
+  "RARE": {
+    "timestamp": 1761784582.529961,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 704,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 19.6,
+        "rsi_max": 74.2
+      }
+    }
+  },
+  "RENDER": {
+    "timestamp": 1761784582.551595,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 462,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.8,
+        "rsi_max": 78.0
+      }
+    }
+  },
+  "RAYDIUM": {
+    "timestamp": 1761784582.7156322,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 514,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 24.0,
+        "rsi_max": 83.5
+      }
+    }
+  },
+  "RDNT": {
+    "timestamp": 1761784582.7279766,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 928,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 19.4,
+        "rsi_max": 79.1
+      }
+    }
+  },
+  "OP": {
+    "timestamp": 1761784582.744304,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.2,
+        "rsi_max": 91.1
+      }
+    }
+  },
   "QTUM": {
-    "timestamp": 1761769708.8011472,
+    "timestamp": 1761784582.875844,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3206,7 +3220,7 @@
     }
   },
   "REQ": {
-    "timestamp": 1761769710.0129952,
+    "timestamp": 1761784583.1485093,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3215,16 +3229,30 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 15.8,
-        "rsi_max": 92.5
+        "rsi_max": 100.0
+      }
+    }
+  },
+  "RIF": {
+    "timestamp": 1761784583.476969,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 739,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.8,
+        "rsi_max": 77.8
       }
     }
   },
   "REZ": {
-    "timestamp": 1761769710.3605077,
+    "timestamp": 1761784583.4944677,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 540,
+        "candles_count": 541,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -3234,11 +3262,11 @@
     }
   },
   "RPL": {
-    "timestamp": 1761769710.3946455,
+    "timestamp": 1761784583.5157733,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 974,
+        "candles_count": 975,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -3247,26 +3275,12 @@
       }
     }
   },
-  "SAGA": {
-    "timestamp": 1761769710.4067097,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 569,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.4,
-        "rsi_max": 72.2
-      }
-    }
-  },
   "SAFE": {
-    "timestamp": 1761769710.418779,
+    "timestamp": 1761784583.5310395,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 549,
+        "candles_count": 550,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -3275,26 +3289,26 @@
       }
     }
   },
-  "RLC": {
-    "timestamp": 1761769710.4402275,
+  "SAGA": {
+    "timestamp": 1761784583.653003,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 953,
+        "candles_count": 570,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 27.5,
-        "rsi_max": 83.1
+        "rsi_min": 22.4,
+        "rsi_max": 72.2
       }
     }
   },
   "SEI": {
-    "timestamp": 1761769710.586207,
+    "timestamp": 1761784583.7252197,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 806,
+        "candles_count": 807,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -3303,22 +3317,36 @@
       }
     }
   },
-  "RIF": {
-    "timestamp": 1761769710.6973705,
+  "RLC": {
+    "timestamp": 1761784583.8197446,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 738,
+        "candles_count": 954,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 22.8,
-        "rsi_max": 77.8
+        "rsi_min": 27.5,
+        "rsi_max": 83.0
+      }
+    }
+  },
+  "ROSE": {
+    "timestamp": 1761784583.8793597,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.4,
+        "rsi_max": 90.9
       }
     }
   },
   "RSR": {
-    "timestamp": 1761769710.7699814,
+    "timestamp": 1761784583.8987532,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3331,8 +3359,36 @@
       }
     }
   },
+  "RVN": {
+    "timestamp": 1761784583.9251816,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 15.3,
+        "rsi_max": 90.0
+      }
+    }
+  },
+  "RUNE": {
+    "timestamp": 1761784583.9552097,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 15.4,
+        "rsi_max": 90.3
+      }
+    }
+  },
   "SAND": {
-    "timestamp": 1761769710.7911716,
+    "timestamp": 1761784583.9906614,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3345,36 +3401,22 @@
       }
     }
   },
-  "RVN": {
-    "timestamp": 1761769710.8208675,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 15.3,
-        "rsi_max": 84.0
-      }
-    }
-  },
   "SNT": {
-    "timestamp": 1761769710.8376656,
+    "timestamp": 1761784584.0153387,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 728,
+        "candles_count": 729,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 19.6,
-        "rsi_max": 83.5
+        "rsi_max": 83.3
       }
     }
   },
-  "RSS3": {
-    "timestamp": 1761769711.0918055,
+  "SCRT": {
+    "timestamp": 1761784584.1288512,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3382,13 +3424,13 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 13.1,
-        "rsi_max": 74.8
+        "rsi_min": 16.6,
+        "rsi_max": 90.7
       }
     }
   },
-  "SOL": {
-    "timestamp": 1761769711.2302241,
+  "SFP": {
+    "timestamp": 1761784584.164592,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3396,17 +3438,31 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 16.8,
-        "rsi_max": 93.9
+        "rsi_min": 20.6,
+        "rsi_max": 85.5
+      }
+    }
+  },
+  "SKL": {
+    "timestamp": 1761784584.1906614,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.2,
+        "rsi_max": 93.8
       }
     }
   },
   "SSV": {
-    "timestamp": 1761769711.2489233,
+    "timestamp": 1761784584.2407525,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 974,
+        "candles_count": 975,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -3416,21 +3472,21 @@
     }
   },
   "STEEM": {
-    "timestamp": 1761769711.264375,
+    "timestamp": 1761784584.2683384,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 736,
+        "candles_count": 737,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 23.1,
-        "rsi_max": 80.3
+        "rsi_max": 80.2
       }
     }
   },
   "SLP": {
-    "timestamp": 1761769711.3268,
+    "timestamp": 1761784584.330766,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3444,11 +3500,11 @@
     }
   },
   "STRK": {
-    "timestamp": 1761769711.4412422,
+    "timestamp": 1761784584.3568106,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 618,
+        "candles_count": 619,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -3457,260 +3513,8 @@
       }
     }
   },
-  "SUI": {
-    "timestamp": 1761769711.4626825,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 911,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 27.1,
-        "rsi_max": 83.6
-      }
-    }
-  },
-  "RUNE": {
-    "timestamp": 1761769711.4792595,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 15.4,
-        "rsi_max": 90.2
-      }
-    }
-  },
-  "SPELL": {
-    "timestamp": 1761769711.4988973,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 13.5,
-        "rsi_max": 86.2
-      }
-    }
-  },
-  "SUNDOG": {
-    "timestamp": 1761769711.5076811,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 430,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 18.8,
-        "rsi_max": 74.7
-      }
-    }
-  },
-  "SUPER": {
-    "timestamp": 1761769711.5227895,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 707,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 26.9,
-        "rsi_max": 81.0
-      }
-    }
-  },
-  "ROSE": {
-    "timestamp": 1761769711.609543,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.4,
-        "rsi_max": 85.1
-      }
-    }
-  },
-  "SC": {
-    "timestamp": 1761769711.6510825,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 13.2,
-        "rsi_max": 85.0
-      }
-    }
-  },
-  "SYN": {
-    "timestamp": 1761769711.670454,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 436,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 23.2,
-        "rsi_max": 81.3
-      }
-    }
-  },
-  "SFP": {
-    "timestamp": 1761769711.6846018,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 20.6,
-        "rsi_max": 85.2
-      }
-    }
-  },
-  "SHIB1000": {
-    "timestamp": 1761769711.7126288,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 15.5,
-        "rsi_max": 91.2
-      }
-    }
-  },
-  "SYS": {
-    "timestamp": 1761769711.7283406,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 436,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.3,
-        "rsi_max": 82.5
-      }
-    }
-  },
-  "SCRT": {
-    "timestamp": 1761769711.7558439,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 16.6,
-        "rsi_max": 90.5
-      }
-    }
-  },
-  "SKL": {
-    "timestamp": 1761769711.7744539,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.2,
-        "rsi_max": 93.8
-      }
-    }
-  },
-  "STORJ": {
-    "timestamp": 1761769711.821686,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 13.2,
-        "rsi_max": 92.3
-      }
-    }
-  },
-  "STX": {
-    "timestamp": 1761769711.8712523,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.6,
-        "rsi_max": 87.9
-      }
-    }
-  },
-  "TAIKO": {
-    "timestamp": 1761769711.8825395,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 512,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.3,
-        "rsi_max": 75.4
-      }
-    }
-  },
-  "TAO": {
-    "timestamp": 1761769711.895087,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 639,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 28.1,
-        "rsi_max": 76.7
-      }
-    }
-  },
-  "TIA": {
-    "timestamp": 1761769711.9226358,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 730,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 23.8,
-        "rsi_max": 72.5
-      }
-    }
-  },
   "SNX": {
-    "timestamp": 1761769711.9421926,
+    "timestamp": 1761784584.3741558,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3719,12 +3523,12 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 16.9,
-        "rsi_max": 85.8
+        "rsi_max": 89.0
       }
     }
   },
-  "SUSHI": {
-    "timestamp": 1761769711.9685092,
+  "SOL": {
+    "timestamp": 1761784584.4140744,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3732,55 +3536,153 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 19.2,
-        "rsi_max": 93.5
+        "rsi_min": 16.8,
+        "rsi_max": 93.9
       }
     }
   },
-  "TON": {
-    "timestamp": 1761769711.9870229,
+  "SUI": {
+    "timestamp": 1761784584.430792,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 791,
+        "candles_count": 912,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 18.2,
-        "rsi_max": 74.2
+        "rsi_min": 27.1,
+        "rsi_max": 83.7
       }
     }
   },
-  "TNSR": {
-    "timestamp": 1761769711.9996414,
+  "SUNDOG": {
+    "timestamp": 1761784584.441691,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 569,
+        "candles_count": 431,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 17.3,
-        "rsi_max": 71.5
+        "rsi_min": 18.8,
+        "rsi_max": 74.7
+      }
+    }
+  },
+  "SC": {
+    "timestamp": 1761784584.4788065,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 13.2,
+        "rsi_max": 88.0
+      }
+    }
+  },
+  "SYN": {
+    "timestamp": 1761784584.5391285,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 437,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 23.2,
+        "rsi_max": 81.3
+      }
+    }
+  },
+  "SYS": {
+    "timestamp": 1761784584.5769038,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 437,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.3,
+        "rsi_max": 82.5
       }
     }
   },
   "T": {
-    "timestamp": 1761769712.1230593,
+    "timestamp": 1761784584.6006284,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 969,
+        "candles_count": 970,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 25.0,
-        "rsi_max": 75.3
+        "rsi_max": 75.2
+      }
+    }
+  },
+  "SUPER": {
+    "timestamp": 1761784584.6125336,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 708,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 26.9,
+        "rsi_max": 80.2
+      }
+    }
+  },
+  "TAO": {
+    "timestamp": 1761784584.751264,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 640,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 28.1,
+        "rsi_max": 76.7
+      }
+    }
+  },
+  "RSS3": {
+    "timestamp": 1761784584.7708788,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 13.1,
+        "rsi_max": 74.8
+      }
+    }
+  },
+  "STX": {
+    "timestamp": 1761784584.8185246,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.6,
+        "rsi_max": 88.2
       }
     }
   },
   "SUN": {
-    "timestamp": 1761769712.2316163,
+    "timestamp": 1761784584.8369887,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3793,36 +3695,106 @@
       }
     }
   },
-  "UMA": {
-    "timestamp": 1761769712.2541423,
+  "TIA": {
+    "timestamp": 1761784584.8536663,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 875,
+        "candles_count": 731,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 22.7,
-        "rsi_max": 84.1
+        "rsi_min": 23.8,
+        "rsi_max": 72.4
       }
     }
   },
-  "TRU": {
-    "timestamp": 1761769712.3811152,
+  "TNSR": {
+    "timestamp": 1761784584.869183,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 966,
+        "candles_count": 570,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 24.4,
-        "rsi_max": 76.1
+        "rsi_min": 17.3,
+        "rsi_max": 71.5
+      }
+    }
+  },
+  "SHIB1000": {
+    "timestamp": 1761784584.8872342,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 15.5,
+        "rsi_max": 91.2
+      }
+    }
+  },
+  "TON": {
+    "timestamp": 1761784584.9057117,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 792,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 18.2,
+        "rsi_max": 74.1
+      }
+    }
+  },
+  "TAIKO": {
+    "timestamp": 1761784584.922103,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 513,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.3,
+        "rsi_max": 75.3
+      }
+    }
+  },
+  "SXP": {
+    "timestamp": 1761784584.9456418,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.1,
+        "rsi_max": 91.2
+      }
+    }
+  },
+  "SUSHI": {
+    "timestamp": 1761784584.9682395,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 19.2,
+        "rsi_max": 93.5
       }
     }
   },
   "STG": {
-    "timestamp": 1761769712.4189284,
+    "timestamp": 1761784584.9905262,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3835,12 +3807,82 @@
       }
     }
   },
-  "USTC": {
-    "timestamp": 1761769712.531852,
+  "STORJ": {
+    "timestamp": 1761784585.0038612,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 703,
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 13.2,
+        "rsi_max": 92.3
+      }
+    }
+  },
+  "TRU": {
+    "timestamp": 1761784585.0162432,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 967,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 24.4,
+        "rsi_max": 76.0
+      }
+    }
+  },
+  "UMA": {
+    "timestamp": 1761784585.1584384,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 876,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.7,
+        "rsi_max": 84.1
+      }
+    }
+  },
+  "TLM": {
+    "timestamp": 1761784585.2378368,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 16.4,
+        "rsi_max": 89.8
+      }
+    }
+  },
+  "SPELL": {
+    "timestamp": 1761784585.2825906,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 13.5,
+        "rsi_max": 86.2
+      }
+    }
+  },
+  "USTC": {
+    "timestamp": 1761784585.297962,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 704,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -3849,8 +3891,22 @@
       }
     }
   },
+  "TRB": {
+    "timestamp": 1761784585.3225286,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 18.0,
+        "rsi_max": 96.8
+      }
+    }
+  },
   "TRX": {
-    "timestamp": 1761769712.5503323,
+    "timestamp": 1761784585.462194,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3864,7 +3920,7 @@
     }
   },
   "TWT": {
-    "timestamp": 1761769712.633302,
+    "timestamp": 1761784585.5278623,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3877,64 +3933,8 @@
       }
     }
   },
-  "UNI": {
-    "timestamp": 1761769712.654178,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 13.7,
-        "rsi_max": 88.2
-      }
-    }
-  },
-  "TRB": {
-    "timestamp": 1761769712.7435758,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 18.0,
-        "rsi_max": 90.9
-      }
-    }
-  },
-  "USDE": {
-    "timestamp": 1761769712.8813941,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 449,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 19.1,
-        "rsi_max": 71.2
-      }
-    }
-  },
-  "SXP": {
-    "timestamp": 1761769713.0000794,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 17.1,
-        "rsi_max": 91.2
-      }
-    }
-  },
   "THETA": {
-    "timestamp": 1761769713.0202854,
+    "timestamp": 1761784585.5603242,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3947,8 +3947,8 @@
       }
     }
   },
-  "TLM": {
-    "timestamp": 1761769713.0363033,
+  "UNI": {
+    "timestamp": 1761784585.5966408,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3956,13 +3956,27 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 16.4,
-        "rsi_max": 89.8
+        "rsi_min": 13.7,
+        "rsi_max": 88.5
+      }
+    }
+  },
+  "USDE": {
+    "timestamp": 1761784585.7597823,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 450,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 19.1,
+        "rsi_max": 69.9
       }
     }
   },
   "USDC": {
-    "timestamp": 1761769713.740278,
+    "timestamp": 1761784586.012494,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -3971,16 +3985,16 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 14.2,
-        "rsi_max": 75.8
+        "rsi_max": 75.4
       }
     }
   },
   "VANRY": {
-    "timestamp": 1761769714.0712068,
+    "timestamp": 1761784586.3508525,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 595,
+        "candles_count": 596,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -3989,12 +4003,68 @@
       }
     }
   },
-  "WIF": {
-    "timestamp": 1761769714.1205463,
+  "VELO": {
+    "timestamp": 1761784586.3690941,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 658,
+        "candles_count": 529,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.1,
+        "rsi_max": 81.5
+      }
+    }
+  },
+  "VOXEL": {
+    "timestamp": 1761784586.4052882,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 436,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 14.6,
+        "rsi_max": 80.8
+      }
+    }
+  },
+  "W": {
+    "timestamp": 1761784586.4170492,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 576,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 21.0,
+        "rsi_max": 77.7
+      }
+    }
+  },
+  "WAXP": {
+    "timestamp": 1761784586.4293191,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 752,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.8,
+        "rsi_max": 79.4
+      }
+    }
+  },
+  "WIF": {
+    "timestamp": 1761784586.4429138,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 659,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -4003,40 +4073,12 @@
       }
     }
   },
-  "VELO": {
-    "timestamp": 1761769714.133854,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 528,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 25.8,
-        "rsi_max": 81.6
-      }
-    }
-  },
-  "W": {
-    "timestamp": 1761769714.148049,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 575,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.0,
-        "rsi_max": 77.8
-      }
-    }
-  },
   "WLD": {
-    "timestamp": 1761769714.1655354,
+    "timestamp": 1761784586.4515374,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 829,
+        "candles_count": 830,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -4045,40 +4087,12 @@
       }
     }
   },
-  "VOXEL": {
-    "timestamp": 1761769714.237741,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 435,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 14.6,
-        "rsi_max": 80.9
-      }
-    }
-  },
-  "XAI": {
-    "timestamp": 1761769714.3016706,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 659,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 21.8,
-        "rsi_max": 79.3
-      }
-    }
-  },
   "XCH": {
-    "timestamp": 1761769714.3204846,
+    "timestamp": 1761784586.6027236,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 521,
+        "candles_count": 522,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -4087,22 +4101,50 @@
       }
     }
   },
-  "WAXP": {
-    "timestamp": 1761769714.411548,
+  "XAI": {
+    "timestamp": 1761784586.6175227,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 751,
+        "candles_count": 660,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 22.8,
-        "rsi_max": 79.5
+        "rsi_min": 21.8,
+        "rsi_max": 79.3
+      }
+    }
+  },
+  "XVG": {
+    "timestamp": 1761784586.7345004,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 849,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 26.9,
+        "rsi_max": 91.5
+      }
+    }
+  },
+  "WOO": {
+    "timestamp": 1761784586.776281,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 18.5,
+        "rsi_max": 89.6
       }
     }
   },
   "VET": {
-    "timestamp": 1761769714.485425,
+    "timestamp": 1761784586.7961123,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -4115,50 +4157,22 @@
       }
     }
   },
-  "XVS": {
-    "timestamp": 1761769714.5541937,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 783,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 19.6,
-        "rsi_max": 80.4
-      }
-    }
-  },
   "ZBCN": {
-    "timestamp": 1761769714.573504,
+    "timestamp": 1761784586.9228342,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 561,
+        "candles_count": 562,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 31.7,
+        "rsi_min": 30.5,
         "rsi_max": 90.2
       }
     }
   },
-  "WAVES": {
-    "timestamp": 1761769714.6719165,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 14.0,
-        "rsi_max": 83.3
-      }
-    }
-  },
   "XCN": {
-    "timestamp": 1761769714.711937,
+    "timestamp": 1761784587.0279758,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -4171,8 +4185,50 @@
       }
     }
   },
+  "ZETA": {
+    "timestamp": 1761784587.0485115,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 638,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 22.1,
+        "rsi_max": 75.5
+      }
+    }
+  },
+  "ZEUS": {
+    "timestamp": 1761784587.0635526,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 570,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 28.6,
+        "rsi_max": 79.3
+      }
+    }
+  },
+  "XMR": {
+    "timestamp": 1761784587.095619,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 11.4,
+        "rsi_max": 95.9
+      }
+    }
+  },
   "XLM": {
-    "timestamp": 1761769714.7463744,
+    "timestamp": 1761784587.125408,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -4186,11 +4242,11 @@
     }
   },
   "ZK": {
-    "timestamp": 1761769714.7848318,
+    "timestamp": 1761784587.1325097,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 497,
+        "candles_count": 498,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
@@ -4199,64 +4255,22 @@
       }
     }
   },
-  "XRP": {
-    "timestamp": 1761769714.8045652,
+  "XVS": {
+    "timestamp": 1761784587.1408098,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 2000,
+        "candles_count": 784,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 15.9,
-        "rsi_max": 94.7
-      }
-    }
-  },
-  "XVG": {
-    "timestamp": 1761769714.8199086,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 848,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 26.9,
-        "rsi_max": 91.5
-      }
-    }
-  },
-  "ZETA": {
-    "timestamp": 1761769714.8329823,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 637,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 22.1,
-        "rsi_max": 75.5
-      }
-    }
-  },
-  "WOO": {
-    "timestamp": 1761769714.8489885,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 18.5,
-        "rsi_max": 89.6
+        "rsi_min": 19.6,
+        "rsi_max": 80.4
       }
     }
   },
   "XNO": {
-    "timestamp": 1761769714.8993976,
+    "timestamp": 1761784587.1540968,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -4269,22 +4283,8 @@
       }
     }
   },
-  "ZRO": {
-    "timestamp": 1761769714.9328518,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 497,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 24.4,
-        "rsi_max": 81.9
-      }
-    }
-  },
   "YGG": {
-    "timestamp": 1761769714.9745739,
+    "timestamp": 1761784587.2654006,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -4297,22 +4297,22 @@
       }
     }
   },
-  "ZEUS": {
-    "timestamp": 1761769715.1235528,
+  "ZRO": {
+    "timestamp": 1761784587.276428,
     "maturity_data": {
       "is_mature": true,
       "details": {
-        "candles_count": 569,
+        "candles_count": 498,
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 28.6,
-        "rsi_max": 79.6
+        "rsi_min": 24.4,
+        "rsi_max": 81.8
       }
     }
   },
-  "ZEN": {
-    "timestamp": 1761769715.1861184,
+  "WAVES": {
+    "timestamp": 1761784587.4678013,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -4320,13 +4320,13 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 15.5,
-        "rsi_max": 90.2
+        "rsi_min": 14.0,
+        "rsi_max": 85.4
       }
     }
   },
-  "YFI": {
-    "timestamp": 1761769715.3181176,
+  "ZEC": {
+    "timestamp": 1761784587.5107212,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -4334,13 +4334,41 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 20.0,
-        "rsi_max": 91.3
+        "rsi_min": 16.7,
+        "rsi_max": 95.3
+      }
+    }
+  },
+  "XTZ": {
+    "timestamp": 1761784587.654907,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 17.8,
+        "rsi_max": 97.8
+      }
+    }
+  },
+  "XRP": {
+    "timestamp": 1761784587.673494,
+    "maturity_data": {
+      "is_mature": true,
+      "details": {
+        "candles_count": 2000,
+        "min_required": 400,
+        "config_min_rsi_low": 35,
+        "config_max_rsi_high": 65,
+        "rsi_min": 15.9,
+        "rsi_max": 94.7
       }
     }
   },
   "ZRX": {
-    "timestamp": 1761769715.3965635,
+    "timestamp": 1761784587.6913834,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -4353,22 +4381,8 @@
       }
     }
   },
-  "XTZ": {
-    "timestamp": 1761769715.4981399,
-    "maturity_data": {
-      "is_mature": true,
-      "details": {
-        "candles_count": 2000,
-        "min_required": 400,
-        "config_min_rsi_low": 35,
-        "config_max_rsi_high": 65,
-        "rsi_min": 15.0,
-        "rsi_max": 97.8
-      }
-    }
-  },
   "ZIL": {
-    "timestamp": 1761769715.6044676,
+    "timestamp": 1761784587.7916944,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -4377,12 +4391,12 @@
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
         "rsi_min": 16.1,
-        "rsi_max": 82.6
+        "rsi_max": 92.1
       }
     }
   },
-  "XMR": {
-    "timestamp": 1761769715.7676318,
+  "YFI": {
+    "timestamp": 1761784587.9567068,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -4390,13 +4404,13 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 11.4,
-        "rsi_max": 94.5
+        "rsi_min": 20.0,
+        "rsi_max": 96.0
       }
     }
   },
-  "ZEC": {
-    "timestamp": 1761769716.0898292,
+  "ZEN": {
+    "timestamp": 1761784588.2422566,
     "maturity_data": {
       "is_mature": true,
       "details": {
@@ -4404,8 +4418,8 @@
         "min_required": 400,
         "config_min_rsi_low": 35,
         "config_max_rsi_high": 65,
-        "rsi_min": 15.1,
-        "rsi_max": 95.3
+        "rsi_min": 15.5,
+        "rsi_max": 90.2
       }
     }
   }

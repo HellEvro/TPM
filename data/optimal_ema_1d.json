@@ -6490,5 +6490,17 @@
     "last_updated": "2025-10-29T19:58:28.551036",
     "candles_analyzed": 210,
     "analysis_method": "trend_confirmation"
+  },
+  "YB": {
+    "ema_short_period": 29,
+    "ema_long_period": 90,
+    "accuracy": 100.0,
+    "total_signals": 26,
+    "correct_signals": 26,
+    "long_signals": 0,
+    "short_signals": 26,
+    "last_updated": "2025-10-30T03:36:58.774492",
+    "candles_analyzed": 210,
+    "analysis_method": "trend_confirmation"
   }
 }
