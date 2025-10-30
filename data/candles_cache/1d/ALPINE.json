@@ -700,12 +700,12 @@
       "open": 0.7619,
       "high": 0.7824,
       "low": 0.7105,
-      "close": 0.713,
-      "volume": 980744.0,
-      "turnover": 727406.19406
+      "close": 0.7115,
+      "volume": 984006.8,
+      "turnover": 729731.23573
     }
   ],
   "count": 78,
-  "last_update": "2025-10-30T18:45:06.811192",
-  "rsi_last_candle": 35.76
+  "last_update": "2025-10-30T19:00:51.303756",
+  "rsi_last_candle": 35.72
 }

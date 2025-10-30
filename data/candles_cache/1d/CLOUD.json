@@ -4219,12 +4219,12 @@
       "open": 0.12843,
       "high": 0.13059,
       "low": 0.12384,
-      "close": 0.12451,
-      "volume": 2509572.0,
-      "turnover": 320628.12628
+      "close": 0.12457,
+      "volume": 2511630.0,
+      "turnover": 320884.14162
     }
   ],
   "count": 469,
-  "last_update": "2025-10-30T18:45:12.955781",
-  "rsi_last_candle": 45.27
+  "last_update": "2025-10-30T19:00:53.537567",
+  "rsi_last_candle": 45.29
 }

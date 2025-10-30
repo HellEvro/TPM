@@ -5326,12 +5326,12 @@
       "open": 0.1103,
       "high": 0.1116,
       "low": 0.1004,
-      "close": 0.101,
-      "volume": 53425453.0,
-      "turnover": 5647306.5481
+      "close": 0.1009,
+      "volume": 53777506.0,
+      "turnover": 5682869.7725
     }
   ],
   "count": 592,
-  "last_update": "2025-10-30T18:45:27.815522",
-  "rsi_last_candle": 32.19
+  "last_update": "2025-10-30T19:01:00.359071",
+  "rsi_last_candle": 32.15
 }

@@ -2806,12 +2806,12 @@
       "open": 0.131,
       "high": 0.132,
       "low": 0.1211,
-      "close": 0.1215,
-      "volume": 1159142.0,
-      "turnover": 147378.0501
+      "close": 0.1213,
+      "volume": 1170961.0,
+      "turnover": 148811.6475
     }
   ],
   "count": 312,
-  "last_update": "2025-10-30T18:45:20.702877",
-  "rsi_last_candle": 27.72
+  "last_update": "2025-10-30T19:00:56.583637",
+  "rsi_last_candle": 27.63
 }

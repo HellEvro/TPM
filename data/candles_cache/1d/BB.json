@@ -4813,12 +4813,12 @@
       "open": 0.1161,
       "high": 0.1165,
       "low": 0.1023,
-      "close": 0.103,
-      "volume": 6905780.0,
-      "turnover": 753689.1881
+      "close": 0.1028,
+      "volume": 7025911.0,
+      "turnover": 766039.3232
     }
   ],
   "count": 535,
-  "last_update": "2025-10-30T18:45:09.679593",
-  "rsi_last_candle": 32.6
+  "last_update": "2025-10-30T19:00:52.253374",
+  "rsi_last_candle": 32.53
 }

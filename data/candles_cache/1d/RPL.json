@@ -8773,12 +8773,12 @@
       "open": 3.338,
       "high": 3.382,
       "low": 3.106,
-      "close": 3.117,
-      "volume": 46243.99,
-      "turnover": 149699.31359
+      "close": 3.111,
+      "volume": 46888.57,
+      "turnover": 151709.85866
     }
   ],
   "count": 975,
-  "last_update": "2025-10-30T18:45:31.786046",
-  "rsi_last_candle": 32.53
+  "last_update": "2025-10-30T19:01:02.532458",
+  "rsi_last_candle": 32.44
 }

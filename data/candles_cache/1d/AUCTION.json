@@ -7432,12 +7432,12 @@
       "open": 6.812,
       "high": 7.238,
       "low": 6.301,
-      "close": 6.325,
-      "volume": 1012401.2,
-      "turnover": 6863373.9479
+      "close": 6.318,
+      "volume": 1015694.1,
+      "turnover": 6884191.9902
     }
   ],
   "count": 826,
-  "last_update": "2025-10-30T18:45:08.615170",
-  "rsi_last_candle": 40.3
+  "last_update": "2025-10-30T19:00:51.838671",
+  "rsi_last_candle": 40.25
 }

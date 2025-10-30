@@ -6559,12 +6559,12 @@
       "open": 0.01774,
       "high": 0.01789,
       "low": 0.01706,
-      "close": 0.01716,
-      "volume": 42389990.0,
-      "turnover": 744196.7044
+      "close": 0.01711,
+      "volume": 42721450.0,
+      "turnover": 749872.1665
     }
   ],
   "count": 729,
-  "last_update": "2025-10-30T18:45:32.620313",
-  "rsi_last_candle": 31.87
+  "last_update": "2025-10-30T19:01:02.840286",
+  "rsi_last_candle": 31.63
 }

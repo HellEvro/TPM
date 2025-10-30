@@ -6649,12 +6649,12 @@
       "open": 2.587,
       "high": 2.618,
       "low": 2.454,
-      "close": 2.462,
-      "volume": 183053.2,
-      "turnover": 461866.65
+      "close": 2.463,
+      "volume": 185792.1,
+      "turnover": 468611.8584
     }
   ],
   "count": 739,
-  "last_update": "2025-10-30T18:45:18.905766",
-  "rsi_last_candle": 37.77
+  "last_update": "2025-10-30T19:00:56.135029",
+  "rsi_last_candle": 37.81
 }

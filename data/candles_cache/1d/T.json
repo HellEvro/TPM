@@ -8728,12 +8728,12 @@
       "open": 0.01252,
       "high": 0.01278,
       "low": 0.01173,
-      "close": 0.01177,
-      "volume": 29269550.0,
-      "turnover": 356981.2272
+      "close": 0.01183,
+      "volume": 29813990.0,
+      "turnover": 363408.8262
     }
   ],
   "count": 970,
-  "last_update": "2025-10-30T18:45:34.682787",
-  "rsi_last_candle": 33.34
+  "last_update": "2025-10-30T19:01:03.979212",
+  "rsi_last_candle": 33.76
 }

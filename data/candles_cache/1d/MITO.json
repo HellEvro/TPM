@@ -565,12 +565,12 @@
       "open": 0.10929,
       "high": 0.11127,
       "low": 0.09791,
-      "close": 0.09863,
-      "volume": 3340337.0,
-      "turnover": 348705.26725
+      "close": 0.09856,
+      "volume": 3378356.0,
+      "turnover": 352459.10049
     }
   ],
   "count": 63,
-  "last_update": "2025-10-30T18:45:25.303719",
-  "rsi_last_candle": 35.61
+  "last_update": "2025-10-30T19:00:59.844011",
+  "rsi_last_candle": 35.58
 }

@@ -6244,12 +6244,12 @@
       "open": 0.1812,
       "high": 0.1841,
       "low": 0.1624,
-      "close": 0.1632,
-      "volume": 7923991.0,
-      "turnover": 1363802.6899
+      "close": 0.1631,
+      "volume": 8009304.0,
+      "turnover": 1377715.9184
     }
   ],
   "count": 694,
-  "last_update": "2025-10-30T18:45:09.691216",
-  "rsi_last_candle": 31.2
+  "last_update": "2025-10-30T19:00:51.974074",
+  "rsi_last_candle": 31.18
 }

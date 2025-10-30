@@ -9,7 +9,7 @@
     },
     "auto_bot_worker": {
       "active": false,
-      "last_check": "2025-10-30T18:47:21.697969",
+      "last_check": "2025-10-30T21:59:27.277425",
       "check_count": 1,
       "last_error": null,
       "enabled": false,
@@ -23,8 +23,8 @@
     },
     "exchange_connection": {
       "initialized": true,
-      "last_sync": "2025-10-30T15:31:20.800837",
-      "connection_count": 40,
+      "last_sync": "2025-10-30T21:57:47.464956",
+      "connection_count": 42,
       "last_error": null
     },
     "auto_bot_signals": {
@@ -34,6 +34,6 @@
       "last_error": null
     }
   },
-  "last_saved": "2025-10-30T18:47:21.697981",
+  "last_saved": "2025-10-30T21:59:27.277441",
   "version": "1.0"
 }
