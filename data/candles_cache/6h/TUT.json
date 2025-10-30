@@ -8125,12 +8125,12 @@
       "open": 0.0193,
       "high": 0.01937,
       "low": 0.0189,
-      "close": 0.01899,
-      "volume": 1663225.0,
-      "turnover": 31759.48771
+      "close": 0.01915,
+      "volume": 2296794.0,
+      "turnover": 43844.06176
     }
   ],
   "count": 903,
-  "last_update": "2025-10-30T21:58:26.559907",
-  "rsi_last_candle": 22.79
+  "last_update": "2025-10-30T22:12:04.375754",
+  "rsi_last_candle": 23.33
 }

@@ -2795,14 +2795,14 @@
     {
       "time": 1761847200000,
       "open": 0.6979,
-      "high": 0.7021,
+      "high": 0.706,
       "low": 0.6933,
-      "close": 0.7001,
-      "volume": 66030.6,
-      "turnover": 46107.79013
+      "close": 0.7035,
+      "volume": 96368.8,
+      "turnover": 67355.28932
     }
   ],
   "count": 311,
-  "last_update": "2025-10-30T21:57:56.867535",
-  "rsi_last_candle": 18.91
+  "last_update": "2025-10-30T22:11:45.000320",
+  "rsi_last_candle": 20.52
 }

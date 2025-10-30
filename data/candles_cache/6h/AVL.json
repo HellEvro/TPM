@@ -9014,14 +9014,14 @@
     {
       "time": 1761847200000,
       "open": 0.149,
-      "high": 0.1517,
+      "high": 0.1537,
       "low": 0.1483,
-      "close": 0.1515,
-      "volume": 256405.0,
-      "turnover": 38420.8682
+      "close": 0.1537,
+      "volume": 354918.0,
+      "turnover": 53387.3181
     }
   ],
   "count": 1002,
-  "last_update": "2025-10-30T21:57:58.888099",
-  "rsi_last_candle": 60.56
+  "last_update": "2025-10-30T22:11:46.297148",
+  "rsi_last_candle": 63.5
 }

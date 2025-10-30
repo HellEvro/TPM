@@ -3839,14 +3839,14 @@
     {
       "time": 1761847200000,
       "open": 0.999,
-      "high": 0.9991,
+      "high": 0.9992,
       "low": 0.999,
-      "close": 0.999,
-      "volume": 29859.0,
-      "turnover": 29831.559
+      "close": 0.9991,
+      "volume": 38024.0,
+      "turnover": 37989.5119
     }
   ],
   "count": 427,
-  "last_update": "2025-10-30T21:58:26.681040",
-  "rsi_last_candle": 39.94
+  "last_update": "2025-10-30T22:12:04.457711",
+  "rsi_last_candle": 41.7
 }

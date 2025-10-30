@@ -5317,12 +5317,12 @@
       "open": 0.3393,
       "high": 0.3409,
       "low": 0.3364,
-      "close": 0.3387,
-      "volume": 143635.0,
-      "turnover": 48642.39308
+      "close": 0.3402,
+      "volume": 225748.4,
+      "turnover": 76472.72625
     }
   ],
   "count": 591,
-  "last_update": "2025-10-30T21:58:14.103892",
-  "rsi_last_candle": 25.32
+  "last_update": "2025-10-30T22:11:55.160703",
+  "rsi_last_candle": 26.01
 }
