@@ -44,8 +44,13 @@
     "turnover_price_mismatch": 3.0,
     "ai_optimal_entry_enabled": false,
     "timeframe": "6h",
-    "max_candles_limit": 2000
+    "max_candles_limit": 2000,
+    "filtered_coins": [
+      "ALEO",
+      "MNT"
+    ],
+    "last_filter_update": "2025-10-30T22:16:42.558753"
   },
-  "last_saved": "2025-10-30T21:59:25.777837",
+  "last_saved": "2025-10-30T22:16:42.559844",
   "version": "1.0"
 }

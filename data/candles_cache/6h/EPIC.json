@@ -8304,13 +8304,13 @@
       "time": 1761847200000,
       "open": 0.7516,
       "high": 0.7547,
-      "low": 0.7403,
-      "close": 0.745,
-      "volume": 12334.0,
-      "turnover": 9236.005
+      "low": 0.7396,
+      "close": 0.7461,
+      "volume": 17139.0,
+      "turnover": 12810.0924
     }
   ],
   "count": 923,
-  "last_update": "2025-10-30T21:58:03.505424",
-  "rsi_last_candle": 25.08
+  "last_update": "2025-10-30T22:11:49.725393",
+  "rsi_last_candle": 25.18
 }

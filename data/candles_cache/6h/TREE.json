@@ -3364,12 +3364,12 @@
       "open": 0.1615,
       "high": 0.16229,
       "low": 0.15839,
-      "close": 0.15992,
-      "volume": 872403.4,
-      "turnover": 139819.330761
+      "close": 0.16054,
+      "volume": 1229729.9,
+      "turnover": 196965.571435
     }
   ],
   "count": 374,
-  "last_update": "2025-10-30T21:58:26.188850",
-  "rsi_last_candle": 36.03
+  "last_update": "2025-10-30T22:12:04.135701",
+  "rsi_last_candle": 36.35
 }

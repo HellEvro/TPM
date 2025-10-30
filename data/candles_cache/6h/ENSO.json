@@ -601,12 +601,12 @@
       "open": 1.456,
       "high": 1.462,
       "low": 1.414,
-      "close": 1.444,
-      "volume": 1019722.6,
-      "turnover": 1466841.0943
+      "close": 1.431,
+      "volume": 1229996.1,
+      "turnover": 1770190.6275
     }
   ],
   "count": 67,
-  "last_update": "2025-10-30T21:58:03.264788",
-  "rsi_last_candle": 38.54
+  "last_update": "2025-10-30T22:11:49.657935",
+  "rsi_last_candle": 38.18
 }

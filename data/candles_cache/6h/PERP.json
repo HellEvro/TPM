@@ -9016,12 +9016,12 @@
       "open": 0.2051,
       "high": 0.2066,
       "low": 0.1837,
-      "close": 0.186,
-      "volume": 2339323.0,
-      "turnover": 456405.6613
+      "close": 0.1871,
+      "volume": 3077487.0,
+      "turnover": 594317.9127
     }
   ],
   "count": 1002,
-  "last_update": "2025-10-30T21:58:21.566317",
-  "rsi_last_candle": 36.52
+  "last_update": "2025-10-30T22:11:59.442236",
+  "rsi_last_candle": 37.1
 }

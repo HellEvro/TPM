@@ -780,10 +780,15 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             logger.debug(f"[TREND] {symbol}: Ошибка анализа тренда: {e}")
             # НЕ устанавливаем дефолт при ошибке - оставляем None
         
-        # Рассчитываем изменение за 24h (примерно 4 свечи 6H)
+        # Рассчитываем изменение за 24h с учётом текущего таймфрейма
         change_24h = 0
-        if len(closes) >= 5:
-            change_24h = round(((closes[-1] - closes[-5]) / closes[-5]) * 100, 2)
+        try:
+            tf_map_sec = {'1m':60,'5m':300,'15m':900,'30m':1800,'1h':3600,'4h':14400,'6h':21600,'12h':43200,'1d':86400,'1w':604800}
+            bars_24h = max(1, 86400 // tf_map_sec.get(timeframe, 21600))
+            if len(closes) > bars_24h:
+                change_24h = round(((closes[-1] - closes[-bars_24h-1]) / closes[-bars_24h-1]) * 100, 2)
+        except Exception:
+            pass
         
         # ✅ КРИТИЧНО: Получаем оптимальные EMA периоды ДО определения сигнала!
         # Это нужно для правильного расчета базового сигнала на основе EMA
@@ -1017,7 +1022,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             'rsi_zone': rsi_zone,
             'signal': signal,
             'price': current_price,
-            'change24h': change_24h,
+            'change_24h': change_24h,
             'last_update': datetime.now().isoformat(),
             'trend_analysis': trend_analysis,
             'ema_periods': {

@@ -6685,12 +6685,12 @@
       "open": 107.03,
       "high": 107.51,
       "low": 101.53,
-      "close": 102.43,
-      "volume": 15374.5,
-      "turnover": 1605764.2628
+      "close": 104.08,
+      "volume": 19559.38,
+      "turnover": 2041079.9562
     }
   ],
   "count": 743,
-  "last_update": "2025-10-30T21:58:01.592343",
-  "rsi_last_candle": 52.2
+  "last_update": "2025-10-30T22:11:48.212987",
+  "rsi_last_candle": 53.09
 }

@@ -8557,12 +8557,12 @@
       "open": 0.08157,
       "high": 0.08318,
       "low": 0.08066,
-      "close": 0.08131,
-      "volume": 1057333.0,
-      "turnover": 86627.58315
+      "close": 0.08219,
+      "volume": 1215347.0,
+      "turnover": 99566.21641
     }
   ],
   "count": 951,
-  "last_update": "2025-10-30T21:58:23.867058",
-  "rsi_last_candle": 43.5
+  "last_update": "2025-10-30T22:12:01.800936",
+  "rsi_last_candle": 45.35
 }

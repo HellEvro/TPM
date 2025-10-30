@@ -8880,13 +8880,13 @@
       "time": 1761847200000,
       "open": 0.3056,
       "high": 0.3065,
-      "low": 0.3011,
-      "close": 0.3021,
-      "volume": 65675.0,
-      "turnover": 19954.0067
+      "low": 0.3,
+      "close": 0.3032,
+      "volume": 110189.0,
+      "turnover": 33384.3436
     }
   ],
   "count": 987,
-  "last_update": "2025-10-30T21:58:22.691625",
-  "rsi_last_candle": 28.02
+  "last_update": "2025-10-30T22:12:00.293142",
+  "rsi_last_candle": 28.36
 }

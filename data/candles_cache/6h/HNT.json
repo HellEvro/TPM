@@ -9015,13 +9015,13 @@
       "time": 1761847200000,
       "open": 2.223,
       "high": 2.233,
-      "low": 2.196,
-      "close": 2.21,
-      "volume": 26020.14,
-      "turnover": 57605.56053
+      "low": 2.192,
+      "close": 2.206,
+      "volume": 37176.39,
+      "turnover": 82212.9695
     }
   ],
   "count": 1002,
-  "last_update": "2025-10-30T21:58:12.836496",
-  "rsi_last_candle": 36.41
+  "last_update": "2025-10-30T22:11:54.224595",
+  "rsi_last_candle": 35.99
 }
