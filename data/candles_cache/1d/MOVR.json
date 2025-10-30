@@ -6370,12 +6370,12 @@
       "open": 3.534,
       "high": 3.554,
       "low": 3.255,
-      "close": 3.277,
-      "volume": 69496.9,
-      "turnover": 235254.2275
+      "close": 3.272,
+      "volume": 72653.1,
+      "turnover": 245610.2876
     }
   ],
   "count": 708,
-  "last_update": "2025-10-30T18:45:25.968439",
-  "rsi_last_candle": 27.94
+  "last_update": "2025-10-30T19:01:00.088787",
+  "rsi_last_candle": 27.87
 }

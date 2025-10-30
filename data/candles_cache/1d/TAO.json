@@ -5758,12 +5758,12 @@
       "open": 440.99,
       "high": 455.69,
       "low": 404.51,
-      "close": 413.41,
-      "volume": 227430.561,
-      "turnover": 98569899.61398
+      "close": 410.7,
+      "volume": 230485.862,
+      "turnover": 99828052.21751
     }
   ],
   "count": 640,
-  "last_update": "2025-10-30T18:45:34.661369",
-  "rsi_last_candle": 55.48
+  "last_update": "2025-10-30T19:01:03.835263",
+  "rsi_last_candle": 54.87
 }

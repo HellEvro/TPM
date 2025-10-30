@@ -7881,13 +7881,13 @@
       "time": 1761782400000,
       "open": 1.111,
       "high": 1.132,
-      "low": 1.051,
-      "close": 1.055,
-      "volume": 471379.5,
-      "turnover": 511734.1932
+      "low": 1.05,
+      "close": 1.051,
+      "volume": 480897.6,
+      "turnover": 521756.1468
     }
   ],
   "count": 876,
-  "last_update": "2025-10-30T18:45:35.607006",
-  "rsi_last_candle": 42.61
+  "last_update": "2025-10-30T19:01:04.209185",
+  "rsi_last_candle": 42.35
 }

@@ -8188,12 +8188,12 @@
       "open": 0.179,
       "high": 0.182,
       "low": 0.1702,
-      "close": 0.1725,
-      "volume": 7695618.0,
-      "turnover": 1345692.37419
+      "close": 0.1724,
+      "volume": 7813252.9,
+      "turnover": 1366020.95813
     }
   ],
   "count": 910,
-  "last_update": "2025-10-30T18:45:15.785085",
-  "rsi_last_candle": 52.19
+  "last_update": "2025-10-30T19:00:54.512544",
+  "rsi_last_candle": 52.15
 }

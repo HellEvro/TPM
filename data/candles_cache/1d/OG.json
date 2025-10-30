@@ -7153,12 +7153,12 @@
       "open": 11.3131,
       "high": 12.1883,
       "low": 11.0034,
-      "close": 11.1208,
-      "volume": 460164.2,
-      "turnover": 5315977.40862
+      "close": 11.139,
+      "volume": 464419.0,
+      "turnover": 5363395.36459
     }
   ],
   "count": 795,
-  "last_update": "2025-10-30T18:45:26.941299",
-  "rsi_last_candle": 29.86
+  "last_update": "2025-10-30T19:01:00.338813",
+  "rsi_last_candle": 29.9
 }

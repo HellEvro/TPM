@@ -448,12 +448,12 @@
       "open": 160.54,
       "high": 161.05,
       "low": 150.04,
-      "close": 150.6,
-      "volume": 5721.13,
-      "turnover": 889877.7647
+      "close": 150.67,
+      "volume": 5756.16,
+      "turnover": 895154.3772
     }
   ],
   "count": 50,
-  "last_update": "2025-10-30T18:45:26.861077",
-  "rsi_last_candle": 32.06
+  "last_update": "2025-10-30T19:01:00.349697",
+  "rsi_last_candle": 32.09
 }

@@ -43,15 +43,9 @@
     "turnover_drop_threshold": 0.3,
     "turnover_price_mismatch": 3.0,
     "ai_optimal_entry_enabled": false,
-    "timeframe": "1d",
-    "max_candles_limit": 2000,
-    "filtered_coins": [
-      "JST",
-      "TRX",
-      "XLM"
-    ],
-    "last_filter_update": "2025-10-30T18:47:23.703297"
+    "timeframe": "6h",
+    "max_candles_limit": 2000
   },
-  "last_saved": "2025-10-30T18:47:24.012518",
+  "last_saved": "2025-10-30T21:59:25.777837",
   "version": "1.0"
 }

@@ -1978,12 +1978,12 @@
       "open": 0.0708,
       "high": 0.0718,
       "low": 0.06433,
-      "close": 0.06475,
-      "volume": 6783206.0,
-      "turnover": 462824.59625
+      "close": 0.06464,
+      "volume": 6888759.0,
+      "turnover": 469660.2839
     }
   ],
   "count": 220,
-  "last_update": "2025-10-30T18:45:27.811918",
-  "rsi_last_candle": 26.85
+  "last_update": "2025-10-30T19:01:00.580838",
+  "rsi_last_candle": 26.8
 }

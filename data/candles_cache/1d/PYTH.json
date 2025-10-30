@@ -6388,12 +6388,12 @@
       "open": 0.1131,
       "high": 0.114,
       "low": 0.102,
-      "close": 0.1024,
-      "volume": 47473038.0,
-      "turnover": 5147564.9008
+      "close": 0.1022,
+      "volume": 47975634.0,
+      "turnover": 5199013.8462
     }
   ],
   "count": 710,
-  "last_update": "2025-10-30T18:45:29.839834",
-  "rsi_last_candle": 35.83
+  "last_update": "2025-10-30T19:01:01.162317",
+  "rsi_last_candle": 35.74
 }

@@ -8035,12 +8035,12 @@
       "open": 5.154,
       "high": 5.179,
       "low": 4.587,
-      "close": 4.612,
-      "volume": 2360333.08,
-      "turnover": 11535548.68259
+      "close": 4.6,
+      "volume": 2391539.85,
+      "turnover": 11679432.89545
     }
   ],
   "count": 893,
-  "last_update": "2025-10-30T18:45:27.857617",
-  "rsi_last_candle": 32.72
+  "last_update": "2025-10-30T19:01:00.588330",
+  "rsi_last_candle": 32.62
 }

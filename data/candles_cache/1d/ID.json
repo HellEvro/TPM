@@ -8566,12 +8566,12 @@
       "open": 0.1099,
       "high": 0.1111,
       "low": 0.1008,
-      "close": 0.1013,
-      "volume": 3804584.0,
-      "turnover": 402968.8059
+      "close": 0.101,
+      "volume": 3872512.0,
+      "turnover": 409847.3709
     }
   ],
   "count": 952,
-  "last_update": "2025-10-30T18:45:20.948238",
-  "rsi_last_candle": 33.19
+  "last_update": "2025-10-30T19:00:56.930679",
+  "rsi_last_candle": 33.02
 }

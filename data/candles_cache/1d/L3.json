@@ -4111,12 +4111,12 @@
       "open": 0.02245,
       "high": 0.02344,
       "low": 0.02177,
-      "close": 0.02203,
-      "volume": 15274890.0,
-      "turnover": 340197.7835
+      "close": 0.0219,
+      "volume": 15516240.0,
+      "turnover": 345496.9197
     }
   ],
   "count": 457,
-  "last_update": "2025-10-30T18:45:21.980411",
-  "rsi_last_candle": 36.17
+  "last_update": "2025-10-30T19:00:57.583470",
+  "rsi_last_candle": 35.83
 }

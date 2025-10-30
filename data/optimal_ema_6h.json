@@ -6622,5 +6622,17 @@
     "last_updated": "2025-10-28T14:14:34.211472",
     "candles_analyzed": 5000,
     "analysis_method": "trend_confirmation"
+  },
+  "BLUAI": {
+    "ema_short_period": 41,
+    "ema_long_period": 250,
+    "accuracy": 100.0,
+    "total_signals": 20,
+    "correct_signals": 20,
+    "long_signals": 0,
+    "short_signals": 20,
+    "last_updated": "2025-10-30T21:58:06.082663",
+    "candles_analyzed": 351,
+    "analysis_method": "trend_confirmation"
   }
 }

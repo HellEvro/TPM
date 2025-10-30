@@ -7341,13 +7341,13 @@
       "time": 1761782400000,
       "open": 0.5884,
       "high": 0.5992,
-      "low": 0.5647,
-      "close": 0.5647,
-      "volume": 114634.0,
-      "turnover": 66637.6968
+      "low": 0.5616,
+      "close": 0.562,
+      "volume": 128871.0,
+      "turnover": 74647.9002
     }
   ],
   "count": 816,
-  "last_update": "2025-10-30T18:45:11.953927",
-  "rsi_last_candle": 37.16
+  "last_update": "2025-10-30T19:00:53.142258",
+  "rsi_last_candle": 36.71
 }

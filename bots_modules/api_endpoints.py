@@ -84,13 +84,20 @@ except ImportError as e:
         from bots_modules.filters import get_effective_signal as real_get_effective_signal
         return real_get_effective_signal(coin)
     def check_auto_bot_filters(symbol):
-        return {'allowed': True}
+        from bots_modules.filters import check_auto_bot_filters as real_check
+        return real_check(symbol)
     def process_auto_bot_signals(exchange_obj=None):
-        pass
+        from bots_modules.filters import process_auto_bot_signals as real_proc
+        return real_proc(exchange_obj)
     def test_exit_scam_filter(symbol):
-        pass
+        from bots_modules.filters import test_exit_scam_filter as real_test_exit
+        return real_test_exit(symbol)
     def test_rsi_time_filter(symbol):
-        pass
+        from bots_modules.filters import test_rsi_time_filter as real_test_time
+        return real_test_time(symbol)
+    def process_trading_signals_for_all_bots():
+        from bots_modules.filters import process_trading_signals_for_all_bots as real_all
+        return real_all()
 
 # Функция для очистки данных для JSON
 def clean_data_for_json(data):
