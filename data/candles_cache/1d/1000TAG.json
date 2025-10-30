@@ -851,14 +851,14 @@
     {
       "time": 1761782400000,
       "open": 0.4492,
-      "high": 0.4493,
+      "high": 0.5345,
       "low": 0.4304,
-      "close": 0.4387,
-      "volume": 53741.0,
-      "turnover": 23531.3973
+      "close": 0.4809,
+      "volume": 1428543.0,
+      "turnover": 710256.6553
     }
   ],
   "count": 95,
-  "last_update": "2025-10-30T03:49:05.532141",
-  "rsi_last_candle": 52.3
+  "last_update": "2025-10-30T15:25:35.981984",
+  "rsi_last_candle": 56.23
 }

@@ -88,6 +88,14 @@ def save_candles(symbol, timeframe, candles, update_mode='replace', rsi_value=No
                 except Exception as e:
                     logger.warning(f"[CANDLES_DB] ⚠️ Ошибка чтения старых свечей для {symbol}: {e}")
             
+            # ✅ Гарантируем сортировку свечей по времени (от старых к новым)
+            try:
+                if candles and isinstance(candles, list) and isinstance(candles[0], dict) and 'time' in candles[0]:
+                    candles = sorted(candles, key=lambda x: x['time'])
+            except Exception:
+                # В случае нестандартного формата не ломаем сохранение
+                pass
+
             # ✅ Сохраняем RSI: новый имеет приоритет, если не передан - используем старый
             final_rsi = rsi_value if rsi_value is not None else old_rsi
             
@@ -162,6 +170,13 @@ def get_candles(symbol, timeframe, return_rsi=False):
                 data = json.load(f)
             
             candles = data.get('candles', [])
+            # ✅ Гарантируем сортировку по времени на чтении
+            try:
+                if candles and isinstance(candles, list) and isinstance(candles[0], dict) and 'time' in candles[0]:
+                    candles.sort(key=lambda x: x['time'])
+            except Exception:
+                # Не прерываем чтение при ошибке сортировки
+                pass
             if candles:
                 logger.debug(f"[CANDLES_DB] 📖 {symbol}: {len(candles)} свечей")
             else:

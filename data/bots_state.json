@@ -46,8 +46,8 @@
     "timeframe": "1d",
     "max_candles_limit": 2000,
     "filtered_coins": [],
-    "last_filter_update": "2025-10-30T03:48:55.989831"
+    "last_filter_update": "2025-10-30T15:25:53.637011"
   },
-  "last_saved": "2025-10-30T03:49:17.259511",
+  "last_saved": "2025-10-30T15:25:54.565211",
   "version": "1.0"
 }

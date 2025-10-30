@@ -3,15 +3,6 @@
   "timeframe": "1d",
   "candles": [
     {
-      "time": 1675296000000,
-      "open": 55.65,
-      "high": 58.4,
-      "low": 52.0,
-      "close": 52.55,
-      "volume": 106964.92,
-      "turnover": 5883743.5615
-    },
-    {
       "time": 1675382400000,
       "open": 52.55,
       "high": 55.3,
@@ -9015,13 +9006,13 @@
       "time": 1761782400000,
       "open": 36.89,
       "high": 37.34,
-      "low": 36.77,
-      "close": 37.34,
-      "volume": 1032.7,
-      "turnover": 38345.5751
+      "low": 35.79,
+      "close": 36.11,
+      "volume": 66552.88,
+      "turnover": 2441723.2812
     }
   ],
-  "count": 1002,
-  "last_update": "2025-10-30T03:49:16.648412",
-  "rsi_last_candle": 49.75
+  "count": 1001,
+  "last_update": "2025-10-30T15:25:39.672308",
+  "rsi_last_candle": 42.54
 }

@@ -7079,14 +7079,14 @@
     {
       "time": 1761782400000,
       "open": 10.183,
-      "high": 10.293,
+      "high": 10.572,
       "low": 10.154,
-      "close": 10.254,
-      "volume": 2455.3,
-      "turnover": 25124.4793
+      "close": 10.294,
+      "volume": 29013.4,
+      "turnover": 299538.1019
     }
   ],
   "count": 787,
-  "last_update": "2025-10-30T03:42:57.741629",
-  "rsi_last_candle": 57.51
+  "last_update": "2025-10-30T15:25:44.879455",
+  "rsi_last_candle": 57.93
 }

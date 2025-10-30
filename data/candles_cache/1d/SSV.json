@@ -8771,14 +8771,14 @@
     {
       "time": 1761782400000,
       "open": 5.146,
-      "high": 5.167,
-      "low": 5.105,
-      "close": 5.143,
-      "volume": 1170.63,
-      "turnover": 6021.63172
+      "high": 5.216,
+      "low": 4.882,
+      "close": 4.898,
+      "volume": 44770.18,
+      "turnover": 224538.63482
     }
   ],
   "count": 975,
-  "last_update": "2025-10-30T03:43:14.285271",
-  "rsi_last_candle": 35.4
+  "last_update": "2025-10-30T15:25:46.794385",
+  "rsi_last_candle": 33.71
 }

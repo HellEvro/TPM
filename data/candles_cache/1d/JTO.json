@@ -6233,14 +6233,14 @@
     {
       "time": 1761782400000,
       "open": 1.059,
-      "high": 1.064,
-      "low": 1.05,
-      "close": 1.061,
-      "volume": 98222.0,
-      "turnover": 103861.8165
+      "high": 1.081,
+      "low": 1.01,
+      "close": 1.013,
+      "volume": 2094534.6,
+      "turnover": 2183426.709
     }
   ],
   "count": 693,
-  "last_update": "2025-10-30T03:42:34.054132",
-  "rsi_last_candle": 36.84
+  "last_update": "2025-10-30T15:25:42.206181",
+  "rsi_last_candle": 33.98
 }

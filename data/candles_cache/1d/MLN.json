@@ -1841,14 +1841,14 @@
     {
       "time": 1761782400000,
       "open": 7.065,
-      "high": 7.072,
-      "low": 6.947,
-      "close": 6.991,
-      "volume": 6675.4,
-      "turnover": 46760.0244
+      "high": 7.167,
+      "low": 6.529,
+      "close": 6.673,
+      "volume": 161787.3,
+      "turnover": 1108739.9538
     }
   ],
   "count": 205,
-  "last_update": "2025-10-30T03:42:46.072108",
-  "rsi_last_candle": 46.14
+  "last_update": "2025-10-30T15:25:43.892315",
+  "rsi_last_candle": 44.84
 }

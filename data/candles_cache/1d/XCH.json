@@ -4694,14 +4694,14 @@
     {
       "time": 1761782400000,
       "open": 6.811,
-      "high": 6.87,
-      "low": 6.75,
-      "close": 6.855,
-      "volume": 1878.22,
-      "turnover": 12774.99712
+      "high": 6.981,
+      "low": 6.709,
+      "close": 6.856,
+      "volume": 36497.81,
+      "turnover": 251099.00558
     }
   ],
   "count": 522,
-  "last_update": "2025-10-30T03:43:26.672606",
-  "rsi_last_candle": 38.02
+  "last_update": "2025-10-30T15:25:49.023779",
+  "rsi_last_candle": 38.83
 }

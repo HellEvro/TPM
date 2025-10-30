@@ -6368,14 +6368,14 @@
     {
       "time": 1761782400000,
       "open": 3.534,
-      "high": 3.543,
-      "low": 3.495,
-      "close": 3.542,
-      "volume": 1417.1,
-      "turnover": 4999.9818
+      "high": 3.554,
+      "low": 3.343,
+      "close": 3.347,
+      "volume": 42914.8,
+      "turnover": 147405.3793
     }
   ],
   "count": 708,
-  "last_update": "2025-10-30T03:42:50.296201",
-  "rsi_last_candle": 31.85
+  "last_update": "2025-10-30T15:25:43.960488",
+  "rsi_last_candle": 28.88
 }

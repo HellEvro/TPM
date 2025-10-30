@@ -1,4 +1,4 @@
 {
-  "coins_count": 545,
+  "coins_count": 542,
   "config_hash": "{'timeframe': '1d', 'min_candles': 400, 'min_rsi_low': 35, 'max_rsi_high': 65}"
 }

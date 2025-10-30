@@ -364,8 +364,8 @@ def get_coin_candles_only(symbol, exchange_obj=None):
         rsi_key = f'rsi{timeframe}'
         if candles_count >= 14:
             try:
-                # Берем последние 14+ свечей для расчета RSI (используем все загруженные)
-                closes = [candle['close'] for candle in candles[-50:]]  # Берем последние 50 для надежности
+                # Для согласованности с биржей используем ВСЕ доступные закрытия
+                closes = [candle['close'] for candle in candles]
                 if len(closes) >= 14:
                     rsi_value = calculate_rsi(closes, 14)
                     if rsi_value is not None:
@@ -725,7 +725,11 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         from bots_modules.imports_and_globals import get_timeframe
         
         timeframe = get_timeframe()
-        candles = get_candles(symbol, timeframe)
+        candles_tuple = get_candles(symbol, timeframe, return_rsi=True)
+        if isinstance(candles_tuple, tuple):
+            candles, rsi_cached = candles_tuple
+        else:
+            candles, rsi_cached = candles_tuple, None
         
         if candles:
             logger.debug(f"[CANDLES_DB] ✅ {symbol}: Свечи из БД ({len(candles)} свечей)")
@@ -750,11 +754,10 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                 'rsi_reason': f'Недостаточно свечей: {len(candles) if candles else 0}/14'
             }
         
-        # Рассчитываем RSI - используем ВСЕ загруженные свечи (включая последнюю)
-        # ✅ Используем все свечи, которые загружены с биржи - они актуальные
+        # Рассчитываем RSI - сначала используем значение из файла, если оно есть
+        # Иначе пересчитываем по ВСЕМ доступным закрытиям (включая последнюю незакрытую свечу)
         closes = [candle['close'] for candle in candles]
-        
-        rsi = calculate_rsi(closes, 14)
+        rsi = rsi_cached if rsi_cached is not None else calculate_rsi(closes, 14)
         
         if rsi is None:
             logger.warning(f"[WARNING] Не удалось рассчитать RSI для {symbol}")
