@@ -2221,6 +2221,9 @@ class BotsManager {
         const maxLossEl = document.getElementById('maxLossPercentDup');
         if (maxLossEl && maxLossEl.value) settings.max_loss_percent = parseFloat(maxLossEl.value);
         
+        const takeProfitEl = document.getElementById('takeProfitPercentDup');
+        if (takeProfitEl && takeProfitEl.value) settings.take_profit_percent = parseFloat(takeProfitEl.value);
+        
         const trailingActivationEl = document.getElementById('trailingStopActivationDup');
         if (trailingActivationEl && trailingActivationEl.value) settings.trailing_stop_activation = parseFloat(trailingActivationEl.value);
         
@@ -4699,6 +4702,12 @@ class BotsManager {
             console.log('[BotsManager] 🛡️ Макс. убыток (стоп-лосс):', maxLossPercentEl.value);
         }
         
+        const takeProfitPercentEl = document.getElementById('takeProfitPercent');
+        if (takeProfitPercentEl) {
+            takeProfitPercentEl.value = autoBotConfig.take_profit_percent || 20.0;
+            console.log('[BotsManager] 🎯 Защитный TP:', takeProfitPercentEl.value);
+        }
+        
         const trailingStopActivationEl = document.getElementById('trailingStopActivation');
         if (trailingStopActivationEl) {
             trailingStopActivationEl.value = autoBotConfig.trailing_stop_activation || 300.0;
@@ -5175,6 +5184,7 @@ class BotsManager {
             default_position_size: parseFloat(document.getElementById('defaultPositionSize')?.value) || 10,
             check_interval: parseInt(document.getElementById('checkInterval')?.value) || 180,
             max_loss_percent: parseFloat(document.getElementById('maxLossPercent')?.value) || 15.0,
+            take_profit_percent: parseFloat(document.getElementById('takeProfitPercent')?.value) || 20.0,
             trailing_stop_activation: parseFloat(document.getElementById('trailingStopActivation')?.value) || 300.0,
             trailing_stop_distance: parseFloat(document.getElementById('trailingStopDistance')?.value) || 150.0,
             max_position_hours: parseInt(document.getElementById('maxPositionHours')?.value) || 0,
@@ -5437,6 +5447,7 @@ class BotsManager {
             const config = this.collectConfigurationData();
             const protectiveMechanisms = {
                 max_loss_percent: config.autoBot.max_loss_percent,
+                take_profit_percent: config.autoBot.take_profit_percent,
                 trailing_stop_activation: config.autoBot.trailing_stop_activation,
                 trailing_stop_distance: config.autoBot.trailing_stop_distance,
                 max_position_hours: config.autoBot.max_position_hours,
@@ -5621,6 +5632,7 @@ class BotsManager {
                     default_position_size: 10,
                     check_interval: 180,
                     max_loss_percent: 15.0,
+                    take_profit_percent: 20.0,
                     trailing_stop_activation: 300.0,
                     trailing_stop_distance: 150.0,
                     max_position_hours: 0,
@@ -5693,6 +5705,10 @@ class BotsManager {
             errors.push('Стоп-лосс должен быть от 1% до 50%');
         }
         
+        if (config.autoBot.take_profit_percent <= 0 || config.autoBot.take_profit_percent > 100) {
+            errors.push('Защитный Take Profit должен быть от 1% до 100%');
+        }
+        
         if (config.autoBot.trailing_stop_activation < config.autoBot.break_even_trigger) {
             errors.push('Активация Trailing Stop должна быть больше триггера безубыточности');
         }
@@ -5751,6 +5767,9 @@ class BotsManager {
         
         const maxLossDupEl = document.getElementById('maxLossPercentDup');
         if (maxLossDupEl) maxLossDupEl.value = config.max_loss_percent || 15.0;
+        
+        const takeProfitDupEl = document.getElementById('takeProfitPercentDup');
+        if (takeProfitDupEl) takeProfitDupEl.value = config.take_profit_percent || 20.0;
         
         const trailingActivationDupEl = document.getElementById('trailingStopActivationDup');
         if (trailingActivationDupEl) trailingActivationDupEl.value = config.trailing_stop_activation || 300.0;

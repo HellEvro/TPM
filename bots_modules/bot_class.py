@@ -578,6 +578,51 @@ class NewTradingBot:
                 except Exception as e:
                     logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка обновления программного trailing stop: {e}")
             
+            # 📈 Обновляем Take Profit на бирже (trailing TP - движется выше вместе с ценой)
+            if self.exchange:
+                try:
+                    # Рассчитываем новый TP на основе максимальной прибыли
+                    if self.position_side == 'LONG':
+                        # TP = текущая цена + 20% (следует за ценой вверх)
+                        current_price = self.entry_price * (1 + self.max_profit_achieved / 100)
+                        new_take_profit = current_price * 1.20  # +20% от текущей максимальной прибыли
+                        
+                        # Получаем текущий TP с биржи
+                        current_tp = None
+                        try:
+                            position_info = self.exchange.get_position(self.symbol)
+                            if position_info and position_info.get('success'):
+                                current_tp = position_info.get('data', {}).get('take_profit')
+                        except:
+                            pass
+                        
+                        # Обновляем только если новый TP выше текущего
+                        if not current_tp or new_take_profit > float(current_tp):
+                            tp_result = self.exchange.update_take_profit(self.symbol, new_take_profit, self.position_side)
+                            if tp_result and tp_result.get('success'):
+                                logger.info(f"[NEW_BOT_{self.symbol}] 📈 Trailing TP обновлен вверх: {new_take_profit:.6f} (прибыль: {profit_percent:.2f}%)")
+                    else:  # SHORT
+                        # TP = текущая цена - 20% (следует за ценой вниз)
+                        current_price = self.entry_price * (1 - self.max_profit_achieved / 100)
+                        new_take_profit = current_price * 0.80  # -20% от текущей минимальной прибыли
+                        
+                        # Получаем текущий TP с биржи
+                        current_tp = None
+                        try:
+                            position_info = self.exchange.get_position(self.symbol)
+                            if position_info and position_info.get('success'):
+                                current_tp = position_info.get('data', {}).get('take_profit')
+                        except:
+                            pass
+                        
+                        # Обновляем только если новый TP ниже текущего
+                        if not current_tp or new_take_profit < float(current_tp):
+                            tp_result = self.exchange.update_take_profit(self.symbol, new_take_profit, self.position_side)
+                            if tp_result and tp_result.get('success'):
+                                logger.info(f"[NEW_BOT_{self.symbol}] 📈 Trailing TP обновлен вниз: {new_take_profit:.6f} (прибыль: {profit_percent:.2f}%)")
+                except Exception as e:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось обновить trailing TP: {e}")
+            
         except Exception as e:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка расчета программного trailing stop: {e}")
     
@@ -942,59 +987,37 @@ class NewTradingBot:
                     
                     logger.info(f"[NEW_BOT_{self.symbol}] 🛑 SL рассчитан: {stop_loss_price:.6f} (entry={actual_entry_price:.6f}, стоимость позиции={position_value:.4f} USDT, убыток={max_loss_usdt:.4f} USDT = {sl_percent_from_config}% от входа)")
                 
-                # ШАГ 4: Рассчитываем Take Profit от маржи
+                # ШАГ 4: Рассчитываем Take Profit от стоимости входа (как стоп-лосс!)
+                # ⚠️ ВАЖНО: Основной выход по RSI 6h (65 для LONG, 35 для SHORT), TP только защитный
+                # TP рассчитывается как стоп-лосс: % от стоимости входа позиции (из конфига)
                 take_profit_price = None
-                tp_percent_from_config = None
                 
-                # 🤖 Если есть результат бэктеста - используем его значения для TP
-                if backtest_result and backtest_result.get('confidence', 0) > 0.7:
-                    optimal_tp_pct = backtest_result.get('optimal_tp_percent', 100.0)
-                    tp_percent_from_config = optimal_tp_pct
-                    logger.info(f"[NEW_BOT_{self.symbol}] 🤖 Используем TP из бэктеста: {optimal_tp_pct}%")
+                # Получаем процент TP из конфига
+                auto_bot_config = get_auto_bot_config()
+                tp_percent = auto_bot_config.get('take_profit_percent', 20.0)  # По умолчанию 20%
+                
+                # Рассчитываем TP на основе стоимости входа (как стоп-лосс!)
+                # Стоимость позиции = количество × цена входа
+                position_value = abs(actual_qty) * actual_entry_price if actual_qty else self.volume_value
+                
+                # Прибыль в USDT = % от стоимости входа (как указано в конфиге)
+                target_profit_usdt = position_value * (tp_percent / 100)
+                
+                # Рассчитываем прибыль на одну монету
+                if actual_qty and abs(actual_qty) > 0:
+                    profit_per_coin = target_profit_usdt / abs(actual_qty)
                 else:
-                    # 🤖 Пытаемся использовать AI для расчета TP (если бэктест не дал результат)
-                    try:
-                        if AI_RISK_MANAGER_AVAILABLE and DynamicRiskManager:
-                            # Получаем свечи для AI анализа
-                            chart_response = self.exchange.get_chart_data(self.symbol, '6h', limit=50)
-                            candles_for_ai = []
-                            
-                            if chart_response and chart_response.get('success'):
-                                candles_data = chart_response.get('data', {}).get('candles', [])
-                                if candles_data and len(candles_data) >= 20:
-                                    # Конвертируем свечи в формат для AI
-                                    for c in candles_data[-30:]:  # Последние 30 свечей
-                                        candles_for_ai.append({
-                                            'open': float(c.get('open', 0)),
-                                            'high': float(c.get('high', 0)),
-                                            'low': float(c.get('low', 0)),
-                                            'close': float(c.get('close', 0)),
-                                            'volume': float(c.get('volume', 0))
-                                        })
-                                    
-                                    # Используем AI Risk Manager для TP
-                                    risk_manager = DynamicRiskManager()
-                                    ai_tp_result = risk_manager.calculate_dynamic_tp(
-                                        self.symbol, candles_for_ai, side
-                                    )
-                                    
-                                    # Берем AI адаптированный TP процент
-                                    tp_percent_from_config = ai_tp_result['tp_percent']
-                                    logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI адаптировал TP: → {tp_percent_from_config}% ({ai_tp_result['reason']})")
-                    except Exception as ai_error:
-                        logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ AI TP недоступен: {ai_error}, используем базовый расчет")
+                    # Если нет actual_qty, рассчитываем через volume_value
+                    estimated_qty = self.volume_value / actual_entry_price if actual_entry_price > 0 else 0
+                    profit_per_coin = target_profit_usdt / estimated_qty if estimated_qty > 0 else 0
                 
-                # Рассчитываем TP от маржи
-                if tp_percent_from_config:
-                    take_profit_price = self.calculate_dynamic_take_profit(side, actual_entry_price, actual_leverage, actual_qty, tp_percent_from_config)
-                else:
-                    # Используем значение из конфига
-                    auto_bot_config = get_auto_bot_config()
-                    default_tp_percent = auto_bot_config.get('take_profit_percent', 100.0)
-                    take_profit_price = self.calculate_dynamic_take_profit(side, actual_entry_price, actual_leverage, actual_qty, default_tp_percent)
-                
-                if take_profit_price:
-                    logger.info(f"[NEW_BOT_{self.symbol}] 🎯 TP рассчитан от маржи: {actual_entry_price:.6f} → {take_profit_price:.6f}")
+                # Рассчитываем цену Take Profit
+                if side == 'LONG':
+                    take_profit_price = actual_entry_price + profit_per_coin
+                    logger.info(f"[NEW_BOT_{self.symbol}] 🎯 Защитный TP установлен: {actual_entry_price:.6f} → {take_profit_price:.6f} (стоимость позиции={position_value:.4f} USDT, прибыль={target_profit_usdt:.4f} USDT = {tp_percent}% от входа, основной выход по RSI 6h=65)")
+                else:  # SHORT
+                    take_profit_price = actual_entry_price - profit_per_coin
+                    logger.info(f"[NEW_BOT_{self.symbol}] 🎯 Защитный TP установлен: {actual_entry_price:.6f} → {take_profit_price:.6f} (стоимость позиции={position_value:.4f} USDT, прибыль={target_profit_usdt:.4f} USDT = {tp_percent}% от входа, основной выход по RSI 6h=35)")
                 
                 # ШАГ 5: Устанавливаем Stop Loss и Take Profit на бирже
                 if stop_loss_price and stop_loss_price > 0:

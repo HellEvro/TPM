@@ -582,6 +582,11 @@
         </div>
 
                             <div class="setting-item">
+                                <label data-translate="take_profit_label">🎯 Защитный Take Profit (% прибыли):</label>
+                                <input type="number" id="takeProfitPercentDup" value="20.0" min="1" max="100" step="0.5" />
+        </div>
+
+                            <div class="setting-item">
                                 <label data-translate="trailing_stop_activation_label">🚀 Trailing Stop активация (%):</label>
                                 <input type="number" id="trailingStopActivationDup" value="300.0" min="50" max="1000" step="10" />
             </div>
@@ -1606,7 +1611,16 @@
                                 <span class="label-text" data-translate="stop_loss_percent_label">Стоп-лосс (% убытка):</span>
                             </label>
                             <input type="number" id="maxLossPercent" value="15.0" min="1" max="50" step="0.5" class="config-input" />
-                            <small class="config-help" data-translate="max_loss_description">Максимальный убыток от цены входа</small>
+                            <small class="config-help" data-translate="max_loss_description">Максимальный убыток от стоимости входа позиции (например: вход 5 USDT, стоп 15% = убыток 0.75 USDT)</small>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">🎯</span>
+                                <span class="label-text" data-translate="take_profit_percent_label">Защитный Take Profit (% прибыли):</span>
+                            </label>
+                            <input type="number" id="takeProfitPercent" value="20.0" min="1" max="100" step="0.5" class="config-input" />
+                            <small class="config-help" data-translate="take_profit_description">Защитный TP рассчитывается как стоп-лосс: % от стоимости входа. Основной выход по RSI 6h (65 для LONG, 35 для SHORT)</small>
                         </div>
                         
                         <div class="config-item">
