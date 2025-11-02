@@ -410,9 +410,9 @@ class BybitExchange(BaseExchange):
                     'tickSize': instrument['priceFilter']['tickSize'],
                     'status': instrument.get('status', 'Unknown')  # ✅ Добавляем статус инструмента
                 }
-                # ✅ Проверяем наличие minOrderValue (минимальный размер ордера в USDT)
-                if 'lotSizeFilter' in instrument and 'minOrderValue' in instrument['lotSizeFilter']:
-                    result['minOrderValue'] = instrument['lotSizeFilter']['minOrderValue']
+                # ✅ Проверяем наличие minNotionalValue (минимальная сумма ордера в USDT!)
+                if 'lotSizeFilter' in instrument and 'minNotionalValue' in instrument['lotSizeFilter']:
+                    result['minNotionalValue'] = float(instrument['lotSizeFilter']['minNotionalValue'])
                 return result
             else:
                 print(f"[BYBIT] ❌ Не удалось получить информацию об инструменте {symbol}")
@@ -1304,30 +1304,45 @@ class BybitExchange(BaseExchange):
                 }
             
             # ⚡ Для LINEAR фьючерсов используем marketUnit='quoteCoin' для указания суммы в USDT
-            # ✅ БЕЗ ПЕРЕСЧЕТОВ! Передаем ТОЧНУЮ сумму из конфига в USDT - Bybit сам рассчитает монеты!
-            qty_usdt = quantity  # ✅ Используем ТОЧНО значение из конфига (5, 6, 10.31 и т.д.)
+            # ✅ marketUnit='quoteCoin' работает ТОЛЬКО для MARKET ордеров - Bybit сам рассчитает монеты!
+            
+            # ✅ Получаем информацию об инструменте для проверки minNotionalValue
+            min_notional_value = None
+            try:
+                instruments_info = self.get_instruments_info(f"{symbol}USDT")
+                if instruments_info and 'minNotionalValue' in instruments_info:
+                    min_notional_value = float(instruments_info['minNotionalValue'])
+                    print(f"[BYBIT_BOT] 📊 Минимальная сумма ордера для {symbol}: {min_notional_value} USDT")
+            except Exception as e:
+                print(f"[BYBIT_BOT] ⚠️ Не удалось получить minNotionalValue: {e}")
+            
+            qty_usdt = quantity  # ✅ Используем ТОЧНО значение из конфига
             min_qty_usdt = 5.0  # ✅ Минимум 5 USDT всегда!
             
-            # ✅ Проверяем только минимальный лимит
+            # ✅ Проверяем минимальный лимит: максимальное значение из (5 USDT, minNotionalValue монеты)
+            if min_notional_value and min_notional_value > min_qty_usdt:
+                min_qty_usdt = min_notional_value  # ✅ Используем больший из минимумов!
+                print(f"[BYBIT_BOT] ⚡ Увеличен минимум до {min_qty_usdt} USDT (minNotionalValue для {symbol})")
+            
             if qty_usdt < min_qty_usdt:
                 print(f"[BYBIT_BOT] ⚠️ Запрошенная сумма {qty_usdt:.2f} USDT меньше минимума {min_qty_usdt} USDT, устанавливаем: {min_qty_usdt} USDT")
                 qty_usdt = min_qty_usdt
             
-            print(f"[BYBIT_BOT] 💰 {symbol}: Запрашиваем ТОЧНО {qty_usdt} USDT (marketUnit='quoteCoin' - Bybit сам рассчитает количество монет)")
+            print(f"[BYBIT_BOT] 💰 {symbol}: Запрашиваем {qty_usdt} USDT (marketUnit='quoteCoin' - Bybit сам рассчитает монеты)")
             
             # ДЛЯ LINEAR - передаем ТОЧНУЮ сумму в USDT с marketUnit='quoteCoin'
-            # ✅ БЕЗ ОКРУГЛЕНИЙ! Передаем точное значение из конфига
+            # ✅ marketUnit='quoteCoin' работает ТОЛЬКО для MARKET ордеров!
             order_params = {
                 "category": "linear",
                 "symbol": f"{symbol}USDT",
                 "side": bybit_side,
                 "orderType": order_type.title(),
-                "qty": str(qty_usdt),  # ✅ ТОЧНАЯ сумма в USDT из конфига (5, 6, 10.31 и т.д.)
-                "marketUnit": "quoteCoin",  # ⚡ Указываем что qty в USDT - Bybit сам рассчитает монеты!
+                "qty": str(qty_usdt),  # ✅ ТОЧНАЯ сумма в USDT из конфига
+                "marketUnit": "quoteCoin",  # ⚡ ТОЛЬКО для MARKET - Bybit сам рассчитает и округлит монеты!
                 "positionIdx": position_idx
             }
             
-            print(f"[BYBIT_BOT] 🎯 Сумма ордера: {qty_usdt} USDT (marketUnit='quoteCoin' - точное значение из конфига)")
+            print(f"[BYBIT_BOT] 🎯 Сумма ордера: {qty_usdt} USDT (marketUnit='quoteCoin', orderType='{order_type.title()}')")
             
             # ⚠️ НЕ добавляем leverage в order_params - Bybit не поддерживает это при размещении ордера!
             # Плечо должно быть установлено ВРУЧНУЮ в настройках аккаунта на бирже
