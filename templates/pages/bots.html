@@ -71,8 +71,8 @@
             <!-- Левая панель - список монет с RSI 6H -->
         <div class="coins-panel">
             <div class="panel-header">
-                    <div class="title-row">
-                        <h3 data-translate="coins_rsi_6h">📊 Монеты<span id="currentTimeframe" class="timeframe-display"></span></h3>
+                <div class="title-row">
+                        <h3 data-translate="coins_rsi_6h">📊 Монеты (RSI 6H)</h3>
                         <span class="status-dot" id="rsiStatusDot">●</span>
                     </div>
                     <div class="service-status" id="botsServiceStatus">
@@ -185,12 +185,12 @@
                                 <span class="value" id="selectedCoinPrice">$0</span>
                         </div>
                         <div class="data-item">
-                                <span class="label" data-translate="coin_info_rsi">📊 RSI<span id="selectedCoinRSITimeframe"></span>:</span>
+                                <span class="label" data-translate="coin_info_rsi">📊 RSI 6H:</span>
                                 <span class="value rsi-indicator" id="selectedCoinRSI">-</span>
                                 <span class="status-icon" id="rsiIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
                         <div class="data-item">
-                                <span class="label" data-translate="coin_info_trend">📈 Тренд<span id="selectedCoinTrendTimeframe"></span>:</span>
+                                <span class="label" data-translate="coin_info_trend">📈 Тренд 6H:</span>
                                 <span class="value trend-indicator" id="selectedCoinTrend">-</span>
                                 <span class="status-icon" id="trendIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
@@ -915,15 +915,6 @@
                         
                         <div class="config-item">
                             <label class="config-label">
-                                <span class="label-icon">📈</span>
-                                <span class="label-text" data-translate="max_candles_limit_label">Лимит свечей для загрузки:</span>
-                            </label>
-                            <input type="number" id="maxCandlesLimit" value="2000" min="100" max="50000" step="100" class="config-input" />
-                            <div class="config-hint" data-translate="max_candles_limit_hint">Максимальное количество свечей для загрузки с биржи (по умолчанию: 2000)</div>
-                        </div>
-                        
-                        <div class="config-item">
-                            <label class="config-label">
                                 <span class="label-icon">🎯</span>
                                 <span class="label-text" data-translate="action_scope_input">Область действия:</span>
                             </label>
@@ -939,25 +930,6 @@
                                 </button>
                             </div>
                             <input type="hidden" id="autoBotScope" value="all">
-                        </div>
-                        
-                        <div class="config-item">
-                            <label class="config-label">
-                                <span class="label-icon">⏱️</span>
-                                <span class="label-text" data-translate="timeframe_label">Таймфрейм анализа:</span>
-                            </label>
-                            <select id="timeframe" class="config-input">
-                                <option value="1m">1 минута</option>
-                                <option value="5m">5 минут</option>
-                                <option value="15m">15 минут</option>
-                                <option value="30m">30 минут</option>
-                                <option value="1h">1 час</option>
-                                <option value="4h">4 часа</option>
-                                <option value="6h">6 часов</option>
-                                <option value="1d">1 день</option>
-                                <option value="1w" selected>1 неделя</option>
-                            </select>
-                            <small class="config-help" data-translate="timeframe_help">Таймфрейм для расчета RSI, EMA и анализа тренда. Влияет на LSTM и другие AI модули</small>
                         </div>
                     </div>
                     
@@ -2672,20 +2644,7 @@ function getStatusDescription(statusType, statusValue) {
 function enableBotForCurrentCoin() {
     if (window.botsManager && window.botsManager.selectedCoin) {
         const coin = window.botsManager.selectedCoin;
-        const isManualPosition = coin.manual_position || false;
-        console.log('[EnableBot] Включение бота для монеты:', coin.symbol, 'isManualPosition:', isManualPosition);
-        
-        // Определяем параметры в зависимости от типа позиции
-        const requestData = {
-            symbol: coin.symbol,
-            signal: coin.signal || 'ENTER_LONG'
-        };
-        
-        // Для ручных позиций добавляем флаг синхронизации
-        if (isManualPosition) {
-            requestData.sync_with_existing_position = true;
-            console.log('[EnableBot] 🔗 Синхронизация с существующей позицией');
-        }
+        console.log('[EnableBot] Включение бота для монеты:', coin.symbol);
         
         // Отправляем запрос на создание бота
         fetch('/api/bots/create', {
@@ -2693,7 +2652,10 @@ function enableBotForCurrentCoin() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(requestData)
+            body: JSON.stringify({
+                symbol: coin.symbol,
+                signal: coin.signal || 'ENTER_LONG'
+            })
         })
         .then(response => response.json())
         .then(data => {
@@ -2701,15 +2663,8 @@ function enableBotForCurrentCoin() {
                 console.log('[EnableBot] Бот успешно создан:', data);
                 // Обновляем интерфейс
                 window.botsManager.updateCoinInfo(coin);
-                window.botsManager.loadActiveBotsData();
                 // Скрываем кнопку
                 document.getElementById('enableBotBtn').style.display = 'none';
-                // Показываем уведомление
-                if (isManualPosition) {
-                    alert('✅ Бот синхронизирован с позицией на бирже');
-                } else {
-                    alert('✅ Бот успешно создан');
-                }
             } else {
                 console.error('[EnableBot] Ошибка создания бота:', data.error);
                 alert('Ошибка создания бота: ' + data.error);

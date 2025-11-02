@@ -141,77 +141,69 @@ def check_and_stop_existing_bots_processes():
                     except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                         continue
                 
-                # Также проверяем порт 5001 (ОЧЕНЬ ВАЖНО: только порт 5001, НЕ 5000!)
+                # Также проверяем порт 5001
                 port_process = None
                 for conn in psutil.net_connections(kind='inet'):
                     if conn.laddr.port == 5001 and conn.status == 'LISTEN':
                         port_process = conn.pid
-                        # ✅ ДВОЙНАЯ ПРОВЕРКА: проверим что это точно bots.py
-                        try:
-                            proc_check = psutil.Process(port_process)
-                            cmdline_check = proc_check.cmdline()
-                            # ✅ ТОЛЬКО если это bots.py
-                            if cmdline_check and any('bots.py' in arg for arg in cmdline_check):
-                                if port_process != current_pid and port_process not in python_processes:
-                                    python_processes.append(port_process)
-                                    print(f"🎯 Найден процесс bots.py на порту 5001: PID {port_process}")
-                            else:
-                                print(f"⚠️  На порту 5001 не bots.py (пропускаем): PID {port_process}")
-                        except (psutil.NoSuchProcess, psutil.AccessDenied):
-                            pass
+                        if port_process != current_pid and port_process not in python_processes:
+                            python_processes.append(port_process)
+                            print(f"🎯 Найден процесс на порту 5001: PID {port_process}")
                         break
                 
-                # ✅ ИСПРАВЛЕНО: Убиваем ВСЕ найденные процессы, а не только первый!
                 if python_processes:
-                    print(f"🎯 Найдено {len(python_processes)} процессов для остановки")
-                    for pid in python_processes:
-                        try:
-                            proc = psutil.Process(pid)
-                            proc_info = proc.as_dict(attrs=['pid', 'name', 'cmdline', 'create_time'])
-                            
-                            print(f"🎯 Останавливаем процесс:")
-                            print(f"   PID: {proc_info['pid']}")
-                            print(f"   Команда: {' '.join(proc_info['cmdline'][:3]) if proc_info['cmdline'] else 'N/A'}...")
-                            print()
-                            
-                            print(f"🔧 Останавливаем процесс {pid}...")
-                            proc.terminate()
-                            
-                            try:
-                                proc.wait(timeout=5)
-                                print(f"✅ Процесс {pid} остановлен")
-                            except psutil.TimeoutExpired:
-                                proc.kill()
-                                proc.wait()
-                                print(f"🔴 Процесс {pid} принудительно остановлен")
-                        except psutil.NoSuchProcess:
-                            print(f"⚠️  Процесс {pid} уже завершен")
-                        except Exception as e:
-                            print(f"❌ Ошибка остановки процесса {pid}: {e}")
-                    
-                    # Проверяем что все процессы остановлены
-                    print("\n⏳ Ожидание освобождения порта 5001...")
-                    for i in range(10):
-                        time.sleep(1)
-                        try:
-                            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                            sock.settimeout(1)
-                            result = sock.connect_ex(('127.0.0.1', 5001))
-                            sock.close()
-                            
-                            if result != 0:
-                                print("✅ Порт 5001 освобожден")
-                                break
-                        except:
-                            pass
-                        
-                        if i == 9:
-                            print("❌ Порт 5001 все еще занят!")
-                            print("⚠️  Возможно нужно вручную остановить процесс")
-                            print("=" * 80)
-                            return False
-                
+                    process_to_stop = python_processes[0]  # Останавливаем первый найденный
                 else:
+                    process_to_stop = None
+                
+                if process_to_stop and process_to_stop != current_pid:
+                    try:
+                        proc = psutil.Process(process_to_stop)
+                        proc_info = proc.as_dict(attrs=['pid', 'name', 'cmdline', 'create_time'])
+                        
+                        print(f"🎯 Найден процесс на порту 5001:")
+                        print(f"   PID: {proc_info['pid']}")
+                        print(f"   Команда: {' '.join(proc_info['cmdline'][:3]) if proc_info['cmdline'] else 'N/A'}...")
+                        print()
+                        
+                        print(f"🔧 Останавливаем процесс {process_to_stop}...")
+                        proc.terminate()
+                        
+                        try:
+                            proc.wait(timeout=5)
+                            print(f"✅ Процесс {process_to_stop} остановлен")
+                        except psutil.TimeoutExpired:
+                            proc.kill()
+                            proc.wait()
+                            print(f"🔴 Процесс {process_to_stop} принудительно остановлен")
+                        
+                        print("\n⏳ Ожидание освобождения порта 5001...")
+                        for i in range(10):
+                            time.sleep(1)
+                            try:
+                                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                sock.settimeout(1)
+                                result = sock.connect_ex(('127.0.0.1', 5001))
+                                sock.close()
+                                
+                                if result != 0:
+                                    print("✅ Порт 5001 освобожден")
+                                    break
+                            except:
+                                pass
+                            
+                            if i == 9:
+                                print("❌ Порт 5001 все еще занят!")
+                                print("⚠️  Возможно нужно вручную остановить процесс")
+                                print("=" * 80)
+                                return False
+                        
+                    except Exception as e:
+                        print(f"❌ Ошибка остановки процесса {process_to_stop}: {e}")
+                        print("=" * 80)
+                        return False
+                
+                elif not process_to_stop:
                     print("⚠️  Не удалось найти процесс на порту 5001")
                     print("=" * 80)
                     return False
@@ -577,17 +569,6 @@ def get_auto_bot_config():
         logger.error(f"[CONFIG] ❌ Ошибка получения конфигурации: {e}")
         return DEFAULT_AUTO_BOT_CONFIG.copy()
 
-def get_timeframe():
-    """Получает текущий таймфрейм из конфигурации Auto Bot"""
-    try:
-        config = get_auto_bot_config()
-        timeframe = config.get('timeframe', '6h')
-        logger.debug(f"[TIMEFRAME] Текущий таймфрейм: {timeframe}")
-        return timeframe
-    except Exception as e:
-        logger.error(f"[TIMEFRAME] ❌ Ошибка получения таймфрейма: {e}")
-        return '6h'
-
 # ВАЖНО: load_auto_bot_config() теперь вызывается в if __name__ == '__main__'
 # чтобы check_and_stop_existing_bots_processes() мог вывести свои сообщения первым
 
@@ -781,9 +762,12 @@ def restore_lost_bots():
         logger.error(f"[REGISTRY] ❌ Ошибка восстановления ботов: {e}")
         return []
 
-# ✅ ИСПРАВЛЕНО: Зрелые монеты загружаются в init_bot_service() ПОСЛЕ загрузки конфигурации
-# При импорте модуля НЕ загружаем, т.к. get_timeframe() еще не верен
-# load_mature_coins_storage() - будет вызвана в init_bot_service() с правильным таймфреймом
+# ✅ ИСПРАВЛЕНИЕ: Загружаем зрелые монеты при импорте модуля
+try:
+    load_mature_coins_storage()
+    logger.info(f"[IMPORTS] ✅ Загружено {len(mature_coins_storage)} зрелых монет при импорте")
+except Exception as e:
+    logger.error(f"[IMPORTS] ❌ Ошибка загрузки зрелых монет: {e}")
 
 
 def open_position_for_bot(symbol, side, volume_value, current_price, take_profit_price=None):

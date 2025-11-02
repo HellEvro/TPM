@@ -221,18 +221,10 @@ def main():
     print("STARTING TRAINING")
     print("=" * 60)
     
-    # ✅ Получаем динамический путь с учётом таймфрейма
-    from bot_engine.bot_config import AIConfig
-    model_path_temp = AIConfig.get_model_path('lstm_predictor_new', 'keras')
-    scaler_path_temp = AIConfig.get_model_path('lstm_scaler_new', 'pkl')
-    
-    # Создаём директорию если её нет
-    os.makedirs(os.path.dirname(model_path_temp), exist_ok=True)
-    
     # Создаем новый предиктор БЕЗ загрузки существующей модели
     predictor = LSTMPredictor(
-        model_path=model_path_temp,
-        scaler_path=scaler_path_temp
+        model_path="data/ai/models/lstm_predictor_new.keras",  # ✅ Временный путь в Keras 3 формате
+        scaler_path="data/ai/models/lstm_scaler_new.pkl"
     )
     
     # Обучаем модель (она сама нормализует данные внутри)
@@ -249,16 +241,13 @@ def main():
     # Переименовываем модель в финальную версию
     if result.get('success'):
         import shutil
-        final_model = AIConfig.get_model_path('lstm_predictor', 'keras')
-        final_scaler = AIConfig.get_model_path('lstm_scaler', 'pkl')
+        final_model = "data/ai/models/lstm_predictor.keras"  # ✅ Keras 3 формат
+        final_scaler = "data/ai/models/lstm_scaler.pkl"
         
-        # Создаём директорию если её нет
-        os.makedirs(os.path.dirname(final_model), exist_ok=True)
-        
-        if os.path.exists(model_path_temp):
-            shutil.move(model_path_temp, final_model)
-        if os.path.exists(scaler_path_temp):
-            shutil.move(scaler_path_temp, final_scaler)
+        if os.path.exists("data/ai/models/lstm_predictor_new.keras"):
+            shutil.move("data/ai/models/lstm_predictor_new.keras", final_model)
+        if os.path.exists("data/ai/models/lstm_scaler_new.pkl"):
+            shutil.move("data/ai/models/lstm_scaler_new.pkl", final_scaler)
     
     # Выводим результаты
     print("\n" + "=" * 60)
@@ -269,7 +258,7 @@ def main():
         print(f"Final loss (val): {result['final_val_loss']:.6f}")
         print(f"Epochs trained: {result['epochs_trained']}")
         print(f"Training samples: {result['training_samples']}")
-        print(f"\n[SAVED] Model saved to: {final_model}")
+        print(f"\n[SAVED] Model saved to: data/ai/models/lstm_predictor.keras")
         return 0
     else:
         print("[ERROR] TRAINING FAILED!")

@@ -84,20 +84,13 @@ except ImportError as e:
         from bots_modules.filters import get_effective_signal as real_get_effective_signal
         return real_get_effective_signal(coin)
     def check_auto_bot_filters(symbol):
-        from bots_modules.filters import check_auto_bot_filters as real_check
-        return real_check(symbol)
+        return {'allowed': True}
     def process_auto_bot_signals(exchange_obj=None):
-        from bots_modules.filters import process_auto_bot_signals as real_proc
-        return real_proc(exchange_obj)
+        pass
     def test_exit_scam_filter(symbol):
-        from bots_modules.filters import test_exit_scam_filter as real_test_exit
-        return real_test_exit(symbol)
+        pass
     def test_rsi_time_filter(symbol):
-        from bots_modules.filters import test_rsi_time_filter as real_test_time
-        return real_test_time(symbol)
-    def process_trading_signals_for_all_bots():
-        from bots_modules.filters import process_trading_signals_for_all_bots as real_all
-        return real_all()
+        pass
 
 # Функция для очистки данных для JSON
 def clean_data_for_json(data):
@@ -385,7 +378,7 @@ def refresh_manual_positions():
                         if 'bots' in saved_data:
                             saved_bot_symbols = set(saved_data['bots'].keys())
             except Exception as e:
-                logger.debug(f"[MANUAL_POSITIONS] ⚠️ Не удалось загрузить сохраненных ботов (файл не существует или пустой): {e}")  # ✅ DEBUG - не критично
+                logger.warning(f"[MANUAL_POSITIONS] ⚠️ Не удалось загрузить сохраненных ботов: {e}")
             
             # Объединяем активных и сохраненных ботов
             system_bot_symbols = active_bot_symbols.union(saved_bot_symbols)
@@ -417,7 +410,7 @@ def refresh_manual_positions():
 
 @bots_app.route('/api/bots/coins-with-rsi', methods=['GET'])
 def get_coins_with_rsi():
-    """Получить все монеты с RSI данными (использует текущий таймфрейм из конфига)"""
+    """Получить все монеты с RSI 6H данными"""
     try:
         # Проверяем параметр refresh_symbol для обновления конкретной монеты
         refresh_symbol = request.args.get('refresh_symbol')
@@ -489,43 +482,18 @@ def get_coins_with_rsi():
                     cleaned_coin['stoch_rsi_k'] = confirmations.get('stoch_rsi_k')
                     cleaned_coin['stoch_rsi_d'] = confirmations.get('stoch_rsi_d')
             
-            # ✅ ИСПРАВЛЕНИЕ: Добавляем количество свечей и зрелость из данных зрелых монет
+            # ✅ ИСПРАВЛЕНИЕ: Добавляем количество свечей из данных зрелых монет
             try:
-                from bots_modules.imports_and_globals import mature_coins_storage, is_coin_mature_stored
-                # ✅ КРИТИЧНО: Проверяем зрелость из хранилища и добавляем в cleaned_coin
-                is_mature = is_coin_mature_stored(symbol)
-                cleaned_coin['is_mature'] = is_mature
-                
+                from bots_modules.imports_and_globals import mature_coins_storage
                 if symbol in mature_coins_storage:
                     maturity_data = mature_coins_storage[symbol].get('maturity_data', {})
                     details = maturity_data.get('details', {})
-                    cleaned_coin['candles_count'] = details.get('candles_count', coin_data.get('candles_count'))
+                    cleaned_coin['candles_count'] = details.get('candles_count')
                 else:
-                    # Если нет в хранилище, используем candles_count из coin_data
-                    cleaned_coin['candles_count'] = coin_data.get('candles_count')
+                    cleaned_coin['candles_count'] = None
             except Exception as e:
-                logger.debug(f"[API] Ошибка получения maturity данных для {symbol}: {e}")
-                # Fallback: используем данные из coin_data если есть
-                cleaned_coin['is_mature'] = coin_data.get('is_mature', False)
-                cleaned_coin['candles_count'] = coin_data.get('candles_count')
-            
-            # ✅ ИСПРАВЛЕНИЕ: Нормализуем RSI и Trend ключи для фронтенда
-            # Добавляем универсальные ключи 'rsi' и 'trend' со значением из динамических ключей
-            from bots_modules.filters import get_rsi_key, get_trend_key
-            rsi_key = get_rsi_key()
-            trend_key = get_trend_key()
-            
-            # Нормализация RSI
-            if rsi_key in cleaned_coin and cleaned_coin[rsi_key] is not None:
-                cleaned_coin['rsi'] = cleaned_coin[rsi_key]
-            elif 'rsi' not in cleaned_coin:
-                cleaned_coin['rsi'] = None
-            
-            # Нормализация Trend
-            if trend_key in cleaned_coin and cleaned_coin[trend_key] is not None:
-                cleaned_coin['trend'] = cleaned_coin[trend_key]
-            elif 'trend' not in cleaned_coin:
-                cleaned_coin['trend'] = 'NEUTRAL'
+                logger.debug(f"[API] Ошибка получения candles_count для {symbol}: {e}")
+                cleaned_coin['candles_count'] = None
             
             cleaned_coins[symbol] = cleaned_coin
         
@@ -549,31 +517,17 @@ def get_coins_with_rsi():
                 # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
                 active_bot_symbols = set(bots_data['bots'].keys())
                 
-                # Также загружаем сохраненных ботов из файла (устойчиво к пустому/битому JSON)
+                # Также загружаем сохраненных ботов из файла
                 saved_bot_symbols = set()
-                bots_state_invalid = False
-                bots_state_empty = False
                 try:
                     bots_state_file = 'data/bots_state.json'
                     if os.path.exists(bots_state_file):
-                        try:
-                            # Пустой файл — просто пропускаем
-                            if os.path.getsize(bots_state_file) == 0:
-                                logger.debug("[MANUAL_POSITIONS] Пустой bots_state.json — пропускаем")
-                                bots_state_empty = True
-                            else:
-                                with open(bots_state_file, 'r', encoding='utf-8') as f:
-                                    saved_data = json.load(f)
-                                bots_block = saved_data.get('bots', {}) if isinstance(saved_data, dict) else {}
-                                if isinstance(bots_block, dict):
-                                    saved_bot_symbols = set(bots_block.keys())
-                        except json.JSONDecodeError as je:
-                            logger.debug(f"[MANUAL_POSITIONS] Некорректный JSON в bots_state.json — пропускаем: {je}")
-                            bots_state_invalid = True
-                        except Exception as re:
-                            logger.debug(f"[MANUAL_POSITIONS] Ошибка чтения bots_state.json — пропускаем: {re}")
+                        with open(bots_state_file, 'r', encoding='utf-8') as f:
+                            saved_data = json.load(f)
+                            if 'bots' in saved_data:
+                                saved_bot_symbols = set(saved_data['bots'].keys())
                 except Exception as e:
-                    logger.debug(f"[MANUAL_POSITIONS] Ошибка доступа к bots_state.json: {e}")
+                    logger.warning(f"[MANUAL_POSITIONS] ⚠️ Не удалось загрузить сохраненных ботов: {e}")
                 
                 # Объединяем активных и сохраненных ботов
                 system_bot_symbols = active_bot_symbols.union(saved_bot_symbols)
@@ -592,17 +546,6 @@ def get_coins_with_rsi():
                 
                 # ✅ Детальное логирование для отладки
                 logger.debug(f"[MANUAL_POSITIONS] Найдено {len(manual_positions)} ручных позиций: {manual_positions}")
-
-                # Если файл состояния пустой/битый и есть ручные позиции — перезаписываем корректной структурой
-                try:
-                    bots_state_file = 'data/bots_state.json'
-                    if (bots_state_invalid or bots_state_empty) and manual_positions:
-                        os.makedirs(os.path.dirname(bots_state_file), exist_ok=True)
-                        with open(bots_state_file, 'w', encoding='utf-8') as f:
-                            json.dump({'bots': {}}, f, ensure_ascii=False, indent=2)
-                        logger.info("[MANUAL_POSITIONS] Восстановлен bots_state.json (перезаписан корректной структурой)")
-                except Exception as e:
-                    logger.debug(f"[MANUAL_POSITIONS] Не удалось восстановить bots_state.json: {e}")
         except Exception as e:
             logger.error(f"[ERROR] Ошибка получения ручных позиций: {str(e)}")
         
@@ -872,50 +815,16 @@ def create_bot_endpoint():
             thread.daemon = True
             thread.start()
         else:
-            # ✅ Для существующей позиции - обновляем бота немедленно с данными позиции
-            logger.info(f"[BOT_CREATE] 🔄 {symbol}: Обнаружена существующая позиция на бирже")
+            # ✅ Для существующей позиции - просто запускаем синхронизацию
+            logger.info(f"[BOT_CREATE] 🔄 {symbol}: Запускаем синхронизацию существующей позиции...")
             
             def sync_existing_position():
                 try:
-                    # 1. Немедленная синхронизация бота с позицией на бирже
                     from bots_modules.sync_and_cache import sync_bots_with_exchange
                     sync_bots_with_exchange()
-                    
-                    # 2. Устанавливаем корректный статус бота на основе позиции
-                    with bots_data_lock:
-                        if symbol in bots_data['bots']:
-                            bot_data = bots_data['bots'][symbol]
-                            # Проверяем данные позиции из биржи
-                            current_exchange = get_exchange()
-                            if current_exchange:
-                                positions_response = current_exchange.get_positions()
-                                if isinstance(positions_response, tuple):
-                                    positions_list = positions_response[0] if positions_response else []
-                                else:
-                                    positions_list = positions_response if positions_response else []
-                                
-                                # Ищем позицию для этой монеты
-                                for pos in positions_list:
-                                    pos_symbol = pos.get('symbol', '').replace('USDT', '')
-                                    if pos_symbol == symbol and abs(float(pos.get('size', 0))) > 0:
-                                        # Обновляем статус бота
-                                        bot_data['entry_price'] = float(pos.get('avgPrice', 0))
-                                        bot_data['position_side'] = 'LONG' if pos.get('side') == 'Buy' else 'SHORT'
-                                        bot_data['unrealized_pnl'] = float(pos.get('unrealisedPnl', 0))
-                                        bot_data['status'] = BOT_STATUS['IN_POSITION_LONG'] if bot_data['position_side'] == 'LONG' else BOT_STATUS['IN_POSITION_SHORT']
-                                        
-                                        logger.info(f"[BOT_CREATE_ASYNC] ✅ Бот {symbol} синхронизирован с позицией: {bot_data['position_side']} @ {bot_data['entry_price']}")
-                                        break
-                    
-                    # Сохраняем состояние
-                    from bots_modules.sync_and_cache import save_bots_state
-                    save_bots_state()
-                    
                     logger.info(f"[BOT_CREATE_ASYNC] ✅ Синхронизация позиции {symbol} завершена")
                 except Exception as e:
                     logger.error(f"[BOT_CREATE_ASYNC] ❌ Ошибка синхронизации: {e}")
-                    import traceback
-                    traceback.print_exc()
             
             thread = threading.Thread(target=sync_existing_position)
             thread.daemon = True
@@ -1670,27 +1579,19 @@ def cleanup_inactive_manual():
 
 @bots_app.route('/api/bots/mature-coins-list', methods=['GET'])
 def get_mature_coins_list():
-    """Получить список всех зрелых монет (использует динамический таймфрейм)"""
+    """Получить список всех зрелых монет"""
     try:
-        # ✅ ИСПРАВЛЕНИЕ: Используем динамический путь для текущего таймфрейма
-        from bots_modules.imports_and_globals import get_timeframe
-        from bots_modules.maturity import get_mature_coins_file
+        # ✅ ИСПРАВЛЕНИЕ: Читаем данные напрямую из файла, а не из памяти
         import json
         import os
         
-        # Получаем файл для текущего таймфрейма
-        mature_coins_file = get_mature_coins_file()
-        logger.debug(f"[API_MATURE_LIST] Читаем файл: {mature_coins_file}")
-        
+        mature_coins_file = 'data/mature_coins.json'
         if os.path.exists(mature_coins_file):
             with open(mature_coins_file, 'r', encoding='utf-8') as f:
                 mature_coins_data = json.load(f)
             mature_coins_list = list(mature_coins_data.keys())
         else:
             mature_coins_list = []
-            logger.debug(f"[API_MATURE_LIST] Файл не существует: {mature_coins_file}")
-        
-        logger.info(f"[API_MATURE_LIST] ✅ Найдено {len(mature_coins_list)} зрелых монет")
         
         return jsonify({
             'success': True,
@@ -1977,16 +1878,6 @@ def restart_service_endpoint():
         logger.info("[HOT_RELOAD] 🔄 Сброшен флаг инициализации")
         
         # Перезагружаем конфигурацию (БЕЗ принудительного выключения автобота)
-        # 1. Перезагружаем модуль bot_config для применения изменений
-        try:
-            import importlib
-            import bot_engine.bot_config
-            importlib.reload(bot_engine.bot_config)
-            logger.info("[HOT_RELOAD] 🔄 Модуль bot_config перезагружен")
-        except Exception as reload_error:
-            logger.warning(f"[HOT_RELOAD] ⚠️ Не удалось перезагрузить bot_config: {reload_error}")
-        
-        # 2. Загружаем конфигурацию
         load_auto_bot_config(force_disable=False)
         load_system_config()
         logger.info("[HOT_RELOAD] 🔄 Перезагружена конфигурация")
@@ -2164,21 +2055,14 @@ def auto_bot_config():
                 logger.error("[CONFIG_API] ❌ Пустые данные!")
                 return jsonify({'success': False, 'error': 'No data provided'}), 400
             
-            # ✅ Сохраняем старую конфигурацию для сравнения (ПЕРВЫМ ДЕЛОМ!)
-            with bots_data_lock:
-                old_config = bots_data['auto_bot_config'].copy()
-            
             # Проверяем изменение критериев зрелости
             maturity_params_changed = False
             maturity_keys = ['min_candles_for_maturity', 'min_rsi_low', 'max_rsi_high']
-            
-            # Проверяем изменение таймфрейма
-            timeframe_changed = False
-            if 'timeframe' in data and data['timeframe'] != old_config.get('timeframe'):
-                timeframe_changed = True
-                logger.warning(f"[TIMEFRAME] ⚠️ Таймфрейм изменен: {old_config.get('timeframe')} → {data['timeframe']}")
-            
             changes_count = 0
+            
+            # ✅ Сохраняем старую конфигурацию для сравнения
+            with bots_data_lock:
+                old_config = bots_data['auto_bot_config'].copy()
             
             # ✅ Сначала проверяем какие изменения будут
             for key in maturity_keys:
@@ -2226,188 +2110,6 @@ def auto_bot_config():
                     logger.info("[MATURITY] 🔄 Монеты будут перепроверены при следующей загрузке RSI")
                 except Exception as e:
                     logger.error(f"[MATURITY] ❌ Ошибка очистки файла зрелых монет: {e}")
-            
-            # ✅ АВТОМАТИЧЕСКИЙ ПЕРЕСЧЕТ при изменении таймфрейма
-            if timeframe_changed:
-                logger.warning("=" * 80)
-                logger.warning(f"[TIMEFRAME] 🔄 ТАЙМФРЕЙМ ИЗМЕНЕН: {old_config.get('timeframe')} → {data['timeframe']}")
-                logger.warning("[TIMEFRAME] 🔄 Запуск ПОЛНОГО пересчета всех зависимых данных...")
-                logger.warning("=" * 80)
-                
-                try:
-                    # Очищаем кэши для пересчета
-                    from bots_modules.imports_and_globals import clear_rsi_cache, coins_rsi_data, rsi_data_lock
-                    from bots_modules.maturity import clear_mature_coins_storage
-                    import os
-                    
-                    # 1. КРИТИЧНО: Очищаем кэш свечей (он был от СТАРОГО таймфрейма!)
-                    with rsi_data_lock:
-                        if 'candles_cache' in coins_rsi_data:
-                            coins_rsi_data['candles_cache'].clear()
-                            logger.info("[TIMEFRAME] ✅ Кэш свечей очищен (был от другого таймфрейма)")
-                        
-                        # ✅ КРИТИЧНО: Сбрасываем метки времени для ПРИНУДИТЕЛЬНОЙ загрузки нового таймфрейма
-                        coins_rsi_data['last_candles_update'] = None
-                        coins_rsi_data['last_rsi_update'] = None
-                        coins_rsi_data['candles_timeframe'] = data['timeframe']  # Обновляем метку таймфрейма
-                        logger.info("[TIMEFRAME] ✅ Метки времени сброшены - следующая загрузка будет принудительной")
-                    
-                    # 2. Очищаем RSI кэш (пересчитается при следующей загрузке)
-                    clear_rsi_cache()
-                    logger.info("[TIMEFRAME] ✅ RSI кэш очищен - будет пересчитан для нового TF")
-                    
-                    # 2. ✅ ИСПРАВЛЕНО: НЕ очищаем зрелые монеты - они для старого TF остаются в файле!
-                    # При переключении на новый TF система просто начнет использовать новый файл
-                    logger.info("[TIMEFRAME] ✅ Зрелые монеты для нового TF будут вычисляться независимо")
-                    
-                    # 3. ✅ ИСПРАВЛЕНО: НЕ очищаем оптимальные EMA - они для старого TF остаются в файле!
-                    # При переключении на новый TF система просто начнет использовать новый файл
-                    logger.info("[TIMEFRAME] ✅ Optimal EMA для нового TF будут вычисляться независимо")
-                    
-                    # 4. 🤖 AI МОДЕЛИ - СОЗДАЕМ ОТДЕЛЬНЫЕ БАЗЫ ДЛЯ КАЖДОГО ТАЙМФРЕЙМА!
-                    try:
-                        new_tf = data['timeframe']
-                        
-                        # Структура директорий для нового таймфрейма
-                        ai_base_dir = 'data/ai/models'
-                        ai_training_dir = 'data/ai/training'
-                        ai_historical_dir = 'data/ai/historical'
-                        
-                        new_tf_models_dir = os.path.join(ai_base_dir, new_tf)
-                        new_tf_training_dir = os.path.join(ai_training_dir, new_tf)
-                        new_tf_historical_dir = os.path.join(ai_historical_dir, new_tf)
-                        
-                        # Создаем отдельные директории для нового таймфрейма если их нет
-                        if not os.path.exists(new_tf_models_dir):
-                            os.makedirs(new_tf_models_dir, exist_ok=True)
-                            logger.info(f"[TIMEFRAME] ✅ Создана директория для AI моделей: {new_tf_models_dir}")
-                        else:
-                            logger.info(f"[TIMEFRAME] ✅ Директория AI моделей уже существует: {new_tf_models_dir}")
-                        
-                        if not os.path.exists(new_tf_training_dir):
-                            os.makedirs(new_tf_training_dir, exist_ok=True)
-                            logger.info(f"[TIMEFRAME] ✅ Создана директория для AI обучающих данных: {new_tf_training_dir}")
-                        else:
-                            logger.info(f"[TIMEFRAME] ✅ Директория AI обучения уже существует: {new_tf_training_dir}")
-                        
-                        if not os.path.exists(new_tf_historical_dir):
-                            os.makedirs(new_tf_historical_dir, exist_ok=True)
-                            logger.info(f"[TIMEFRAME] ✅ Создана директория для исторических данных: {new_tf_historical_dir}")
-                        else:
-                            logger.info(f"[TIMEFRAME] ✅ Директория исторических данных уже существует: {new_tf_historical_dir}")
-                        
-                        logger.info("=" * 80)
-                        logger.info(f"[TIMEFRAME] ✅ AI системы готовы для таймфрейма {new_tf}")
-                        logger.info(f"[TIMEFRAME] 📁 Модели: {new_tf_models_dir}")
-                        logger.info(f"[TIMEFRAME] 📊 Обучение: {new_tf_training_dir}")
-                        logger.info(f"[TIMEFRAME] 📈 Исторические данные: {new_tf_historical_dir}")
-                        logger.info("[TIMEFRAME] 💡 Каждый таймфрейм имеет СВОЮ ИНДИВИДУАЛЬНУЮ базу данных AI!")
-                        logger.info("=" * 80)
-                        
-                    except Exception as ai_error:
-                        logger.error(f"[TIMEFRAME] ⚠️ Ошибка настройки AI для нового таймфрейма: {ai_error}")
-                        import traceback
-                        logger.error(traceback.format_exc())
-                    
-                    # 5. 📊 ПАРАМЕТРЫ ОСТАЮТСЯ ТАКИЕ ЖЕ (количество свечей, не время!)
-                    logger.info("[TIMEFRAME] ✅ Параметры остаются без изменений:")
-                    logger.info("[TIMEFRAME]   - min_candles_for_maturity: 400 свечей")
-                    logger.info("[TIMEFRAME]   - rsi_time_filter_candles: 4 свечи")
-                    logger.info("[TIMEFRAME]   - exit_scam_candles: 8 свечей")
-                    logger.info("[TIMEFRAME] 💡 На разных таймфреймах это разное время, но ОДИНАКОВОЕ количество свечей!")
-                    
-                    # 6. 📈 ЗАПУСКАЕМ РАСЧЕТ OPTIMAL EMA ДЛЯ НОВОГО ТАЙМФРЕЙМА!
-                    try:
-                        from bots_modules.optimal_ema import calculate_all_coins_optimal_ema, load_optimal_ema_data
-                        
-                        new_tf = data['timeframe']
-                        optimal_ema_file = f'data/optimal_ema_{new_tf}.json'
-                        
-                        # Проверяем наличие файла
-                        if os.path.exists(optimal_ema_file):
-                            # Файл существует - загружаем
-                            load_optimal_ema_data()
-                            logger.info(f"[TIMEFRAME] 🔄 Загружены данные Optimal EMA для таймфрейма {new_tf}")
-                        else:
-                            # Файла нет - запускаем расчет
-                            logger.warning(f"[TIMEFRAME] ⚠️ Файл Optimal EMA для таймфрейма {new_tf} не найден")
-                            logger.info(f"[TIMEFRAME] 🚀 Запускаем расчет Optimal EMA для таймфрейма {new_tf}...")
-                            
-                            # Запускаем расчет в отдельном потоке (чтобы не блокировать ответ)
-                            def run_optimal_ema_calculation():
-                                try:
-                                    logger.info(f"[TIMEFRAME] 🚀 Начинаем расчет Optimal EMA для таймфрейма {new_tf}...")
-                                    
-                                    # Запускаем расчет с указанием таймфрейма
-                                    result = calculate_all_coins_optimal_ema(mode='auto', timeframe=new_tf)
-                                    if result:
-                                        logger.info(f"[TIMEFRAME] ✅ Расчет Optimal EMA для {new_tf} завершен успешно")
-                                        # Перезагружаем данные после расчета
-                                        load_optimal_ema_data()
-                                    else:
-                                        logger.warning(f"[TIMEFRAME] ⚠️ Расчет Optimal EMA для {new_tf} завершился с ошибками")
-                                except Exception as optimal_ema_error:
-                                    logger.error(f"[TIMEFRAME] ❌ Ошибка расчета Optimal EMA: {optimal_ema_error}")
-                            
-                            # Запускаем в отдельном потоке
-                            import threading
-                            ema_thread = threading.Thread(target=run_optimal_ema_calculation, daemon=True)
-                            ema_thread.start()
-                            logger.info("[TIMEFRAME] ✅ Расчет Optimal EMA запущен в фоновом режиме")
-                        
-                    except Exception as optimal_ema_error:
-                        logger.error(f"[TIMEFRAME] ⚠️ Не удалось запустить расчет Optimal EMA: {optimal_ema_error}")
-                    
-                    # 7. 🎯 ЗАПУСКАЕМ РАСЧЕТ ЗРЕЛОСТИ ДЛЯ НОВОГО ТАЙМФРЕЙМА!
-                    try:
-                        from bots_modules.maturity import calculate_all_coins_maturity, load_mature_coins_storage
-                        
-                        new_tf = data['timeframe']
-                        mature_coins_file = f'data/mature_coins_{new_tf}.json'
-                        
-                        # Проверяем наличие файла
-                        if os.path.exists(mature_coins_file):
-                            # Файл существует - загружаем
-                            load_mature_coins_storage()
-                            logger.info(f"[TIMEFRAME] 🔄 Загружены данные зрелых монет для таймфрейма {new_tf}")
-                        else:
-                            # Файла нет - запускаем расчет
-                            logger.warning(f"[TIMEFRAME] ⚠️ Файл зрелых монет для таймфрейма {new_tf} не найден")
-                            logger.info(f"[TIMEFRAME] 🚀 Запускаем расчет зрелых монет для таймфрейма {new_tf}...")
-                            
-                            # Запускаем расчет зрелости в отдельном потоке
-                            def run_maturity_calculation():
-                                try:
-                                    logger.info("[TIMEFRAME] 🚀 Начинаем расчет зрелости для нового таймфрейма...")
-                                    result = calculate_all_coins_maturity()
-                                    if result:
-                                        logger.info("[TIMEFRAME] ✅ Расчет зрелости завершен успешно")
-                                    else:
-                                        logger.warning("[TIMEFRAME] ⚠️ Расчет зрелости завершился с ошибками")
-                                except Exception as maturity_error:
-                                    logger.error(f"[TIMEFRAME] ❌ Ошибка расчета зрелости: {maturity_error}")
-                            
-                            import threading
-                            maturity_thread = threading.Thread(target=run_maturity_calculation, daemon=True)
-                            maturity_thread.start()
-                            logger.info("[TIMEFRAME] ✅ Расчет зрелости запущен в фоновом режиме")
-                        
-                    except Exception as maturity_error:
-                        logger.error(f"[TIMEFRAME] ⚠️ Не удалось запустить расчет зрелости: {maturity_error}")
-                    
-                    logger.info("=" * 80)
-                    logger.info("[TIMEFRAME] ✅ ВСЕ ДАННЫЕ БУДУТ ПЕРЕСЧИТАНЫ ДЛЯ НОВОГО ТАЙМФРЕЙМА!")
-                    logger.info("[TIMEFRAME] 📊 RSI - пересчитается автоматически")
-                    logger.info("[TIMEFRAME] 📈 EMA - БУДЕТ РАСЧИТАН для нового TF в фоне")
-                    logger.info("[TIMEFRAME] 🎯 Зрелость - БУДЕТ ПРОВЕРЕНА для нового TF в фоне")
-                    logger.info("[TIMEFRAME] 🤖 AI модели - используют отдельные базы для каждого TF")
-                    logger.info("[TIMEFRAME] 📏 Параметры фильтров - остаются БЕЗ ИЗМЕНЕНИЙ (это СВЕЧИ, не время!)")
-                    logger.info("=" * 80)
-                    
-                except Exception as e:
-                    logger.error(f"[TIMEFRAME] ❌ Ошибка пересчета данных: {e}")
-                    import traceback
-                    logger.error(traceback.format_exc())
             
             # КРИТИЧЕСКИ ВАЖНО: При включении Auto Bot запускаем немедленную проверку
             # Показываем блок только если enabled реально изменился с False на True
