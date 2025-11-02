@@ -236,11 +236,19 @@ class SmartRiskManager:
         # Рассчитываем оптимальные SL/TP на основе истории стопов для этой монеты
         coin_stops = self._get_coin_stops(symbol)
         
+        # 🚫 Проверяем не слишком ли часто были стопы для этой монеты
+        should_increase_sl = self._should_increase_sl_after_stops(coin_stops, symbol)
+        
         # Объединяем рекомендации от разных источников
         if coin_stops:
             # Используем данные о стопах этой монеты
             optimal_sl_from_history = self._optimal_sl_for_coin(coin_stops, volatility)
             optimal_tp_from_history = self._optimal_tp_for_coin(coin_stops, trend_strength)
+            
+            # Если были частые стопы - дополнительно увеличиваем SL
+            if should_increase_sl:
+                optimal_sl_from_history = max(optimal_sl_from_history, 18.0)  # Минимум 18%
+                logger.warning(f"[SmartRiskManager] ⚠️ {symbol}: Частые стопы, используем увеличенный SL: {optimal_sl_from_history}%")
         else:
             # Используем общие рекомендации
             optimal_sl_from_history = 12.0 if volatility < 1.0 else 18.0
@@ -402,15 +410,85 @@ class SmartRiskManager:
             return (len(recent) - up_ticks) / len(recent)
     
     def _get_coin_stops(self, symbol: str) -> List[Dict]:
-        """Получает стопы для конкретной монеты"""
-        if symbol in self.stop_patterns:
-            return self.stop_patterns[symbol]
-        return []
+        """
+        PREMIUM: Получает стопы для конкретной монеты из истории
+        
+        Анализирует историю стопов этой монеты для оптимизации SL/TP
+        """
+        try:
+            from bot_engine.bot_history import bot_history_manager
+            
+            # Получаем все стопы из истории
+            all_stops = bot_history_manager.get_stopped_trades(limit=1000)
+            
+            # Фильтруем по символу
+            coin_stops = [stop for stop in all_stops if stop.get('symbol', '').upper() == symbol.upper()]
+            
+            # Кэшируем в памяти для быстрого доступа
+            if symbol not in self.stop_patterns:
+                self.stop_patterns[symbol] = []
+            
+            # Обновляем кэш
+            self.stop_patterns[symbol] = coin_stops
+            
+            return coin_stops
+        except Exception as e:
+            logger.debug(f"[SmartRiskManager] Ошибка получения стопов для {symbol}: {e}")
+            return self.stop_patterns.get(symbol, [])
     
     def _optimal_sl_for_coin(self, stops: List[Dict], volatility: float) -> float:
-        """Рассчитывает оптимальный SL для монеты"""
-        # TODO: ML модель для оптимизации
-        return 12.0 if volatility < 1.0 else 18.0
+        """
+        PREMIUM: Рассчитывает оптимальный SL для монеты на основе истории стопов
+        
+        Анализирует последние стопы монеты:
+        - Если много быстрых стопов (< 6 часов) - увеличивает SL
+        - Адаптирует на основе волатильности
+        """
+        if not stops:
+            # Если нет истории - используем базовую логику по волатильности
+            base_sl = 12.0 if volatility < 1.0 else 18.0
+            return base_sl
+        
+        # Анализируем последние стопы этой монеты
+        recent_stops = stops[:10]  # Последние 10 стопов
+        
+        # Анализируем насколько быстро срабатывали стопы
+        rapid_stops = []
+        slow_stops = []
+        
+        for stop in recent_stops:
+            entry_data = stop.get('entry_data', {})
+            duration_hours = entry_data.get('duration_hours', 24)
+            
+            if duration_hours < 6:  # Быстрый стоп (< 6 часов)
+                rapid_stops.append(stop)
+            else:
+                slow_stops.append(stop)
+        
+        # Если много быстрых стопов - увеличиваем SL
+        rapid_ratio = len(rapid_stops) / len(recent_stops) if recent_stops else 0
+        
+        # Базовый SL от волатильности
+        base_sl = 12.0 if volatility < 1.0 else 18.0
+        
+        # Корректируем на основе истории
+        if rapid_ratio > 0.6:  # Больше 60% быстрых стопов
+            # Нужно увеличить SL, чтобы не выбивало сразу
+            adjustment = min(rapid_ratio * 10, 8.0)  # До +8%
+            optimal_sl = base_sl + adjustment
+            logger.info(f"[SmartRiskManager] {recent_stops[0].get('symbol', '?')}: Много быстрых стопов ({rapid_ratio:.0%}), увеличиваем SL: {base_sl}% → {optimal_sl:.1f}%")
+        elif rapid_ratio > 0.3:  # 30-60% быстрых стопов
+            # Умеренное увеличение
+            adjustment = (rapid_ratio - 0.3) * 5  # До +2.5%
+            optimal_sl = base_sl + adjustment
+        else:
+            # Мало быстрых стопов - можно оставить базовый или чуть уменьшить
+            optimal_sl = base_sl
+        
+        # Ограничиваем разумными пределами (минимальный и максимальный)
+        optimal_sl = max(8.0, min(optimal_sl, 30.0))
+        
+        return round(optimal_sl, 1)
     
     def _optimal_tp_for_coin(self, stops: List[Dict], trend_strength: float) -> float:
         """Рассчитывает оптимальный TP для монеты"""
@@ -1031,6 +1109,151 @@ class SmartRiskManager:
         
         # Ограничиваем разумными пределами
         return min(int(base_wait), 30)  # Максимум 30 минут
+    
+    def _should_increase_sl_after_stops(self, coin_stops: List[Dict], symbol: str) -> bool:
+        """
+        Проверяет, нужно ли увеличить SL после частых стопов
+        
+        Возвращает True если:
+        - Было 2+ стопа за последние 24 часа
+        - Последний стоп был менее 6 часов назад
+        """
+        if not coin_stops:
+            return False
+        
+        # Берем последние стопы
+        recent_stops = coin_stops[:5]
+        
+        if len(recent_stops) < 2:
+            return False
+        
+        # Проверяем время последнего стопа
+        from datetime import datetime, timedelta
+        
+        try:
+            last_stop = recent_stops[0]
+            close_time_str = last_stop.get('close_timestamp') or last_stop.get('timestamp', '')
+            
+            if close_time_str:
+                if isinstance(close_time_str, str):
+                    close_time = datetime.fromisoformat(close_time_str.replace('Z', '+00:00'))
+                else:
+                    close_time = close_time_str
+                
+                hours_since_last_stop = (datetime.now(close_time.tzinfo) - close_time).total_seconds() / 3600
+                
+                # Если последний стоп был менее 6 часов назад И было 2+ стопа
+                if hours_since_last_stop < 6 and len(recent_stops) >= 2:
+                    logger.warning(f"[SmartRiskManager] ⚠️ {symbol}: Частые стопы! Последний {hours_since_last_stop:.1f}ч назад, всего {len(recent_stops)} стопов")
+                    return True
+        except Exception as e:
+            logger.debug(f"[SmartRiskManager] Ошибка проверки времени стопа: {e}")
+        
+        return False
+    
+    def should_avoid_entry(self, symbol: str, side: str) -> Dict[str, Any]:
+        """
+        PREMIUM: Определяет, стоит ли избегать входа в позицию из-за частых стопов
+        
+        Анализирует историю стопов для этой монеты и направления:
+        - Если 3+ стопа за 24 часа → блокирует вход на время
+        - Если 2 стопа за 24 часа → рекомендует увеличенный SL
+        
+        Args:
+            symbol: Символ монеты
+            side: 'LONG' или 'SHORT'
+        
+        Returns:
+            {
+                'should_avoid': True/False,
+                'reason': "Причина",
+                'wait_minutes': 60,  # Сколько ждать перед следующим входом
+                'recommended_sl_percent': 20.0  # Рекомендуемый SL если все же входить
+            }
+        """
+        try:
+            coin_stops = self._get_coin_stops(symbol)
+            
+            if not coin_stops:
+                return {
+                    'should_avoid': False,
+                    'reason': 'Нет истории стопов для анализа',
+                    'wait_minutes': 0,
+                    'recommended_sl_percent': None
+                }
+            
+            # Берем последние стопы для этого направления
+            recent_stops = [s for s in coin_stops[:10] if s.get('direction', '').upper() == side.upper()]
+            
+            if not recent_stops:
+                return {
+                    'should_avoid': False,
+                    'reason': 'Нет стопов для этого направления',
+                    'wait_minutes': 0,
+                    'recommended_sl_percent': None
+                }
+            
+            # Проверяем частоту стопов
+            from datetime import datetime, timedelta
+            
+            now = datetime.now()
+            stops_last_24h = 0
+            last_stop_time = None
+            
+            for stop in recent_stops:
+                try:
+                    close_time_str = stop.get('close_timestamp') or stop.get('timestamp', '')
+                    if close_time_str:
+                        if isinstance(close_time_str, str):
+                            close_time = datetime.fromisoformat(close_time_str.replace('Z', '+00:00'))
+                        else:
+                            close_time = close_time_str
+                        
+                        hours_ago = (now.replace(tzinfo=close_time.tzinfo) - close_time).total_seconds() / 3600
+                        
+                        if hours_ago < 24:
+                            stops_last_24h += 1
+                            if not last_stop_time or close_time > last_stop_time:
+                                last_stop_time = close_time
+                except Exception:
+                    continue
+            
+            # Если 3+ стопа за 24 часа - избегаем входа
+            if stops_last_24h >= 3:
+                hours_since_last = (now.replace(tzinfo=last_stop_time.tzinfo) - last_stop_time).total_seconds() / 3600 if last_stop_time else 0
+                wait_minutes = max(60, int((24 - hours_since_last) * 60))  # Ждем до конца 24-часового периода
+                
+                return {
+                    'should_avoid': True,
+                    'reason': f'Слишком частые стопы: {stops_last_24h} за 24ч. Рекомендуется подождать {wait_minutes//60}ч',
+                    'wait_minutes': wait_minutes,
+                    'recommended_sl_percent': 20.0  # Если все же входить - использовать увеличенный SL
+                }
+            
+            # Если 2 стопа за 24 часа - предупреждение, но можно входить с увеличенным SL
+            if stops_last_24h >= 2:
+                return {
+                    'should_avoid': False,
+                    'reason': f'Обнаружено {stops_last_24h} стопа за 24ч. Рекомендуется увеличенный SL',
+                    'wait_minutes': 0,
+                    'recommended_sl_percent': 20.0  # Рекомендуем увеличенный SL
+                }
+            
+            return {
+                'should_avoid': False,
+                'reason': 'Нормальная частота стопов',
+                'wait_minutes': 0,
+                'recommended_sl_percent': None
+            }
+            
+        except Exception as e:
+            logger.error(f"[SmartRiskManager] Ошибка проверки избежания входа для {symbol}: {e}")
+            return {
+                'should_avoid': False,
+                'reason': f'Ошибка анализа: {e}',
+                'wait_minutes': 0,
+                'recommended_sl_percent': None
+            }
 
 
 # Проверка лицензии при импорте
