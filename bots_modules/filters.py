@@ -1459,7 +1459,7 @@ def process_long_short_coins_with_filters():
         return []
 
 def set_filtered_coins_for_autobot(filtered_coins):
-    """✅ Передает отфильтрованные монеты автоботу"""
+    """✅ Передает отфильтрованные монеты автоботу и СРАЗУ запускает проверку сигналов"""
     try:
         logger.info(f"[AUTOBOT_SETUP] ✅ Передаем {len(filtered_coins)} отфильтрованных монет автоботу...")
         
@@ -1475,6 +1475,17 @@ def set_filtered_coins_for_autobot(filtered_coins):
         
         logger.info(f"[AUTOBOT_SETUP] ✅ Отфильтрованные монеты сохранены в конфиг автобота")
         logger.info(f"[AUTOBOT_SETUP] 📊 Монеты для автобота: {', '.join(filtered_coins[:10])}{'...' if len(filtered_coins) > 10 else ''}")
+        
+        # ✅ КРИТИЧНО: СРАЗУ проверяем сигналы и создаем ботов без задержки!
+        # Не ждем следующего цикла воркера (180 секунд) - обрабатываем немедленно!
+        if filtered_coins and bots_data.get('auto_bot_config', {}).get('enabled', False):
+            logger.info(f"[AUTOBOT_SETUP] 🚀 Немедленно проверяем сигналы для {len(filtered_coins)} монет...")
+            try:
+                from bots_modules.imports_and_globals import get_exchange
+                exchange_obj = get_exchange()
+                process_auto_bot_signals(exchange_obj=exchange_obj)
+            except Exception as e:
+                logger.error(f"[AUTOBOT_SETUP] ❌ Ошибка немедленной проверки сигналов: {e}")
         
         return True
         

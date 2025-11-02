@@ -4,6 +4,7 @@ from http.client import IncompleteRead, RemoteDisconnected
 import requests.exceptions
 import requests
 import time
+import math
 from datetime import datetime
 import sys
 from app.config import (
@@ -403,12 +404,16 @@ class BybitExchange(BaseExchange):
             
             if response['retCode'] == 0 and response['result']['list']:
                 instrument = response['result']['list'][0]
-                return {
+                result = {
                     'minOrderQty': instrument['lotSizeFilter']['minOrderQty'],
                     'qtyStep': instrument['lotSizeFilter']['qtyStep'],
                     'tickSize': instrument['priceFilter']['tickSize'],
                     'status': instrument.get('status', 'Unknown')  # ✅ Добавляем статус инструмента
                 }
+                # ✅ Проверяем наличие minOrderValue (минимальный размер ордера в USDT)
+                if 'lotSizeFilter' in instrument and 'minOrderValue' in instrument['lotSizeFilter']:
+                    result['minOrderValue'] = instrument['lotSizeFilter']['minOrderValue']
+                return result
             else:
                 print(f"[BYBIT] ❌ Не удалось получить информацию об инструменте {symbol}")
                 return {}
@@ -1299,68 +1304,30 @@ class BybitExchange(BaseExchange):
                 }
             
             # ⚡ Для LINEAR фьючерсов используем marketUnit='quoteCoin' для указания суммы в USDT
-            qty_usdt = quantity  # quantity это стоимость в USDT
+            # ✅ БЕЗ ПЕРЕСЧЕТОВ! Передаем ТОЧНУЮ сумму из конфига в USDT - Bybit сам рассчитает монеты!
+            qty_usdt = quantity  # ✅ Используем ТОЧНО значение из конфига (5, 6, 10.31 и т.д.)
+            min_qty_usdt = 5.0  # ✅ Минимум 5 USDT всегда!
             
-            # ✅ Получаем информацию об инструменте для проверки минимального размера ордера и qtyStep
-            min_order_value_usdt = None
-            qty_step = None
-            min_order_qty = None
+            # ✅ Проверяем только минимальный лимит
+            if qty_usdt < min_qty_usdt:
+                print(f"[BYBIT_BOT] ⚠️ Запрошенная сумма {qty_usdt:.2f} USDT меньше минимума {min_qty_usdt} USDT, устанавливаем: {min_qty_usdt} USDT")
+                qty_usdt = min_qty_usdt
             
-            try:
-                instruments_info = self.get_instruments_info(f"{symbol}USDT")
-                if instruments_info and current_price:
-                    if 'minOrderQty' in instruments_info:
-                        min_order_qty = float(instruments_info['minOrderQty'])
-                        min_order_value_usdt = min_order_qty * current_price
-                    
-                    if 'qtyStep' in instruments_info:
-                        qty_step = float(instruments_info['qtyStep'])
-                    
-                    print(f"[BYBIT_BOT] 📊 Инструмент {symbol}: мин. {min_order_qty} монет ({min_order_value_usdt:.2f} USDT @ {current_price}), шаг: {qty_step}")
-            except Exception as e:
-                print(f"[BYBIT_BOT] ⚠️ Не удалось получить информацию об инструменте: {e}")
+            print(f"[BYBIT_BOT] 💰 {symbol}: Запрашиваем ТОЧНО {qty_usdt} USDT (marketUnit='quoteCoin' - Bybit сам рассчитает количество монет)")
             
-            # ✅ КРИТИЧНО: При использовании marketUnit='quoteCoin' Bybit проверяет количество монет!
-            # Рассчитываем количество монет из USDT и округляем до qtyStep
-            if current_price and qty_step and qty_step > 0:
-                qty_in_coins = qty_usdt / current_price
-                # Округляем до qtyStep
-                qty_in_coins = round(qty_in_coins / qty_step) * qty_step
-                
-                # Проверяем минимум в монетах
-                if min_order_qty and qty_in_coins < min_order_qty:
-                    qty_in_coins = min_order_qty
-                    # Округляем до qtyStep после установки минимума
-                    if qty_step > 0:
-                        qty_in_coins = round(qty_in_coins / qty_step) * qty_step
-                    print(f"[BYBIT_BOT] ⚠️ Количество монет меньше минимума {min_order_qty}, устанавливаем: {qty_in_coins} (шаг: {qty_step})")
-                
-                # Пересчитываем обратно в USDT и округляем до 2 знаков после запятой
-                qty_usdt = qty_in_coins * current_price
-                qty_usdt = round(qty_usdt, 2)  # ✅ Округляем до 2 знаков для USDT
-                print(f"[BYBIT_BOT] 📐 Округлено: {qty_in_coins} монет = {qty_usdt:.2f} USDT (шаг: {qty_step})")
-            else:
-                # Fallback: проверяем минимум USDT
-                min_required = max(min_order_value_usdt if min_order_value_usdt else 5.0, 5.0)
-                if qty_usdt < min_required:
-                    old_qty = qty_usdt
-                    qty_usdt = min_required
-                    print(f"[BYBIT_BOT] ⚠️ Сумма {old_qty:.2f} USDT меньше минимума {min_required:.2f} USDT, устанавливаем: {qty_usdt:.2f} USDT")
-            
-            print(f"[BYBIT_BOT] 💰 {symbol}: Запрашиваем {qty_usdt:.2f} USDT")
-            
-            # ДЛЯ LINEAR - передаем сумму в USDT с marketUnit='quoteCoin'
+            # ДЛЯ LINEAR - передаем ТОЧНУЮ сумму в USDT с marketUnit='quoteCoin'
+            # ✅ БЕЗ ОКРУГЛЕНИЙ! Передаем точное значение из конфига
             order_params = {
                 "category": "linear",
                 "symbol": f"{symbol}USDT",
                 "side": bybit_side,
                 "orderType": order_type.title(),
-                "qty": str(qty_usdt),  # Сумма в USDT
-                "marketUnit": "quoteCoin",  # ⚡ Указываем что qty в USDT!
+                "qty": str(qty_usdt),  # ✅ ТОЧНАЯ сумма в USDT из конфига (5, 6, 10.31 и т.д.)
+                "marketUnit": "quoteCoin",  # ⚡ Указываем что qty в USDT - Bybit сам рассчитает монеты!
                 "positionIdx": position_idx
             }
             
-            print(f"[BYBIT_BOT] 🎯 Сумма ордера: {qty_usdt:.2f} USDT (marketUnit='quoteCoin')")
+            print(f"[BYBIT_BOT] 🎯 Сумма ордера: {qty_usdt} USDT (marketUnit='quoteCoin' - точное значение из конфига)")
             
             # ⚠️ НЕ добавляем leverage в order_params - Bybit не поддерживает это при размещении ордера!
             # Плечо должно быть установлено ВРУЧНУЮ в настройках аккаунта на бирже
