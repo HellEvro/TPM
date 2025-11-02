@@ -7,37 +7,37 @@
       "volume_mode": "usdt",
       "volume_value": 5,
       "position": null,
-      "entry_price": 14.385336,
+      "entry_price": 12.6855,
       "entry_time": null,
       "last_signal_time": null,
       "last_bar_timestamp": null,
-      "created_at": "2025-10-28T02:39:44.878940",
+      "created_at": "2025-11-02T21:01:21.745840",
       "scaling_enabled": false,
       "scaling_levels": [],
       "scaling_current_level": 0,
       "scaling_group_id": null,
-      "unrealized_pnl": 0.04132,
+      "unrealized_pnl": -3.1425,
       "position_side": "LONG",
-      "stop_loss": "14.1711",
-      "take_profit": "15.8257",
-      "current_price": "14.3936",
+      "stop_loss": "3.7134",
+      "take_profit": "16.3563",
+      "current_price": "12.057",
       "rsi_data": {
         "symbol": "OG",
-        "rsi6h": 27.9,
-        "trend6h": "NEUTRAL",
-        "rsi_zone": "BUY_ZONE",
-        "signal": "ENTER_LONG",
-        "price": 14.3936,
-        "change24h": 2.52,
-        "last_update": "2025-10-28T02:55:56.976736",
+        "rsi6h": 45.6,
+        "trend6h": "DOWN",
+        "rsi_zone": "NEUTRAL",
+        "signal": "WAIT",
+        "price": 12.0232,
+        "change24h": -2.94,
+        "last_update": "2025-11-02T21:13:46.388412",
         "trend_analysis": {
-          "trend": "NEUTRAL",
-          "ema_short": 16.53151814209297,
-          "ema_long": 15.992885565018309,
+          "trend": "DOWN",
+          "ema_short": 13.500501938842651,
+          "ema_long": 15.056372527274798,
           "ema_short_period": 50,
           "ema_long_period": 200,
-          "ema_long_slope": -0.016073221758976075,
-          "current_close": 14.3936,
+          "ema_long_slope": -0.030542437460047367,
+          "current_close": 12.0174,
           "confirmations": 3,
           "min_confirmations": 2,
           "accuracy": 0
@@ -58,26 +58,16 @@
             71
           ],
           "confirmations": {
-            "volume": false,
+            "volume": true,
             "divergence": false,
-            "stoch_rsi_k": 46.960623550284474,
-            "stoch_rsi_d": 30.785418343520053
+            "stoch_rsi_k": 86.22512462389123,
+            "stoch_rsi_d": 89.00612063386806
           },
-          "enhanced_signal": "ENTER_LONG",
-          "enhanced_reason": "rsi_oversold_27.9"
+          "enhanced_signal": "WAIT",
+          "enhanced_reason": "rsi_neutral_45.6"
         },
-        "time_filter_info": {
-          "blocked": false,
-          "reason": "Разрешено: с лоя (свеча -5) прошло 4 спокойных свечей <= 35",
-          "filter_type": "time_filter",
-          "last_extreme_candles_ago": 4,
-          "calm_candles": 4
-        },
-        "exit_scam_info": {
-          "blocked": false,
-          "reason": "ExitScam фильтр пройден",
-          "filter_type": "exit_scam"
-        },
+        "time_filter_info": null,
+        "exit_scam_info": null,
         "blocked_by_scope": false,
         "has_existing_position": false,
         "is_mature": true,
@@ -89,22 +79,22 @@
       "exchange_position": {
         "size": 5.0,
         "side": "Long",
-        "unrealized_pnl": 0.04132,
-        "mark_price": 14.3936,
-        "entry_price": 14.385336,
+        "unrealized_pnl": -3.1425,
+        "mark_price": 12.057,
+        "entry_price": 12.6855,
         "leverage": 1,
-        "stop_loss": "14.1711",
-        "take_profit": "15.8257",
-        "roi": 0.057447389480509876
+        "stop_loss": "3.7134",
+        "take_profit": "16.3563",
+        "roi": -4.95447558235781
       },
       "position_size": 5,
       "position_size_coins": 5.0,
-      "mark_price": 14.3936,
-      "unrealized_pnl_usdt": 0.04132,
-      "roi": 0.057447389480509876,
+      "mark_price": 12.057,
+      "unrealized_pnl_usdt": -3.1425,
+      "roi": -4.95447558235781,
       "take_profit_price": null,
-      "last_update": "2025-10-28T02:56:12.732143",
-      "work_time": "16м 19с",
+      "last_update": "2025-11-02T21:14:36.904997",
+      "work_time": "13м 14с",
       "bot_status": "Активен"
     }
   },
@@ -149,10 +139,10 @@
     "exit_scam_multi_candle_percent": 50,
     "ai_optimal_entry_enabled": false,
     "filtered_coins": [
-      "OG"
+      "ZORA"
     ],
-    "last_filter_update": "2025-10-28T02:56:09.832434"
+    "last_filter_update": "2025-11-02T21:14:08.609789"
   },
-  "last_saved": "2025-10-28T02:56:14.250434",
+  "last_saved": "2025-11-02T21:14:42.149405",
   "version": "1.0"
 }
