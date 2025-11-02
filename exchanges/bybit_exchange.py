@@ -1330,38 +1330,40 @@ class BybitExchange(BaseExchange):
             except Exception as e:
                 print(f"[BYBIT_BOT] ⚠️ Не удалось получить информацию об инструменте: {e}")
             
-            # ✅ Получаем текущее плечо для монеты (если есть открытая позиция)
+            # ✅ Получаем ТЕКУЩЕЕ плечо для монеты из настроек биржи
             current_leverage = None
             try:
                 pos_response = self.client.get_positions(category="linear", symbol=f"{symbol}USDT")
                 if pos_response.get('retCode') == 0 and pos_response.get('result', {}).get('list'):
-                    # Ищем активную позицию с нужной стороной
-                    for pos in pos_response['result']['list']:
-                        if abs(float(pos.get('size', 0))) > 0:
-                            current_leverage = float(pos.get('leverage', 10))
-                            break
-                    if current_leverage:
-                        print(f"[BYBIT_BOT] 📊 {symbol}: Текущее плечо из позиции: {current_leverage}x")
+                    # get_positions всегда возвращает leverage даже для пустых позиций!
+                    # Берем leverage из первой позиции в списке (она может быть пустой)
+                    pos_list = pos_response['result']['list']
+                    if pos_list:
+                        current_leverage = float(pos_list[0].get('leverage', 10))
+                        print(f"[BYBIT_BOT] 📊 {symbol}: Плечо с биржи: {current_leverage}x")
             except Exception as e:
                 print(f"[BYBIT_BOT] ⚠️ Не удалось получить текущее плечо: {e}")
             
-            # Если нет текущей позиции - используем дефолтное 10x
+            # Если не удалось - используем дефолтное 10x (НО ЭТО НЕ ДОЛЖНО БЫТЬ!)
             if not current_leverage:
                 current_leverage = 10.0
-                print(f"[BYBIT_BOT] 📊 {symbol}: Используем дефолтное плечо: {current_leverage}x")
+                print(f"[BYBIT_BOT] ⚠️ {symbol}: FALLBACK - используем дефолтное плечо: {current_leverage}x")
             
-            requested_qty_usdt = quantity  # ✅ Запрошенная сумма из конфига
-            print(f"[BYBIT_BOT] 🎯 {symbol}: Запрошенная сумма из конфига: {requested_qty_usdt} USDT, плечо: {current_leverage}x")
+            requested_qty_usdt = quantity  # ✅ Запрошенная сумма из конфига (margin)
+            print(f"[BYBIT_BOT] 🎯 {symbol}: Запрошенная сумма из конфига: {requested_qty_usdt} USDT (margin), плечо: {current_leverage}x")
+            
+            # ✅ КРИТИЧНО: quantity - это МАРЖА! С учетом плеча Bybit ждет НОМИНАЛЬНУЮ сумму!
+            # Если в конфиге 5 USDT и плечо 10x, то Bybit ждет 50 USDT для открытия позиции!
+            qty_usdt = requested_qty_usdt * current_leverage
+            print(f"[BYBIT_BOT] 🔍 {symbol}: С учетом плеча {current_leverage}x номинальная сумма: {qty_usdt} USDT")
             
             # ✅ КРИТИЧНО: marketUnit='quoteCoin' НЕ ВЫКЛЮЧАЕТ проверку кратности монет!
             # Bybit проверяет что РАССЧИТАННОЕ количество монет кратно qtyStep
             # Поэтому мы ДОЛЖНЫ рассчитать qty в USDT так, чтобы монеты были кратны qtyStep
             
-            qty_usdt = requested_qty_usdt
-            
             # Рассчитываем реальный минимум с учетом кратности монет
             if qty_step and current_price and min_order_qty:
-                # ✅ ШАГ 1: Сначала считаем сколько МОНЕТ за запрошенную сумму
+                # ✅ ШАГ 1: Сначала считаем сколько МОНЕТ за номинальную сумму (с учетом плеча!)
                 requested_coins = qty_usdt / current_price
                 print(f"[BYBIT_BOT] 🔍 {symbol}: За запрошенные {qty_usdt} USDT получается {requested_coins:.2f} монет")
                 
@@ -1446,9 +1448,20 @@ class BybitExchange(BaseExchange):
             
             # Размещаем ордер
             print(f"[BYBIT_BOT] 🔍 {symbol}: ОТПРАВЛЯЕМ ЗАПРОС в Bybit API...")
-            response = self.client.place_order(**order_params)
-            print(f"[BYBIT_BOT] ✅ {symbol}: ПОЛУЧЕН ОТВЕТ от Bybit API: retCode={response.get('retCode')}, retMsg={response.get('retMsg')}")
-            print(f"[BYBIT_BOT] 📊 {symbol}: Полный ответ: {response}")
+            try:
+                response = self.client.place_order(**order_params)
+                print(f"[BYBIT_BOT] ✅ {symbol}: ПОЛУЧЕН ОТВЕТ от Bybit API: retCode={response.get('retCode')}, retMsg={response.get('retMsg')}")
+                print(f"[BYBIT_BOT] 📊 {symbol}: Полный ответ: {response}")
+            except Exception as api_error:
+                # Pybit бросает исключение при retCode != 0, но ответ может быть в ошибке!
+                print(f"[BYBIT_BOT] ❌ {symbol}: Pybit exception: {api_error}")
+                # Пытаемся извлечь ответ из исключения
+                error_str = str(api_error)
+                import re
+                # Извлекаем retCode и retMsg из строки ошибки
+                if "retCode" in error_str and "retMsg" in error_str:
+                    print(f"[BYBIT_BOT] 📊 {symbol}: Ошибка содержит информацию об ответе: {error_str}")
+                raise api_error  # Пробрасываем дальше
             
             if response['retCode'] == 0:
                 # Вычисляем количество в монетах для возврата
