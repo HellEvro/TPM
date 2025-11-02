@@ -44,26 +44,10 @@ def load_historical_data(data_dir='data/ai/historical', window_size=50, step=25)
         logger.info("Сначала запустите: python scripts/ai/collect_historical_data.py")
         return []
     
-    # ✅ Получаем текущий таймфрейм для загрузки правильных CSV
-    try:
-        from bots_modules.imports_and_globals import get_timeframe
-        timeframe = get_timeframe()
-    except Exception:
-        timeframe = '6h'  # Fallback
-    
-    # Обновляем путь к директории с учетом таймфрейма
-    data_path = Path(data_dir) / timeframe
-    
-    if not data_path.exists():
-        logger.error(f"Директория не найдена: {data_path}")
-        logger.info("Сначала запустите: python scripts/ai/collect_historical_data.py")
-        return []
-    
-    # Загружаем CSV для текущего таймфрейма
-    csv_files = list(data_path.glob(f'*_{timeframe}_historical.csv'))
+    csv_files = list(data_path.glob('*_6h_historical.csv'))
     
     if not csv_files:
-        logger.error(f"CSV файлы не найдены в {data_dir} для таймфрейма {timeframe}")
+        logger.error(f"CSV файлы не найдены в {data_dir}")
         logger.info("Сначала запустите: python scripts/ai/collect_historical_data.py")
         return []
     
@@ -74,7 +58,7 @@ def load_historical_data(data_dir='data/ai/historical', window_size=50, step=25)
     
     for csv_file in csv_files:
         try:
-            symbol = csv_file.stem.replace(f'_{timeframe}_historical', '')
+            symbol = csv_file.stem.replace('_6h_historical', '')
             df = pd.read_csv(csv_file)
             
             # Преобразуем DataFrame в список словарей
@@ -164,9 +148,8 @@ def train_on_real_data():
     print("Step 4/4: Saving model...")
     print("-" * 60)
     
-    # ✅ Используем динамический путь с учётом таймфрейма
-    model_path = AIConfig.get_model_path('anomaly_detector', 'pkl')
-    scaler_path = AIConfig.get_model_path('anomaly_scaler', 'pkl')
+    model_path = AIConfig.AI_ANOMALY_MODEL_PATH
+    scaler_path = AIConfig.AI_ANOMALY_SCALER_PATH
     
     detector.save_model(model_path, scaler_path)
     

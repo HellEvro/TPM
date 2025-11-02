@@ -19,32 +19,16 @@ optimal_ema_data = {}
 OPTIMAL_EMA_FILE = 'data/optimal_ema.json'
 
 def load_optimal_ema_data():
-    """Загружает данные об оптимальных EMA из файла (для текущего таймфрейма)"""
+    """Загружает данные об оптимальных EMA из файла"""
     global optimal_ema_data
     try:
-        # ✅ ИСПРАВЛЕНИЕ: Не импортируем get_timeframe при импорте модуля!
-        # Получаем текущий таймфрейм из конфига (с fallback на 6h)
-        try:
-            from bots_modules.imports_and_globals import get_timeframe, auto_bot_config
-            # Безопасная проверка: если конфиг не загружен, используем дефолт
-            if auto_bot_config and isinstance(auto_bot_config, dict):
-                timeframe = auto_bot_config.get('timeframe', '6h')
-            else:
-                timeframe = '6h'
-        except (ImportError, AttributeError):
-            # Если что-то пошло не так, используем дефолтный таймфрейм
-            timeframe = '6h'
-        
-        # Формируем имя файла с учетом таймфрейма (всегда с суффиксом)
-        optimal_ema_file = f'data/optimal_ema_{timeframe}.json'
-        
-        if os.path.exists(optimal_ema_file):
-            with open(optimal_ema_file, 'r', encoding='utf-8') as f:
+        if os.path.exists(OPTIMAL_EMA_FILE):
+            with open(OPTIMAL_EMA_FILE, 'r', encoding='utf-8') as f:
                 optimal_ema_data = json.load(f)
-                logger.info(f"[OPTIMAL_EMA] Загружено {len(optimal_ema_data)} записей об оптимальных EMA для TF {timeframe}")
+                logger.info(f"[OPTIMAL_EMA] Загружено {len(optimal_ema_data)} записей об оптимальных EMA")
         else:
             optimal_ema_data = {}
-            logger.info(f"[OPTIMAL_EMA] Файл с оптимальными EMA для TF {timeframe} не найден")
+            logger.info("[OPTIMAL_EMA] Файл с оптимальными EMA не найден")
     except Exception as e:
         logger.error(f"[OPTIMAL_EMA] Ошибка загрузки данных об оптимальных EMA: {e}")
         optimal_ema_data = {}
@@ -97,7 +81,7 @@ def get_optimal_ema_periods(symbol):
             'analysis_method': 'default'
         }
 
-def calculate_all_coins_optimal_ema(mode='auto', force_symbols=None, timeframe=None):
+def calculate_all_coins_optimal_ema(mode='auto', force_symbols=None):
     """📊 ПАКЕТНЫЙ расчет Optimal EMA через скрипт с параметрами
     
     Args:
@@ -106,7 +90,6 @@ def calculate_all_coins_optimal_ema(mode='auto', force_symbols=None, timeframe=N
             - 'force': --force (все монеты принудительно)
             - 'symbols': --force --coins LIST (конкретные монеты)
         force_symbols (list): Список монет для принудительного расчета (если mode='symbols')
-        timeframe (str): Таймфрейм для расчета (по умолчанию из конфига)
     """
     try:
         logger.info(f"[OPTIMAL_EMA_BATCH] 📊 Начинаем расчет Optimal EMA (режим: {mode})...")
@@ -117,13 +100,9 @@ def calculate_all_coins_optimal_ema(mode='auto', force_symbols=None, timeframe=N
         
         # Получаем все монеты с RSI данными
         coins_to_check = []
-        # ✅ ДИНАМИЧЕСКИЙ КЛЮЧ для RSI
-        from bots_modules.filters import get_rsi_key
-        rsi_key = get_rsi_key()
-        
         with rsi_data_lock:
             for symbol, coin_data in coins_rsi_data['coins'].items():
-                if coin_data.get(rsi_key) is not None:
+                if coin_data.get('rsi6h') is not None:
                     coins_to_check.append(symbol)
         
         logger.info(f"[OPTIMAL_EMA_BATCH] 📊 Найдено {len(coins_to_check)} монет для расчета Optimal EMA")
@@ -154,22 +133,17 @@ def calculate_all_coins_optimal_ema(mode='auto', force_symbols=None, timeframe=N
             logger.error(f"[OPTIMAL_EMA_BATCH] ❌ Скрипт не найден: {script_path}")
             return False
         
-        # Определяем таймфрейм (если не указан - берем из конфига)
-        if not timeframe:
-            from bots_modules.imports_and_globals import get_timeframe
-            timeframe = get_timeframe()
-        
         # Формируем команду в зависимости от режима
         if mode == 'auto':
-            cmd = ['python', script_path, '--all', '--timeframe', timeframe]
-            logger.info(f"[OPTIMAL_EMA_BATCH] 🚀 Запускаем скрипт с параметрами --all --timeframe {timeframe}...")
+            cmd = ['python', script_path, '--all']
+            logger.info("[OPTIMAL_EMA_BATCH] 🚀 Запускаем скрипт с параметром --all (только новые монеты)...")
         elif mode == 'force':
-            cmd = ['python', script_path, '--force', '--timeframe', timeframe]
-            logger.info(f"[OPTIMAL_EMA_BATCH] 🚀 Запускаем скрипт с параметрами --force --timeframe {timeframe}...")
+            cmd = ['python', script_path, '--force']
+            logger.info("[OPTIMAL_EMA_BATCH] 🚀 Запускаем скрипт с параметром --force (все монеты принудительно)...")
         elif mode == 'symbols' and force_symbols:
             symbols_str = ','.join(force_symbols)
-            cmd = ['python', script_path, '--force', '--coins', symbols_str, '--timeframe', timeframe]
-            logger.info(f"[OPTIMAL_EMA_BATCH] 🚀 Запускаем скрипт с параметрами --force --coins {symbols_str} --timeframe {timeframe}...")
+            cmd = ['python', script_path, '--force', '--coins', symbols_str]
+            logger.info(f"[OPTIMAL_EMA_BATCH] 🚀 Запускаем скрипт с параметрами --force --coins {symbols_str}...")
         else:
             logger.error(f"[OPTIMAL_EMA_BATCH] ❌ Неверный режим или отсутствуют монеты: mode={mode}, symbols={force_symbols}")
             return False

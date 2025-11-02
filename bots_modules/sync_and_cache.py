@@ -163,22 +163,32 @@ def load_rsi_cache():
         return False
 
 def save_default_config():
-    """✅ ИСПРАВЛЕНО: Больше НЕ сохраняем в JSON - используем только bot_config.py"""
-    # Больше не сохраняем default_auto_bot_config.json
-    # Единственный источник: bot_engine/bot_config.py
-    logger.info(f"[DEFAULT_CONFIG] ✅ Конфигурация в bot_config.py")
-    return True
+    """Сохраняет дефолтную конфигурацию в файл для восстановления"""
+    try:
+        with open(DEFAULT_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(DEFAULT_AUTO_BOT_CONFIG, f, indent=2, ensure_ascii=False)
+        
+        logger.info(f"[DEFAULT_CONFIG] ✅ Дефолтная конфигурация сохранена в {DEFAULT_CONFIG_FILE}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"[DEFAULT_CONFIG] ❌ Ошибка сохранения дефолтной конфигурации: {e}")
+        return False
 
 def load_default_config():
-    """✅ ИСПРАВЛЕНО: Загружает дефолтную конфигурацию ИЗ bot_config.py"""
+    """Загружает дефолтную конфигурацию из файла"""
     try:
-        # Импортируем напрямую из bot_config.py
-        from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
-        return DEFAULT_AUTO_BOT_CONFIG.copy()
+        if os.path.exists(DEFAULT_CONFIG_FILE):
+            with open(DEFAULT_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
+            # Если файла нет, создаем его с текущими дефолтными значениями
+            save_default_config()
+            return DEFAULT_AUTO_BOT_CONFIG.copy()
             
     except Exception as e:
         logger.error(f"[DEFAULT_CONFIG] ❌ Ошибка загрузки дефолтной конфигурации: {e}")
-        return {}
+        return DEFAULT_AUTO_BOT_CONFIG.copy()
 
 def restore_default_config():
     """Восстанавливает дефолтную конфигурацию Auto Bot"""
@@ -452,12 +462,11 @@ def save_auto_bot_config():
                     importlib.reload(bot_engine.bot_config)
                     
                     # Перечитываем конфигурацию из обновленного модуля
-                    from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG, TIMEFRAME
+                    from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
                     with bots_data_lock:
                         bots_data['auto_bot_config'] = DEFAULT_AUTO_BOT_CONFIG.copy()
                     
                     logger.info(f"[SAVE_CONFIG] ✅ Модуль перезагружен, изменения применены БЕЗ перезапуска!")
-                    logger.info(f"[SAVE_CONFIG] 📊 Новый таймфрейм: {TIMEFRAME}")
                 else:
                     logger.warning(f"[SAVE_CONFIG] ⚠️ Модуль bot_config не был загружен")
             except Exception as reload_error:
@@ -471,27 +480,19 @@ def save_auto_bot_config():
         return False
 
 def save_optimal_ema_periods():
-    """Сохраняет оптимальные EMA периоды (для текущего таймфрейма)"""
+    """Сохраняет оптимальные EMA периоды"""
     try:
-        # Импортируем оптимальные EMA данные
-        from bots_modules.optimal_ema import optimal_ema_data
+        global optimal_ema_data
         
         # Проверяем, что есть данные для сохранения
         if not optimal_ema_data:
             logger.warning("[SAVE_EMA] ⚠️ Нет данных об оптимальных EMA для сохранения")
             return False
         
-        # Получаем текущий таймфрейм из конфига
-        from bots_modules.imports_and_globals import get_timeframe
-        timeframe = get_timeframe()
-        
-        # Формируем имя файла с учетом таймфрейма (всегда с суффиксом)
-        optimal_ema_file = f'data/optimal_ema_{timeframe}.json'
-        
-        with open(optimal_ema_file, 'w', encoding='utf-8') as f:
+        with open(OPTIMAL_EMA_FILE, 'w', encoding='utf-8') as f:
             json.dump(optimal_ema_data, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"[SAVE_EMA] ✅ Оптимальные EMA периоды сохранены в {optimal_ema_file} ({len(optimal_ema_data)} записей для TF {timeframe})")
+        logger.info(f"[SAVE_EMA] ✅ Оптимальные EMA периоды сохранены в {OPTIMAL_EMA_FILE} ({len(optimal_ema_data)} записей)")
         return True
         
     except Exception as e:
@@ -516,11 +517,11 @@ def load_bots_state():
         logger.info(f"[LOAD_STATE] 📊 Версия состояния: {version}, последнее сохранение: {last_saved}")
         
         # ✅ ИСПРАВЛЕНИЕ: НЕ перезаписываем конфигурацию Auto Bot из bots_state.json!
-        # Конфигурация должна загружаться ТОЛЬКО из bot_engine/bot_config.py
+        # Конфигурация должна загружаться ТОЛЬКО из auto_bot_config.json
         # bots_state.json содержит только состояние ботов и глобальную статистику
         
         logger.info(f"[LOAD_STATE] ⚙️ Конфигурация Auto Bot НЕ загружается из bots_state.json")
-        logger.info(f"[LOAD_STATE] 💡 Конфигурация загружается только из bot_engine/bot_config.py")
+        logger.info(f"[LOAD_STATE] 💡 Конфигурация загружается только из auto_bot_config.json")
         
         # Восстанавливаем ботов
         restored_bots = 0
@@ -2034,42 +2035,48 @@ def sync_bots_with_exchange():
             
             # Синхронизируем только с позициями, для которых есть боты
             synchronized_bots = 0
-            bots_to_delete = []  # 🔥 НАКОПЛЕНИЕ символов для удаления ВНЕ цикла
             
+            # ✅ ИСПРАВЛЕНИЕ: Используем list() для безопасной итерации (предотвращаем "dictionary changed size during iteration")
             with bots_data_lock:
-                for symbol, bot_data in bots_data['bots'].items():
+                bot_items = list(bots_data['bots'].items())  # Создаем копию списка
+            
+            for symbol, bot_data in bot_items:
                     try:
                         if symbol in positions_with_bots:
                             # Есть позиция на бирже - обновляем данные бота
                             exchange_pos = positions_with_bots[symbol]
                             
-                            # Обновляем данные бота согласно позиции на бирже
-                            old_status = bot_data.get('status', 'UNKNOWN')
-                            old_pnl = bot_data.get('unrealized_pnl', 0)
-                            
-                            # ⚡ КРИТИЧНО: Не изменяем статус если бот был остановлен вручную!
-                            is_paused = old_status == BOT_STATUS['PAUSED']
-                            
-                            bot_data['entry_price'] = exchange_pos['avg_price']
-                            bot_data['unrealized_pnl'] = exchange_pos['unrealized_pnl']
-                            bot_data['position_side'] = 'LONG' if exchange_pos['side'] == 'Buy' else 'SHORT'
-                            
-                            # Сохраняем стопы и тейки из биржи
-                            if exchange_pos.get('stop_loss'):
-                                bot_data['stop_loss'] = exchange_pos['stop_loss']
-                            if exchange_pos.get('take_profit'):
-                                bot_data['take_profit'] = exchange_pos['take_profit']
-                            if exchange_pos.get('mark_price'):
-                                bot_data['current_price'] = exchange_pos['mark_price']
-                            
-                            # Определяем статус на основе наличия позиции (НЕ ИЗМЕНЯЕМ если бот на паузе!)
-                            if not is_paused:
-                                if exchange_pos['side'] == 'Buy':
-                                    bot_data['status'] = BOT_STATUS['IN_POSITION_LONG']
+                            # Получаем старые данные для логирования
+                            with bots_data_lock:
+                                if symbol not in bots_data['bots']:
+                                    continue  # Бот был удалён в другом потоке
+                                bot_data = bots_data['bots'][symbol]
+                                old_status = bot_data.get('status', 'UNKNOWN')
+                                old_pnl = bot_data.get('unrealized_pnl', 0)
+                                
+                                # ⚡ КРИТИЧНО: Не изменяем статус если бот был остановлен вручную!
+                                is_paused = old_status == BOT_STATUS['PAUSED']
+                                
+                                bot_data['entry_price'] = exchange_pos['avg_price']
+                                bot_data['unrealized_pnl'] = exchange_pos['unrealized_pnl']
+                                bot_data['position_side'] = 'LONG' if exchange_pos['side'] == 'Buy' else 'SHORT'
+                                
+                                # Сохраняем стопы и тейки из биржи
+                                if exchange_pos.get('stop_loss'):
+                                    bot_data['stop_loss'] = exchange_pos['stop_loss']
+                                if exchange_pos.get('take_profit'):
+                                    bot_data['take_profit'] = exchange_pos['take_profit']
+                                if exchange_pos.get('mark_price'):
+                                    bot_data['current_price'] = exchange_pos['mark_price']
+                                
+                                # Определяем статус на основе наличия позиции (НЕ ИЗМЕНЯЕМ если бот на паузе!)
+                                if not is_paused:
+                                    if exchange_pos['side'] == 'Buy':
+                                        bot_data['status'] = BOT_STATUS['IN_POSITION_LONG']
+                                    else:
+                                        bot_data['status'] = BOT_STATUS['IN_POSITION_SHORT']
                                 else:
-                                    bot_data['status'] = BOT_STATUS['IN_POSITION_SHORT']
-                            else:
-                                logger.info(f"[SYNC_EXCHANGE] ⏸️ {symbol}: Бот на паузе - сохраняем статус PAUSED")
+                                    logger.info(f"[SYNC_EXCHANGE] ⏸️ {symbol}: Бот на паузе - сохраняем статус PAUSED")
                             
                             synchronized_bots += 1
                             
@@ -2103,23 +2110,18 @@ def sync_bots_with_exchange():
                                 logger.error(f"[SYNC_EXCHANGE] ❌ Ошибка проверки статуса {symbol}: {e}")
                                 logger.info(f"[SYNC_EXCHANGE] 🗑️ {symbol}: Удаляем бота (позиция закрыта на бирже)")
                             
-                            # 🔥 НЕ УДАЛЯЕМ СРАЗУ - добавляем в список для удаления ПОСЛЕ цикла
-                            bots_to_delete.append(symbol)
+                            # Удаляем бота из системы (с блокировкой!)
+                            with bots_data_lock:
+                                if symbol in bots_data['bots']:
+                                    del bots_data['bots'][symbol]
+                            
+                            # Сохраняем состояние после удаления
+                            save_bots_state()
                             
                             synchronized_bots += 1
                         
                     except Exception as e:
                         logger.error(f"[SYNC_EXCHANGE] ❌ Ошибка синхронизации бота {symbol}: {e}")
-                
-                # 🔥 УДАЛЯЕМ ботов ВНЕ цикла итерации
-                for symbol_to_delete in bots_to_delete:
-                    if symbol_to_delete in bots_data['bots']:
-                        del bots_data['bots'][symbol_to_delete]
-                        logger.info(f"[SYNC_EXCHANGE] 🗑️ Удален бот: {symbol_to_delete}")
-                
-                # Сохраняем состояние после удаления (если были удаления)
-                if bots_to_delete:
-                    save_bots_state()
             
             if synchronized_bots > 0:
                 elapsed = time.time() - start_time

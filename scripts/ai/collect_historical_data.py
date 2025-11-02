@@ -125,17 +125,10 @@ def collect_data_for_coin(exchange, symbol, days=730):
         # Убираем дубликаты в новых данных
         new_df = new_df.drop_duplicates(subset=['timestamp'], keep='first')
         
-        # ✅ Получаем текущий таймфрейм для динамического имени файла
-        try:
-            from bots_modules.imports_and_globals import get_timeframe
-            timeframe = get_timeframe()
-        except Exception:
-            timeframe = '6h'  # Fallback
-        
         # Подготавливаем путь к файлу
-        output_dir = Path(f'data/ai/historical/{timeframe}')
+        output_dir = Path('data/ai/historical')
         output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / f'{symbol}_{timeframe}_historical.csv'
+        output_file = output_dir / f'{symbol}_6h_historical.csv'
         
         # ИНКРЕМЕНТАЛЬНОЕ ОБНОВЛЕНИЕ: объединяем со старыми данными
         if output_file.exists():

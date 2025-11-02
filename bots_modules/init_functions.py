@@ -118,35 +118,15 @@ def init_bot_service():
         logger.info(f"🔧 Версия: 1.0")
         logger.info("=" * 80)
         
-        # 0. Загружаем конфигурацию СНАЧАЛА (чтобы знать текущий таймфрейм!)
-        load_auto_bot_config()
+        # 0. Загружаем постоянное хранилище зрелых монет (с проверкой конфига!)
+        load_mature_coins_storage()
         
-        # ✅ НЕ ОЧИЩАЕМ кэш! Пусть candle_loader решит - загружать из БД или с биржи
-        from bots_modules.imports_and_globals import coins_rsi_data, rsi_data_lock, get_timeframe
-        from bots_modules.candles_db import init_candles_db, clear_timeframe_cache
+        # 0.1. 🚀 Загружаем кэш последней проверки зрелости
+        from bots_modules.maturity import load_maturity_check_cache
+        load_maturity_check_cache()
         
-        current_tf = get_timeframe()
-        
-        # ✅ Инициализируем БД свечей
-        init_candles_db()
-        
-        with rsi_data_lock:
-            # Проверяем метку таймфрейма в кэше
-            cache_tf = coins_rsi_data.get('candles_timeframe')
-            cached_count = len(coins_rsi_data.get('candles_cache', {}))
-            
-            # Если таймфрейм изменился - очищаем кэш только для старого TF
-            if cache_tf and cache_tf != current_tf:
-                logger.warning(f"[INIT] 🧹 Таймфрейм изменился: {cache_tf} -> {current_tf}")
-                clear_timeframe_cache(cache_tf)
-                coins_rsi_data['candles_cache'] = {}  # Очищаем память
-            elif not cache_tf:
-                # Первый запуск
-                coins_rsi_data['candles_cache'] = {}
-            
-            coins_rsi_data['last_candles_update'] = None  # Сбрасываем метку времени
-            coins_rsi_data['candles_timeframe'] = current_tf  # Устанавливаем новый таймфрейм
-            logger.info(f"[INIT] ✅ Кэш инициализирован для таймфрейма: {current_tf}")
+        # 0.1. Загружаем данные об оптимальных EMA
+        load_optimal_ema_data()
         
         # 1. Создаем дефолтную конфигурацию если её нет
         save_default_config()
@@ -160,13 +140,6 @@ def init_bot_service():
         # 4. Загружаем сохраненное состояние ботов
         load_bots_state()
         
-        # 0.1. Загружаем постоянное хранилище зрелых монет (с проверкой конфига!)
-        load_mature_coins_storage()
-        
-        # 0.2. 🚀 Загружаем кэш последней проверки зрелости
-        from bots_modules.maturity import load_maturity_check_cache
-        load_maturity_check_cache()
-        
         # 5. СНАЧАЛА инициализируем биржу (КРИТИЧЕСКИ ВАЖНО!)
         if init_exchange_sync():
             pass  # Успешно инициализирована
@@ -175,45 +148,6 @@ def init_bot_service():
                 'last_sync': datetime.now().isoformat(),
                 'connection_count': process_state['exchange_connection']['connection_count'] + 1
             })
-            
-            # 5.0. Загружаем данные об оптимальных EMA (после инициализации биржи)
-            try:
-                # Получаем текущий таймфрейм
-                current_tf = '6h'  # По умолчанию
-                try:
-                    with bots_data_lock:
-                        config = bots_data.get('auto_bot_config', {})
-                        current_tf = config.get('timeframe', '6h')
-                except Exception:
-                    pass
-                
-                # Проверяем наличие файла для текущего TF
-                optimal_ema_file = f'data/optimal_ema_{current_tf}.json'
-                import os
-                
-                if not os.path.exists(optimal_ema_file):
-                    logger.warning(f"[INIT] ⚠️ Файл оптимальных EMA для TF {current_tf} не найден")
-                    logger.info(f"[INIT] 🚀 Запускаем расчет оптимальных EMA для TF {current_tf}...")
-                    
-                    # Запускаем расчет в фоне
-                    def calculate_optimal_ema():
-                        try:
-                            from bots_modules.optimal_ema import calculate_all_coins_optimal_ema
-                            calculate_all_coins_optimal_ema(mode='auto', timeframe=current_tf)
-                            logger.info(f"[INIT] ✅ Расчет оптимальных EMA для TF {current_tf} завершен")
-                            # Перезагружаем данные
-                            from bots_modules.optimal_ema import load_optimal_ema_data
-                            load_optimal_ema_data()
-                        except Exception as calc_error:
-                            logger.error(f"[INIT] ❌ Ошибка расчета оптимальных EMA: {calc_error}")
-                    
-                    thread = threading.Thread(target=calculate_optimal_ema, daemon=True)
-                    thread.start()
-                else:
-                    load_optimal_ema_data()
-                    logger.info("[INIT] ✅ Загружены данные об оптимальных EMA")
-            except Exception as ema_error:
-                logger.error(f"[INIT] ⚠️ Не удалось загрузить оптимальные EMA: {ema_error}")
             
             # 5.1. Инициализируем загруженных ботов (после инициализации биржи)
             with bots_data_lock:
@@ -641,13 +575,8 @@ def process_trading_signals_on_candle_close(candle_timestamp: int, exchange_obj=
                     logger.warning(f"[TRADING] ⚠️ Нет RSI данных для {symbol}")
                     continue
                 
-                # ✅ ДИНАМИЧЕСКИЕ КЛЮЧИ
-                from bots_modules.filters import get_rsi_key, get_trend_key
-                rsi_key = get_rsi_key()
-                trend_key = get_trend_key()
-                
-                rsi = coin_rsi_data.get(rsi_key)
-                trend = coin_rsi_data.get(trend_key, 'NEUTRAL')
+                rsi = coin_rsi_data.get('rsi6h')
+                trend = coin_rsi_data.get('trend6h', 'NEUTRAL')
                 price = coin_rsi_data.get('price', 0)
                 
                 if not rsi or not price:

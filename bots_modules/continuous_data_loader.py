@@ -108,12 +108,7 @@ class ContinuousDataLoader:
                     time.sleep(30)  # Пауза перед следующей попыткой
                     continue
                 
-                # ✅ Этап 2: Рассчитываем RSI, EMA, тренды для всех монет (30-40 сек) - БЛОКИРУЮЩИЙ
-                # Внутри load_all_coins_rsi() этапы идут последовательно:
-                # - Этап 1: Расчет RSI (только RSI)
-                # - Этап 2: Расчет оптимальных EMA (чтение из файла)
-                # - Этап 3: Расчет трендов (зависит от EMA и RSI)
-                # - Этап 4: Расчет сигналов и зон RSI
+                # ✅ Этап 2: Рассчитываем RSI для всех монет (30-40 сек) - БЛОКИРУЮЩИЙ
                 success = self._calculate_rsi()
                 if not success:
                     logger.error("[CONTINUOUS] ❌ Не удалось рассчитать RSI, пропускаем раунд")
@@ -121,16 +116,16 @@ class ContinuousDataLoader:
                     time.sleep(30)
                     continue
                 
-                # ✅ Этап 3: Рассчитываем зрелость для новых/незрелых монет (10-20 сек)
-                # ⚡ ОПТИМИЗАЦИЯ: Зрелость УЖЕ рассчитывается при загрузке свечей (get_coin_candles_only)
-                # Этот этап проверяет ТОЛЬКО новые монеты или те, которые стали зрелыми
-                # УМНАЯ ЛОГИКА: пропускает уже зрелые монеты из хранилища
+                # ✅ Этап 3: Рассчитываем зрелость (только для незрелых монет) (10-20 сек)
                 self._calculate_maturity()
                 
-                # ✅ Этап 4: Обрабатываем лонг/шорт монеты фильтрами (сигналы уже рассчитаны в load_all_coins_rsi) (5 сек)
+                # ✅ Этап 4: Определяем тренд для сигнальных монет (RSI ≤29 или ≥71) (5-10 сек)
+                self._analyze_trends()
+                
+                # ✅ Этап 5: Обрабатываем лонг/шорт монеты фильтрами (5 сек)
                 filtered_coins = self._process_filters()
                 
-                # ✅ Этап 5: Передаем отфильтрованные монеты автоботу (торговля только для зрелых монет)
+                # ✅ Этап 6: Передаем отфильтрованные монеты автоботу
                 self._set_filtered_coins_for_autobot(filtered_coins)
                 
                 cycle_duration = time.time() - cycle_start
@@ -177,57 +172,13 @@ class ContinuousDataLoader:
             logger.info("[CONTINUOUS] 📦 Этап 1/6: Загружаем свечи...")
             start = time.time()
             
-            # ✅ КРИТИЧНО: Проверяем смену таймфрейма ПЕРЕД проверкой кэша
-            from bots_modules.imports_and_globals import coins_rsi_data, get_timeframe
-            current_tf = get_timeframe()
-            cached_tf = coins_rsi_data.get('candles_timeframe')
-            
-            # Если таймфрейм изменился - принудительно загружаем свечи
-            if cached_tf and cached_tf != current_tf:
-                logger.warning(f"[CONTINUOUS] 🔄 ТАЙМФРЕЙМ ИЗМЕНЕН: {cached_tf} → {current_tf}")
-                logger.warning("[CONTINUOUS] 🔄 ПРИНУДИТЕЛЬНАЯ загрузка свечей для нового таймфрейма")
-                coins_rsi_data['last_candles_update'] = None  # Сбрасываем метку времени
-                coins_rsi_data['candles_timeframe'] = current_tf  # Обновляем метку таймфрейма
-            elif not cached_tf:
-                # Первый запуск - сохраняем текущий таймфрейм
-                coins_rsi_data['candles_timeframe'] = current_tf
-            
-            # ⚠️ КРИТИЧНО: Проверяем, не загружались ли свечи недавно (только если таймфрейм НЕ изменился)
-            last_update = coins_rsi_data.get('last_candles_update')
-            if last_update and cached_tf == current_tf:  # Проверяем кэш только если таймфрейм не изменился
-                from datetime import datetime
-                try:
-                    last_update_dt = datetime.fromisoformat(last_update)
-                    time_diff = datetime.now() - last_update_dt
-                    if time_diff.total_seconds() < 300:  # Если свечи обновлялись менее 5 минут назад
-                        logger.info("[CONTINUOUS] ✅ Используем свежие свечи из кэша")
-                        return True
-                except:
-                    pass
-            
-            # Запускаем загрузку в отдельном потоке
-            import threading
-            result = [None]
-            
-            def load_candles_thread():
-                try:
-                    logger.info("[CONTINUOUS] 🔄 Запускаем load_all_coins_candles_fast() в отдельном потоке...")
-                    from bots_modules.filters import load_all_coins_candles_fast
-                    result[0] = load_all_coins_candles_fast()
-                    logger.info(f"[CONTINUOUS] 📊 load_all_coins_candles_fast() завершена: {result[0]}")
-                except Exception as e:
-                    logger.error(f"[CONTINUOUS] ❌ Ошибка в потоке загрузки свечей: {e}")
-                    result[0] = False
-            
-            # Запускаем поток
-            candles_thread = threading.Thread(target=load_candles_thread, daemon=False)  # ⚠️ НЕ daemon чтобы дождаться завершения!
-            candles_thread.start()
-            
-            # ✅ КРИТИЧНО: Ждем ПОЛНОГО завершения загрузки всех свечей БЕЗ таймаута!
-            candles_thread.join()  # Убрали timeout=2!
+            logger.info("[CONTINUOUS] 🔄 Вызываем load_all_coins_candles_fast()...")
+            from bots_modules.filters import load_all_coins_candles_fast
+            success = load_all_coins_candles_fast()
+            logger.info(f"[CONTINUOUS] 📊 load_all_coins_candles_fast() вернула: {success}")
             
             duration = time.time() - start
-            if result[0]:
+            if success:
                 logger.info(f"[CONTINUOUS] ✅ Свечи загружены за {duration:.1f}с")
                 return True
             else:
@@ -273,11 +224,11 @@ class ContinuousDataLoader:
                     logger.error(f"[CONTINUOUS] ❌ Ошибка в потоке загрузки свечей: {e}")
             
             # Запускаем поток
-            candles_thread = threading.Thread(target=load_candles_thread, daemon=False)  # ⚠️ НЕ daemon!
+            candles_thread = threading.Thread(target=load_candles_thread, daemon=True)
             candles_thread.start()
             
-            # ✅ КРИТИЧНО: Ждем ПОЛНОГО завершения загрузки всех свечей БЕЗ таймаута!
-            candles_thread.join()
+            # Ждем максимум 2 секунды для инициализации
+            candles_thread.join(timeout=2)
             
             duration = time.time() - start
             logger.info(f"[CONTINUOUS] ✅ Загрузка свечей запущена в фоне за {duration:.1f}с")

@@ -101,7 +101,7 @@ class AutoTrainer:
     
     def _check_initial_training(self):
         """Проверяет нужно ли обучение при старте"""
-        model_path = Path(AIConfig.get_model_path('anomaly_detector', 'pkl'))
+        model_path = Path(AIConfig.AI_ANOMALY_MODEL_PATH)
         
         if not model_path.exists():
             logger.warning("[AutoTrainer] ⚠️ Модель не найдена, требуется первичное обучение")
@@ -349,8 +349,8 @@ class AutoTrainer:
             # 1. Перезагружаем Anomaly Detector
             if ai_manager.anomaly_detector:
                 try:
-                    model_path = AIConfig.get_model_path('anomaly_detector', 'pkl')
-                    scaler_path = AIConfig.get_model_path('anomaly_scaler', 'pkl')
+                    model_path = AIConfig.AI_ANOMALY_MODEL_PATH
+                    scaler_path = AIConfig.AI_ANOMALY_SCALER_PATH
                     
                     success = ai_manager.anomaly_detector.load_model(model_path, scaler_path)
                     

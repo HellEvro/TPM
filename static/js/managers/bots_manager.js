@@ -113,28 +113,7 @@ class BotsManager {
             // Принудительная загрузка конфигурации
             setTimeout(() => {
                 console.log('[BotsManager] 🔄 Принудительная загрузка конфигурации...');
-                this.loadConfigurationData().then((config) => {
-                    // После загрузки конфигурации - обновляем таймфрейм в UI
-                    // Берем таймфрейм прямо из конфига, а не из поля (которое могло не обновиться)
-                    if (config && config.autoBot) {
-                        const systemConfig = config.system || {};
-                        const timeframe = systemConfig.timeframe || config.autoBot.timeframe || '6h';
-                        console.log('[BotsManager] 🔄 Обновляем таймфрейм в UI после загрузки конфигурации:', timeframe);
-                        
-                        // Обновляем поле тоже
-                        const timeframeEl = document.getElementById('timeframe');
-                        if (timeframeEl) {
-                            timeframeEl.value = timeframe;
-                        }
-                        
-                        // Обновляем UI заголовок
-                        setTimeout(() => {
-                            this.updateTimeframeInUI(timeframe);
-                        }, 200);
-                    }
-                }).catch((error) => {
-                    console.error('[BotsManager] ❌ Ошибка загрузки конфигурации в init:', error);
-                });
+                this.loadConfigurationData();
             }, 2000);
             
             // Принудительное обновление состояния автобота и ботов (только при первой загрузке)
@@ -187,14 +166,6 @@ class BotsManager {
         
         // Загружаем счётчик зрелых монет
         this.loadMatureCoinsCount();
-        
-        // ✅ Обновляем таймфрейм в UI СРАЗУ при инициализации
-        const timeframeEl = document.getElementById('timeframe');
-        if (timeframeEl) {
-            const currentTf = timeframeEl.value || '6h';
-            console.log('[BotsManager] 🔄 Устанавливаем начальный таймфрейм из HTML:', currentTf);
-            this.updateTimeframeInUI(currentTf);
-        }
         
         // Принудительно применяем стили для читаемости
         this.applyReadabilityStyles();
@@ -527,9 +498,7 @@ class BotsManager {
                 item.classList.remove('buy-zone', 'sell-zone', 'enter-long', 'enter-short');
                 
                 // Добавляем новые классы на основе обновленных порогов
-                // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI (динамический таймфрейм)
-                const rsiValue = coinData.rsi6h || coinData.rsi5m || coinData.rsi15m || coinData.rsi1h || coinData.rsi4h || coinData.rsi1d || coinData.rsi1w;
-                const rsiClass = this.getRsiZoneClass(rsiValue);
+                const rsiClass = this.getRsiZoneClass(coinData.rsi6h);
                 if (rsiClass) {
                     item.classList.add(rsiClass);
                 }
@@ -805,14 +774,8 @@ class BotsManager {
         }
         
         const coinsHtml = this.coinsRsiData.map(coin => {
-            // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI и Trend (динамический таймфрейм)
-            // ✅ Используем нормализованный ключ 'rsi' (добавлен в API для совместимости)
-            // Fallback на старые ключи для обратной совместимости
-            const rsiValue = coin.rsi || coin.rsi6h || coin.rsi5m || coin.rsi15m || coin.rsi1h || coin.rsi4h || coin.rsi1d || coin.rsi1w;
-            const trendValue = coin.trend || coin.trend6h || coin.trend5m || coin.trend15m || coin.trend1h || coin.trend4h || coin.trend1d || coin.trend1w;
-            
-            const rsiClass = this.getRsiZoneClass(rsiValue);
-            const trendClass = trendValue ? `trend-${trendValue.toLowerCase()}` : 'trend-none';
+            const rsiClass = this.getRsiZoneClass(coin.rsi6h);
+            const trendClass = coin.trend6h ? `trend-${coin.trend6h.toLowerCase()}` : 'trend-none';
             
             // Используем универсальную функцию для определения сигнала
             const effectiveSignal = this.getEffectiveSignal(coin);
@@ -850,7 +813,7 @@ class BotsManager {
                                 ${isDelisting ? '<span class="delisting-indicator" title="Монета на делистинге">⚠️</span>' : ''}
                                 ${isNewCoin ? '<span class="new-coin-indicator" title="Новая монета (включение в листинг)">🆕</span>' : ''}
                                 ${this.generateWarningIndicator(coin)}
-                                <span class="coin-rsi ${this.getRsiZoneClass(rsiValue)}">${rsiValue}</span>
+                                <span class="coin-rsi ${this.getRsiZoneClass(coin.rsi6h)}">${coin.rsi6h}</span>
                                 <a href="${this.createTickerLink(coin.symbol)}" 
                                target="_blank" 
                                class="external-link" 
@@ -865,7 +828,7 @@ class BotsManager {
                         </div>
                         </div>
                         <div class="coin-details">
-                            <span class="coin-trend ${trendValue}">${trendValue || 'NEUTRAL'}</span>
+                            <span class="coin-trend ${coin.trend6h}">${coin.trend6h || 'NEUTRAL'}</span>
                             <span class="coin-price">$${coin.price?.toFixed(6) || '0'}</span>
                         </div>
                         <div class="coin-signal">
@@ -1217,25 +1180,10 @@ class BotsManager {
         const allCount = this.coinsRsiData.length;
         const longCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'ENTER_LONG').length;
         const shortCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'ENTER_SHORT').length;
-        // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI и Trend
-        const buyZoneCount = this.coinsRsiData.filter(coin => {
-            // ✅ Используем нормализованный ключ 'rsi' (добавлен в API для совместимости)
-            const rsi = coin.rsi || coin.rsi6h || coin.rsi5m || coin.rsi15m || coin.rsi1h || coin.rsi4h || coin.rsi1d || coin.rsi1w;
-            return rsi && rsi <= 29;
-        }).length;
-        const sellZoneCount = this.coinsRsiData.filter(coin => {
-            // ✅ Используем нормализованный ключ 'rsi' (добавлен в API для совместимости)
-            const rsi = coin.rsi || coin.rsi6h || coin.rsi5m || coin.rsi15m || coin.rsi1h || coin.rsi4h || coin.rsi1d || coin.rsi1w;
-            return rsi && rsi >= 71;
-        }).length;
-        const trendUpCount = this.coinsRsiData.filter(coin => {
-            const trend = coin.trend6h || coin.trend5m || coin.trend15m || coin.trend1h || coin.trend4h || coin.trend1d || coin.trend1w;
-            return trend === 'UP';
-        }).length;
-        const trendDownCount = this.coinsRsiData.filter(coin => {
-            const trend = coin.trend6h || coin.trend5m || coin.trend15m || coin.trend1h || coin.trend4h || coin.trend4h || coin.trend1d || coin.trend1w;
-            return trend === 'DOWN';
-        }).length;
+        const buyZoneCount = this.coinsRsiData.filter(coin => coin.rsi6h && coin.rsi6h <= 29).length;
+        const sellZoneCount = this.coinsRsiData.filter(coin => coin.rsi6h && coin.rsi6h >= 71).length;
+        const trendUpCount = this.coinsRsiData.filter(coin => coin.trend6h === 'UP').length;
+        const trendDownCount = this.coinsRsiData.filter(coin => coin.trend6h === 'DOWN').length;
         const manualPositionCount = this.coinsRsiData.filter(coin => coin.manual_position === true).length;
         const unavailableCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'UNAVAILABLE').length;
         
@@ -1459,18 +1407,14 @@ class BotsManager {
         }
         
         if (rsiElement) {
-            // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI
-            // ✅ Используем нормализованный ключ 'rsi' (добавлен в API для совместимости)
-            const rsi = coin.rsi || coin.enhanced_rsi?.rsi_6h || coin.rsi6h || coin.rsi5m || coin.rsi15m || coin.rsi1h || coin.rsi4h || coin.rsi1d || coin.rsi1w || '-';
+            const rsi = coin.enhanced_rsi?.rsi_6h || coin.rsi6h || '-';
             rsiElement.textContent = rsi;
             rsiElement.className = `value rsi-indicator ${this.getRsiZoneClass(rsi)}`;
             console.log('[BotsManager] ✅ RSI обновлен:', rsi);
         }
         
         if (trendElement) {
-            // ✅ УНИВЕРСАЛЬНО: используем нормализованный ключ 'trend' (добавлен в API)
-            // Fallback на старые ключи для обратной совместимости
-            const trend = coin.trend || coin.trend6h || coin.trend5m || coin.trend15m || coin.trend1h || coin.trend4h || coin.trend1d || coin.trend1w || 'NEUTRAL';
+            const trend = coin.trend6h || 'NEUTRAL';
             trendElement.textContent = trend;
             trendElement.className = `value trend-indicator ${trend}`;
             console.log('[BotsManager] ✅ Тренд обновлен:', trend);
@@ -1770,23 +1714,12 @@ class BotsManager {
                         icon = '❓'; 
                         description = 'Бот не создан';
                         
-                        // ✅ ПОКАЗЫВАЕМ КНОПКУ "Включить" для ручных позиций или монет с сигналами
+                        // Показываем кнопку "Включить" только для монет с сигналами LONG/SHORT
                         const enableBotBtn = document.getElementById('enableBotBtn');
                         if (enableBotBtn && this.selectedCoin) {
-                            const isManualPosition = this.selectedCoin.manual_position || false;
                             const signal = this.selectedCoin.signal;
-                            
-                            // Показываем кнопку если:
-                            // 1. Это ручная позиция (независимо от сигнала)
-                            // 2. Или есть сигнал для входа
-                            if (isManualPosition || signal === 'ENTER_LONG' || signal === 'ENTER_SHORT') {
+                            if (signal === 'ENTER_LONG' || signal === 'ENTER_SHORT') {
                                 enableBotBtn.style.display = 'inline-block';
-                                // Меняем текст кнопки для ручных позиций
-                                if (isManualPosition) {
-                                    enableBotBtn.textContent = '🔗 Синхронизировать';
-                                } else {
-                                    enableBotBtn.textContent = 'Включить';
-                                }
                             } else {
                                 enableBotBtn.style.display = 'none';
                             }
@@ -2169,9 +2102,7 @@ class BotsManager {
         }
         
         console.log(`[BotsManager] 🤖 Создание бота для ${this.selectedCoin.symbol}`);
-        // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI
-        const currentRsi = this.selectedCoin.rsi6h || this.selectedCoin.rsi5m || this.selectedCoin.rsi15m || this.selectedCoin.rsi1h || this.selectedCoin.rsi4h || this.selectedCoin.rsi1d || this.selectedCoin.rsi1w || 'неизвестно';
-        console.log(`[BotsManager] 📊 RSI текущий: ${currentRsi}`);
+        console.log(`[BotsManager] 📊 RSI текущий: ${this.selectedCoin.rsi6h || 'неизвестно'}`);
         
         // Показываем уведомление о начале процесса
         this.showNotification(`🔄 ${this.translate('creating_bot_for')} ${this.selectedCoin.symbol}...`, 'info');
@@ -4649,51 +4580,6 @@ class BotsManager {
         }
     }
     
-    updateTimeframeInUI(timeframe) {
-        /**Обновляет отображение таймфрейма в заголовках UI*/
-        if (!timeframe) {
-            console.warn('[BotsManager] ⚠️ updateTimeframeInUI вызвана без таймфрейма');
-            return;
-        }
-        
-        const tfMap = {
-            '1m': '1M', '5m': '5M', '15m': '15M', '30m': '30M',
-            '1h': '1H', '4h': '4H', '6h': '6H', '1d': '1Д', '1w': '1Н'
-        };
-        const displayTf = tfMap[timeframe] || '6H';
-        
-        // Обновляем заголовок списка монет - таймфрейм отображается рядом с "Монеты"
-        const currentTfEl = document.getElementById('currentTimeframe');
-        if (currentTfEl) {
-            currentTfEl.textContent = ' ' + displayTf;
-            console.log('[BotsManager] ✅ Обновлен currentTimeframe:', displayTf);
-        } else {
-            console.warn('[BotsManager] ⚠️ Элемент currentTimeframe не найден!');
-            // Попробуем еще раз через небольшую задержку
-            setTimeout(() => {
-                const retryEl = document.getElementById('currentTimeframe');
-                if (retryEl) {
-                    retryEl.textContent = ' ' + displayTf;
-                    console.log('[BotsManager] ✅ Обновлен currentTimeframe (повторная попытка):', displayTf);
-                }
-            }, 500);
-        }
-        
-        // Обновляем таймфрейм в панели выбранной монеты (RSI)
-        const selectedCoinRSITfEl = document.getElementById('selectedCoinRSITimeframe');
-        if (selectedCoinRSITfEl) {
-            selectedCoinRSITfEl.textContent = displayTf;
-        }
-        
-        // Обновляем таймфрейм в панели выбранной монеты (Тренд)
-        const selectedCoinTrendTfEl = document.getElementById('selectedCoinTrendTimeframe');
-        if (selectedCoinTrendTfEl) {
-            selectedCoinTrendTfEl.textContent = displayTf;
-        }
-        
-        console.log('[BotsManager] ✅ Таймфрейм обновлен в UI:', displayTf, 'для timeframe:', timeframe);
-    }
-    
     populateConfigurationForm(config) {
         this.logDebug('[BotsManager] 🔧 Заполнение формы конфигурации:', config);
         this.logDebug('[BotsManager] 🔍 DOM готовность:', document.readyState);
@@ -4748,45 +4634,6 @@ class BotsManager {
             console.error('[BotsManager] ❌ Элемент autoBotScope не найден!');
         }
         
-        // Таймфрейм - приоритет системным настройкам
-        const timeframeEl = document.getElementById('timeframe');
-        if (timeframeEl) {
-            // ✅ Сначала берем из system config, потом из autoBot config
-            const systemConfig = config.system || {};
-            const timeframe = systemConfig.timeframe || autoBotConfig.timeframe || '6h';
-            timeframeEl.value = timeframe;
-            console.log('[BotsManager] ⏱️ Таймфрейм установлен в поле:', timeframe);
-            
-            // ✅ СРАЗУ обновляем таймфрейм в UI заголовках (после небольшой задержки для гарантии что элемент существует)
-            setTimeout(() => {
-                this.updateTimeframeInUI(timeframe);
-            }, 100);
-            
-            // ✅ Добавляем обработчик события для немедленного обновления UI при смене
-            // Убираем старые обработчики чтобы избежать дублирования
-            const newTimeframeEl = document.getElementById('timeframe');
-            if (newTimeframeEl) {
-                // Клонируем элемент чтобы убрать все старые обработчики
-                const newEl = newTimeframeEl.cloneNode(true);
-                newTimeframeEl.parentNode.replaceChild(newEl, newTimeframeEl);
-                
-                newEl.addEventListener('change', (e) => {
-                    const newTf = e.target.value;
-                    console.log('[BotsManager] 🔄 Таймфрейм изменен в UI:', newTf);
-                    this.updateTimeframeInUI(newTf);
-                });
-            }
-        } else {
-            console.warn('[BotsManager] ⚠️ Элемент timeframe не найден!');
-        }
-        
-        // Лимит загрузки свечей
-        const maxCandlesLimitEl = document.getElementById('maxCandlesLimit');
-        if (maxCandlesLimitEl) {
-            maxCandlesLimitEl.value = autoBotConfig.max_candles_limit || 2000;
-            console.log('[BotsManager] 📈 Лимит свечей:', maxCandlesLimitEl.value);
-        }
-        
         // Торговые параметры
         const rsiLongEl = document.getElementById('rsiLongThreshold');
         if (rsiLongEl) {
@@ -4813,7 +4660,9 @@ class BotsManager {
         } else if (checkIntervalEl) {
             console.warn('[BotsManager] ⚠️ Интервал проверки не найден в API, оставляем поле пустым');
         }
+        
 
+        
         const rsiExitLongEl = document.getElementById('rsiExitLong');
         if (rsiExitLongEl) {
             rsiExitLongEl.value = autoBotConfig.rsi_exit_long || 65;
@@ -5318,9 +5167,7 @@ class BotsManager {
             enabled: document.getElementById('globalAutoBotToggle')?.checked || false,
             max_concurrent: parseInt(document.getElementById('autoBotMaxConcurrent')?.value) || 5,
             risk_cap_percent: parseFloat(document.getElementById('autoBotRiskCap')?.value) || 10,
-            max_candles_limit: parseInt(document.getElementById('maxCandlesLimit')?.value) || 2000,
             scope: document.getElementById('autoBotScope')?.value || 'all',
-            timeframe: document.getElementById('timeframe')?.value || '6h',
             rsi_long_threshold: parseInt(document.getElementById('rsiLongThreshold')?.value) || 29,
             rsi_short_threshold: parseInt(document.getElementById('rsiShortThreshold')?.value) || 71,
             rsi_exit_long: parseInt(document.getElementById('rsiExitLong')?.value) || 65,
@@ -5442,8 +5289,7 @@ class BotsManager {
                 enabled: config.autoBot.enabled,
                 max_concurrent: config.autoBot.max_concurrent,
                 risk_cap_percent: config.autoBot.risk_cap_percent,
-                scope: config.autoBot.scope,
-                timeframe: config.autoBot.timeframe
+                scope: config.autoBot.scope
             };
             
             await this.sendConfigUpdate('auto-bot', basicSettings, 'Основные настройки');
@@ -6859,8 +6705,7 @@ class BotsManager {
         if (!takeProfit && bot.entry_price) {
             const rsiExitLong = bot.rsi_exit_long || 55;
             const rsiExitShort = bot.rsi_exit_short || 45;
-            // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI
-            const currentRsi = bot.rsi_data?.rsi6h || bot.rsi_data?.rsi5m || bot.rsi_data?.rsi15m || bot.rsi_data?.rsi1h || bot.rsi_data?.rsi4h || bot.rsi_data?.rsi1d || bot.rsi_data?.rsi1w || 50;
+            const currentRsi = bot.rsi_data?.rsi6h || 50;
             
             if (bot.position_side === 'LONG' && currentRsi < rsiExitLong) {
                 const takeProfitPercent = (rsiExitLong - currentRsi) * 0.5;
@@ -6884,9 +6729,8 @@ class BotsManager {
         
         // Добавляем RSI данные если есть
         if (bot.rsi_data) {
-            // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI и Trend
-            const rsi = bot.rsi_data.rsi6h || bot.rsi_data.rsi5m || bot.rsi_data.rsi15m || bot.rsi_data.rsi1h || bot.rsi_data.rsi4h || bot.rsi_data.rsi1d || bot.rsi_data.rsi1w;
-            const trend = bot.rsi_data.trend6h || bot.rsi_data.trend5m || bot.rsi_data.trend15m || bot.rsi_data.trend1h || bot.rsi_data.trend4h || bot.rsi_data.trend1d || bot.rsi_data.trend1w;
+            const rsi = bot.rsi_data.rsi6h;
+            const trend = bot.rsi_data.trend6h;
             
             if (rsi) {
                 let rsiColor = '#888';
@@ -7040,8 +6884,7 @@ class BotsManager {
         const trades = [];
         
         // Определяем currentRsi в начале функции для использования во всех блоках
-        // ✅ УНИВЕРСАЛЬНО: используем любой доступный RSI
-        const currentRsi = bot.rsi_data?.rsi6h || bot.rsi_data?.rsi5m || bot.rsi_data?.rsi15m || bot.rsi_data?.rsi1h || bot.rsi_data?.rsi4h || bot.rsi_data?.rsi1d || bot.rsi_data?.rsi1w || 50;
+        const currentRsi = bot.rsi_data?.rsi6h || 50;
         
         // Проверяем, есть ли позиция LONG
         if (bot.position_side === 'LONG' && bot.entry_price) {
@@ -7095,8 +6938,7 @@ class BotsManager {
                 volumeMode: 'USDT',
                 startTime: bot.created_at,
                 rsi: currentRsi,
-                // ✅ УНИВЕРСАЛЬНО: используем любой доступный Trend
-                trend: bot.trend6h || bot.trend5m || bot.trend15m || bot.trend1h || bot.trend4h || bot.trend1d || bot.trend1w || 'NEUTRAL',
+                trend: bot.trend6h || 'NEUTRAL',
                 workTime: bot.work_time || '0м',
                 lastUpdate: bot.last_update || 'Неизвестно'
             });
@@ -7150,8 +6992,7 @@ class BotsManager {
                 volumeMode: 'USDT',
                 startTime: bot.created_at,
                 rsi: currentRsi,
-                // ✅ УНИВЕРСАЛЬНО: используем любой доступный Trend
-                trend: bot.trend6h || bot.trend5m || bot.trend15m || bot.trend1h || bot.trend4h || bot.trend1d || bot.trend1w || 'NEUTRAL',
+                trend: bot.trend6h || 'NEUTRAL',
                 workTime: bot.work_time || '0м',
                 lastUpdate: bot.last_update || 'Неизвестно'
             });
@@ -7315,17 +7156,10 @@ class BotsManager {
                 const countEl = document.getElementById('matureCoinsCount');
                 if (countEl) {
                     countEl.textContent = `(${data.total_count})`;
-                    console.log(`[BotsManager] 💎 Счетчик зрелых монет обновлен: ${data.total_count}`);
-                }
-                
-                // ✅ Также обновляем счетчик на основе данных из coinsRsiData (если загружены)
-                if (this.coinsRsiData && this.coinsRsiData.length > 0) {
-                    const matureCountInList = this.coinsRsiData.filter(coin => coin.is_mature === true).length;
-                    console.log(`[BotsManager] 💎 Зрелых монет в списке: ${matureCountInList}`);
                 }
             }
         } catch (error) {
-            console.error('[BotsManager] ❌ Ошибка загрузки счётчика зрелых монет:', error);
+            console.error('[BotsManager] Ошибка загрузки счётчика зрелых монет:', error);
         }
     }
     
@@ -7341,25 +7175,14 @@ class BotsManager {
                 // Помечаем зрелые монеты в данных
                 let markedCount = 0;
                 this.coinsRsiData.forEach(coin => {
-                    const wasMature = coin.is_mature || false;
                     coin.is_mature = data.mature_coins.includes(coin.symbol);
                     if (coin.is_mature) {
                         markedCount++;
                     }
-                    // Если статус изменился - перерисовываем
-                    if ((wasMature !== coin.is_mature) && this.selectedCoin && this.selectedCoin.symbol === coin.symbol) {
-                        this.updateSelectedCoinInfo();
-                    }
                 });
                 
-                // ✅ Обновляем счетчик зрелых монет в UI
-                const countEl = document.getElementById('matureCoinsCount');
-                if (countEl) {
-                    countEl.textContent = `(${data.total_count})`;
-                }
-                
-                // ✅ Перерисовываем список чтобы показать/скрыть индикаторы зрелости
-                this.renderCoinsList();
+                // ✅ ИСПРАВЛЕНИЕ: Обновляем счетчик зрелых монет в UI
+                await this.loadMatureCoinsCount();
                 
                 this.logDebug(`[BotsManager] 💎 Помечено ${markedCount} зрелых монет из ${data.total_count} общих`);
             }

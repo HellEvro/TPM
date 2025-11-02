@@ -762,9 +762,6 @@ class BybitExchange(BaseExchange):
                             'close': float(k[4]),
                             'volume': float(k[5])
                         }
-                        # ✅ Сохраняем turnover (оборот в USDT), если доступен
-                        if len(k) > 6:
-                            candle['turnover'] = float(k[6])
                         candles.append(candle)
                     
                     # Сортируем свечи от старых к новым
@@ -789,20 +786,6 @@ class BybitExchange(BaseExchange):
                 'error': str(e)
             }
 
-    def get_available_timeframes(self):
-        """Получает список всех доступных таймфреймов"""
-        return {
-            '1m': '1 минута',
-            '5m': '5 минут',
-            '15m': '15 минут',
-            '30m': '30 минут',
-            '1h': '1 час',
-            '4h': '4 часа',
-            '6h': '6 часов',
-            '1d': '1 день',
-            '1w': '1 неделя'
-        }
-    
     def get_indicators(self, symbol, timeframe='1h'):
         """Получение значений индикаторов
         
@@ -824,7 +807,6 @@ class BybitExchange(BaseExchange):
                 '30m': '30',
                 '1h': '60',
                 '4h': '240',
-                '6h': '360',
                 '1d': 'D',
                 '1w': 'W'
             }
@@ -1296,26 +1278,42 @@ class BybitExchange(BaseExchange):
                     'message': f'Неизвестная сторона ордера: {side}'
                 }
             
-            # ⚡ Для LINEAR фьючерсов Bybit не поддерживает marketUnit
-            # Поэтому рассчитываем количество в монетах на основе qty_usdt
+            # ⚡ Для LINEAR фьючерсов используем marketUnit='quoteCoin' для указания суммы в USDT
             qty_usdt = quantity  # quantity это стоимость в USDT
             
-            print(f"[BYBIT_BOT] 💰 {symbol}: Исходный запрос {qty_usdt:.2f} USDT")
+            # ✅ Получаем информацию об инструменте для проверки минимального размера ордера
+            min_order_value_usdt = None
+            try:
+                instruments_info = self.get_instruments_info(f"{symbol}USDT")
+                if instruments_info and 'minOrderQty' in instruments_info and current_price:
+                    # Рассчитываем минимальный размер ордера в USDT
+                    min_order_qty = float(instruments_info['minOrderQty'])
+                    min_order_value_usdt = min_order_qty * current_price
+                    print(f"[BYBIT_BOT] 📊 Минимальный размер ордера для {symbol}: {min_order_value_usdt:.2f} USDT (мин. кол-во: {min_order_qty} монет @ {current_price})")
+            except Exception as e:
+                print(f"[BYBIT_BOT] ⚠️ Не удалось получить информацию об инструменте: {e}")
             
-            # ⚡ ДЛЯ LINEAR - пробуем marketUnit='quoteCoin' для USDT
+            # Проверяем минимум USDT (используем полученный минимум или дефолтный 5 USDT)
+            min_required = max(min_order_value_usdt if min_order_value_usdt else 5.0, 5.0)
+            if qty_usdt < min_required:
+                old_qty = qty_usdt
+                qty_usdt = min_required
+                print(f"[BYBIT_BOT] ⚠️ Сумма {old_qty:.2f} USDT меньше минимума {min_required:.2f} USDT, устанавливаем: {qty_usdt:.2f} USDT")
+            
+            print(f"[BYBIT_BOT] 💰 {symbol}: Запрашиваем {qty_usdt:.2f} USDT")
+            
+            # ДЛЯ LINEAR - передаем сумму в USDT с marketUnit='quoteCoin'
             order_params = {
                 "category": "linear",
                 "symbol": f"{symbol}USDT",
                 "side": bybit_side,
                 "orderType": order_type.title(),
-                "qty": str(qty_usdt),  # Количество в USDT (без умножения на плечо!)
+                "qty": str(qty_usdt),  # Сумма в USDT
+                "marketUnit": "quoteCoin",  # ⚡ Указываем что qty в USDT!
                 "positionIdx": position_idx
             }
             
-            # Добавляем marketUnit='quoteCoin' для указания что qty в USDT
-            if order_type.lower() == 'market':
-                order_params["marketUnit"] = "quoteCoin"  # ⚡ Указываем что qty в USDT!
-                print(f"[BYBIT_BOT] 🎯 marketUnit='quoteCoin': qty в USDT")
+            print(f"[BYBIT_BOT] 🎯 Сумма ордера: {qty_usdt:.2f} USDT (marketUnit='quoteCoin')")
             
             # ⚠️ НЕ добавляем leverage в order_params - Bybit не поддерживает это при размещении ордера!
             # Плечо должно быть установлено ВРУЧНУЮ в настройках аккаунта на бирже
@@ -1345,86 +1343,30 @@ class BybitExchange(BaseExchange):
                 order_params["stopLoss"] = str(round(stop_loss, 6))
                 print(f"[BYBIT_BOT] 🛑 Stop Loss установлен: {stop_loss:.6f} (цена)")
             
-            # 🔄 АДАПТИВНАЯ ЛОГИКА: Попытки с увеличением объема при ошибке
-            original_qty = qty_usdt
-            max_attempts = 5
-            increment = 1.0  # Увеличиваем на 1 USDT за попытку
-            max_total = 15 if original_qty >= 10 else 10  # Максимум 15 если изначально >= 10, иначе 10
+            print(f"[BYBIT_BOT] Параметры ордера: {order_params}")
             
-            for attempt in range(max_attempts):
-                print(f"[BYBIT_BOT] Параметры ордера (попытка {attempt + 1}): {order_params}")
+            # Размещаем ордер
+            response = self.client.place_order(**order_params)
+            print(f"[BYBIT_BOT] Ответ API: {response}")
+            
+            if response['retCode'] == 0:
+                # Вычисляем количество в монетах для возврата
+                qty_in_coins = (qty_usdt / current_price) if (current_price and current_price > 0) else 0
+                print(f"[BYBIT_BOT] ✅ Ордер успешно размещён: {qty_usdt} USDT = {qty_in_coins:.6f} монет @ {current_price}")
                 
-                try:
-                    # Размещаем ордер
-                    response = self.client.place_order(**order_params)
-                    print(f"[BYBIT_BOT] Ответ API (попытка {attempt + 1}): retCode={response['retCode']}, retMsg={response.get('retMsg', 'N/A')}")
-                    
-                    if response['retCode'] == 0:
-                        # Рассчитываем qty_in_coins для возврата
-                        # Биржа применит плечо автоматически согласно настройкам аккаунта
-                        qty_in_coins = (qty_usdt / current_price) if (current_price) else 0
-                        
-                        print(f"[BYBIT_BOT] ✅ Расчёт: {qty_usdt} USDT / {current_price} = {qty_in_coins:.6f} монет")
-                        
-                        return {
-                            'success': True,
-                            'order_id': response['result']['orderId'],
-                            'message': f'{order_type.title()} ордер успешно размещён',
-                            'price': price or current_price or 0,
-                            'quantity': qty_in_coins,  # Возвращаем количество в монетах
-                            'quantity_usdt': qty_usdt  # Возвращаем сумму в USDT из конфига
-                        }
-                    else:
-                        error_msg = response.get('retMsg', 'Unknown error')
-                        
-                        # Проверяем если это ошибка "minimum order value"
-                        if '110094' in error_msg or 'minimum order' in error_msg.lower():
-                            # Увеличиваем объем
-                            if qty_usdt < max_total:
-                                qty_usdt += increment
-                                order_params['qty'] = str(qty_usdt)
-                                print(f"[BYBIT_BOT] ⚠️ Попытка {attempt + 1}: Минимальный объем не достигнут, увеличиваем до {qty_usdt:.2f} USDT")
-                                continue  # Повторяем попытку
-                            else:
-                                print(f"[BYBIT_BOT] ❌ Достигнут максимум {max_total} USDT, пропускаем монету")
-                                return {
-                                    'success': False,
-                                    'message': f"Минимальный объем превышает {max_total} USDT для этого инструмента"
-                                }
-                        else:
-                            # Другая ошибка - не повторяем
-                            return {
-                                'success': False,
-                                'message': f"Ошибка размещения ордера: {error_msg}"
-                            }
-                        
-                except Exception as api_error:
-                    error_str = str(api_error)
-                    print(f"[BYBIT_BOT] ❌ Ошибка API (попытка {attempt + 1}): {error_str}")
-                    
-                    # Проверяем если это ошибка "minimum order value" или "exceeds minimum limit"
-                    if '110094' in error_str or 'minimum order' in error_str.lower() or 'exceeds minimum limit' in error_str.lower():
-                        # Увеличиваем объем
-                        if qty_usdt < max_total:
-                            qty_usdt += increment
-                            order_params['qty'] = str(qty_usdt)
-                            print(f"[BYBIT_BOT] ⚠️ Попытка {attempt + 1}: Минимальный объем не достигнут, увеличиваем до {qty_usdt:.2f} USDT")
-                            continue  # Повторяем попытку
-                        else:
-                            print(f"[BYBIT_BOT] ❌ Достигнут максимум {max_total} USDT, пропускаем монету")
-                            return {
-                                'success': False,
-                                'message': f"Минимальный объем превышает {max_total} USDT для этого инструмента"
-                            }
-                    else:
-                        # Другая ошибка - не повторяем
-                        raise api_error
-            
-            # Если дошли сюда - все попытки не удались
-            return {
-                'success': False,
-                'message': f"Не удалось разместить ордер после {max_attempts} попыток"
-            }
+                return {
+                    'success': True,
+                    'order_id': response['result']['orderId'],
+                    'message': f'{order_type.title()} ордер успешно размещён',
+                    'price': price or current_price or 0,
+                    'quantity': qty_in_coins,  # Возвращаем количество в монетах
+                    'quantity_usdt': qty_usdt  # Возвращаем сумму в USDT из конфига
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': f"Ошибка размещения ордера: {response['retMsg']}"
+                }
                 
         except Exception as e:
             print(f"[BYBIT_BOT] Ошибка размещения ордера: {str(e)}")

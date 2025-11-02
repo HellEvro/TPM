@@ -97,18 +97,7 @@ RSI_OVERBOUGHT = 71
 MAX_WORKERS = mp.cpu_count()
 MIN_CANDLES_FOR_ANALYSIS = 200
 MAX_CANDLES_TO_REQUEST = 5000
-
-# ✅ Получаем таймфрейм из конфигурации
-def get_timeframe_from_config():
-    """Получает таймфрейм из конфигурации"""
-    try:
-        from bots_modules.imports_and_globals import get_timeframe
-        return get_timeframe()
-    except Exception:
-        # Fallback
-        return '1w'
-
-DEFAULT_TIMEFRAME = get_timeframe_from_config()  # ✅ Динамический таймфрейм из конфига
+DEFAULT_TIMEFRAME = '6h'  # Таймфрейм по умолчанию
 
 # На Windows используем ThreadPoolExecutor вместо ProcessPoolExecutor для совместимости с numba
 USE_MULTIPROCESSING = os.environ.get('OPTIMAL_EMA_NO_MP', '').lower() not in ['1', 'true', 'yes']
@@ -364,8 +353,13 @@ class OptimalEMAFinder:
         self.rsi_cache = {}  # Кэш для RSI значений
     
     def _get_ema_file_path(self) -> str:
-        """Возвращает путь к файлу в зависимости от таймфрейма (всегда с суффиксом)"""
-        return f"{OPTIMAL_EMA_BASE_FILE}_{self.timeframe}.json"
+        """Возвращает путь к файлу в зависимости от таймфрейма"""
+        if self.timeframe == DEFAULT_TIMEFRAME:
+            # Для 6h используем стандартное имя файла
+            return f"{OPTIMAL_EMA_BASE_FILE}.json"
+        else:
+            # Для других таймфреймов добавляем суффикс
+            return f"{OPTIMAL_EMA_BASE_FILE}_{self.timeframe}.json"
     
     def _init_exchange(self):
         """Инициализирует exchange"""

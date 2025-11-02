@@ -41,13 +41,9 @@ class SmartRiskManager:
         self.logger = logger
         self.backtest_cache = {}
         self.stop_patterns = {}
-        # ✅ Динамическое определение путей на основе таймфрейма
-        from bots_modules.imports_and_globals import get_timeframe
-        timeframe = get_timeframe()
-        
-        self.training_data_path = Path(f'data/ai/training/{timeframe}/stops_analysis.json')
-        self.feedback_data_path = Path(f'data/ai/training/{timeframe}/feedback')
-        self.optimized_params_path = Path(f'data/ai/training/{timeframe}/optimized_params.json')
+        self.training_data_path = Path('data/ai/training/stops_analysis.json')
+        self.feedback_data_path = Path('data/ai/training/feedback')
+        self.optimized_params_path = Path('data/ai/training/optimized_params.json')
         
         # Создаем директории если нужно
         self.training_data_path.parent.mkdir(parents=True, exist_ok=True)
