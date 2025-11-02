@@ -1330,8 +1330,28 @@ class BybitExchange(BaseExchange):
             except Exception as e:
                 print(f"[BYBIT_BOT] ⚠️ Не удалось получить информацию об инструменте: {e}")
             
+            # ✅ Получаем текущее плечо для монеты (если есть открытая позиция)
+            current_leverage = None
+            try:
+                pos_response = self.client.get_positions(category="linear", symbol=f"{symbol}USDT")
+                if pos_response.get('retCode') == 0 and pos_response.get('result', {}).get('list'):
+                    # Ищем активную позицию с нужной стороной
+                    for pos in pos_response['result']['list']:
+                        if abs(float(pos.get('size', 0))) > 0:
+                            current_leverage = float(pos.get('leverage', 10))
+                            break
+                    if current_leverage:
+                        print(f"[BYBIT_BOT] 📊 {symbol}: Текущее плечо из позиции: {current_leverage}x")
+            except Exception as e:
+                print(f"[BYBIT_BOT] ⚠️ Не удалось получить текущее плечо: {e}")
+            
+            # Если нет текущей позиции - используем дефолтное 10x
+            if not current_leverage:
+                current_leverage = 10.0
+                print(f"[BYBIT_BOT] 📊 {symbol}: Используем дефолтное плечо: {current_leverage}x")
+            
             requested_qty_usdt = quantity  # ✅ Запрошенная сумма из конфига
-            print(f"[BYBIT_BOT] 🎯 {symbol}: Запрошенная сумма из конфига: {requested_qty_usdt} USDT")
+            print(f"[BYBIT_BOT] 🎯 {symbol}: Запрошенная сумма из конфига: {requested_qty_usdt} USDT, плечо: {current_leverage}x")
             
             # ✅ КРИТИЧНО: marketUnit='quoteCoin' НЕ ВЫКЛЮЧАЕТ проверку кратности монет!
             # Bybit проверяет что РАССЧИТАННОЕ количество монет кратно qtyStep
