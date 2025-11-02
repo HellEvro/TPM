@@ -1361,9 +1361,10 @@ class BybitExchange(BaseExchange):
             # Bybit проверяет что РАССЧИТАННОЕ количество монет кратно qtyStep
             # Поэтому мы ДОЛЖНЫ рассчитать qty в USDT так, чтобы монеты были кратны qtyStep
             
-            # Рассчитываем реальный минимум с учетом кратности монет
+            # Рассчитываем количество МОНЕТ с учетом кратности qtyStep и minOrderQty
+            qty_in_coins = None
             if qty_step and current_price and min_order_qty:
-                # ✅ ШАГ 1: Сначала считаем сколько МОНЕТ за сумму margin (Bybit умножит на плечо!)
+                # ✅ ШАГ 1: Считаем сколько МОНЕТ можно купить на запрошенную сумму USDT
                 requested_coins = qty_usdt / current_price
                 print(f"[BYBIT_BOT] 🔍 {symbol}: За запрошенные {qty_usdt} USDT получается {requested_coins:.2f} монет")
                 
@@ -1377,44 +1378,38 @@ class BybitExchange(BaseExchange):
                     rounded_coins = min_coins_for_qty
                     print(f"[BYBIT_BOT] ⚠️ {symbol}: Меньше minOrderQty={min_order_qty}, увеличили до {rounded_coins} монет")
                 
-                # ✅ ШАГ 4: Пересчитываем обратно в USDT
-                qty_usdt = rounded_coins * current_price
-                
-                # ✅ ШАГ 5: Проверяем minNotionalValue
+                # ✅ ШАГ 4: Проверяем minNotionalValue (по номинальной стоимости!)
+                nominal_usdt = rounded_coins * current_price
                 min_usdt_from_notional = min_notional_value if min_notional_value else 5.0
-                if qty_usdt < min_usdt_from_notional:
+                if nominal_usdt < min_usdt_from_notional:
                     # Если получилось меньше minNotional - увеличиваем монеты
                     min_coins_for_notional = math.ceil(min_usdt_from_notional / current_price / qty_step) * qty_step
-                    qty_usdt = min_coins_for_notional * current_price
                     rounded_coins = min_coins_for_notional
-                    print(f"[BYBIT_BOT] ⚠️ {symbol}: Меньше minNotionalValue={min_usdt_from_notional}, увеличили до {qty_usdt:.4f} USDT ({rounded_coins} монет)")
+                    print(f"[BYBIT_BOT] ⚠️ {symbol}: Меньше minNotionalValue={min_usdt_from_notional}, увеличили до {rounded_coins} монет")
                 
-                print(f"[BYBIT_BOT] 💰 {symbol}: ФИНАЛЬНО: {qty_usdt:.4f} USDT = {rounded_coins} монет @ {current_price:.8f} (кратно {qty_step})")
+                qty_in_coins = rounded_coins
+                print(f"[BYBIT_BOT] 💰 {symbol}: ФИНАЛЬНО: {qty_in_coins} монет @ {current_price:.8f} (кратно {qty_step})")
             else:
                 # Fallback если нет данных об инструменте
-                min_qty_usdt = max(min_notional_value if min_notional_value else 5.0, 5.0)
-                if qty_usdt < min_qty_usdt:
-                    qty_usdt = min_qty_usdt
-                    print(f"[BYBIT_BOT] ⚠️ {symbol}: Fallback: увеличено до {min_qty_usdt} USDT")
-                print(f"[BYBIT_BOT] 💰 {symbol}: Финальная сумма: {qty_usdt} USDT")
+                # Просто пересчитываем USDT в монеты
+                qty_in_coins = qty_usdt / current_price if current_price else 0
+                print(f"[BYBIT_BOT] 💰 {symbol}: Fallback: {qty_in_coins:.2f} монет")
             
-            # ДЛЯ LINEAR - передаем ТОЧНУЮ сумму в USDT с marketUnit='quoteCoin'
-            # ✅ marketUnit='quoteCoin' работает ТОЛЬКО для MARKET ордеров!
-            # ✅ Округляем qty_usdt до 2 знаков для marketUnit='quoteCoin'
-            qty_usdt_str = str(round(qty_usdt, 2))
+            # ✅ Передаем количество МОНЕТ без marketUnit='quoteCoin'!
+            # Bybit САМ применит плечо при размещении ордера!
+            qty_coins_str = str(int(qty_in_coins)) if qty_in_coins and qty_in_coins >= 1 else str(qty_in_coins)
             
             order_params = {
                 "category": "linear",
                 "symbol": f"{symbol}USDT",
                 "side": bybit_side,
                 "orderType": order_type.title(),
-                "qty": qty_usdt_str,  # ✅ Округленная сумма в USDT
-                "marketUnit": "quoteCoin",  # ⚡ ТОЛЬКО для MARKET - Bybit сам рассчитает и округлит монеты!
+                "qty": qty_coins_str,  # ✅ Количество в МОНЕТАХ!
                 "positionIdx": position_idx
             }
             
             print(f"[BYBIT_BOT] 🎯 {symbol}: order_params={order_params}")
-            print(f"[BYBIT_BOT] 🔍 {symbol}: ДЕТАЛИ: qty='{qty_usdt_str}', marketUnit='quoteCoin', orderType='{order_type.title()}'")
+            print(f"[BYBIT_BOT] 🔍 {symbol}: ДЕТАЛИ: qty='{qty_coins_str}' монет, orderType='{order_type.title()}'")
             
             # ⚠️ НЕ добавляем leverage в order_params - Bybit не поддерживает это при размещении ордера!
             # Плечо должно быть установлено ВРУЧНУЮ в настройках аккаунта на бирже
@@ -1464,9 +1459,9 @@ class BybitExchange(BaseExchange):
                 raise api_error  # Пробрасываем дальше
             
             if response['retCode'] == 0:
-                # Вычисляем количество в монетах для возврата
-                qty_in_coins = (qty_usdt / current_price) if (current_price and current_price > 0) else 0
-                print(f"[BYBIT_BOT] ✅ Ордер успешно размещён: {qty_usdt} USDT = {qty_in_coins:.6f} монет @ {current_price}")
+                # Вычисляем количество в USDT для возврата
+                qty_usdt_actual = (qty_in_coins * current_price) if (qty_in_coins and current_price and current_price > 0) else qty_usdt
+                print(f"[BYBIT_BOT] ✅ Ордер успешно размещён: {qty_in_coins} монет = {qty_usdt_actual:.4f} USDT @ {current_price}")
                 
                 return {
                     'success': True,
@@ -1474,7 +1469,7 @@ class BybitExchange(BaseExchange):
                     'message': f'{order_type.title()} ордер успешно размещён',
                     'price': price or current_price or 0,
                     'quantity': qty_in_coins,  # Возвращаем количество в монетах
-                    'quantity_usdt': qty_usdt  # Возвращаем сумму в USDT из конфига
+                    'quantity_usdt': qty_usdt_actual  # Возвращаем фактическую сумму в USDT
                 }
             else:
                 return {
