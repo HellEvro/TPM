@@ -797,60 +797,95 @@ class NewTradingBot:
                 if not actual_leverage:
                     actual_leverage = 10.0  # Дефолт
                 
-                # 🔄 ШАГ 2.5: PREMIUM - Бэктest перед расчетом SL/TP
+                # 🔄 ШАГ 2.5: PREMIUM - Проверка частых стопов и бэктest перед расчетом SL/TP
+                # ⚠️ ВАЖНО: Все функции ниже работают ТОЛЬКО с премиум лицензией!
+                # Без премиума используется базовый расчет стоп-лосса (15% от стоимости входа)
                 backtest_result = None
+                should_avoid = False
+                avoid_reason = None
+                smart_risk = None
+                
                 try:
                     from bot_engine.ai import check_premium_license
                     is_premium = check_premium_license()
                     
                     if is_premium:
-                        from bot_engine.ai.smart_risk_manager import SmartRiskManager
-                        smart_risk = SmartRiskManager()
+                        # ✅ ПРЕМИУМ ЛИЦЕНЗИЯ АКТИВНА - используем умные стопы
+                        try:
+                            from bot_engine.ai.smart_risk_manager import SmartRiskManager
+                            smart_risk = SmartRiskManager()
+                            
+                            # 🚫 ШАГ 2.5.1: PREMIUM - Проверяем не слишком ли частые стопы для этой монеты
+                            avoid_check = smart_risk.should_avoid_entry(self.symbol, side)
+                            should_avoid = avoid_check.get('should_avoid', False)
+                            avoid_reason = avoid_check.get('reason', '')
+                            
+                            if should_avoid:
+                                wait_minutes = avoid_check.get('wait_minutes', 60)
+                                logger.warning(f"[NEW_BOT_{self.symbol}] 🚫 [PREMIUM] УМНЫЙ ФИЛЬТР: Избегаем входа - {avoid_reason}. Ждем {wait_minutes} мин")
+                                # Не открываем позицию, но не выбрасываем ошибку - просто пропускаем
+                                return False
+                            
+                            # Если рекомендуется увеличенный SL - используем его
+                            recommended_sl = avoid_check.get('recommended_sl_percent')
+                            if recommended_sl:
+                                logger.info(f"[NEW_BOT_{self.symbol}] 🤖 [PREMIUM] УМНЫЙ СТОП: Рекомендуется увеличенный SL: {recommended_sl}% (было {max_loss_percent}%)")
+                                max_loss_percent = recommended_sl
+                            
+                            # Получаем свечи для бэктеста
+                            chart_response = self.exchange.get_chart_data(self.symbol, '6h', limit=50)
+                            candles_for_backtest = []
+                            
+                            if chart_response and chart_response.get('success'):
+                                candles_data = chart_response.get('data', {}).get('candles', [])
+                                if candles_data and len(candles_data) >= 20:
+                                    for c in candles_data:
+                                        candles_for_backtest.append({
+                                            'open': float(c.get('open', 0)),
+                                            'high': float(c.get('high', 0)),
+                                            'low': float(c.get('low', 0)),
+                                            'close': float(c.get('close', 0)),
+                                            'volume': float(c.get('volume', 0))
+                                        })
+                                    
+                                    # 🎯 PREMIUM - Запускаем бэктест на основе истории стопов для этой монеты
+                                    backtest_result = smart_risk.backtest_coin(
+                                        self.symbol, 
+                                        candles_for_backtest, 
+                                        side,
+                                        actual_entry_price
+                                    )
+                                    
+                                    logger.info(f"[NEW_BOT_{self.symbol}] 🤖 [PREMIUM] Бэктест завершен: SL={backtest_result.get('optimal_sl_percent')}%, TP={backtest_result.get('optimal_tp_percent')}%, confidence={backtest_result.get('confidence', 0):.1%}")
+                                    
+                                    # Сохраняем для обратной связи
+                                    self._last_backtest_result = backtest_result
+                        except ImportError as import_error:
+                            # SmartRiskManager недоступен (нет премиум лицензии)
+                            logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ [PREMIUM] SmartRiskManager недоступен: {import_error}. Используем базовый расчет.")
+                            is_premium = False  # Отключаем премиум функции
+                    else:
+                        # Нет премиум лицензии - используем базовый расчет стоп-лосса
+                        logger.debug(f"[NEW_BOT_{self.symbol}] ℹ️ Премиум лицензия не найдена - используем базовый расчет SL ({max_loss_percent}% от стоимости входа)")
                         
-                        # Получаем свечи для бэктеста
-                        chart_response = self.exchange.get_chart_data(self.symbol, '6h', limit=50)
-                        candles_for_backtest = []
-                        
-                        if chart_response and chart_response.get('success'):
-                            candles_data = chart_response.get('data', {}).get('candles', [])
-                            if candles_data and len(candles_data) >= 20:
-                                for c in candles_data:
-                                    candles_for_backtest.append({
-                                        'open': float(c.get('open', 0)),
-                                        'high': float(c.get('high', 0)),
-                                        'low': float(c.get('low', 0)),
-                                        'close': float(c.get('close', 0)),
-                                        'volume': float(c.get('volume', 0))
-                                    })
-                                
-                                # Запускаем бэктест
-                                backtest_result = smart_risk.backtest_coin(
-                                    self.symbol, 
-                                    candles_for_backtest, 
-                                    side,
-                                    actual_entry_price
-                                )
-                                
-                                logger.info(f"[NEW_BOT_{self.symbol}] 🤖 Бэктест завершен: SL={backtest_result.get('optimal_sl_percent')}%, TP={backtest_result.get('optimal_tp_percent')}%, confidence={backtest_result.get('confidence', 0):.1%}")
-                                
-                                # Сохраняем для обратной связи
-                                self._last_backtest_result = backtest_result
                 except Exception as ai_error:
-                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Premium бэктест недоступен: {ai_error}")
+                    # Любая ошибка - используем базовый расчет
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Premium функции недоступны: {ai_error}. Используем базовый расчет.")
                     self._last_backtest_result = None
                 
                 # ШАГ 3: Рассчитываем Stop Loss
                 stop_loss_price = None
                 sl_percent_from_config = max_loss_percent
                 
-                # 🤖 Если есть результат бэктеста - используем его значения
+                # 🤖 PREMIUM: Если есть результат бэктеста - используем его значения
                 if backtest_result and backtest_result.get('confidence', 0) > 0.7:
                     optimal_sl_pct = backtest_result.get('optimal_sl_percent', max_loss_percent)
                     sl_percent_from_config = optimal_sl_pct
-                    logger.info(f"[NEW_BOT_{self.symbol}] 🤖 Используем SL из бэктеста: {optimal_sl_pct}%")
+                    logger.info(f"[NEW_BOT_{self.symbol}] 🤖 [PREMIUM] Используем SL из бэктеста на основе истории: {optimal_sl_pct}%")
                 
                 if max_loss_percent:
-                    # 🤖 Пытаемся использовать AI для адаптивного SL (если бэктест не дал результат)
+                    # 🤖 БАЗОВЫЙ AI: Пытаемся использовать DynamicRiskManager для адаптивного SL (работает без премиума)
+                    # Это базовая функция на основе волатильности, не требует премиум
                     if not backtest_result:
                         try:
                             if AI_RISK_MANAGER_AVAILABLE and DynamicRiskManager:
@@ -883,18 +918,29 @@ class NewTradingBot:
                         except Exception as ai_error:
                             logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ AI SL недоступен: {ai_error}, используем базовый расчет")
                     
-                    # Рассчитываем стоп на основе реальных данных
-                    position_value = abs(actual_qty) * actual_entry_price if actual_qty else (self.volume_value)
-                    margin = position_value / actual_leverage
-                    max_loss_usdt = margin * (sl_percent_from_config / 100)
-                    loss_per_coin = max_loss_usdt / abs(actual_qty) if actual_qty and abs(actual_qty) > 0 else (max_loss_usdt / (self.volume_value / actual_entry_price))
+                    # ✅ БАЗОВЫЙ РАСЧЕТ: Рассчитываем стоп на основе стоимости входа (НЕ от маржи!)
+                    # Стоп-лосс должен быть % от стоимости входа позиции (как указано в конфиге: 15% убытка)
+                    # Например: стоимость входа 5 USDT, стоп-лосс 15% → убыток 0.75 USDT
+                    position_value = abs(actual_qty) * actual_entry_price if actual_qty else self.volume_value
                     
+                    # Убыток в USDT = % от стоимости входа (как указано в конфиге)
+                    max_loss_usdt = position_value * (sl_percent_from_config / 100)
+                    
+                    # Рассчитываем убыток на одну монету
+                    if actual_qty and abs(actual_qty) > 0:
+                        loss_per_coin = max_loss_usdt / abs(actual_qty)
+                    else:
+                        # Если нет actual_qty, рассчитываем через volume_value
+                        estimated_qty = self.volume_value / actual_entry_price if actual_entry_price > 0 else 0
+                        loss_per_coin = max_loss_usdt / estimated_qty if estimated_qty > 0 else 0
+                    
+                    # Рассчитываем цену стоп-лосса
                     if side == 'LONG':
                         stop_loss_price = actual_entry_price - loss_per_coin
                     else:
                         stop_loss_price = actual_entry_price + loss_per_coin
                     
-                    logger.info(f"[NEW_BOT_{self.symbol}] 🛑 SL рассчитан: {stop_loss_price:.6f} (entry={actual_entry_price}, leverage={actual_leverage}x, убыток {max_loss_usdt:.4f} USDT = {sl_percent_from_config}%)")
+                    logger.info(f"[NEW_BOT_{self.symbol}] 🛑 SL рассчитан: {stop_loss_price:.6f} (entry={actual_entry_price:.6f}, стоимость позиции={position_value:.4f} USDT, убыток={max_loss_usdt:.4f} USDT = {sl_percent_from_config}% от входа)")
                 
                 # ШАГ 4: Рассчитываем Take Profit от маржи
                 take_profit_price = None
