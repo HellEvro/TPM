@@ -1246,18 +1246,38 @@ class BybitExchange(BaseExchange):
         try:
             print(f"[BYBIT_BOT] Размещение ордера: {symbol} {side} {quantity} USDT ({order_type})")
             
-            # ⚡ ПОЛУЧАЕМ ТЕКУЩУЮ ЦЕНУ для лимитных ордеров
+            # ✅ КРИТИЧНО: Получаем АКТУАЛЬНУЮ цену с биржи ПЕРЕД расчетом ордера!
+            # Цена нужна всегда, чтобы правильно рассчитать количество монет и округление
             current_price = None
             try:
                 ticker = self.client.get_tickers(category="linear", symbol=f"{symbol}USDT")
                 if ticker.get('retCode') == 0 and ticker.get('result', {}).get('list'):
                     current_price = float(ticker['result']['list'][0].get('lastPrice', 0))
-                    print(f"[BYBIT_BOT] 📊 Текущая цена {symbol}: {current_price}")
+                    if current_price and current_price > 0:
+                        print(f"[BYBIT_BOT] 📊 Текущая цена {symbol}: {current_price}")
+                    else:
+                        raise ValueError("Получена некорректная цена (0 или отрицательная)")
+                else:
+                    raise ValueError(f"Ошибка API: {ticker.get('retMsg', 'Unknown error')}")
             except Exception as e:
-                print(f"[BYBIT_BOT] ⚠️ Не удалось получить текущую цену: {e}")
+                error_msg = f"❌ Не удалось получить актуальную цену с биржи для {symbol}: {e}"
+                print(f"[BYBIT_BOT] {error_msg}")
+                return {
+                    'success': False,
+                    'message': error_msg
+                }
             
-                         # ⚠️ ПЛЕЧО НЕ УСТАНАВЛИВАЕТСЯ ЧЕРЕЗ API!
-             # Плечо должно быть установлено ВРУЧНУЮ в настройках аккаунта на бирже
+            # Проверяем что цена получена и валидна
+            if not current_price or current_price <= 0:
+                error_msg = f"❌ Некорректная цена {symbol}: {current_price}"
+                print(f"[BYBIT_BOT] {error_msg}")
+                return {
+                    'success': False,
+                    'message': error_msg
+                }
+                         
+            # ⚠️ ПЛЕЧО НЕ УСТАНАВЛИВАЕТСЯ ЧЕРЕЗ API!
+            # Плечо должно быть установлено ВРУЧНУЮ в настройках аккаунта на бирже
                          
             # Конвертируем side для ботов
             if side.upper() == 'LONG':
@@ -1315,8 +1335,9 @@ class BybitExchange(BaseExchange):
                         qty_in_coins = round(qty_in_coins / qty_step) * qty_step
                     print(f"[BYBIT_BOT] ⚠️ Количество монет меньше минимума {min_order_qty}, устанавливаем: {qty_in_coins} (шаг: {qty_step})")
                 
-                # Пересчитываем обратно в USDT с округлением
+                # Пересчитываем обратно в USDT и округляем до 2 знаков после запятой
                 qty_usdt = qty_in_coins * current_price
+                qty_usdt = round(qty_usdt, 2)  # ✅ Округляем до 2 знаков для USDT
                 print(f"[BYBIT_BOT] 📐 Округлено: {qty_in_coins} монет = {qty_usdt:.2f} USDT (шаг: {qty_step})")
             else:
                 # Fallback: проверяем минимум USDT
