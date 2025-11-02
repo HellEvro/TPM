@@ -107,12 +107,11 @@ def should_exclude(path_str):
     return False
 
 def sync_file(src: Path, dst: Path):
-    """Синхронизирует один файл"""
+    """Синхронизирует один файл - ПРИНУДИТЕЛЬНО копирует всегда!"""
     try:
         if not dst.parent.exists():
             dst.parent.mkdir(parents=True, exist_ok=True)
-        if dst.exists() and dst.stat().st_mtime >= src.stat().st_mtime:
-            return  # Уже актуальный
+        # ✅ ВСЕГДА копируем! Не проверяем mtime - мы обновляем только в одну сторону!
         shutil.copy2(src, dst)
         return True
     except Exception as e:
