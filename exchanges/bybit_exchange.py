@@ -1281,24 +1281,50 @@ class BybitExchange(BaseExchange):
             # ⚡ Для LINEAR фьючерсов используем marketUnit='quoteCoin' для указания суммы в USDT
             qty_usdt = quantity  # quantity это стоимость в USDT
             
-            # ✅ Получаем информацию об инструменте для проверки минимального размера ордера
+            # ✅ Получаем информацию об инструменте для проверки минимального размера ордера и qtyStep
             min_order_value_usdt = None
+            qty_step = None
+            min_order_qty = None
+            
             try:
                 instruments_info = self.get_instruments_info(f"{symbol}USDT")
-                if instruments_info and 'minOrderQty' in instruments_info and current_price:
-                    # Рассчитываем минимальный размер ордера в USDT
-                    min_order_qty = float(instruments_info['minOrderQty'])
-                    min_order_value_usdt = min_order_qty * current_price
-                    print(f"[BYBIT_BOT] 📊 Минимальный размер ордера для {symbol}: {min_order_value_usdt:.2f} USDT (мин. кол-во: {min_order_qty} монет @ {current_price})")
+                if instruments_info and current_price:
+                    if 'minOrderQty' in instruments_info:
+                        min_order_qty = float(instruments_info['minOrderQty'])
+                        min_order_value_usdt = min_order_qty * current_price
+                    
+                    if 'qtyStep' in instruments_info:
+                        qty_step = float(instruments_info['qtyStep'])
+                    
+                    print(f"[BYBIT_BOT] 📊 Инструмент {symbol}: мин. {min_order_qty} монет ({min_order_value_usdt:.2f} USDT @ {current_price}), шаг: {qty_step}")
             except Exception as e:
                 print(f"[BYBIT_BOT] ⚠️ Не удалось получить информацию об инструменте: {e}")
             
-            # Проверяем минимум USDT (используем полученный минимум или дефолтный 5 USDT)
-            min_required = max(min_order_value_usdt if min_order_value_usdt else 5.0, 5.0)
-            if qty_usdt < min_required:
-                old_qty = qty_usdt
-                qty_usdt = min_required
-                print(f"[BYBIT_BOT] ⚠️ Сумма {old_qty:.2f} USDT меньше минимума {min_required:.2f} USDT, устанавливаем: {qty_usdt:.2f} USDT")
+            # ✅ КРИТИЧНО: При использовании marketUnit='quoteCoin' Bybit проверяет количество монет!
+            # Рассчитываем количество монет из USDT и округляем до qtyStep
+            if current_price and qty_step and qty_step > 0:
+                qty_in_coins = qty_usdt / current_price
+                # Округляем до qtyStep
+                qty_in_coins = round(qty_in_coins / qty_step) * qty_step
+                
+                # Проверяем минимум в монетах
+                if min_order_qty and qty_in_coins < min_order_qty:
+                    qty_in_coins = min_order_qty
+                    # Округляем до qtyStep после установки минимума
+                    if qty_step > 0:
+                        qty_in_coins = round(qty_in_coins / qty_step) * qty_step
+                    print(f"[BYBIT_BOT] ⚠️ Количество монет меньше минимума {min_order_qty}, устанавливаем: {qty_in_coins} (шаг: {qty_step})")
+                
+                # Пересчитываем обратно в USDT с округлением
+                qty_usdt = qty_in_coins * current_price
+                print(f"[BYBIT_BOT] 📐 Округлено: {qty_in_coins} монет = {qty_usdt:.2f} USDT (шаг: {qty_step})")
+            else:
+                # Fallback: проверяем минимум USDT
+                min_required = max(min_order_value_usdt if min_order_value_usdt else 5.0, 5.0)
+                if qty_usdt < min_required:
+                    old_qty = qty_usdt
+                    qty_usdt = min_required
+                    print(f"[BYBIT_BOT] ⚠️ Сумма {old_qty:.2f} USDT меньше минимума {min_required:.2f} USDT, устанавливаем: {qty_usdt:.2f} USDT")
             
             print(f"[BYBIT_BOT] 💰 {symbol}: Запрашиваем {qty_usdt:.2f} USDT")
             
