@@ -1350,23 +1350,15 @@ class BybitExchange(BaseExchange):
                 print(f"[BYBIT_BOT] ⚠️ {symbol}: FALLBACK - используем дефолтное плечо: {current_leverage}x")
             
             requested_qty_usdt = quantity  # ✅ Запрошенная сумма из конфига (margin)
-            print(f"[BYBIT_BOT] 🎯 {symbol}: Запрошенная сумма из конфига: {requested_qty_usdt} USDT, плечо: {current_leverage}x")
-            
-            # ✅ КРИТИЧНО: marketUnit='quoteCoin' означает что qty - это МАРЖА в USDT, НЕ номинальная сумма!
-            # Bybit САМ умножает на плечо! Поэтому НЕ ДОЛЖНЫ умножать сами!
-            qty_usdt = requested_qty_usdt
-            print(f"[BYBIT_BOT] 🔍 {symbol}: Используем {qty_usdt} USDT как margin (Bybit умножит на плечо {current_leverage}x сам)")
-            
-            # ✅ КРИТИЧНО: marketUnit='quoteCoin' НЕ ВЫКЛЮЧАЕТ проверку кратности монет!
-            # Bybit проверяет что РАССЧИТАННОЕ количество монет кратно qtyStep
-            # Поэтому мы ДОЛЖНЫ рассчитать qty в USDT так, чтобы монеты были кратны qtyStep
+            print(f"[BYBIT_BOT] 🎯 {symbol}: Запрошенная сумма из конфига: {requested_qty_usdt} USDT")
             
             # Рассчитываем количество МОНЕТ с учетом кратности qtyStep и minOrderQty
+            # Затем передаем монеты в Bybit - он САМ применит плечо!
             qty_in_coins = None
             if qty_step and current_price and min_order_qty:
                 # ✅ ШАГ 1: Считаем сколько МОНЕТ можно купить на запрошенную сумму USDT
-                requested_coins = qty_usdt / current_price
-                print(f"[BYBIT_BOT] 🔍 {symbol}: За запрошенные {qty_usdt} USDT получается {requested_coins:.2f} монет")
+                requested_coins = requested_qty_usdt / current_price
+                print(f"[BYBIT_BOT] 🔍 {symbol}: За запрошенные {requested_qty_usdt} USDT получается {requested_coins:.2f} монет")
                 
                 # ✅ ШАГ 2: Округляем монеты вверх до qtyStep
                 rounded_coins = math.ceil(requested_coins / qty_step) * qty_step
@@ -1392,7 +1384,7 @@ class BybitExchange(BaseExchange):
             else:
                 # Fallback если нет данных об инструменте
                 # Просто пересчитываем USDT в монеты
-                qty_in_coins = qty_usdt / current_price if current_price else 0
+                qty_in_coins = requested_qty_usdt / current_price if current_price else 0
                 print(f"[BYBIT_BOT] 💰 {symbol}: Fallback: {qty_in_coins:.2f} монет")
             
             # ✅ Передаем количество МОНЕТ без marketUnit='quoteCoin'!
@@ -1460,7 +1452,7 @@ class BybitExchange(BaseExchange):
             
             if response['retCode'] == 0:
                 # Вычисляем количество в USDT для возврата
-                qty_usdt_actual = (qty_in_coins * current_price) if (qty_in_coins and current_price and current_price > 0) else qty_usdt
+                qty_usdt_actual = (qty_in_coins * current_price) if (qty_in_coins and current_price and current_price > 0) else requested_qty_usdt
                 print(f"[BYBIT_BOT] ✅ Ордер успешно размещён: {qty_in_coins} монет = {qty_usdt_actual:.4f} USDT @ {current_price}")
                 
                 return {
