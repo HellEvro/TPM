@@ -1304,31 +1304,81 @@ class BybitExchange(BaseExchange):
                 }
             
             # ⚡ Для LINEAR фьючерсов используем marketUnit='quoteCoin' для указания суммы в USDT
-            # ✅ marketUnit='quoteCoin' работает ТОЛЬКО для MARKET ордеров - Bybit сам рассчитает монеты!
+            # ✅ marketUnit='quoteCoin' работает ТОЛЬКО для MARKET ордеров, НО Bybit проверяет кратность монет!
             
-            # ✅ Получаем информацию об инструменте для проверки minNotionalValue
+            # ✅ Получаем ПОЛНУЮ информацию об инструменте для ВСЕХ проверок
+            instruments_info = None
             min_notional_value = None
+            qty_step = None
+            min_order_qty = None
+            
             try:
                 instruments_info = self.get_instruments_info(f"{symbol}USDT")
-                if instruments_info and 'minNotionalValue' in instruments_info:
-                    min_notional_value = float(instruments_info['minNotionalValue'])
-                    print(f"[BYBIT_BOT] 📊 Минимальная сумма ордера для {symbol}: {min_notional_value} USDT")
+                if instruments_info:
+                    min_notional_value = instruments_info.get('minNotionalValue')
+                    qty_step = instruments_info.get('qtyStep')
+                    min_order_qty = instruments_info.get('minOrderQty')
+                    
+                    if min_notional_value:
+                        min_notional_value = float(min_notional_value)
+                    if qty_step:
+                        qty_step = float(qty_step)
+                    if min_order_qty:
+                        min_order_qty = float(min_order_qty)
+                        
+                    print(f"[BYBIT_BOT] 📊 {symbol}: minNotionalValue={min_notional_value} USDT, minOrderQty={min_order_qty}, qtyStep={qty_step}")
             except Exception as e:
-                print(f"[BYBIT_BOT] ⚠️ Не удалось получить minNotionalValue: {e}")
+                print(f"[BYBIT_BOT] ⚠️ Не удалось получить информацию об инструменте: {e}")
             
-            qty_usdt = quantity  # ✅ Используем ТОЧНО значение из конфига
-            min_qty_usdt = 5.0  # ✅ Минимум 5 USDT всегда!
+            requested_qty_usdt = quantity  # ✅ Запрошенная сумма из конфига
+            print(f"[BYBIT_BOT] 🎯 {symbol}: Запрошенная сумма из конфига: {requested_qty_usdt} USDT")
             
-            # ✅ Проверяем минимальный лимит: максимальное значение из (5 USDT, minNotionalValue монеты)
-            if min_notional_value and min_notional_value > min_qty_usdt:
-                min_qty_usdt = min_notional_value  # ✅ Используем больший из минимумов!
-                print(f"[BYBIT_BOT] ⚡ Увеличен минимум до {min_qty_usdt} USDT (minNotionalValue для {symbol})")
+            # ✅ КРИТИЧНО: marketUnit='quoteCoin' НЕ ВЫКЛЮЧАЕТ проверку кратности монет!
+            # Bybit проверяет что РАССЧИТАННОЕ количество монет кратно qtyStep
+            # Поэтому мы ДОЛЖНЫ рассчитать qty в USDT так, чтобы монеты были кратны qtyStep
             
-            if qty_usdt < min_qty_usdt:
-                print(f"[BYBIT_BOT] ⚠️ Запрошенная сумма {qty_usdt:.2f} USDT меньше минимума {min_qty_usdt} USDT, устанавливаем: {min_qty_usdt} USDT")
-                qty_usdt = min_qty_usdt
+            qty_usdt = requested_qty_usdt
             
-            print(f"[BYBIT_BOT] 💰 {symbol}: Запрашиваем {qty_usdt} USDT (marketUnit='quoteCoin' - Bybit сам рассчитает монеты)")
+            # Рассчитываем реальный минимум с учетом кратности монет
+            if qty_step and current_price and min_order_qty:
+                # Рассчитываем минимальные монеты (кратные qtyStep)
+                min_coins = math.ceil(min_order_qty / qty_step) * qty_step  # Округляем вверх до qtyStep
+                min_usdt_from_coins = min_coins * current_price  # Минимум в USDT из minOrderQty
+                
+                # Также проверяем minNotionalValue
+                min_usdt_from_notional = min_notional_value if min_notional_value else 5.0
+                
+                # Берем МАКСИМАЛЬНОЕ значение из всех минимумов
+                real_min_usdt = max(min_usdt_from_notional, min_usdt_from_coins, 5.0)
+                
+                print(f"[BYBIT_BOT] 🔍 {symbol}: Расчет реального минимума:")
+                print(f"[BYBIT_BOT]   - minOrderQty={min_order_qty} монет, после округления до qtyStep={qty_step}: {min_coins} монет")
+                print(f"[BYBIT_BOT]   - {min_coins} монет @ {current_price} = {min_usdt_from_coins:.4f} USDT")
+                print(f"[BYBIT_BOT]   - minNotionalValue API: {min_usdt_from_notional} USDT")
+                print(f"[BYBIT_BOT]   - РЕАЛЬНЫЙ минимум для Bybit: {real_min_usdt:.4f} USDT")
+                
+                # Если запрошено меньше реального минимума - устанавливаем реальный минимум
+                if qty_usdt < real_min_usdt:
+                    qty_usdt = real_min_usdt
+                    print(f"[BYBIT_BOT] ⚠️ {symbol}: Увеличено с {requested_qty_usdt} до {qty_usdt:.4f} USDT (real_min)")
+                
+                # Проверяем что рассчитанная сумма даст количество монет кратное qtyStep
+                calculated_coins = qty_usdt / current_price
+                rounded_coins = round(calculated_coins / qty_step) * qty_step  # Округляем до qtyStep
+                
+                # Если после округления получилось другое количество - пересчитываем USDT
+                if abs(calculated_coins - rounded_coins) > 0.01:  # Если разница больше 0.01 монеты
+                    qty_usdt = rounded_coins * current_price
+                    print(f"[BYBIT_BOT] ⚡ {symbol}: Скорректировано до {qty_usdt:.4f} USDT для кратности {qty_step} ({rounded_coins} монет)")
+                
+                print(f"[BYBIT_BOT] 💰 {symbol}: ФИНАЛЬНО: {qty_usdt:.4f} USDT = {qty_usdt/current_price:.2f} монет @ {current_price:.8f} (кратно {qty_step})")
+            else:
+                # Fallback если нет данных об инструменте
+                min_qty_usdt = max(min_notional_value if min_notional_value else 5.0, 5.0)
+                if qty_usdt < min_qty_usdt:
+                    qty_usdt = min_qty_usdt
+                    print(f"[BYBIT_BOT] ⚠️ {symbol}: Fallback: увеличено до {min_qty_usdt} USDT")
+                print(f"[BYBIT_BOT] 💰 {symbol}: Финальная сумма: {qty_usdt} USDT")
             
             # ДЛЯ LINEAR - передаем ТОЧНУЮ сумму в USDT с marketUnit='quoteCoin'
             # ✅ marketUnit='quoteCoin' работает ТОЛЬКО для MARKET ордеров!
@@ -1342,7 +1392,8 @@ class BybitExchange(BaseExchange):
                 "positionIdx": position_idx
             }
             
-            print(f"[BYBIT_BOT] 🎯 Сумма ордера: {qty_usdt} USDT (marketUnit='quoteCoin', orderType='{order_type.title()}')")
+            print(f"[BYBIT_BOT] 🎯 {symbol}: order_params={order_params}")
+            print(f"[BYBIT_BOT] 🔍 {symbol}: ДЕТАЛИ: qty='{qty_usdt}', type(qty)={type(qty_usdt)}, marketUnit='quoteCoin', orderType='{order_type.title()}'")
             
             # ⚠️ НЕ добавляем leverage в order_params - Bybit не поддерживает это при размещении ордера!
             # Плечо должно быть установлено ВРУЧНУЮ в настройках аккаунта на бирже
@@ -1375,8 +1426,10 @@ class BybitExchange(BaseExchange):
             print(f"[BYBIT_BOT] Параметры ордера: {order_params}")
             
             # Размещаем ордер
+            print(f"[BYBIT_BOT] 🔍 {symbol}: ОТПРАВЛЯЕМ ЗАПРОС в Bybit API...")
             response = self.client.place_order(**order_params)
-            print(f"[BYBIT_BOT] Ответ API: {response}")
+            print(f"[BYBIT_BOT] ✅ {symbol}: ПОЛУЧЕН ОТВЕТ от Bybit API: retCode={response.get('retCode')}, retMsg={response.get('retMsg')}")
+            print(f"[BYBIT_BOT] 📊 {symbol}: Полный ответ: {response}")
             
             if response['retCode'] == 0:
                 # Вычисляем количество в монетах для возврата
