@@ -66,16 +66,39 @@ except ImportError:
     __all__ = []
 
 
+# Кэш для проверки лицензии (чтобы не проверять каждый раз)
+_license_check_cache = {'valid': None, 'timestamp': None}
+_license_check_ttl = 300  # Кэш на 5 минут
+
 def check_premium_license() -> bool:
     """
     Проверяет наличие валидной премиум лицензии
+    Использует кэширование для оптимизации производительности
     
     Returns:
         True если лицензия валидна и премиум функции доступны
     """
+    import time
+    
+    # Проверяем кэш
+    current_time = time.time()
+    if (_license_check_cache['valid'] is not None and 
+        _license_check_cache['timestamp'] is not None and
+        current_time - _license_check_cache['timestamp'] < _license_check_ttl):
+        return _license_check_cache['valid']
+    
     try:
         from .ai_manager import get_ai_manager
         ai_manager = get_ai_manager()
-        return ai_manager.is_available() and ai_manager._license_valid
+        is_valid = ai_manager.is_available() and ai_manager._license_valid
+        
+        # Обновляем кэш
+        _license_check_cache['valid'] = is_valid
+        _license_check_cache['timestamp'] = current_time
+        
+        return is_valid
     except Exception as e:
+        # Обновляем кэш с False
+        _license_check_cache['valid'] = False
+        _license_check_cache['timestamp'] = current_time
         return False
