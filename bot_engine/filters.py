@@ -6,6 +6,8 @@
 
 import logging
 
+from .utils.rsi_utils import calculate_rsi_history
+
 logger = logging.getLogger('Filters')
 
 
@@ -57,7 +59,22 @@ def check_rsi_time_filter(candles, rsi, signal, config, calculate_rsi_history_fu
         
         current_index = len(rsi_history) - 1
         
+        # Обновляем последний элемент истории переданным RSI, если он указан
+        # Это важно для согласованности данных, так как переданный RSI может быть более актуальным
+        if rsi is not None:
+            rsi_history[current_index] = rsi
+        
         if signal == 'ENTER_SHORT':
+            # Проверяем, что текущая свеча действительно в зоне входа для SHORT
+            current_rsi = rsi_history[current_index]
+            if current_rsi < rsi_short_threshold:
+                return {
+                    'allowed': False,
+                    'reason': f'Блокировка: текущий RSI {current_rsi:.1f} < {rsi_short_threshold} (не в зоне входа)',
+                    'last_extreme_candles_ago': None,
+                    'calm_candles': 0
+                }
+            
             # Логика для SHORT
             last_n_candles_start = max(0, current_index - rsi_time_filter_candles + 1)
             last_n_candles = rsi_history[last_n_candles_start:current_index + 1]
@@ -114,19 +131,33 @@ def check_rsi_time_filter(candles, rsi, signal, config, calculate_rsi_history_fu
             }
                 
         elif signal == 'ENTER_LONG':
-            # Зеркальная логика для LONG
-            last_n_candles_start = max(0, current_index - rsi_time_filter_candles + 1)
-            last_n_candles = rsi_history[last_n_candles_start:current_index + 1]
+            # Проверяем, что текущая свеча действительно в зоне входа
+            # RSI уже обновлен в начале функции из переданного параметра
+            current_rsi = rsi_history[current_index]
             
-            # Ищем лои (<= 29)
+            if current_rsi > rsi_long_threshold:
+                return {
+                    'allowed': False,
+                    'reason': f'Блокировка: текущий RSI {current_rsi:.1f} > {rsi_long_threshold} (не в зоне входа)',
+                    'last_extreme_candles_ago': None,
+                    'calm_candles': 0
+                }
+            
+            # Расширенный диапазон для поиска лоя (в 2 раза больше, чтобы поймать недавние лои)
+            search_range = rsi_time_filter_candles * 2
+            search_start = max(0, current_index - search_range + 1)
+            max_search_back = min(current_index, 100)  # Максимум 100 свечей назад
+            
+            # Ищем последний лой в расширенном диапазоне
             low_index = None
-            for i in range(last_n_candles_start, current_index + 1):
+            for i in range(current_index, search_start - 1, -1):
                 if rsi_history[i] <= rsi_long_threshold:
                     low_index = i
                     break
             
+            # Если лой не найден в расширенном диапазоне, ищем дальше, но ограничиваем поиск
             if low_index is None:
-                for i in range(last_n_candles_start - 1, -1, -1):
+                for i in range(search_start - 1, max(0, current_index - max_search_back), -1):
                     if rsi_history[i] <= rsi_long_threshold:
                         low_index = i
                         break
@@ -134,25 +165,71 @@ def check_rsi_time_filter(candles, rsi, signal, config, calculate_rsi_history_fu
             if low_index is None:
                 return {
                     'allowed': True,
-                    'reason': f'Разрешено: лой RSI <= {rsi_long_threshold} не найден во всей истории',
+                    'reason': f'Разрешено: лой RSI <= {rsi_long_threshold} не найден в последних {max_search_back} свечах',
                     'last_extreme_candles_ago': None,
-                    'calm_candles': len(last_n_candles)
+                    'calm_candles': 0
                 }
             
+            # Проверяем свечи после найденного лоя
             candles_since_low = current_index - low_index + 1
             start_check = low_index + 1
             check_candles = rsi_history[start_check:current_index + 1]
             
+            # Если после лоя не было свечей, это значит текущая свеча и есть лой
+            if len(check_candles) == 0:
+                return {
+                    'allowed': True,
+                    'reason': f'Разрешено: текущая свеча является лоем (RSI {current_rsi:.1f} <= {rsi_long_threshold})',
+                    'last_extreme_candles_ago': 0,
+                    'calm_candles': 0
+                }
+            
+            # Проверяем, что после лоя все свечи остались в зоне спокойствия (<= 35)
             invalid_candles = [rsi_val for rsi_val in check_candles if rsi_val > rsi_time_filter_lower]
             
             if len(invalid_candles) > 0:
+                # Если после лоя были свечи > 35, проверяем, не был ли вход упущен
+                # Но если текущая свеча снова в зоне входа, ищем новый лой после последнего превышения
+                
+                # Находим индекс последней свечи, которая превысила порог
+                last_break_index = None
+                for i in range(current_index, low_index, -1):
+                    if rsi_history[i] > rsi_time_filter_lower:
+                        last_break_index = i
+                        break
+                
+                # Если после последнего превышения есть новый лой, используем его
+                if last_break_index is not None:
+                    new_low_index = None
+                    for i in range(current_index, last_break_index, -1):
+                        if rsi_history[i] <= rsi_long_threshold:
+                            new_low_index = i
+                            break
+                    
+                    if new_low_index is not None:
+                        # Нашли новый лой после превышения - проверяем свечи после него
+                        new_check_candles = rsi_history[new_low_index + 1:current_index + 1]
+                        new_invalid = [rsi_val for rsi_val in new_check_candles if rsi_val > rsi_time_filter_lower]
+                        
+                        if len(new_invalid) == 0 and len(new_check_candles) >= rsi_time_filter_candles:
+                            # Новый лой валиден - разрешаем вход
+                            new_candles_since_low = current_index - new_low_index + 1
+                            return {
+                                'allowed': True,
+                                'reason': f'Разрешено: после превышения найден новый лой (свеча -{new_candles_since_low}), прошло {len(new_check_candles)} спокойных свечей',
+                                'last_extreme_candles_ago': new_candles_since_low - 1,
+                                'calm_candles': len(new_check_candles)
+                            }
+                
+                # Вход был упущен - после старого лоя цена поднялась выше 35
                 return {
                     'allowed': False,
-                    'reason': f'Блокировка: {len(invalid_candles)} свечей после лоя поднялись > {rsi_time_filter_lower}',
+                    'reason': f'Блокировка: {len(invalid_candles)} свечей после лоя (свеча -{candles_since_low}) поднялись > {rsi_time_filter_lower} (вход упущен)',
                     'last_extreme_candles_ago': candles_since_low,
                     'calm_candles': len(check_candles) - len(invalid_candles)
                 }
             
+            # Проверяем, что прошло достаточно свечей после лоя
             if len(check_candles) < rsi_time_filter_candles:
                 return {
                     'allowed': False,
