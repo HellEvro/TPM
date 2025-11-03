@@ -19,12 +19,29 @@ from pathlib import Path
 
 logger = logging.getLogger('AI.SmartRiskManager')
 
-# Проверяем лицензию при импорте
-try:
-    from bot_engine.ai import check_premium_license
-    PREMIUM_AVAILABLE = check_premium_license()
-except ImportError:
-    PREMIUM_AVAILABLE = False
+# Проверяем лицензию при импорте (ленивая проверка)
+_PREMIUM_AVAILABLE = None
+
+def _check_premium_lazy():
+    """Ленивая проверка лицензии (выполняется только при первом использовании)"""
+    global _PREMIUM_AVAILABLE
+    if _PREMIUM_AVAILABLE is None:
+        try:
+            from bot_engine.ai import check_premium_license
+            _PREMIUM_AVAILABLE = check_premium_license()
+        except ImportError:
+            _PREMIUM_AVAILABLE = False
+    return _PREMIUM_AVAILABLE
+
+# Глобальный экземпляр SmartRiskManager (синглтон)
+_smart_risk_instance = None
+
+def get_smart_risk_manager():
+    """Получает глобальный экземпляр SmartRiskManager (синглтон)"""
+    global _smart_risk_instance
+    if _smart_risk_instance is None:
+        _smart_risk_instance = SmartRiskManager()
+    return _smart_risk_instance
 
 
 class SmartRiskManager:
@@ -32,7 +49,7 @@ class SmartRiskManager:
     
     def __init__(self):
         """Инициализация (только с лицензией!)"""
-        if not PREMIUM_AVAILABLE:
+        if not _check_premium_lazy():
             raise ImportError(
                 "SmartRiskManager требует премиум лицензию. "
                 "Для активации: python scripts/activate_premium.py"
