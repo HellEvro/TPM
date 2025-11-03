@@ -692,11 +692,8 @@ class NewTradingBot:
                                 'volume': float(c.get('volume', 0))} for c in candles_data[-10:]] if candles_data else []
                 
                 # 📊 ВСЕГДА собираем данные для обучения ИИ (если есть лицензия)
-                # Оптимизация: используем глобальный экземпляр SmartRiskManager
-                smart_risk = None
                 try:
-                    from bot_engine.ai.smart_risk_manager import get_smart_risk_manager
-                    smart_risk = get_smart_risk_manager()
+                    smart_risk = SmartRiskManager()
                     smart_risk.collect_entry_data(
                         symbol=self.symbol,
                         current_price=price,
@@ -710,13 +707,7 @@ class NewTradingBot:
                 # 🔍 Проверяем оптимальную точку входа (только если включено в конфиге)
                 if ai_optimal_entry_enabled:
                     # Проверяем, стоит ли входить сейчас
-                    # Используем тот же экземпляр smart_risk, если он уже создан
-                    if smart_risk is None:
-                        try:
-                            from bot_engine.ai.smart_risk_manager import get_smart_risk_manager
-                            smart_risk = get_smart_risk_manager()
-                        except Exception:
-                            smart_risk = None
+                    smart_risk = SmartRiskManager()
                     decision = smart_risk.should_enter_now(
                         symbol=self.symbol,
                         current_price=price,
@@ -866,8 +857,8 @@ class NewTradingBot:
                     if is_premium:
                         # ✅ ПРЕМИУМ ЛИЦЕНЗИЯ АКТИВНА - используем умные стопы
                         try:
-                            from bot_engine.ai.smart_risk_manager import get_smart_risk_manager
-                            smart_risk = get_smart_risk_manager()
+                            from bot_engine.ai.smart_risk_manager import SmartRiskManager
+                            smart_risk = SmartRiskManager()
                             
                             # 🚫 ШАГ 2.5.1: PREMIUM - Проверяем не слишком ли частые стопы для этой монеты
                             avoid_check = smart_risk.should_avoid_entry(self.symbol, side)

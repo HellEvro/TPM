@@ -30,7 +30,6 @@ class AnomalyDetector:
         self.model = None
         self.scaler = None
         self.is_trained = False
-        self._loaded_model_path = None  # Путь к загруженной модели (для проверки повторной загрузки)
         
         # Параметры модели
         self.contamination = 0.1  # 10% данных считаем аномалиями
@@ -348,19 +347,11 @@ class AnomalyDetector:
     def load_model(self, model_path: str, scaler_path: Optional[str] = None):
         """
         Загружает обученную модель
-        Оптимизация: не загружает повторно, если модель уже загружена
         
         Args:
             model_path: Путь к файлу модели
             scaler_path: Путь к файлу scaler (если None, пытается найти рядом)
         """
-        # Проверяем, не загружена ли модель уже
-        if self.model is not None and self.is_trained:
-            # Проверяем, не тот ли это путь (если передан)
-            if hasattr(self, '_loaded_model_path') and self._loaded_model_path == model_path:
-                logger.debug(f"[AnomalyDetector] ⚡ Модель уже загружена, пропускаем повторную загрузку: {model_path}")
-                return True
-        
         if scaler_path is None:
             scaler_path = model_path.replace('.pkl', '_scaler.pkl')
         
@@ -368,7 +359,6 @@ class AnomalyDetector:
             # Загружаем модель
             if os.path.exists(model_path):
                 self.model = joblib.load(model_path)
-                self._loaded_model_path = model_path  # Сохраняем путь для проверки
                 logger.info(f"[AnomalyDetector] ✅ Модель загружена: {model_path}")
                 self.is_trained = True
             else:
