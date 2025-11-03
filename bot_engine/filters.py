@@ -175,14 +175,39 @@ def check_rsi_time_filter(candles, rsi, signal, config, calculate_rsi_history_fu
             start_check = low_index + 1
             check_candles = rsi_history[start_check:current_index + 1]
             
-            # Если после лоя не было свечей, это значит текущая свеча и есть лой
-            if len(check_candles) == 0:
-                return {
-                    'allowed': True,
-                    'reason': f'Разрешено: текущая свеча является лоем (RSI {current_rsi:.1f} <= {rsi_long_threshold})',
-                    'last_extreme_candles_ago': 0,
-                    'calm_candles': 0
-                }
+            # Если текущая свеча сама является лоем (low_index == current_index)
+            # Нужно найти ПРЕДЫДУЩИЙ лой и проверить, прошло ли достаточно свечей
+            if low_index == current_index:
+                # Ищем предыдущий лой (не включая текущую свечу)
+                prev_low_index = None
+                for i in range(current_index - 1, max(0, current_index - max_search_back), -1):
+                    if rsi_history[i] <= rsi_long_threshold:
+                        prev_low_index = i
+                        break
+                
+                if prev_low_index is None:
+                    # Это первый лой в истории - нужно проверить, прошло ли достаточно свечей от начала
+                    candles_since_start = current_index + 1
+                    if candles_since_start < rsi_time_filter_candles:
+                        return {
+                            'allowed': False,
+                            'reason': f'Блокировка: текущая свеча - лой, но прошло только {candles_since_start} свечей от начала (требуется {rsi_time_filter_candles})',
+                            'last_extreme_candles_ago': candles_since_start,
+                            'calm_candles': 0
+                        }
+                    else:
+                        return {
+                            'allowed': True,
+                            'reason': f'Разрешено: текущая свеча - лой, прошло {candles_since_start} свечей от начала',
+                            'last_extreme_candles_ago': candles_since_start,
+                            'calm_candles': candles_since_start
+                        }
+                
+                # Используем предыдущий лой для проверки
+                low_index = prev_low_index
+                candles_since_low = current_index - low_index + 1
+                start_check = low_index + 1
+                check_candles = rsi_history[start_check:current_index + 1]
             
             # Проверяем, что после лоя все свечи остались в зоне спокойствия (<= 35)
             invalid_candles = [rsi_val for rsi_val in check_candles if rsi_val > rsi_time_filter_lower]
