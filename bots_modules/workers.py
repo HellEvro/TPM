@@ -222,19 +222,8 @@ def auto_bot_worker():
                     'interval_seconds': check_interval_seconds
                 })
             
-            # ✅ КРИТИЧНО: Проверяем торговые сигналы для всех активных ботов (включая проверку закрытия по RSI)
-            # Это важно для проверки условий выхода из позиций независимо от статуса автобота
-            current_time = time.time()
-            time_since_trading_signals = current_time - last_trading_signals_check
-            
-            # Проверяем торговые сигналы с тем же интервалом, что и автобот (или минимум каждые 60 секунд)
-            trading_signals_interval = max(check_interval_seconds, 60)
-            
-            if time_since_trading_signals >= trading_signals_interval:
-                logger.debug(f"[TRADING_SIGNALS] Проверяем торговые сигналы для всех активных ботов...")
-                from bots_modules.imports_and_globals import get_exchange
-                process_trading_signals_for_all_bots(exchange_obj=get_exchange())
-                last_trading_signals_check = current_time
+            # Примечание: Проверка закрытия позиций по RSI теперь происходит в positions_monitor_worker
+            # каждые refresh_interval секунд (3 секунды по умолчанию), что соответствует интервалу обновления позиций
             
             # Обновляем статус позиций каждые BOT_STATUS_UPDATE_INTERVAL секунд (независимо от Auto Bot)
             current_time = time.time()
@@ -286,11 +275,10 @@ def auto_bot_worker():
 
 def positions_monitor_worker():
     """
-    📊 Мониторинг позиций на бирже (каждую секунду)
+    📊 Мониторинг позиций на бирже и проверка закрытия по RSI
     
     Загружает все позиции с биржи и сохраняет в кэш для быстрого доступа.
-    Это позволяет определять ручные позиции и избегать конфликтов.
-    КРИТИЧНО: Обновляется каждую секунду для быстрой реакции ботов!
+    КРИТИЧНО: Проверяет условия закрытия позиций по RSI каждые 3 секунды (согласно refresh_interval)!
     """
     logger.info("[POSITIONS_MONITOR] 🚀 Запуск мониторинга позиций...")
     
@@ -301,6 +289,9 @@ def positions_monitor_worker():
         'last_update': None,
         'symbols_with_positions': set()
     }
+    
+    # Время последней проверки закрытия позиций по RSI
+    last_rsi_close_check = time.time() - SystemConfig.UI_REFRESH_INTERVAL  # Сразу при первом запуске
     
     while not shutdown_flag.is_set():
         try:
@@ -350,6 +341,76 @@ def positions_monitor_worker():
                 logger.error(f"[POSITIONS_MONITOR] ❌ Ошибка загрузки позиций: {e}")
                 import traceback
                 traceback.print_exc()
+            
+            # ✅ КРИТИЧНО: Проверяем условия закрытия позиций по RSI каждые refresh_interval секунд (из конфига)
+            current_time = time.time()
+            time_since_rsi_check = current_time - last_rsi_close_check
+            
+            # Получаем интервал из конфига (не хардкод!)
+            refresh_interval = SystemConfig.UI_REFRESH_INTERVAL
+            
+            if time_since_rsi_check >= refresh_interval:
+                try:
+                    logger.debug(f"[POSITIONS_MONITOR] 🔍 Проверяем условия закрытия позиций по RSI (интервал: {refresh_interval}с)...")
+                    
+                    # Простая проверка: берем ботов в позиции, проверяем RSI, закрываем если нужно
+                    from bots_modules.imports_and_globals import bots_data, bots_data_lock, coins_rsi_data
+                    from bots_modules.bot_class import NewTradingBot
+                    
+                    with bots_data_lock:
+                        # Получаем только ботов в позиции
+                        bots_in_position = {
+                            symbol: bot_data for symbol, bot_data in bots_data.get('bots', {}).items()
+                            if bot_data.get('status') in ['in_position_long', 'in_position_short']
+                        }
+                    
+                    if bots_in_position:
+                        logger.debug(f"[POSITIONS_MONITOR] 📊 Проверяем {len(bots_in_position)} ботов в позиции: {list(bots_in_position.keys())}")
+                        
+                        for symbol, bot_data in bots_in_position.items():
+                            try:
+                                # Берем уже рассчитанный RSI из coins_rsi_data
+                                rsi_data = coins_rsi_data.get('coins', {}).get(symbol)
+                                if not rsi_data:
+                                    logger.debug(f"[POSITIONS_MONITOR] ⚠️ {symbol}: RSI данные не найдены, пропускаем")
+                                    continue
+                                
+                                current_rsi = rsi_data.get('rsi6h')
+                                current_price = rsi_data.get('price')
+                                
+                                if current_rsi is None or current_price is None:
+                                    logger.debug(f"[POSITIONS_MONITOR] ⚠️ {symbol}: RSI или цена не найдены, пропускаем")
+                                    continue
+                                
+                                # Создаем экземпляр бота и проверяем условие закрытия
+                                trading_bot = NewTradingBot(symbol, bot_data, exchange_obj)
+                                position_side = bot_data.get('position_side')
+                                
+                                if position_side == 'LONG':
+                                    should_close, reason = trading_bot.should_close_long(current_rsi, current_price)
+                                    if should_close:
+                                        logger.info(f"[POSITIONS_MONITOR] 🔴 {symbol}: Закрываем LONG позицию (RSI={current_rsi:.2f}, причина: {reason})")
+                                        trading_bot._close_position_on_exchange(reason)
+                                
+                                elif position_side == 'SHORT':
+                                    should_close, reason = trading_bot.should_close_short(current_rsi, current_price)
+                                    if should_close:
+                                        logger.info(f"[POSITIONS_MONITOR] 🔴 {symbol}: Закрываем SHORT позицию (RSI={current_rsi:.2f}, причина: {reason})")
+                                        trading_bot._close_position_on_exchange(reason)
+                                
+                            except Exception as bot_error:
+                                logger.error(f"[POSITIONS_MONITOR] ❌ Ошибка проверки бота {symbol}: {bot_error}")
+                                import traceback
+                                logger.error(f"[POSITIONS_MONITOR] ❌ Traceback: {traceback.format_exc()}")
+                    else:
+                        logger.debug(f"[POSITIONS_MONITOR] ⏳ Нет ботов в позиции для проверки")
+                    
+                    last_rsi_close_check = current_time
+                    
+                except Exception as e:
+                    logger.error(f"[POSITIONS_MONITOR] ❌ Ошибка проверки закрытия позиций по RSI: {e}")
+                    import traceback
+                    logger.error(f"[POSITIONS_MONITOR] ❌ Traceback: {traceback.format_exc()}")
             
             # Ждем 1 секунду перед следующей проверкой - КАЖДУЮ СЕКУНДУ!
             time.sleep(1)
