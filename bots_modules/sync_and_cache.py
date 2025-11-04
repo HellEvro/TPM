@@ -454,24 +454,44 @@ def save_auto_bot_config():
         if success:
             logger.info(f"[SAVE_CONFIG] ✅ Конфигурация автобота сохранена в bot_engine/bot_config.py")
             
-            # ✅ Принудительно перезагружаем модуль bot_config
+            # ✅ КРИТИЧНО: Обновляем конфигурацию в памяти из СОХРАНЕННЫХ данных (не из DEFAULT!)
+            with bots_data_lock:
+                old_rsi_long_exit = bots_data['auto_bot_config'].get('rsi_long_exit')
+                old_rsi_short_exit = bots_data['auto_bot_config'].get('rsi_short_exit')
+                
+                # Используем ТОЛЬКО ЧТО СОХРАНЕННЫЕ значения, а не дефолтные!
+                bots_data['auto_bot_config'].update(config_data)
+                
+                new_rsi_long_exit = bots_data['auto_bot_config'].get('rsi_long_exit')
+                new_rsi_short_exit = bots_data['auto_bot_config'].get('rsi_short_exit')
+            
+            # Проверяем что значения действительно есть
+            if new_rsi_long_exit is None:
+                logger.error(f"[SAVE_CONFIG] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_long_exit отсутствует в сохраненных данных!")
+            if new_rsi_short_exit is None:
+                logger.error(f"[SAVE_CONFIG] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_short_exit отсутствует в сохраненных данных!")
+            
+            # Логируем изменения RSI exit порогов
+            if old_rsi_long_exit is not None and new_rsi_long_exit is not None and old_rsi_long_exit != new_rsi_long_exit:
+                logger.info(f"[SAVE_CONFIG] 🔄 RSI LONG exit изменен: {old_rsi_long_exit} → {new_rsi_long_exit}")
+            if old_rsi_short_exit is not None and new_rsi_short_exit is not None and old_rsi_short_exit != new_rsi_short_exit:
+                logger.info(f"[SAVE_CONFIG] 🔄 RSI SHORT exit изменен: {old_rsi_short_exit} → {new_rsi_short_exit}")
+            
+            logger.info(f"[SAVE_CONFIG] ✅ Конфигурация обновлена в памяти из сохраненных данных!")
+            if new_rsi_long_exit is not None and new_rsi_short_exit is not None:
+                logger.info(f"[SAVE_CONFIG] 📊 Текущие RSI exit пороги: LONG={new_rsi_long_exit}, SHORT={new_rsi_short_exit}")
+            else:
+                logger.error(f"[SAVE_CONFIG] ❌ НЕКОТОРЫЕ RSI exit пороги отсутствуют в конфигурации!")
+            
+            # ✅ Опционально: Перезагружаем модуль bot_config для будущих запусков (но не используем его значения!)
             try:
                 if 'bot_engine.bot_config' in sys.modules:
-                    logger.info(f"[SAVE_CONFIG] 🔄 Перезагружаем модуль bot_config...")
+                    logger.debug(f"[SAVE_CONFIG] 🔄 Перезагружаем модуль bot_config для будущих запусков...")
                     import bot_engine.bot_config
                     importlib.reload(bot_engine.bot_config)
-                    
-                    # Перечитываем конфигурацию из обновленного модуля
-                    from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
-                    with bots_data_lock:
-                        bots_data['auto_bot_config'] = DEFAULT_AUTO_BOT_CONFIG.copy()
-                    
-                    logger.info(f"[SAVE_CONFIG] ✅ Модуль перезагружен, изменения применены БЕЗ перезапуска!")
-                else:
-                    logger.warning(f"[SAVE_CONFIG] ⚠️ Модуль bot_config не был загружен")
+                    logger.debug(f"[SAVE_CONFIG] ✅ Модуль перезагружен (для будущих запусков)")
             except Exception as reload_error:
-                logger.error(f"[SAVE_CONFIG] ❌ Ошибка перезагрузки модуля: {reload_error}")
-                logger.warning(f"[SAVE_CONFIG] ⚠️ Для применения изменений требуется перезапуск системы!")
+                logger.warning(f"[SAVE_CONFIG] ⚠️ Не удалось перезагрузить модуль (не критично): {reload_error}")
         
         return success
         
