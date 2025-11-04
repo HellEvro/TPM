@@ -18,6 +18,40 @@ from datetime import datetime
 
 logger = logging.getLogger('BotsService')
 
+# ✅ КЭШИРОВАНИЕ AI MANAGER для избежания повторных инициализаций
+_ai_manager_cache = None
+_ai_available_cache = None
+_ai_cache_lock = threading.Lock()
+
+def get_cached_ai_manager():
+    """
+    Получает закэшированный экземпляр AI Manager.
+    Инициализируется только один раз для избежания повторных загрузок моделей.
+    """
+    global _ai_manager_cache, _ai_available_cache
+    
+    with _ai_cache_lock:
+        # Если уже есть в кэше - возвращаем
+        if _ai_manager_cache is not None:
+            return _ai_manager_cache, _ai_available_cache
+        
+        # Инициализируем только один раз
+        try:
+            from bot_engine.bot_config import AIConfig
+            if AIConfig.AI_ENABLED:
+                from bot_engine.ai.ai_manager import get_ai_manager
+                _ai_manager_cache = get_ai_manager()
+                _ai_available_cache = _ai_manager_cache.is_available() if _ai_manager_cache else False
+            else:
+                _ai_manager_cache = None
+                _ai_available_cache = False
+        except Exception as e:
+            logger.debug(f"[FILTERS] AI Manager недоступен: {e}")
+            _ai_manager_cache = None
+            _ai_available_cache = False
+        
+        return _ai_manager_cache, _ai_available_cache
+
 # Импорт класса бота - ОТКЛЮЧЕН из-за циклического импорта
 # NewTradingBot будет импортирован локально в функциях
 
@@ -1633,12 +1667,11 @@ def check_exit_scam_filter(symbol, coin_data):
                 # Быстрая проверка: AI включен и Anomaly Detection включен
                 if AIConfig.AI_ENABLED and AIConfig.AI_ANOMALY_DETECTION_ENABLED:
                     try:
-                        from bot_engine.ai.ai_manager import get_ai_manager
-                        
-                        ai_manager = get_ai_manager()
+                        # ✅ Используем закэшированный AI Manager
+                        ai_manager, ai_available = get_cached_ai_manager()
                         
                         # Быстрая проверка доступности: если AI недоступен, пропускаем
-                        if not ai_manager.is_available():
+                        if not ai_available or not ai_manager:
                             # AI модули не загружены (нет лицензии или не установлены)
                             # Не логируем каждый раз, чтобы не спамить
                             pass
@@ -1706,12 +1739,11 @@ def get_lstm_prediction(symbol, signal, current_price):
             return None
         
         try:
-            from bot_engine.ai.ai_manager import get_ai_manager
-            
-            ai_manager = get_ai_manager()
+            # ✅ Используем закэшированный AI Manager
+            ai_manager, ai_available = get_cached_ai_manager()
             
             # Проверяем доступность LSTM
-            if not ai_manager.is_available() or not ai_manager.lstm_predictor:
+            if not ai_available or not ai_manager or not ai_manager.lstm_predictor:
                 return None
             
             # Получаем свечи для анализа
@@ -1796,12 +1828,11 @@ def get_pattern_analysis(symbol, signal, current_price):
             return None
         
         try:
-            from bot_engine.ai.ai_manager import get_ai_manager
-            
-            ai_manager = get_ai_manager()
+            # ✅ Используем закэшированный AI Manager
+            ai_manager, ai_available = get_cached_ai_manager()
             
             # Проверяем доступность Pattern Detector
-            if not ai_manager.is_available() or not ai_manager.pattern_detector:
+            if not ai_available or not ai_manager or not ai_manager.pattern_detector:
                 return None
             
             # Получаем свечи для анализа
