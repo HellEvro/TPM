@@ -62,7 +62,6 @@ class NewTradingBot:
         self.config = config or {}
         self.exchange = exchange
         
-        logger.info(f"[NEW_BOT_{symbol}] 🤖 Инициализация нового торгового бота")
         
         # Параметры сделки из конфига
         self.volume_mode = self.config.get('volume_mode', 'usdt')
@@ -102,7 +101,6 @@ class NewTradingBot:
         self.take_profit = self.config.get('take_profit', None)
         self.current_price = self.config.get('current_price', None)
         
-        logger.info(f"[NEW_BOT_{symbol}] ✅ Бот инициализирован (статус: {self.status})")
         
     def update_status(self, new_status, entry_price=None, position_side=None):
         """Обновляет статус бота"""
@@ -121,7 +119,6 @@ class NewTradingBot:
             self.trailing_stop_price = None
             self.break_even_activated = False
             
-        logger.info(f"[NEW_BOT_{self.symbol}] 📊 Статус изменен: {old_status} → {new_status}")
     
     def should_open_long(self, rsi, trend, candles):
         """Проверяет, нужно ли открывать LONG позицию"""
@@ -159,10 +156,10 @@ class NewTradingBot:
             if rsi_time_filter_enabled:
                 time_filter_result = self.check_rsi_time_filter_for_long(candles, rsi, rsi_time_filter_candles, rsi_time_filter_lower)
                 if not time_filter_result['allowed']:
-                    logger.info(f"[NEW_BOT_{self.symbol}] ❌ RSI Time Filter блокирует LONG: {time_filter_result['reason']}")
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ❌ RSI Time Filter блокирует LONG: {time_filter_result['reason']}")
                     return False
             
-            logger.info(f"[NEW_BOT_{self.symbol}] ✅ Все проверки пройдены - открываем LONG (RSI: {rsi:.1f}, Trend: {trend})")
+            logger.info(f"[NEW_BOT_{self.symbol}] ✅ Открываем LONG (RSI: {rsi:.1f})")
             return True
             
         except Exception as e:
@@ -205,10 +202,10 @@ class NewTradingBot:
             if rsi_time_filter_enabled:
                 time_filter_result = self.check_rsi_time_filter_for_short(candles, rsi, rsi_time_filter_candles, rsi_time_filter_upper)
                 if not time_filter_result['allowed']:
-                    logger.info(f"[NEW_BOT_{self.symbol}] ❌ RSI Time Filter блокирует SHORT: {time_filter_result['reason']}")
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ❌ RSI Time Filter блокирует SHORT: {time_filter_result['reason']}")
                     return False
             
-            logger.info(f"[NEW_BOT_{self.symbol}] ✅ Все проверки пройдены - открываем SHORT (RSI: {rsi:.1f}, Trend: {trend})")
+            logger.info(f"[NEW_BOT_{self.symbol}] ✅ Открываем SHORT (RSI: {rsi:.1f})")
             return True
             
         except Exception as e:
@@ -274,15 +271,10 @@ class NewTradingBot:
                 logger.error(f"[RSI_CHECK_{symbol}] ❌ Проверьте конфигурацию auto_bot_config в bots_data!")
                 return False, None
             
-            # Логируем проверку с подробной информацией
             condition_result = condition_func(rsi, threshold)
-            logger.debug(f"[RSI_CHECK_{symbol}] 🔍 Проверка закрытия {position_side}: RSI={rsi:.2f}, Порог={threshold}, Условие: {rsi:.2f} {condition_str} {threshold} = {condition_result}")
             
             if condition_result:
-                logger.info(f"[RSI_CHECK_{symbol}] ✅ ЗАКРЫВАЕМ {position_side}: RSI {rsi:.2f} {condition_str} {threshold}")
                 return True, 'RSI_EXIT'
-            else:
-                logger.debug(f"[RSI_CHECK_{symbol}] ⏳ Продолжаем {position_side}: RSI {rsi:.2f} не достиг порога {threshold}")
             
             return False, None
             
@@ -398,7 +390,7 @@ class NewTradingBot:
             
             # Проверяем возможность открытия LONG
             if self.should_open_long(rsi, trend, candles):
-                logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Открываем LONG позицию (RSI: {rsi:.1f})")
+                logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Открываем LONG")
                 if self._open_position_on_exchange('LONG', price):
                     self.update_status(BOT_STATUS['IN_POSITION_LONG'], price, 'LONG')
                     return {'success': True, 'action': 'OPEN_LONG', 'status': self.status}
@@ -408,7 +400,7 @@ class NewTradingBot:
             
             # Проверяем возможность открытия SHORT
             if self.should_open_short(rsi, trend, candles):
-                logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Открываем SHORT позицию (RSI: {rsi:.1f})")
+                logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Открываем SHORT")
                 if self._open_position_on_exchange('SHORT', price):
                     self.update_status(BOT_STATUS['IN_POSITION_SHORT'], price, 'SHORT')
                     return {'success': True, 'action': 'OPEN_SHORT', 'status': self.status}
@@ -436,19 +428,18 @@ class NewTradingBot:
             # 1. Проверяем защитные механизмы
             protection_result = self.check_protection_mechanisms(price)
             if protection_result['should_close']:
-                logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Закрываем позицию: {protection_result['reason']}")
+                logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Закрываем: {protection_result['reason']}")
                 self._close_position_on_exchange(protection_result['reason'])
                 return {'success': True, 'action': f"CLOSE_{self.position_side}", 'reason': protection_result['reason']}
             
             # 2. Проверяем условия закрытия по RSI (универсальная функция)
             if self.position_side in ['LONG', 'SHORT']:
-                logger.info(f"[NEW_BOT_{self.symbol}] 🔍 Проверяем условия закрытия {self.position_side}: RSI={rsi:.2f}")
                 should_close, reason = self.should_close_position(rsi, price, self.position_side)
                 if should_close:
-                    logger.info(f"[NEW_BOT_{self.symbol}] 🔴 РЕШЕНИЕ: Закрываем {self.position_side} позицию по RSI (причина: {reason})")
+                    logger.info(f"[NEW_BOT_{self.symbol}] 🔴 Закрываем {self.position_side} по RSI")
                     close_success = self._close_position_on_exchange(reason)
                     if close_success:
-                        logger.info(f"[NEW_BOT_{self.symbol}] ✅ {self.position_side} позиция успешно закрыта!")
+                        logger.info(f"[NEW_BOT_{self.symbol}] ✅ {self.position_side} закрыта")
                         return {'success': True, 'action': f'CLOSE_{self.position_side}', 'reason': reason}
                     else:
                         logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: Не удалось закрыть {self.position_side} позицию на бирже!")
@@ -499,10 +490,10 @@ class NewTradingBot:
             # 3. Проверка безубыточности
             if not self.break_even_activated and profit_percent >= break_even_trigger_percent:
                 self.break_even_activated = True
-                logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Активирована защита безубыточности при {profit_percent:.2f}%")
+                logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Безубыток активирован: {profit_percent:.2f}%")
             
             if self.break_even_activated and profit_percent <= 0:
-                logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Закрываем по безубыточности (было {self.max_profit_achieved:.2f}%, сейчас {profit_percent:.2f}%)")
+                logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Закрываем по безубытку")
                 return {'should_close': True, 'reason': f'BREAK_EVEN_MAX_{self.max_profit_achieved:.2f}%'}
             
             # 4. Проверка trailing stop
@@ -514,7 +505,7 @@ class NewTradingBot:
                     trailing_stop = max_price * (1 - trailing_distance_percent / 100)
                     
                     if current_price <= trailing_stop:
-                        logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Trailing Stop! Макс: {self.max_profit_achieved:.2f}%, Текущ: {profit_percent:.2f}%")
+                        logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Trailing Stop")
                         return {'should_close': True, 'reason': f'TRAILING_STOP_MAX_{self.max_profit_achieved:.2f}%'}
                 else:  # SHORT
                     # Для SHORT trailing stop выше минимальной цены
@@ -522,7 +513,7 @@ class NewTradingBot:
                     trailing_stop = min_price * (1 + trailing_distance_percent / 100)
                     
                     if current_price >= trailing_stop:
-                        logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Trailing Stop! Макс: {self.max_profit_achieved:.2f}%, Текущ: {profit_percent:.2f}%")
+                        logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Trailing Stop")
                         return {'should_close': True, 'reason': f'TRAILING_STOP_MAX_{self.max_profit_achieved:.2f}%'}
             
             return {'should_close': False, 'reason': None}
@@ -612,7 +603,7 @@ class NewTradingBot:
                         )
                         
                         if trailing_result and trailing_result.get('retCode') == 0:
-                            logger.info(f"[NEW_BOT_{self.symbol}] ✅ Биржевой trailing stop АКТИВИРОВАН: {trailing_distance_percent}%")
+                            logger.debug(f"[NEW_BOT_{self.symbol}] ✅ Trailing stop активирован: {trailing_distance_percent}%")
                             self._trailing_stop_activated = True
                         else:
                             logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка установки биржевого trailing stop: {trailing_result.get('retMsg') if trailing_result else 'Unknown'}")
@@ -624,7 +615,7 @@ class NewTradingBot:
                 try:
                     result = self.exchange.update_stop_loss(self.symbol, new_stop_loss, self.position_side)
                     if result and result.get('success'):
-                        logger.info(f"[NEW_BOT_{self.symbol}] 📈 Программный trailing stop обновлен: {new_stop_loss:.6f} (прибыль: {profit_percent:.2f}%)")
+                        logger.debug(f"[NEW_BOT_{self.symbol}] 📈 Trailing stop обновлен")
                     else:
                         logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось обновить программный trailing stop: {result.get('message', 'Unknown error') if result else 'No response'}")
                 except Exception as e:
@@ -652,7 +643,7 @@ class NewTradingBot:
                         if not current_tp or new_take_profit > float(current_tp):
                             tp_result = self.exchange.update_take_profit(self.symbol, new_take_profit, self.position_side)
                             if tp_result and tp_result.get('success'):
-                                logger.info(f"[NEW_BOT_{self.symbol}] 📈 Trailing TP обновлен вверх: {new_take_profit:.6f} (прибыль: {profit_percent:.2f}%)")
+                                logger.debug(f"[NEW_BOT_{self.symbol}] 📈 Trailing TP обновлен")
                     else:  # SHORT
                         # TP = текущая цена - 20% (следует за ценой вниз)
                         current_price = self.entry_price * (1 - self.max_profit_achieved / 100)
@@ -696,7 +687,6 @@ class NewTradingBot:
                     self.position_side = pos.get('side', 'UNKNOWN')
                     self.position_size = abs(float(pos.get('size', 0)))  # ✅ Сохраняем размер позиции
                     self.unrealized_pnl = float(pos.get('unrealized_pnl', 0))
-                    logger.info(f"[NEW_BOT_{self.symbol}] 🔄 Синхронизировано с биржей: {self.position_side} @ {self.entry_price}")
                     break
                 
         except Exception as e:
@@ -717,7 +707,6 @@ class NewTradingBot:
             ticker = self.exchange.get_ticker(self.symbol) if self.exchange else None
             price = ticker['last'] if ticker and 'last' in ticker else 0
             
-            logger.info(f"[NEW_BOT_{self.symbol}] 📈 Входим в {direction} позицию @ {price}")
             
             # 🤖 Сбор данных для ИИ и проверка оптимальной точки входа (если включено)
             try:
@@ -770,10 +759,10 @@ class NewTradingBot:
                     )
                     
                     if not decision.get('should_enter', True):
-                        logger.info(f"[NEW_BOT_{self.symbol}] ⏳ ИИ рекомендует подождать: {decision.get('reason', 'Неизвестная причина')}")
+                        logger.debug(f"[NEW_BOT_{self.symbol}] ⏳ ИИ: подождать")
                         return False
                     else:
-                        logger.info(f"[NEW_BOT_{self.symbol}] ✅ ИИ рекомендует вход: {decision.get('reason', 'Всё ок')}")
+                        logger.debug(f"[NEW_BOT_{self.symbol}] ✅ ИИ: вход")
                 
             except ImportError:
                 # ИИ функция недоступна (нет лицензии) - продолжаем как обычно
@@ -792,7 +781,6 @@ class NewTradingBot:
                 with bots_data_lock:
                     bots_data['bots'][self.symbol] = self.to_dict()
                 
-                logger.info(f"[NEW_BOT_{self.symbol}] ✅ Вход в {direction} позицию успешен")
                 return True
             else:
                 logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось войти в {direction} позицию")
@@ -809,7 +797,6 @@ class NewTradingBot:
                 logger.error(f"[NEW_BOT_{self.symbol}] ❌ Биржа не инициализирована")
                 return False
             
-            logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Открываем позицию {side} @ {price}")
             
             # Открываем позицию на бирже
             # Рассчитываем количество монет на основе volume_value в USDT
@@ -820,7 +807,6 @@ class NewTradingBot:
             auto_bot_config = get_auto_bot_config()
             max_loss_percent = auto_bot_config.get('max_loss_percent', 15.0)
             
-            logger.info(f"[NEW_BOT_{self.symbol}] 🚀 ОТПРАВЛЯЕМ ОРДЕР: symbol={self.symbol}, side={side}, quantity={self.volume_value} USDT (БЕЗ TP/SL)")
             
             # ШАГ 1: Открываем позицию БЕЗ стоп-лосса и тейк-профита
             order_result = self.exchange.place_order(
@@ -836,10 +822,9 @@ class NewTradingBot:
             if order_result and order_result.get('success'):
                 self.order_id = order_result.get('order_id')
                 self.entry_timestamp = datetime.now().isoformat()
-                logger.info(f"[NEW_BOT_{self.symbol}] ✅ Позиция {side} открыта: Order ID {self.order_id}")
+                logger.info(f"[NEW_BOT_{self.symbol}] ✅ Позиция {side} открыта")
                 
                 # ШАГ 2: Получаем реальные данные позиции (entry_price, leverage, quantity) с RETRY
-                logger.info(f"[NEW_BOT_{self.symbol}] ⏳ Получаем данные позиции для расчета TP/SL...")
                 
                 actual_entry_price = None
                 actual_leverage = None
@@ -872,7 +857,6 @@ class NewTradingBot:
                                 # ✅ КРИТИЧНО: Сохраняем размер позиции в боте!
                                 self.position_size = abs(actual_qty)
                                 
-                                logger.info(f"[NEW_BOT_{self.symbol}] 📊 Попытка {attempt + 1}/{max_attempts}: entry={actual_entry_price}, leverage={actual_leverage}x, qty={actual_qty}")
                                 
                                 # Если получили валидные данные - выходим из цикла
                                 if actual_entry_price and actual_entry_price > 0:
@@ -1113,15 +1097,12 @@ class NewTradingBot:
                 logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: position_side не установлен! Невозможно закрыть позицию!")
                 return False
             
-            logger.info(f"[NEW_BOT_{self.symbol}] 🔴 ЗАКРЫВАЕМ позицию {self.position_side} (причина: {reason})")
-            
             # Получаем размер позиции (сначала из бота, если нет - с биржи)
             position_size = None
             
             # ✅ КРИТИЧНО: Используем сохраненный размер позиции из бота!
             if self.position_size:
                 position_size = self.position_size
-                logger.info(f"[NEW_BOT_{self.symbol}] 📊 Используем сохраненный размер позиции: {position_size}")
             else:
                 # Если нет в боте - получаем с биржи
                 try:
@@ -1140,7 +1121,6 @@ class NewTradingBot:
                                 position_size = abs(float(pos.get('size', 0)))
                                 # Сохраняем в бота для будущего использования
                                 self.position_size = position_size
-                                logger.info(f"[NEW_BOT_{self.symbol}] 📊 Получен размер позиции с биржи и сохранен: {position_size}")
                                 break
                     
                     if position_size is None:
@@ -1153,7 +1133,6 @@ class NewTradingBot:
             # ✅ КРИТИЧНО: Преобразуем side в формат, который ожидает биржа ('Long'/'Short')
             side_for_exchange = 'Long' if self.position_side == 'LONG' else 'Short' if self.position_side == 'SHORT' else self.position_side
             
-            logger.info(f"[NEW_BOT_{self.symbol}] 📋 Параметры закрытия: symbol={self.symbol}, side={side_for_exchange} (было {self.position_side}), size={position_size}")
             
             # Закрываем позицию на бирже
             close_result = self.exchange.close_position(
@@ -1162,10 +1141,8 @@ class NewTradingBot:
                 side=side_for_exchange  # ✅ Используем правильный формат
             )
             
-            logger.info(f"[NEW_BOT_{self.symbol}] 📥 Результат закрытия: {close_result}")
             
             if close_result and close_result.get('success'):
-                logger.info(f"[NEW_BOT_{self.symbol}] ✅ Позиция закрыта успешно на бирже!")
                 
                 # Сохраняем историю закрытия позиции (для обучения ИИ)
                 try:
