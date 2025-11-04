@@ -493,14 +493,28 @@ class BybitExchange(BaseExchange):
                 positions = response['result']['list']
                 active_position = None
                 
+                # ✅ КРИТИЧНО: Логируем все позиции для отладки
+                print(f"[BYBIT] DEBUG: Получено позиций: {len(positions)}")
+                for pos in positions:
+                    print(f"[BYBIT] DEBUG: Позиция: symbol={pos.get('symbol')}, side={pos.get('side')}, size={pos.get('size')}")
+                
                 # Ищем позицию с нужной стороной
+                # ✅ Нормализуем side (принимаем и 'Long', и 'LONG')
+                normalized_side = side if side in ['Long', 'Short'] else ('Long' if side.upper() == 'LONG' else 'Short' if side.upper() == 'SHORT' else side)
+                
                 for pos in positions:
                     pos_side = 'Long' if pos['side'] == 'Buy' else 'Short'
-                    if abs(float(pos['size'])) > 0 and pos_side == side:
+                    pos_size = abs(float(pos['size']))
+                    print(f"[BYBIT] DEBUG: Проверка: pos_side={pos_side}, normalized_side={normalized_side}, pos_size={pos_size}")
+                    
+                    if pos_size > 0 and pos_side == normalized_side:
                         active_position = pos
+                        print(f"[BYBIT] DEBUG: ✅ Найдена позиция: {active_position.get('symbol')}, size={active_position.get('size')}")
                         break
                 
                 if not active_position:
+                    # ✅ Детальное логирование для отладки
+                    print(f"[BYBIT] DEBUG: ❌ Позиция не найдена! Искали: side={normalized_side} (было {side}), symbol={symbol}USDT")
                     return {
                         'success': False,
                         'message': f'Нет активной {side} позиции для {symbol}'
