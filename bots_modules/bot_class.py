@@ -241,6 +241,9 @@ class NewTradingBot:
                 auto_config = bots_data.get('auto_bot_config', {})
                 rsi_long_exit = auto_config.get('rsi_long_exit', 65)
             
+            # Логируем проверку для отладки
+            logger.debug(f"[NEW_BOT_{self.symbol}] 🔍 Проверка закрытия LONG: RSI {rsi:.1f} >= {rsi_long_exit}?")
+            
             if rsi >= rsi_long_exit:
                 logger.info(f"[NEW_BOT_{self.symbol}] ✅ Закрываем LONG: RSI {rsi:.1f} >= {rsi_long_exit}")
                 return True, 'RSI_EXIT'
@@ -257,6 +260,9 @@ class NewTradingBot:
             with bots_data_lock:
                 auto_config = bots_data.get('auto_bot_config', {})
                 rsi_short_exit = auto_config.get('rsi_short_exit', 35)
+            
+            # Логируем проверку для отладки
+            logger.debug(f"[NEW_BOT_{self.symbol}] 🔍 Проверка закрытия SHORT: RSI {rsi:.1f} <= {rsi_short_exit}?")
             
             if rsi <= rsi_short_exit:
                 logger.info(f"[NEW_BOT_{self.symbol}] ✅ Закрываем SHORT: RSI {rsi:.1f} <= {rsi_short_exit}")

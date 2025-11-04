@@ -44,7 +44,7 @@ try:
         check_delisting_emergency_close
     )
     from bots_modules.maturity import save_mature_coins_storage
-    from bots_modules.filters import process_auto_bot_signals
+    from bots_modules.filters import process_auto_bot_signals, process_trading_signals_for_all_bots
 except ImportError as e:
     print(f"Warning: Could not import functions in workers: {e}")
     def should_log_message(category, message, interval_seconds=60):
@@ -66,6 +66,8 @@ except ImportError as e:
     def check_trading_rules_activation():
         pass
     def process_auto_bot_signals(exchange_obj=None):
+        pass
+    def process_trading_signals_for_all_bots(exchange_obj=None):
         pass
 
 def log_system_status(cycle_count, auto_bot_enabled, check_interval_seconds):
@@ -167,6 +169,7 @@ def auto_bot_worker():
     last_position_sync = time.time() - SystemConfig.POSITION_SYNC_INTERVAL
     last_inactive_cleanup = time.time() - SystemConfig.INACTIVE_BOT_CLEANUP_INTERVAL
     last_auto_bot_check = time.time()  # Время последней проверки сигналов автобота
+    last_trading_signals_check = time.time()  # Время последней проверки торговых сигналов для всех ботов
     last_delisting_check = time.time() - 600  # Время последней проверки делистинга (10 минут назад для первого запуска)
     
     logger.info("[AUTO_BOT] 🔄 Входим в основной цикл (автобот выключен, ждем ручного включения)...")
@@ -218,6 +221,20 @@ def auto_bot_worker():
                     'enabled': False,
                     'interval_seconds': check_interval_seconds
                 })
+            
+            # ✅ КРИТИЧНО: Проверяем торговые сигналы для всех активных ботов (включая проверку закрытия по RSI)
+            # Это важно для проверки условий выхода из позиций независимо от статуса автобота
+            current_time = time.time()
+            time_since_trading_signals = current_time - last_trading_signals_check
+            
+            # Проверяем торговые сигналы с тем же интервалом, что и автобот (или минимум каждые 60 секунд)
+            trading_signals_interval = max(check_interval_seconds, 60)
+            
+            if time_since_trading_signals >= trading_signals_interval:
+                logger.debug(f"[TRADING_SIGNALS] Проверяем торговые сигналы для всех активных ботов...")
+                from bots_modules.imports_and_globals import get_exchange
+                process_trading_signals_for_all_bots(exchange_obj=get_exchange())
+                last_trading_signals_check = current_time
             
             # Обновляем статус позиций каждые BOT_STATUS_UPDATE_INTERVAL секунд (независимо от Auto Bot)
             current_time = time.time()
