@@ -456,14 +456,14 @@ def save_auto_bot_config():
             
             # ✅ КРИТИЧНО: Обновляем конфигурацию в памяти из СОХРАНЕННЫХ данных (не из DEFAULT!)
             with bots_data_lock:
-                old_rsi_long_exit = bots_data['auto_bot_config'].get('rsi_long_exit')
-                old_rsi_short_exit = bots_data['auto_bot_config'].get('rsi_short_exit')
+                old_rsi_long_exit = bots_data['auto_bot_config'].get('rsi_exit_long')
+                old_rsi_short_exit = bots_data['auto_bot_config'].get('rsi_exit_short')
                 
                 # Используем ТОЛЬКО ЧТО СОХРАНЕННЫЕ значения, а не дефолтные!
                 bots_data['auto_bot_config'].update(config_data)
                 
-                new_rsi_long_exit = bots_data['auto_bot_config'].get('rsi_long_exit')
-                new_rsi_short_exit = bots_data['auto_bot_config'].get('rsi_short_exit')
+                new_rsi_long_exit = bots_data['auto_bot_config'].get('rsi_exit_long')
+                new_rsi_short_exit = bots_data['auto_bot_config'].get('rsi_exit_short')
             
             # Проверяем что значения действительно есть
             if new_rsi_long_exit is None:

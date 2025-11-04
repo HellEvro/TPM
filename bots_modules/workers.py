@@ -351,7 +351,7 @@ def positions_monitor_worker():
             
             if time_since_rsi_check >= refresh_interval:
                 try:
-                    logger.debug(f"[POSITIONS_MONITOR] 🔍 Проверяем условия закрытия позиций по RSI (интервал: {refresh_interval}с)...")
+                    logger.info(f"[POSITIONS_MONITOR] 🔍 Проверяем условия закрытия позиций по RSI (интервал: {refresh_interval}с)...")
                     
                     # Простая проверка: берем ботов в позиции, проверяем RSI, закрываем если нужно
                     from bots_modules.imports_and_globals import bots_data, bots_data_lock, coins_rsi_data
@@ -365,7 +365,7 @@ def positions_monitor_worker():
                         }
                     
                     if bots_in_position:
-                        logger.debug(f"[POSITIONS_MONITOR] 📊 Проверяем {len(bots_in_position)} ботов в позиции: {list(bots_in_position.keys())}")
+                        logger.info(f"[POSITIONS_MONITOR] 📊 Проверяем {len(bots_in_position)} ботов в позиции: {list(bots_in_position.keys())}")
                         
                         for symbol, bot_data in bots_in_position.items():
                             try:
@@ -386,17 +386,11 @@ def positions_monitor_worker():
                                 trading_bot = NewTradingBot(symbol, bot_data, exchange_obj)
                                 position_side = bot_data.get('position_side')
                                 
-                                if position_side == 'LONG':
-                                    should_close, reason = trading_bot.should_close_long(current_rsi, current_price)
-                                    if should_close:
-                                        logger.info(f"[POSITIONS_MONITOR] 🔴 {symbol}: Закрываем LONG позицию (RSI={current_rsi:.2f}, причина: {reason})")
-                                        trading_bot._close_position_on_exchange(reason)
-                                
-                                elif position_side == 'SHORT':
-                                    should_close, reason = trading_bot.should_close_short(current_rsi, current_price)
-                                    if should_close:
-                                        logger.info(f"[POSITIONS_MONITOR] 🔴 {symbol}: Закрываем SHORT позицию (RSI={current_rsi:.2f}, причина: {reason})")
-                                        trading_bot._close_position_on_exchange(reason)
+                                # Универсальная проверка закрытия
+                                should_close, reason = trading_bot.should_close_position(current_rsi, current_price, position_side)
+                                if should_close:
+                                    logger.info(f"[POSITIONS_MONITOR] 🔴 {symbol}: Закрываем {position_side} позицию (RSI={current_rsi:.2f}, причина: {reason})")
+                                    trading_bot._close_position_on_exchange(reason)
                                 
                             except Exception as bot_error:
                                 logger.error(f"[POSITIONS_MONITOR] ❌ Ошибка проверки бота {symbol}: {bot_error}")
