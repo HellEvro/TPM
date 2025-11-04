@@ -234,61 +234,72 @@ class NewTradingBot:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка RSI Time Filter для SHORT: {e}")
             return {'allowed': False, 'reason': f'Ошибка анализа: {str(e)}'}
     
-    def should_close_long(self, rsi, current_price):
-        """Проверяет, нужно ли закрывать LONG позицию"""
+    def should_close_position(self, rsi, current_price, position_side=None):
+        """
+        Универсальная функция проверки закрытия позиции по RSI
+        
+        Args:
+            rsi: Текущее значение RSI
+            current_price: Текущая цена (не используется, но оставлен для совместимости)
+            position_side: Сторона позиции ('LONG' или 'SHORT'). Если None, берется из self.position_side
+        
+        Returns:
+            tuple: (should_close: bool, reason: str или None)
+        """
         try:
+            # Если сторона не указана, берем из текущего состояния бота
+            if position_side is None:
+                position_side = self.position_side
+            
+            if position_side not in ['LONG', 'SHORT']:
+                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Неизвестная сторона позиции: {position_side}")
+                return False, None
+            
             with bots_data_lock:
                 auto_config = bots_data.get('auto_bot_config', {})
-                rsi_long_exit = auto_config.get('rsi_long_exit')
+                
+                # Определяем ключ конфига и условие в зависимости от стороны
+                if position_side == 'LONG':
+                    config_key = 'rsi_exit_long'
+                    threshold = auto_config.get(config_key)
+                    condition_func = lambda r, t: r >= t  # RSI >= порог для LONG
+                    condition_str = ">="
+                else:  # SHORT
+                    config_key = 'rsi_exit_short'
+                    threshold = auto_config.get(config_key)
+                    condition_func = lambda r, t: r <= t  # RSI <= порог для SHORT
+                    condition_str = "<="
             
             # КРИТИЧНО: Если значение не найдено - это ОШИБКА КОНФИГУРАЦИИ!
-            if rsi_long_exit is None:
-                logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_long_exit не найден в конфигурации! Позиция НЕ будет закрыта!")
+            if threshold is None:
+                logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: {config_key} не найден в конфигурации! Позиция НЕ будет закрыта!")
                 logger.error(f"[NEW_BOT_{self.symbol}] ❌ Проверьте конфигурацию auto_bot_config в bots_data!")
                 return False, None
             
             # Логируем проверку с подробной информацией
-            logger.info(f"[NEW_BOT_{self.symbol}] 🔍 Проверка закрытия LONG: RSI={rsi:.2f}, Порог={rsi_long_exit}, Условие: {rsi:.2f} >= {rsi_long_exit} = {rsi >= rsi_long_exit}")
+            condition_result = condition_func(rsi, threshold)
+            logger.info(f"[NEW_BOT_{self.symbol}] 🔍 Проверка закрытия {position_side}: RSI={rsi:.2f}, Порог={threshold}, Условие: {rsi:.2f} {condition_str} {threshold} = {condition_result}")
             
-            if rsi >= rsi_long_exit:
-                logger.info(f"[NEW_BOT_{self.symbol}] ✅ ЗАКРЫВАЕМ LONG: RSI {rsi:.2f} >= {rsi_long_exit}")
+            if condition_result:
+                logger.info(f"[NEW_BOT_{self.symbol}] ✅ ЗАКРЫВАЕМ {position_side}: RSI {rsi:.2f} {condition_str} {threshold}")
                 return True, 'RSI_EXIT'
             else:
-                logger.debug(f"[NEW_BOT_{self.symbol}] ⏳ Продолжаем LONG: RSI {rsi:.2f} < {rsi_long_exit} (не достигнут порог)")
+                logger.debug(f"[NEW_BOT_{self.symbol}] ⏳ Продолжаем {position_side}: RSI {rsi:.2f} не достиг порога {threshold}")
             
             return False, None
             
         except Exception as e:
-            logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка проверки закрытия LONG: {e}")
+            logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка проверки закрытия {position_side}: {e}")
             return False, None
     
+    # Обратная совместимость - оставляем старые методы для совместимости
+    def should_close_long(self, rsi, current_price):
+        """Проверяет, нужно ли закрывать LONG позицию (обертка для совместимости)"""
+        return self.should_close_position(rsi, current_price, 'LONG')
+    
     def should_close_short(self, rsi, current_price):
-        """Проверяет, нужно ли закрывать SHORT позицию"""
-        try:
-            with bots_data_lock:
-                auto_config = bots_data.get('auto_bot_config', {})
-                rsi_short_exit = auto_config.get('rsi_short_exit')
-            
-            # КРИТИЧНО: Если значение не найдено - это ОШИБКА КОНФИГУРАЦИИ!
-            if rsi_short_exit is None:
-                logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_short_exit не найден в конфигурации! Позиция НЕ будет закрыта!")
-                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Проверьте конфигурацию auto_bot_config в bots_data!")
-                return False, None
-            
-            # Логируем проверку с подробной информацией
-            logger.info(f"[NEW_BOT_{self.symbol}] 🔍 Проверка закрытия SHORT: RSI={rsi:.2f}, Порог={rsi_short_exit}, Условие: {rsi:.2f} <= {rsi_short_exit} = {rsi <= rsi_short_exit}")
-            
-            if rsi <= rsi_short_exit:
-                logger.info(f"[NEW_BOT_{self.symbol}] ✅ ЗАКРЫВАЕМ SHORT: RSI {rsi:.2f} <= {rsi_short_exit}")
-                return True, 'RSI_EXIT'
-            else:
-                logger.debug(f"[NEW_BOT_{self.symbol}] ⏳ Продолжаем SHORT: RSI {rsi:.2f} > {rsi_short_exit} (не достигнут порог)")
-            
-            return False, None
-            
-        except Exception as e:
-            logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка проверки закрытия SHORT: {e}")
-            return False, None
+        """Проверяет, нужно ли закрывать SHORT позицию (обертка для совместимости)"""
+        return self.should_close_position(rsi, current_price, 'SHORT')
     
     def update(self, force_analysis=False, external_signal=None, external_trend=None):
         """Основной метод обновления бота"""
@@ -414,36 +425,21 @@ class NewTradingBot:
                 self._close_position_on_exchange(protection_result['reason'])
                 return {'success': True, 'action': f"CLOSE_{self.position_side}", 'reason': protection_result['reason']}
             
-            # 2. Проверяем условия закрытия по RSI
-            if self.position_side == 'LONG':
-                logger.info(f"[NEW_BOT_{self.symbol}] 🔍 Проверяем условия закрытия LONG: RSI={rsi:.2f}")
-                should_close, reason = self.should_close_long(rsi, price)
+            # 2. Проверяем условия закрытия по RSI (универсальная функция)
+            if self.position_side in ['LONG', 'SHORT']:
+                logger.info(f"[NEW_BOT_{self.symbol}] 🔍 Проверяем условия закрытия {self.position_side}: RSI={rsi:.2f}")
+                should_close, reason = self.should_close_position(rsi, price, self.position_side)
                 if should_close:
-                    logger.info(f"[NEW_BOT_{self.symbol}] 🔴 РЕШЕНИЕ: Закрываем LONG позицию по RSI (причина: {reason})")
+                    logger.info(f"[NEW_BOT_{self.symbol}] 🔴 РЕШЕНИЕ: Закрываем {self.position_side} позицию по RSI (причина: {reason})")
                     close_success = self._close_position_on_exchange(reason)
                     if close_success:
-                        logger.info(f"[NEW_BOT_{self.symbol}] ✅ LONG позиция успешно закрыта!")
-                        return {'success': True, 'action': 'CLOSE_LONG', 'reason': reason}
+                        logger.info(f"[NEW_BOT_{self.symbol}] ✅ {self.position_side} позиция успешно закрыта!")
+                        return {'success': True, 'action': f'CLOSE_{self.position_side}', 'reason': reason}
                     else:
-                        logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: Не удалось закрыть LONG позицию на бирже!")
-                        return {'success': False, 'error': 'Failed to close position on exchange', 'action': 'CLOSE_LONG_FAILED', 'reason': reason}
+                        logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: Не удалось закрыть {self.position_side} позицию на бирже!")
+                        return {'success': False, 'error': 'Failed to close position on exchange', 'action': f'CLOSE_{self.position_side}_FAILED', 'reason': reason}
                 else:
-                    logger.debug(f"[NEW_BOT_{self.symbol}] ⏳ Продолжаем держать LONG позицию (RSI не достиг порога)")
-            
-            elif self.position_side == 'SHORT':
-                logger.info(f"[NEW_BOT_{self.symbol}] 🔍 Проверяем условия закрытия SHORT: RSI={rsi:.2f}")
-                should_close, reason = self.should_close_short(rsi, price)
-                if should_close:
-                    logger.info(f"[NEW_BOT_{self.symbol}] 🔴 РЕШЕНИЕ: Закрываем SHORT позицию по RSI (причина: {reason})")
-                    close_success = self._close_position_on_exchange(reason)
-                    if close_success:
-                        logger.info(f"[NEW_BOT_{self.symbol}] ✅ SHORT позиция успешно закрыта!")
-                        return {'success': True, 'action': 'CLOSE_SHORT', 'reason': reason}
-                    else:
-                        logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: Не удалось закрыть SHORT позицию на бирже!")
-                        return {'success': False, 'error': 'Failed to close position on exchange', 'action': 'CLOSE_SHORT_FAILED', 'reason': reason}
-                else:
-                    logger.debug(f"[NEW_BOT_{self.symbol}] ⏳ Продолжаем держать SHORT позицию (RSI не достиг порога)")
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⏳ Продолжаем держать {self.position_side} позицию (RSI не достиг порога)")
             
             # 3. Обновляем защитные механизмы
             self._update_protection_mechanisms(price)
