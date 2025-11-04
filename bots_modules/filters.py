@@ -1228,6 +1228,8 @@ def process_auto_bot_signals(exchange_obj=None):
 def process_trading_signals_for_all_bots(exchange_obj=None):
     """Обрабатывает торговые сигналы для всех активных ботов с новым классом"""
     try:
+        logger.info("[NEW_BOT_SIGNALS] 🔄 Начинаем обработку торговых сигналов для всех активных ботов...")
+        
         # Проверяем, инициализирована ли система
         if not system_initialized:
             logger.warning("[NEW_BOT_SIGNALS] ⏳ Система еще не инициализирована - пропускаем обработку")
@@ -1239,14 +1241,15 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                       if bot['status'] not in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']]}
         
         if not active_bots:
-            logger.debug("[NEW_BOT_SIGNALS] ⏳ Нет активных ботов для обработки")
+            logger.info("[NEW_BOT_SIGNALS] ⏳ Нет активных ботов для обработки")
             return
         
         logger.info(f"[NEW_BOT_SIGNALS] 🔍 Обрабатываем {len(active_bots)} активных ботов: {list(active_bots.keys())}")
+        logger.info(f"[NEW_BOT_SIGNALS] 📊 Проверяем условия закрытия позиций по RSI для ботов в позиции...")
         
         for symbol, bot_data in active_bots.items():
             try:
-                logger.debug(f"[NEW_BOT_SIGNALS] 🔍 Обрабатываем бота {symbol}...")
+                logger.info(f"[NEW_BOT_SIGNALS] 🔍 Обрабатываем бота {symbol} (статус: {bot_data.get('status')}, позиция: {bot_data.get('position_side')})...")
                 
                 # Используем переданную биржу или глобальную переменную
                 from bots_modules.imports_and_globals import get_exchange
@@ -1261,10 +1264,12 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                 rsi_data = coins_rsi_data['coins'].get(symbol)
                 
                 if not rsi_data:
-                    logger.debug(f"[NEW_BOT_SIGNALS] ❌ {symbol}: RSI данные не найдены")
+                    logger.warning(f"[NEW_BOT_SIGNALS] ❌ {symbol}: RSI данные не найдены - пропускаем проверку")
                     continue
                 
-                logger.debug(f"[NEW_BOT_SIGNALS] ✅ {symbol}: RSI={rsi_data.get('rsi6h')}, Trend={rsi_data.get('trend6h')}")
+                current_rsi = rsi_data.get('rsi6h')
+                current_trend = rsi_data.get('trend6h')
+                logger.info(f"[NEW_BOT_SIGNALS] ✅ {symbol}: RSI={current_rsi}, Trend={current_trend}, Проверяем условия закрытия...")
                 
                 # Обрабатываем торговые сигналы через метод update
                 external_signal = rsi_data.get('signal')
