@@ -1418,15 +1418,15 @@ def cleanup_inactive_bots():
             logger.warning(f"[INACTIVE_CLEANUP] ⚠️ Не удалось получить позиции с биржи - пропускаем очистку для безопасности")
             return False
         
-        exchange_symbols = {pos['symbol'] for pos in exchange_positions}
+        # Нормализуем символы позиций (убираем USDT если есть)
+        def normalize_symbol(symbol):
+            """Нормализует символ, убирая USDT суффикс если есть"""
+            if symbol.endswith('USDT'):
+                return symbol[:-4]  # Убираем 'USDT'
+            return symbol
         
-        # Добавляем символы с USDT суффиксом для проверки
-        exchange_symbols_with_usdt = set()
-        for symbol in exchange_positions:
-            clean_symbol = symbol['symbol']  # Уже без USDT
-            exchange_symbols_with_usdt.add(clean_symbol)
-            exchange_symbols_with_usdt.add(f"{clean_symbol}USDT")
-        exchange_symbols = exchange_symbols_with_usdt
+        # Создаем множество нормализованных символов позиций на бирже
+        exchange_symbols = {normalize_symbol(pos['symbol']) for pos in exchange_positions}
         
         logger.info(f"[INACTIVE_CLEANUP] 🔍 Проверка {len(bots_data['bots'])} ботов на неактивность")
         logger.info(f"[INACTIVE_CLEANUP] 📊 Найдено {len(exchange_symbols)} активных позиций на бирже: {sorted(exchange_symbols)}")
@@ -1444,7 +1444,9 @@ def cleanup_inactive_bots():
                     continue
                 
                 # Пропускаем ботов, которые имеют реальные позиции на бирже
-                if symbol in exchange_symbols:
+                # Нормализуем символ бота для корректного сравнения
+                normalized_bot_symbol = normalize_symbol(symbol)
+                if normalized_bot_symbol in exchange_symbols:
                     continue
                 
                 # Убрали хардкод - теперь проверяем только реальные позиции на бирже
