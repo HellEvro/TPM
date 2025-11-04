@@ -395,7 +395,7 @@ def positions_monitor_worker():
                         for symbol, bot_data in bots_in_position.items():
                             try:
                                 position_side = bot_data.get('position_side')
-                                logger.info(f"[POSITIONS_MONITOR] 🔍 {symbol}: Проверяем {position_side} позицию...")
+                                logger.debug(f"[POSITIONS_MONITOR] 🔍 {symbol}: Проверяем {position_side} позицию...")
                                 
                                 # Берем уже рассчитанный RSI из coins_rsi_data
                                 rsi_data = coins_rsi_data.get('coins', {}).get(symbol)
@@ -410,23 +410,22 @@ def positions_monitor_worker():
                                     logger.warning(f"[POSITIONS_MONITOR] ⚠️ {symbol}: RSI={current_rsi} или цена={current_price} не найдены, пропускаем")
                                     continue
                                 
-                                logger.info(f"[POSITIONS_MONITOR] 📊 {symbol}: RSI={current_rsi:.2f}, Цена={current_price:.6f}, Позиция={position_side}")
+                                logger.debug(f"[POSITIONS_MONITOR] 📊 {symbol}: RSI={current_rsi:.2f}, Цена={current_price:.6f}, Позиция={position_side}")
                                 
-                                # Создаем экземпляр бота и проверяем условие закрытия
-                                trading_bot = NewTradingBot(symbol, bot_data, exchange_obj)
-                                
-                                # Универсальная проверка закрытия
-                                should_close, reason = trading_bot.should_close_position(current_rsi, current_price, position_side)
+                                # ✅ ОПТИМИЗАЦИЯ: Используем статический метод без создания объекта бота
+                                should_close, reason = NewTradingBot.check_should_close_by_rsi(symbol, current_rsi, position_side)
                                 
                                 if should_close:
                                     logger.info(f"[POSITIONS_MONITOR] 🔴 {symbol}: УСЛОВИЕ ВЫПОЛНЕНО! Закрываем {position_side} позицию (RSI={current_rsi:.2f}, причина: {reason})")
+                                    # Только теперь создаем объект бота для закрытия позиции
+                                    trading_bot = NewTradingBot(symbol, bot_data, exchange_obj)
                                     close_result = trading_bot._close_position_on_exchange(reason)
                                     if close_result:
                                         logger.info(f"[POSITIONS_MONITOR] ✅ {symbol}: Позиция успешно закрыта!")
                                     else:
                                         logger.error(f"[POSITIONS_MONITOR] ❌ {symbol}: ОШИБКА закрытия позиции!")
                                 else:
-                                    logger.info(f"[POSITIONS_MONITOR] ⏳ {symbol}: Условие не выполнено, продолжаем держать {position_side} позицию")
+                                    logger.debug(f"[POSITIONS_MONITOR] ⏳ {symbol}: Условие не выполнено, продолжаем держать {position_side} позицию")
                                 
                             except Exception as bot_error:
                                 logger.error(f"[POSITIONS_MONITOR] ❌ Ошибка проверки бота {symbol}: {bot_error}")

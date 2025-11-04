@@ -235,25 +235,22 @@ class NewTradingBot:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка RSI Time Filter для SHORT: {e}")
             return {'allowed': False, 'reason': f'Ошибка анализа: {str(e)}'}
     
-    def should_close_position(self, rsi, current_price, position_side=None):
+    @staticmethod
+    def check_should_close_by_rsi(symbol, rsi, position_side):
         """
-        Универсальная функция проверки закрытия позиции по RSI
+        Статическая функция проверки закрытия позиции по RSI (без создания объекта бота)
         
         Args:
+            symbol: Символ монеты
             rsi: Текущее значение RSI
-            current_price: Текущая цена (не используется, но оставлен для совместимости)
-            position_side: Сторона позиции ('LONG' или 'SHORT'). Если None, берется из self.position_side
+            position_side: Сторона позиции ('LONG' или 'SHORT')
         
         Returns:
             tuple: (should_close: bool, reason: str или None)
         """
         try:
-            # Если сторона не указана, берем из текущего состояния бота
-            if position_side is None:
-                position_side = self.position_side
-            
             if position_side not in ['LONG', 'SHORT']:
-                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Неизвестная сторона позиции: {position_side}")
+                logger.error(f"[RSI_CHECK_{symbol}] ❌ Неизвестная сторона позиции: {position_side}")
                 return False, None
             
             with bots_data_lock:
@@ -273,25 +270,42 @@ class NewTradingBot:
             
             # КРИТИЧНО: Если значение не найдено - это ОШИБКА КОНФИГУРАЦИИ!
             if threshold is None:
-                logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: {config_key} не найден в конфигурации! Позиция НЕ будет закрыта!")
-                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Проверьте конфигурацию auto_bot_config в bots_data!")
+                logger.error(f"[RSI_CHECK_{symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: {config_key} не найден в конфигурации! Позиция НЕ будет закрыта!")
+                logger.error(f"[RSI_CHECK_{symbol}] ❌ Проверьте конфигурацию auto_bot_config в bots_data!")
                 return False, None
             
             # Логируем проверку с подробной информацией
             condition_result = condition_func(rsi, threshold)
-            logger.info(f"[NEW_BOT_{self.symbol}] 🔍 Проверка закрытия {position_side}: RSI={rsi:.2f}, Порог={threshold}, Условие: {rsi:.2f} {condition_str} {threshold} = {condition_result}")
+            logger.debug(f"[RSI_CHECK_{symbol}] 🔍 Проверка закрытия {position_side}: RSI={rsi:.2f}, Порог={threshold}, Условие: {rsi:.2f} {condition_str} {threshold} = {condition_result}")
             
             if condition_result:
-                logger.info(f"[NEW_BOT_{self.symbol}] ✅ ЗАКРЫВАЕМ {position_side}: RSI {rsi:.2f} {condition_str} {threshold}")
+                logger.info(f"[RSI_CHECK_{symbol}] ✅ ЗАКРЫВАЕМ {position_side}: RSI {rsi:.2f} {condition_str} {threshold}")
                 return True, 'RSI_EXIT'
             else:
-                logger.debug(f"[NEW_BOT_{self.symbol}] ⏳ Продолжаем {position_side}: RSI {rsi:.2f} не достиг порога {threshold}")
+                logger.debug(f"[RSI_CHECK_{symbol}] ⏳ Продолжаем {position_side}: RSI {rsi:.2f} не достиг порога {threshold}")
             
             return False, None
             
         except Exception as e:
-            logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка проверки закрытия {position_side}: {e}")
+            logger.error(f"[RSI_CHECK_{symbol}] ❌ Ошибка проверки закрытия {position_side}: {e}")
             return False, None
+    
+    def should_close_position(self, rsi, current_price, position_side=None):
+        """
+        Универсальная функция проверки закрытия позиции по RSI
+        
+        Args:
+            rsi: Текущее значение RSI
+            current_price: Текущая цена (не используется, но оставлен для совместимости)
+            position_side: Сторона позиции ('LONG' или 'SHORT'). Если None, берется из self.position_side
+        
+        Returns:
+            tuple: (should_close: bool, reason: str или None)
+        """
+        # Используем статический метод для проверки
+        if position_side is None:
+            position_side = self.position_side
+        return self.check_should_close_by_rsi(self.symbol, rsi, position_side)
     
     # Обратная совместимость - оставляем старые методы для совместимости
     def should_close_long(self, rsi, current_price):
