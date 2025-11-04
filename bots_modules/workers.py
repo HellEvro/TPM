@@ -290,6 +290,10 @@ def positions_monitor_worker():
         'symbols_with_positions': set()
     }
     
+    # ✅ КРИТИЧНО: Флаг первого запуска - ждем первую загрузку RSI
+    first_startup = True
+    rsi_data_loaded_once = False
+    
     # Время последней проверки закрытия позиций по RSI
     last_rsi_close_check = time.time() - SystemConfig.UI_REFRESH_INTERVAL  # Сразу при первом запуске
     
@@ -351,11 +355,32 @@ def positions_monitor_worker():
             
             if time_since_rsi_check >= refresh_interval:
                 try:
-                    logger.info(f"[POSITIONS_MONITOR] 🔍 Проверяем условия закрытия позиций по RSI (интервал: {refresh_interval}с)...")
-                    
-                    # Простая проверка: берем ботов в позиции, проверяем RSI, закрываем если нужно
+                    # ✅ КРИТИЧНО: Проверяем, загружены ли RSI данные перед проверкой
                     from bots_modules.imports_and_globals import bots_data, bots_data_lock, coins_rsi_data
                     from bots_modules.bot_class import NewTradingBot
+                    
+                    # Проверяем наличие RSI данных
+                    rsi_data_available = coins_rsi_data.get('coins') is not None and len(coins_rsi_data.get('coins', {})) > 0
+                    
+                    # ✅ КРИТИЧНО: При первом запуске ждем загрузки RSI, потом работаем независимо
+                    if first_startup:
+                        if rsi_data_available:
+                            logger.info(f"[POSITIONS_MONITOR] ✅ RSI данные загружены, начинаем проверку закрытия позиций")
+                            first_startup = False
+                            rsi_data_loaded_once = True
+                        else:
+                            logger.debug(f"[POSITIONS_MONITOR] ⏳ Первый запуск: ждем загрузки RSI данных...")
+                            last_rsi_close_check = current_time  # Сбрасываем таймер, чтобы не спамить
+                            continue  # Пропускаем проверку до загрузки RSI
+                    else:
+                        # После первого запуска работаем независимо - RSI данные могут обновляться, но мы используем текущие
+                        if not rsi_data_available:
+                            logger.debug(f"[POSITIONS_MONITOR] ⏳ RSI данные временно недоступны, пропускаем проверку")
+                            last_rsi_close_check = current_time
+                            continue
+                    
+                    # ✅ RSI данные загружены - выполняем проверку закрытия
+                    logger.info(f"[POSITIONS_MONITOR] 🔍 Проверяем условия закрытия позиций по RSI (интервал: {refresh_interval}с)...")
                     
                     with bots_data_lock:
                         # Получаем только ботов в позиции
@@ -375,7 +400,7 @@ def positions_monitor_worker():
                                 # Берем уже рассчитанный RSI из coins_rsi_data
                                 rsi_data = coins_rsi_data.get('coins', {}).get(symbol)
                                 if not rsi_data:
-                                    logger.warning(f"[POSITIONS_MONITOR] ⚠️ {symbol}: RSI данные не найдены в coins_rsi_data, пропускаем")
+                                    logger.debug(f"[POSITIONS_MONITOR] ⏳ {symbol}: RSI данные для этой монеты еще не загружены, пропускаем")
                                     continue
                                 
                                 current_rsi = rsi_data.get('rsi6h')
