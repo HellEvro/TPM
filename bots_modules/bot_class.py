@@ -1120,7 +1120,9 @@ class NewTradingBot:
                     for pos in positions_list:
                         if pos.get('symbol', '').replace('USDT', '') == self.symbol:
                             pos_side = 'Long' if pos.get('side') == 'Buy' else 'Short'
-                            if pos_side == self.position_side and abs(float(pos.get('size', 0))) > 0:
+                            # ✅ КРИТИЧНО: Сравниваем с правильным форматом (Long/Short, а не LONG/SHORT)
+                            expected_side = 'Long' if self.position_side == 'LONG' else 'Short' if self.position_side == 'SHORT' else self.position_side
+                            if pos_side == expected_side and abs(float(pos.get('size', 0))) > 0:
                                 position_size = abs(float(pos.get('size', 0)))
                                 # Сохраняем в бота для будущего использования
                                 self.position_size = position_size
@@ -1134,13 +1136,16 @@ class NewTradingBot:
                     logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка получения размера позиции с биржи: {e}")
                     return False
             
-            logger.info(f"[NEW_BOT_{self.symbol}] 📋 Параметры закрытия: symbol={self.symbol}, side={self.position_side}, size={position_size}")
+            # ✅ КРИТИЧНО: Преобразуем side в формат, который ожидает биржа ('Long'/'Short')
+            side_for_exchange = 'Long' if self.position_side == 'LONG' else 'Short' if self.position_side == 'SHORT' else self.position_side
+            
+            logger.info(f"[NEW_BOT_{self.symbol}] 📋 Параметры закрытия: symbol={self.symbol}, side={side_for_exchange} (было {self.position_side}), size={position_size}")
             
             # Закрываем позицию на бирже
             close_result = self.exchange.close_position(
                 symbol=self.symbol,
                 size=position_size,
-                side=self.position_side
+                side=side_for_exchange  # ✅ Используем правильный формат
             )
             
             logger.info(f"[NEW_BOT_{self.symbol}] 📥 Результат закрытия: {close_result}")
