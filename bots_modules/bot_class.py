@@ -72,6 +72,7 @@ class NewTradingBot:
         self.status = self.config.get('status', BOT_STATUS['IDLE'])
         self.entry_price = self.config.get('entry_price', None)
         self.position_side = self.config.get('position_side', None)
+        self.position_size = self.config.get('position_size', None)  # Размер позиции в монетах
         self.unrealized_pnl = self.config.get('unrealized_pnl', 0.0)
         self.created_at = self.config.get('created_at', datetime.now().isoformat())
         self.last_signal_time = self.config.get('last_signal_time', None)
@@ -679,6 +680,7 @@ class NewTradingBot:
                 if pos.get('symbol') == self.symbol and abs(float(pos.get('size', 0))) > 0:
                     self.entry_price = float(pos.get('entry_price', 0))
                     self.position_side = pos.get('side', 'UNKNOWN')
+                    self.position_size = abs(float(pos.get('size', 0)))  # ✅ Сохраняем размер позиции
                     self.unrealized_pnl = float(pos.get('unrealized_pnl', 0))
                     logger.info(f"[NEW_BOT_{self.symbol}] 🔄 Синхронизировано с биржей: {self.position_side} @ {self.entry_price}")
                     break
@@ -852,6 +854,10 @@ class NewTradingBot:
                                 actual_entry_price = float(pos.get('entry_price', 0))
                                 actual_leverage = float(pos.get('leverage', 10.0))
                                 actual_qty = float(pos.get('size', 0))
+                                
+                                # ✅ КРИТИЧНО: Сохраняем размер позиции в боте!
+                                self.position_size = abs(actual_qty)
+                                
                                 logger.info(f"[NEW_BOT_{self.symbol}] 📊 Попытка {attempt + 1}/{max_attempts}: entry={actual_entry_price}, leverage={actual_leverage}x, qty={actual_qty}")
                                 
                                 # Если получили валидные данные - выходим из цикла
@@ -1094,11 +1100,46 @@ class NewTradingBot:
                 return False
             
             logger.info(f"[NEW_BOT_{self.symbol}] 🔴 ЗАКРЫВАЕМ позицию {self.position_side} (причина: {reason})")
-            logger.info(f"[NEW_BOT_{self.symbol}] 📋 Параметры закрытия: symbol={self.symbol}, side={self.position_side}")
+            
+            # Получаем размер позиции (сначала из бота, если нет - с биржи)
+            position_size = None
+            
+            # ✅ КРИТИЧНО: Используем сохраненный размер позиции из бота!
+            if self.position_size:
+                position_size = self.position_size
+                logger.info(f"[NEW_BOT_{self.symbol}] 📊 Используем сохраненный размер позиции: {position_size}")
+            else:
+                # Если нет в боте - получаем с биржи
+                try:
+                    positions = self.exchange.get_positions()
+                    if isinstance(positions, tuple):
+                        positions_list = positions[0] if positions else []
+                    else:
+                        positions_list = positions if positions else []
+                    
+                    for pos in positions_list:
+                        if pos.get('symbol', '').replace('USDT', '') == self.symbol:
+                            pos_side = 'Long' if pos.get('side') == 'Buy' else 'Short'
+                            if pos_side == self.position_side and abs(float(pos.get('size', 0))) > 0:
+                                position_size = abs(float(pos.get('size', 0)))
+                                # Сохраняем в бота для будущего использования
+                                self.position_size = position_size
+                                logger.info(f"[NEW_BOT_{self.symbol}] 📊 Получен размер позиции с биржи и сохранен: {position_size}")
+                                break
+                    
+                    if position_size is None:
+                        logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось найти размер позиции на бирже!")
+                        return False
+                except Exception as e:
+                    logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка получения размера позиции с биржи: {e}")
+                    return False
+            
+            logger.info(f"[NEW_BOT_{self.symbol}] 📋 Параметры закрытия: symbol={self.symbol}, side={self.position_side}, size={position_size}")
             
             # Закрываем позицию на бирже
             close_result = self.exchange.close_position(
                 symbol=self.symbol,
+                size=position_size,
                 side=self.position_side
             )
             
@@ -1353,6 +1394,7 @@ class NewTradingBot:
             'entry_price': self.entry_price,
             'entry_time': self.position_start_time.isoformat() if self.position_start_time else None,
             'position_side': self.position_side,
+            'position_size': self.position_size,  # ✅ Размер позиции в монетах
             'unrealized_pnl': self.unrealized_pnl,
             'created_at': self.created_at,
             'last_signal_time': self.last_signal_time,
