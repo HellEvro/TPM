@@ -1000,14 +1000,11 @@ class BotsManager {
         const timeFilterInfo = coin.time_filter_info;
         
         if (!timeFilterInfo) {
-            // console.log(`[DEBUG] ${coin.symbol}: НЕТ time_filter_info`);
             return '';
         }
         
-        // console.log(`[DEBUG] ${coin.symbol}: time_filter_info =`, timeFilterInfo);
-        
         const isBlocked = timeFilterInfo.blocked;
-        const reason = timeFilterInfo.reason;
+        const reason = timeFilterInfo.reason || '';
         const lastExtremeCandlesAgo = timeFilterInfo.last_extreme_candles_ago;
         const calmCandles = timeFilterInfo.calm_candles;
         
@@ -1015,32 +1012,35 @@ class BotsManager {
         let className = '';
         let title = '';
         
-        if (isBlocked) {
+        // Определяем тип статуса по причине
+        if (reason.includes('Ожидание') || reason.includes('ожидание') || reason.includes('прошло только')) {
+            // Ожидание - показываем с иконкой ожидания
+            icon = '⏳';
+            className = 'time-filter-waiting';
+            title = `Временной фильтр: ${reason}`;
+        } else if (isBlocked) {
             // Фильтр блокирует вход
             icon = '⏰';
             className = 'time-filter-blocked';
             title = `Временной фильтр блокирует: ${reason}`;
         } else {
             // Фильтр пройден, показываем информацию
-            icon = '⏱️';
-            className = 'time-filter-active';
+            icon = '✅';
+            className = 'time-filter-allowed';
             title = `Временной фильтр: ${reason}`;
-            if (lastExtremeCandlesAgo !== null) {
+            if (lastExtremeCandlesAgo !== null && lastExtremeCandlesAgo !== undefined) {
                 title += ` (${lastExtremeCandlesAgo} свечей назад)`;
             }
-            if (calmCandles !== null) {
+            if (calmCandles !== null && calmCandles !== undefined) {
                 title += ` (${calmCandles} спокойных свечей)`;
             }
         }
         
-        console.log(`[DEBUG] ${coin.symbol}: isBlocked=${isBlocked}, reason="${reason}", icon="${icon}", title="${title}"`);
-        
-        if (icon && title) {
-            console.log(`[DEBUG] ${coin.symbol}: ГЕНЕРИРУЮ ИКОНКУ RSI Time Filter`);
-            return `<div class="time-filter-info ${className}" title="${title}">${icon}</div>`;
+        // ВСЕГДА показываем иконку, если есть reason
+        if (reason && icon) {
+            return `<div class="time-filter-info ${className}" title="${title}" style="margin-left: 4px; font-size: 14px; cursor: help;">${icon}</div>`;
         }
         
-        console.log(`[DEBUG] ${coin.symbol}: НЕ ГЕНЕРИРУЮ ИКОНКУ - icon="${icon}", title="${title}"`);
         return '';
     }
     
@@ -1595,8 +1595,10 @@ class BotsManager {
             const reason = timeFilter.reason || '';
             const calmCandles = timeFilter.calm_candles || 0;
             
+            console.log(`[RSI_TIME_FILTER] ${coin.symbol}: time_filter_info =`, timeFilter);
+            
             if (isBlocked) {
-                if (reason.includes('Ожидание') || reason.includes('ожидание')) {
+                if (reason.includes('Ожидание') || reason.includes('ожидание') || reason.includes('прошло только')) {
                     activeStatusData.rsi_time_filter = `WAITING: ${reason}`;
                 } else {
                     activeStatusData.rsi_time_filter = `BLOCKED: ${reason}`;
@@ -1604,12 +1606,16 @@ class BotsManager {
             } else {
                 activeStatusData.rsi_time_filter = `ALLOWED: ${reason}`;
             }
+            
+            console.log(`[RSI_TIME_FILTER] ${coin.symbol}: activeStatusData.rsi_time_filter =`, activeStatusData.rsi_time_filter);
         } else if (coin.rsi_time_filter && coin.rsi_time_filter !== 'NONE' && coin.rsi_time_filter !== null) {
             activeStatusData.rsi_time_filter = coin.rsi_time_filter;
         } else if (coin.time_filter && coin.time_filter !== 'NONE') {
             activeStatusData.rsi_time_filter = coin.time_filter;
         } else if (coin.rsi_time_status && coin.rsi_time_status !== 'NONE') {
             activeStatusData.rsi_time_filter = coin.rsi_time_status;
+        } else {
+            console.log(`[RSI_TIME_FILTER] ${coin.symbol}: НЕТ time_filter_info и других полей`);
         }
         
         // Enhanced RSI Warning (если есть)
@@ -1838,7 +1844,13 @@ class BotsManager {
                 iconElement.title = `${label}: ${description || statusValue}`;
                 valueElement.title = `${label}: ${description || statusValue}`;
             } else {
+                // Если нет статуса - скрываем элемент
                 itemElement.style.display = 'none';
+            }
+        } else {
+            // Если элементы не найдены - логируем для отладки
+            if (label === 'RSI Time Filter') {
+                console.warn(`[RSI_TIME_FILTER] Элементы не найдены для ${label}:`, {itemId, valueId, iconId, statusValue});
             }
         }
     }
