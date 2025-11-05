@@ -400,10 +400,16 @@ class PositionsManager {
                 updateTimeElement.textContent = formatUtils.formatLastUpdate();
             }
             
-            // В последнюю очередь обновляем данные
-            if (this.chartCache.size === 0) {
-                console.log('PositionsManager: Initializing data for the first time');
-                setTimeout(() => this.updateAllData(), 0);
+            // В последнюю очередь обновляем данные (только если не включено снижение нагрузки)
+            if (!this.reduceLoad) {
+                if (this.chartCache.size === 0) {
+                    console.log('PositionsManager: Initializing data for the first time');
+                    setTimeout(() => this.updateAllData(), 0);
+                } else {
+                    // Если кэш уже есть, но нужно обновить данные, запускаем обновление
+                    console.log('PositionsManager: Updating existing data');
+                    setTimeout(() => this.updateAllData(), 0);
+                }
             }
             
             return data;

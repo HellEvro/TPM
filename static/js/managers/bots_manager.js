@@ -7154,54 +7154,54 @@ class BotsManager {
                 
                 <div class="trade-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: var(--text-color);">
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('entry_price_label')}</span>
+                        <span class="trade-detail-label" style="color: var(--text-muted);">${window.languageUtils.translate('entry_price_label')}</span>
                         <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">$${trade.entryPrice.toFixed(6)}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('current_price_label')}</span>
+                        <span class="trade-detail-label" style="color: var(--text-muted);">${window.languageUtils.translate('current_price_label')}</span>
                         <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">$${trade.currentPrice.toFixed(6)}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('change_price_label')}</span>
+                        <span class="trade-detail-label" style="color: var(--text-muted);">${window.languageUtils.translate('change_price_label')}</span>
                         <span class="trade-detail-value ${priceChangeClass}" style="color: ${priceChange >= 0 ? 'var(--green-color)' : 'var(--red-color)'}; font-weight: 600;">${priceChange.toFixed(2)}%</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('volume_price_label')}</span>
+                        <span class="trade-detail-label" style="color: var(--text-muted);">${window.languageUtils.translate('volume_price_label')}</span>
                         <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">${trade.volume.toFixed(2)} ${trade.volumeMode.toUpperCase()}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('stop_loss_price_label')}</span>
+                        <span class="trade-detail-label" style="color: var(--text-muted);">${window.languageUtils.translate('stop_loss_price_label')}</span>
                         <span class="trade-detail-value" style="color: var(--warning-color); font-weight: 600;">$${parseFloat(trade.stopLossPrice).toFixed(6)} (${trade.stopLossPercent}%)</span>
                     </div>
                     
                     ${trade.takeProfitPrice ? `
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('take_profit_price_label')}</span>
+                        <span class="trade-detail-label" style="color: var(--text-muted);">${window.languageUtils.translate('take_profit_price_label')}</span>
                         <span class="trade-detail-value" style="color: var(--green-color); font-weight: 600;">$${parseFloat(trade.takeProfitPrice).toFixed(6)}</span>
                     </div>
                     ` : ''}
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('rsi_label')}</span>
+                        <span class="trade-detail-label" style="color: var(--text-muted);">${window.languageUtils.translate('rsi_label')}</span>
                         <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">${trade.rsi ? trade.rsi.toFixed(1) : 'N/A'}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: var(--border-color);">➡️ ${window.languageUtils.translate('trend_label')}:</span>
+                        <span class="trade-detail-label" style="color: var(--text-muted);">➡️ ${window.languageUtils.translate('trend_label')}:</span>
                         <span class="trade-detail-value" style="color: ${trade.trend === 'UP' ? 'var(--green-color)' : trade.trend === 'DOWN' ? 'var(--red-color)' : 'var(--warning-color)'}; font-weight: 600;">${trade.trend || 'NEUTRAL'}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('time_detail_label')}</span>
+                        <span class="trade-detail-label" style="color: var(--text-muted);">${window.languageUtils.translate('time_detail_label')}</span>
                         <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">${trade.workTime || '0м'}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('updated_detail_label')}</span>
+                        <span class="trade-detail-label" style="color: var(--text-muted);">${window.languageUtils.translate('updated_detail_label')}</span>
                         <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">${trade.lastUpdate || window.languageUtils.translate('unknown')}</span>
                     </div>
                 </div>
