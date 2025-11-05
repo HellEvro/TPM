@@ -1588,8 +1588,23 @@ class BotsManager {
             activeStatusData.exit_scam = coin.scam_status;
         }
         
-        // RSI Time Filter - проверяем разные поля
-        if (coin.rsi_time_filter && coin.rsi_time_filter !== 'NONE' && coin.rsi_time_filter !== null) {
+        // RSI Time Filter - преобразуем time_filter_info в строковый статус
+        if (coin.time_filter_info) {
+            const timeFilter = coin.time_filter_info;
+            const isBlocked = timeFilter.blocked;
+            const reason = timeFilter.reason || '';
+            const calmCandles = timeFilter.calm_candles || 0;
+            
+            if (isBlocked) {
+                if (reason.includes('Ожидание') || reason.includes('ожидание')) {
+                    activeStatusData.rsi_time_filter = `WAITING: ${reason}`;
+                } else {
+                    activeStatusData.rsi_time_filter = `BLOCKED: ${reason}`;
+                }
+            } else {
+                activeStatusData.rsi_time_filter = `ALLOWED: ${reason}`;
+            }
+        } else if (coin.rsi_time_filter && coin.rsi_time_filter !== 'NONE' && coin.rsi_time_filter !== null) {
             activeStatusData.rsi_time_filter = coin.rsi_time_filter;
         } else if (coin.time_filter && coin.time_filter !== 'NONE') {
             activeStatusData.rsi_time_filter = coin.time_filter;
@@ -1724,10 +1739,31 @@ class BotsManager {
                     else if (statusValue.includes('CHECKING')) { icon = '🔍'; description = 'ExitScam: Проверка'; }
                 }
                 else if (label === 'RSI Time Filter') {
-                    if (statusValue.includes('ALLOWED')) { icon = '✅'; description = 'RSI Time Filter разрешен'; }
-                    else if (statusValue.includes('BLOCKED')) { icon = '❌'; description = 'RSI Time Filter заблокирован'; }
-                    else if (statusValue.includes('WAITING')) { icon = '⏳'; description = 'RSI Time Filter ожидание'; }
-                    else if (statusValue.includes('TIMEOUT')) { icon = '⏰'; description = 'RSI Time Filter таймаут'; }
+                    // Убираем префикс статуса из текста для отображения
+                    let displayText = statusValue;
+                    if (statusValue.includes('ALLOWED:')) {
+                        icon = '✅';
+                        displayText = statusValue.replace('ALLOWED:', '').trim();
+                        description = 'RSI Time Filter разрешен';
+                    } else if (statusValue.includes('WAITING:')) {
+                        icon = '⏳';
+                        displayText = statusValue.replace('WAITING:', '').trim();
+                        description = 'RSI Time Filter ожидание';
+                    } else if (statusValue.includes('BLOCKED:')) {
+                        icon = '❌';
+                        displayText = statusValue.replace('BLOCKED:', '').trim();
+                        description = 'RSI Time Filter заблокирован';
+                    } else if (statusValue.includes('TIMEOUT')) {
+                        icon = '⏰';
+                        description = 'RSI Time Filter таймаут';
+                    } else {
+                        icon = '⏰';
+                        description = statusValue || 'RSI Time Filter';
+                    }
+                    // Обновляем текст значения без префикса
+                    if (displayText && displayText !== statusValue) {
+                        valueElement.textContent = displayText;
+                    }
                 }
                 else if (label === 'Статус бота') {
                     // Устанавливаем цвет для статуса бота в зависимости от значения
