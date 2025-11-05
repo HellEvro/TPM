@@ -493,6 +493,30 @@
     color: var(--text-color);
 }
 
+/* Стили для статуса бота в светлой теме */
+[data-theme="light"] .data-item .value {
+    color: var(--text-color);
+}
+
+/* Специальные стили для статуса бота */
+.data-item #selectedCoinBotStatus {
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+[data-theme="light"] .data-item #selectedCoinBotStatus {
+    color: var(--text-color);
+}
+
+/* Если статус активен - добавляем зеленый цвет */
+.data-item #selectedCoinBotStatus.active-status {
+    color: var(--green-color) !important;
+}
+
+[data-theme="light"] .data-item #selectedCoinBotStatus.active-status {
+    color: var(--green-color) !important;
+}
+
 .rsi-indicator.buy-zone {
     color: var(--green-color);
 }
@@ -1233,9 +1257,9 @@ input:checked + .slider:before {
 }
 
 .scope-btn {
-    background: #2a2a2a;
-    border: 1px solid #444;
-    color: #fff;
+    background: var(--button-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
     padding: 10px 12px;
     border-radius: 6px;
     cursor: pointer;
@@ -1251,8 +1275,9 @@ input:checked + .slider:before {
 }
 
 .scope-btn:hover {
-    background: #3a3a3a;
-    border-color: #555;
+    background: var(--hover-bg, var(--button-bg));
+    border-color: var(--blue-color);
+    opacity: 0.9;
 }
 
 .scope-btn.active {
@@ -1263,9 +1288,9 @@ input:checked + .slider:before {
 
 /* Улучшенные стили для полей ввода */
 .config-input {
-    background: #2a2a2a;
-    border: 1px solid #444;
-    color: #fff;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
     padding: 10px 12px;
     border-radius: 6px;
     width: 100%;
@@ -1756,9 +1781,9 @@ body .bots-page #autoBotRiskCap {
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
     appearance: none !important;
-    background: #2a2a2a !important;
-    color: #ffffff !important;
-    border: 1px solid #404040 !important;
+    background: var(--input-bg) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--border-color) !important;
     padding: 8px 12px !important;
     border-radius: 6px !important;
     font-size: 14px !important;
@@ -1766,8 +1791,8 @@ body .bots-page #autoBotRiskCap {
 
 body .bots-page select option,
 body .bots-page .config-select option {
-    background: #2a2a2a !important;
-    color: #ffffff !important;
+    background: var(--input-bg) !important;
+    color: var(--text-color) !important;
     padding: 8px !important;
 }
 
@@ -1775,9 +1800,9 @@ body .bots-page .config-select option {
 body .bots-page input[type="number"],
 body .bots-page input[type="text"],
 body .bots-page .config-input {
-    background: #2a2a2a !important;
-    color: #ffffff !important;
-    border: 1px solid #404040 !important;
+    background: var(--input-bg) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--border-color) !important;
     padding: 8px 12px !important;
     border-radius: 6px !important;
 }
@@ -2118,8 +2143,8 @@ input:checked + .toggle-slider:before {
    ======================================== */
 
 .bulk-bot-controls {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--section-bg);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 12px;
     margin: 10px 0;
@@ -2141,8 +2166,8 @@ input:checked + .toggle-slider:before {
 
 .bulk-controls-count {
     font-size: 0.8em;
-    color: var(--text-secondary);
-    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-muted, var(--text-color));
+    background: var(--button-bg);
     padding: 2px 8px;
     border-radius: 12px;
 }
@@ -3063,14 +3088,17 @@ input:checked + .toggle-slider:before {
     gap: 15px;
     margin-bottom: 20px;
     padding: 15px;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--input-bg);
     border-radius: 6px;
+    border: 1px solid var(--border-color);
 }
 
 .status-item {
     display: flex;
     flex-direction: column;
     gap: 5px;
+    color: var(--text-color);
+    padding: 4px 0;
 }
 
 .status-label {
@@ -3085,6 +3113,39 @@ input:checked + .toggle-slider:before {
     font-size: 14px;
     color: var(--text-color);
     font-weight: 600;
+}
+
+/* Стили для справочника статусов */
+.status-guide {
+    margin-top: 20px;
+}
+
+.status-category {
+    margin-bottom: 20px;
+}
+
+.status-category h4 {
+    color: var(--text-color);
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.status-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.status-items .status-item {
+    color: var(--text-color);
+    font-size: 13px;
+    padding: 6px 0;
+}
+
+.status-text {
+    font-weight: 600;
+    color: var(--text-color);
 }
 
 /* Кнопки управления ботом */
@@ -3107,7 +3168,7 @@ input:checked + .toggle-slider:before {
 
 /* Информация о позиции */
 .position-info {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--input-bg);
     border-radius: 6px;
     padding: 15px;
     border: 1px solid var(--border-color);

@@ -781,7 +781,16 @@ const TRANSLATIONS = {
         'paused_status': 'Приостановлен',
         'stopped_status': 'Остановлен',
         'waiting_status': 'Ожидание',
-        'enable_bot_btn': 'Включить'
+        'enable_bot_btn': 'Включить',
+        'bot_service_unavailable': 'Сервис ботов недоступен',
+        'bot_service_launch_instruction': 'Для работы с ботами запустите:',
+        'bot_service_port_instruction': 'Сервис должен быть доступен на порту 5001',
+        'bot_service_unavailable_new': 'Сервис ботов недоступен',
+        'bot_service_launch_terminal': 'Для работы с ботами запустите в отдельном терминале:',
+        'bot_service_port_small': 'Сервис должен работать на порту 5001',
+        'refresh_page': 'Обновить страницу',
+        'bot_service_check': 'Проверить сервис',
+        'bot_service_launch_required': 'Для работы с ботами необходимо запустить сервис:'
     },
     en: {
         theme: '🌓 Toggle Theme',
@@ -1561,7 +1570,16 @@ const TRANSLATIONS = {
         'paused_status': 'Paused',
         'stopped_status': 'Stopped',
         'waiting_status': 'Waiting',
-        'enable_bot_btn': 'Enable'
+        'enable_bot_btn': 'Enable',
+        'bot_service_unavailable': 'Bot service unavailable',
+        'bot_service_launch_instruction': 'To work with bots, launch:',
+        'bot_service_port_instruction': 'The service must be available on port 5001',
+        'bot_service_unavailable_new': 'Bot service unavailable',
+        'bot_service_launch_terminal': 'To work with bots, launch in a separate terminal:',
+        'bot_service_port_small': 'The service must be running on port 5001',
+        'refresh_page': 'Refresh page',
+        'bot_service_check': 'Check service',
+        'bot_service_launch_required': 'To work with bots, you need to launch the service:'
     }
 };
 

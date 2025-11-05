@@ -743,12 +743,12 @@ class App {
         if (botsContainer) {
             botsContainer.innerHTML = `
                 <div class="service-error">
-                    <h3>🔧 Сервис ботов недоступен</h3>
-                    <p>Для работы с ботами необходимо запустить сервис:</p>
+                    <h3>🔧 ${window.languageUtils.translate('bot_service_unavailable')}</h3>
+                    <p>${window.languageUtils.translate('bot_service_launch_required')}</p>
                     <code>python bots.py</code>
                     <br><br>
                     <button onclick="window.app.checkBotsServiceDirectly()" class="btn btn-primary">
-                        Проверить сервис
+                        ${window.languageUtils.translate('bot_service_check')}
                     </button>
                 </div>
             `;
