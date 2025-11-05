@@ -447,6 +447,13 @@ def get_coins_with_rsi():
                 
             cleaned_coin = coin_data.copy()
             
+            # ✅ ВАЖНО: Убеждаемся, что time_filter_info и exit_scam_info сохраняются
+            # Эти поля должны быть в coin_data, но проверяем явно
+            if 'time_filter_info' in coin_data:
+                cleaned_coin['time_filter_info'] = coin_data['time_filter_info']
+            if 'exit_scam_info' in coin_data:
+                cleaned_coin['exit_scam_info'] = coin_data['exit_scam_info']
+            
             # Очищаем enhanced_rsi от numpy типов и других несериализуемых объектов
             if 'enhanced_rsi' in cleaned_coin and cleaned_coin['enhanced_rsi']:
                 enhanced_rsi = cleaned_coin['enhanced_rsi'].copy()
