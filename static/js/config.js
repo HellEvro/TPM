@@ -437,6 +437,13 @@ const TRANSLATIONS = {
         'retrain_hour_label': 'Время переобучения:',
         'retrain_hour_help': 'Час для запуска переобучения (3 = 3:00 AM, минимальная нагрузка)',
         
+        // Optimal Entry Detection
+        'optimal_entry_title': 'Optimal Entry Detection',
+        'optimal_entry_enabled_label': 'Определение оптимальной точки входа:',
+        'optimal_entry_enabled_help': 'ИИ определяет оптимальную цену входа и может отложить вход для лучшей цены',
+        'data_collection_label': 'Сбор данных для обучения:',
+        'data_collection_help': 'Данные о точках входа собираются автоматически даже при отключенной фильтрации',
+        
         // AI Logging
         'ai_logging_title': 'Логирование AI',
         'log_predictions_label': 'Логировать предсказания:',
@@ -445,6 +452,16 @@ const TRANSLATIONS = {
         'log_anomalies_help': 'Записывать обнаруженные аномалии в логи',
         'log_patterns_label': 'Логировать паттерны:',
         'log_patterns_help': 'Записывать найденные графические паттерны в логи',
+        
+        // EMA параметры тренда
+        'ema_params_title': '📊 EMA параметры тренда',
+        'ema_params_desc': 'Настройки экспоненциальных скользящих средних для определения тренда',
+        'ema_fast_label': 'Быстрая EMA:',
+        'ema_fast_help': 'Рекомендуется: 50 периодов. Используется для краткосрочного тренда',
+        'ema_slow_label': 'Медленная EMA:',
+        'ema_slow_help': 'Рекомендуется: 200 периодов. Используется для долгосрочного тренда',
+        'periods_unit': 'периодов',
+        'trend_confirmation_help': 'Рекомендуется: 3 свечи. Количество свечей для подтверждения смены тренда',
         
         // Кнопки
         'save_basic_section_btn': '💾 Сохранить основные настройки',
@@ -1341,6 +1358,13 @@ const TRANSLATIONS = {
         'retrain_hour_label': 'Retrain time:',
         'retrain_hour_help': 'Hour to start retraining (3 = 3:00 AM, minimal load)',
         
+        // Optimal Entry Detection
+        'optimal_entry_title': 'Optimal Entry Detection',
+        'optimal_entry_enabled_label': 'Optimal entry point detection:',
+        'optimal_entry_enabled_help': 'AI determines optimal entry price and may delay entry for better price',
+        'data_collection_label': 'Data collection for training:',
+        'data_collection_help': 'Entry point data is collected automatically even when filtering is disabled',
+        
         // AI Logging
         'ai_logging_title': 'AI Logging',
         'log_predictions_label': 'Log predictions:',
@@ -1349,6 +1373,16 @@ const TRANSLATIONS = {
         'log_anomalies_help': 'Write detected anomalies to logs',
         'log_patterns_label': 'Log patterns:',
         'log_patterns_help': 'Write detected chart patterns to logs',
+        
+        // EMA Trend Parameters
+        'ema_params_title': '📊 EMA Trend Parameters',
+        'ema_params_desc': 'Exponential moving average settings for trend determination',
+        'ema_fast_label': 'Fast EMA:',
+        'ema_fast_help': 'Recommended: 50 periods. Used for short-term trend',
+        'ema_slow_label': 'Slow EMA:',
+        'ema_slow_help': 'Recommended: 200 periods. Used for long-term trend',
+        'periods_unit': 'periods',
+        'trend_confirmation_help': 'Recommended: 3 candles. Number of candles to confirm trend change',
         
         // Buttons
         'save_ai_section_btn': '💾 Save AI Settings',

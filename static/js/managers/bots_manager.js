@@ -4121,21 +4121,21 @@ class BotsManager {
                     console.log(`[DEBUG] timeInfo для ${bot.symbol}:`, timeInfo);
                     
                     const htmlResult = `
-                        <div class="active-bot-item clickable-bot-item" data-symbol="${bot.symbol}" style="border: 1px solid #444; border-radius: 8px; padding: 12px; margin: 8px 0; background: #2a2a2a; cursor: pointer;" onmouseover="this.style.backgroundColor='#333'" onmouseout="this.style.backgroundColor='#2a2a2a'">
+                        <div class="active-bot-item clickable-bot-item" data-symbol="${bot.symbol}" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin: 8px 0; background: var(--section-bg); cursor: pointer;" onmouseover="this.style.backgroundColor='var(--hover-bg, var(--button-bg))'" onmouseout="this.style.backgroundColor='var(--section-bg)'">
                             <div class="bot-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span style="color: #fff; font-weight: bold; font-size: 16px;">${bot.symbol}</span>
+                                    <span style="color: var(--text-color); font-weight: bold; font-size: 16px;">${bot.symbol}</span>
                                     <span style="background: ${statusColor}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px;">${statusText}</span>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <div style="text-align: right;">
-                                        <div style="color: ${(bot.unrealized_pnl || bot.unrealized_pnl_usdt || 0) >= 0 ? '#4caf50' : '#f44336'}; font-weight: bold; font-size: 14px;">$${(bot.unrealized_pnl_usdt || bot.unrealized_pnl || 0).toFixed(3)}</div>
+                                        <div style="color: ${(bot.unrealized_pnl || bot.unrealized_pnl_usdt || 0) >= 0 ? 'var(--green-color)' : 'var(--red-color)'}; font-weight: bold; font-size: 14px;">$${(bot.unrealized_pnl_usdt || bot.unrealized_pnl || 0).toFixed(3)}</div>
                                     </div>
-                                    <button class="collapse-btn" onclick="event.stopPropagation(); const details = this.parentElement.parentElement.parentElement.querySelector('.bot-details'); const isCurrentlyCollapsed = details.style.display === 'none'; details.style.display = isCurrentlyCollapsed ? 'block' : 'none'; this.textContent = isCurrentlyCollapsed ? '▲' : '▼'; window.botsManager && window.botsManager.saveCollapseState(this.parentElement.parentElement.parentElement.dataset.symbol, !isCurrentlyCollapsed);" style="background: none; border: none; color: #888; font-size: 12px; cursor: pointer; padding: 4px;">▼</button>
+                                    <button class="collapse-btn" onclick="event.stopPropagation(); const details = this.parentElement.parentElement.parentElement.querySelector('.bot-details'); const isCurrentlyCollapsed = details.style.display === 'none'; details.style.display = isCurrentlyCollapsed ? 'block' : 'none'; this.textContent = isCurrentlyCollapsed ? '▲' : '▼'; window.botsManager && window.botsManager.saveCollapseState(this.parentElement.parentElement.parentElement.dataset.symbol, !isCurrentlyCollapsed);" style="background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; padding: 4px;">▼</button>
                                 </div>
                             </div>
                                 
-                            <div class="bot-details" style="font-size: 12px; color: #ccc; margin-bottom: 8px; display: none;">
+                            <div class="bot-details" style="font-size: 12px; color: var(--text-color); margin-bottom: 8px; display: none;">
                                 <div style="margin-bottom: 4px;">💰 ${this.getTranslation('position_volume')} ${parseFloat(((bot.position_size || 0) * (bot.entry_price || 0)).toFixed(2))} USDT</div>
                                 ${positionInfo}
                                 ${timeInfo}
@@ -4265,22 +4265,22 @@ class BotsManager {
                     console.log(`[DEBUG] timeInfo для ${bot.symbol}:`, timeInfo);
                     
                     const htmlResult = `
-                        <div class="active-bot-item clickable-bot-item" data-symbol="${bot.symbol}" style="border: 1px solid #333; border-radius: 12px; padding: 16px; margin: 12px 0; background: linear-gradient(135deg, #252525 0%, #2a2a2a 100%); cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.3);" onmouseover="this.style.backgroundColor='#2a2a2a'; this.style.borderColor='#555'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.4)'" onmouseout="this.style.backgroundColor='#252525'; this.style.borderColor='#333'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.3)'">
-                            <div class="bot-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #333;">
+                        <div class="active-bot-item clickable-bot-item" data-symbol="${bot.symbol}" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin: 12px 0; background: var(--section-bg); cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" onmouseover="this.style.backgroundColor='var(--hover-bg, var(--button-bg))'; this.style.borderColor='var(--border-color)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.backgroundColor='var(--section-bg)'; this.style.borderColor='var(--border-color)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'">
+                            <div class="bot-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
                                 <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span style="color: #fff; font-weight: bold; font-size: 18px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">${bot.symbol}</span>
+                                    <span style="color: var(--text-color); font-weight: bold; font-size: 18px;">${bot.symbol}</span>
                                     <span style="background: ${statusColor}; color: white; padding: 4px 10px; border-radius: 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${statusText}</span>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <div style="text-align: right;">
-                                        <div style="color: ${(bot.unrealized_pnl || bot.unrealized_pnl_usdt || 0) >= 0 ? '#4caf50' : '#f44336'}; font-weight: bold; font-size: 16px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">$${(bot.unrealized_pnl_usdt || bot.unrealized_pnl || 0).toFixed(3)}</div>
-                                        <div style="color: #888; font-size: 10px; margin-top: 2px;">PnL</div>
+                                        <div style="color: ${(bot.unrealized_pnl || bot.unrealized_pnl_usdt || 0) >= 0 ? 'var(--green-color)' : 'var(--red-color)'}; font-weight: bold; font-size: 16px;">$${(bot.unrealized_pnl_usdt || bot.unrealized_pnl || 0).toFixed(3)}</div>
+                                        <div style="color: var(--text-muted); font-size: 10px; margin-top: 2px;">PnL</div>
                                     </div>
-                                    <button class="collapse-btn" onclick="event.stopPropagation(); const details = this.parentElement.parentElement.parentElement.querySelector('.bot-details'); const isCurrentlyCollapsed = details.style.display === 'none'; details.style.display = isCurrentlyCollapsed ? 'grid' : 'none'; this.textContent = isCurrentlyCollapsed ? '▲' : '▼'; window.botsManager && window.botsManager.saveCollapseState(this.parentElement.parentElement.parentElement.dataset.symbol, !isCurrentlyCollapsed);" style="background: none; border: none; color: #888; font-size: 14px; cursor: pointer; padding: 4px;">▼</button>
+                                    <button class="collapse-btn" onclick="event.stopPropagation(); const details = this.parentElement.parentElement.parentElement.querySelector('.bot-details'); const isCurrentlyCollapsed = details.style.display === 'none'; details.style.display = isCurrentlyCollapsed ? 'grid' : 'none'; this.textContent = isCurrentlyCollapsed ? '▲' : '▼'; window.botsManager && window.botsManager.saveCollapseState(this.parentElement.parentElement.parentElement.dataset.symbol, !isCurrentlyCollapsed);" style="background: none; border: none; color: var(--text-muted); font-size: 14px; cursor: pointer; padding: 4px;">▼</button>
                                 </div>
                             </div>
                             
-                            <div class="bot-details" style="display: none; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; color: #ccc; margin-bottom: 16px;">
+                            <div class="bot-details" style="display: none; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; color: var(--text-color); margin-bottom: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
                                     <span style="color: var(--text-muted);">💰 ${window.languageUtils.translate('position_volume')}</span>
                                     <span style="color: var(--text-color); font-weight: 600;">${bot.position_size || bot.volume_value} ${(bot.volume_mode || 'USDT').toUpperCase()}</span>
@@ -4290,7 +4290,7 @@ class BotsManager {
                                 ${timeInfo}
                             </div>
                             
-                            <div class="bot-controls" style="display: flex; gap: 8px; justify-content: center; padding-top: 12px; border-top: 1px solid #333;">
+                            <div class="bot-controls" style="display: flex; gap: 8px; justify-content: center; padding-top: 12px; border-top: 1px solid var(--border-color);">
                                 ${this.getBotControlButtonsHtml(bot)}
                             </div>
                         </div>
@@ -6707,41 +6707,41 @@ class BotsManager {
         if (!bot.position_side || !bot.entry_price) {
             // Если нет активной позиции, показываем информацию о статусе бота
             let statusText = '';
-            let statusColor = '#888';
+            let statusColor = 'var(--text-muted)';
             let statusIcon = '📍';
             
             if (bot.status === 'in_position_long') {
                 statusText = window.languageUtils.translate('long_closed');
-                statusColor = '#4caf50';
+                statusColor = 'var(--green-color)';
                 statusIcon = '📈';
             } else if (bot.status === 'in_position_short') {
                 statusText = window.languageUtils.translate('short_closed');
-                statusColor = '#f44336';
+                statusColor = 'var(--red-color)';
                 statusIcon = '📉';
             } else if (bot.status === 'running') {
                 statusText = window.languageUtils.translate('waiting_signal');
-                statusColor = '#2196f3';
+                statusColor = 'var(--blue-color)';
                 statusIcon = '🔄';
             } else {
                 statusText = window.languageUtils.translate('no_position');
-                statusColor = '#888';
+                statusColor = 'var(--text-muted)';
                 statusIcon = '📍';
             }
             
-            return `<div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>${statusIcon} ${this.getTranslation('position_label')}:</span><span style="color: ${statusColor};">${statusText}</span></div>`;
+            return `<div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="color: var(--text-muted);">${statusIcon} ${this.getTranslation('position_label')}:</span><span style="color: ${statusColor};">${statusText}</span></div>`;
         }
         
-        const sideColor = bot.position_side === 'LONG' ? '#4caf50' : '#f44336';
+        const sideColor = bot.position_side === 'LONG' ? 'var(--green-color)' : 'var(--red-color)';
         const sideIcon = bot.position_side === 'LONG' ? '📈' : '📉';
         
         let positionHtml = `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
-                <span style="color: #888;">${sideIcon} ${this.getTranslation('position_label')}</span>
+                <span style="color: var(--text-muted);">${sideIcon} ${this.getTranslation('position_label')}</span>
                 <span style="color: ${sideColor}; font-weight: 600;">${bot.position_side}</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
-                <span style="color: #888;">💵 ${this.getTranslation('entry_label')}</span>
-                <span style="color: #fff; font-weight: 600;">$${bot.entry_price.toFixed(6)}</span>
+                <span style="color: var(--text-muted);">💵 ${this.getTranslation('entry_label')}</span>
+                <span style="color: var(--text-color); font-weight: 600;">$${bot.entry_price.toFixed(6)}</span>
             </div>
         `;
         
@@ -6750,16 +6750,16 @@ class BotsManager {
             const currentPrice = bot.current_price || bot.mark_price;
             const entryPrice = bot.entry_price || 0;
             const priceChange = entryPrice > 0 ? ((currentPrice - entryPrice) / entryPrice) * 100 : 0;
-            const priceChangeColor = priceChange >= 0 ? '#4caf50' : '#f44336';
+            const priceChangeColor = priceChange >= 0 ? 'var(--green-color)' : 'var(--red-color)';
             const priceChangeIcon = priceChange >= 0 ? '↗️' : '↘️';
             
             positionHtml += `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
-                    <span style="color: #888;">📊 ${this.getTranslation('current_label')}</span>
+                    <span style="color: var(--text-muted);">📊 ${this.getTranslation('current_label')}</span>
                     <span style="color: ${priceChangeColor}; font-weight: 600;">$${currentPrice.toFixed(6)} ${priceChangeIcon}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
-                    <span style="color: #888;">📈 ${this.getTranslation('change_label')}</span>
+                    <span style="color: var(--text-muted);">📈 ${this.getTranslation('change_label')}</span>
                     <span style="color: ${priceChangeColor}; font-weight: 600;">${priceChange.toFixed(2)}%</span>
                 </div>
             `;
@@ -6796,12 +6796,12 @@ class BotsManager {
         
         positionHtml += `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
-                <span style="color: #888;">🛡️ ${this.getTranslation('stop_loss_label_detailed')}</span>
-                <span style="color: ${stopLoss ? '#ff9800' : '#666'}; font-weight: 600;">${stopLoss ? `$${parseFloat(stopLoss).toFixed(6)}` : this.getTranslation('not_set')}</span>
+                <span style="color: var(--text-muted);">🛡️ ${this.getTranslation('stop_loss_label_detailed')}</span>
+                <span style="color: ${stopLoss ? 'var(--warning-color)' : 'var(--text-muted)'}; font-weight: 600;">${stopLoss ? `$${parseFloat(stopLoss).toFixed(6)}` : this.getTranslation('not_set')}</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
-                <span style="color: #888;">🎯 ${this.getTranslation('take_profit_label_detailed')}</span>
-                <span style="color: ${takeProfit ? '#4caf50' : '#666'}; font-weight: 600;">${takeProfit ? `$${parseFloat(takeProfit).toFixed(6)}` : this.getTranslation('not_set')}</span>
+                <span style="color: var(--text-muted);">🎯 ${this.getTranslation('take_profit_label_detailed')}</span>
+                <span style="color: ${takeProfit ? 'var(--green-color)' : 'var(--text-muted)'}; font-weight: 600;">${takeProfit ? `$${parseFloat(takeProfit).toFixed(6)}` : this.getTranslation('not_set')}</span>
             </div>
         `;
         
@@ -6811,28 +6811,28 @@ class BotsManager {
             const trend = bot.rsi_data.trend6h;
             
             if (rsi) {
-                let rsiColor = '#888';
-                if (rsi > 70) rsiColor = '#f44336'; // Перекупленность
-                else if (rsi < 30) rsiColor = '#4caf50'; // Перепроданность
+                let rsiColor = 'var(--text-muted)';
+                if (rsi > 70) rsiColor = 'var(--red-color)'; // Перекупленность
+                else if (rsi < 30) rsiColor = 'var(--green-color)'; // Перепроданность
                 
                 positionHtml += `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
-                        <span style="color: #888;">📊 RSI</span>
+                        <span style="color: var(--text-muted);">📊 RSI</span>
                         <span style="color: ${rsiColor}; font-weight: 600;">${rsi.toFixed(1)}</span>
                     </div>
                 `;
             }
             
             if (trend) {
-                let trendColor = '#888';
+                let trendColor = 'var(--text-muted)';
                 let trendIcon = '➡️';
-                if (trend === 'UP') { trendColor = '#4caf50'; trendIcon = '📈'; }
-                else if (trend === 'DOWN') { trendColor = '#f44336'; trendIcon = '📉'; }
-                else if (trend === 'NEUTRAL') { trendColor = '#ff9800'; trendIcon = '➡️'; }
+                if (trend === 'UP') { trendColor = 'var(--green-color)'; trendIcon = '📈'; }
+                else if (trend === 'DOWN') { trendColor = 'var(--red-color)'; trendIcon = '📉'; }
+                else if (trend === 'NEUTRAL') { trendColor = 'var(--warning-color)'; trendIcon = '➡️'; }
                 
                 positionHtml += `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
-                        <span style="color: #888;">${trendIcon} Тренд</span>
+                        <span style="color: var(--text-muted);">${trendIcon} ${this.getTranslation('trend_label')}</span>
                         <span style="color: ${trendColor}; font-weight: 600;">${trend}</span>
                     </div>
                 `;
@@ -6862,8 +6862,8 @@ class BotsManager {
         
             timeInfoHtml += `
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                <span>⏱️ ${window.languageUtils.translate('time_label')}</span>
-                <span style="color: #888; font-weight: 500;">${timeText}</span>
+                <span style="color: var(--text-muted);">⏱️ ${window.languageUtils.translate('time_label')}</span>
+                <span style="color: var(--text-color); font-weight: 500;">${timeText}</span>
             </div>
         `;
         }
@@ -6884,17 +6884,17 @@ class BotsManager {
             }
             
             // Цвет в зависимости от давности обновления
-            let updateColor = '#4caf50'; // зеленый - свежие данные
+            let updateColor = 'var(--green-color)'; // зеленый - свежие данные
             if (updateMinutes > 1) {
-                updateColor = '#ff9800'; // оранжевый - данные старше минуты
+                updateColor = 'var(--warning-color)'; // оранжевый - данные старше минуты
             }
             if (updateMinutes > 5) {
-                updateColor = '#f44336'; // красный - данные старше 5 минут
+                updateColor = 'var(--red-color)'; // красный - данные старше 5 минут
             }
             
             timeInfoHtml += `
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                    <span>🔄 ${this.getTranslation('updated_label')}</span>
+                    <span style="color: var(--text-muted);">🔄 ${this.getTranslation('updated_label')}</span>
                     <span style="color: ${updateColor}; font-weight: 500;">${updateTimeText}</span>
                 </div>
             `;
