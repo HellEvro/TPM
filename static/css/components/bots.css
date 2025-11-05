@@ -487,6 +487,10 @@
     font-weight: 500;
 }
 
+[data-theme="light"] .data-item .label {
+    color: var(--text-muted) !important;
+}
+
 .data-item .value {
     font-size: 12px;
     font-weight: 600;

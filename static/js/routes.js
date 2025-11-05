@@ -3,7 +3,7 @@ class Routes {
         this.currentRoute = null;
         this.routes = {
             'positions': {
-                title: 'Позиции',
+                get title() { return (window.languageUtils && window.languageUtils.translate('positions')) || 'Позиции'; },
                 init: () => {
                     // Инициализация страницы позиций
                     if (!window.positionsManager) {
@@ -67,7 +67,8 @@ class Routes {
         // Обновляем заголовок в бургер-меню
         const currentPage = document.getElementById('currentPage');
         if (currentPage) {
-            currentPage.textContent = this.routes[route].title;
+            const title = typeof this.routes[route].title === 'function' ? this.routes[route].title() : this.routes[route].title;
+            currentPage.textContent = title;
         }
 
         // Инициализируем компоненты страницы

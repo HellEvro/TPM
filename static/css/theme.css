@@ -6,6 +6,7 @@
     --red-color: #f44336;
     --section-bg: #2d2d2d;
     --text-color: #fff;
+    --text-muted: #999;
     --button-bg: #3a3a3a;
     --input-bg: #2d2d2d;
     
@@ -23,6 +24,7 @@
     --border-color: #ddd;
     --section-bg: #fff;
     --text-color: #000;
+    --text-muted: #444;
     --button-bg: #e0e0e0;
     --input-bg: #fff;
     --hover-bg: #f5f5f5;
