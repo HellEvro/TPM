@@ -220,7 +220,7 @@
                                 <span class="status-icon" id="volumeConfirmationIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
                         <div class="data-item" id="stochasticItem" style="display: none;">
-                                <span class="label">📈 Стохастик:</span>
+                                <span class="label" data-translate="stochastic_label">📈 Стохастик:</span>
                                 <span class="value" id="selectedCoinStochastic">-</span>
                                 <span class="status-icon" id="stochasticIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
@@ -235,15 +235,15 @@
                                 <span class="status-icon" id="rsiTimeFilterIcon" style="margin-left: 8px; font-size: 16px;"></span>
                         </div>
                         <div class="data-item" id="maturityDiamondItem" style="display: none;">
-                                <span class="label">💎 Зрелость монеты:</span>
+                                <span class="label" data-translate="coin_maturity_label">💎 Зрелость монеты:</span>
                                 <span class="value" id="selectedCoinMaturityDiamond">-</span>
                                 <span class="status-icon" id="maturityDiamondIcon" style="margin-left: 8px; font-size: 16px;">💎</span>
                         </div>
                         <div class="data-item" id="botStatusItem" style="display: none;">
-                                <span class="label">🤖 Статус бота:</span>
+                                <span class="label" data-translate="bot_status_label">🤖 Статус бота:</span>
                                 <span class="value" id="selectedCoinBotStatus">-</span>
                                 <span class="status-icon" id="botStatusIcon" style="margin-left: 8px; font-size: 16px;"></span>
-                                <button id="enableBotBtn" class="btn btn-success btn-sm" style="margin-left: 10px; display: none;" onclick="enableBotForCurrentCoin()">Включить</button>
+                                <button id="enableBotBtn" class="btn btn-success btn-sm" style="margin-left: 10px; display: none;" onclick="enableBotForCurrentCoin()" data-translate="enable_bot_btn">Включить</button>
                         </div>
                     </div>
                 </div>
@@ -253,8 +253,8 @@
                     <div class="status-guide" style="margin-top: 20px;">
                         <div class="status-guide-header" onclick="toggleStatusGuide()" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px; background: #2a2a2a; border-radius: 8px; margin-bottom: 10px;">
                             <span class="toggle-arrow">▼</span>
-                            <h3 style="color: #fff; margin: 0; font-size: 16px;">📚 Справочник статусов и иконок</h3>
-                            <span style="color: #888; font-size: 12px; margin-left: auto;">(кликните чтобы развернуть)</span>
+                            <h3 style="color: #fff; margin: 0; font-size: 16px;" data-translate="status_guide_title">📚 Справочник статусов и иконок</h3>
+                            <span style="color: #888; font-size: 12px; margin-left: auto;" data-translate="status_guide_expand_hint">(кликните чтобы развернуть)</span>
                         </div>
                         <div class="status-guide-content" id="statusGuideContent" style="display: none;">
                             <div class="status-categories">
@@ -491,7 +491,7 @@
 
                     <!-- Объединенная секция: Активные сделки + Статус бота + Управление -->
                     <div class="trades-info" id="tradesInfoSection" style="display: none;">
-                        <h3 style="color: #fff; margin-bottom: 15px; font-size: 16px;">📊 Активные сделки</h3>
+                        <h3 style="color: #fff; margin-bottom: 15px; font-size: 16px;" data-translate="active_trades">📊 Активные сделки</h3>
                         <div class="trades-container" id="tradesContainer">
                             <!-- Информация о сделках будет загружена динамически -->
                         </div>
@@ -771,7 +771,7 @@
                 <!-- Массовые операции с ботами -->
                 <div class="bulk-bot-controls" id="bulkBotControls" style="display: none;">
                     <div class="bulk-controls-header">
-                        <span class="bulk-controls-title">📋 Массовые операции</span>
+                        <span class="bulk-controls-title" data-translate="mass_operations">📋 Массовые операции</span>
                         <span class="bulk-controls-count" id="bulkControlsCount">0 ботов</span>
                     </div>
                     <div class="bulk-controls-buttons">
