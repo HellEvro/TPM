@@ -153,9 +153,44 @@ def check_rsi_time_filter(candles, rsi, signal, config, calculate_rsi_history_fu
             invalid_candles = [rsi_val for rsi_val in check_candles if rsi_val > rsi_time_filter_lower]
             
             if len(invalid_candles) > 0:
+                # После старого лоя были свечи > 35, но если текущая свеча снова в зоне входа - ищем новый лой
+                # после последнего превышения порога
+                
+                # Находим индекс последней свечи, которая превысила порог 35
+                last_break_index = None
+                for i in range(current_index, low_index, -1):
+                    if rsi_history[i] > rsi_time_filter_lower:
+                        last_break_index = i
+                        break
+                
+                # Если нашли превышение, ищем новый лой после него
+                if last_break_index is not None:
+                    new_low_index = None
+                    # Ищем новый лой после последнего превышения
+                    for i in range(current_index, last_break_index, -1):
+                        if rsi_history[i] <= rsi_long_threshold:
+                            new_low_index = i
+                            break
+                    
+                    # Если нашли новый лой после превышения - проверяем его
+                    if new_low_index is not None:
+                        new_check_candles = rsi_history[new_low_index + 1:current_index + 1]
+                        new_invalid = [rsi_val for rsi_val in new_check_candles if rsi_val > rsi_time_filter_lower]
+                        
+                        # Если после нового лоя все свечи <= 35 и прошло достаточно свечей - разрешаем
+                        if len(new_invalid) == 0 and len(new_check_candles) >= rsi_time_filter_candles:
+                            new_candles_since_low = current_index - new_low_index + 1
+                            return {
+                                'allowed': True,
+                                'reason': f'Разрешено: после превышения найден новый лой (свеча -{new_candles_since_low}), прошло {len(new_check_candles)} спокойных свечей',
+                                'last_extreme_candles_ago': new_candles_since_low - 1,
+                                'calm_candles': len(new_check_candles)
+                            }
+                
+                # Новый лой не найден или не подходит - вход упущен
                 return {
                     'allowed': False,
-                    'reason': f'Блокировка: {len(invalid_candles)} свечей после лоя поднялись > {rsi_time_filter_lower}',
+                    'reason': f'Блокировка: {len(invalid_candles)} свечей после лоя поднялись > {rsi_time_filter_lower} (вход упущен)',
                     'last_extreme_candles_ago': candles_since_low,
                     'calm_candles': len(check_candles) - len(invalid_candles)
                 }
