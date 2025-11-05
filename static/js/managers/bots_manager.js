@@ -938,25 +938,25 @@ class BotsManager {
             if (stochK < 20) {
                 stochIcon = '⬇️';
                 stochStatus = 'OVERSOLD';
-                stochDescription = 'Перепроданность: %K ниже 20 - возможен разворот вверх';
+                stochDescription = window.languageUtils.translate('stochastic_oversold').replace('{k}', stochK.toFixed(1));
             } else if (stochK > 80) {
                 stochIcon = '⬆️';
                 stochStatus = 'OVERBOUGHT';
-                stochDescription = 'Перекупленность: %K выше 80 - возможен разворот вниз';
+                stochDescription = window.languageUtils.translate('stochastic_overbought').replace('{k}', stochK.toFixed(1));
             } else {
                 stochIcon = '➡️';
                 stochStatus = 'NEUTRAL';
-                stochDescription = 'Нейтральная зона: %K между 20-80 - тренд продолжается';
+                stochDescription = window.languageUtils.translate('stochastic_neutral').replace('{k}', stochK.toFixed(1));
             }
             
             // Добавляем информацию о пересечении %K и %D
             let crossoverInfo = '';
             if (stochK > stochD) {
-                crossoverInfo = ' (%K выше %D - бычий сигнал)';
+                crossoverInfo = ' ' + window.languageUtils.translate('stochastic_bullish_signal').replace('{d}', stochD.toFixed(1));
             } else if (stochK < stochD) {
-                crossoverInfo = ' (%K ниже %D - медвежий сигнал)';
+                crossoverInfo = ' ' + window.languageUtils.translate('stochastic_bearish_signal').replace('{d}', stochD.toFixed(1));
             } else {
-                crossoverInfo = ' (%K = %D - нейтрально)';
+                crossoverInfo = ' (%K = %D - ' + window.languageUtils.translate('neutral') + ')';
             }
             
             const fullDescription = `${stochDescription}${crossoverInfo}`;
@@ -1708,10 +1708,12 @@ class BotsManager {
                 }
                 else if (label === 'ExitScam защита') {
                     // Специальная обработка для ExitScam с цветами
-                    if (statusValue.includes('Блокирует:') || statusValue.toLowerCase().includes('block')) {
+                    const blocksLabel = window.languageUtils.translate('blocks_label');
+                    const safeLabel = window.languageUtils.translate('safe_label');
+                    if (statusValue.includes(blocksLabel) || statusValue.toLowerCase().includes('block')) {
                         valueElement.innerHTML = `<span style="color: var(--red-text);">${statusValue}</span>`;
                         return; // Выходим рано для цветного контента
-                    } else if (statusValue.includes('Безопасно:') || statusValue.toLowerCase().includes('safe')) {
+                    } else if (statusValue.includes(safeLabel) || statusValue.toLowerCase().includes('safe')) {
                         valueElement.innerHTML = `<span style="color: var(--green-text);">${statusValue}</span>`;
                         return; // Выходим рано для цветного контента
                     }
@@ -1763,7 +1765,7 @@ class BotsManager {
                     }
                     else if (statusValue.includes('running') || statusValue === window.languageUtils.translate('active_status') || statusValue === 'Активен') { 
                         icon = '🟢'; 
-                        description = 'Бот активен и работает';
+                        description = window.languageUtils.translate('bot_active_and_working');
                         valueElement.style.color = 'var(--green-color)';
                         // Скрываем кнопку для активных ботов
                         const enableBotBtn = document.getElementById('enableBotBtn');
@@ -1776,17 +1778,17 @@ class BotsManager {
                     }
                     else if (statusValue.includes('error')) { 
                         icon = '🔴'; 
-                        description = 'Ошибка в работе';
+                        description = window.languageUtils.translate('error_in_work');
                         valueElement.style.color = 'var(--red-color)';
                     }
                     else if (statusValue.includes('stopped')) { 
                         icon = '🔴'; 
-                        description = 'Бот остановлен';
+                        description = window.languageUtils.translate('bot_stopped_desc');
                         valueElement.style.color = 'var(--red-color)';
                     }
                     else if (statusValue.includes('in_position')) { 
                         icon = '🟣'; 
-                        description = 'В позиции';
+                        description = window.languageUtils.translate('in_position_desc');
                         valueElement.style.color = 'var(--green-color)';
                     }
                     else if (statusValue.includes('paused')) { 
@@ -1918,25 +1920,25 @@ class BotsManager {
                     if (stochK < 20) {
                         stochIcon = '⬇️';
                         stochStatus = 'OVERSOLD';
-                        stochDescription = 'Перепроданность: %K ниже 20 - возможен разворот вверх';
+                        stochDescription = window.languageUtils.translate('stochastic_oversold').replace('{k}', stochK.toFixed(1));
                     } else if (stochK > 80) {
                         stochIcon = '⬆️';
                         stochStatus = 'OVERBOUGHT';
-                        stochDescription = 'Перекупленность: %K выше 80 - возможен разворот вниз';
+                        stochDescription = window.languageUtils.translate('stochastic_overbought').replace('{k}', stochK.toFixed(1));
                     } else {
                         stochIcon = '➡️';
                         stochStatus = 'NEUTRAL';
-                        stochDescription = 'Нейтральная зона: %K между 20-80 - тренд продолжается';
+                        stochDescription = window.languageUtils.translate('stochastic_neutral').replace('{k}', stochK.toFixed(1));
                     }
                     
                     // Добавляем информацию о пересечении
                     let crossoverInfo = '';
                     if (stochK > stochD) {
-                        crossoverInfo = ' (%K выше %D - бычий сигнал)';
+                        crossoverInfo = ' ' + window.languageUtils.translate('stochastic_bullish_signal').replace('{d}', stochD.toFixed(1));
                     } else if (stochK < stochD) {
-                        crossoverInfo = ' (%K ниже %D - медвежий сигнал)';
+                        crossoverInfo = ' ' + window.languageUtils.translate('stochastic_bearish_signal').replace('{d}', stochD.toFixed(1));
                     } else {
-                        crossoverInfo = ' (%K = %D - нейтрально)';
+                        crossoverInfo = ' (%K = %D - ' + (window.languageUtils.translate('neutral') || 'нейтрально') + ')';
                     }
                     
                     const fullDescription = `Stochastic RSI: ${stochDescription}${crossoverInfo}`;
@@ -2029,9 +2031,9 @@ class BotsManager {
                 itemId: 'rsiTimeFilterItem',
                 valueId: 'selectedCoinRsiTimeFilter',
                 iconId: 'rsiTimeFilterIcon',
-                value: isBlocked ? `Блокирует: ${reason}` : `Разрешено: ${reason}`,
+                value: isBlocked ? window.languageUtils.translate('rsi_time_filter_blocked').replace('{reason}', reason) : window.languageUtils.translate('rsi_time_filter_allowed').replace('{reason}', reason),
                 icon: isBlocked ? '⏰' : '⏱️',
-                description: `RSI Time Filter: ${reason}${calmCandles > 0 ? ` (${calmCandles} спокойных свечей)` : ''}`
+                        description: `RSI Time Filter: ${reason}${calmCandles > 0 ? ` (${calmCandles} ${window.languageUtils.translate('calm_candles') || 'calm candles'})` : ''}`
             });
         }
         
@@ -2044,9 +2046,9 @@ class BotsManager {
             // Добавляем цветовое кодирование
             let coloredValue = '';
             if (isBlocked) {
-                coloredValue = `<span style="color: var(--red-text);">Блокирует: ${reason}</span>`;
+                coloredValue = `<span style="color: var(--red-text);">${window.languageUtils.translate('blocks_label')} ${reason}</span>`;
             } else {
-                coloredValue = `<span style="color: var(--green-text);">Безопасно: ${reason}</span>`;
+                coloredValue = `<span style="color: var(--green-text);">${window.languageUtils.translate('safe_label')} ${reason}</span>`;
             }
             
             realFilters.push({
@@ -3000,14 +3002,14 @@ class BotsManager {
         
         if (isRunning) {
             // Если бот работает - показываем кнопку СТОП
-            buttons.push(`<button onclick="window.app.botsManager.stopBot('${bot.symbol}')" style="padding: 4px 8px; background: #f44336; border: none; border-radius: 3px; color: white; cursor: pointer; font-size: 10px;">⏹️ Стоп</button>`);
+            buttons.push(`<button onclick="window.app.botsManager.stopBot('${bot.symbol}')" style="padding: 4px 8px; background: #f44336; border: none; border-radius: 3px; color: white; cursor: pointer; font-size: 10px;">⏹️ ${window.languageUtils.translate('stop_btn')}</button>`);
         } else if (isStopped) {
             // Если бот остановлен - показываем кнопку СТАРТ
-            buttons.push(`<button onclick="window.app.botsManager.startBot('${bot.symbol}')" style="padding: 4px 8px; background: #4caf50; border: none; border-radius: 3px; color: white; cursor: pointer; font-size: 10px;">▶️ Старт</button>`);
+            buttons.push(`<button onclick="window.app.botsManager.startBot('${bot.symbol}')" style="padding: 4px 8px; background: #4caf50; border: none; border-radius: 3px; color: white; cursor: pointer; font-size: 10px;">▶️ ${window.languageUtils.translate('start_btn') || 'Старт'}</button>`);
         }
         
         // Кнопка удаления всегда доступна
-        buttons.push(`<button onclick="window.app.botsManager.deleteBot('${bot.symbol}')" style="padding: 4px 8px; background: #9e9e9e; border: none; border-radius: 3px; color: white; cursor: pointer; font-size: 10px;">🗑️ Удалить</button>`);
+        buttons.push(`<button onclick="window.app.botsManager.deleteBot('${bot.symbol}')" style="padding: 4px 8px; background: #9e9e9e; border: none; border-radius: 3px; color: white; cursor: pointer; font-size: 10px;">🗑️ ${window.languageUtils.translate('delete_btn')}</button>`);
         
         return buttons.join('');
     }
@@ -3022,14 +3024,14 @@ class BotsManager {
         
         if (isRunning) {
             // Если бот работает - показываем кнопку СТОП
-            buttons.push(`<button onclick="window.app.botsManager.stopBot('${bot.symbol}')" style="padding: 5px 10px; background: #f44336; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 12px;">⏹️ Стоп</button>`);
+            buttons.push(`<button onclick="window.app.botsManager.stopBot('${bot.symbol}')" style="padding: 5px 10px; background: #f44336; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 12px;">⏹️ ${window.languageUtils.translate('stop_btn')}</button>`);
         } else if (isStopped) {
             // Если бот остановлен - показываем кнопку СТАРТ  
-            buttons.push(`<button onclick="window.app.botsManager.startBot('${bot.symbol}')" style="padding: 5px 10px; background: #4caf50; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 12px;">▶️ Старт</button>`);
+            buttons.push(`<button onclick="window.app.botsManager.startBot('${bot.symbol}')" style="padding: 5px 10px; background: #4caf50; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 12px;">▶️ ${window.languageUtils.translate('start_btn') || 'Старт'}</button>`);
         }
         
         // Кнопка удаления
-        buttons.push(`<button onclick="window.app.botsManager.deleteBot('${bot.symbol}')" style="padding: 5px 10px; background: #9e9e9e; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>`);
+        buttons.push(`<button onclick="window.app.botsManager.deleteBot('${bot.symbol}')" style="padding: 5px 10px; background: #9e9e9e; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 12px;">🗑️ ${window.languageUtils.translate('delete_btn')}</button>`);
         
         return buttons.join('');
     }
@@ -3046,28 +3048,28 @@ class BotsManager {
             if (selectedBot) {
                 switch(selectedBot.status) {
                     case 'idle':
-                        statusText.textContent = 'Бот создан (ожидает)';
+                        statusText.textContent = window.languageUtils.translate('waiting_status') || 'Бот создан (ожидает)';
                         break;
                     case 'running':
-                        statusText.textContent = 'Бот активен';
+                        statusText.textContent = window.languageUtils.translate('active_status');
                         break;
                     case 'in_position_long':
-                        statusText.textContent = 'Бот активен (LONG)';
+                        statusText.textContent = window.languageUtils.translate('active_status') + ' (LONG)';
                         break;
                     case 'in_position_short':
-                        statusText.textContent = 'Бот активен (SHORT)';
+                        statusText.textContent = window.languageUtils.translate('active_status') + ' (SHORT)';
                         break;
                     case 'stopped':
-                        statusText.textContent = 'Бот остановлен';
+                        statusText.textContent = window.languageUtils.translate('bot_stopped_desc');
                         break;
                     case 'paused':
-                        statusText.textContent = 'Бот на паузе';
+                        statusText.textContent = window.languageUtils.translate('paused_status');
                         break;
                     default:
-                        statusText.textContent = 'Бот создан';
+                        statusText.textContent = window.languageUtils.translate('bot_created');
                 }
             } else {
-                statusText.textContent = 'Бот не создан';
+                statusText.textContent = window.languageUtils.translate('bot_not_created');
             }
         }
         
@@ -4280,8 +4282,8 @@ class BotsManager {
                             
                             <div class="bot-details" style="display: none; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; color: #ccc; margin-bottom: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
-                                    <span style="color: #888;">💰 Объем</span>
-                                    <span style="color: #fff; font-weight: 600;">${bot.position_size || bot.volume_value} ${(bot.volume_mode || 'USDT').toUpperCase()}</span>
+                                    <span style="color: var(--text-muted);">💰 ${window.languageUtils.translate('position_volume')}</span>
+                                    <span style="color: var(--text-color); font-weight: 600;">${bot.position_size || bot.volume_value} ${(bot.volume_mode || 'USDT').toUpperCase()}</span>
                                 </div>
                                 
                                 ${positionInfo}

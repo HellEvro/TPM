@@ -123,9 +123,9 @@ class App {
                 // Fallback на базовые названия если перевод не доступен
                 if (!translatedText) {
                     const fallbackNames = {
-                        'positions': 'Позиции',
-                        'bots': 'Боты', 
-                        'closedPnl': 'Закрытые PNL'
+                        'positions': window.languageUtils?.translate('positions') || 'Позиции',
+                        'bots': window.languageUtils?.translate('bots') || 'Боты', 
+                        'closedPnl': window.languageUtils?.translate('closedPnl') || 'Закрытые PNL'
                     };
                     translatedText = fallbackNames[lastActivePage] || lastActivePage;
                 }
@@ -162,9 +162,9 @@ class App {
                 } else {
                     // Fallback на базовые названия
                     const fallbackNames = {
-                        'positions': 'Позиции',
-                        'bots': 'Боты', 
-                        'closedPnl': 'Закрытые PNL'
+                        'positions': window.languageUtils?.translate('positions') || 'Позиции',
+                        'bots': window.languageUtils?.translate('bots') || 'Боты', 
+                        'closedPnl': window.languageUtils?.translate('closedPnl') || 'Закрытые PNL'
                     };
                     translatedText = fallbackNames[tabName] || tabName;
                 }
