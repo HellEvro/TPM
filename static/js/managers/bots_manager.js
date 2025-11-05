@@ -1481,15 +1481,15 @@ class BotsManager {
                 if (bot.bot_status) {
                     botStatus = bot.bot_status;
                 } else if (bot.status === 'running') {
-                    botStatus = 'Активен';
+                    botStatus = window.languageUtils.translate('active_status');
                 } else if (bot.status === 'waiting') {
-                    botStatus = 'Ожидание сигнала';
+                    botStatus = window.languageUtils.translate('waiting_signal');
                 } else if (bot.status === 'in_position_long') {
-                    botStatus = 'Активен';
+                    botStatus = window.languageUtils.translate('active_status');
                 } else if (bot.status === 'in_position_short') {
-                    botStatus = 'Активен';
+                    botStatus = window.languageUtils.translate('active_status');
                 } else {
-                    botStatus = bot.status || 'Нет бота';
+                    botStatus = bot.status || window.languageUtils.translate('bot_not_created');
                 }
             }
         }
@@ -1523,16 +1523,25 @@ class BotsManager {
             
             if (stochK < 20) {
                 stochStatus = 'OVERSOLD';
-                crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
-                stochValue = `<span style="color: #44ff44;">Перепроданность: %K=${stochK.toFixed(1)} (ниже 20) - возможен разворот цены вверх.</span><br><span style="color: ${stochK > stochD ? '#44ff44' : '#ff4444'};">${stochK > stochD ? 'Бычий сигнал' : 'Медвежий сигнал'}: %D=${stochD.toFixed(1)} (${stochK > stochD ? '%K выше %D' : '%K ниже %D'})</span>`;
+                const signalText = stochK > stochD 
+                    ? window.languageUtils.getTranslation('stochastic_bullish_signal', {d: stochD.toFixed(1)})
+                    : window.languageUtils.getTranslation('stochastic_bearish_signal', {d: stochD.toFixed(1)});
+                const zoneText = window.languageUtils.getTranslation('stochastic_oversold', {k: stochK.toFixed(1)});
+                stochValue = `<span style="color: var(--green-text);">${zoneText}</span><br><span style="color: ${stochK > stochD ? 'var(--green-text)' : 'var(--red-text)'};">${signalText}</span>`;
             } else if (stochK > 80) {
                 stochStatus = 'OVERBOUGHT';
-                crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
-                stochValue = `<span style="color: #ff4444;">Перекупленность: %K=${stochK.toFixed(1)} (выше 80) - возможен разворот цены вниз.</span><br><span style="color: ${stochK > stochD ? '#44ff44' : '#ff4444'};">${stochK > stochD ? 'Бычий сигнал' : 'Медвежий сигнал'}: %D=${stochD.toFixed(1)} (${stochK > stochD ? '%K выше %D' : '%K ниже %D'})</span>`;
+                const signalText = stochK > stochD 
+                    ? window.languageUtils.getTranslation('stochastic_bullish_signal', {d: stochD.toFixed(1)})
+                    : window.languageUtils.getTranslation('stochastic_bearish_signal', {d: stochD.toFixed(1)});
+                const zoneText = window.languageUtils.getTranslation('stochastic_overbought', {k: stochK.toFixed(1)});
+                stochValue = `<span style="color: var(--red-text);">${zoneText}</span><br><span style="color: ${stochK > stochD ? 'var(--green-text)' : 'var(--red-text)'};">${signalText}</span>`;
             } else {
                 stochStatus = 'NEUTRAL';
-                crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
-                stochValue = `<span style="color: #ffff44;">Нейтральная зона: %K=${stochK.toFixed(1)} (между 20-80) - тренд продолжается.</span><br><span style="color: ${stochK > stochD ? '#44ff44' : '#ff4444'};">${stochK > stochD ? 'Бычий сигнал' : 'Медвежий сигнал'}: %D=${stochD.toFixed(1)} (${stochK > stochD ? '%K выше %D' : '%K ниже %D'})</span>`;
+                const signalText = stochK > stochD 
+                    ? window.languageUtils.getTranslation('stochastic_bullish_signal', {d: stochD.toFixed(1)})
+                    : window.languageUtils.getTranslation('stochastic_bearish_signal', {d: stochD.toFixed(1)});
+                const zoneText = window.languageUtils.getTranslation('stochastic_neutral', {k: stochK.toFixed(1)});
+                stochValue = `<span style="color: var(--warning-color);">${zoneText}</span><br><span style="color: ${stochK > stochD ? 'var(--green-text)' : 'var(--red-text)'};">${signalText}</span>`;
             }
         } else if (coin.enhanced_rsi && coin.enhanced_rsi.confirmations) {
             const stochK = coin.enhanced_rsi.confirmations.stoch_rsi_k;
@@ -1543,16 +1552,25 @@ class BotsManager {
                 
                 if (stochK < 20) {
                     stochStatus = 'OVERSOLD';
-                    crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
-                    stochValue = `<span style="color: #44ff44;">Перепроданность: %K=${stochK.toFixed(1)} (ниже 20) - возможен разворот цены вверх.</span><br><span style="color: ${stochK > stochD ? '#44ff44' : '#ff4444'};">${stochK > stochD ? 'Бычий сигнал' : 'Медвежий сигнал'}: %D=${stochD.toFixed(1)} (${stochK > stochD ? '%K выше %D' : '%K ниже %D'})</span>`;
+                    const signalText = stochK > stochD 
+                        ? window.languageUtils.getTranslation('stochastic_bullish_signal', {d: stochD.toFixed(1)})
+                        : window.languageUtils.getTranslation('stochastic_bearish_signal', {d: stochD.toFixed(1)});
+                    const zoneText = window.languageUtils.getTranslation('stochastic_oversold', {k: stochK.toFixed(1)});
+                    stochValue = `<span style="color: var(--green-text);">${zoneText}</span><br><span style="color: ${stochK > stochD ? 'var(--green-text)' : 'var(--red-text)'};">${signalText}</span>`;
                 } else if (stochK > 80) {
                     stochStatus = 'OVERBOUGHT';
-                    crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
-                    stochValue = `<span style="color: #ff4444;">Перекупленность: %K=${stochK.toFixed(1)} (выше 80) - возможен разворот цены вниз.</span><br><span style="color: ${stochK > stochD ? '#44ff44' : '#ff4444'};">${stochK > stochD ? 'Бычий сигнал' : 'Медвежий сигнал'}: %D=${stochD.toFixed(1)} (${stochK > stochD ? '%K выше %D' : '%K ниже %D'})</span>`;
+                    const signalText = stochK > stochD 
+                        ? window.languageUtils.getTranslation('stochastic_bullish_signal', {d: stochD.toFixed(1)})
+                        : window.languageUtils.getTranslation('stochastic_bearish_signal', {d: stochD.toFixed(1)});
+                    const zoneText = window.languageUtils.getTranslation('stochastic_overbought', {k: stochK.toFixed(1)});
+                    stochValue = `<span style="color: var(--red-text);">${zoneText}</span><br><span style="color: ${stochK > stochD ? 'var(--green-text)' : 'var(--red-text)'};">${signalText}</span>`;
                 } else {
                     stochStatus = 'NEUTRAL';
-                    crossoverInfo = stochK > stochD ? ' (%K выше %D - бычий сигнал)' : ' (%K ниже %D - медвежий сигнал)';
-                    stochValue = `<span style="color: #ffff44;">Нейтральная зона: %K=${stochK.toFixed(1)} (между 20-80) - тренд продолжается.</span><br><span style="color: ${stochK > stochD ? '#44ff44' : '#ff4444'};">${stochK > stochD ? 'Бычий сигнал' : 'Медвежий сигнал'}: %D=${stochD.toFixed(1)} (${stochK > stochD ? '%K выше %D' : '%K ниже %D'})</span>`;
+                    const signalText = stochK > stochD 
+                        ? window.languageUtils.getTranslation('stochastic_bullish_signal', {d: stochD.toFixed(1)})
+                        : window.languageUtils.getTranslation('stochastic_bearish_signal', {d: stochD.toFixed(1)});
+                    const zoneText = window.languageUtils.getTranslation('stochastic_neutral', {k: stochK.toFixed(1)});
+                    stochValue = `<span style="color: var(--warning-color);">${zoneText}</span><br><span style="color: ${stochK > stochD ? 'var(--green-text)' : 'var(--red-text)'};">${signalText}</span>`;
                 }
             }
         }
@@ -1593,10 +1611,10 @@ class BotsManager {
         if (coin.is_mature === true) {
             const actualCandles = coin.candles_count || 'N/A';
             const minCandles = this.autoBotConfig?.min_candles_for_maturity || 400;
-            activeStatusData.maturity = `Зрелая монета: ${actualCandles} > ${minCandles} свечей - достаточно истории для торговли`;
+            activeStatusData.maturity = window.languageUtils.getTranslation('mature_coin_description', {candles: actualCandles, min: minCandles});
         } else if (coin.is_mature === false) {
             const minCandles = this.autoBotConfig?.min_candles_for_maturity || 400;
-            activeStatusData.maturity = `Незрелая монета, менее ${minCandles} свечей - недостаточно истории`;
+            activeStatusData.maturity = window.languageUtils.getTranslation('immature_coin_description', {min: minCandles});
         }
         
         console.log('[BotsManager] 🎯 Обновление активных иконок:', activeStatusData);
@@ -1690,11 +1708,11 @@ class BotsManager {
                 }
                 else if (label === 'ExitScam защита') {
                     // Специальная обработка для ExitScam с цветами
-                    if (statusValue.includes('Блокирует:')) {
-                        valueElement.innerHTML = `<span style="color: #ff4444;">${statusValue}</span>`;
+                    if (statusValue.includes('Блокирует:') || statusValue.toLowerCase().includes('block')) {
+                        valueElement.innerHTML = `<span style="color: var(--red-text);">${statusValue}</span>`;
                         return; // Выходим рано для цветного контента
-                    } else if (statusValue.includes('Безопасно:')) {
-                        valueElement.innerHTML = `<span style="color: #44ff44;">${statusValue}</span>`;
+                    } else if (statusValue.includes('Безопасно:') || statusValue.toLowerCase().includes('safe')) {
+                        valueElement.innerHTML = `<span style="color: var(--green-text);">${statusValue}</span>`;
                         return; // Выходим рано для цветного контента
                     }
                     
@@ -1732,11 +1750,11 @@ class BotsManager {
                         const enableBotBtn = document.getElementById('enableBotBtn');
                         if (enableBotBtn) enableBotBtn.style.display = 'none';
                     }
-                    else if (statusValue.includes('waiting')) { icon = '🔵'; description = 'Ожидание сигнала'; }
+                    else if (statusValue.includes('waiting')) { icon = '🔵'; description = window.languageUtils.translate('waiting_signal'); }
                     else if (statusValue.includes('error')) { icon = '🔴'; description = 'Ошибка в работе'; }
                     else if (statusValue.includes('stopped')) { icon = '🔴'; description = 'Бот остановлен'; }
                     else if (statusValue.includes('in_position')) { icon = '🟣'; description = 'В позиции'; }
-                    else if (statusValue.includes('paused')) { icon = '⚪'; description = 'Приостановлен'; }
+                    else if (statusValue.includes('paused')) { icon = '⚪'; description = window.languageUtils.translate('paused_status'); }
                 }
                 
                 iconElement.textContent = icon;
@@ -1789,7 +1807,7 @@ class BotsManager {
                 itemId: 'maturityDiamondItem',
                 valueId: 'selectedCoinMaturityDiamond',
                 iconId: 'maturityDiamondIcon',
-                value: `Зрелая монета: ${actualCandles} > ${minCandles} свечей - достаточно истории для торговли`,
+                value: window.languageUtils.getTranslation('mature_coin_description', {candles: actualCandles, min: minCandles}),
                 icon: '',
                 description: 'Монета имеет достаточно истории для надежного анализа'
             });
@@ -1799,7 +1817,7 @@ class BotsManager {
                 itemId: 'maturityDiamondItem',
                 valueId: 'selectedCoinMaturityDiamond',
                 iconId: 'maturityDiamondIcon',
-                value: `Незрелая монета, менее ${minCandles} свечей - недостаточно истории`,
+                value: window.languageUtils.getTranslation('immature_coin_description', {min: minCandles}),
                 icon: '',
                 description: 'Монета не имеет достаточно истории для надежного анализа'
             });
@@ -1890,19 +1908,19 @@ class BotsManager {
                     // Определяем сигнал пересечения с цветами
                     let signalInfo = '';
                     if (stochK > stochD) {
-                        signalInfo = `<span style="color: #44ff44;">Бычий сигнал: %D=${stochD.toFixed(1)} (%K выше %D)</span>`;
+                        signalInfo = `<span style="color: var(--green-text);">${window.languageUtils.getTranslation('stochastic_bullish_signal', {d: stochD.toFixed(1)})}</span>`;
                     } else if (stochK < stochD) {
-                        signalInfo = `<span style="color: #ff4444;">Медвежий сигнал: %D=${stochD.toFixed(1)} (%K ниже %D)</span>`;
+                        signalInfo = `<span style="color: var(--red-text);">${window.languageUtils.getTranslation('stochastic_bearish_signal', {d: stochD.toFixed(1)})}</span>`;
                     } else {
-                        signalInfo = `<span style="color: #ffff44;">Нейтральный сигнал: %D=${stochD.toFixed(1)} (%K = %D)</span>`;
+                        signalInfo = `<span style="color: var(--warning-color);">Нейтральный сигнал: %D=${stochD.toFixed(1)} (%K = %D)</span>`;
                     }
                     
                     if (stochStatus === 'OVERSOLD') {
-                        detailedValue = `<span style="color: #44ff44;">Перепроданность: %K=${stochK.toFixed(1)} (ниже 20) - возможен разворот цены вверх.</span><br>${signalInfo}`;
+                        detailedValue = `<span style="color: var(--green-text);">${window.languageUtils.getTranslation('stochastic_oversold', {k: stochK.toFixed(1)})}</span><br>${signalInfo}`;
                     } else if (stochStatus === 'OVERBOUGHT') {
-                        detailedValue = `<span style="color: #ff4444;">Перекупленность: %K=${stochK.toFixed(1)} (выше 80) - возможен разворот цены вниз.</span><br>${signalInfo}`;
+                        detailedValue = `<span style="color: var(--red-text);">${window.languageUtils.getTranslation('stochastic_overbought', {k: stochK.toFixed(1)})}</span><br>${signalInfo}`;
                     } else {
-                        detailedValue = `<span style="color: #ffff44;">Нейтральная зона: %K=${stochK.toFixed(1)} (между 20-80) - тренд продолжается.</span><br>${signalInfo}`;
+                        detailedValue = `<span style="color: var(--warning-color);">${window.languageUtils.getTranslation('stochastic_neutral', {k: stochK.toFixed(1)})}</span><br>${signalInfo}`;
                     }
                     
                     realFilters.push({
@@ -1987,9 +2005,9 @@ class BotsManager {
             // Добавляем цветовое кодирование
             let coloredValue = '';
             if (isBlocked) {
-                coloredValue = `<span style="color: #ff4444;">Блокирует: ${reason}</span>`;
+                coloredValue = `<span style="color: var(--red-text);">Блокирует: ${reason}</span>`;
             } else {
-                coloredValue = `<span style="color: #44ff44;">Безопасно: ${reason}</span>`;
+                coloredValue = `<span style="color: var(--green-text);">Безопасно: ${reason}</span>`;
             }
             
             realFilters.push({
@@ -2825,13 +2843,13 @@ class BotsManager {
         if (statusElement) {
             switch (status) {
                 case 'starting':
-                    statusElement.textContent = 'Запуск...';
+                    statusElement.textContent = window.languageUtils.translate('bot_status_starting');
                     statusElement.className = 'bot-status status-starting';
                     if (startButton) startButton.disabled = true;
                     if (stopButton) stopButton.disabled = true;
                     break;
                 case 'active':
-                    statusElement.textContent = 'Активен';
+                    statusElement.textContent = window.languageUtils.translate('active_status');
                     statusElement.className = 'bot-status status-active';
                     if (startButton) startButton.disabled = true;
                     if (stopButton) stopButton.disabled = false;
@@ -2843,13 +2861,13 @@ class BotsManager {
                     if (stopButton) stopButton.disabled = true;
                     break;
                 case 'idle':
-                    statusElement.textContent = 'Ожидание';
+                    statusElement.textContent = window.languageUtils.translate('waiting_status');
                     statusElement.className = 'bot-status status-idle';
                     if (startButton) startButton.disabled = false;
                     if (stopButton) stopButton.disabled = true;
                     break;
                 case 'stopped':
-                    statusElement.textContent = 'Остановлен';
+                    statusElement.textContent = window.languageUtils.translate('stopped_status');
                     statusElement.className = 'bot-status status-stopped';
                     if (startButton) startButton.disabled = false;
                     if (stopButton) stopButton.disabled = true;
@@ -4045,7 +4063,7 @@ class BotsManager {
                                     bot.status === 'armed_up' || bot.status === 'armed_down';
                     
                     const statusColor = isActive ? '#4caf50' : '#ff5722';
-                    const statusText = isActive ? 'Активен' : (bot.status === 'paused' ? 'Приостановлен' : (bot.status === 'idle' ? 'Ожидание' : 'Остановлен'));
+                    const statusText = isActive ? window.languageUtils.translate('active_status') : (bot.status === 'paused' ? window.languageUtils.translate('paused_status') : (bot.status === 'idle' ? window.languageUtils.translate('waiting_status') : window.languageUtils.translate('stopped_status')));
                     
                     // Определяем информацию о позиции
                     console.log(`[DEBUG] renderActiveBotsDetails для ${bot.symbol}:`, {
@@ -4127,7 +4145,7 @@ class BotsManager {
                                                 bot.status === 'in_position_long' || bot.status === 'in_position_short' ||
                                                 bot.status === 'armed_up' || bot.status === 'armed_down';
                                 const statusColor = isActive ? '#4caf50' : '#ff5722';
-                                const statusText = isActive ? 'Активен' : (bot.status === 'paused' ? 'Приостановлен' : (bot.status === 'idle' ? 'Ожидание' : 'Остановлен'));
+                                const statusText = isActive ? window.languageUtils.translate('active_status') : (bot.status === 'paused' ? window.languageUtils.translate('paused_status') : (bot.status === 'idle' ? window.languageUtils.translate('waiting_status') : window.languageUtils.translate('stopped_status')));
                                 statusBadge.style.background = statusColor;
                                 statusBadge.textContent = statusText;
                             }
@@ -4189,7 +4207,7 @@ class BotsManager {
                                     bot.status === 'armed_up' || bot.status === 'armed_down';
                     
                     const statusColor = isActive ? '#4caf50' : '#ff5722';
-                    const statusText = isActive ? 'Активен' : (bot.status === 'paused' ? 'Приостановлен' : (bot.status === 'idle' ? 'Ожидание' : 'Остановлен'));
+                    const statusText = isActive ? window.languageUtils.translate('active_status') : (bot.status === 'paused' ? window.languageUtils.translate('paused_status') : (bot.status === 'idle' ? window.languageUtils.translate('waiting_status') : window.languageUtils.translate('stopped_status')));
                     
                     // Определяем информацию о позиции
                     console.log(`[DEBUG] renderActiveBotsDetails для ${bot.symbol}:`, {
@@ -6660,7 +6678,7 @@ class BotsManager {
                 statusColor = '#f44336';
                 statusIcon = '📉';
             } else if (bot.status === 'running') {
-                statusText = 'Ожидание сигнала';
+                statusText = window.languageUtils.translate('waiting_signal');
                 statusColor = '#2196f3';
                 statusIcon = '🔄';
             } else {
@@ -7040,62 +7058,62 @@ class BotsManager {
                         <span style="font-size: 16px;">${sideIcon}</span>
                         <span style="color: ${trade.side === 'LONG' ? '#4caf50' : '#f44336'}; font-weight: bold;">${trade.side}</span>
                     </div>
-                    <div class="trade-status ${trade.status}" style="background: ${trade.status === 'active' ? '#4caf50' : '#ff5722'}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px;">
-                        ${trade.status === 'active' ? 'Активна' : 'Закрыта'}
+                    <div class="trade-status ${trade.status}" style="background: ${trade.status === 'active' ? 'var(--green-color)' : 'var(--red-bright)'}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px;">
+                        ${trade.status === 'active' ? window.languageUtils.translate('active_trade_status') : window.languageUtils.translate('closed_trade_status')}
                     </div>
                 </div>
                 
                 <div class="trade-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #ccc;">
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: #888;">💵 Вход:</span>
-                        <span class="trade-detail-value" style="color: #fff; font-weight: 600;">$${trade.entryPrice.toFixed(6)}</span>
+                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('entry_price_label')}</span>
+                        <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">$${trade.entryPrice.toFixed(6)}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: #888;">📊 Текущая:</span>
-                        <span class="trade-detail-value" style="color: #fff; font-weight: 600;">$${trade.currentPrice.toFixed(6)}</span>
+                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('current_price_label')}</span>
+                        <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">$${trade.currentPrice.toFixed(6)}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: #888;">📈 Изменение:</span>
-                        <span class="trade-detail-value ${priceChangeClass}" style="color: ${priceChange >= 0 ? '#4caf50' : '#f44336'}; font-weight: 600;">${priceChange.toFixed(2)}%</span>
+                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('change_price_label')}</span>
+                        <span class="trade-detail-value ${priceChangeClass}" style="color: ${priceChange >= 0 ? 'var(--green-color)' : 'var(--red-color)'}; font-weight: 600;">${priceChange.toFixed(2)}%</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: #888;">💰 Объем:</span>
-                        <span class="trade-detail-value" style="color: #fff; font-weight: 600;">${trade.volume.toFixed(2)} ${trade.volumeMode.toUpperCase()}</span>
+                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('volume_price_label')}</span>
+                        <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">${trade.volume.toFixed(2)} ${trade.volumeMode.toUpperCase()}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: #888;">🛡️ Стоп-лосс:</span>
-                        <span class="trade-detail-value" style="color: #ff9800; font-weight: 600;">$${parseFloat(trade.stopLossPrice).toFixed(6)} (${trade.stopLossPercent}%)</span>
+                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('stop_loss_price_label')}</span>
+                        <span class="trade-detail-value" style="color: var(--warning-color); font-weight: 600;">$${parseFloat(trade.stopLossPrice).toFixed(6)} (${trade.stopLossPercent}%)</span>
                     </div>
                     
                     ${trade.takeProfitPrice ? `
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: #888;">🎯 Тейк-профит:</span>
-                        <span class="trade-detail-value" style="color: #4caf50; font-weight: 600;">$${parseFloat(trade.takeProfitPrice).toFixed(6)}</span>
+                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('take_profit_price_label')}</span>
+                        <span class="trade-detail-value" style="color: var(--green-color); font-weight: 600;">$${parseFloat(trade.takeProfitPrice).toFixed(6)}</span>
                     </div>
                     ` : ''}
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: #888;">📊 RSI:</span>
-                        <span class="trade-detail-value" style="color: #fff; font-weight: 600;">${trade.rsi ? trade.rsi.toFixed(1) : 'N/A'}</span>
+                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('rsi_label')}</span>
+                        <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">${trade.rsi ? trade.rsi.toFixed(1) : 'N/A'}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: #888;">➡️ Тренд:</span>
-                        <span class="trade-detail-value" style="color: ${trade.trend === 'UP' ? '#4caf50' : trade.trend === 'DOWN' ? '#f44336' : '#ff9800'}; font-weight: 600;">${trade.trend || 'NEUTRAL'}</span>
+                        <span class="trade-detail-label" style="color: var(--border-color);">➡️ ${window.languageUtils.translate('trend_label')}:</span>
+                        <span class="trade-detail-value" style="color: ${trade.trend === 'UP' ? 'var(--green-color)' : trade.trend === 'DOWN' ? 'var(--red-color)' : 'var(--warning-color)'}; font-weight: 600;">${trade.trend || 'NEUTRAL'}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: #888;">⏱️ Время:</span>
-                        <span class="trade-detail-value" style="color: #fff; font-weight: 600;">${trade.workTime || '0м'}</span>
+                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('time_detail_label')}</span>
+                        <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">${trade.workTime || '0м'}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                        <span class="trade-detail-label" style="color: #888;">🔄 Обновлено:</span>
-                        <span class="trade-detail-value" style="color: #fff; font-weight: 600;">${trade.lastUpdate || 'Неизвестно'}</span>
+                        <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('updated_detail_label')}</span>
+                        <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">${trade.lastUpdate || window.languageUtils.translate('unknown')}</span>
                     </div>
                 </div>
                 
