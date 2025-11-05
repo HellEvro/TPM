@@ -570,7 +570,7 @@ class BotsManager {
                     await this.loadCoinsRsiData();
                 } else {
                     console.warn('[BotsManager] ⚠️ Сервис ботов недоступен');
-                    this.updateServiceStatus('offline', 'Сервис ботов недоступен');
+                    this.updateServiceStatus('offline', window.languageUtils.translate('bot_service_unavailable'));
                 }
             } else {
                 throw new Error(`HTTP ${response.status}`);
@@ -612,10 +612,10 @@ class BotsManager {
         if (coinsListElement) {
             coinsListElement.innerHTML = `
                 <div class="service-unavailable">
-                    <h3>🚫 Сервис ботов недоступен</h3>
-                    <p>Для работы с ботами запустите:</p>
+                    <h3>🚫 ${window.languageUtils.translate('bot_service_unavailable')}</h3>
+                    <p>${window.languageUtils.translate('bot_service_launch_instruction')}</p>
                     <code>python bots.py</code>
-                    <p>Сервис должен быть доступен на порту 5001</p>
+                    <p>${window.languageUtils.translate('bot_service_port_instruction')}</p>
                 </div>
             `;
         }
@@ -1728,9 +1728,27 @@ class BotsManager {
                     else if (statusValue.includes('TIMEOUT')) { icon = '⏰'; description = 'RSI Time Filter таймаут'; }
                 }
                 else if (label === 'Статус бота') {
-                    if (statusValue === 'Нет бота') { 
+                    // Устанавливаем цвет для статуса бота в зависимости от значения
+                    if (statusValue === window.languageUtils.translate('active_status') || 
+                        statusValue.includes('running') || 
+                        statusValue.includes('active') ||
+                        statusValue === 'Активен') {
+                        valueElement.style.color = 'var(--green-color)';
+                        valueElement.classList.add('active-status');
+                    } else if (statusValue.includes('waiting') || statusValue.includes('idle')) {
+                        valueElement.style.color = 'var(--blue-color)';
+                    } else if (statusValue.includes('error') || statusValue.includes('stopped')) {
+                        valueElement.style.color = 'var(--red-color)';
+                    } else if (statusValue.includes('paused')) {
+                        valueElement.style.color = 'var(--warning-color)';
+                    } else {
+                        valueElement.style.color = 'var(--text-color)';
+                    }
+                    
+                    if (statusValue === 'Нет бота' || statusValue === window.languageUtils.translate('bot_not_created')) { 
                         icon = '❓'; 
                         description = 'Бот не создан';
+                        valueElement.style.color = 'var(--text-muted, var(--text-color))';
                         
                         // Показываем кнопку "Включить" только для монет с сигналами LONG/SHORT
                         const enableBotBtn = document.getElementById('enableBotBtn');
@@ -1743,18 +1761,39 @@ class BotsManager {
                             }
                         }
                     }
-                    else if (statusValue.includes('running')) { 
+                    else if (statusValue.includes('running') || statusValue === window.languageUtils.translate('active_status') || statusValue === 'Активен') { 
                         icon = '🟢'; 
                         description = 'Бот активен и работает';
+                        valueElement.style.color = 'var(--green-color)';
                         // Скрываем кнопку для активных ботов
                         const enableBotBtn = document.getElementById('enableBotBtn');
                         if (enableBotBtn) enableBotBtn.style.display = 'none';
                     }
-                    else if (statusValue.includes('waiting')) { icon = '🔵'; description = window.languageUtils.translate('waiting_signal'); }
-                    else if (statusValue.includes('error')) { icon = '🔴'; description = 'Ошибка в работе'; }
-                    else if (statusValue.includes('stopped')) { icon = '🔴'; description = 'Бот остановлен'; }
-                    else if (statusValue.includes('in_position')) { icon = '🟣'; description = 'В позиции'; }
-                    else if (statusValue.includes('paused')) { icon = '⚪'; description = window.languageUtils.translate('paused_status'); }
+                    else if (statusValue.includes('waiting') || statusValue.includes('idle')) { 
+                        icon = '🔵'; 
+                        description = window.languageUtils.translate('waiting_signal');
+                        valueElement.style.color = 'var(--blue-color)';
+                    }
+                    else if (statusValue.includes('error')) { 
+                        icon = '🔴'; 
+                        description = 'Ошибка в работе';
+                        valueElement.style.color = 'var(--red-color)';
+                    }
+                    else if (statusValue.includes('stopped')) { 
+                        icon = '🔴'; 
+                        description = 'Бот остановлен';
+                        valueElement.style.color = 'var(--red-color)';
+                    }
+                    else if (statusValue.includes('in_position')) { 
+                        icon = '🟣'; 
+                        description = 'В позиции';
+                        valueElement.style.color = 'var(--green-color)';
+                    }
+                    else if (statusValue.includes('paused')) { 
+                        icon = '⚪'; 
+                        description = window.languageUtils.translate('paused_status');
+                        valueElement.style.color = 'var(--warning-color)';
+                    }
                 }
                 
                 iconElement.textContent = icon;
@@ -4240,7 +4279,7 @@ class BotsManager {
                             </div>
                             
                             <div class="bot-details" style="display: none; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; color: #ccc; margin-bottom: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
                                     <span style="color: #888;">💰 Объем</span>
                                     <span style="color: #fff; font-weight: 600;">${bot.position_size || bot.volume_value} ${(bot.volume_mode || 'USDT').toUpperCase()}</span>
                                 </div>
@@ -6694,11 +6733,11 @@ class BotsManager {
         const sideIcon = bot.position_side === 'LONG' ? '📈' : '📉';
         
         let positionHtml = `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
                 <span style="color: #888;">${sideIcon} ${this.getTranslation('position_label')}</span>
                 <span style="color: ${sideColor}; font-weight: 600;">${bot.position_side}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
                 <span style="color: #888;">💵 ${this.getTranslation('entry_label')}</span>
                 <span style="color: #fff; font-weight: 600;">$${bot.entry_price.toFixed(6)}</span>
             </div>
@@ -6713,11 +6752,11 @@ class BotsManager {
             const priceChangeIcon = priceChange >= 0 ? '↗️' : '↘️';
             
             positionHtml += `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
                     <span style="color: #888;">📊 ${this.getTranslation('current_label')}</span>
                     <span style="color: ${priceChangeColor}; font-weight: 600;">$${currentPrice.toFixed(6)} ${priceChangeIcon}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
                     <span style="color: #888;">📈 ${this.getTranslation('change_label')}</span>
                     <span style="color: ${priceChangeColor}; font-weight: 600;">${priceChange.toFixed(2)}%</span>
                 </div>
@@ -6754,11 +6793,11 @@ class BotsManager {
         }
         
         positionHtml += `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
                 <span style="color: #888;">🛡️ ${this.getTranslation('stop_loss_label_detailed')}</span>
                 <span style="color: ${stopLoss ? '#ff9800' : '#666'}; font-weight: 600;">${stopLoss ? `$${parseFloat(stopLoss).toFixed(6)}` : this.getTranslation('not_set')}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
                 <span style="color: #888;">🎯 ${this.getTranslation('take_profit_label_detailed')}</span>
                 <span style="color: ${takeProfit ? '#4caf50' : '#666'}; font-weight: 600;">${takeProfit ? `$${parseFloat(takeProfit).toFixed(6)}` : this.getTranslation('not_set')}</span>
             </div>
@@ -6775,7 +6814,7 @@ class BotsManager {
                 else if (rsi < 30) rsiColor = '#4caf50'; // Перепроданность
                 
                 positionHtml += `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
                         <span style="color: #888;">📊 RSI</span>
                         <span style="color: ${rsiColor}; font-weight: 600;">${rsi.toFixed(1)}</span>
                     </div>
@@ -6790,7 +6829,7 @@ class BotsManager {
                 else if (trend === 'NEUTRAL') { trendColor = '#ff9800'; trendIcon = '➡️'; }
                 
                 positionHtml += `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
                         <span style="color: #888;">${trendIcon} Тренд</span>
                         <span style="color: ${trendColor}; font-weight: 600;">${trend}</span>
                     </div>
@@ -7052,66 +7091,66 @@ class BotsManager {
         const priceChangeClass = priceChange >= 0 ? 'positive' : 'negative';
         
         return `
-            <div class="trade-item" style="border: 1px solid #444; border-radius: 8px; padding: 12px; margin: 8px 0; background: #2a2a2a; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#333'" onmouseout="this.style.backgroundColor='#2a2a2a'">
-                <div class="trade-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
+            <div class="trade-item" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin: 8px 0; background: var(--section-bg); transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='var(--hover-bg, var(--button-bg))'" onmouseout="this.style.backgroundColor='var(--section-bg)'">
+                <div class="trade-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
                     <div class="trade-side ${sideClass}" style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 16px;">${sideIcon}</span>
-                        <span style="color: ${trade.side === 'LONG' ? '#4caf50' : '#f44336'}; font-weight: bold;">${trade.side}</span>
+                        <span style="color: ${trade.side === 'LONG' ? 'var(--green-color)' : 'var(--red-color)'}; font-weight: bold;">${trade.side}</span>
                     </div>
                     <div class="trade-status ${trade.status}" style="background: ${trade.status === 'active' ? 'var(--green-color)' : 'var(--red-bright)'}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px;">
                         ${trade.status === 'active' ? window.languageUtils.translate('active_trade_status') : window.languageUtils.translate('closed_trade_status')}
                     </div>
                 </div>
                 
-                <div class="trade-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #ccc;">
-                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                <div class="trade-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: var(--text-color);">
+                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('entry_price_label')}</span>
                         <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">$${trade.entryPrice.toFixed(6)}</span>
                     </div>
                     
-                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('current_price_label')}</span>
                         <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">$${trade.currentPrice.toFixed(6)}</span>
                     </div>
                     
-                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('change_price_label')}</span>
                         <span class="trade-detail-value ${priceChangeClass}" style="color: ${priceChange >= 0 ? 'var(--green-color)' : 'var(--red-color)'}; font-weight: 600;">${priceChange.toFixed(2)}%</span>
                     </div>
                     
-                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('volume_price_label')}</span>
                         <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">${trade.volume.toFixed(2)} ${trade.volumeMode.toUpperCase()}</span>
                     </div>
                     
-                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('stop_loss_price_label')}</span>
                         <span class="trade-detail-value" style="color: var(--warning-color); font-weight: 600;">$${parseFloat(trade.stopLossPrice).toFixed(6)} (${trade.stopLossPercent}%)</span>
                     </div>
                     
                     ${trade.takeProfitPrice ? `
-                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('take_profit_price_label')}</span>
                         <span class="trade-detail-value" style="color: var(--green-color); font-weight: 600;">$${parseFloat(trade.takeProfitPrice).toFixed(6)}</span>
                     </div>
                     ` : ''}
                     
-                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('rsi_label')}</span>
                         <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">${trade.rsi ? trade.rsi.toFixed(1) : 'N/A'}</span>
                     </div>
                     
-                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: var(--border-color);">➡️ ${window.languageUtils.translate('trend_label')}:</span>
                         <span class="trade-detail-value" style="color: ${trade.trend === 'UP' ? 'var(--green-color)' : trade.trend === 'DOWN' ? 'var(--red-color)' : 'var(--warning-color)'}; font-weight: 600;">${trade.trend || 'NEUTRAL'}</span>
                     </div>
                     
-                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('time_detail_label')}</span>
                         <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">${trade.workTime || '0м'}</span>
                     </div>
                     
-                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: var(--border-color);">${window.languageUtils.translate('updated_detail_label')}</span>
                         <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">${trade.lastUpdate || window.languageUtils.translate('unknown')}</span>
                     </div>

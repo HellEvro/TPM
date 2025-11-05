@@ -367,12 +367,12 @@ class BotsManager {
         if (coinsListElement) {
             coinsListElement.innerHTML = `
                 <div class="service-unavailable">
-                    <h3>🚫 Сервис ботов недоступен</h3>
-                    <p>Для работы с ботами запустите в отдельном терминале:</p>
+                    <h3>🚫 ${window.languageUtils.translate('bot_service_unavailable_new')}</h3>
+                    <p>${window.languageUtils.translate('bot_service_launch_terminal')}</p>
                     <code>python bots.py</code>
-                    <p><small>Сервис должен работать на порту 5001</small></p>
+                    <p><small>${window.languageUtils.translate('bot_service_port_small')}</small></p>
                     <button class="btn btn-primary" onclick="location.reload()">
-                        <i class="fas fa-refresh"></i> Обновить страницу
+                        <i class="fas fa-refresh"></i> ${window.languageUtils.translate('refresh_page')}
                     </button>
                 </div>
             `;
