@@ -6711,11 +6711,11 @@ class BotsManager {
             let statusIcon = '📍';
             
             if (bot.status === 'in_position_long') {
-                statusText = 'LONG (закрыта)';
+                statusText = window.languageUtils.translate('long_closed');
                 statusColor = '#4caf50';
                 statusIcon = '📈';
             } else if (bot.status === 'in_position_short') {
-                statusText = 'SHORT (закрыта)';
+                statusText = window.languageUtils.translate('short_closed');
                 statusColor = '#f44336';
                 statusIcon = '📉';
             } else if (bot.status === 'running') {
@@ -6723,7 +6723,7 @@ class BotsManager {
                 statusColor = '#2196f3';
                 statusIcon = '🔄';
             } else {
-                statusText = 'Нет позиции';
+                statusText = window.languageUtils.translate('no_position');
                 statusColor = '#888';
                 statusIcon = '📍';
             }
@@ -6862,7 +6862,7 @@ class BotsManager {
         
             timeInfoHtml += `
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                <span>⏱️ Время:</span>
+                <span>⏱️ ${window.languageUtils.translate('time_label')}</span>
                 <span style="color: #888; font-weight: 500;">${timeText}</span>
             </div>
         `;
