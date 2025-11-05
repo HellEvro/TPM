@@ -192,76 +192,66 @@ def check_rsi_time_filter(candles, rsi, signal):
             rsi_history[current_index] = rsi
         
         if signal == 'ENTER_SHORT':
-            # ПРАВИЛЬНАЯ ЛОГИКА ДЛЯ SHORT:
-            # 1. Берем последние N свечей (8)
-            # 2. Ищем среди них пик >= 71
-            #    - Если несколько пиков - берем САМЫЙ РАННИЙ (8-ую свечу)
-            #    - Если нет пиков - идем дальше в историю до 50 свечей
-            # 3. От найденного пика проверяем ВСЕ свечи до текущей
-            # 4. Все должны быть >= 65 (иначе был провал - вход упущен)
+            # ЛОГИКА ДЛЯ SHORT (аналогично LONG, только наоборот):
+            # 1. Берем последние N свечей (rsi_time_filter_candles из конфига, например 8)
+            # 2. Ищем среди них САМУЮ РАННЮЮ (левую) свечу с RSI >= 71 - это отправная точка
+            # 3. От отправной точки проверяем ВСЕ последующие свечи (до текущей) - должны быть >= 65
+            # 4. Если все >= 65 И прошло минимум N свечей - разрешаем
+            # 5. Если какая-то свеча < 65 - блокируем (вход упущен)
             
-            # Шаг 1: Проверяем последние N свечей
+            # Берем последние N свечей из конфига
             last_n_candles_start = max(0, current_index - rsi_time_filter_candles + 1)
             last_n_candles = rsi_history[last_n_candles_start:current_index + 1]
             
-            # Ищем пики (>= 71) в последних N свечах
+            # Ищем САМУЮ РАННЮЮ (левую) свечу с RSI >= 71 среди последних N свечей
             peak_index = None
             for i in range(last_n_candles_start, current_index + 1):
                 if rsi_history[i] >= rsi_short_threshold:
-                    peak_index = i
-                    break  # Берем САМЫЙ РАННИЙ пик
+                    peak_index = i  # Нашли самую раннюю свечу >= 71
+                    break
             
-            # Шаг 2: Если не нашли пик в последних N - ищем дальше в ВСЕЙ истории
+            # Если не нашли пик в последних N свечах - блокируем (нет отправной точки)
             if peak_index is None:
-                # Ищем по всей доступной истории (без ограничений)
-                for i in range(last_n_candles_start - 1, -1, -1):
-                    if rsi_history[i] >= rsi_short_threshold:
-                        peak_index = i
-                        break
-            
-            if peak_index is None:
-                # Пик не найден вообще - разрешаем (никогда не было экстремума)
                 return {
-                    'allowed': True,
-                    'reason': f'Разрешено: пик RSI >= {rsi_short_threshold} не найден во всей истории',
+                    'allowed': False,
+                    'reason': f'Блокировка: пик RSI >= {rsi_short_threshold} не найден в последних {rsi_time_filter_candles} свечах',
                     'last_extreme_candles_ago': None,
-                    'calm_candles': len(last_n_candles)
+                    'calm_candles': 0
                 }
             
-            # Шаг 3: Проверяем ВСЕ свечи от пика до текущей
-            # candles_since_peak = количество свечей С МОМЕНТА пика (включая сам пик)
-            candles_since_peak = current_index - peak_index + 1
-            
-            # Берем все свечи ПОСЛЕ пика (не включая сам пик)
-            start_check = peak_index + 1
-            check_candles = rsi_history[start_check:current_index + 1]
+            # Проверяем ВСЕ свечи ПОСЛЕ отправной точки (до текущей включительно)
+            # Берем все свечи ПОСЛЕ peak_index (не включая сам peak_index)
+            check_candles = rsi_history[peak_index + 1:current_index + 1]
             
             # Проверяем что ВСЕ свечи >= 65
             invalid_candles = [rsi_val for rsi_val in check_candles if rsi_val < rsi_time_filter_upper]
             
             if len(invalid_candles) > 0:
-                # Есть провалы < 65 - вход упущен
+                # Есть свечи < 65 - вход упущен
+                candles_since_peak = current_index - peak_index + 1
                 return {
                     'allowed': False,
-                    'reason': f'Блокировка: {len(invalid_candles)} свечей после пика провалились < {rsi_time_filter_upper} (вход упущен)',
-                    'last_extreme_candles_ago': candles_since_peak,
+                    'reason': f'Блокировка: {len(invalid_candles)} свечей после отправной точки провалились < {rsi_time_filter_upper} (вход упущен)',
+                    'last_extreme_candles_ago': candles_since_peak - 1,
                     'calm_candles': len(check_candles) - len(invalid_candles)
                 }
             
-            # Проверяем что прошло достаточно свечей
+            # Проверяем что прошло достаточно свечей (минимум N из конфига)
             if len(check_candles) < rsi_time_filter_candles:
+                candles_since_peak = current_index - peak_index + 1
                 return {
                     'allowed': False,
-                    'reason': f'Блокировка: с пика прошло только {len(check_candles)} свечей (требуется {rsi_time_filter_candles})',
-                    'last_extreme_candles_ago': candles_since_peak,
+                    'reason': f'Ожидание: с отправной точки прошло только {len(check_candles)} свечей (требуется {rsi_time_filter_candles})',
+                    'last_extreme_candles_ago': candles_since_peak - 1,
                     'calm_candles': len(check_candles)
                 }
             
             # Все проверки пройдены!
+            candles_since_peak = current_index - peak_index + 1
             return {
                 'allowed': True,
-                'reason': f'Разрешено: с пика (свеча -{candles_since_peak}) прошло {len(check_candles)} спокойных свечей >= {rsi_time_filter_upper}',
-                'last_extreme_candles_ago': candles_since_peak - 1,  # Для соответствия с вашим пониманием
+                'reason': f'Разрешено: с отправной точки (свеча -{candles_since_peak}) прошло {len(check_candles)} спокойных свечей >= {rsi_time_filter_upper}',
+                'last_extreme_candles_ago': candles_since_peak - 1,
                 'calm_candles': len(check_candles)
             }
                 
@@ -662,8 +652,50 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         exit_scam_info = None
         time_filter_info = None
         
-        # Проверяем фильтры только если монета в зоне входа (LONG/SHORT)
-        if signal in ['ENTER_LONG', 'ENTER_SHORT']:
+        # Определяем потенциальный сигнал для проверки фильтров
+        # ВАЖНО: Проверяем фильтры даже если текущий сигнал WAIT, но RSI был в зоне входа
+        potential_signal = signal
+        if signal == 'WAIT':
+            # Если сигнал WAIT, но RSI был в зоне входа - проверяем фильтры для информации
+            # Проверяем последние N свечей на наличие экстремума
+            if len(candles) >= 50:
+                try:
+                    closes = [candle['close'] for candle in candles]
+                    rsi_history = calculate_rsi_history(closes, 14)
+                    if rsi_history and len(rsi_history) > 0:
+                        current_idx = len(rsi_history) - 1
+                        # Обновляем последний элемент переданным RSI
+                        if rsi is not None:
+                            rsi_history[current_idx] = rsi
+                        
+                        # Проверяем последние N свечей на наличие экстремума
+                        rsi_time_filter_candles = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_candles', 8)
+                        last_n_start = max(0, current_idx - rsi_time_filter_candles + 1)
+                        
+                        # Ищем лой в последних N свечах для LONG
+                        has_low_in_last_n = False
+                        for i in range(last_n_start, current_idx + 1):
+                            if rsi_history[i] <= rsi_long_threshold:
+                                has_low_in_last_n = True
+                                break
+                        
+                        # Ищем пик в последних N свечах для SHORT
+                        has_peak_in_last_n = False
+                        for i in range(last_n_start, current_idx + 1):
+                            if rsi_history[i] >= rsi_short_threshold:
+                                has_peak_in_last_n = True
+                                break
+                        
+                        # Если есть экстремум в последних N свечах - определяем потенциальный сигнал
+                        if has_low_in_last_n:
+                            potential_signal = 'ENTER_LONG'
+                        elif has_peak_in_last_n:
+                            potential_signal = 'ENTER_SHORT'
+                except Exception as e:
+                    logger.debug(f"[FILTERS] {symbol}: Ошибка определения потенциального сигнала: {e}")
+        
+        # Проверяем фильтры если монета в зоне входа (LONG/SHORT) или потенциально в зоне
+        if potential_signal in ['ENTER_LONG', 'ENTER_SHORT']:
             # 6. Проверка ExitScam фильтра
             exit_scam_passed = check_exit_scam_filter(symbol, {})
             if not exit_scam_passed:
@@ -672,8 +704,9 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     'reason': 'Обнаружены резкие движения цены (ExitScam фильтр)',
                     'filter_type': 'exit_scam'
                 }
-                signal = 'WAIT'
-                rsi_zone = 'NEUTRAL'
+                if signal in ['ENTER_LONG', 'ENTER_SHORT']:
+                    signal = 'WAIT'
+                    rsi_zone = 'NEUTRAL'
             else:
                 exit_scam_info = {
                     'blocked': False,
@@ -681,21 +714,21 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     'filter_type': 'exit_scam'
                 }
             
-            # 7. Проверка RSI временного фильтра (только если ExitScam пройден)
-            if signal in ['ENTER_LONG', 'ENTER_SHORT']:
-                time_filter_result = check_rsi_time_filter(candles, rsi, signal)
-                time_filter_info = {
-                    'blocked': not time_filter_result['allowed'],
-                    'reason': time_filter_result['reason'],
-                    'filter_type': 'time_filter',
-                    'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago'),
-                    'calm_candles': time_filter_result.get('calm_candles')
-                }
-                
-                # Если временной фильтр блокирует - меняем сигнал на WAIT
-                if not time_filter_result['allowed']:
-                    signal = 'WAIT'
-                    rsi_zone = 'NEUTRAL'
+            # 7. Проверка RSI временного фильтра (ВСЕГДА проверяем для информации, даже если сигнал WAIT)
+            # Это позволяет показать статус фильтра в UI даже если вход заблокирован другими причинами
+            time_filter_result = check_rsi_time_filter(candles, rsi, potential_signal)
+            time_filter_info = {
+                'blocked': not time_filter_result['allowed'],
+                'reason': time_filter_result['reason'],
+                'filter_type': 'time_filter',
+                'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago'),
+                'calm_candles': time_filter_result.get('calm_candles')
+            }
+            
+            # Если временной фильтр блокирует и сигнал был ENTER_LONG/SHORT - меняем на WAIT
+            if not time_filter_result['allowed'] and signal in ['ENTER_LONG', 'ENTER_SHORT']:
+                signal = 'WAIT'
+                rsi_zone = 'NEUTRAL'
         
         # ✅ ПРИМЕНЯЕМ БЛОКИРОВКУ ПО SCOPE
         # Scope фильтр (если монета в черном списке или не в белом)
