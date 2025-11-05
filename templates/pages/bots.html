@@ -499,7 +499,7 @@
                         <!-- Статус бота (встроен в секцию сделок) -->
                         <div class="bot-status-inline" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #333;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <h4 style="color: #fff; margin: 0; font-size: 14px;">🤖 Статус бота</h4>
+                                <h4 style="color: var(--text-color); margin: 0; font-size: 14px;" data-translate="bot_status_label_header">🤖 Статус бота</h4>
                                 <div class="bot-status-display" id="botStatusDisplay">
                                     <span class="status-text" data-translate="bot_not_created" id="botStatusText">Бот не создан</span>
                                     <span class="status-indicator" id="botStatusIndicator">●</span>
@@ -2115,7 +2115,7 @@
                                     <span class="label-text" data-translate="data_collection_label">Сбор данных для обучения:</span>
                                 </label>
                                 <label class="toggle-info" style="font-size: 14px; color: #4CAF50;">
-                                    ✅ Всегда включен
+                                    ✅ <span data-translate="always_enabled">Всегда включен</span>
                                 </label>
                                 <small class="config-help" data-translate="data_collection_help">Данные о точках входа собираются автоматически даже при отключенной фильтрации</small>
                             </div>
