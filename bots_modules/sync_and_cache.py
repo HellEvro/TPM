@@ -1662,10 +1662,75 @@ def check_trading_rules_activation():
         return False
 
 def check_missing_stop_losses():
-    """Проверяет и устанавливает недостающие стоп-лоссы и трейлинг стопы для ботов"""
+    """Проверяет и устанавливает недостающие стоп-лоссы и трейлинг стопы для ботов
+    
+    КРИТИЧЕСКАЯ ФУНКЦИЯ: От работы этой функции зависит защита средств!
+    Если exchange недоступен - это КРИТИЧЕСКАЯ ОШИБКА, а не предупреждение!
+    """
     try:
-        if not ensure_exchange_initialized():
+        # Шаг 1: Проверка и инициализация exchange - АГРЕССИВНЫЙ ПОДХОД
+        current_exchange = None
+        max_retries = 3
+        
+        for attempt in range(max_retries):
+            # Попытка 1: Получить через get_exchange()
+            try:
+                current_exchange = get_exchange()
+                if current_exchange:
+                    break
+            except (NameError, AttributeError) as e:
+                logger.debug(f"[STOP_LOSS_SETUP] get_exchange() недоступен: {e}")
+            
+            # Попытка 2: Использовать глобальную переменную exchange
+            if not current_exchange:
+                try:
+                    current_exchange = exchange
+                    if current_exchange:
+                        break
+                except NameError:
+                    pass
+            
+            # Попытка 3: Попытаться инициализировать через ensure_exchange_initialized
+            if not current_exchange:
+                logger.error(f"[STOP_LOSS_SETUP] ❌ КРИТИЧЕСКАЯ ОШИБКА: Exchange недоступен (попытка {attempt + 1}/{max_retries})")
+                if ensure_exchange_initialized():
+                    # После инициализации ВСЕГДА используем get_exchange() (не локальную переменную exchange!)
+                    # потому что set_exchange() обновляет _state.exchange, но не локальные переменные
+                    try:
+                        current_exchange = get_exchange()
+                        if current_exchange:
+                            logger.info(f"[STOP_LOSS_SETUP] ✅ Exchange восстановлен после инициализации через get_exchange() (попытка {attempt + 1})")
+                            break
+                        else:
+                            logger.error(f"[STOP_LOSS_SETUP] ❌ ensure_exchange_initialized() вернул True, но get_exchange() всё ещё None!")
+                    except Exception as e:
+                        logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка получения exchange после инициализации: {e}")
+                else:
+                    logger.error(f"[STOP_LOSS_SETUP] ❌ КРИТИЧЕСКАЯ ОШИБКА: ensure_exchange_initialized() вернул False (попытка {attempt + 1}/{max_retries})")
+            
+            # Если не получилось, ждем немного перед следующей попыткой
+            if attempt < max_retries - 1:
+                import time
+                time.sleep(0.5)
+        
+        # ФИНАЛЬНАЯ ПРОВЕРКА: Если exchange всё ещё недоступен - это КРИТИЧЕСКАЯ ОШИБКА
+        if not current_exchange:
+            logger.error(f"[STOP_LOSS_SETUP] ❌ КРИТИЧЕСКАЯ ОШИБКА: Exchange объект недоступен после {max_retries} попыток!")
+            # Безопасная диагностика
+            try:
+                get_exchange_result = get_exchange()
+                logger.error(f"[STOP_LOSS_SETUP] ❌ get_exchange() = {get_exchange_result}")
+            except Exception as e:
+                logger.error(f"[STOP_LOSS_SETUP] ❌ get_exchange() недоступен: {e}")
+            try:
+                logger.error(f"[STOP_LOSS_SETUP] ❌ exchange = {exchange}")
+            except Exception as e:
+                logger.error(f"[STOP_LOSS_SETUP] ❌ exchange недоступен: {e}")
+            logger.error(f"[STOP_LOSS_SETUP] ❌ СТОП-ЛОССЫ НЕ МОГУТ БЫТЬ УСТАНОВЛЕНЫ! Это критическая проблема безопасности!")
+            logger.error(f"[STOP_LOSS_SETUP] ❌ Проверьте: 1) Ключи API корректны 2) Сеть доступна 3) Биржа работает")
             return False
+        
+        logger.debug(f"[STOP_LOSS_SETUP] ✅ Exchange получен успешно: {type(current_exchange)}")
         
         with bots_data_lock:
             # Получаем конфигурацию трейлинг стопа
@@ -1674,15 +1739,6 @@ def check_missing_stop_losses():
             
             # Получаем все позиции с биржи
             try:
-                # Безопасное получение exchange объекта
-                try:
-                    current_exchange = get_exchange()
-                except NameError:
-                    current_exchange = exchange
-                
-                if not current_exchange:
-                    logger.warning(f"[STOP_LOSS_SETUP] ⚠️ Exchange объект недоступен")
-                    return False
                 
                 positions_response = current_exchange.client.get_positions(
                     category="linear",
@@ -1690,7 +1746,7 @@ def check_missing_stop_losses():
                 )
                 
                 if positions_response.get('retCode') != 0:
-                    logger.warning(f"[STOP_LOSS_SETUP] ⚠️ Ошибка получения позиций: {positions_response.get('retMsg')}")
+                    logger.error(f"[STOP_LOSS_SETUP] ❌ КРИТИЧЕСКАЯ ОШИБКА получения позиций: {positions_response.get('retMsg')} (retCode={positions_response.get('retCode')})")
                     return False
                 
                 exchange_positions = positions_response.get('result', {}).get('list', [])
@@ -1759,8 +1815,7 @@ def check_missing_stop_losses():
                             stop_price = entry_price * 1.05  # 5% стоп-лосс
                         
                         try:
-                            from bots_modules.imports_and_globals import get_exchange
-                            current_exchange = get_exchange() or exchange
+                            # Используем уже полученный exchange объект
                             stop_result = current_exchange.client.set_trading_stop(
                                 category="linear",
                                 symbol=pos.get('symbol'),
@@ -1784,8 +1839,7 @@ def check_missing_stop_losses():
                         if not existing_trailing_stop:
                             # Устанавливаем трейлинг стоп
                             try:
-                                from bots_modules.imports_and_globals import get_exchange
-                                current_exchange = get_exchange() or exchange
+                                # Используем уже полученный exchange объект
                                 trailing_result = current_exchange.client.set_trading_stop(
                                     category="linear",
                                     symbol=pos.get('symbol'),
