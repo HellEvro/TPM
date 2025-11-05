@@ -220,54 +220,77 @@ class PositionsManager {
             console.log(`Updating data for ${symbol}...`);
             
             // Загружаем миниграфик и SMA200 параллельно
-            const [chartResponse, sma200Response] = await Promise.all([
+            const [chartResponse, sma200Response] = await Promise.allSettled([
                 fetch(`/get_symbol_chart/${symbol}?theme=${this.currentTheme}`),
                 fetch(`/get_sma200_position/${symbol}`)
             ]);
 
-            const [chartData, sma200Data] = await Promise.all([
-                chartResponse.json(),
-                sma200Response.json()
-            ]);
-
-            // Обноляем миниграфик
-            if (chartData.chart) {
-                const cacheKey = `${symbol}_${this.currentTheme}`;
-                this.chartCache.set(cacheKey, chartData.chart);
-                
-                document.querySelectorAll(`.mini-chart[data-symbol="${symbol}"]`)
-                    .forEach(elem => {
-                        if (elem) {
-                            elem.src = `data:image/png;base64,${chartData.chart}`;
-                        }
-                    });
-                console.log(`Chart updated for ${symbol}`);
+            // Обрабатываем ответ графика
+            if (chartResponse.status === 'fulfilled' && chartResponse.value.ok) {
+                try {
+                    const chartData = await chartResponse.value.json();
+                    if (chartData.success && chartData.chart) {
+                        const cacheKey = `${symbol}_${this.currentTheme}`;
+                        this.chartCache.set(cacheKey, chartData.chart);
+                        
+                        document.querySelectorAll(`.mini-chart[data-symbol="${symbol}"]`)
+                            .forEach(elem => {
+                                if (elem) {
+                                    elem.src = `data:image/png;base64,${chartData.chart}`;
+                                }
+                            });
+                        console.log(`Chart updated for ${symbol}`);
+                    } else {
+                        console.warn(`Chart data not available for ${symbol}:`, chartData.error || 'Unknown error');
+                    }
+                } catch (e) {
+                    console.error(`Error parsing chart JSON for ${symbol}:`, e);
+                }
+            } else {
+                const errorMsg = chartResponse.status === 'rejected' 
+                    ? chartResponse.reason?.message 
+                    : `HTTP ${chartResponse.value?.status || 'unknown'}`;
+                console.warn(`Failed to fetch chart for ${symbol}: ${errorMsg}`);
             }
 
-            // Обновляем SMA200
-            if (sma200Data.above_sma200 !== undefined) {
-                console.log(`SMA200 for ${symbol}: ${sma200Data.above_sma200 ? 'ABOVE' : 'BELOW'}`);
-                this.sma200Cache.set(symbol, {
-                    above_sma200: sma200Data.above_sma200,
-                    timestamp: Date.now()
-                });
-                
-                // Обновляем индикатор и цвет ROI
-                document.querySelectorAll(`.position[data-symbol="${symbol}"]`).forEach(position => {
-                    if (!position) return;
-                    
-                    const indicator = position.querySelector('.sma-indicator');
-                    const roiSpan = position.querySelector('.position-footer span');
-                    
-                    if (indicator) {
-                        indicator.classList.remove('sma-loading');
-                        indicator.classList.add(sma200Data.above_sma200 ? 'sma-above' : 'sma-below');
+            // Обрабатываем ответ SMA200
+            if (sma200Response.status === 'fulfilled' && sma200Response.value.ok) {
+                try {
+                    const sma200Data = await sma200Response.value.json();
+                    if (sma200Data.success && sma200Data.above_sma200 !== undefined) {
+                        console.log(`SMA200 for ${symbol}: ${sma200Data.above_sma200 ? 'ABOVE' : 'BELOW'}`);
+                        this.sma200Cache.set(symbol, {
+                            above_sma200: sma200Data.above_sma200,
+                            timestamp: Date.now()
+                        });
+                        
+                        // Обновляем индикатор и цвет ROI
+                        document.querySelectorAll(`.position[data-symbol="${symbol}"]`).forEach(position => {
+                            if (!position) return;
+                            
+                            const indicator = position.querySelector('.sma-indicator');
+                            const roiSpan = position.querySelector('.position-footer span');
+                            
+                            if (indicator) {
+                                indicator.classList.remove('sma-loading');
+                                indicator.classList.add(sma200Data.above_sma200 ? 'sma-above' : 'sma-below');
+                            }
+                            
+                            if (roiSpan) {
+                                roiSpan.style.color = sma200Data.above_sma200 ? '#4CAF50' : '#f44336';
+                            }
+                        });
+                    } else {
+                        console.warn(`SMA200 data not available for ${symbol}:`, sma200Data.error || 'Unknown error');
                     }
-                    
-                    if (roiSpan) {
-                        roiSpan.style.color = sma200Data.above_sma200 ? '#4CAF50' : '#f44336';
-                    }
-                });
+                } catch (e) {
+                    console.error(`Error parsing SMA200 JSON for ${symbol}:`, e);
+                }
+            } else {
+                const errorMsg = sma200Response.status === 'rejected' 
+                    ? sma200Response.reason?.message 
+                    : `HTTP ${sma200Response.value?.status || 'unknown'}`;
+                console.warn(`Failed to fetch SMA200 for ${symbol}: ${errorMsg}`);
             }
 
             console.log(`Data update completed for ${symbol}`);

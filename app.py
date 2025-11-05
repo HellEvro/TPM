@@ -1239,8 +1239,35 @@ def get_symbol_chart(symbol):
             line_color = '#00ff00'
             
         # Подготавливаем данные
-        times = [datetime.fromtimestamp(int(candle['timestamp']) / 1000) for candle in candles]
-        prices = [float(candle['close']) for candle in candles]
+        # Биржи возвращают 'time', а не 'timestamp'
+        times = []
+        prices = []
+        for candle in candles:
+            try:
+                # Проверяем оба варианта: 'time' и 'timestamp'
+                timestamp = candle.get('timestamp') or candle.get('time')
+                if timestamp:
+                    # Если timestamp уже в миллисекундах
+                    if isinstance(timestamp, (int, float)):
+                        if timestamp > 1e10:  # Если в миллисекундах
+                            times.append(datetime.fromtimestamp(timestamp / 1000))
+                        else:  # Если в секундах
+                            times.append(datetime.fromtimestamp(timestamp))
+                    else:
+                        times.append(datetime.fromtimestamp(int(timestamp) / 1000))
+                    
+                    # Получаем цену закрытия
+                    close_price = candle.get('close')
+                    if close_price:
+                        prices.append(float(close_price))
+            except (ValueError, TypeError, KeyError) as e:
+                print(f"[CHART] Error processing candle for {symbol}: {e}")
+                continue
+        
+        # Проверяем, что есть данные для графика
+        if not times or not prices:
+            print(f"[CHART] No valid data after processing candles for {symbol}")
+            return jsonify({'success': False, 'error': 'No valid chart data after processing'}), 500
         
         # Создаем график
         fig, ax = plt.subplots(figsize=(4, 2), facecolor=bg_color)
