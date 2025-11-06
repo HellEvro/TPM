@@ -1420,11 +1420,53 @@ class BotsManager {
             console.log('[BotsManager] ✅ Тренд обновлен:', trend);
         }
         
-        if (emaElement) {
-            const emaText = coin.ema_periods ? `EMA(${coin.ema_periods.ema_short},${coin.ema_periods.ema_long})` : '-';
+        // ✅ НОВЫЙ ФОРМАТ: Отдельные EMA для LONG и SHORT
+        const emaLongElement = document.getElementById('selectedCoinEMALong');
+        const emaShortElement = document.getElementById('selectedCoinEMAShort');
+        const emaElement = document.getElementById('selectedCoinEMA'); // Старый элемент для обратной совместимости
+        
+        if (emaLongElement && emaShortElement) {
+            // Новый формат с отдельными элементами
+            if (coin.ema_periods) {
+                if (coin.ema_periods.long && coin.ema_periods.short) {
+                    // Новый формат с отдельными LONG и SHORT EMA
+                    const longEma = coin.ema_periods.long;
+                    const shortEma = coin.ema_periods.short;
+                    const longText = `LONG: EMA(${longEma.ema_short_period || longEma.ema_short || '-'},${longEma.ema_long_period || longEma.ema_long || '-'})`;
+                    const shortText = `SHORT: EMA(${shortEma.ema_short_period || shortEma.ema_short || '-'},${shortEma.ema_long_period || shortEma.ema_long || '-'})`;
+                    emaLongElement.textContent = longText;
+                    emaShortElement.textContent = shortText;
+                    console.log('[BotsManager] ✅ EMA обновлен:', longText, shortText);
+                } else if (coin.ema_periods.ema_short && coin.ema_periods.ema_long) {
+                    // Старый формат (обратная совместимость)
+                    const emaText = `EMA(${coin.ema_periods.ema_short},${coin.ema_periods.ema_long})`;
+                    emaLongElement.textContent = `LONG: ${emaText}`;
+                    emaShortElement.textContent = `SHORT: ${emaText}`;
+                    console.log('[BotsManager] ✅ EMA обновлен (legacy):', emaText);
+                } else {
+                    emaLongElement.textContent = 'LONG: -';
+                    emaShortElement.textContent = 'SHORT: -';
+                }
+            } else {
+                emaLongElement.textContent = 'LONG: -';
+                emaShortElement.textContent = 'SHORT: -';
+            }
+        } else if (emaElement) {
+            // Старый формат (обратная совместимость)
+            let emaText = '-';
+            if (coin.ema_periods) {
+                if (coin.ema_periods.long && coin.ema_periods.short) {
+                    const longEma = coin.ema_periods.long;
+                    const shortEma = coin.ema_periods.short;
+                    emaText = `LONG: EMA(${longEma.ema_short_period || longEma.ema_short || '-'},${longEma.ema_long_period || longEma.ema_long || '-'}) | SHORT: EMA(${shortEma.ema_short_period || shortEma.ema_short || '-'},${shortEma.ema_long_period || shortEma.ema_long || '-'})`;
+                } else if (coin.ema_periods.ema_short && coin.ema_periods.ema_long) {
+                    emaText = `EMA(${coin.ema_periods.ema_short},${coin.ema_periods.ema_long})`;
+                }
+            }
             emaElement.textContent = emaText;
             emaElement.className = 'value ema-indicator';
-            console.log('[BotsManager] ✅ EMA обновлен:', emaText);
+            emaElement.style.fontSize = '12px';
+            console.log('[BotsManager] ✅ EMA обновлен (legacy):', emaText);
         }
         
         if (zoneElement) {

@@ -531,37 +531,86 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         avoid_up_trend = bots_data.get('auto_bot_config', {}).get('avoid_up_trend', True)
         
         # ✅ КРИТИЧНО: Определяем сигнал на основе Optimal EMA периодов!
-        if ema_periods and ema_periods.get('ema_short') and ema_periods.get('ema_long'):
-            # Рассчитываем EMA на основе оптимальных периодов
-            ema_short = ema_periods['ema_short']
-            ema_long = ema_periods['ema_long']
-            
-            # Рассчитываем EMA значения
+        # ✅ НОВАЯ ЛОГИКА: Используем разные EMA для LONG и SHORT
+        if ema_periods:
             try:
                 from bots_modules.calculations import calculate_ema
-                ema_short_value = calculate_ema(closes, ema_short)[-1] if len(closes) >= ema_short else closes[-1]
-                ema_long_value = calculate_ema(closes, ema_long)[-1] if len(closes) >= ema_long else closes[-1]
                 
-                # Определяем сигнал на основе пересечения EMA
-                if ema_short_value > ema_long_value:
-                    # Короткая EMA выше длинной - восходящий тренд
-                    if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
+                # Определяем, какие EMA использовать в зависимости от RSI
+                if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 - потенциальный LONG
+                    # Используем EMA для LONG сигналов
+                    if 'long' in ema_periods and ema_periods['long'].get('ema_short_period') and ema_periods['long'].get('ema_long_period'):
+                        ema_short = ema_periods['long']['ema_short_period']
+                        ema_long = ema_periods['long']['ema_long_period']
+                    elif ema_periods.get('ema_short') and ema_periods.get('ema_long'):
+                        # Обратная совместимость со старым форматом
+                        ema_short = ema_periods['ema_short']
+                        ema_long = ema_periods['ema_long']
+                    else:
+                        ema_short = None
+                        ema_long = None
+                    
+                    if ema_short and ema_long:
+                        ema_short_value = calculate_ema(closes, ema_short)[-1] if len(closes) >= ema_short else closes[-1]
+                        ema_long_value = calculate_ema(closes, ema_long)[-1] if len(closes) >= ema_long else closes[-1]
+                        
+                        # Проверяем, что EMA показывает UP тренд (ema_short > ema_long)
+                        if ema_short_value > ema_long_value:
+                            rsi_zone = 'BUY_ZONE'
+                            if avoid_down_trend and trend == 'DOWN':
+                                signal = 'WAIT'
+                            else:
+                                signal = 'ENTER_LONG'  # ✅ Входим в лонг - EMA показывает UP тренд!
+                        else:
+                            # EMA показывает DOWN тренд - не входим
+                            rsi_zone = 'BUY_ZONE'
+                            signal = 'WAIT'
+                    else:
+                        # EMA периоды недоступны для LONG - используем fallback
                         rsi_zone = 'BUY_ZONE'
-                        # ✅ ИСПРАВЛЕНИЕ: Если тренд еще не рассчитан (None), не блокируем сигнал
                         if avoid_down_trend and trend == 'DOWN':
-                            signal = 'WAIT'  # Ждем улучшения тренда
+                            signal = 'WAIT'
                         else:
-                            signal = 'ENTER_LONG'  # Входим в лонг при восходящем тренде EMA
-                elif ema_short_value < ema_long_value:
-                    # Короткая EMA ниже длинной - нисходящий тренд
-                    if rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71
+                            signal = 'ENTER_LONG'
+                
+                elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71 - потенциальный SHORT
+                    # Используем EMA для SHORT сигналов
+                    if 'short' in ema_periods and ema_periods['short'].get('ema_short_period') and ema_periods['short'].get('ema_long_period'):
+                        ema_short = ema_periods['short']['ema_short_period']
+                        ema_long = ema_periods['short']['ema_long_period']
+                    elif ema_periods.get('ema_short') and ema_periods.get('ema_long'):
+                        # Обратная совместимость со старым форматом
+                        ema_short = ema_periods['ema_short']
+                        ema_long = ema_periods['ema_long']
+                    else:
+                        ema_short = None
+                        ema_long = None
+                    
+                    if ema_short and ema_long:
+                        ema_short_value = calculate_ema(closes, ema_short)[-1] if len(closes) >= ema_short else closes[-1]
+                        ema_long_value = calculate_ema(closes, ema_long)[-1] if len(closes) >= ema_long else closes[-1]
+                        
+                        # Проверяем, что EMA показывает DOWN тренд (ema_short < ema_long)
+                        if ema_short_value < ema_long_value:
+                            rsi_zone = 'SELL_ZONE'
+                            if avoid_up_trend and trend == 'UP':
+                                signal = 'WAIT'
+                            else:
+                                signal = 'ENTER_SHORT'  # ✅ Входим в шорт - EMA показывает DOWN тренд!
+                        else:
+                            # EMA показывает UP тренд - не входим
+                            rsi_zone = 'SELL_ZONE'
+                            signal = 'WAIT'
+                    else:
+                        # EMA периоды недоступны для SHORT - используем fallback
                         rsi_zone = 'SELL_ZONE'
-                        # ✅ ИСПРАВЛЕНИЕ: Если тренд еще не рассчитан (None), не блокируем сигнал
                         if avoid_up_trend and trend == 'UP':
-                            signal = 'WAIT'  # Ждем ослабления тренда
+                            signal = 'WAIT'
                         else:
-                            signal = 'ENTER_SHORT'  # Входим в шорт при нисходящем тренде EMA
-                # Если EMA пересекаются или равны - нейтральная зона
+                            signal = 'ENTER_SHORT'
+                else:
+                    # RSI в нейтральной зоне
+                    pass
             except Exception as e:
                 logger.debug(f"[EMA_SIGNAL] {symbol}: Ошибка расчета EMA сигнала: {e}")
                 # Fallback к старой логике при ошибке
@@ -818,10 +867,30 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             'last_update': datetime.now().isoformat(),
             'trend_analysis': trend_analysis,
             'ema_periods': {
-                'ema_short': ema_periods['ema_short'],
-                'ema_long': ema_periods['ema_long'],
-                'accuracy': ema_periods['accuracy'],
-                'analysis_method': ema_periods['analysis_method']
+                # ✅ НОВЫЙ ФОРМАТ: Отдельные EMA для LONG и SHORT
+                'long': ema_periods.get('long', {
+                    'ema_short_period': ema_periods.get('ema_short', 50),
+                    'ema_long_period': ema_periods.get('ema_long', 200),
+                    'accuracy': ema_periods.get('accuracy', 0)
+                }) if 'long' in ema_periods else {
+                    'ema_short_period': ema_periods.get('ema_short', 50),
+                    'ema_long_period': ema_periods.get('ema_long', 200),
+                    'accuracy': ema_periods.get('accuracy', 0)
+                },
+                'short': ema_periods.get('short', {
+                    'ema_short_period': ema_periods.get('ema_short', 50),
+                    'ema_long_period': ema_periods.get('ema_long', 200),
+                    'accuracy': ema_periods.get('accuracy', 0)
+                }) if 'short' in ema_periods else {
+                    'ema_short_period': ema_periods.get('ema_short', 50),
+                    'ema_long_period': ema_periods.get('ema_long', 200),
+                    'accuracy': ema_periods.get('accuracy', 0)
+                },
+                # Для обратной совместимости
+                'ema_short': ema_periods.get('ema_short', 50),
+                'ema_long': ema_periods.get('ema_long', 200),
+                'accuracy': ema_periods.get('accuracy', 0),
+                'analysis_method': ema_periods.get('analysis_method', 'unknown')
             },
             # ⚡ ОПТИМИЗАЦИЯ: Enhanced RSI, фильтры и флаги ТОЛЬКО если проверялись
             'enhanced_rsi': enhanced_analysis if enhanced_analysis else {'enabled': False},
