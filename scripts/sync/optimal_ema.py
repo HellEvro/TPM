@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Скрипт для поиска оптимальных EMA периодов для определения тренда
-для каждой монеты на основе корреляции с RSI 30/70.
+Скрипт для поиска оптимальных EMA периодов для определения идеальных точек входа
+для каждой монеты на основе реальной прибыльности сигналов.
 
 Логика работы:
-1. Ищет моменты входа RSI в зоны перепроданности (≤30) и перекупленности (≥70)
-2. Проверяет, подтверждается ли соответствующий тренд EMA в течение следующих 5 периодов
-3. Для LONG: RSI ≤30, затем EMA должны показать восходящий тренд
-4. Для SHORT: RSI ≥70, затем EMA должны показать нисходящий тренд
-5. Находит EMA периоды с максимальной точностью таких подтверждений
+1. Ищет моменты входа RSI в зоны перепроданности (≤29) и перекупленности (≥71)
+2. Проверяет качество точки входа (близость к локальному минимуму/максимуму)
+3. Для LONG: RSI ≤29 + восходящий тренд EMA + проверка реальной прибыльности (≥1% за 20 периодов)
+4. Для SHORT: RSI ≥71 + нисходящий тренд EMA + проверка реальной прибыльности (≥1% за 20 периодов)
+5. Учитывает качество точки входа - идеальные точки входа (близко к экстремуму) имеют больший вес
+6. Находит EMA периоды с максимальной точностью и реальной прибыльностью сигналов
 """
 
 import os
@@ -167,7 +168,7 @@ def calculate_ema_numba(prices, period):
 
 @jit(nopython=True)
 def analyze_ema_combination_numba(prices, rsi_values, ema_short_period, ema_long_period):
-    """Анализ EMA трендов с подтверждением RSI"""
+    """Анализ EMA трендов с подтверждением RSI и проверкой реальной прибыльности точек входа"""
     n = len(prices)
     if n < max(ema_short_period, ema_long_period) + 100:
         return 0.0, 0, 0, 0, 0
@@ -183,14 +184,20 @@ def analyze_ema_combination_numba(prices, rsi_values, ema_short_period, ema_long
     if min_length - start_idx < 100:
         return 0.0, 0, 0, 0, 0
     
-    # Счетчики для разных типов сигналов
-    total_long_signals = 0
-    correct_long_signals = 0
-    total_short_signals = 0
-    correct_short_signals = 0
+    # Параметры для проверки прибыльности
+    MIN_PROFIT_PERCENT = 1.0  # Минимальная прибыль 1% для успешного сигнала
+    HOLD_PERIODS = 20  # Период удержания позиции для проверки прибыльности
+    LOOKBACK_FOR_ENTRY_QUALITY = 10  # Период для проверки качества точки входа
     
-    for i in range(start_idx, min_length - 10):
+    # Счетчики для разных типов сигналов (float для поддержки частичных успехов)
+    total_long_signals = 0
+    correct_long_signals = 0.0
+    total_short_signals = 0
+    correct_short_signals = 0.0
+    
+    for i in range(start_idx, min_length - HOLD_PERIODS):
         rsi = rsi_values[i]
+        entry_price = prices[i]
         
         # Проверяем тренды EMA
         if i > start_idx:
@@ -198,35 +205,96 @@ def analyze_ema_combination_numba(prices, rsi_values, ema_short_period, ema_long
             if ema_short[i] > ema_long[i]:
                 # Проверяем RSI на перепроданность для подтверждения
                 if rsi <= 29:  # Строгие условия для перепроданности
+                    # Проверяем качество точки входа - ищем локальный минимум
+                    is_good_entry = True
+                    if i >= LOOKBACK_FOR_ENTRY_QUALITY:
+                        # Проверяем, что текущая цена близка к минимуму в последних N периодах
+                        lookback_start = max(start_idx, i - LOOKBACK_FOR_ENTRY_QUALITY)
+                        min_price_in_lookback = prices[lookback_start]
+                        for j in range(lookback_start, i):
+                            if prices[j] < min_price_in_lookback:
+                                min_price_in_lookback = prices[j]
+                        
+                        # Если текущая цена значительно выше минимума (>2%), точка входа не идеальна
+                        if entry_price > min_price_in_lookback * 1.02:
+                            is_good_entry = False
+                    
                     total_long_signals += 1
                     
-                    # Проверяем успешность в следующих 10 периодах
+                    # Проверяем реальную прибыльность в следующих периодах
                     success = False
-                    for j in range(1, 11):
-                        if i + j < min_length:
-                            if ema_short[i + j] > ema_long[i + j]:
-                                success = True
-                                break
+                    max_profit = 0.0
                     
-                    if success:
+                    # Проверяем прибыльность в течение HOLD_PERIODS периодов
+                    for j in range(1, HOLD_PERIODS + 1):
+                        if i + j < min_length:
+                            exit_price = prices[i + j]
+                            profit_percent = ((exit_price - entry_price) / entry_price) * 100.0
+                            
+                            if profit_percent > max_profit:
+                                max_profit = profit_percent
+                            
+                            # Сигнал успешен, если достигнута минимальная прибыль
+                            if profit_percent >= MIN_PROFIT_PERCENT:
+                                success = True
+                                # Дополнительно проверяем, что тренд сохранился
+                                if ema_short[i + j] > ema_long[i + j]:
+                                    break
+                    
+                    # Учитываем качество точки входа в оценку успешности
+                    if success and is_good_entry:
                         correct_long_signals += 1
+                    elif success and not is_good_entry:
+                        # Сигнал прибыльный, но точка входа не идеальна - считаем частично успешным
+                        # (учитываем с меньшим весом, но все же учитываем)
+                        correct_long_signals += 0.5
             
             # Нисходящий тренд EMA (короткая ниже длинной)
             elif ema_short[i] < ema_long[i]:
                 # Проверяем RSI на перекупленность для подтверждения
                 if rsi >= 71:  # Строгие условия для перекупленности
+                    # Проверяем качество точки входа - ищем локальный максимум
+                    is_good_entry = True
+                    if i >= LOOKBACK_FOR_ENTRY_QUALITY:
+                        # Проверяем, что текущая цена близка к максимуму в последних N периодах
+                        lookback_start = max(start_idx, i - LOOKBACK_FOR_ENTRY_QUALITY)
+                        max_price_in_lookback = prices[lookback_start]
+                        for j in range(lookback_start, i):
+                            if prices[j] > max_price_in_lookback:
+                                max_price_in_lookback = prices[j]
+                        
+                        # Если текущая цена значительно ниже максимума (<98%), точка входа не идеальна
+                        if entry_price < max_price_in_lookback * 0.98:
+                            is_good_entry = False
+                    
                     total_short_signals += 1
                     
-                    # Проверяем успешность в следующих 10 периодах
+                    # Проверяем реальную прибыльность в следующих периодах
                     success = False
-                    for j in range(1, 11):
-                        if i + j < min_length:
-                            if ema_short[i + j] < ema_long[i + j]:
-                                success = True
-                                break
+                    max_profit = 0.0
                     
-                    if success:
+                    # Проверяем прибыльность в течение HOLD_PERIODS периодов
+                    for j in range(1, HOLD_PERIODS + 1):
+                        if i + j < min_length:
+                            exit_price = prices[i + j]
+                            profit_percent = ((entry_price - exit_price) / entry_price) * 100.0
+                            
+                            if profit_percent > max_profit:
+                                max_profit = profit_percent
+                            
+                            # Сигнал успешен, если достигнута минимальная прибыль
+                            if profit_percent >= MIN_PROFIT_PERCENT:
+                                success = True
+                                # Дополнительно проверяем, что тренд сохранился
+                                if ema_short[i + j] < ema_long[i + j]:
+                                    break
+                    
+                    # Учитываем качество точки входа в оценку успешности
+                    if success and is_good_entry:
                         correct_short_signals += 1
+                    elif success and not is_good_entry:
+                        # Сигнал прибыльный, но точка входа не идеальна - считаем частично успешным
+                        correct_short_signals += 0.5
     
     total_signals = total_long_signals + total_short_signals
     correct_signals = correct_long_signals + correct_short_signals
