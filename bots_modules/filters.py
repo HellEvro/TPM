@@ -563,38 +563,32 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             try:
                 # Определяем сигнал только на основе RSI
                 if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 - потенциальный LONG
-                    # ✅ УБРАЛИ ФИЛЬТР EMA: Входим по RSI, проверяем только тренд 6h
+                    # ✅ ЧИСТЫЙ СИГНАЛ RSI: Входим сразу, без проверки тренда
+                    # Защита от "падающего ножа" уже есть:
+                    # - Временной фильтр RSI (блокирует если oversold слишком долго)
+                    # - Pump-Dump фильтр (определяет искусственные движения)
+                    # - ExitScam фильтр (защита от скама)
+                    # - AI фильтр (дополнительный анализ)
+                    # - Стоп-лосс 15% (ограничивает убытки)
                     rsi_zone = 'BUY_ZONE'
-                    if avoid_down_trend and trend == 'DOWN':
-                        signal = 'WAIT'  # Не входим против сильного DOWN тренда 6h
-                    else:
-                        signal = 'ENTER_LONG'  # ✅ Входим в лонг по сигналу RSI
+                    signal = 'ENTER_LONG'  # ✅ Входим в лонг по сигналу RSI
                 
                 elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71 - потенциальный SHORT
-                    # ✅ УБРАЛИ ФИЛЬТР EMA: Входим по RSI, проверяем только тренд 6h
+                    # ✅ ЧИСТЫЙ СИГНАЛ RSI: Входим сразу, без проверки тренда
                     rsi_zone = 'SELL_ZONE'
-                    if avoid_up_trend and trend == 'UP':
-                        signal = 'WAIT'  # Не входим против сильного UP тренда 6h
-                    else:
-                        signal = 'ENTER_SHORT'  # ✅ Входим в шорт по сигналу RSI
+                    signal = 'ENTER_SHORT'  # ✅ Входим в шорт по сигналу RSI
                 else:
                     # RSI в нейтральной зоне
                     pass
             except Exception as e:
-                logger.debug(f"[EMA_SIGNAL] {symbol}: Ошибка расчета EMA сигнала: {e}")
-                # Fallback к старой логике при ошибке
+                logger.debug(f"[RSI_SIGNAL] {symbol}: Ошибка определения RSI сигнала: {e}")
+                # Fallback к базовой логике при ошибке
                 if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
                     rsi_zone = 'BUY_ZONE'
-                    if avoid_down_trend and trend == 'DOWN':
-                        signal = 'WAIT'
-                    else:
-                        signal = 'ENTER_LONG'
+                    signal = 'ENTER_LONG'
                 elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71
                     rsi_zone = 'SELL_ZONE'
-                    if avoid_up_trend and trend == 'UP':
-                        signal = 'WAIT'
-                    else:
-                        signal = 'ENTER_SHORT'
+                    signal = 'ENTER_SHORT'
         else:
             # Fallback к старой логике если EMA периоды недоступны
             if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
