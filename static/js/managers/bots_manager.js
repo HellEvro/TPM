@@ -1423,7 +1423,7 @@ class BotsManager {
         // ✅ НОВЫЙ ФОРМАТ: Отдельные EMA для LONG и SHORT
         const emaLongElement = document.getElementById('selectedCoinEMALong');
         const emaShortElement = document.getElementById('selectedCoinEMAShort');
-        const emaElement = document.getElementById('selectedCoinEMA');
+        // emaElement уже объявлен выше на строке 1369
         
         if (emaLongElement && emaShortElement && emaElement) {
             // Новый формат с отдельными элементами
