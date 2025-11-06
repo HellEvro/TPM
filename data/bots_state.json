@@ -18,13 +18,13 @@
       "scaling_group_id": null,
       "rsi_data": {
         "symbol": "ZORA",
-        "rsi6h": 35.1,
+        "rsi6h": 35.3,
         "trend6h": "DOWN",
         "rsi_zone": "NEUTRAL",
         "signal": "WAIT",
-        "price": 0.059643,
-        "change24h": -10.22,
-        "last_update": "2025-11-07T00:38:37.094279",
+        "price": 0.059727,
+        "change24h": -10.09,
+        "last_update": "2025-11-07T00:39:41.329579",
         "trend_analysis": {
           "trend": "DOWN",
           "ema_short": 0.07202237629715777,
@@ -69,11 +69,11 @@
           "confirmations": {
             "volume": false,
             "divergence": false,
-            "stoch_rsi_k": 55.34709032338415,
-            "stoch_rsi_d": 61.83784600898401
+            "stoch_rsi_k": 55.506492586391744,
+            "stoch_rsi_d": 61.89098009665321
           },
           "enhanced_signal": "WAIT",
-          "enhanced_reason": "enhanced_neutral_35.2"
+          "enhanced_reason": "enhanced_neutral_35.3"
         },
         "time_filter_info": {
           "blocked": false,
@@ -91,32 +91,32 @@
         "trading_status": "Trading",
         "is_delisting": false
       },
-      "unrealized_pnl": -0.5876,
+      "unrealized_pnl": -0.5856,
       "position_side": "LONG",
       "stop_loss": "0.040512",
       "take_profit": "0.134974",
-      "current_price": "0.059704",
+      "current_price": "0.059729",
       "exchange_position": {
         "size": 80.0,
         "side": "Long",
-        "unrealized_pnl": -0.5876,
-        "mark_price": 0.059704,
+        "unrealized_pnl": -0.58576,
+        "mark_price": 0.059727,
         "entry_price": 0.067049,
         "leverage": 1,
         "stop_loss": "0.040512",
         "take_profit": "0.134974",
-        "roi": -10.954674939223551
+        "roi": -10.920371668481259
       },
       "position_size": 5,
       "position_size_coins": 80.0,
-      "mark_price": 0.059703,
-      "unrealized_pnl_usdt": -0.5876,
-      "roi": -10.954674939223551,
+      "mark_price": 0.05972,
+      "unrealized_pnl_usdt": -0.58576,
+      "roi": -10.920371668481259,
       "take_profit_price": null,
-      "last_update": "2025-11-07T00:38:42.101947",
+      "last_update": "2025-11-07T00:40:19.733764",
       "stop_loss_price": 0.040512,
       "trailing_stop_price": 0.0,
-      "work_time": "17м 6с",
+      "work_time": "18м 45с",
       "bot_status": "Активен"
     },
     "BNB": {
@@ -137,21 +137,21 @@
       "scaling_group_id": null,
       "rsi_data": {
         "symbol": "BNB",
-        "rsi6h": 33.4,
+        "rsi6h": 33.5,
         "trend6h": "DOWN",
         "rsi_zone": "NEUTRAL",
         "signal": "WAIT",
-        "price": 950.3,
-        "change24h": -0.87,
-        "last_update": "2025-11-07T00:38:28.323923",
+        "price": 950.5,
+        "change24h": -0.84,
+        "last_update": "2025-11-07T00:39:31.997189",
         "trend_analysis": {
           "trend": "DOWN",
-          "ema_short": 1038.192285995935,
-          "ema_long": 1057.5336190939115,
+          "ema_short": 1038.1883644273075,
+          "ema_long": 1057.532624069036,
           "ema_short_period": 50,
           "ema_long_period": 200,
-          "ema_long_slope": -1.0777248150141077,
-          "current_close": 950.3,
+          "ema_long_slope": -1.0787198398895725,
+          "current_close": 950.2,
           "confirmations": 3,
           "min_confirmations": 2,
           "accuracy": 0
@@ -192,7 +192,7 @@
             "stoch_rsi_d": 80.906875171864
           },
           "enhanced_signal": "WAIT",
-          "enhanced_reason": "enhanced_neutral_33.4"
+          "enhanced_reason": "enhanced_neutral_33.5"
         },
         "time_filter_info": {
           "blocked": false,
@@ -214,32 +214,32 @@
         "trading_status": "Trading",
         "is_delisting": false
       },
-      "unrealized_pnl": 1.628,
+      "unrealized_pnl": 1.5155,
       "position_side": "LONG",
       "stop_loss": "829.7",
       "take_profit": "1072.1",
-      "current_price": "950.6",
+      "current_price": "950.15",
       "exchange_position": {
         "size": 0.25,
         "side": "Long",
-        "unrealized_pnl": 1.628,
-        "mark_price": 950.6,
+        "unrealized_pnl": 1.5155,
+        "mark_price": 950.15,
         "entry_price": 944.088,
         "leverage": 1,
         "stop_loss": "829.7",
         "take_profit": "1072.1",
-        "roi": 0.6897662082348256
+        "roi": 0.6421011600613502
       },
       "position_size": 5,
       "position_size_coins": 0.25,
-      "mark_price": 950.6,
-      "unrealized_pnl_usdt": 1.628,
-      "roi": 0.6897662082348256,
+      "mark_price": 950.1,
+      "unrealized_pnl_usdt": 1.5155,
+      "roi": 0.6421011600613502,
       "take_profit_price": null,
-      "last_update": "2025-11-07T00:38:42.392078",
+      "last_update": "2025-11-07T00:40:20.026176",
       "stop_loss_price": 829.7,
       "trailing_stop_price": 0.0,
-      "work_time": "17м 6с",
+      "work_time": "18м 45с",
       "bot_status": "Активен"
     },
     "SOSO": {
@@ -260,21 +260,21 @@
       "scaling_group_id": null,
       "rsi_data": {
         "symbol": "SOSO",
-        "rsi6h": 28.4,
+        "rsi6h": 28.3,
         "trend6h": "NEUTRAL",
         "rsi_zone": "BUY_ZONE",
         "signal": "ENTER_LONG",
-        "price": 0.6809,
-        "change24h": -2.09,
-        "last_update": "2025-11-07T00:38:35.068983",
+        "price": 0.6808,
+        "change24h": -2.1,
+        "last_update": "2025-11-07T00:39:39.416346",
         "trend_analysis": {
           "trend": "NEUTRAL",
-          "ema_short": 0.7522451389395003,
-          "ema_long": 0.7351819577641678,
+          "ema_short": 0.7522372958022454,
+          "ema_long": 0.7351799677144166,
           "ema_short_period": 50,
           "ema_long_period": 200,
-          "ema_long_slope": -0.0005455473142127465,
-          "current_close": 0.6809,
+          "ema_long_slope": -0.0005475373639639569,
+          "current_close": 0.6807,
           "confirmations": 3,
           "min_confirmations": 2,
           "accuracy": 0
@@ -311,11 +311,11 @@
           "confirmations": {
             "volume": false,
             "divergence": false,
-            "stoch_rsi_k": 29.57800739420813,
-            "stoch_rsi_d": 24.072426124330857
+            "stoch_rsi_k": 29.451588567211612,
+            "stoch_rsi_d": 24.030286515332012
           },
           "enhanced_signal": "ENTER_LONG",
-          "enhanced_reason": "fresh_oversold_28.4_base_oversold"
+          "enhanced_reason": "fresh_oversold_28.3_base_oversold"
         },
         "time_filter_info": {
           "blocked": false,
@@ -337,32 +337,32 @@
         "trading_status": "Trading",
         "is_delisting": false
       },
-      "unrealized_pnl": -0.0552,
+      "unrealized_pnl": -0.0568,
       "position_side": "LONG",
       "stop_loss": "0.5836",
       "take_profit": "0.824",
-      "current_price": "0.6807",
+      "current_price": "0.6805",
       "exchange_position": {
         "size": 8.0,
         "side": "Long",
-        "unrealized_pnl": -0.0552,
-        "mark_price": 0.6807,
+        "unrealized_pnl": -0.056,
+        "mark_price": 0.6806,
         "entry_price": 0.6876,
         "leverage": 1,
         "stop_loss": "0.5836",
         "take_profit": "0.824",
-        "roi": -1.0034904013961605
+        "roi": -1.0180337405468296
       },
       "position_size": 5,
       "position_size_coins": 8.0,
-      "mark_price": 0.6809,
-      "unrealized_pnl_usdt": -0.0552,
-      "roi": -1.0034904013961605,
+      "mark_price": 0.6807,
+      "unrealized_pnl_usdt": -0.056,
+      "roi": -1.0180337405468296,
       "take_profit_price": null,
-      "last_update": "2025-11-07T00:38:42.684690",
+      "last_update": "2025-11-07T00:40:20.319416",
       "stop_loss_price": 0.5836,
       "trailing_stop_price": 0.0,
-      "work_time": "17м 6с",
+      "work_time": "18м 45с",
       "bot_status": "Активен"
     },
     "MEW": {
@@ -386,18 +386,18 @@
         "rsi6h": 28.2,
         "trend6h": "DOWN",
         "rsi_zone": "BUY_ZONE",
-        "signal": "ENTER_LONG",
-        "price": 0.001437,
-        "change24h": -2.91,
-        "last_update": "2025-11-07T00:38:32.659323",
+        "signal": "WAIT",
+        "price": 0.001436,
+        "change24h": -2.97,
+        "last_update": "2025-11-07T00:39:36.868179",
         "trend_analysis": {
           "trend": "DOWN",
-          "ema_short": 0.0016855296257404897,
-          "ema_long": 0.0021575820185253717,
+          "ema_short": 0.0016854904100542152,
+          "ema_long": 0.0021575720682766152,
           "ema_short_period": 50,
           "ema_long_period": 200,
-          "ema_long_slope": -7.242030336938009e-06,
-          "current_close": 0.001437,
+          "ema_long_slope": -7.25198058569446e-06,
+          "current_close": 0.001436,
           "confirmations": 3,
           "min_confirmations": 2,
           "accuracy": 0
@@ -434,8 +434,8 @@
           "confirmations": {
             "volume": false,
             "divergence": false,
-            "stoch_rsi_k": 69.0105078172424,
-            "stoch_rsi_d": 59.017630560759336
+            "stoch_rsi_k": 68.72060363789006,
+            "stoch_rsi_d": 58.92099583430856
           },
           "enhanced_signal": "ENTER_LONG",
           "enhanced_reason": "fresh_oversold_28.2_base_oversold"
@@ -460,32 +460,32 @@
         "trading_status": "Trading",
         "is_delisting": false
       },
-      "unrealized_pnl": 0.0648,
+      "unrealized_pnl": 0.0612,
       "position_side": "LONG",
       "stop_loss": "0.001204",
       "take_profit": "0.0017",
-      "current_price": "0.001437",
+      "current_price": "0.001436",
       "exchange_position": {
         "size": 3600.0,
         "side": "Long",
-        "unrealized_pnl": 0.0648,
-        "mark_price": 0.001437,
+        "unrealized_pnl": 0.0612,
+        "mark_price": 0.001436,
         "entry_price": 0.001419,
         "leverage": 1,
         "stop_loss": "0.001204",
         "take_profit": "0.0017",
-        "roi": 1.2684989429175475
+        "roi": 1.1980267794221284
       },
       "position_size": 5,
       "position_size_coins": 3600.0,
-      "mark_price": 0.001437,
-      "unrealized_pnl_usdt": 0.0648,
-      "roi": 1.2684989429175475,
+      "mark_price": 0.001436,
+      "unrealized_pnl_usdt": 0.0612,
+      "roi": 1.1980267794221284,
       "take_profit_price": null,
-      "last_update": "2025-11-07T00:38:42.976707",
+      "last_update": "2025-11-07T00:40:20.958907",
       "stop_loss_price": 0.001204,
       "trailing_stop_price": 0.0,
-      "work_time": "17м 6с",
+      "work_time": "18м 45с",
       "bot_status": "Активен"
     },
     "PYR": {
@@ -512,7 +512,7 @@
         "signal": "WAIT",
         "price": 0.4995,
         "change24h": -3.46,
-        "last_update": "2025-11-07T00:38:33.390839",
+        "last_update": "2025-11-07T00:39:37.910225",
         "trend_analysis": {
           "trend": "DOWN",
           "ema_short": 0.587138994385546,
@@ -583,32 +583,32 @@
         "trading_status": "Trading",
         "is_delisting": false
       },
-      "unrealized_pnl": 0.1463,
+      "unrealized_pnl": 0.1441,
       "position_side": "LONG",
       "stop_loss": "0.4136",
       "take_profit": "0.5839",
-      "current_price": "0.4998",
+      "current_price": "0.4996",
       "exchange_position": {
         "size": 11.0,
         "side": "Long",
-        "unrealized_pnl": 0.1463,
-        "mark_price": 0.4998,
+        "unrealized_pnl": 0.1441,
+        "mark_price": 0.4996,
         "entry_price": 0.4865,
         "leverage": 1,
         "stop_loss": "0.4136",
         "take_profit": "0.5839",
-        "roi": 2.7338129496402885
+        "roi": 2.692702980472765
       },
       "position_size": 5,
       "position_size_coins": 11.0,
-      "mark_price": 0.4995,
-      "unrealized_pnl_usdt": 0.1463,
-      "roi": 2.7338129496402885,
+      "mark_price": 0.4994,
+      "unrealized_pnl_usdt": 0.1441,
+      "roi": 2.692702980472765,
       "take_profit_price": null,
-      "last_update": "2025-11-07T00:38:43.267852",
+      "last_update": "2025-11-07T00:40:21.252160",
       "stop_loss_price": 0.4136,
       "trailing_stop_price": 0.0,
-      "work_time": "17м 6с",
+      "work_time": "18м 45с",
       "bot_status": "Активен"
     }
   },
@@ -656,8 +656,8 @@
     "filtered_coins": [
       "SOSO"
     ],
-    "last_filter_update": "2025-11-07T00:38:00.797582"
+    "last_filter_update": "2025-11-07T00:40:09.176946"
   },
-  "last_saved": "2025-11-07T00:38:43.654037",
+  "last_saved": "2025-11-07T00:40:25.091460",
   "version": "1.0"
 }

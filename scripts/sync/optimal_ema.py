@@ -83,15 +83,25 @@ python optimal_ema.py --coin BTCUSDT --timeframe 1h
 3. ✅ ПРАВИЛЬНАЯ ЛОГИКА: Ищем моменты когда RSI входит в зону (значения из 
    конфига: RSI_OVERSOLD и RSI_OVERBOUGHT)
 
-4. Для LONG: Ищем моменты когда RSI <= RSI_OVERSOLD, проверяем что EMA УЖЕ 
-   перекрестились (ema_short > ema_long) в этот момент ИЛИ перекрестятся в 
-   ближайшие 1-2 свечи
+4. Для LONG: Ищем моменты когда RSI <= RSI_OVERSOLD, проверяем ПРИЗНАКИ РАЗВОРОТА:
+   - EMA уже перекрестились (ema_short > ema_long) ИЛИ
+   - Короткая EMA начинает расти ИЛИ
+   - EMA сближаются (признак возможного разворота) ИЛИ
+   - Цена уже выше длинной EMA
+   ✅ НОВЫЙ ПОДХОД: Не ждем пересечения - ищем признаки разворота (как в реальной торговле)!
 
-5. Для SHORT: Ищем моменты когда RSI >= RSI_OVERBOUGHT, проверяем что EMA УЖЕ 
-   перекрестились (ema_short < ema_long) в этот момент ИЛИ перекрестятся в 
-   ближайшие 1-2 свечи
+5. Для SHORT: Ищем моменты когда RSI >= RSI_OVERBOUGHT, проверяем ПРИЗНАКИ РАЗВОРОТА:
+   - EMA уже перекрестились (ema_short < ema_long) ИЛИ
+   - Короткая EMA начинает падать ИЛИ
+   - EMA сближаются (признак возможного разворота) ИЛИ
+   - Цена уже ниже длинной EMA
+   ✅ НОВЫЙ ПОДХОД: Не ждем пересечения - ищем признаки разворота (как в реальной торговле)!
 
-6. Проверяем реальную прибыльность сигналов (≥1% за 20 периодов)
+6. ✅ ПРОВЕРКА УСПЕШНОСТИ: Проверяем достиг ли сигнал RSI выхода из позиции
+   - Для LONG: сигнал успешен, если после входа (RSI <= RSI_OVERSOLD) RSI достиг уровня выхода RSI >= RSI_EXIT_LONG
+   - Для SHORT: сигнал успешен, если после входа (RSI >= RSI_OVERBOUGHT) RSI достиг уровня выхода RSI <= RSI_EXIT_SHORT
+   - ТОЧНОСТЬ = процент сигналов, которые достигли RSI выхода из позиции
+   - ВСЕ значения берутся из конфига: RSI_OVERSOLD, RSI_OVERBOUGHT, RSI_EXIT_LONG, RSI_EXIT_SHORT
 
 7. ✅ СТРОГИЙ ОТБОР: Выбираем EMA с максимальной точностью И достаточным 
    количеством сигналов (минимум 5)
@@ -120,9 +130,9 @@ python optimal_ema.py --coin BTCUSDT --timeframe 1h
    - Минимум: 50 свечей (для EMA с периодами 10-20)
    - Формула: max_period + 100 свечей (где max_period - максимальный период EMA)
    - Запас 100 свечей включает:
-     * 20 периодов для проверки прибыльности (HOLD_PERIODS)
+     * Проверку достижения RSI выхода из позиции (RSI_EXIT_LONG/SHORT из конфига)
      * 2 периода для проверки будущих свечей (max_future_candles)
-     * ~78 периодов для стабилизации EMA и надежности анализа
+     * ~98 периодов для стабилизации EMA и надежности анализа
 
 ✅ ИСПРАВЛЕН ПОИСК В КЭШЕ:
    - Теперь проверяются все варианты ключей: "0G", "0GUSDT", "0GUSDT" (верхний/нижний регистр)
@@ -263,23 +273,28 @@ logger = setup_logging()
 # Константы
 OPTIMAL_EMA_BASE_FILE = 'data/optimal_ema'  # Базовое имя файла
 # ✅ РАСШИРЕННЫЕ ДИАПАЗОНЫ: Перебираем все возможные комбинации для точного анализа
-EMA_SHORT_RANGE = (3, 300)  # Короткая EMA - расширенный диапазон
-EMA_LONG_RANGE = (10, 600)  # Длинная EMA - расширенный диапазон
+EMA_SHORT_RANGE = (5, 100)  # Короткая EMA - диапазон от 5 до 100 (расширен для поиска оптимальных комбинаций)
+EMA_LONG_RANGE = (50, 300)  # Длинная EMA - диапазон от 50 до 300 (расширен для поиска оптимальных комбинаций)
 
 # ✅ Импортируем значения RSI из конфига
 try:
     from bot_engine.bot_config import SystemConfig
     RSI_OVERSOLD = SystemConfig.RSI_OVERSOLD  # Зона покупки (LONG)
     RSI_OVERBOUGHT = SystemConfig.RSI_OVERBOUGHT  # Зона продажи (SHORT)
+    RSI_EXIT_LONG = SystemConfig.RSI_EXIT_LONG  # Выход из лонга (при RSI >= 65)
+    RSI_EXIT_SHORT = SystemConfig.RSI_EXIT_SHORT  # Выход из шорта (при RSI <= 35)
 except ImportError:
-    # Fallback значения, если конфиг недоступен
+    # Fallback значения, если конфиг недоступен (только для отладки!)
+    logger.warning("⚠️ Конфиг недоступен! Используются fallback значения. Убедитесь, что конфиг доступен!")
     RSI_OVERSOLD = 29
     RSI_OVERBOUGHT = 71
+    RSI_EXIT_LONG = 65  # Выход из лонга
+    RSI_EXIT_SHORT = 35  # Выход из шорта
 # Используем multiprocessing с безопасной инициализацией
 MAX_WORKERS = mp.cpu_count()
 # ✅ ДИНАМИЧЕСКИЙ МИНИМУМ: Рассчитывается на основе максимального периода EMA
-# Максимальный период длинной EMA (600) + запас для анализа сигналов (150) = 750
-MIN_CANDLES_FOR_ANALYSIS = EMA_LONG_RANGE[1] + 150  # 600 + 150 = 750 свечей
+# Максимальный период длинной EMA (300) + запас для анализа сигналов (150) = 450
+MIN_CANDLES_FOR_ANALYSIS = EMA_LONG_RANGE[1] + 150  # 300 + 150 = 450 свечей
 # Максимальное количество свечей для запроса через API (если кэш недоступен)
 # Примечание: Скрипт сначала проверяет кэш в памяти и файле, API используется только при необходимости
 MAX_CANDLES_TO_REQUEST = 10000  # Увеличено с 5000 до 10000 для большего охвата истории
@@ -352,23 +367,32 @@ def calculate_ema_numba(prices, period):
     return ema
 
 @jit(nopython=True)
-def analyze_ema_combination_long_numba(prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, max_future_candles):
+def analyze_ema_combination_long_numba(prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, rsi_exit_long, max_future_candles):
     """
     Анализ для LONG сигналов: ищем моменты когда RSI входит в зону покупки,
-    проверяем что EMA УЖЕ перекрестились или перекрестятся в ближайшие 1-2 свечи.
+    проверяем что EMA перекрестятся в течение следующих 15-20 свечей (не обязательно сразу).
+    
+    ЦЕЛЬ: Найти EMA, которые дают МАКСИМАЛЬНОЕ количество входов в лонг при RSI <= RSI_OVERSOLD
+    и EMA перекрестятся в ближайшем будущем (ema_short > ema_long в течение max_future_candles свечей).
+    
+    Returns:
+        accuracy: ТОЧНОСТЬ = процент сигналов, которые достигли RSI >= RSI_EXIT_LONG (выход из LONG)
+        total_signals: КОЛИЧЕСТВО СИГНАЛОВ = количество моментов когда RSI <= RSI_OVERSOLD И EMA показывает UPTREND
+        correct_signals: КОЛИЧЕСТВО УСПЕШНЫХ СИГНАЛОВ = сколько из total_signals достигли RSI >= RSI_EXIT_LONG
     
     Args:
         prices: Массив цен закрытия
         rsi_values: Массив значений RSI
         ema_short_period: Период короткой EMA
         ema_long_period: Период длинной EMA
-        rsi_oversold: Значение RSI для зоны покупки (из конфига)
+        rsi_oversold: Значение RSI для зоны покупки (из конфига SystemConfig.RSI_OVERSOLD)
+        rsi_exit_long: Значение RSI для выхода из LONG (из конфига SystemConfig.RSI_EXIT_LONG)
         max_future_candles: Максимальное количество свечей в будущем для проверки (1-2)
     """
     n = len(prices)
     # ✅ МИНИМАЛЬНЫЕ ТРЕБОВАНИЯ: max_period + запас для анализа
-    # Запас = HOLD_PERIODS (20) + max_future_candles (2) + запас для стабилизации (10) = 32
-    # Но оставляем 100 для надежности анализа (больше данных = лучше результаты)
+    # Запас = проверка RSI выхода + max_future_candles (2) + запас для стабилизации
+    # Оставляем 100 для надежности анализа (больше данных = лучше результаты)
     min_required = max(ema_short_period, ema_long_period) + 100
     if n < min_required:
         return 0.0, 0, 0
@@ -384,72 +408,111 @@ def analyze_ema_combination_long_numba(prices, rsi_values, ema_short_period, ema
     if min_length - start_idx < 100:
         return 0.0, 0, 0
     
-    # Параметры для проверки прибыльности
-    MIN_PROFIT_PERCENT = 1.0
-    HOLD_PERIODS = 20
-    
     total_signals = 0
     correct_signals = 0.0
     
-    # ✅ ПРАВИЛЬНАЯ ЛОГИКА: Ищем моменты когда RSI входит в зону покупки
-    # EMA должны УЖЕ перекреститься в этот момент ИЛИ перекреститься в ближайшие 1-2 свечи
-    for i in range(start_idx, min_length - HOLD_PERIODS - max_future_candles):
+    # ✅ ЦЕЛЬ: Найти МАКСИМАЛЬНОЕ количество входов в лонг
+    # Условия для сигнала LONG:
+    # 1. RSI <= RSI_OVERSOLD (из конфига, например 29) - зона покупки
+    # 2. EMA перекрестятся в течение следующих max_future_candles свечей (ema_short > ema_long)
+    # ✅ ВАЖНО: Не требуем немедленного пересечения - даем EMA время на разворот!
+    
+    for i in range(start_idx, min_length - max_future_candles):
         rsi = rsi_values[i]
         entry_price = prices[i]
         
-        # Ищем моменты когда RSI входит в зону покупки (используем значение из конфига)
+        # ✅ УСЛОВИЕ 1: RSI входит в зону покупки (используем значение из конфига)
         if rsi <= rsi_oversold:
-            # ✅ КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Проверяем, что EMA УЖЕ перекрестились ИЛИ перекрестятся в ближайшие 1-2 свечи
+            # ✅ УСЛОВИЕ 2: Проверяем признаки разворота вверх (как в реальной торговле)
+            # ✅ НОВЫЙ ПОДХОД: Не ждем пересечения EMA, ищем признаки разворота!
             ema_shows_up_trend = False
             
-            # Проверяем текущий момент (i) и ближайшие 1-2 свечи (i+1, i+2)
+            # 1. Проверяем, что EMA уже перекрестились (текущий момент или будущие свечи)
             for check_idx in range(i, min(i + max_future_candles + 1, min_length)):
                 if ema_short[check_idx] > ema_long[check_idx]:
                     ema_shows_up_trend = True
                     break
             
-            # Если EMA перекрестились в момент входа RSI в зону или в ближайшие свечи - это хороший сигнал
-            if ema_shows_up_trend:
-                total_signals += 1
+            # 2. Если EMA еще не перекрестились, проверяем ПРИЗНАКИ РАЗВОРОТА:
+            if not ema_shows_up_trend and i > 0:
+                # Проверяем наклон короткой EMA (растет ли она)
+                ema_short_slope = ema_short[i] - ema_short[i-1] if i > 0 else 0
                 
-                # Проверяем реальную прибыльность
+                # Проверяем сближение EMA (сближаются ли они)
+                ema_distance = abs(ema_short[i] - ema_long[i])
+                prev_ema_distance = abs(ema_short[i-1] - ema_long[i-1]) if i > 0 else ema_distance
+                ema_converging = prev_ema_distance > 0 and ema_distance < prev_ema_distance * 0.95  # Сближаются на 5%+
+                
+                # Проверяем, что цена уже выше длинной EMA (даже если EMA еще не пересеклись)
+                price_above_ema_long = prices[i] > ema_long[i]
+                
+                # ✅ Признаки разворота: короткая EMA растет ИЛИ EMA сближаются ИЛИ цена выше длинной EMA
+                signs_of_reversal = (
+                    ema_short_slope > 0 or  # Короткая EMA начинает расти
+                    ema_converging or  # EMA сближаются
+                    price_above_ema_long  # Цена уже выше длинной EMA
+                )
+                
+                if signs_of_reversal:
+                    ema_shows_up_trend = True
+            
+            # ✅ НАЙДЕН СИГНАЛ: RSI в зоне покупки И EMA показывает UPTREND
+            if ema_shows_up_trend:
+                total_signals += 1  # Увеличиваем счетчик входов в лонг
+                
+                # ✅ ПРОВЕРКА УСПЕШНОСТИ: Проверяем достиг ли сигнал RSI >= RSI_EXIT_LONG
+                # Сигнал успешен, если после входа (RSI <= RSI_OVERSOLD) RSI достиг уровня выхода RSI >= RSI_EXIT_LONG
                 success = False
-                for j in range(1, HOLD_PERIODS + 1):
+                
+                # ✅ Ограничиваем проверку разумным периодом (200 свечей) для производительности
+                max_check_periods = min(200, min_length - i - 1)
+                
+                for j in range(1, max_check_periods + 1):
                     if i + j < min_length:
-                        exit_price = prices[i + j]
-                        profit_percent = ((exit_price - entry_price) / entry_price) * 100.0
+                        future_rsi = rsi_values[i + j]
                         
-                        if profit_percent >= MIN_PROFIT_PERCENT:
+                        # ✅ ПРОВЕРКА RSI ВЫХОДА: Если RSI достиг уровня выхода - сигнал успешен
+                        if future_rsi >= rsi_exit_long:
                             success = True
                             break
                 
                 if success:
-                    correct_signals += 1.0
+                    correct_signals += 1.0  # Увеличиваем счетчик успешных сигналов
     
     if total_signals == 0:
         return 0.0, 0, 0
     
+    # ✅ ТОЧНОСТЬ = процент сигналов, которые достигли RSI >= RSI_EXIT_LONG (выход из LONG)
     accuracy = (correct_signals / total_signals) * 100
     return accuracy, total_signals, correct_signals
 
 @jit(nopython=True)
-def analyze_ema_combination_short_numba(prices, rsi_values, ema_short_period, ema_long_period, rsi_overbought, max_future_candles):
+def analyze_ema_combination_short_numba(prices, rsi_values, ema_short_period, ema_long_period, rsi_overbought, rsi_exit_short, max_future_candles):
     """
     Анализ для SHORT сигналов: ищем моменты когда RSI входит в зону продажи,
     проверяем что EMA УЖЕ перекрестились или перекрестятся в ближайшие 1-2 свечи.
+    
+    ЦЕЛЬ: Найти EMA, которые дают МАКСИМАЛЬНОЕ количество входов в шорт при RSI >= RSI_OVERBOUGHT
+    и EMA показывает DOWNTREND (ema_short < ema_long).
+    
+    Returns:
+        accuracy: ТОЧНОСТЬ = процент сигналов, которые достигли RSI <= RSI_EXIT_SHORT (выход из SHORT)
+        total_signals: КОЛИЧЕСТВО СИГНАЛОВ = количество моментов когда RSI >= RSI_OVERBOUGHT И EMA показывает DOWNTREND
+        correct_signals: КОЛИЧЕСТВО УСПЕШНЫХ СИГНАЛОВ = сколько из total_signals достигли RSI <= RSI_EXIT_SHORT
     
     Args:
         prices: Массив цен закрытия
         rsi_values: Массив значений RSI
         ema_short_period: Период короткой EMA
         ema_long_period: Период длинной EMA
-        rsi_overbought: Значение RSI для зоны продажи (из конфига)
+        rsi_overbought: Значение RSI для зоны продажи (из конфига SystemConfig.RSI_OVERBOUGHT)
+        rsi_exit_short: Значение RSI для выхода из SHORT (из конфига SystemConfig.RSI_EXIT_SHORT)
         max_future_candles: Максимальное количество свечей в будущем для проверки (1-2)
     """
     n = len(prices)
     # ✅ МИНИМАЛЬНЫЕ ТРЕБОВАНИЯ: max_period + запас для анализа
-    # Запас = HOLD_PERIODS (20) + max_future_candles (2) + запас для стабилизации (10) = 32
-    # Но оставляем 100 для надежности анализа (больше данных = лучше результаты)
+    # Запас = проверка RSI выхода + max_future_candles (2) + запас для стабилизации
+    # Оставляем 100 для надежности анализа (больше данных = лучше результаты)
     min_required = max(ema_short_period, ema_long_period) + 100
     if n < min_required:
         return 0.0, 0, 0
@@ -465,51 +528,81 @@ def analyze_ema_combination_short_numba(prices, rsi_values, ema_short_period, em
     if min_length - start_idx < 100:
         return 0.0, 0, 0
     
-    # Параметры для проверки прибыльности
-    MIN_PROFIT_PERCENT = 1.0
-    HOLD_PERIODS = 20
-    
     total_signals = 0
     correct_signals = 0.0
     
-    # ✅ ПРАВИЛЬНАЯ ЛОГИКА: Ищем моменты когда RSI входит в зону продажи
-    # EMA должны УЖЕ перекреститься в этот момент ИЛИ перекреститься в ближайшие 1-2 свечи
-    for i in range(start_idx, min_length - HOLD_PERIODS - max_future_candles):
+    # ✅ ЦЕЛЬ: Найти МАКСИМАЛЬНОЕ количество входов в шорт
+    # Условия для сигнала SHORT:
+    # 1. RSI >= RSI_OVERBOUGHT (из конфига, например 71) - зона продажи
+    # 2. EMA перекрестятся в течение следующих max_future_candles свечей (ema_short < ema_long)
+    # ✅ ВАЖНО: Не требуем немедленного пересечения - даем EMA время на разворот!
+    
+    for i in range(start_idx, min_length - max_future_candles):
         rsi = rsi_values[i]
         entry_price = prices[i]
         
-        # Ищем моменты когда RSI входит в зону продажи (используем значение из конфига)
+        # ✅ УСЛОВИЕ 1: RSI входит в зону продажи (используем значение из конфига)
         if rsi >= rsi_overbought:
-            # ✅ КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Проверяем, что EMA УЖЕ перекрестились ИЛИ перекрестятся в ближайшие 1-2 свечи
+            # ✅ УСЛОВИЕ 2: Проверяем признаки разворота вниз (как в реальной торговле)
+            # ✅ НОВЫЙ ПОДХОД: Не ждем пересечения EMA, ищем признаки разворота!
             ema_shows_down_trend = False
             
-            # Проверяем текущий момент (i) и ближайшие 1-2 свечи (i+1, i+2)
+            # 1. Проверяем, что EMA уже перекрестились (текущий момент или будущие свечи)
             for check_idx in range(i, min(i + max_future_candles + 1, min_length)):
                 if ema_short[check_idx] < ema_long[check_idx]:
                     ema_shows_down_trend = True
                     break
             
-            # Если EMA перекрестились в момент входа RSI в зону или в ближайшие свечи - это хороший сигнал
-            if ema_shows_down_trend:
-                total_signals += 1
+            # 2. Если EMA еще не перекрестились, проверяем ПРИЗНАКИ РАЗВОРОТА:
+            if not ema_shows_down_trend and i > 0:
+                # Проверяем наклон короткой EMA (падает ли она)
+                ema_short_slope = ema_short[i] - ema_short[i-1] if i > 0 else 0
                 
-                # Проверяем реальную прибыльность
+                # Проверяем сближение EMA (сближаются ли они)
+                ema_distance = abs(ema_short[i] - ema_long[i])
+                prev_ema_distance = abs(ema_short[i-1] - ema_long[i-1]) if i > 0 else ema_distance
+                ema_converging = prev_ema_distance > 0 and ema_distance < prev_ema_distance * 0.95  # Сближаются на 5%+
+                
+                # Проверяем, что цена уже ниже длинной EMA (даже если EMA еще не пересеклись)
+                price_below_ema_long = prices[i] < ema_long[i]
+                
+                # ✅ Признаки разворота: короткая EMA падает ИЛИ EMA сближаются ИЛИ цена ниже длинной EMA
+                signs_of_reversal = (
+                    ema_short_slope < 0 or  # Короткая EMA начинает падать
+                    ema_converging or  # EMA сближаются
+                    price_below_ema_long  # Цена уже ниже длинной EMA
+                )
+                
+                if signs_of_reversal:
+                    ema_shows_down_trend = True
+            
+            # ✅ НАЙДЕН СИГНАЛ: RSI в зоне продажи И EMA показывает DOWNTREND
+            if ema_shows_down_trend:
+                total_signals += 1  # Увеличиваем счетчик входов в шорт
+                
+                # ✅ ПРОВЕРКА УСПЕШНОСТИ: Проверяем достиг ли сигнал RSI <= RSI_EXIT_SHORT
+                # Сигнал успешен, если после входа (RSI >= RSI_OVERBOUGHT) RSI достиг уровня выхода RSI <= RSI_EXIT_SHORT
                 success = False
-                for j in range(1, HOLD_PERIODS + 1):
+                
+                # ✅ Ограничиваем проверку разумным периодом (200 свечей) для производительности
+                max_check_periods = min(200, min_length - i - 1)
+                
+                for j in range(1, max_check_periods + 1):
                     if i + j < min_length:
-                        exit_price = prices[i + j]
-                        profit_percent = ((entry_price - exit_price) / entry_price) * 100.0
+                        future_rsi = rsi_values[i + j]
                         
-                        if profit_percent >= MIN_PROFIT_PERCENT:
+                        # ✅ ПРОВЕРКА RSI ВЫХОДА: Если RSI достиг уровня выхода - сигнал успешен
+                        if future_rsi <= rsi_exit_short:
                             success = True
                             break
                 
                 if success:
-                    correct_signals += 1.0
+                    correct_signals += 1.0  # Увеличиваем счетчик успешных сигналов
     
     if total_signals == 0:
         return 0.0, 0, 0
     
+    # ✅ ТОЧНОСТЬ = процент сигналов, которые достигли RSI <= RSI_EXIT_SHORT (выход из SHORT)
     accuracy = (correct_signals / total_signals) * 100
     return accuracy, total_signals, correct_signals
 
@@ -519,10 +612,10 @@ def analyze_ema_combination_numba(prices, rsi_values, ema_short_period, ema_long
     Объединенный анализ для обратной совместимости
     """
     long_accuracy, long_total, long_correct = analyze_ema_combination_long_numba(
-        prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, max_future_candles
+        prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, RSI_EXIT_LONG, max_future_candles
     )
     short_accuracy, short_total, short_correct = analyze_ema_combination_short_numba(
-        prices, rsi_values, ema_short_period, ema_long_period, rsi_overbought, max_future_candles
+        prices, rsi_values, ema_short_period, ema_long_period, rsi_overbought, RSI_EXIT_SHORT, max_future_candles
     )
     
     total_signals = long_total + short_total
@@ -557,7 +650,7 @@ def analyze_ema_combination_parallel(args):
         # Анализируем в зависимости от типа сигнала
         if signal_type == 'long':
             accuracy, total_signals, correct_signals = analyze_ema_combination_long_numba(
-                prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, max_future_candles
+                prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, RSI_EXIT_LONG, max_future_candles
             )
             return {
                 'accuracy': accuracy,
@@ -571,7 +664,7 @@ def analyze_ema_combination_parallel(args):
             }
         elif signal_type == 'short':
             accuracy, total_signals, correct_signals = analyze_ema_combination_short_numba(
-                prices, rsi_values, ema_short_period, ema_long_period, rsi_overbought, max_future_candles
+                prices, rsi_values, ema_short_period, ema_long_period, rsi_overbought, RSI_EXIT_SHORT, max_future_candles
             )
             return {
                 'accuracy': accuracy,
@@ -586,10 +679,10 @@ def analyze_ema_combination_parallel(args):
         else:
             # Объединенный анализ для обратной совместимости (используем значения по умолчанию)
             long_accuracy, long_total, long_correct = analyze_ema_combination_long_numba(
-                prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, max_future_candles
+                prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, RSI_EXIT_LONG, max_future_candles
             )
             short_accuracy, short_total, short_correct = analyze_ema_combination_short_numba(
-                prices, rsi_values, ema_short_period, ema_long_period, rsi_overbought, max_future_candles
+                prices, rsi_values, ema_short_period, ema_long_period, rsi_overbought, RSI_EXIT_SHORT, max_future_candles
             )
             
             total_signals = long_total + short_total
@@ -776,7 +869,7 @@ class OptimalEMAFinder:
         try:
             # ✅ Вычисляем минимальное количество свечей динамически
             # Максимальный период длинной EMA + запас для анализа (100 свечей для проверки сигналов)
-            min_candles_needed = EMA_LONG_RANGE[1] + 100  # 600 + 100 = 700 свечей
+            min_candles_needed = EMA_LONG_RANGE[1] + 100  # 300 + 100 = 400 свечей
             
             # Очищаем символ от USDT если есть
             clean_symbol = symbol.replace('USDT', '') if symbol.endswith('USDT') else symbol
@@ -1127,10 +1220,13 @@ class OptimalEMAFinder:
         logger.info(f"  Доступно свечей: {available_candles}, максимальный период EMA: {max_usable_period}")
         
         # ✅ ПЕРЕБИРАЕМ ВСЕ ЗНАЧЕНИЯ ПОДРЯД (step=1) - БЕЗ ПРОПУСКОВ
+        # ✅ МИНИМАЛЬНАЯ РАЗНИЦА: Длинная EMA должна быть больше короткой минимум на 30 периодов
+        # С новым подходом (признаки разворота) можем использовать меньшую разницу, так как не требуем строгого пересечения
+        MIN_EMA_DIFF = 30  # Минимальная разница между длинной и короткой EMA (уменьшено с 50 до 30)
         total_combinations = 0
         for ema_short in range(ema_short_min, ema_short_max + 1):
-            # Длинная EMA должна быть больше короткой минимум на 5 периодов для значимости
-            min_long = max(ema_long_min, ema_short + 5)
+            # Длинная EMA должна быть больше короткой минимум на MIN_EMA_DIFF периодов
+            min_long = max(ema_long_min, ema_short + MIN_EMA_DIFF)
             for ema_long in range(min_long, ema_long_max + 1):
                 combinations.append((ema_short, ema_long))
                 total_combinations += 1
@@ -1155,10 +1251,12 @@ class OptimalEMAFinder:
                     new_short = ema_short + short_offset
                     new_long = ema_long + long_offset
                     
-                    # Проверяем что значения в допустимых диапазонах
+                    # ✅ Проверяем что значения в допустимых диапазонах И разница достаточна
+                    # Минимальная разница между длинной и короткой EMA = 30 периодов (уменьшено с 50)
+                    MIN_EMA_DIFF = 30
                     if (EMA_SHORT_RANGE[0] <= new_short <= EMA_SHORT_RANGE[1] and
                         EMA_LONG_RANGE[0] <= new_long <= EMA_LONG_RANGE[1] and
-                        new_short < new_long):
+                        new_long - new_short >= MIN_EMA_DIFF):
                         combinations.append((new_short, new_long))
         
         # Убираем дубликаты
@@ -1169,7 +1267,7 @@ class OptimalEMAFinder:
     
     def _analyze_combinations(self, symbol: str, candles: List[Dict], rsi_values: np.ndarray, 
                             combinations: List[Tuple[int, int]], stage_name: str, signal_type: str = 'both',
-                            rsi_oversold: float = None, rsi_overbought: float = None, max_future_candles: int = 2) -> List[Dict]:
+                            rsi_oversold: float = None, rsi_overbought: float = None, max_future_candles: int = 20) -> List[Dict]:
         """Анализирует список комбинаций EMA для указанного типа сигнала"""
         if not combinations:
             return []
@@ -1180,7 +1278,7 @@ class OptimalEMAFinder:
         if rsi_overbought is None:
             rsi_overbought = RSI_OVERBOUGHT
         if max_future_candles is None:
-            max_future_candles = 2  # По умолчанию проверяем 1-2 свечи в будущем
+            max_future_candles = 20  # По умолчанию проверяем до 20 свечей в будущем для пересечения EMA
         
         best_accuracy = 0
         best_combination = None
@@ -1270,6 +1368,7 @@ class OptimalEMAFinder:
                 }
                 
                 completed = 0
+                best_signals = 0  # ✅ Отслеживаем лучшее количество сигналов
                 for future in as_completed(future_to_combination):
                     completed += 1
                     
@@ -1281,12 +1380,24 @@ class OptimalEMAFinder:
                         result = future.result()
                         all_results.append(result)
                         
-                        if result['accuracy'] > best_accuracy:
-                            best_accuracy = result['accuracy']
+                        # ✅ ПРИОРИТЕТ: Максимальное количество сигналов, затем точность
+                        signals = result.get('total_signals', 0)
+                        accuracy = result.get('accuracy', 0)
+                        
+                        # Вычисляем взвешенную оценку: приоритет количеству сигналов
+                        import math
+                        score = (signals * 100) + (accuracy * math.log(signals + 1))
+                        
+                        # Обновляем лучший результат если:
+                        # 1. Больше сигналов ИЛИ
+                        # 2. Столько же сигналов, но выше оценка
+                        if signals > best_signals or (signals == best_signals and score > best_accuracy):
+                            best_accuracy = score
+                            best_signals = signals
                             best_combination = result
                             logger.info(f"{stage_name} {symbol}: Новая лучшая комбинация "
                                       f"EMA({result['ema_short_period']},{result['ema_long_period']}) "
-                                      f"с точностью {result['accuracy']:.1f}% "
+                                      f"с {signals} сигналами и точностью {result['accuracy']:.1f}% "
                                       f"(Long: {result['long_signals']}, Short: {result['short_signals']})")
                         
                     except Exception as e:
@@ -1343,21 +1454,61 @@ class OptimalEMAFinder:
             
             best_long = None
             if best_candidates_long:
-                # ✅ УВЕЛИЧЕНО: Берем топ-5 кандидатов для более детального анализа
-                top_candidates_long = sorted(best_candidates_long, key=lambda x: x['accuracy'], reverse=True)[:5]
+                # ✅ ПРИОРИТЕТ: Максимальное количество сигналов, затем точность
+                # Сортируем по взвешенной оценке: количество сигналов * 100 + точность * log(сигналы)
+                import math
+                scored_candidates = []
+                MIN_EMA_DIFF = 30  # Минимальная разница между длинной и короткой EMA (уменьшено с 50)
+                for r in best_candidates_long:
+                    ema_short = r.get('ema_short_period', 0)
+                    ema_long = r.get('ema_long_period', 0)
+                    # ✅ Фильтруем комбинации с недостаточной разницей между EMA
+                    if ema_long - ema_short < MIN_EMA_DIFF:
+                        continue  # Пропускаем комбинации с слишком близкими EMA
+                    signals = r.get('total_signals', 0)
+                    accuracy = r.get('accuracy', 0)
+                    # Приоритет количеству сигналов: сигналы * 100 + точность * log(сигналы + 1)
+                    score = (signals * 100) + (accuracy * math.log(signals + 1))
+                    scored_candidates.append((score, signals, accuracy, r))
+                
+                # Сортируем по оценке (приоритет количеству сигналов) и берем топ-5
+                top_candidates_long = [r for _, _, _, r in sorted(scored_candidates, key=lambda x: (x[0], x[1]), reverse=True)[:5]]
+                logger.info(f"Топ-5 кандидатов LONG для {symbol} (приоритет количеству сигналов):")
+                for i, (score, signals, accuracy, r) in enumerate(sorted(scored_candidates, key=lambda x: (x[0], x[1]), reverse=True)[:5], 1):
+                    logger.info(f"  {i}. EMA({r['ema_short_period']},{r['ema_long_period']}): {signals} сигналов, {accuracy:.1f}% точность, оценка: {score:.1f}")
                 stage2_combinations_long = self._generate_detailed_combinations(top_candidates_long)
                 final_results_long = self._analyze_combinations(
                     symbol, candles, rsi_values, stage2_combinations_long, "Этап 2 LONG", signal_type='long'
                 )
                 
                 if final_results_long:
-                    # ✅ СТРОГИЙ ОТБОР: Выбираем EMA с максимальной точностью И достаточным количеством сигналов
-                    # Минимум 5 сигналов для надежности
-                    valid_results = [r for r in final_results_long if r.get('total_signals', 0) >= 5]
-                    if valid_results:
-                        best_long = max(valid_results, key=lambda x: (x['accuracy'], x.get('total_signals', 0)))
+                    # ✅ ПРИОРИТЕТ: Максимальное количество сигналов, затем точность
+                    import math
+                    scored_results = []
+                    MIN_EMA_DIFF = 30  # Минимальная разница между длинной и короткой EMA (уменьшено с 50)
+                    for r in final_results_long:
+                        ema_short = r.get('ema_short_period', 0)
+                        ema_long = r.get('ema_long_period', 0)
+                        # ✅ Фильтруем комбинации с недостаточной разницей между EMA
+                        if ema_long - ema_short < MIN_EMA_DIFF:
+                            continue  # Пропускаем комбинации с слишком близкими EMA
+                        signals = r.get('total_signals', 0)
+                        accuracy = r.get('accuracy', 0)
+                        # Приоритет количеству сигналов: сигналы * 100 + точность * log(сигналы + 1)
+                        score = (signals * 100) + (accuracy * math.log(signals + 1))
+                        scored_results.append((score, signals, accuracy, r))
+                    
+                    if scored_results:
+                        # Выбираем результат с максимальной оценкой (приоритет количеству сигналов)
+                        best_long = max(scored_results, key=lambda x: (x[0], x[1]))[3]
+                        best_signals = best_long.get('total_signals', 0)
+                        best_accuracy = best_long.get('accuracy', 0)
+                        logger.info(f"✅ Выбран лучший LONG для {symbol}: {best_signals} сигналов, {best_accuracy:.1f}% точность")
+                        if best_signals < 5:
+                            logger.warning(f"⚠️ Для LONG {symbol} найдено только {best_signals} сигналов. "
+                                         f"Рекомендуется минимум 5 для надежности.")
                     else:
-                        best_long = max(final_results_long, key=lambda x: x['accuracy'])
+                        best_long = max(final_results_long, key=lambda x: x.get('total_signals', 0))
                 else:
                     best_long = top_candidates_long[0] if top_candidates_long else None
             
@@ -1371,21 +1522,61 @@ class OptimalEMAFinder:
             
             best_short = None
             if best_candidates_short:
-                # ✅ УВЕЛИЧЕНО: Берем топ-5 кандидатов для более детального анализа
-                top_candidates_short = sorted(best_candidates_short, key=lambda x: x['accuracy'], reverse=True)[:5]
+                # ✅ ПРИОРИТЕТ: Максимальное количество сигналов, затем точность
+                # Сортируем по взвешенной оценке: количество сигналов * 100 + точность * log(сигналы)
+                import math
+                scored_candidates = []
+                MIN_EMA_DIFF = 30  # Минимальная разница между длинной и короткой EMA (уменьшено с 50)
+                for r in best_candidates_short:
+                    ema_short = r.get('ema_short_period', 0)
+                    ema_long = r.get('ema_long_period', 0)
+                    # ✅ Фильтруем комбинации с недостаточной разницей между EMA
+                    if ema_long - ema_short < MIN_EMA_DIFF:
+                        continue  # Пропускаем комбинации с слишком близкими EMA
+                    signals = r.get('total_signals', 0)
+                    accuracy = r.get('accuracy', 0)
+                    # Приоритет количеству сигналов: сигналы * 100 + точность * log(сигналы + 1)
+                    score = (signals * 100) + (accuracy * math.log(signals + 1))
+                    scored_candidates.append((score, signals, accuracy, r))
+                
+                # Сортируем по оценке (приоритет количеству сигналов) и берем топ-5
+                top_candidates_short = [r for _, _, _, r in sorted(scored_candidates, key=lambda x: (x[0], x[1]), reverse=True)[:5]]
+                logger.info(f"Топ-5 кандидатов SHORT для {symbol} (приоритет количеству сигналов):")
+                for i, (score, signals, accuracy, r) in enumerate(sorted(scored_candidates, key=lambda x: (x[0], x[1]), reverse=True)[:5], 1):
+                    logger.info(f"  {i}. EMA({r['ema_short_period']},{r['ema_long_period']}): {signals} сигналов, {accuracy:.1f}% точность, оценка: {score:.1f}")
                 stage2_combinations_short = self._generate_detailed_combinations(top_candidates_short)
                 final_results_short = self._analyze_combinations(
                     symbol, candles, rsi_values, stage2_combinations_short, "Этап 2 SHORT", signal_type='short'
                 )
                 
                 if final_results_short:
-                    # ✅ СТРОГИЙ ОТБОР: Выбираем EMA с максимальной точностью И достаточным количеством сигналов
-                    # Минимум 5 сигналов для надежности
-                    valid_results = [r for r in final_results_short if r.get('total_signals', 0) >= 5]
-                    if valid_results:
-                        best_short = max(valid_results, key=lambda x: (x['accuracy'], x.get('total_signals', 0)))
+                    # ✅ ПРИОРИТЕТ: Максимальное количество сигналов, затем точность
+                    import math
+                    scored_results = []
+                    MIN_EMA_DIFF = 30  # Минимальная разница между длинной и короткой EMA (уменьшено с 50)
+                    for r in final_results_short:
+                        ema_short = r.get('ema_short_period', 0)
+                        ema_long = r.get('ema_long_period', 0)
+                        # ✅ Фильтруем комбинации с недостаточной разницей между EMA
+                        if ema_long - ema_short < MIN_EMA_DIFF:
+                            continue  # Пропускаем комбинации с слишком близкими EMA
+                        signals = r.get('total_signals', 0)
+                        accuracy = r.get('accuracy', 0)
+                        # Приоритет количеству сигналов: сигналы * 100 + точность * log(сигналы + 1)
+                        score = (signals * 100) + (accuracy * math.log(signals + 1))
+                        scored_results.append((score, signals, accuracy, r))
+                    
+                    if scored_results:
+                        # Выбираем результат с максимальной оценкой (приоритет количеству сигналов)
+                        best_short = max(scored_results, key=lambda x: (x[0], x[1]))[3]
+                        best_signals = best_short.get('total_signals', 0)
+                        best_accuracy = best_short.get('accuracy', 0)
+                        logger.info(f"✅ Выбран лучший SHORT для {symbol}: {best_signals} сигналов, {best_accuracy:.1f}% точность")
+                        if best_signals < 5:
+                            logger.warning(f"⚠️ Для SHORT {symbol} найдено только {best_signals} сигналов. "
+                                         f"Рекомендуется минимум 5 для надежности.")
                     else:
-                        best_short = max(final_results_short, key=lambda x: x['accuracy'])
+                        best_short = max(final_results_short, key=lambda x: x.get('total_signals', 0))
                 else:
                     best_short = top_candidates_short[0] if top_candidates_short else None
             

@@ -385,20 +385,16 @@ def calculate_ema(prices, period):
     return ema
 
 def analyze_trend_6h(symbol, exchange_obj=None):
-    """Анализирует тренд 6H с использованием оптимальных EMA периодов и индивидуальных параметров подтверждения"""
+    """
+    Анализирует тренд 6H на основе ПРОСТОГО АНАЛИЗА ЦЕНЫ (без EMA)
+    
+    Логика:
+    - Берем последние 30 свечей 6h (7.5 дней)
+    - Сравниваем цену начала и конца периода
+    - Считаем % изменения и количество растущих/падающих свечей
+    - Определяем тренд: UP / DOWN / NEUTRAL
+    """
     try:
-        # Получаем оптимальные EMA периоды и параметры подтверждения для монеты
-        ema_periods = get_optimal_ema_periods(symbol)
-        ema_short_period = ema_periods['ema_short']
-        ema_long_period = ema_periods['ema_long']
-        
-        # Получаем параметры подтверждения (индивидуальные для монеты или глобальные)
-        trend_confirmation_bars = ema_periods.get('trend_confirmation_bars') or SystemConfig.TREND_CONFIRMATION_BARS
-        trend_min_confirmations = ema_periods.get('trend_min_confirmations') or SystemConfig.TREND_MIN_CONFIRMATIONS
-        trend_require_slope = ema_periods.get('trend_require_slope') if ema_periods.get('trend_require_slope') is not None else SystemConfig.TREND_REQUIRE_SLOPE
-        trend_require_price = ema_periods.get('trend_require_price') if ema_periods.get('trend_require_price') is not None else SystemConfig.TREND_REQUIRE_PRICE
-        trend_require_candles = ema_periods.get('trend_require_candles') if ema_periods.get('trend_require_candles') is not None else SystemConfig.TREND_REQUIRE_CANDLES
-        
         # Получаем свечи 6H для анализа тренда
         from bots_modules.imports_and_globals import get_exchange
         exchange_to_use = exchange_obj if exchange_obj else get_exchange()
@@ -406,112 +402,52 @@ def analyze_trend_6h(symbol, exchange_obj=None):
             logger.error(f"[TREND] ❌ Биржа не доступна для анализа тренда {symbol}")
             return None
             
-        chart_response = exchange_to_use.get_chart_data(symbol, '6h', '60d')
+        chart_response = exchange_to_use.get_chart_data(symbol, '6h', '30d')
         
         if not chart_response or not chart_response.get('success'):
             return None
         
         candles = chart_response['data']['candles']
-        min_candles = max(ema_long_period + 50, 210)
-        if not candles or len(candles) < min_candles:
+        if not candles or len(candles) < 30:
             return None
         
         # Извлекаем цены закрытия
         closes = [candle['close'] for candle in candles]
-        
-        # Рассчитываем оптимальные EMA
-        ema_short = calculate_ema(closes, ema_short_period)
-        ema_long = calculate_ema(closes, ema_long_period)
-        
-        if ema_short is None or ema_long is None:
-            return None
-        
         current_close = closes[-1]
         
-        # Наклон длинной EMA
-        if len(closes) >= ema_long_period + 1:
-            prev_ema_long = calculate_ema(closes[:-1], ema_long_period)
-            ema_long_slope = ema_long - prev_ema_long if prev_ema_long else 0
-        else:
-            ema_long_slope = 0
+        # ✅ УПРОЩЕННАЯ ЛОГИКА: Анализ последних 30 свечей (7.5 дней)
+        period = 30
+        recent_closes = closes[-period:]
+        start_price = recent_closes[0]
+        end_price = recent_closes[-1]
         
-        # Проверяем N закрытий подряд относительно длинной EMA
-        recent_closes = closes[-trend_confirmation_bars:]
-        closes_above = sum(1 for c in recent_closes if c > ema_long)
-        closes_below = sum(1 for c in recent_closes if c < ema_long)
+        # Считаем % изменения
+        price_change_pct = ((end_price - start_price) / start_price) * 100
         
-        # === ГИБКАЯ ЛОГИКА ОПРЕДЕЛЕНИЯ ТРЕНДА ===
+        # Считаем растущие/падающие свечи
+        rising_candles = sum(1 for i in range(1, len(recent_closes)) if recent_closes[i] > recent_closes[i-1])
+        falling_candles = sum(1 for i in range(1, len(recent_closes)) if recent_closes[i] < recent_closes[i-1])
+        
+        # ✅ ОПРЕДЕЛЕНИЕ ТРЕНДА:
+        # UP: если цена выросла > 7% ИЛИ больше 70% свечей растут
+        # DOWN: если цена упала > 7% ИЛИ больше 70% свечей падают
+        # NEUTRAL: иначе
         trend = 'NEUTRAL'
         
-        # Основной сигнал: крест EMA
-        ema_cross_up = ema_short > ema_long
-        ema_cross_down = ema_short < ema_long
-        
-        # UP Trend: если крест вверх + минимум N подтверждений
-        if ema_cross_up:
-            confirmations = 0
-            required_confirmations = 0
-            
-            # 1. Цена выше EMA_long (опциональный или обязательный)
-            if current_close > ema_long:
-                confirmations += 1
-            if trend_require_price:
-                required_confirmations += 1
-            
-            # 2. Наклон EMA_long вверх (опциональный или обязательный)
-            if ema_long_slope > 0:
-                confirmations += 1
-            if trend_require_slope:
-                required_confirmations += 1
-            
-            # 3. N свечей подряд выше EMA_long (опциональный или обязательный)
-            if closes_above >= trend_min_confirmations:
-                confirmations += 1
-            if trend_require_candles:
-                required_confirmations += 1
-            
-            # Определяем тренд: обязательные критерии + достаточно опциональных
-            if confirmations >= max(trend_min_confirmations, required_confirmations):
-                trend = 'UP'
-        
-        # DOWN Trend: аналогично
-        elif ema_cross_down:
-            confirmations = 0
-            required_confirmations = 0
-            
-            # 1. Цена ниже EMA_long
-            if current_close < ema_long:
-                confirmations += 1
-            if trend_require_price:
-                required_confirmations += 1
-            
-            # 2. Наклон EMA_long вниз
-            if ema_long_slope < 0:
-                confirmations += 1
-            if trend_require_slope:
-                required_confirmations += 1
-            
-            # 3. N свечей подряд ниже EMA_long
-            if closes_below >= trend_min_confirmations:
-                confirmations += 1
-            if trend_require_candles:
-                required_confirmations += 1
-            
-            # Определяем тренд
-            if confirmations >= max(trend_min_confirmations, required_confirmations):
-                trend = 'DOWN'
+        if price_change_pct > 7 or rising_candles > (period * 0.7):
+            trend = 'UP'
+        elif price_change_pct < -7 or falling_candles > (period * 0.7):
+            trend = 'DOWN'
         
         return {
             'trend': trend,
-            'ema_short': ema_short,
-            'ema_long': ema_long,
-            'ema_short_period': ema_short_period,
-            'ema_long_period': ema_long_period,
-            'ema_long_slope': ema_long_slope,
+            'price_change_pct': price_change_pct,
+            'rising_candles': rising_candles,
+            'falling_candles': falling_candles,
             'current_close': current_close,
-            'confirmations': trend_confirmation_bars,
-            'min_confirmations': trend_min_confirmations,
-            'accuracy': ema_periods['accuracy']
+            'start_price': start_price,
+            'period': period,
+            'method': 'simple_price_analysis'  # Метод анализа
         }
         
     except Exception as e:
