@@ -92,11 +92,11 @@ def check_rsi_time_filter(candles, rsi, signal, config, calculate_rsi_history_fu
                     'calm_candles': 0
                 }
             
-            # Проверяем ВСЕ свечи ПОСЛЕ отправной точки (до текущей включительно)
-            # Берем все свечи ПОСЛЕ peak_index (не включая сам peak_index)
-            check_candles = rsi_history[peak_index + 1:current_index + 1]
+            # Проверяем ВСЕ свечи ОТ отправной точки (включая её) до текущей включительно
+            # Берем все свечи ОТ peak_index (включая сам peak_index) до current_index
+            check_candles = rsi_history[peak_index:current_index + 1]
             
-            # Проверяем что ВСЕ свечи >= 65
+            # Проверяем что ВСЕ свечи >= 65 (включая саму отправную точку)
             invalid_candles = [rsi_val for rsi_val in check_candles if rsi_val < rsi_time_filter_upper]
             
             if len(invalid_candles) > 0:
@@ -110,22 +110,22 @@ def check_rsi_time_filter(candles, rsi, signal, config, calculate_rsi_history_fu
                 }
             
             # Проверяем что прошло достаточно свечей (минимум N из конфига)
-            if len(check_candles) < rsi_time_filter_candles:
-                candles_since_peak = current_index - peak_index + 1
+            # candles_since_peak - это количество свечей ОТ отправной точки (включая её) до текущей
+            candles_since_peak = current_index - peak_index + 1
+            if candles_since_peak < rsi_time_filter_candles:
                 return {
                     'allowed': False,
-                    'reason': f'Ожидание: с отправной точки прошло только {len(check_candles)} свечей (требуется {rsi_time_filter_candles})',
+                    'reason': f'Ожидание: с отправной точки прошло только {candles_since_peak} свечей (требуется {rsi_time_filter_candles})',
                     'last_extreme_candles_ago': candles_since_peak - 1,
-                    'calm_candles': len(check_candles)
+                    'calm_candles': candles_since_peak
                 }
             
             # Все проверки пройдены!
-            candles_since_peak = current_index - peak_index + 1
             return {
                 'allowed': True,
-                'reason': f'Разрешено: с отправной точки (свеча -{candles_since_peak}) прошло {len(check_candles)} спокойных свечей >= {rsi_time_filter_upper}',
+                'reason': f'Разрешено: с отправной точки (свеча -{candles_since_peak}) прошло {candles_since_peak} спокойных свечей >= {rsi_time_filter_upper}',
                 'last_extreme_candles_ago': candles_since_peak - 1,
-                'calm_candles': len(check_candles)
+                'calm_candles': candles_since_peak
             }
                 
         elif signal == 'ENTER_LONG':
@@ -156,11 +156,11 @@ def check_rsi_time_filter(candles, rsi, signal, config, calculate_rsi_history_fu
                     'calm_candles': 0
                 }
             
-            # Проверяем ВСЕ свечи ПОСЛЕ отправной точки (до текущей включительно)
-            # Берем все свечи ПОСЛЕ low_index (не включая сам low_index)
-            check_candles = rsi_history[low_index + 1:current_index + 1]
+            # Проверяем ВСЕ свечи ОТ отправной точки (включая её) до текущей включительно
+            # Берем все свечи ОТ low_index (включая сам low_index) до current_index
+            check_candles = rsi_history[low_index:current_index + 1]
             
-            # Проверяем что ВСЕ свечи <= 35
+            # Проверяем что ВСЕ свечи <= 35 (включая саму отправную точку)
             invalid_candles = [rsi_val for rsi_val in check_candles if rsi_val > rsi_time_filter_lower]
             
             if len(invalid_candles) > 0:
@@ -174,22 +174,22 @@ def check_rsi_time_filter(candles, rsi, signal, config, calculate_rsi_history_fu
                 }
             
             # Проверяем что прошло достаточно свечей (минимум N из конфига)
-            if len(check_candles) < rsi_time_filter_candles:
-                candles_since_low = current_index - low_index + 1
+            # candles_since_low - это количество свечей ОТ отправной точки (включая её) до текущей
+            candles_since_low = current_index - low_index + 1
+            if candles_since_low < rsi_time_filter_candles:
                 return {
                     'allowed': False,
-                    'reason': f'Ожидание: с отправной точки прошло только {len(check_candles)} свечей (требуется {rsi_time_filter_candles})',
+                    'reason': f'Ожидание: с отправной точки прошло только {candles_since_low} свечей (требуется {rsi_time_filter_candles})',
                     'last_extreme_candles_ago': candles_since_low - 1,
-                    'calm_candles': len(check_candles)
+                    'calm_candles': candles_since_low
                 }
             
             # Все проверки пройдены!
-            candles_since_low = current_index - low_index + 1
             return {
                 'allowed': True,
-                'reason': f'Разрешено: с отправной точки (свеча -{candles_since_low}) прошло {len(check_candles)} спокойных свечей <= {rsi_time_filter_lower}',
+                'reason': f'Разрешено: с отправной точки (свеча -{candles_since_low}) прошло {candles_since_low} спокойных свечей <= {rsi_time_filter_lower}',
                 'last_extreme_candles_ago': candles_since_low - 1,
-                'calm_candles': len(check_candles)
+                'calm_candles': candles_since_low
             }
         
         return {'allowed': True, 'reason': 'Неизвестный сигнал', 'last_extreme_candles_ago': None, 'calm_candles': 0}
