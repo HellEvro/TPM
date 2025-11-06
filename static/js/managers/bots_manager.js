@@ -1423,9 +1423,9 @@ class BotsManager {
         // ✅ НОВЫЙ ФОРМАТ: Отдельные EMA для LONG и SHORT
         const emaLongElement = document.getElementById('selectedCoinEMALong');
         const emaShortElement = document.getElementById('selectedCoinEMAShort');
-        const emaElement = document.getElementById('selectedCoinEMA'); // Старый элемент для обратной совместимости
+        const emaElement = document.getElementById('selectedCoinEMA');
         
-        if (emaLongElement && emaShortElement) {
+        if (emaLongElement && emaShortElement && emaElement) {
             // Новый формат с отдельными элементами
             if (coin.ema_periods) {
                 if (coin.ema_periods.long && coin.ema_periods.short) {
@@ -1452,7 +1452,7 @@ class BotsManager {
                 emaShortElement.textContent = 'SHORT: -';
             }
         } else if (emaElement) {
-            // Старый формат (обратная совместимость)
+            // Fallback для старого формата (обратная совместимость)
             let emaText = '-';
             if (coin.ema_periods) {
                 if (coin.ema_periods.long && coin.ema_periods.short) {
@@ -1465,8 +1465,7 @@ class BotsManager {
             }
             emaElement.textContent = emaText;
             emaElement.className = 'value ema-indicator';
-            emaElement.style.fontSize = '12px';
-            console.log('[BotsManager] ✅ EMA обновлен (legacy):', emaText);
+            console.log('[BotsManager] ✅ EMA обновлен (fallback):', emaText);
         }
         
         if (zoneElement) {
