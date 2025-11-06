@@ -1,5 +1,20 @@
 {
-  "history": [],
+  "history": [
+    {
+      "id": "close_OG_1762272372.496494",
+      "timestamp": "2025-11-04T19:06:12.496510",
+      "action_type": "POSITION_CLOSED",
+      "action_name": "Закрытие позиции",
+      "bot_id": "OG",
+      "symbol": "OG",
+      "direction": "LONG",
+      "exit_price": 12.6855,
+      "pnl": 4.229,
+      "roi": 0,
+      "reason": "RSI_EXIT",
+      "details": "Закрыта позиция LONG для OG: цена выхода 12.6855, PnL: 4.23 USDT (0.00%)"
+    }
+  ],
   "trades": [],
-  "last_update": "2025-10-19T04:00:46.862682"
+  "last_update": "2025-11-04T19:06:12.497811"
 }

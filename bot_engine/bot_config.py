@@ -65,8 +65,8 @@ DEFAULT_AUTO_BOT_CONFIG = {
     # RSI параметры согласно ТЗ
     'rsi_long_threshold': 29,   # Вход в LONG при RSI <= 29
     'rsi_short_threshold': 71,  # Вход в SHORT при RSI >= 71
-    'rsi_exit_long': 60,        # Выход из LONG при RSI >= 65
-    'rsi_exit_short': 40,       # Выход из SHORT при RSI <= 35
+    'rsi_exit_long': 65,        # Выход из LONG при RSI >= 65
+    'rsi_exit_short': 35,       # Выход из SHORT при RSI <= 35
     'default_position_size': 5,  # Размер позиции в USDT
     'check_interval': 180,      # Интервал проверки в секундах (3 мин = 180 сек)
     'monitoring_interval': 10,  # Интервал мониторинга активных ботов в секундах
@@ -93,7 +93,7 @@ DEFAULT_AUTO_BOT_CONFIG = {
     'max_rsi_high': 65,                 # Максимальный достигнутый RSI (должен быть >= 65)
     # RSI временной фильтр
     'rsi_time_filter_enabled': True,    # Включить временной фильтр для RSI сигналов
-    'rsi_time_filter_candles': 4,       # Минимум свечей с последнего экстремума (4 = 1 день на 6H)
+    'rsi_time_filter_candles': 8,       # Минимум свечей с последнего экстремума (4 = 1 день на 6H)
     'rsi_time_filter_upper': 65,        # Верхняя граница спокойной зоны для SHORT
     'rsi_time_filter_lower': 35,        # Нижняя граница спокойной зоны для LONG
     # ExitScam фильтр (защита от резких движений цены)
