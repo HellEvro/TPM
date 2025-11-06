@@ -234,8 +234,9 @@ except ImportError:
     RSI_OVERBOUGHT = 71
 # Используем multiprocessing с безопасной инициализацией
 MAX_WORKERS = mp.cpu_count()
-# ✅ УВЕЛИЧЕНЫ ЛИМИТЫ: Анализируем больше свечей для более точных результатов
-MIN_CANDLES_FOR_ANALYSIS = 200  # Минимум свечей для анализа
+# ✅ ДИНАМИЧЕСКИЙ МИНИМУМ: Рассчитывается на основе максимального периода EMA
+# Максимальный период длинной EMA (600) + запас для анализа сигналов (150) = 750
+MIN_CANDLES_FOR_ANALYSIS = EMA_LONG_RANGE[1] + 150  # 600 + 150 = 750 свечей
 # Максимальное количество свечей для запроса через API (если кэш недоступен)
 # Примечание: Скрипт сначала проверяет кэш в памяти и файле, API используется только при необходимости
 MAX_CANDLES_TO_REQUEST = 10000  # Увеличено с 5000 до 10000 для большего охвата истории
@@ -322,7 +323,11 @@ def analyze_ema_combination_long_numba(prices, rsi_values, ema_short_period, ema
         max_future_candles: Максимальное количество свечей в будущем для проверки (1-2)
     """
     n = len(prices)
-    if n < max(ema_short_period, ema_long_period) + 100:
+    # ✅ МИНИМАЛЬНЫЕ ТРЕБОВАНИЯ: max_period + запас для анализа
+    # Запас = HOLD_PERIODS (20) + max_future_candles (2) + запас для стабилизации (10) = 32
+    # Но оставляем 100 для надежности анализа (больше данных = лучше результаты)
+    min_required = max(ema_short_period, ema_long_period) + 100
+    if n < min_required:
         return 0.0, 0, 0
     
     # Вычисляем EMA
@@ -399,7 +404,11 @@ def analyze_ema_combination_short_numba(prices, rsi_values, ema_short_period, em
         max_future_candles: Максимальное количество свечей в будущем для проверки (1-2)
     """
     n = len(prices)
-    if n < max(ema_short_period, ema_long_period) + 100:
+    # ✅ МИНИМАЛЬНЫЕ ТРЕБОВАНИЯ: max_period + запас для анализа
+    # Запас = HOLD_PERIODS (20) + max_future_candles (2) + запас для стабилизации (10) = 32
+    # Но оставляем 100 для надежности анализа (больше данных = лучше результаты)
+    min_required = max(ema_short_period, ema_long_period) + 100
+    if n < min_required:
         return 0.0, 0, 0
     
     # Вычисляем EMA
@@ -688,24 +697,51 @@ class OptimalEMAFinder:
         """
         Получает данные свечей для символа.
         ✅ УЛУЧШЕНО: Сначала проверяет кэш в памяти и файлах, затем загружает через API.
+        ✅ ДИНАМИЧЕСКИЙ МИНИМУМ: Проверяет достаточность данных на основе максимального периода EMA.
         """
         try:
+            # ✅ Вычисляем минимальное количество свечей динамически
+            # Максимальный период длинной EMA + запас для анализа (100 свечей для проверки сигналов)
+            min_candles_needed = EMA_LONG_RANGE[1] + 100  # 600 + 100 = 700 свечей
+            
             # Очищаем символ от USDT если есть
             clean_symbol = symbol.replace('USDT', '') if symbol.endswith('USDT') else symbol
+            # ✅ Формируем ключ: проверяем разные варианты формата
             symbol_key = f"{clean_symbol}USDT"
+            # Также проверяем варианты без USDT и с разными регистрами
+            # ВАЖНО: В файле кэша может быть сохранено как "0G" (без USDT) или "0GUSDT"
+            symbol_variants = [
+                clean_symbol,  # 0G (без USDT) - ПЕРВЫМ, т.к. в файле кэша часто так сохранено
+                symbol_key,    # 0GUSDT
+                symbol,        # 0G или 0GUSDT (как пришло)
+                f"{clean_symbol}USDT".upper(),  # 0GUSDT (верхний регистр)
+                f"{clean_symbol}USDT".lower(),  # 0gusdt (нижний регистр)
+            ]
             
             # ✅ ШАГ 1: Проверяем кэш свечей в памяти (coins_rsi_data['candles_cache'])
             try:
                 from bots_modules.imports_and_globals import coins_rsi_data
                 candles_cache = coins_rsi_data.get('candles_cache', {})
-                if symbol_key in candles_cache:
-                    cached_data = candles_cache[symbol_key]
+                
+                # Проверяем все варианты ключа
+                cached_data = None
+                found_key = None
+                for variant in symbol_variants:
+                    if variant in candles_cache:
+                        cached_data = candles_cache[variant]
+                        found_key = variant
+                        break
+                
+                if cached_data:
                     # Проверяем что это свечи для нужного таймфрейма (6h по умолчанию)
                     if 'candles' in cached_data and cached_data.get('timeframe') == self.timeframe:
                         candles = cached_data['candles']
-                        if candles and len(candles) >= MIN_CANDLES_FOR_ANALYSIS:
-                            logger.info(f"✅ Использованы свечи из кэша памяти: {len(candles)} свечей для {symbol}")
+                        # ✅ ДИНАМИЧЕСКАЯ ПРОВЕРКА: достаточно ли свечей для максимального периода EMA
+                        if candles and len(candles) >= min_candles_needed:
+                            logger.info(f"✅ Использованы свечи из кэша памяти: {len(candles)} свечей для {symbol} (ключ: {found_key}, минимум: {min_candles_needed})")
                             return candles
+                        else:
+                            logger.debug(f"В кэше памяти недостаточно свечей для {symbol}: {len(candles) if candles else 0}/{min_candles_needed}")
             except Exception as cache_error:
                 logger.debug(f"Кэш памяти недоступен: {cache_error}")
             
@@ -717,19 +753,32 @@ class OptimalEMAFinder:
                 try:
                     with open(candles_cache_file, 'r', encoding='utf-8') as f:
                         file_cache = json.load(f)
-                    if symbol_key in file_cache:
-                        cached_data = file_cache[symbol_key]
+                    
+                    # ✅ Проверяем все варианты ключа
+                    cached_data = None
+                    found_key = None
+                    for variant in symbol_variants:
+                        if variant in file_cache:
+                            cached_data = file_cache[variant]
+                            found_key = variant
+                            break
+                    
+                    if cached_data:
                         if 'candles' in cached_data and cached_data.get('timeframe') == self.timeframe:
                             candles = cached_data['candles']
                             # ✅ ИСПОЛЬЗУЕМ НАКОПЛЕННЫЕ ДАННЫЕ: не проверяем возраст, т.к. данные накапливаются каждый раунд
-                            # Если данных достаточно - используем их (они могут быть старше 24 часов, но это нормально)
-                            if candles and len(candles) >= MIN_CANDLES_FOR_ANALYSIS:
+                            # ✅ ДИНАМИЧЕСКАЯ ПРОВЕРКА: достаточно ли свечей для максимального периода EMA
+                            if candles and len(candles) >= min_candles_needed:
                                 # Показываем информацию о последнем обновлении
                                 last_update = cached_data.get('last_update') or cached_data.get('timestamp', 'неизвестно')
-                                logger.info(f"✅ Использованы НАКОПЛЕННЫЕ свечи из файла кэша: {len(candles)} свечей для {symbol} (обновлено: {last_update})")
+                                logger.info(f"✅ Использованы НАКОПЛЕННЫЕ свечи из файла кэша: {len(candles)} свечей для {symbol} (ключ: {found_key}, минимум: {min_candles_needed}, обновлено: {last_update})")
                                 return candles
                             else:
-                                logger.debug(f"В кэше недостаточно свечей для {symbol}: {len(candles) if candles else 0}/{MIN_CANDLES_FOR_ANALYSIS}")
+                                logger.debug(f"В кэше недостаточно свечей для {symbol}: {len(candles) if candles else 0}/{min_candles_needed}")
+                    else:
+                        # Показываем какие ключи есть в файле для отладки
+                        available_keys = list(file_cache.keys())[:10]  # Первые 10 для примера
+                        logger.debug(f"Ключ {symbol_key} не найден в кэше. Доступные ключи (примеры): {available_keys}")
                 except Exception as file_error:
                     logger.debug(f"Ошибка чтения файла кэша: {file_error}")
             
@@ -755,7 +804,8 @@ class OptimalEMAFinder:
             
             # ✅ Сохраняем в файл кэша с НАРАЩИВАНИЕМ данных (как в системе)
             # Объединяем старые и новые свечи, чтобы не конфликтовать с системой
-            if candles and len(candles) >= MIN_CANDLES_FOR_ANALYSIS:
+            # Сохраняем любые свечи, даже если их меньше минимума (они накопятся со временем)
+            if candles and len(candles) > 0:
                 try:
                     # Определяем путь относительно корня проекта (как и другие файлы данных)
                     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -825,10 +875,12 @@ class OptimalEMAFinder:
                     logger.debug(f"Не удалось сохранить в кэш файл: {save_error}")
                 
                 logger.info(f"✅ Получено {len(candles)} свечей для {symbol} через API")
+                
+                # ✅ Возвращаем свечи независимо от количества (анализ адаптируется автоматически)
+                if len(candles) < min_candles_needed:
+                    logger.warning(f"⚠️ Получено только {len(candles)} свечей для {symbol}, но для полного анализа желательно минимум {min_candles_needed} свечей")
+                    logger.warning(f"   Анализ будет ограничен периодами EMA до {max(50, len(candles) - 120)}")
                 return candles
-            else:
-                logger.warning(f"Недостаточно свечей для {symbol}: {len(candles) if candles else 0}/{MIN_CANDLES_FOR_ANALYSIS}")
-                return None
                 
         except Exception as e:
             logger.error(f"Ошибка получения данных для {symbol}: {e}")
@@ -858,10 +910,15 @@ class OptimalEMAFinder:
             all_candles = []
             limit = 1000  # Максимум за запрос
             end_time = None  # Для пагинации
+            seen_timestamps = set()  # ✅ Для проверки дубликатов
             
             logger.info(f"Запрашиваем расширенные данные для {symbol} (цель: {target_candles} свечей)")
             
-            while len(all_candles) < target_candles:
+            max_iterations = 20  # ✅ Ограничиваем количество итераций (максимум 20 запросов)
+            iteration = 0
+            
+            while len(all_candles) < target_candles and iteration < max_iterations:
+                iteration += 1
                 try:
                     # Параметры запроса
                     params = {
@@ -883,11 +940,20 @@ class OptimalEMAFinder:
                             logger.info("Больше данных нет")
                             break
                         
-                        # Конвертируем в наш формат
+                        # ✅ Проверяем на дубликаты и конвертируем в наш формат
                         batch_candles = []
+                        new_candles_count = 0
                         for k in klines:
+                            candle_time = int(k[0])
+                            
+                            # Пропускаем дубликаты
+                            if candle_time in seen_timestamps:
+                                continue
+                            
+                            seen_timestamps.add(candle_time)
+                            
                             candle = {
-                                'time': int(k[0]),
+                                'time': candle_time,
                                 'open': float(k[1]),
                                 'high': float(k[2]),
                                 'low': float(k[3]),
@@ -895,6 +961,12 @@ class OptimalEMAFinder:
                                 'volume': float(k[5])
                             }
                             batch_candles.append(candle)
+                            new_candles_count += 1
+                        
+                        if not batch_candles:
+                            # Все свечи были дубликатами - значит достигли конца истории
+                            logger.info("Все свечи дубликаты - достигнут конец истории")
+                            break
                         
                         # Добавляем к общему списку
                         all_candles.extend(batch_candles)
@@ -902,11 +974,10 @@ class OptimalEMAFinder:
                         # Обновляем end_time для следующего запроса (берем время первой свечи - 1)
                         end_time = int(klines[0][0]) - 1
                         
-                        logger.debug(f"Получено {len(batch_candles)} свечей, всего: {len(all_candles)}")
+                        logger.debug(f"Получено {new_candles_count} новых свечей (пропущено дубликатов: {len(klines) - new_candles_count}), всего: {len(all_candles)}")
                         
                         # Небольшая пауза между запросами
                         time.sleep(0.1)
-                        
                     else:
                         logger.warning(f"Ошибка API: {response.get('retMsg', 'Неизвестная ошибка')}")
                         break
@@ -946,23 +1017,40 @@ class OptimalEMAFinder:
         """
         Генерирует ВСЕ возможные комбинации EMA для дотошного анализа.
         БЕЗ ОГРАНИЧЕНИЙ: перебираем все значения подряд (step=1) для максимальной точности.
-        """
+        ✅ АДАПТИВНЫЕ ДИАПАЗОНЫ: Ограничивает максимальные периоды EMA в зависимости от доступных свечей.
+6        """
         prices = np.array([float(candle['close']) for candle in candles], dtype=np.float64)
         volatility = self._calculate_volatility(prices)
         
         combinations = []
         
-        # ✅ ПОЛНЫЙ ПЕРЕБОР: Используем расширенные диапазоны БЕЗ ШАГОВ (step=1)
-        # Это займет больше времени, но даст идеальные результаты
+        # ✅ АДАПТИВНЫЕ ДИАПАЗОНЫ: Ограничиваем максимальные периоды в зависимости от количества свечей
+        # МИНИМАЛЬНЫЕ ТРЕБОВАНИЯ ДЛЯ РАСЧЕТА EMA:
+        # - Для EMA с периодом N нужно минимум N свечей
+        # - Плюс запас для проверки прибыльности: 20 периодов (HOLD_PERIODS)
+        # - Плюс запас для проверки будущих свечей: 2 периода (max_future_candles)
+        # - Плюс запас для стабилизации и анализа: ~100 периодов (из проверки в numba функциях)
+        # ИТОГО: max_period + 100 = available_candles, значит max_period = available_candles - 100
+        # Но оставляем минимум 50 для минимального анализа
+        available_candles = len(candles)
+        max_usable_period = max(50, available_candles - 100)  # Минимум 50, но с учетом запаса в 100 свечей
+        
+        # Ограничиваем максимальные периоды доступными данными
         ema_short_min = EMA_SHORT_RANGE[0]
-        ema_short_max = EMA_SHORT_RANGE[1]
+        ema_short_max = min(EMA_SHORT_RANGE[1], max_usable_period)
         ema_long_min = EMA_LONG_RANGE[0]
-        ema_long_max = EMA_LONG_RANGE[1]
+        ema_long_max = min(EMA_LONG_RANGE[1], max_usable_period)
+        
+        # Если доступно мало свечей, предупреждаем
+        if available_candles < MIN_CANDLES_FOR_ANALYSIS:
+            logger.warning(f"⚠️ Для {symbol} доступно только {available_candles} свечей (минимум для полного анализа: {MIN_CANDLES_FOR_ANALYSIS})")
+            logger.warning(f"   Диапазоны EMA ограничены: короткая EMA до {ema_short_max}, длинная EMA до {ema_long_max}")
         
         logger.info(f"Генерация ВСЕХ комбинаций EMA для {symbol}:")
         logger.info(f"  Короткая EMA: {ema_short_min}..{ema_short_max} (step=1)")
         logger.info(f"  Длинная EMA: {ema_long_min}..{ema_long_max} (step=1)")
         logger.info(f"  Волатильность: {volatility:.3f}")
+        logger.info(f"  Доступно свечей: {available_candles}, максимальный период EMA: {max_usable_period}")
         
         # ✅ ПЕРЕБИРАЕМ ВСЕ ЗНАЧЕНИЯ ПОДРЯД (step=1) - БЕЗ ПРОПУСКОВ
         total_combinations = 0
@@ -1149,6 +1237,20 @@ class OptimalEMAFinder:
             # Получаем данные свечей
             candles = self.get_candles_data(symbol)
             if not candles:
+                return None
+            
+            # ✅ Проверяем минимальное количество свечей для расчета EMA
+            # МИНИМАЛЬНЫЕ ТРЕБОВАНИЯ:
+            # - Для расчета EMA с периодом N нужно минимум N свечей
+            # - Плюс запас для проверки прибыльности: 20 периодов (HOLD_PERIODS)
+            # - Плюс запас для проверки будущих свечей: 2 периода (max_future_candles)
+            # - Плюс небольшой запас для стабилизации: ~10 периодов
+            # ИТОГО: минимум для EMA(10, 20) = 20 + 20 + 2 + 10 = 52 свечи
+            # Но для минимального анализа можно обойтись меньшим количеством
+            min_candles_for_ema = 50  # Минимум для расчета EMA с минимальными периодами (10-20)
+            if len(candles) < min_candles_for_ema:
+                logger.warning(f"⚠️ Для {symbol} недостаточно свечей для анализа EMA: {len(candles)} < {min_candles_for_ema}")
+                logger.warning(f"   Минимум: {min_candles_for_ema} свечей (для EMA с периодами 10-20)")
                 return None
             
             # Вычисляем RSI один раз для всех комбинаций
