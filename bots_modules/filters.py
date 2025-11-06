@@ -74,6 +74,31 @@ except ImportError as e:
     def perform_enhanced_rsi_analysis(candles, rsi, symbol):
         return {'enabled': False, 'enhanced_signal': 'WAIT'}
 
+def calculate_ema_list(prices, period):
+    """
+    Рассчитывает список значений EMA для массива цен.
+    Возвращает список значений EMA или None, если недостаточно данных.
+    """
+    if len(prices) < period:
+        return None
+    
+    ema_values = []
+    # Первое значение EMA = SMA
+    sma = sum(prices[:period]) / period
+    ema = sma
+    multiplier = 2 / (period + 1)
+    
+    # Добавляем None для первых period-1 значений (где EMA еще не определен)
+    ema_values.extend([None] * (period - 1))
+    ema_values.append(ema)
+    
+    # Рассчитываем EMA для остальных значений
+    for price in prices[period:]:
+        ema = (price * multiplier) + (ema * (1 - multiplier))
+        ema_values.append(ema)
+    
+    return ema_values
+
 # Импорт функций зрелости из maturity
 try:
     from bots_modules.maturity import (
@@ -534,8 +559,6 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # ✅ НОВАЯ ЛОГИКА: Используем разные EMA для LONG и SHORT
         if ema_periods:
             try:
-                from bots_modules.calculations import calculate_ema
-                
                 # Определяем, какие EMA использовать в зависимости от RSI
                 if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 - потенциальный LONG
                     # Используем EMA для LONG сигналов
@@ -551,20 +574,64 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                         ema_long = None
                     
                     if ema_short and ema_long:
-                        ema_short_value = calculate_ema(closes, ema_short)[-1] if len(closes) >= ema_short else closes[-1]
-                        ema_long_value = calculate_ema(closes, ema_long)[-1] if len(closes) >= ema_long else closes[-1]
+                        ema_short_values = calculate_ema_list(closes, ema_short) if len(closes) >= ema_short else None
+                        ema_long_values = calculate_ema_list(closes, ema_long) if len(closes) >= ema_long else None
                         
-                        # Проверяем, что EMA показывает UP тренд (ema_short > ema_long)
-                        if ema_short_value > ema_long_value:
+                        if not ema_short_values or not ema_long_values:
+                            # Недостаточно данных для расчета EMA
                             rsi_zone = 'BUY_ZONE'
                             if avoid_down_trend and trend == 'DOWN':
                                 signal = 'WAIT'
                             else:
-                                signal = 'ENTER_LONG'  # ✅ Входим в лонг - EMA показывает UP тренд!
+                                signal = 'ENTER_LONG'
                         else:
-                            # EMA показывает DOWN тренд - не входим
-                            rsi_zone = 'BUY_ZONE'
-                            signal = 'WAIT'
+                            ema_short_value = ema_short_values[-1]
+                            ema_long_value = ema_long_values[-1]
+                            current_price = closes[-1]
+                            
+                            # ✅ УЛУЧШЕННАЯ ЛОГИКА: Проверяем не только текущий тренд, но и признаки разворота
+                            ema_shows_up_trend = ema_short_value > ema_long_value
+                            
+                            # Если EMA еще не показывают UP тренд, проверяем признаки разворота
+                            if not ema_shows_up_trend:
+                                # Проверяем наклон короткой EMA (если она начинает расти)
+                                ema_short_slope = 0
+                                if len(ema_short_values) >= 2 and ema_short_values[-2] is not None:
+                                    ema_short_slope = ema_short_value - ema_short_values[-2]
+                                
+                                # Проверяем сближение EMA (если они сближаются, это признак возможного разворота)
+                                ema_distance = abs(ema_short_value - ema_long_value)
+                                prev_ema_distance = 0
+                                if len(ema_short_values) >= 2 and len(ema_long_values) >= 2:
+                                    prev_short = ema_short_values[-2]
+                                    prev_long = ema_long_values[-2]
+                                    if prev_short is not None and prev_long is not None:
+                                        prev_ema_distance = abs(prev_short - prev_long)
+                                
+                                # Проверяем, что цена уже выше длинной EMA (даже если EMA еще не пересеклись)
+                                price_above_ema_long = current_price > ema_long_value
+                                
+                                # ✅ Признаки разворота: короткая EMA растет ИЛИ EMA сближаются ИЛИ цена выше длинной EMA
+                                signs_of_reversal = (
+                                    ema_short_slope > 0 or  # Короткая EMA начинает расти
+                                    (prev_ema_distance > 0 and ema_distance < prev_ema_distance * 0.9) or  # EMA сближаются (на 10%+)
+                                    price_above_ema_long  # Цена уже выше длинной EMA
+                                )
+                                
+                                if signs_of_reversal:
+                                    # Есть признаки разворота - разрешаем вход
+                                    ema_shows_up_trend = True
+                            
+                            if ema_shows_up_trend:
+                                rsi_zone = 'BUY_ZONE'
+                                if avoid_down_trend and trend == 'DOWN':
+                                    signal = 'WAIT'
+                                else:
+                                    signal = 'ENTER_LONG'  # ✅ Входим в лонг - EMA показывает UP тренд или признаки разворота!
+                            else:
+                                # EMA показывает DOWN тренд и нет признаков разворота - не входим
+                                rsi_zone = 'BUY_ZONE'
+                                signal = 'WAIT'
                     else:
                         # EMA периоды недоступны для LONG - используем fallback
                         rsi_zone = 'BUY_ZONE'
@@ -587,20 +654,64 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                         ema_long = None
                     
                     if ema_short and ema_long:
-                        ema_short_value = calculate_ema(closes, ema_short)[-1] if len(closes) >= ema_short else closes[-1]
-                        ema_long_value = calculate_ema(closes, ema_long)[-1] if len(closes) >= ema_long else closes[-1]
+                        ema_short_values = calculate_ema_list(closes, ema_short) if len(closes) >= ema_short else None
+                        ema_long_values = calculate_ema_list(closes, ema_long) if len(closes) >= ema_long else None
                         
-                        # Проверяем, что EMA показывает DOWN тренд (ema_short < ema_long)
-                        if ema_short_value < ema_long_value:
+                        if not ema_short_values or not ema_long_values:
+                            # Недостаточно данных для расчета EMA
                             rsi_zone = 'SELL_ZONE'
                             if avoid_up_trend and trend == 'UP':
                                 signal = 'WAIT'
                             else:
-                                signal = 'ENTER_SHORT'  # ✅ Входим в шорт - EMA показывает DOWN тренд!
+                                signal = 'ENTER_SHORT'
                         else:
-                            # EMA показывает UP тренд - не входим
-                            rsi_zone = 'SELL_ZONE'
-                            signal = 'WAIT'
+                            ema_short_value = ema_short_values[-1]
+                            ema_long_value = ema_long_values[-1]
+                            current_price = closes[-1]
+                            
+                            # ✅ УЛУЧШЕННАЯ ЛОГИКА: Проверяем не только текущий тренд, но и признаки разворота
+                            ema_shows_down_trend = ema_short_value < ema_long_value
+                            
+                            # Если EMA еще не показывают DOWN тренд, проверяем признаки разворота
+                            if not ema_shows_down_trend:
+                                # Проверяем наклон короткой EMA (если она начинает падать)
+                                ema_short_slope = 0
+                                if len(ema_short_values) >= 2 and ema_short_values[-2] is not None:
+                                    ema_short_slope = ema_short_value - ema_short_values[-2]
+                                
+                                # Проверяем сближение EMA (если они сближаются, это признак возможного разворота)
+                                ema_distance = abs(ema_short_value - ema_long_value)
+                                prev_ema_distance = 0
+                                if len(ema_short_values) >= 2 and len(ema_long_values) >= 2:
+                                    prev_short = ema_short_values[-2]
+                                    prev_long = ema_long_values[-2]
+                                    if prev_short is not None and prev_long is not None:
+                                        prev_ema_distance = abs(prev_short - prev_long)
+                                
+                                # Проверяем, что цена уже ниже длинной EMA (даже если EMA еще не пересеклись)
+                                price_below_ema_long = current_price < ema_long_value
+                                
+                                # ✅ Признаки разворота: короткая EMA падает ИЛИ EMA сближаются ИЛИ цена ниже длинной EMA
+                                signs_of_reversal = (
+                                    ema_short_slope < 0 or  # Короткая EMA начинает падать
+                                    (prev_ema_distance > 0 and ema_distance < prev_ema_distance * 0.9) or  # EMA сближаются (на 10%+)
+                                    price_below_ema_long  # Цена уже ниже длинной EMA
+                                )
+                                
+                                if signs_of_reversal:
+                                    # Есть признаки разворота - разрешаем вход
+                                    ema_shows_down_trend = True
+                            
+                            if ema_shows_down_trend:
+                                rsi_zone = 'SELL_ZONE'
+                                if avoid_up_trend and trend == 'UP':
+                                    signal = 'WAIT'
+                                else:
+                                    signal = 'ENTER_SHORT'  # ✅ Входим в шорт - EMA показывает DOWN тренд или признаки разворота!
+                            else:
+                                # EMA показывает UP тренд и нет признаков разворота - не входим
+                                rsi_zone = 'SELL_ZONE'
+                                signal = 'WAIT'
                     else:
                         # EMA периоды недоступны для SHORT - используем fallback
                         rsi_zone = 'SELL_ZONE'
