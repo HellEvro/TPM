@@ -432,436 +432,436 @@
     "short_signals": 5
   },
   "1000TURBO": {
-    "last_updated": "2025-11-06T23:16:47.525528",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
-      "accuracy": 100.0,
-      "total_signals": 11,
-      "correct_signals": 11.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 100.0,
-      "total_signals": 11,
-      "correct_signals": 11.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 26,
-    "accuracy": 100.0,
-    "long_signals": 11,
-    "short_signals": 11
-  },
-  "1000X": {
-    "last_updated": "2025-11-06T23:16:49.586388",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T00:39:22.578068",
+    "candles_analyzed": 1019,
     "analysis_method": "separate_long_short",
     "long": {
       "ema_short_period": 8,
-      "ema_long_period": 15,
+      "ema_long_period": 321,
       "accuracy": 100.0,
-      "total_signals": 8,
-      "correct_signals": 8.0
+      "total_signals": 5,
+      "correct_signals": 5.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
+      "ema_short_period": 12,
+      "ema_long_period": 279,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "ema_short_period": 8,
+    "ema_long_period": 321,
+    "accuracy": 100.0,
+    "long_signals": 5,
+    "short_signals": 1
+  },
+  "1000X": {
+    "last_updated": "2025-11-07T00:40:06.850385",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 12,
+      "ema_long_period": 361,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 375,
+      "accuracy": 100.0,
+      "total_signals": 6,
+      "correct_signals": 6.0
+    },
+    "ema_short_period": 12,
+    "ema_long_period": 361,
+    "accuracy": 100.0,
+    "long_signals": 2,
+    "short_signals": 6
+  },
+  "1000XEC": {
+    "last_updated": "2025-11-07T00:40:51.170568",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 3,
+      "ema_long_period": 14,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 170,
+      "accuracy": 66.66666666666666,
+      "total_signals": 6,
+      "correct_signals": 4.0
+    },
+    "ema_short_period": 3,
+    "ema_long_period": 14,
+    "accuracy": 100.0,
+    "long_signals": 2,
+    "short_signals": 6
+  },
+  "1INCH": {
+    "last_updated": "2025-11-07T00:41:35.369514",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 10,
+      "ema_long_period": 263,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "short": {
+      "ema_short_period": 7,
+      "ema_long_period": 179,
+      "accuracy": 40.0,
+      "total_signals": 5,
+      "correct_signals": 2.0
+    },
+    "ema_short_period": 10,
+    "ema_long_period": 263,
+    "accuracy": 100.0,
+    "long_signals": 5,
+    "short_signals": 5
+  },
+  "A": {
+    "last_updated": "2025-11-07T00:42:32.732294",
+    "candles_analyzed": 651,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 40,
+      "ema_long_period": 245,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
+    },
+    "short": {
+      "ema_short_period": 9,
+      "ema_long_period": 174,
+      "accuracy": 100.0,
+      "total_signals": 6,
+      "correct_signals": 6.0
+    },
+    "ema_short_period": 40,
+    "ema_long_period": 245,
+    "accuracy": 100.0,
+    "long_signals": 2,
+    "short_signals": 6
+  },
+  "A2Z": {
+    "last_updated": "2025-11-07T00:42:50.413467",
+    "candles_analyzed": 395,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 3,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 6,
+      "correct_signals": 6.0
+    },
+    "short": {
+      "ema_short_period": 3,
+      "ema_long_period": 126,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
+    },
+    "ema_short_period": 3,
+    "ema_long_period": 10,
+    "accuracy": 100.0,
+    "long_signals": 6,
+    "short_signals": 0
+  },
+  "A8": {
+    "last_updated": "2025-11-07T00:43:47.377620",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 56,
+      "ema_long_period": 95,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 7,
+      "ema_long_period": 285,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "ema_short_period": 56,
+    "ema_long_period": 95,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 1
+  },
+  "AAVE": {
+    "last_updated": "2025-11-07T00:44:48.582138",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 12,
+      "ema_long_period": 314,
       "accuracy": 100.0,
       "total_signals": 7,
       "correct_signals": 7.0
     },
-    "ema_short_period": 8,
-    "ema_long_period": 15,
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 198,
+      "accuracy": 80.0,
+      "total_signals": 5,
+      "correct_signals": 4.0
+    },
+    "ema_short_period": 12,
+    "ema_long_period": 314,
     "accuracy": 100.0,
-    "long_signals": 8,
-    "short_signals": 7
+    "long_signals": 7,
+    "short_signals": 5
   },
-  "1000XEC": {
-    "last_updated": "2025-11-06T23:16:51.672406",
-    "candles_analyzed": 5000,
+  "ACE": {
+    "last_updated": "2025-11-07T00:45:47.394067",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 7,
-      "ema_long_period": 16,
+      "ema_short_period": 3,
+      "ema_long_period": 13,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 138,
+      "accuracy": 77.77777777777779,
+      "total_signals": 9,
+      "correct_signals": 7.0
+    },
+    "ema_short_period": 3,
+    "ema_long_period": 13,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 9
+  },
+  "ACH": {
+    "last_updated": "2025-11-07T00:46:45.511347",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 38,
+      "ema_long_period": 111,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 10,
+      "ema_long_period": 245,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "ema_short_period": 38,
+    "ema_long_period": 111,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 5
+  },
+  "ACT": {
+    "last_updated": "2025-11-07T00:47:42.545000",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 3,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "short": {
+      "ema_short_period": 8,
+      "ema_long_period": 205,
+      "accuracy": 100.0,
+      "total_signals": 10,
+      "correct_signals": 10.0
+    },
+    "ema_short_period": 3,
+    "ema_long_period": 10,
+    "accuracy": 100.0,
+    "long_signals": 5,
+    "short_signals": 10
+  },
+  "ACX": {
+    "last_updated": "2025-11-07T00:48:43.154575",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 3,
+      "ema_long_period": 13,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
+    },
+    "short": {
+      "ema_short_period": 5,
+      "ema_long_period": 458,
       "accuracy": 100.0,
       "total_signals": 11,
       "correct_signals": 11.0
     },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
-      "accuracy": 100.0,
-      "total_signals": 8,
-      "correct_signals": 8.0
-    },
-    "ema_short_period": 7,
-    "ema_long_period": 16,
+    "ema_short_period": 3,
+    "ema_long_period": 13,
     "accuracy": 100.0,
-    "long_signals": 11,
-    "short_signals": 8
-  },
-  "1INCH": {
-    "last_updated": "2025-11-06T23:16:53.749312",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 59,
-      "correct_signals": 59.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
-      "accuracy": 100.0,
-      "total_signals": 12,
-      "correct_signals": 12.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 11,
-    "accuracy": 100.0,
-    "long_signals": 59,
-    "short_signals": 12
-  },
-  "A": {
-    "last_updated": "2025-11-06T23:17:27.827687",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 100.0,
-      "total_signals": 30,
-      "correct_signals": 30.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
-      "accuracy": 96.15384615384616,
-      "total_signals": 26,
-      "correct_signals": 25.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
-    "accuracy": 100.0,
-    "long_signals": 30,
-    "short_signals": 26
-  },
-  "A2Z": {
-    "last_updated": "2025-11-06T23:17:32.496995",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 87.5,
-      "total_signals": 72,
-      "correct_signals": 63.0
-    },
-    "short": {
-      "ema_short_period": 7,
-      "ema_long_period": 16,
-      "accuracy": 98.27586206896551,
-      "total_signals": 58,
-      "correct_signals": 57.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
-    "accuracy": 87.5,
-    "long_signals": 72,
-    "short_signals": 58
-  },
-  "A8": {
-    "last_updated": "2025-11-06T23:17:35.372490",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 7,
-      "ema_long_period": 31,
-      "accuracy": 100.0,
-      "total_signals": 13,
-      "correct_signals": 13.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 10,
-      "accuracy": 100.0,
-      "total_signals": 33,
-      "correct_signals": 33.0
-    },
-    "ema_short_period": 7,
-    "ema_long_period": 31,
-    "accuracy": 100.0,
-    "long_signals": 13,
-    "short_signals": 33
-  },
-  "AAVE": {
-    "last_updated": "2025-11-06T23:17:37.736472",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 10,
-      "accuracy": 100.0,
-      "total_signals": 73,
-      "correct_signals": 73.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 10,
-      "accuracy": 100.0,
-      "total_signals": 48,
-      "correct_signals": 48.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 10,
-    "accuracy": 100.0,
-    "long_signals": 73,
-    "short_signals": 48
-  },
-  "ACE": {
-    "last_updated": "2025-11-06T23:17:39.757949",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 7,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 19,
-      "correct_signals": 19.0
-    },
-    "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 18,
-      "correct_signals": 18.0
-    },
-    "ema_short_period": 7,
-    "ema_long_period": 16,
-    "accuracy": 100.0,
-    "long_signals": 19,
-    "short_signals": 18
-  },
-  "ACH": {
-    "last_updated": "2025-11-06T23:17:41.919875",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 16,
-      "correct_signals": 16.0
-    },
-    "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 10,
-      "accuracy": 100.0,
-      "total_signals": 38,
-      "correct_signals": 38.0
-    },
-    "ema_short_period": 10,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 16,
-    "short_signals": 38
-  },
-  "ACT": {
-    "last_updated": "2025-11-06T23:17:43.909572",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
-      "accuracy": 96.0,
-      "total_signals": 25,
-      "correct_signals": 24.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 27,
-      "correct_signals": 27.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 15,
-    "accuracy": 96.0,
-    "long_signals": 25,
-    "short_signals": 27
-  },
-  "ACX": {
-    "last_updated": "2025-11-06T23:17:45.886556",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 19,
-      "correct_signals": 19.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
-      "accuracy": 100.0,
-      "total_signals": 10,
-      "correct_signals": 10.0
-    },
-    "ema_short_period": 10,
-    "ema_long_period": 11,
-    "accuracy": 100.0,
-    "long_signals": 19,
-    "short_signals": 10
+    "long_signals": 2,
+    "short_signals": 11
   },
   "ADA": {
-    "last_updated": "2025-11-06T23:17:47.933752",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T00:49:41.999865",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
       "ema_short_period": 9,
-      "ema_long_period": 16,
+      "ema_long_period": 346,
       "accuracy": 100.0,
-      "total_signals": 15,
-      "correct_signals": 15.0
+      "total_signals": 2,
+      "correct_signals": 2.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 23,
-      "correct_signals": 23.0
+      "ema_short_period": 14,
+      "ema_long_period": 526,
+      "accuracy": 80.0,
+      "total_signals": 5,
+      "correct_signals": 4.0
     },
     "ema_short_period": 9,
-    "ema_long_period": 16,
+    "ema_long_period": 346,
     "accuracy": 100.0,
-    "long_signals": 15,
-    "short_signals": 23
+    "long_signals": 2,
+    "short_signals": 5
   },
   "AERGO": {
-    "last_updated": "2025-11-06T23:17:50.195825",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T00:50:41.643997",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
+      "ema_short_period": 3,
+      "ema_long_period": 288,
       "accuracy": 100.0,
-      "total_signals": 27,
-      "correct_signals": 27.0
+      "total_signals": 2,
+      "correct_signals": 2.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
-      "accuracy": 100.0,
-      "total_signals": 13,
-      "correct_signals": 13.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 27,
-    "short_signals": 13
-  },
-  "AERO": {
-    "last_updated": "2025-11-06T23:17:52.300637",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 26,
-      "correct_signals": 26.0
-    },
-    "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 22,
-      "correct_signals": 22.0
-    },
-    "ema_short_period": 10,
-    "ema_long_period": 11,
-    "accuracy": 100.0,
-    "long_signals": 26,
-    "short_signals": 22
-  },
-  "AEVO": {
-    "last_updated": "2025-11-06T23:17:54.628718",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 21,
-      "correct_signals": 21.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
+      "ema_short_period": 12,
+      "ema_long_period": 168,
       "accuracy": 100.0,
       "total_signals": 9,
       "correct_signals": 9.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
+    "ema_short_period": 3,
+    "ema_long_period": 288,
     "accuracy": 100.0,
-    "long_signals": 21,
+    "long_signals": 2,
     "short_signals": 9
   },
-  "AGI": {
-    "last_updated": "2025-11-06T23:17:56.746483",
-    "candles_analyzed": 5000,
+  "AERO": {
+    "last_updated": "2025-11-07T00:51:41.240869",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
+      "ema_short_period": 13,
+      "ema_long_period": 353,
       "accuracy": 100.0,
-      "total_signals": 34,
-      "correct_signals": 34.0
+      "total_signals": 13,
+      "correct_signals": 13.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
+      "ema_short_period": 9,
+      "ema_long_period": 211,
       "accuracy": 100.0,
-      "total_signals": 8,
-      "correct_signals": 8.0
+      "total_signals": 6,
+      "correct_signals": 6.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
+    "ema_short_period": 13,
+    "ema_long_period": 353,
     "accuracy": 100.0,
-    "long_signals": 34,
-    "short_signals": 8
+    "long_signals": 13,
+    "short_signals": 6
   },
-  "AGLD": {
-    "last_updated": "2025-11-06T23:17:58.819395",
-    "candles_analyzed": 5000,
+  "AEVO": {
+    "last_updated": "2025-11-07T00:52:42.360413",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
+      "ema_short_period": 28,
+      "ema_long_period": 317,
       "accuracy": 100.0,
-      "total_signals": 14,
-      "correct_signals": 14.0
+      "total_signals": 2,
+      "correct_signals": 2.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
+      "ema_short_period": 8,
+      "ema_long_period": 524,
       "accuracy": 100.0,
       "total_signals": 10,
       "correct_signals": 10.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 21,
+    "ema_short_period": 28,
+    "ema_long_period": 317,
     "accuracy": 100.0,
-    "long_signals": 14,
+    "long_signals": 2,
     "short_signals": 10
+  },
+  "AGI": {
+    "last_updated": "2025-11-07T00:53:38.742816",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 16,
+      "ema_long_period": 358,
+      "accuracy": 80.0,
+      "total_signals": 5,
+      "correct_signals": 4.0
+    },
+    "short": {
+      "ema_short_period": 3,
+      "ema_long_period": 265,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "ema_short_period": 16,
+    "ema_long_period": 358,
+    "accuracy": 80.0,
+    "long_signals": 5,
+    "short_signals": 5
+  },
+  "AGLD": {
+    "last_updated": "2025-11-07T00:54:34.543900",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 169,
+      "ema_long_period": 315,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 9,
+      "ema_long_period": 364,
+      "accuracy": 100.0,
+      "total_signals": 4,
+      "correct_signals": 4.0
+    },
+    "ema_short_period": 169,
+    "ema_long_period": 315,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 4
   },
   "AGT": {
     "ema_short_period": 101,
@@ -876,28 +876,28 @@
     "analysis_method": "trend_confirmation"
   },
   "AI": {
-    "last_updated": "2025-11-06T23:18:00.902503",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T00:55:30.275811",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
+      "ema_short_period": 15,
+      "ema_long_period": 81,
       "accuracy": 100.0,
-      "total_signals": 19,
-      "correct_signals": 19.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
-      "accuracy": 100.0,
-      "total_signals": 9,
-      "correct_signals": 9.0
+      "ema_short_period": 13,
+      "ema_long_period": 152,
+      "accuracy": 71.42857142857143,
+      "total_signals": 7,
+      "correct_signals": 5.0
     },
-    "ema_short_period": 10,
-    "ema_long_period": 11,
+    "ema_short_period": 15,
+    "ema_long_period": 81,
     "accuracy": 100.0,
-    "long_signals": 19,
-    "short_signals": 9
+    "long_signals": 1,
+    "short_signals": 7
   },
   "AI16Z": {
     "ema_short_period": 153,
@@ -912,220 +912,220 @@
     "analysis_method": "trend_confirmation"
   },
   "AIN": {
-    "last_updated": "2025-11-06T23:18:14.454106",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T00:56:02.983691",
+    "candles_analyzed": 479,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 95.45454545454545,
-      "total_signals": 66,
-      "correct_signals": 63.0
+      "ema_short_period": 12,
+      "ema_long_period": 202,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 98.46153846153847,
-      "total_signals": 65,
-      "correct_signals": 64.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
-    "accuracy": 95.45454545454545,
-    "long_signals": 66,
-    "short_signals": 65
-  },
-  "AIO": {
-    "last_updated": "2025-11-06T23:18:19.410455",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 91.30434782608695,
-      "total_signals": 92,
-      "correct_signals": 84.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 96.73913043478261,
-      "total_signals": 92,
-      "correct_signals": 89.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
-    "accuracy": 91.30434782608695,
-    "long_signals": 92,
-    "short_signals": 92
-  },
-  "AIOZ": {
-    "last_updated": "2025-11-06T23:18:21.404652",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 20,
-      "accuracy": 100.0,
-      "total_signals": 7,
-      "correct_signals": 7.0
-    },
-    "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 7,
-      "correct_signals": 7.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 20,
-    "accuracy": 100.0,
-    "long_signals": 7,
-    "short_signals": 7
-  },
-  "AIXBT": {
-    "last_updated": "2025-11-06T23:18:23.402223",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 15,
-      "correct_signals": 15.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 23,
-      "correct_signals": 23.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 15,
-    "short_signals": 23
-  },
-  "AKT": {
-    "last_updated": "2025-11-06T23:18:35.985506",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 44,
-      "correct_signals": 44.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 41,
-      "correct_signals": 41.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 11,
-    "accuracy": 100.0,
-    "long_signals": 44,
-    "short_signals": 41
-  },
-  "ALCH": {
-    "last_updated": "2025-11-06T23:18:37.985380",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 34,
-      "correct_signals": 34.0
-    },
-    "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 23,
-      "correct_signals": 23.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
-    "accuracy": 100.0,
-    "long_signals": 34,
-    "short_signals": 23
-  },
-  "ALEO": {
-    "last_updated": "2025-11-06T23:18:40.085994",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 7,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 22,
-      "correct_signals": 22.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 35,
-      "correct_signals": 35.0
-    },
-    "ema_short_period": 7,
-    "ema_long_period": 16,
-    "accuracy": 100.0,
-    "long_signals": 22,
-    "short_signals": 35
-  },
-  "ALGO": {
-    "last_updated": "2025-11-06T23:18:42.365796",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 7,
-      "ema_long_period": 26,
+      "ema_short_period": 12,
+      "ema_long_period": 188,
       "accuracy": 100.0,
       "total_signals": 8,
       "correct_signals": 8.0
     },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
-      "accuracy": 100.0,
-      "total_signals": 12,
-      "correct_signals": 12.0
-    },
-    "ema_short_period": 7,
-    "ema_long_period": 26,
+    "ema_short_period": 12,
+    "ema_long_period": 202,
     "accuracy": 100.0,
-    "long_signals": 8,
-    "short_signals": 12
+    "long_signals": 1,
+    "short_signals": 8
   },
-  "ALICE": {
-    "last_updated": "2025-11-06T23:18:44.496657",
-    "candles_analyzed": 5000,
+  "AIO": {
+    "last_updated": "2025-11-07T00:56:15.580649",
+    "candles_analyzed": 342,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
+      "ema_short_period": 4,
+      "ema_long_period": 211,
       "accuracy": 100.0,
-      "total_signals": 31,
-      "correct_signals": 31.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
+      "ema_short_period": 3,
+      "ema_long_period": 17,
       "accuracy": 100.0,
-      "total_signals": 24,
-      "correct_signals": 24.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 10,
-    "ema_long_period": 11,
+    "ema_short_period": 4,
+    "ema_long_period": 211,
     "accuracy": 100.0,
-    "long_signals": 31,
-    "short_signals": 24
+    "long_signals": 1,
+    "short_signals": 1
+  },
+  "AIOZ": {
+    "last_updated": "2025-11-07T00:57:12.702624",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 13,
+      "ema_long_period": 286,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 231,
+      "accuracy": 100.0,
+      "total_signals": 9,
+      "correct_signals": 9.0
+    },
+    "ema_short_period": 13,
+    "ema_long_period": 286,
+    "accuracy": 100.0,
+    "long_signals": 5,
+    "short_signals": 9
+  },
+  "AIXBT": {
+    "last_updated": "2025-11-07T00:58:08.546272",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 22,
+      "ema_long_period": 423,
+      "accuracy": 100.0,
+      "total_signals": 3,
+      "correct_signals": 3.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 209,
+      "accuracy": 100.0,
+      "total_signals": 16,
+      "correct_signals": 16.0
+    },
+    "ema_short_period": 22,
+    "ema_long_period": 423,
+    "accuracy": 100.0,
+    "long_signals": 3,
+    "short_signals": 16
+  },
+  "AKT": {
+    "last_updated": "2025-11-07T00:59:10.363371",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 13,
+      "ema_long_period": 352,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "short": {
+      "ema_short_period": 5,
+      "ema_long_period": 162,
+      "accuracy": 87.5,
+      "total_signals": 8,
+      "correct_signals": 7.0
+    },
+    "ema_short_period": 13,
+    "ema_long_period": 352,
+    "accuracy": 100.0,
+    "long_signals": 5,
+    "short_signals": 8
+  },
+  "ALCH": {
+    "last_updated": "2025-11-07T01:00:08.448854",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 6,
+      "ema_long_period": 205,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 189,
+      "accuracy": 100.0,
+      "total_signals": 7,
+      "correct_signals": 7.0
+    },
+    "ema_short_period": 6,
+    "ema_long_period": 205,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 7
+  },
+  "ALEO": {
+    "last_updated": "2025-11-07T01:01:05.512118",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 13,
+      "ema_long_period": 362,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 175,
+      "accuracy": 77.77777777777779,
+      "total_signals": 9,
+      "correct_signals": 7.0
+    },
+    "ema_short_period": 13,
+    "ema_long_period": 362,
+    "accuracy": 100.0,
+    "long_signals": 2,
+    "short_signals": 9
+  },
+  "ALGO": {
+    "last_updated": "2025-11-07T01:02:01.407971",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 6,
+      "ema_long_period": 312,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 69,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
+    },
+    "ema_short_period": 6,
+    "ema_long_period": 312,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 2
+  },
+  "ALICE": {
+    "last_updated": "2025-11-07T01:02:58.288117",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 3,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 7,
+      "ema_long_period": 341,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "ema_short_period": 3,
+    "ema_long_period": 10,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 5
   },
   "ALPHA": {
     "ema_short_period": 155,
@@ -1140,412 +1140,412 @@
     "analysis_method": "trend_confirmation"
   },
   "ALPINE": {
-    "last_updated": "2025-11-06T23:18:49.871261",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:03:09.957592",
+    "candles_analyzed": 339,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 85.48387096774194,
-      "total_signals": 62,
-      "correct_signals": 53.0
+      "ema_short_period": 4,
+      "ema_long_period": 10,
+      "accuracy": 80.0,
+      "total_signals": 5,
+      "correct_signals": 4.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
-      "accuracy": 85.0,
-      "total_signals": 40,
-      "correct_signals": 34.0
+      "ema_short_period": 3,
+      "ema_long_period": 25,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
-    "accuracy": 85.48387096774194,
-    "long_signals": 62,
-    "short_signals": 40
+    "ema_short_period": 4,
+    "ema_long_period": 10,
+    "accuracy": 80.0,
+    "long_signals": 5,
+    "short_signals": 1
   },
   "ALT": {
-    "last_updated": "2025-11-06T23:18:51.988991",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:03:54.014220",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 7,
-      "ema_long_period": 16,
+      "ema_short_period": 17,
+      "ema_long_period": 573,
       "accuracy": 100.0,
-      "total_signals": 12,
-      "correct_signals": 12.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 29,
-      "correct_signals": 29.0
+      "ema_short_period": 10,
+      "ema_long_period": 152,
+      "accuracy": 60.0,
+      "total_signals": 5,
+      "correct_signals": 3.0
     },
-    "ema_short_period": 7,
-    "ema_long_period": 16,
+    "ema_short_period": 17,
+    "ema_long_period": 573,
     "accuracy": 100.0,
-    "long_signals": 12,
-    "short_signals": 29
+    "long_signals": 1,
+    "short_signals": 5
   },
   "ALU": {
-    "last_updated": "2025-11-06T23:18:54.064892",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:04:43.116731",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
+      "ema_short_period": 144,
+      "ema_long_period": 343,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 3,
+      "ema_long_period": 163,
+      "accuracy": 100.0,
+      "total_signals": 7,
+      "correct_signals": 7.0
+    },
+    "ema_short_period": 144,
+    "ema_long_period": 343,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 7
+  },
+  "ANIME": {
+    "last_updated": "2025-11-07T01:05:28.822030",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 8,
+      "ema_long_period": 431,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 149,
+      "accuracy": 100.0,
+      "total_signals": 6,
+      "correct_signals": 6.0
+    },
+    "ema_short_period": 8,
+    "ema_long_period": 431,
+    "accuracy": 100.0,
+    "long_signals": 2,
+    "short_signals": 6
+  },
+  "ANKR": {
+    "last_updated": "2025-11-07T01:06:17.015336",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 9,
+      "ema_long_period": 200,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
+    },
+    "short": {
+      "ema_short_period": 9,
+      "ema_long_period": 530,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "ema_short_period": 9,
+    "ema_long_period": 200,
+    "accuracy": 100.0,
+    "long_signals": 2,
+    "short_signals": 5
+  },
+  "APE": {
+    "last_updated": "2025-11-07T01:07:03.923410",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 13,
+      "ema_long_period": 321,
       "accuracy": 100.0,
       "total_signals": 7,
       "correct_signals": 7.0
     },
     "short": {
-      "ema_short_period": 10,
-      "ema_long_period": 15,
+      "ema_short_period": 13,
+      "ema_long_period": 282,
       "accuracy": 100.0,
-      "total_signals": 14,
-      "correct_signals": 14.0
+      "total_signals": 9,
+      "correct_signals": 9.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
+    "ema_short_period": 13,
+    "ema_long_period": 321,
     "accuracy": 100.0,
     "long_signals": 7,
-    "short_signals": 14
+    "short_signals": 9
   },
-  "ANIME": {
-    "last_updated": "2025-11-06T23:18:56.133623",
-    "candles_analyzed": 5000,
+  "API3": {
+    "last_updated": "2025-11-07T01:07:58.053918",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
+      "ema_short_period": 12,
+      "ema_long_period": 123,
       "accuracy": 100.0,
-      "total_signals": 16,
-      "correct_signals": 16.0
+      "total_signals": 6,
+      "correct_signals": 6.0
+    },
+    "short": {
+      "ema_short_period": 9,
+      "ema_long_period": 182,
+      "accuracy": 80.0,
+      "total_signals": 5,
+      "correct_signals": 4.0
+    },
+    "ema_short_period": 12,
+    "ema_long_period": 123,
+    "accuracy": 100.0,
+    "long_signals": 6,
+    "short_signals": 5
+  },
+  "APT": {
+    "last_updated": "2025-11-07T01:08:46.290448",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 3,
+      "ema_long_period": 11,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
     },
     "short": {
       "ema_short_period": 7,
-      "ema_long_period": 26,
+      "ema_long_period": 230,
+      "accuracy": 100.0,
+      "total_signals": 9,
+      "correct_signals": 9.0
+    },
+    "ema_short_period": 3,
+    "ema_long_period": 11,
+    "accuracy": 100.0,
+    "long_signals": 2,
+    "short_signals": 9
+  },
+  "AR": {
+    "last_updated": "2025-11-07T01:09:33.923341",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 4,
+      "ema_long_period": 15,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 9,
+      "ema_long_period": 525,
+      "accuracy": 80.0,
+      "total_signals": 5,
+      "correct_signals": 4.0
+    },
+    "ema_short_period": 4,
+    "ema_long_period": 15,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 5
+  },
+  "ARB": {
+    "last_updated": "2025-11-07T01:10:21.840291",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 15,
+      "ema_long_period": 263,
+      "accuracy": 83.33333333333334,
+      "total_signals": 6,
+      "correct_signals": 5.0
+    },
+    "short": {
+      "ema_short_period": 6,
+      "ema_long_period": 212,
       "accuracy": 100.0,
       "total_signals": 5,
       "correct_signals": 5.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
-    "accuracy": 100.0,
-    "long_signals": 16,
+    "ema_short_period": 15,
+    "ema_long_period": 263,
+    "accuracy": 83.33333333333334,
+    "long_signals": 6,
     "short_signals": 5
   },
-  "ANKR": {
-    "last_updated": "2025-11-06T23:18:58.148312",
-    "candles_analyzed": 5000,
+  "ARC": {
+    "last_updated": "2025-11-07T01:11:09.331717",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 8,
-      "correct_signals": 8.0
-    },
-    "short": {
-      "ema_short_period": 6,
+      "ema_short_period": 3,
       "ema_long_period": 10,
-      "accuracy": 96.7741935483871,
-      "total_signals": 62,
-      "correct_signals": 60.0
-    },
-    "ema_short_period": 10,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 8,
-    "short_signals": 62
-  },
-  "APE": {
-    "last_updated": "2025-11-06T23:19:00.324101",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
       "accuracy": 100.0,
-      "total_signals": 19,
-      "correct_signals": 19.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 24,
-      "correct_signals": 24.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 21,
-    "accuracy": 100.0,
-    "long_signals": 19,
-    "short_signals": 24
-  },
-  "API3": {
-    "last_updated": "2025-11-06T23:19:13.532512",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 100.0,
-      "total_signals": 22,
-      "correct_signals": 22.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
-      "accuracy": 100.0,
-      "total_signals": 18,
-      "correct_signals": 18.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
-    "accuracy": 100.0,
-    "long_signals": 22,
-    "short_signals": 18
-  },
-  "APT": {
-    "last_updated": "2025-11-06T23:19:33.432127",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 31,
-      "accuracy": 100.0,
-      "total_signals": 16,
-      "correct_signals": 16.0
-    },
-    "short": {
-      "ema_short_period": 10,
-      "ema_long_period": 15,
+      "ema_short_period": 9,
+      "ema_long_period": 299,
       "accuracy": 100.0,
       "total_signals": 11,
       "correct_signals": 11.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 31,
+    "ema_short_period": 3,
+    "ema_long_period": 10,
     "accuracy": 100.0,
-    "long_signals": 16,
+    "long_signals": 1,
     "short_signals": 11
   },
-  "AR": {
-    "last_updated": "2025-11-06T23:19:35.490783",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
-      "accuracy": 100.0,
-      "total_signals": 17,
-      "correct_signals": 17.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 10,
-      "accuracy": 100.0,
-      "total_signals": 50,
-      "correct_signals": 50.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 21,
-    "accuracy": 100.0,
-    "long_signals": 17,
-    "short_signals": 50
-  },
-  "ARB": {
-    "last_updated": "2025-11-06T23:19:37.743496",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
-      "accuracy": 100.0,
-      "total_signals": 19,
-      "correct_signals": 19.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 44,
-      "correct_signals": 44.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 21,
-    "accuracy": 100.0,
-    "long_signals": 19,
-    "short_signals": 44
-  },
-  "ARC": {
-    "last_updated": "2025-11-06T23:19:39.946172",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 40,
-      "correct_signals": 40.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 32,
-      "correct_signals": 32.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 40,
-    "short_signals": 32
-  },
   "ARK": {
-    "last_updated": "2025-11-06T23:19:49.034629",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:12:02.083026",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
+      "ema_short_period": 13,
+      "ema_long_period": 338,
       "accuracy": 100.0,
-      "total_signals": 33,
-      "correct_signals": 33.0
+      "total_signals": 7,
+      "correct_signals": 7.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
+      "ema_short_period": 3,
+      "ema_long_period": 304,
       "accuracy": 100.0,
-      "total_signals": 22,
-      "correct_signals": 22.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
+    "ema_short_period": 13,
+    "ema_long_period": 338,
     "accuracy": 100.0,
-    "long_signals": 33,
-    "short_signals": 22
+    "long_signals": 7,
+    "short_signals": 1
   },
   "ARKM": {
-    "last_updated": "2025-11-06T23:19:51.812250",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:12:49.236219",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 7,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 22,
-      "correct_signals": 22.0
+      "ema_short_period": 13,
+      "ema_long_period": 297,
+      "accuracy": 85.71428571428571,
+      "total_signals": 7,
+      "correct_signals": 6.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 10,
-      "accuracy": 100.0,
-      "total_signals": 41,
-      "correct_signals": 41.0
+      "ema_short_period": 8,
+      "ema_long_period": 524,
+      "accuracy": 88.88888888888889,
+      "total_signals": 9,
+      "correct_signals": 8.0
     },
-    "ema_short_period": 7,
-    "ema_long_period": 16,
-    "accuracy": 100.0,
-    "long_signals": 22,
-    "short_signals": 41
+    "ema_short_period": 13,
+    "ema_long_period": 297,
+    "accuracy": 85.71428571428571,
+    "long_signals": 7,
+    "short_signals": 9
   },
   "ARPA": {
-    "last_updated": "2025-11-06T23:19:53.904539",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:13:32.691966",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
+      "ema_short_period": 3,
+      "ema_long_period": 10,
       "accuracy": 100.0,
-      "total_signals": 23,
-      "correct_signals": 23.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
+      "ema_short_period": 13,
+      "ema_long_period": 209,
       "accuracy": 100.0,
-      "total_signals": 19,
-      "correct_signals": 19.0
+      "total_signals": 10,
+      "correct_signals": 10.0
     },
-    "ema_short_period": 10,
-    "ema_long_period": 11,
+    "ema_short_period": 3,
+    "ema_long_period": 10,
     "accuracy": 100.0,
-    "long_signals": 23,
-    "short_signals": 19
+    "long_signals": 1,
+    "short_signals": 10
   },
   "ASP": {
-    "last_updated": "2025-11-06T23:19:58.346839",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:13:49.171178",
+    "candles_analyzed": 422,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 88.88888888888889,
-      "total_signals": 72,
-      "correct_signals": 64.0
+      "ema_short_period": 65,
+      "ema_long_period": 87,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
-      "accuracy": 94.82758620689656,
-      "total_signals": 58,
-      "correct_signals": 55.0
+      "ema_short_period": 3,
+      "ema_long_period": 149,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
-    "accuracy": 88.88888888888889,
-    "long_signals": 72,
-    "short_signals": 58
+    "ema_short_period": 65,
+    "ema_long_period": 87,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 1
   },
   "ASR": {
-    "last_updated": "2025-11-06T23:20:03.987392",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:14:00.168366",
+    "candles_analyzed": 339,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
-      "accuracy": 80.28169014084507,
-      "total_signals": 71,
-      "correct_signals": 57.0
+      "ema_short_period": 3,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 3,
+      "correct_signals": 3.0
     },
     "short": {
       "ema_short_period": 8,
-      "ema_long_period": 15,
-      "accuracy": 82.66666666666667,
-      "total_signals": 75,
-      "correct_signals": 62.0
+      "ema_long_period": 86,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
     },
-    "ema_short_period": 8,
-    "ema_long_period": 15,
-    "accuracy": 80.28169014084507,
-    "long_signals": 71,
-    "short_signals": 75
+    "ema_short_period": 3,
+    "ema_long_period": 10,
+    "accuracy": 100.0,
+    "long_signals": 3,
+    "short_signals": 2
   },
   "ASTR": {
-    "last_updated": "2025-11-06T23:20:14.788677",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:14:46.779644",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
+      "ema_short_period": 16,
+      "ema_long_period": 172,
       "accuracy": 100.0,
-      "total_signals": 20,
-      "correct_signals": 20.0
+      "total_signals": 2,
+      "correct_signals": 2.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
+      "ema_short_period": 9,
+      "ema_long_period": 527,
       "accuracy": 100.0,
-      "total_signals": 30,
-      "correct_signals": 30.0
+      "total_signals": 10,
+      "correct_signals": 10.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
+    "ema_short_period": 16,
+    "ema_long_period": 172,
     "accuracy": 100.0,
-    "long_signals": 20,
-    "short_signals": 30
+    "long_signals": 2,
+    "short_signals": 10
   },
   "ATA": {
     "ema_short_period": 127,
@@ -1560,148 +1560,148 @@
     "analysis_method": "trend_confirmation"
   },
   "ATH": {
-    "last_updated": "2025-11-06T23:20:27.675561",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:15:38.748633",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 22,
-      "correct_signals": 22.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 51,
-      "correct_signals": 51.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 22,
-    "short_signals": 51
-  },
-  "ATOM": {
-    "last_updated": "2025-11-06T23:20:29.781604",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
-      "accuracy": 100.0,
-      "total_signals": 12,
-      "correct_signals": 12.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
-      "accuracy": 100.0,
-      "total_signals": 13,
-      "correct_signals": 13.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 25,
-    "accuracy": 100.0,
-    "long_signals": 12,
-    "short_signals": 13
-  },
-  "AUCTION": {
-    "last_updated": "2025-11-06T23:20:31.910583",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 19,
-      "correct_signals": 19.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
-      "accuracy": 100.0,
-      "total_signals": 13,
-      "correct_signals": 13.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
-    "accuracy": 100.0,
-    "long_signals": 19,
-    "short_signals": 13
-  },
-  "AUDIO": {
-    "last_updated": "2025-11-06T23:20:33.996578",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 19,
-      "correct_signals": 19.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
+      "ema_short_period": 9,
+      "ema_long_period": 367,
       "accuracy": 100.0,
       "total_signals": 9,
       "correct_signals": 9.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
+    "short": {
+      "ema_short_period": 10,
+      "ema_long_period": 132,
+      "accuracy": 88.88888888888889,
+      "total_signals": 9,
+      "correct_signals": 8.0
+    },
+    "ema_short_period": 9,
+    "ema_long_period": 367,
     "accuracy": 100.0,
-    "long_signals": 19,
+    "long_signals": 9,
     "short_signals": 9
   },
-  "AVA": {
-    "last_updated": "2025-11-06T23:20:36.097343",
-    "candles_analyzed": 5000,
+  "ATOM": {
+    "last_updated": "2025-11-07T01:16:25.869850",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
+      "ema_short_period": 15,
+      "ema_long_period": 104,
       "accuracy": 100.0,
-      "total_signals": 34,
-      "correct_signals": 34.0
+      "total_signals": 3,
+      "correct_signals": 3.0
+    },
+    "short": {
+      "ema_short_period": 12,
+      "ema_long_period": 276,
+      "accuracy": 20.0,
+      "total_signals": 5,
+      "correct_signals": 1.0
+    },
+    "ema_short_period": 15,
+    "ema_long_period": 104,
+    "accuracy": 100.0,
+    "long_signals": 3,
+    "short_signals": 5
+  },
+  "AUCTION": {
+    "last_updated": "2025-11-07T01:17:10.094833",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 60,
+      "ema_long_period": 83,
+      "accuracy": 100.0,
+      "total_signals": 8,
+      "correct_signals": 8.0
+    },
+    "short": {
+      "ema_short_period": 3,
+      "ema_long_period": 28,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "ema_short_period": 60,
+    "ema_long_period": 83,
+    "accuracy": 100.0,
+    "long_signals": 8,
+    "short_signals": 1
+  },
+  "AUDIO": {
+    "last_updated": "2025-11-07T01:17:57.683185",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 39,
+      "ema_long_period": 141,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
       "ema_short_period": 6,
+      "ema_long_period": 530,
+      "accuracy": 80.0,
+      "total_signals": 5,
+      "correct_signals": 4.0
+    },
+    "ema_short_period": 39,
+    "ema_long_period": 141,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 5
+  },
+  "AVA": {
+    "last_updated": "2025-11-07T01:18:46.034157",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 5,
       "ema_long_period": 11,
       "accuracy": 100.0,
-      "total_signals": 45,
-      "correct_signals": 45.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 8,
+    "short": {
+      "ema_short_period": 3,
+      "ema_long_period": 194,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "ema_short_period": 5,
     "ema_long_period": 11,
     "accuracy": 100.0,
-    "long_signals": 34,
-    "short_signals": 45
+    "long_signals": 1,
+    "short_signals": 5
   },
   "AVAAI": {
-    "last_updated": "2025-11-06T23:20:38.193839",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:19:31.678038",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 7,
-      "ema_long_period": 16,
+      "ema_short_period": 10,
+      "ema_long_period": 276,
       "accuracy": 100.0,
-      "total_signals": 24,
-      "correct_signals": 24.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
+      "ema_short_period": 11,
+      "ema_long_period": 326,
       "accuracy": 100.0,
-      "total_signals": 28,
-      "correct_signals": 28.0
+      "total_signals": 7,
+      "correct_signals": 7.0
     },
-    "ema_short_period": 7,
-    "ema_long_period": 16,
+    "ema_short_period": 10,
+    "ema_long_period": 276,
     "accuracy": 100.0,
-    "long_signals": 24,
-    "short_signals": 28
+    "long_signals": 1,
+    "short_signals": 7
   },
   "AVAIL": {
     "ema_short_period": 155,
@@ -1716,220 +1716,220 @@
     "analysis_method": "trend_confirmation"
   },
   "AVAX": {
-    "last_updated": "2025-11-06T23:20:40.274899",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:20:11.561007",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
+      "ema_short_period": 13,
+      "ema_long_period": 244,
       "accuracy": 100.0,
-      "total_signals": 27,
-      "correct_signals": 27.0
+      "total_signals": 8,
+      "correct_signals": 8.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
-      "accuracy": 100.0,
-      "total_signals": 13,
-      "correct_signals": 13.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 27,
-    "short_signals": 13
-  },
-  "AVL": {
-    "last_updated": "2025-11-06T23:20:42.514885",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 17,
-      "correct_signals": 17.0
-    },
-    "short": {
-      "ema_short_period": 11,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
+      "ema_short_period": 19,
+      "ema_long_period": 524,
+      "accuracy": 83.33333333333334,
       "total_signals": 6,
-      "correct_signals": 6.0
+      "correct_signals": 5.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
+    "ema_short_period": 13,
+    "ema_long_period": 244,
     "accuracy": 100.0,
-    "long_signals": 17,
+    "long_signals": 8,
     "short_signals": 6
   },
-  "AWE": {
-    "last_updated": "2025-11-06T23:20:53.257331",
-    "candles_analyzed": 5000,
+  "AVL": {
+    "last_updated": "2025-11-07T01:20:57.621751",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
+      "ema_short_period": 3,
+      "ema_long_period": 10,
       "accuracy": 100.0,
-      "total_signals": 39,
-      "correct_signals": 39.0
+      "total_signals": 8,
+      "correct_signals": 8.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
+      "ema_short_period": 13,
+      "ema_long_period": 307,
       "accuracy": 100.0,
-      "total_signals": 21,
-      "correct_signals": 21.0
+      "total_signals": 15,
+      "correct_signals": 15.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
+    "ema_short_period": 3,
+    "ema_long_period": 10,
     "accuracy": 100.0,
-    "long_signals": 39,
-    "short_signals": 21
+    "long_signals": 8,
+    "short_signals": 15
+  },
+  "AWE": {
+    "last_updated": "2025-11-07T01:21:44.088480",
+    "candles_analyzed": 675,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 13,
+      "ema_long_period": 292,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "short": {
+      "ema_short_period": 4,
+      "ema_long_period": 374,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "ema_short_period": 13,
+    "ema_long_period": 292,
+    "accuracy": 100.0,
+    "long_signals": 5,
+    "short_signals": 1
   },
   "AXL": {
-    "last_updated": "2025-11-06T23:20:55.400287",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:22:28.819430",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
+      "ema_short_period": 3,
+      "ema_long_period": 13,
       "accuracy": 100.0,
-      "total_signals": 31,
-      "correct_signals": 31.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 42,
-      "correct_signals": 42.0
+      "ema_short_period": 13,
+      "ema_long_period": 119,
+      "accuracy": 88.88888888888889,
+      "total_signals": 9,
+      "correct_signals": 8.0
     },
-    "ema_short_period": 8,
-    "ema_long_period": 11,
+    "ema_short_period": 3,
+    "ema_long_period": 13,
     "accuracy": 100.0,
-    "long_signals": 31,
-    "short_signals": 42
+    "long_signals": 1,
+    "short_signals": 9
   },
   "AXS": {
-    "last_updated": "2025-11-06T23:20:58.087047",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:23:11.153032",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 15,
+      "ema_short_period": 239,
+      "ema_long_period": 328,
       "accuracy": 100.0,
-      "total_signals": 15,
-      "correct_signals": 15.0
+      "total_signals": 5,
+      "correct_signals": 5.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
+      "ema_short_period": 4,
+      "ema_long_period": 10,
       "accuracy": 100.0,
-      "total_signals": 32,
-      "correct_signals": 32.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 10,
-    "ema_long_period": 15,
+    "ema_short_period": 239,
+    "ema_long_period": 328,
     "accuracy": 100.0,
-    "long_signals": 15,
-    "short_signals": 32
+    "long_signals": 5,
+    "short_signals": 1
   },
   "B": {
-    "last_updated": "2025-11-06T23:21:00.964677",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:23:50.032181",
+    "candles_analyzed": 671,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
+      "ema_short_period": 5,
+      "ema_long_period": 229,
       "accuracy": 100.0,
-      "total_signals": 41,
-      "correct_signals": 41.0
+      "total_signals": 2,
+      "correct_signals": 2.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
+      "ema_short_period": 13,
+      "ema_long_period": 110,
       "accuracy": 100.0,
-      "total_signals": 45,
-      "correct_signals": 45.0
+      "total_signals": 9,
+      "correct_signals": 9.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 21,
+    "ema_short_period": 5,
+    "ema_long_period": 229,
     "accuracy": 100.0,
-    "long_signals": 41,
-    "short_signals": 45
+    "long_signals": 2,
+    "short_signals": 9
   },
   "B2": {
-    "last_updated": "2025-11-06T23:21:04.120822",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:24:20.805037",
+    "candles_analyzed": 603,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
+      "ema_short_period": 5,
+      "ema_long_period": 10,
       "accuracy": 100.0,
-      "total_signals": 52,
-      "correct_signals": 52.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
+      "ema_short_period": 4,
       "ema_long_period": 11,
-      "accuracy": 97.77777777777777,
-      "total_signals": 90,
-      "correct_signals": 88.0
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
+    "ema_short_period": 5,
+    "ema_long_period": 10,
     "accuracy": 100.0,
-    "long_signals": 52,
-    "short_signals": 90
+    "long_signals": 1,
+    "short_signals": 1
   },
   "B3": {
-    "last_updated": "2025-11-06T23:21:06.147993",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:25:00.749998",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
+      "ema_short_period": 12,
+      "ema_long_period": 81,
       "accuracy": 100.0,
-      "total_signals": 15,
-      "correct_signals": 15.0
+      "total_signals": 2,
+      "correct_signals": 2.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
+      "ema_short_period": 13,
+      "ema_long_period": 231,
       "accuracy": 100.0,
-      "total_signals": 20,
-      "correct_signals": 20.0
+      "total_signals": 9,
+      "correct_signals": 9.0
     },
-    "ema_short_period": 8,
-    "ema_long_period": 15,
+    "ema_short_period": 12,
+    "ema_long_period": 81,
     "accuracy": 100.0,
-    "long_signals": 15,
-    "short_signals": 20
+    "long_signals": 2,
+    "short_signals": 9
   },
   "BABY": {
-    "last_updated": "2025-11-06T23:21:08.500873",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:25:41.402335",
+    "candles_analyzed": 871,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
+      "ema_short_period": 7,
+      "ema_long_period": 10,
       "accuracy": 100.0,
-      "total_signals": 48,
-      "correct_signals": 48.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
+      "ema_short_period": 4,
+      "ema_long_period": 262,
       "accuracy": 100.0,
-      "total_signals": 37,
-      "correct_signals": 37.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
+    "ema_short_period": 7,
+    "ema_long_period": 10,
     "accuracy": 100.0,
-    "long_signals": 48,
-    "short_signals": 37
+    "long_signals": 1,
+    "short_signals": 1
   },
   "BADGER": {
     "ema_short_period": 155,
@@ -1956,196 +1956,196 @@
     "analysis_method": "trend_confirmation"
   },
   "BAN": {
-    "last_updated": "2025-11-06T23:21:10.564772",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:26:23.423258",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 97.82608695652173,
-      "total_signals": 46,
-      "correct_signals": 45.0
+      "ema_short_period": 13,
+      "ema_long_period": 379,
+      "accuracy": 100.0,
+      "total_signals": 10,
+      "correct_signals": 10.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 10,
+      "ema_short_period": 13,
+      "ema_long_period": 279,
       "accuracy": 100.0,
-      "total_signals": 38,
-      "correct_signals": 38.0
+      "total_signals": 7,
+      "correct_signals": 7.0
     },
-    "ema_short_period": 8,
-    "ema_long_period": 11,
-    "accuracy": 97.82608695652173,
-    "long_signals": 46,
-    "short_signals": 38
+    "ema_short_period": 13,
+    "ema_long_period": 379,
+    "accuracy": 100.0,
+    "long_signals": 10,
+    "short_signals": 7
   },
   "BANANA": {
-    "last_updated": "2025-11-06T23:21:12.710233",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:27:12.173190",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
+      "ema_short_period": 4,
+      "ema_long_period": 212,
       "accuracy": 100.0,
-      "total_signals": 14,
-      "correct_signals": 14.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 24,
-      "correct_signals": 24.0
+      "ema_short_period": 13,
+      "ema_long_period": 199,
+      "accuracy": 83.33333333333334,
+      "total_signals": 6,
+      "correct_signals": 5.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 25,
+    "ema_short_period": 4,
+    "ema_long_period": 212,
     "accuracy": 100.0,
-    "long_signals": 14,
-    "short_signals": 24
+    "long_signals": 1,
+    "short_signals": 6
   },
   "BANANAS31": {
-    "last_updated": "2025-11-06T23:21:15.076111",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:27:56.642633",
+    "candles_analyzed": 895,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 27,
-      "correct_signals": 27.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 41,
-      "correct_signals": 41.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
-    "accuracy": 100.0,
-    "long_signals": 27,
-    "short_signals": 41
-  },
-  "BAND": {
-    "last_updated": "2025-11-06T23:21:17.131437",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 19,
-      "correct_signals": 19.0
-    },
-    "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 20,
-      "accuracy": 100.0,
-      "total_signals": 17,
-      "correct_signals": 17.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
-    "accuracy": 100.0,
-    "long_signals": 19,
-    "short_signals": 17
-  },
-  "BANK": {
-    "last_updated": "2025-11-06T23:21:19.781251",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 97.05882352941177,
-      "total_signals": 34,
-      "correct_signals": 33.0
-    },
-    "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 19,
-      "correct_signals": 19.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
-    "accuracy": 97.05882352941177,
-    "long_signals": 34,
-    "short_signals": 19
-  },
-  "BAT": {
-    "last_updated": "2025-11-06T23:21:30.182743",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 100.0,
-      "total_signals": 14,
-      "correct_signals": 14.0
-    },
-    "short": {
-      "ema_short_period": 8,
+      "ema_short_period": 4,
       "ema_long_period": 10,
-      "accuracy": 100.0,
-      "total_signals": 40,
-      "correct_signals": 40.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
-    "accuracy": 100.0,
-    "long_signals": 14,
-    "short_signals": 40
-  },
-  "BB": {
-    "last_updated": "2025-11-06T23:21:32.346706",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
       "accuracy": 100.0,
       "total_signals": 7,
       "correct_signals": 7.0
     },
     "short": {
-      "ema_short_period": 11,
-      "ema_long_period": 16,
+      "ema_short_period": 6,
+      "ema_long_period": 192,
       "accuracy": 100.0,
-      "total_signals": 3,
-      "correct_signals": 3.0
+      "total_signals": 2,
+      "correct_signals": 2.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 25,
+    "ema_short_period": 4,
+    "ema_long_period": 10,
     "accuracy": 100.0,
     "long_signals": 7,
-    "short_signals": 3
+    "short_signals": 2
   },
-  "BCH": {
-    "last_updated": "2025-11-06T23:21:34.323095",
-    "candles_analyzed": 5000,
+  "BAND": {
+    "last_updated": "2025-11-07T01:28:43.355314",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
-      "accuracy": 96.0,
-      "total_signals": 25,
-      "correct_signals": 24.0
+      "ema_short_period": 13,
+      "ema_long_period": 291,
+      "accuracy": 100.0,
+      "total_signals": 6,
+      "correct_signals": 6.0
     },
     "short": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
+      "ema_short_period": 13,
+      "ema_long_period": 525,
       "accuracy": 100.0,
-      "total_signals": 21,
-      "correct_signals": 21.0
+      "total_signals": 10,
+      "correct_signals": 10.0
     },
-    "ema_short_period": 10,
-    "ema_long_period": 11,
-    "accuracy": 96.0,
-    "long_signals": 25,
-    "short_signals": 21
+    "ema_short_period": 13,
+    "ema_long_period": 291,
+    "accuracy": 100.0,
+    "long_signals": 6,
+    "short_signals": 10
+  },
+  "BANK": {
+    "last_updated": "2025-11-07T01:29:24.706362",
+    "candles_analyzed": 731,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 3,
+      "ema_long_period": 269,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
+    },
+    "short": {
+      "ema_short_period": 7,
+      "ema_long_period": 165,
+      "accuracy": 100.0,
+      "total_signals": 8,
+      "correct_signals": 8.0
+    },
+    "ema_short_period": 3,
+    "ema_long_period": 269,
+    "accuracy": 100.0,
+    "long_signals": 2,
+    "short_signals": 8
+  },
+  "BAT": {
+    "last_updated": "2025-11-07T01:30:16.941932",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 6,
+      "ema_long_period": 581,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 3,
+      "ema_long_period": 98,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "ema_short_period": 6,
+    "ema_long_period": 581,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 1
+  },
+  "BB": {
+    "last_updated": "2025-11-07T01:31:03.023029",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 11,
+      "ema_long_period": 111,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
+    },
+    "short": {
+      "ema_short_period": 9,
+      "ema_long_period": 211,
+      "accuracy": 100.0,
+      "total_signals": 6,
+      "correct_signals": 6.0
+    },
+    "ema_short_period": 11,
+    "ema_long_period": 111,
+    "accuracy": 100.0,
+    "long_signals": 2,
+    "short_signals": 6
+  },
+  "BCH": {
+    "last_updated": "2025-11-07T01:31:49.512431",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 7,
+      "ema_long_period": 14,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 82,
+      "ema_long_period": 167,
+      "accuracy": 92.3076923076923,
+      "total_signals": 13,
+      "correct_signals": 12.0
+    },
+    "ema_short_period": 7,
+    "ema_long_period": 14,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 13
   },
   "BDXN": {
     "ema_short_period": 153,
@@ -2160,436 +2160,436 @@
     "analysis_method": "trend_confirmation"
   },
   "BEAM": {
-    "last_updated": "2025-11-06T23:21:37.347079",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:32:34.552253",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
+      "ema_short_period": 3,
+      "ema_long_period": 13,
       "accuracy": 100.0,
-      "total_signals": 32,
-      "correct_signals": 32.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
+      "ema_short_period": 3,
+      "ema_long_period": 12,
       "accuracy": 100.0,
-      "total_signals": 30,
-      "correct_signals": 30.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
+    "ema_short_period": 3,
+    "ema_long_period": 13,
     "accuracy": 100.0,
-    "long_signals": 32,
-    "short_signals": 30
+    "long_signals": 1,
+    "short_signals": 1
   },
   "BEL": {
-    "last_updated": "2025-11-06T23:21:39.309752",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:33:19.324860",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 31,
-      "correct_signals": 31.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
-      "accuracy": 100.0,
-      "total_signals": 22,
-      "correct_signals": 22.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
-    "accuracy": 100.0,
-    "long_signals": 31,
-    "short_signals": 22
-  },
-  "BERA": {
-    "last_updated": "2025-11-06T23:21:41.626013",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 37,
-      "correct_signals": 37.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 24,
-      "correct_signals": 24.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 37,
-    "short_signals": 24
-  },
-  "BICO": {
-    "last_updated": "2025-11-06T23:21:43.821734",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 12,
-      "correct_signals": 12.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 10,
-      "accuracy": 100.0,
-      "total_signals": 45,
-      "correct_signals": 45.0
-    },
-    "ema_short_period": 10,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 12,
-    "short_signals": 45
-  },
-  "BIGTIME": {
-    "last_updated": "2025-11-06T23:21:45.884361",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 100.0,
-      "total_signals": 12,
-      "correct_signals": 12.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
-      "accuracy": 100.0,
-      "total_signals": 8,
-      "correct_signals": 8.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
-    "accuracy": 100.0,
-    "long_signals": 12,
-    "short_signals": 8
-  },
-  "BIO": {
-    "last_updated": "2025-11-06T23:21:48.031893",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 5,
-      "ema_long_period": 45,
-      "accuracy": 100.0,
-      "total_signals": 8,
-      "correct_signals": 8.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 100.0,
-      "total_signals": 8,
-      "correct_signals": 8.0
-    },
-    "ema_short_period": 5,
-    "ema_long_period": 45,
-    "accuracy": 100.0,
-    "long_signals": 8,
-    "short_signals": 8
-  },
-  "BLAST": {
-    "last_updated": "2025-11-06T23:21:50.294319",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 97.2972972972973,
-      "total_signals": 37,
-      "correct_signals": 36.0
-    },
-    "short": {
-      "ema_short_period": 10,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 8,
-      "correct_signals": 8.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
-    "accuracy": 97.2972972972973,
-    "long_signals": 37,
-    "short_signals": 8
-  },
-  "BLUR": {
-    "last_updated": "2025-11-06T23:22:19.332297",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 36,
-      "correct_signals": 36.0
-    },
-    "short": {
-      "ema_short_period": 7,
-      "ema_long_period": 21,
-      "accuracy": 100.0,
-      "total_signals": 12,
-      "correct_signals": 12.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 11,
-    "accuracy": 100.0,
-    "long_signals": 36,
-    "short_signals": 12
-  },
-  "BMT": {
-    "last_updated": "2025-11-06T23:22:21.886825",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 17,
-      "correct_signals": 17.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
-      "accuracy": 100.0,
-      "total_signals": 16,
-      "correct_signals": 16.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
-    "accuracy": 100.0,
-    "long_signals": 17,
-    "short_signals": 16
-  },
-  "BNB": {
-    "last_updated": "2025-11-06T23:22:23.884499",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
+      "ema_short_period": 92,
+      "ema_long_period": 96,
       "accuracy": 100.0,
       "total_signals": 3,
       "correct_signals": 3.0
     },
     "short": {
-      "ema_short_period": 9,
-      "ema_long_period": 26,
+      "ema_short_period": 10,
+      "ema_long_period": 397,
       "accuracy": 100.0,
-      "total_signals": 6,
-      "correct_signals": 6.0
+      "total_signals": 3,
+      "correct_signals": 3.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 21,
+    "ema_short_period": 92,
+    "ema_long_period": 96,
     "accuracy": 100.0,
     "long_signals": 3,
-    "short_signals": 6
+    "short_signals": 3
   },
-  "BNT": {
-    "last_updated": "2025-11-06T23:22:25.880289",
-    "candles_analyzed": 5000,
+  "BERA": {
+    "last_updated": "2025-11-07T01:34:05.174581",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 15,
-      "correct_signals": 15.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
-      "accuracy": 100.0,
-      "total_signals": 18,
-      "correct_signals": 18.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 16,
-    "accuracy": 100.0,
-    "long_signals": 15,
-    "short_signals": 18
-  },
-  "BOBA": {
-    "last_updated": "2025-11-06T23:22:27.871841",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 24,
-      "correct_signals": 24.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 20,
-      "correct_signals": 20.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 24,
-    "short_signals": 20
-  },
-  "BOME": {
-    "last_updated": "2025-11-06T23:22:29.857446",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 29,
-      "correct_signals": 29.0
-    },
-    "short": {
-      "ema_short_period": 8,
+      "ema_short_period": 3,
       "ema_long_period": 11,
       "accuracy": 100.0,
-      "total_signals": 44,
-      "correct_signals": 44.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
+    "short": {
+      "ema_short_period": 8,
+      "ema_long_period": 525,
+      "accuracy": 100.0,
+      "total_signals": 13,
+      "correct_signals": 13.0
+    },
+    "ema_short_period": 3,
+    "ema_long_period": 11,
     "accuracy": 100.0,
-    "long_signals": 29,
-    "short_signals": 44
+    "long_signals": 1,
+    "short_signals": 13
   },
-  "BR": {
-    "last_updated": "2025-11-06T23:22:32.190345",
-    "candles_analyzed": 5000,
+  "BICO": {
+    "last_updated": "2025-11-07T01:34:50.524423",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 7,
-      "ema_long_period": 21,
-      "accuracy": 56.25,
-      "total_signals": 16,
+      "ema_short_period": 10,
+      "ema_long_period": 295,
+      "accuracy": 100.0,
+      "total_signals": 3,
+      "correct_signals": 3.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 146,
+      "accuracy": 100.0,
+      "total_signals": 8,
+      "correct_signals": 8.0
+    },
+    "ema_short_period": 10,
+    "ema_long_period": 295,
+    "accuracy": 100.0,
+    "long_signals": 3,
+    "short_signals": 8
+  },
+  "BIGTIME": {
+    "last_updated": "2025-11-07T01:35:36.701505",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 13,
+      "ema_long_period": 330,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 156,
+      "accuracy": 83.33333333333334,
+      "total_signals": 6,
+      "correct_signals": 5.0
+    },
+    "ema_short_period": 13,
+    "ema_long_period": 330,
+    "accuracy": 100.0,
+    "long_signals": 5,
+    "short_signals": 6
+  },
+  "BIO": {
+    "last_updated": "2025-11-07T01:36:25.858443",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 13,
+      "ema_long_period": 329,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 12,
+      "ema_long_period": 275,
+      "accuracy": 100.0,
+      "total_signals": 10,
+      "correct_signals": 10.0
+    },
+    "ema_short_period": 13,
+    "ema_long_period": 329,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 10
+  },
+  "BLAST": {
+    "last_updated": "2025-11-07T01:37:13.314112",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 13,
+      "ema_long_period": 92,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 11,
+      "ema_long_period": 273,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "ema_short_period": 13,
+    "ema_long_period": 92,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 5
+  },
+  "BLUR": {
+    "last_updated": "2025-11-07T01:38:12.495601",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 20,
+      "ema_long_period": 113,
+      "accuracy": 90.0,
+      "total_signals": 10,
       "correct_signals": 9.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 78.125,
-      "total_signals": 32,
-      "correct_signals": 25.0
-    },
-    "ema_short_period": 7,
-    "ema_long_period": 21,
-    "accuracy": 56.25,
-    "long_signals": 16,
-    "short_signals": 32
-  },
-  "BRETT": {
-    "last_updated": "2025-11-06T23:22:34.188182",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 22,
-      "correct_signals": 22.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 10,
-      "accuracy": 100.0,
-      "total_signals": 48,
-      "correct_signals": 48.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
-    "accuracy": 100.0,
-    "long_signals": 22,
-    "short_signals": 48
-  },
-  "BROCCOLI": {
-    "last_updated": "2025-11-06T23:22:36.235029",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
+      "ema_short_period": 10,
+      "ema_long_period": 532,
       "accuracy": 100.0,
       "total_signals": 11,
       "correct_signals": 11.0
     },
+    "ema_short_period": 20,
+    "ema_long_period": 113,
+    "accuracy": 90.0,
+    "long_signals": 10,
+    "short_signals": 11
+  },
+  "BMT": {
+    "last_updated": "2025-11-07T01:38:58.502864",
+    "candles_analyzed": 955,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 3,
+      "ema_long_period": 14,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
+      "ema_short_period": 9,
+      "ema_long_period": 309,
       "accuracy": 100.0,
       "total_signals": 7,
       "correct_signals": 7.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 25,
+    "ema_short_period": 3,
+    "ema_long_period": 14,
     "accuracy": 100.0,
-    "long_signals": 11,
+    "long_signals": 1,
     "short_signals": 7
   },
-  "BSU": {
-    "last_updated": "2025-11-06T23:22:42.090722",
-    "candles_analyzed": 5000,
+  "BNB": {
+    "last_updated": "2025-11-07T01:39:45.615659",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
-      "accuracy": 92.0,
-      "total_signals": 75,
-      "correct_signals": 69.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 95.45454545454545,
-      "total_signals": 66,
-      "correct_signals": 63.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 15,
-    "accuracy": 92.0,
-    "long_signals": 75,
-    "short_signals": 66
-  },
-  "BSV": {
-    "last_updated": "2025-11-06T23:22:44.156655",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
+      "ema_short_period": 10,
+      "ema_long_period": 436,
       "accuracy": 100.0,
-      "total_signals": 20,
-      "correct_signals": 20.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
+      "ema_short_period": 22,
+      "ema_long_period": 46,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "ema_short_period": 10,
+    "ema_long_period": 436,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 1
+  },
+  "BNT": {
+    "last_updated": "2025-11-07T01:40:32.826698",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 13,
+      "ema_long_period": 335,
       "accuracy": 100.0,
       "total_signals": 9,
       "correct_signals": 9.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 21,
+    "short": {
+      "ema_short_period": 3,
+      "ema_long_period": 11,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "ema_short_period": 13,
+    "ema_long_period": 335,
     "accuracy": 100.0,
-    "long_signals": 20,
+    "long_signals": 9,
+    "short_signals": 1
+  },
+  "BOBA": {
+    "last_updated": "2025-11-07T01:41:17.403248",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 19,
+      "ema_long_period": 586,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 278,
+      "accuracy": 100.0,
+      "total_signals": 8,
+      "correct_signals": 8.0
+    },
+    "ema_short_period": 19,
+    "ema_long_period": 586,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 8
+  },
+  "BOME": {
+    "last_updated": "2025-11-07T01:42:04.911649",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 3,
+      "ema_long_period": 312,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "short": {
+      "ema_short_period": 18,
+      "ema_long_period": 209,
+      "accuracy": 100.0,
+      "total_signals": 6,
+      "correct_signals": 6.0
+    },
+    "ema_short_period": 3,
+    "ema_long_period": 312,
+    "accuracy": 100.0,
+    "long_signals": 5,
+    "short_signals": 6
+  },
+  "BR": {
+    "last_updated": "2025-11-07T01:42:51.115056",
+    "candles_analyzed": 926,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 9,
+      "ema_long_period": 494,
+      "accuracy": 80.0,
+      "total_signals": 5,
+      "correct_signals": 4.0
+    },
+    "short": {
+      "ema_short_period": 12,
+      "ema_long_period": 109,
+      "accuracy": 100.0,
+      "total_signals": 10,
+      "correct_signals": 10.0
+    },
+    "ema_short_period": 9,
+    "ema_long_period": 494,
+    "accuracy": 80.0,
+    "long_signals": 5,
+    "short_signals": 10
+  },
+  "BRETT": {
+    "last_updated": "2025-11-07T01:43:33.906856",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 13,
+      "ema_long_period": 338,
+      "accuracy": 100.0,
+      "total_signals": 3,
+      "correct_signals": 3.0
+    },
+    "short": {
+      "ema_short_period": 12,
+      "ema_long_period": 312,
+      "accuracy": 40.0,
+      "total_signals": 5,
+      "correct_signals": 2.0
+    },
+    "ema_short_period": 13,
+    "ema_long_period": 338,
+    "accuracy": 100.0,
+    "long_signals": 3,
+    "short_signals": 5
+  },
+  "BROCCOLI": {
+    "last_updated": "2025-11-07T01:44:20.614978",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 4,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "short": {
+      "ema_short_period": 10,
+      "ema_long_period": 245,
+      "accuracy": 100.0,
+      "total_signals": 9,
+      "correct_signals": 9.0
+    },
+    "ema_short_period": 4,
+    "ema_long_period": 10,
+    "accuracy": 100.0,
+    "long_signals": 5,
     "short_signals": 9
+  },
+  "BSU": {
+    "last_updated": "2025-11-07T01:44:30.669444",
+    "candles_analyzed": 287,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 9,
+      "ema_long_period": 174,
+      "accuracy": 100.0,
+      "total_signals": 6,
+      "correct_signals": 6.0
+    },
+    "short": {
+      "ema_short_period": 6,
+      "ema_long_period": 93,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
+    },
+    "ema_short_period": 9,
+    "ema_long_period": 174,
+    "accuracy": 100.0,
+    "long_signals": 6,
+    "short_signals": 0
+  },
+  "BSV": {
+    "last_updated": "2025-11-07T01:45:20.836025",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 3,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 4,
+      "correct_signals": 4.0
+    },
+    "short": {
+      "ema_short_period": 3,
+      "ema_long_period": 189,
+      "accuracy": 100.0,
+      "total_signals": 7,
+      "correct_signals": 7.0
+    },
+    "ema_short_period": 3,
+    "ema_long_period": 10,
+    "accuracy": 100.0,
+    "long_signals": 4,
+    "short_signals": 7
   },
   "BSW": {
     "ema_short_period": 155,
@@ -2604,316 +2604,316 @@
     "analysis_method": "trend_confirmation"
   },
   "BTC": {
-    "last_updated": "2025-11-06T23:22:46.253883",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:46:06.956167",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 88.0,
-      "total_signals": 25,
-      "correct_signals": 22.0
+      "ema_short_period": 4,
+      "ema_long_period": 184,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
     },
     "short": {
-      "ema_short_period": 7,
-      "ema_long_period": 21,
-      "accuracy": 100.0,
-      "total_signals": 9,
-      "correct_signals": 9.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
-    "accuracy": 88.0,
-    "long_signals": 25,
-    "short_signals": 9
-  },
-  "BTR": {
-    "last_updated": "2025-11-06T23:22:52.167121",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 96.05263157894737,
-      "total_signals": 76,
-      "correct_signals": 73.0
-    },
-    "short": {
-      "ema_short_period": 7,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 76,
-      "correct_signals": 76.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
-    "accuracy": 96.05263157894737,
-    "long_signals": 76,
-    "short_signals": 76
-  },
-  "C": {
-    "last_updated": "2025-11-06T23:22:56.288121",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 95.3125,
-      "total_signals": 64,
-      "correct_signals": 61.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 55,
-      "correct_signals": 55.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
-    "accuracy": 95.3125,
-    "long_signals": 64,
-    "short_signals": 55
-  },
-  "C98": {
-    "last_updated": "2025-11-06T23:22:58.365142",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
+      "ema_short_period": 4,
       "ema_long_period": 11,
       "accuracy": 100.0,
-      "total_signals": 35,
-      "correct_signals": 35.0
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "ema_short_period": 4,
+    "ema_long_period": 184,
+    "accuracy": 100.0,
+    "long_signals": 5,
+    "short_signals": 1
+  },
+  "BTR": {
+    "last_updated": "2025-11-07T01:46:16.775860",
+    "candles_analyzed": 287,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 65,
+      "ema_long_period": 115,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 21,
+      "ema_short_period": 12,
+      "ema_long_period": 150,
       "accuracy": 100.0,
-      "total_signals": 10,
-      "correct_signals": 10.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 8,
-    "ema_long_period": 11,
+    "ema_short_period": 65,
+    "ema_long_period": 115,
     "accuracy": 100.0,
-    "long_signals": 35,
-    "short_signals": 10
+    "long_signals": 1,
+    "short_signals": 1
+  },
+  "C": {
+    "last_updated": "2025-11-07T01:46:37.846979",
+    "candles_analyzed": 459,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 12,
+      "ema_long_period": 14,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 12,
+      "ema_long_period": 243,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "ema_short_period": 12,
+    "ema_long_period": 14,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 1
+  },
+  "C98": {
+    "last_updated": "2025-11-07T01:47:24.905812",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 15,
+      "ema_long_period": 160,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 6,
+      "ema_long_period": 179,
+      "accuracy": 80.0,
+      "total_signals": 5,
+      "correct_signals": 4.0
+    },
+    "ema_short_period": 15,
+    "ema_long_period": 160,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 5
   },
   "CAKE": {
-    "last_updated": "2025-11-06T23:23:00.405098",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:48:10.635045",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
+      "ema_short_period": 8,
+      "ema_long_period": 493,
       "accuracy": 100.0,
-      "total_signals": 17,
-      "correct_signals": 17.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
+      "ema_short_period": 15,
+      "ema_long_period": 151,
       "accuracy": 100.0,
-      "total_signals": 17,
-      "correct_signals": 17.0
+      "total_signals": 6,
+      "correct_signals": 6.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
+    "ema_short_period": 8,
+    "ema_long_period": 493,
     "accuracy": 100.0,
-    "long_signals": 17,
-    "short_signals": 17
+    "long_signals": 1,
+    "short_signals": 6
   },
   "CAMP": {
-    "last_updated": "2025-11-06T23:23:06.533063",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 7,
-      "ema_long_period": 16,
-      "accuracy": 92.1875,
-      "total_signals": 64,
-      "correct_signals": 59.0
-    },
-    "short": {
-      "ema_short_period": 7,
-      "ema_long_period": 16,
-      "accuracy": 92.85714285714286,
-      "total_signals": 56,
-      "correct_signals": 52.0
-    },
-    "ema_short_period": 7,
-    "ema_long_period": 16,
-    "accuracy": 92.1875,
-    "long_signals": 64,
-    "short_signals": 56
-  },
-  "CARV": {
-    "last_updated": "2025-11-06T23:23:08.504979",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:48:20.634571",
+    "candles_analyzed": 283,
     "analysis_method": "separate_long_short",
     "long": {
       "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 32,
-      "correct_signals": 32.0
+      "ema_long_period": 171,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 25,
-      "correct_signals": 25.0
+      "ema_short_period": 3,
+      "ema_long_period": 154,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
     },
     "ema_short_period": 6,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 32,
-    "short_signals": 25
+    "ema_long_period": 171,
+    "accuracy": 0.0,
+    "long_signals": 0,
+    "short_signals": 0
   },
-  "CATI": {
-    "last_updated": "2025-11-06T23:23:10.476723",
-    "candles_analyzed": 5000,
+  "CARV": {
+    "last_updated": "2025-11-07T01:49:10.161513",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 10,
-      "accuracy": 94.44444444444444,
-      "total_signals": 36,
-      "correct_signals": 34.0
+      "ema_short_period": 17,
+      "ema_long_period": 331,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
       "ema_short_period": 13,
-      "ema_long_period": 16,
+      "ema_long_period": 343,
       "accuracy": 100.0,
-      "total_signals": 14,
-      "correct_signals": 14.0
+      "total_signals": 7,
+      "correct_signals": 7.0
     },
-    "ema_short_period": 8,
-    "ema_long_period": 10,
-    "accuracy": 94.44444444444444,
-    "long_signals": 36,
-    "short_signals": 14
+    "ema_short_period": 17,
+    "ema_long_period": 331,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 7
   },
-  "CELO": {
-    "last_updated": "2025-11-06T23:23:12.456559",
-    "candles_analyzed": 5000,
+  "CATI": {
+    "last_updated": "2025-11-07T01:49:59.585030",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
+      "ema_short_period": 285,
+      "ema_long_period": 290,
       "accuracy": 100.0,
-      "total_signals": 17,
-      "correct_signals": 17.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
+      "ema_short_period": 13,
+      "ema_long_period": 277,
+      "accuracy": 100.0,
+      "total_signals": 13,
+      "correct_signals": 13.0
+    },
+    "ema_short_period": 285,
+    "ema_long_period": 290,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 13
+  },
+  "CELO": {
+    "last_updated": "2025-11-07T01:50:48.842528",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 10,
+      "ema_long_period": 328,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 208,
+      "ema_long_period": 209,
+      "accuracy": 83.33333333333334,
+      "total_signals": 30,
+      "correct_signals": 25.0
+    },
+    "ema_short_period": 10,
+    "ema_long_period": 328,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 30
+  },
+  "CELR": {
+    "last_updated": "2025-11-07T01:51:36.561272",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 8,
+      "ema_long_period": 130,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
+    },
+    "short": {
+      "ema_short_period": 12,
+      "ema_long_period": 210,
+      "accuracy": 66.66666666666666,
+      "total_signals": 6,
+      "correct_signals": 4.0
+    },
+    "ema_short_period": 8,
+    "ema_long_period": 130,
+    "accuracy": 100.0,
+    "long_signals": 2,
+    "short_signals": 6
+  },
+  "CETUS": {
+    "last_updated": "2025-11-07T01:52:23.577232",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 5,
+      "ema_long_period": 320,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 10,
+      "ema_long_period": 523,
       "accuracy": 100.0,
       "total_signals": 11,
       "correct_signals": 11.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
+    "ema_short_period": 5,
+    "ema_long_period": 320,
     "accuracy": 100.0,
-    "long_signals": 17,
+    "long_signals": 1,
     "short_signals": 11
   },
-  "CELR": {
-    "last_updated": "2025-11-06T23:23:14.772433",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 32,
-      "correct_signals": 32.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 100.0,
-      "total_signals": 24,
-      "correct_signals": 24.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 11,
-    "accuracy": 100.0,
-    "long_signals": 32,
-    "short_signals": 24
-  },
-  "CETUS": {
-    "last_updated": "2025-11-06T23:23:16.923764",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 53,
-      "correct_signals": 53.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 28,
-      "correct_signals": 28.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 11,
-    "accuracy": 100.0,
-    "long_signals": 53,
-    "short_signals": 28
-  },
   "CFX": {
-    "last_updated": "2025-11-06T23:23:19.426542",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:53:11.129262",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 23,
-      "correct_signals": 23.0
+      "ema_short_period": 13,
+      "ema_long_period": 297,
+      "accuracy": 85.71428571428571,
+      "total_signals": 7,
+      "correct_signals": 6.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
+      "ema_short_period": 4,
+      "ema_long_period": 188,
       "accuracy": 100.0,
-      "total_signals": 33,
-      "correct_signals": 33.0
+      "total_signals": 7,
+      "correct_signals": 7.0
     },
-    "ema_short_period": 10,
-    "ema_long_period": 11,
-    "accuracy": 100.0,
-    "long_signals": 23,
-    "short_signals": 33
+    "ema_short_period": 13,
+    "ema_long_period": 297,
+    "accuracy": 85.71428571428571,
+    "long_signals": 7,
+    "short_signals": 7
   },
   "CGPT": {
-    "last_updated": "2025-11-06T23:23:21.442579",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:53:56.600584",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
+      "ema_short_period": 7,
+      "ema_long_period": 331,
       "accuracy": 100.0,
-      "total_signals": 19,
-      "correct_signals": 19.0
+      "total_signals": 3,
+      "correct_signals": 3.0
     },
     "short": {
       "ema_short_period": 8,
-      "ema_long_period": 11,
+      "ema_long_period": 208,
       "accuracy": 100.0,
-      "total_signals": 34,
-      "correct_signals": 34.0
+      "total_signals": 8,
+      "correct_signals": 8.0
     },
-    "ema_short_period": 10,
-    "ema_long_period": 11,
+    "ema_short_period": 7,
+    "ema_long_period": 331,
     "accuracy": 100.0,
-    "long_signals": 19,
-    "short_signals": 34
+    "long_signals": 3,
+    "short_signals": 8
   },
   "CHESS": {
     "ema_short_period": 151,
@@ -2928,244 +2928,244 @@
     "analysis_method": "trend_confirmation"
   },
   "CHILLGUY": {
-    "last_updated": "2025-11-06T23:23:23.449779",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:54:44.359930",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
+      "ema_short_period": 5,
+      "ema_long_period": 319,
       "accuracy": 100.0,
-      "total_signals": 28,
-      "correct_signals": 28.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
+      "ema_short_period": 8,
+      "ema_long_period": 185,
+      "accuracy": 100.0,
+      "total_signals": 8,
+      "correct_signals": 8.0
+    },
+    "ema_short_period": 5,
+    "ema_long_period": 319,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 8
+  },
+  "CHR": {
+    "last_updated": "2025-11-07T01:55:31.997942",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 11,
+      "ema_long_period": 98,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 11,
+      "ema_long_period": 396,
+      "accuracy": 100.0,
+      "total_signals": 3,
+      "correct_signals": 3.0
+    },
+    "ema_short_period": 11,
+    "ema_long_period": 98,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 3
+  },
+  "CHZ": {
+    "last_updated": "2025-11-07T01:56:21.064220",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 14,
+      "ema_long_period": 303,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 167,
+      "accuracy": 80.0,
+      "total_signals": 5,
+      "correct_signals": 4.0
+    },
+    "ema_short_period": 14,
+    "ema_long_period": 303,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 5
+  },
+  "CKB": {
+    "last_updated": "2025-11-07T01:57:08.506361",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 12,
+      "ema_long_period": 109,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 11,
+      "ema_long_period": 195,
+      "accuracy": 85.71428571428571,
+      "total_signals": 7,
+      "correct_signals": 6.0
+    },
+    "ema_short_period": 12,
+    "ema_long_period": 109,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 7
+  },
+  "CLANKER": {
+    "last_updated": "2025-11-07T01:57:50.558785",
+    "candles_analyzed": 771,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 5,
+      "ema_long_period": 11,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 3,
+      "ema_long_period": 141,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "ema_short_period": 5,
+    "ema_long_period": 11,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 1
+  },
+  "CLOUD": {
+    "last_updated": "2025-11-07T01:58:42.190009",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 3,
+      "ema_long_period": 404,
+      "accuracy": 100.0,
+      "total_signals": 7,
+      "correct_signals": 7.0
+    },
+    "short": {
+      "ema_short_period": 12,
+      "ema_long_period": 178,
+      "accuracy": 100.0,
+      "total_signals": 12,
+      "correct_signals": 12.0
+    },
+    "ema_short_period": 3,
+    "ema_long_period": 404,
+    "accuracy": 100.0,
+    "long_signals": 7,
+    "short_signals": 12
+  },
+  "COMP": {
+    "last_updated": "2025-11-07T01:59:39.837861",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 5,
+      "ema_long_period": 14,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 12,
+      "ema_long_period": 118,
+      "accuracy": 71.42857142857143,
+      "total_signals": 7,
+      "correct_signals": 5.0
+    },
+    "ema_short_period": 5,
+    "ema_long_period": 14,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 7
+  },
+  "COOK": {
+    "last_updated": "2025-11-07T02:00:27.526391",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 24,
+      "ema_long_period": 97,
+      "accuracy": 60.0,
+      "total_signals": 5,
+      "correct_signals": 3.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 193,
+      "accuracy": 83.33333333333334,
+      "total_signals": 6,
+      "correct_signals": 5.0
+    },
+    "ema_short_period": 24,
+    "ema_long_period": 97,
+    "accuracy": 60.0,
+    "long_signals": 5,
+    "short_signals": 6
+  },
+  "COOKIE": {
+    "last_updated": "2025-11-07T02:01:13.939639",
+    "candles_analyzed": 1000,
+    "analysis_method": "separate_long_short",
+    "long": {
       "ema_short_period": 10,
-      "ema_long_period": 15,
+      "ema_long_period": 440,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 12,
+      "ema_long_period": 233,
       "accuracy": 100.0,
       "total_signals": 11,
       "correct_signals": 11.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
+    "ema_short_period": 10,
+    "ema_long_period": 440,
     "accuracy": 100.0,
-    "long_signals": 28,
+    "long_signals": 1,
     "short_signals": 11
   },
-  "CHR": {
-    "last_updated": "2025-11-06T23:23:25.509981",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 24,
-      "correct_signals": 24.0
-    },
-    "short": {
-      "ema_short_period": 7,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 25,
-      "correct_signals": 25.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 11,
-    "accuracy": 100.0,
-    "long_signals": 24,
-    "short_signals": 25
-  },
-  "CHZ": {
-    "last_updated": "2025-11-06T23:23:27.556372",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 14,
-      "correct_signals": 14.0
-    },
-    "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 20,
-      "accuracy": 100.0,
-      "total_signals": 12,
-      "correct_signals": 12.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 14,
-    "short_signals": 12
-  },
-  "CKB": {
-    "last_updated": "2025-11-06T23:23:29.626059",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 27,
-      "correct_signals": 27.0
-    },
-    "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 31,
-      "correct_signals": 31.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 27,
-    "short_signals": 31
-  },
-  "CLANKER": {
-    "last_updated": "2025-11-06T23:23:32.278930",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 100.0,
-      "total_signals": 51,
-      "correct_signals": 51.0
-    },
-    "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 38,
-      "correct_signals": 38.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
-    "accuracy": 100.0,
-    "long_signals": 51,
-    "short_signals": 38
-  },
-  "CLOUD": {
-    "last_updated": "2025-11-06T23:23:59.801554",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
-      "accuracy": 100.0,
-      "total_signals": 14,
-      "correct_signals": 14.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 10,
-      "accuracy": 100.0,
-      "total_signals": 45,
-      "correct_signals": 45.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 25,
-    "accuracy": 100.0,
-    "long_signals": 14,
-    "short_signals": 45
-  },
-  "COMP": {
-    "last_updated": "2025-11-06T23:24:27.938657",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 10,
-      "accuracy": 98.64864864864865,
-      "total_signals": 74,
-      "correct_signals": 73.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 53,
-      "correct_signals": 53.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 10,
-    "accuracy": 98.64864864864865,
-    "long_signals": 74,
-    "short_signals": 53
-  },
-  "COOK": {
-    "last_updated": "2025-11-06T23:24:29.913892",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 27,
-      "correct_signals": 27.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
-      "accuracy": 100.0,
-      "total_signals": 6,
-      "correct_signals": 6.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 11,
-    "accuracy": 100.0,
-    "long_signals": 27,
-    "short_signals": 6
-  },
-  "COOKIE": {
-    "last_updated": "2025-11-06T23:24:31.957179",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 41,
-      "correct_signals": 41.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 31,
-      "accuracy": 100.0,
-      "total_signals": 12,
-      "correct_signals": 12.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 11,
-    "accuracy": 100.0,
-    "long_signals": 41,
-    "short_signals": 12
-  },
   "CORE": {
-    "last_updated": "2025-11-06T23:24:34.131238",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T02:02:00.880076",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
+      "ema_short_period": 3,
+      "ema_long_period": 93,
       "accuracy": 100.0,
-      "total_signals": 32,
-      "correct_signals": 32.0
+      "total_signals": 5,
+      "correct_signals": 5.0
     },
     "short": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 19,
-      "correct_signals": 19.0
+      "ema_short_period": 12,
+      "ema_long_period": 107,
+      "accuracy": 71.42857142857143,
+      "total_signals": 7,
+      "correct_signals": 5.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
+    "ema_short_period": 3,
+    "ema_long_period": 93,
     "accuracy": 100.0,
-    "long_signals": 32,
-    "short_signals": 19
+    "long_signals": 5,
+    "short_signals": 7
   },
   "COS": {
     "ema_short_period": 153,
@@ -3180,52 +3180,52 @@
     "analysis_method": "trend_confirmation"
   },
   "COTI": {
-    "last_updated": "2025-11-06T23:24:36.305854",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T02:02:50.240494",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
+      "ema_short_period": 17,
+      "ema_long_period": 56,
       "accuracy": 100.0,
-      "total_signals": 25,
-      "correct_signals": 25.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
+      "ema_short_period": 12,
+      "ema_long_period": 192,
       "accuracy": 100.0,
-      "total_signals": 20,
-      "correct_signals": 20.0
+      "total_signals": 8,
+      "correct_signals": 8.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
+    "ema_short_period": 17,
+    "ema_long_period": 56,
     "accuracy": 100.0,
-    "long_signals": 25,
-    "short_signals": 20
+    "long_signals": 1,
+    "short_signals": 8
   },
   "COW": {
-    "last_updated": "2025-11-06T23:24:38.326347",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T02:03:39.638441",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
+      "ema_short_period": 3,
+      "ema_long_period": 10,
       "accuracy": 100.0,
-      "total_signals": 13,
-      "correct_signals": 13.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
+      "ema_short_period": 13,
+      "ema_long_period": 146,
       "accuracy": 100.0,
-      "total_signals": 11,
-      "correct_signals": 11.0
+      "total_signals": 5,
+      "correct_signals": 5.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 20,
+    "ema_short_period": 3,
+    "ema_long_period": 10,
     "accuracy": 100.0,
-    "long_signals": 13,
-    "short_signals": 11
+    "long_signals": 1,
+    "short_signals": 5
   },
   "CPOOL": {
     "ema_short_period": 139,
@@ -3240,76 +3240,76 @@
     "analysis_method": "trend_confirmation"
   },
   "CRO": {
-    "last_updated": "2025-11-06T23:24:40.378253",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T02:04:27.665770",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
+      "ema_short_period": 12,
+      "ema_long_period": 127,
       "accuracy": 100.0,
-      "total_signals": 25,
-      "correct_signals": 25.0
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 515,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "ema_short_period": 12,
+    "ema_long_period": 127,
+    "accuracy": 100.0,
+    "long_signals": 5,
+    "short_signals": 5
+  },
+  "CROSS": {
+    "last_updated": "2025-11-07T02:04:51.979424",
+    "candles_analyzed": 479,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 48,
+      "ema_long_period": 142,
+      "accuracy": 100.0,
+      "total_signals": 2,
+      "correct_signals": 2.0
     },
     "short": {
       "ema_short_period": 11,
-      "ema_long_period": 16,
-      "accuracy": 100.0,
-      "total_signals": 6,
-      "correct_signals": 6.0
+      "ema_long_period": 114,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
     },
-    "ema_short_period": 10,
-    "ema_long_period": 11,
+    "ema_short_period": 48,
+    "ema_long_period": 142,
     "accuracy": 100.0,
-    "long_signals": 25,
-    "short_signals": 6
-  },
-  "CROSS": {
-    "last_updated": "2025-11-06T23:24:44.247486",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 10,
-      "accuracy": 98.63013698630137,
-      "total_signals": 73,
-      "correct_signals": 72.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 94.11764705882352,
-      "total_signals": 51,
-      "correct_signals": 48.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 10,
-    "accuracy": 98.63013698630137,
-    "long_signals": 73,
-    "short_signals": 51
+    "long_signals": 2,
+    "short_signals": 0
   },
   "CRV": {
-    "last_updated": "2025-11-06T23:24:46.315270",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T02:05:40.327221",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
+      "ema_short_period": 25,
+      "ema_long_period": 586,
       "accuracy": 100.0,
-      "total_signals": 21,
-      "correct_signals": 21.0
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
+      "ema_short_period": 16,
+      "ema_long_period": 525,
       "accuracy": 100.0,
-      "total_signals": 8,
-      "correct_signals": 8.0
+      "total_signals": 7,
+      "correct_signals": 7.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 25,
+    "ema_short_period": 25,
+    "ema_long_period": 586,
     "accuracy": 100.0,
-    "long_signals": 21,
-    "short_signals": 8
+    "long_signals": 1,
+    "short_signals": 7
   },
   "CTC": {
     "last_updated": "2025-11-06T23:24:48.411453",
@@ -4284,28 +4284,28 @@
     "short_signals": 11
   },
   "ETH": {
-    "last_updated": "2025-11-06T23:27:10.028277",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T02:35:58.380085",
+    "candles_analyzed": 1000,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 25,
+      "ema_short_period": 90,
+      "ema_long_period": 154,
       "accuracy": 100.0,
-      "total_signals": 9,
-      "correct_signals": 9.0
+      "total_signals": 27,
+      "correct_signals": 27.0
     },
     "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
+      "ema_short_period": 5,
+      "ema_long_period": 54,
       "accuracy": 100.0,
-      "total_signals": 33,
-      "correct_signals": 33.0
+      "total_signals": 20,
+      "correct_signals": 20.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 25,
+    "ema_short_period": 90,
+    "ema_long_period": 154,
     "accuracy": 100.0,
-    "long_signals": 9,
-    "short_signals": 33
+    "long_signals": 27,
+    "short_signals": 20
   },
   "ETHBTC": {
     "last_updated": "2025-11-06T23:27:12.088677",
@@ -12732,28 +12732,28 @@
     "short_signals": 66
   },
   "ARIA": {
-    "last_updated": "2025-11-06T23:19:46.964524",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:11:16.832452",
+    "candles_analyzed": 258,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 9,
-      "ema_long_period": 16,
-      "accuracy": 95.94594594594594,
-      "total_signals": 74,
-      "correct_signals": 71.0
+      "ema_short_period": 3,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 7,
+      "correct_signals": 7.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 16,
-      "accuracy": 93.02325581395348,
-      "total_signals": 86,
-      "correct_signals": 80.0
+      "ema_short_period": 23,
+      "ema_long_period": 34,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 9,
-    "ema_long_period": 16,
-    "accuracy": 95.94594594594594,
-    "long_signals": 74,
-    "short_signals": 86
+    "ema_short_period": 3,
+    "ema_long_period": 10,
+    "accuracy": 100.0,
+    "long_signals": 7,
+    "short_signals": 1
   },
   "PTB": {
     "last_updated": "2025-11-06T23:39:08.902095",
@@ -12804,220 +12804,220 @@
     "short_signals": 0
   },
   "2Z": {
-    "last_updated": "2025-11-06T23:17:06.492390",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T00:41:41.382124",
+    "candles_analyzed": 142,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 15,
-      "accuracy": 76.47058823529412,
-      "total_signals": 51,
-      "correct_signals": 39.0
+      "ema_short_period": 3,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 3,
+      "correct_signals": 3.0
     },
     "short": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
-      "accuracy": 88.88888888888889,
-      "total_signals": 54,
-      "correct_signals": 48.0
+      "ema_short_period": 13,
+      "ema_long_period": 50,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 15,
-    "accuracy": 76.47058823529412,
-    "long_signals": 51,
-    "short_signals": 54
+    "ema_short_period": 3,
+    "ema_long_period": 10,
+    "accuracy": 100.0,
+    "long_signals": 3,
+    "short_signals": 0
   },
   "AIA": {
-    "last_updated": "2025-11-06T23:18:10.645197",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 10,
-      "ema_long_period": 11,
-      "accuracy": 97.89473684210527,
-      "total_signals": 95,
-      "correct_signals": 93.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 100.0,
-      "total_signals": 81,
-      "correct_signals": 81.0
-    },
-    "ema_short_period": 10,
-    "ema_long_period": 11,
-    "accuracy": 97.89473684210527,
-    "long_signals": 95,
-    "short_signals": 81
-  },
-  "AKE": {
-    "last_updated": "2025-11-06T23:18:33.996144",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
-      "accuracy": 87.03703703703704,
-      "total_signals": 54,
-      "correct_signals": 47.0
-    },
-    "short": {
-      "ema_short_period": 7,
-      "ema_long_period": 21,
-      "accuracy": 93.22033898305084,
-      "total_signals": 59,
-      "correct_signals": 55.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 26,
-    "accuracy": 87.03703703703704,
-    "long_signals": 54,
-    "short_signals": 59
-  },
-  "APEX": {
-    "last_updated": "2025-11-06T23:19:11.532671",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T00:55:37.618181",
+    "candles_analyzed": 199,
     "analysis_method": "separate_long_short",
     "long": {
       "ema_short_period": 9,
-      "ema_long_period": 16,
-      "accuracy": 95.45454545454545,
-      "total_signals": 66,
-      "correct_signals": 63.0
+      "ema_long_period": 10,
+      "accuracy": 20.0,
+      "total_signals": 5,
+      "correct_signals": 1.0
     },
     "short": {
-      "ema_short_period": 11,
-      "ema_long_period": 16,
-      "accuracy": 89.0625,
-      "total_signals": 64,
-      "correct_signals": 57.0
+      "ema_short_period": 3,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "ema_short_period": 9,
-    "ema_long_period": 16,
-    "accuracy": 95.45454545454545,
-    "long_signals": 66,
-    "short_signals": 64
+    "ema_long_period": 10,
+    "accuracy": 20.0,
+    "long_signals": 5,
+    "short_signals": 1
+  },
+  "AKE": {
+    "last_updated": "2025-11-07T00:58:14.448690",
+    "candles_analyzed": 166,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 60,
+      "ema_long_period": 66,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 14,
+      "ema_long_period": 28,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
+    },
+    "ema_short_period": 60,
+    "ema_long_period": 66,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 0
+  },
+  "APEX": {
+    "last_updated": "2025-11-07T01:07:10.005334",
+    "candles_analyzed": 159,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 32,
+      "ema_long_period": 39,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 6,
+      "ema_long_period": 18,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
+    },
+    "ema_short_period": 32,
+    "ema_long_period": 39,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 0
   },
   "ASTER": {
-    "last_updated": "2025-11-06T23:20:12.792302",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:14:05.917061",
+    "candles_analyzed": 195,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 7,
-      "ema_long_period": 21,
-      "accuracy": 87.93103448275862,
-      "total_signals": 58,
-      "correct_signals": 51.0
+      "ema_short_period": 8,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
     },
     "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 16,
-      "accuracy": 96.61016949152543,
-      "total_signals": 59,
-      "correct_signals": 57.0
+      "ema_short_period": 3,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 7,
-    "ema_long_period": 21,
-    "accuracy": 87.93103448275862,
-    "long_signals": 58,
-    "short_signals": 59
+    "ema_short_period": 8,
+    "ema_long_period": 10,
+    "accuracy": 100.0,
+    "long_signals": 5,
+    "short_signals": 1
   },
   "AVNT": {
-    "last_updated": "2025-11-06T23:20:50.364172",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T01:21:04.790789",
+    "candles_analyzed": 234,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 21,
-      "accuracy": 90.56603773584906,
-      "total_signals": 53,
-      "correct_signals": 48.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 97.01492537313433,
-      "total_signals": 67,
-      "correct_signals": 65.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 21,
-    "accuracy": 90.56603773584906,
-    "long_signals": 53,
-    "short_signals": 67
-  },
-  "BARD": {
-    "last_updated": "2025-11-06T23:21:28.197144",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 26,
-      "accuracy": 65.33333333333333,
-      "total_signals": 75,
-      "correct_signals": 49.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 79.26829268292683,
-      "total_signals": 82,
-      "correct_signals": 65.0
-    },
-    "ema_short_period": 6,
-    "ema_long_period": 26,
-    "accuracy": 65.33333333333333,
-    "long_signals": 75,
-    "short_signals": 82
-  },
-  "BLESS": {
-    "last_updated": "2025-11-06T23:22:00.521183",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 5,
-      "ema_long_period": 20,
+      "ema_short_period": 8,
+      "ema_long_period": 10,
       "accuracy": 100.0,
-      "total_signals": 65,
-      "correct_signals": 65.0
-    },
-    "short": {
-      "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 93.65079365079364,
-      "total_signals": 63,
-      "correct_signals": 59.0
-    },
-    "ema_short_period": 5,
-    "ema_long_period": 20,
-    "accuracy": 100.0,
-    "long_signals": 65,
-    "short_signals": 63
-  },
-  "COAI": {
-    "last_updated": "2025-11-06T23:24:12.728966",
-    "candles_analyzed": 5000,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 7,
-      "ema_long_period": 25,
-      "accuracy": 100.0,
-      "total_signals": 43,
-      "correct_signals": 43.0
+      "total_signals": 5,
+      "correct_signals": 5.0
     },
     "short": {
       "ema_short_period": 9,
-      "ema_long_period": 20,
-      "accuracy": 98.0392156862745,
-      "total_signals": 51,
-      "correct_signals": 50.0
+      "ema_long_period": 122,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
-    "ema_short_period": 7,
-    "ema_long_period": 25,
+    "ema_short_period": 8,
+    "ema_long_period": 10,
     "accuracy": 100.0,
-    "long_signals": 43,
-    "short_signals": 51
+    "long_signals": 5,
+    "short_signals": 1
+  },
+  "BARD": {
+    "last_updated": "2025-11-07T01:29:32.010495",
+    "candles_analyzed": 207,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 9,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "short": {
+      "ema_short_period": 13,
+      "ema_long_period": 21,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
+    },
+    "ema_short_period": 9,
+    "ema_long_period": 10,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 0
+  },
+  "BLESS": {
+    "last_updated": "2025-11-07T01:37:20.540375",
+    "candles_analyzed": 175,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 3,
+      "ema_long_period": 10,
+      "accuracy": 66.66666666666666,
+      "total_signals": 3,
+      "correct_signals": 2.0
+    },
+    "short": {
+      "ema_short_period": 23,
+      "ema_long_period": 25,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
+    },
+    "ema_short_period": 3,
+    "ema_long_period": 10,
+    "accuracy": 66.66666666666666,
+    "long_signals": 3,
+    "short_signals": 1
+  },
+  "COAI": {
+    "last_updated": "2025-11-07T01:58:47.880352",
+    "candles_analyzed": 143,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 9,
+      "ema_long_period": 10,
+      "accuracy": 100.0,
+      "total_signals": 5,
+      "correct_signals": 5.0
+    },
+    "short": {
+      "ema_short_period": 7,
+      "ema_long_period": 53,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
+    },
+    "ema_short_period": 9,
+    "ema_long_period": 10,
+    "accuracy": 100.0,
+    "long_signals": 5,
+    "short_signals": 0
   },
   "EDEN": {
     "last_updated": "2025-11-06T23:26:03.583188",
@@ -13536,28 +13536,28 @@
     "short_signals": 61
   },
   "4": {
-    "last_updated": "2025-11-06T23:17:24.831028",
-    "candles_analyzed": 5000,
+    "last_updated": "2025-11-07T00:41:46.913118",
+    "candles_analyzed": 118,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 6,
-      "ema_long_period": 16,
-      "accuracy": 96.55172413793103,
-      "total_signals": 58,
-      "correct_signals": 56.0
+      "ema_short_period": 3,
+      "ema_long_period": 12,
+      "accuracy": 100.0,
+      "total_signals": 1,
+      "correct_signals": 1.0
     },
     "short": {
       "ema_short_period": 9,
-      "ema_long_period": 16,
-      "accuracy": 96.66666666666667,
-      "total_signals": 60,
-      "correct_signals": 58.0
+      "ema_long_period": 33,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
     },
-    "ema_short_period": 6,
-    "ema_long_period": 16,
-    "accuracy": 96.55172413793103,
-    "long_signals": 58,
-    "short_signals": 60
+    "ema_short_period": 3,
+    "ema_long_period": 12,
+    "accuracy": 100.0,
+    "long_signals": 1,
+    "short_signals": 0
   },
   "GIGGLE": {
     "last_updated": "2025-11-06T23:29:24.698904",
@@ -13728,28 +13728,28 @@
     "short_signals": 28
   },
   "CLO": {
-    "last_updated": "2025-11-06T23:23:57.218864",
-    "candles_analyzed": 3403,
+    "last_updated": "2025-11-07T01:57:56.688138",
+    "candles_analyzed": 82,
     "analysis_method": "separate_long_short",
     "long": {
-      "ema_short_period": 7,
+      "ema_short_period": 25,
       "ema_long_period": 26,
-      "accuracy": 85.29411764705883,
-      "total_signals": 34,
-      "correct_signals": 29.0
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
     },
     "short": {
-      "ema_short_period": 7,
-      "ema_long_period": 16,
-      "accuracy": 85.29411764705883,
-      "total_signals": 34,
-      "correct_signals": 29.0
+      "ema_short_period": 5,
+      "ema_long_period": 40,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
     },
-    "ema_short_period": 7,
+    "ema_short_period": 25,
     "ema_long_period": 26,
-    "accuracy": 85.29411764705883,
-    "long_signals": 34,
-    "short_signals": 34
+    "accuracy": 0.0,
+    "long_signals": 0,
+    "short_signals": 0
   },
   "EVAA": {
     "last_updated": "2025-11-06T23:28:10.479619",
@@ -13896,52 +13896,52 @@
     "short_signals": 24
   },
   "APR": {
-    "last_updated": "2025-11-06T23:19:31.263625",
-    "candles_analyzed": 1711,
-    "analysis_method": "separate_long_short",
-    "long": {
-      "ema_short_period": 8,
-      "ema_long_period": 20,
-      "accuracy": 100.0,
-      "total_signals": 17,
-      "correct_signals": 17.0
-    },
-    "short": {
-      "ema_short_period": 8,
-      "ema_long_period": 11,
-      "accuracy": 100.0,
-      "total_signals": 21,
-      "correct_signals": 21.0
-    },
-    "ema_short_period": 8,
-    "ema_long_period": 20,
-    "accuracy": 100.0,
-    "long_signals": 17,
-    "short_signals": 21
-  },
-  "BLUAI": {
-    "last_updated": "2025-11-06T23:22:17.276789",
-    "candles_analyzed": 1485,
+    "last_updated": "2025-11-07T01:08:03.213131",
+    "candles_analyzed": 58,
     "analysis_method": "separate_long_short",
     "long": {
       "ema_short_period": 6,
-      "ema_long_period": 20,
-      "accuracy": 90.9090909090909,
-      "total_signals": 11,
-      "correct_signals": 10.0
+      "ema_long_period": 24,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
     },
     "short": {
-      "ema_short_period": 9,
-      "ema_long_period": 26,
-      "accuracy": 91.66666666666666,
-      "total_signals": 12,
-      "correct_signals": 11.0
+      "ema_short_period": 16,
+      "ema_long_period": 21,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
     },
     "ema_short_period": 6,
-    "ema_long_period": 20,
-    "accuracy": 90.9090909090909,
-    "long_signals": 11,
-    "short_signals": 12
+    "ema_long_period": 24,
+    "accuracy": 0.0,
+    "long_signals": 0,
+    "short_signals": 0
+  },
+  "BLUAI": {
+    "last_updated": "2025-11-07T01:37:25.925570",
+    "candles_analyzed": 54,
+    "analysis_method": "separate_long_short",
+    "long": {
+      "ema_short_period": 12,
+      "ema_long_period": 19,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
+    },
+    "short": {
+      "ema_short_period": 5,
+      "ema_long_period": 30,
+      "accuracy": 0.0,
+      "total_signals": 0,
+      "correct_signals": 0.0
+    },
+    "ema_short_period": 12,
+    "ema_long_period": 19,
+    "accuracy": 0.0,
+    "long_signals": 0,
+    "short_signals": 0
   },
   "COMMON": {
     "last_updated": "2025-11-06T23:24:25.704785",
