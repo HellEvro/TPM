@@ -2,19 +2,21 @@
 # -*- coding: utf-8 -*-
 """
 Скрипт для поиска оптимальных EMA периодов для определения идеальных точек входа
-для каждой монеты. ПРАВИЛЬНАЯ ЛОГИКА: ищет EMA которые показывают правильный тренд
-в момент когда RSI в зоне перепроданности/перекупленности.
+для каждой монеты. ПРАВИЛЬНАЯ ЛОГИКА: ищет EMA которые УЖЕ перекрестились или перекрестятся
+в ближайшие 1-2 свечи когда RSI входит в зону перепроданности/перекупленности.
 
 Логика работы:
-1. ✅ ПРАВИЛЬНЫЙ ПОДХОД: Сначала ищем моменты когда RSI в зоне (≤29 или ≥71)
-2. Для LONG: Ищем моменты RSI ≤29, проверяем какие EMA показывают UP тренд (ema_short > ema_long) в этот момент
-3. Для SHORT: Ищем моменты RSI ≥71, проверяем какие EMA показывают DOWN тренд (ema_short < ema_long) в этот момент
+1. ✅ ПРАВИЛЬНЫЙ ПОДХОД: Ищем моменты когда RSI входит в зону (значения из конфига: RSI_OVERSOLD и RSI_OVERBOUGHT)
+2. Для LONG: Ищем моменты когда RSI <= RSI_OVERSOLD, проверяем что EMA УЖЕ перекрестились (ema_short > ema_long) 
+   в этот момент ИЛИ перекрестятся в ближайшие 1-2 свечи
+3. Для SHORT: Ищем моменты когда RSI >= RSI_OVERBOUGHT, проверяем что EMA УЖЕ перекрестились (ema_short < ema_long)
+   в этот момент ИЛИ перекрестятся в ближайшие 1-2 свечи
 4. Проверяем реальную прибыльность сигналов (≥1% за 20 периодов)
 5. Находим ОТДЕЛЬНЫЕ оптимальные EMA периоды для LONG и SHORT сигналов
 6. Сохраняем отдельные EMA для каждого направления - они могут быть разными!
 
-Ключевое отличие: EMA подбираются так, чтобы они показывали правильный тренд
-ИМЕННО В МОМЕНТ когда RSI в зоне, а не просто подтверждали тренд после.
+Ключевое отличие: EMA подбираются так, чтобы они УЖЕ показывали правильный тренд в момент входа RSI в зону
+или перекрестились в ближайшие 1-2 свечи, что позволяет не пропускать идеальные точки входа.
 """
 
 import os
@@ -96,8 +98,16 @@ logger = setup_logging()
 OPTIMAL_EMA_BASE_FILE = 'data/optimal_ema'  # Базовое имя файла
 EMA_SHORT_RANGE = (5, 200)  # Короткая EMA
 EMA_LONG_RANGE = (50, 500)  # Длинная EMA
-RSI_OVERSOLD = 29  # Строгие условия для подтверждения тренда
-RSI_OVERBOUGHT = 71
+
+# ✅ Импортируем значения RSI из конфига
+try:
+    from bot_engine.bot_config import SystemConfig
+    RSI_OVERSOLD = SystemConfig.RSI_OVERSOLD  # Зона покупки (LONG)
+    RSI_OVERBOUGHT = SystemConfig.RSI_OVERBOUGHT  # Зона продажи (SHORT)
+except ImportError:
+    # Fallback значения, если конфиг недоступен
+    RSI_OVERSOLD = 29
+    RSI_OVERBOUGHT = 71
 # Используем multiprocessing с безопасной инициализацией
 MAX_WORKERS = mp.cpu_count()
 MIN_CANDLES_FOR_ANALYSIS = 200
@@ -171,9 +181,18 @@ def calculate_ema_numba(prices, period):
     return ema
 
 @jit(nopython=True)
-def analyze_ema_combination_long_numba(prices, rsi_values, ema_short_period, ema_long_period):
+def analyze_ema_combination_long_numba(prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, max_future_candles):
     """
-    Анализ для LONG сигналов: ищем моменты RSI <= 29, проверяем что EMA показывает UP тренд
+    Анализ для LONG сигналов: ищем моменты когда RSI входит в зону покупки,
+    проверяем что EMA УЖЕ перекрестились или перекрестятся в ближайшие 1-2 свечи.
+    
+    Args:
+        prices: Массив цен закрытия
+        rsi_values: Массив значений RSI
+        ema_short_period: Период короткой EMA
+        ema_long_period: Период длинной EMA
+        rsi_oversold: Значение RSI для зоны покупки (из конфига)
+        max_future_candles: Максимальное количество свечей в будущем для проверки (1-2)
     """
     n = len(prices)
     if n < max(ema_short_period, ema_long_period) + 100:
@@ -197,15 +216,25 @@ def analyze_ema_combination_long_numba(prices, rsi_values, ema_short_period, ema
     total_signals = 0
     correct_signals = 0.0
     
-    # ✅ ПРАВИЛЬНАЯ ЛОГИКА: Сначала ищем моменты когда RSI <= 29, потом проверяем EMA UP тренд
-    for i in range(start_idx, min_length - HOLD_PERIODS):
+    # ✅ ПРАВИЛЬНАЯ ЛОГИКА: Ищем моменты когда RSI входит в зону покупки
+    # EMA должны УЖЕ перекреститься в этот момент ИЛИ перекреститься в ближайшие 1-2 свечи
+    for i in range(start_idx, min_length - HOLD_PERIODS - max_future_candles):
         rsi = rsi_values[i]
         entry_price = prices[i]
         
-        # Ищем моменты когда RSI <= 29 (перепроданность)
-        if rsi <= 29:
-            # Проверяем, что EMA показывает UP тренд в этот момент
-            if ema_short[i] > ema_long[i]:
+        # Ищем моменты когда RSI входит в зону покупки (используем значение из конфига)
+        if rsi <= rsi_oversold:
+            # ✅ КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Проверяем, что EMA УЖЕ перекрестились ИЛИ перекрестятся в ближайшие 1-2 свечи
+            ema_shows_up_trend = False
+            
+            # Проверяем текущий момент (i) и ближайшие 1-2 свечи (i+1, i+2)
+            for check_idx in range(i, min(i + max_future_candles + 1, min_length)):
+                if ema_short[check_idx] > ema_long[check_idx]:
+                    ema_shows_up_trend = True
+                    break
+            
+            # Если EMA перекрестились в момент входа RSI в зону или в ближайшие свечи - это хороший сигнал
+            if ema_shows_up_trend:
                 total_signals += 1
                 
                 # Проверяем реальную прибыльность
@@ -229,9 +258,18 @@ def analyze_ema_combination_long_numba(prices, rsi_values, ema_short_period, ema
     return accuracy, total_signals, correct_signals
 
 @jit(nopython=True)
-def analyze_ema_combination_short_numba(prices, rsi_values, ema_short_period, ema_long_period):
+def analyze_ema_combination_short_numba(prices, rsi_values, ema_short_period, ema_long_period, rsi_overbought, max_future_candles):
     """
-    Анализ для SHORT сигналов: ищем моменты RSI >= 71, проверяем что EMA показывает DOWN тренд
+    Анализ для SHORT сигналов: ищем моменты когда RSI входит в зону продажи,
+    проверяем что EMA УЖЕ перекрестились или перекрестятся в ближайшие 1-2 свечи.
+    
+    Args:
+        prices: Массив цен закрытия
+        rsi_values: Массив значений RSI
+        ema_short_period: Период короткой EMA
+        ema_long_period: Период длинной EMA
+        rsi_overbought: Значение RSI для зоны продажи (из конфига)
+        max_future_candles: Максимальное количество свечей в будущем для проверки (1-2)
     """
     n = len(prices)
     if n < max(ema_short_period, ema_long_period) + 100:
@@ -255,15 +293,25 @@ def analyze_ema_combination_short_numba(prices, rsi_values, ema_short_period, em
     total_signals = 0
     correct_signals = 0.0
     
-    # ✅ ПРАВИЛЬНАЯ ЛОГИКА: Сначала ищем моменты когда RSI >= 71, потом проверяем EMA DOWN тренд
-    for i in range(start_idx, min_length - HOLD_PERIODS):
+    # ✅ ПРАВИЛЬНАЯ ЛОГИКА: Ищем моменты когда RSI входит в зону продажи
+    # EMA должны УЖЕ перекреститься в этот момент ИЛИ перекреститься в ближайшие 1-2 свечи
+    for i in range(start_idx, min_length - HOLD_PERIODS - max_future_candles):
         rsi = rsi_values[i]
         entry_price = prices[i]
         
-        # Ищем моменты когда RSI >= 71 (перекупленность)
-        if rsi >= 71:
-            # Проверяем, что EMA показывает DOWN тренд в этот момент
-            if ema_short[i] < ema_long[i]:
+        # Ищем моменты когда RSI входит в зону продажи (используем значение из конфига)
+        if rsi >= rsi_overbought:
+            # ✅ КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Проверяем, что EMA УЖЕ перекрестились ИЛИ перекрестятся в ближайшие 1-2 свечи
+            ema_shows_down_trend = False
+            
+            # Проверяем текущий момент (i) и ближайшие 1-2 свечи (i+1, i+2)
+            for check_idx in range(i, min(i + max_future_candles + 1, min_length)):
+                if ema_short[check_idx] < ema_long[check_idx]:
+                    ema_shows_down_trend = True
+                    break
+            
+            # Если EMA перекрестились в момент входа RSI в зону или в ближайшие свечи - это хороший сигнал
+            if ema_shows_down_trend:
                 total_signals += 1
                 
                 # Проверяем реальную прибыльность
@@ -287,15 +335,15 @@ def analyze_ema_combination_short_numba(prices, rsi_values, ema_short_period, em
     return accuracy, total_signals, correct_signals
 
 @jit(nopython=True)
-def analyze_ema_combination_numba(prices, rsi_values, ema_short_period, ema_long_period):
+def analyze_ema_combination_numba(prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, rsi_overbought, max_future_candles):
     """
     Объединенный анализ для обратной совместимости
     """
     long_accuracy, long_total, long_correct = analyze_ema_combination_long_numba(
-        prices, rsi_values, ema_short_period, ema_long_period
+        prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, max_future_candles
     )
     short_accuracy, short_total, short_correct = analyze_ema_combination_short_numba(
-        prices, rsi_values, ema_short_period, ema_long_period
+        prices, rsi_values, ema_short_period, ema_long_period, rsi_overbought, max_future_candles
     )
     
     total_signals = long_total + short_total
@@ -321,7 +369,7 @@ except ImportError:
 
 def analyze_ema_combination_parallel(args):
     """Умная функция для параллельной обработки комбинаций EMA с анализом пересечений"""
-    symbol, candles, rsi_values, ema_short_period, ema_long_period, signal_type = args
+    symbol, candles, rsi_values, ema_short_period, ema_long_period, signal_type, rsi_oversold, rsi_overbought, max_future_candles = args
     
     try:
         # Конвертируем в numpy массивы
@@ -330,7 +378,7 @@ def analyze_ema_combination_parallel(args):
         # Анализируем в зависимости от типа сигнала
         if signal_type == 'long':
             accuracy, total_signals, correct_signals = analyze_ema_combination_long_numba(
-                prices, rsi_values, ema_short_period, ema_long_period
+                prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, max_future_candles
             )
             return {
                 'accuracy': accuracy,
@@ -344,7 +392,7 @@ def analyze_ema_combination_parallel(args):
             }
         elif signal_type == 'short':
             accuracy, total_signals, correct_signals = analyze_ema_combination_short_numba(
-                prices, rsi_values, ema_short_period, ema_long_period
+                prices, rsi_values, ema_short_period, ema_long_period, rsi_overbought, max_future_candles
             )
             return {
                 'accuracy': accuracy,
@@ -357,16 +405,28 @@ def analyze_ema_combination_parallel(args):
                 'signal_type': 'short'
             }
         else:
-            # Объединенный анализ для обратной совместимости
-            accuracy, total_signals, correct_signals, long_signals, short_signals = analyze_ema_combination_numba(
-                prices, rsi_values, ema_short_period, ema_long_period
+            # Объединенный анализ для обратной совместимости (используем значения по умолчанию)
+            long_accuracy, long_total, long_correct = analyze_ema_combination_long_numba(
+                prices, rsi_values, ema_short_period, ema_long_period, rsi_oversold, max_future_candles
             )
+            short_accuracy, short_total, short_correct = analyze_ema_combination_short_numba(
+                prices, rsi_values, ema_short_period, ema_long_period, rsi_overbought, max_future_candles
+            )
+            
+            total_signals = long_total + short_total
+            correct_signals = long_correct + short_correct
+            
+            if total_signals == 0:
+                accuracy = 0.0
+            else:
+                accuracy = (correct_signals / total_signals) * 100
+            
             return {
                 'accuracy': accuracy,
                 'total_signals': total_signals,
                 'correct_signals': correct_signals,
-                'long_signals': long_signals,
-                'short_signals': short_signals,
+                'long_signals': long_total,
+                'short_signals': short_total,
                 'ema_short_period': ema_short_period,
                 'ema_long_period': ema_long_period,
                 'signal_type': 'both'
@@ -707,10 +767,19 @@ class OptimalEMAFinder:
         return combinations
     
     def _analyze_combinations(self, symbol: str, candles: List[Dict], rsi_values: np.ndarray, 
-                            combinations: List[Tuple[int, int]], stage_name: str, signal_type: str = 'both') -> List[Dict]:
+                            combinations: List[Tuple[int, int]], stage_name: str, signal_type: str = 'both',
+                            rsi_oversold: float = None, rsi_overbought: float = None, max_future_candles: int = 2) -> List[Dict]:
         """Анализирует список комбинаций EMA для указанного типа сигнала"""
         if not combinations:
             return []
+        
+        # Используем значения из конфига, если не переданы
+        if rsi_oversold is None:
+            rsi_oversold = RSI_OVERSOLD
+        if rsi_overbought is None:
+            rsi_overbought = RSI_OVERBOUGHT
+        if max_future_candles is None:
+            max_future_candles = 2  # По умолчанию проверяем 1-2 свечи в будущем
         
         best_accuracy = 0
         best_combination = None
@@ -719,7 +788,7 @@ class OptimalEMAFinder:
         # Подготавливаем аргументы для параллельной обработки
         args_list = []
         for ema_short, ema_long in combinations:
-            args_list.append((symbol, candles, rsi_values, ema_short, ema_long, signal_type))
+            args_list.append((symbol, candles, rsi_values, ema_short, ema_long, signal_type, rsi_oversold, rsi_overbought, max_future_candles))
         
         total_combinations = len(combinations)
         logger.info(f"{stage_name}: Анализируем {total_combinations} комбинаций EMA для {symbol}")
