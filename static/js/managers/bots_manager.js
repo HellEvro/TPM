@@ -1366,7 +1366,6 @@ class BotsManager {
         const priceElement = document.getElementById('selectedCoinPrice');
         const rsiElement = document.getElementById('selectedCoinRSI');
         const trendElement = document.getElementById('selectedCoinTrend');
-        const emaElement = document.getElementById('selectedCoinEMA');
         const zoneElement = document.getElementById('selectedCoinZone');
         const signalElement = document.getElementById('selectedCoinSignal');
         const changeElement = document.getElementById('selectedCoinChange');
@@ -1376,7 +1375,6 @@ class BotsManager {
             priceElement: !!priceElement,
             rsiElement: !!rsiElement,
             trendElement: !!trendElement,
-            emaElement: !!emaElement,
             zoneElement: !!zoneElement,
             signalElement: !!signalElement,
             changeElement: !!changeElement
@@ -1420,53 +1418,7 @@ class BotsManager {
             console.log('[BotsManager] ✅ Тренд обновлен:', trend);
         }
         
-        // ✅ НОВЫЙ ФОРМАТ: Отдельные EMA для LONG и SHORT
-        const emaLongElement = document.getElementById('selectedCoinEMALong');
-        const emaShortElement = document.getElementById('selectedCoinEMAShort');
-        // emaElement уже объявлен выше на строке 1369
-        
-        if (emaLongElement && emaShortElement && emaElement) {
-            // Новый формат с отдельными элементами
-            if (coin.ema_periods) {
-                if (coin.ema_periods.long && coin.ema_periods.short) {
-                    // Новый формат с отдельными LONG и SHORT EMA
-                    const longEma = coin.ema_periods.long;
-                    const shortEma = coin.ema_periods.short;
-                    const longText = `LONG: EMA(${longEma.ema_short_period || longEma.ema_short || '-'},${longEma.ema_long_period || longEma.ema_long || '-'})`;
-                    const shortText = `SHORT: EMA(${shortEma.ema_short_period || shortEma.ema_short || '-'},${shortEma.ema_long_period || shortEma.ema_long || '-'})`;
-                    emaLongElement.textContent = longText;
-                    emaShortElement.textContent = shortText;
-                    console.log('[BotsManager] ✅ EMA обновлен:', longText, shortText);
-                } else if (coin.ema_periods.ema_short && coin.ema_periods.ema_long) {
-                    // Старый формат (обратная совместимость)
-                    const emaText = `EMA(${coin.ema_periods.ema_short},${coin.ema_periods.ema_long})`;
-                    emaLongElement.textContent = `LONG: ${emaText}`;
-                    emaShortElement.textContent = `SHORT: ${emaText}`;
-                    console.log('[BotsManager] ✅ EMA обновлен (legacy):', emaText);
-                } else {
-                    emaLongElement.textContent = 'LONG: -';
-                    emaShortElement.textContent = 'SHORT: -';
-                }
-            } else {
-                emaLongElement.textContent = 'LONG: -';
-                emaShortElement.textContent = 'SHORT: -';
-            }
-        } else if (emaElement) {
-            // Fallback для старого формата (обратная совместимость)
-            let emaText = '-';
-            if (coin.ema_periods) {
-                if (coin.ema_periods.long && coin.ema_periods.short) {
-                    const longEma = coin.ema_periods.long;
-                    const shortEma = coin.ema_periods.short;
-                    emaText = `LONG: EMA(${longEma.ema_short_period || longEma.ema_short || '-'},${longEma.ema_long_period || longEma.ema_long || '-'}) | SHORT: EMA(${shortEma.ema_short_period || shortEma.ema_short || '-'},${shortEma.ema_long_period || shortEma.ema_long || '-'})`;
-                } else if (coin.ema_periods.ema_short && coin.ema_periods.ema_long) {
-                    emaText = `EMA(${coin.ema_periods.ema_short},${coin.ema_periods.ema_long})`;
-                }
-            }
-            emaElement.textContent = emaText;
-            emaElement.className = 'value ema-indicator';
-            console.log('[BotsManager] ✅ EMA обновлен (fallback):', emaText);
-        }
+        // ❌ EMA данные больше не используются и не отображаются
         
         if (zoneElement) {
             const zone = coin.rsi_zone || 'NEUTRAL';
@@ -5154,35 +5106,8 @@ class BotsManager {
         // ПАРАМЕТРЫ ОПРЕДЕЛЕНИЯ ТРЕНДА
         // ==========================================
         
-        const trendConfirmationBarsEl = document.getElementById('trendConfirmationBars');
-        if (trendConfirmationBarsEl && systemConfig.trend_confirmation_bars !== undefined) {
-            trendConfirmationBarsEl.value = systemConfig.trend_confirmation_bars;
-            console.log('[BotsManager] 📊 Количество свечей для подтверждения тренда:', trendConfirmationBarsEl.value);
-        }
-        
-        const trendMinConfirmationsEl = document.getElementById('trendMinConfirmations');
-        if (trendMinConfirmationsEl && systemConfig.trend_min_confirmations !== undefined) {
-            trendMinConfirmationsEl.value = systemConfig.trend_min_confirmations;
-            console.log('[BotsManager] ✅ Минимум подтверждений тренда:', trendMinConfirmationsEl.value);
-        }
-        
-        const trendRequireSlopeEl = document.getElementById('trendRequireSlope');
-        if (trendRequireSlopeEl) {
-            trendRequireSlopeEl.checked = systemConfig.trend_require_slope || false;
-            console.log('[BotsManager] 📈 Требовать наклон EMA:', trendRequireSlopeEl.checked);
-        }
-        
-        const trendRequirePriceEl = document.getElementById('trendRequirePrice');
-        if (trendRequirePriceEl) {
-            trendRequirePriceEl.checked = systemConfig.trend_require_price !== false;
-            console.log('[BotsManager] 💰 Требовать позицию цены:', trendRequirePriceEl.checked);
-        }
-        
-        const trendRequireCandlesEl = document.getElementById('trendRequireCandles');
-        if (trendRequireCandlesEl) {
-            trendRequireCandlesEl.checked = systemConfig.trend_require_candles !== false;
-            console.log('[BotsManager] 🕯️ Требовать подтверждение свечами:', trendRequireCandlesEl.checked);
-        }
+        // ❌ УСТАРЕВШИЕ НАСТРОЙКИ EMA - УБРАНЫ (больше не используются)
+        // Тренд теперь определяется простым анализом цены (% изменения и растущие/падающие свечи)
         
         console.log('[BotsManager] ✅ Форма заполнена данными из API');
     }
@@ -5401,15 +5326,8 @@ class BotsManager {
             inactive_bot_cleanup_interval: parseInt(document.getElementById('inactiveBotCleanupInterval')?.value) || 600,
             inactive_bot_timeout: parseInt(document.getElementById('inactiveBotTimeout')?.value) || 600,
             stop_loss_setup_interval: parseInt(document.getElementById('stopLossSetupInterval')?.value) || 300,
-            // EMA параметры тренда
-            ema_fast: parseInt(document.getElementById('emaFast')?.value) || 50,
-            ema_slow: parseInt(document.getElementById('emaSlow')?.value) || 200,
-            // Параметры определения тренда
-            trend_confirmation_bars: parseInt(document.getElementById('trendConfirmationBars')?.value) || 3,
-            trend_min_confirmations: parseInt(document.getElementById('trendMinConfirmations')?.value) || 2,
-            trend_require_slope: document.getElementById('trendRequireSlope')?.checked || false,
-            trend_require_price: document.getElementById('trendRequirePrice')?.checked !== false,
-            trend_require_candles: document.getElementById('trendRequireCandles')?.checked !== false,
+            // ❌ УСТАРЕВШИЕ НАСТРОЙКИ EMA - УБРАНЫ (больше не используются)
+            // Тренд теперь определяется простым анализом цены
             // Enhanced RSI настройки
             enhanced_rsi_enabled: autoBotConfig.enhanced_rsi_enabled,
             enhanced_rsi_require_volume_confirmation: autoBotConfig.enhanced_rsi_require_volume_confirmation,
@@ -5650,23 +5568,9 @@ class BotsManager {
     
     async saveTrendParameters() {
         console.log('[BotsManager] 💾 Сохранение параметров определения тренда...');
-        try {
-            const config = this.collectConfigurationData();
-            const trendParameters = {
-                trend_confirmation_bars: config.system.trend_confirmation_bars,
-                trend_min_confirmations: config.system.trend_min_confirmations,
-                trend_require_slope: config.system.trend_require_slope,
-                trend_require_price: config.system.trend_require_price,
-                trend_require_candles: config.system.trend_require_candles
-            };
-            
-            console.log('[BotsManager] 📊 Параметры тренда для сохранения:', trendParameters);
-            
-            await this.sendConfigUpdate('system-config', trendParameters, 'Параметры определения тренда');
-        } catch (error) {
-            console.error('[BotsManager] ❌ Ошибка сохранения параметров тренда:', error);
-            this.showNotification('❌ Ошибка сохранения параметров тренда', 'error');
-        }
+        // ❌ УСТАРЕВШИЕ НАСТРОЙКИ EMA - УБРАНЫ (больше не используются)
+        // Тренд теперь определяется простым анализом цены - настройки не требуются
+        this.showNotification('ℹ️ Настройки тренда больше не используются (тренд определяется автоматически по цене)', 'info');
     }
     
     // ✅ ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ОТПРАВКИ КОНФИГУРАЦИИ
