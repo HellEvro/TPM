@@ -373,6 +373,7 @@ def get_coin_candles_only(symbol, exchange_obj=None):
         return {
             'symbol': symbol,
             'candles': candles,
+            'timeframe': '6h',  # ✅ Добавляем timeframe для правильного накопления
             'last_update': datetime.now().isoformat()
         }
         
@@ -1103,6 +1104,96 @@ def load_all_coins_candles_fast():
             logger.info(f"[CANDLES_FAST] ✅ Проверка: в глобальном кэше сейчас {len(coins_rsi_data.get('candles_cache', {}))} монет")
         except Exception as cache_error:
             logger.warning(f"[CANDLES_FAST] ⚠️ Ошибка сохранения кэша: {cache_error}")
+        
+        # ✅ ДОПОЛНИТЕЛЬНО: Сохраняем свечи в файл кэша с НАРАЩИВАНИЕМ данных
+        # Каждый раунд добавляет новые свечи к существующим, накапливая историю
+        try:
+            import os
+            import json
+            from pathlib import Path
+            
+            # Определяем путь к файлу кэша (относительно корня проекта)
+            project_root = Path(__file__).parent.parent
+            candles_cache_file = project_root / 'data' / 'candles_cache.json'
+            
+            # Создаем директорию если нужно
+            candles_cache_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Загружаем существующий кэш (если есть)
+            file_cache = {}
+            if candles_cache_file.exists():
+                try:
+                    with open(candles_cache_file, 'r', encoding='utf-8') as f:
+                        file_cache = json.load(f)
+                    logger.debug(f"[CANDLES_FAST] Загружен существующий кэш: {len(file_cache)} монет")
+                except Exception as load_error:
+                    logger.debug(f"[CANDLES_FAST] Ошибка загрузки файла кэша: {load_error}")
+            
+            # ✅ НАРАЩИВАЕМ данные: объединяем старые и новые свечи
+            updated_count = 0
+            total_candles_added = 0
+            
+            for symbol, candle_data in candles_cache.items():
+                new_candles = candle_data.get('candles', [])
+                if not new_candles:
+                    continue
+                
+                # Получаем существующие свечи для этой монеты
+                existing_data = file_cache.get(symbol, {})
+                existing_candles = existing_data.get('candles', [])
+                
+                # ✅ ОБЪЕДИНЯЕМ: создаем словарь для быстрого поиска по timestamp
+                candles_dict = {}
+                
+                # Добавляем существующие свечи
+                for candle in existing_candles:
+                    timestamp = candle.get('timestamp') or candle.get('time') or candle.get('openTime')
+                    if timestamp:
+                        candles_dict[timestamp] = candle
+                
+                # Добавляем/обновляем новыми свечами (новые перезаписывают старые)
+                for candle in new_candles:
+                    timestamp = candle.get('timestamp') or candle.get('time') or candle.get('openTime')
+                    if timestamp:
+                        candles_dict[timestamp] = candle
+                
+                # Преобразуем обратно в список и сортируем по времени
+                merged_candles = list(candles_dict.values())
+                merged_candles.sort(key=lambda x: x.get('timestamp') or x.get('time') or x.get('openTime') or 0)
+                
+                # Ограничиваем максимальное количество свечей (например, последние 10000)
+                max_candles = 10000
+                if len(merged_candles) > max_candles:
+                    merged_candles = merged_candles[-max_candles:]
+                    logger.debug(f"[CANDLES_FAST] Обрезано до {max_candles} свечей для {symbol}")
+                
+                # Обновляем кэш для этой монеты
+                old_count = len(existing_candles)
+                new_count = len(merged_candles)
+                added_count = new_count - old_count
+                
+                file_cache[symbol] = {
+                    'candles': merged_candles,
+                    'timeframe': candle_data.get('timeframe', '6h'),
+                    'timestamp': datetime.now().isoformat(),
+                    'count': new_count,
+                    'last_update': datetime.now().isoformat()
+                }
+                
+                updated_count += 1
+                total_candles_added += added_count
+                
+                if added_count > 0:
+                    logger.debug(f"[CANDLES_FAST] {symbol}: {old_count} -> {new_count} свечей (+{added_count})")
+            
+            # Сохраняем обновленный кэш
+            with open(candles_cache_file, 'w', encoding='utf-8') as f:
+                json.dump(file_cache, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"[CANDLES_FAST] 💾 Кэш накоплен в файл: {updated_count} монет, +{total_candles_added} новых свечей -> {candles_cache_file}")
+            
+        except Exception as file_error:
+            logger.warning(f"[CANDLES_FAST] ⚠️ Ошибка сохранения в файл кэша: {file_error}")
         
         # 🔄 Сбрасываем задержку запросов после успешной загрузки раунда
         try:
