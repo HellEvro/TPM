@@ -2,15 +2,19 @@
 # -*- coding: utf-8 -*-
 """
 Скрипт для поиска оптимальных EMA периодов для определения идеальных точек входа
-для каждой монеты на основе реальной прибыльности сигналов.
+для каждой монеты. ПРАВИЛЬНАЯ ЛОГИКА: ищет EMA которые показывают правильный тренд
+в момент когда RSI в зоне перепроданности/перекупленности.
 
 Логика работы:
-1. Ищет моменты входа RSI в зоны перепроданности (≤29) и перекупленности (≥71)
-2. Проверяет качество точки входа (близость к локальному минимуму/максимуму)
-3. Для LONG: RSI ≤29 + восходящий тренд EMA + проверка реальной прибыльности (≥1% за 20 периодов)
-4. Для SHORT: RSI ≥71 + нисходящий тренд EMA + проверка реальной прибыльности (≥1% за 20 периодов)
-5. Учитывает качество точки входа - идеальные точки входа (близко к экстремуму) имеют больший вес
-6. Находит EMA периоды с максимальной точностью и реальной прибыльностью сигналов
+1. ✅ ПРАВИЛЬНЫЙ ПОДХОД: Сначала ищем моменты когда RSI в зоне (≤29 или ≥71)
+2. Для LONG: Ищем моменты RSI ≤29, проверяем какие EMA показывают UP тренд (ema_short > ema_long) в этот момент
+3. Для SHORT: Ищем моменты RSI ≥71, проверяем какие EMA показывают DOWN тренд (ema_short < ema_long) в этот момент
+4. Проверяем реальную прибыльность сигналов (≥1% за 20 периодов)
+5. Находим ОТДЕЛЬНЫЕ оптимальные EMA периоды для LONG и SHORT сигналов
+6. Сохраняем отдельные EMA для каждого направления - они могут быть разными!
+
+Ключевое отличие: EMA подбираются так, чтобы они показывали правильный тренд
+ИМЕННО В МОМЕНТ когда RSI в зоне, а не просто подтверждали тренд после.
 """
 
 import os
@@ -167,11 +171,13 @@ def calculate_ema_numba(prices, period):
     return ema
 
 @jit(nopython=True)
-def analyze_ema_combination_numba(prices, rsi_values, ema_short_period, ema_long_period):
-    """Анализ EMA трендов с подтверждением RSI и проверкой реальной прибыльности точек входа"""
+def analyze_ema_combination_long_numba(prices, rsi_values, ema_short_period, ema_long_period):
+    """
+    Анализ для LONG сигналов: ищем моменты RSI <= 29, проверяем что EMA показывает UP тренд
+    """
     n = len(prices)
     if n < max(ema_short_period, ema_long_period) + 100:
-        return 0.0, 0, 0, 0, 0
+        return 0.0, 0, 0
     
     # Вычисляем EMA
     ema_short = calculate_ema_numba(prices, ema_short_period)
@@ -182,128 +188,124 @@ def analyze_ema_combination_numba(prices, rsi_values, ema_short_period, ema_long
     start_idx = max(ema_short_period, ema_long_period) - 1
     
     if min_length - start_idx < 100:
-        return 0.0, 0, 0, 0, 0
+        return 0.0, 0, 0
     
     # Параметры для проверки прибыльности
-    MIN_PROFIT_PERCENT = 1.0  # Минимальная прибыль 1% для успешного сигнала
-    HOLD_PERIODS = 20  # Период удержания позиции для проверки прибыльности
-    LOOKBACK_FOR_ENTRY_QUALITY = 10  # Период для проверки качества точки входа
+    MIN_PROFIT_PERCENT = 1.0
+    HOLD_PERIODS = 20
     
-    # Счетчики для разных типов сигналов (float для поддержки частичных успехов)
-    total_long_signals = 0
-    correct_long_signals = 0.0
-    total_short_signals = 0
-    correct_short_signals = 0.0
+    total_signals = 0
+    correct_signals = 0.0
     
+    # ✅ ПРАВИЛЬНАЯ ЛОГИКА: Сначала ищем моменты когда RSI <= 29, потом проверяем EMA UP тренд
     for i in range(start_idx, min_length - HOLD_PERIODS):
         rsi = rsi_values[i]
         entry_price = prices[i]
         
-        # Проверяем тренды EMA
-        if i > start_idx:
-            # Восходящий тренд EMA (короткая выше длинной)
+        # Ищем моменты когда RSI <= 29 (перепроданность)
+        if rsi <= 29:
+            # Проверяем, что EMA показывает UP тренд в этот момент
             if ema_short[i] > ema_long[i]:
-                # Проверяем RSI на перепроданность для подтверждения
-                if rsi <= 29:  # Строгие условия для перепроданности
-                    # Проверяем качество точки входа - ищем локальный минимум
-                    is_good_entry = True
-                    if i >= LOOKBACK_FOR_ENTRY_QUALITY:
-                        # Проверяем, что текущая цена близка к минимуму в последних N периодах
-                        lookback_start = max(start_idx, i - LOOKBACK_FOR_ENTRY_QUALITY)
-                        min_price_in_lookback = prices[lookback_start]
-                        for j in range(lookback_start, i):
-                            if prices[j] < min_price_in_lookback:
-                                min_price_in_lookback = prices[j]
+                total_signals += 1
+                
+                # Проверяем реальную прибыльность
+                success = False
+                for j in range(1, HOLD_PERIODS + 1):
+                    if i + j < min_length:
+                        exit_price = prices[i + j]
+                        profit_percent = ((exit_price - entry_price) / entry_price) * 100.0
                         
-                        # Если текущая цена значительно выше минимума (>2%), точка входа не идеальна
-                        if entry_price > min_price_in_lookback * 1.02:
-                            is_good_entry = False
-                    
-                    total_long_signals += 1
-                    
-                    # Проверяем реальную прибыльность в следующих периодах
-                    success = False
-                    max_profit = 0.0
-                    
-                    # Проверяем прибыльность в течение HOLD_PERIODS периодов
-                    for j in range(1, HOLD_PERIODS + 1):
-                        if i + j < min_length:
-                            exit_price = prices[i + j]
-                            profit_percent = ((exit_price - entry_price) / entry_price) * 100.0
-                            
-                            if profit_percent > max_profit:
-                                max_profit = profit_percent
-                            
-                            # Сигнал успешен, если достигнута минимальная прибыль
-                            if profit_percent >= MIN_PROFIT_PERCENT:
-                                success = True
-                                # Дополнительно проверяем, что тренд сохранился
-                                if ema_short[i + j] > ema_long[i + j]:
-                                    break
-                    
-                    # Учитываем качество точки входа в оценку успешности
-                    if success and is_good_entry:
-                        correct_long_signals += 1
-                    elif success and not is_good_entry:
-                        # Сигнал прибыльный, но точка входа не идеальна - считаем частично успешным
-                        # (учитываем с меньшим весом, но все же учитываем)
-                        correct_long_signals += 0.5
-            
-            # Нисходящий тренд EMA (короткая ниже длинной)
-            elif ema_short[i] < ema_long[i]:
-                # Проверяем RSI на перекупленность для подтверждения
-                if rsi >= 71:  # Строгие условия для перекупленности
-                    # Проверяем качество точки входа - ищем локальный максимум
-                    is_good_entry = True
-                    if i >= LOOKBACK_FOR_ENTRY_QUALITY:
-                        # Проверяем, что текущая цена близка к максимуму в последних N периодах
-                        lookback_start = max(start_idx, i - LOOKBACK_FOR_ENTRY_QUALITY)
-                        max_price_in_lookback = prices[lookback_start]
-                        for j in range(lookback_start, i):
-                            if prices[j] > max_price_in_lookback:
-                                max_price_in_lookback = prices[j]
-                        
-                        # Если текущая цена значительно ниже максимума (<98%), точка входа не идеальна
-                        if entry_price < max_price_in_lookback * 0.98:
-                            is_good_entry = False
-                    
-                    total_short_signals += 1
-                    
-                    # Проверяем реальную прибыльность в следующих периодах
-                    success = False
-                    max_profit = 0.0
-                    
-                    # Проверяем прибыльность в течение HOLD_PERIODS периодов
-                    for j in range(1, HOLD_PERIODS + 1):
-                        if i + j < min_length:
-                            exit_price = prices[i + j]
-                            profit_percent = ((entry_price - exit_price) / entry_price) * 100.0
-                            
-                            if profit_percent > max_profit:
-                                max_profit = profit_percent
-                            
-                            # Сигнал успешен, если достигнута минимальная прибыль
-                            if profit_percent >= MIN_PROFIT_PERCENT:
-                                success = True
-                                # Дополнительно проверяем, что тренд сохранился
-                                if ema_short[i + j] < ema_long[i + j]:
-                                    break
-                    
-                    # Учитываем качество точки входа в оценку успешности
-                    if success and is_good_entry:
-                        correct_short_signals += 1
-                    elif success and not is_good_entry:
-                        # Сигнал прибыльный, но точка входа не идеальна - считаем частично успешным
-                        correct_short_signals += 0.5
+                        if profit_percent >= MIN_PROFIT_PERCENT:
+                            success = True
+                            break
+                
+                if success:
+                    correct_signals += 1.0
     
-    total_signals = total_long_signals + total_short_signals
-    correct_signals = correct_long_signals + correct_short_signals
+    if total_signals == 0:
+        return 0.0, 0, 0
+    
+    accuracy = (correct_signals / total_signals) * 100
+    return accuracy, total_signals, correct_signals
+
+@jit(nopython=True)
+def analyze_ema_combination_short_numba(prices, rsi_values, ema_short_period, ema_long_period):
+    """
+    Анализ для SHORT сигналов: ищем моменты RSI >= 71, проверяем что EMA показывает DOWN тренд
+    """
+    n = len(prices)
+    if n < max(ema_short_period, ema_long_period) + 100:
+        return 0.0, 0, 0
+    
+    # Вычисляем EMA
+    ema_short = calculate_ema_numba(prices, ema_short_period)
+    ema_long = calculate_ema_numba(prices, ema_long_period)
+    
+    # Находим общую длину для анализа
+    min_length = min(len(rsi_values), len(ema_short), len(ema_long))
+    start_idx = max(ema_short_period, ema_long_period) - 1
+    
+    if min_length - start_idx < 100:
+        return 0.0, 0, 0
+    
+    # Параметры для проверки прибыльности
+    MIN_PROFIT_PERCENT = 1.0
+    HOLD_PERIODS = 20
+    
+    total_signals = 0
+    correct_signals = 0.0
+    
+    # ✅ ПРАВИЛЬНАЯ ЛОГИКА: Сначала ищем моменты когда RSI >= 71, потом проверяем EMA DOWN тренд
+    for i in range(start_idx, min_length - HOLD_PERIODS):
+        rsi = rsi_values[i]
+        entry_price = prices[i]
+        
+        # Ищем моменты когда RSI >= 71 (перекупленность)
+        if rsi >= 71:
+            # Проверяем, что EMA показывает DOWN тренд в этот момент
+            if ema_short[i] < ema_long[i]:
+                total_signals += 1
+                
+                # Проверяем реальную прибыльность
+                success = False
+                for j in range(1, HOLD_PERIODS + 1):
+                    if i + j < min_length:
+                        exit_price = prices[i + j]
+                        profit_percent = ((entry_price - exit_price) / entry_price) * 100.0
+                        
+                        if profit_percent >= MIN_PROFIT_PERCENT:
+                            success = True
+                            break
+                
+                if success:
+                    correct_signals += 1.0
+    
+    if total_signals == 0:
+        return 0.0, 0, 0
+    
+    accuracy = (correct_signals / total_signals) * 100
+    return accuracy, total_signals, correct_signals
+
+@jit(nopython=True)
+def analyze_ema_combination_numba(prices, rsi_values, ema_short_period, ema_long_period):
+    """
+    Объединенный анализ для обратной совместимости
+    """
+    long_accuracy, long_total, long_correct = analyze_ema_combination_long_numba(
+        prices, rsi_values, ema_short_period, ema_long_period
+    )
+    short_accuracy, short_total, short_correct = analyze_ema_combination_short_numba(
+        prices, rsi_values, ema_short_period, ema_long_period
+    )
+    
+    total_signals = long_total + short_total
+    correct_signals = long_correct + short_correct
     
     if total_signals == 0:
         return 0.0, 0, 0, 0, 0
     
     accuracy = (correct_signals / total_signals) * 100
-    return accuracy, total_signals, correct_signals, total_long_signals, total_short_signals
+    return accuracy, total_signals, correct_signals, long_total, short_total
 
 # Импортируем конфигурацию из app.config
 try:
@@ -319,26 +321,56 @@ except ImportError:
 
 def analyze_ema_combination_parallel(args):
     """Умная функция для параллельной обработки комбинаций EMA с анализом пересечений"""
-    symbol, candles, rsi_values, ema_short_period, ema_long_period = args
+    symbol, candles, rsi_values, ema_short_period, ema_long_period, signal_type = args
     
     try:
         # Конвертируем в numpy массивы
         prices = np.array([float(candle['close']) for candle in candles], dtype=np.float64)
         
-        # Анализируем комбинацию с numba (теперь возвращает 5 значений)
-        accuracy, total_signals, correct_signals, long_signals, short_signals = analyze_ema_combination_numba(
-            prices, rsi_values, ema_short_period, ema_long_period
-        )
-        
-        return {
-            'accuracy': accuracy,
-            'total_signals': total_signals,
-            'correct_signals': correct_signals,
-            'long_signals': long_signals,
-            'short_signals': short_signals,
-            'ema_short_period': ema_short_period,
-            'ema_long_period': ema_long_period
-        }
+        # Анализируем в зависимости от типа сигнала
+        if signal_type == 'long':
+            accuracy, total_signals, correct_signals = analyze_ema_combination_long_numba(
+                prices, rsi_values, ema_short_period, ema_long_period
+            )
+            return {
+                'accuracy': accuracy,
+                'total_signals': total_signals,
+                'correct_signals': correct_signals,
+                'long_signals': total_signals,
+                'short_signals': 0,
+                'ema_short_period': ema_short_period,
+                'ema_long_period': ema_long_period,
+                'signal_type': 'long'
+            }
+        elif signal_type == 'short':
+            accuracy, total_signals, correct_signals = analyze_ema_combination_short_numba(
+                prices, rsi_values, ema_short_period, ema_long_period
+            )
+            return {
+                'accuracy': accuracy,
+                'total_signals': total_signals,
+                'correct_signals': correct_signals,
+                'long_signals': 0,
+                'short_signals': total_signals,
+                'ema_short_period': ema_short_period,
+                'ema_long_period': ema_long_period,
+                'signal_type': 'short'
+            }
+        else:
+            # Объединенный анализ для обратной совместимости
+            accuracy, total_signals, correct_signals, long_signals, short_signals = analyze_ema_combination_numba(
+                prices, rsi_values, ema_short_period, ema_long_period
+            )
+            return {
+                'accuracy': accuracy,
+                'total_signals': total_signals,
+                'correct_signals': correct_signals,
+                'long_signals': long_signals,
+                'short_signals': short_signals,
+                'ema_short_period': ema_short_period,
+                'ema_long_period': ema_long_period,
+                'signal_type': 'both'
+            }
         
     except Exception as e:
         logger.error(f"Ошибка в анализе комбинации {ema_short_period}/{ema_long_period} для {symbol}: {e}")
@@ -675,8 +707,8 @@ class OptimalEMAFinder:
         return combinations
     
     def _analyze_combinations(self, symbol: str, candles: List[Dict], rsi_values: np.ndarray, 
-                            combinations: List[Tuple[int, int]], stage_name: str) -> List[Dict]:
-        """Анализирует список комбинаций EMA"""
+                            combinations: List[Tuple[int, int]], stage_name: str, signal_type: str = 'both') -> List[Dict]:
+        """Анализирует список комбинаций EMA для указанного типа сигнала"""
         if not combinations:
             return []
         
@@ -687,7 +719,7 @@ class OptimalEMAFinder:
         # Подготавливаем аргументы для параллельной обработки
         args_list = []
         for ema_short, ema_long in combinations:
-            args_list.append((symbol, candles, rsi_values, ema_short, ema_long))
+            args_list.append((symbol, candles, rsi_values, ema_short, ema_long, signal_type))
         
         total_combinations = len(combinations)
         logger.info(f"{stage_name}: Анализируем {total_combinations} комбинаций EMA для {symbol}")
@@ -815,56 +847,127 @@ class OptimalEMAFinder:
             prices = np.array([float(candle['close']) for candle in candles], dtype=np.float64)
             rsi_values = calculate_rsi_numba(prices, 14)
             
-            # ЭТАП 1: Быстрый скрининг с адаптивными диапазонами
-            logger.info(f"Этап 1: Быстрый скрининг {symbol}...")
-            stage1_combinations = self._generate_adaptive_combinations(symbol, candles)
+            # ✅ НОВАЯ ЛОГИКА: Ищем отдельно для LONG и SHORT
             
-            best_candidates = self._analyze_combinations(
-                symbol, candles, rsi_values, stage1_combinations, "Этап 1"
+            # === ПОИСК ОПТИМАЛЬНЫХ EMA ДЛЯ LONG ===
+            logger.info(f"Поиск оптимальных EMA для LONG сигналов {symbol}...")
+            stage1_combinations_long = self._generate_adaptive_combinations(symbol, candles)
+            
+            best_candidates_long = self._analyze_combinations(
+                symbol, candles, rsi_values, stage1_combinations_long, "Этап 1 LONG", signal_type='long'
             )
             
-            if not best_candidates:
-                logger.warning(f"Не найдено подходящих EMA для {symbol} на этапе 1")
-                return None
+            best_long = None
+            if best_candidates_long:
+                top_candidates_long = sorted(best_candidates_long, key=lambda x: x['accuracy'], reverse=True)[:3]
+                stage2_combinations_long = self._generate_detailed_combinations(top_candidates_long)
+                final_results_long = self._analyze_combinations(
+                    symbol, candles, rsi_values, stage2_combinations_long, "Этап 2 LONG", signal_type='long'
+                )
+                
+                if final_results_long:
+                    best_long = max(final_results_long, key=lambda x: x['accuracy'])
+                else:
+                    best_long = top_candidates_long[0] if top_candidates_long else None
             
-            # Берем топ-3 кандидата для детального анализа
-            top_candidates = sorted(best_candidates, key=lambda x: x['accuracy'], reverse=True)[:3]
+            # === ПОИСК ОПТИМАЛЬНЫХ EMA ДЛЯ SHORT ===
+            logger.info(f"Поиск оптимальных EMA для SHORT сигналов {symbol}...")
+            stage1_combinations_short = self._generate_adaptive_combinations(symbol, candles)
             
-            # ЭТАП 2: Детальный анализ лучших кандидатов
-            logger.info(f"Этап 2: Детальный анализ {symbol}...")
-            stage2_combinations = self._generate_detailed_combinations(top_candidates)
-            
-            final_results = self._analyze_combinations(
-                symbol, candles, rsi_values, stage2_combinations, "Этап 2"
+            best_candidates_short = self._analyze_combinations(
+                symbol, candles, rsi_values, stage1_combinations_short, "Этап 1 SHORT", signal_type='short'
             )
             
-            if not final_results:
-                # Если детальный анализ не дал результатов, используем лучший из этапа 1
-                best_combination = top_candidates[0]
-            else:
-                best_combination = max(final_results, key=lambda x: x['accuracy'])
+            best_short = None
+            if best_candidates_short:
+                top_candidates_short = sorted(best_candidates_short, key=lambda x: x['accuracy'], reverse=True)[:3]
+                stage2_combinations_short = self._generate_detailed_combinations(top_candidates_short)
+                final_results_short = self._analyze_combinations(
+                    symbol, candles, rsi_values, stage2_combinations_short, "Этап 2 SHORT", signal_type='short'
+                )
+                
+                if final_results_short:
+                    best_short = max(final_results_short, key=lambda x: x['accuracy'])
+                else:
+                    best_short = top_candidates_short[0] if top_candidates_short else None
             
-            # Сохраняем результат
-            self.optimal_ema_data[clean_symbol] = {
-                'ema_short_period': best_combination['ema_short_period'],
-                'ema_long_period': best_combination['ema_long_period'],
-                'accuracy': best_combination['accuracy'],
-                'total_signals': best_combination['total_signals'],
-                'correct_signals': best_combination['correct_signals'],
-                'long_signals': best_combination['long_signals'],
-                'short_signals': best_combination['short_signals'],
+            # Сохраняем результаты (отдельные EMA для LONG и SHORT)
+            result_data = {
                 'last_updated': datetime.now().isoformat(),
                 'candles_analyzed': len(candles),
-                'analysis_method': 'trend_confirmation'
+                'analysis_method': 'separate_long_short'
             }
             
-            self.save_optimal_ema_data()
+            # Сохраняем EMA для LONG
+            if best_long:
+                result_data['long'] = {
+                    'ema_short_period': best_long['ema_short_period'],
+                    'ema_long_period': best_long['ema_long_period'],
+                    'accuracy': best_long['accuracy'],
+                    'total_signals': best_long['total_signals'],
+                    'correct_signals': best_long['correct_signals']
+                }
+                logger.info(f"LONG EMA для {symbol}: "
+                          f"EMA({best_long['ema_short_period']},{best_long['ema_long_period']}) "
+                          f"с точностью {best_long['accuracy']:.1f}% "
+                          f"({best_long['correct_signals']}/{best_long['total_signals']})")
+            else:
+                logger.warning(f"Не найдено оптимальных EMA для LONG сигналов {symbol}")
+                # Используем дефолтные значения
+                result_data['long'] = {
+                    'ema_short_period': 50,
+                    'ema_long_period': 200,
+                    'accuracy': 0,
+                    'total_signals': 0,
+                    'correct_signals': 0
+                }
             
-            logger.info(f"Оптимальные EMA для {symbol}: "
-                      f"EMA({best_combination['ema_short_period']},{best_combination['ema_long_period']}) "
-                      f"с точностью {best_combination['accuracy']:.1f}% "
-                      f"({best_combination['correct_signals']}/{best_combination['total_signals']}) "
-                      f"Long: {best_combination['long_signals']}, Short: {best_combination['short_signals']}")
+            # Сохраняем EMA для SHORT
+            if best_short:
+                result_data['short'] = {
+                    'ema_short_period': best_short['ema_short_period'],
+                    'ema_long_period': best_short['ema_long_period'],
+                    'accuracy': best_short['accuracy'],
+                    'total_signals': best_short['total_signals'],
+                    'correct_signals': best_short['correct_signals']
+                }
+                logger.info(f"SHORT EMA для {symbol}: "
+                          f"EMA({best_short['ema_short_period']},{best_short['ema_long_period']}) "
+                          f"с точностью {best_short['accuracy']:.1f}% "
+                          f"({best_short['correct_signals']}/{best_short['total_signals']})")
+            else:
+                logger.warning(f"Не найдено оптимальных EMA для SHORT сигналов {symbol}")
+                # Используем дефолтные значения
+                result_data['short'] = {
+                    'ema_short_period': 50,
+                    'ema_long_period': 200,
+                    'accuracy': 0,
+                    'total_signals': 0,
+                    'correct_signals': 0
+                }
+            
+            # Для обратной совместимости сохраняем также общие поля
+            if best_long:
+                result_data['ema_short_period'] = best_long['ema_short_period']
+                result_data['ema_long_period'] = best_long['ema_long_period']
+                result_data['accuracy'] = best_long['accuracy']
+                result_data['long_signals'] = best_long['total_signals']
+                result_data['short_signals'] = best_short['total_signals'] if best_short else 0
+            elif best_short:
+                result_data['ema_short_period'] = best_short['ema_short_period']
+                result_data['ema_long_period'] = best_short['ema_long_period']
+                result_data['accuracy'] = best_short['accuracy']
+                result_data['long_signals'] = 0
+                result_data['short_signals'] = best_short['total_signals']
+            else:
+                result_data['ema_short_period'] = 50
+                result_data['ema_long_period'] = 200
+                result_data['accuracy'] = 0
+                result_data['long_signals'] = 0
+                result_data['short_signals'] = 0
+            
+            self.optimal_ema_data[clean_symbol] = result_data
+            self.save_optimal_ema_data()
             
             return self.optimal_ema_data[clean_symbol]
                 
