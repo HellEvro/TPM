@@ -92,6 +92,10 @@ class BybitExchange(BaseExchange):
         self.last_reset_day = None
         self.max_profit_values = {}
         self.max_loss_values = {}
+        
+        # Управление задержкой между запросами для предотвращения rate limit
+        self.base_request_delay = 0.2  # Базовая задержка между запросами (200ms)
+        self.current_request_delay = 0.2  # Текущая задержка (может увеличиваться при rate limit)
     
     def _setup_connection_pool(self):
         """Настраивает пул соединений для requests и pybit"""
@@ -135,6 +139,12 @@ class BybitExchange(BaseExchange):
         except Exception as e:
             logging.warning(f"[BYBIT] ⚠️ Не удалось настроить пул соединений: {e}")
 
+    def reset_request_delay(self):
+        """Сбрасывает текущую задержку запросов к базовому значению"""
+        if self.current_request_delay != self.base_request_delay:
+            logger.info(f"[BYBIT] 🔄 Сброс задержки запросов: {self.current_request_delay:.3f}с → {self.base_request_delay:.3f}с")
+            self.current_request_delay = self.base_request_delay
+    
     def reset_daily_pnl(self, positions):
         """Сброс значений PnL в 00:00"""
         self.daily_pnl = {}
@@ -646,8 +656,8 @@ class BybitExchange(BaseExchange):
         Returns:
             dict: Данные для построения графика
         """
-        # Добавляем задержку для предотвращения rate limiting
-        time.sleep(0.2)  # 200ms задержка между запросами для предотвращения превышения лимита
+        # Добавляем задержку для предотвращения rate limiting (динамическая задержка)
+        time.sleep(self.current_request_delay)
         
         try:
             # Специальная обработка для таймфрейма "all"
@@ -673,17 +683,43 @@ class BybitExchange(BaseExchange):
                         print(f"[BYBIT] Пробуем интервал {interval_name}")
                         # Убираем USDT если он уже есть в символе
                         clean_sym = symbol.replace('USDT', '') if symbol.endswith('USDT') else symbol
-                        response = self.client.get_kline(
-                            category="linear",
-                            symbol=f"{clean_sym}USDT",
-                            interval=interval,
-                            limit=1000
-                        )
                         
-                        # Обработка rate limiting
-                        if response.get('retCode') == 10006:
-                            print(f"[BYBIT] Rate limit exceeded for {symbol}, waiting...")
-                            time.sleep(5)  # Ждем 5 секунд при rate limit
+                        # Повторные попытки при rate limit
+                        max_retries = 3
+                        retry_count = 0
+                        response = None
+                        
+                        while retry_count < max_retries:
+                            response = self.client.get_kline(
+                                category="linear",
+                                symbol=f"{clean_sym}USDT",
+                                interval=interval,
+                                limit=1000
+                            )
+                            
+                            # Обработка rate limiting
+                            if response.get('retCode') == 10006:
+                                # Увеличиваем задержку в 2 раза
+                                old_delay = self.current_request_delay
+                                self.current_request_delay *= 2
+                                logger.warning(f"[BYBIT] ⚠️ Rate limit для {symbol} ({interval_name}). Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
+                                
+                                # Ждем с увеличенной задержкой
+                                time.sleep(self.current_request_delay)
+                                retry_count += 1
+                                
+                                if retry_count < max_retries:
+                                    logger.info(f"[BYBIT] 🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name})...")
+                                    continue
+                                else:
+                                    logger.error(f"[BYBIT] ❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
+                                    break
+                            else:
+                                # Успешный ответ - выходим из цикла повторных попыток
+                                break
+                        
+                        # Если все попытки исчерпаны - пропускаем этот интервал
+                        if response and response.get('retCode') == 10006:
                             continue
                         
                         if response['retCode'] == 0:
@@ -754,17 +790,46 @@ class BybitExchange(BaseExchange):
                 
                 # Убираем USDT если он уже есть в символе
                 clean_sym = symbol.replace('USDT', '') if symbol.endswith('USDT') else symbol
-                response = self.client.get_kline(
-                    category="linear",
-                    symbol=f"{clean_sym}USDT",
-                    interval=interval,
-                    limit=1000
-                )
                 
-                # Обработка rate limiting
-                if response.get('retCode') == 10006:
-                    print(f"[BYBIT] Rate limit exceeded for {symbol}, waiting...")
-                    time.sleep(5)  # Ждем 5 секунд при rate limit
+                # Повторные попытки при rate limit
+                max_retries = 3
+                retry_count = 0
+                response = None
+                
+                while retry_count < max_retries:
+                    response = self.client.get_kline(
+                        category="linear",
+                        symbol=f"{clean_sym}USDT",
+                        interval=interval,
+                        limit=1000
+                    )
+                    
+                    # Обработка rate limiting
+                    if response.get('retCode') == 10006:
+                        # Увеличиваем задержку в 2 раза
+                        old_delay = self.current_request_delay
+                        self.current_request_delay *= 2
+                        logger.warning(f"[BYBIT] ⚠️ Rate limit для {symbol}. Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
+                        
+                        # Ждем с увеличенной задержкой
+                        time.sleep(self.current_request_delay)
+                        retry_count += 1
+                        
+                        if retry_count < max_retries:
+                            logger.info(f"[BYBIT] 🔄 Повторная попытка {retry_count}/{max_retries} для {symbol}...")
+                            continue
+                        else:
+                            logger.error(f"[BYBIT] ❌ Превышено максимальное количество попыток для {symbol}")
+                            return {
+                                'success': False,
+                                'error': 'Rate limit exceeded, maximum retries reached'
+                            }
+                    else:
+                        # Успешный ответ или другая ошибка - выходим из цикла
+                        break
+                
+                # Если все попытки исчерпаны
+                if response and response.get('retCode') == 10006:
                     return {
                         'success': False,
                         'error': 'Rate limit exceeded, please try again later'

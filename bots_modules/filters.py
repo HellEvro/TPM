@@ -1104,6 +1104,14 @@ def load_all_coins_candles_fast():
         except Exception as cache_error:
             logger.warning(f"[CANDLES_FAST] ⚠️ Ошибка сохранения кэша: {cache_error}")
         
+        # 🔄 Сбрасываем задержку запросов после успешной загрузки раунда
+        try:
+            if current_exchange and hasattr(current_exchange, 'reset_request_delay'):
+                current_exchange.reset_request_delay()
+                logger.info(f"[CANDLES_FAST] 🔄 Задержка запросов сброшена к базовому значению")
+        except Exception as reset_error:
+            logger.warning(f"[CANDLES_FAST] ⚠️ Ошибка сброса задержки: {reset_error}")
+        
         return True
         
     except Exception as e:
@@ -1219,6 +1227,15 @@ def load_all_coins_rsi():
             logger.debug(f"[RSI] Флаги is_mature обновлены")
         except Exception as update_error:
             logger.warning(f"[RSI] ⚠️ Не удалось обновить is_mature: {update_error}")
+        
+        # 🔄 Сбрасываем задержку запросов после успешной загрузки раунда
+        try:
+            if current_exchange and hasattr(current_exchange, 'reset_request_delay'):
+                current_exchange.reset_request_delay()
+                logger.info(f"[RSI] 🔄 Задержка запросов сброшена к базовому значению")
+        except Exception as reset_error:
+            logger.warning(f"[RSI] ⚠️ Ошибка сброса задержки: {reset_error}")
+        
         return True
         
     except Exception as e:
