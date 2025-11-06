@@ -233,6 +233,9 @@ logs/
 !data/ai/training/.gitkeep
 !data/ai/models/.gitkeep
 
+data/process_state.json
+data/candles_cache.json
+
 *.json.backup
 *.json.bak
 *.json.tmp
