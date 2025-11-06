@@ -753,7 +753,8 @@ class OptimalEMAFinder:
                     logger.warning(f"Не удалось получить данные для {symbol}")
                     return None
             
-            # ✅ Сохраняем в файл кэша для будущего использования
+            # ✅ Сохраняем в файл кэша с НАРАЩИВАНИЕМ данных (как в системе)
+            # Объединяем старые и новые свечи, чтобы не конфликтовать с системой
             if candles and len(candles) >= MIN_CANDLES_FOR_ANALYSIS:
                 try:
                     # Определяем путь относительно корня проекта (как и другие файлы данных)
@@ -770,19 +771,56 @@ class OptimalEMAFinder:
                         except:
                             pass
                     
+                    # ✅ НАРАЩИВАЕМ данные: объединяем старые и новые свечи (как в системе)
+                    existing_data = file_cache.get(symbol_key, {})
+                    existing_candles = existing_data.get('candles', [])
+                    
+                    # Создаем словарь для быстрого поиска по timestamp
+                    candles_dict = {}
+                    
+                    # Добавляем существующие свечи
+                    for candle in existing_candles:
+                        timestamp = candle.get('timestamp') or candle.get('time') or candle.get('openTime')
+                        if timestamp:
+                            candles_dict[timestamp] = candle
+                    
+                    # Добавляем/обновляем новыми свечами (новые перезаписывают старые)
+                    for candle in candles:
+                        timestamp = candle.get('timestamp') or candle.get('time') or candle.get('openTime')
+                        if timestamp:
+                            candles_dict[timestamp] = candle
+                    
+                    # Преобразуем обратно в список и сортируем по времени
+                    merged_candles = list(candles_dict.values())
+                    merged_candles.sort(key=lambda x: x.get('timestamp') or x.get('time') or x.get('openTime') or 0)
+                    
+                    # Ограничиваем максимальное количество свечей (последние 10000)
+                    max_candles = 10000
+                    if len(merged_candles) > max_candles:
+                        merged_candles = merged_candles[-max_candles:]
+                        logger.debug(f"Обрезано до {max_candles} свечей для {symbol}")
+                    
                     # Обновляем кэш для этой монеты
+                    old_count = len(existing_candles)
+                    new_count = len(merged_candles)
+                    added_count = new_count - old_count
+                    
                     file_cache[symbol_key] = {
-                        'candles': candles,
+                        'candles': merged_candles,
                         'timeframe': self.timeframe,
                         'timestamp': datetime.now().isoformat(),
-                        'count': len(candles)
+                        'count': new_count,
+                        'last_update': datetime.now().isoformat()
                     }
                     
                     # Сохраняем обратно
                     with open(candles_cache_file, 'w', encoding='utf-8') as f:
                         json.dump(file_cache, f, indent=2, ensure_ascii=False)
                     
-                    logger.debug(f"💾 Свечи сохранены в кэш файл: {len(candles)} свечей для {symbol}")
+                    if added_count > 0:
+                        logger.info(f"💾 Кэш накоплен: {symbol} {old_count} -> {new_count} свечей (+{added_count})")
+                    else:
+                        logger.debug(f"💾 Свечи сохранены в кэш файл: {len(candles)} свечей для {symbol}")
                 except Exception as save_error:
                     logger.debug(f"Не удалось сохранить в кэш файл: {save_error}")
                 
