@@ -9,8 +9,8 @@
     },
     "auto_bot_worker": {
       "active": false,
-      "last_check": "2025-11-08T01:48:27.287035",
-      "check_count": 2268,
+      "last_check": "2025-11-08T02:30:55.735578",
+      "check_count": 2272,
       "last_error": null,
       "enabled": false,
       "interval_seconds": 180
@@ -23,8 +23,8 @@
     },
     "exchange_connection": {
       "initialized": true,
-      "last_sync": "2025-11-08T01:40:32.848314",
-      "connection_count": 55,
+      "last_sync": "2025-11-08T02:17:50.473824",
+      "connection_count": 56,
       "last_error": null
     },
     "auto_bot_signals": {
@@ -34,6 +34,6 @@
       "last_error": null
     }
   },
-  "last_saved": "2025-11-08T01:48:27.287058",
+  "last_saved": "2025-11-08T02:30:55.735597",
   "version": "1.0"
 }
