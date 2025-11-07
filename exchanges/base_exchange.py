@@ -69,13 +69,14 @@ class BaseExchange(ABC):
         pass
 
     @abstractmethod
-    def close_position(self, symbol, size, side):
+    def close_position(self, symbol, size, side, order_type="Limit"):
         """Закрытие позиции
         
         Args:
             symbol (str): Символ торговой пары (например, 'BTC')
             size (float): Размер позиции для закрытия
             side (str): Сторона позиции ('Long' или 'Short')
+            order_type (str): Тип ордера ('Limit' или 'Market')
             
         Returns:
             dict: Результат закрытия позиции с полями:
