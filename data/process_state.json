@@ -9,13 +9,8 @@
     },
     "auto_bot_worker": {
       "active": false,
-<<<<<<< HEAD
-      "last_check": "2025-11-08T01:37:07.761212",
-      "check_count": 2254,
-=======
       "last_check": "2025-11-08T01:33:31.789835",
       "check_count": 2266,
->>>>>>> 4bf47ca62871faf74b60e004990fc0c752ac2cc1
       "last_error": null,
       "enabled": false,
       "interval_seconds": 180
@@ -28,11 +23,7 @@
     },
     "exchange_connection": {
       "initialized": true,
-<<<<<<< HEAD
-      "last_sync": "2025-11-08T01:35:20.624345",
-=======
       "last_sync": "2025-11-08T00:55:51.482861",
->>>>>>> 4bf47ca62871faf74b60e004990fc0c752ac2cc1
       "connection_count": 54,
       "last_error": null
     },
@@ -43,10 +34,6 @@
       "last_error": null
     }
   },
-<<<<<<< HEAD
-  "last_saved": "2025-11-08T01:37:07.761232",
-=======
   "last_saved": "2025-11-08T01:33:31.789868",
->>>>>>> 4bf47ca62871faf74b60e004990fc0c752ac2cc1
   "version": "1.0"
 }
