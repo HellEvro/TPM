@@ -370,9 +370,8 @@ def load_system_config():
                 if 'trend_require_candles' in config_data:
                     SystemConfig.TREND_REQUIRE_CANDLES = bool(config_data['trend_require_candles'])
                 
-                # Обновляем интервал в SmartRSIManager если он уже инициализирован
-                if 'smart_rsi_manager' in globals() and smart_rsi_manager:
-                    smart_rsi_manager.update_monitoring_interval(SystemConfig.RSI_UPDATE_INTERVAL)
+                # ❌ ОТКЛЮЧЕНО: Smart RSI Manager больше не используется
+                # Continuous Data Loader работает с фиксированным интервалом
                 
                 return True
         else:
