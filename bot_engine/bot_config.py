@@ -66,7 +66,7 @@ class VolumeMode:
 # Настройки Auto Bot по умолчанию
 DEFAULT_AUTO_BOT_CONFIG = {
     'enabled': True,
-    'max_concurrent': 10,
+    'max_concurrent': 20,
     'risk_cap_percent': 10,
     'scope': 'all',  # all | whitelist | blacklist
     'whitelist': [],
@@ -96,8 +96,8 @@ DEFAULT_AUTO_BOT_CONFIG = {
     'break_even_trigger': 100,        # Триггер для break even в % (x1 = 100%)
     # Фильтры по тренду
     'trend_detection_enabled': True,    # Включить определение тренда (выключить = пропускает анализ трендов)
-    'avoid_down_trend': True,          # Не входить в LONG при нисходящем тренде (КРИТИЧЕСКИ ВАЖНО!)
-    'avoid_up_trend': True,            # Не входить в SHORT при восходящем тренде (КРИТИЧЕСКИ ВАЖНО!)
+    'avoid_down_trend': False,          # Не входить в LONG при нисходящем тренде (КРИТИЧЕСКИ ВАЖНО!)
+    'avoid_up_trend': False,            # Не входить в SHORT при восходящем тренде (КРИТИЧЕСКИ ВАЖНО!)
     # Параметры анализа тренда (простой ценовой анализ)
     'trend_analysis_period': 30,       # Количество свечей для анализа тренда (20-50, по умолчанию 30 = 7.5 дней на 6h)
     'trend_price_change_threshold': 7, # Процент изменения цены для определения тренда (3-15%, чем меньше - тем чувствительнее)
