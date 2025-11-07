@@ -566,9 +566,12 @@ class BybitExchange(BaseExchange):
             if order_type.upper() == "LIMIT":  # Проверяем в верхнем регистре
                 price_multiplier = (100 - self.limit_order_offset) / 100 if close_side == "Buy" else (100 + self.limit_order_offset) / 100
                 limit_price = ticker['ask'] * price_multiplier if close_side == "Buy" else ticker['bid'] * price_multiplier
-                order_params["price"] = str(round(limit_price, 2))
+                
+                # ✅ КРИТИЧНО: Используем 6 знаков после запятой для поддержки дешевых монет (например, MEW ~0.005)
+                # round(0.005, 2) = 0.00 ❌ → round(0.005, 6) = 0.005 ✅
+                order_params["price"] = str(round(limit_price, 6))
                 order_params["timeInForce"] = "GTC"
-                print(f"[BYBIT] Calculated limit price: {limit_price}")
+                print(f"[BYBIT] Calculated limit price: {limit_price} → rounded: {round(limit_price, 6)}")
             
             print(f"[BYBIT] Sending order with params: {order_params}")
             response = self.client.place_order(**order_params)
@@ -1495,7 +1498,7 @@ class BybitExchange(BaseExchange):
                         price = current_price * 1.001  # Продаем чуть выше рынка
                 
                 if price:
-                    order_params["price"] = str(round(price, 2))
+                    order_params["price"] = str(round(price, 6))  # 6 знаков для поддержки дешевых монет
                     order_params["timeInForce"] = "GTC"
             
             # 🎯 Добавляем Take Profit если указан
