@@ -32,6 +32,9 @@ class BotsManager {
         // Список делистинговых монет
         this.delistedCoins = [];
         
+        // Кэш конфигурации Auto Bot для быстрого доступа
+        this.cachedAutoBotConfig = null;
+        
         // URL сервиса ботов - используем тот же хост что и у приложения
         this.BOTS_SERVICE_URL = `${window.location.protocol}//${window.location.hostname}:5001`;
         this.apiUrl = `${window.location.protocol}//${window.location.hostname}:5001/api/bots`; // Для совместимости
@@ -1416,6 +1419,32 @@ class BotsManager {
             trendElement.textContent = trend;
             trendElement.className = `value trend-indicator ${trend}`;
             console.log('[BotsManager] ✅ Тренд обновлен:', trend);
+            
+            // ✅ Обновляем подсказку в зависимости от настроек избегания трендов
+            const trendHintElement = document.getElementById('trendHint');
+            if (trendHintElement) {
+                // Получаем текущие настройки из кэша конфигурации
+                const avoidDownTrend = this.cachedAutoBotConfig?.avoid_down_trend !== false;
+                const avoidUpTrend = this.cachedAutoBotConfig?.avoid_up_trend !== false;
+                
+                // Если оба фильтра отключены - тренд не используется
+                if (!avoidDownTrend && !avoidUpTrend) {
+                    trendHintElement.textContent = '(фильтры трендов отключены)';
+                    trendHintElement.style.color = 'var(--warning-color)';
+                } else if (!avoidDownTrend && avoidUpTrend) {
+                    trendHintElement.textContent = '(DOWN тренд не блокирует LONG)';
+                    trendHintElement.style.color = 'var(--text-muted)';
+                } else if (avoidDownTrend && !avoidUpTrend) {
+                    trendHintElement.textContent = '(UP тренд не блокирует SHORT)';
+                    trendHintElement.style.color = 'var(--text-muted)';
+                } else {
+                    // Оба фильтра включены - показываем период анализа
+                    const period = this.cachedAutoBotConfig?.trend_analysis_period || 30;
+                    const days = (period * 6 / 24).toFixed(1);
+                    trendHintElement.textContent = `(анализ за ${days} дней)`;
+                    trendHintElement.style.color = 'var(--text-muted)';
+                }
+            }
         }
         
         // ❌ EMA данные больше не используются и не отображаются
@@ -4719,6 +4748,9 @@ class BotsManager {
         
         const autoBotConfig = config.autoBot || config;
         
+        // ✅ Кэшируем конфигурацию Auto Bot для быстрого доступа (для updateCoinInfo и др.)
+        this.cachedAutoBotConfig = autoBotConfig;
+        
         // ==========================================
         // КОНФИГУРАЦИЯ AUTO BOT
         // ==========================================
@@ -5775,6 +5807,11 @@ class BotsManager {
                     break_even_protection: true,
                     avoid_down_trend: true,
                     avoid_up_trend: true,
+                    // Параметры анализа тренда
+                    trend_detection_enabled: true,
+                    trend_analysis_period: 30,
+                    trend_price_change_threshold: 7,
+                    trend_candles_threshold: 70,
                     break_even_trigger: 100.0,
                     enable_maturity_check: true,
                     min_candles_for_maturity: 200,

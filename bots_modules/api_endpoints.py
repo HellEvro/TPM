@@ -1313,9 +1313,8 @@ def system_config():
                 if log_config_change('rsi_update_interval', old_value, new_value):
                     SystemConfig.RSI_UPDATE_INTERVAL = new_value
                     changes_count += 1
-                    # Обновляем интервал в SmartRSIManager если он активен
-                    if 'smart_rsi_manager' in globals() and smart_rsi_manager:
-                        smart_rsi_manager.update_monitoring_interval(SystemConfig.RSI_UPDATE_INTERVAL)
+                    # ❌ ОТКЛЮЧЕНО: Smart RSI Manager больше не используется
+                    # Continuous Data Loader обновляет данные постоянно
             
             if 'auto_save_interval' in data:
                 old_value = SystemConfig.AUTO_SAVE_INTERVAL
@@ -1673,20 +1672,30 @@ def remove_mature_coins_api():
 
 @bots_app.route('/api/bots/smart-rsi-status', methods=['GET'])
 def get_smart_rsi_status():
-    """Получить статус Smart RSI Manager"""
+    """Получить статус Smart RSI Manager (LEGACY - теперь используется Continuous Data Loader)"""
     try:
-        global smart_rsi_manager
-        if not smart_rsi_manager:
-            return jsonify({
-                'success': False,
-                'error': 'Smart RSI Manager не инициализирован'
-            }), 500
+        # ❌ Smart RSI Manager отключен, вместо него работает Continuous Data Loader
+        from bots_modules.continuous_data_loader import get_continuous_loader
+        loader = get_continuous_loader()
         
-        status = smart_rsi_manager.get_status()
+        if loader:
+            status = loader.get_status()
+            return jsonify({
+                'success': True,
+                'status': {
+                    'active': True,
+                    'service': 'Continuous Data Loader',
+                    'is_running': status['is_running'],
+                    'update_count': status['update_count'],
+                    'last_update': status['last_update'],
+                    'note': 'Smart RSI Manager заменен на Continuous Data Loader'
+                }
+            })
+        
         return jsonify({
-            'success': True,
-            'status': status
-        })
+            'success': False,
+            'error': 'Continuous Data Loader не инициализирован'
+        }), 500
         
     except Exception as e:
         logger.error(f"[API] ❌ Ошибка получения статуса Smart RSI Manager: {e}")
@@ -2228,15 +2237,27 @@ def restore_auto_bot_defaults():
 def debug_init_status():
     """Отладочный эндпоинт для проверки инициализации"""
     try:
+        from bots_modules.continuous_data_loader import get_continuous_loader
+        loader = get_continuous_loader()
+        
         return jsonify({
             'success': True,
             'init_bot_service_called': 'init_bot_service' in globals(),
-            'smart_rsi_manager_exists': smart_rsi_manager is not None,
+            'continuous_loader_running': loader is not None and loader.is_running if loader else False,
             'exchange_exists': exchange is not None,
             'bots_data_keys': list(bots_data.keys()) if 'bots_data' in globals() else 'not_initialized'
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+def _get_continuous_loader_status():
+    """Helper для получения статуса Continuous Data Loader"""
+    try:
+        from bots_modules.continuous_data_loader import get_continuous_loader
+        loader = get_continuous_loader()
+        return loader is not None and loader.is_running if loader else False
+    except:
+        return False
 
 @bots_app.route('/api/bots/process-state', methods=['GET'])
 def get_process_state():
@@ -2246,7 +2267,7 @@ def get_process_state():
             'success': True,
             'process_state': process_state.copy(),
             'system_info': {
-                'smart_rsi_manager_running': smart_rsi_manager is not None and not smart_rsi_manager.shutdown_flag.is_set(),
+                'continuous_loader_running': _get_continuous_loader_status(),
                 'exchange_initialized': exchange is not None,
                 'total_bots': len(bots_data['bots']),
                 'auto_bot_enabled': bots_data['auto_bot_config']['enabled'],
@@ -2709,7 +2730,7 @@ def force_delisting_scan_api():
 
 def cleanup_bot_service():
     """Очистка ресурсов при завершении сервиса"""
-    global smart_rsi_manager, system_initialized
+    global system_initialized
     
     # КРИТИЧЕСКИ ВАЖНО: Сбрасываем флаг, чтобы остановить торговлю
     system_initialized = False
@@ -2721,11 +2742,13 @@ def cleanup_bot_service():
         # Останавливаем асинхронный процессор
         stop_async_processor()
         
-        # Останавливаем умный менеджер RSI
-        if smart_rsi_manager:
-            logger.info("[CLEANUP] 🛑 Остановка Smart RSI Manager...")
-            smart_rsi_manager.stop()
-            smart_rsi_manager = None
+        # Останавливаем Continuous Data Loader
+        try:
+            from bots_modules.continuous_data_loader import stop_continuous_loader
+            logger.info("[CLEANUP] 🛑 Остановка Continuous Data Loader...")
+            stop_continuous_loader()
+        except Exception as e:
+            logger.warning(f"[CLEANUP] ⚠️ Ошибка остановки Continuous Data Loader: {e}")
         
         # ❌ ОТКЛЮЧЕНО: Воркер оптимальных EMA больше не используется
         # try:

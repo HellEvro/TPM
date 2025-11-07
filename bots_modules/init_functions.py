@@ -314,7 +314,7 @@ def init_bot_service():
         logger.info("=" * 80)
         logger.info(f"📊 Статус компонентов:")
         logger.info(f"  🔗 Exchange: {'✅ Инициализирован' if exchange else '❌ Не инициализирован'}")
-        logger.info(f"  📊 Smart RSI Manager: {'✅ Запущен' if smart_rsi_manager else '❌ Не запущен'}")
+        logger.info(f"  🔄 Continuous Data Loader: ✅ Запущен (обновляет RSI и свечи)")
         logger.info(f"  🤖 Auto Bot: {'❌ ВКЛЮЧЕН!' if auto_bot_enabled else '✅ Выключен (безопасно)'}")
         logger.info(f"  💾 Auto Save: ✅ Запущен")
         logger.info(f"  🔄 Async Processor: ✅ Запущен")
