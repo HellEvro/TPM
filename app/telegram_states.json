@@ -1,7 +1,16 @@
 {
   "high_roi": [],
   "high_loss": [],
-  "rapid_growth": [],
+  "rapid_growth": [
+    "RAYDIUM",
+    "BNB",
+    "VELO",
+    "MEW",
+    "RSR",
+    "SUPER",
+    "ANIME",
+    "SOSO"
+  ],
   "high_pnl": [],
-  "last_update": "2025-11-08 01:40:36"
+  "last_update": "2025-11-07 21:19:18"
 }

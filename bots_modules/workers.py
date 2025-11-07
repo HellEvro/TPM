@@ -340,25 +340,7 @@ def positions_monitor_worker():
                     if active_positions_log:
                         logger.info(f"[POSITIONS_MONITOR] 📈 Активные позиции: {', '.join(active_positions_log)}")
                     logger.info(f"[POSITIONS_MONITOR] ✅ Обновлено: {len(positions_list)} позиций, активных: {len(symbols_with_positions)}")
- 
-                # ⚙️ Синхронизируем bots_state с реальными позициями: удаляем исчезнувшие
-                removed_symbols = []
-                with bots_data_lock:
-                    bots_dict = bots_data.get('bots', {})
-                    for symbol in list(bots_dict.keys()):
-                        if symbol not in symbols_with_positions:
-                            removed_symbols.append(symbol)
-                            bots_dict.pop(symbol, None)
-
-                if removed_symbols:
-                    logger.info(
-                        f"[POSITIONS_MONITOR] 🧹 Удалены боты без позиций: {', '.join(removed_symbols)}"
-                    )
-                    try:
-                        save_bots_state()
-                    except Exception as save_error:
-                        logger.warning(f"[POSITIONS_MONITOR] ⚠️ Не удалось обновить bots_state: {save_error}")
-
+                
             except Exception as e:
                 logger.error(f"[POSITIONS_MONITOR] ❌ Ошибка загрузки позиций: {e}")
                 import traceback

@@ -172,9 +172,6 @@ class BotsManager {
         // Инициализируем кнопки конфигурации (должны работать всегда!)
         this.initializeConfigurationButtons();
         
-        // Инициализируем переключатель расширенных настроек Trailing Stop
-        this.initializeProtectionAdvancedToggle();
-        
         // Загружаем счётчик зрелых монет
         this.loadMatureCoinsCount();
         
@@ -188,57 +185,6 @@ class BotsManager {
         this.initializeRSILoadingButtons();
         
         console.log('[BotsManager] ✅ Интерфейс инициализирован');
-    }
-
-    initializeProtectionAdvancedToggle() {
-        const toggles = Array.from(document.querySelectorAll('[data-role="advanced-trailing-toggle"]'));
-        const advancedItems = Array.from(document.querySelectorAll('.advanced-protection-setting'));
-
-        if (!toggles.length || !advancedItems.length) {
-            return;
-        }
-
-        const storageKey = 'showAdvancedTrailingSettings';
-
-        const applyState = (enabled) => {
-            advancedItems.forEach(item => {
-                if (enabled) {
-                    item.style.removeProperty('display');
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-
-            toggles.forEach(toggle => {
-                if (toggle.checked !== enabled) {
-                    toggle.checked = enabled;
-                }
-            });
-        };
-
-        let initialState = false;
-        try {
-            const savedValue = localStorage.getItem(storageKey);
-            if (savedValue !== null) {
-                initialState = savedValue === 'true';
-            }
-        } catch (error) {
-            console.warn('[BotsManager] ⚠️ Не удалось прочитать состояние advanced trailing toggle из localStorage:', error);
-        }
-
-        applyState(initialState);
-
-        toggles.forEach(toggle => {
-            toggle.addEventListener('change', (event) => {
-                const enabled = event.target.checked;
-                applyState(enabled);
-                try {
-                    localStorage.setItem(storageKey, String(enabled));
-                } catch (error) {
-                    console.warn('[BotsManager] ⚠️ Не удалось сохранить состояние advanced trailing toggle:', error);
-                }
-            });
-        });
     }
 
     applyReadabilityStyles() {

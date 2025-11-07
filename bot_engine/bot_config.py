@@ -89,7 +89,7 @@ DEFAULT_AUTO_BOT_CONFIG = {
     # Защитные механизмы
     'max_loss_percent': 15,   # Максимальный убыток в % от входа (стоп-лосс)
     'take_profit_percent': 20,  # Защитный Take Profit в % от входа (рассчитывается как стоп-лосс)
-    'trailing_stop_activation': 20,  # Активация trailing stop при прибыли в % (x3 = 300%)
+    'trailing_stop_activation': 50,  # Активация trailing stop при прибыли в % (x3 = 300%)
     'trailing_stop_distance': 15,    # Расстояние trailing stop в % (x1.5 = 150%)
     'max_position_hours': 0,     # Максимальное время удержания позиции в часах (0 = отключено)
     'break_even_protection': True,      # Защита безубыточности
