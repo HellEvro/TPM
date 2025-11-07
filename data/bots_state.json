@@ -46,18 +46,9 @@
     "exit_scam_multi_candle_count": 4,
     "exit_scam_multi_candle_percent": 50,
     "ai_optimal_entry_enabled": false,
-<<<<<<< HEAD
-    "filtered_coins": [
-      "GLM"
-    ],
-    "last_filter_update": "2025-11-08T01:36:30.408716"
-  },
-  "last_saved": "2025-11-08T01:37:06.756672",
-=======
     "filtered_coins": [],
     "last_filter_update": "2025-11-08T01:33:32.503006"
   },
   "last_saved": "2025-11-08T01:33:33.480825",
->>>>>>> 4bf47ca62871faf74b60e004990fc0c752ac2cc1
   "version": "1.0"
 }
