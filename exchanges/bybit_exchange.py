@@ -1471,7 +1471,8 @@ class BybitExchange(BaseExchange):
             
             # ✅ Передаем количество МОНЕТ без marketUnit='quoteCoin'!
             # Bybit САМ применит плечо при размещении ордера!
-            qty_coins_str = str(int(qty_in_coins)) if qty_in_coins and qty_in_coins >= 1 else str(qty_in_coins)
+            # КРИТИЧНО: Форматируем с точностью до 8 знаков после запятой (стандарт крипты)
+            qty_coins_str = f"{qty_in_coins:.8f}".rstrip('0').rstrip('.')
             
             order_params = {
                 "category": "linear",
