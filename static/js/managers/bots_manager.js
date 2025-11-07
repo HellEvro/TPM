@@ -41,6 +41,11 @@ class BotsManager {
         
         // Уровень логирования: 'error' - только ошибки, 'info' - важные события, 'debug' - все
         this.logLevel = 'error'; // ✅ ОТКЛЮЧЕНЫ СПАМ-ЛОГИ - только ошибки
+
+        // Состояние вкладки истории
+        this.historyInitialized = false;
+        this.currentHistoryTab = 'actions';
+        this.historyBotSymbols = [];
         
         // Инициализация при создании
         this.init();
@@ -287,6 +292,9 @@ class BotsManager {
             case 'active-bots':
             case 'activeBotsTab':
                 this.loadActiveBotsData();
+                break;
+            case 'history':
+                this.initializeHistoryTab();
                 break;
         }
         
@@ -7449,18 +7457,22 @@ class BotsManager {
      */
     initializeHistoryTab() {
         console.log('[BotsManager] 📊 Инициализация вкладки истории ботов...');
-        
-        // Инициализируем фильтры
-        this.initializeHistoryFilters();
-        
-        // Инициализируем подвкладки истории
-        this.initializeHistorySubTabs();
-        
-        // Загружаем данные
-        this.loadHistoryData();
-        
-        // Инициализируем кнопки действий
-        this.initializeHistoryActionButtons();
+
+        if (!this.historyInitialized) {
+            // Инициализируем фильтры
+            this.initializeHistoryFilters();
+
+            // Инициализируем подвкладки истории
+            this.initializeHistorySubTabs();
+
+            // Инициализируем кнопки действий
+            this.initializeHistoryActionButtons();
+
+            this.historyInitialized = true;
+        }
+
+        // Загружаем данные для текущей подвкладки
+        this.loadHistoryData(this.currentHistoryTab);
     }
 
     /**
@@ -7469,36 +7481,42 @@ class BotsManager {
     initializeHistoryFilters() {
         // Фильтр по боту
         const botFilter = document.getElementById('historyBotFilter');
-        if (botFilter) {
-            botFilter.addEventListener('change', () => this.loadHistoryData());
+        if (botFilter && !botFilter.hasAttribute('data-listener-bound')) {
+            botFilter.addEventListener('change', () => this.loadHistoryData(this.currentHistoryTab));
+            botFilter.setAttribute('data-listener-bound', 'true');
         }
 
         // Фильтр по типу действия
         const actionFilter = document.getElementById('historyActionFilter');
-        if (actionFilter) {
-            actionFilter.addEventListener('change', () => this.loadHistoryData());
+        if (actionFilter && !actionFilter.hasAttribute('data-listener-bound')) {
+            actionFilter.addEventListener('change', () => this.loadHistoryData(this.currentHistoryTab));
+            actionFilter.setAttribute('data-listener-bound', 'true');
         }
 
         // Фильтр по периоду
         const dateFilter = document.getElementById('historyDateFilter');
-        if (dateFilter) {
-            dateFilter.addEventListener('change', () => this.loadHistoryData());
+        if (dateFilter && !dateFilter.hasAttribute('data-listener-bound')) {
+            dateFilter.addEventListener('change', () => this.loadHistoryData(this.currentHistoryTab));
+            dateFilter.setAttribute('data-listener-bound', 'true');
         }
 
         // Кнопки фильтров
-        const applyBtn = document.querySelector('.history-filters .btn-primary');
-        if (applyBtn) {
-            applyBtn.addEventListener('click', () => this.loadHistoryData());
+        const applyBtn = document.getElementById('applyHistoryFilters');
+        if (applyBtn && !applyBtn.hasAttribute('data-listener-bound')) {
+            applyBtn.addEventListener('click', () => this.loadHistoryData(this.currentHistoryTab));
+            applyBtn.setAttribute('data-listener-bound', 'true');
         }
 
-        const clearBtn = document.querySelector('.history-filters .btn-secondary');
-        if (clearBtn) {
+        const clearBtn = document.getElementById('clearHistoryFilters');
+        if (clearBtn && !clearBtn.hasAttribute('data-listener-bound')) {
             clearBtn.addEventListener('click', () => this.clearHistoryFilters());
+            clearBtn.setAttribute('data-listener-bound', 'true');
         }
 
-        const exportBtn = document.querySelector('.history-filters .btn-info');
-        if (exportBtn) {
+        const exportBtn = document.getElementById('exportHistoryBtn');
+        if (exportBtn && !exportBtn.hasAttribute('data-listener-bound')) {
             exportBtn.addEventListener('click', () => this.exportHistoryData());
+            exportBtn.setAttribute('data-listener-bound', 'true');
         }
     }
 
@@ -7510,6 +7528,10 @@ class BotsManager {
         const tabContents = document.querySelectorAll('.history-tab-content');
 
         tabButtons.forEach(button => {
+            if (button.hasAttribute('data-listener-bound')) {
+                return;
+            }
+
             button.addEventListener('click', () => {
                 const tabName = button.dataset.historyTab;
                 
@@ -7525,8 +7547,11 @@ class BotsManager {
                 }
                 
                 // Загружаем данные для выбранной вкладки
+                this.currentHistoryTab = tabName;
                 this.loadHistoryData(tabName);
             });
+
+            button.setAttribute('data-listener-bound', 'true');
         });
     }
 
@@ -7535,36 +7560,42 @@ class BotsManager {
      */
     initializeHistoryActionButtons() {
         // Кнопка обновления
-        const refreshBtn = document.querySelector('.history-actions .btn-primary');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.loadHistoryData());
+        const refreshBtn = document.getElementById('refreshHistoryBtn');
+        if (refreshBtn && !refreshBtn.hasAttribute('data-listener-bound')) {
+            refreshBtn.addEventListener('click', () => this.loadHistoryData(this.currentHistoryTab));
+            refreshBtn.setAttribute('data-listener-bound', 'true');
         }
 
         // Кнопка создания демо-данных
-        const demoBtn = document.querySelector('.history-actions .btn-success');
-        if (demoBtn) {
+        const demoBtn = document.getElementById('createDemoDataBtn');
+        if (demoBtn && !demoBtn.hasAttribute('data-listener-bound')) {
             demoBtn.addEventListener('click', () => this.createDemoHistoryData());
+            demoBtn.setAttribute('data-listener-bound', 'true');
         }
 
         // Кнопка очистки истории
-        const clearBtn = document.querySelector('.history-actions .btn-warning');
-        if (clearBtn) {
+        const clearBtn = document.getElementById('clearHistoryBtn');
+        if (clearBtn && !clearBtn.hasAttribute('data-listener-bound')) {
             clearBtn.addEventListener('click', () => this.clearAllHistory());
+            clearBtn.setAttribute('data-listener-bound', 'true');
         }
     }
 
     /**
      * Загружает данные истории
      */
-    async loadHistoryData(tabName = 'actions') {
+    async loadHistoryData(tabName = null) {
         try {
-            console.log(`[BotsManager] 📊 Загрузка данных истории: ${tabName}`);
+            const targetTab = tabName || this.currentHistoryTab || 'actions';
+            this.currentHistoryTab = targetTab;
+
+            console.log(`[BotsManager] 📊 Загрузка данных истории: ${targetTab}`);
             
             // Получаем параметры фильтров
             const filters = this.getHistoryFilters();
             
             // Загружаем данные в зависимости от вкладки
-            switch (tabName) {
+            switch (targetTab) {
                 case 'actions':
                     await this.loadBotActions(filters);
                     break;
@@ -7577,7 +7608,7 @@ class BotsManager {
             }
             
             // Загружаем статистику
-            await this.loadHistoryStatistics(filters.symbol);
+            await this.loadHistoryStatistics(filters);
             
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка загрузки данных истории:', error);
@@ -7593,11 +7624,16 @@ class BotsManager {
         const actionFilter = document.getElementById('historyActionFilter');
         const dateFilter = document.getElementById('historyDateFilter');
         
+        const symbolValue = botFilter ? (botFilter.value || 'all') : 'all';
+        const actionValueRaw = actionFilter ? (actionFilter.value || 'all') : 'all';
+        const actionValue = actionValueRaw !== 'all' ? actionValueRaw.toUpperCase() : 'all';
+        const periodValue = dateFilter ? (dateFilter.value || 'all') : 'all';
+
         return {
-            symbol: botFilter ? botFilter.value : null,
-            action_type: actionFilter ? actionFilter.value : null,
-            trade_type: actionFilter ? actionFilter.value : null,
-            period: dateFilter ? dateFilter.value : null,
+            symbol: symbolValue,
+            action_type: actionValue,
+            trade_type: actionValue,
+            period: periodValue,
             limit: 100
         };
     }
@@ -7610,6 +7646,7 @@ class BotsManager {
             const params = new URLSearchParams();
             if (filters.symbol && filters.symbol !== 'all') params.append('symbol', filters.symbol);
             if (filters.action_type && filters.action_type !== 'all') params.append('action_type', filters.action_type);
+            if (filters.period && filters.period !== 'all') params.append('period', filters.period);
             params.append('limit', filters.limit);
             
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/history?${params}`);
@@ -7634,6 +7671,7 @@ class BotsManager {
             const params = new URLSearchParams();
             if (filters.symbol && filters.symbol !== 'all') params.append('symbol', filters.symbol);
             if (filters.trade_type && filters.trade_type !== 'all') params.append('trade_type', filters.trade_type);
+            if (filters.period && filters.period !== 'all') params.append('period', filters.period);
             params.append('limit', filters.limit);
             
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/trades?${params}`);
@@ -7658,6 +7696,7 @@ class BotsManager {
             const params = new URLSearchParams();
             if (filters.symbol && filters.symbol !== 'all') params.append('symbol', filters.symbol);
             params.append('action_type', 'SIGNAL');
+            if (filters.period && filters.period !== 'all') params.append('period', filters.period);
             params.append('limit', filters.limit);
             
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/history?${params}`);
@@ -7677,10 +7716,14 @@ class BotsManager {
     /**
      * Загружает статистику истории
      */
-    async loadHistoryStatistics(symbol = null) {
+    async loadHistoryStatistics(filters = {}) {
         try {
             const params = new URLSearchParams();
+            const symbol = filters?.symbol;
+            const period = filters?.period;
+
             if (symbol && symbol !== 'all') params.append('symbol', symbol);
+            if (period && period !== 'all') params.append('period', period);
             
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/statistics?${params}`);
             const data = await response.json();
@@ -7817,10 +7860,53 @@ class BotsManager {
         const totalPnlEl = document.querySelector('.history-stats .stat-card:nth-child(3) .stat-value');
         const successRateEl = document.querySelector('.history-stats .stat-card:nth-child(4) .stat-value');
         
-        if (totalActionsEl) totalActionsEl.textContent = stats.total_trades || 0;
-        if (totalTradesEl) totalTradesEl.textContent = stats.total_trades || 0;
-        if (totalPnlEl) totalPnlEl.textContent = `$${stats.total_pnl?.toFixed(2) || '0.00'}`;
-        if (successRateEl) successRateEl.textContent = `${stats.win_rate?.toFixed(1) || '0'}%`;
+        const totalActions = typeof stats.total_actions === 'number' ? stats.total_actions : 0;
+        const totalTrades = typeof stats.total_trades === 'number' ? stats.total_trades : 0;
+        const totalPnL = typeof stats.total_pnl === 'number' ? stats.total_pnl : 0;
+        const successRate = typeof stats.success_rate === 'number'
+            ? stats.success_rate
+            : (typeof stats.win_rate === 'number' ? stats.win_rate : 0);
+
+        if (totalActionsEl) totalActionsEl.textContent = totalActions;
+        if (totalTradesEl) totalTradesEl.textContent = totalTrades;
+        if (totalPnlEl) totalPnlEl.textContent = `$${totalPnL.toFixed(2)}`;
+        if (successRateEl) successRateEl.textContent = `${successRate.toFixed(1)}%`;
+
+        if (Array.isArray(stats.symbols)) {
+            this.updateHistoryBotFilterOptions(stats.symbols);
+        }
+    }
+
+    updateHistoryBotFilterOptions(symbols = []) {
+        const botFilter = document.getElementById('historyBotFilter');
+        if (!botFilter) {
+            return;
+        }
+
+        const uniqueSymbols = Array.from(new Set(symbols.filter(Boolean))).sort();
+        this.historyBotSymbols = uniqueSymbols;
+
+        const currentValue = botFilter.value;
+
+        const allBotsLabel = typeof this.getTranslation === 'function'
+            ? this.getTranslation('all_bots')
+            : 'Все боты';
+
+        const options = [
+            `<option value="all" data-translate="all_bots">${allBotsLabel}</option>`
+        ];
+
+        uniqueSymbols.forEach(symbol => {
+            options.push(`<option value="${symbol}">${symbol}</option>`);
+        });
+
+        botFilter.innerHTML = options.join('');
+
+        if (uniqueSymbols.includes(currentValue)) {
+            botFilter.value = currentValue;
+        } else {
+            botFilter.value = 'all';
+        }
     }
 
     /**
@@ -7833,7 +7919,7 @@ class BotsManager {
         
         if (botFilter) botFilter.value = 'all';
         if (actionFilter) actionFilter.value = 'all';
-        if (dateFilter) dateFilter.value = 'today';
+        if (dateFilter) dateFilter.value = 'all';
         
         this.loadHistoryData();
     }

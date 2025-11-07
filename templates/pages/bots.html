@@ -2164,21 +2164,21 @@
                     <label data-translate="filter_by_action">⚡ Тип действия:</label>
                     <select id="historyActionFilter">
                         <option value="all" data-translate="all_actions">Все действия</option>
-                        <option value="bot_start" data-translate="bot_started">Запуск бота</option>
-                        <option value="bot_stop" data-translate="bot_stopped">Остановка бота</option>
-                        <option value="position_opened" data-translate="position_opened">Открытие позиции</option>
-                        <option value="position_closed" data-translate="position_closed">Закрытие позиции</option>
-                        <option value="signal_received" data-translate="signal_received">Получен сигнал</option>
+                        <option value="BOT_START" data-translate="bot_started">Запуск бота</option>
+                        <option value="BOT_STOP" data-translate="bot_stopped">Остановка бота</option>
+                        <option value="POSITION_OPENED" data-translate="position_opened">Открытие позиции</option>
+                        <option value="POSITION_CLOSED" data-translate="position_closed">Закрытие позиции</option>
+                        <option value="SIGNAL" data-translate="signal_received">Получен сигнал</option>
                     </select>
                 </div>
                 
                 <div class="filter-group">
                     <label data-translate="filter_by_date">📅 Период:</label>
                     <select id="historyDateFilter">
+                        <option value="all" data-translate="all_time" selected>Все время</option>
                         <option value="today" data-translate="today">Сегодня</option>
                         <option value="week" data-translate="this_week">Эта неделя</option>
                         <option value="month" data-translate="this_month">Этот месяц</option>
-                        <option value="all" data-translate="all_time">Все время</option>
                     </select>
                 </div>
                 
