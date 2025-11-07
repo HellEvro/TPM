@@ -153,7 +153,8 @@ print("Загрузка модулей...")
 from bots_modules.imports_and_globals import *
 from bots_modules.calculations import *
 from bots_modules.maturity import *
-from bots_modules.optimal_ema import *
+# ❌ ОТКЛЮЧЕНО: optimal_ema перемещен в backup (используются заглушки из imports_and_globals)
+# from bots_modules.optimal_ema import *
 from bots_modules.filters import *
 from bots_modules.bot_class import *
 from bots_modules.sync_and_cache import *

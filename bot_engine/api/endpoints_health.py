@@ -88,8 +88,7 @@ def register_health_endpoints(app, get_state_func):
                     'exchange_initialized': state.get('exchange_connected', False),
                     'total_bots': state.get('bots_active', 0),
                     'auto_bot_enabled': state.get('auto_bot_enabled', False),
-                    'mature_coins_storage_size': state.get('mature_coins_count', 0),
-                    'optimal_ema_count': state.get('optimal_ema_count', 0)
+                    'mature_coins_storage_size': state.get('mature_coins_count', 0)
                 }
             })
         except Exception as e:

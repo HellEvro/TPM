@@ -124,13 +124,14 @@ except ImportError as e:
     def load_delisted_coins(): 
         return {"delisted_coins": {}}
 
+# ❌ ОТКЛЮЧЕНО: optimal_ema перемещен в backup (используется заглушка из imports_and_globals)
 # Импорт функции optimal_ema из модуля
-try:
-    from bots_modules.optimal_ema import get_optimal_ema_periods
-except ImportError as e:
-    print(f"Warning: Could not import optimal_ema functions in filters: {e}")
-    def get_optimal_ema_periods(symbol):
-        return {'ema_short': 50, 'ema_long': 200, 'accuracy': 0}
+# try:
+#     from bots_modules.optimal_ema import get_optimal_ema_periods
+# except ImportError as e:
+#     print(f"Warning: Could not import optimal_ema functions in filters: {e}")
+#     def get_optimal_ema_periods(symbol):
+#         return {'ema_short': 50, 'ema_long': 200, 'accuracy': 0}
 
 # Импорт функций кэша из sync_and_cache
 try:
@@ -540,14 +541,13 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             change_24h = round(((closes[-1] - closes[-5]) / closes[-5]) * 100, 2)
         
         # ✅ КРИТИЧНО: Получаем оптимальные EMA периоды ДО определения сигнала!
-        # Это нужно для правильного расчета базового сигнала на основе EMA
-        ema_periods = None
-        try:
-            ema_periods = get_optimal_ema_periods(symbol)
-        except Exception as e:
-            logger.debug(f"[EMA] Ошибка получения оптимальных EMA для {symbol}: {e}")
-            # Если не удалось получить оптимальные EMA, используем дефолтные значения
-            ema_periods = {'ema_short': 50, 'ema_long': 200, 'accuracy': 0, 'analysis_method': 'default'}
+        # ❌ ОТКЛЮЧЕНО: EMA фильтр удален из системы
+        # ema_periods = None
+        # try:
+        #     ema_periods = get_optimal_ema_periods(symbol)
+        # except Exception as e:
+        #     logger.debug(f"[EMA] Ошибка получения оптимальных EMA для {symbol}: {e}")
+        #     ema_periods = {'ema_short': 50, 'ema_long': 200, 'accuracy': 0, 'analysis_method': 'default'}
         
         # Определяем RSI зоны согласно техзаданию
         rsi_zone = 'NEUTRAL'
@@ -832,32 +832,6 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             'change24h': change_24h,
             'last_update': datetime.now().isoformat(),
             'trend_analysis': trend_analysis,
-            'ema_periods': {
-                # ✅ НОВЫЙ ФОРМАТ: Отдельные EMA для LONG и SHORT
-                'long': ema_periods.get('long', {
-                    'ema_short_period': ema_periods.get('ema_short', 50),
-                    'ema_long_period': ema_periods.get('ema_long', 200),
-                    'accuracy': ema_periods.get('accuracy', 0)
-                }) if 'long' in ema_periods else {
-                    'ema_short_period': ema_periods.get('ema_short', 50),
-                    'ema_long_period': ema_periods.get('ema_long', 200),
-                    'accuracy': ema_periods.get('accuracy', 0)
-                },
-                'short': ema_periods.get('short', {
-                    'ema_short_period': ema_periods.get('ema_short', 50),
-                    'ema_long_period': ema_periods.get('ema_long', 200),
-                    'accuracy': ema_periods.get('accuracy', 0)
-                }) if 'short' in ema_periods else {
-                    'ema_short_period': ema_periods.get('ema_short', 50),
-                    'ema_long_period': ema_periods.get('ema_long', 200),
-                    'accuracy': ema_periods.get('accuracy', 0)
-                },
-                # Для обратной совместимости
-                'ema_short': ema_periods.get('ema_short', 50),
-                'ema_long': ema_periods.get('ema_long', 200),
-                'accuracy': ema_periods.get('accuracy', 0),
-                'analysis_method': ema_periods.get('analysis_method', 'unknown')
-            },
             # ⚡ ОПТИМИЗАЦИЯ: Enhanced RSI, фильтры и флаги ТОЛЬКО если проверялись
             'enhanced_rsi': enhanced_analysis if enhanced_analysis else {'enabled': False},
             'time_filter_info': time_filter_info,

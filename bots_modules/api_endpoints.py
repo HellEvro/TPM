@@ -24,7 +24,7 @@ from bots_modules.imports_and_globals import (
     bots_data_lock, bots_data, rsi_data_lock, coins_rsi_data,
     bots_cache_data, bots_cache_lock, process_state,
     system_initialized, shutdown_flag, mature_coins_storage,
-    mature_coins_lock, optimal_ema_data, coin_processing_locks,
+    mature_coins_lock, coin_processing_locks,
     BOT_STATUS, ASYNC_AVAILABLE, RSI_CACHE_FILE, bot_history_manager,
     get_exchange
 )
@@ -44,7 +44,6 @@ try:
     from bots_modules.sync_and_cache import (
         update_bots_cache_data, save_system_config, load_system_config,
         save_auto_bot_config, save_bots_state,
-        save_optimal_ema_periods,
         restore_default_config, load_default_config
     )
     from bots_modules.init_functions import ensure_exchange_initialized, create_bot
@@ -52,9 +51,10 @@ try:
         save_mature_coins_storage, load_mature_coins_storage,
         remove_mature_coin_from_storage, check_coin_maturity_with_storage
     )
-    from bots_modules.optimal_ema import (
-        load_optimal_ema_data, update_optimal_ema_data
-    )
+    # ❌ ОТКЛЮЧЕНО: optimal_ema перемещен в backup (используются заглушки из imports_and_globals)
+    # from bots_modules.optimal_ema import (
+    #     load_optimal_ema_data, update_optimal_ema_data
+    # )
     from bots_modules.filters import (
         get_effective_signal, check_auto_bot_filters,
         process_auto_bot_signals, test_exit_scam_filter, test_rsi_time_filter,
@@ -121,11 +121,12 @@ except:
     def check_trading_rules_activation():
         pass
 
-try:
-    from bots_modules.optimal_ema import get_optimal_ema_periods
-except:
-    def get_optimal_ema_periods(symbol):
-        return {}
+# ❌ ОТКЛЮЧЕНО: optimal_ema перемещен в backup (используется заглушка из imports_and_globals)
+# try:
+#     from bots_modules.optimal_ema import get_optimal_ema_periods
+# except:
+#     def get_optimal_ema_periods(symbol):
+#         return {}
 
 def start_async_processor():
     pass
@@ -2233,8 +2234,7 @@ def get_process_state():
                 'exchange_initialized': exchange is not None,
                 'total_bots': len(bots_data['bots']),
                 'auto_bot_enabled': bots_data['auto_bot_config']['enabled'],
-                'mature_coins_storage_size': len(mature_coins_storage),
-                'optimal_ema_count': len(optimal_ema_data)
+                'mature_coins_storage_size': len(mature_coins_storage)
             }
                 })
         
@@ -2311,51 +2311,10 @@ def clear_mature_coins_storage():
         logger.error(f"[API] Ошибка очистки хранилища зрелых монет: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@bots_app.route('/api/bots/optimal-ema', methods=['GET'])
-def get_optimal_ema():
-    """Получение списка оптимальных EMA из хранилища"""
-    try:
-        return jsonify({
-            'success': True,
-            'data': {
-                'optimal_ema': optimal_ema_data,
-                'count': len(optimal_ema_data)
-            }
-        })
-    except Exception as e:
-        logger.error(f"[API] Ошибка получения оптимальных EMA: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@bots_app.route('/api/bots/optimal-ema/<symbol>', methods=['GET'])
-def get_optimal_ema_for_symbol(symbol):
-    """Получение оптимальных EMA для конкретной монеты"""
-    try:
-        if symbol in optimal_ema_data:
-            return jsonify({
-                'success': True,
-                'data': optimal_ema_data[symbol]
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': f'Оптимальные EMA для {symbol} не найдены'
-            }), 404
-    except Exception as e:
-        logger.error(f"[API] Ошибка получения оптимальных EMA для {symbol}: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@bots_app.route('/api/bots/optimal-ema/<symbol>/rescan', methods=['POST'])
-def rescan_optimal_ema(symbol):
-    """Принудительное пересканирование оптимальных EMA для монеты"""
-    try:
-        # ❌ ОТКЛЮЧЕНО: EMA фильтр больше не используется
-        return jsonify({
-            'success': False,
-            'message': f'Optimal EMA отключен - EMA фильтр больше не используется. Скрипт перемещен в backup.'
-        }), 404
-    except Exception as e:
-        logger.error(f"[API] Ошибка пересканирования EMA для {symbol}: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+# ❌ ОТКЛЮЧЕНО: Все Optimal EMA endpoints удалены (EMA фильтр убран из системы)
+# @bots_app.route('/api/bots/optimal-ema', methods=['GET'])
+# @bots_app.route('/api/bots/optimal-ema/<symbol>', methods=['GET'])
+# @bots_app.route('/api/bots/optimal-ema/<symbol>/rescan', methods=['POST'])
 
 # ❌ ОТКЛЮЧЕНО: Optimal EMA Worker больше не используется (EMA фильтр убран)
 # @bots_app.route('/api/bots/optimal-ema-worker/status', methods=['GET'])
@@ -2794,10 +2753,6 @@ def cleanup_bot_service():
         logger.info("[CLEANUP] 🪙 Сохранение данных о зрелости монет...")
         save_mature_coins_storage()
         
-        # 7. Сохраняем оптимальные EMA периоды
-        logger.info("[CLEANUP] 📊 Сохранение оптимальных EMA периодов...")
-        save_optimal_ema_periods()
-        
         logger.info("[CLEANUP] ✅ Все данные сохранены, очистка завершена")
         
     except Exception as e:
@@ -3204,9 +3159,6 @@ if __name__ == '__main__':
     print("  POST /api/bots/create           - Создать бота")
     print("  GET  /api/bots/auto-bot         - Конфигурация Auto Bot")
     print("  POST /api/bots/auto-bot         - Обновить Auto Bot")
-    print("  GET  /api/bots/optimal-ema      - Оптимальные EMA периоды")
-    print("  GET  /api/bots/optimal-ema-worker/status - Статус воркера EMA")
-    print("  POST /api/bots/optimal-ema-worker/force-update - Принудительное обновление")
     print("=" * 60)
     print("*** Запуск...")
     
@@ -3225,9 +3177,6 @@ if __name__ == '__main__':
     print("  POST /api/bots/create           - Создать бота")
     print("  GET  /api/bots/auto-bot         - Конфигурация Auto Bot")
     print("  POST /api/bots/auto-bot         - Обновить Auto Bot")
-    print("  GET  /api/bots/optimal-ema      - Оптимальные EMA периоды")
-    print("  GET  /api/bots/optimal-ema-worker/status - Статус воркера EMA")
-    print("  POST /api/bots/optimal-ema-worker/force-update - Принудительное обновление")
     print("=" * 60)
     print("*** Запуск...")
     

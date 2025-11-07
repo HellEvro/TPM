@@ -27,11 +27,12 @@ try:
         process_state, mature_coins_storage, ASYNC_AVAILABLE, BOT_STATUS,
         RealTradingBot
     )
-    # Импорт optimal_ema_data из модуля
-    try:
-        from bots_modules.optimal_ema import optimal_ema_data
-    except:
-        optimal_ema_data = {}
+    # ❌ ОТКЛЮЧЕНО: optimal_ema перемещен в backup (используется заглушка из imports_and_globals)
+    # # Импорт optimal_ema_data из модуля
+    # try:
+    #     from bots_modules.optimal_ema import optimal_ema_data
+    # except:
+    #     optimal_ema_data = {}
 except ImportError as e:
     print(f"Warning: Could not import globals in init_functions: {e}")
     exchange = None
@@ -69,7 +70,6 @@ from bot_engine.bot_config import SystemConfig
 # Импорт функций из других модулей
 try:
     from bots_modules.maturity import load_mature_coins_storage
-    from bots_modules.optimal_ema import load_optimal_ema_data
     from bots_modules.imports_and_globals import load_auto_bot_config
     from bots_modules.filters import load_all_coins_rsi, process_trading_signals_for_all_bots, process_auto_bot_signals
     from bots_modules.sync_and_cache import (
@@ -81,8 +81,6 @@ except ImportError as e:
     print(f"Warning: Could not import functions in init_functions: {e}")
     # Заглушки если импорт не удался
     def load_mature_coins_storage():
-        pass
-    def load_optimal_ema_data():
         pass
     def save_default_config():
         pass
@@ -124,9 +122,6 @@ def init_bot_service():
         # 0.1. 🚀 Загружаем кэш последней проверки зрелости
         from bots_modules.maturity import load_maturity_check_cache
         load_maturity_check_cache()
-        
-        # 0.1. Загружаем данные об оптимальных EMA
-        load_optimal_ema_data()
         
         # 1. Создаем дефолтную конфигурацию если её нет
         save_default_config()
@@ -327,9 +322,6 @@ def init_bot_service():
         logger.info(f"📈 Данные:")
         logger.info(f"  🤖 Загружено ботов: {bots_count}")
         logger.info(f"  ✅ Зрелых монет: {len(mature_coins_storage)}")
-        # Получаем актуальное значение из глобального модуля
-        from bots_modules.optimal_ema import optimal_ema_data as actual_optimal_ema
-        logger.info(f"  📊 Optimal EMA: {len(actual_optimal_ema)}")
         logger.info("")
         logger.info(f"⚙️ Конфигурация Auto Bot:")
         logger.info(f"  📊 RSI: LONG≤{auto_bot_config.get('rsi_long_threshold')}, SHORT≥{auto_bot_config.get('rsi_short_threshold')}")
