@@ -715,6 +715,14 @@ const TRANSLATIONS = {
         'avoid_down_trend_help': 'Не входить в LONG при DOWN тренде монеты',
         'avoid_up_trend_label': 'Избегать восходящий тренд',
         'avoid_up_trend_help': 'Не входить в SHORT при UP тренде монеты',
+        'trend_detection_enabled_label': 'Включить анализ трендов',
+        'trend_detection_enabled_help': 'Включить определение UP/DOWN/NEUTRAL трендов для монет. Выключить = входы без учета тренда',
+        'trend_analysis_period_label': 'Период анализа (свечей 6h)',
+        'trend_analysis_period_help': 'Количество свечей для анализа тренда (30 свечей = 7.5 дней)',
+        'trend_price_change_threshold_label': 'Порог изменения цены (%)',
+        'trend_price_change_threshold_help': 'Процент изменения цены для определения тренда (7% = UP/DOWN, меньше = более чувствительный)',
+        'trend_candles_threshold_label': 'Порог свечей (%)',
+        'trend_candles_threshold_help': 'Процент растущих/падающих свечей для тренда (70% = 21 из 30 свечей)',
         
         // Управление зрелыми монетами
         'coins_to_remove_label': 'Монеты для удаления:',
@@ -1647,6 +1655,14 @@ const TRANSLATIONS = {
         'avoid_down_trend_help': 'Do not enter LONG in DOWN trend of the coin',
         'avoid_up_trend_label': 'Avoid upward trend',
         'avoid_up_trend_help': 'Do not enter SHORT in UP trend of the coin',
+        'trend_detection_enabled_label': 'Enable trend analysis',
+        'trend_detection_enabled_help': 'Enable UP/DOWN/NEUTRAL trend detection for coins. Disable = entries without trend consideration',
+        'trend_analysis_period_label': 'Analysis period (6h candles)',
+        'trend_analysis_period_help': 'Number of candles for trend analysis (30 candles = 7.5 days)',
+        'trend_price_change_threshold_label': 'Price change threshold (%)',
+        'trend_price_change_threshold_help': 'Price change percentage for trend determination (7% = UP/DOWN, lower = more sensitive)',
+        'trend_candles_threshold_label': 'Candles threshold (%)',
+        'trend_candles_threshold_help': 'Percentage of rising/falling candles for trend (70% = 21 out of 30 candles)',
         
         // Mature coins management
         'mature_coins_management_title': '💰 Mature Coins Management',

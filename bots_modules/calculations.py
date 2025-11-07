@@ -284,34 +284,39 @@ def analyze_trend_6h(symbol, exchange_obj=None):
     Анализирует тренд 6H на основе ПРОСТОГО АНАЛИЗА ЦЕНЫ (без EMA)
     
     Логика:
-    - Берем последние 30 свечей 6h (7.5 дней)
+    - Берет последние N свечей 6h (из конфига: trend_analysis_period)
     - Сравниваем цену начала и конца периода
     - Считаем % изменения и количество растущих/падающих свечей
-    - Определяем тренд: UP / DOWN / NEUTRAL
+    - Определяем тренд: UP / DOWN / NEUTRAL (по порогам из конфига)
     """
     try:
         # Получаем свечи 6H для анализа тренда
-        from bots_modules.imports_and_globals import get_exchange
+        from bots_modules.imports_and_globals import get_exchange, get_auto_bot_config
         exchange_to_use = exchange_obj if exchange_obj else get_exchange()
         if not exchange_to_use:
             logger.error(f"[TREND] ❌ Биржа не доступна для анализа тренда {symbol}")
             return None
-            
+        
+        # ✅ Получаем параметры анализа тренда из конфига
+        config = get_auto_bot_config()
+        period = config.get('trend_analysis_period', 30)  # Количество свечей (20-50)
+        price_threshold = config.get('trend_price_change_threshold', 7)  # Порог изменения цены (3-15%)
+        candles_threshold = config.get('trend_candles_threshold', 70)  # Порог процента свечей (50-80%)
+        
         chart_response = exchange_to_use.get_chart_data(symbol, '6h', '30d')
         
         if not chart_response or not chart_response.get('success'):
             return None
         
         candles = chart_response['data']['candles']
-        if not candles or len(candles) < 30:
+        if not candles or len(candles) < period:
             return None
         
         # Извлекаем цены закрытия
         closes = [candle['close'] for candle in candles]
         current_close = closes[-1]
         
-        # ✅ УПРОЩЕННАЯ ЛОГИКА: Анализ последних 30 свечей (7.5 дней)
-        period = 30
+        # ✅ АНАЛИЗ: Берем последние N свечей (из конфига)
         recent_closes = closes[-period:]
         start_price = recent_closes[0]
         end_price = recent_closes[-1]
@@ -323,15 +328,17 @@ def analyze_trend_6h(symbol, exchange_obj=None):
         rising_candles = sum(1 for i in range(1, len(recent_closes)) if recent_closes[i] > recent_closes[i-1])
         falling_candles = sum(1 for i in range(1, len(recent_closes)) if recent_closes[i] < recent_closes[i-1])
         
-        # ✅ ОПРЕДЕЛЕНИЕ ТРЕНДА:
-        # UP: если цена выросла > 7% ИЛИ больше 70% свечей растут
-        # DOWN: если цена упала > 7% ИЛИ больше 70% свечей падают
+        # ✅ ОПРЕДЕЛЕНИЕ ТРЕНДА (используем пороги из конфига):
+        # UP: если цена выросла > price_threshold% ИЛИ больше candles_threshold% свечей растут
+        # DOWN: если цена упала > price_threshold% ИЛИ больше candles_threshold% свечей падают
         # NEUTRAL: иначе
         trend = 'NEUTRAL'
         
-        if price_change_pct > 7 or rising_candles > (period * 0.7):
+        candles_threshold_pct = candles_threshold / 100.0  # Конвертируем в десятичную дробь
+        
+        if price_change_pct > price_threshold or rising_candles > (period * candles_threshold_pct):
             trend = 'UP'
-        elif price_change_pct < -7 or falling_candles > (period * 0.7):
+        elif price_change_pct < -price_threshold or falling_candles > (period * candles_threshold_pct):
             trend = 'DOWN'
         
         return {
