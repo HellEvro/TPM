@@ -101,6 +101,9 @@ class NewTradingBot:
         self.take_profit = self.config.get('take_profit', None)
         self.current_price = self.config.get('current_price', None)
         
+        # ✅ Тренд при входе в позицию (для определения уровня RSI выхода)
+        self.entry_trend = self.config.get('entry_trend', None)
+        
         
     def update_status(self, new_status, entry_price=None, position_side=None):
         """Обновляет статус бота"""
@@ -253,15 +256,38 @@ class NewTradingBot:
             with bots_data_lock:
                 auto_config = bots_data.get('auto_bot_config', {})
                 
-                # Определяем ключ конфига и условие в зависимости от стороны
+                # ✅ Определяем уровень RSI выхода в зависимости от тренда при входе
+                entry_trend = getattr(self, 'entry_trend', None) if hasattr(self, 'entry_trend') else auto_config.get('entry_trend')
+                
                 if position_side == 'LONG':
-                    config_key = 'rsi_exit_long'
-                    threshold = auto_config.get(config_key)
+                    # Для LONG: проверяем был ли вход по UP тренду или против DOWN тренда
+                    if entry_trend == 'UP':
+                        # Вход по тренду - можем ждать большего движения
+                        config_key = 'rsi_exit_long_with_trend'
+                        threshold = auto_config.get(config_key, 65)
+                        logger.debug(f"[RSI_CHECK_{symbol}] 📈 LONG по тренду → выход на RSI >= {threshold}")
+                    else:
+                        # Вход против тренда или тренд неизвестен - выходим раньше
+                        config_key = 'rsi_exit_long_against_trend'
+                        threshold = auto_config.get(config_key, 60)
+                        logger.debug(f"[RSI_CHECK_{symbol}] 📉 LONG против тренда ({entry_trend}) → выход на RSI >= {threshold}")
+                    
                     condition_func = lambda r, t: r >= t  # RSI >= порог для LONG
                     condition_str = ">="
+                    
                 else:  # SHORT
-                    config_key = 'rsi_exit_short'
-                    threshold = auto_config.get(config_key)
+                    # Для SHORT: проверяем был ли вход по DOWN тренду или против UP тренда
+                    if entry_trend == 'DOWN':
+                        # Вход по тренду - можем ждать большего движения
+                        config_key = 'rsi_exit_short_with_trend'
+                        threshold = auto_config.get(config_key, 35)
+                        logger.debug(f"[RSI_CHECK_{symbol}] 📉 SHORT по тренду → выход на RSI <= {threshold}")
+                    else:
+                        # Вход против тренда или тренд неизвестен - выходим раньше
+                        config_key = 'rsi_exit_short_against_trend'
+                        threshold = auto_config.get(config_key, 40)
+                        logger.debug(f"[RSI_CHECK_{symbol}] 📈 SHORT против тренда ({entry_trend}) → выход на RSI <= {threshold}")
+                    
                     condition_func = lambda r, t: r <= t  # RSI <= порог для SHORT
                     condition_str = "<="
             
@@ -771,8 +797,21 @@ class NewTradingBot:
                 logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка проверки ИИ входа: {ai_error}")
                 # Продолжаем обычный вход при ошибке ИИ
             
+            # ✅ Получаем текущий тренд монеты для сохранения
+            current_trend = None
+            try:
+                with rsi_data_lock:
+                    coin_data = coins_rsi_data['coins'].get(self.symbol)
+                    if coin_data:
+                        current_trend = coin_data.get('trend6h') or coin_data.get('trend')
+            except Exception as trend_error:
+                logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось получить тренд: {trend_error}")
+            
             # Открываем позицию
             if self._open_position_on_exchange(direction, price):
+                # ✅ Сохраняем тренд при входе (для определения правильного RSI выхода)
+                self.entry_trend = current_trend
+                
                 # Обновляем статус
                 status_key = 'IN_POSITION_LONG' if direction == 'LONG' else 'IN_POSITION_SHORT'
                 self.update_status(BOT_STATUS[status_key], price, direction)
@@ -780,6 +819,8 @@ class NewTradingBot:
                 # Сохраняем состояние
                 with bots_data_lock:
                     bots_data['bots'][self.symbol] = self.to_dict()
+                
+                logger.info(f"[NEW_BOT_{self.symbol}] 📊 Вход в {direction} при тренде: {current_trend or 'UNKNOWN'}")
                 
                 return True
             else:
@@ -1402,6 +1443,7 @@ class NewTradingBot:
             'order_id': self.order_id,
             'entry_timestamp': self.entry_timestamp,
             'opened_by_autobot': self.opened_by_autobot,
+            'entry_trend': self.entry_trend,  # ✅ Сохраняем тренд при входе
             'scaling_enabled': False,  # Для совместимости
             'scaling_levels': [],  # Для совместимости
             'scaling_current_level': 0,  # Для совместимости
