@@ -3030,8 +3030,21 @@ def get_bot_history():
         symbol = request.args.get('symbol')
         action_type = request.args.get('action_type')
         limit = int(request.args.get('limit', 100))
+        period = request.args.get('period')
+
+        if symbol and symbol.lower() == 'all':
+            symbol = None
+        if action_type:
+            action_type = action_type.upper()
+        if period and period.lower() == 'all':
+            period = None
         
-        history = bot_history_manager.get_bot_history(symbol, action_type, limit)
+        history = bot_history_manager.get_bot_history(
+            symbol,
+            action_type,
+            limit,
+            period
+        )
         
         return jsonify({
             'success': True,
@@ -3050,8 +3063,21 @@ def get_bot_trades():
         symbol = request.args.get('symbol')
         trade_type = request.args.get('trade_type')
         limit = int(request.args.get('limit', 100))
+        period = request.args.get('period')
+
+        if symbol and symbol.lower() == 'all':
+            symbol = None
+        if trade_type:
+            trade_type = trade_type.upper()
+        if period and period.lower() == 'all':
+            period = None
         
-        trades = bot_history_manager.get_bot_trades(symbol, trade_type, limit)
+        trades = bot_history_manager.get_bot_trades(
+            symbol,
+            trade_type,
+            limit,
+            period
+        )
         
         return jsonify({
             'success': True,
@@ -3115,7 +3141,14 @@ def get_bot_statistics():
     try:
         symbol = request.args.get('symbol')
         
-        statistics = bot_history_manager.get_bot_statistics(symbol)
+        period = request.args.get('period')
+
+        if symbol and symbol.lower() == 'all':
+            symbol = None
+        if period and period.lower() == 'all':
+            period = None
+
+        statistics = bot_history_manager.get_bot_statistics(symbol, period)
         
         return jsonify({
             'success': True,

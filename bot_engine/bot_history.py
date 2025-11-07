@@ -8,7 +8,7 @@
 import os
 import json
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
 import logging
 
@@ -96,6 +96,67 @@ class BotHistoryManager:
                 self.trades = self.trades[-5000:]
         self._save_history()
     
+    def _parse_timestamp(self, value: Any) -> Optional[datetime]:
+        """Преобразует значение timestamp в datetime"""
+        if value in (None, ''):
+            return None
+
+        if isinstance(value, (int, float)):
+            try:
+                return datetime.fromtimestamp(value)
+            except Exception:  # pragma: no cover - защитный код
+                return None
+
+        if isinstance(value, str):
+            candidate = value
+            # Удаляем суффикс Z для совместимости с datetime.fromisoformat
+            if candidate.endswith('Z'):
+                candidate = candidate[:-1]
+
+            # Добавляем временную зону, если отсутствует
+            if candidate and candidate[-1].isdigit():
+                try:
+                    return datetime.fromisoformat(candidate)
+                except ValueError:
+                    try:
+                        return datetime.fromisoformat(candidate + '+00:00')
+                    except ValueError:
+                        return None
+
+        return None
+
+    def _filter_by_period(self, records: List[Dict[str, Any]], period: Optional[str],
+                          timestamp_keys: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        """Фильтрует записи по периоду времени"""
+        if not period or period.lower() == 'all':
+            return records
+
+        period = period.lower()
+        now = datetime.now()
+
+        if period == 'today':
+            threshold = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif period == 'week':
+            threshold = now - timedelta(days=7)
+        elif period == 'month':
+            threshold = now - timedelta(days=30)
+        else:
+            # Неизвестный период — не фильтруем
+            return records
+
+        keys_to_check = timestamp_keys or ['timestamp']
+
+        filtered: List[Dict[str, Any]] = []
+        for item in records:
+            for key in keys_to_check:
+                timestamp = item.get(key)
+                dt = self._parse_timestamp(timestamp)
+                if dt and dt >= threshold:
+                    filtered.append(item)
+                    break
+
+        return filtered
+
     # ==================== Функции логирования ====================
     
     def log_bot_start(self, bot_id: str, symbol: str, direction: str, config: Dict = None):
@@ -265,8 +326,8 @@ class BotHistoryManager:
     
     # ==================== Методы получения данных ====================
     
-    def get_bot_history(self, symbol: Optional[str] = None, action_type: Optional[str] = None, 
-                       limit: int = 100) -> List[Dict]:
+    def get_bot_history(self, symbol: Optional[str] = None, action_type: Optional[str] = None,
+                       limit: int = 100, period: Optional[str] = None) -> List[Dict]:
         """
         Получает историю действий ботов
         
@@ -285,9 +346,16 @@ class BotHistoryManager:
             if symbol:
                 filtered = [h for h in filtered if h.get('symbol') == symbol]
             
-            # Фильтр по типу действия
+            # Фильтр по типу действия (регистр игнорируется)
             if action_type:
-                filtered = [h for h in filtered if h.get('action_type') == action_type]
+                action_upper = action_type.upper()
+                filtered = [
+                    h for h in filtered
+                    if (h.get('action_type') or '').upper() == action_upper
+                ]
+
+            # Фильтр по периоду
+            filtered = self._filter_by_period(filtered, period, ['timestamp'])
             
             # Сортируем от новых к старым
             filtered.sort(key=lambda x: x['timestamp'], reverse=True)
@@ -318,7 +386,7 @@ class BotHistoryManager:
             return stopped_trades[:limit]
     
     def get_bot_trades(self, symbol: Optional[str] = None, trade_type: Optional[str] = None,
-                      limit: int = 100) -> List[Dict]:
+                      limit: int = 100, period: Optional[str] = None) -> List[Dict]:
         """
         Получает историю торговых сделок
         
@@ -339,7 +407,14 @@ class BotHistoryManager:
             
             # Фильтр по типу сделки
             if trade_type:
-                filtered = [t for t in filtered if t.get('direction') == trade_type]
+                direction_upper = trade_type.upper()
+                filtered = [
+                    t for t in filtered
+                    if (t.get('direction') or '').upper() == direction_upper
+                ]
+
+            # Фильтр по периоду (учитываем время закрытия, затем открытия)
+            filtered = self._filter_by_period(filtered, period, ['close_timestamp', 'timestamp'])
             
             # Сортируем от новых к старым
             filtered.sort(key=lambda x: x['timestamp'], reverse=True)
@@ -347,59 +422,78 @@ class BotHistoryManager:
             # Ограничиваем количество
             return filtered[:limit]
     
-    def get_bot_statistics(self, symbol: Optional[str] = None) -> Dict:
-        """
-        Получает статистику по ботам
-        
-        Args:
-            symbol: Фильтр по символу (если None - вся статистика)
-        
-        Returns:
-            Словарь со статистикой
-        """
+    def get_bot_statistics(self, symbol: Optional[str] = None, period: Optional[str] = None) -> Dict:
+        """Получает агрегированную статистику по истории и сделкам"""
         with self.lock:
             trades = self.trades.copy()
-            
-            # Фильтр по символу
+            history = self.history.copy()
+
+            # Собираем список всех доступных символов
+            all_symbols_set = {
+                entry.get('symbol')
+                for entry in self.history
+                if entry.get('symbol')
+            }
+            all_symbols_set.update(
+                trade.get('symbol')
+                for trade in self.trades
+                if trade.get('symbol')
+            )
+            all_symbols = sorted(all_symbols_set)
+
+            # Фильтры
             if symbol:
                 trades = [t for t in trades if t.get('symbol') == symbol]
-            
-            # Только закрытые сделки
+                history = [h for h in history if h.get('symbol') == symbol]
+
+            trades = self._filter_by_period(trades, period, ['close_timestamp', 'timestamp'])
+            history = self._filter_by_period(history, period, ['timestamp'])
+
             closed_trades = [t for t in trades if t.get('status') == 'CLOSED']
-            
-            if not closed_trades:
-                return {
-                    'total_trades': 0,
-                    'profitable_trades': 0,
-                    'losing_trades': 0,
-                    'win_rate': 0,
-                    'total_pnl': 0,
-                    'avg_pnl': 0,
-                    'best_trade': None,
-                    'worst_trade': None
-                }
-            
-            # Расчет статистики
+            open_trades = [t for t in trades if t.get('status') == 'OPEN']
             profitable = [t for t in closed_trades if t.get('pnl', 0) > 0]
             losing = [t for t in closed_trades if t.get('pnl', 0) < 0]
-            
+
             total_pnl = sum(t.get('pnl', 0) for t in closed_trades)
             avg_pnl = total_pnl / len(closed_trades) if closed_trades else 0
-            
-            # Лучшая и худшая сделки
+            win_rate = (len(profitable) / len(closed_trades) * 100) if closed_trades else 0
+
             best_trade = max(closed_trades, key=lambda x: x.get('pnl', 0)) if closed_trades else None
             worst_trade = min(closed_trades, key=lambda x: x.get('pnl', 0)) if closed_trades else None
-            
+
+            filtered_symbols_set = {
+                entry.get('symbol')
+                for entry in history
+                if entry.get('symbol')
+            }
+            filtered_symbols_set.update(
+                trade.get('symbol')
+                for trade in trades
+                if trade.get('symbol')
+            )
+
+            signals_count = sum(
+                1 for entry in history
+                if (entry.get('action_type') or '').upper() == 'SIGNAL'
+            )
+
             return {
+                'total_actions': len(history),
                 'total_trades': len(closed_trades),
+                'total_trades_overall': len(trades),
+                'open_trades': len(open_trades),
+                'signals_count': signals_count,
                 'profitable_trades': len(profitable),
                 'losing_trades': len(losing),
-                'win_rate': (len(profitable) / len(closed_trades) * 100) if closed_trades else 0,
+                'win_rate': win_rate,
+                'success_rate': win_rate,
                 'total_pnl': total_pnl,
                 'avg_pnl': avg_pnl,
                 'best_trade': best_trade,
                 'worst_trade': worst_trade,
-                'symbol': symbol if symbol else 'ALL'
+                'symbols': all_symbols,
+                'symbols_filtered': sorted(filtered_symbols_set),
+                'symbol': symbol if symbol else 'ALL',
             }
     
     def clear_history(self, symbol: Optional[str] = None):
