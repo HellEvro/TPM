@@ -2311,11 +2311,26 @@ class BotsManager {
         const rsiShortEl = document.getElementById('rsiShortThresholdDup');
         if (rsiShortEl && rsiShortEl.value) settings.rsi_short_threshold = parseInt(rsiShortEl.value);
         
-        const rsiExitLongEl = document.getElementById('rsiExitLongDup');
-        if (rsiExitLongEl && rsiExitLongEl.value) settings.rsi_exit_long = parseInt(rsiExitLongEl.value);
+        // ✅ Новые параметры RSI выхода с учетом тренда
+        const rsiExitLongWithTrendEl = document.getElementById('rsiExitLongWithTrendDup');
+        if (rsiExitLongWithTrendEl && rsiExitLongWithTrendEl.value) {
+            settings.rsi_exit_long_with_trend = parseInt(rsiExitLongWithTrendEl.value);
+        }
         
-        const rsiExitShortEl = document.getElementById('rsiExitShortDup');
-        if (rsiExitShortEl && rsiExitShortEl.value) settings.rsi_exit_short = parseInt(rsiExitShortEl.value);
+        const rsiExitLongAgainstTrendEl = document.getElementById('rsiExitLongAgainstTrendDup');
+        if (rsiExitLongAgainstTrendEl && rsiExitLongAgainstTrendEl.value) {
+            settings.rsi_exit_long_against_trend = parseInt(rsiExitLongAgainstTrendEl.value);
+        }
+        
+        const rsiExitShortWithTrendEl = document.getElementById('rsiExitShortWithTrendDup');
+        if (rsiExitShortWithTrendEl && rsiExitShortWithTrendEl.value) {
+            settings.rsi_exit_short_with_trend = parseInt(rsiExitShortWithTrendEl.value);
+        }
+        
+        const rsiExitShortAgainstTrendEl = document.getElementById('rsiExitShortAgainstTrendDup');
+        if (rsiExitShortAgainstTrendEl && rsiExitShortAgainstTrendEl.value) {
+            settings.rsi_exit_short_against_trend = parseInt(rsiExitShortAgainstTrendEl.value);
+        }
         
         // Защитные механизмы
         const maxLossEl = document.getElementById('maxLossPercentDup');
@@ -2472,14 +2487,25 @@ class BotsManager {
             rsiShortEl.value = settings.rsi_short_threshold;
         }
         
-        const rsiExitLongEl = document.getElementById('rsiExitLongDup');
-        if (rsiExitLongEl && settings.rsi_exit_long !== undefined) {
-            rsiExitLongEl.value = settings.rsi_exit_long;
+        // ✅ Новые параметры RSI выхода с учетом тренда
+        const rsiExitLongWithTrendEl = document.getElementById('rsiExitLongWithTrendDup');
+        if (rsiExitLongWithTrendEl && settings.rsi_exit_long_with_trend !== undefined) {
+            rsiExitLongWithTrendEl.value = settings.rsi_exit_long_with_trend;
         }
         
-        const rsiExitShortEl = document.getElementById('rsiExitShortDup');
-        if (rsiExitShortEl && settings.rsi_exit_short !== undefined) {
-            rsiExitShortEl.value = settings.rsi_exit_short;
+        const rsiExitLongAgainstTrendEl = document.getElementById('rsiExitLongAgainstTrendDup');
+        if (rsiExitLongAgainstTrendEl && settings.rsi_exit_long_against_trend !== undefined) {
+            rsiExitLongAgainstTrendEl.value = settings.rsi_exit_long_against_trend;
+        }
+        
+        const rsiExitShortWithTrendEl = document.getElementById('rsiExitShortWithTrendDup');
+        if (rsiExitShortWithTrendEl && settings.rsi_exit_short_with_trend !== undefined) {
+            rsiExitShortWithTrendEl.value = settings.rsi_exit_short_with_trend;
+        }
+        
+        const rsiExitShortAgainstTrendEl = document.getElementById('rsiExitShortAgainstTrendDup');
+        if (rsiExitShortAgainstTrendEl && settings.rsi_exit_short_against_trend !== undefined) {
+            rsiExitShortAgainstTrendEl.value = settings.rsi_exit_short_against_trend;
         }
         
         // Защитные механизмы
@@ -4766,16 +4792,29 @@ class BotsManager {
         
 
         
-        const rsiExitLongEl = document.getElementById('rsiExitLong');
-        if (rsiExitLongEl) {
-            rsiExitLongEl.value = autoBotConfig.rsi_exit_long || 65;
-            console.log('[BotsManager] 🟢 RSI выход LONG:', rsiExitLongEl.value);
+        // ✅ Новые параметры RSI выхода с учетом тренда
+        const rsiExitLongWithTrendEl = document.getElementById('rsiExitLongWithTrendGlobal');
+        if (rsiExitLongWithTrendEl) {
+            rsiExitLongWithTrendEl.value = autoBotConfig.rsi_exit_long_with_trend || 65;
+            console.log('[BotsManager] 🟢📈 RSI выход LONG (по тренду):', rsiExitLongWithTrendEl.value);
         }
         
-        const rsiExitShortEl = document.getElementById('rsiExitShort');
-        if (rsiExitShortEl) {
-            rsiExitShortEl.value = autoBotConfig.rsi_exit_short || 35;
-            console.log('[BotsManager] 🔴 RSI выход SHORT:', rsiExitShortEl.value);
+        const rsiExitLongAgainstTrendEl = document.getElementById('rsiExitLongAgainstTrendGlobal');
+        if (rsiExitLongAgainstTrendEl) {
+            rsiExitLongAgainstTrendEl.value = autoBotConfig.rsi_exit_long_against_trend || 60;
+            console.log('[BotsManager] 🟢📉 RSI выход LONG (против тренда):', rsiExitLongAgainstTrendEl.value);
+        }
+        
+        const rsiExitShortWithTrendEl = document.getElementById('rsiExitShortWithTrendGlobal');
+        if (rsiExitShortWithTrendEl) {
+            rsiExitShortWithTrendEl.value = autoBotConfig.rsi_exit_short_with_trend || 35;
+            console.log('[BotsManager] 🔴📉 RSI выход SHORT (по тренду):', rsiExitShortWithTrendEl.value);
+        }
+        
+        const rsiExitShortAgainstTrendEl = document.getElementById('rsiExitShortAgainstTrendGlobal');
+        if (rsiExitShortAgainstTrendEl) {
+            rsiExitShortAgainstTrendEl.value = autoBotConfig.rsi_exit_short_against_trend || 40;
+            console.log('[BotsManager] 🔴📈 RSI выход SHORT (против тренда):', rsiExitShortAgainstTrendEl.value);
         }
         
         // Торговые настройки (торговля включена по умолчанию в backend)
@@ -5252,8 +5291,11 @@ class BotsManager {
             scope: document.getElementById('autoBotScope')?.value || 'all',
             rsi_long_threshold: parseInt(document.getElementById('rsiLongThreshold')?.value) || 29,
             rsi_short_threshold: parseInt(document.getElementById('rsiShortThreshold')?.value) || 71,
-            rsi_exit_long: parseInt(document.getElementById('rsiExitLong')?.value) || 65,
-            rsi_exit_short: parseInt(document.getElementById('rsiExitShort')?.value) || 35,
+            // ✅ Новые параметры RSI выхода с учетом тренда
+            rsi_exit_long_with_trend: parseInt(document.getElementById('rsiExitLongWithTrendGlobal')?.value) || 65,
+            rsi_exit_long_against_trend: parseInt(document.getElementById('rsiExitLongAgainstTrendGlobal')?.value) || 60,
+            rsi_exit_short_with_trend: parseInt(document.getElementById('rsiExitShortWithTrendGlobal')?.value) || 35,
+            rsi_exit_short_against_trend: parseInt(document.getElementById('rsiExitShortAgainstTrendGlobal')?.value) || 40,
             default_position_size: parseFloat(document.getElementById('defaultPositionSize')?.value) || 10,
             check_interval: parseInt(document.getElementById('checkInterval')?.value) || 180,
             max_loss_percent: parseFloat(document.getElementById('maxLossPercent')?.value) || 15.0,
