@@ -25,7 +25,8 @@ try:
         exchange, smart_rsi_manager, async_processor, async_processor_task,
         system_initialized, shutdown_flag, bots_data_lock, bots_data,
         process_state, mature_coins_storage, ASYNC_AVAILABLE, BOT_STATUS,
-        RealTradingBot
+        RealTradingBot, get_individual_coin_settings,
+        load_individual_coin_settings
     )
     # ❌ ОТКЛЮЧЕНО: optimal_ema перемещен в backup (используется заглушка из imports_and_globals)
     # # Импорт optimal_ema_data из модуля
@@ -47,6 +48,10 @@ except ImportError as e:
     mature_coins_storage = {}
     ASYNC_AVAILABLE = False
     BOT_STATUS = {}
+    def get_individual_coin_settings(symbol):
+        return None
+    def load_individual_coin_settings():
+        return {}
 
 # Импорт функций
 try:
@@ -134,6 +139,9 @@ def init_bot_service():
         
         # 4. Загружаем сохраненное состояние ботов
         load_bots_state()
+
+        # 4.1. Загружаем индивидуальные настройки монет
+        load_individual_coin_settings()
         
         # 5. СНАЧАЛА инициализируем биржу (КРИТИЧЕСКИ ВАЖНО!)
         if init_exchange_sync():
@@ -181,8 +189,17 @@ def init_bot_service():
                     trading_bot.position_side = bot_data.get('position_side', '')
                     trading_bot.position_start_time = bot_data.get('position_start_time', '')
                     trading_bot.unrealized_pnl = bot_data.get('unrealized_pnl', 0)
+                    trading_bot.unrealized_pnl_usdt = bot_data.get('unrealized_pnl_usdt', 0)
+                    trading_bot.realized_pnl = bot_data.get('realized_pnl', 0)
+                    trading_bot.position_size = bot_data.get('position_size', trading_bot.position_size)
+                    trading_bot.position_size_coins = bot_data.get('position_size_coins', trading_bot.position_size_coins)
+                    trading_bot.leverage = bot_data.get('leverage', trading_bot.leverage)
+                    trading_bot.margin_usdt = bot_data.get('margin_usdt', trading_bot.margin_usdt)
                     trading_bot.max_profit_achieved = bot_data.get('max_profit_achieved', 0)
                     trading_bot.trailing_stop_price = bot_data.get('trailing_stop_price', '')
+                    trading_bot.trailing_activation_profit = bot_data.get('trailing_activation_profit', 0)
+                    trading_bot.trailing_activation_threshold = bot_data.get('trailing_activation_threshold', 0)
+                    trading_bot.trailing_locked_profit = bot_data.get('trailing_locked_profit', 0)
                     trading_bot.break_even_activated = bot_data.get('break_even_activated', False)
                     trading_bot.rsi_data = bot_data.get('rsi_data', {})
                     
@@ -436,59 +453,56 @@ def stop_async_processor():
 
 def create_bot(symbol, config=None, exchange_obj=None):
     """Создает нового бота для символа"""
-    if config is None:
-        # Получаем default_position_size из конфигурации Auto Bot
-        with bots_data_lock:
-            auto_bot_config = bots_data['auto_bot_config']
-            default_volume = auto_bot_config['default_position_size']
-        
-        config = {
-            'id': f"{symbol}_{int(time.time())}",  # Генерируем уникальный ID
-            'volume_mode': 'usdt',
-            'volume_value': default_volume,
-            'status': BOT_STATUS['RUNNING'],  # ✅ Бот должен сразу работать
-            'entry_price': None,
-            'position_side': None,
-            'unrealized_pnl': 0.0,
-            'created_at': datetime.now().isoformat(),
-            'last_signal_time': None
-        }
-    
-    # Применяем настройки из конфигурации Auto Bot как базовые
     with bots_data_lock:
-        auto_bot_config = bots_data['auto_bot_config']
-        base_config = {
-            'id': f"{symbol}_{int(time.time())}",  # Генерируем уникальный ID
-            'volume_mode': 'usdt',
-            'volume_value': auto_bot_config['default_position_size'],
-            'status': BOT_STATUS['RUNNING'],
-            'entry_price': None,
-            'position_side': None,
-            'unrealized_pnl': 0.0,
-            'created_at': datetime.now().isoformat(),
-            'last_signal_time': None,
-            # Настройки RSI и защитных механизмов
-            'rsi_long_threshold': auto_bot_config.get('rsi_long_threshold', 29),
-            'rsi_short_threshold': auto_bot_config.get('rsi_short_threshold', 71),
-            # ✅ Новые параметры RSI выхода с учетом тренда
-            'rsi_exit_long_with_trend': auto_bot_config.get('rsi_exit_long_with_trend', 65),
-            'rsi_exit_long_against_trend': auto_bot_config.get('rsi_exit_long_against_trend', 60),
-            'rsi_exit_short_with_trend': auto_bot_config.get('rsi_exit_short_with_trend', 35),
-            'rsi_exit_short_against_trend': auto_bot_config.get('rsi_exit_short_against_trend', 40),
-            'max_loss_percent': auto_bot_config.get('max_loss_percent', 15.0),
-            'trailing_stop_activation': auto_bot_config.get('trailing_stop_activation', 300.0),
-            'trailing_stop_distance': auto_bot_config.get('trailing_stop_distance', 150.0),
-            'max_position_hours': auto_bot_config.get('max_position_hours', 48),
-            'break_even_protection': auto_bot_config.get('break_even_protection', True),
-            'break_even_trigger': auto_bot_config.get('break_even_trigger', 100.0),
-            'avoid_down_trend': auto_bot_config.get('avoid_down_trend', True),
-            'avoid_up_trend': auto_bot_config.get('avoid_up_trend', True),
-            'enable_maturity_check': auto_bot_config.get('enable_maturity_check', True)
-        }
-        
-        # Объединяем базовую конфигурацию с переданной (переданная имеет приоритет)
-        full_config = {**base_config, **config}
-        config = full_config
+        auto_bot_config = bots_data['auto_bot_config'].copy()
+
+    individual_settings = get_individual_coin_settings(symbol)
+    incoming_config = config if isinstance(config, dict) else {}
+
+    unique_id = f"{symbol}_{int(time.time())}"
+    base_config = {
+        'id': unique_id,
+        'symbol': symbol,
+        'volume_mode': 'usdt',
+        'volume_value': auto_bot_config.get('default_position_size'),
+        'status': BOT_STATUS['RUNNING'],
+        'entry_price': None,
+        'position_side': None,
+        'unrealized_pnl': 0.0,
+        'created_at': datetime.now().isoformat(),
+        'last_signal_time': None,
+        'rsi_long_threshold': auto_bot_config.get('rsi_long_threshold', 29),
+        'rsi_short_threshold': auto_bot_config.get('rsi_short_threshold', 71),
+        'rsi_exit_long_with_trend': auto_bot_config.get('rsi_exit_long_with_trend', 65),
+        'rsi_exit_long_against_trend': auto_bot_config.get('rsi_exit_long_against_trend', 60),
+        'rsi_exit_short_with_trend': auto_bot_config.get('rsi_exit_short_with_trend', 35),
+        'rsi_exit_short_against_trend': auto_bot_config.get('rsi_exit_short_against_trend', 40),
+        'max_loss_percent': auto_bot_config.get('max_loss_percent', 15.0),
+        'trailing_stop_activation': auto_bot_config.get('trailing_stop_activation', 300.0),
+        'trailing_stop_distance': auto_bot_config.get('trailing_stop_distance', 150.0),
+        'max_position_hours': auto_bot_config.get('max_position_hours', 48),
+        'break_even_protection': auto_bot_config.get('break_even_protection', True),
+        'break_even_trigger': auto_bot_config.get('break_even_trigger', 100.0),
+        'avoid_down_trend': auto_bot_config.get('avoid_down_trend', True),
+        'avoid_up_trend': auto_bot_config.get('avoid_up_trend', True),
+        'enable_maturity_check': auto_bot_config.get('enable_maturity_check', True)
+    }
+
+    if individual_settings:
+        base_config.update(individual_settings)
+
+    if incoming_config:
+        base_config.update(incoming_config)
+
+    base_config['id'] = unique_id
+    base_config['symbol'] = symbol
+    base_config['status'] = BOT_STATUS['RUNNING']
+    base_config.setdefault('created_at', datetime.now().isoformat())
+    base_config.setdefault('volume_mode', 'usdt')
+    if base_config.get('volume_value') is None:
+        base_config['volume_value'] = auto_bot_config.get('default_position_size')
+
+    config = base_config
     
     logger.info(f"[BOT_INIT] Инициализация бота для {symbol}")
     logger.info(f"[BOT_INIT] 🔍 Детальная отладка конфигурации бота:")

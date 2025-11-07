@@ -16,6 +16,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 import copy
+import math
 
 logger = logging.getLogger('BotsService')
 
@@ -33,7 +34,8 @@ try:
         DEFAULT_AUTO_BOT_CONFIG, RSI_CACHE_FILE, PROCESS_STATE_FILE,
         SYSTEM_CONFIG_FILE, BOTS_STATE_FILE, AUTO_BOT_CONFIG_FILE,
         DEFAULT_CONFIG_FILE, should_log_message,
-        get_coin_processing_lock, get_exchange
+        get_coin_processing_lock, get_exchange,
+        save_individual_coin_settings
     )
     # MATURE_COINS_FILE определен в maturity.py
     try:
@@ -77,6 +79,146 @@ except ImportError as e:
     DEFAULT_CONFIG_FILE = 'data/default_auto_bot_config.json'
     def should_log_message(cat, msg, interval=60):
         return (True, msg)
+
+
+def _compute_margin_based_trailing(side: str,
+                                   entry_price: float,
+                                   current_price: float,
+                                   position_qty: float,
+                                   leverage: float,
+                                   realized_pnl: float,
+                                   profit_percent: float,
+                                   max_profit_percent: float,
+                                   trailing_activation_percent: float,
+                                   trailing_distance_percent: float):
+    """
+    Рассчитывает параметры трейлинг-стопа на основе маржи сделки.
+
+    Returns dict:
+        {
+            'active': bool,
+            'stop_price': float | None,
+            'locked_profit_usdt': float,
+            'activation_threshold_usdt': float,
+            'activation_profit_usdt': float,
+            'profit_usdt': float,
+            'margin_usdt': float
+        }
+    """
+    try:
+        side = (side or '').lower()
+        entry_price = float(entry_price or 0)
+        current_price = float(current_price or 0)
+        position_qty = abs(float(position_qty or 0))
+        leverage = float(leverage or 1) if float(leverage or 1) > 0 else 1.0
+        realized_pnl = float(realized_pnl or 0)
+        profit_percent = float(profit_percent or 0)
+        max_profit_percent = float(max_profit_percent or 0)
+        trailing_activation_percent = float(trailing_activation_percent or 0)
+        trailing_distance_percent = float(trailing_distance_percent or 0)
+    except (ValueError, TypeError):
+        return {
+            'active': False,
+            'stop_price': None,
+            'locked_profit_usdt': 0.0,
+            'activation_threshold_usdt': 0.0,
+            'activation_profit_usdt': 0.0,
+            'profit_usdt': 0.0,
+            'margin_usdt': 0.0
+        }
+
+    if entry_price <= 0 or position_qty <= 0:
+        return {
+            'active': False,
+            'stop_price': None,
+            'locked_profit_usdt': 0.0,
+            'activation_threshold_usdt': 0.0,
+            'activation_profit_usdt': 0.0,
+            'profit_usdt': 0.0,
+            'margin_usdt': 0.0
+        }
+
+    position_value = entry_price * position_qty
+    margin_usdt = position_value / leverage if leverage else position_value
+    profit_usdt = (profit_percent / 100.0) * position_value
+    max_profit_usdt = (max_profit_percent / 100.0) * position_value
+    realized_abs = abs(realized_pnl)
+    activation_from_margin = margin_usdt * (trailing_activation_percent / 100.0)
+    activation_threshold_usdt = activation_from_margin
+    if realized_abs > 0:
+        activation_threshold_usdt = max(activation_from_margin, realized_abs * 4.0)
+    activation_profit_usdt = activation_threshold_usdt
+
+    if margin_usdt <= 0:
+        return {
+            'active': False,
+            'stop_price': None,
+            'locked_profit_usdt': 0.0,
+            'activation_threshold_usdt': activation_profit_usdt,
+            'activation_profit_usdt': activation_profit_usdt,
+            'profit_usdt': profit_usdt,
+            'margin_usdt': margin_usdt
+        }
+
+    locked_profit_base = realized_abs * 3.0 if realized_abs > 0 else margin_usdt * (trailing_distance_percent / 100.0)
+
+    if activation_profit_usdt > 0 and profit_usdt < activation_profit_usdt:
+        return {
+            'active': False,
+            'stop_price': None,
+            'locked_profit_usdt': locked_profit_base,
+            'activation_threshold_usdt': activation_profit_usdt,
+            'activation_profit_usdt': activation_profit_usdt,
+            'profit_usdt': profit_usdt,
+            'margin_usdt': margin_usdt
+        }
+
+    trailing_step_usdt = margin_usdt * (trailing_distance_percent / 100.0)
+    if trailing_step_usdt <= 0:
+        trailing_step_usdt = 0.0
+
+    locked_profit = locked_profit_base
+    if trailing_step_usdt > 0 and max_profit_usdt > locked_profit_base:
+        increments = math.floor((max_profit_usdt - locked_profit_base) / trailing_step_usdt)
+        if increments > 0:
+            locked_profit = locked_profit_base + increments * trailing_step_usdt
+
+    locked_profit = min(locked_profit, max_profit_usdt if max_profit_usdt > 0 else locked_profit, profit_usdt)
+    if locked_profit <= 0:
+        return {
+            'active': False,
+            'stop_price': None,
+            'locked_profit_usdt': locked_profit,
+            'activation_threshold_usdt': activation_profit_usdt,
+            'activation_profit_usdt': activation_profit_usdt,
+            'profit_usdt': profit_usdt,
+            'margin_usdt': margin_usdt
+        }
+
+    stop_price = None
+    profit_per_coin = locked_profit / position_qty if position_qty else 0
+
+    if side == 'buy' or side == 'long':
+        stop_price = entry_price + profit_per_coin
+        # стоп не должен быть выше текущей цены
+        if current_price > 0:
+            stop_price = min(stop_price, current_price * 0.9995)
+        stop_price = max(stop_price, entry_price)
+    elif side == 'sell' or side == 'short':
+        stop_price = entry_price - profit_per_coin
+        if current_price > 0:
+            stop_price = max(stop_price, current_price * 1.0005)
+        stop_price = min(stop_price, entry_price)
+
+    return {
+        'active': True,
+        'stop_price': stop_price,
+        'locked_profit_usdt': locked_profit,
+        'activation_threshold_usdt': activation_profit_usdt,
+        'activation_profit_usdt': activation_profit_usdt,
+        'profit_usdt': profit_usdt,
+        'margin_usdt': margin_usdt
+    }
     def get_coin_processing_lock(symbol):
         return threading.Lock()
     def ensure_exchange_initialized():
@@ -424,6 +566,9 @@ def save_bots_state():
         
         total_bots = len(state_data['bots'])
         logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено")
+
+        # Дополнительно сохраняем индивидуальные настройки монет
+        save_individual_coin_settings()
         
         return True
         
@@ -884,20 +1029,24 @@ def update_bots_cache_data():
                             'unrealized_pnl': float(pos.get('pnl', 0)),  # ✅ Используем правильное поле 'pnl'
                             'mark_price': float(pos.get('mark_price', 0)),  # ✅ Используем правильное поле 'mark_price'
                             'entry_price': float(pos.get('avg_price', 0)),   # ✅ Используем правильное поле 'avg_price'
-                            'leverage': pos.get('leverage', 1),
+                            'leverage': float(pos.get('leverage', 1)),
                             'stop_loss': pos.get('stop_loss', ''),  # Стоп-лосс с биржи
                             'take_profit': pos.get('take_profit', ''),  # Тейк-профит с биржи
-                            'roi': float(pos.get('roi', 0))  # ✅ ROI есть в данных
+                            'roi': float(pos.get('roi', 0)),  # ✅ ROI есть в данных
+                            'realized_pnl': float(pos.get('realized_pnl', 0)),
+                            'margin_usdt': bot_data.get('margin_usdt')
                         }
                         
                         # ✅ КРИТИЧНО: Синхронизируем ВСЕ данные позиции с биржей
                         exchange_stop_loss = pos.get('stopLoss', '')
                         exchange_take_profit = pos.get('takeProfit', '')
                         exchange_entry_price = float(pos.get('avgPrice', 0))  # ❌ НЕТ в данных биржи
-                        exchange_size = float(pos.get('size', 0))
+                        exchange_size = abs(float(pos.get('size', 0)))
                         exchange_unrealized_pnl = float(pos.get('pnl', 0))  # ✅ Используем правильное поле 'pnl'
                         exchange_mark_price = float(pos.get('markPrice', 0))  # ❌ НЕТ в данных биржи
                         exchange_roi = float(pos.get('roi', 0))  # ✅ ROI есть в данных
+                        exchange_realized_pnl = float(pos.get('realized_pnl', 0))
+                        exchange_leverage = float(pos.get('leverage', 1) or 1)
                         
                         # ✅ КРИТИЧНО: Обновляем данные бота актуальными данными с биржи
                         if exchange_entry_price > 0:
@@ -933,6 +1082,12 @@ def update_bots_cache_data():
                         # ✅ КРИТИЧНО: Обновляем PnL ВСЕГДА, даже если он равен 0
                         bot_data['unrealized_pnl'] = exchange_unrealized_pnl
                         bot_data['unrealized_pnl_usdt'] = exchange_unrealized_pnl  # Точное значение в USDT
+                        bot_data['realized_pnl'] = exchange_realized_pnl
+                        bot_data['leverage'] = exchange_leverage
+                        bot_data['position_size_coins'] = exchange_size
+                        if exchange_entry_price > 0 and exchange_size > 0:
+                            position_value = exchange_entry_price * exchange_size
+                            bot_data['margin_usdt'] = position_value / exchange_leverage if exchange_leverage else position_value
                         
                         # Отладочный лог для проверки PnL
                         logger.debug(f"[POSITION_SYNC] {symbol}: PnL с биржи = {exchange_unrealized_pnl}, обновлен в bot_data")
@@ -1760,8 +1915,9 @@ def check_missing_stop_losses():
         
         with bots_data_lock:
             # Получаем конфигурацию трейлинг стопа
-            trailing_activation = bots_data.get('trailing_stop_activation', 300)  # 3% по умолчанию
-            trailing_distance = bots_data.get('trailing_stop_distance', 150)      # 1.5% по умолчанию
+            auto_config = bots_data.get('auto_bot_config', {})
+            trailing_activation = float(auto_config.get('trailing_stop_activation', 300.0))  # в %
+            trailing_distance = float(auto_config.get('trailing_stop_distance', 150.0))      # в %
             
             # Получаем все позиции с биржи
             try:
@@ -1860,31 +2016,96 @@ def check_missing_stop_losses():
                             logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка API для {symbol}: {e}")
                             failed_count += 1
                     
-                    # Логика трейлинг стопа (только при прибыли)
-                    elif profit_percent >= (trailing_activation / 100):  # Прибыль больше порога активации
-                        if not existing_trailing_stop:
-                            # Устанавливаем трейлинг стоп
+                    # Логика трейлинг стопа по марже
+                    else:
+                        realized_pnl = float(pos.get('cumRealisedPnl', pos.get('realizedPnl', 0)) or 0)
+                        leverage = float(pos.get('leverage', 1) or 1)
+                        bot_data['realized_pnl'] = realized_pnl
+                        bot_data['leverage'] = leverage
+                        bot_data['position_size_coins'] = position_size
+
+                        trailing_params = _compute_margin_based_trailing(
+                            side,
+                            entry_price,
+                            current_price,
+                            position_size,
+                            leverage,
+                            realized_pnl,
+                            profit_percent,
+                            bot_data.get('max_profit_achieved', 0),
+                            trailing_activation,
+                            trailing_distance
+                        )
+
+                        bot_data['trailing_activation_profit'] = trailing_params.get('activation_profit_usdt', 0.0)
+                        bot_data['trailing_activation_threshold'] = trailing_params.get('activation_threshold_usdt', 0.0)
+                        bot_data['trailing_locked_profit'] = trailing_params.get('locked_profit_usdt', 0.0)
+                        bot_data['margin_usdt'] = trailing_params.get('margin_usdt', 0.0)
+
+                        if trailing_params.get('active') and trailing_params.get('stop_price'):
+                            desired_stop = trailing_params['stop_price']
+                            existing_stop_price = float(existing_stop_loss) if existing_stop_loss else None
+                            should_update_stop = False
+
+                            if side == 'Buy':
+                                if not existing_stop_price or desired_stop > existing_stop_price + 1e-6:
+                                    should_update_stop = True
+                            else:  # Short позиция
+                                if not existing_stop_price or desired_stop < existing_stop_price - 1e-6:
+                                    should_update_stop = True
+
+                            if should_update_stop:
+                                try:
+                                    trailing_result = current_exchange.client.set_trading_stop(
+                                        category="linear",
+                                        symbol=pos.get('symbol'),
+                                        positionIdx=position_idx,
+                                        stopLoss=str(desired_stop)
+                                    )
+
+                                    if trailing_result and trailing_result.get('retCode') == 0:
+                                        bot_data['trailing_stop_price'] = desired_stop
+                                        updated_count += 1
+                                        logger.info(
+                                            f"[STOP_LOSS_SETUP] ✅ Trailing stop обновлен для {symbol}: цена {desired_stop}"
+                                        )
+                                    else:
+                                        logger.error(
+                                            f"[STOP_LOSS_SETUP] ❌ Ошибка обновления trailing stop для {symbol}: "
+                                            f"{trailing_result.get('retMsg') if trailing_result else 'Unknown'}"
+                                        )
+                                        failed_count += 1
+                                except Exception as e:
+                                    logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка API trailing stop для {symbol}: {e}")
+                                    failed_count += 1
+                            else:
+                                logger.debug(f"[STOP_LOSS_SETUP] ℹ️ Trailing stop для {symbol} уже актуален")
+                        elif abs(realized_pnl) <= 0.0 and trailing_params.get('profit_usdt', 0.0) >= trailing_params.get('activation_threshold_usdt', 0.0):
+                            # Fallback на старую схему, если нет данных о комиссиях
                             try:
-                                # Используем уже полученный exchange объект
                                 trailing_result = current_exchange.client.set_trading_stop(
                                     category="linear",
                                     symbol=pos.get('symbol'),
                                     positionIdx=position_idx,
-                                    trailingStop=str(trailing_distance / 100)  # Конвертируем в десятичную дробь
+                                    trailingStop=str(trailing_distance / 100)
                                 )
-                                
+
                                 if trailing_result and trailing_result.get('retCode') == 0:
                                     bot_data['trailing_stop_price'] = trailing_distance / 100
                                     updated_count += 1
-                                    logger.info(f"[STOP_LOSS_SETUP] ✅ Установлен трейлинг стоп для {symbol}: {trailing_distance/100}%")
+                                    logger.info(
+                                        f"[STOP_LOSS_SETUP] ✅ Установлен fallback trailing stop для {symbol}: "
+                                        f"{trailing_distance / 100}%"
+                                    )
                                 else:
-                                    logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка установки трейлинг стопа для {symbol}: {trailing_result.get('retMsg')}")
+                                    logger.error(
+                                        f"[STOP_LOSS_SETUP] ❌ Ошибка установки fallback trailing stop для {symbol}: "
+                                        f"{trailing_result.get('retMsg') if trailing_result else 'Unknown'}"
+                                    )
                                     failed_count += 1
                             except Exception as e:
-                                logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка API трейлинг стопа для {symbol}: {e}")
+                                logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка API fallback trailing stop для {symbol}: {e}")
                                 failed_count += 1
-                        else:
-                            logger.info(f"[STOP_LOSS_SETUP] ✅ Трейлинг стоп уже активен для {symbol}")
                     
                     # Обновляем время последнего обновления
                     bot_data['last_update'] = datetime.now().isoformat()

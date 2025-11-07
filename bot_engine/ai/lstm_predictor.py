@@ -19,6 +19,13 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+try:
+    from sklearn.exceptions import NotFittedError
+except ImportError:  # pragma: no cover - fallback если scikit-learn не установлен
+    class NotFittedError(Exception):
+        """Локальный NotFittedError, если scikit-learn недоступен"""
+        pass
+
 logger = logging.getLogger('LSTM')
 
 # Отключаем предупреждения TensorFlow
@@ -146,6 +153,7 @@ class LSTMPredictor:
             Массив признаков для модели
         """
         if len(candles) < self.config['sequence_length']:
+            logger.debug("[LSTM] Недостаточно свечей: %s < %s", len(candles), self.config['sequence_length'])
             return None
         
         df = pd.DataFrame(candles)
@@ -166,7 +174,7 @@ class LSTMPredictor:
         # Берем последние sequence_length свечей
         features = features[-self.config['sequence_length']:]
         
-        return features
+        return features.astype(np.float32)
     
     def predict(
         self,
@@ -199,10 +207,17 @@ class LSTMPredictor:
                 return None
             
             # Нормализуем данные
-            features_scaled = self.scaler.transform(features)
+            try:
+                features_scaled = self.scaler.transform(features)
+            except NotFittedError:
+                logger.error("[LSTM] Scaler не обучен. Выполните обучение модели")
+                return None
+            except Exception as transform_error:
+                logger.error(f"[LSTM] Ошибка нормализации: {transform_error}")
+                return None
             
             # Добавляем batch dimension
-            features_scaled = features_scaled.reshape(1, self.config['sequence_length'], -1)
+            features_scaled = features_scaled.reshape(1, self.config['sequence_length'], -1).astype(np.float32)
             
             # Предсказание
             prediction = self.model.predict(features_scaled, verbose=0)[0]
@@ -257,12 +272,39 @@ class LSTMPredictor:
         """
         if not TENSORFLOW_AVAILABLE or self.model is None:
             return {'error': 'TensorFlow unavailable'}
+
+        if not training_data:
+            logger.error("[LSTM] Пустой набор данных для обучения")
+            return {'error': 'No training data provided'}
         
         try:
             # Объединяем данные
             X_list, y_list = zip(*training_data)
             X = np.array(X_list)
             y = np.array(y_list)
+
+            if X.ndim != 3:
+                raise ValueError(f"Training data X должен иметь размерность (samples, seq_len, features), получено: {X.shape}")
+
+            if np.isnan(X).any() or np.isinf(X).any():
+                logger.warning("[LSTM] Обнаружены NaN/Inf в обучающих данных. Выполняем замену на нули")
+                X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
+
+            # Проверяем наличие признаков
+            if X.shape[-1] != len(self.config['features']):
+                logger.warning(
+                    "[LSTM] Количество признаков (%s) не совпадает с конфигурацией (%s). Обновляем конфиг.",
+                    X.shape[-1], len(self.config['features'])
+                )
+                self.config['features'] = [f'feature_{i}' for i in range(X.shape[-1])]
+
+            # Обучаем scaler на всем массиве
+            if self.scaler is None:
+                self.scaler = MinMaxScaler(feature_range=(0, 1))
+
+            flat_X = X.reshape(-1, X.shape[-1])
+            self.scaler.fit(flat_X)
+            X_scaled = self.scaler.transform(flat_X).reshape(X.shape).astype(np.float32)
             
             logger.info(f"[LSTM] Начало обучения: {len(X)} образцов")
             logger.info(f"[LSTM] Форма X: {X.shape}, форма y: {y.shape}")
@@ -284,7 +326,7 @@ class LSTMPredictor:
             
             # Обучаем модель
             history = self.model.fit(
-                X, y,
+                X_scaled, y,
                 validation_split=validation_split,
                 epochs=epochs,
                 batch_size=batch_size,

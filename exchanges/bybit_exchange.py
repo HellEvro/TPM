@@ -225,7 +225,9 @@ class BybitExchange(BaseExchange):
                             'take_profit': position.get('takeProfit', ''),
                             'stop_loss': position.get('stopLoss', ''),
                             'mark_price': position.get('markPrice', ''),
-                            'avg_price': position.get('avgPrice', '')
+                            'avg_price': position.get('avgPrice', ''),
+                            'realized_pnl': float(position.get('cumRealisedPnl', 0)),
+                            'leverage': float(position.get('leverage', 1))
                         }
                         
                         processed_positions.append(position_info)

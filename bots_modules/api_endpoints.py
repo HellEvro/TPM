@@ -26,7 +26,9 @@ from bots_modules.imports_and_globals import (
     system_initialized, shutdown_flag, mature_coins_storage,
     mature_coins_lock, coin_processing_locks,
     BOT_STATUS, ASYNC_AVAILABLE, RSI_CACHE_FILE, bot_history_manager,
-    get_exchange
+    get_exchange, load_individual_coin_settings,
+    get_individual_coin_settings, set_individual_coin_settings,
+    remove_individual_coin_settings, copy_individual_coin_settings_to_all
 )
 import bots_modules.imports_and_globals as globals_module
 
@@ -2058,6 +2060,101 @@ def activate_trading_rules_manual():
             'success': False,
             'error': str(e)
         }), 500
+
+@bots_app.route('/api/bots/individual-settings/<symbol>', methods=['GET', 'POST', 'DELETE'])
+def individual_coin_settings(symbol):
+    """CRUD операции для индивидуальных настроек монет"""
+    try:
+        if not symbol:
+            return jsonify({'success': False, 'error': 'Symbol is required'}), 400
+
+        normalized_symbol = symbol.upper()
+
+        # Загружаем настройки из файла если память пуста
+        if not bots_data.get('individual_coin_settings'):
+            load_individual_coin_settings()
+
+        if request.method == 'GET':
+            settings = get_individual_coin_settings(normalized_symbol)
+            if not settings:
+                return jsonify({'success': False, 'error': 'Individual settings not found'}), 404
+            return jsonify({
+                'success': True,
+                'symbol': normalized_symbol,
+                'settings': settings
+            })
+
+        if request.method == 'POST':
+            payload = request.get_json(silent=True)
+            if not payload or not isinstance(payload, dict):
+                return jsonify({'success': False, 'error': 'Invalid settings payload'}), 400
+
+            # Удаляем None значения чтобы не затирать настройки пустыми значениями
+            filtered_payload = {k: v for k, v in payload.items() if v is not None}
+            filtered_payload['updated_at'] = datetime.now().isoformat()
+
+            stored = set_individual_coin_settings(normalized_symbol, filtered_payload, persist=True)
+            logger.info(f"[COIN_SETTINGS] 💾 Настройки для {normalized_symbol} сохранены")
+
+            return jsonify({
+                'success': True,
+                'symbol': normalized_symbol,
+                'settings': stored
+            })
+
+        if request.method == 'DELETE':
+            removed = remove_individual_coin_settings(normalized_symbol, persist=True)
+            if not removed:
+                return jsonify({'success': False, 'error': 'Individual settings not found'}), 404
+            logger.info(f"[COIN_SETTINGS] 🗑️ Настройки для {normalized_symbol} удалены")
+            return jsonify({
+                'success': True,
+                'symbol': normalized_symbol,
+                'removed': True
+            })
+
+        return jsonify({'success': False, 'error': 'Unsupported method'}), 405
+
+    except (ValueError, KeyError) as validation_error:
+        logger.error(f"[COIN_SETTINGS] ❌ Ошибка валидации настроек {symbol}: {validation_error}")
+        return jsonify({'success': False, 'error': str(validation_error)}), 400
+    except Exception as e:
+        logger.error(f"[COIN_SETTINGS] ❌ Ошибка обработки настроек {symbol}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bots_app.route('/api/bots/individual-settings/<symbol>/copy-to-all', methods=['POST'])
+def copy_individual_settings(symbol):
+    """Копирует индивидуальные настройки монеты ко всем другим монетам"""
+    try:
+        if not symbol:
+            return jsonify({'success': False, 'error': 'Symbol is required'}), 400
+
+        payload = request.get_json(silent=True) or {}
+        targets = payload.get('targets') if isinstance(payload, dict) else None
+
+        if targets is not None and not isinstance(targets, list):
+            return jsonify({'success': False, 'error': 'targets must be a list'}), 400
+
+        copied_count = copy_individual_coin_settings_to_all(
+            symbol,
+            targets,
+            persist=True
+        )
+
+        return jsonify({
+            'success': True,
+            'symbol': symbol.upper(),
+            'copied_count': copied_count
+        })
+
+    except KeyError as missing_error:
+        logger.error(f"[COIN_SETTINGS] ❌ Настройки {symbol} не найдены для копирования: {missing_error}")
+        return jsonify({'success': False, 'error': 'Individual settings not found'}), 404
+    except Exception as e:
+        logger.error(f"[COIN_SETTINGS] ❌ Ошибка копирования настроек {symbol}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @bots_app.route('/api/bots/auto-bot', methods=['GET', 'POST'])
 def auto_bot_config():

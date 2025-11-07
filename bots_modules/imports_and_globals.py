@@ -12,6 +12,7 @@ import asyncio
 import requests
 import socket
 import psutil
+from copy import deepcopy
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -44,6 +45,8 @@ try:
         load_bots_state as storage_load_bots_state,
         save_auto_bot_config as storage_save_auto_bot_config,
         load_auto_bot_config as storage_load_auto_bot_config,
+        save_individual_coin_settings as storage_save_individual_coin_settings,
+        load_individual_coin_settings as storage_load_individual_coin_settings,
         save_mature_coins, load_mature_coins,
         save_process_state as storage_save_process_state,
         load_process_state as storage_load_process_state,
@@ -291,6 +294,7 @@ RSI_CACHE_FILE = 'data/rsi_cache.json'
 DEFAULT_CONFIG_FILE = 'data/default_auto_bot_config.json'
 PROCESS_STATE_FILE = 'data/process_state.json'
 SYSTEM_CONFIG_FILE = 'data/system_config.json'
+INDIVIDUAL_COIN_SETTINGS_FILE = 'data/individual_coin_settings.json'
 
 # Создаем папку для данных если её нет
 os.makedirs('data', exist_ok=True)
@@ -544,6 +548,7 @@ coins_rsi_data = {
 bots_data = {
     'bots': {},  # {symbol: bot_config}
     'auto_bot_config': DEFAULT_AUTO_BOT_CONFIG.copy(),  # Используем дефолтную конфигурацию
+    'individual_coin_settings': {},  # {symbol: settings}
     'global_stats': {
         'active_bots': 0,
         'bots_in_position': 0,
@@ -584,6 +589,124 @@ def get_auto_bot_config():
     except Exception as e:
         logger.error(f"[CONFIG] ❌ Ошибка получения конфигурации: {e}")
         return DEFAULT_AUTO_BOT_CONFIG.copy()
+
+
+# ===== Индивидуальные настройки монет =====
+
+def _normalize_symbol(symbol: str) -> str:
+    return symbol.upper() if symbol else symbol
+
+
+def load_individual_coin_settings():
+    """Загружает индивидуальные настройки монет из файла"""
+    try:
+        loaded = storage_load_individual_coin_settings() or {}
+        normalized = {
+            _normalize_symbol(symbol): settings
+            for symbol, settings in loaded.items()
+            if isinstance(settings, dict)
+        }
+        with bots_data_lock:
+            bots_data['individual_coin_settings'] = normalized
+        logger.info(
+            "[COIN_SETTINGS] ✅ Загружено индивидуальных настроек: %d",
+            len(normalized)
+        )
+        return deepcopy(normalized)
+    except Exception as exc:
+        logger.error(f"[COIN_SETTINGS] ❌ Ошибка загрузки индивидуальных настроек: {exc}")
+        return {}
+
+
+def save_individual_coin_settings():
+    """Сохраняет индивидуальные настройки монет в файл"""
+    try:
+        with bots_data_lock:
+            settings = {
+                _normalize_symbol(symbol): settings
+                for symbol, settings in bots_data.get('individual_coin_settings', {}).items()
+                if isinstance(settings, dict)
+            }
+        return storage_save_individual_coin_settings(settings)
+    except Exception as exc:
+        logger.error(f"[COIN_SETTINGS] ❌ Ошибка сохранения индивидуальных настроек: {exc}")
+        return False
+
+
+def get_individual_coin_settings(symbol):
+    """Возвращает индивидуальные настройки монеты (копию)"""
+    if not symbol:
+        return None
+    normalized = _normalize_symbol(symbol)
+    with bots_data_lock:
+        settings = bots_data.get('individual_coin_settings', {}).get(normalized)
+        return deepcopy(settings) if settings else None
+
+
+def set_individual_coin_settings(symbol, settings, persist=True):
+    """Устанавливает индивидуальные настройки монеты"""
+    if not symbol or not isinstance(settings, dict):
+        raise ValueError("Symbol and settings dictionary are required")
+    normalized = _normalize_symbol(symbol)
+    with bots_data_lock:
+        bots_data.setdefault('individual_coin_settings', {})[normalized] = deepcopy(settings)
+    if persist:
+        save_individual_coin_settings()
+    logger.info(f"[COIN_SETTINGS] 💾 Настройки для {normalized} обновлены")
+    return get_individual_coin_settings(normalized)
+
+
+def remove_individual_coin_settings(symbol, persist=True):
+    """Удаляет индивидуальные настройки монеты"""
+    if not symbol:
+        return False
+    normalized = _normalize_symbol(symbol)
+    removed = False
+    with bots_data_lock:
+        coin_settings = bots_data.get('individual_coin_settings', {})
+        if normalized in coin_settings:
+            del coin_settings[normalized]
+            removed = True
+    if removed and persist:
+        save_individual_coin_settings()
+    if removed:
+        logger.info(f"[COIN_SETTINGS] 🗑️ Настройки для {normalized} удалены")
+    else:
+        logger.info(f"[COIN_SETTINGS] ℹ️ Настройки для {normalized} отсутствуют")
+    return removed
+
+
+def copy_individual_coin_settings_to_all(source_symbol, target_symbols=None, persist=True):
+    """Копирует индивидуальные настройки монеты ко всем целевым монетам"""
+    if not source_symbol:
+        raise ValueError("Source symbol is required")
+    normalized_source = _normalize_symbol(source_symbol)
+    template = get_individual_coin_settings(normalized_source)
+    if not template:
+        raise KeyError(f"Settings for {normalized_source} not found")
+
+    with bots_data_lock:
+        destination = bots_data.setdefault('individual_coin_settings', {})
+        if target_symbols is None:
+            target_symbols = list(coins_rsi_data.get('coins', {}).keys())
+        copied = 0
+        for symbol in target_symbols:
+            normalized = _normalize_symbol(symbol)
+            if not normalized or normalized == normalized_source:
+                continue
+            destination[normalized] = deepcopy(template)
+            copied += 1
+
+    if persist:
+        save_individual_coin_settings()
+
+    logger.info(
+        "[COIN_SETTINGS] 📋 Настройки %s скопированы к %d монетам",
+        normalized_source,
+        copied
+    )
+    return copied
+
 
 # ВАЖНО: load_auto_bot_config() теперь вызывается в if __name__ == '__main__'
 # чтобы check_and_stop_existing_bots_processes() мог вывести свои сообщения первым
