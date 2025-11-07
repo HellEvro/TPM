@@ -281,15 +281,16 @@ try:
     from bot_engine.bot_config import SystemConfig
     RSI_OVERSOLD = SystemConfig.RSI_OVERSOLD  # Зона покупки (LONG)
     RSI_OVERBOUGHT = SystemConfig.RSI_OVERBOUGHT  # Зона продажи (SHORT)
-    RSI_EXIT_LONG = SystemConfig.RSI_EXIT_LONG  # Выход из лонга (при RSI >= 65)
-    RSI_EXIT_SHORT = SystemConfig.RSI_EXIT_SHORT  # Выход из шорта (при RSI <= 35)
+    # ✅ Используем WITH_TREND по умолчанию для расчета оптимальных EMA
+    RSI_EXIT_LONG = SystemConfig.RSI_EXIT_LONG_WITH_TREND  # Выход из лонга (при RSI >= 65)
+    RSI_EXIT_SHORT = SystemConfig.RSI_EXIT_SHORT_WITH_TREND  # Выход из шорта (при RSI <= 35)
 except ImportError:
     # Fallback значения, если конфиг недоступен (только для отладки!)
     logger.warning("⚠️ Конфиг недоступен! Используются fallback значения. Убедитесь, что конфиг доступен!")
     RSI_OVERSOLD = 29
     RSI_OVERBOUGHT = 71
-    RSI_EXIT_LONG = 65  # Выход из лонга
-    RSI_EXIT_SHORT = 35  # Выход из шорта
+    RSI_EXIT_LONG = 65  # Выход из лонга (fallback)
+    RSI_EXIT_SHORT = 35  # Выход из шорта (fallback)
 # Используем multiprocessing с безопасной инициализацией
 MAX_WORKERS = mp.cpu_count()
 # ✅ ДИНАМИЧЕСКИЙ МИНИМУМ: Рассчитывается на основе максимального периода EMA

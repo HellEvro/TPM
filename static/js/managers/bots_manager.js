@@ -5443,8 +5443,11 @@ class BotsManager {
             const tradingParams = {
                 rsi_long_threshold: config.autoBot.rsi_long_threshold,
                 rsi_short_threshold: config.autoBot.rsi_short_threshold,
-                rsi_exit_long: config.autoBot.rsi_exit_long,
-                rsi_exit_short: config.autoBot.rsi_exit_short,
+                // ✅ Новые параметры RSI выхода с учетом тренда
+                rsi_exit_long_with_trend: config.autoBot.rsi_exit_long_with_trend,
+                rsi_exit_long_against_trend: config.autoBot.rsi_exit_long_against_trend,
+                rsi_exit_short_with_trend: config.autoBot.rsi_exit_short_with_trend,
+                rsi_exit_short_against_trend: config.autoBot.rsi_exit_short_against_trend,
                 default_position_size: config.autoBot.default_position_size,
                 check_interval: config.autoBot.check_interval
             };
@@ -5461,8 +5464,11 @@ class BotsManager {
         try {
             const config = this.collectConfigurationData();
             const rsiExits = {
-                rsi_exit_long: config.autoBot.rsi_exit_long,
-                rsi_exit_short: config.autoBot.rsi_exit_short
+                // ✅ Новые параметры RSI выхода с учетом тренда
+                rsi_exit_long_with_trend: config.autoBot.rsi_exit_long_with_trend,
+                rsi_exit_long_against_trend: config.autoBot.rsi_exit_long_against_trend,
+                rsi_exit_short_with_trend: config.autoBot.rsi_exit_short_with_trend,
+                rsi_exit_short_against_trend: config.autoBot.rsi_exit_short_against_trend
             };
             
             await this.sendConfigUpdate('auto-bot', rsiExits, 'RSI выходы');
@@ -5721,8 +5727,11 @@ class BotsManager {
                     scope: 'all',
                     rsi_long_threshold: 29,
                     rsi_short_threshold: 71,
-                    rsi_exit_long: 65,
-                    rsi_exit_short: 35,
+                    // ✅ Новые параметры RSI выхода с учетом тренда
+                    rsi_exit_long_with_trend: 65,
+                    rsi_exit_long_against_trend: 60,
+                    rsi_exit_short_with_trend: 35,
+                    rsi_exit_short_against_trend: 40,
                     default_position_size: 10,
                     check_interval: 180,
                     max_loss_percent: 15.0,
@@ -5787,12 +5796,21 @@ class BotsManager {
             errors.push('RSI для LONG должен быть меньше RSI для SHORT');
         }
         
-        if (config.autoBot.rsi_exit_long <= config.autoBot.rsi_long_threshold) {
-            errors.push('RSI выход из LONG должен быть больше RSI входа в LONG');
+        // ✅ Валидация новых параметров RSI выхода
+        if (config.autoBot.rsi_exit_long_with_trend && config.autoBot.rsi_exit_long_with_trend <= config.autoBot.rsi_long_threshold) {
+            errors.push('RSI выход из LONG (по тренду) должен быть больше порога входа');
         }
         
-        if (config.autoBot.rsi_exit_short >= config.autoBot.rsi_short_threshold) {
-            errors.push('RSI выход из SHORT должен быть меньше RSI входа в SHORT');
+        if (config.autoBot.rsi_exit_long_against_trend && config.autoBot.rsi_exit_long_against_trend <= config.autoBot.rsi_long_threshold) {
+            errors.push('RSI выход из LONG (против тренда) должен быть больше порога входа');
+        }
+        
+        if (config.autoBot.rsi_exit_short_with_trend && config.autoBot.rsi_exit_short_with_trend >= config.autoBot.rsi_short_threshold) {
+            errors.push('RSI выход из SHORT (по тренду) должен быть меньше порога входа');
+        }
+        
+        if (config.autoBot.rsi_exit_short_against_trend && config.autoBot.rsi_exit_short_against_trend >= config.autoBot.rsi_short_threshold) {
+            errors.push('RSI выход из SHORT (против тренда) должен быть меньше порога входа');
         }
         
         if (config.autoBot.max_loss_percent <= 0 || config.autoBot.max_loss_percent > 50) {

@@ -478,8 +478,11 @@ def create_bot(symbol, config=None, exchange_obj=None):
             # Настройки RSI и защитных механизмов
             'rsi_long_threshold': auto_bot_config.get('rsi_long_threshold', 29),
             'rsi_short_threshold': auto_bot_config.get('rsi_short_threshold', 71),
-            'rsi_exit_long': auto_bot_config.get('rsi_exit_long', 65),
-            'rsi_exit_short': auto_bot_config.get('rsi_exit_short', 35),
+            # ✅ Новые параметры RSI выхода с учетом тренда
+            'rsi_exit_long_with_trend': auto_bot_config.get('rsi_exit_long_with_trend', 65),
+            'rsi_exit_long_against_trend': auto_bot_config.get('rsi_exit_long_against_trend', 60),
+            'rsi_exit_short_with_trend': auto_bot_config.get('rsi_exit_short_with_trend', 35),
+            'rsi_exit_short_against_trend': auto_bot_config.get('rsi_exit_short_against_trend', 40),
             'max_loss_percent': auto_bot_config.get('max_loss_percent', 15.0),
             'trailing_stop_activation': auto_bot_config.get('trailing_stop_activation', 300.0),
             'trailing_stop_distance': auto_bot_config.get('trailing_stop_distance', 150.0),

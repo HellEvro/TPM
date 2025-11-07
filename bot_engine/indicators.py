@@ -534,7 +534,7 @@ class SignalGenerator:
         Returns:
             Словарь с действием и причиной
         """
-        from .bot_config import RSI_OVERSOLD, RSI_OVERBOUGHT, RSI_EXIT_LONG, RSI_EXIT_SHORT
+        from .bot_config import RSI_OVERSOLD, RSI_OVERBOUGHT
         
         # Логика с учетом тренда для входов
         if rsi <= RSI_OVERSOLD:  # RSI ≤ 29 
@@ -568,7 +568,7 @@ class SignalGenerator:
         Returns:
             Словарь с действием и причиной
         """
-        from .bot_config import RSI_OVERSOLD, RSI_OVERBOUGHT, RSI_EXIT_LONG, RSI_EXIT_SHORT, SystemConfig
+        from .bot_config import RSI_OVERSOLD, RSI_OVERBOUGHT, SystemConfig
         
         # Проверяем, включена ли улучшенная система RSI
         if not SystemConfig.ENHANCED_RSI_ENABLED:
