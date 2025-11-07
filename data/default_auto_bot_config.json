@@ -19,7 +19,7 @@
   "max_risk_per_trade": 2,
   "max_loss_percent": 15,
   "take_profit_percent": 20,
-  "trailing_stop_activation": 50,
+  "trailing_stop_activation": 20,
   "trailing_stop_distance": 15,
   "max_position_hours": 0,
   "break_even_protection": true,
