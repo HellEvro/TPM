@@ -499,25 +499,10 @@ def save_auto_bot_config():
         logger.error(f"[SAVE_CONFIG] ❌ Ошибка сохранения конфигурации автобота: {e}")
         return False
 
-def save_optimal_ema_periods():
-    """Сохраняет оптимальные EMA периоды"""
-    try:
-        global optimal_ema_data
-        
-        # Проверяем, что есть данные для сохранения
-        if not optimal_ema_data:
-            logger.warning("[SAVE_EMA] ⚠️ Нет данных об оптимальных EMA для сохранения")
-            return False
-        
-        with open(OPTIMAL_EMA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(optimal_ema_data, f, indent=2, ensure_ascii=False)
-        
-        logger.info(f"[SAVE_EMA] ✅ Оптимальные EMA периоды сохранены в {OPTIMAL_EMA_FILE} ({len(optimal_ema_data)} записей)")
-        return True
-        
-    except Exception as e:
-        logger.error(f"[SAVE_EMA] ❌ Ошибка сохранения EMA периодов: {e}")
-        return False
+# ❌ ОТКЛЮЧЕНО: optimal_ema перемещен в backup (EMA фильтр убран)
+# def save_optimal_ema_periods():
+#     """Сохраняет оптимальные EMA периоды"""
+#     return True  # Заглушка
 
 def load_bots_state():
     """Загружает состояние ботов из файла"""

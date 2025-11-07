@@ -28,7 +28,6 @@ except ImportError as e:
 # Импортируем новые модули из bot_engine
 try:
     from bot_engine.utils.rsi_utils import calculate_rsi, calculate_rsi_history
-    from bot_engine.utils.ema_utils import calculate_ema
     from bot_engine.filters import check_rsi_time_filter, check_exit_scam_filter, check_no_existing_position
     # ✅ ИСПРАВЛЕНО: Используем модуль bots_modules.maturity вместо bot_engine.maturity_checker
     from bots_modules.maturity import (
@@ -46,18 +45,18 @@ try:
         save_auto_bot_config as storage_save_auto_bot_config,
         load_auto_bot_config as storage_load_auto_bot_config,
         save_mature_coins, load_mature_coins,
-        save_optimal_ema, load_optimal_ema,
         save_process_state as storage_save_process_state,
         load_process_state as storage_load_process_state,
         save_system_config as storage_save_system_config,
         load_system_config as storage_load_system_config
     )
     from bot_engine.signal_processor import get_effective_signal, check_autobot_filters, process_auto_bot_signals
-    from bot_engine.optimal_ema_manager import (
-        load_optimal_ema_data, get_optimal_ema_periods,
-        update_optimal_ema_data, save_optimal_ema_periods,
-        optimal_ema_data
-    )
+    # ❌ ОТКЛЮЧЕНО: optimal_ema_manager перемещен в backup (EMA фильтр убран)
+    # from bot_engine.optimal_ema_manager import (
+    #     load_optimal_ema_data, get_optimal_ema_periods,
+    #     update_optimal_ema_data, save_optimal_ema_periods,
+    #     optimal_ema_data
+    # )
     MODULES_AVAILABLE = True
     print("[OK] New bot_engine modules loaded successfully")
 except ImportError as e:
@@ -82,6 +81,23 @@ if not MODULES_AVAILABLE:
     def calculate_ema(prices, period):
         """Будет определена ниже в файле"""
         pass
+
+# ✅ Fallback версия calculate_ema (так как ema_utils.py перемещен в backup)
+def calculate_ema(prices, period):
+    """Рассчитывает EMA для массива цен"""
+    if len(prices) < period:
+        return None
+    
+    # Первое значение EMA = SMA
+    sma = sum(prices[:period]) / period
+    ema = sma
+    multiplier = 2 / (period + 1)
+    
+    # Рассчитываем EMA для остальных значений
+    for price in prices[period:]:
+        ema = (price * multiplier) + (ema * (1 - multiplier))
+    
+    return ema
 
 def check_and_stop_existing_bots_processes():
     """

@@ -27,7 +27,8 @@ RSI_CACHE_FILE = 'data/rsi_cache.json'
 BOTS_STATE_FILE = 'data/bots_state.json'
 AUTO_BOT_CONFIG_FILE = 'data/auto_bot_config.json'
 MATURE_COINS_FILE = 'data/mature_coins.json'
-OPTIMAL_EMA_FILE = 'data/optimal_ema.json'
+# ❌ ОТКЛЮЧЕНО: optimal_ema удален (EMA фильтр убран)
+# OPTIMAL_EMA_FILE = 'data/optimal_ema.json'
 PROCESS_STATE_FILE = 'data/process_state.json'
 SYSTEM_CONFIG_FILE = 'data/system_config.json'
 
@@ -204,21 +205,14 @@ def load_mature_coins():
     return data
 
 
-# Optimal EMA
-def save_optimal_ema(ema_data):
-    """Сохраняет оптимальные EMA периоды"""
-    success = save_json_file(OPTIMAL_EMA_FILE, ema_data, "оптимальные EMA")
-    if success:
-        logger.info(f"[STORAGE] Сохранено {len(ema_data)} EMA периодов")
-    return success
-
-
-def load_optimal_ema():
-    """Загружает оптимальные EMA периоды"""
-    data = load_json_file(OPTIMAL_EMA_FILE, default={}, description="оптимальные EMA")
-    if data:
-        logger.info(f"[STORAGE] Загружено {len(data)} EMA периодов")
-    return data
+# ❌ ОТКЛЮЧЕНО: Optimal EMA удален (EMA фильтр убран из системы)
+# def save_optimal_ema(ema_data):
+#     """Сохраняет оптимальные EMA периоды"""
+#     return True
+# 
+# def load_optimal_ema():
+#     """Загружает оптимальные EMA периоды"""
+#     return {}
 
 
 # Process State
