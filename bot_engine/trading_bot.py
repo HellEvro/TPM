@@ -37,7 +37,29 @@ class TradingBot:
         self.entry_price = self.config.get('entry_price')
         self.entry_time = self.config.get('entry_time')
         self.last_signal_time = self.config.get('last_signal_time')
-        
+        self.position_side = self.config.get('position_side')
+        self.position_start_time = self.config.get('position_start_time')
+        self.position_size = self.config.get('position_size')
+        self.position_size_coins = self.config.get('position_size_coins')
+        self.leverage = self.config.get('leverage', 1.0)
+        self.margin_usdt = self.config.get('margin_usdt')
+        self.max_profit_achieved = self.config.get('max_profit_achieved', 0.0)
+        self.trailing_stop_price = self.config.get('trailing_stop_price')
+        self.trailing_stop_active = bool(self.config.get('trailing_stop_active', False))
+        self.trailing_activation_threshold = self.config.get('trailing_activation_threshold', 0.0)
+        self.trailing_activation_profit = self.config.get('trailing_activation_profit', 0.0)
+        self.trailing_locked_profit = self.config.get('trailing_locked_profit', 0.0)
+        self.break_even_activated = bool(self.config.get('break_even_activated', False))
+        self.unrealized_pnl = self.config.get('unrealized_pnl', 0.0)
+        self.unrealized_pnl_usdt = self.config.get('unrealized_pnl_usdt', self.unrealized_pnl)
+        self.realized_pnl = self.config.get('realized_pnl', 0.0)
+        self.rsi_data = self.config.get('rsi_data', {})
+        self.created_at = self.config.get('created_at', datetime.now().isoformat())
+        self.order_id = self.config.get('order_id')
+        self.last_price = self.config.get('last_price')
+        self.last_rsi = self.config.get('last_rsi')
+        self.last_trend = self.config.get('last_trend')
+
         # Масштабирование (лесенка)
         self.scaling_enabled = self.config.get('scaling_enabled', False)
         self.scaling_levels = self.config.get('scaling_levels', [])
@@ -72,11 +94,32 @@ class TradingBot:
             'entry_time': self.entry_time.isoformat() if self.entry_time and hasattr(self.entry_time, 'isoformat') else self.entry_time,
             'last_signal_time': self.last_signal_time.isoformat() if self.last_signal_time and hasattr(self.last_signal_time, 'isoformat') else self.last_signal_time,
             'last_bar_timestamp': self.last_bar_timestamp,
-            'created_at': datetime.now().isoformat(),
+            'created_at': self.created_at,
             'scaling_enabled': self.scaling_enabled,
             'scaling_levels': self.scaling_levels,
             'scaling_current_level': self.scaling_current_level,
-            'scaling_group_id': self.scaling_group_id
+            'scaling_group_id': self.scaling_group_id,
+            'position_side': self.position_side,
+            'position_start_time': self.position_start_time.isoformat() if self.position_start_time and hasattr(self.position_start_time, 'isoformat') else self.position_start_time,
+            'position_size': self.position_size,
+            'position_size_coins': self.position_size_coins,
+            'leverage': self.leverage,
+            'margin_usdt': self.margin_usdt,
+            'unrealized_pnl': self.unrealized_pnl,
+            'unrealized_pnl_usdt': self.unrealized_pnl_usdt,
+            'realized_pnl': self.realized_pnl,
+            'max_profit_achieved': self.max_profit_achieved,
+            'trailing_stop_price': self.trailing_stop_price,
+            'trailing_stop_active': self.trailing_stop_active,
+            'trailing_activation_threshold': self.trailing_activation_threshold,
+            'trailing_activation_profit': self.trailing_activation_profit,
+            'trailing_locked_profit': self.trailing_locked_profit,
+            'break_even_activated': self.break_even_activated,
+            'rsi_data': self.rsi_data,
+            'order_id': self.order_id,
+            'last_price': self.last_price,
+            'last_rsi': self.last_rsi,
+            'last_trend': self.last_trend
         }
     
     def update(self, force_analysis: bool = False, external_signal: str = None, external_trend: str = None) -> Dict:
