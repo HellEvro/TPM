@@ -2348,107 +2348,132 @@ def get_optimal_ema_for_symbol(symbol):
 def rescan_optimal_ema(symbol):
     """Принудительное пересканирование оптимальных EMA для монеты"""
     try:
-        # Здесь можно добавить логику для запуска пересканирования
-        # Пока просто возвращаем сообщение
+        # ❌ ОТКЛЮЧЕНО: EMA фильтр больше не используется
         return jsonify({
-            'success': True,
-            'message': f'Запущено пересканирование оптимальных EMA для {symbol}. Используйте скрипт scripts/sync/optimal_ema.py для выполнения.'
-        })
+            'success': False,
+            'message': f'Optimal EMA отключен - EMA фильтр больше не используется. Скрипт перемещен в backup.'
+        }), 404
     except Exception as e:
         logger.error(f"[API] Ошибка пересканирования EMA для {symbol}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@bots_app.route('/api/bots/optimal-ema-worker/status', methods=['GET'])
-def get_optimal_ema_worker_status():
-    """Получает статус воркера оптимальных EMA"""
-    try:
-        from bot_engine.optimal_ema_worker import get_optimal_ema_worker
-        
-        worker = get_optimal_ema_worker()
-        if worker:
-            status = worker.get_status()
-            return jsonify({
-                'success': True,
-                'data': status
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Воркер оптимальных EMA не инициализирован'
-            }), 404
-    except Exception as e:
-        logger.error(f"[API] Ошибка получения статуса воркера: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+# ❌ ОТКЛЮЧЕНО: Optimal EMA Worker больше не используется (EMA фильтр убран)
+# @bots_app.route('/api/bots/optimal-ema-worker/status', methods=['GET'])
+# def get_optimal_ema_worker_status():
+#     """Получает статус воркера оптимальных EMA"""
+#     return jsonify({
+#         'success': False,
+#         'error': 'Optimal EMA Worker отключен - EMA фильтр больше не используется'
+#     }), 404
 
-@bots_app.route('/api/bots/optimal-ema-worker/force-update', methods=['POST'])
-def force_optimal_ema_update():
-    """Принудительно запускает обновление оптимальных EMA"""
-    try:
-        from bot_engine.optimal_ema_worker import get_optimal_ema_worker
-        
-        worker = get_optimal_ema_worker()
-        if worker:
-            success = worker.force_update()
-            if success:
-                return jsonify({
-                    'success': True,
-                    'message': 'Принудительное обновление оптимальных EMA запущено'
-                })
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': 'Обновление уже выполняется'
-                }), 409
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Воркер оптимальных EMA не инициализирован'
-            }), 404
-    except Exception as e:
-        logger.error(f"[API] Ошибка принудительного обновления: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+# @bots_app.route('/api/bots/optimal-ema-worker/force-update', methods=['POST'])
+# def force_optimal_ema_update():
+#     """Принудительно запускает обновление оптимальных EMA"""
+#     return jsonify({
+#         'success': False,
+#         'error': 'Optimal EMA Worker отключен - EMA фильтр больше не используется'
+#     }), 404
 
-@bots_app.route('/api/bots/optimal-ema-worker/set-interval', methods=['POST'])
-def set_optimal_ema_interval():
-    """Устанавливает интервал обновления воркера оптимальных EMA"""
-    try:
-        from bot_engine.optimal_ema_worker import get_optimal_ema_worker
-        
-        data = request.get_json()
-        if not data or 'interval' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'Не указан интервал обновления'
-            }), 400
-        
-        interval = int(data['interval'])
-        if interval < 300:  # Минимум 5 минут
-            return jsonify({
-                'success': False,
-                'error': 'Интервал не может быть меньше 300 секунд (5 минут)'
-            }), 400
-        
-        worker = get_optimal_ema_worker()
-        if worker:
-            success = worker.set_update_interval(interval)
-            if success:
-                return jsonify({
-                    'success': True,
-                    'message': f'Интервал обновления изменен на {interval} секунд'
-                })
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': 'Не удалось изменить интервал'
-                })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Воркер оптимальных EMA не инициализирован'
-            }), 404
-    except Exception as e:
-        logger.error(f"[API] Ошибка изменения интервала: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+# @bots_app.route('/api/bots/optimal-ema-worker/set-interval', methods=['POST'])
+# def set_optimal_ema_interval():
+#     """Устанавливает интервал обновления воркера оптимальных EMA"""
+#     return jsonify({
+#         'success': False,
+#         'error': 'Optimal EMA Worker отключен - EMA фильтр больше не используется'
+#     }), 404
+
+# Старый код (закомментирован):
+# @bots_app.route('/api/bots/optimal-ema-worker/status', methods=['GET'])
+# def get_optimal_ema_worker_status():
+#     """Получает статус воркера оптимальных EMA"""
+#     try:
+#         from bot_engine.optimal_ema_worker import get_optimal_ema_worker
+#         
+#         worker = get_optimal_ema_worker()
+#         if worker:
+#             status = worker.get_status()
+#             return jsonify({
+#                 'success': True,
+#                 'data': status
+#             })
+#         else:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'Воркер оптимальных EMA не инициализирован'
+#             }), 404
+#     except Exception as e:
+#         logger.error(f"[API] Ошибка получения статуса воркера: {e}")
+#         return jsonify({'success': False, 'error': str(e)}), 500
+# 
+# @bots_app.route('/api/bots/optimal-ema-worker/force-update', methods=['POST'])
+# def force_optimal_ema_update():
+#     """Принудительно запускает обновление оптимальных EMA"""
+#     try:
+#         from bot_engine.optimal_ema_worker import get_optimal_ema_worker
+#         
+#         worker = get_optimal_ema_worker()
+#         if worker:
+#             success = worker.force_update()
+#             if success:
+#                 return jsonify({
+#                     'success': True,
+#                     'message': 'Принудительное обновление оптимальных EMA запущено'
+#                 })
+#             else:
+#                 return jsonify({
+#                     'success': False,
+#                     'error': 'Обновление уже выполняется'
+#                 }), 409
+#         else:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'Воркер оптимальных EMA не инициализирован'
+#             }), 404
+#     except Exception as e:
+#         logger.error(f"[API] Ошибка принудительного обновления: {e}")
+#         return jsonify({'success': False, 'error': str(e)}), 500
+# 
+# @bots_app.route('/api/bots/optimal-ema-worker/set-interval', methods=['POST'])
+# def set_optimal_ema_interval():
+#     """Устанавливает интервал обновления воркера оптимальных EMA"""
+#     try:
+#         from bot_engine.optimal_ema_worker import get_optimal_ema_worker
+#         
+#         data = request.get_json()
+#         if not data or 'interval' not in data:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'Не указан интервал обновления'
+#             }), 400
+#         
+#         interval = int(data['interval'])
+#         if interval < 300:  # Минимум 5 минут
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'Интервал не может быть меньше 300 секунд (5 минут)'
+#             }), 400
+#         
+#         worker = get_optimal_ema_worker()
+#         if worker:
+#             success = worker.set_update_interval(interval)
+#             if success:
+#                 return jsonify({
+#                     'success': True,
+#                     'message': f'Интервал обновления изменен на {interval} секунд'
+#                 })
+#             else:
+#                 return jsonify({
+#                     'success': False,
+#                     'error': 'Не удалось изменить интервал'
+#                 })
+#         else:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'Воркер оптимальных EMA не инициализирован'
+#             }), 404
+#     except Exception as e:
+#         logger.error(f"[API] Ошибка изменения интервала: {e}")
+#         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/default-config', methods=['GET'])
 def get_default_config():
@@ -2727,13 +2752,13 @@ def cleanup_bot_service():
             smart_rsi_manager.stop()
             smart_rsi_manager = None
         
-        # Останавливаем воркер оптимальных EMA
-        try:
-            from bot_engine.optimal_ema_worker import stop_optimal_ema_worker
-            stop_optimal_ema_worker()
-            logger.info("[CLEANUP] 🛑 Остановка воркера оптимальных EMA...")
-        except Exception as e:
-            logger.error(f"[CLEANUP] Ошибка остановки воркера оптимальных EMA: {e}")
+        # ❌ ОТКЛЮЧЕНО: Воркер оптимальных EMA больше не используется
+        # try:
+        #     from bot_engine.optimal_ema_worker import stop_optimal_ema_worker
+        #     stop_optimal_ema_worker()
+        #     logger.info("[CLEANUP] 🛑 Остановка воркера оптимальных EMA...")
+        # except Exception as e:
+        #     logger.error(f"[CLEANUP] Ошибка остановки воркера оптимальных EMA: {e}")
         
         # Сохраняем все важные данные
         logger.info("[CLEANUP] 💾 Финальное сохранение всех данных...")
