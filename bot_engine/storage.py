@@ -193,6 +193,20 @@ def load_auto_bot_config():
 def save_individual_coin_settings(settings):
     """Сохраняет индивидуальные настройки монет"""
     settings_to_save = settings or {}
+
+    # Если настроек нет, не создаем пустой файл и не засоряем логи
+    if not settings_to_save:
+        if os.path.exists(INDIVIDUAL_COIN_SETTINGS_FILE):
+            try:
+                os.remove(INDIVIDUAL_COIN_SETTINGS_FILE)
+                logger.info("[STORAGE] Индивидуальные настройки монет очищены")
+            except OSError as error:
+                logger.warning(f"[STORAGE] Не удалось удалить файл индивидуальных настроек: {error}")
+                return False
+        else:
+            logger.debug("[STORAGE] Индивидуальных настроек монет нет — файл не создаем")
+        return True
+
     success = save_json_file(
         INDIVIDUAL_COIN_SETTINGS_FILE,
         settings_to_save,
