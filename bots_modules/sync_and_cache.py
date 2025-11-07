@@ -17,7 +17,6 @@ from datetime import datetime
 from pathlib import Path
 import copy
 import math
-from typing import Dict, Any
 
 logger = logging.getLogger('BotsService')
 
@@ -80,94 +79,6 @@ except ImportError as e:
     DEFAULT_CONFIG_FILE = 'data/default_auto_bot_config.json'
     def should_log_message(cat, msg, interval=60):
         return (True, msg)
-
-
-FLOAT_FIELDS_TO_NORMALIZE = {
-    'entry_price', 'stop_loss_price', 'stop_loss', 'take_profit', 'take_profit_price',
-    'current_price', 'mark_price', 'trailing_stop_price', 'unrealized_pnl',
-    'unrealized_pnl_usdt', 'realized_pnl', 'roi', 'position_size', 'position_size_coins'
-}
-
-EXCHANGE_FLOAT_FIELDS = {
-    'size', 'unrealized_pnl', 'mark_price', 'entry_price', 'stop_loss', 'take_profit',
-    'roi', 'leverage'
-}
-
-
-def _normalize_float(value):
-    try:
-        if value is None:
-            return None
-        if isinstance(value, (int, float)):
-            return float(value)
-        if isinstance(value, str):
-            stripped = value.strip()
-            if not stripped:
-                return None
-            return float(stripped.replace(',', '.'))
-    except (ValueError, TypeError):
-        return None
-    return None
-
-
-def normalize_bot_state(bot_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Нормализует структуру бота, чтобы не терять данные старого формата."""
-
-    if not isinstance(bot_data, dict):
-        return {}
-
-    normalized = dict(bot_data)
-
-    for field in FLOAT_FIELDS_TO_NORMALIZE:
-        if field in normalized:
-            normalized[field] = _normalize_float(normalized[field])
-
-    trailing_price = normalized.get('trailing_stop_price')
-    if trailing_price is None:
-        normalized['trailing_stop_price'] = None
-    else:
-        normalized['trailing_stop_price'] = _normalize_float(trailing_price) or 0.0
-
-    if 'trailing_stop_active' not in normalized:
-        price_val = normalized.get('trailing_stop_price') or 0.0
-        normalized['trailing_stop_active'] = bool(price_val) and float(price_val) != 0.0
-    else:
-        normalized['trailing_stop_active'] = bool(normalized['trailing_stop_active'])
-
-    normalized.setdefault('trailing_activation_threshold', 0.0)
-    normalized.setdefault('trailing_activation_profit', 0.0)
-    normalized.setdefault('trailing_locked_profit', 0.0)
-    normalized['trailing_activation_threshold'] = _normalize_float(normalized['trailing_activation_threshold']) or 0.0
-    normalized['trailing_activation_profit'] = _normalize_float(normalized['trailing_activation_profit']) or 0.0
-    normalized['trailing_locked_profit'] = _normalize_float(normalized['trailing_locked_profit']) or 0.0
-
-    normalized['margin_usdt'] = _normalize_float(normalized.get('margin_usdt')) or 0.0
-
-    if normalized.get('unrealized_pnl_usdt') is None and normalized.get('unrealized_pnl') is not None:
-        normalized['unrealized_pnl_usdt'] = _normalize_float(normalized.get('unrealized_pnl'))
-
-    exchange_position = normalized.get('exchange_position')
-    if isinstance(exchange_position, dict):
-        exchange_normalized = dict(exchange_position)
-        for field in EXCHANGE_FLOAT_FIELDS:
-            if field in exchange_normalized:
-                exchange_normalized[field] = _normalize_float(exchange_normalized[field])
-        normalized['exchange_position'] = exchange_normalized
-
-    if normalized.get('position_size_coins') is None and normalized.get('position_size') is not None:
-        normalized['position_size_coins'] = normalized['position_size']
-
-    normalized['position_size'] = _normalize_float(normalized.get('position_size'))
-    normalized['position_size_coins'] = _normalize_float(normalized.get('position_size_coins'))
-
-    for field in ['stop_loss', 'take_profit', 'stop_loss_price', 'take_profit_price']:
-        if field in normalized:
-            normalized[field] = _normalize_float(normalized[field])
-
-    if 'roi' in normalized:
-        normalized['roi'] = _normalize_float(normalized['roi'])
-
-    return normalized
 
 
 def _compute_margin_based_trailing(side: str,
@@ -642,19 +553,8 @@ def save_bots_state():
         
         try:
             for symbol, bot_data in bots_data['bots'].items():
-                state_data['bots'][symbol] = normalize_bot_state(bot_data)
+                state_data['bots'][symbol] = bot_data
             
-            if not state_data['bots'] and os.path.exists(BOTS_STATE_FILE):
-                try:
-                    with open(BOTS_STATE_FILE, 'r', encoding='utf-8') as existing_file:
-                        existing_state = json.load(existing_file)
-                    existing_bots = existing_state.get('bots', {}) if isinstance(existing_state, dict) else {}
-                    if existing_bots:
-                        logger.warning("[SAVE_STATE] ⚠️ Пропускаем сохранение — новое состояние пустое, но в файле есть боты")
-                        return False
-                except Exception as check_error:
-                    logger.warning(f"[SAVE_STATE] ⚠️ Не удалось проверить текущее состояние файла: {check_error}")
-
             # Сохраняем конфигурацию Auto Bot
             state_data['auto_bot_config'] = bots_data['auto_bot_config'].copy()
         finally:
@@ -802,13 +702,11 @@ def load_bots_state():
                         # 2. Если бот был сохранен - он уже прошел проверку зрелости при создании
                         # 3. Проверка зрелости будет выполнена позже при обработке сигналов
                         
-                        normalized_bot = normalize_bot_state(bot_data)
-                        
                         # Восстанавливаем бота
-                        bots_data['bots'][symbol] = normalized_bot
+                        bots_data['bots'][symbol] = bot_data
                         restored_bots += 1
                         
-                        logger.info(f"[LOAD_STATE] 🤖 Восстановлен бот {symbol}: статус={normalized_bot.get('status', 'UNKNOWN')}")
+                        logger.info(f"[LOAD_STATE] 🤖 Восстановлен бот {symbol}: статус={bot_data.get('status', 'UNKNOWN')}")
                         
                     except Exception as e:
                         logger.error(f"[LOAD_STATE] ❌ Ошибка восстановления бота {symbol}: {e}")
