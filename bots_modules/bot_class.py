@@ -87,6 +87,7 @@ class NewTradingBot:
         # Защитные механизмы
         self.max_profit_achieved = self.config.get('max_profit_achieved', 0.0)
         self.trailing_stop_price = self.config.get('trailing_stop_price', None)
+        self.trailing_stop_active = bool(self.config.get('trailing_stop_active', False))
         self.break_even_activated = bool(self.config.get('break_even_activated', False))
         self.trailing_activation_threshold = self.config.get('trailing_activation_threshold', 0.0)
         
@@ -129,6 +130,7 @@ class NewTradingBot:
             self.position_start_time = datetime.now()
             self.max_profit_achieved = 0.0
             self.trailing_stop_price = None
+            self.trailing_stop_active = False
             self.break_even_activated = False
             
     
@@ -649,7 +651,10 @@ class NewTradingBot:
             self.margin_usdt = trailing_info.get('margin_usdt', self.margin_usdt)
             self.unrealized_pnl_usdt = trailing_info.get('profit_usdt', self.unrealized_pnl_usdt)
 
-            if trailing_info.get('active') and trailing_info.get('stop_price'):
+            trailing_active = bool(trailing_info.get('active', False))
+            self.trailing_stop_active = trailing_active
+
+            if trailing_active and trailing_info.get('stop_price'):
                 stop_price = trailing_info['stop_price']
                 self.trailing_stop_price = stop_price
                 if self.position_side == 'LONG' and current_price <= stop_price:
@@ -658,7 +663,10 @@ class NewTradingBot:
                 if self.position_side == 'SHORT' and current_price >= stop_price:
                     logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Trailing Stop (SHORT) достигнут: {stop_price:.6f}")
                     return {'should_close': True, 'reason': f'TRAILING_STOP_USD_{self.trailing_locked_profit:.4f}'}
-            
+            else:
+                self.trailing_stop_price = None
+                self.trailing_stop_active = False
+
             return {'should_close': False, 'reason': None}
             
         except Exception as e:
@@ -711,8 +719,10 @@ class NewTradingBot:
 
             activation_threshold_usdt = trailing_info.get('activation_threshold_usdt', 0.0)
             profit_usdt = trailing_info.get('profit_usdt', 0.0)
+            trailing_active = bool(trailing_info.get('active', False))
+            self.trailing_stop_active = trailing_active
 
-            if not trailing_info.get('active'):
+            if not trailing_active:
                 # Фолбэк к процентам, если нет данных по комиссиям
                 if activation_threshold_usdt > 0 and profit_usdt >= activation_threshold_usdt:
                     fallback_stop = None
@@ -732,13 +742,17 @@ class NewTradingBot:
                                 logger.debug(f"[NEW_BOT_{self.symbol}] 📈 Trailing stop (fallback) обновлен до {fallback_stop:.6f}")
                         except Exception as exc:
                             logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка fallback trailing stop: {exc}")
+                self.trailing_stop_price = None
                 return
 
             desired_stop = trailing_info.get('stop_price')
             if desired_stop is None:
+                self.trailing_stop_active = False
+                self.trailing_stop_price = None
                 return
 
             self.trailing_stop_price = desired_stop
+            self.trailing_stop_active = True
 
             if self.exchange:
                 try:
@@ -1369,6 +1383,7 @@ class NewTradingBot:
                 self.unrealized_pnl = 0.0
                 self.max_profit_achieved = 0.0
                 self.trailing_stop_price = None
+                self.trailing_stop_active = False
                 self.break_even_activated = False
                 
                 return True
@@ -1547,6 +1562,7 @@ class NewTradingBot:
             'last_bar_timestamp': None,  # Для совместимости
             'max_profit_achieved': self.max_profit_achieved,
             'trailing_stop_price': self.trailing_stop_price,
+            'trailing_stop_active': self.trailing_stop_active,
             'trailing_activation_threshold': self.trailing_activation_threshold,
             'trailing_activation_profit': self.trailing_activation_profit,
             'trailing_locked_profit': self.trailing_locked_profit,
