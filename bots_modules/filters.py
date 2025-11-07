@@ -145,7 +145,8 @@ except ImportError as e:
 try:
     from bots_modules.imports_and_globals import (
         bots_data_lock, bots_data, rsi_data_lock, coins_rsi_data,
-        BOT_STATUS, system_initialized, get_exchange
+        BOT_STATUS, system_initialized, get_exchange,
+        get_individual_coin_settings
     )
     from bot_engine.bot_config import SystemConfig
 except ImportError:
@@ -156,6 +157,8 @@ except ImportError:
     BOT_STATUS = {}
     system_initialized = False
     def get_exchange():
+        return None
+    def get_individual_coin_settings(symbol):
         return None
     # Fallback для SystemConfig
     class SystemConfig:
@@ -2128,6 +2131,17 @@ def create_new_bot(symbol, config=None, exchange_obj=None):
             'volume_mode': 'usdt',
             'volume_value': default_volume  # ✅ ИСПРАВЛЕНО: используем значение из конфига
         }
+
+        individual_settings = get_individual_coin_settings(symbol)
+        if individual_settings:
+            bot_config.update(individual_settings)
+
+        # Гарантируем обязательные поля
+        bot_config['symbol'] = symbol
+        bot_config['status'] = BOT_STATUS['RUNNING']
+        bot_config.setdefault('volume_mode', 'usdt')
+        if bot_config.get('volume_value') is None:
+            bot_config['volume_value'] = default_volume
         
         # Создаем бота
         new_bot = NewTradingBot(symbol, bot_config, exchange_to_use)

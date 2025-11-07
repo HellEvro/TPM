@@ -26,6 +26,7 @@ def _get_file_lock(filepath):
 RSI_CACHE_FILE = 'data/rsi_cache.json'
 BOTS_STATE_FILE = 'data/bots_state.json'
 AUTO_BOT_CONFIG_FILE = 'data/auto_bot_config.json'
+INDIVIDUAL_COIN_SETTINGS_FILE = 'data/individual_coin_settings.json'
 MATURE_COINS_FILE = 'data/mature_coins.json'
 # ❌ ОТКЛЮЧЕНО: optimal_ema удален (EMA фильтр убран)
 # OPTIMAL_EMA_FILE = 'data/optimal_ema.json'
@@ -186,6 +187,39 @@ def save_auto_bot_config(config):
 def load_auto_bot_config():
     """Загружает конфигурацию автобота"""
     return load_json_file(AUTO_BOT_CONFIG_FILE, description="конфигурация автобота")
+
+
+# Individual coin settings
+def save_individual_coin_settings(settings):
+    """Сохраняет индивидуальные настройки монет"""
+    settings_to_save = settings or {}
+    success = save_json_file(
+        INDIVIDUAL_COIN_SETTINGS_FILE,
+        settings_to_save,
+        "индивидуальные настройки монет"
+    )
+    if success:
+        logger.info(
+            "[STORAGE] Индивидуальные настройки монет сохранены (%d записей)",
+            len(settings_to_save)
+        )
+    return success
+
+
+def load_individual_coin_settings():
+    """Загружает индивидуальные настройки монет"""
+    data = load_json_file(
+        INDIVIDUAL_COIN_SETTINGS_FILE,
+        default={},
+        description="индивидуальные настройки монет"
+    )
+    if not data:
+        return {}
+    logger.info(
+        "[STORAGE] Загружено индивидуальных настроек монет: %d",
+        len(data)
+    )
+    return data
 
 
 # Mature Coins

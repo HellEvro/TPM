@@ -49,6 +49,7 @@ class BinanceExchange(BaseExchange):
                     if symbol not in self.max_loss_values or current_pnl < self.max_loss_values[symbol]:
                         self.max_loss_values[symbol] = current_pnl
 
+                realized_pnl = float(position.get('realizedPnL', 0)) if 'realizedPnL' in position else 0.0
                 position_info = {
                     'symbol': symbol,
                     'pnl': current_pnl,
@@ -58,7 +59,9 @@ class BinanceExchange(BaseExchange):
                     'high_roi': roi > 100,
                     'high_loss': current_pnl < -40,
                     'side': 'Long' if float(position['positionAmt']) > 0 else 'Short',
-                    'size': abs(float(position['positionAmt']))
+                    'size': abs(float(position['positionAmt'])),
+                    'realized_pnl': realized_pnl,
+                    'leverage': float(position.get('leverage', 1))
                 }
                 
                 processed_positions.append(position_info)

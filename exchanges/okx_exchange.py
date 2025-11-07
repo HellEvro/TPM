@@ -106,7 +106,9 @@ class OkxExchange(BaseExchange):
                         'high_roi': roi > 100,
                         'high_loss': current_pnl < -40,
                         'side': 'Long' if position['side'] == 'long' else 'Short',
-                        'size': float(position['contracts'])
+                        'size': float(position['contracts']),
+                        'realized_pnl': float(position.get('realizedPnl', 0)),
+                        'leverage': float(position.get('lever', 1))
                     }
                     
                     processed_positions.append(position_info)
