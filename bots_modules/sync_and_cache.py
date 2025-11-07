@@ -566,9 +566,6 @@ def save_bots_state():
         
         total_bots = len(state_data['bots'])
         logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено")
-
-        # Дополнительно сохраняем индивидуальные настройки монет
-        save_individual_coin_settings()
         
         return True
         
