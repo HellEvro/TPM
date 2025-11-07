@@ -160,8 +160,11 @@ except ImportError:
     class SystemConfig:
         RSI_OVERSOLD = 29
         RSI_OVERBOUGHT = 71
-        RSI_EXIT_LONG = 65
-        RSI_EXIT_SHORT = 35
+        # ✅ Новые параметры с учетом тренда
+        RSI_EXIT_LONG_WITH_TREND = 65
+        RSI_EXIT_LONG_AGAINST_TREND = 60
+        RSI_EXIT_SHORT_WITH_TREND = 35
+        RSI_EXIT_SHORT_AGAINST_TREND = 40
 
 def check_rsi_time_filter(candles, rsi, signal):
     """
