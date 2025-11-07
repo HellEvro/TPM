@@ -563,13 +563,23 @@
                         </div>
                             
                         <div class="setting-item">
-                                <label data-translate="rsi_long_exit_label">🟢 RSI выход из LONG:</label>
-                                <input type="number" id="rsiExitLongDup" value="65" min="50" max="99" />
+                                <label data-translate="rsi_long_exit_with_trend_label">🟢📈 RSI выход из LONG (по тренду):</label>
+                                <input type="number" id="rsiExitLongWithTrendDup" value="65" min="50" max="99" />
+                        </div>
+                        
+                        <div class="setting-item">
+                                <label data-translate="rsi_long_exit_against_trend_label">🟢📉 RSI выход из LONG (против тренда):</label>
+                                <input type="number" id="rsiExitLongAgainstTrendDup" value="60" min="50" max="99" />
                         </div>
                             
                         <div class="setting-item">
-                                <label data-translate="rsi_short_exit_label">🔴 RSI выход из SHORT:</label>
-                                <input type="number" id="rsiExitShortDup" value="35" min="1" max="50" />
+                                <label data-translate="rsi_short_exit_with_trend_label">🔴📉 RSI выход из SHORT (по тренду):</label>
+                                <input type="number" id="rsiExitShortWithTrendDup" value="35" min="1" max="50" />
+                        </div>
+                        
+                        <div class="setting-item">
+                                <label data-translate="rsi_short_exit_against_trend_label">🔴📈 RSI выход из SHORT (против тренда):</label>
+                                <input type="number" id="rsiExitShortAgainstTrendDup" value="40" min="1" max="50" />
                         </div>
                             
                             <div class="setting-item">
@@ -1191,18 +1201,38 @@
                         
                         <div class="config-item">
                             <label class="config-label">
-                                <span class="label-icon">🟢</span>
-                                <span class="label-text" data-translate="rsi_exit_long_label">RSI выход из LONG:</span>
+                                <span class="label-icon">🟢📈</span>
+                                <span class="label-text" data-translate="rsi_exit_long_with_trend_label">RSI выход из LONG (по тренду):</span>
                             </label>
-                            <input type="number" id="rsiExitLong" value="65" min="50" max="99" class="config-input" />
+                            <input type="number" id="rsiExitLongWithTrendGlobal" value="65" min="50" max="99" class="config-input" />
+                            <small class="config-help" data-translate="rsi_exit_long_with_trend_help">Выход когда вход был ПО тренду (UP тренд) - можно ждать большего движения</small>
                         </div>
                         
                         <div class="config-item">
                             <label class="config-label">
-                                <span class="label-icon">🔴</span>
-                                <span class="label-text" data-translate="rsi_exit_short_label">RSI выход из SHORT:</span>
+                                <span class="label-icon">🟢📉</span>
+                                <span class="label-text" data-translate="rsi_exit_long_against_trend_label">RSI выход из LONG (против тренда):</span>
                             </label>
-                            <input type="number" id="rsiExitShort" value="35" min="1" max="50" class="config-input" />
+                            <input type="number" id="rsiExitLongAgainstTrendGlobal" value="60" min="50" max="99" class="config-input" />
+                            <small class="config-help" data-translate="rsi_exit_long_against_trend_help">Выход когда вход был ПРОТИВ тренда (DOWN тренд) - выходим раньше, безопаснее</small>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">🔴📉</span>
+                                <span class="label-text" data-translate="rsi_exit_short_with_trend_label">RSI выход из SHORT (по тренду):</span>
+                            </label>
+                            <input type="number" id="rsiExitShortWithTrendGlobal" value="35" min="1" max="50" class="config-input" />
+                            <small class="config-help" data-translate="rsi_exit_short_with_trend_help">Выход когда вход был ПО тренду (DOWN тренд) - можно ждать большего движения</small>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">🔴📈</span>
+                                <span class="label-text" data-translate="rsi_exit_short_against_trend_label">RSI выход из SHORT (против тренда):</span>
+                            </label>
+                            <input type="number" id="rsiExitShortAgainstTrendGlobal" value="40" min="1" max="50" class="config-input" />
+                            <small class="config-help" data-translate="rsi_exit_short_against_trend_help">Выход когда вход был ПРОТИВ тренда (UP тренд) - выходим раньше, безопаснее</small>
                         </div>
                         
 
