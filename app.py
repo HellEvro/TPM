@@ -601,7 +601,7 @@ def send_daily_report():
     while True:
         now = datetime.now()
         if now.strftime('%H:%M') == TELEGRAM_NOTIFY['DAILY_REPORT_TIME']:
-            positions, _ = exchange.get_positions()
+            positions, _ = current_exchange.get_positions()
             if positions:
                 stats = calculate_statistics(positions)
                 telegram.send_daily_report(stats)
@@ -733,12 +733,12 @@ def get_ticker(symbol):
         print(f"[TICKER] Getting ticker for {symbol}...")
         
         # Проверяем инициализацию биржи
-        if not exchange:
+        if not current_exchange:
             print("[TICKER] Exchange not initialized")
             return jsonify({'error': 'Exchange not initialized'}), 500
             
         # Получаем данные тикера
-        ticker_data = exchange.get_ticker(symbol)
+        ticker_data = current_exchange.get_ticker(symbol)
         print(f"[TICKER] Raw ticker data: {ticker_data}")
         
         if ticker_data:
@@ -764,7 +764,7 @@ def close_position():
             }), 400
 
         print(f"[API] Closing position: {data}")
-        result = exchange.close_position(
+        result = current_exchange.close_position(
             symbol=data['symbol'],
             size=float(data['size']),
             side=data['side'],
@@ -860,7 +860,7 @@ def determine_trend_and_position(symbol, force_update=False):
     
     try:
         # Получаем исторические данные
-        data = exchange.get_chart_data(symbol, '1d', '1M')
+        data = current_exchange.get_chart_data(symbol, '1d', '1M')
         if not data.get('success'):
             return None
             
@@ -998,7 +998,7 @@ def get_candles(symbol):
     
     try:
         # Получаем данные за последний месяц
-        data = exchange.get_chart_data(symbol, '1d', '1M')
+        data = current_exchange.get_chart_data(symbol, '1d', '1M')
         if not data.get('success'):
             return jsonify({'success': False, 'error': 'Не удалось получить данные'})
         
