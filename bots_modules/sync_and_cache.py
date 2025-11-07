@@ -581,18 +581,47 @@ def load_bots_state():
 def load_delisted_coins():
     """Загружает список делистинговых монет из файла"""
     delisted_file = Path("data/delisted.json")
+    default_data = {"delisted_coins": {}, "last_scan": None, "scan_enabled": True}
     
-    if not delisted_file.exists():
-        logger.warning("[DELISTING_CHECK] Файл delisted.json не найден, создаем новый")
-        return {"delisted_coins": {}, "last_scan": None, "scan_enabled": True}
+    # Если файл не существует или пустой, создаем дефолтный
+    if not delisted_file.exists() or delisted_file.stat().st_size == 0:
+        logger.info("[DELISTING_CHECK] Создаем новый файл delisted.json с дефолтными данными")
+        # Создаем папку data если её нет
+        delisted_file.parent.mkdir(exist_ok=True)
+        # Сохраняем дефолтные данные
+        try:
+            with open(delisted_file, 'w', encoding='utf-8') as f:
+                json.dump(default_data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.warning(f"[DELISTING_CHECK] Не удалось создать файл delisted.json: {e}")
+        return default_data
     
+    # Пытаемся загрузить существующий файл
     try:
         with open(delisted_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        return data
+            content = f.read().strip()
+            # Если файл пустой после trim
+            if not content:
+                logger.info("[DELISTING_CHECK] Файл delisted.json пустой, используем дефолтные данные")
+                # Записываем дефолтные данные
+                with open(delisted_file, 'w', encoding='utf-8') as fw:
+                    json.dump(default_data, fw, indent=2, ensure_ascii=False)
+                return default_data
+            # Парсим JSON
+            data = json.loads(content)
+            return data
+    except json.JSONDecodeError as e:
+        logger.warning(f"[DELISTING_CHECK] Невалидный JSON в delisted.json, восстанавливаем дефолтные данные: {e}")
+        # Перезаписываем файл дефолтными данными
+        try:
+            with open(delisted_file, 'w', encoding='utf-8') as f:
+                json.dump(default_data, f, indent=2, ensure_ascii=False)
+        except Exception as write_error:
+            logger.warning(f"[DELISTING_CHECK] Не удалось восстановить файл: {write_error}")
+        return default_data
     except Exception as e:
-        logger.error(f"[DELISTING_CHECK] Ошибка загрузки delisted.json: {e}")
-        return {"delisted_coins": {}, "last_scan": None, "scan_enabled": True}
+        logger.warning(f"[DELISTING_CHECK] Ошибка загрузки delisted.json: {e}, используем дефолтные данные")
+        return default_data
 
 def save_delisted_coins(data):
     """Сохраняет список делистинговых монет в файл"""
