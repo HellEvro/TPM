@@ -595,12 +595,22 @@
                             <div class="setting-item">
                                 <label data-translate="trailing_stop_activation_label">🚀 Trailing Stop активация (%):</label>
                                 <input type="number" id="trailingStopActivationDup" value="300.0" min="50" max="1000" step="10" />
-            </div>
-            
-                            <div class="setting-item">
+                                <small class="config-help" data-translate="trailing_stop_activation_description">Активируется при max(процент от маржи, |realized PnL|×4), стоп фиксирует |realized PnL|×3</small>
+                            </div>
+
+                            <div class="setting-item advanced-toggle">
+                                <label>
+                                    <input type="checkbox" id="showAdvancedTrailingDup" data-role="advanced-trailing-toggle" />
+                                    <span data-translate="trailing_stop_advanced_toggle">Показать расширенные настройки Trailing Stop</span>
+                                </label>
+                                <small class="config-help" data-translate="trailing_stop_advanced_hint">Включите, чтобы изменить шаг Trailing Stop и режим fallback</small>
+                            </div>
+
+                            <div class="setting-item advanced-protection-setting" style="display: none;">
                                 <label data-translate="trailing_stop_distance_label">📏 Trailing Stop расстояние (%):</label>
                                 <input type="number" id="trailingStopDistanceDup" value="150.0" min="50" max="500" step="10" />
-            </div>
+                                <small class="config-help" data-translate="trailing_stop_distance_description">Используется как шаг подтягивания и fallback, если данные комиссии недоступны</small>
+                            </div>
 
                             <div class="setting-item">
                                 <label data-translate="max_position_time_label">⏰ Макс. время позиции (мин):</label>
@@ -1583,16 +1593,28 @@
                                 <span class="label-text" data-translate="trailing_stop_activation_percent">Активация Trailing Stop (% прибыли):</span>
                             </label>
                             <input type="number" id="trailingStopActivation" value="300.0" min="50" max="1000" step="10" class="config-input" />
-                            <small class="config-help" data-translate="trailing_stop_activation_description">При x3 прибыли (300%) активируется подтягивающийся стоп</small>
+                            <small class="config-help" data-translate="trailing_stop_activation_description">Активируется при max(процент от маржи, |realized PnL|×4), стоп фиксирует |realized PnL|×3</small>
                         </div>
-                        
+
                         <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">🧩</span>
+                                <span class="label-text" data-translate="trailing_stop_advanced_toggle">Расширенные настройки Trailing Stop</span>
+                            </label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="showAdvancedTrailing" data-role="advanced-trailing-toggle" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <small class="config-help" data-translate="trailing_stop_advanced_hint">Включите, чтобы изменить шаг Trailing Stop и режим fallback</small>
+                        </div>
+
+                        <div class="config-item advanced-protection-setting" style="display: none;">
                             <label class="config-label">
                                 <span class="label-icon">📏</span>
                                 <span class="label-text" data-translate="trailing_stop_distance_percent">Расстояние Trailing Stop (%):</span>
                             </label>
                             <input type="number" id="trailingStopDistance" value="150.0" min="50" max="500" step="10" class="config-input" />
-                            <small class="config-help" data-translate="trailing_stop_distance_description">На x1.5 (150%) от входа ниже текущей цены</small>
+                            <small class="config-help" data-translate="trailing_stop_distance_description">Используется как шаг подтягивания и fallback, если данные комиссии недоступны</small>
                         </div>
                         
                         <div class="config-item">
