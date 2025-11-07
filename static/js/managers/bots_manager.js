@@ -4428,38 +4428,80 @@ class BotsManager {
 
     updateBotsSummaryStats() {
         this.logDebug('[BotsManager] 📊 Обновление статистики ботов...');
-        this.logDebug('[BotsManager] 📊 Активные боты:', this.activeBots);
-        
-        // Вычисляем общий PnL
+        const bots = Array.isArray(this.activeBots) ? this.activeBots : [];
+
+        const activeStatuses = new Set([
+            'running',
+            'idle',
+            'in_position_long',
+            'in_position_short',
+            'armed_up',
+            'armed_down'
+        ]);
+
         let totalPnL = 0;
+        let activeCount = 0;
         let inPositionCount = 0;
-        
-        if (this.activeBots && this.activeBots.length > 0) {
-            this.activeBots.forEach(bot => {
-                // Добавляем PnL бота к общему
-                const botPnL = parseFloat(bot.unrealized_pnl || 0);
-                totalPnL += botPnL;
-                
-                console.log(`[BotsManager] 📊 Бот ${bot.symbol}: PnL=$${botPnL}, Статус=${bot.status}`);
-                
-                // Считаем ботов в позиции
-                if (bot.status === 'in_position_long' || bot.status === 'in_position_short') {
-                    inPositionCount++;
-                }
-            });
+
+        bots.forEach(bot => {
+            const rawPnL = bot.unrealized_pnl_usdt ?? bot.unrealized_pnl ?? 0;
+            const botPnL = Number.parseFloat(rawPnL) || 0;
+            totalPnL += botPnL;
+
+            if (activeStatuses.has(bot.status)) {
+                activeCount += 1;
+            }
+
+            if (bot.status === 'in_position_long' || bot.status === 'in_position_short') {
+                inPositionCount += 1;
+            }
+
+            this.logDebug(`[BotsManager] 📊 Бот ${bot.symbol}: PnL=$${botPnL.toFixed(3)}, Статус=${bot.status}`);
+        });
+
+        const totalBotsElement = document.getElementById('totalBotsCount');
+        if (totalBotsElement) {
+            totalBotsElement.textContent = bots.length;
+        } else {
+            this.logDebug('[BotsManager] ⚠️ Элемент totalBotsCount не найден');
         }
-        
-        // Обновляем элементы статистики
+
+        const activeBotsElement = document.getElementById('activeBotsCount');
+        if (activeBotsElement) {
+            activeBotsElement.textContent = activeCount;
+        } else {
+            this.logDebug('[BotsManager] ⚠️ Элемент activeBotsCount не найден');
+        }
+
+        const inPositionElement = document.getElementById('inPositionBotsCount');
+        if (inPositionElement) {
+            inPositionElement.textContent = inPositionCount;
+        } else {
+            this.logDebug('[BotsManager] ⚠️ Элемент inPositionBotsCount не найден');
+        }
+
         const totalPnLElement = document.getElementById('totalPnLValue');
+        const headerPnLElement = document.getElementById('totalBotsePnL');
+        const positiveColor = 'var(--green-color, #4caf50)';
+        const negativeColor = 'var(--red-color, #f44336)';
+        const formattedPnL = `$${totalPnL.toFixed(3)}`;
+
         if (totalPnLElement) {
-            totalPnLElement.textContent = `$${totalPnL.toFixed(2)}`;
-            totalPnLElement.style.color = totalPnL >= 0 ? '#4caf50' : '#f44336';
-            this.logDebug(`[BotsManager] 📊 Обновлен элемент totalPnLValue: $${totalPnL.toFixed(2)}`);
+            totalPnLElement.textContent = formattedPnL;
+            totalPnLElement.style.color = totalPnL >= 0 ? positiveColor : negativeColor;
+            this.logDebug(`[BotsManager] 📊 Обновлен элемент totalPnLValue: ${formattedPnL}`);
         } else {
             console.warn('[BotsManager] ⚠️ Элемент totalPnLValue не найден!');
         }
-        
-        this.logDebug(`[BotsManager] 📊 Статистика обновлена: PnL=$${totalPnL.toFixed(2)}, В позиции=${inPositionCount}`);
+
+        if (headerPnLElement) {
+            headerPnLElement.textContent = formattedPnL;
+            headerPnLElement.style.color = totalPnL >= 0 ? positiveColor : negativeColor;
+        } else {
+            this.logDebug('[BotsManager] ⚠️ Элемент totalBotsePnL не найден');
+        }
+
+        this.logDebug(`[BotsManager] 📊 Статистика обновлена: всего=${bots.length}, активных=${activeCount}, в позиции=${inPositionCount}, PnL=${formattedPnL}`);
     }
 
     startPeriodicUpdate() {
