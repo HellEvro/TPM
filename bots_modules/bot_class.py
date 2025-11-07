@@ -257,7 +257,9 @@ class NewTradingBot:
                 auto_config = bots_data.get('auto_bot_config', {})
                 
                 # ✅ Определяем уровень RSI выхода в зависимости от тренда при входе
-                entry_trend = getattr(self, 'entry_trend', None) if hasattr(self, 'entry_trend') else auto_config.get('entry_trend')
+                # Получаем entry_trend из данных бота (сохраняется при входе в позицию)
+                bot_data = bots_data.get('bots', {}).get(symbol, {})
+                entry_trend = bot_data.get('entry_trend', None)
                 
                 if position_side == 'LONG':
                     # Для LONG: проверяем был ли вход по UP тренду или против DOWN тренда
