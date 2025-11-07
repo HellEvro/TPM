@@ -37,6 +37,49 @@ class TradingBot:
         self.entry_price = self.config.get('entry_price')
         self.entry_time = self.config.get('entry_time')
         self.last_signal_time = self.config.get('last_signal_time')
+        self.last_price = self.config.get('last_price')
+        self.last_rsi = self.config.get('last_rsi')
+        self.last_trend = self.config.get('last_trend')
+        
+        # Расширенные параметры позиции
+        self.position_side = self.config.get('position_side')
+        position_start = self.config.get('position_start_time')
+        if position_start and hasattr(position_start, 'isoformat'):
+            self.position_start_time = position_start
+        elif isinstance(position_start, str):
+            try:
+                self.position_start_time = datetime.fromisoformat(position_start)
+            except ValueError:
+                self.position_start_time = position_start
+        else:
+            self.position_start_time = position_start
+        
+        self.position_size = self.config.get('position_size')
+        self.position_size_coins = self.config.get('position_size_coins')
+        self.unrealized_pnl = self.config.get('unrealized_pnl', 0.0)
+        self.unrealized_pnl_usdt = self.config.get('unrealized_pnl_usdt', 0.0)
+        self.realized_pnl = self.config.get('realized_pnl', 0.0)
+        self.leverage = self.config.get('leverage', 1.0)
+        self.margin_usdt = self.config.get('margin_usdt')
+        self.max_profit_achieved = self.config.get('max_profit_achieved', 0.0)
+        self.trailing_stop_price = self.config.get('trailing_stop_price')
+        self.trailing_activation_profit = self.config.get('trailing_activation_profit', 0.0)
+        self.trailing_activation_threshold = self.config.get('trailing_activation_threshold', 0.0)
+        self.trailing_locked_profit = self.config.get('trailing_locked_profit', 0.0)
+        self.break_even_activated = self.config.get('break_even_activated', False)
+        self.order_id = self.config.get('order_id')
+        self.current_price = self.config.get('current_price')
+        created = self.config.get('created_at')
+        if created and hasattr(created, 'isoformat'):
+            self.created_at = created
+        elif isinstance(created, str):
+            try:
+                self.created_at = datetime.fromisoformat(created)
+            except ValueError:
+                self.created_at = created
+        else:
+            self.created_at = datetime.now()
+        self.rsi_data = self.config.get('rsi_data', {})
         
         # Масштабирование (лесенка)
         self.scaling_enabled = self.config.get('scaling_enabled', False)
@@ -72,7 +115,28 @@ class TradingBot:
             'entry_time': self.entry_time.isoformat() if self.entry_time and hasattr(self.entry_time, 'isoformat') else self.entry_time,
             'last_signal_time': self.last_signal_time.isoformat() if self.last_signal_time and hasattr(self.last_signal_time, 'isoformat') else self.last_signal_time,
             'last_bar_timestamp': self.last_bar_timestamp,
-            'created_at': datetime.now().isoformat(),
+            'position_side': self.position_side or (self.position.get('side') if self.position else None),
+            'position_start_time': self.position_start_time.isoformat() if self.position_start_time and hasattr(self.position_start_time, 'isoformat') else self.position_start_time,
+            'position_size': self.position_size,
+            'position_size_coins': self.position_size_coins,
+            'unrealized_pnl': self.unrealized_pnl,
+            'unrealized_pnl_usdt': self.unrealized_pnl_usdt,
+            'realized_pnl': self.realized_pnl,
+            'leverage': self.leverage,
+            'margin_usdt': self.margin_usdt,
+            'max_profit_achieved': self.max_profit_achieved,
+            'trailing_stop_price': self.trailing_stop_price,
+            'trailing_activation_profit': self.trailing_activation_profit,
+            'trailing_activation_threshold': self.trailing_activation_threshold,
+            'trailing_locked_profit': self.trailing_locked_profit,
+            'break_even_activated': self.break_even_activated,
+            'order_id': self.order_id,
+            'current_price': self.current_price,
+            'last_price': self.last_price,
+            'last_rsi': self.last_rsi,
+            'last_trend': self.last_trend,
+            'rsi_data': self.rsi_data,
+            'created_at': self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else self.created_at,
             'scaling_enabled': self.scaling_enabled,
             'scaling_levels': self.scaling_levels,
             'scaling_current_level': self.scaling_current_level,
