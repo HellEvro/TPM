@@ -6864,14 +6864,14 @@ class BotsManager {
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--input-bg); border-radius: 6px;">
                 <span style="color: var(--text-muted);">💵 ${this.getTranslation('entry_label')}</span>
-                <span style="color: var(--text-color); font-weight: 600;">$${bot.entry_price.toFixed(6)}</span>
+                <span style="color: var(--text-color); font-weight: 600;">$${(parseFloat(bot.entry_price) || 0).toFixed(6)}</span>
             </div>
         `;
         
         // ✅ ИСПРАВЛЕНО: Используем current_price напрямую из bot (обновляется каждую секунду)
         if (bot.current_price || bot.mark_price) {
-            const currentPrice = bot.current_price || bot.mark_price;
-            const entryPrice = bot.entry_price || 0;
+            const currentPrice = parseFloat(bot.current_price || bot.mark_price) || 0;
+            const entryPrice = parseFloat(bot.entry_price) || 0;
             const priceChange = entryPrice > 0 ? ((currentPrice - entryPrice) / entryPrice) * 100 : 0;
             const priceChangeColor = priceChange >= 0 ? 'var(--green-color)' : 'var(--red-color)';
             const priceChangeIcon = priceChange >= 0 ? '↗️' : '↘️';
@@ -7230,12 +7230,12 @@ class BotsManager {
                 <div class="trade-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: var(--text-color);">
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: var(--text-muted);">${window.languageUtils.translate('entry_price_label')}</span>
-                        <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">$${trade.entryPrice.toFixed(6)}</span>
+                        <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">$${(parseFloat(trade.entryPrice) || 0).toFixed(6)}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
                         <span class="trade-detail-label" style="color: var(--text-muted);">${window.languageUtils.translate('current_price_label')}</span>
-                        <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">$${trade.currentPrice.toFixed(6)}</span>
+                        <span class="trade-detail-value" style="color: var(--text-color); font-weight: 600;">$${(parseFloat(trade.currentPrice) || 0).toFixed(6)}</span>
                     </div>
                     
                     <div class="trade-detail-item" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--input-bg); border-radius: 4px;">
