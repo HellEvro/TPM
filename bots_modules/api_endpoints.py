@@ -375,9 +375,17 @@ def refresh_manual_positions():
                 bots_state_file = 'data/bots_state.json'
                 if os.path.exists(bots_state_file):
                     with open(bots_state_file, 'r', encoding='utf-8') as f:
-                        saved_data = json.load(f)
-                        if 'bots' in saved_data:
-                            saved_bot_symbols = set(saved_data['bots'].keys())
+                        file_content = f.read()
+                        # Проверяем, что файл не пустой
+                        if file_content.strip():
+                            saved_data = json.loads(file_content)
+                            if 'bots' in saved_data:
+                                saved_bot_symbols = set(saved_data['bots'].keys())
+                        else:
+                            logger.debug("[MANUAL_POSITIONS] Файл состояния пустой, пропускаем")
+            except json.JSONDecodeError as e:
+                logger.warning(f"[MANUAL_POSITIONS] ⚠️ Ошибка парсинга JSON (строка {e.lineno}, колонка {e.colno}): {e.msg}")
+                logger.debug(f"[MANUAL_POSITIONS] Проблемный участок около символа {e.pos}")
             except Exception as e:
                 logger.warning(f"[MANUAL_POSITIONS] ⚠️ Не удалось загрузить сохраненных ботов: {e}")
             
@@ -531,9 +539,17 @@ def get_coins_with_rsi():
                     bots_state_file = 'data/bots_state.json'
                     if os.path.exists(bots_state_file):
                         with open(bots_state_file, 'r', encoding='utf-8') as f:
-                            saved_data = json.load(f)
-                            if 'bots' in saved_data:
-                                saved_bot_symbols = set(saved_data['bots'].keys())
+                            file_content = f.read()
+                            # Проверяем, что файл не пустой
+                            if file_content.strip():
+                                saved_data = json.loads(file_content)
+                                if 'bots' in saved_data:
+                                    saved_bot_symbols = set(saved_data['bots'].keys())
+                            else:
+                                logger.debug("[MANUAL_POSITIONS] Файл состояния пустой, пропускаем")
+                except json.JSONDecodeError as e:
+                    logger.warning(f"[MANUAL_POSITIONS] ⚠️ Ошибка парсинга JSON (строка {e.lineno}, колонка {e.colno}): {e.msg}")
+                    logger.debug(f"[MANUAL_POSITIONS] Проблемный участок около символа {e.pos}")
                 except Exception as e:
                     logger.warning(f"[MANUAL_POSITIONS] ⚠️ Не удалось загрузить сохраненных ботов: {e}")
                 

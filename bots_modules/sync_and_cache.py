@@ -456,30 +456,43 @@ def save_auto_bot_config():
             
             # ✅ КРИТИЧНО: Обновляем конфигурацию в памяти из СОХРАНЕННЫХ данных (не из DEFAULT!)
             with bots_data_lock:
-                old_rsi_long_exit = bots_data['auto_bot_config'].get('rsi_exit_long')
-                old_rsi_short_exit = bots_data['auto_bot_config'].get('rsi_exit_short')
+                # ✅ Используем новые RSI exit с учетом тренда
+                old_rsi_long_with = bots_data['auto_bot_config'].get('rsi_exit_long_with_trend')
+                old_rsi_long_against = bots_data['auto_bot_config'].get('rsi_exit_long_against_trend')
+                old_rsi_short_with = bots_data['auto_bot_config'].get('rsi_exit_short_with_trend')
+                old_rsi_short_against = bots_data['auto_bot_config'].get('rsi_exit_short_against_trend')
                 
                 # Используем ТОЛЬКО ЧТО СОХРАНЕННЫЕ значения, а не дефолтные!
                 bots_data['auto_bot_config'].update(config_data)
                 
-                new_rsi_long_exit = bots_data['auto_bot_config'].get('rsi_exit_long')
-                new_rsi_short_exit = bots_data['auto_bot_config'].get('rsi_exit_short')
+                new_rsi_long_with = bots_data['auto_bot_config'].get('rsi_exit_long_with_trend')
+                new_rsi_long_against = bots_data['auto_bot_config'].get('rsi_exit_long_against_trend')
+                new_rsi_short_with = bots_data['auto_bot_config'].get('rsi_exit_short_with_trend')
+                new_rsi_short_against = bots_data['auto_bot_config'].get('rsi_exit_short_against_trend')
             
             # Проверяем что значения действительно есть
-            if new_rsi_long_exit is None:
-                logger.error(f"[SAVE_CONFIG] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_long_exit отсутствует в сохраненных данных!")
-            if new_rsi_short_exit is None:
-                logger.error(f"[SAVE_CONFIG] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_short_exit отсутствует в сохраненных данных!")
+            if new_rsi_long_with is None:
+                logger.error(f"[SAVE_CONFIG] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_exit_long_with_trend отсутствует в сохраненных данных!")
+            if new_rsi_long_against is None:
+                logger.error(f"[SAVE_CONFIG] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_exit_long_against_trend отсутствует в сохраненных данных!")
+            if new_rsi_short_with is None:
+                logger.error(f"[SAVE_CONFIG] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_exit_short_with_trend отсутствует в сохраненных данных!")
+            if new_rsi_short_against is None:
+                logger.error(f"[SAVE_CONFIG] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_exit_short_against_trend отсутствует в сохраненных данных!")
             
             # Логируем изменения RSI exit порогов
-            if old_rsi_long_exit is not None and new_rsi_long_exit is not None and old_rsi_long_exit != new_rsi_long_exit:
-                logger.info(f"[SAVE_CONFIG] 🔄 RSI LONG exit изменен: {old_rsi_long_exit} → {new_rsi_long_exit}")
-            if old_rsi_short_exit is not None and new_rsi_short_exit is not None and old_rsi_short_exit != new_rsi_short_exit:
-                logger.info(f"[SAVE_CONFIG] 🔄 RSI SHORT exit изменен: {old_rsi_short_exit} → {new_rsi_short_exit}")
+            if old_rsi_long_with is not None and new_rsi_long_with is not None and old_rsi_long_with != new_rsi_long_with:
+                logger.info(f"[SAVE_CONFIG] 🔄 RSI LONG exit (по тренду) изменен: {old_rsi_long_with} → {new_rsi_long_with}")
+            if old_rsi_long_against is not None and new_rsi_long_against is not None and old_rsi_long_against != new_rsi_long_against:
+                logger.info(f"[SAVE_CONFIG] 🔄 RSI LONG exit (против тренда) изменен: {old_rsi_long_against} → {new_rsi_long_against}")
+            if old_rsi_short_with is not None and new_rsi_short_with is not None and old_rsi_short_with != new_rsi_short_with:
+                logger.info(f"[SAVE_CONFIG] 🔄 RSI SHORT exit (по тренду) изменен: {old_rsi_short_with} → {new_rsi_short_with}")
+            if old_rsi_short_against is not None and new_rsi_short_against is not None and old_rsi_short_against != new_rsi_short_against:
+                logger.info(f"[SAVE_CONFIG] 🔄 RSI SHORT exit (против тренда) изменен: {old_rsi_short_against} → {new_rsi_short_against}")
             
             logger.info(f"[SAVE_CONFIG] ✅ Конфигурация обновлена в памяти из сохраненных данных!")
-            if new_rsi_long_exit is not None and new_rsi_short_exit is not None:
-                logger.info(f"[SAVE_CONFIG] 📊 Текущие RSI exit пороги: LONG={new_rsi_long_exit}, SHORT={new_rsi_short_exit}")
+            if new_rsi_long_with is not None and new_rsi_short_with is not None:
+                logger.info(f"[SAVE_CONFIG] 📊 Текущие RSI exit пороги: LONG(with)={new_rsi_long_with}, LONG(against)={new_rsi_long_against}, SHORT(with)={new_rsi_short_with}, SHORT(against)={new_rsi_short_against}")
             else:
                 logger.error(f"[SAVE_CONFIG] ❌ НЕКОТОРЫЕ RSI exit пороги отсутствуют в конфигурации!")
             

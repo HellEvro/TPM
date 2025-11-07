@@ -4894,6 +4894,34 @@ class BotsManager {
         }
         
         // ==========================================
+        // ПАРАМЕТРЫ АНАЛИЗА ТРЕНДА
+        // ==========================================
+        
+        const trendDetectionEnabledEl = document.getElementById('trendDetectionEnabled');
+        if (trendDetectionEnabledEl) {
+            trendDetectionEnabledEl.checked = autoBotConfig.trend_detection_enabled !== false;
+            console.log('[BotsManager] 🔍 Анализ трендов включен:', trendDetectionEnabledEl.checked);
+        }
+        
+        const trendAnalysisPeriodEl = document.getElementById('trendAnalysisPeriod');
+        if (trendAnalysisPeriodEl && autoBotConfig.trend_analysis_period !== undefined) {
+            trendAnalysisPeriodEl.value = autoBotConfig.trend_analysis_period;
+            console.log('[BotsManager] 📊 Период анализа тренда:', trendAnalysisPeriodEl.value);
+        }
+        
+        const trendPriceChangeThresholdEl = document.getElementById('trendPriceChangeThreshold');
+        if (trendPriceChangeThresholdEl && autoBotConfig.trend_price_change_threshold !== undefined) {
+            trendPriceChangeThresholdEl.value = autoBotConfig.trend_price_change_threshold;
+            console.log('[BotsManager] 📈 Порог изменения цены:', trendPriceChangeThresholdEl.value);
+        }
+        
+        const trendCandlesThresholdEl = document.getElementById('trendCandlesThreshold');
+        if (trendCandlesThresholdEl && autoBotConfig.trend_candles_threshold !== undefined) {
+            trendCandlesThresholdEl.value = autoBotConfig.trend_candles_threshold;
+            console.log('[BotsManager] 🕯️ Порог свечей:', trendCandlesThresholdEl.value);
+        }
+        
+        // ==========================================
         // СИСТЕМНЫЕ НАСТРОЙКИ
         // ==========================================
         const systemConfig = config.system || {};
@@ -5306,6 +5334,11 @@ class BotsManager {
             break_even_protection: document.getElementById('breakEvenProtection')?.checked !== false,
             avoid_down_trend: document.getElementById('avoidDownTrend')?.checked !== false,
             avoid_up_trend: document.getElementById('avoidUpTrend')?.checked !== false,
+            // Параметры анализа тренда
+            trend_detection_enabled: document.getElementById('trendDetectionEnabled')?.checked !== false,
+            trend_analysis_period: parseInt(document.getElementById('trendAnalysisPeriod')?.value) || 30,
+            trend_price_change_threshold: parseFloat(document.getElementById('trendPriceChangeThreshold')?.value) || 7,
+            trend_candles_threshold: parseFloat(document.getElementById('trendCandlesThreshold')?.value) || 70,
             break_even_trigger: parseFloat(document.getElementById('breakEvenTrigger')?.value) || 100.0,
             enable_maturity_check: document.getElementById('enableMaturityCheck')?.checked !== false,
             min_candles_for_maturity: parseInt(document.getElementById('minCandlesForMaturity')?.value) || 200,

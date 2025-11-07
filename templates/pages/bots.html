@@ -1675,6 +1675,48 @@
                             <small class="config-help" data-translate="avoid_up_trend_help">Не входить в SHORT при UP тренде монеты</small>
                         </div>
                         
+                        <div class="config-divider"></div>
+                        
+                        <h4 class="config-subsection-title">⚙️ Параметры анализа тренда</h4>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-text" data-translate="trend_detection_enabled_label">Включить анализ трендов:</span>
+                            </label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="trendDetectionEnabled" checked />
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <small class="config-help" data-translate="trend_detection_enabled_help">Включить определение UP/DOWN/NEUTRAL трендов для монет. Выключить = входы без учета тренда</small>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">📊</span>
+                                <span class="label-text" data-translate="trend_analysis_period_label">Период анализа (свечей 6h):</span>
+                            </label>
+                            <input type="number" id="trendAnalysisPeriod" value="30" min="20" max="50" step="5" class="config-input" />
+                            <small class="config-help" data-translate="trend_analysis_period_help">Количество свечей для анализа тренда (30 свечей = 7.5 дней)</small>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">📈</span>
+                                <span class="label-text" data-translate="trend_price_change_threshold_label">Порог изменения цены (%):</span>
+                            </label>
+                            <input type="number" id="trendPriceChangeThreshold" value="7" min="3" max="15" step="1" class="config-input" />
+                            <small class="config-help" data-translate="trend_price_change_threshold_help">Процент изменения цены для определения тренда (7% = UP/DOWN, меньше = более чувствительный)</small>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">🕯️</span>
+                                <span class="label-text" data-translate="trend_candles_threshold_label">Порог свечей (%):</span>
+                            </label>
+                            <input type="number" id="trendCandlesThreshold" value="70" min="50" max="80" step="5" class="config-input" />
+                            <small class="config-help" data-translate="trend_candles_threshold_help">Процент растущих/падающих свечей для тренда (70% = 21 из 30 свечей)</small>
+                        </div>
+                        
                         <div class="config-item">
                             <label class="config-label">
                                 <span class="label-text" data-translate="break_even_trigger_percent">Триггер безубыточности (%):</span>
