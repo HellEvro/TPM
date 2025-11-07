@@ -1246,15 +1246,42 @@ class NewTradingBot:
             
             logger.warning(f"[NEW_BOT_{self.symbol}] 🚨 ЭКСТРЕННОЕ ЗАКРЫТИЕ: ДЕЛИСТИНГ ОБНАРУЖЕН! Закрываем {self.position_side} рыночным ордером")
             
-            # Определяем сторону для закрытия (противоположную позиции)
-            close_side = 'Sell' if self.position_side == 'Long' else 'Buy'
+            # Получаем размер позиции
+            position_size = None
+            if self.position_size:
+                position_size = self.position_size
+            else:
+                # Получаем размер позиции с биржи
+                try:
+                    positions = self.exchange.get_positions()
+                    if isinstance(positions, tuple):
+                        positions_list = positions[0] if positions else []
+                    else:
+                        positions_list = positions if positions else []
+                    
+                    for pos in positions_list:
+                        if pos.get('symbol', '').replace('USDT', '') == self.symbol:
+                            pos_side = 'Long' if pos.get('side') == 'Buy' else 'Short'
+                            expected_side = 'Long' if self.position_side == 'LONG' else 'Short' if self.position_side == 'SHORT' else self.position_side
+                            if pos_side == expected_side and abs(float(pos.get('size', 0))) > 0:
+                                position_size = abs(float(pos.get('size', 0)))
+                                break
+                except Exception as e:
+                    logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка получения размера позиции: {e}")
+            
+            if not position_size:
+                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось определить размер позиции для экстренного закрытия")
+                return False
+            
+            # Преобразуем side в формат биржи
+            side_for_exchange = 'Long' if self.position_side == 'LONG' else 'Short' if self.position_side == 'SHORT' else self.position_side
             
             # Экстренное закрытие рыночным ордером
             emergency_result = self.exchange.close_position(
                 symbol=self.symbol,
-                side=self.position_side,
-                order_type='Market',  # Принудительно рыночный ордер
-                emergency=True  # Флаг экстренного закрытия
+                size=position_size,
+                side=side_for_exchange,
+                order_type='Market'  # Принудительно рыночный ордер
             )
             
             if emergency_result and emergency_result.get('success'):

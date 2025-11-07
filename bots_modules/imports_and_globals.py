@@ -858,10 +858,37 @@ def close_position_for_bot(symbol, position_side, reason='Manual close'):
         
         logger.info(f"[CLOSE_POSITION] {symbol}: Закрываем {position_side} позицию (причина: {reason})")
         
-        # Вызываем close_position
+        # Получаем размер позиции с биржи перед закрытием
+        position_size = None
+        try:
+            positions = exch.get_positions()
+            if isinstance(positions, tuple):
+                positions_list = positions[0] if positions else []
+            else:
+                positions_list = positions if positions else []
+            
+            # Преобразуем position_side в формат биржи для сравнения
+            side_for_exchange = 'Long' if position_side in ['LONG', 'Long'] else 'Short' if position_side in ['SHORT', 'Short'] else position_side
+            
+            for pos in positions_list:
+                if pos.get('symbol', '').replace('USDT', '') == symbol:
+                    pos_side = 'Long' if pos.get('side') == 'Buy' else 'Short'
+                    if pos_side == side_for_exchange and abs(float(pos.get('size', 0))) > 0:
+                        position_size = abs(float(pos.get('size', 0)))
+                        logger.info(f"[CLOSE_POSITION] {symbol}: Найден размер позиции на бирже: {position_size}")
+                        break
+        except Exception as e:
+            logger.error(f"[CLOSE_POSITION] {symbol}: ⚠️ Ошибка получения размера позиции с биржи: {e}")
+        
+        if not position_size:
+            logger.error(f"[CLOSE_POSITION] {symbol}: ❌ Не удалось определить размер позиции")
+            return {'success': False, 'error': 'Position size not found on exchange'}
+        
+        # Вызываем close_position с размером
         result = exch.close_position(
             symbol=symbol,
-            side=position_side
+            size=position_size,
+            side=side_for_exchange
         )
         
         if result and result.get('success'):
