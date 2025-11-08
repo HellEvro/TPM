@@ -233,9 +233,54 @@ def get_rsi_cache():
         return coins_rsi_data.get('coins', {})
 
 # ✅ РЕФАКТОРИНГ: Используем унифицированную функцию из bot_engine.storage
+# ✅ ОПТИМИЗАЦИЯ: Опциональное использование асинхронного хранилища
 def save_rsi_cache():
     """Сохранить кэш RSI данных в файл"""
     try:
+        # Пытаемся использовать асинхронное хранилище
+        try:
+            from bot_engine.async_storage import save_rsi_cache_async
+            from bot_engine.performance_optimizer import get_performance_optimizer
+            import asyncio
+            
+            # Проверяем доступность асинхронного хранилища
+            optimizer = get_performance_optimizer()
+            if optimizer.enabled:
+                # Получаем данные из глобальной переменной
+                global coins_rsi_data
+                coins_data = coins_rsi_data.get('coins', {})
+                stats = {
+                    'total_coins': len(coins_data),
+                    'successful_coins': coins_rsi_data.get('successful_coins', 0),
+                    'failed_coins': coins_rsi_data.get('failed_coins', 0)
+                }
+                
+                # Пытаемся использовать существующий event loop
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # Если loop уже запущен, создаем задачу
+                        task = asyncio.create_task(save_rsi_cache_async(coins_data, stats))
+                        # Возвращаем True сразу (сохранение произойдет асинхронно)
+                        logger.debug(f"[CACHE] RSI данные для {len(coins_data)} монет поставлены в очередь на сохранение")
+                        return True
+                    else:
+                        # Если loop не запущен, запускаем
+                        success = loop.run_until_complete(save_rsi_cache_async(coins_data, stats))
+                        if success:
+                            logger.info(f"[CACHE] RSI данные для {len(coins_data)} монет сохранены в кэш (async)")
+                        return success
+                except RuntimeError:
+                    # Нет event loop, создаем новый
+                    success = asyncio.run(save_rsi_cache_async(coins_data, stats))
+                    if success:
+                        logger.info(f"[CACHE] RSI данные для {len(coins_data)} монет сохранены в кэш (async)")
+                    return success
+        except (ImportError, AttributeError):
+            # Fallback на синхронное сохранение
+            pass
+        
+        # Синхронное сохранение (fallback или если async недоступен)
         from bot_engine.storage import save_rsi_cache as storage_save_rsi_cache
         
         # Получаем данные из глобальной переменной
@@ -609,6 +654,61 @@ def load_system_config():
 def save_bots_state():
     """Сохраняет состояние всех ботов в файл"""
     try:
+        # ✅ ОПТИМИЗАЦИЯ: Пытаемся использовать асинхронное хранилище
+        try:
+            from bot_engine.async_storage import save_bots_state_async
+            from bot_engine.performance_optimizer import get_performance_optimizer
+            import asyncio
+            
+            # Проверяем доступность асинхронного хранилища
+            optimizer = get_performance_optimizer()
+            if optimizer.enabled:
+                # ✅ ИСПРАВЛЕНИЕ: Используем таймаут для блокировки чтобы не висеть при остановке
+                import threading
+                
+                # Пытаемся захватить блокировку с таймаутом
+                acquired = bots_data_lock.acquire(timeout=2.0)
+                if not acquired:
+                    logger.warning("[SAVE_STATE] ⚠️ Не удалось получить блокировку за 2 секунды - пропускаем сохранение")
+                    return False
+                
+                try:
+                    bots_dict = {}
+                    for symbol, bot_data in bots_data['bots'].items():
+                        bots_dict[symbol] = bot_data
+                    
+                    auto_bot_config = bots_data['auto_bot_config'].copy()
+                finally:
+                    bots_data_lock.release()
+                
+                # Пытаемся использовать существующий event loop
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # Если loop уже запущен, создаем задачу
+                        task = asyncio.create_task(save_bots_state_async(bots_dict, auto_bot_config))
+                        # Возвращаем True сразу (сохранение произойдет асинхронно)
+                        logger.debug(f"[SAVE_STATE] Состояние {len(bots_dict)} ботов поставлено в очередь на сохранение")
+                        return True
+                    else:
+                        # Если loop не запущен, запускаем
+                        success = loop.run_until_complete(save_bots_state_async(bots_dict, auto_bot_config))
+                        if success:
+                            total_bots = len(bots_dict)
+                            logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено (async)")
+                        return success
+                except RuntimeError:
+                    # Нет event loop, создаем новый
+                    success = asyncio.run(save_bots_state_async(bots_dict, auto_bot_config))
+                    if success:
+                        total_bots = len(bots_dict)
+                        logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено (async)")
+                    return success
+        except (ImportError, AttributeError):
+            # Fallback на синхронное сохранение
+            pass
+        
+        # Синхронное сохранение (fallback или если async недоступен)
         from bot_engine.storage import save_bots_state as storage_save_bots_state
         
         # ✅ ИСПРАВЛЕНИЕ: Используем таймаут для блокировки чтобы не висеть при остановке

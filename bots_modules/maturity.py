@@ -168,6 +168,45 @@ def save_mature_coins_storage():
         return False
     
     try:
+        # ✅ ОПТИМИЗАЦИЯ: Пытаемся использовать асинхронное хранилище
+        try:
+            from bot_engine.async_storage import save_mature_coins_async
+            from bot_engine.performance_optimizer import get_performance_optimizer
+            import asyncio
+            
+            # Проверяем доступность асинхронного хранилища
+            optimizer = get_performance_optimizer()
+            if optimizer.enabled:
+                with mature_coins_lock:
+                    # Создаем копию для безопасной сериализации
+                    storage_copy = mature_coins_storage.copy()
+                
+                # Пытаемся использовать существующий event loop
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # Если loop уже запущен, создаем задачу
+                        task = asyncio.create_task(save_mature_coins_async(storage_copy))
+                        # Возвращаем True сразу (сохранение произойдет асинхронно)
+                        logger.debug(f"[MATURITY_STORAGE] Хранилище {len(storage_copy)} монет поставлено в очередь на сохранение")
+                        return True
+                    else:
+                        # Если loop не запущен, запускаем
+                        success = loop.run_until_complete(save_mature_coins_async(storage_copy))
+                        if success:
+                            logger.debug(f"[MATURITY_STORAGE] Хранилище сохранено: {len(storage_copy)} монет (async)")
+                        return success
+                except RuntimeError:
+                    # Нет event loop, создаем новый
+                    success = asyncio.run(save_mature_coins_async(storage_copy))
+                    if success:
+                        logger.debug(f"[MATURITY_STORAGE] Хранилище сохранено: {len(storage_copy)} монет (async)")
+                    return success
+        except (ImportError, AttributeError):
+            # Fallback на синхронное сохранение
+            pass
+        
+        # Синхронное сохранение (fallback или если async недоступен)
         from bot_engine.storage import save_mature_coins
         
         with mature_coins_lock:
