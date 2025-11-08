@@ -1789,82 +1789,70 @@ class BotsManager {
             }
         }
         
-        // Сводка причин блокировки сигнала
-        const effectiveSignal = coin.effective_signal || this.getEffectiveSignal(coin);
-        const baseSignal = coin.signal || 'WAIT';
-        
-        if (effectiveSignal === 'WAIT' && baseSignal !== 'WAIT') {
-            // Сигнал был заблокирован - собираем причины
+        // Функция для полной проверки всех фильтров и сбора причин блокировки
+        const checkAllBlockingFilters = (coin) => {
             const blockReasons = [];
+            const autoConfig = this.cachedAutoBotConfig || {};
+            const baseSignal = coin.signal || 'WAIT';
+            const rsi = coin.rsi6h || 50;
+            const trend = coin.trend6h || 'NEUTRAL';
+            const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
+            const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
             
-            // Проверяем все возможные причины блокировки
-            if (coin.blocked_by_exit_scam) {
+            // 1. Проверяем ExitScam фильтр
+            if (coin.blocked_by_exit_scam === true) {
                 blockReasons.push('ExitScam фильтр');
             }
-            if (coin.blocked_by_rsi_time) {
+            
+            // 2. Проверяем RSI Time фильтр
+            if (coin.blocked_by_rsi_time === true) {
                 blockReasons.push('RSI Time фильтр');
             }
-            if (!coin.is_mature) {
+            
+            // 3. Проверяем зрелость монеты
+            if (coin.is_mature === false) {
                 blockReasons.push('Незрелая монета');
             }
-            if (coin.blocked_by_scope) {
+            
+            // 4. Проверяем Whitelist/Blacklist
+            if (coin.blocked_by_scope === true) {
                 blockReasons.push('Whitelist/Blacklist');
             }
             
-            // Проверяем Enhanced RSI
-            if (coin.enhanced_rsi && coin.enhanced_rsi.enabled) {
-                const enhancedSignal = coin.enhanced_rsi.enhanced_signal;
-                const enhancedReason = coin.enhanced_rsi.enhanced_reason || '';
-                // ✅ ИСПРАВЛЕНИЕ: Проверяем только если Enhanced RSI действительно заблокировал сигнал
-                // Если enhanced_signal = ENTER_LONG, значит Enhanced RSI РАЗРЕШИЛ сигнал, а не заблокировал!
-                if (enhancedSignal === 'WAIT' && baseSignal !== 'WAIT') {
-                    // Добавляем детальную причину блокировки Enhanced RSI
-                    let enhancedReasonText = 'Enhanced RSI';
-                    if (enhancedReason) {
-                        // Парсим причину для более понятного отображения
-                        if (enhancedReason.includes('insufficient_confirmation')) {
-                            enhancedReasonText = 'Enhanced RSI: недостаточно подтверждений (нужно 2, если долго в зоне)';
-                        } else if (enhancedReason.includes('strict_mode_no_divergence')) {
-                            enhancedReasonText = 'Enhanced RSI: строгий режим - требуется дивергенция';
-                        } else if (enhancedReason.includes('strict_mode')) {
-                            enhancedReasonText = 'Enhanced RSI: строгий режим (требуется дивергенция)';
-                        } else if (enhancedReason.includes('duration')) {
-                            enhancedReasonText = 'Enhanced RSI: слишком долго в экстремальной зоне (нужно больше подтверждений)';
-                        } else if (enhancedReason.includes('neutral') || enhancedReason.includes('enhanced_neutral')) {
-                            // Проверяем, почему нейтральная зона - возможно adaptive_oversold выше текущего RSI
-                            const rsi = coin.rsi6h || 50;
-                            enhancedReasonText = `Enhanced RSI: RSI ${rsi.toFixed(1)} не попадает в adaptive_oversold уровень`;
-                        } else {
-                            enhancedReasonText = `Enhanced RSI (${enhancedReason})`;
-                        }
+            // 5. Проверяем Enhanced RSI
+            const enhancedRsiEnabled = coin.enhanced_rsi && coin.enhanced_rsi.enabled;
+            const enhancedSignal = enhancedRsiEnabled ? coin.enhanced_rsi.enhanced_signal : null;
+            const enhancedReason = enhancedRsiEnabled ? (coin.enhanced_rsi.enhanced_reason || '') : '';
+            
+            if (enhancedRsiEnabled && enhancedSignal === 'WAIT' && baseSignal !== 'WAIT') {
+                // Enhanced RSI заблокировал сигнал
+                let enhancedReasonText = 'Enhanced RSI';
+                if (enhancedReason) {
+                    if (enhancedReason.includes('insufficient_confirmation')) {
+                        enhancedReasonText = 'Enhanced RSI: недостаточно подтверждений (нужно 2, если долго в зоне)';
+                    } else if (enhancedReason.includes('strict_mode_no_divergence')) {
+                        enhancedReasonText = 'Enhanced RSI: строгий режим - требуется дивергенция';
+                    } else if (enhancedReason.includes('strict_mode')) {
+                        enhancedReasonText = 'Enhanced RSI: строгий режим (требуется дивергенция)';
+                    } else if (enhancedReason.includes('duration')) {
+                        enhancedReasonText = 'Enhanced RSI: слишком долго в экстремальной зоне (нужно больше подтверждений)';
+                    } else if (enhancedReason.includes('neutral') || enhancedReason.includes('enhanced_neutral')) {
+                        enhancedReasonText = `Enhanced RSI: RSI ${rsi.toFixed(1)} не попадает в adaptive уровень`;
                     } else {
-                        // Если причины нет, но сигнал WAIT - проверяем возможные причины
-                        const rsi = coin.rsi6h || 50;
-                        enhancedReasonText = `Enhanced RSI: RSI ${rsi.toFixed(1)} заблокирован (проверьте настройки Enhanced RSI)`;
+                        enhancedReasonText = `Enhanced RSI (${enhancedReason})`;
                     }
-                    blockReasons.push(enhancedReasonText);
+                } else {
+                    enhancedReasonText = `Enhanced RSI: RSI ${rsi.toFixed(1)} заблокирован`;
                 }
+                blockReasons.push(enhancedReasonText);
             }
             
-            // Проверяем фильтры трендов (только если они ВКЛЮЧЕНЫ и Enhanced RSI НЕ заблокировал сигнал)
-            // ✅ КРИТИЧНО: Enhanced RSI проверяется ПЕРЕД фильтрами трендов в get_effective_signal
-            // Если Enhanced RSI вернул WAIT, то фильтры трендов даже не проверяются
-            const enhancedRsiBlocked = coin.enhanced_rsi && coin.enhanced_rsi.enabled && 
-                                      coin.enhanced_rsi.enhanced_signal === 'WAIT' && baseSignal !== 'WAIT';
-            
-            // Проверяем фильтры трендов только если Enhanced RSI НЕ заблокировал сигнал
+            // 6. Проверяем фильтры трендов (только если Enhanced RSI НЕ заблокировал)
+            const enhancedRsiBlocked = enhancedRsiEnabled && enhancedSignal === 'WAIT' && baseSignal !== 'WAIT';
             if (!enhancedRsiBlocked) {
-                const autoConfig = this.cachedAutoBotConfig || {};
-                // ✅ ИСПРАВЛЕНИЕ: Проверяем реальное состояние фильтров трендов
-                // Если avoid_down_trend === false, значит фильтр ОТКЛЮЧЕН
                 const avoidDownTrend = autoConfig.avoid_down_trend === true;
                 const avoidUpTrend = autoConfig.avoid_up_trend === true;
-                const rsi = coin.rsi6h || 50;
-                const trend = coin.trend6h || 'NEUTRAL';
-                const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
-                const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
                 
-                // Добавляем фильтр тренда в причины только если он ВКЛЮЧЕН и действительно блокирует
                 if (baseSignal === 'ENTER_LONG' && avoidDownTrend && rsi <= rsiLongThreshold && trend === 'DOWN') {
                     blockReasons.push('Фильтр DOWN тренда');
                 }
@@ -1873,31 +1861,84 @@ class BotsManager {
                 }
             }
             
-            if (blockReasons.length > 0) {
-                activeStatusData.signal_block_reason = `Базовый сигнал ${baseSignal} заблокирован: ${blockReasons.join(', ')}`;
+            return {
+                reasons: blockReasons,
+                enhancedRsiEnabled: enhancedRsiEnabled,
+                enhancedSignal: enhancedSignal
+            };
+        };
+        
+        // Сводка причин блокировки сигнала
+        const effectiveSignal = coin.effective_signal || this.getEffectiveSignal(coin);
+        const baseSignal = coin.signal || 'WAIT';
+        
+        if (effectiveSignal === 'WAIT' && baseSignal !== 'WAIT') {
+            // Сигнал был заблокирован - проверяем ВСЕ фильтры
+            const filterCheck = checkAllBlockingFilters(coin);
+            
+            if (filterCheck.reasons.length > 0) {
+                activeStatusData.signal_block_reason = `Базовый сигнал ${baseSignal} заблокирован: ${filterCheck.reasons.join(', ')}`;
             } else {
                 activeStatusData.signal_block_reason = `Базовый сигнал ${baseSignal} изменен на WAIT (причина не определена)`;
             }
         } else if (effectiveSignal === 'WAIT' && baseSignal === 'WAIT') {
-            // Базовый сигнал уже WAIT - проверяем почему
+            // Базовый сигнал уже WAIT - проверяем ВСЕ фильтры
+            const filterCheck = checkAllBlockingFilters(coin);
             const autoConfig = this.cachedAutoBotConfig || {};
             const rsi = coin.rsi6h || 50;
             const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
             const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
             
+            // Формируем сообщение на основе результатов проверки фильтров
+            let reasonText = '';
+            
             if (rsi <= rsiLongThreshold) {
-                // RSI низкий, но сигнал WAIT - проверяем Enhanced RSI
-                if (coin.enhanced_rsi && coin.enhanced_rsi.enabled && coin.enhanced_rsi.enhanced_signal === 'WAIT') {
-                    activeStatusData.signal_block_reason = `RSI ${rsi.toFixed(1)} ≤ ${rsiLongThreshold}, но Enhanced RSI вернул WAIT`;
+                // RSI низкий, но сигнал WAIT
+                if (filterCheck.enhancedRsiEnabled && filterCheck.enhancedSignal === 'WAIT') {
+                    reasonText = `RSI ${rsi.toFixed(1)} ≤ ${rsiLongThreshold}, но Enhanced RSI вернул WAIT`;
+                } else if (filterCheck.enhancedRsiEnabled && filterCheck.enhancedSignal === 'ENTER_LONG') {
+                    // Enhanced RSI разрешил LONG, но другие фильтры блокируют
+                    if (filterCheck.reasons.length > 0) {
+                        reasonText = `RSI ${rsi.toFixed(1)} ≤ ${rsiLongThreshold}, Enhanced RSI разрешил LONG, но заблокировано: ${filterCheck.reasons.join(', ')}`;
+                    } else {
+                        reasonText = `RSI ${rsi.toFixed(1)} ≤ ${rsiLongThreshold}, Enhanced RSI разрешил LONG, но сигнал WAIT`;
+                    }
                 } else {
-                    activeStatusData.signal_block_reason = `RSI ${rsi.toFixed(1)} ≤ ${rsiLongThreshold}, но сигнал WAIT (проверьте Enhanced RSI)`;
+                    // Другие причины блокировки
+                    if (filterCheck.reasons.length > 0) {
+                        reasonText = `RSI ${rsi.toFixed(1)} ≤ ${rsiLongThreshold}, но заблокировано: ${filterCheck.reasons.join(', ')}`;
+                    } else {
+                        reasonText = `RSI ${rsi.toFixed(1)} ≤ ${rsiLongThreshold}, но сигнал WAIT`;
+                    }
                 }
             } else if (rsi >= rsiShortThreshold) {
-                if (coin.enhanced_rsi && coin.enhanced_rsi.enabled && coin.enhanced_rsi.enhanced_signal === 'WAIT') {
-                    activeStatusData.signal_block_reason = `RSI ${rsi.toFixed(1)} ≥ ${rsiShortThreshold}, но Enhanced RSI вернул WAIT`;
+                // RSI высокий, но сигнал WAIT
+                if (filterCheck.enhancedRsiEnabled && filterCheck.enhancedSignal === 'WAIT') {
+                    reasonText = `RSI ${rsi.toFixed(1)} ≥ ${rsiShortThreshold}, но Enhanced RSI вернул WAIT`;
+                } else if (filterCheck.enhancedRsiEnabled && filterCheck.enhancedSignal === 'ENTER_SHORT') {
+                    // Enhanced RSI разрешил SHORT, но другие фильтры блокируют
+                    if (filterCheck.reasons.length > 0) {
+                        reasonText = `RSI ${rsi.toFixed(1)} ≥ ${rsiShortThreshold}, Enhanced RSI разрешил SHORT, но заблокировано: ${filterCheck.reasons.join(', ')}`;
+                    } else {
+                        reasonText = `RSI ${rsi.toFixed(1)} ≥ ${rsiShortThreshold}, Enhanced RSI разрешил SHORT, но сигнал WAIT`;
+                    }
                 } else {
-                    activeStatusData.signal_block_reason = `RSI ${rsi.toFixed(1)} ≥ ${rsiShortThreshold}, но сигнал WAIT (проверьте Enhanced RSI)`;
+                    // Другие причины блокировки
+                    if (filterCheck.reasons.length > 0) {
+                        reasonText = `RSI ${rsi.toFixed(1)} ≥ ${rsiShortThreshold}, но заблокировано: ${filterCheck.reasons.join(', ')}`;
+                    } else {
+                        reasonText = `RSI ${rsi.toFixed(1)} ≥ ${rsiShortThreshold}, но сигнал WAIT`;
+                    }
                 }
+            } else {
+                // RSI в нейтральной зоне
+                if (filterCheck.reasons.length > 0) {
+                    reasonText = `RSI ${rsi.toFixed(1)} в нейтральной зоне, заблокировано: ${filterCheck.reasons.join(', ')}`;
+                }
+            }
+            
+            if (reasonText) {
+                activeStatusData.signal_block_reason = reasonText;
             }
         }
         
