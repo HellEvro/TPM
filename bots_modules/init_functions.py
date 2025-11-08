@@ -84,34 +84,25 @@ try:
     )
 except ImportError as e:
     print(f"Warning: Could not import functions in init_functions: {e}")
-    # ✅ РЕФАКТОРИНГ: Используем импорты из унифицированных модулей
-    try:
-        from bots_modules.maturity import load_mature_coins_storage
-        from bots_modules.sync_and_cache import (
-            save_default_config, load_system_config, load_bots_state, 
-            save_bots_state, load_process_state, sync_bots_with_exchange
-        )
-        from bots_modules.imports_and_globals import load_auto_bot_config
-    except ImportError:
-        # Fallback заглушки если импорт не удался
-        def load_mature_coins_storage():
-            pass
-        def save_default_config():
-            pass
-        def load_system_config():
-            pass
-        def load_auto_bot_config():
-            pass
-        def load_bots_state():
-            pass
-        def save_bots_state():
-            pass
-        def load_process_state():
-            pass
-        def check_startup_position_conflicts():
-            pass
-        def sync_bots_with_exchange():
-            pass
+    # Заглушки если импорт не удался
+    def load_mature_coins_storage():
+        pass
+    def save_default_config():
+        pass
+    def load_system_config():
+        pass
+    def load_auto_bot_config():
+        pass
+    def load_bots_state():
+        pass
+    def save_bots_state():
+        pass
+    def load_process_state():
+        pass
+    def check_startup_position_conflicts():
+        pass
+    def sync_bots_with_exchange():
+        pass
     def save_auto_bot_config():
         pass
     def load_all_coins_rsi(exchange_obj=None):

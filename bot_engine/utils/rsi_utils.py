@@ -1,5 +1,5 @@
 """
-RSI (Relative Strength Index) и EMA (Exponential Moving Average) расчеты
+RSI (Relative Strength Index) расчеты
 Wilder's RSI алгоритм
 """
 
@@ -94,46 +94,4 @@ def calculate_rsi_history(prices, period=14):
         rsi_history.append(round(rsi, 2))
     
     return rsi_history
-
-
-def calculate_ema(prices, period, return_list=False):
-    """
-    Рассчитывает EMA для массива цен
-    
-    Args:
-        prices: Список цен закрытия
-        period: Период EMA
-        return_list: Если True, возвращает список всех значений EMA, иначе только последнее значение
-    
-    Returns:
-        Если return_list=False: последнее значение EMA или None если недостаточно данных
-        Если return_list=True: список значений EMA или None если недостаточно данных
-    """
-    if len(prices) < period:
-        return None if not return_list else []
-    
-    # Первое значение EMA = SMA
-    sma = sum(prices[:period]) / period
-    ema = sma
-    multiplier = 2 / (period + 1)
-    
-    if return_list:
-        # Возвращаем список значений EMA
-        ema_values = []
-        # Добавляем None для первых period-1 значений (где EMA еще не определен)
-        ema_values.extend([None] * (period - 1))
-        ema_values.append(ema)
-        
-        # Рассчитываем EMA для остальных значений
-        for price in prices[period:]:
-            ema = (price * multiplier) + (ema * (1 - multiplier))
-            ema_values.append(ema)
-        
-        return ema_values
-    else:
-        # Возвращаем только последнее значение EMA
-        for price in prices[period:]:
-            ema = (price * multiplier) + (ema * (1 - multiplier))
-        
-        return ema
 

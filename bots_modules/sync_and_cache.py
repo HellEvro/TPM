@@ -232,111 +232,46 @@ def get_rsi_cache():
     with rsi_data_lock:
         return coins_rsi_data.get('coins', {})
 
-# ✅ РЕФАКТОРИНГ: Используем унифицированную функцию из bot_engine.storage
-# ✅ ОПТИМИЗАЦИЯ: Опциональное использование асинхронного хранилища
 def save_rsi_cache():
     """Сохранить кэш RSI данных в файл"""
-    global coins_rsi_data  # ✅ ИСПРАВЛЕНО: объявляем global в начале функции
-    
     try:
-        # Пытаемся использовать асинхронное хранилище
-        try:
-            from bot_engine.async_storage import save_rsi_cache_async
-            from bot_engine.performance_optimizer import get_performance_optimizer
-            import asyncio
-            
-            # Проверяем доступность асинхронного хранилища
-            optimizer = get_performance_optimizer()
-            if optimizer.enabled:
-                # Получаем данные из глобальной переменной
-                coins_data = coins_rsi_data.get('coins', {})
-                stats = {
-                    'total_coins': len(coins_data),
-                    'successful_coins': coins_rsi_data.get('successful_coins', 0),
-                    'failed_coins': coins_rsi_data.get('failed_coins', 0)
-                }
-                
-                # Пытаемся использовать существующий event loop
-                try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        # Если loop уже запущен, создаем задачу
-                        task = asyncio.create_task(save_rsi_cache_async(coins_data, stats))
-                        # Возвращаем True сразу (сохранение произойдет асинхронно)
-                        logger.debug(f"[CACHE] RSI данные для {len(coins_data)} монет поставлены в очередь на сохранение")
-                        return True
-                    else:
-                        # Если loop не запущен, запускаем
-                        success = loop.run_until_complete(save_rsi_cache_async(coins_data, stats))
-                        if success:
-                            logger.info(f"[CACHE] RSI данные для {len(coins_data)} монет сохранены в кэш (async)")
-                        return success
-                except RuntimeError:
-                    # Нет event loop, создаем новый
-                    success = asyncio.run(save_rsi_cache_async(coins_data, stats))
-                    if success:
-                        logger.info(f"[CACHE] RSI данные для {len(coins_data)} монет сохранены в кэш (async)")
-                    return success
-        except (ImportError, AttributeError):
-            # Fallback на синхронное сохранение
-            pass
-        
-        # Синхронное сохранение (fallback или если async недоступен)
-        from bot_engine.storage import save_rsi_cache as storage_save_rsi_cache
-        
-        # Получаем данные из глобальной переменной
-        coins_data = coins_rsi_data.get('coins', {})
-        stats = {
-            'total_coins': len(coins_data),
-            'successful_coins': coins_rsi_data.get('successful_coins', 0),
-            'failed_coins': coins_rsi_data.get('failed_coins', 0)
+        # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция в Python
+        cache_data = {
+            'timestamp': datetime.now().isoformat(),
+            'coins': coins_rsi_data.get('coins', {}),
+            'stats': {
+                'total_coins': len(coins_rsi_data.get('coins', {})),
+                'successful_coins': coins_rsi_data.get('successful_coins', 0),
+                'failed_coins': coins_rsi_data.get('failed_coins', 0)
+            }
         }
         
-        # Используем унифицированную функцию сохранения
-        success = storage_save_rsi_cache(coins_data, stats)
-        if success:
-            logger.info(f"[CACHE] RSI данные для {len(coins_data)} монет сохранены в кэш")
-        return success
+        with open(RSI_CACHE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(cache_data, f, indent=2, ensure_ascii=False)
+            
+        logger.info(f"[CACHE] RSI данные для {len(cache_data['coins'])} монет сохранены в кэш")
         
-    except ImportError:
-        # Fallback для обратной совместимости
-        try:
-            cache_data = {
-                'timestamp': datetime.now().isoformat(),
-                'coins': coins_rsi_data.get('coins', {}),
-                'stats': {
-                    'total_coins': len(coins_rsi_data.get('coins', {})),
-                    'successful_coins': coins_rsi_data.get('successful_coins', 0),
-                    'failed_coins': coins_rsi_data.get('failed_coins', 0)
-                }
-            }
-            
-            with open(RSI_CACHE_FILE, 'w', encoding='utf-8') as f:
-                json.dump(cache_data, f, indent=2, ensure_ascii=False)
-                
-            logger.info(f"[CACHE] RSI данные для {len(cache_data['coins'])} монет сохранены в кэш")
-            return True
-            
-        except Exception as e:
-            logger.error(f"[ERROR] Ошибка сохранения RSI кэша: {str(e)}")
-            return False
     except Exception as e:
         logger.error(f"[ERROR] Ошибка сохранения RSI кэша: {str(e)}")
-        return False
 
-# ✅ РЕФАКТОРИНГ: Используем унифицированную функцию из bot_engine.storage
 def load_rsi_cache():
     """Загрузить кэш RSI данных из файла"""
     global coins_rsi_data
     
     try:
-        from bot_engine.storage import load_rsi_cache as storage_load_rsi_cache
+        if not os.path.exists(RSI_CACHE_FILE):
+            logger.info("[CACHE] Файл RSI кэша не найден, будет создан при первом обновлении")
+            return False
+            
+        with open(RSI_CACHE_FILE, 'r', encoding='utf-8') as f:
+            cache_data = json.load(f)
         
-        # Используем унифицированную функцию загрузки
-        cache_data = storage_load_rsi_cache()
+        # Проверяем возраст кэша (не старше 6 часов)
+        cache_timestamp = datetime.fromisoformat(cache_data['timestamp'])
+        age_hours = (datetime.now() - cache_timestamp).total_seconds() / 3600
         
-        if not cache_data:
-            logger.info("[CACHE] Файл RSI кэша не найден или устарел, будет создан при первом обновлении")
+        if age_hours > 6:
+            logger.warning(f"[CACHE] RSI кэш устарел ({age_hours:.1f} часов), будет обновлен")
             return False
         
         # Загружаем данные из кэша
@@ -362,62 +297,9 @@ def load_rsi_cache():
                 'update_in_progress': False
             })
         
-        # Вычисляем возраст кэша для логирования
-        try:
-            cache_timestamp = datetime.fromisoformat(cache_data.get('timestamp', datetime.now().isoformat()))
-            age_hours = (datetime.now() - cache_timestamp).total_seconds() / 3600
-            logger.info(f"[CACHE] Загружено {len(cached_coins)} монет из RSI кэша (возраст: {age_hours:.1f}ч)")
-        except:
-            logger.info(f"[CACHE] Загружено {len(cached_coins)} монет из RSI кэша")
-        
+        logger.info(f"[CACHE] Загружено {len(cached_coins)} монет из RSI кэша (возраст: {age_hours:.1f}ч)")
         return True
         
-    except ImportError:
-        # Fallback для обратной совместимости
-        try:
-            if not os.path.exists(RSI_CACHE_FILE):
-                logger.info("[CACHE] Файл RSI кэша не найден, будет создан при первом обновлении")
-                return False
-                
-            with open(RSI_CACHE_FILE, 'r', encoding='utf-8') as f:
-                cache_data = json.load(f)
-            
-            # Проверяем возраст кэша (не старше 6 часов)
-            cache_timestamp = datetime.fromisoformat(cache_data['timestamp'])
-            age_hours = (datetime.now() - cache_timestamp).total_seconds() / 3600
-            
-            if age_hours > 6:
-                logger.warning(f"[CACHE] RSI кэш устарел ({age_hours:.1f} часов), будет обновлен")
-                return False
-            
-            # Загружаем данные из кэша
-            cached_coins = cache_data.get('coins', {})
-            
-            # Проверяем формат кэша (старый массив или новый словарь)
-            if isinstance(cached_coins, list):
-                # Старый формат - преобразуем массив в словарь
-                coins_dict = {}
-                for coin in cached_coins:
-                    if 'symbol' in coin:
-                        coins_dict[coin['symbol']] = coin
-                cached_coins = coins_dict
-                logger.info("[CACHE] Преобразован старый формат кэша (массив -> словарь)")
-            
-            with rsi_data_lock:
-                coins_rsi_data.update({
-                    'coins': cached_coins,
-                    'successful_coins': cache_data.get('stats', {}).get('successful_coins', len(cached_coins)),
-                    'failed_coins': cache_data.get('stats', {}).get('failed_coins', 0),
-                    'total_coins': len(cached_coins),
-                    'last_update': datetime.now().isoformat(),
-                    'update_in_progress': False
-                })
-            
-            logger.info(f"[CACHE] Загружено {len(cached_coins)} монет из RSI кэша (возраст: {age_hours:.1f}ч)")
-            return True
-        except Exception as e:
-            logger.error(f"[ERROR] Ошибка загрузки RSI кэша: {str(e)}")
-            return False
     except Exception as e:
         logger.error(f"[ERROR] Ошибка загрузки RSI кэша: {str(e)}")
         return False
@@ -534,125 +416,106 @@ def load_process_state():
         logger.error(f"[PROCESS_STATE] ❌ Ошибка загрузки состояния процессов: {e}")
         return False
 
-# ✅ РЕФАКТОРИНГ: Используем унифицированную функцию из bot_engine.storage
 def save_system_config(config_data):
     """Сохраняет системные настройки в файл"""
     try:
-        from bot_engine.storage import save_system_config as storage_save_system_config
+        with open(SYSTEM_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, indent=2, ensure_ascii=False)
         
-        # Используем унифицированную функцию сохранения
-        success = storage_save_system_config(config_data)
-        if success:
-            logger.debug(f"[SYSTEM_CONFIG] Сохранены настройки")
-        return success
+        logger.debug(f"[SYSTEM_CONFIG] Сохранены настройки")
+        return True
         
-    except ImportError:
-        # Fallback для обратной совместимости
-        try:
-            with open(SYSTEM_CONFIG_FILE, 'w', encoding='utf-8') as f:
-                json.dump(config_data, f, indent=2, ensure_ascii=False)
-            
-            logger.debug(f"[SYSTEM_CONFIG] Сохранены настройки")
-            return True
-            
-        except Exception as e:
-            logger.error(f"[SYSTEM_CONFIG] ❌ Ошибка сохранения системных настроек: {e}")
-            return False
     except Exception as e:
         logger.error(f"[SYSTEM_CONFIG] ❌ Ошибка сохранения системных настроек: {e}")
         return False
 
-# ✅ РЕФАКТОРИНГ: Используем унифицированную функцию из bot_engine.storage
 def load_system_config():
-    """Загружает системные настройки из файла и применяет их к SystemConfig"""
+    """Загружает системные настройки из файла"""
     try:
-        from bot_engine.storage import load_system_config as storage_load_system_config
-        
         logger.debug(f"[SYSTEM_CONFIG] Загрузка конфигурации из {SYSTEM_CONFIG_FILE}")
-        
-        # Используем унифицированную функцию загрузки
-        config_data = storage_load_system_config()
-        
-        if config_data:
-            # Применяем загруженные настройки к SystemConfig
-            if 'rsi_update_interval' in config_data:
-                SystemConfig.RSI_UPDATE_INTERVAL = int(config_data['rsi_update_interval'])
-            
-            if 'auto_save_interval' in config_data:
-                SystemConfig.AUTO_SAVE_INTERVAL = int(config_data['auto_save_interval'])
-            
-            if 'debug_mode' in config_data:
-                SystemConfig.DEBUG_MODE = bool(config_data['debug_mode'])
-            
-            if 'auto_refresh_ui' in config_data:
-                SystemConfig.AUTO_REFRESH_UI = bool(config_data['auto_refresh_ui'])
-            
-            if 'refresh_interval' in config_data:
-                SystemConfig.UI_REFRESH_INTERVAL = int(config_data['refresh_interval'])
-            
-            # Загружаем интервалы синхронизации и очистки
-            # ✅ INACTIVE_BOT_TIMEOUT теперь в SystemConfig
-            
-            if 'stop_loss_setup_interval' in config_data:
-                SystemConfig.STOP_LOSS_SETUP_INTERVAL = int(config_data['stop_loss_setup_interval'])
-            
-            if 'position_sync_interval' in config_data:
-                SystemConfig.POSITION_SYNC_INTERVAL = int(config_data['position_sync_interval'])
-            
-            if 'inactive_bot_cleanup_interval' in config_data:
-                SystemConfig.INACTIVE_BOT_CLEANUP_INTERVAL = int(config_data['inactive_bot_cleanup_interval'])
-            
-            if 'inactive_bot_timeout' in config_data:
-                SystemConfig.INACTIVE_BOT_TIMEOUT = int(config_data['inactive_bot_timeout'])
-            
-            # Настройки улучшенного RSI
-            if 'enhanced_rsi_enabled' in config_data:
-                SystemConfig.ENHANCED_RSI_ENABLED = bool(config_data['enhanced_rsi_enabled'])
-            
-            if 'enhanced_rsi_require_volume_confirmation' in config_data:
-                SystemConfig.ENHANCED_RSI_REQUIRE_VOLUME_CONFIRMATION = bool(config_data['enhanced_rsi_require_volume_confirmation'])
-            
-            if 'enhanced_rsi_require_divergence_confirmation' in config_data:
-                SystemConfig.ENHANCED_RSI_REQUIRE_DIVERGENCE_CONFIRMATION = bool(config_data['enhanced_rsi_require_divergence_confirmation'])
-            
-            if 'enhanced_rsi_use_stoch_rsi' in config_data:
-                SystemConfig.ENHANCED_RSI_USE_STOCH_RSI = bool(config_data['enhanced_rsi_use_stoch_rsi'])
-            
-            if 'rsi_extreme_zone_timeout' in config_data:
-                SystemConfig.RSI_EXTREME_ZONE_TIMEOUT = int(config_data['rsi_extreme_zone_timeout'])
-            
-            if 'rsi_extreme_oversold' in config_data:
-                SystemConfig.RSI_EXTREME_OVERSOLD = int(config_data['rsi_extreme_oversold'])
-            
-            if 'rsi_extreme_overbought' in config_data:
-                SystemConfig.RSI_EXTREME_OVERBOUGHT = int(config_data['rsi_extreme_overbought'])
-            
-            if 'rsi_volume_confirmation_multiplier' in config_data:
-                SystemConfig.RSI_VOLUME_CONFIRMATION_MULTIPLIER = float(config_data['rsi_volume_confirmation_multiplier'])
-            
-            if 'rsi_divergence_lookback' in config_data:
-                SystemConfig.RSI_DIVERGENCE_LOOKBACK = int(config_data['rsi_divergence_lookback'])
-            
-            # Параметры определения тренда
-            if 'trend_confirmation_bars' in config_data:
-                SystemConfig.TREND_CONFIRMATION_BARS = int(config_data['trend_confirmation_bars'])
-            
-            if 'trend_min_confirmations' in config_data:
-                SystemConfig.TREND_MIN_CONFIRMATIONS = int(config_data['trend_min_confirmations'])
-            
-            if 'trend_require_slope' in config_data:
-                SystemConfig.TREND_REQUIRE_SLOPE = bool(config_data['trend_require_slope'])
-            
-            if 'trend_require_price' in config_data:
-                SystemConfig.TREND_REQUIRE_PRICE = bool(config_data['trend_require_price'])
-            
-            if 'trend_require_candles' in config_data:
-                SystemConfig.TREND_REQUIRE_CANDLES = bool(config_data['trend_require_candles'])
-            
-            # ❌ ОТКЛЮЧЕНО: Smart RSI Manager больше не используется
-            # Continuous Data Loader работает с фиксированным интервалом
-            
-            return True
+        if os.path.exists(SYSTEM_CONFIG_FILE):
+            with open(SYSTEM_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
+                
+                # Применяем загруженные настройки к SystemConfig
+                if 'rsi_update_interval' in config_data:
+                    SystemConfig.RSI_UPDATE_INTERVAL = int(config_data['rsi_update_interval'])
+                
+                if 'auto_save_interval' in config_data:
+                    SystemConfig.AUTO_SAVE_INTERVAL = int(config_data['auto_save_interval'])
+                
+                if 'debug_mode' in config_data:
+                    SystemConfig.DEBUG_MODE = bool(config_data['debug_mode'])
+                
+                if 'auto_refresh_ui' in config_data:
+                    SystemConfig.AUTO_REFRESH_UI = bool(config_data['auto_refresh_ui'])
+                
+                if 'refresh_interval' in config_data:
+                    SystemConfig.UI_REFRESH_INTERVAL = int(config_data['refresh_interval'])
+                
+                # Загружаем интервалы синхронизации и очистки
+                # ✅ INACTIVE_BOT_TIMEOUT теперь в SystemConfig
+                
+                if 'stop_loss_setup_interval' in config_data:
+                    SystemConfig.STOP_LOSS_SETUP_INTERVAL = int(config_data['stop_loss_setup_interval'])
+                
+                if 'position_sync_interval' in config_data:
+                    SystemConfig.POSITION_SYNC_INTERVAL = int(config_data['position_sync_interval'])
+                
+                if 'inactive_bot_cleanup_interval' in config_data:
+                    SystemConfig.INACTIVE_BOT_CLEANUP_INTERVAL = int(config_data['inactive_bot_cleanup_interval'])
+                
+                if 'inactive_bot_timeout' in config_data:
+                    SystemConfig.INACTIVE_BOT_TIMEOUT = int(config_data['inactive_bot_timeout'])
+                
+                # Настройки улучшенного RSI
+                if 'enhanced_rsi_enabled' in config_data:
+                    SystemConfig.ENHANCED_RSI_ENABLED = bool(config_data['enhanced_rsi_enabled'])
+                
+                if 'enhanced_rsi_require_volume_confirmation' in config_data:
+                    SystemConfig.ENHANCED_RSI_REQUIRE_VOLUME_CONFIRMATION = bool(config_data['enhanced_rsi_require_volume_confirmation'])
+                
+                if 'enhanced_rsi_require_divergence_confirmation' in config_data:
+                    SystemConfig.ENHANCED_RSI_REQUIRE_DIVERGENCE_CONFIRMATION = bool(config_data['enhanced_rsi_require_divergence_confirmation'])
+                
+                if 'enhanced_rsi_use_stoch_rsi' in config_data:
+                    SystemConfig.ENHANCED_RSI_USE_STOCH_RSI = bool(config_data['enhanced_rsi_use_stoch_rsi'])
+                
+                if 'rsi_extreme_zone_timeout' in config_data:
+                    SystemConfig.RSI_EXTREME_ZONE_TIMEOUT = int(config_data['rsi_extreme_zone_timeout'])
+                
+                if 'rsi_extreme_oversold' in config_data:
+                    SystemConfig.RSI_EXTREME_OVERSOLD = int(config_data['rsi_extreme_oversold'])
+                
+                if 'rsi_extreme_overbought' in config_data:
+                    SystemConfig.RSI_EXTREME_OVERBOUGHT = int(config_data['rsi_extreme_overbought'])
+                
+                if 'rsi_volume_confirmation_multiplier' in config_data:
+                    SystemConfig.RSI_VOLUME_CONFIRMATION_MULTIPLIER = float(config_data['rsi_volume_confirmation_multiplier'])
+                
+                if 'rsi_divergence_lookback' in config_data:
+                    SystemConfig.RSI_DIVERGENCE_LOOKBACK = int(config_data['rsi_divergence_lookback'])
+                
+                # Параметры определения тренда
+                if 'trend_confirmation_bars' in config_data:
+                    SystemConfig.TREND_CONFIRMATION_BARS = int(config_data['trend_confirmation_bars'])
+                
+                if 'trend_min_confirmations' in config_data:
+                    SystemConfig.TREND_MIN_CONFIRMATIONS = int(config_data['trend_min_confirmations'])
+                
+                if 'trend_require_slope' in config_data:
+                    SystemConfig.TREND_REQUIRE_SLOPE = bool(config_data['trend_require_slope'])
+                
+                if 'trend_require_price' in config_data:
+                    SystemConfig.TREND_REQUIRE_PRICE = bool(config_data['trend_require_price'])
+                
+                if 'trend_require_candles' in config_data:
+                    SystemConfig.TREND_REQUIRE_CANDLES = bool(config_data['trend_require_candles'])
+                
+                # ❌ ОТКЛЮЧЕНО: Smart RSI Manager больше не используется
+                # Continuous Data Loader работает с фиксированным интервалом
+                
+                return True
         else:
             # Если файла нет, создаем его с текущими дефолтными значениями
             default_config = {
@@ -669,66 +532,15 @@ def load_system_config():
         logger.error(f"[SYSTEM_CONFIG] ❌ Ошибка загрузки системных настроек: {e}")
         return False
 
-# ✅ РЕФАКТОРИНГ: Используем унифицированную функцию из bot_engine.storage
 def save_bots_state():
     """Сохраняет состояние всех ботов в файл"""
     try:
-        # ✅ ОПТИМИЗАЦИЯ: Пытаемся использовать асинхронное хранилище
-        try:
-            from bot_engine.async_storage import save_bots_state_async
-            from bot_engine.performance_optimizer import get_performance_optimizer
-            import asyncio
-            
-            # Проверяем доступность асинхронного хранилища
-            optimizer = get_performance_optimizer()
-            if optimizer.enabled:
-                # ✅ ИСПРАВЛЕНИЕ: Используем таймаут для блокировки чтобы не висеть при остановке
-                import threading
-                
-                # Пытаемся захватить блокировку с таймаутом
-                acquired = bots_data_lock.acquire(timeout=2.0)
-                if not acquired:
-                    logger.warning("[SAVE_STATE] ⚠️ Не удалось получить блокировку за 2 секунды - пропускаем сохранение")
-                    return False
-                
-                try:
-                    bots_dict = {}
-                    for symbol, bot_data in bots_data['bots'].items():
-                        bots_dict[symbol] = bot_data
-                    
-                    auto_bot_config = bots_data['auto_bot_config'].copy()
-                finally:
-                    bots_data_lock.release()
-                
-                # Пытаемся использовать существующий event loop
-                try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        # Если loop уже запущен, создаем задачу
-                        task = asyncio.create_task(save_bots_state_async(bots_dict, auto_bot_config))
-                        # Возвращаем True сразу (сохранение произойдет асинхронно)
-                        logger.debug(f"[SAVE_STATE] Состояние {len(bots_dict)} ботов поставлено в очередь на сохранение")
-                        return True
-                    else:
-                        # Если loop не запущен, запускаем
-                        success = loop.run_until_complete(save_bots_state_async(bots_dict, auto_bot_config))
-                        if success:
-                            total_bots = len(bots_dict)
-                            logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено (async)")
-                        return success
-                except RuntimeError:
-                    # Нет event loop, создаем новый
-                    success = asyncio.run(save_bots_state_async(bots_dict, auto_bot_config))
-                    if success:
-                        total_bots = len(bots_dict)
-                        logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено (async)")
-                    return success
-        except (ImportError, AttributeError):
-            # Fallback на синхронное сохранение
-            pass
-        
-        # Синхронное сохранение (fallback или если async недоступен)
-        from bot_engine.storage import save_bots_state as storage_save_bots_state
+        state_data = {
+            'bots': {},
+            'auto_bot_config': {},
+            'last_saved': datetime.now().isoformat(),
+            'version': '1.0'
+        }
         
         # ✅ ИСПРАВЛЕНИЕ: Используем таймаут для блокировки чтобы не висеть при остановке
         import threading
@@ -740,62 +552,23 @@ def save_bots_state():
             return False
         
         try:
-            bots_dict = {}
             for symbol, bot_data in bots_data['bots'].items():
-                bots_dict[symbol] = bot_data
+                state_data['bots'][symbol] = bot_data
             
-            auto_bot_config = bots_data['auto_bot_config'].copy()
+            # Сохраняем конфигурацию Auto Bot
+            state_data['auto_bot_config'] = bots_data['auto_bot_config'].copy()
         finally:
             bots_data_lock.release()
         
-        # Используем унифицированную функцию сохранения
-        success = storage_save_bots_state(bots_dict, auto_bot_config)
+        # Записываем в файл
+        with open(BOTS_STATE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(state_data, f, indent=2, ensure_ascii=False)
         
-        if success:
-            total_bots = len(bots_dict)
-            logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено")
+        total_bots = len(state_data['bots'])
+        logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено")
         
-        return success
+        return True
         
-    except ImportError:
-        # Fallback для обратной совместимости
-        try:
-            state_data = {
-                'bots': {},
-                'auto_bot_config': {},
-                'last_saved': datetime.now().isoformat(),
-                'version': '1.0'
-            }
-            
-            import threading
-            
-            # Пытаемся захватить блокировку с таймаутом
-            acquired = bots_data_lock.acquire(timeout=2.0)
-            if not acquired:
-                logger.warning("[SAVE_STATE] ⚠️ Не удалось получить блокировку за 2 секунды - пропускаем сохранение")
-                return False
-            
-            try:
-                for symbol, bot_data in bots_data['bots'].items():
-                    state_data['bots'][symbol] = bot_data
-                
-                # Сохраняем конфигурацию Auto Bot
-                state_data['auto_bot_config'] = bots_data['auto_bot_config'].copy()
-            finally:
-                bots_data_lock.release()
-            
-            # Записываем в файл
-            with open(BOTS_STATE_FILE, 'w', encoding='utf-8') as f:
-                json.dump(state_data, f, indent=2, ensure_ascii=False)
-            
-            total_bots = len(state_data['bots'])
-            logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено")
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"[SAVE_STATE] ❌ Ошибка сохранения состояния: {e}")
-            return False
     except Exception as e:
         logger.error(f"[SAVE_STATE] ❌ Ошибка сохранения состояния: {e}")
         return False
@@ -1032,10 +805,8 @@ def scan_all_coins_for_delisting():
             logger.warning("[DELISTING_CHECK] ⚠️ Не удалось получить список пар")
             return
         
-        # ✅ ИСПРАВЛЕНИЕ: get_all_pairs() возвращает символы БЕЗ 'USDT' (через clean_symbol)
-        # Поэтому все пары уже являются USDT парами, просто без суффикса
-        # Используем все пары напрямую
-        usdt_pairs = all_pairs
+        # Фильтруем только USDT пары
+        usdt_pairs = [pair for pair in all_pairs if pair.endswith('USDT')]
         
         logger.info(f"[DELISTING_CHECK] 📊 Проверяем {len(usdt_pairs)} USDT пар")
         
@@ -1050,10 +821,7 @@ def scan_all_coins_for_delisting():
         for symbol in usdt_pairs:
             try:
                 checked_count += 1
-                # ✅ ИСПРАВЛЕНИЕ: symbol уже без 'USDT', используем напрямую
-                coin_symbol = symbol
-                # Для API вызова нужно добавить 'USDT' обратно
-                api_symbol = f"{symbol}USDT"
+                coin_symbol = symbol.replace('USDT', '')
                 
                 # Пропускаем если уже в списке делистинговых
                 if coin_symbol in delisted_data['delisted_coins']:
@@ -1061,8 +829,7 @@ def scan_all_coins_for_delisting():
                 
                 # Проверяем статус делистинга через API
                 if hasattr(exchange_obj, 'get_instrument_status'):
-                    # ✅ ИСПРАВЛЕНИЕ: Используем api_symbol с 'USDT' для API вызова
-                    status_info = exchange_obj.get_instrument_status(api_symbol)
+                    status_info = exchange_obj.get_instrument_status(symbol)
                     
                     if status_info and status_info.get('is_delisting'):
                         delisted_data['delisted_coins'][coin_symbol] = {
@@ -1204,12 +971,8 @@ def update_bots_cache_data():
         timeout_thread.start()
         
         # ⚡ ОПТИМИЗАЦИЯ: Получаем данные ботов быстро без лишних операций
-        # ✅ ИСПРАВЛЕНИЕ: Добавляем блокировку при чтении bots_data
         bots_list = []
-        with bots_data_lock:
-            bots_dict = dict(bots_data['bots'])  # Копируем словарь для безопасной итерации
-        
-        for symbol, bot_data in bots_dict.items():
+        for symbol, bot_data in bots_data['bots'].items():
             # Проверяем таймаут
             if timeout_occurred.is_set():
                 logger.warning("[BOTS_CACHE] ⚠️ Таймаут достигнут, прерываем обновление")
@@ -2517,55 +2280,28 @@ def sync_bots_with_exchange():
                 timeout_seconds = 8  # Короткий таймаут
                 max_retries = 2
                 
-                # ✅ РЕФАКТОРИНГ: Используем унифицированный декоратор retry
-                try:
-                    from bot_engine.utils.retry_utils import retry_with_backoff
-                    
-                    @retry_with_backoff(
-                        max_retries=max_retries,
-                        backoff_multiplier=1.0,  # Фиксированная задержка 2 секунды
-                        initial_delay=2.0,
-                        exceptions=(Exception,),
-                        on_retry=lambda attempt, e: logger.debug(f"[SYNC_EXCHANGE] Повтор {attempt}/{max_retries}: {e}"),
-                        on_failure=lambda e: logger.error(f"[SYNC_EXCHANGE] ❌ Все попытки провалились: {e}")
-                    )
-                    def _get_positions_with_timeout():
+                for retry in range(max_retries):
+                    retry_start = time.time()
+                    try:
                         # Устанавливаем короткий таймаут на уровне клиента
                         old_timeout = getattr(current_exchange.client, 'timeout', None)
                         current_exchange.client.timeout = timeout_seconds
-                        try:
-                            return current_exchange.client.get_positions(**params)
-                        finally:
-                            # Восстанавливаем таймаут
-                            if old_timeout is not None:
-                                current_exchange.client.timeout = old_timeout
-                    
-                    positions_response = _get_positions_with_timeout()
-                    
-                except ImportError:
-                    # Fallback на старую реализацию если модуль недоступен
-                    for retry in range(max_retries):
-                        retry_start = time.time()
-                        try:
-                            # Устанавливаем короткий таймаут на уровне клиента
-                            old_timeout = getattr(current_exchange.client, 'timeout', None)
-                            current_exchange.client.timeout = timeout_seconds
-                            
-                            positions_response = current_exchange.client.get_positions(**params)
-                            
-                            # Восстанавливаем таймаут
-                            if old_timeout is not None:
-                                current_exchange.client.timeout = old_timeout
-                            
-                            break  # Успех!
-                            
-                        except Exception as e:
-                            logger.debug(f"[SYNC_EXCHANGE] Повтор {retry + 1}/{max_retries}: {e}")
-                            if retry < max_retries - 1:
-                                time.sleep(2)
-                            else:
-                                logger.error(f"[SYNC_EXCHANGE] ❌ Все попытки провалились")
-                                return False
+                        
+                        positions_response = current_exchange.client.get_positions(**params)
+                        
+                        # Восстанавливаем таймаут
+                        if old_timeout is not None:
+                            current_exchange.client.timeout = old_timeout
+                        
+                        break  # Успех!
+                        
+                    except Exception as e:
+                        logger.debug(f"[SYNC_EXCHANGE] Повтор {retry + 1}/{max_retries}: {e}")
+                        if retry < max_retries - 1:
+                            time.sleep(2)
+                        else:
+                            logger.error(f"[SYNC_EXCHANGE] ❌ Все попытки провалились")
+                            return False
                 
                 # Проверяем что получили ответ
                 if positions_response is None:
