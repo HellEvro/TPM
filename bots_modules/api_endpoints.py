@@ -70,21 +70,22 @@ try:
             pass
 except ImportError as e:
     print(f"Warning: Could not import functions in api_endpoints: {e}")
-    # Заглушки если импорт не удался
-    def update_bots_cache_data():
-        pass
-    def save_system_config(config):
-        pass
-    def load_system_config():
-        return {}
-    def save_auto_bot_config():
-        pass
     # ✅ РЕФАКТОРИНГ: Используем импорты из унифицированных модулей
     try:
-        from bots_modules.sync_and_cache import save_bots_state
+        from bots_modules.sync_and_cache import (
+            save_bots_state, save_system_config, load_system_config, save_auto_bot_config
+        )
         from bots_modules.filters import get_effective_signal
     except ImportError:
         # Fallback заглушки если импорт не удался
+        def update_bots_cache_data():
+            pass
+        def save_system_config(config):
+            pass
+        def load_system_config():
+            return {}
+        def save_auto_bot_config():
+            pass
         def save_bots_state():
             pass
         def get_effective_signal(coin):

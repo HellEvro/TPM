@@ -18,7 +18,12 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from bot_engine.ai.lstm_predictor import LSTMPredictor, TENSORFLOW_AVAILABLE
-from utils.rsi_calculator import calculate_rsi
+# ✅ РЕФАКТОРИНГ: Используем унифицированную функцию RSI
+try:
+    from bot_engine.utils.rsi_utils import calculate_rsi
+except ImportError:
+    # Fallback на старую версию если модуль недоступен
+    from utils.rsi_calculator import calculate_rsi
 
 
 def calculate_ema(prices: np.ndarray, period: int) -> np.ndarray:
