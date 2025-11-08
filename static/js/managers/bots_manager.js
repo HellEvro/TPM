@@ -1648,8 +1648,127 @@ class BotsManager {
             console.log(`[RSI_TIME_FILTER] ${coin.symbol}: НЕТ time_filter_info и других полей`);
         }
         
-        // Enhanced RSI Warning (если есть)
-        if (coin.enhanced_rsi?.warning_type && coin.enhanced_rsi.warning_type !== 'ERROR') {
+        // Enhanced RSI информация (если включена)
+        if (coin.enhanced_rsi && coin.enhanced_rsi.enabled) {
+            const enhancedSignal = coin.enhanced_rsi.enhanced_signal;
+            const baseSignal = coin.signal || 'WAIT';
+            const enhancedReason = coin.enhanced_rsi.enhanced_reason || '';
+            const warningMessage = coin.enhanced_rsi.warning_message || '';
+            
+            let enhancedRsiText = '';
+            
+            if (enhancedSignal) {
+                // Если Enhanced RSI изменил сигнал
+                if (enhancedSignal !== baseSignal && baseSignal !== 'WAIT') {
+                    enhancedRsiText = `Сигнал изменен: ${baseSignal} → ${enhancedSignal}`;
+                    if (enhancedReason) {
+                        enhancedRsiText += ` (${enhancedReason})`;
+                    }
+                } else if (enhancedSignal === 'WAIT' && baseSignal !== 'WAIT') {
+                    enhancedRsiText = `Блокировка: базовый сигнал ${baseSignal} заблокирован Enhanced RSI`;
+                    if (enhancedReason) {
+                        enhancedRsiText += ` (${enhancedReason})`;
+                    }
+                } else if (enhancedSignal === baseSignal) {
+                    enhancedRsiText = `Сигнал: ${enhancedSignal}`;
+                    if (enhancedReason) {
+                        enhancedRsiText += ` (${enhancedReason})`;
+                    }
+                } else {
+                    enhancedRsiText = `Сигнал: ${enhancedSignal}`;
+                    if (enhancedReason) {
+                        enhancedRsiText += ` (${enhancedReason})`;
+                    }
+                }
+                
+                if (warningMessage) {
+                    enhancedRsiText += ` | ${warningMessage}`;
+                }
+            } else {
+                enhancedRsiText = 'Включена, но сигнал не определен';
+            }
+            
+            if (enhancedRsiText) {
+                activeStatusData.enhanced_rsi = enhancedRsiText;
+            }
+        }
+        
+        // Сводка причин блокировки сигнала
+        const effectiveSignal = coin.effective_signal || this.getEffectiveSignal(coin);
+        const baseSignal = coin.signal || 'WAIT';
+        
+        if (effectiveSignal === 'WAIT' && baseSignal !== 'WAIT') {
+            // Сигнал был заблокирован - собираем причины
+            const blockReasons = [];
+            
+            // Проверяем все возможные причины блокировки
+            if (coin.blocked_by_exit_scam) {
+                blockReasons.push('ExitScam фильтр');
+            }
+            if (coin.blocked_by_rsi_time) {
+                blockReasons.push('RSI Time фильтр');
+            }
+            if (!coin.is_mature) {
+                blockReasons.push('Незрелая монета');
+            }
+            if (coin.blocked_by_scope) {
+                blockReasons.push('Whitelist/Blacklist');
+            }
+            
+            // Проверяем Enhanced RSI
+            if (coin.enhanced_rsi && coin.enhanced_rsi.enabled) {
+                const enhancedSignal = coin.enhanced_rsi.enhanced_signal;
+                if (enhancedSignal === 'WAIT' && baseSignal !== 'WAIT') {
+                    blockReasons.push('Enhanced RSI');
+                }
+            }
+            
+            // Проверяем фильтры трендов (если включены)
+            const autoConfig = this.cachedAutoBotConfig || {};
+            const avoidDownTrend = autoConfig.avoid_down_trend !== false;
+            const avoidUpTrend = autoConfig.avoid_up_trend !== false;
+            const rsi = coin.rsi6h || 50;
+            const trend = coin.trend6h || 'NEUTRAL';
+            const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
+            const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
+            
+            if (baseSignal === 'ENTER_LONG' && avoidDownTrend && rsi <= rsiLongThreshold && trend === 'DOWN') {
+                blockReasons.push('Фильтр DOWN тренда');
+            }
+            if (baseSignal === 'ENTER_SHORT' && avoidUpTrend && rsi >= rsiShortThreshold && trend === 'UP') {
+                blockReasons.push('Фильтр UP тренда');
+            }
+            
+            if (blockReasons.length > 0) {
+                activeStatusData.signal_block_reason = `Базовый сигнал ${baseSignal} заблокирован: ${blockReasons.join(', ')}`;
+            } else {
+                activeStatusData.signal_block_reason = `Базовый сигнал ${baseSignal} изменен на WAIT (причина не определена)`;
+            }
+        } else if (effectiveSignal === 'WAIT' && baseSignal === 'WAIT') {
+            // Базовый сигнал уже WAIT - проверяем почему
+            const autoConfig = this.cachedAutoBotConfig || {};
+            const rsi = coin.rsi6h || 50;
+            const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
+            const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
+            
+            if (rsi <= rsiLongThreshold) {
+                // RSI низкий, но сигнал WAIT - проверяем Enhanced RSI
+                if (coin.enhanced_rsi && coin.enhanced_rsi.enabled && coin.enhanced_rsi.enhanced_signal === 'WAIT') {
+                    activeStatusData.signal_block_reason = `RSI ${rsi.toFixed(1)} ≤ ${rsiLongThreshold}, но Enhanced RSI вернул WAIT`;
+                } else {
+                    activeStatusData.signal_block_reason = `RSI ${rsi.toFixed(1)} ≤ ${rsiLongThreshold}, но сигнал WAIT (проверьте Enhanced RSI)`;
+                }
+            } else if (rsi >= rsiShortThreshold) {
+                if (coin.enhanced_rsi && coin.enhanced_rsi.enabled && coin.enhanced_rsi.enhanced_signal === 'WAIT') {
+                    activeStatusData.signal_block_reason = `RSI ${rsi.toFixed(1)} ≥ ${rsiShortThreshold}, но Enhanced RSI вернул WAIT`;
+                } else {
+                    activeStatusData.signal_block_reason = `RSI ${rsi.toFixed(1)} ≥ ${rsiShortThreshold}, но сигнал WAIT (проверьте Enhanced RSI)`;
+                }
+            }
+        }
+        
+        // Enhanced RSI Warning (если есть, но не включена система)
+        if (coin.enhanced_rsi?.warning_type && coin.enhanced_rsi.warning_type !== 'ERROR' && !coin.enhanced_rsi.enabled) {
             activeStatusData.enhanced_warning = coin.enhanced_rsi.warning_type;
         }
         
@@ -1704,6 +1823,12 @@ class BotsManager {
         
         this.updateFilterItem('rsiTimeFilterItem', 'selectedCoinRsiTimeFilter', 'rsiTimeFilterIcon', 
                              activeStatusData.rsi_time_filter, 'RSI Time Filter');
+        
+        this.updateFilterItem('enhancedRsiItem', 'selectedCoinEnhancedRsi', 'enhancedRsiIcon', 
+                             activeStatusData.enhanced_rsi, 'Enhanced RSI');
+        
+        this.updateFilterItem('signalBlockReasonItem', 'selectedCoinSignalBlockReason', 'signalBlockReasonIcon', 
+                             activeStatusData.signal_block_reason, 'Причина блокировки');
         
         this.updateFilterItem('maturityDiamondItem', 'selectedCoinMaturityDiamond', 'maturityDiamondIcon', 
                              activeStatusData.maturity, 'Зрелость монеты');
@@ -1797,9 +1922,43 @@ class BotsManager {
                         description = statusValue || 'RSI Time Filter';
                     }
                     // Обновляем текст значения без префикса
-                    if (displayText && displayText !== statusValue) {
+                }
+                else if (label === 'Enhanced RSI') {
+                    // Специальная обработка для Enhanced RSI
+                    let displayText = statusValue;
+                    if (statusValue.includes('Блокировка:') || statusValue.includes('заблокирован')) {
+                        icon = '🚫';
+                        description = 'Enhanced RSI заблокировал сигнал';
+                        valueElement.innerHTML = `<span style="color: var(--red-text);">${displayText}</span>`;
+                        iconElement.textContent = icon;
+                        iconElement.title = description;
+                        return; // Выходим рано для цветного контента
+                    } else if (statusValue.includes('Сигнал изменен:')) {
+                        icon = '🔄';
+                        description = 'Enhanced RSI изменил сигнал';
+                        valueElement.innerHTML = `<span style="color: var(--warning-color);">${displayText}</span>`;
+                        iconElement.textContent = icon;
+                        iconElement.title = description;
+                        return; // Выходим рано для цветного контента
+                    } else if (statusValue.includes('Сигнал:')) {
+                        icon = '🧠';
+                        description = 'Enhanced RSI сигнал';
+                        valueElement.textContent = displayText;
+                    } else {
+                        icon = '🧠';
+                        description = 'Enhanced RSI';
                         valueElement.textContent = displayText;
                     }
+                }
+                else if (label === 'Причина блокировки') {
+                    // Специальная обработка для причины блокировки сигнала
+                    let displayText = statusValue;
+                    icon = '🚫';
+                    description = 'Причина блокировки сигнала';
+                    valueElement.innerHTML = `<span style="color: var(--red-text); font-weight: bold;">${displayText}</span>`;
+                    iconElement.textContent = icon;
+                    iconElement.title = description;
+                    return; // Выходим рано для цветного контента
                 }
                 else if (label === 'Статус бота') {
                     // Устанавливаем цвет для статуса бота в зависимости от значения
