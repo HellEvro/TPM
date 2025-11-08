@@ -49,14 +49,21 @@ except ImportError as e:
     print(f"Warning: Could not import functions in workers: {e}")
     def should_log_message(category, message, interval_seconds=60):
         return (True, message)
-    def save_bots_state():
-        return True
-    def save_mature_coins_storage():
-        pass
-    def update_process_state(name, data):
-        pass
-    def save_auto_bot_config():
-        pass
+    # ✅ РЕФАКТОРИНГ: Используем импорты из унифицированных модулей
+    try:
+        from bots_modules.sync_and_cache import save_bots_state, update_process_state
+        from bots_modules.maturity import save_mature_coins_storage
+        from bots_modules.sync_and_cache import save_auto_bot_config
+    except ImportError:
+        # Fallback заглушки если импорт не удался
+        def save_bots_state():
+            return True
+        def save_mature_coins_storage():
+            pass
+        def update_process_state(name, data):
+            pass
+        def save_auto_bot_config():
+            pass
     def update_bots_cache_data():
         pass
     def check_missing_stop_losses():

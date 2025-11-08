@@ -157,6 +157,7 @@ def load_mature_coins_storage(expected_coins_count=None):
         with mature_coins_lock:
             mature_coins_storage.clear()
 
+# ✅ РЕФАКТОРИНГ: Используем унифицированную функцию из bot_engine.storage
 def save_mature_coins_storage():
     """Сохраняет постоянное хранилище зрелых монет в файл"""
     global maturity_data_invalidated
@@ -167,17 +168,35 @@ def save_mature_coins_storage():
         return False
     
     try:
+        from bot_engine.storage import save_mature_coins
+        
         with mature_coins_lock:
             # Создаем копию для безопасной сериализации
             storage_copy = mature_coins_storage.copy()
         
-        os.makedirs(os.path.dirname(MATURE_COINS_FILE), exist_ok=True)
+        # Используем унифицированную функцию сохранения
+        success = save_mature_coins(storage_copy)
         
-        # Используем стандартную функцию сохранения из bot_engine.storage
-        from bot_engine.storage import save_json_file
-        save_json_file(MATURE_COINS_FILE, storage_copy)
-        logger.debug(f"[MATURITY_STORAGE] Хранилище сохранено: {len(storage_copy)} монет")
-        return True  # Успешно сохранили
+        if success:
+            logger.debug(f"[MATURITY_STORAGE] Хранилище сохранено: {len(storage_copy)} монет")
+        
+        return success
+        
+    except ImportError:
+        # Fallback для обратной совместимости
+        try:
+            with mature_coins_lock:
+                storage_copy = mature_coins_storage.copy()
+            
+            os.makedirs(os.path.dirname(MATURE_COINS_FILE), exist_ok=True)
+            
+            from bot_engine.storage import save_json_file
+            save_json_file(MATURE_COINS_FILE, storage_copy, "зрелые монеты")
+            logger.debug(f"[MATURITY_STORAGE] Хранилище сохранено: {len(storage_copy)} монет")
+            return True
+        except Exception as e:
+            logger.error(f"[MATURITY_STORAGE] Ошибка сохранения хранилища: {e}")
+            return False
     except Exception as e:
         logger.error(f"[MATURITY_STORAGE] Ошибка сохранения хранилища: {e}")
         return False
@@ -275,90 +294,101 @@ def remove_mature_coin_from_storage(symbol):
 #     """Обновляет данные об оптимальных EMA из внешнего источника"""
 #     return False
 
+# ✅ РЕФАКТОРИНГ: Используем унифицированные функции из bot_engine.maturity_checker
 def check_coin_maturity_with_storage(symbol, candles):
     """Проверяет зрелость монеты с использованием постоянного хранилища"""
-    # Сначала проверяем постоянное хранилище
-    if is_coin_mature_stored(symbol):
-        logger.debug(f"[MATURITY_STORAGE] {symbol}: найдена в постоянном хранилище зрелых монет")
-        return {
-            'is_mature': True,
-            'details': {'stored': True, 'from_storage': True}
-        }
-    
-    # Если не в хранилище, выполняем полную проверку
-    maturity_result = check_coin_maturity(symbol, candles)
-    
-    # Если монета зрелая, добавляем в постоянное хранилище (с автосохранением)
-    if maturity_result['is_mature']:
-        add_mature_coin_to_storage(symbol, maturity_result, auto_save=True)
-    
-    return maturity_result
-
-def check_coin_maturity(symbol, candles):
-    """Проверяет зрелость монеты для торговли"""
     try:
-        # Получаем настройки зрелости из конфигурации
+        from bot_engine.maturity_checker import (
+            check_coin_maturity_with_storage as base_check_with_storage,
+            is_coin_mature_stored
+        )
+        
+        # Получаем конфигурацию из глобальной переменной
         with bots_data_lock:
             config = bots_data.get('auto_bot_config', {})
         
-        min_candles = config.get('min_candles_for_maturity', MIN_CANDLES_FOR_MATURITY)
-        min_rsi_low = config.get('min_rsi_low', MIN_RSI_LOW)
-        max_rsi_high = config.get('max_rsi_high', MAX_RSI_HIGH)
-        # Убрали min_volatility - больше не проверяем волатильность
+        # Используем базовую функцию с передачей конфига
+        def save_func():
+            save_mature_coins_storage()
         
-        if not candles or len(candles) < min_candles:
+        return base_check_with_storage(symbol, candles, config, save_func=save_func)
+        
+    except ImportError:
+        # Fallback для обратной совместимости
+        if is_coin_mature_stored(symbol):
+            logger.debug(f"[MATURITY_STORAGE] {symbol}: найдена в постоянном хранилище зрелых монет")
             return {
-                'is_mature': False,
-                'reason': f'Недостаточно свечей: {len(candles) if candles else 0}/{min_candles}',
-                'details': {
-                    'candles_count': len(candles) if candles else 0,
-                    'min_required': min_candles
+                'is_mature': True,
+                'details': {'stored': True, 'from_storage': True}
+            }
+        
+        maturity_result = check_coin_maturity(symbol, candles)
+        
+        if maturity_result['is_mature']:
+            add_mature_coin_to_storage(symbol, maturity_result, auto_save=True)
+        
+        return maturity_result
+
+# ✅ РЕФАКТОРИНГ: Используем унифицированную функцию из bot_engine.maturity_checker
+def check_coin_maturity(symbol, candles):
+    """Проверяет зрелость монеты для торговли"""
+    try:
+        from bot_engine.maturity_checker import check_coin_maturity as base_check_coin_maturity
+        
+        # Получаем конфигурацию из глобальной переменной
+        with bots_data_lock:
+            config = bots_data.get('auto_bot_config', {})
+        
+        # Используем базовую функцию с передачей конфига
+        return base_check_coin_maturity(symbol, candles, config)
+        
+    except ImportError:
+        # Fallback для обратной совместимости - используем старую логику
+        try:
+            with bots_data_lock:
+                config = bots_data.get('auto_bot_config', {})
+            
+            min_candles = config.get('min_candles_for_maturity', MIN_CANDLES_FOR_MATURITY)
+            min_rsi_low = config.get('min_rsi_low', MIN_RSI_LOW)
+            max_rsi_high = config.get('max_rsi_high', MAX_RSI_HIGH)
+            
+            if not candles or len(candles) < min_candles:
+                return {
+                    'is_mature': False,
+                    'reason': f'Недостаточно свечей: {len(candles) if candles else 0}/{min_candles}',
+                    'details': {
+                        'candles_count': len(candles) if candles else 0,
+                        'min_required': min_candles
+                    }
                 }
+            
+            recent_candles = candles[-min_candles:] if len(candles) >= min_candles else candles
+            closes = [candle['close'] for candle in recent_candles]
+            rsi_history = calculate_rsi_history(closes, 14)
+            
+            if not rsi_history:
+                return {
+                    'is_mature': False,
+                    'reason': 'Не удалось рассчитать историю RSI',
+                    'details': {}
+                }
+            
+            rsi_min = min(rsi_history)
+            rsi_max = max(rsi_history)
+            rsi_range = rsi_max - rsi_min
+            
+            maturity_checks = {
+                'sufficient_candles': len(candles) >= min_candles,
+                'rsi_reached_low': rsi_min <= min_rsi_low,
+                'rsi_reached_high': rsi_max >= max_rsi_high
             }
-        
-        # ✅ ИСПРАВЛЕНИЕ: Берем только последние N свечей для анализа зрелости
-        # Это означает что монета должна иметь достаточно истории в РЕЦЕНТНОЕ время
-        recent_candles = candles[-min_candles:] if len(candles) >= min_candles else candles
-        
-        # Извлекаем цены закрытия из последних свечей
-        closes = [candle['close'] for candle in recent_candles]
-        
-        # Рассчитываем историю RSI
-        rsi_history = calculate_rsi_history(closes, 14)
-        if not rsi_history:
-            return {
-                'is_mature': False,
-                'reason': 'Не удалось рассчитать историю RSI',
-                'details': {}
-            }
-        
-        # Анализируем диапазон RSI
-        rsi_min = min(rsi_history)
-        rsi_max = max(rsi_history)
-        rsi_range = rsi_max - rsi_min
-        
-        # Проверяем критерии зрелости (убрали проверку волатильности)
-        maturity_checks = {
-            'sufficient_candles': len(candles) >= min_candles,
-            'rsi_reached_low': rsi_min <= min_rsi_low,
-            'rsi_reached_high': rsi_max >= max_rsi_high
-        }
-        
-        # Убрали проверку волатильности - она была слишком строгой
-        volatility = 0  # Для совместимости с детальной информацией
-        
-        # Определяем общую зрелость
-        # Монета зрелая, если достаточно свечей И RSI достигал низких И высоких значений (полный цикл)
-        is_mature = maturity_checks['sufficient_candles'] and maturity_checks['rsi_reached_low'] and maturity_checks['rsi_reached_high']
-        
-        # Детальное логирование для отладки (отключено для уменьшения спама)
-        # logger.info(f"[MATURITY_DEBUG] {symbol}: свечи={maturity_checks['sufficient_candles']} ({len(candles)}/{min_candles}), RSI_low={maturity_checks['rsi_reached_low']} (min={rsi_min:.1f}<=>{min_rsi_low}), RSI_high={maturity_checks['rsi_reached_high']} (max={rsi_max:.1f}>={max_rsi_high}), зрелая={is_mature}")
-        
-        # Формируем детальную информацию с параметрами конфига
-        details = {
-            'candles_count': len(candles),
-            'min_required': min_candles,
-            'config_min_rsi_low': min_rsi_low,
+            
+            is_mature = maturity_checks['sufficient_candles'] and maturity_checks['rsi_reached_low'] and maturity_checks['rsi_reached_high']
+            
+            details = {
+                'candles_count': len(candles),
+                'min_required': min_candles,
+                'config_min_rsi_low': min_rsi_low,
             'config_max_rsi_high': max_rsi_high,
             'rsi_min': round(rsi_min, 1),
             'rsi_max': round(rsi_max, 1)

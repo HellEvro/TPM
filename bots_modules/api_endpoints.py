@@ -79,12 +79,16 @@ except ImportError as e:
         return {}
     def save_auto_bot_config():
         pass
-    def save_bots_state():
-        pass
-    def get_effective_signal(coin):
-        # Используем настоящую функцию из filters.py
-        from bots_modules.filters import get_effective_signal as real_get_effective_signal
-        return real_get_effective_signal(coin)
+    # ✅ РЕФАКТОРИНГ: Используем импорты из унифицированных модулей
+    try:
+        from bots_modules.sync_and_cache import save_bots_state
+        from bots_modules.filters import get_effective_signal
+    except ImportError:
+        # Fallback заглушки если импорт не удался
+        def save_bots_state():
+            pass
+        def get_effective_signal(coin):
+            return 'WAIT'
     def check_auto_bot_filters(symbol):
         return {'allowed': True}
     def process_auto_bot_signals(exchange_obj=None):
