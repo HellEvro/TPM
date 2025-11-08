@@ -1654,30 +1654,126 @@ class BotsManager {
             const baseSignal = coin.signal || 'WAIT';
             const enhancedReason = coin.enhanced_rsi.enhanced_reason || '';
             const warningMessage = coin.enhanced_rsi.warning_message || '';
+            const confirmations = coin.enhanced_rsi.confirmations || {};
             
             let enhancedRsiText = '';
+            
+            // Функция для преобразования технической причины в понятный текст
+            const parseEnhancedReason = (reason) => {
+                if (!reason) return '';
+                
+                // Парсим причину для понятного отображения
+                if (reason.includes('fresh_oversold')) {
+                    const rsiMatch = reason.match(/fresh_oversold_(\d+\.?\d*)/);
+                    const rsi = rsiMatch ? rsiMatch[1] : '';
+                    const factors = [];
+                    
+                    if (reason.includes('base_oversold')) factors.push('RSI в зоне перепроданности');
+                    if (reason.includes('bullish_divergence')) factors.push('бычья дивергенция');
+                    if (reason.includes('stoch_oversold')) factors.push('Stochastic RSI перепродан');
+                    if (reason.includes('volume_confirm')) factors.push('подтверждение объемом');
+                    
+                    if (factors.length > 0) {
+                        return `RSI ${rsi} недавно вошел в зону перепроданности. Подтверждения: ${factors.join(', ')}`;
+                    }
+                    return `RSI ${rsi} недавно вошел в зону перепроданности`;
+                } else if (reason.includes('enhanced_oversold')) {
+                    const rsiMatch = reason.match(/enhanced_oversold_(\d+\.?\d*)/);
+                    const rsi = rsiMatch ? rsiMatch[1] : '';
+                    const factors = [];
+                    
+                    if (reason.includes('base_oversold')) factors.push('RSI в зоне перепроданности');
+                    if (reason.includes('bullish_divergence')) factors.push('бычья дивергенция');
+                    if (reason.includes('stoch_oversold')) factors.push('Stochastic RSI перепродан');
+                    if (reason.includes('volume_confirm')) factors.push('подтверждение объемом');
+                    
+                    if (factors.length > 0) {
+                        return `RSI ${rsi} в зоне перепроданности. Подтверждения: ${factors.join(', ')}`;
+                    }
+                    return `RSI ${rsi} в зоне перепроданности`;
+                } else if (reason.includes('fresh_overbought')) {
+                    const rsiMatch = reason.match(/fresh_overbought_(\d+\.?\d*)/);
+                    const rsi = rsiMatch ? rsiMatch[1] : '';
+                    const factors = [];
+                    
+                    if (reason.includes('base_overbought')) factors.push('RSI в зоне перекупленности');
+                    if (reason.includes('bearish_divergence')) factors.push('медвежья дивергенция');
+                    if (reason.includes('stoch_overbought')) factors.push('Stochastic RSI перекуплен');
+                    if (reason.includes('volume_confirm')) factors.push('подтверждение объемом');
+                    
+                    if (factors.length > 0) {
+                        return `RSI ${rsi} недавно вошел в зону перекупленности. Подтверждения: ${factors.join(', ')}`;
+                    }
+                    return `RSI ${rsi} недавно вошел в зону перекупленности`;
+                } else if (reason.includes('enhanced_overbought')) {
+                    const rsiMatch = reason.match(/enhanced_overbought_(\d+\.?\d*)/);
+                    const rsi = rsiMatch ? rsiMatch[1] : '';
+                    const factors = [];
+                    
+                    if (reason.includes('base_overbought')) factors.push('RSI в зоне перекупленности');
+                    if (reason.includes('bearish_divergence')) factors.push('медвежья дивергенция');
+                    if (reason.includes('stoch_overbought')) factors.push('Stochastic RSI перекуплен');
+                    if (reason.includes('volume_confirm')) factors.push('подтверждение объемом');
+                    
+                    if (factors.length > 0) {
+                        return `RSI ${rsi} в зоне перекупленности. Подтверждения: ${factors.join(', ')}`;
+                    }
+                    return `RSI ${rsi} в зоне перекупленности`;
+                } else if (reason.includes('strict_mode_bullish_divergence')) {
+                    const rsiMatch = reason.match(/strict_mode_bullish_divergence_(\d+\.?\d*)/);
+                    const rsi = rsiMatch ? rsiMatch[1] : '';
+                    return `Строгий режим: RSI ${rsi} + бычья дивергенция`;
+                } else if (reason.includes('strict_mode_bearish_divergence')) {
+                    const rsiMatch = reason.match(/strict_mode_bearish_divergence_(\d+\.?\d*)/);
+                    const rsi = rsiMatch ? rsiMatch[1] : '';
+                    return `Строгий режим: RSI ${rsi} + медвежья дивергенция`;
+                } else if (reason.includes('strict_mode_no_divergence')) {
+                    const rsiMatch = reason.match(/strict_mode_no_divergence_(\d+\.?\d*)/);
+                    const rsi = rsiMatch ? rsiMatch[1] : '';
+                    return `Строгий режим: требуется дивергенция (RSI ${rsi})`;
+                } else if (reason.includes('insufficient_confirmation')) {
+                    const rsiMatch = reason.match(/oversold_but_insufficient_confirmation_(\d+\.?\d*)/);
+                    const rsi = rsiMatch ? rsiMatch[1] : '';
+                    const durationMatch = reason.match(/duration_(\d+)/);
+                    const duration = durationMatch ? durationMatch[1] : '';
+                    return `RSI ${rsi} в зоне ${duration} свечей, но недостаточно подтверждений`;
+                } else if (reason.includes('enhanced_neutral')) {
+                    const rsiMatch = reason.match(/enhanced_neutral_(\d+\.?\d*)/);
+                    const rsi = rsiMatch ? rsiMatch[1] : '';
+                    return `RSI ${rsi} в нейтральной зоне`;
+                }
+                
+                // Если не распознано - возвращаем как есть, но убираем подчеркивания
+                return reason.replace(/_/g, ' ');
+            };
             
             if (enhancedSignal) {
                 // Если Enhanced RSI изменил сигнал
                 if (enhancedSignal !== baseSignal && baseSignal !== 'WAIT') {
+                    const reasonText = parseEnhancedReason(enhancedReason);
                     enhancedRsiText = `Сигнал изменен: ${baseSignal} → ${enhancedSignal}`;
-                    if (enhancedReason) {
-                        enhancedRsiText += ` (${enhancedReason})`;
+                    if (reasonText) {
+                        enhancedRsiText += `. ${reasonText}`;
                     }
                 } else if (enhancedSignal === 'WAIT' && baseSignal !== 'WAIT') {
+                    const reasonText = parseEnhancedReason(enhancedReason);
                     enhancedRsiText = `Блокировка: базовый сигнал ${baseSignal} заблокирован Enhanced RSI`;
-                    if (enhancedReason) {
-                        enhancedRsiText += ` (${enhancedReason})`;
+                    if (reasonText) {
+                        enhancedRsiText += `. ${reasonText}`;
                     }
-                } else if (enhancedSignal === baseSignal) {
-                    enhancedRsiText = `Сигнал: ${enhancedSignal}`;
-                    if (enhancedReason) {
-                        enhancedRsiText += ` (${enhancedReason})`;
+                } else if (enhancedSignal === baseSignal || enhancedSignal === 'ENTER_LONG' || enhancedSignal === 'ENTER_SHORT') {
+                    // Enhanced RSI подтвердил или разрешил сигнал
+                    const reasonText = parseEnhancedReason(enhancedReason);
+                    if (reasonText) {
+                        enhancedRsiText = `${enhancedSignal === 'ENTER_LONG' ? '✅ LONG разрешен' : enhancedSignal === 'ENTER_SHORT' ? '✅ SHORT разрешен' : `Сигнал: ${enhancedSignal}`}. ${reasonText}`;
+                    } else {
+                        enhancedRsiText = `${enhancedSignal === 'ENTER_LONG' ? '✅ LONG разрешен' : enhancedSignal === 'ENTER_SHORT' ? '✅ SHORT разрешен' : `Сигнал: ${enhancedSignal}`}`;
                     }
                 } else {
+                    const reasonText = parseEnhancedReason(enhancedReason);
                     enhancedRsiText = `Сигнал: ${enhancedSignal}`;
-                    if (enhancedReason) {
-                        enhancedRsiText += ` (${enhancedReason})`;
+                    if (reasonText) {
+                        enhancedRsiText += `. ${reasonText}`;
                     }
                 }
                 
