@@ -66,7 +66,7 @@ class VolumeMode:
 # Настройки Auto Bot по умолчанию
 DEFAULT_AUTO_BOT_CONFIG = {
     'enabled': True,
-    'max_concurrent': 50,
+    'max_concurrent': 20,
     'risk_cap_percent': 10,
     'scope': 'all',  # all | whitelist | blacklist
     'whitelist': [],
@@ -89,7 +89,7 @@ DEFAULT_AUTO_BOT_CONFIG = {
     # Защитные механизмы
     'max_loss_percent': 15,   # Максимальный убыток в % от входа (стоп-лосс)
     'take_profit_percent': 20,  # Защитный Take Profit в % от входа (рассчитывается как стоп-лосс)
-    'trailing_stop_activation': 50,  # Активация trailing stop при прибыли в % (x3 = 300%)
+    'trailing_stop_activation': 20,  # Активация trailing stop при прибыли в % (x3 = 300%)
     'trailing_stop_distance': 15,    # Расстояние trailing stop в % (x1.5 = 150%)
     'max_position_hours': 0,     # Максимальное время удержания позиции в часах (0 = отключено)
     'break_even_protection': True,      # Защита безубыточности
@@ -109,7 +109,7 @@ DEFAULT_AUTO_BOT_CONFIG = {
     'max_rsi_high': 65,                 # Максимальный достигнутый RSI (должен быть >= 65)
     # RSI временной фильтр
     'rsi_time_filter_enabled': True,    # Включить временной фильтр для RSI сигналов
-    'rsi_time_filter_candles': 8,       # Минимум свечей с последнего экстремума (4 = 1 день на 6H)
+    'rsi_time_filter_candles': 6,       # Минимум свечей с последнего экстремума (4 = 1 день на 6H)
     'rsi_time_filter_upper': 65,        # Верхняя граница спокойной зоны для SHORT
     'rsi_time_filter_lower': 35,        # Нижняя граница спокойной зоны для LONG
     # ExitScam фильтр (защита от резких движений цены)
