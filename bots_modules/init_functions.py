@@ -200,6 +200,11 @@ def init_bot_service():
                     trading_bot.trailing_activation_profit = bot_data.get('trailing_activation_profit', 0)
                     trading_bot.trailing_activation_threshold = bot_data.get('trailing_activation_threshold', 0)
                     trading_bot.trailing_locked_profit = bot_data.get('trailing_locked_profit', 0)
+                    trading_bot.trailing_active = bot_data.get('trailing_active', False)
+                    trading_bot.trailing_max_profit_usdt = bot_data.get('trailing_max_profit_usdt', 0.0)
+                    trading_bot.trailing_step_usdt = bot_data.get('trailing_step_usdt', 0.0)
+                    trading_bot.trailing_step_price = bot_data.get('trailing_step_price', 0.0)
+                    trading_bot.trailing_steps = bot_data.get('trailing_steps', 0)
                     trading_bot.break_even_activated = bot_data.get('break_even_activated', False)
                     trading_bot.rsi_data = bot_data.get('rsi_data', {})
                     

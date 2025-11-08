@@ -90,7 +90,8 @@ def _compute_margin_based_trailing(side: str,
                                    profit_percent: float,
                                    max_profit_percent: float,
                                    trailing_activation_percent: float,
-                                   trailing_distance_percent: float):
+                                   trailing_distance_percent: float,
+                                   trailing_profit_usdt_max: float = 0.0):
     """
     Рассчитывает параметры трейлинг-стопа на основе маржи сделки.
 
@@ -106,16 +107,17 @@ def _compute_margin_based_trailing(side: str,
         }
     """
     try:
-        side = (side or '').lower()
-        entry_price = float(entry_price or 0)
-        current_price = float(current_price or 0)
-        position_qty = abs(float(position_qty or 0))
-        leverage = float(leverage or 1) if float(leverage or 1) > 0 else 1.0
-        realized_pnl = float(realized_pnl or 0)
-        profit_percent = float(profit_percent or 0)
-        max_profit_percent = float(max_profit_percent or 0)
-        trailing_activation_percent = float(trailing_activation_percent or 0)
-        trailing_distance_percent = float(trailing_distance_percent or 0)
+        normalized_side = (side or '').upper()
+        entry_price = float(entry_price or 0.0)
+        current_price = float(current_price or 0.0)
+        position_qty = abs(float(position_qty or 0.0))
+        leverage = float(leverage or 1.0)
+        if leverage <= 0:
+            leverage = 1.0
+        realized_pnl = float(realized_pnl or 0.0)
+        trailing_activation_percent = float(trailing_activation_percent or 0.0)
+        trailing_distance_percent = float(trailing_distance_percent or 0.0)
+        trailing_profit_usdt_max = float(trailing_profit_usdt_max or 0.0)
     except (ValueError, TypeError):
         return {
             'active': False,
@@ -124,7 +126,11 @@ def _compute_margin_based_trailing(side: str,
             'activation_threshold_usdt': 0.0,
             'activation_profit_usdt': 0.0,
             'profit_usdt': 0.0,
-            'margin_usdt': 0.0
+            'profit_usdt_max': 0.0,
+            'margin_usdt': 0.0,
+            'trailing_step_usdt': 0.0,
+            'trailing_step_price': 0.0,
+            'steps': 0
         }
 
     if entry_price <= 0 or position_qty <= 0:
@@ -135,89 +141,83 @@ def _compute_margin_based_trailing(side: str,
             'activation_threshold_usdt': 0.0,
             'activation_profit_usdt': 0.0,
             'profit_usdt': 0.0,
-            'margin_usdt': 0.0
+            'profit_usdt_max': trailing_profit_usdt_max,
+            'margin_usdt': 0.0,
+            'trailing_step_usdt': 0.0,
+            'trailing_step_price': 0.0,
+            'steps': 0
         }
 
     position_value = entry_price * position_qty
     margin_usdt = position_value / leverage if leverage else position_value
-    profit_usdt = (profit_percent / 100.0) * position_value
-    max_profit_usdt = (max_profit_percent / 100.0) * position_value
+
+    profit_usdt = 0.0
+    if normalized_side == 'LONG':
+        profit_usdt = position_qty * max(0.0, current_price - entry_price)
+    elif normalized_side == 'SHORT':
+        profit_usdt = position_qty * max(0.0, entry_price - current_price)
+    profit_usdt = float(profit_usdt)
+
     realized_abs = abs(realized_pnl)
-    activation_from_margin = margin_usdt * (trailing_activation_percent / 100.0)
-    activation_threshold_usdt = activation_from_margin
-    if realized_abs > 0:
-        activation_threshold_usdt = max(activation_from_margin, realized_abs * 4.0)
-    activation_profit_usdt = activation_threshold_usdt
+    activation_from_config = margin_usdt * (trailing_activation_percent / 100.0)
+    realized_times_three = realized_abs * 3.0
+    if activation_from_config >= realized_times_three:
+        activation_threshold_usdt = activation_from_config
+    else:
+        activation_threshold_usdt = realized_abs * 4.0
+    activation_threshold_usdt = float(activation_threshold_usdt)
 
-    if margin_usdt <= 0:
-        return {
-            'active': False,
-            'stop_price': None,
-            'locked_profit_usdt': 0.0,
-            'activation_threshold_usdt': activation_profit_usdt,
-            'activation_profit_usdt': activation_profit_usdt,
-            'profit_usdt': profit_usdt,
-            'margin_usdt': margin_usdt
-        }
-
-    locked_profit_base = realized_abs * 3.0 if realized_abs > 0 else margin_usdt * (trailing_distance_percent / 100.0)
-
-    if activation_profit_usdt > 0 and profit_usdt < activation_profit_usdt:
-        return {
-            'active': False,
-            'stop_price': None,
-            'locked_profit_usdt': locked_profit_base,
-            'activation_threshold_usdt': activation_profit_usdt,
-            'activation_profit_usdt': activation_profit_usdt,
-            'profit_usdt': profit_usdt,
-            'margin_usdt': margin_usdt
-        }
+    trailing_profit_usdt_max = max(trailing_profit_usdt_max, profit_usdt)
 
     trailing_step_usdt = margin_usdt * (trailing_distance_percent / 100.0)
-    if trailing_step_usdt <= 0:
-        trailing_step_usdt = 0.0
+    trailing_step_usdt = max(trailing_step_usdt, 0.0)
+    trailing_step_price = trailing_step_usdt / position_qty if position_qty > 0 else 0.0
 
-    locked_profit = locked_profit_base
-    if trailing_step_usdt > 0 and max_profit_usdt > locked_profit_base:
-        increments = math.floor((max_profit_usdt - locked_profit_base) / trailing_step_usdt)
-        if increments > 0:
-            locked_profit = locked_profit_base + increments * trailing_step_usdt
+    trailing_active = False
+    if margin_usdt > 0 and activation_threshold_usdt > 0:
+        trailing_active = trailing_profit_usdt_max >= activation_threshold_usdt
 
-    locked_profit = min(locked_profit, max_profit_usdt if max_profit_usdt > 0 else locked_profit, profit_usdt)
-    if locked_profit <= 0:
-        return {
-            'active': False,
-            'stop_price': None,
-            'locked_profit_usdt': locked_profit,
-            'activation_threshold_usdt': activation_profit_usdt,
-            'activation_profit_usdt': activation_profit_usdt,
-            'profit_usdt': profit_usdt,
-            'margin_usdt': margin_usdt
-        }
+    locked_profit_usdt = realized_abs * 3.0
+    if locked_profit_usdt < 0:
+        locked_profit_usdt = 0.0
 
+    steps = 0
     stop_price = None
-    profit_per_coin = locked_profit / position_qty if position_qty else 0
 
-    if side == 'buy' or side == 'long':
-        stop_price = entry_price + profit_per_coin
-        # стоп не должен быть выше текущей цены
-        if current_price > 0:
-            stop_price = min(stop_price, current_price * 0.9995)
-        stop_price = max(stop_price, entry_price)
-    elif side == 'sell' or side == 'short':
-        stop_price = entry_price - profit_per_coin
-        if current_price > 0:
-            stop_price = max(stop_price, current_price * 1.0005)
-        stop_price = min(stop_price, entry_price)
+    if trailing_active:
+        prirost_max = max(0.0, trailing_profit_usdt_max - activation_threshold_usdt)
+        if trailing_step_usdt > 0:
+            steps = int(math.floor(prirost_max / trailing_step_usdt))
+        locked_profit_total = locked_profit_usdt + steps * trailing_step_usdt
+        locked_profit_total = min(locked_profit_total, trailing_profit_usdt_max)
+
+        profit_per_coin = locked_profit_total / position_qty if position_qty > 0 else 0.0
+
+        if normalized_side == 'LONG':
+            stop_price = entry_price + profit_per_coin
+            if current_price > 0:
+                stop_price = min(stop_price, current_price)
+            stop_price = max(stop_price, entry_price)
+        elif normalized_side == 'SHORT':
+            stop_price = entry_price - profit_per_coin
+            if current_price > 0:
+                stop_price = max(stop_price, current_price)
+            stop_price = min(stop_price, entry_price)
+
+        locked_profit_usdt = locked_profit_total
 
     return {
-        'active': True,
+        'active': trailing_active,
         'stop_price': stop_price,
-        'locked_profit_usdt': locked_profit,
-        'activation_threshold_usdt': activation_profit_usdt,
-        'activation_profit_usdt': activation_profit_usdt,
+        'locked_profit_usdt': locked_profit_usdt,
+        'activation_threshold_usdt': activation_threshold_usdt,
+        'activation_profit_usdt': activation_threshold_usdt,
         'profit_usdt': profit_usdt,
-        'margin_usdt': margin_usdt
+        'profit_usdt_max': trailing_profit_usdt_max,
+        'margin_usdt': margin_usdt,
+        'trailing_step_usdt': trailing_step_usdt,
+        'trailing_step_price': trailing_step_price,
+        'steps': steps
     }
     def get_coin_processing_lock(symbol):
         return threading.Lock()
@@ -2031,13 +2031,19 @@ def check_missing_stop_losses():
                             profit_percent,
                             bot_data.get('max_profit_achieved', 0),
                             trailing_activation,
-                            trailing_distance
+                            trailing_distance,
+                            bot_data.get('trailing_max_profit_usdt', 0.0)
                         )
 
                         bot_data['trailing_activation_profit'] = trailing_params.get('activation_profit_usdt', 0.0)
                         bot_data['trailing_activation_threshold'] = trailing_params.get('activation_threshold_usdt', 0.0)
                         bot_data['trailing_locked_profit'] = trailing_params.get('locked_profit_usdt', 0.0)
                         bot_data['margin_usdt'] = trailing_params.get('margin_usdt', 0.0)
+                        bot_data['trailing_active'] = trailing_params.get('active', False)
+                        bot_data['trailing_max_profit_usdt'] = trailing_params.get('profit_usdt_max', bot_data.get('trailing_max_profit_usdt', 0.0))
+                        bot_data['trailing_step_usdt'] = trailing_params.get('trailing_step_usdt', 0.0)
+                        bot_data['trailing_step_price'] = trailing_params.get('trailing_step_price', 0.0)
+                        bot_data['trailing_steps'] = trailing_params.get('steps', 0)
 
                         if trailing_params.get('active') and trailing_params.get('stop_price'):
                             desired_stop = trailing_params['stop_price']
