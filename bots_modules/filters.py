@@ -74,30 +74,37 @@ except ImportError as e:
     def perform_enhanced_rsi_analysis(candles, rsi, symbol):
         return {'enabled': False, 'enhanced_signal': 'WAIT'}
 
+# ✅ РЕФАКТОРИНГ: calculate_ema_list теперь использует унифицированную функцию
 def calculate_ema_list(prices, period):
     """
     Рассчитывает список значений EMA для массива цен.
     Возвращает список значений EMA или None, если недостаточно данных.
     """
-    if len(prices) < period:
-        return None
-    
-    ema_values = []
-    # Первое значение EMA = SMA
-    sma = sum(prices[:period]) / period
-    ema = sma
-    multiplier = 2 / (period + 1)
-    
-    # Добавляем None для первых period-1 значений (где EMA еще не определен)
-    ema_values.extend([None] * (period - 1))
-    ema_values.append(ema)
-    
-    # Рассчитываем EMA для остальных значений
-    for price in prices[period:]:
-        ema = (price * multiplier) + (ema * (1 - multiplier))
+    # Используем унифицированную функцию из bot_engine.utils.rsi_utils
+    try:
+        from bot_engine.utils.rsi_utils import calculate_ema
+        return calculate_ema(prices, period, return_list=True)
+    except ImportError:
+        # Fallback для обратной совместимости
+        if len(prices) < period:
+            return None
+        
+        ema_values = []
+        # Первое значение EMA = SMA
+        sma = sum(prices[:period]) / period
+        ema = sma
+        multiplier = 2 / (period + 1)
+        
+        # Добавляем None для первых period-1 значений (где EMA еще не определен)
+        ema_values.extend([None] * (period - 1))
         ema_values.append(ema)
-    
-    return ema_values
+        
+        # Рассчитываем EMA для остальных значений
+        for price in prices[period:]:
+            ema = (price * multiplier) + (ema * (1 - multiplier))
+            ema_values.append(ema)
+        
+        return ema_values
 
 # Импорт функций зрелости из maturity
 try:
@@ -1237,15 +1244,12 @@ def _recalculate_signal_with_trend(rsi, trend, symbol):
         logger.error(f"[RECALC_SIGNAL] ❌ Ошибка пересчета сигнала для {symbol}: {e}")
         return 'WAIT'
 
+# ✅ РЕФАКТОРИНГ: Используем унифицированную функцию из bot_engine.signal_processor
 def get_effective_signal(coin):
     """
     Универсальная функция для определения эффективного сигнала монеты
     
-    ЛОГИКА ПРОВЕРКИ ТРЕНДОВ (упрощенная):
-    - НЕ открываем SHORT если RSI > 71 И тренд = UP
-    - НЕ открываем LONG если RSI < 29 И тренд = DOWN
-    - NEUTRAL тренд разрешает любые сделки
-    - Тренд только усиливает возможность, но не блокирует полностью
+    Обертка над bot_engine.signal_processor.get_effective_signal для работы с глобальным конфигом
     
     Args:
         coin (dict): Данные монеты
@@ -1253,69 +1257,71 @@ def get_effective_signal(coin):
     Returns:
         str: Эффективный сигнал (ENTER_LONG, ENTER_SHORT, WAIT)
     """
-    symbol = coin.get('symbol', 'UNKNOWN')
-    
-    # Получаем настройки автобота
-    # ⚡ БЕЗ БЛОКИРОВКИ: конфиг не меняется, GIL делает чтение атомарным
-    auto_config = bots_data.get('auto_bot_config', {})
-    avoid_down_trend = auto_config.get('avoid_down_trend', True)
-    avoid_up_trend = auto_config.get('avoid_up_trend', True)
-    rsi_long_threshold = auto_config.get('rsi_long_threshold', 29)
-    rsi_short_threshold = auto_config.get('rsi_short_threshold', 71)
+    try:
+        from bot_engine.signal_processor import get_effective_signal as base_get_effective_signal
         
-    # Получаем данные монеты
-    rsi = coin.get('rsi6h', 50)
-    trend = coin.get('trend', coin.get('trend6h', 'NEUTRAL'))
-    
-    # ✅ КРИТИЧНО: Проверяем зрелость монеты ПЕРВЫМ ДЕЛОМ
-    # Незрелые монеты НЕ МОГУТ иметь активных ботов и НЕ ДОЛЖНЫ показываться в LONG/SHORT фильтрах!
-    base_signal = coin.get('signal', 'WAIT')
-    if base_signal == 'WAIT':
-        # Монета незрелая - не показываем её в фильтрах
-        return 'WAIT'
-    
-    # ✅ Монета зрелая - проверяем Enhanced RSI сигнал
-    enhanced_rsi = coin.get('enhanced_rsi', {})
-    if enhanced_rsi.get('enabled') and enhanced_rsi.get('enhanced_signal'):
-        signal = enhanced_rsi.get('enhanced_signal')
-    else:
-        # Используем базовый сигнал
-        signal = base_signal
-    
-    # Если сигнал WAIT - возвращаем сразу
-    if signal == 'WAIT':
+        # Получаем настройки автобота из глобальной переменной
+        from bots_modules.imports_and_globals import bots_data
+        auto_config = bots_data.get('auto_bot_config', {})
+        
+        # Используем базовую функцию с передачей конфига
+        signal = base_get_effective_signal(coin, auto_config)
+        
+        # Дополнительные проверки фильтров (специфичные для filters.py)
+        symbol = coin.get('symbol', 'UNKNOWN')
+        
+        # Проверяем ExitScam фильтр
+        if coin.get('blocked_by_exit_scam', False):
+            logger.debug(f"[SIGNAL] {symbol}: ❌ {signal} заблокирован ExitScam фильтром")
+            return 'WAIT'
+        
+        # Проверяем RSI Time фильтр
+        if coin.get('blocked_by_rsi_time', False):
+            logger.debug(f"[SIGNAL] {symbol}: ❌ {signal} заблокирован RSI Time фильтром")
+            return 'WAIT'
+        
+        # Проверяем зрелость монеты
+        if not coin.get('is_mature', True):
+            logger.debug(f"[SIGNAL] {symbol}: ❌ {signal} заблокирован - монета незрелая")
+            return 'WAIT'
+        
         return signal
-    
-    # ✅ КРИТИЧНО: Проверяем результаты ВСЕХ фильтров!
-    # Если любой фильтр заблокировал сигнал - возвращаем WAIT
-    
-    # Проверяем ExitScam фильтр
-    if coin.get('blocked_by_exit_scam', False):
-        logger.debug(f"[SIGNAL] {symbol}: ❌ {signal} заблокирован ExitScam фильтром")
-        return 'WAIT'
-    
-    # Проверяем RSI Time фильтр
-    if coin.get('blocked_by_rsi_time', False):
-        logger.debug(f"[SIGNAL] {symbol}: ❌ {signal} заблокирован RSI Time фильтром")
-        return 'WAIT'
-    
-    # Проверяем зрелость монеты
-    if not coin.get('is_mature', True):
-        logger.debug(f"[SIGNAL] {symbol}: ❌ {signal} заблокирован - монета незрелая")
-        return 'WAIT'
-    
-    # УПРОЩЕННАЯ ПРОВЕРКА ТРЕНДОВ - только экстремальные случаи
-    if signal == 'ENTER_SHORT' and avoid_up_trend and rsi >= rsi_short_threshold and trend == 'UP':
-        logger.debug(f"[SIGNAL] {symbol}: ❌ SHORT заблокирован (RSI={rsi:.1f} >= {rsi_short_threshold} + UP тренд)")
-        return 'WAIT'
-    
-    if signal == 'ENTER_LONG' and avoid_down_trend and rsi <= rsi_long_threshold and trend == 'DOWN':
-        logger.debug(f"[SIGNAL] {symbol}: ❌ LONG заблокирован (RSI={rsi:.1f} <= {rsi_long_threshold} + DOWN тренд)")
-        return 'WAIT'
-    
-    # Все проверки пройдены
-    logger.debug(f"[SIGNAL] {symbol}: ✅ {signal} разрешен (RSI={rsi:.1f}, Trend={trend})")
-    return signal
+        
+    except ImportError:
+        # Fallback для обратной совместимости - используем старую логику
+        symbol = coin.get('symbol', 'UNKNOWN')
+        auto_config = bots_data.get('auto_bot_config', {})
+        avoid_down_trend = auto_config.get('avoid_down_trend', True)
+        avoid_up_trend = auto_config.get('avoid_up_trend', True)
+        rsi_long_threshold = auto_config.get('rsi_long_threshold', 29)
+        rsi_short_threshold = auto_config.get('rsi_short_threshold', 71)
+        
+        rsi = coin.get('rsi6h', 50)
+        trend = coin.get('trend', coin.get('trend6h', 'NEUTRAL'))
+        
+        base_signal = coin.get('signal', 'WAIT')
+        if base_signal == 'WAIT':
+            return 'WAIT'
+        
+        enhanced_rsi = coin.get('enhanced_rsi', {})
+        if enhanced_rsi.get('enabled') and enhanced_rsi.get('enhanced_signal'):
+            signal = enhanced_rsi.get('enhanced_signal')
+        else:
+            signal = base_signal
+        
+        if signal == 'WAIT':
+            return signal
+        
+        if coin.get('blocked_by_exit_scam', False) or coin.get('blocked_by_rsi_time', False) or not coin.get('is_mature', True):
+            return 'WAIT'
+        
+        if signal == 'ENTER_SHORT' and avoid_up_trend and rsi >= rsi_short_threshold and trend == 'UP':
+            return 'WAIT'
+        
+        if signal == 'ENTER_LONG' and avoid_down_trend and rsi <= rsi_long_threshold and trend == 'DOWN':
+            return 'WAIT'
+        
+        return signal
 
 def process_auto_bot_signals(exchange_obj=None):
     """Новая логика автобота согласно требованиям"""
