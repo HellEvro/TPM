@@ -1,8 +1,8 @@
 """Функции расчета RSI, EMA и анализа тренда
 
 Включает:
-- calculate_rsi - расчет RSI (импортируется из bot_engine.utils.rsi_utils)
-- calculate_rsi_history - история RSI (импортируется из bot_engine.utils.rsi_utils)
+- calculate_rsi - расчет RSI
+- calculate_rsi_history - история RSI
 - calculate_ema - расчет EMA
 - analyze_trend_6h - анализ тренда
 - perform_enhanced_rsi_analysis - расширенный анализ RSI
@@ -12,20 +12,6 @@ import logging
 from datetime import datetime
 import time
 import threading
-
-# ✅ РЕФАКТОРИНГ: Импорт RSI и EMA функций из единого модуля
-try:
-    from bot_engine.utils.rsi_utils import calculate_rsi, calculate_rsi_history, calculate_ema
-except ImportError:
-    # Fallback для обратной совместимости
-    logger = logging.getLogger('BotsService')
-    logger.warning("Не удалось импортировать RSI/EMA функции из bot_engine.utils.rsi_utils")
-    def calculate_rsi(prices, period=14):
-        return None
-    def calculate_rsi_history(prices, period=14):
-        return None
-    def calculate_ema(prices, period, return_list=False):
-        return None if not return_list else []
 
 # Импорты из bot_engine
 try:
@@ -51,6 +37,97 @@ except ImportError:
 
 logger = logging.getLogger('BotsService')
 
+def calculate_rsi(prices, period=14):
+    """Рассчитывает RSI на основе массива цен (Wilder's RSI алгоритм)"""
+    if len(prices) < period + 1:
+        return None
+    
+    # Рассчитываем изменения цен
+    changes = []
+    for i in range(1, len(prices)):
+        changes.append(prices[i] - prices[i-1])
+    
+    if len(changes) < period:
+        return None
+    
+    # Разделяем на прибыли и убытки
+    gains = []
+    losses = []
+    
+    for change in changes:
+        if change > 0:
+            gains.append(change)
+            losses.append(0)
+        else:
+            gains.append(0) 
+            losses.append(-change)
+    
+    # Первоначальные средние значения (простое среднее для первого периода)
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    
+    # Рассчитываем RSI используя сглаживание Wilder's
+    # (это тип экспоненциального сглаживания)
+    for i in range(period, len(gains)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+    
+    # Избегаем деления на ноль
+    if avg_loss == 0:
+        return 100.0
+    
+    # Рассчитываем RS и RSI
+    rs = avg_gain / avg_loss
+    rsi = 100.0 - (100.0 / (1.0 + rs))
+    
+    return round(rsi, 2)
+
+def calculate_rsi_history(prices, period=14):
+    """Рассчитывает полную историю RSI для анализа зрелости монеты"""
+    if len(prices) < period + 1:
+        return None
+    
+    # Рассчитываем изменения цен
+    changes = []
+    for i in range(1, len(prices)):
+        changes.append(prices[i] - prices[i-1])
+    
+    if len(changes) < period:
+        return None
+    
+    # Разделяем на прибыли и убытки
+    gains = []
+    losses = []
+    
+    for change in changes:
+        if change > 0:
+            gains.append(change)
+            losses.append(0)
+        else:
+            gains.append(0) 
+            losses.append(-change)
+    
+    # Первоначальные средние значения
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    
+    # Рассчитываем полную историю RSI
+    rsi_history = []
+    
+    for i in range(period, len(gains)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+        
+        if avg_loss == 0:
+            rsi = 100.0
+        else:
+            rs = avg_gain / avg_loss
+            rsi = 100.0 - (100.0 / (1.0 + rs))
+        
+        rsi_history.append(round(rsi, 2))
+    
+    return rsi_history
+
 # Глобальные переменные (импортируются из главного файла)
 # Эти переменные будут доступны после импорта из bots_modules.imports_and_globals
 try:
@@ -70,138 +147,137 @@ except:
 # optimal_ema_data = {}
 # OPTIMAL_EMA_FILE = 'data/optimal_ema.json'
 
-# ✅ РЕФАКТОРИНГ: Используем унифицированные функции из bot_engine.maturity_checker
 def check_coin_maturity_with_storage(symbol, candles):
     """Проверяет зрелость монеты с использованием постоянного хранилища"""
-    try:
-        from bot_engine.maturity_checker import (
-            check_coin_maturity_with_storage as base_check_with_storage,
-            add_mature_coin_to_storage
-        )
-        from bots_modules.maturity import save_mature_coins_storage
-        
-        # Получаем конфигурацию из глобальной переменной
-        with bots_data_lock:
-            config = bots_data.get('auto_bot_config', {})
-        
-        # Используем базовую функцию с передачей конфига
-        def save_func():
-            save_mature_coins_storage()
-        
-        return base_check_with_storage(symbol, candles, config, save_func=save_func)
-        
-    except ImportError:
-        # Fallback для обратной совместимости - используем старую логику
-        from bots_modules.maturity import (
-            is_coin_mature_stored, update_mature_coin_verification,
-            add_mature_coin_to_storage
-        )
-        
-        if is_coin_mature_stored(symbol):
-            logger.debug(f"[MATURITY_STORAGE] {symbol}: найдена в постоянном хранилище зрелых монет")
-            update_mature_coin_verification(symbol)
-            return {
-                'is_mature': True,
-                'reason': 'Монета зрелая (из постоянного хранилища)',
-                'details': {'stored': True, 'from_storage': True}
-            }
-        
-        maturity_result = check_coin_maturity(symbol, candles)
-        
-        if maturity_result['is_mature']:
-            add_mature_coin_to_storage(symbol, maturity_result, auto_save=False)
-        
-        return maturity_result
+    # Сначала проверяем постоянное хранилище
+    if is_coin_mature_stored(symbol):
+        logger.debug(f"[MATURITY_STORAGE] {symbol}: найдена в постоянном хранилище зрелых монет")
+        # Обновляем время последней проверки
+        update_mature_coin_verification(symbol)
+        return {
+            'is_mature': True,
+            'reason': 'Монета зрелая (из постоянного хранилища)',
+            'details': {'stored': True, 'from_storage': True}
+        }
+    
+    # Если не в хранилище, выполняем полную проверку
+    maturity_result = check_coin_maturity(symbol, candles)
+    
+    # Если монета зрелая, добавляем в постоянное хранилище (без автосохранения)
+    if maturity_result['is_mature']:
+        add_mature_coin_to_storage(symbol, maturity_result, auto_save=False)
+    
+    return maturity_result
 
 def check_coin_maturity(symbol, candles):
     """Проверяет зрелость монеты для торговли"""
     try:
-        from bot_engine.maturity_checker import check_coin_maturity as base_check_coin_maturity
-        
-        # Получаем конфигурацию из глобальной переменной
+        # Получаем настройки зрелости из конфигурации
         with bots_data_lock:
             config = bots_data.get('auto_bot_config', {})
         
-        # Используем базовую функцию с передачей конфига
-        return base_check_coin_maturity(symbol, candles, config)
+        min_candles = config.get('min_candles_for_maturity', MIN_CANDLES_FOR_MATURITY)
+        min_rsi_low = config.get('min_rsi_low', MIN_RSI_LOW)
+        max_rsi_high = config.get('max_rsi_high', MAX_RSI_HIGH)
+        # Убрали min_volatility - больше не проверяем волатильность
         
-    except ImportError:
-        # Fallback для обратной совместимости - используем старую логику
-        try:
-            with bots_data_lock:
-                config = bots_data.get('auto_bot_config', {})
-            
-            min_candles = config.get('min_candles_for_maturity', MIN_CANDLES_FOR_MATURITY)
-            min_rsi_low = config.get('min_rsi_low', MIN_RSI_LOW)
-            max_rsi_high = config.get('max_rsi_high', MAX_RSI_HIGH)
-            
-            if not candles or len(candles) < min_candles:
-                return {
-                    'is_mature': False,
-                    'reason': f'Недостаточно свечей: {len(candles) if candles else 0}/{min_candles}',
-                    'details': {
-                        'candles_count': len(candles) if candles else 0,
-                        'min_required': min_candles
-                    }
-                }
-            
-            recent_candles = candles[-min_candles:] if len(candles) >= min_candles else candles
-            closes = [candle['close'] for candle in recent_candles]
-            rsi_history = calculate_rsi_history(closes, 14)
-            
-            if not rsi_history:
-                return {
-                    'is_mature': False,
-                    'reason': 'Не удалось рассчитать историю RSI',
-                    'details': {}
-                }
-            
-            rsi_min = min(rsi_history)
-            rsi_max = max(rsi_history)
-            rsi_range = rsi_max - rsi_min
-            
-            maturity_checks = {
-                'sufficient_candles': len(candles) >= min_candles,
-                'rsi_reached_low': rsi_min <= min_rsi_low,
-                'rsi_reached_high': rsi_max >= max_rsi_high
-            }
-            
-            is_mature = maturity_checks['sufficient_candles'] and maturity_checks['rsi_reached_low'] and maturity_checks['rsi_reached_high']
-            
-            details = {
-                'candles_count': len(candles),
-                'min_required': min_candles,
-                'rsi_min': rsi_min,
-                'rsi_max': rsi_max,
-                'rsi_range': rsi_range,
-                'checks': maturity_checks
-            }
-            
-            if not is_mature:
-                failed_checks = [check for check, passed in maturity_checks.items() if not passed]
-                reason = f'Не пройдены проверки: {", ".join(failed_checks)}'
-            else:
-                reason = 'Монета зрелая для торговли'
-            
-            logger.debug(f"[MATURITY] {symbol}: {reason}")
-            logger.debug(f"[MATURITY] {symbol}: Свечи={len(candles)}, RSI={rsi_min:.1f}-{rsi_max:.1f}")
-            
-            return {
-                'is_mature': is_mature,
-                'reason': reason,
-                'details': details
-            }
-            
-        except Exception as e:
-            logger.error(f"[MATURITY] Ошибка проверки зрелости {symbol}: {e}")
+        if not candles or len(candles) < min_candles:
             return {
                 'is_mature': False,
-                'reason': f'Ошибка анализа: {str(e)}',
+                'reason': f'Недостаточно свечей: {len(candles) if candles else 0}/{min_candles}',
+                'details': {
+                    'candles_count': len(candles) if candles else 0,
+                    'min_required': min_candles
+                }
+            }
+        
+        # ✅ ИСПРАВЛЕНИЕ: Берем только последние N свечей для анализа зрелости
+        # Это означает что монета должна иметь достаточно истории в РЕЦЕНТНОЕ время
+        recent_candles = candles[-min_candles:] if len(candles) >= min_candles else candles
+        
+        # Извлекаем цены закрытия из последних свечей
+        closes = [candle['close'] for candle in recent_candles]
+        
+        # Рассчитываем историю RSI
+        rsi_history = calculate_rsi_history(closes, 14)
+        if not rsi_history:
+            return {
+                'is_mature': False,
+                'reason': 'Не удалось рассчитать историю RSI',
                 'details': {}
             }
+        
+        # Анализируем диапазон RSI
+        rsi_min = min(rsi_history)
+        rsi_max = max(rsi_history)
+        rsi_range = rsi_max - rsi_min
+        
+        # Проверяем критерии зрелости (убрали проверку волатильности)
+        maturity_checks = {
+            'sufficient_candles': len(candles) >= min_candles,
+            'rsi_reached_low': rsi_min <= min_rsi_low,
+            'rsi_reached_high': rsi_max >= max_rsi_high
+        }
+        
+        # Убрали проверку волатильности - она была слишком строгой
+        volatility = 0  # Для совместимости с детальной информацией
+        
+        # Определяем общую зрелость
+        # Монета зрелая, если достаточно свечей И RSI достигал низких И высоких значений (полный цикл)
+        is_mature = maturity_checks['sufficient_candles'] and maturity_checks['rsi_reached_low'] and maturity_checks['rsi_reached_high']
+        
+        # Детальное логирование для отладки (отключено для уменьшения спама)
+        # logger.info(f"[MATURITY_DEBUG] {symbol}: свечи={maturity_checks['sufficient_candles']} ({len(candles)}/{min_candles}), RSI_low={maturity_checks['rsi_reached_low']} (min={rsi_min:.1f}<=>{min_rsi_low}), RSI_high={maturity_checks['rsi_reached_high']} (max={rsi_max:.1f}>={max_rsi_high}), зрелая={is_mature}")
+        
+        # Формируем детальную информацию
+        details = {
+            'candles_count': len(candles),
+            'min_required': min_candles,
+            'rsi_min': rsi_min,
+            'rsi_max': rsi_max,
+            'rsi_range': rsi_range,
+            'checks': maturity_checks
+        }
+        
+        # Определяем причину незрелости
+        if not is_mature:
+            failed_checks = [check for check, passed in maturity_checks.items() if not passed]
+            reason = f'Не пройдены проверки: {", ".join(failed_checks)}'
+        else:
+            reason = 'Монета зрелая для торговли'
+        
+        logger.debug(f"[MATURITY] {symbol}: {reason}")
+        logger.debug(f"[MATURITY] {symbol}: Свечи={len(candles)}, RSI={rsi_min:.1f}-{rsi_max:.1f}")
+        
+        return {
+            'is_mature': is_mature,
+            'reason': reason,
+            'details': details
+        }
+        
+    except Exception as e:
+        logger.error(f"[MATURITY] Ошибка проверки зрелости {symbol}: {e}")
+        return {
+            'is_mature': False,
+            'reason': f'Ошибка анализа: {str(e)}',
+            'details': {}
+        }
 
-# ✅ РЕФАКТОРИНГ: calculate_ema теперь импортируется из bot_engine.utils.rsi_utils
-# Функция удалена, используется импортированная версия
+def calculate_ema(prices, period):
+    """Рассчитывает EMA для массива цен"""
+    if len(prices) < period:
+        return None
+    
+    # Первое значение EMA = SMA
+    sma = sum(prices[:period]) / period
+    ema = sma
+    multiplier = 2 / (period + 1)
+    
+    # Рассчитываем EMA для остальных значений
+    for price in prices[period:]:
+        ema = (price * multiplier) + (ema * (1 - multiplier))
+    
+    return ema
 
 def analyze_trend_6h(symbol, exchange_obj=None):
     """
