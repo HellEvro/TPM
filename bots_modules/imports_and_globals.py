@@ -85,22 +85,26 @@ if not MODULES_AVAILABLE:
         """Будет определена ниже в файле"""
         pass
 
-# ✅ Fallback версия calculate_ema (так как ema_utils.py перемещен в backup)
-def calculate_ema(prices, period):
-    """Рассчитывает EMA для массива цен"""
-    if len(prices) < period:
-        return None
-    
-    # Первое значение EMA = SMA
-    sma = sum(prices[:period]) / period
-    ema = sma
-    multiplier = 2 / (period + 1)
-    
-    # Рассчитываем EMA для остальных значений
-    for price in prices[period:]:
-        ema = (price * multiplier) + (ema * (1 - multiplier))
-    
-    return ema
+# ✅ РЕФАКТОРИНГ: calculate_ema теперь импортируется из bot_engine.utils.rsi_utils
+try:
+    from bot_engine.utils.rsi_utils import calculate_ema
+except ImportError:
+    # Fallback версия для обратной совместимости
+    def calculate_ema(prices, period):
+        """Рассчитывает EMA для массива цен"""
+        if len(prices) < period:
+            return None
+        
+        # Первое значение EMA = SMA
+        sma = sum(prices[:period]) / period
+        ema = sma
+        multiplier = 2 / (period + 1)
+        
+        # Рассчитываем EMA для остальных значений
+        for price in prices[period:]:
+            ema = (price * multiplier) + (ema * (1 - multiplier))
+        
+        return ema
 
 def check_and_stop_existing_bots_processes():
     """

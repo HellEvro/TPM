@@ -232,46 +232,66 @@ def get_rsi_cache():
     with rsi_data_lock:
         return coins_rsi_data.get('coins', {})
 
+# ✅ РЕФАКТОРИНГ: Используем унифицированную функцию из bot_engine.storage
 def save_rsi_cache():
     """Сохранить кэш RSI данных в файл"""
     try:
-        # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция в Python
-        cache_data = {
-            'timestamp': datetime.now().isoformat(),
-            'coins': coins_rsi_data.get('coins', {}),
-            'stats': {
-                'total_coins': len(coins_rsi_data.get('coins', {})),
-                'successful_coins': coins_rsi_data.get('successful_coins', 0),
-                'failed_coins': coins_rsi_data.get('failed_coins', 0)
-            }
+        from bot_engine.storage import save_rsi_cache as storage_save_rsi_cache
+        
+        # Получаем данные из глобальной переменной
+        global coins_rsi_data
+        coins_data = coins_rsi_data.get('coins', {})
+        stats = {
+            'total_coins': len(coins_data),
+            'successful_coins': coins_rsi_data.get('successful_coins', 0),
+            'failed_coins': coins_rsi_data.get('failed_coins', 0)
         }
         
-        with open(RSI_CACHE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(cache_data, f, indent=2, ensure_ascii=False)
-            
-        logger.info(f"[CACHE] RSI данные для {len(cache_data['coins'])} монет сохранены в кэш")
+        # Используем унифицированную функцию сохранения
+        success = storage_save_rsi_cache(coins_data, stats)
+        if success:
+            logger.info(f"[CACHE] RSI данные для {len(coins_data)} монет сохранены в кэш")
+        return success
         
+    except ImportError:
+        # Fallback для обратной совместимости
+        try:
+            cache_data = {
+                'timestamp': datetime.now().isoformat(),
+                'coins': coins_rsi_data.get('coins', {}),
+                'stats': {
+                    'total_coins': len(coins_rsi_data.get('coins', {})),
+                    'successful_coins': coins_rsi_data.get('successful_coins', 0),
+                    'failed_coins': coins_rsi_data.get('failed_coins', 0)
+                }
+            }
+            
+            with open(RSI_CACHE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(cache_data, f, indent=2, ensure_ascii=False)
+                
+            logger.info(f"[CACHE] RSI данные для {len(cache_data['coins'])} монет сохранены в кэш")
+            return True
+            
+        except Exception as e:
+            logger.error(f"[ERROR] Ошибка сохранения RSI кэша: {str(e)}")
+            return False
     except Exception as e:
         logger.error(f"[ERROR] Ошибка сохранения RSI кэша: {str(e)}")
+        return False
 
+# ✅ РЕФАКТОРИНГ: Используем унифицированную функцию из bot_engine.storage
 def load_rsi_cache():
     """Загрузить кэш RSI данных из файла"""
     global coins_rsi_data
     
     try:
-        if not os.path.exists(RSI_CACHE_FILE):
-            logger.info("[CACHE] Файл RSI кэша не найден, будет создан при первом обновлении")
-            return False
-            
-        with open(RSI_CACHE_FILE, 'r', encoding='utf-8') as f:
-            cache_data = json.load(f)
+        from bot_engine.storage import load_rsi_cache as storage_load_rsi_cache
         
-        # Проверяем возраст кэша (не старше 6 часов)
-        cache_timestamp = datetime.fromisoformat(cache_data['timestamp'])
-        age_hours = (datetime.now() - cache_timestamp).total_seconds() / 3600
+        # Используем унифицированную функцию загрузки
+        cache_data = storage_load_rsi_cache()
         
-        if age_hours > 6:
-            logger.warning(f"[CACHE] RSI кэш устарел ({age_hours:.1f} часов), будет обновлен")
+        if not cache_data:
+            logger.info("[CACHE] Файл RSI кэша не найден или устарел, будет создан при первом обновлении")
             return False
         
         # Загружаем данные из кэша
@@ -297,9 +317,62 @@ def load_rsi_cache():
                 'update_in_progress': False
             })
         
-        logger.info(f"[CACHE] Загружено {len(cached_coins)} монет из RSI кэша (возраст: {age_hours:.1f}ч)")
+        # Вычисляем возраст кэша для логирования
+        try:
+            cache_timestamp = datetime.fromisoformat(cache_data.get('timestamp', datetime.now().isoformat()))
+            age_hours = (datetime.now() - cache_timestamp).total_seconds() / 3600
+            logger.info(f"[CACHE] Загружено {len(cached_coins)} монет из RSI кэша (возраст: {age_hours:.1f}ч)")
+        except:
+            logger.info(f"[CACHE] Загружено {len(cached_coins)} монет из RSI кэша")
+        
         return True
         
+    except ImportError:
+        # Fallback для обратной совместимости
+        try:
+            if not os.path.exists(RSI_CACHE_FILE):
+                logger.info("[CACHE] Файл RSI кэша не найден, будет создан при первом обновлении")
+                return False
+                
+            with open(RSI_CACHE_FILE, 'r', encoding='utf-8') as f:
+                cache_data = json.load(f)
+            
+            # Проверяем возраст кэша (не старше 6 часов)
+            cache_timestamp = datetime.fromisoformat(cache_data['timestamp'])
+            age_hours = (datetime.now() - cache_timestamp).total_seconds() / 3600
+            
+            if age_hours > 6:
+                logger.warning(f"[CACHE] RSI кэш устарел ({age_hours:.1f} часов), будет обновлен")
+                return False
+            
+            # Загружаем данные из кэша
+            cached_coins = cache_data.get('coins', {})
+            
+            # Проверяем формат кэша (старый массив или новый словарь)
+            if isinstance(cached_coins, list):
+                # Старый формат - преобразуем массив в словарь
+                coins_dict = {}
+                for coin in cached_coins:
+                    if 'symbol' in coin:
+                        coins_dict[coin['symbol']] = coin
+                cached_coins = coins_dict
+                logger.info("[CACHE] Преобразован старый формат кэша (массив -> словарь)")
+            
+            with rsi_data_lock:
+                coins_rsi_data.update({
+                    'coins': cached_coins,
+                    'successful_coins': cache_data.get('stats', {}).get('successful_coins', len(cached_coins)),
+                    'failed_coins': cache_data.get('stats', {}).get('failed_coins', 0),
+                    'total_coins': len(cached_coins),
+                    'last_update': datetime.now().isoformat(),
+                    'update_in_progress': False
+                })
+            
+            logger.info(f"[CACHE] Загружено {len(cached_coins)} монет из RSI кэша (возраст: {age_hours:.1f}ч)")
+            return True
+        except Exception as e:
+            logger.error(f"[ERROR] Ошибка загрузки RSI кэша: {str(e)}")
+            return False
     except Exception as e:
         logger.error(f"[ERROR] Ошибка загрузки RSI кэша: {str(e)}")
         return False
@@ -532,15 +605,11 @@ def load_system_config():
         logger.error(f"[SYSTEM_CONFIG] ❌ Ошибка загрузки системных настроек: {e}")
         return False
 
+# ✅ РЕФАКТОРИНГ: Используем унифицированную функцию из bot_engine.storage
 def save_bots_state():
     """Сохраняет состояние всех ботов в файл"""
     try:
-        state_data = {
-            'bots': {},
-            'auto_bot_config': {},
-            'last_saved': datetime.now().isoformat(),
-            'version': '1.0'
-        }
+        from bot_engine.storage import save_bots_state as storage_save_bots_state
         
         # ✅ ИСПРАВЛЕНИЕ: Используем таймаут для блокировки чтобы не висеть при остановке
         import threading
@@ -552,23 +621,62 @@ def save_bots_state():
             return False
         
         try:
+            bots_dict = {}
             for symbol, bot_data in bots_data['bots'].items():
-                state_data['bots'][symbol] = bot_data
+                bots_dict[symbol] = bot_data
             
-            # Сохраняем конфигурацию Auto Bot
-            state_data['auto_bot_config'] = bots_data['auto_bot_config'].copy()
+            auto_bot_config = bots_data['auto_bot_config'].copy()
         finally:
             bots_data_lock.release()
         
-        # Записываем в файл
-        with open(BOTS_STATE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(state_data, f, indent=2, ensure_ascii=False)
+        # Используем унифицированную функцию сохранения
+        success = storage_save_bots_state(bots_dict, auto_bot_config)
         
-        total_bots = len(state_data['bots'])
-        logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено")
+        if success:
+            total_bots = len(bots_dict)
+            logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено")
         
-        return True
+        return success
         
+    except ImportError:
+        # Fallback для обратной совместимости
+        try:
+            state_data = {
+                'bots': {},
+                'auto_bot_config': {},
+                'last_saved': datetime.now().isoformat(),
+                'version': '1.0'
+            }
+            
+            import threading
+            
+            # Пытаемся захватить блокировку с таймаутом
+            acquired = bots_data_lock.acquire(timeout=2.0)
+            if not acquired:
+                logger.warning("[SAVE_STATE] ⚠️ Не удалось получить блокировку за 2 секунды - пропускаем сохранение")
+                return False
+            
+            try:
+                for symbol, bot_data in bots_data['bots'].items():
+                    state_data['bots'][symbol] = bot_data
+                
+                # Сохраняем конфигурацию Auto Bot
+                state_data['auto_bot_config'] = bots_data['auto_bot_config'].copy()
+            finally:
+                bots_data_lock.release()
+            
+            # Записываем в файл
+            with open(BOTS_STATE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(state_data, f, indent=2, ensure_ascii=False)
+            
+            total_bots = len(state_data['bots'])
+            logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"[SAVE_STATE] ❌ Ошибка сохранения состояния: {e}")
+            return False
     except Exception as e:
         logger.error(f"[SAVE_STATE] ❌ Ошибка сохранения состояния: {e}")
         return False
