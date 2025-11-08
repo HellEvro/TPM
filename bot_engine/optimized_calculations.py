@@ -66,6 +66,32 @@ def calculate_rsi_batch(prices_list: List[List[float]], period: int = 14,
     return results
 
 
+def calculate_rsi_batch_dict(prices_dict: Dict[str, List[float]], period: int = 14,
+                            max_workers: int = None) -> Dict[str, Optional[float]]:
+    """
+    Рассчитывает RSI для словаря монет параллельно
+    
+    Args:
+        prices_dict: Словарь {symbol: [prices]}
+        period: Период RSI
+        max_workers: Максимальное количество потоков
+    
+    Returns:
+        Словарь {symbol: rsi_value}
+    """
+    if not prices_dict:
+        return {}
+    
+    symbols = list(prices_dict.keys())
+    prices_list = [prices_dict[symbol] for symbol in symbols]
+    
+    # Используем пакетный расчет
+    rsi_list = calculate_rsi_batch(prices_list, period, max_workers)
+    
+    # Возвращаем словарь
+    return {symbol: rsi for symbol, rsi in zip(symbols, rsi_list)}
+
+
 def calculate_ema_batch(prices_list: List[List[float]], period: int,
                        return_list: bool = False, max_workers: int = None) -> List:
     """
