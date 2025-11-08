@@ -1718,25 +1718,63 @@ class BotsManager {
             // Проверяем Enhanced RSI
             if (coin.enhanced_rsi && coin.enhanced_rsi.enabled) {
                 const enhancedSignal = coin.enhanced_rsi.enhanced_signal;
+                const enhancedReason = coin.enhanced_rsi.enhanced_reason || '';
+                // ✅ ИСПРАВЛЕНИЕ: Проверяем только если Enhanced RSI действительно заблокировал сигнал
+                // Если enhanced_signal = ENTER_LONG, значит Enhanced RSI РАЗРЕШИЛ сигнал, а не заблокировал!
                 if (enhancedSignal === 'WAIT' && baseSignal !== 'WAIT') {
-                    blockReasons.push('Enhanced RSI');
+                    // Добавляем детальную причину блокировки Enhanced RSI
+                    let enhancedReasonText = 'Enhanced RSI';
+                    if (enhancedReason) {
+                        // Парсим причину для более понятного отображения
+                        if (enhancedReason.includes('insufficient_confirmation')) {
+                            enhancedReasonText = 'Enhanced RSI: недостаточно подтверждений (нужно 2, если долго в зоне)';
+                        } else if (enhancedReason.includes('strict_mode_no_divergence')) {
+                            enhancedReasonText = 'Enhanced RSI: строгий режим - требуется дивергенция';
+                        } else if (enhancedReason.includes('strict_mode')) {
+                            enhancedReasonText = 'Enhanced RSI: строгий режим (требуется дивергенция)';
+                        } else if (enhancedReason.includes('duration')) {
+                            enhancedReasonText = 'Enhanced RSI: слишком долго в экстремальной зоне (нужно больше подтверждений)';
+                        } else if (enhancedReason.includes('neutral') || enhancedReason.includes('enhanced_neutral')) {
+                            // Проверяем, почему нейтральная зона - возможно adaptive_oversold выше текущего RSI
+                            const rsi = coin.rsi6h || 50;
+                            enhancedReasonText = `Enhanced RSI: RSI ${rsi.toFixed(1)} не попадает в adaptive_oversold уровень`;
+                        } else {
+                            enhancedReasonText = `Enhanced RSI (${enhancedReason})`;
+                        }
+                    } else {
+                        // Если причины нет, но сигнал WAIT - проверяем возможные причины
+                        const rsi = coin.rsi6h || 50;
+                        enhancedReasonText = `Enhanced RSI: RSI ${rsi.toFixed(1)} заблокирован (проверьте настройки Enhanced RSI)`;
+                    }
+                    blockReasons.push(enhancedReasonText);
                 }
             }
             
-            // Проверяем фильтры трендов (если включены)
-            const autoConfig = this.cachedAutoBotConfig || {};
-            const avoidDownTrend = autoConfig.avoid_down_trend !== false;
-            const avoidUpTrend = autoConfig.avoid_up_trend !== false;
-            const rsi = coin.rsi6h || 50;
-            const trend = coin.trend6h || 'NEUTRAL';
-            const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
-            const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
+            // Проверяем фильтры трендов (только если они ВКЛЮЧЕНЫ и Enhanced RSI НЕ заблокировал сигнал)
+            // ✅ КРИТИЧНО: Enhanced RSI проверяется ПЕРЕД фильтрами трендов в get_effective_signal
+            // Если Enhanced RSI вернул WAIT, то фильтры трендов даже не проверяются
+            const enhancedRsiBlocked = coin.enhanced_rsi && coin.enhanced_rsi.enabled && 
+                                      coin.enhanced_rsi.enhanced_signal === 'WAIT' && baseSignal !== 'WAIT';
             
-            if (baseSignal === 'ENTER_LONG' && avoidDownTrend && rsi <= rsiLongThreshold && trend === 'DOWN') {
-                blockReasons.push('Фильтр DOWN тренда');
-            }
-            if (baseSignal === 'ENTER_SHORT' && avoidUpTrend && rsi >= rsiShortThreshold && trend === 'UP') {
-                blockReasons.push('Фильтр UP тренда');
+            // Проверяем фильтры трендов только если Enhanced RSI НЕ заблокировал сигнал
+            if (!enhancedRsiBlocked) {
+                const autoConfig = this.cachedAutoBotConfig || {};
+                // ✅ ИСПРАВЛЕНИЕ: Проверяем реальное состояние фильтров трендов
+                // Если avoid_down_trend === false, значит фильтр ОТКЛЮЧЕН
+                const avoidDownTrend = autoConfig.avoid_down_trend === true;
+                const avoidUpTrend = autoConfig.avoid_up_trend === true;
+                const rsi = coin.rsi6h || 50;
+                const trend = coin.trend6h || 'NEUTRAL';
+                const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
+                const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
+                
+                // Добавляем фильтр тренда в причины только если он ВКЛЮЧЕН и действительно блокирует
+                if (baseSignal === 'ENTER_LONG' && avoidDownTrend && rsi <= rsiLongThreshold && trend === 'DOWN') {
+                    blockReasons.push('Фильтр DOWN тренда');
+                }
+                if (baseSignal === 'ENTER_SHORT' && avoidUpTrend && rsi >= rsiShortThreshold && trend === 'UP') {
+                    blockReasons.push('Фильтр UP тренда');
+                }
             }
             
             if (blockReasons.length > 0) {
