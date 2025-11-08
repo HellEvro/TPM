@@ -236,6 +236,8 @@ def get_rsi_cache():
 # ✅ ОПТИМИЗАЦИЯ: Опциональное использование асинхронного хранилища
 def save_rsi_cache():
     """Сохранить кэш RSI данных в файл"""
+    global coins_rsi_data  # ✅ ИСПРАВЛЕНО: объявляем global в начале функции
+    
     try:
         # Пытаемся использовать асинхронное хранилище
         try:
@@ -247,7 +249,6 @@ def save_rsi_cache():
             optimizer = get_performance_optimizer()
             if optimizer.enabled:
                 # Получаем данные из глобальной переменной
-                global coins_rsi_data
                 coins_data = coins_rsi_data.get('coins', {})
                 stats = {
                     'total_coins': len(coins_data),
@@ -284,7 +285,6 @@ def save_rsi_cache():
         from bot_engine.storage import save_rsi_cache as storage_save_rsi_cache
         
         # Получаем данные из глобальной переменной
-        global coins_rsi_data
         coins_data = coins_rsi_data.get('coins', {})
         stats = {
             'total_coins': len(coins_data),
