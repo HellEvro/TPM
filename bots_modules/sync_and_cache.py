@@ -2507,28 +2507,55 @@ def sync_bots_with_exchange():
                 timeout_seconds = 8  # Короткий таймаут
                 max_retries = 2
                 
-                for retry in range(max_retries):
-                    retry_start = time.time()
-                    try:
+                # ✅ РЕФАКТОРИНГ: Используем унифицированный декоратор retry
+                try:
+                    from bot_engine.utils.retry_utils import retry_with_backoff
+                    
+                    @retry_with_backoff(
+                        max_retries=max_retries,
+                        backoff_multiplier=1.0,  # Фиксированная задержка 2 секунды
+                        initial_delay=2.0,
+                        exceptions=(Exception,),
+                        on_retry=lambda attempt, e: logger.debug(f"[SYNC_EXCHANGE] Повтор {attempt}/{max_retries}: {e}"),
+                        on_failure=lambda e: logger.error(f"[SYNC_EXCHANGE] ❌ Все попытки провалились: {e}")
+                    )
+                    def _get_positions_with_timeout():
                         # Устанавливаем короткий таймаут на уровне клиента
                         old_timeout = getattr(current_exchange.client, 'timeout', None)
                         current_exchange.client.timeout = timeout_seconds
-                        
-                        positions_response = current_exchange.client.get_positions(**params)
-                        
-                        # Восстанавливаем таймаут
-                        if old_timeout is not None:
-                            current_exchange.client.timeout = old_timeout
-                        
-                        break  # Успех!
-                        
-                    except Exception as e:
-                        logger.debug(f"[SYNC_EXCHANGE] Повтор {retry + 1}/{max_retries}: {e}")
-                        if retry < max_retries - 1:
-                            time.sleep(2)
-                        else:
-                            logger.error(f"[SYNC_EXCHANGE] ❌ Все попытки провалились")
-                            return False
+                        try:
+                            return current_exchange.client.get_positions(**params)
+                        finally:
+                            # Восстанавливаем таймаут
+                            if old_timeout is not None:
+                                current_exchange.client.timeout = old_timeout
+                    
+                    positions_response = _get_positions_with_timeout()
+                    
+                except ImportError:
+                    # Fallback на старую реализацию если модуль недоступен
+                    for retry in range(max_retries):
+                        retry_start = time.time()
+                        try:
+                            # Устанавливаем короткий таймаут на уровне клиента
+                            old_timeout = getattr(current_exchange.client, 'timeout', None)
+                            current_exchange.client.timeout = timeout_seconds
+                            
+                            positions_response = current_exchange.client.get_positions(**params)
+                            
+                            # Восстанавливаем таймаут
+                            if old_timeout is not None:
+                                current_exchange.client.timeout = old_timeout
+                            
+                            break  # Успех!
+                            
+                        except Exception as e:
+                            logger.debug(f"[SYNC_EXCHANGE] Повтор {retry + 1}/{max_retries}: {e}")
+                            if retry < max_retries - 1:
+                                time.sleep(2)
+                            else:
+                                logger.error(f"[SYNC_EXCHANGE] ❌ Все попытки провалились")
+                                return False
                 
                 # Проверяем что получили ответ
                 if positions_response is None:
