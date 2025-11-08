@@ -695,36 +695,62 @@ class BybitExchange(BaseExchange):
                         response = None
                         
                         while retry_count < max_retries:
-                            response = self.client.get_kline(
-                                category="linear",
-                                symbol=f"{clean_sym}USDT",
-                                interval=interval,
-                                limit=1000
-                            )
-                            
-                            # Обработка rate limiting
-                            if response.get('retCode') == 10006:
-                                # Увеличиваем задержку в 2 раза
-                                old_delay = self.current_request_delay
-                                self.current_request_delay *= 2
-                                logger.warning(f"[BYBIT] ⚠️ Rate limit для {symbol} ({interval_name}). Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
+                            try:
+                                response = self.client.get_kline(
+                                    category="linear",
+                                    symbol=f"{clean_sym}USDT",
+                                    interval=interval,
+                                    limit=1000
+                                )
                                 
-                                # Ждем с увеличенной задержкой
-                                time.sleep(self.current_request_delay)
-                                retry_count += 1
-                                
-                                if retry_count < max_retries:
-                                    logger.info(f"[BYBIT] 🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name})...")
-                                    continue
+                                # Обработка rate limiting в ответе
+                                if response.get('retCode') == 10006:
+                                    # Увеличиваем задержку в 2 раза
+                                    old_delay = self.current_request_delay
+                                    self.current_request_delay *= 2
+                                    logger.warning(f"[BYBIT] ⚠️ Rate limit для {symbol} ({interval_name}). Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
+                                    
+                                    # Ждем с увеличенной задержкой
+                                    time.sleep(self.current_request_delay)
+                                    retry_count += 1
+                                    
+                                    if retry_count < max_retries:
+                                        logger.info(f"[BYBIT] 🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name})...")
+                                        continue
+                                    else:
+                                        logger.error(f"[BYBIT] ❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
+                                        break
                                 else:
-                                    logger.error(f"[BYBIT] ❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
+                                    # Успешный ответ - выходим из цикла повторных попыток
                                     break
-                            else:
-                                # Успешный ответ - выходим из цикла повторных попыток
-                                break
+                            except Exception as api_error:
+                                # Перехватываем исключения от pybit (rate limit выбрасывает исключение)
+                                error_str = str(api_error).lower()
+                                if 'rate limit' in error_str or 'too many' in error_str or '10006' in error_str or 'x-bapi-limit-reset-timestamp' in error_str:
+                                    # Увеличиваем задержку в 2 раза
+                                    old_delay = self.current_request_delay
+                                    self.current_request_delay *= 2
+                                    logger.warning(f"[BYBIT] ⚠️ Rate limit (исключение) для {symbol} ({interval_name}). Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
+                                    
+                                    # Ждем с увеличенной задержкой
+                                    time.sleep(self.current_request_delay)
+                                    retry_count += 1
+                                    
+                                    if retry_count < max_retries:
+                                        logger.info(f"[BYBIT] 🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name}) после исключения...")
+                                        continue
+                                    else:
+                                        logger.error(f"[BYBIT] ❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
+                                        break
+                                else:
+                                    # Другая ошибка - пробрасываем дальше
+                                    raise
                         
                         # Если все попытки исчерпаны - пропускаем этот интервал
                         if response and response.get('retCode') == 10006:
+                            continue
+                        if response is None:
+                            # Если response None после всех попыток - пропускаем интервал
                             continue
                         
                         if response['retCode'] == 0:
@@ -802,39 +828,70 @@ class BybitExchange(BaseExchange):
                 response = None
                 
                 while retry_count < max_retries:
-                    response = self.client.get_kline(
-                        category="linear",
-                        symbol=f"{clean_sym}USDT",
-                        interval=interval,
-                        limit=1000
-                    )
-                    
-                    # Обработка rate limiting
-                    if response.get('retCode') == 10006:
-                        # Увеличиваем задержку в 2 раза
-                        old_delay = self.current_request_delay
-                        self.current_request_delay *= 2
-                        logger.warning(f"[BYBIT] ⚠️ Rate limit для {symbol}. Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
+                    try:
+                        response = self.client.get_kline(
+                            category="linear",
+                            symbol=f"{clean_sym}USDT",
+                            interval=interval,
+                            limit=1000
+                        )
                         
-                        # Ждем с увеличенной задержкой
-                        time.sleep(self.current_request_delay)
-                        retry_count += 1
-                        
-                        if retry_count < max_retries:
-                            logger.info(f"[BYBIT] 🔄 Повторная попытка {retry_count}/{max_retries} для {symbol}...")
-                            continue
+                        # Обработка rate limiting в ответе
+                        if response.get('retCode') == 10006:
+                            # Увеличиваем задержку в 2 раза
+                            old_delay = self.current_request_delay
+                            self.current_request_delay *= 2
+                            logger.warning(f"[BYBIT] ⚠️ Rate limit для {symbol}. Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
+                            
+                            # Ждем с увеличенной задержкой
+                            time.sleep(self.current_request_delay)
+                            retry_count += 1
+                            
+                            if retry_count < max_retries:
+                                logger.info(f"[BYBIT] 🔄 Повторная попытка {retry_count}/{max_retries} для {symbol}...")
+                                continue
+                            else:
+                                logger.error(f"[BYBIT] ❌ Превышено максимальное количество попыток для {symbol}")
+                                return {
+                                    'success': False,
+                                    'error': 'Rate limit exceeded, maximum retries reached'
+                                }
                         else:
-                            logger.error(f"[BYBIT] ❌ Превышено максимальное количество попыток для {symbol}")
-                            return {
-                                'success': False,
-                                'error': 'Rate limit exceeded, maximum retries reached'
-                            }
-                    else:
-                        # Успешный ответ или другая ошибка - выходим из цикла
-                        break
+                            # Успешный ответ или другая ошибка - выходим из цикла
+                            break
+                    except Exception as api_error:
+                        # Перехватываем исключения от pybit (rate limit выбрасывает исключение)
+                        error_str = str(api_error).lower()
+                        if 'rate limit' in error_str or 'too many' in error_str or '10006' in error_str or 'x-bapi-limit-reset-timestamp' in error_str:
+                            # Увеличиваем задержку в 2 раза
+                            old_delay = self.current_request_delay
+                            self.current_request_delay *= 2
+                            logger.warning(f"[BYBIT] ⚠️ Rate limit (исключение) для {symbol}. Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
+                            
+                            # Ждем с увеличенной задержкой
+                            time.sleep(self.current_request_delay)
+                            retry_count += 1
+                            
+                            if retry_count < max_retries:
+                                logger.info(f"[BYBIT] 🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} после исключения...")
+                                continue
+                            else:
+                                logger.error(f"[BYBIT] ❌ Превышено максимальное количество попыток для {symbol}")
+                                return {
+                                    'success': False,
+                                    'error': 'Rate limit exceeded, maximum retries reached'
+                                }
+                        else:
+                            # Другая ошибка - пробрасываем дальше
+                            raise
                 
                 # Если все попытки исчерпаны
                 if response and response.get('retCode') == 10006:
+                    return {
+                        'success': False,
+                        'error': 'Rate limit exceeded, please try again later'
+                    }
+                if response is None:
                     return {
                         'success': False,
                         'error': 'Rate limit exceeded, please try again later'
