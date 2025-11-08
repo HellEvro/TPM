@@ -1032,8 +1032,10 @@ def scan_all_coins_for_delisting():
             logger.warning("[DELISTING_CHECK] ⚠️ Не удалось получить список пар")
             return
         
-        # Фильтруем только USDT пары
-        usdt_pairs = [pair for pair in all_pairs if pair.endswith('USDT')]
+        # ✅ ИСПРАВЛЕНИЕ: get_all_pairs() возвращает символы БЕЗ 'USDT' (через clean_symbol)
+        # Поэтому все пары уже являются USDT парами, просто без суффикса
+        # Используем все пары напрямую
+        usdt_pairs = all_pairs
         
         logger.info(f"[DELISTING_CHECK] 📊 Проверяем {len(usdt_pairs)} USDT пар")
         
@@ -1048,7 +1050,10 @@ def scan_all_coins_for_delisting():
         for symbol in usdt_pairs:
             try:
                 checked_count += 1
-                coin_symbol = symbol.replace('USDT', '')
+                # ✅ ИСПРАВЛЕНИЕ: symbol уже без 'USDT', используем напрямую
+                coin_symbol = symbol
+                # Для API вызова нужно добавить 'USDT' обратно
+                api_symbol = f"{symbol}USDT"
                 
                 # Пропускаем если уже в списке делистинговых
                 if coin_symbol in delisted_data['delisted_coins']:
@@ -1056,7 +1061,8 @@ def scan_all_coins_for_delisting():
                 
                 # Проверяем статус делистинга через API
                 if hasattr(exchange_obj, 'get_instrument_status'):
-                    status_info = exchange_obj.get_instrument_status(symbol)
+                    # ✅ ИСПРАВЛЕНИЕ: Используем api_symbol с 'USDT' для API вызова
+                    status_info = exchange_obj.get_instrument_status(api_symbol)
                     
                     if status_info and status_info.get('is_delisting'):
                         delisted_data['delisted_coins'][coin_symbol] = {
@@ -1198,8 +1204,12 @@ def update_bots_cache_data():
         timeout_thread.start()
         
         # ⚡ ОПТИМИЗАЦИЯ: Получаем данные ботов быстро без лишних операций
+        # ✅ ИСПРАВЛЕНИЕ: Добавляем блокировку при чтении bots_data
         bots_list = []
-        for symbol, bot_data in bots_data['bots'].items():
+        with bots_data_lock:
+            bots_dict = dict(bots_data['bots'])  # Копируем словарь для безопасной итерации
+        
+        for symbol, bot_data in bots_dict.items():
             # Проверяем таймаут
             if timeout_occurred.is_set():
                 logger.warning("[BOTS_CACHE] ⚠️ Таймаут достигнут, прерываем обновление")

@@ -22,12 +22,21 @@ def with_timeout(timeout_seconds=30):
                     signal.alarm(0)
                     signal.signal(signal.SIGALRM, old_handler)
             else:
-                # Для Windows используем простую проверку времени
+                # ✅ ИСПРАВЛЕНИЕ: Для Windows используем проверку времени БЕЗ прерывания
+                # НЕ прерываем выполнение, так как это может сломать операции с повторными попытками
+                # Просто логируем предупреждение если операция заняла больше времени
                 start_time = time.time()
                 result = func(*args, **kwargs)
                 elapsed = time.time() - start_time
+                
                 if elapsed > timeout_seconds:
-                    raise TimeoutError(f"API call took {elapsed:.2f}s, exceeded timeout of {timeout_seconds}s")
+                    # Логируем предупреждение, но НЕ прерываем выполнение
+                    # Это позволяет операциям с повторными попытками (rate limiting) завершиться успешно
+                    import logging
+                    logger = logging.getLogger('Exchange')
+                    logger.warning(f"API call took {elapsed:.2f}s, exceeded timeout of {timeout_seconds}s (function: {func.__name__})")
+                    # НЕ выбрасываем исключение - позволяем операции завершиться
+                
                 return result
         return wrapper
     return decorator
