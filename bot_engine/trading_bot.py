@@ -66,6 +66,11 @@ class TradingBot:
         self.trailing_activation_profit = self.config.get('trailing_activation_profit', 0.0)
         self.trailing_activation_threshold = self.config.get('trailing_activation_threshold', 0.0)
         self.trailing_locked_profit = self.config.get('trailing_locked_profit', 0.0)
+        self.trailing_active = bool(self.config.get('trailing_active', False))
+        self.trailing_max_profit_usdt = float(self.config.get('trailing_max_profit_usdt', 0.0) or 0.0)
+        self.trailing_step_usdt = float(self.config.get('trailing_step_usdt', 0.0) or 0.0)
+        self.trailing_step_price = float(self.config.get('trailing_step_price', 0.0) or 0.0)
+        self.trailing_steps = int(self.config.get('trailing_steps', 0) or 0)
         self.break_even_activated = self.config.get('break_even_activated', False)
         self.order_id = self.config.get('order_id')
         self.current_price = self.config.get('current_price')
@@ -129,6 +134,11 @@ class TradingBot:
             'trailing_activation_profit': self.trailing_activation_profit,
             'trailing_activation_threshold': self.trailing_activation_threshold,
             'trailing_locked_profit': self.trailing_locked_profit,
+            'trailing_active': self.trailing_active,
+            'trailing_max_profit_usdt': self.trailing_max_profit_usdt,
+            'trailing_step_usdt': self.trailing_step_usdt,
+            'trailing_step_price': self.trailing_step_price,
+            'trailing_steps': self.trailing_steps,
             'break_even_activated': self.break_even_activated,
             'order_id': self.order_id,
             'current_price': self.current_price,
