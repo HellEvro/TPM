@@ -389,38 +389,34 @@ def check_coin_maturity(symbol, candles):
                 'candles_count': len(candles),
                 'min_required': min_candles,
                 'config_min_rsi_low': min_rsi_low,
-            'config_max_rsi_high': max_rsi_high,
-            'rsi_min': round(rsi_min, 1),
-            'rsi_max': round(rsi_max, 1)
-        }
-        
-        # Определяем причину незрелости (только для незрелых монет)
-        if not is_mature:
-            failed_checks = [check for check, passed in maturity_checks.items() if not passed]
-            reason = f'Не пройдены проверки: {", ".join(failed_checks)}'
+                'config_max_rsi_high': max_rsi_high,
+                'rsi_min': round(rsi_min, 1),
+                'rsi_max': round(rsi_max, 1)
+            }
+            
+            # Определяем причину незрелости
+            if not is_mature:
+                failed_checks = [check for check, passed in maturity_checks.items() if not passed]
+                reason = f'Не пройдены проверки: {", ".join(failed_checks)}'
+            else:
+                reason = 'Монета зрелая для торговли'
+            
             logger.debug(f"[MATURITY] {symbol}: {reason}")
             logger.debug(f"[MATURITY] {symbol}: Свечи={len(candles)}, RSI={rsi_min:.1f}-{rsi_max:.1f}")
-        else:
-            reason = None  # Для зрелых монет reason не нужен
-        
-        result = {
-            'is_mature': is_mature,
-            'details': details
-        }
-        
-        # Добавляем reason только для незрелых монет
-        if reason:
-            result['reason'] = reason
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"[MATURITY] Ошибка проверки зрелости {symbol}: {e}")
-        return {
-            'is_mature': False,
-            'reason': f'Ошибка анализа: {str(e)}',
-            'details': {}
-        }
+            
+            return {
+                'is_mature': is_mature,
+                'reason': reason,
+                'details': details
+            }
+            
+        except Exception as e:
+            logger.error(f"[MATURITY] Ошибка проверки зрелости {symbol}: {e}")
+            return {
+                'is_mature': False,
+                'reason': f'Ошибка анализа: {str(e)}',
+                'details': {}
+            }
 
 def calculate_all_coins_maturity():
     """🧮 УМНЫЙ расчет зрелости - ТОЛЬКО для незрелых монет!"""
