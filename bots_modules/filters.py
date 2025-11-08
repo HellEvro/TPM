@@ -525,7 +525,20 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # Bybit отправляет свечи в правильном порядке для RSI (от старой к новой)
         closes = [candle['close'] for candle in candles]
         
-        rsi = calculate_rsi(closes, 14)
+        # ✅ ОПТИМИЗАЦИЯ: Используем векторизованный расчет RSI если NumPy доступен
+        try:
+            from bot_engine.optimized_calculations import calculate_rsi_vectorized
+            from bot_engine.performance_optimizer import get_performance_optimizer
+            
+            optimizer = get_performance_optimizer()
+            if optimizer.enabled:
+                # Используем векторизованный расчет (быстрее с NumPy)
+                rsi = calculate_rsi_vectorized(closes, 14)
+            else:
+                rsi = calculate_rsi(closes, 14)
+        except (ImportError, AttributeError):
+            # Fallback на стандартный расчет
+            rsi = calculate_rsi(closes, 14)
         
         if rsi is None:
             logger.warning(f"[WARNING] Не удалось рассчитать RSI для {symbol}")
@@ -1156,6 +1169,58 @@ def load_all_coins_rsi():
             processed = coins_rsi_data['successful_coins'] + coins_rsi_data['failed_coins']
             if batch_num <= total_batches:
                 logger.info(f"[RSI] 📊 Прогресс: {processed}/{len(pairs)} ({processed*100//len(pairs)}%)")
+        
+        # ✅ ОПТИМИЗАЦИЯ: Опциональный пакетный пересчет RSI для улучшения производительности
+        try:
+            from bot_engine.optimized_calculations import calculate_rsi_batch_dict
+            from bot_engine.performance_optimizer import get_performance_optimizer
+            from bot_engine.bot_config import SystemConfig
+            
+            optimizer = get_performance_optimizer()
+            if optimizer.enabled and len(temp_coins_data) > 50:  # Используем пакетный расчет только для большого количества монет
+                # Собираем все цены закрытия для пакетного расчета
+                prices_dict = {}
+                coins_to_recalculate = {}
+                
+                for symbol, coin_data in temp_coins_data.items():
+                    # Пытаемся получить свечи из кэша или из данных монеты
+                    candles = None
+                    candles_cache = coins_rsi_data.get('candles_cache', {})
+                    if symbol in candles_cache:
+                        candles = candles_cache[symbol].get('candles')
+                    
+                    if candles and len(candles) >= 15:
+                        closes = [candle['close'] for candle in candles]
+                        prices_dict[symbol] = closes
+                        coins_to_recalculate[symbol] = coin_data
+                
+                # Пакетный расчет RSI
+                if prices_dict:
+                    logger.debug(f"[RSI_OPT] Пакетный пересчет RSI для {len(prices_dict)} монет...")
+                    batch_rsi_results = calculate_rsi_batch_dict(prices_dict, period=14)
+                    
+                    # Обновляем RSI значения в результатах
+                    updated_count = 0
+                    for symbol, rsi_value in batch_rsi_results.items():
+                        if symbol in coins_to_recalculate and rsi_value is not None:
+                            coins_to_recalculate[symbol]['rsi6h'] = round(rsi_value, 2)
+                            # Пересчитываем сигналы на основе нового RSI
+                            if rsi_value <= SystemConfig.RSI_OVERSOLD:
+                                coins_to_recalculate[symbol]['rsi_zone'] = 'BUY_ZONE'
+                                coins_to_recalculate[symbol]['signal'] = 'ENTER_LONG'
+                            elif rsi_value >= SystemConfig.RSI_OVERBOUGHT:
+                                coins_to_recalculate[symbol]['rsi_zone'] = 'SELL_ZONE'
+                                coins_to_recalculate[symbol]['signal'] = 'ENTER_SHORT'
+                            else:
+                                coins_to_recalculate[symbol]['rsi_zone'] = 'NEUTRAL'
+                                coins_to_recalculate[symbol]['signal'] = 'WAIT'
+                            updated_count += 1
+                    
+                    if updated_count > 0:
+                        logger.debug(f"[RSI_OPT] ✅ Пакетный пересчет RSI завершен для {updated_count} монет")
+        except (ImportError, AttributeError, Exception) as e:
+            # Fallback - используем данные как есть
+            logger.debug(f"[RSI_OPT] Пакетный пересчет недоступен: {e}")
         
         # ✅ КРИТИЧНО: АТОМАРНОЕ обновление всех данных ОДНИМ МАХОМ!
         coins_rsi_data['coins'] = temp_coins_data
