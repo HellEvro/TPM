@@ -899,14 +899,31 @@ def load_all_coins_candles_fast():
         candles_cache = {}
         
         import concurrent.futures
+        # ⚡ АДАПТИВНОЕ УПРАВЛЕНИЕ ВОРКЕРАМИ: начинаем с 20, временно уменьшаем при rate limit
+        current_max_workers = 20  # Базовое количество воркеров
+        rate_limit_detected = False  # Флаг обнаружения rate limit в предыдущем батче
+        
         for i in range(0, len(pairs), batch_size):
             batch = pairs[i:i + batch_size]
             batch_num = i//batch_size + 1
             total_batches = (len(pairs) + batch_size - 1)//batch_size
             
-            logger.debug(f"[CANDLES_FAST] Пакет {batch_num}/{total_batches}: загрузка {len(batch)} монет...")
+            # ⚡ ВРЕМЕННОЕ УМЕНЬШЕНИЕ ВОРКЕРОВ: если в предыдущем батче был rate limit
+            if rate_limit_detected:
+                current_max_workers = max(17, current_max_workers - 3)  # Уменьшаем на 3, но не меньше 17
+                logger.warning(f"[CANDLES_FAST] ⚠️ Rate limit обнаружен в предыдущем батче. Временно уменьшаем воркеры до {current_max_workers}")
+                rate_limit_detected = False  # Сбрасываем флаг для следующего батча
+            elif current_max_workers < 20:
+                # Возвращаем к базовому значению после успешного батча
+                logger.info(f"[CANDLES_FAST] ✅ Возвращаем воркеры к базовому значению: {current_max_workers} → 20")
+                current_max_workers = 20
             
-            with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            logger.debug(f"[CANDLES_FAST] Пакет {batch_num}/{total_batches}: загрузка {len(batch)} монет (воркеров: {current_max_workers})...")
+            
+            # ⚡ ОТСЛЕЖИВАНИЕ RATE LIMIT: проверяем задержку до и после батча
+            delay_before_batch = current_exchange.current_request_delay if hasattr(current_exchange, 'current_request_delay') else None
+            
+            with concurrent.futures.ThreadPoolExecutor(max_workers=current_max_workers) as executor:
                 future_to_symbol = {executor.submit(get_coin_candles_only, symbol, current_exchange): symbol for symbol in batch}
                 
                 completed = 0
@@ -918,6 +935,14 @@ def load_all_coins_candles_fast():
                             completed += 1
                     except Exception as e:
                         pass
+                
+                # Проверяем, увеличилась ли задержка после батча (признак rate limit)
+                delay_after_batch = current_exchange.current_request_delay if hasattr(current_exchange, 'current_request_delay') else None
+                if delay_before_batch is not None and delay_after_batch is not None:
+                    if delay_after_batch > delay_before_batch:
+                        # Задержка увеличилась - был rate limit
+                        rate_limit_detected = True
+                        logger.warning(f"[CANDLES_FAST] ⚠️ Rate limit обнаружен в батче {batch_num}/{total_batches}: задержка увеличилась {delay_before_batch:.3f}с → {delay_after_batch:.3f}с")
                 
                 # Уменьшили паузу между пакетами
                 import time
