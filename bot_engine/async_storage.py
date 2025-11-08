@@ -15,15 +15,27 @@ import logging
 import time
 from datetime import datetime
 from typing import Dict, Any, Optional, Callable
-from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from collections import defaultdict
 
 logger = logging.getLogger('AsyncStorage')
 
-# Глобальный пул потоков для I/O операций
-_io_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="async_storage_io")
-_io_executor_lock = Lock()
+# ✅ РЕФАКТОРИНГ: Используем унифицированный ThreadPoolManager
+try:
+    from bot_engine.utils.thread_pool_manager import get_io_executor
+except ImportError:
+    # Fallback на локальную реализацию если модуль недоступен
+    from concurrent.futures import ThreadPoolExecutor
+    _io_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="async_storage_io")
+    _io_executor_lock = Lock()
+    
+    def get_io_executor():
+        """Получить глобальный пул потоков для I/O операций"""
+        global _io_executor
+        with _io_executor_lock:
+            if _io_executor is None or _io_executor._shutdown:
+                _io_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="async_storage_io")
+        return _io_executor
 
 # Очередь операций записи с батчингом
 _write_queue: Dict[str, Dict[str, Any]] = {}
@@ -31,15 +43,6 @@ _write_queue_lock = Lock()
 _write_timers: Dict[str, float] = {}
 _batch_timeout = 2.0  # Секунды до автоматического flush
 _max_batch_size = 10  # Максимальное количество операций в батче
-
-
-def get_io_executor():
-    """Получить глобальный пул потоков для I/O операций"""
-    global _io_executor
-    with _io_executor_lock:
-        if _io_executor is None or _io_executor._shutdown:
-            _io_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="async_storage_io")
-    return _io_executor
 
 
 async def save_json_file_async(filepath: str, data: Dict[str, Any], description: str = "данные", 
@@ -112,64 +115,82 @@ async def _flush_queue_if_needed():
         await asyncio.gather(*tasks, return_exceptions=True)
 
 
+# ✅ РЕФАКТОРИНГ: Используем унифицированный декоратор retry
+def _save_file_sync_internal(filepath: str, data: Dict[str, Any], description: str) -> bool:
+    """Внутренняя синхронная функция сохранения (без retry логики)"""
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    
+    # Атомарная запись через временный файл
+    temp_file = filepath + '.tmp'
+    
+    with open(temp_file, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    
+    # Заменяем оригинальный файл
+    if os.name == 'nt':  # Windows
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        os.rename(temp_file, filepath)
+    else:  # Unix/Linux
+        os.rename(temp_file, filepath)
+    
+    logger.debug(f"[ASYNC_STORAGE] {description} сохранены в {filepath}")
+    return True
+
+
 async def _save_file_immediate(filepath: str, data: Dict[str, Any], description: str, 
                                 max_retries: int) -> bool:
     """Немедленное сохранение файла через ThreadPoolExecutor"""
     executor = get_io_executor()
     loop = asyncio.get_event_loop()
     
-    def _save_sync():
-        """Синхронная функция сохранения"""
-        for attempt in range(max_retries):
-            try:
-                os.makedirs(os.path.dirname(filepath), exist_ok=True)
-                
-                # Атомарная запись через временный файл
-                temp_file = filepath + '.tmp'
-                
-                with open(temp_file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                
-                # Заменяем оригинальный файл
-                if os.name == 'nt':  # Windows
-                    if os.path.exists(filepath):
-                        os.remove(filepath)
-                    os.rename(temp_file, filepath)
-                else:  # Unix/Linux
-                    os.rename(temp_file, filepath)
-                
-                logger.debug(f"[ASYNC_STORAGE] {description} сохранены в {filepath}")
-                return True
-                
-            except (OSError, PermissionError) as e:
-                if attempt < max_retries - 1:
-                    wait_time = 0.1 * (2 ** attempt)
-                    logger.warning(f"[ASYNC_STORAGE] Попытка {attempt + 1} неудачна, повторяем через {wait_time}с: {e}")
-                    time.sleep(wait_time)
-                    continue
-                else:
-                    logger.error(f"[ASYNC_STORAGE] Ошибка сохранения {description} после {max_retries} попыток: {e}")
-                    if 'temp_file' in locals() and os.path.exists(temp_file):
-                        try:
-                            os.remove(temp_file)
-                        except:
-                            pass
-                    return False
-            except Exception as e:
-                logger.error(f"[ASYNC_STORAGE] Неожиданная ошибка сохранения {description}: {e}")
-                if 'temp_file' in locals() and os.path.exists(temp_file):
-                    try:
-                        os.remove(temp_file)
-                    except:
-                        pass
-                return False
-    
+    # ✅ РЕФАКТОРИНГ: Используем унифицированный декоратор retry
     try:
-        result = await loop.run_in_executor(executor, _save_sync)
-        return result
-    except Exception as e:
-        logger.error(f"[ASYNC_STORAGE] Ошибка выполнения сохранения: {e}")
-        return False
+        from bot_engine.utils.retry_utils import retry_with_backoff
+        
+        @retry_with_backoff(
+            max_retries=max_retries,
+            backoff_multiplier=2.0,
+            initial_delay=0.1,
+            exceptions=(OSError, PermissionError),
+            on_failure=lambda e: logger.error(f"[ASYNC_STORAGE] Ошибка сохранения {description} после {max_retries} попыток: {e}")
+        )
+        def _save_with_retry():
+            return _save_file_sync_internal(filepath, data, description)
+        
+        try:
+            result = await loop.run_in_executor(executor, _save_with_retry)
+            return result
+        except Exception as e:
+            logger.error(f"[ASYNC_STORAGE] Ошибка выполнения сохранения: {e}")
+            return False
+            
+    except ImportError:
+        # Fallback на старую реализацию если модуль недоступен
+        def _save_sync():
+            """Синхронная функция сохранения"""
+            for attempt in range(max_retries):
+                try:
+                    return _save_file_sync_internal(filepath, data, description)
+                except (OSError, PermissionError) as e:
+                    if attempt < max_retries - 1:
+                        wait_time = 0.1 * (2 ** attempt)
+                        logger.warning(f"[ASYNC_STORAGE] Попытка {attempt + 1} неудачна, повторяем через {wait_time}с: {e}")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        logger.error(f"[ASYNC_STORAGE] Ошибка сохранения {description} после {max_retries} попыток: {e}")
+                        return False
+                except Exception as e:
+                    logger.error(f"[ASYNC_STORAGE] Неожиданная ошибка сохранения {description}: {e}")
+                    return False
+        
+        try:
+            result = await loop.run_in_executor(executor, _save_sync)
+            return result
+        except Exception as e:
+            logger.error(f"[ASYNC_STORAGE] Ошибка выполнения сохранения: {e}")
+            return False
 
 
 async def flush_all_pending():
