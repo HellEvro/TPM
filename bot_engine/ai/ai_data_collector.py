@@ -331,17 +331,11 @@ class AIDataCollector:
                             # Логируем каждые 100 монет
                             if candles_count % 100 == 0:
                                 logger.debug(f"📊 Обработано свечей: {candles_count} монет...")
-                            
-                        except Exception as e:
-                            logger.debug(f"⚠️ Ошибка обработки свечей для {symbol}: {e}")
-                            continue
-                    
-                    logger.info(f"✅ Обработано свечей: {candles_count} монет, {total_candles} свечей всего")
-                    
-                except Exception as e:
-                    logger.error(f"❌ Ошибка чтения candles_cache.json: {e}")
-                    import traceback
-                    logger.error(traceback.format_exc())
+                    except Exception as e:
+                        logger.debug(f"⚠️ Ошибка обработки свечей для {symbol}: {e}")
+                        continue
+                
+                logger.info(f"✅ Обработано свечей: {candles_count} монет, {total_candles} свечей всего")
             else:
                 logger.warning(f"⚠️ Файл {candles_cache_file} не найден")
             
