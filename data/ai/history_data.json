@@ -125,49 +125,27 @@
           "timestamp": "2025-11-04T19:06:12.496510"
         }
       ]
+    },
+    {
+      "timestamp": "2025-11-10T01:46:05.890597",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T01:47:26.829046",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T01:48:52.020559",
+      "trades": [],
+      "statistics": {}
     }
   ],
-  "last_update": "2025-11-10T01:22:28.191036",
+  "last_update": "2025-11-10T01:48:58.102951",
   "latest": {
-    "timestamp": "2025-11-10T01:22:28.173560",
+    "timestamp": "2025-11-10T01:48:52.020559",
     "trades": [],
-    "statistics": {
-      "avg_pnl": 0,
-      "best_trade": null,
-      "losing_trades": 0,
-      "open_trades": 0,
-      "profitable_trades": 0,
-      "signals_count": 0,
-      "success_rate": 0,
-      "symbol": "ALL",
-      "symbols": [
-        "OG"
-      ],
-      "symbols_filtered": [
-        "OG"
-      ],
-      "total_actions": 1,
-      "total_pnl": 0,
-      "total_trades": 0,
-      "total_trades_overall": 0,
-      "win_rate": 0,
-      "worst_trade": null
-    },
-    "actions": [
-      {
-        "action_name": "Закрытие позиции",
-        "action_type": "POSITION_CLOSED",
-        "bot_id": "OG",
-        "details": "Закрыта позиция LONG для OG: цена выхода 12.6855, PnL: 4.23 USDT (0.00%)",
-        "direction": "LONG",
-        "exit_price": 12.6855,
-        "id": "close_OG_1762272372.496494",
-        "pnl": 4.229,
-        "reason": "RSI_EXIT",
-        "roi": 0,
-        "symbol": "OG",
-        "timestamp": "2025-11-04T19:06:12.496510"
-      }
-    ]
+    "statistics": {}
   }
 }
