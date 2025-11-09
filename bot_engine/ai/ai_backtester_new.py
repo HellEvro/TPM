@@ -153,6 +153,122 @@ class AIBacktester:
             logger.error(f"❌ Ошибка загрузки истории: {e}")
             return []
     
+    def _backtest_on_candles(self, strategy_params: Dict, period_days: int = 30) -> Dict:
+        """
+        Бэктест стратегии на основе свечей (когда нет истории сделок)
+        
+        Args:
+            strategy_params: Параметры стратегии
+            period_days: Период для бэктеста в днях
+        
+        Returns:
+            Результаты бэктеста
+        """
+        logger.info("📊 Бэктест на основе свечей...")
+        
+        try:
+            # Загружаем рыночные данные (свечи)
+            market_data = self._load_market_data()
+            latest = market_data.get('latest', {})
+            candles_data = latest.get('candles', {})
+            
+            if not candles_data:
+                logger.warning("⚠️ Нет свечей для бэктеста")
+                return {'error': 'No candles available for backtesting'}
+            
+            # Параметры стратегии
+            rsi_long_entry = strategy_params.get('rsi_long_entry', 29)
+            rsi_long_exit = strategy_params.get('rsi_long_exit', 65)
+            rsi_short_entry = strategy_params.get('rsi_short_entry', 71)
+            rsi_short_exit = strategy_params.get('rsi_short_exit', 35)
+            stop_loss_pct = strategy_params.get('stop_loss_pct', 2.0)
+            take_profit_pct = strategy_params.get('take_profit_pct', 20.0)
+            position_size_pct = strategy_params.get('position_size_pct', 10.0)
+            
+            # Симулируем торговлю на свечах
+            initial_balance = 10000.0
+            balance = initial_balance
+            positions = []
+            closed_trades = []
+            
+            # Обрабатываем свечи каждой монеты
+            processed_symbols = 0
+            for symbol, candle_info in candles_data.items():
+                candles = candle_info.get('candles', [])
+                if len(candles) < 50:  # Нужно минимум свечей для анализа
+                    continue
+                
+                indicators = latest.get('indicators', {}).get(symbol, {})
+                current_rsi = indicators.get('rsi', 50)
+                
+                # Простая симуляция: проверяем условия входа/выхода на основе RSI
+                # В реальном бэктесте нужно анализировать каждую свечу последовательно
+                
+                # Проверяем условия входа
+                should_enter_long = current_rsi <= rsi_long_entry
+                should_enter_short = current_rsi >= rsi_short_entry
+                
+                if should_enter_long or should_enter_short:
+                    # Получаем текущую цену из последней свечи
+                    if candles:
+                        current_price = candles[-1].get('close', 0)
+                        if current_price > 0:
+                            direction = 'LONG' if should_enter_long else 'SHORT'
+                            position_size = balance * (position_size_pct / 100.0)
+                            
+                            position = {
+                                'symbol': symbol,
+                                'direction': direction,
+                                'entry_price': current_price,
+                                'size': position_size,
+                                'entry_rsi': current_rsi,
+                                'entry_time': candles[-1].get('time')
+                            }
+                            positions.append(position)
+                            balance -= position_size
+                
+                processed_symbols += 1
+                if processed_symbols >= 10:  # Ограничиваем количество монет для теста
+                    break
+            
+            # Упрощенная симуляция выхода (в реальности нужно отслеживать каждую позицию)
+            # Для демонстрации просто возвращаем базовые результаты
+            
+            if len(positions) == 0:
+                return {
+                    'error': 'No positions opened',
+                    'message': 'Не удалось открыть позиции на основе текущих данных свечей'
+                }
+            
+            # Базовые результаты
+            results = {
+                'strategy_params': strategy_params,
+                'period_days': period_days,
+                'initial_balance': initial_balance,
+                'final_balance': balance + sum(p['size'] for p in positions),
+                'total_return': 0.0,  # Упрощенная симуляция
+                'total_pnl': 0.0,
+                'total_trades': len(positions),
+                'winning_trades': 0,
+                'losing_trades': 0,
+                'win_rate': 0.0,
+                'avg_win': 0.0,
+                'avg_loss': 0.0,
+                'profit_factor': 0.0,
+                'timestamp': datetime.now().isoformat(),
+                'note': 'Упрощенный бэктест на свечах (нужна история сделок для полного анализа)'
+            }
+            
+            logger.info(f"✅ Бэктест на свечах завершен: открыто {len(positions)} позиций")
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка бэктеста на свечах: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return {'error': str(e)}
+    
     def backtest_strategy(self, strategy_params: Dict, period_days: int = 30) -> Dict:
         """
         Бэктест стратегии с заданными параметрами
