@@ -38,6 +38,34 @@ class AIBacktester:
         try:
             market_file = os.path.join(self.data_dir, 'market_data.json')
             if not os.path.exists(market_file):
+                logger.debug("📊 Файл рыночных данных не найден, пробуем получить через API...")
+                # Пробуем получить через API
+                try:
+                    import requests
+                    response = requests.get('http://127.0.0.1:5001/api/bots/coins-with-rsi', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data.get('success'):
+                            coins_data = data.get('coins', {})
+                            # Преобразуем в формат market_data
+                            market_data = {
+                                'latest': {
+                                    'candles': {},
+                                    'indicators': {}
+                                }
+                            }
+                            for symbol, coin_data in coins_data.items():
+                                candles = coin_data.get('candles')
+                                if candles:
+                                    market_data['latest']['candles'][symbol] = {'candles': candles}
+                                market_data['latest']['indicators'][symbol] = {
+                                    'rsi': coin_data.get('rsi6h'),
+                                    'trend': coin_data.get('trend6h'),
+                                    'price': coin_data.get('price')
+                                }
+                            return market_data
+                except Exception as api_error:
+                    logger.debug(f"⚠️ Не удалось получить данные через API: {api_error}")
                 return {}
             
             with open(market_file, 'r', encoding='utf-8') as f:
@@ -52,6 +80,17 @@ class AIBacktester:
         try:
             history_file = os.path.join(self.data_dir, 'history_data.json')
             if not os.path.exists(history_file):
+                logger.debug("📊 Файл истории не найден, пробуем получить через API...")
+                # Пробуем получить через API
+                try:
+                    import requests
+                    response = requests.get('http://127.0.0.1:5001/api/bots/trades?limit=1000', timeout=5)
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data.get('success'):
+                            return data.get('trades', [])
+                except:
+                    pass
                 return []
             
             with open(history_file, 'r', encoding='utf-8') as f:
@@ -67,7 +106,17 @@ class AIBacktester:
             for entry in history:
                 trades.extend(entry.get('trades', []))
             
-            return trades
+            # Убираем дубликаты по ID
+            seen_ids = set()
+            unique_trades = []
+            for trade in trades:
+                trade_id = trade.get('id')
+                if trade_id and trade_id not in seen_ids:
+                    seen_ids.add(trade_id)
+                    unique_trades.append(trade)
+            
+            logger.debug(f"📊 Загружено {len(unique_trades)} уникальных сделок из истории")
+            return unique_trades
             
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки истории: {e}")
@@ -84,15 +133,19 @@ class AIBacktester:
         Returns:
             Результаты бэктеста
         """
-        logger.info(f"📈 Бэктест стратегии с параметрами: {strategy_params}")
+        strategy_name = strategy_params.get('name', 'Unknown')
+        logger.info(f"📈 Бэктест стратегии '{strategy_name}' с параметрами: {strategy_params}")
         
         try:
             # Загружаем исторические данные
             trades = self._load_history_data()
             
+            logger.info(f"📊 Загружено {len(trades)} сделок из истории")
+            
+            # Если нет сделок, используем свечи для симуляции
             if len(trades) < 10:
-                logger.warning("⚠️ Недостаточно данных для бэктеста")
-                return {'error': 'Insufficient data'}
+                logger.info("⚠️ Недостаточно сделок для бэктеста, используем свечи для симуляции...")
+                return self._backtest_on_candles(strategy_params, period_days)
             
             # Фильтруем сделки по периоду
             cutoff_date = datetime.now() - timedelta(days=period_days)
@@ -106,9 +159,11 @@ class AIBacktester:
                 except:
                     continue
             
+            logger.info(f"📊 Отфильтровано {len(filtered_trades)} сделок за последние {period_days} дней")
+            
             if len(filtered_trades) < 10:
-                logger.warning(f"⚠️ Недостаточно данных за период {period_days} дней")
-                return {'error': 'Insufficient data for period'}
+                logger.info("⚠️ Недостаточно сделок за период, используем свечи для симуляции...")
+                return self._backtest_on_candles(strategy_params, period_days)
             
             # Симулируем торговлю с новыми параметрами
             initial_balance = 10000.0
