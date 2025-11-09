@@ -1,7 +1,10 @@
 {
   "high_roi": [],
   "high_loss": [],
-  "rapid_growth": [],
+  "rapid_growth": [
+    "ACX",
+    "GLM"
+  ],
   "high_pnl": [],
-  "last_update": "2025-11-08 02:41:32"
+  "last_update": "2025-11-10 01:37:47"
 }
