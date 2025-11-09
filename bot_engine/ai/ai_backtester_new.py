@@ -76,7 +76,12 @@ class AIBacktester:
                     
                 except json.JSONDecodeError as json_error:
                     logger.warning(f"⚠️ Файл candles_cache.json поврежден (JSON ошибка на позиции {json_error.pos})")
-                    logger.info("💡 Пропускаем candles_cache.json, используем данные из API")
+                    logger.info("🗑️ Удаляем поврежденный файл, bots.py пересоздаст его автоматически")
+                    try:
+                        os.remove(candles_cache_file)
+                        logger.info("✅ Поврежденный файл удален")
+                    except Exception as del_error:
+                        logger.debug(f"⚠️ Не удалось удалить файл: {del_error}")
                 except Exception as e:
                     logger.warning(f"⚠️ Ошибка чтения candles_cache.json: {e}")
             
