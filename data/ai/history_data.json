@@ -140,11 +140,16 @@
       "timestamp": "2025-11-10T01:48:52.020559",
       "trades": [],
       "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T01:50:22.428273",
+      "trades": [],
+      "statistics": {}
     }
   ],
-  "last_update": "2025-11-10T01:48:58.102951",
+  "last_update": "2025-11-10T01:50:28.519075",
   "latest": {
-    "timestamp": "2025-11-10T01:48:52.020559",
+    "timestamp": "2025-11-10T01:50:22.428273",
     "trades": [],
     "statistics": {}
   }
