@@ -51,8 +51,42 @@ class AIDataCollector:
         logger.info("✅ AIDataCollector инициализирован")
     
     def _load_data(self, filepath: str) -> Dict:
-        """Загрузить данные из файла"""
+        """Загрузить данные из файла (с поддержкой разбитых файлов)"""
         try:
+            # Проверяем наличие разбитых частей
+            part_files = []
+            part_num = 1
+            while True:
+                part_file = f"{filepath}.part{part_num}"
+                if os.path.exists(part_file):
+                    part_files.append(part_file)
+                    part_num += 1
+                else:
+                    break
+            
+            # Если есть части - собираем их
+            if part_files:
+                logger.debug(f"📦 Загрузка разбитого файла из {len(part_files)} частей: {filepath}")
+                all_data = {}
+                for part_file in part_files:
+                    with open(part_file, 'r', encoding='utf-8') as f:
+                        part_data = json.load(f)
+                        # Объединяем данные из частей
+                        if isinstance(part_data, dict):
+                            for key, value in part_data.items():
+                                if key == 'metadata':
+                                    all_data[key] = value
+                                elif key == 'history' and isinstance(value, list):
+                                    if 'history' not in all_data:
+                                        all_data['history'] = []
+                                    all_data['history'].extend(value)
+                                elif key == 'latest':
+                                    all_data[key] = value
+                                else:
+                                    all_data[key] = value
+                return all_data
+            
+            # Если частей нет - загружаем обычный файл
             if os.path.exists(filepath):
                 with open(filepath, 'r', encoding='utf-8') as f:
                     return json.load(f)
@@ -61,13 +95,109 @@ class AIDataCollector:
         return {}
     
     def _save_data(self, filepath: str, data: Dict):
-        """Сохранить данные в файл"""
+        """Сохранить данные в файл (с автоматическим разбиением на части >100MB)"""
         try:
             with self.lock:
-                with open(filepath, 'w', encoding='utf-8') as f:
+                # Сначала сохраняем во временный файл чтобы проверить размер
+                temp_file = f"{filepath}.tmp"
+                with open(temp_file, 'w', encoding='utf-8') as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
+                
+                # Проверяем размер файла
+                file_size = os.path.getsize(temp_file)
+                max_size = 100 * 1024 * 1024  # 100MB
+                
+                if file_size > max_size:
+                    # Файл больше 100MB - разбиваем на части
+                    logger.info(f"📦 Файл {filepath} слишком большой ({file_size / 1024 / 1024:.2f}MB), разбиваем на части...")
+                    
+                    # Загружаем данные обратно
+                    with open(temp_file, 'r', encoding='utf-8') as f:
+                        full_data = json.load(f)
+                    
+                    # Удаляем временный файл
+                    os.remove(temp_file)
+                    
+                    # Разбиваем данные на части
+                    # Стратегия: разбиваем по ключам, сохраняя структуру
+                    part_num = 1
+                    current_part = {}
+                    current_size = 0
+                    
+                    # Сохраняем метаданные в первую часть
+                    if 'metadata' in full_data:
+                        current_part['metadata'] = full_data['metadata']
+                    
+                    # Разбиваем историю на части
+                    if 'history' in full_data and isinstance(full_data['history'], list):
+                        history = full_data['history']
+                        current_history = []
+                        
+                        for item in history:
+                            # Сериализуем элемент чтобы узнать его размер
+                            item_json = json.dumps(item, ensure_ascii=False)
+                            item_size = len(item_json.encode('utf-8'))
+                            
+                            if current_size + item_size > max_size and current_history:
+                                # Сохраняем текущую часть
+                                current_part['history'] = current_history
+                                part_file = f"{filepath}.part{part_num}"
+                                with open(part_file, 'w', encoding='utf-8') as f:
+                                    json.dump(current_part, f, ensure_ascii=False, indent=2)
+                                logger.debug(f"   💾 Сохранена часть {part_num}: {os.path.getsize(part_file) / 1024 / 1024:.2f}MB")
+                                
+                                # Начинаем новую часть
+                                part_num += 1
+                                current_part = {'metadata': full_data.get('metadata', {})}
+                                current_history = []
+                                current_size = 0
+                            
+                            current_history.append(item)
+                            current_size += item_size
+                        
+                        # Сохраняем последнюю часть истории
+                        if current_history:
+                            current_part['history'] = current_history
+                    
+                    # Сохраняем latest в последнюю часть
+                    if 'latest' in full_data:
+                        current_part['latest'] = full_data['latest']
+                    
+                    # Сохраняем последнюю часть
+                    if current_part:
+                        part_file = f"{filepath}.part{part_num}"
+                        with open(part_file, 'w', encoding='utf-8') as f:
+                            json.dump(current_part, f, ensure_ascii=False, indent=2)
+                        logger.debug(f"   💾 Сохранена часть {part_num}: {os.path.getsize(part_file) / 1024 / 1024:.2f}MB")
+                    
+                    # Удаляем старые части если они есть
+                    old_part_num = part_num + 1
+                    while os.path.exists(f"{filepath}.part{old_part_num}"):
+                        os.remove(f"{filepath}.part{old_part_num}")
+                        old_part_num += 1
+                    
+                    logger.info(f"✅ Файл разбит на {part_num} частей")
+                    
+                    # Удаляем основной файл если он существует (он будет собираться из частей)
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
+                else:
+                    # Файл меньше 100MB - сохраняем как обычно
+                    # Удаляем старые части если они есть
+                    part_num = 1
+                    while os.path.exists(f"{filepath}.part{part_num}"):
+                        os.remove(f"{filepath}.part{part_num}")
+                        part_num += 1
+                    
+                    # Переименовываем временный файл
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
+                    os.rename(temp_file, filepath)
+                    
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения данных в {filepath}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     
     def _call_bots_api(self, endpoint: str, method: str = 'GET', data: Dict = None) -> Optional[Dict]:
         """Вызов API bots.py"""
