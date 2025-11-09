@@ -166,6 +166,38 @@ class NewTradingBot:
                 rsi_time_filter_enabled = auto_config.get('rsi_time_filter_enabled', True)
                 rsi_time_filter_candles = auto_config.get('rsi_time_filter_candles', 8)
                 rsi_time_filter_lower = auto_config.get('rsi_time_filter_lower', 35)
+                ai_enabled = auto_config.get('ai_enabled', False)  # Включение AI
+            
+            # 🤖 ПРОВЕРКА AI ПРЕДСКАЗАНИЯ (если включено)
+            if ai_enabled:
+                try:
+                    from bot_engine.ai.ai_integration import should_open_position_with_ai
+                    
+                    # Получаем текущую цену
+                    current_price = 0
+                    if candles and len(candles) > 0:
+                        current_price = candles[-1].get('close', 0)
+                    
+                    if current_price > 0:
+                        ai_result = should_open_position_with_ai(
+                            symbol=self.symbol,
+                            direction='LONG',
+                            rsi=rsi,
+                            trend=trend,
+                            price=current_price,
+                            config=auto_config
+                        )
+                        
+                        if ai_result.get('ai_used') and not ai_result.get('should_open', True):
+                            logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI блокирует LONG: {ai_result.get('reason', 'AI prediction')}")
+                            return False
+                        elif ai_result.get('ai_used') and ai_result.get('should_open'):
+                            logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI подтверждает LONG (уверенность: {ai_result.get('ai_confidence', 0):.2%})")
+                except ImportError:
+                    # AI модуль недоступен - продолжаем без него
+                    pass
+                except Exception as ai_error:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка проверки AI: {ai_error}")
             
             # 1. Проверка RSI
             if rsi > rsi_long_threshold:
@@ -212,6 +244,38 @@ class NewTradingBot:
                 rsi_time_filter_enabled = auto_config.get('rsi_time_filter_enabled', True)
                 rsi_time_filter_candles = auto_config.get('rsi_time_filter_candles', 8)
                 rsi_time_filter_upper = auto_config.get('rsi_time_filter_upper', 65)
+                ai_enabled = auto_config.get('ai_enabled', False)  # Включение AI
+            
+            # 🤖 ПРОВЕРКА AI ПРЕДСКАЗАНИЯ (если включено)
+            if ai_enabled:
+                try:
+                    from bot_engine.ai.ai_integration import should_open_position_with_ai
+                    
+                    # Получаем текущую цену
+                    current_price = 0
+                    if candles and len(candles) > 0:
+                        current_price = candles[-1].get('close', 0)
+                    
+                    if current_price > 0:
+                        ai_result = should_open_position_with_ai(
+                            symbol=self.symbol,
+                            direction='SHORT',
+                            rsi=rsi,
+                            trend=trend,
+                            price=current_price,
+                            config=auto_config
+                        )
+                        
+                        if ai_result.get('ai_used') and not ai_result.get('should_open', True):
+                            logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI блокирует SHORT: {ai_result.get('reason', 'AI prediction')}")
+                            return False
+                        elif ai_result.get('ai_used') and ai_result.get('should_open'):
+                            logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI подтверждает SHORT (уверенность: {ai_result.get('ai_confidence', 0):.2%})")
+                except ImportError:
+                    # AI модуль недоступен - продолжаем без него
+                    pass
+                except Exception as ai_error:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка проверки AI: {ai_error}")
             
             # 1. Проверка RSI
             if rsi < rsi_short_threshold:
