@@ -74,8 +74,11 @@ class AIBacktester:
                                 'last_update': candle_info.get('last_update')
                             }
                     
+                except json.JSONDecodeError as json_error:
+                    logger.warning(f"⚠️ Файл candles_cache.json поврежден (JSON ошибка на позиции {json_error.pos})")
+                    logger.info("💡 Пропускаем candles_cache.json, используем данные из API")
                 except Exception as e:
-                    logger.error(f"❌ Ошибка чтения candles_cache.json: {e}")
+                    logger.warning(f"⚠️ Ошибка чтения candles_cache.json: {e}")
             
             # 2. Получаем индикаторы через API
             try:
@@ -235,19 +238,36 @@ class AIBacktester:
             # Для демонстрации просто возвращаем базовые результаты
             
             if len(positions) == 0:
+                logger.warning("⚠️ Не удалось открыть позиции на основе текущих данных свечей")
                 return {
-                    'error': 'No positions opened',
-                    'message': 'Не удалось открыть позиции на основе текущих данных свечей'
+                    'strategy_params': strategy_params,
+                    'period_days': period_days,
+                    'initial_balance': initial_balance,
+                    'final_balance': initial_balance,
+                    'total_return': 0.0,
+                    'total_pnl': 0.0,
+                    'total_trades': 0,
+                    'winning_trades': 0,
+                    'losing_trades': 0,
+                    'win_rate': 0.0,
+                    'avg_win': 0.0,
+                    'avg_loss': 0.0,
+                    'profit_factor': 0.0,
+                    'timestamp': datetime.now().isoformat(),
+                    'note': 'Не удалось открыть позиции (нужна история сделок для полного анализа)'
                 }
             
             # Базовые результаты
+            final_balance = balance + sum(p['size'] for p in positions)
+            total_return = ((final_balance - initial_balance) / initial_balance) * 100
+            
             results = {
                 'strategy_params': strategy_params,
                 'period_days': period_days,
                 'initial_balance': initial_balance,
-                'final_balance': balance + sum(p['size'] for p in positions),
-                'total_return': 0.0,  # Упрощенная симуляция
-                'total_pnl': 0.0,
+                'final_balance': final_balance,
+                'total_return': total_return,
+                'total_pnl': final_balance - initial_balance,
                 'total_trades': len(positions),
                 'winning_trades': 0,
                 'losing_trades': 0,
@@ -256,10 +276,11 @@ class AIBacktester:
                 'avg_loss': 0.0,
                 'profit_factor': 0.0,
                 'timestamp': datetime.now().isoformat(),
-                'note': 'Упрощенный бэктест на свечах (нужна история сделок для полного анализа)'
+                'note': 'Упрощенный бэктест на свечах (нужна история сделок для полного анализа)',
+                'positions_opened': len(positions)
             }
             
-            logger.info(f"✅ Бэктест на свечах завершен: открыто {len(positions)} позиций")
+            logger.info(f"✅ Бэктест на свечах завершен: открыто {len(positions)} позиций, баланс: {final_balance:.2f}")
             
             return results
             
