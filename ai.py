@@ -205,6 +205,23 @@ class AISystem:
         
         self.running = True
         
+        # Загружаем полную историю свечей (если еще не загружена)
+        if self.data_collector:
+            full_history_file = os.path.join('data', 'ai', 'candles_full_history.json')
+            if not os.path.exists(full_history_file):
+                logger.info("📊 Загружаем полную историю свечей для AI обучения...")
+                logger.info("   💡 Это может занять несколько минут (загружаем до 1000 свечей для каждой монеты)")
+                # Запускаем в отдельном потоке чтобы не блокировать старт
+                load_thread = threading.Thread(
+                    target=self.data_collector.load_full_candles_history,
+                    daemon=True,
+                    name="AI-LoadFullHistory"
+                )
+                load_thread.start()
+                logger.info("   ✅ Загрузка полной истории запущена в фоне")
+            else:
+                logger.info("✅ Полная история свечей уже загружена")
+        
         # Запуск сбора данных
         if self.data_collector:
             data_thread = threading.Thread(
@@ -291,11 +308,12 @@ class AISystem:
                     trades_count = len(history_data.get('trades', []))
                     logger.info(f"   ✅ История трейдов: {trades_count} сделок")
                     
-                    # Собираем рыночные данные (свечи для всех монет)
+                    # Собираем рыночные данные (используем УЖЕ СОБРАННЫЕ свечи из bots.py)
                     market_data = self.data_collector.collect_market_data()
                     candles_count = len(market_data.get('candles', {}))
                     indicators_count = len(market_data.get('indicators', {}))
                     logger.info(f"   ✅ Рыночные данные: {candles_count} монет со свечами, {indicators_count} с индикаторами")
+                    logger.info(f"   💡 Используем свечи которые bots.py уже собрал (без дополнительных запросов к бирже)")
                     
                     logger.info(f"📊 Сбор данных #{collection_count} завершен успешно")
                 

@@ -209,16 +209,54 @@ class AIDataCollector:
         
         return collected_data
     
+    def load_full_candles_history(self) -> bool:
+        """
+        Загружает ВСЕ доступные свечи для всех монет
+        
+        Использует AICandlesLoader для загрузки максимального количества свечей
+        (до 1000 свечей на монету вместо ~1000 из candles_cache.json)
+        
+        Returns:
+            True если успешно загружено
+        """
+        try:
+            from bot_engine.ai.ai_candles_loader import AICandlesLoader
+            from bots_modules.imports_and_globals import get_exchange
+            
+            logger.info("=" * 80)
+            logger.info("📊 ЗАГРУЗКА ВСЕХ ДОСТУПНЫХ СВЕЧЕЙ ДЛЯ AI ОБУЧЕНИЯ")
+            logger.info("=" * 80)
+            
+            exchange = get_exchange()
+            if not exchange:
+                logger.error("❌ Не удалось получить объект биржи")
+                return False
+            
+            loader = AICandlesLoader(exchange_obj=exchange)
+            success = loader.load_all_candles_full_history(max_workers=10)
+            
+            if success:
+                logger.info("✅ Полная история свечей загружена в data/ai/candles_full_history.json")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки полной истории свечей: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
+    
     def collect_market_data(self) -> Dict:
         """
-        Сбор рыночных данных из bots.py
+        Сбор рыночных данных напрямую из файлов bots.py
         
-        Собирает:
-        - Свечи для всех монет из coins_rsi_data (которые уже загружены)
-        - Индикаторы (RSI, стохастик, EMA)
-        - Тренды
+        Использует УЖЕ СОБРАННЫЕ данные:
+        - Свечи из data/candles_cache.json (которые bots.py собирает постоянно)
+        - Индикаторы из API /api/bots/coins-with-rsi (RSI, тренды, сигналы)
+        
+        НЕ делает дополнительных запросов к бирже - использует данные которые уже есть!
         """
-        logger.info("📊 Сбор рыночных данных из bots.py...")
+        logger.info("📊 Сбор рыночных данных из файлов bots.py...")
         
         collected_data = {
             'timestamp': datetime.now().isoformat(),
@@ -227,47 +265,127 @@ class AIDataCollector:
         }
         
         try:
-            # Получаем RSI данные со свечами из bots.py
-            rsi_response = self._call_bots_api('/api/bots/coins-with-rsi')
-            if rsi_response and rsi_response.get('success'):
-                coins_data = rsi_response.get('coins', {})
+            # 1. Пробуем читать из полной истории свечей (data/ai/candles_full_history.json)
+            # Если нет - используем candles_cache.json
+            full_history_file = os.path.join('data', 'ai', 'candles_full_history.json')
+            candles_cache_file = os.path.join('data', 'candles_cache.json')
+            candles_data = {}
+            source_file = None
+            is_full_history = False
+            
+            # Приоритет: полная история > кэш bots.py
+            if os.path.exists(full_history_file):
+                try:
+                    logger.info(f"📖 Чтение полной истории свечей из {full_history_file}...")
+                    with open(full_history_file, 'r', encoding='utf-8') as f:
+                        full_data = json.load(f)
+                    
+                    # Извлекаем свечи из структуры с метаданными
+                    if 'candles' in full_data:
+                        candles_data = full_data['candles']
+                        source_file = full_history_file
+                        is_full_history = True
+                        logger.info(f"✅ Загружено полной истории для {len(candles_data)} монет")
+                    elif isinstance(full_data, dict) and not full_data.get('metadata'):
+                        # Если структура плоская (без метаданных)
+                        candles_data = full_data
+                        source_file = full_history_file
+                        is_full_history = True
+                        logger.info(f"✅ Загружено полной истории для {len(candles_data)} монет")
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка чтения полной истории: {e}, пробуем candles_cache.json")
+            
+            # Если не удалось загрузить полную историю, используем кэш bots.py
+            if not candles_data and os.path.exists(candles_cache_file):
+                try:
+                    logger.info(f"📖 Чтение свечей из {candles_cache_file}...")
+                    with open(candles_cache_file, 'r', encoding='utf-8') as f:
+                        candles_data = json.load(f)
+                    
+                    source_file = candles_cache_file
+                    is_full_history = False
+                    logger.info(f"✅ Загружено свечей для {len(candles_data)} монет из кэша bots.py")
+                except Exception as e:
+                    logger.error(f"❌ Ошибка чтения candles_cache.json: {e}")
+            
+            # Обрабатываем свечи
+            if candles_data:
+                candles_count = 0
+                total_candles = 0
                 
-                logger.info(f"📊 Получено данных для {len(coins_data)} монет")
-                
-                # Для каждой монеты собираем свечи и индикаторы
-                processed_count = 0
-                for symbol, coin_data in coins_data.items():
+                for symbol, candle_info in candles_data.items():
                     try:
-                        # Получаем свечи из данных монеты
-                        candles = coin_data.get('candles')
+                        candles = candle_info.get('candles', [])
                         if candles and len(candles) > 0:
                             collected_data['candles'][symbol] = {
                                 'candles': candles,
                                 'count': len(candles),
-                                'timeframe': '6h'
+                                'timeframe': candle_info.get('timeframe', '6h'),
+                                'last_update': candle_info.get('last_update') or candle_info.get('loaded_at'),
+                                'source': source_file or 'candles_cache.json',
+                                'is_full_history': is_full_history
                             }
-                        
-                        # Сохраняем индикаторы
+                            candles_count += 1
+                            total_candles += len(candles)
+                            
+                            # Логируем каждые 100 монет
+                            if candles_count % 100 == 0:
+                                logger.debug(f"📊 Обработано свечей: {candles_count} монет...")
+                            
+                        except Exception as e:
+                            logger.debug(f"⚠️ Ошибка обработки свечей для {symbol}: {e}")
+                            continue
+                    
+                    logger.info(f"✅ Обработано свечей: {candles_count} монет, {total_candles} свечей всего")
+                    
+                except Exception as e:
+                    logger.error(f"❌ Ошибка чтения candles_cache.json: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+            else:
+                logger.warning(f"⚠️ Файл {candles_cache_file} не найден")
+            
+            # 2. Получаем индикаторы через API (RSI, тренды, сигналы)
+            rsi_response = self._call_bots_api('/api/bots/coins-with-rsi')
+            if rsi_response and rsi_response.get('success'):
+                coins_data = rsi_response.get('coins', {})
+                
+                logger.info(f"📊 Получено индикаторов для {len(coins_data)} монет")
+                
+                # Сохраняем индикаторы
+                indicators_count = 0
+                for symbol, coin_data in coins_data.items():
+                    try:
                         collected_data['indicators'][symbol] = {
                             'rsi': coin_data.get('rsi6h'),
                             'trend': coin_data.get('trend6h'),
                             'signal': coin_data.get('signal'),
                             'price': coin_data.get('price'),
                             'volume': coin_data.get('volume'),
-                            'stochastic': coin_data.get('stochastic')
+                            'stochastic': coin_data.get('stochastic'),
+                            'stoch_rsi_k': coin_data.get('stoch_rsi_k'),
+                            'stoch_rsi_d': coin_data.get('stoch_rsi_d'),
+                            'enhanced_rsi': coin_data.get('enhanced_rsi'),
+                            'trend_analysis': coin_data.get('trend_analysis'),
+                            'time_filter_info': coin_data.get('time_filter_info'),
+                            'exit_scam_info': coin_data.get('exit_scam_info'),
+                            'source': 'coins_rsi_data'
                         }
-                        
-                        processed_count += 1
-                        
-                        # Логируем каждые 50 монет
-                        if processed_count % 50 == 0:
-                            logger.debug(f"📊 Обработано {processed_count}/{len(coins_data)} монет...")
+                        indicators_count += 1
                         
                     except Exception as e:
-                        logger.debug(f"⚠️ Ошибка обработки данных для {symbol}: {e}")
+                        logger.debug(f"⚠️ Ошибка обработки индикаторов для {symbol}: {e}")
                         continue
                 
-                logger.info(f"✅ Собрано рыночных данных: {processed_count} монет (свечи: {len(collected_data['candles'])}, индикаторы: {len(collected_data['indicators'])})")
+                logger.info(f"✅ Обработано индикаторов: {indicators_count} монет")
+            
+            # Итоговая статистика
+            logger.info("=" * 80)
+            logger.info(f"✅ СБОР РЫНОЧНЫХ ДАННЫХ ЗАВЕРШЕН")
+            logger.info(f"   📊 Свечи: {len(collected_data['candles'])} монет из candles_cache.json")
+            logger.info(f"   📈 Индикаторы: {len(collected_data['indicators'])} монет из coins_rsi_data")
+            logger.info(f"   💡 Все данные уже собраны bots.py - используем без дополнительных запросов к бирже!")
+            logger.info("=" * 80)
             
             # Сохраняем данные
             existing_data = self._load_data(self.market_data_file)
