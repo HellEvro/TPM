@@ -235,11 +235,10 @@ logs/
 
 data/process_state.json
 data/candles_cache.json
-# market_data.json может быть разбит на части - игнорируем основной файл если он >100MB
+# Большие файлы данных AI (не коммитим в Git)
 data/ai/market_data.json
-# candles_cache.json - большой файл, пересоздается bots.py автоматически
-# Части разбитых файлов можно коммитить (каждая <100MB)
-# data/ai/market_data.json.part*
+data/ai/candles_full_history.json
+# Эти файлы пересоздаются автоматически при работе системы
 
 *.json.backup
 *.json.bak
