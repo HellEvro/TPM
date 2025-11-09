@@ -204,6 +204,10 @@ def should_open_position_with_ai(
     """
     Проверяет, нужно ли открывать позицию с учетом AI предсказания
     
+    Использует обученные модели из data/ai/models/:
+    - signal_predictor.pkl - предсказание сигналов
+    - profit_predictor.pkl - предсказание прибыльности
+    
     Args:
         symbol: Символ монеты
         direction: Направление (LONG/SHORT)
@@ -216,42 +220,64 @@ def should_open_position_with_ai(
         Словарь с решением и информацией об AI
     """
     try:
+        # Проверяем наличие обученных моделей
+        if not AI_SYSTEM_AVAILABLE or not ai_system_instance:
+            return {'should_open': True, 'ai_used': False, 'reason': 'AI system not available'}
+        
+        if not ai_system_instance.trainer or not ai_system_instance.trainer.signal_predictor:
+            logger.debug(f"🤖 AI модели не обучены для {symbol} - используем базовую логику")
+            return {'should_open': True, 'ai_used': False, 'reason': 'AI models not trained yet'}
+        
         # Подготавливаем рыночные данные
         market_data = {
             'rsi': rsi,
             'trend': trend,
-            'price': price
+            'price': price,
+            'direction': direction
         }
         
-        # Определяем оригинальный сигнал на основе направления
-        original_signal = direction if direction in ['LONG', 'SHORT'] else 'WAIT'
+        # Получаем предсказание от обученной модели
+        prediction = ai_system_instance.predict_signal(symbol, market_data)
         
-        # Применяем AI предсказание
-        result = apply_ai_prediction_to_signal(
-            symbol,
-            original_signal,
-            market_data,
-            config
-        )
+        if 'error' in prediction:
+            logger.debug(f"⚠️ Ошибка предсказания AI для {symbol}: {prediction.get('error')}")
+            return {'should_open': True, 'ai_used': False, 'reason': f"AI prediction error: {prediction.get('error')}"}
         
-        # Определяем, нужно ли открывать позицию
-        ai_signal = result.get('signal', original_signal)
+        signal = prediction.get('signal')
+        confidence = prediction.get('confidence', 0)
+        
+        ai_confidence_threshold = config.get('ai_min_confidence', 0.65) if config else 0.65
+        
         should_open = False
+        reason = f"AI signal: {signal}, confidence: {confidence:.2%}"
         
-        if direction == 'LONG' and ai_signal == 'LONG':
+        # Применяем логику AI
+        if direction == 'LONG' and signal == 'LONG' and confidence >= ai_confidence_threshold:
             should_open = True
-        elif direction == 'SHORT' and ai_signal == 'SHORT':
+            logger.debug(f"🤖 AI подтверждает LONG для {symbol} (уверенность: {confidence:.2%})")
+        elif direction == 'SHORT' and signal == 'SHORT' and confidence >= ai_confidence_threshold:
             should_open = True
+            logger.debug(f"🤖 AI подтверждает SHORT для {symbol} (уверенность: {confidence:.2%})")
+        elif signal == 'WAIT':
+            should_open = False
+            logger.debug(f"🤖 AI рекомендует WAIT для {symbol} (уверенность: {confidence:.2%})")
+        elif confidence < ai_confidence_threshold:
+            should_open = False
+            reason = f"AI confidence too low: {confidence:.2%} < {ai_confidence_threshold:.2%}"
+            logger.debug(f"🤖 AI блокирует {direction} для {symbol} (низкая уверенность: {confidence:.2%})")
         
-        result['should_open'] = should_open
-        
-        return result
+        return {
+            'should_open': should_open,
+            'ai_used': True,
+            'ai_confidence': confidence,
+            'ai_signal': signal,
+            'reason': reason,
+            'model_used': 'signal_predictor.pkl'  # Указываем какая модель использовалась
+        }
         
     except Exception as e:
-        logger.error(f"Ошибка проверки открытия позиции с AI для {symbol}: {e}")
-        return {
-            'should_open': False,
-            'ai_used': False,
-            'error': str(e)
-        }
+        logger.error(f"❌ Ошибка при получении AI предсказания для {symbol}: {e}")
+        import traceback
+        logger.debug(traceback.format_exc())
+        return {'should_open': True, 'ai_used': False, 'reason': f'AI error: {e}'}
 

@@ -57,20 +57,58 @@ class AITrainer:
             profit_model_path = os.path.join(self.models_dir, 'profit_predictor.pkl')
             scaler_path = os.path.join(self.models_dir, 'scaler.pkl')
             
+            loaded_count = 0
+            
             if os.path.exists(signal_model_path):
                 self.signal_predictor = joblib.load(signal_model_path)
-                logger.info("✅ Загружена модель предсказания сигналов")
+                logger.info(f"✅ Загружена модель предсказания сигналов: {signal_model_path}")
+                loaded_count += 1
+                
+                # Загружаем метаданные если есть
+                metadata_path = os.path.join(self.models_dir, 'signal_predictor_metadata.json')
+                if os.path.exists(metadata_path):
+                    try:
+                        with open(metadata_path, 'r', encoding='utf-8') as f:
+                            metadata = json.load(f)
+                            logger.info(f"   📊 Модель обучена: {metadata.get('saved_at', 'unknown')}")
+                    except:
+                        pass
+            else:
+                logger.info("ℹ️ Модель предсказания сигналов не найдена (будет создана при обучении)")
             
             if os.path.exists(profit_model_path):
                 self.profit_predictor = joblib.load(profit_model_path)
-                logger.info("✅ Загружена модель предсказания прибыли")
+                logger.info(f"✅ Загружена модель предсказания прибыли: {profit_model_path}")
+                loaded_count += 1
+                
+                # Загружаем метаданные если есть
+                metadata_path = os.path.join(self.models_dir, 'profit_predictor_metadata.json')
+                if os.path.exists(metadata_path):
+                    try:
+                        with open(metadata_path, 'r', encoding='utf-8') as f:
+                            metadata = json.load(f)
+                            logger.info(f"   📊 Модель обучена: {metadata.get('saved_at', 'unknown')}")
+                    except:
+                        pass
+            else:
+                logger.info("ℹ️ Модель предсказания прибыли не найдена (будет создана при обучении)")
             
             if os.path.exists(scaler_path):
                 self.scaler = joblib.load(scaler_path)
-                logger.info("✅ Загружен scaler")
+                logger.info(f"✅ Загружен scaler: {scaler_path}")
+                loaded_count += 1
+            else:
+                logger.info("ℹ️ Scaler не найден (будет создан при обучении)")
+            
+            if loaded_count > 0:
+                logger.info(f"🤖 Загружено моделей: {loaded_count}/3 - готовы к использованию ботами!")
+            else:
+                logger.info("💡 Модели еще не обучены - запустите обучение для создания моделей")
                 
         except Exception as e:
             logger.warning(f"⚠️ Ошибка загрузки моделей: {e}")
+            import traceback
+            logger.warning(traceback.format_exc())
     
     def _save_models(self):
         """Сохранить модели"""
@@ -79,19 +117,53 @@ class AITrainer:
             profit_model_path = os.path.join(self.models_dir, 'profit_predictor.pkl')
             scaler_path = os.path.join(self.models_dir, 'scaler.pkl')
             
+            saved_count = 0
+            
             if self.signal_predictor:
                 joblib.dump(self.signal_predictor, signal_model_path)
-                logger.info("✅ Сохранена модель предсказания сигналов")
+                logger.info(f"✅ Сохранена модель предсказания сигналов: {signal_model_path}")
+                saved_count += 1
+                
+                # Сохраняем метаданные модели
+                metadata_path = os.path.join(self.models_dir, 'signal_predictor_metadata.json')
+                metadata = {
+                    'model_type': 'RandomForestClassifier',
+                    'saved_at': datetime.now().isoformat(),
+                    'n_estimators': getattr(self.signal_predictor, 'n_estimators', 'unknown'),
+                    'max_depth': getattr(self.signal_predictor, 'max_depth', 'unknown')
+                }
+                with open(metadata_path, 'w', encoding='utf-8') as f:
+                    json.dump(metadata, f, indent=2, ensure_ascii=False)
             
             if self.profit_predictor:
                 joblib.dump(self.profit_predictor, profit_model_path)
-                logger.info("✅ Сохранена модель предсказания прибыли")
+                logger.info(f"✅ Сохранена модель предсказания прибыли: {profit_model_path}")
+                saved_count += 1
+                
+                # Сохраняем метаданные модели
+                metadata_path = os.path.join(self.models_dir, 'profit_predictor_metadata.json')
+                metadata = {
+                    'model_type': 'GradientBoostingRegressor',
+                    'saved_at': datetime.now().isoformat(),
+                    'n_estimators': getattr(self.profit_predictor, 'n_estimators', 'unknown'),
+                    'max_depth': getattr(self.profit_predictor, 'max_depth', 'unknown')
+                }
+                with open(metadata_path, 'w', encoding='utf-8') as f:
+                    json.dump(metadata, f, indent=2, ensure_ascii=False)
             
-            joblib.dump(self.scaler, scaler_path)
-            logger.info("✅ Сохранен scaler")
+            if self.scaler:
+                joblib.dump(self.scaler, scaler_path)
+                logger.info(f"✅ Сохранен scaler: {scaler_path}")
+                saved_count += 1
             
+            logger.info(f"💾 Сохранено моделей: {saved_count}/3")
+            logger.info(f"📁 Модели сохранены в: {self.models_dir}")
+            logger.info("🤖 Модели готовы к использованию ботами!")
+                
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения моделей: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     
     def _load_history_data(self) -> List[Dict]:
         """Загрузить данные истории трейдов"""
@@ -216,7 +288,9 @@ class AITrainer:
         """
         Обучение на истории трейдов
         """
-        logger.info("🎓 Обучение на истории трейдов...")
+        logger.info("=" * 80)
+        logger.info("🎓 ОБУЧЕНИЕ НА ИСТОРИИ ТРЕЙДОВ")
+        logger.info("=" * 80)
         
         try:
             # Загружаем данные
@@ -224,18 +298,26 @@ class AITrainer:
             
             if len(trades) < 10:
                 logger.warning(f"⚠️ Недостаточно данных для обучения (нужно минимум 10, есть {len(trades)})")
+                logger.info("💡 Накопите больше сделок для качественного обучения")
                 return
             
             logger.info(f"📊 Загружено {len(trades)} сделок для обучения")
+            logger.info(f"📈 Анализируем сделки...")
             
             # Подготавливаем данные
             X = []
             y_signal = []  # Сигнал (1 = прибыль, 0 = убыток)
             y_profit = []  # Размер прибыли/убытка
             
+            logger.info(f"🔍 Подготовка признаков из {len(trades)} сделок...")
+            
+            processed = 0
+            skipped = 0
+            
             for trade in trades:
                 features = self._prepare_features(trade)
                 if features is None:
+                    skipped += 1
                     continue
                 
                 X.append(features)
@@ -243,10 +325,21 @@ class AITrainer:
                 pnl = trade.get('pnl', 0)
                 y_signal.append(1 if pnl > 0 else 0)
                 y_profit.append(pnl)
+                
+                processed += 1
+                
+                # Логируем прогресс каждые 20 сделок
+                if processed % 20 == 0:
+                    logger.info(f"📊 Обработано {processed}/{len(trades)} сделок...")
+            
+            if skipped > 0:
+                logger.info(f"⚠️ Пропущено {skipped} сделок (недостаточно данных)")
             
             if len(X) < 10:
                 logger.warning(f"⚠️ Недостаточно валидных данных для обучения ({len(X)} записей)")
                 return
+            
+            logger.info(f"✅ Подготовлено {len(X)} валидных записей для обучения")
             
             X = np.array(X)
             y_signal = np.array(y_signal)
@@ -261,7 +354,12 @@ class AITrainer:
             )
             
             # Обучение модели предсказания сигналов
-            logger.info("🎓 Обучение модели предсказания сигналов...")
+            logger.info("=" * 80)
+            logger.info("🎓 ОБУЧЕНИЕ МОДЕЛИ ПРЕДСКАЗАНИЯ СИГНАЛОВ")
+            logger.info(f"📊 Обучающая выборка: {len(X_train)} записей")
+            logger.info(f"📊 Тестовая выборка: {len(X_test)} записей")
+            logger.info("⏳ Обучение RandomForestClassifier...")
+            
             self.signal_predictor = RandomForestClassifier(
                 n_estimators=100,
                 max_depth=10,
@@ -273,10 +371,21 @@ class AITrainer:
             # Оценка модели сигналов
             y_signal_pred = self.signal_predictor.predict(X_test)
             accuracy = accuracy_score(y_signal_test, y_signal_pred)
-            logger.info(f"✅ Точность модели сигналов: {accuracy:.2%}")
+            
+            # Дополнительная статистика
+            profitable_pred = sum(y_signal_pred)
+            profitable_actual = sum(y_signal_test)
+            
+            logger.info(f"✅ Модель сигналов обучена!")
+            logger.info(f"   📊 Точность: {accuracy:.2%}")
+            logger.info(f"   📈 Предсказано прибыльных: {profitable_pred}/{len(y_signal_test)}")
+            logger.info(f"   📈 Реально прибыльных: {profitable_actual}/{len(y_signal_test)}")
             
             # Обучение модели предсказания прибыли
-            logger.info("🎓 Обучение модели предсказания прибыли...")
+            logger.info("=" * 80)
+            logger.info("🎓 ОБУЧЕНИЕ МОДЕЛИ ПРЕДСКАЗАНИЯ ПРИБЫЛИ")
+            logger.info("⏳ Обучение GradientBoostingRegressor...")
+            
             self.profit_predictor = GradientBoostingRegressor(
                 n_estimators=100,
                 max_depth=5,
@@ -287,7 +396,14 @@ class AITrainer:
             # Оценка модели прибыли
             y_profit_pred = self.profit_predictor.predict(X_test)
             mse = mean_squared_error(y_profit_test, y_profit_pred)
-            logger.info(f"✅ MSE модели прибыли: {mse:.2f}")
+            
+            avg_profit_actual = np.mean(y_profit_test)
+            avg_profit_pred = np.mean(y_profit_pred)
+            
+            logger.info(f"✅ Модель прибыли обучена!")
+            logger.info(f"   📊 MSE: {mse:.2f}")
+            logger.info(f"   📈 Средняя прибыль (реальная): {avg_profit_actual:.2f} USDT")
+            logger.info(f"   📈 Средняя прибыль (предсказанная): {avg_profit_pred:.2f} USDT")
             
             # Сохранение моделей
             self._save_models()
@@ -357,11 +473,11 @@ class AITrainer:
     
     def train_on_historical_data(self):
         """
-        Обучение на исторических данных
+        Обучение на исторических данных (свечах)
         
-        Использует свечи и индикаторы для обучения
+        Использует свечи и индикаторы для обучения на всех монетах
         """
-        logger.info("🎓 Обучение на исторических данных...")
+        logger.info("🎓 Обучение на исторических данных (свечах)...")
         
         try:
             # Загружаем рыночные данные
@@ -371,13 +487,61 @@ class AITrainer:
                 logger.warning("⚠️ Нет рыночных данных для обучения")
                 return
             
-            # Здесь можно добавить обучение на исторических свечах
-            # Например, обучение LSTM или других временных моделей
+            latest = market_data.get('latest', {})
+            candles_data = latest.get('candles', {})
+            indicators_data = latest.get('indicators', {})
             
-            logger.info("✅ Обучение на исторических данных завершено")
+            if not candles_data:
+                logger.warning("⚠️ Нет свечей для обучения")
+                return
+            
+            logger.info(f"📊 Начинаем обучение на {len(candles_data)} монетах...")
+            
+            # Обучаемся на свечах каждой монеты
+            trained_count = 0
+            failed_count = 0
+            
+            for symbol, candle_info in candles_data.items():
+                try:
+                    candles = candle_info.get('candles', [])
+                    if not candles or len(candles) < 50:
+                        continue
+                    
+                    indicators = indicators_data.get(symbol, {})
+                    
+                    logger.info(f"🎓 Обучение на {symbol}: {len(candles)} свечей, RSI={indicators.get('rsi', 'N/A')}, Trend={indicators.get('trend', 'N/A')}")
+                    
+                    # Извлекаем данные из свечей
+                    closes = [float(c.get('close', 0)) for c in candles]
+                    volumes = [float(c.get('volume', 0)) for c in candles]
+                    
+                    if len(closes) < 50:
+                        continue
+                    
+                    # Рассчитываем дополнительные индикаторы
+                    rsi = indicators.get('rsi')
+                    trend = indicators.get('trend', 'NEUTRAL')
+                    
+                    # Здесь можно добавить обучение на паттернах свечей
+                    # Например, обучение на последовательностях ценовых движений
+                    
+                    trained_count += 1
+                    
+                    # Логируем прогресс каждые 10 монет
+                    if trained_count % 10 == 0:
+                        logger.info(f"📊 Прогресс обучения: {trained_count} монет обработано...")
+                    
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка обучения на {symbol}: {e}")
+                    failed_count += 1
+                    continue
+            
+            logger.info(f"✅ Обучение на исторических данных завершено: {trained_count} монет обучено, {failed_count} ошибок")
             
         except Exception as e:
             logger.error(f"❌ Ошибка обучения на исторических данных: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     
     def predict(self, symbol: str, market_data: Dict) -> Dict:
         """

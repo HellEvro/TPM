@@ -211,14 +211,14 @@ class AIDataCollector:
     
     def collect_market_data(self) -> Dict:
         """
-        Сбор рыночных данных
+        Сбор рыночных данных из bots.py
         
         Собирает:
-        - Свечи для всех активных монет
+        - Свечи для всех монет из coins_rsi_data (которые уже загружены)
         - Индикаторы (RSI, стохастик, EMA)
         - Тренды
         """
-        logger.debug("📊 Сбор рыночных данных...")
+        logger.info("📊 Сбор рыночных данных из bots.py...")
         
         collected_data = {
             'timestamp': datetime.now().isoformat(),
@@ -227,41 +227,47 @@ class AIDataCollector:
         }
         
         try:
-            # Получаем список активных монет из bots.py
-            bots_response = self._call_bots_api('/api/bots/list')
-            if bots_response and bots_response.get('success'):
-                bots = bots_response.get('bots', [])
-                symbols = [bot.get('symbol') for bot in bots if bot.get('symbol')]
+            # Получаем RSI данные со свечами из bots.py
+            rsi_response = self._call_bots_api('/api/bots/coins-with-rsi')
+            if rsi_response and rsi_response.get('success'):
+                coins_data = rsi_response.get('coins', {})
+                
+                logger.info(f"📊 Получено данных для {len(coins_data)} монет")
                 
                 # Для каждой монеты собираем свечи и индикаторы
-                for symbol in symbols[:50]:  # Ограничиваем до 50 монет за раз
+                processed_count = 0
+                for symbol, coin_data in coins_data.items():
                     try:
-                        # Получаем свечи через app.py
-                        candles_url = f"{self.app_service_url}/api/candles/{symbol}"
-                        candles_response = requests.get(candles_url, timeout=5)
+                        # Получаем свечи из данных монеты
+                        candles = coin_data.get('candles')
+                        if candles and len(candles) > 0:
+                            collected_data['candles'][symbol] = {
+                                'candles': candles,
+                                'count': len(candles),
+                                'timeframe': '6h'
+                            }
                         
-                        if candles_response.status_code == 200:
-                            candles_data = candles_response.json()
-                            if candles_data.get('success'):
-                                collected_data['candles'][symbol] = candles_data.get('data', {})
+                        # Сохраняем индикаторы
+                        collected_data['indicators'][symbol] = {
+                            'rsi': coin_data.get('rsi6h'),
+                            'trend': coin_data.get('trend6h'),
+                            'signal': coin_data.get('signal'),
+                            'price': coin_data.get('price'),
+                            'volume': coin_data.get('volume'),
+                            'stochastic': coin_data.get('stochastic')
+                        }
                         
-                        # Получаем RSI данные из bots.py
-                        rsi_response = self._call_bots_api(f'/api/bots/coins-with-rsi')
-                        if rsi_response and rsi_response.get('success'):
-                            coins_data = rsi_response.get('coins', {})
-                            if symbol in coins_data:
-                                collected_data['indicators'][symbol] = {
-                                    'rsi': coins_data[symbol].get('rsi6h'),
-                                    'trend': coins_data[symbol].get('trend6h'),
-                                    'signal': coins_data[symbol].get('signal'),
-                                    'price': coins_data[symbol].get('price')
-                                }
+                        processed_count += 1
                         
-                        time.sleep(0.1)  # Небольшая задержка между запросами
+                        # Логируем каждые 50 монет
+                        if processed_count % 50 == 0:
+                            logger.debug(f"📊 Обработано {processed_count}/{len(coins_data)} монет...")
                         
                     except Exception as e:
-                        logger.debug(f"⚠️ Ошибка сбора данных для {symbol}: {e}")
+                        logger.debug(f"⚠️ Ошибка обработки данных для {symbol}: {e}")
                         continue
+                
+                logger.info(f"✅ Собрано рыночных данных: {processed_count} монет (свечи: {len(collected_data['candles'])}, индикаторы: {len(collected_data['indicators'])})")
             
             # Сохраняем данные
             existing_data = self._load_data(self.market_data_file)
@@ -279,11 +285,10 @@ class AIDataCollector:
             
             self._save_data(self.market_data_file, existing_data)
             
-            symbols_count = len(collected_data.get('candles', {}))
-            logger.debug(f"✅ Собрано рыночных данных: {symbols_count} монет")
-            
         except Exception as e:
             logger.error(f"❌ Ошибка сбора рыночных данных: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
         
         return collected_data
     

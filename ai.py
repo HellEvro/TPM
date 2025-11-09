@@ -72,11 +72,17 @@ except ImportError as e:
 try:
     from bot_engine.ai.ai_manager import get_ai_manager
     from bot_engine.ai.auto_trainer import AutoTrainer
-    from bot_engine.ai.smart_risk_manager import SmartRiskManager
+    # SmartRiskManager может требовать лицензию, но это не критично
+    try:
+        from bot_engine.ai.smart_risk_manager import SmartRiskManager
+    except ImportError:
+        # Это нормально, если нет лицензии
+        SmartRiskManager = None
     EXISTING_AI_AVAILABLE = True
     logger.info("✅ Существующие AI модули обнаружены")
 except ImportError:
     EXISTING_AI_AVAILABLE = False
+    SmartRiskManager = None
     logger.info("ℹ️ Существующие AI модули недоступны (работаем независимо)")
 
 # Конфигурация
@@ -266,24 +272,39 @@ class AISystem:
         """Рабочий поток для сбора данных"""
         logger.info("📊 Запуск потока сбора данных...")
         
+        collection_count = 0
+        
         while self.running:
             try:
                 if self.data_collector:
+                    collection_count += 1
+                    logger.info(f"📊 Сбор данных #{collection_count}...")
+                    
                     # Собираем данные из bots.py
-                    self.data_collector.collect_bots_data()
+                    bots_data = self.data_collector.collect_bots_data()
+                    bots_count = len(bots_data.get('bots', []))
+                    rsi_count = len(bots_data.get('rsi_data', {}))
+                    logger.info(f"   ✅ Боты: {bots_count}, RSI данных: {rsi_count}")
                     
                     # Собираем данные из bot_history
-                    self.data_collector.collect_history_data()
+                    history_data = self.data_collector.collect_history_data()
+                    trades_count = len(history_data.get('trades', []))
+                    logger.info(f"   ✅ История трейдов: {trades_count} сделок")
                     
-                    # Собираем рыночные данные
-                    self.data_collector.collect_market_data()
+                    # Собираем рыночные данные (свечи для всех монет)
+                    market_data = self.data_collector.collect_market_data()
+                    candles_count = len(market_data.get('candles', {}))
+                    indicators_count = len(market_data.get('indicators', {}))
+                    logger.info(f"   ✅ Рыночные данные: {candles_count} монет со свечами, {indicators_count} с индикаторами")
                     
-                    logger.debug("📊 Данные собраны успешно")
+                    logger.info(f"📊 Сбор данных #{collection_count} завершен успешно")
                 
                 time.sleep(self.config['data_collection_interval'])
                 
             except Exception as e:
                 logger.error(f"❌ Ошибка в потоке сбора данных: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
                 time.sleep(10)
     
     def _training_worker(self):
@@ -291,6 +312,7 @@ class AISystem:
         logger.info("🎓 Запуск потока обучения...")
         
         last_training_time = 0
+        training_count = 0
         
         while self.running:
             try:
@@ -299,23 +321,49 @@ class AISystem:
                 # Проверяем интервал обучения
                 if current_time - last_training_time >= self.config['training_interval']:
                     if self.trainer:
+                        training_count += 1
+                        
                         # Проверяем достаточно ли данных для обучения
                         trades_count = self.trainer.get_trades_count()
                         
+                        logger.info("=" * 80)
+                        logger.info(f"🎓 ОБУЧЕНИЕ #{training_count}")
+                        logger.info(f"📊 Доступно сделок: {trades_count}")
+                        logger.info("=" * 80)
+                        
                         if trades_count >= self.config['min_trades_for_training']:
-                            logger.info(f"🎓 Начинаем обучение (сделок: {trades_count})...")
+                            logger.info(f"✅ Достаточно данных для обучения (нужно: {self.config['min_trades_for_training']}, есть: {trades_count})")
+                            
+                            # Обучение на истории трейдов
+                            logger.info("\n📈 Этап 1/3: Обучение на истории трейдов...")
                             self.trainer.train_on_history()
+                            
+                            # Обучение на параметрах стратегии
+                            logger.info("\n📈 Этап 2/3: Обучение на параметрах стратегии...")
                             self.trainer.train_on_strategy_params()
+                            
+                            # Обучение на исторических данных (свечах)
+                            logger.info("\n📈 Этап 3/3: Обучение на исторических данных (свечах)...")
                             self.trainer.train_on_historical_data()
+                            
                             last_training_time = current_time
-                            logger.info("✅ Обучение завершено")
+                            logger.info("=" * 80)
+                            logger.info("✅ ОБУЧЕНИЕ ЗАВЕРШЕНО")
+                            logger.info("=" * 80)
                         else:
                             logger.info(f"⏳ Недостаточно данных для обучения (нужно: {self.config['min_trades_for_training']}, есть: {trades_count})")
+                            logger.info("💡 Накопите больше сделок для качественного обучения")
+                            
+                            # Но все равно обучаемся на свечах (если есть данные)
+                            logger.info("\n📈 Обучение на свечах (без истории трейдов)...")
+                            self.trainer.train_on_historical_data()
                 
                 time.sleep(60)  # Проверяем каждую минуту
                 
             except Exception as e:
                 logger.error(f"❌ Ошибка в потоке обучения: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
                 time.sleep(60)
     
     def _backtest_worker(self):
@@ -323,6 +371,7 @@ class AISystem:
         logger.info("📈 Запуск потока бэктеста...")
         
         last_backtest_time = 0
+        backtest_count = 0
         
         while self.running:
             try:
@@ -331,17 +380,38 @@ class AISystem:
                 # Проверяем интервал бэктеста
                 if current_time - last_backtest_time >= self.config['backtest_interval']:
                     if self.backtester:
-                        logger.info("📈 Начинаем бэктест стратегий...")
+                        backtest_count += 1
+                        logger.info("=" * 80)
+                        logger.info(f"📈 БЭКТЕСТ #{backtest_count}")
+                        logger.info("=" * 80)
+                        logger.info(f"📊 Период: {self.config['backtest_period_days']} дней")
+                        
                         results = self.backtester.backtest_strategies(
                             period_days=self.config['backtest_period_days']
                         )
+                        
                         last_backtest_time = current_time
-                        logger.info(f"✅ Бэктест завершен: {results}")
+                        
+                        if results:
+                            logger.info("=" * 80)
+                            logger.info("✅ БЭКТЕСТ ЗАВЕРШЕН")
+                            logger.info(f"📊 Протестировано стратегий: {len(results)}")
+                            if results:
+                                best = results[0]
+                                logger.info(f"🏆 Лучшая стратегия: {best.get('strategy_name', 'Unknown')}")
+                                logger.info(f"   📈 Return: {best.get('total_return', 0):.2f}%")
+                                logger.info(f"   📊 Win Rate: {best.get('win_rate', 0):.2f}%")
+                                logger.info(f"   💰 Сделок: {best.get('total_trades', 0)}")
+                            logger.info("=" * 80)
+                        else:
+                            logger.warning("⚠️ Бэктест не вернул результатов")
                 
                 time.sleep(3600)  # Проверяем каждый час
                 
             except Exception as e:
                 logger.error(f"❌ Ошибка в потоке бэктеста: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
                 time.sleep(3600)
     
     def _strategy_optimization_worker(self):
@@ -349,6 +419,7 @@ class AISystem:
         logger.info("⚙️ Запуск потока оптимизации стратегий...")
         
         last_optimization_time = 0
+        optimization_count = 0
         
         while self.running:
             try:
@@ -357,15 +428,31 @@ class AISystem:
                 # Проверяем интервал оптимизации
                 if current_time - last_optimization_time >= self.config['strategy_optimization_interval']:
                     if self.strategy_optimizer:
-                        logger.info("⚙️ Начинаем оптимизацию стратегий...")
+                        optimization_count += 1
+                        logger.info("=" * 80)
+                        logger.info(f"⚙️ ОПТИМИЗАЦИЯ СТРАТЕГИЙ #{optimization_count}")
+                        logger.info("=" * 80)
+                        
                         optimized_params = self.strategy_optimizer.optimize_strategy()
+                        
                         last_optimization_time = current_time
-                        logger.info(f"✅ Оптимизация завершена: {optimized_params}")
+                        
+                        logger.info("=" * 80)
+                        logger.info("✅ ОПТИМИЗАЦИЯ ЗАВЕРШЕНА")
+                        if optimized_params:
+                            logger.info(f"📊 Оптимизированные параметры:")
+                            for key, value in optimized_params.items():
+                                logger.info(f"   - {key}: {value}")
+                        else:
+                            logger.warning("⚠️ Оптимизация не вернула параметров")
+                        logger.info("=" * 80)
                 
                 time.sleep(3600)  # Проверяем каждый час
                 
             except Exception as e:
                 logger.error(f"❌ Ошибка в потоке оптимизации: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
                 time.sleep(3600)
     
     def get_status(self) -> Dict:
@@ -405,6 +492,10 @@ class AISystem:
         """
         Предсказание торгового сигнала для символа
         
+        Использует обученные модели из data/ai/models/:
+        - signal_predictor.pkl - предсказание сигналов
+        - profit_predictor.pkl - предсказание прибыльности
+        
         Args:
             symbol: Символ монеты (например, BTCUSDT)
             market_data: Рыночные данные (RSI, свечи, тренд и т.д.)
@@ -415,11 +506,28 @@ class AISystem:
         if not self.trainer:
             return {'error': 'Trainer not initialized'}
         
+        if not self.trainer.signal_predictor:
+            logger.debug(f"🤖 Модель signal_predictor.pkl не обучена для {symbol}")
+            return {
+                'signal': 'WAIT',
+                'confidence': 0,
+                'error': 'Model not trained yet. Run training first.',
+                'model_path': 'data/ai/models/signal_predictor.pkl'
+            }
+        
         try:
+            # Используем обученную модель для предсказания
             prediction = self.trainer.predict(symbol, market_data)
+            
+            # Добавляем информацию о модели
+            prediction['model_used'] = 'signal_predictor.pkl'
+            prediction['model_path'] = 'data/ai/models/signal_predictor.pkl'
+            
             return prediction
         except Exception as e:
             logger.error(f"❌ Ошибка предсказания для {symbol}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return {'error': str(e)}
     
     def optimize_bot_config(self, symbol: str) -> Dict:
