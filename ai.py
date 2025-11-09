@@ -28,6 +28,20 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import requests
 
+# Настройка кодировки для Windows консоли
+if os.name == 'nt':
+    try:
+        # Пытаемся установить UTF-8 для консоли Windows
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except:
+        # Если не получилось, пробуем через os
+        try:
+            import subprocess
+            subprocess.run(['chcp', '65001'], shell=True, capture_output=True)
+        except:
+            pass
+
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
