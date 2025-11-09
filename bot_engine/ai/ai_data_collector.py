@@ -88,10 +88,29 @@ class AIDataCollector:
             
             # Если частей нет - загружаем обычный файл
             if os.path.exists(filepath):
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        return json.load(f)
+                except json.JSONDecodeError as json_error:
+                    # Файл поврежден - пробуем удалить его и использовать части если есть
+                    logger.warning(f"⚠️ Файл {filepath} поврежден (JSON ошибка), пробуем использовать части...")
+                    if part_files:
+                        # Если есть части - используем их
+                        logger.info(f"📦 Используем {len(part_files)} частей вместо поврежденного файла")
+                        # Данные уже собраны выше, просто возвращаем
+                        pass
+                    else:
+                        # Если частей нет - удаляем поврежденный файл
+                        logger.warning(f"🗑️ Удаляем поврежденный файл {filepath}")
+                        try:
+                            os.remove(filepath)
+                        except:
+                            pass
+                    return all_data if part_files else {}
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки данных из {filepath}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
         return {}
     
     def _save_data(self, filepath: str, data: Dict):
@@ -357,9 +376,15 @@ class AIDataCollector:
             logger.info("📊 ЗАГРУЗКА ВСЕХ ДОСТУПНЫХ СВЕЧЕЙ ДЛЯ AI ОБУЧЕНИЯ")
             logger.info("=" * 80)
             
-            exchange = get_exchange()
+            try:
+                exchange = get_exchange()
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка получения биржи: {e}")
+                exchange = None
+            
             if not exchange:
-                logger.error("❌ Не удалось получить объект биржи")
+                logger.warning("⚠️ Не удалось получить объект биржи (возможно bots.py еще не запущен)")
+                logger.info("💡 Полная история свечей будет загружена при следующем запуске")
                 return False
             
             loader = AICandlesLoader(exchange_obj=exchange)
@@ -435,8 +460,13 @@ class AIDataCollector:
                     source_file = candles_cache_file
                     is_full_history = False
                     logger.info(f"✅ Загружено свечей для {len(candles_data)} монет из кэша bots.py")
+                except json.JSONDecodeError as json_error:
+                    logger.warning(f"⚠️ Файл candles_cache.json поврежден (JSON ошибка на позиции {json_error.pos})")
+                    logger.info("💡 Пропускаем candles_cache.json, используем данные из API")
+                    candles_data = {}
                 except Exception as e:
-                    logger.error(f"❌ Ошибка чтения candles_cache.json: {e}")
+                    logger.warning(f"⚠️ Ошибка чтения candles_cache.json: {e}")
+                    candles_data = {}
             
             # Обрабатываем свечи
             if candles_data:

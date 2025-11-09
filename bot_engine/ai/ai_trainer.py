@@ -255,10 +255,14 @@ class AITrainer:
                         
                         logger.info(f"✅ Обработано: {candles_count} монет, {total_candles} свечей")
                         
+                    except json.JSONDecodeError as json_error:
+                        logger.error(f"❌ Файл candles_cache.json поврежден (JSON ошибка на позиции {json_error.pos})")
+                        logger.warning("⚠️ Пропускаем candles_cache.json, используем данные из market_data.json или API")
+                        # Продолжаем работу без свечей из этого файла
                     except Exception as e:
                         logger.error(f"❌ Ошибка чтения candles_cache.json: {e}")
                         import traceback
-                        logger.error(traceback.format_exc())
+                        logger.debug(traceback.format_exc())
             
             return market_data
                 
