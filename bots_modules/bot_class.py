@@ -193,6 +193,8 @@ class NewTradingBot:
                             return False
                         elif ai_result.get('ai_used') and ai_result.get('should_open'):
                             logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI подтверждает LONG (уверенность: {ai_result.get('ai_confidence', 0):.2%})")
+                            # Сохраняем ID решения AI для последующего отслеживания результатов
+                            self.ai_decision_id = ai_result.get('ai_decision_id')
                 except ImportError:
                     # AI модуль недоступен - продолжаем без него
                     pass
@@ -271,6 +273,8 @@ class NewTradingBot:
                             return False
                         elif ai_result.get('ai_used') and ai_result.get('should_open'):
                             logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI подтверждает SHORT (уверенность: {ai_result.get('ai_confidence', 0):.2%})")
+                            # Сохраняем ID решения AI для последующего отслеживания результатов
+                            self.ai_decision_id = ai_result.get('ai_decision_id')
                 except ImportError:
                     # AI модуль недоступен - продолжаем без него
                     pass
@@ -1598,6 +1602,16 @@ class NewTradingBot:
                 entry_data=entry_data,
                 market_data=market_data
             )
+            
+            # ВАЖНО: Обновляем результат решения AI для переобучения
+            if hasattr(self, 'ai_decision_id') and self.ai_decision_id:
+                try:
+                    from bot_engine.ai.ai_integration import update_ai_decision_result
+                    is_successful = pnl > 0
+                    update_ai_decision_result(self.ai_decision_id, pnl, pnl_pct, is_successful)
+                    logger.debug(f"[NEW_BOT_{self.symbol}] 📝 Обновлен результат решения AI: {'SUCCESS' if is_successful else 'FAILED'}")
+                except Exception as ai_track_error:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка обновления решения AI: {ai_track_error}")
             
         except Exception as e:
             logger.debug(f"[NEW_BOT_{self.symbol}] Не удалось сохранить историю: {e}")

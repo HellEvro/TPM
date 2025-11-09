@@ -8,7 +8,10 @@
 
 import os
 import logging
+import threading
+import time
 from typing import Dict, Optional, Any
+from datetime import datetime
 
 logger = logging.getLogger('AI.Integration')
 
@@ -220,11 +223,14 @@ def should_open_position_with_ai(
         Словарь с решением и информацией об AI
     """
     try:
+        # ВАЖНО: bots.py должен работать даже если ai.py не запущен
+        ai_system = get_ai_system()
+        
         # Проверяем наличие обученных моделей
-        if not AI_SYSTEM_AVAILABLE or not ai_system_instance:
+        if not ai_system:
             return {'should_open': True, 'ai_used': False, 'reason': 'AI system not available'}
         
-        if not ai_system_instance.trainer or not ai_system_instance.trainer.signal_predictor:
+        if not ai_system.trainer or not ai_system.trainer.signal_predictor:
             logger.debug(f"🤖 AI модели не обучены для {symbol} - используем базовую логику")
             return {'should_open': True, 'ai_used': False, 'reason': 'AI models not trained yet'}
         
@@ -237,7 +243,7 @@ def should_open_position_with_ai(
         }
         
         # Получаем предсказание от обученной модели
-        prediction = ai_system_instance.predict_signal(symbol, market_data)
+        prediction = ai_system.predict_signal(symbol, market_data)
         
         if 'error' in prediction:
             logger.debug(f"⚠️ Ошибка предсказания AI для {symbol}: {prediction.get('error')}")
@@ -266,18 +272,90 @@ def should_open_position_with_ai(
             reason = f"AI confidence too low: {confidence:.2%} < {ai_confidence_threshold:.2%}"
             logger.debug(f"🤖 AI блокирует {direction} для {symbol} (низкая уверенность: {confidence:.2%})")
         
-        return {
+        result = {
             'should_open': should_open,
             'ai_used': True,
             'ai_confidence': confidence,
             'ai_signal': signal,
             'reason': reason,
-            'model_used': 'signal_predictor.pkl'  # Указываем какая модель использовалась
+            'model_used': 'signal_predictor.pkl',  # Указываем какая модель использовалась
+            'timestamp': datetime.now().isoformat()
         }
+        
+        # ВАЖНО: Сохраняем решение AI для отслеживания результатов торговли
+        if should_open:
+            try:
+                # Сохраняем решение AI для последующего анализа результатов
+                # Это будет использовано когда позиция закроется
+                result['ai_decision_id'] = _track_ai_decision(
+                    symbol, direction, rsi, trend, price, signal, confidence, market_data
+                )
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка отслеживания решения AI: {e}")
+        
+        return result
         
     except Exception as e:
         logger.error(f"❌ Ошибка при получении AI предсказания для {symbol}: {e}")
         import traceback
         logger.debug(traceback.format_exc())
+        # ВАЖНО: Возвращаем разрешение на открытие если AI недоступен
         return {'should_open': True, 'ai_used': False, 'reason': f'AI error: {e}'}
+
+# Глобальная функция для отслеживания решений AI
+_ai_decisions_tracking = {}
+_ai_decisions_lock = threading.Lock()
+
+def _track_ai_decision(symbol: str, direction: str, rsi: float, trend: str,
+                       price: float, ai_signal: str, ai_confidence: float,
+                       market_data: Dict) -> str:
+    """Отслеживает решение AI для последующего анализа"""
+    try:
+        decision_id = f"ai_{symbol}_{int(time.time() * 1000)}"
+        
+        with _ai_decisions_lock:
+            _ai_decisions_tracking[decision_id] = {
+                'id': decision_id,
+                'symbol': symbol,
+                'direction': direction,
+                'rsi': rsi,
+                'trend': trend,
+                'price': price,
+                'ai_signal': ai_signal,
+                'ai_confidence': ai_confidence,
+                'market_data': market_data.copy(),
+                'timestamp': datetime.now().isoformat(),
+                'status': 'PENDING'
+            }
+        
+        return decision_id
+    except:
+        return None
+
+def get_ai_decision(decision_id: str) -> Optional[Dict]:
+    """Получить решение AI по ID"""
+    with _ai_decisions_lock:
+        return _ai_decisions_tracking.get(decision_id)
+
+def update_ai_decision_result(decision_id: str, pnl: float, roi: float, is_successful: bool):
+    """Обновить результат решения AI после закрытия сделки"""
+    try:
+        with _ai_decisions_lock:
+            if decision_id in _ai_decisions_tracking:
+                _ai_decisions_tracking[decision_id]['status'] = 'SUCCESS' if is_successful else 'FAILED'
+                _ai_decisions_tracking[decision_id]['pnl'] = pnl
+                _ai_decisions_tracking[decision_id]['roi'] = roi
+                _ai_decisions_tracking[decision_id]['closed_at'] = datetime.now().isoformat()
+                
+                # Сохраняем в файл через тренер для последующего переобучения
+                try:
+                    ai_system = get_ai_system()
+                    if ai_system and ai_system.trainer:
+                        ai_system.trainer.update_ai_decision_result(
+                            decision_id, pnl, roi, is_successful, {'exit_data': 'from_bot_class'}
+                        )
+                except Exception as save_error:
+                    logger.debug(f"⚠️ Ошибка сохранения решения AI: {save_error}")
+    except Exception as e:
+        logger.debug(f"⚠️ Ошибка обновления результата решения AI: {e}")
 
