@@ -37,42 +37,73 @@ class AIBacktester:
         """Загрузить рыночные данные"""
         try:
             market_file = os.path.join(self.data_dir, 'market_data.json')
-            if not os.path.exists(market_file):
-                logger.debug("📊 Файл рыночных данных не найден, пробуем получить через API...")
-                # Пробуем получить через API
-                try:
-                    import requests
-                    response = requests.get('http://127.0.0.1:5001/api/bots/coins-with-rsi', timeout=10)
-                    if response.status_code == 200:
-                        data = response.json()
-                        if data.get('success'):
-                            coins_data = data.get('coins', {})
-                            # Преобразуем в формат market_data
-                            market_data = {
-                                'latest': {
-                                    'candles': {},
-                                    'indicators': {}
-                                }
-                            }
-                            for symbol, coin_data in coins_data.items():
-                                candles = coin_data.get('candles')
-                                if candles:
-                                    market_data['latest']['candles'][symbol] = {'candles': candles}
-                                market_data['latest']['indicators'][symbol] = {
-                                    'rsi': coin_data.get('rsi6h'),
-                                    'trend': coin_data.get('trend6h'),
-                                    'price': coin_data.get('price')
-                                }
-                            return market_data
-                except Exception as api_error:
-                    logger.debug(f"⚠️ Не удалось получить данные через API: {api_error}")
-                return {}
             
-            with open(market_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            # Пробуем загрузить из market_data.json (если есть)
+            if os.path.exists(market_file):
+                try:
+                    with open(market_file, 'r', encoding='utf-8') as f:
+                        return json.load(f)
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка чтения market_data.json: {e}")
+            
+            # Если нет market_data.json, читаем напрямую из candles_cache.json
+            logger.info("📖 Загрузка данных напрямую из candles_cache.json...")
+            
+            market_data = {
+                'latest': {
+                    'candles': {},
+                    'indicators': {}
+                }
+            }
+            
+            # 1. Читаем свечи из candles_cache.json
+            candles_cache_file = os.path.join('data', 'candles_cache.json')
+            if os.path.exists(candles_cache_file):
+                try:
+                    with open(candles_cache_file, 'r', encoding='utf-8') as f:
+                        candles_data = json.load(f)
+                    
+                    logger.info(f"✅ Загружено свечей для {len(candles_data)} монет из candles_cache.json")
+                    
+                    for symbol, candle_info in candles_data.items():
+                        candles = candle_info.get('candles', [])
+                        if candles:
+                            market_data['latest']['candles'][symbol] = {
+                                'candles': candles,
+                                'timeframe': candle_info.get('timeframe', '6h'),
+                                'last_update': candle_info.get('last_update')
+                            }
+                    
+                except Exception as e:
+                    logger.error(f"❌ Ошибка чтения candles_cache.json: {e}")
+            
+            # 2. Получаем индикаторы через API
+            try:
+                import requests
+                response = requests.get('http://127.0.0.1:5001/api/bots/coins-with-rsi', timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get('success'):
+                        coins_data = data.get('coins', {})
+                        logger.info(f"✅ Загружено индикаторов для {len(coins_data)} монет через API")
+                        
+                        for symbol, coin_data in coins_data.items():
+                            market_data['latest']['indicators'][symbol] = {
+                                'rsi': coin_data.get('rsi6h'),
+                                'trend': coin_data.get('trend6h'),
+                                'price': coin_data.get('price'),
+                                'signal': coin_data.get('signal'),
+                                'volume': coin_data.get('volume')
+                            }
+            except Exception as api_error:
+                logger.debug(f"⚠️ Не удалось получить индикаторы через API: {api_error}")
+            
+            return market_data
                 
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки рыночных данных: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return {}
     
     def _load_history_data(self) -> List[Dict]:

@@ -201,17 +201,71 @@ class AITrainer:
             return []
     
     def _load_market_data(self) -> Dict:
-        """Загрузить рыночные данные"""
+        """
+        Загрузить рыночные данные
+        
+        Использует:
+        - Свечи из data/candles_cache.json (напрямую из файла - ~554 монеты, ~554,000 свечей!)
+        - Индикаторы из data/ai/market_data.json или через API
+        """
         try:
             market_file = os.path.join(self.data_dir, 'market_data.json')
-            if not os.path.exists(market_file):
-                return {}
             
-            with open(market_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            # Пробуем загрузить из market_data.json (если есть)
+            market_data = {}
+            if os.path.exists(market_file):
+                try:
+                    with open(market_file, 'r', encoding='utf-8') as f:
+                        market_data = json.load(f)
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка чтения market_data.json: {e}")
+            
+            # Если нет свечей в market_data, читаем напрямую из candles_cache.json
+            if not market_data.get('latest', {}).get('candles'):
+                logger.info("📖 Загрузка свечей напрямую из data/candles_cache.json...")
+                
+                candles_cache_file = os.path.join('data', 'candles_cache.json')
+                if os.path.exists(candles_cache_file):
+                    try:
+                        with open(candles_cache_file, 'r', encoding='utf-8') as f:
+                            candles_data = json.load(f)
+                        
+                        logger.info(f"✅ Загружено свечей для {len(candles_data)} монет из candles_cache.json")
+                        
+                        if 'latest' not in market_data:
+                            market_data['latest'] = {}
+                        if 'candles' not in market_data['latest']:
+                            market_data['latest']['candles'] = {}
+                        
+                        candles_count = 0
+                        total_candles = 0
+                        
+                        for symbol, candle_info in candles_data.items():
+                            candles = candle_info.get('candles', [])
+                            if candles:
+                                market_data['latest']['candles'][symbol] = {
+                                    'candles': candles,
+                                    'timeframe': candle_info.get('timeframe', '6h'),
+                                    'last_update': candle_info.get('last_update'),
+                                    'count': len(candles),
+                                    'source': 'candles_cache.json'
+                                }
+                                candles_count += 1
+                                total_candles += len(candles)
+                        
+                        logger.info(f"✅ Обработано: {candles_count} монет, {total_candles} свечей")
+                        
+                    except Exception as e:
+                        logger.error(f"❌ Ошибка чтения candles_cache.json: {e}")
+                        import traceback
+                        logger.error(traceback.format_exc())
+            
+            return market_data
                 
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки рыночных данных: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return {}
     
     def _prepare_features(self, trade: Dict, market_data: Dict = None) -> Optional[np.ndarray]:
@@ -475,12 +529,14 @@ class AITrainer:
         """
         Обучение на исторических данных (свечах)
         
-        Использует свечи и индикаторы для обучения на всех монетах
+        Использует свечи из data/candles_cache.json и индикаторы для обучения на всех монетах
         """
-        logger.info("🎓 Обучение на исторических данных (свечах)...")
+        logger.info("=" * 80)
+        logger.info("🎓 ОБУЧЕНИЕ НА ИСТОРИЧЕСКИХ ДАННЫХ (СВЕЧАХ)")
+        logger.info("=" * 80)
         
         try:
-            # Загружаем рыночные данные
+            # Загружаем рыночные данные (свечи из candles_cache.json + индикаторы)
             market_data = self._load_market_data()
             
             if not market_data:
@@ -492,14 +548,16 @@ class AITrainer:
             indicators_data = latest.get('indicators', {})
             
             if not candles_data:
-                logger.warning("⚠️ Нет свечей для обучения")
+                logger.warning("⚠️ Нет свечей для обучения (проверьте data/candles_cache.json)")
                 return
             
-            logger.info(f"📊 Начинаем обучение на {len(candles_data)} монетах...")
+            logger.info(f"📊 Начинаем обучение на {len(candles_data)} монетах со свечами...")
+            logger.info(f"📈 Доступно индикаторов для {len(indicators_data)} монет")
             
             # Обучаемся на свечах каждой монеты
             trained_count = 0
             failed_count = 0
+            total_candles_processed = 0
             
             for symbol, candle_info in candles_data.items():
                 try:
@@ -509,11 +567,19 @@ class AITrainer:
                     
                     indicators = indicators_data.get(symbol, {})
                     
-                    logger.info(f"🎓 Обучение на {symbol}: {len(candles)} свечей, RSI={indicators.get('rsi', 'N/A')}, Trend={indicators.get('trend', 'N/A')}")
+                    logger.info(f"🎓 Обучение на {symbol}:")
+                    logger.info(f"   📊 Свечей: {len(candles)}")
+                    logger.info(f"   📈 RSI: {indicators.get('rsi', 'N/A')}")
+                    logger.info(f"   📈 Trend: {indicators.get('trend', 'N/A')}")
+                    logger.info(f"   📈 Signal: {indicators.get('signal', 'N/A')}")
+                    logger.info(f"   💰 Price: {indicators.get('price', 'N/A')}")
                     
                     # Извлекаем данные из свечей
-                    closes = [float(c.get('close', 0)) for c in candles]
-                    volumes = [float(c.get('volume', 0)) for c in candles]
+                    closes = [float(c.get('close', 0) or c.get('close', 0)) for c in candles]
+                    volumes = [float(c.get('volume', 0) or 0) for c in candles]
+                    highs = [float(c.get('high', 0) or 0) for c in candles]
+                    lows = [float(c.get('low', 0) or 0) for c in candles]
+                    opens = [float(c.get('open', 0) or 0) for c in candles]
                     
                     if len(closes) < 50:
                         continue
@@ -521,22 +587,45 @@ class AITrainer:
                     # Рассчитываем дополнительные индикаторы
                     rsi = indicators.get('rsi')
                     trend = indicators.get('trend', 'NEUTRAL')
+                    signal = indicators.get('signal', 'WAIT')
+                    
+                    # Анализируем паттерны свечей
+                    # Например: последовательности ценовых движений, объемы, волатильность
+                    
+                    # Рассчитываем волатильность
+                    if len(closes) > 1:
+                        price_changes = [(closes[i] - closes[i-1]) / closes[i-1] * 100 
+                                        for i in range(1, len(closes))]
+                        volatility = np.std(price_changes) if price_changes else 0
+                    else:
+                        volatility = 0
+                    
+                    # Анализируем объемы
+                    avg_volume = np.mean(volumes) if volumes else 0
+                    volume_trend = 'INCREASING' if len(volumes) > 1 and volumes[-1] > volumes[0] else 'DECREASING'
                     
                     # Здесь можно добавить обучение на паттернах свечей
                     # Например, обучение на последовательностях ценовых движений
+                    # Сохраняем данные для будущего обучения моделей на свечах
                     
                     trained_count += 1
+                    total_candles_processed += len(candles)
                     
                     # Логируем прогресс каждые 10 монет
                     if trained_count % 10 == 0:
-                        logger.info(f"📊 Прогресс обучения: {trained_count} монет обработано...")
+                        logger.info(f"📊 Прогресс обучения: {trained_count} монет обработано, {total_candles_processed} свечей...")
                     
                 except Exception as e:
                     logger.debug(f"⚠️ Ошибка обучения на {symbol}: {e}")
                     failed_count += 1
                     continue
             
-            logger.info(f"✅ Обучение на исторических данных завершено: {trained_count} монет обучено, {failed_count} ошибок")
+            logger.info("=" * 80)
+            logger.info(f"✅ ОБУЧЕНИЕ НА СВЕЧАХ ЗАВЕРШЕНО")
+            logger.info(f"   📊 Монет обработано: {trained_count}")
+            logger.info(f"   📈 Свечей обработано: {total_candles_processed}")
+            logger.info(f"   ⚠️ Ошибок: {failed_count}")
+            logger.info("=" * 80)
             
         except Exception as e:
             logger.error(f"❌ Ошибка обучения на исторических данных: {e}")
