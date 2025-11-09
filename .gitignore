@@ -235,6 +235,10 @@ logs/
 
 data/process_state.json
 data/candles_cache.json
+# market_data.json может быть разбит на части - игнорируем основной файл если он >100MB
+data/ai/market_data.json
+# Части разбитых файлов можно коммитить (каждая <100MB)
+# data/ai/market_data.json.part*
 
 *.json.backup
 *.json.bak
