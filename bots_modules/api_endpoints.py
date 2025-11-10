@@ -3186,6 +3186,222 @@ def get_bot_trades():
         logger.error(f"[API] Ошибка получения сделок ботов: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# ==================== AI MODULE ENDPOINTS ====================
+
+@bots_app.route('/api/ai/decisions', methods=['GET'])
+def get_ai_decisions():
+    """Получает список решений AI"""
+    try:
+        status = request.args.get('status')  # SUCCESS, FAILED, PENDING
+        symbol = request.args.get('symbol')
+        limit = int(request.args.get('limit', 100))
+        
+        try:
+            from bot_engine.ai.ai_data_storage import AIDataStorage
+            storage = AIDataStorage()
+            decisions = storage.get_ai_decisions(status=status, symbol=symbol)
+            
+            # Ограничиваем количество
+            decisions = decisions[:limit]
+            
+            return jsonify({
+                'success': True,
+                'decisions': decisions,
+                'count': len(decisions)
+            })
+        except ImportError:
+            return jsonify({
+                'success': False,
+                'error': 'AI data storage not available',
+                'decisions': [],
+                'count': 0
+            })
+        
+    except Exception as e:
+        logger.error(f"[API] Ошибка получения решений AI: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bots_app.route('/api/ai/performance', methods=['GET'])
+def get_ai_performance():
+    """Получает метрики производительности AI"""
+    try:
+        try:
+            from bot_engine.ai.ai_data_storage import AIDataStorage
+            storage = AIDataStorage()
+            
+            # Вычисляем актуальные метрики
+            metrics = storage.calculate_performance_metrics()
+            
+            # Обновляем сохраненные метрики
+            if metrics:
+                storage.update_performance_metrics(metrics)
+            
+            # Получаем сохраненные метрики (включая сравнение с скриптовыми)
+            saved_metrics = storage.get_performance_metrics()
+            
+            # Объединяем вычисленные и сохраненные метрики
+            result = {
+                'overall': metrics.get('overall', {}) if metrics else saved_metrics.get('overall', {}),
+                'vs_script': saved_metrics.get('vs_script', {}),
+                'by_symbol': metrics.get('by_symbol', {}) if metrics else saved_metrics.get('by_symbol', {})
+            }
+            
+            return jsonify({
+                'success': True,
+                'metrics': result
+            })
+        except ImportError:
+            return jsonify({
+                'success': False,
+                'error': 'AI data storage not available',
+                'metrics': {}
+            })
+        
+    except Exception as e:
+        logger.error(f"[API] Ошибка получения метрик AI: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bots_app.route('/api/ai/training-history', methods=['GET'])
+def get_ai_training_history():
+    """Получает историю обучения AI"""
+    try:
+        limit = int(request.args.get('limit', 50))
+        
+        try:
+            from bot_engine.ai.ai_data_storage import AIDataStorage
+            storage = AIDataStorage()
+            history = storage.get_training_history(limit=limit)
+            
+            return jsonify({
+                'success': True,
+                'history': history,
+                'count': len(history)
+            })
+        except ImportError:
+            return jsonify({
+                'success': False,
+                'error': 'AI data storage not available',
+                'history': [],
+                'count': 0
+            })
+        
+    except Exception as e:
+        logger.error(f"[API] Ошибка получения истории обучения AI: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bots_app.route('/api/ai/stats', methods=['GET'])
+def get_ai_stats():
+    """Получает статистику AI vs скриптовые правила"""
+    try:
+        symbol = request.args.get('symbol')  # Опциональный фильтр по символу
+        
+        # Получаем все сделки из истории
+        if bot_history_manager is None:
+            return jsonify({
+                'success': False,
+                'error': 'Bot history manager not initialized'
+            }), 500
+        
+        trades = bot_history_manager.get_bot_trades(symbol=symbol, limit=10000)
+        
+        # Разделяем на AI и скриптовые
+        ai_trades = [t for t in trades if t.get('decision_source') == 'AI']
+        script_trades = [t for t in trades if t.get('decision_source') == 'SCRIPT']
+        
+        # Вычисляем статистику для AI
+        ai_stats = {
+            'total': len(ai_trades),
+            'successful': sum(1 for t in ai_trades if t.get('is_successful', t.get('pnl', 0) > 0)),
+            'failed': sum(1 for t in ai_trades if not t.get('is_successful', t.get('pnl', 0) > 0)),
+            'total_pnl': sum(t.get('pnl', 0) for t in ai_trades),
+            'avg_pnl': sum(t.get('pnl', 0) for t in ai_trades) / len(ai_trades) if ai_trades else 0
+        }
+        ai_stats['win_rate'] = (ai_stats['successful'] / ai_stats['total'] * 100) if ai_stats['total'] > 0 else 0
+        
+        # Вычисляем статистику для скриптовых
+        script_stats = {
+            'total': len(script_trades),
+            'successful': sum(1 for t in script_trades if t.get('is_successful', t.get('pnl', 0) > 0)),
+            'failed': sum(1 for t in script_trades if not t.get('is_successful', t.get('pnl', 0) > 0)),
+            'total_pnl': sum(t.get('pnl', 0) for t in script_trades),
+            'avg_pnl': sum(t.get('pnl', 0) for t in script_trades) / len(script_trades) if script_trades else 0
+        }
+        script_stats['win_rate'] = (script_stats['successful'] / script_stats['total'] * 100) if script_stats['total'] > 0 else 0
+        
+        return jsonify({
+            'success': True,
+            'ai': ai_stats,
+            'script': script_stats,
+            'comparison': {
+                'win_rate_diff': ai_stats['win_rate'] - script_stats['win_rate'],
+                'avg_pnl_diff': ai_stats['avg_pnl'] - script_stats['avg_pnl'],
+                'total_pnl_diff': ai_stats['total_pnl'] - script_stats['total_pnl']
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"[API] Ошибка получения статистики AI: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bots_app.route('/api/ai/models', methods=['GET'])
+def get_ai_models():
+    """Получает информацию о текущих моделях AI"""
+    try:
+        try:
+            from bot_engine.ai.ai_data_storage import AIDataStorage
+            import os
+            import json
+            
+            storage = AIDataStorage()
+            versions = storage.get_model_versions(limit=10)
+            latest_version = storage.get_latest_model_version()
+            
+            # Проверяем наличие файлов моделей
+            models_dir = os.path.join('data', 'ai', 'models')
+            models_info = {}
+            
+            model_files = {
+                'signal_predictor': 'signal_predictor.pkl',
+                'profit_predictor': 'profit_predictor.pkl',
+                'scaler': 'scaler.pkl'
+            }
+            
+            for model_name, filename in model_files.items():
+                filepath = os.path.join(models_dir, filename)
+                metadata_path = os.path.join(models_dir, f"{model_name}_metadata.json")
+                
+                exists = os.path.exists(filepath)
+                models_info[model_name] = {
+                    'exists': exists,
+                    'path': filepath,
+                    'metadata': None
+                }
+                
+                if exists and os.path.exists(metadata_path):
+                    try:
+                        with open(metadata_path, 'r', encoding='utf-8') as f:
+                            models_info[model_name]['metadata'] = json.load(f)
+                    except:
+                        pass
+            
+            return jsonify({
+                'success': True,
+                'models': models_info,
+                'versions': versions,
+                'latest_version': latest_version
+            })
+        except ImportError:
+            return jsonify({
+                'success': False,
+                'error': 'AI data storage not available',
+                'models': {},
+                'versions': []
+            })
+        
+    except Exception as e:
+        logger.error(f"[API] Ошибка получения информации о моделях AI: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @bots_app.route('/api/bots/stops', methods=['GET'])
 def get_stopped_trades():
     """Получает все сделки, закрытые по стопу (ПРЕМИУМ ФУНКЦИЯ!)"""

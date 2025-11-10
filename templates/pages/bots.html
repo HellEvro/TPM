@@ -2183,6 +2183,24 @@
                 </div>
                 
                 <div class="filter-group">
+                    <label>🤖 Источник решения:</label>
+                    <select id="historyDecisionSourceFilter">
+                        <option value="all">Все</option>
+                        <option value="AI">AI решения</option>
+                        <option value="SCRIPT">Скриптовые правила</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>📊 Результат:</label>
+                    <select id="historyResultFilter">
+                        <option value="all">Все</option>
+                        <option value="successful">✅ Успешные</option>
+                        <option value="failed">❌ Неуспешные</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
                     <label data-translate="filter_by_date">📅 Период:</label>
                     <select id="historyDateFilter">
                         <option value="all" data-translate="all_time" selected>Все время</option>
@@ -2246,6 +2264,7 @@
                     <button class="history-tab-btn active" data-history-tab="actions">📋 <span data-translate="bot_actions">Действия ботов</span></button>
                     <button class="history-tab-btn" data-history-tab="trades">💼 <span data-translate="trade_history">История сделок</span></button>
                     <button class="history-tab-btn" data-history-tab="signals">⚡ <span data-translate="signal_history">История сигналов</span></button>
+                    <button class="history-tab-btn" data-history-tab="ai">🤖 <span>AI История</span></button>
                 </div>
                 
                 <!-- История действий -->
@@ -2277,6 +2296,41 @@
                             <div class="empty-icon">⚡</div>
                             <p data-translate="no_signals_found">История сигналов не найдена</p>
                             <small data-translate="signals_will_appear_here">Торговые сигналы будут отображаться здесь</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- AI История -->
+                <div class="history-tab-content" id="aiHistory">
+                    <div class="ai-stats-section">
+                        <h3>📊 Статистика AI vs Скриптовые</h3>
+                        <div class="ai-stats-grid" id="aiStatsGrid">
+                            <div class="stat-card">
+                                <div class="stat-label">AI Решения</div>
+                                <div class="stat-value" id="aiTotalDecisions">-</div>
+                                <div class="stat-detail" id="aiWinRate">Win Rate: -</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Скриптовые</div>
+                                <div class="stat-value" id="scriptTotalDecisions">-</div>
+                                <div class="stat-detail" id="scriptWinRate">Win Rate: -</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Сравнение</div>
+                                <div class="stat-value" id="comparisonWinRate">-</div>
+                                <div class="stat-detail" id="comparisonAvgPnl">Avg PnL: -</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="ai-decisions-section">
+                        <h3>🤖 Решения AI</h3>
+                        <div class="history-list" id="aiDecisionsList">
+                            <div class="empty-history-state">
+                                <div class="empty-icon">🤖</div>
+                                <p>Решения AI не найдены</p>
+                                <small>Решения AI будут отображаться здесь</small>
+                            </div>
                         </div>
                     </div>
                 </div>
