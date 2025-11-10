@@ -299,6 +299,11 @@ INDIVIDUAL_COIN_SETTINGS_FILE = 'data/individual_coin_settings.json'
 # Создаем папку для данных если её нет
 os.makedirs('data', exist_ok=True)
 
+# Метаданные загрузки индивидуальных настроек
+_individual_coin_settings_state = {
+    'last_mtime': None
+}
+
 # Дефолтная конфигурация Auto Bot (для восстановления)
 # ✅ ИСПОЛЬЗУЕМ КОНФИГ ИЗ bot_engine/bot_config.py
 # Импортирован как BOT_ENGINE_DEFAULT_CONFIG
@@ -608,6 +613,10 @@ def load_individual_coin_settings():
         }
         with bots_data_lock:
             bots_data['individual_coin_settings'] = normalized
+        try:
+            _individual_coin_settings_state['last_mtime'] = os.path.getmtime(INDIVIDUAL_COIN_SETTINGS_FILE)
+        except OSError:
+            _individual_coin_settings_state['last_mtime'] = None
         logger.info(
             "[COIN_SETTINGS] ✅ Загружено индивидуальных настроек: %d",
             len(normalized)
@@ -640,7 +649,18 @@ def get_individual_coin_settings(symbol):
     normalized = _normalize_symbol(symbol)
     with bots_data_lock:
         settings = bots_data.get('individual_coin_settings', {}).get(normalized)
-        return deepcopy(settings) if settings else None
+    if not settings:
+        try:
+            current_mtime = os.path.getmtime(INDIVIDUAL_COIN_SETTINGS_FILE)
+        except OSError:
+            current_mtime = None
+        last_mtime = _individual_coin_settings_state.get('last_mtime')
+        if current_mtime and current_mtime != last_mtime:
+            logger.debug("[COIN_SETTINGS] 🔄 Обнаружены новые индивидуальные настройки на диске, обновляем кэш")
+            load_individual_coin_settings()
+            with bots_data_lock:
+                settings = bots_data.get('individual_coin_settings', {}).get(normalized)
+    return deepcopy(settings) if settings else None
 
 
 def set_individual_coin_settings(symbol, settings, persist=True):
@@ -891,7 +911,13 @@ def restore_lost_bots():
         if restored_bots:
             logger.info(f"[REGISTRY] 🎯 Восстановлено {len(restored_bots)} ботов: {restored_bots}")
             # Сохраняем состояние
-            save_bots_state()
+            try:
+                with bots_data_lock:
+                    bots_snapshot = deepcopy(bots_data.get('bots', {}))
+                    config_snapshot = deepcopy(bots_data.get('auto_bot_config', {}))
+                storage_save_bots_state(bots_snapshot, config_snapshot)
+            except Exception as save_error:
+                logger.error(f"[REGISTRY] ❌ Не удалось сохранить состояние после восстановления: {save_error}")
         else:
             logger.info("[REGISTRY] ℹ️ Ботов для восстановления не найдено")
         
