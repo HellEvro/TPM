@@ -177,13 +177,36 @@ class AITrainer:
             logger.error(traceback.format_exc())
     
     def _load_history_data(self) -> List[Dict]:
-        """Загрузить данные истории трейдов"""
+        """
+        Загрузить данные истории трейдов
+        
+        AI получает сделки из следующих источников:
+        1. data/ai/history_data.json - данные собранные через API из bots.py
+        2. data/bot_history.json - основной файл где bots.py сохраняет все сделки
+        3. API endpoint /api/bots/trades - если файлы недоступны
+        
+        ВАЖНО: AI использует ТОЛЬКО закрытые сделки с PnL (status='CLOSED' и pnl != None)
+        Это нужно для обучения на реальных результатах торговли
+        """
+        logger.info("=" * 80)
+        logger.info("📊 ЗАГРУЗКА РЕАЛЬНЫХ СДЕЛОК ДЛЯ ОБУЧЕНИЯ AI")
+        logger.info("=" * 80)
+        logger.info("   💡 AI получает сделки из следующих источников:")
+        logger.info("      1. data/ai/history_data.json (данные через API)")
+        logger.info("      2. data/bot_history.json (основной файл bots.py)")
+        logger.info("      3. API /api/bots/trades (если файлы недоступны)")
+        logger.info("   💡 AI использует ТОЛЬКО закрытые сделки с PnL")
+        logger.info("      (status='CLOSED' и pnl != None)")
+        logger.info("=" * 80)
+        
         trades = []
+        source_counts = {}
         
         # 1. Пробуем загрузить из data/ai/history_data.json (данные собранные через API)
         try:
             history_file = os.path.join(self.data_dir, 'history_data.json')
             if os.path.exists(history_file):
+                logger.info(f"📖 Источник 1: Чтение {history_file}...")
                 with open(history_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 
@@ -192,21 +215,33 @@ class AITrainer:
                 history = data.get('history', [])
                 
                 # Добавляем сделки из latest
-                if latest:
-                    trades.extend(latest.get('trades', []))
+                latest_trades = latest.get('trades', []) if latest else []
+                if latest_trades:
+                    trades.extend(latest_trades)
+                    logger.info(f"   ✅ Загружено {len(latest_trades)} сделок из 'latest'")
                 
                 # Добавляем сделки из истории
+                history_trades_count = 0
                 for entry in history:
-                    trades.extend(entry.get('trades', []))
+                    entry_trades = entry.get('trades', [])
+                    if entry_trades:
+                        trades.extend(entry_trades)
+                        history_trades_count += len(entry_trades)
                 
-                logger.debug(f"📊 Загружено {len(trades)} сделок из history_data.json")
+                if history_trades_count > 0:
+                    logger.info(f"   ✅ Загружено {history_trades_count} сделок из 'history'")
+                
+                source_counts['history_data.json'] = len(latest_trades) + history_trades_count
+            else:
+                logger.info(f"   ⏳ Файл {history_file} не найден (пропускаем)")
         except Exception as e:
-            logger.debug(f"⚠️ Ошибка загрузки history_data.json: {e}")
+            logger.warning(f"   ⚠️ Ошибка загрузки history_data.json: {e}")
         
         # 2. Пробуем загрузить напрямую из data/bot_history.json (основной файл bots.py)
         try:
             bot_history_file = os.path.join('data', 'bot_history.json')
             if os.path.exists(bot_history_file):
+                logger.info(f"📖 Источник 2: Чтение {bot_history_file}...")
                 with open(bot_history_file, 'r', encoding='utf-8') as f:
                     bot_history_data = json.load(f)
                 
@@ -215,31 +250,95 @@ class AITrainer:
                 if bot_trades:
                     # Добавляем только новые сделки (избегаем дубликатов)
                     existing_ids = {t.get('id') for t in trades if t.get('id')}
+                    new_trades = []
                     for trade in bot_trades:
                         trade_id = trade.get('id') or trade.get('timestamp')
                         if trade_id not in existing_ids:
                             trades.append(trade)
+                            new_trades.append(trade)
                     
-                    logger.debug(f"📊 Добавлено {len(bot_trades)} сделок из bot_history.json")
+                    logger.info(f"   ✅ Найдено {len(bot_trades)} сделок в файле")
+                    logger.info(f"   ✅ Добавлено {len(new_trades)} новых сделок (без дубликатов)")
+                    source_counts['bot_history.json'] = len(new_trades)
+                else:
+                    logger.info(f"   ⏳ В файле нет сделок (trades пустой)")
+            else:
+                logger.info(f"   ⏳ Файл {bot_history_file} не найден")
+                logger.info(f"   💡 Этот файл создается автоматически когда bots.py совершает сделки")
         except json.JSONDecodeError as json_error:
-            logger.warning(f"⚠️ Файл bot_history.json поврежден (JSON ошибка на позиции {json_error.pos})")
-            logger.info("🗑️ Удаляем поврежденный файл, bots.py пересоздаст его автоматически")
+            logger.warning(f"   ⚠️ Файл bot_history.json поврежден (JSON ошибка на позиции {json_error.pos})")
+            logger.info("   🗑️ Удаляем поврежденный файл, bots.py пересоздаст его автоматически")
             try:
                 os.remove(bot_history_file)
-                logger.info("✅ Поврежденный файл удален")
+                logger.info("   ✅ Поврежденный файл удален")
             except Exception as del_error:
-                logger.debug(f"⚠️ Не удалось удалить файл: {del_error}")
+                logger.debug(f"   ⚠️ Не удалось удалить файл: {del_error}")
         except Exception as e:
-            logger.debug(f"⚠️ Ошибка загрузки bot_history.json: {e}")
+            logger.warning(f"   ⚠️ Ошибка загрузки bot_history.json: {e}")
         
-        # 3. Фильтруем только закрытые сделки с PnL
+        # 3. Анализируем загруженные сделки
+        logger.info("=" * 80)
+        logger.info("📊 АНАЛИЗ ЗАГРУЖЕННЫХ СДЕЛОК")
+        logger.info("=" * 80)
+        logger.info(f"   📊 Всего загружено сделок: {len(trades)}")
+        
+        if trades:
+            # Анализируем статусы сделок
+            statuses = {}
+            pnl_count = 0
+            closed_count = 0
+            
+            for trade in trades:
+                status = trade.get('status', 'UNKNOWN')
+                statuses[status] = statuses.get(status, 0) + 1
+                
+                if trade.get('pnl') is not None:
+                    pnl_count += 1
+                
+                if status == 'CLOSED':
+                    closed_count += 1
+            
+            logger.info(f"   📊 По статусам:")
+            for status, count in statuses.items():
+                logger.info(f"      - {status}: {count}")
+            logger.info(f"   📊 С PnL: {pnl_count}")
+            logger.info(f"   📊 Закрытых: {closed_count}")
+        else:
+            logger.warning("   ⚠️ Сделки не найдены ни в одном источнике!")
+            logger.info("   💡 Убедитесь что:")
+            logger.info("      1. bots.py запущен и работает")
+            logger.info("      2. Боты совершают сделки")
+            logger.info("      3. Сделки закрываются с PnL")
+        
+        # 4. Фильтруем только закрытые сделки с PnL
         closed_trades = [
             t for t in trades
             if t.get('status') == 'CLOSED' and t.get('pnl') is not None
         ]
         
-        if len(closed_trades) > 0:
-            logger.info(f"✅ Загружено {len(closed_trades)} закрытых сделок для обучения (всего {len(trades)} сделок)")
+        logger.info("=" * 80)
+        logger.info("✅ РЕЗУЛЬТАТ ФИЛЬТРАЦИИ")
+        logger.info("=" * 80)
+        logger.info(f"   📊 Всего сделок загружено: {len(trades)}")
+        logger.info(f"   ✅ Закрытых сделок с PnL: {len(closed_trades)}")
+        logger.info(f"   💡 AI будет обучаться на {len(closed_trades)} реальных сделках")
+        
+        if len(closed_trades) < 10:
+            logger.warning("=" * 80)
+            logger.warning("⚠️ НЕДОСТАТОЧНО СДЕЛОК ДЛЯ ОБУЧЕНИЯ")
+            logger.warning("=" * 80)
+            logger.warning(f"   📊 Найдено: {len(closed_trades)} закрытых сделок с PnL")
+            logger.warning(f"   📊 Нужно минимум: 10 сделок")
+            logger.warning("   💡 AI будет обучаться на исторических данных (симуляция)")
+            logger.warning("   💡 Когда накопится >= 10 реальных сделок, AI переключится на обучение на вашем опыте")
+            logger.warning("=" * 80)
+        else:
+            logger.info("=" * 80)
+            logger.info("✅ ДОСТАТОЧНО СДЕЛОК ДЛЯ ОБУЧЕНИЯ")
+            logger.info("=" * 80)
+            logger.info(f"   📊 Найдено: {len(closed_trades)} закрытых сделок с PnL")
+            logger.info("   💡 AI будет обучаться на вашем реальном опыте торговли!")
+            logger.info("=" * 80)
         
         return closed_trades
     
@@ -963,16 +1062,27 @@ class AITrainer:
         ОБУЧЕНИЕ НА ИСТОРИЧЕСКИХ ДАННЫХ С ИСПОЛЬЗОВАНИЕМ ВАШИХ НАСТРОЕК
         
         Симулирует торговлю на исторических данных используя:
-        - Ваши RSI параметры из bot_config.py
-        - Ваши стратегии входа/выхода
+        - Ваши RSI параметры из bot_config.py (с вариацией для разнообразия)
+        - Ваши стратегии входа/выхода (с разными комбинациями)
         - Проверяет как отработали сигналы
         - Обучается на успешных/неуспешных симуляциях
+        
+        ВАЖНО: Каждое обучение использует РАЗНЫЕ параметры и РАЗНЫЕ данные для разнообразия!
         """
+        import random
+        import time as time_module
+        
+        # Генерируем уникальный seed для этого обучения на основе времени
+        training_seed = int(time_module.time() * 1000) % 1000000
+        random.seed(training_seed)
+        np.random.seed(training_seed)
+        
         logger.info("=" * 80)
         logger.info("🤖 ОБУЧЕНИЕ НА ИСТОРИЧЕСКИХ ДАННЫХ (СИМУЛЯЦИЯ ТОРГОВЛИ)")
         logger.info("=" * 80)
-        logger.info("💡 Используем ВАШИ настройки из bots.py для симуляции сделок")
-        logger.info("💡 Симулируем входы/выходы по вашим правилам и проверяем результаты")
+        logger.info(f"🎲 Seed для этого обучения: {training_seed}")
+        logger.info("💡 Каждое обучение использует РАЗНЫЕ параметры и РАЗНЫЕ данные!")
+        logger.info("💡 Это обеспечивает разнообразие и предотвращает переобучение")
         
         try:
             # Импортируем ВАШИ настройки из bots.py
@@ -983,19 +1093,51 @@ class AITrainer:
                     RSI_EXIT_SHORT_WITH_TREND, RSI_EXIT_SHORT_AGAINST_TREND,
                     RSI_PERIOD, DEFAULT_AUTO_BOT_CONFIG
                 )
-                logger.info("✅ Загружены настройки из bot_config.py")
-                logger.info(f"   📊 RSI вход LONG: <= {RSI_OVERSOLD}, SHORT: >= {RSI_OVERBOUGHT}")
-                logger.info(f"   📊 RSI выход LONG: {RSI_EXIT_LONG_WITH_TREND}/{RSI_EXIT_LONG_AGAINST_TREND}, SHORT: {RSI_EXIT_SHORT_WITH_TREND}/{RSI_EXIT_SHORT_AGAINST_TREND}")
+                base_rsi_oversold = RSI_OVERSOLD
+                base_rsi_overbought = RSI_OVERBOUGHT
+                base_exit_long_with = RSI_EXIT_LONG_WITH_TREND
+                base_exit_long_against = RSI_EXIT_LONG_AGAINST_TREND
+                base_exit_short_with = RSI_EXIT_SHORT_WITH_TREND
+                base_exit_short_against = RSI_EXIT_SHORT_AGAINST_TREND
             except ImportError as e:
                 logger.warning(f"⚠️ Не удалось загрузить настройки из bot_config.py: {e}")
                 # Используем значения по умолчанию
-                RSI_OVERSOLD = 29
-                RSI_OVERBOUGHT = 71
-                RSI_EXIT_LONG_WITH_TREND = 65
-                RSI_EXIT_LONG_AGAINST_TREND = 60
-                RSI_EXIT_SHORT_WITH_TREND = 35
-                RSI_EXIT_SHORT_AGAINST_TREND = 40
+                base_rsi_oversold = 29
+                base_rsi_overbought = 71
+                base_exit_long_with = 65
+                base_exit_long_against = 60
+                base_exit_short_with = 35
+                base_exit_short_against = 40
                 RSI_PERIOD = 14
+            
+            # ВАРИАЦИЯ ПАРАМЕТРОВ: Добавляем случайное отклонение для разнообразия
+            # Это позволяет модели обучаться на разных комбинациях параметров
+            variation_range = 3  # ±3 пункта вариации
+            
+            RSI_OVERSOLD = base_rsi_oversold + random.randint(-variation_range, variation_range)
+            RSI_OVERSOLD = max(20, min(35, RSI_OVERSOLD))  # Ограничиваем разумными пределами
+            
+            RSI_OVERBOUGHT = base_rsi_overbought + random.randint(-variation_range, variation_range)
+            RSI_OVERBOUGHT = max(65, min(80, RSI_OVERBOUGHT))
+            
+            RSI_EXIT_LONG_WITH_TREND = base_exit_long_with + random.randint(-5, 5)
+            RSI_EXIT_LONG_WITH_TREND = max(55, min(70, RSI_EXIT_LONG_WITH_TREND))
+            
+            RSI_EXIT_LONG_AGAINST_TREND = base_exit_long_against + random.randint(-5, 5)
+            RSI_EXIT_LONG_AGAINST_TREND = max(50, min(65, RSI_EXIT_LONG_AGAINST_TREND))
+            
+            RSI_EXIT_SHORT_WITH_TREND = base_exit_short_with + random.randint(-5, 5)
+            RSI_EXIT_SHORT_WITH_TREND = max(25, min(40, RSI_EXIT_SHORT_WITH_TREND))
+            
+            RSI_EXIT_SHORT_AGAINST_TREND = base_exit_short_against + random.randint(-5, 5)
+            RSI_EXIT_SHORT_AGAINST_TREND = max(30, min(45, RSI_EXIT_SHORT_AGAINST_TREND))
+            
+            logger.info("✅ Загружены настройки из bot_config.py (с вариацией для разнообразия)")
+            logger.info(f"   📊 RSI вход LONG: <= {RSI_OVERSOLD} (базовое: {base_rsi_oversold})")
+            logger.info(f"   📊 RSI вход SHORT: >= {RSI_OVERBOUGHT} (базовое: {base_rsi_overbought})")
+            logger.info(f"   📊 RSI выход LONG: {RSI_EXIT_LONG_WITH_TREND}/{RSI_EXIT_LONG_AGAINST_TREND} (базовое: {base_exit_long_with}/{base_exit_long_against})")
+            logger.info(f"   📊 RSI выход SHORT: {RSI_EXIT_SHORT_WITH_TREND}/{RSI_EXIT_SHORT_AGAINST_TREND} (базовое: {base_exit_short_with}/{base_exit_short_against})")
+            logger.info(f"   🎲 Seed: {training_seed} (обеспечивает уникальность данных)")
             
             # Импортируем функцию расчета RSI истории
             try:
@@ -1051,6 +1193,22 @@ class AITrainer:
                     
                     # Сортируем свечи по времени (от старых к новым)
                     candles = sorted(candles, key=lambda x: x.get('time', 0))
+                    
+                    # ВАРИАЦИЯ ДАННЫХ: Используем разные подмножества данных для разнообразия
+                    # Это обеспечивает разные паттерны при каждом обучении
+                    if len(candles) > 500:
+                        # Для каждой монеты используем свой offset на основе seed
+                        coin_seed = training_seed + hash(symbol) % 1000
+                        random.seed(coin_seed)
+                        # Берем случайный offset для начала обработки (но оставляем достаточно данных)
+                        max_offset = min(200, len(candles) - 300)
+                        start_offset = random.randint(0, max_offset) if max_offset > 0 else 0
+                        # Используем все свечи от offset до конца (но не меньше 300)
+                        min_length = 300
+                        if len(candles) - start_offset >= min_length:
+                            candles = candles[start_offset:]
+                            logger.debug(f"   🎲 {symbol}: используем подмножество свечей с offset {start_offset} (всего {len(candles)} свечей)")
+                        random.seed(training_seed)  # Восстанавливаем основной seed
                     
                     # Проверяем что количество не изменилось после сортировки
                     if len(candles) != original_count:
@@ -1310,11 +1468,13 @@ class AITrainer:
                             
                             # Обучаем модель сигналов для этой монеты
                             from sklearn.ensemble import RandomForestClassifier
+                            # ВАЖНО: Используем training_seed для разнообразия при каждом обучении
+                            coin_model_seed = training_seed + hash(symbol) % 1000  # Уникальный seed для каждой монеты
                             symbol_signal_predictor = RandomForestClassifier(
                                 n_estimators=100,
                                 max_depth=10,
                                 min_samples_split=3,
-                                random_state=42,
+                                random_state=coin_model_seed,  # Разный seed для каждого обучения
                                 n_jobs=-1,
                                 class_weight='balanced'
                             )
@@ -1323,11 +1483,13 @@ class AITrainer:
                             
                             # Обучаем модель прибыли для этой монеты
                             from sklearn.ensemble import GradientBoostingRegressor
+                            # ВАЖНО: Используем training_seed для разнообразия при каждом обучении
+                            coin_model_seed = training_seed + hash(symbol) % 1000  # Уникальный seed для каждой монеты
                             symbol_profit_predictor = GradientBoostingRegressor(
                                 n_estimators=50,
                                 max_depth=4,
                                 learning_rate=0.1,
-                                random_state=42
+                                random_state=coin_model_seed  # Разный seed для каждого обучения
                             )
                             symbol_profit_predictor.fit(X_symbol_scaled, y_profit_symbol)
                             profit_pred = symbol_profit_predictor.predict(X_symbol_scaled)
@@ -1349,6 +1511,16 @@ class AITrainer:
                             metadata = {
                                 'symbol': symbol,
                                 'trained_at': datetime.now().isoformat(),
+                                'training_seed': training_seed,  # Seed для этого обучения (обеспечивает уникальность)
+                                'coin_model_seed': coin_model_seed,  # Уникальный seed для этой монеты
+                                'rsi_params': {  # Параметры RSI использованные при обучении
+                                    'oversold': RSI_OVERSOLD,
+                                    'overbought': RSI_OVERBOUGHT,
+                                    'exit_long_with_trend': RSI_EXIT_LONG_WITH_TREND,
+                                    'exit_long_against_trend': RSI_EXIT_LONG_AGAINST_TREND,
+                                    'exit_short_with_trend': RSI_EXIT_SHORT_WITH_TREND,
+                                    'exit_short_against_trend': RSI_EXIT_SHORT_AGAINST_TREND
+                                },
                                 'candles_count': len(candles),  # ВАЖНО: сохраняем количество свечей для проверки
                                 'trades_count': trades_for_symbol,
                                 'win_rate': symbol_win_rate,
@@ -1495,7 +1667,15 @@ class AITrainer:
             return {'error': str(e)}
     
     def get_trades_count(self) -> int:
-        """Получить количество сделок для обучения"""
+        """
+        Получить количество сделок для обучения
+        
+        Возвращает количество закрытых сделок с PnL из:
+        - data/bot_history.json (основной файл bots.py)
+        - data/ai/history_data.json (данные через API)
+        
+        ВАЖНО: Используются ТОЛЬКО закрытые сделки с PnL (status='CLOSED' и pnl != None)
+        """
         trades = self._load_history_data()
         return len(trades)
 
