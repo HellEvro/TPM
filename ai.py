@@ -63,6 +63,7 @@ try:
     from bot_engine.ai.ai_backtester_new import AIBacktester
     from bot_engine.ai.ai_strategy_optimizer import AIStrategyOptimizer
     from bot_engine.ai.ai_bot_manager import AIBotManager
+    from bot_engine.ai.ai_continuous_learning import AIContinuousLearning
 except ImportError as e:
     logger.error(f"❌ Ошибка импорта AI модулей: {e}")
     logger.error("Убедитесь, что все модули созданы в директории bot_engine/ai/")
@@ -118,6 +119,10 @@ class AISystem:
         
         # Инициализация подмодулей
         logger.info("🤖 Инициализация AI модулей...")
+        
+        # Модуль постоянного обучения и улучшения торговой методики
+        self.continuous_learning = AIContinuousLearning()
+        logger.info("✅ AIContinuousLearning инициализирован")
         
         # Интеграция с существующими AI модулями
         self.existing_ai_manager = None
@@ -405,8 +410,29 @@ class AISystem:
                             self.trainer.retrain_on_ai_decisions()
                             
                             # Дополнительное обучение на свечах (поиск новых паттернов)
-                            logger.info("\n📈 Этап 3/3: Поиск паттернов на исторических данных...")
+                            logger.info("\n📈 Этап 3/4: Поиск паттернов на исторических данных...")
                             self.trainer.train_on_historical_data()
+                            
+                            # ПОСТОЯННОЕ УЛУЧШЕНИЕ: Анализ реальных сделок для улучшения методики
+                            logger.info("\n🧠 Этап 4/4: ПОСТОЯННОЕ УЛУЧШЕНИЕ ТОРГОВОЙ МЕТОДИКИ...")
+                            logger.info("   💡 AI анализирует результаты и постоянно улучшает торговлю")
+                            logger.info("      📊 Входы и выходы из сделок")
+                            logger.info("      🛑 Работа со стоп-лоссами и тейк-профитами")
+                            logger.info("      🚀 Трейлинг-стопы и трейлинг-тейки")
+                            logger.info("      📈 Изучение рынка и паттернов")
+                            try:
+                                # Загружаем реальные сделки для анализа
+                                history_data = self.data_collector.collect_history_data()
+                                real_trades = history_data.get('trades', [])
+                                
+                                if len(real_trades) >= 10:
+                                    logger.info(f"   📊 Анализируем {len(real_trades)} реальных сделок для улучшения методики...")
+                                    self.continuous_learning.learn_from_real_trades(real_trades)
+                                    logger.info("   ✅ Методика торговли улучшена на основе реального опыта!")
+                                else:
+                                    logger.info(f"   ⏳ Недостаточно реальных сделок для анализа (есть {len(real_trades)}, нужно минимум 10)")
+                            except Exception as cl_error:
+                                logger.debug(f"   ⚠️ Ошибка постоянного улучшения: {cl_error}")
                             
                             last_training_time = current_time
                             logger.info("=" * 80)
