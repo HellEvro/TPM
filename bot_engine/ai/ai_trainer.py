@@ -56,6 +56,14 @@ class AITrainer:
             logger.debug(f"⚠️ Не удалось инициализировать AIDataStorage: {e}")
             self.data_storage = None
         
+        # Инициализируем трекер параметров (отслеживание использованных комбинаций)
+        try:
+            from bot_engine.ai.ai_parameter_tracker import AIParameterTracker
+            self.param_tracker = AIParameterTracker(self.data_dir)
+        except Exception as e:
+            logger.debug(f"⚠️ Не удалось инициализировать AIParameterTracker: {e}")
+            self.param_tracker = None
+        
         # Загружаем существующие модели
         self._load_models()
         
@@ -1091,23 +1099,74 @@ class AITrainer:
             # Это позволяет модели обучаться на разных комбинациях параметров
             variation_range = 3  # ±3 пункта вариации
             
-            RSI_OVERSOLD = base_rsi_oversold + random.randint(-variation_range, variation_range)
-            RSI_OVERSOLD = max(20, min(35, RSI_OVERSOLD))  # Ограничиваем разумными пределами
+            # Базовые параметры для трекера
+            base_params = {
+                'oversold': base_rsi_oversold,
+                'overbought': base_rsi_overbought,
+                'exit_long_with_trend': base_exit_long_with,
+                'exit_long_against_trend': base_exit_long_against,
+                'exit_short_with_trend': base_exit_short_with,
+                'exit_short_against_trend': base_exit_short_against
+            }
             
-            RSI_OVERBOUGHT = base_rsi_overbought + random.randint(-variation_range, variation_range)
-            RSI_OVERBOUGHT = max(65, min(80, RSI_OVERBOUGHT))
+            # Пробуем найти неиспользованные параметры (если трекер доступен)
+            rsi_params_dict = None
+            if self.param_tracker:
+                # Проверяем статистику использования
+                stats = self.param_tracker.get_usage_stats()
+                if stats['is_exhausted']:
+                    logger.warning(f"⚠️ Использовано {stats['usage_percentage']:.1f}% всех комбинаций параметров!")
+                    logger.warning("💡 Рекомендуется переключиться на обучение на реальных сделках")
+                
+                # Пробуем найти неиспользованные параметры
+                unused_params = self.param_tracker.get_unused_params_suggestion(
+                    base_params, variation_range
+                )
+                
+                if unused_params:
+                    rsi_params_dict = unused_params
+                    logger.debug(f"✅ Найдены неиспользованные параметры")
+                else:
+                    # Если не нашли - генерируем случайные (могут быть дубликаты)
+                    logger.debug(f"⚠️ Неиспользованные параметры не найдены, используем случайные")
             
-            RSI_EXIT_LONG_WITH_TREND = base_exit_long_with + random.randint(-5, 5)
-            RSI_EXIT_LONG_WITH_TREND = max(55, min(70, RSI_EXIT_LONG_WITH_TREND))
+            # Генерируем параметры (используем найденные или случайные)
+            if rsi_params_dict:
+                RSI_OVERSOLD = rsi_params_dict['oversold']
+                RSI_OVERBOUGHT = rsi_params_dict['overbought']
+                RSI_EXIT_LONG_WITH_TREND = rsi_params_dict['exit_long_with_trend']
+                RSI_EXIT_LONG_AGAINST_TREND = rsi_params_dict['exit_long_against_trend']
+                RSI_EXIT_SHORT_WITH_TREND = rsi_params_dict['exit_short_with_trend']
+                RSI_EXIT_SHORT_AGAINST_TREND = rsi_params_dict['exit_short_against_trend']
+            else:
+                # Генерируем случайные параметры (как раньше)
+                RSI_OVERSOLD = base_rsi_oversold + random.randint(-variation_range, variation_range)
+                RSI_OVERSOLD = max(20, min(35, RSI_OVERSOLD))
+                
+                RSI_OVERBOUGHT = base_rsi_overbought + random.randint(-variation_range, variation_range)
+                RSI_OVERBOUGHT = max(65, min(80, RSI_OVERBOUGHT))
+                
+                RSI_EXIT_LONG_WITH_TREND = base_exit_long_with + random.randint(-5, 5)
+                RSI_EXIT_LONG_WITH_TREND = max(55, min(70, RSI_EXIT_LONG_WITH_TREND))
+                
+                RSI_EXIT_LONG_AGAINST_TREND = base_exit_long_against + random.randint(-5, 5)
+                RSI_EXIT_LONG_AGAINST_TREND = max(50, min(65, RSI_EXIT_LONG_AGAINST_TREND))
+                
+                RSI_EXIT_SHORT_WITH_TREND = base_exit_short_with + random.randint(-5, 5)
+                RSI_EXIT_SHORT_WITH_TREND = max(25, min(40, RSI_EXIT_SHORT_WITH_TREND))
+                
+                RSI_EXIT_SHORT_AGAINST_TREND = base_exit_short_against + random.randint(-5, 5)
+                RSI_EXIT_SHORT_AGAINST_TREND = max(30, min(45, RSI_EXIT_SHORT_AGAINST_TREND))
             
-            RSI_EXIT_LONG_AGAINST_TREND = base_exit_long_against + random.randint(-5, 5)
-            RSI_EXIT_LONG_AGAINST_TREND = max(50, min(65, RSI_EXIT_LONG_AGAINST_TREND))
-            
-            RSI_EXIT_SHORT_WITH_TREND = base_exit_short_with + random.randint(-5, 5)
-            RSI_EXIT_SHORT_WITH_TREND = max(25, min(40, RSI_EXIT_SHORT_WITH_TREND))
-            
-            RSI_EXIT_SHORT_AGAINST_TREND = base_exit_short_against + random.randint(-5, 5)
-            RSI_EXIT_SHORT_AGAINST_TREND = max(30, min(45, RSI_EXIT_SHORT_AGAINST_TREND))
+            # Формируем словарь параметров для сохранения
+            rsi_params_dict = {
+                'oversold': RSI_OVERSOLD,
+                'overbought': RSI_OVERBOUGHT,
+                'exit_long_with_trend': RSI_EXIT_LONG_WITH_TREND,
+                'exit_long_against_trend': RSI_EXIT_LONG_AGAINST_TREND,
+                'exit_short_with_trend': RSI_EXIT_SHORT_WITH_TREND,
+                'exit_short_against_trend': RSI_EXIT_SHORT_AGAINST_TREND
+            }
             
             # Параметры только для DEBUG
             logger.debug(f"RSI параметры: LONG {RSI_OVERSOLD}/{RSI_EXIT_LONG_WITH_TREND}/{RSI_EXIT_LONG_AGAINST_TREND}, SHORT {RSI_OVERBOUGHT}/{RSI_EXIT_SHORT_WITH_TREND}/{RSI_EXIT_SHORT_AGAINST_TREND}")
@@ -1157,6 +1216,15 @@ class AITrainer:
                     candles = candle_info.get('candles', [])
                     if not candles or len(candles) < 100:  # Нужно больше свечей для симуляции
                         continue
+                    
+                    # ВАЖНО: Проверяем есть ли лучшие параметры для этой монеты
+                    # Если есть и они с высоким рейтингом - используем их вместо случайных
+                    coin_best_params = None
+                    if self.param_tracker:
+                        best_params = self.param_tracker.get_best_params_for_symbol(symbol)
+                        if best_params and best_params.get('rating', 0) >= 70.0:  # Используем если рейтинг >= 70
+                            coin_best_params = best_params.get('rsi_params')
+                            logger.debug(f"   ⭐ {symbol}: используем лучшие параметры (рейтинг {best_params.get('rating', 0):.1f}, Win Rate {best_params.get('win_rate', 0):.1f}%)")
                     
                     # ВАЖНО: Используем ВСЕ свечи, без ограничений!
                     # Проверяем что не обрезаны свечи
@@ -1230,6 +1298,18 @@ class AITrainer:
                     
                     if len(closes) < 100:
                         continue
+                    
+                    # ВАЖНО: Используем лучшие параметры для монеты если они есть
+                    # Иначе используем общие параметры из начала функции
+                    coin_rsi_params = coin_best_params if coin_best_params else rsi_params_dict
+                    
+                    # Используем параметры для этой монеты
+                    coin_RSI_OVERSOLD = coin_rsi_params['oversold']
+                    coin_RSI_OVERBOUGHT = coin_rsi_params['overbought']
+                    coin_RSI_EXIT_LONG_WITH_TREND = coin_rsi_params['exit_long_with_trend']
+                    coin_RSI_EXIT_LONG_AGAINST_TREND = coin_rsi_params['exit_long_against_trend']
+                    coin_RSI_EXIT_SHORT_WITH_TREND = coin_rsi_params['exit_short_with_trend']
+                    coin_RSI_EXIT_SHORT_AGAINST_TREND = coin_rsi_params['exit_short_against_trend']
                     
                     # Вычисляем RSI для КАЖДОЙ свечи
                     rsi_history = calculate_rsi_history_func(candles, period=RSI_PERIOD)
@@ -1360,12 +1440,12 @@ class AITrainer:
                                 should_enter_long = False
                                 should_enter_short = False
                                 
-                                # LONG: RSI <= RSI_OVERSOLD (29)
-                                if current_rsi <= RSI_OVERSOLD:
+                                # LONG: RSI <= RSI_OVERSOLD (используем параметры для монеты)
+                                if current_rsi <= coin_RSI_OVERSOLD:
                                     should_enter_long = True
                                 
-                                # SHORT: RSI >= RSI_OVERBOUGHT (71)
-                                if current_rsi >= RSI_OVERBOUGHT:
+                                # SHORT: RSI >= RSI_OVERBOUGHT (используем параметры для монеты)
+                                if current_rsi >= coin_RSI_OVERBOUGHT:
                                     should_enter_short = True
                                 
                                 if should_enter_long:
@@ -1477,14 +1557,7 @@ class AITrainer:
                                 'trained_at': datetime.now().isoformat(),
                                 'training_seed': training_seed,  # Seed для этого обучения (обеспечивает уникальность)
                                 'coin_model_seed': coin_model_seed,  # Уникальный seed для этой монеты
-                                'rsi_params': {  # Параметры RSI использованные при обучении
-                                    'oversold': RSI_OVERSOLD,
-                                    'overbought': RSI_OVERBOUGHT,
-                                    'exit_long_with_trend': RSI_EXIT_LONG_WITH_TREND,
-                                    'exit_long_against_trend': RSI_EXIT_LONG_AGAINST_TREND,
-                                    'exit_short_with_trend': RSI_EXIT_SHORT_WITH_TREND,
-                                    'exit_short_against_trend': RSI_EXIT_SHORT_AGAINST_TREND
-                                },
+                                'rsi_params': coin_rsi_params,  # Параметры RSI использованные при обучении (лучшие для монеты или общие)
                                 'candles_count': len(candles),  # ВАЖНО: сохраняем количество свечей для проверки
                                 'trades_count': trades_for_symbol,
                                 'win_rate': symbol_win_rate,
@@ -1497,6 +1570,67 @@ class AITrainer:
                             metadata_path = os.path.join(symbol_models_dir, 'metadata.json')
                             with open(metadata_path, 'w', encoding='utf-8') as f:
                                 json.dump(metadata, f, indent=2, ensure_ascii=False)
+                            
+                            # ВАЖНО: Отмечаем параметры как использованные в трекере с рейтингом
+                            if self.param_tracker:
+                                self.param_tracker.mark_params_used(
+                                    coin_rsi_params,  # Используем параметры которые реально использовались для монеты
+                                    training_seed,
+                                    symbol_win_rate,
+                                    symbol,
+                                    total_pnl=symbol_pnl,
+                                    signal_accuracy=signal_score,
+                                    trades_count=trades_for_symbol
+                                )
+                            
+                            # ВАЖНО: Сохраняем параметры в индивидуальные настройки ТОЛЬКО если Win Rate >= 80%
+                            if symbol_win_rate >= 80.0:
+                                logger.info(f"   🎯 {symbol}: Win Rate {symbol_win_rate:.1f}% >= 80% - сохраняем параметры в индивидуальные настройки")
+                                
+                                # Формируем настройки в формате для bots.py (используем формат из bot_config.py)
+                                individual_settings = {
+                                    'rsi_long_threshold': coin_rsi_params['oversold'],  # Вход в LONG при RSI <=
+                                    'rsi_short_threshold': coin_rsi_params['overbought'],  # Вход в SHORT при RSI >=
+                                    'rsi_exit_long_with_trend': coin_rsi_params['exit_long_with_trend'],
+                                    'rsi_exit_long_against_trend': coin_rsi_params['exit_long_against_trend'],
+                                    'rsi_exit_short_with_trend': coin_rsi_params['exit_short_with_trend'],
+                                    'rsi_exit_short_against_trend': coin_rsi_params['exit_short_against_trend'],
+                                    'ai_trained': True,
+                                    'ai_win_rate': symbol_win_rate,
+                                    'ai_rating': self.param_tracker.calculate_rating(symbol_win_rate, symbol_pnl, signal_score, trades_for_symbol) if self.param_tracker else 0,
+                                    'ai_trained_at': datetime.now().isoformat(),
+                                    'ai_trades_count': trades_for_symbol,
+                                    'ai_total_pnl': symbol_pnl
+                                }
+                                
+                                # Сохраняем через API или напрямую
+                                try:
+                                    import requests
+                                    response = requests.post(
+                                        f'http://localhost:5001/api/bots/individual-settings/{symbol}',
+                                        json=individual_settings,
+                                        timeout=5
+                                    )
+                                    if response.status_code == 200:
+                                        logger.info(f"   💾 Параметры сохранены в индивидуальные настройки для {symbol}")
+                                    else:
+                                        # Пробуем напрямую через импорт
+                                        try:
+                                            from bots_modules.imports_and_globals import set_individual_coin_settings
+                                            set_individual_coin_settings(symbol, individual_settings, persist=True)
+                                            logger.info(f"   💾 Параметры сохранены напрямую для {symbol}")
+                                        except Exception as direct_error:
+                                            logger.warning(f"   ⚠️ Не удалось сохранить параметры для {symbol}: {direct_error}")
+                                except Exception as save_error:
+                                    # Пробуем напрямую через импорт если API недоступен
+                                    try:
+                                        from bots_modules.imports_and_globals import set_individual_coin_settings
+                                        set_individual_coin_settings(symbol, individual_settings, persist=True)
+                                        logger.info(f"   💾 Параметры сохранены напрямую для {symbol} (API недоступен)")
+                                    except Exception as direct_error:
+                                        logger.warning(f"   ⚠️ Не удалось сохранить параметры для {symbol}: {direct_error}")
+                            else:
+                                logger.debug(f"   ⏳ {symbol}: Win Rate {symbol_win_rate:.1f}% < 80% - параметры НЕ сохраняются в индивидуальные настройки")
                             
                             # Детальные метрики только для DEBUG
                             logger.debug(f"   ✅ {symbol}: модель обучена! Accuracy: {signal_score:.2%}, MSE: {profit_mse:.2f}, Win Rate: {symbol_win_rate:.1f}%")
@@ -1517,16 +1651,15 @@ class AITrainer:
                     total_failed_coins += 1
                     continue
             
-            # ИТОГОВАЯ СТАТИСТИКА
-            logger.info("=" * 80)
-            logger.info(f"✅ ИНДИВИДУАЛЬНОЕ ОБУЧЕНИЕ ЗАВЕРШЕНО")
-            logger.info("=" * 80)
-            logger.info(f"   📊 Монет обработано: {total_trained_coins}")
-            logger.info(f"   ✅ Моделей сохранено: {total_models_saved}")
-            logger.info(f"   ⚠️ Ошибок: {total_failed_coins}")
-            logger.info(f"   📈 Свечей обработано: {total_candles_processed}")
-            logger.info(f"   💾 Модели сохранены в: data/ai/models/{{SYMBOL}}/")
-            logger.info("=" * 80)
+            # Итоговая статистика (кратко)
+            logger.info(f"✅ Обучение завершено: {total_trained_coins} монет, {total_models_saved} моделей сохранено, {total_failed_coins} ошибок")
+            
+            # Статистика использования параметров
+            if self.param_tracker:
+                stats = self.param_tracker.get_usage_stats()
+                logger.info(f"📊 Параметры: использовано {stats['used_combinations']} из {stats['total_combinations']} комбинаций ({stats['usage_percentage']:.2f}%)")
+                if stats['is_exhausted']:
+                    logger.warning("⚠️ Параметры почти исчерпаны! Рекомендуется переключиться на обучение на реальных сделках")
             
             # Также создаем общую модель на всех данных (для монет без индивидуальных моделей)
             logger.info("💡 Общая модель будет создана при следующем обучении (после сбора всех сделок)")
