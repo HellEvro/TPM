@@ -212,8 +212,28 @@ class BotHistoryManager:
         logger.info(f"[BOT_HISTORY] 📊 {entry['details']}")
     
     def log_position_opened(self, bot_id: str, symbol: str, direction: str, size: float, 
-                           entry_price: float, stop_loss: float = None, take_profit: float = None):
-        """Логирование открытия позиции"""
+                           entry_price: float, stop_loss: float = None, take_profit: float = None,
+                           decision_source: str = 'SCRIPT', ai_decision_id: str = None, 
+                           ai_confidence: float = None, ai_signal: str = None, rsi: float = None,
+                           trend: str = None):
+        """
+        Логирование открытия позиции с информацией об источнике решения
+        
+        Args:
+            bot_id: ID бота
+            symbol: Символ монеты
+            direction: Направление (LONG/SHORT)
+            size: Размер позиции
+            entry_price: Цена входа
+            stop_loss: Стоп-лосс
+            take_profit: Тейк-профит
+            decision_source: Источник решения ('AI' или 'SCRIPT')
+            ai_decision_id: ID решения AI (если использовался AI)
+            ai_confidence: Уверенность AI (0.0-1.0)
+            ai_signal: Сигнал AI ('LONG'/'SHORT'/'WAIT')
+            rsi: RSI на момент открытия
+            trend: Тренд на момент открытия
+        """
         entry = {
             'id': f"open_{bot_id}_{datetime.now().timestamp()}",
             'timestamp': datetime.now().isoformat(),
@@ -226,8 +246,21 @@ class BotHistoryManager:
             'entry_price': entry_price,
             'stop_loss': stop_loss,
             'take_profit': take_profit,
+            'decision_source': decision_source,  # 'AI' или 'SCRIPT'
+            'ai_decision_id': ai_decision_id,
+            'ai_confidence': ai_confidence,
+            'ai_signal': ai_signal,
+            'rsi': rsi,
+            'trend': trend,
             'details': f"Открыта позиция {direction} для {symbol}: размер {size}, цена входа {entry_price:.4f}"
         }
+        
+        # Добавляем информацию об источнике решения в details
+        if decision_source == 'AI' and ai_confidence:
+            entry['details'] += f" [AI: {ai_confidence:.1%}]"
+        elif decision_source == 'SCRIPT':
+            entry['details'] += " [SCRIPT]"
+        
         self._add_history_entry(entry)
         
         # Также добавляем в сделки
@@ -241,7 +274,12 @@ class BotHistoryManager:
             'entry_price': entry_price,
             'exit_price': None,
             'pnl': None,
-            'status': 'OPEN'
+            'status': 'OPEN',
+            'decision_source': decision_source,
+            'ai_decision_id': ai_decision_id,
+            'ai_confidence': ai_confidence,
+            'rsi': rsi,
+            'trend': trend
         }
         self._add_trade_entry(trade)
         
@@ -249,7 +287,7 @@ class BotHistoryManager:
     
     def log_position_closed(self, bot_id: str, symbol: str, direction: str, exit_price: float, 
                            pnl: float, roi: float, reason: str = None, entry_data: Dict = None,
-                           market_data: Dict = None):
+                           market_data: Dict = None, ai_decision_id: str = None):
         """
         Логирование закрытия позиции с дополнительными данными для обучения ИИ
         
@@ -263,7 +301,21 @@ class BotHistoryManager:
             reason: Причина закрытия (STOP_LOSS, TAKE_PROFIT, TRAILING_STOP и т.д.)
             entry_data: Данные при входе (entry_price, rsi, volume, candles_before)
             market_data: Данные рынка при выходе (volatility, trend_strength, support_resistance)
+            ai_decision_id: ID решения AI (если использовался AI при открытии)
         """
+        # Определяем источник решения из entry_data или из сделки
+        decision_source = 'SCRIPT'
+        ai_confidence = None
+        
+        # Пробуем найти соответствующую сделку для получения информации об источнике решения
+        with self.lock:
+            for trade in reversed(self.trades):
+                if trade['bot_id'] == bot_id and trade['symbol'] == symbol and trade['status'] == 'OPEN':
+                    decision_source = trade.get('decision_source', 'SCRIPT')
+                    ai_decision_id = trade.get('ai_decision_id') or ai_decision_id
+                    ai_confidence = trade.get('ai_confidence')
+                    break
+        
         entry = {
             'id': f"close_{bot_id}_{datetime.now().timestamp()}",
             'timestamp': datetime.now().isoformat(),
@@ -276,8 +328,18 @@ class BotHistoryManager:
             'pnl': pnl,
             'roi': roi,
             'reason': reason or 'Ручное закрытие',
+            'decision_source': decision_source,
+            'ai_decision_id': ai_decision_id,
+            'ai_confidence': ai_confidence,
+            'is_successful': pnl > 0,
             'details': f"Закрыта позиция {direction} для {symbol}: цена выхода {exit_price:.4f}, PnL: {pnl:.2f} USDT ({roi:.2f}%)"
         }
+        
+        # Добавляем информацию об источнике решения в details
+        if decision_source == 'AI' and ai_confidence:
+            entry['details'] += f" [AI: {ai_confidence:.1%}, {'✅' if pnl > 0 else '❌'}]"
+        elif decision_source == 'SCRIPT':
+            entry['details'] += f" [SCRIPT, {'✅' if pnl > 0 else '❌'}]"
         
         # Добавляем данные для обучения ИИ
         if entry_data:
@@ -315,6 +377,7 @@ class BotHistoryManager:
                     trade['status'] = 'CLOSED'
                     trade['close_timestamp'] = datetime.now().isoformat()
                     trade['close_reason'] = reason
+                    trade['is_successful'] = pnl > 0
                     if entry_data:
                         trade['entry_data'] = entry_data
                     if market_data:
