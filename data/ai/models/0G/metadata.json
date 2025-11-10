@@ -1,0 +1,31 @@
+{
+  "symbol": "0G",
+  "trained_at": "2025-11-10T07:08:33.680141",
+  "training_seed": 710098,
+  "coin_model_seed": 710257,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 69,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 15.438204711322388,
+    "take_profit": 16.46298233240634,
+    "trailing_stop_activation": 28.61735751621989,
+    "trailing_stop_distance": 21.24215925185794,
+    "break_even_protection": false,
+    "break_even_trigger": 115.37948454663616,
+    "max_position_hours": 12
+  },
+  "candles_count": 212,
+  "trades_count": 14,
+  "win_rate": 42.857142857142854,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.157660537022412e-05,
+  "total_pnl": 1.2321305719081388,
+  "previous_candles_count": 212,
+  "candles_increased": false
+}
