@@ -1216,121 +1216,83 @@ class AITrainer:
             }
             
             # Пробуем найти неиспользованные параметры (если трекер доступен)
-            rsi_params_dict = None
             if self.param_tracker:
                 # Проверяем статистику использования
                 stats = self.param_tracker.get_usage_stats()
                 if stats['is_exhausted']:
                     logger.warning(f"⚠️ Использовано {stats['usage_percentage']:.1f}% всех комбинаций параметров!")
                     logger.warning("💡 Рекомендуется переключиться на обучение на реальных сделках")
-                
-                # Пробуем найти неиспользованные параметры
-                unused_params = self.param_tracker.get_unused_params_suggestion(
-                    base_params, variation_range
-                )
-                
-                if unused_params:
-                    rsi_params_dict = unused_params
-                    logger.debug(f"✅ Найдены неиспользованные параметры")
                 else:
-                    # Если не нашли - генерируем случайные (могут быть дубликаты)
-                    logger.debug(f"⚠️ Неиспользованные параметры не найдены, используем случайные")
-            
-            # Генерируем параметры (используем найденные или случайные)
-            if rsi_params_dict:
-                RSI_OVERSOLD = rsi_params_dict['oversold']
-                RSI_OVERBOUGHT = rsi_params_dict['overbought']
-                RSI_EXIT_LONG_WITH_TREND = rsi_params_dict['exit_long_with_trend']
-                RSI_EXIT_LONG_AGAINST_TREND = rsi_params_dict['exit_long_against_trend']
-                RSI_EXIT_SHORT_WITH_TREND = rsi_params_dict['exit_short_with_trend']
-                RSI_EXIT_SHORT_AGAINST_TREND = rsi_params_dict['exit_short_against_trend']
+                    logger.debug(
+                        f"   📚 Доступно ещё {stats['remaining_combinations']:,} комбинаций RSI параметров"
+                    )
             else:
-                # Генерируем случайные параметры (как раньше)
-                RSI_OVERSOLD = base_rsi_oversold + random.randint(-variation_range, variation_range)
-                RSI_OVERSOLD = max(20, min(35, RSI_OVERSOLD))
-                
-                RSI_OVERBOUGHT = base_rsi_overbought + random.randint(-variation_range, variation_range)
-                RSI_OVERBOUGHT = max(65, min(80, RSI_OVERBOUGHT))
-                
-                RSI_EXIT_LONG_WITH_TREND = base_exit_long_with + random.randint(-5, 5)
-                RSI_EXIT_LONG_WITH_TREND = max(55, min(70, RSI_EXIT_LONG_WITH_TREND))
-                
-                RSI_EXIT_LONG_AGAINST_TREND = base_exit_long_against + random.randint(-5, 5)
-                RSI_EXIT_LONG_AGAINST_TREND = max(50, min(65, RSI_EXIT_LONG_AGAINST_TREND))
-                
-                RSI_EXIT_SHORT_WITH_TREND = base_exit_short_with + random.randint(-5, 5)
-                RSI_EXIT_SHORT_WITH_TREND = max(25, min(40, RSI_EXIT_SHORT_WITH_TREND))
-                
-                RSI_EXIT_SHORT_AGAINST_TREND = base_exit_short_against + random.randint(-5, 5)
-                RSI_EXIT_SHORT_AGAINST_TREND = max(30, min(45, RSI_EXIT_SHORT_AGAINST_TREND))
-            
-            # Формируем словарь параметров для сохранения
-            rsi_params_dict = {
-                'oversold': RSI_OVERSOLD,
-                'overbought': RSI_OVERBOUGHT,
-                'exit_long_with_trend': RSI_EXIT_LONG_WITH_TREND,
-                'exit_long_against_trend': RSI_EXIT_LONG_AGAINST_TREND,
-                'exit_short_with_trend': RSI_EXIT_SHORT_WITH_TREND,
-                'exit_short_against_trend': RSI_EXIT_SHORT_AGAINST_TREND
-            }
-            
-            # ВАЖНО: ВАРИАЦИЯ ВСЕХ ПАРАМЕТРОВ ИЗ КОНФИГА!
-            # Загружаем базовые значения из конфига
+                logger.debug("   ⚙️ Трекер параметров недоступен — используем случайные комбинации на монету")
+
             try:
                 from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
                 base_config = DEFAULT_AUTO_BOT_CONFIG
             except:
                 base_config = {}
-            
-            # Генерируем ВАРИАЦИЮ для ВСЕХ параметров торговли
-            # Stop Loss: базовое значение ± вариация
+
             base_stop_loss = base_config.get('max_loss_percent', 15.0)
-            stop_loss_variation = random.uniform(-3.0, 3.0)  # ±3%
-            MAX_LOSS_PERCENT = max(5.0, min(25.0, base_stop_loss + stop_loss_variation))
-            
-            # Take Profit: базовое значение ± вариация
             base_take_profit = base_config.get('take_profit_percent', 20.0)
-            take_profit_variation = random.uniform(-5.0, 10.0)  # -5% до +10%
-            TAKE_PROFIT_PERCENT = max(10.0, min(50.0, base_take_profit + take_profit_variation))
-            
-            # Trailing Stop Activation: базовое значение ± вариация
             base_trailing_activation = base_config.get('trailing_stop_activation', 20.0)
-            trailing_activation_variation = random.uniform(-5.0, 15.0)  # -5% до +15%
-            TRAILING_STOP_ACTIVATION = max(10.0, min(50.0, base_trailing_activation + trailing_activation_variation))
-            
-            # Trailing Stop Distance: базовое значение ± вариация
             base_trailing_distance = base_config.get('trailing_stop_distance', 15.0)
-            trailing_distance_variation = random.uniform(-5.0, 10.0)  # -5% до +10%
-            TRAILING_STOP_DISTANCE = max(5.0, min(30.0, base_trailing_distance + trailing_distance_variation))
-            
-            # Break Even Trigger: базовое значение ± вариация
             base_break_even = base_config.get('break_even_trigger', 100.0)
-            break_even_variation = random.uniform(-30.0, 50.0)  # -30% до +50%
-            BREAK_EVEN_TRIGGER = max(50.0, min(200.0, base_break_even + break_even_variation))
-            
-            # Break Even Protection: случайно включен/выключен для разнообразия
-            BREAK_EVEN_PROTECTION = random.choice([True, False])
-            
-            # Max Position Hours: базовое значение ± вариация
+            base_break_even_protection = base_config.get('break_even_protection', True)
             base_max_hours = base_config.get('max_position_hours', 48)
-            max_hours_variation = random.randint(-24, 48)  # -24 до +48 часов
-            MAX_POSITION_HOURS = max(12, min(168, base_max_hours + max_hours_variation))  # от 12ч до 7 дней
-            
-            # ЛОГИРУЕМ ВСЕ ПАРАМЕТРЫ для каждого обучения!
+
+            logger.info("🎲 БАЗОВЫЕ ПАРАМЕТРЫ ОБУЧЕНИЯ (индивидуализация на уровне монеты)")
+
             logger.info("=" * 80)
-            logger.info("🎲 ПАРАМЕТРЫ ОБУЧЕНИЯ #{} (Seed: {})".format(training_seed % 1000, training_seed))
-            logger.info("=" * 80)
-            logger.info("📊 RSI Параметры:")
-            logger.info(f"   LONG: вход <= {RSI_OVERSOLD}, выход по тренду >= {RSI_EXIT_LONG_WITH_TREND}, против тренда >= {RSI_EXIT_LONG_AGAINST_TREND}")
-            logger.info(f"   SHORT: вход >= {RSI_OVERBOUGHT}, выход по тренду <= {RSI_EXIT_SHORT_WITH_TREND}, против тренда <= {RSI_EXIT_SHORT_AGAINST_TREND}")
+
+            logger.info("📊 RSI базовые значения:")
+
+            logger.info(
+
+                f"   LONG: вход <= {base_rsi_oversold} (±{variation_range}), "
+
+                f"выход по тренду >= {base_exit_long_with} (±5), против тренда >= {base_exit_long_against} (±5)"
+
+            )
+
+            logger.info(
+
+                f"   SHORT: вход >= {base_rsi_overbought} (±{variation_range}), "
+
+                f"выход по тренду <= {base_exit_short_with} (±5), против тренда <= {base_exit_short_against} (±5)"
+
+            )
+
             logger.info("💰 Риск-менеджмент:")
-            logger.info(f"   Stop Loss: {MAX_LOSS_PERCENT:.1f}%")
-            logger.info(f"   Take Profit: {TAKE_PROFIT_PERCENT:.1f}%")
-            logger.info(f"   Trailing Stop: активация {TRAILING_STOP_ACTIVATION:.1f}%, расстояние {TRAILING_STOP_DISTANCE:.1f}%")
-            logger.info(f"   Break Even: {'✅' if BREAK_EVEN_PROTECTION else '❌'} (триггер {BREAK_EVEN_TRIGGER:.1f}%)")
-            logger.info(f"   Max Position Hours: {MAX_POSITION_HOURS}ч")
+
+            logger.info(f"   Stop Loss: {base_stop_loss:.1f}% (±3%)")
+
+            logger.info(f"   Take Profit: {base_take_profit:.1f}% (-5% … +10%)")
+
+            logger.info(
+
+                f"   Trailing Stop: активация {base_trailing_activation:.1f}% (±5…15%), "
+
+                f"расстояние {base_trailing_distance:.1f}% (±5…10%)"
+
+            )
+
+            logger.info(
+
+                f"   Break Even: {'✅' if base_break_even_protection else '❌'} "
+
+                f"(триггер {base_break_even:.1f}% ±30…50%)"
+
+            )
+
+            logger.info(f"   Max Position Hours: {base_max_hours}ч (-24…+48ч)")
+
             logger.info("=" * 80)
-            
+
+
+
             # Импортируем функцию расчета RSI истории
             try:
                 from bot_engine.indicators import TechnicalIndicators
@@ -1386,6 +1348,8 @@ class AITrainer:
                 
                 try:
                     candles = candle_info.get('candles', [])
+                    coin_seed = training_seed + (abs(hash(symbol)) % 1000)
+                    coin_rng = random.Random(coin_seed)
                     if not candles or len(candles) < 100:  # Нужно больше свечей для симуляции
                         if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
                             logger.info(f"   ⏭️ {symbol}: пропущено (недостаточно свечей: {len(candles) if candles else 0})")
@@ -1411,22 +1375,14 @@ class AITrainer:
                     # Это обеспечивает разные паттерны при каждом обучении
                     if len(candles) > 500:
                         # Для каждой монеты используем свой offset на основе seed
-                        coin_seed = training_seed + hash(symbol) % 1000
-                        random.seed(coin_seed)
-                        # Берем случайный offset для начала обработки (но оставляем достаточно данных)
                         max_offset = min(200, len(candles) - 300)
-                        start_offset = random.randint(0, max_offset) if max_offset > 0 else 0
+                        start_offset = coin_rng.randint(0, max_offset) if max_offset > 0 else 0
                         # Используем все свечи от offset до конца (но не меньше 300)
                         min_length = 300
                         if len(candles) - start_offset >= min_length:
                             candles = candles[start_offset:]
                             logger.debug(f"   🎲 {symbol}: используем подмножество свечей с offset {start_offset} (всего {len(candles)} свечей)")
-                        random.seed(training_seed)  # Восстанавливаем основной seed
-                    
-                    # Проверяем что количество не изменилось после сортировки
-                    if len(candles) != original_count:
-                        logger.debug(f"   ℹ️ {symbol}: количество свечей изменилось после сортировки ({original_count} -> {len(candles)})")
-                    
+
                     # Проверяем существующую модель и количество свечей при предыдущем обучении
                     symbol_models_dir = os.path.join(self.models_dir, symbol)
                     metadata_path = os.path.join(symbol_models_dir, 'metadata.json')
@@ -1478,8 +1434,32 @@ class AITrainer:
                     
                     # ВАЖНО: Используем лучшие параметры для монеты если они есть
                     # Иначе используем общие параметры из начала функции
-                    coin_rsi_params = coin_best_params if coin_best_params else rsi_params_dict
-                    
+                    if coin_best_params:
+                        coin_rsi_params = coin_best_params
+                        logger.debug(f"   ⭐ {symbol}: применяем сохранённые лучшие параметры")
+                    else:
+                        coin_rsi_params = None
+                        if self.param_tracker:
+                            suggested_params = self.param_tracker.get_unused_params_suggestion(base_params, variation_range)
+                            if suggested_params:
+                                coin_rsi_params = suggested_params
+                                logger.debug(f"   🎯 {symbol}: получили новую комбинацию параметров из трекера")
+                        if not coin_rsi_params:
+                            coin_rsi_params = {
+                                'oversold': max(20, min(35, base_rsi_oversold + coin_rng.randint(-variation_range, variation_range))),
+                                'overbought': max(65, min(80, base_rsi_overbought + coin_rng.randint(-variation_range, variation_range))),
+                                'exit_long_with_trend': max(55, min(70, base_exit_long_with + coin_rng.randint(-5, 5))),
+                                'exit_long_against_trend': max(50, min(65, base_exit_long_against + coin_rng.randint(-5, 5))),
+                                'exit_short_with_trend': max(25, min(40, base_exit_short_with + coin_rng.randint(-5, 5))),
+                                'exit_short_against_trend': max(30, min(45, base_exit_short_against + coin_rng.randint(-5, 5)))
+                            }
+                            logger.debug(f"   🎲 {symbol}: сгенерировали уникальные RSI параметры")
+
+                    if symbol_idx <= 5 or symbol_idx % progress_interval == 0:
+                        logger.info(f"   ⚙️ {symbol}: RSI params {coin_rsi_params}, seed {coin_seed}")
+                    else:
+                        logger.debug(f"   ⚙️ {symbol}: RSI params {coin_rsi_params}")
+
                     # Используем параметры для этой монеты
                     coin_RSI_OVERSOLD = coin_rsi_params['oversold']
                     coin_RSI_OVERBOUGHT = coin_rsi_params['overbought']
@@ -1487,6 +1467,29 @@ class AITrainer:
                     coin_RSI_EXIT_LONG_AGAINST_TREND = coin_rsi_params['exit_long_against_trend']
                     coin_RSI_EXIT_SHORT_WITH_TREND = coin_rsi_params['exit_short_with_trend']
                     coin_RSI_EXIT_SHORT_AGAINST_TREND = coin_rsi_params['exit_short_against_trend']
+
+                    MAX_LOSS_PERCENT = max(5.0, min(25.0, base_stop_loss + coin_rng.uniform(-3.0, 3.0)))
+                    TAKE_PROFIT_PERCENT = max(10.0, min(50.0, base_take_profit + coin_rng.uniform(-5.0, 10.0)))
+                    TRAILING_STOP_ACTIVATION = max(10.0, min(50.0, base_trailing_activation + coin_rng.uniform(-5.0, 15.0)))
+                    TRAILING_STOP_DISTANCE = max(5.0, min(30.0, base_trailing_distance + coin_rng.uniform(-5.0, 10.0)))
+                    BREAK_EVEN_TRIGGER = max(50.0, min(200.0, base_break_even + coin_rng.uniform(-30.0, 50.0)))
+                    base_break_even_flag = bool(base_break_even_protection)
+                    BREAK_EVEN_PROTECTION = base_break_even_flag if coin_rng.random() < 0.5 else not base_break_even_flag
+                    MAX_POSITION_HOURS = max(12, min(168, base_max_hours + coin_rng.randint(-24, 48)))
+
+                    if symbol_idx <= 5 or symbol_idx % progress_interval == 0:
+                        logger.info(
+                            f"   📐 {symbol}: риск-параметры SL {MAX_LOSS_PERCENT:.1f}% | TP {TAKE_PROFIT_PERCENT:.1f}% | "
+                            f"TS {TRAILING_STOP_ACTIVATION:.1f}%/{TRAILING_STOP_DISTANCE:.1f}% | "
+                            f"BE {'✅' if BREAK_EVEN_PROTECTION else '❌'} ({BREAK_EVEN_TRIGGER:.1f}%) | MaxHold {MAX_POSITION_HOURS}ч"
+                        )
+                    else:
+                        logger.debug(
+                            f"   📐 {symbol}: SL {MAX_LOSS_PERCENT:.1f}%, TP {TAKE_PROFIT_PERCENT:.1f}%, "
+                            f"TS {TRAILING_STOP_ACTIVATION:.1f}%/{TRAILING_STOP_DISTANCE:.1f}%, "
+                            f"BE {'✅' if BREAK_EVEN_PROTECTION else '❌'} ({BREAK_EVEN_TRIGGER:.1f}%), MaxHold {MAX_POSITION_HOURS}ч"
+                        )
+
                     
                     # Вычисляем RSI для КАЖДОЙ свечи
                     rsi_history = calculate_rsi_history_func(candles, period=RSI_PERIOD)
@@ -1822,7 +1825,7 @@ class AITrainer:
                             # Обучаем модель сигналов для этой монеты
                             from sklearn.ensemble import RandomForestClassifier
                             # ВАЖНО: Используем training_seed для разнообразия при каждом обучении
-                            coin_model_seed = training_seed + hash(symbol) % 1000  # Уникальный seed для каждой монеты
+                            coin_model_seed = coin_seed  # Уникальный seed для каждой монеты
                             symbol_signal_predictor = RandomForestClassifier(
                                 n_estimators=100,
                                 max_depth=10,
@@ -1841,7 +1844,7 @@ class AITrainer:
                             # Обучаем модель прибыли для этой монеты
                             from sklearn.ensemble import GradientBoostingRegressor
                             # ВАЖНО: Используем training_seed для разнообразия при каждом обучении
-                            coin_model_seed = training_seed + hash(symbol) % 1000  # Уникальный seed для каждой монеты
+                            coin_model_seed = coin_seed  # Уникальный seed для каждой монеты
                             symbol_profit_predictor = GradientBoostingRegressor(
                                 n_estimators=50,
                                 max_depth=4,
