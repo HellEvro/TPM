@@ -259,19 +259,30 @@ class AITrainer:
             entry['last_success_win_rate'] = achieved_win_rate
             entry['achievements'] = entry.get('achievements', 0) + 1
             
-            if achieved_win_rate >= current_target and current_target < 100.0:
-                new_target = min(current_target + 1.0, 100.0)
-                if new_target > current_target:
-                    entry['target'] = new_target
-                    entry['last_target_increment_at'] = datetime.now().isoformat()
-                    entry['last_target_increment_win_rate'] = achieved_win_rate
-                    entry['increments'] = entry.get('increments', 0) + 1
+            if current_target >= 100.0:
+                reset_target = max(default_target, 80.0)
+                if current_target != reset_target:
+                    entry['target'] = reset_target
+                    entry['last_target_reset_at'] = datetime.now().isoformat()
+                    entry['last_target_reset_reason'] = 'reached_100_then_reset'
                     logger.info(
-                        f"   🚀 {symbol}: цель Win Rate повышена с {current_target:.1f}% до {new_target:.1f}% "
-                        f"(достигнуто {achieved_win_rate:.1f}%)"
+                        f"   🔁 {symbol}: цель Win Rate достигла 100%, сбрасываем до {reset_target:.1f}% "
+                        f"для повторного цикла обучения"
                     )
             else:
-                entry['target'] = current_target
+                if achieved_win_rate >= current_target:
+                    new_target = min(current_target + 1.0, 100.0)
+                    if new_target > current_target:
+                        entry['target'] = new_target
+                        entry['last_target_increment_at'] = datetime.now().isoformat()
+                        entry['last_target_increment_win_rate'] = achieved_win_rate
+                        entry['increments'] = entry.get('increments', 0) + 1
+                        logger.info(
+                            f"   🚀 {symbol}: цель Win Rate повышена с {current_target:.1f}% до {new_target:.1f}% "
+                            f"(достигнуто {achieved_win_rate:.1f}%)"
+                        )
+                else:
+                    entry['target'] = current_target
             
             symbols[symbol_key] = entry
             self.win_rate_targets_dirty = True
@@ -1759,6 +1770,10 @@ class AITrainer:
                             )
                         
                         # ОБУЧАЕМ МОДЕЛЬ ДЛЯ ЭТОЙ МОНЕТЫ ОТДЕЛЬНО
+                        signal_score = None
+                        profit_mse = None
+                        model_trained = False
+                        
                         if trades_for_symbol >= 5:  # Минимум 5 сделок для обучения
                             # Показываем начало обучения модели для важных случаев
                             if symbol_win_rate >= win_rate_target or symbol_idx % progress_interval == 0 or symbol_idx <= 10:
@@ -2027,8 +2042,9 @@ class AITrainer:
                             # Детальные метрики только для DEBUG
                             logger.debug(f"   ✅ {symbol}: модель обучена! Accuracy: {signal_score:.2%}, MSE: {profit_mse:.2f}, Win Rate: {symbol_win_rate:.1f}%")
                             total_models_saved += 1
+                            model_trained = True
 
-                        if trades_for_symbol < 5:
+                        if not model_trained:
                             if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
                                 logger.info(f"   ⏳ {symbol}: недостаточно сделок для обучения ({trades_for_symbol} < 5)")
                             else:
