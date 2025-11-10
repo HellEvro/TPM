@@ -49,6 +49,13 @@ class AITrainer:
         self.ai_decisions_min_samples = 20
         self.ai_decisions_last_trained_count = 0
         self._ai_decision_last_accuracy = None
+        # Пути моделей
+        self.signal_model_path = os.path.join(self.models_dir, 'signal_predictor.pkl')
+        self.profit_model_path = os.path.join(self.models_dir, 'profit_predictor.pkl')
+        self.scaler_path = os.path.join(self.models_dir, 'scaler.pkl')
+        self.ai_decision_model_path = os.path.join(self.models_dir, 'ai_decision_model.pkl')
+        self.ai_decision_scaler_path = os.path.join(self.models_dir, 'ai_decision_scaler.pkl')
+
         
         # Файл для отслеживания сделок с AI решениями
         self.ai_decisions_file = os.path.join(self.data_dir, 'ai_decisions_tracking.json')
@@ -81,23 +88,12 @@ class AITrainer:
     
     def _load_models(self):
         """Загрузить сохраненные модели"""
-        signal_model_path = os.path.join(self.models_dir, 'signal_predictor.pkl')
-        profit_model_path = os.path.join(self.models_dir, 'profit_predictor.pkl')
-        scaler_path = os.path.join(self.models_dir, 'scaler.pkl')
-        ai_decision_model_path = os.path.join(self.models_dir, 'ai_decision_model.pkl')
-        ai_decision_scaler_path = os.path.join(self.models_dir, 'ai_decision_scaler.pkl')
-
         try:
-            ai_decision_model_path = os.path.join(self.models_dir, 'ai_decision_model.pkl')
-            ai_decision_scaler_path = os.path.join(self.models_dir, 'ai_decision_scaler.pkl')
-            ai_decision_model_path = os.path.join(self.models_dir, 'ai_decision_model.pkl')
-            ai_decision_scaler_path = os.path.join(self.models_dir, 'ai_decision_scaler.pkl')
-            
             loaded_count = 0
             
-            if os.path.exists(signal_model_path):
-                self.signal_predictor = joblib.load(signal_model_path)
-                logger.info(f"✅ Загружена модель предсказания сигналов: {signal_model_path}")
+            if os.path.exists(self.signal_model_path):
+                self.signal_predictor = joblib.load(self.signal_model_path)
+                logger.info(f"✅ Загружена модель предсказания сигналов: {self.signal_model_path}")
                 loaded_count += 1
                 
                 # Загружаем метаданные если есть
@@ -112,9 +108,9 @@ class AITrainer:
             else:
                 logger.info("ℹ️ Модель предсказания сигналов не найдена (будет создана при обучении)")
             
-            if os.path.exists(profit_model_path):
-                self.profit_predictor = joblib.load(profit_model_path)
-                logger.info(f"✅ Загружена модель предсказания прибыли: {profit_model_path}")
+            if os.path.exists(self.profit_model_path):
+                self.profit_predictor = joblib.load(self.profit_model_path)
+                logger.info(f"✅ Загружена модель предсказания прибыли: {self.profit_model_path}")
                 loaded_count += 1
                 
                 # Загружаем метаданные если есть
@@ -129,17 +125,17 @@ class AITrainer:
             else:
                 logger.info("ℹ️ Модель предсказания прибыли не найдена (будет создана при обучении)")
             
-            if os.path.exists(scaler_path):
-                self.scaler = joblib.load(scaler_path)
-                logger.info(f"✅ Загружен scaler: {scaler_path}")
+            if os.path.exists(self.scaler_path):
+                self.scaler = joblib.load(self.scaler_path)
+                logger.info(f"✅ Загружен scaler: {self.scaler_path}")
                 loaded_count += 1
             else:
                 logger.info("ℹ️ Scaler не найден (будет создан при обучении)")
 
-            if os.path.exists(ai_decision_model_path):
+            if os.path.exists(self.ai_decision_model_path):
                 try:
-                    self.ai_decision_model = joblib.load(ai_decision_model_path)
-                    logger.info(f"✅ Загружена модель анализа AI решений: {ai_decision_model_path}")
+                    self.ai_decision_model = joblib.load(self.ai_decision_model_path)
+                    logger.info(f"✅ Загружена модель анализа AI решений: {self.ai_decision_model_path}")
                     metadata_path = os.path.join(self.models_dir, 'ai_decision_model_metadata.json')
                     if os.path.exists(metadata_path):
                         with open(metadata_path, 'r', encoding='utf-8') as f:
@@ -152,10 +148,10 @@ class AITrainer:
                     logger.warning(f"⚠️ Не удалось загрузить модель решений AI: {ai_load_error}")
                     self.ai_decision_model = None
 
-            if os.path.exists(ai_decision_scaler_path):
+            if os.path.exists(self.ai_decision_scaler_path):
                 try:
-                    self.ai_decision_scaler = joblib.load(ai_decision_scaler_path)
-                    logger.info(f"✅ Загружен scaler для AI решений: {ai_decision_scaler_path}")
+                    self.ai_decision_scaler = joblib.load(self.ai_decision_scaler_path)
+                    logger.info(f"✅ Загружен scaler для AI решений: {self.ai_decision_scaler_path}")
                 except Exception as ai_scaler_error:
                     logger.warning(f"⚠️ Не удалось загрузить scaler решений AI: {ai_scaler_error}")
                     self.ai_decision_scaler = StandardScaler()
@@ -173,17 +169,11 @@ class AITrainer:
     def _save_models(self):
         """Сохранить модели"""
         try:
-            signal_model_path = os.path.join(self.models_dir, 'signal_predictor.pkl')
-            profit_model_path = os.path.join(self.models_dir, 'profit_predictor.pkl')
-            scaler_path = os.path.join(self.models_dir, 'scaler.pkl')
-            ai_decision_model_path = os.path.join(self.models_dir, 'ai_decision_model.pkl')
-            ai_decision_scaler_path = os.path.join(self.models_dir, 'ai_decision_scaler.pkl')
-            
             saved_count = 0
             
             if self.signal_predictor:
-                joblib.dump(self.signal_predictor, signal_model_path)
-                logger.info(f"✅ Сохранена модель предсказания сигналов: {signal_model_path}")
+                joblib.dump(self.signal_predictor, self.signal_model_path)
+                logger.info(f"✅ Сохранена модель предсказания сигналов: {self.signal_model_path}")
                 saved_count += 1
                 
                 # Сохраняем метаданные модели
@@ -198,8 +188,8 @@ class AITrainer:
                     json.dump(metadata, f, indent=2, ensure_ascii=False)
             
             if self.profit_predictor:
-                joblib.dump(self.profit_predictor, profit_model_path)
-                logger.info(f"✅ Сохранена модель предсказания прибыли: {profit_model_path}")
+                joblib.dump(self.profit_predictor, self.profit_model_path)
+                logger.info(f"✅ Сохранена модель предсказания прибыли: {self.profit_model_path}")
                 saved_count += 1
                 
                 # Сохраняем метаданные модели
@@ -214,13 +204,13 @@ class AITrainer:
                     json.dump(metadata, f, indent=2, ensure_ascii=False)
             
             if self.scaler:
-                joblib.dump(self.scaler, scaler_path)
-                logger.info(f"✅ Сохранен scaler: {scaler_path}")
+                joblib.dump(self.scaler, self.scaler_path)
+                logger.info(f"✅ Сохранен scaler: {self.scaler_path}")
                 saved_count += 1
 
             if self.ai_decision_model:
-                joblib.dump(self.ai_decision_model, ai_decision_model_path)
-                logger.info(f"✅ Сохранена модель анализа AI решений: {ai_decision_model_path}")
+                joblib.dump(self.ai_decision_model, self.ai_decision_model_path)
+                logger.info(f"✅ Сохранена модель анализа AI решений: {self.ai_decision_model_path}")
                 metadata_path = os.path.join(self.models_dir, 'ai_decision_model_metadata.json')
                 metadata = {
                     'model_type': type(self.ai_decision_model).__name__,
@@ -235,8 +225,8 @@ class AITrainer:
                     json.dump(metadata, f, indent=2, ensure_ascii=False)
 
             if self.ai_decision_scaler:
-                joblib.dump(self.ai_decision_scaler, ai_decision_scaler_path)
-                logger.info(f"✅ Сохранен scaler для AI решений: {ai_decision_scaler_path}")
+                joblib.dump(self.ai_decision_scaler, self.ai_decision_scaler_path)
+                logger.info(f"✅ Сохранен scaler для AI решений: {self.ai_decision_scaler_path}")
             
             logger.info(f"💾 Сохранено моделей: {saved_count}/3")
             logger.info(f"📁 Модели сохранены в: {self.models_dir}")
