@@ -16,7 +16,8 @@ logger = logging.getLogger('BotsService')
 try:
     from bots_modules.imports_and_globals import (
         shutdown_flag, system_initialized, bots_data_lock, bots_data,
-        process_state, mature_coins_storage, mature_coins_lock, exchange
+        process_state, mature_coins_storage, mature_coins_lock, exchange,
+        refresh_individual_coin_settings_if_needed
     )
 except ImportError as e:
     print(f"Warning: Could not import globals in workers: {e}")
@@ -28,6 +29,8 @@ except ImportError as e:
     mature_coins_storage = {}
     mature_coins_lock = threading.Lock()
     exchange = None
+    def refresh_individual_coin_settings_if_needed(*args, **kwargs):
+        return False
 
 # Константы теперь в SystemConfig
 
@@ -352,6 +355,12 @@ def positions_monitor_worker():
             
             # Получаем интервал из конфига (не хардкод!)
             refresh_interval = SystemConfig.UI_REFRESH_INTERVAL
+
+            # Обновляем индивидуальные настройки монет, если файл изменился
+            try:
+                refresh_individual_coin_settings_if_needed(check_interval=refresh_interval)
+            except Exception as refresh_error:
+                logger.debug(f"[POSITIONS_MONITOR] ⚠️ Не удалось обновить индивидуальные настройки: {refresh_error}")
             
             if time_since_rsi_check >= refresh_interval:
                 try:
