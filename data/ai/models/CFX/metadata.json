@@ -1,0 +1,22 @@
+{
+  "symbol": "CFX",
+  "trained_at": "2025-11-10T06:25:51.905530",
+  "training_seed": 147898,
+  "coin_model_seed": 148247,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 74,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 43
+  },
+  "candles_count": 3913,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.4551787091874072e-05,
+  "total_pnl": 4.661254912083528,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

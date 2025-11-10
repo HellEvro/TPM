@@ -1,0 +1,22 @@
+{
+  "symbol": "PENGU",
+  "trained_at": "2025-11-10T06:27:06.479005",
+  "training_seed": 217502,
+  "coin_model_seed": 217928,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 68,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 36
+  },
+  "candles_count": 1170,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.0191144282629928e-05,
+  "total_pnl": -2.261902227249881,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

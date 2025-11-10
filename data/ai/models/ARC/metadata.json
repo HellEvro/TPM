@@ -1,0 +1,22 @@
+{
+  "symbol": "ARC",
+  "trained_at": "2025-11-10T06:12:53.427174",
+  "training_seed": 368961,
+  "coin_model_seed": 369257,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 68,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 38
+  },
+  "candles_count": 1125,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.679586779551282e-05,
+  "total_pnl": -3.9835422053681615,
+  "previous_candles_count": 1244,
+  "candles_increased": false
+}

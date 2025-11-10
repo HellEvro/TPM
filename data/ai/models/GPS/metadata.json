@@ -1,0 +1,22 @@
+{
+  "symbol": "GPS",
+  "trained_at": "2025-11-10T06:27:03.656847",
+  "training_seed": 217502,
+  "coin_model_seed": 218497,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 68,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 36
+  },
+  "candles_count": 1029,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.445427065964058e-05,
+  "total_pnl": -3.7054800994455563,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

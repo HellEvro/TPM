@@ -1,0 +1,22 @@
+{
+  "symbol": "AKE",
+  "trained_at": "2025-11-10T06:37:38.102616",
+  "training_seed": 848361,
+  "coin_model_seed": 848983,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 73,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 41
+  },
+  "candles_count": 179,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.536490679709061e-05,
+  "total_pnl": 1.9982974727152276,
+  "previous_candles_count": 179,
+  "candles_increased": false
+}
