@@ -96635,11 +96635,77 @@
       "bots": [],
       "rsi_data": {},
       "signals": {}
+    },
+    {
+      "timestamp": "2025-11-10T06:58:33.746165",
+      "bots": [],
+      "rsi_data": {},
+      "signals": {}
+    },
+    {
+      "timestamp": "2025-11-10T06:59:46.200237",
+      "bots": [],
+      "rsi_data": {},
+      "signals": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:00:10.902191",
+      "bots": [],
+      "rsi_data": {},
+      "signals": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:00:59.429562",
+      "bots": [],
+      "rsi_data": {},
+      "signals": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:02:15.453845",
+      "bots": [],
+      "rsi_data": {},
+      "signals": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:03:02.761828",
+      "bots": [],
+      "rsi_data": {},
+      "signals": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:03:37.980121",
+      "bots": [],
+      "rsi_data": {},
+      "signals": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:04:08.395223",
+      "bots": [],
+      "rsi_data": {},
+      "signals": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:05:28.728240",
+      "bots": [],
+      "rsi_data": {},
+      "signals": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:06:54.015059",
+      "bots": [],
+      "rsi_data": {},
+      "signals": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:08:20.997108",
+      "bots": [],
+      "rsi_data": {},
+      "signals": {}
     }
   ],
-  "last_update": "2025-11-10T01:50:22.348663",
+  "last_update": "2025-11-10T07:08:30.208311",
   "latest": {
-    "timestamp": "2025-11-10T01:50:16.240895",
+    "timestamp": "2025-11-10T07:08:20.997108",
     "bots": [],
     "rsi_data": {},
     "signals": {}
