@@ -275,7 +275,7 @@ class AISystem:
         # Обучение продолжается даже если bots.py недоступен
         if self.data_collector:
             logger.info("📊 Собираем начальные данные перед обучением...")
-            logger.info("   💡 Используем доступные данные (candles_cache.json, bot_history.json)")
+            logger.info("   💡 Используем доступные данные (candles_full_history.json, bot_history.json)")
             logger.info("   💡 Обучение НЕ блокируется если bots.py недоступен")
             try:
                 # Собираем рыночные данные один раз для обучения
@@ -375,12 +375,12 @@ class AISystem:
                     except Exception as e:
                         logger.debug(f"⚠️ Ошибка проверки bot_history.json: {e}")
                     
-                    # Собираем рыночные данные (используем УЖЕ СОБРАННЫЕ свечи из bots.py)
+                    # Собираем рыночные данные (используем ПОЛНУЮ ИСТОРИЮ из candles_full_history.json)
                     market_data = self.data_collector.collect_market_data()
                     candles_count = len(market_data.get('candles', {}))
                     indicators_count = len(market_data.get('indicators', {}))
                     logger.info(f"   ✅ Рыночные данные: {candles_count} монет со свечами, {indicators_count} с индикаторами")
-                    logger.info(f"   💡 Используем свечи которые bots.py уже собрал (без дополнительных запросов к бирже)")
+                    logger.info(f"   💡 Используем ПОЛНУЮ ИСТОРИЮ из data/ai/candles_full_history.json (не candles_cache.json!)")
                     
                     logger.info(f"📊 Сбор данных #{collection_count} завершен успешно")
                 
@@ -393,68 +393,144 @@ class AISystem:
                 time.sleep(10)
     
     def _training_worker(self):
-        """Рабочий поток для обучения"""
-        logger.info("🎓 Запуск потока обучения...")
+        """Рабочий поток для обучения - ПОСТОЯННОЕ ОБУЧЕНИЕ БЕЗ ПАУЗ"""
+        logger.info("🎓 Запуск потока ПОСТОЯННОГО обучения...")
+        logger.info("🔥 Обучение будет идти НЕПРЕРЫВНО для перебора миллиардов комбинаций параметров!")
         
-        last_training_time = 0
+        # Показываем результаты предыдущего обучения
+        try:
+            from bot_engine.ai.ai_data_storage import AIDataStorage
+            storage = AIDataStorage()
+            last_training = storage.get_training_history(limit=1)
+            if last_training:
+                training = last_training[0]
+                logger.info("=" * 80)
+                logger.info("📊 РЕЗУЛЬТАТЫ ПРЕДЫДУЩЕГО ОБУЧЕНИЯ:")
+                logger.info(f"   📅 Дата: {training.get('timestamp', 'Unknown')}")
+                logger.info(f"   📈 Монет обработано: {training.get('total_trained_coins', 0)}")
+                logger.info(f"   ✅ Моделей сохранено: {training.get('total_models_saved', 0)}")
+                logger.info(f"   📊 Средний Win Rate: {training.get('overall_win_rate', 0):.1f}%")
+                logger.info(f"   💰 Общий PnL: {training.get('overall_pnl', 0):.2f} USDT")
+                logger.info("=" * 80)
+            else:
+                logger.info("ℹ️ Предыдущих обучений не найдено - начинаем с первого обучения")
+        except Exception as e:
+            logger.debug(f"⚠️ Не удалось загрузить историю обучения: {e}")
+        
         training_count = 0
         
+        # ВАЖНО: НЕПРЕРЫВНЫЙ ЦИКЛ ОБУЧЕНИЯ - БЕЗ ПАУЗ И ИНТЕРВАЛОВ!
         while self.running:
             try:
-                current_time = time.time()
+                if not self.trainer:
+                    logger.warning("⚠️ Trainer недоступен, ждем 10 секунд...")
+                    time.sleep(10)
+                    continue
                 
-                # Проверяем интервал обучения
-                if current_time - last_training_time >= self.config['training_interval']:
-                    if self.trainer:
-                        training_count += 1
-                        
-                        # Проверяем достаточно ли данных для обучения
-                        trades_count = self.trainer.get_trades_count()
-                        
-                        # Сокращенные логи - только самое важное
-                        logger.info(f"🎓 ОБУЧЕНИЕ #{training_count} | Сделок: {trades_count}")
-                        
-                        # Проверка свечей (тихо)
-                        try:
-                            if self.data_collector:
-                                self.data_collector.load_full_candles_history(force_reload=False)
-                        except Exception as candles_error:
-                            logger.debug(f"⚠️ Ошибка проверки свечей: {candles_error}")
-                        
-                        if trades_count >= 10:
-                            logger.info(f"✅ Обучение на {trades_count} реальных сделках...")
-                            self.trainer.train_on_real_trades_with_candles()
-                            self.trainer.retrain_on_ai_decisions()
-                            self.trainer.train_on_historical_data()
-                            
-                            # Постоянное улучшение (тихо)
-                            try:
-                                history_data = self.data_collector.collect_history_data()
-                                real_trades = history_data.get('trades', [])
-                                if len(real_trades) >= 10:
-                                    self.continuous_learning.learn_from_real_trades(real_trades)
-                            except Exception as cl_error:
-                                logger.debug(f"⚠️ Ошибка постоянного улучшения: {cl_error}")
-                            
-                            last_training_time = current_time
-                            logger.info("✅ Обучение завершено")
-                        else:
-                            logger.info(f"📈 Обучение на исторических данных ({trades_count} реальных сделок, нужно >=10)")
-                            self.trainer.train_on_historical_data()
-                            
-                            # Все равно пробуем переобучиться на решениях AI (если есть)
-                            try:
-                                self.trainer.retrain_on_ai_decisions()
-                            except:
-                                pass
+                training_count += 1
                 
-                time.sleep(60)  # Проверяем каждую минуту
+                # Проверяем достаточно ли данных для обучения
+                trades_count = self.trainer.get_trades_count()
+                
+                logger.info("=" * 80)
+                logger.info(f"🎓 ОБУЧЕНИЕ #{training_count} (НЕПРЕРЫВНОЕ)")
+                logger.info(f"   📊 Реальных сделок: {trades_count}")
+                logger.info("=" * 80)
+                
+                # ВАЖНО: Получаем СВЕЖИЕ данные перед каждым обучением!
+                logger.info("📥 Получение свежих данных перед обучением...")
+                try:
+                    if self.data_collector:
+                        # Обновляем полную историю свечей (инкрементально - только новые)
+                        self.data_collector.load_full_candles_history(force_reload=False)
+                        # Собираем свежие рыночные данные
+                        market_data = self.data_collector.collect_market_data()
+                        candles_count = len(market_data.get('candles', {}))
+                        indicators_count = len(market_data.get('indicators', {}))
+                        logger.info(f"   ✅ Свежие данные: {candles_count} монет со свечами, {indicators_count} с индикаторами")
+                except Exception as candles_error:
+                    logger.warning(f"⚠️ Ошибка получения свежих данных: {candles_error}")
+                    logger.info("   ⏭️ Продолжаем обучение на существующих данных...")
+                
+                if trades_count >= 10:
+                    logger.info(f"✅ Обучение на {trades_count} реальных сделках...")
+                    self.trainer.train_on_real_trades_with_candles()
+                    self.trainer.retrain_on_ai_decisions()
+                    self.trainer.train_on_historical_data()
+                    
+                    # Постоянное улучшение (тихо)
+                    try:
+                        history_data = self.data_collector.collect_history_data()
+                        real_trades = history_data.get('trades', [])
+                        if len(real_trades) >= 10:
+                            self.continuous_learning.learn_from_real_trades(real_trades)
+                    except Exception as cl_error:
+                        logger.debug(f"⚠️ Ошибка постоянного улучшения: {cl_error}")
+                else:
+                    logger.info(f"📈 Обучение на исторических данных ({trades_count} реальных сделок, нужно >=10)")
+                    self.trainer.train_on_historical_data()
+                    
+                    # Все равно пробуем переобучиться на решениях AI (если есть)
+                    try:
+                        self.trainer.retrain_on_ai_decisions()
+                    except:
+                        pass
+                
+                # Показываем результаты обучения и прогресс улучшения
+                try:
+                    from bot_engine.ai.ai_data_storage import AIDataStorage
+                    storage = AIDataStorage()
+                    latest_trainings = storage.get_training_history(limit=2)
+                    
+                    if latest_trainings:
+                        current_training = latest_trainings[0]
+                        previous_training = latest_trainings[1] if len(latest_trainings) > 1 else None
+                        
+                        logger.info("=" * 80)
+                        logger.info("✅ ОБУЧЕНИЕ #{} ЗАВЕРШЕНО".format(training_count))
+                        logger.info(f"   📈 Монет обработано: {current_training.get('total_trained_coins', 0)}")
+                        logger.info(f"   ✅ Моделей сохранено: {current_training.get('total_models_saved', 0)}")
+                        logger.info(f"   📊 Средний Win Rate: {current_training.get('overall_win_rate', 0):.1f}%")
+                        logger.info(f"   💰 Общий PnL: {current_training.get('overall_pnl', 0):.2f} USDT")
+                        
+                        # Показываем прогресс улучшения (сравнение с предыдущим обучением)
+                        if previous_training:
+                            prev_win_rate = previous_training.get('overall_win_rate', 0)
+                            curr_win_rate = current_training.get('overall_win_rate', 0)
+                            prev_pnl = previous_training.get('overall_pnl', 0)
+                            curr_pnl = current_training.get('overall_pnl', 0)
+                            
+                            win_rate_change = curr_win_rate - prev_win_rate
+                            pnl_change = curr_pnl - prev_pnl
+                            
+                            if win_rate_change > 0:
+                                logger.info(f"   📈 Win Rate улучшился на +{win_rate_change:.1f}% (было {prev_win_rate:.1f}%)")
+                            elif win_rate_change < 0:
+                                logger.info(f"   📉 Win Rate снизился на {win_rate_change:.1f}% (было {prev_win_rate:.1f}%)")
+                            
+                            if pnl_change > 0:
+                                logger.info(f"   💰 PnL улучшился на +{pnl_change:.2f} USDT (было {prev_pnl:.2f})")
+                            elif pnl_change < 0:
+                                logger.info(f"   💸 PnL снизился на {pnl_change:.2f} USDT (было {prev_pnl:.2f})")
+                        
+                        logger.info("   🔥 СРАЗУ ЗАПУСКАЕМ СЛЕДУЮЩЕЕ ОБУЧЕНИЕ С СВЕЖИМИ ДАННЫМИ...")
+                        logger.info("=" * 80)
+                    else:
+                        logger.info("✅ Обучение #{} завершено, запускаем следующее...".format(training_count))
+                except Exception as e:
+                    logger.debug(f"⚠️ Не удалось загрузить результаты: {e}")
+                    logger.info("✅ Обучение #{} завершено, запускаем следующее...".format(training_count))
+                
+                # ВАЖНО: НЕТ ПАУЗЫ! Сразу запускаем следующее обучение!
+                # Только небольшая пауза для предотвращения перегрузки системы (1 секунда)
+                time.sleep(1)
                 
             except Exception as e:
                 logger.error(f"❌ Ошибка в потоке обучения: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
-                time.sleep(60)
+                # При ошибке ждем 10 секунд перед повтором
+                time.sleep(10)
     
     def _backtest_worker(self):
         """Рабочий поток для бэктеста"""
