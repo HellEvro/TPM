@@ -239,30 +239,62 @@ class AISystem:
             def load_candles_background():
                 try:
                     # Пробуем подключиться несколько раз с задержкой
-                    max_retries = 5
+                    max_retries = 10  # Больше попыток для надежности
                     retry_delay = 5  # секунд
+                    
+                    logger.info("=" * 80)
+                    logger.info("🔄 ФОНОВАЯ ЗАГРУЗКА СВЕЧЕЙ")
+                    logger.info("=" * 80)
+                    logger.info(f"   💡 Будет выполнено до {max_retries} попыток подключения к bots.py")
+                    logger.info(f"   💡 Задержка между попытками: {retry_delay} секунд")
+                    logger.info("=" * 80)
                     
                     for attempt in range(max_retries):
                         try:
+                            logger.info(f"🔄 Попытка {attempt + 1}/{max_retries}: Загрузка свечей...")
                             success = self.data_collector.load_full_candles_history()
                             if success:
                                 if os.path.exists(full_history_file):
-                                    logger.info("✅ История свечей обновлена (инкрементальное обновление)")
+                                    logger.info("=" * 80)
+                                    logger.info("✅ ИСТОРИЯ СВЕЧЕЙ ОБНОВЛЕНА (ИНКРЕМЕНТАЛЬНОЕ ОБНОВЛЕНИЕ)")
+                                    logger.info("=" * 80)
                                 else:
-                                    logger.info("✅ Полная история свечей загружена")
+                                    logger.info("=" * 80)
+                                    logger.info("✅ ПОЛНАЯ ИСТОРИЯ СВЕЧЕЙ ЗАГРУЖЕНА")
+                                    logger.info("=" * 80)
                                 return
                             else:
                                 if attempt < max_retries - 1:
-                                    logger.debug(f"   ⏳ Попытка {attempt + 1}/{max_retries}: bots.py еще не готов, ждем {retry_delay} сек...")
+                                    logger.info(f"   ⏳ Попытка {attempt + 1}/{max_retries}: bots.py еще не готов, ждем {retry_delay} сек...")
                                     time.sleep(retry_delay)
+                                else:
+                                    logger.warning("=" * 80)
+                                    logger.warning("⚠️ НЕ УДАЛОСЬ ЗАГРУЗИТЬ СВЕЧИ ПОСЛЕ ВСЕХ ПОПЫТОК")
+                                    logger.warning("=" * 80)
+                                    logger.warning("   💡 Убедитесь что bots.py запущен и работает")
+                                    logger.warning("   💡 Загрузка будет повторена при следующем цикле")
+                                    logger.warning("=" * 80)
                         except Exception as e:
                             if attempt < max_retries - 1:
-                                logger.debug(f"   ⏳ Попытка {attempt + 1}/{max_retries}: ошибка подключения, ждем {retry_delay} сек... ({e})")
+                                logger.warning(f"   ⚠️ Попытка {attempt + 1}/{max_retries}: ошибка подключения, ждем {retry_delay} сек...")
+                                logger.warning(f"      Ошибка: {e}")
                                 time.sleep(retry_delay)
                             else:
-                                logger.debug(f"   ⚠️ Не удалось загрузить историю свечей после {max_retries} попыток")
+                                logger.error("=" * 80)
+                                logger.error("❌ КРИТИЧЕСКАЯ ОШИБКА ПРИ ЗАГРУЗКЕ СВЕЧЕЙ")
+                                logger.error("=" * 80)
+                                logger.error(f"   Ошибка: {e}")
+                                import traceback
+                                logger.error(traceback.format_exc())
+                                logger.error("=" * 80)
                 except Exception as bg_error:
-                    logger.debug(f"   ⚠️ Ошибка фоновой загрузки свечей: {bg_error}")
+                    logger.error("=" * 80)
+                    logger.error("❌ ОШИБКА ФОНОВОЙ ЗАГРУЗКИ СВЕЧЕЙ")
+                    logger.error("=" * 80)
+                    logger.error(f"   Ошибка: {bg_error}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+                    logger.error("=" * 80)
             
             # Запускаем в отдельном потоке
             candles_thread = threading.Thread(
