@@ -13,6 +13,8 @@
 import os
 import json
 import logging
+import time
+import uuid
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from threading import Lock
@@ -80,12 +82,73 @@ class AIDataStorage:
         return {}
     
     def _save_data(self, filepath: str, data: Dict):
-        """Сохранить данные в файл"""
-        try:
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            logger.error(f"❌ Ошибка сохранения данных в {filepath}: {e}")
+        """Сохранить данные в файл (безопасно с retry логикой)"""
+        max_retries = 5
+        retry_delay = 0.5  # секунд
+        
+        for attempt in range(max_retries):
+            try:
+                with self.lock:
+                    # Создаем уникальное имя временного файла
+                    temp_file = f"{filepath}.tmp.{uuid.uuid4().hex[:8]}"
+                    
+                    # Сохраняем во временный файл сначала
+                    try:
+                        with open(temp_file, 'w', encoding='utf-8') as f:
+                            json.dump(data, f, ensure_ascii=False, indent=2)
+                    except Exception as write_error:
+                        try:
+                            if os.path.exists(temp_file):
+                                os.remove(temp_file)
+                        except:
+                            pass
+                        raise write_error
+                    
+                    # Заменяем оригинальный файл атомарно
+                    if os.path.exists(filepath):
+                        try:
+                            os.remove(filepath)
+                        except PermissionError:
+                            if attempt < max_retries - 1:
+                                try:
+                                    if os.path.exists(temp_file):
+                                        os.remove(temp_file)
+                                except:
+                                    pass
+                                time.sleep(retry_delay * (attempt + 1))
+                                continue
+                            else:
+                                raise
+                    
+                    # Переименовываем временный файл
+                    try:
+                        os.rename(temp_file, filepath)
+                    except PermissionError:
+                        if attempt < max_retries - 1:
+                            try:
+                                if os.path.exists(temp_file):
+                                    os.remove(temp_file)
+                            except:
+                                pass
+                            time.sleep(retry_delay * (attempt + 1))
+                            continue
+                        else:
+                            raise
+                    
+                    # Успешно сохранено
+                    return
+                    
+            except (PermissionError, OSError) as file_error:
+                if attempt < max_retries - 1:
+                    logger.debug(f"⚠️ Файл {filepath} занят, повторная попытка {attempt + 1}/{max_retries}...")
+                    time.sleep(retry_delay * (attempt + 1))
+                    continue
+                else:
+                    logger.warning(f"⚠️ Не удалось сохранить {filepath} после {max_retries} попыток (файл занят)")
+                    logger.debug(f"   Ошибка: {file_error}")
+            except Exception as e:
+                logger.error(f"❌ Ошибка сохранения данных в {filepath}: {e}")
+                return
     
     # ==================== Управление решениями AI ====================
     

@@ -74,23 +74,94 @@ class AIDataCollector:
         return {}
     
     def _save_data(self, filepath: str, data: Dict):
-        """Сохранить данные в файл"""
-        try:
-            with self.lock:
-                # Сохраняем во временный файл сначала
-                temp_file = f"{filepath}.tmp"
-                with open(temp_file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                
-                # Заменяем оригинальный файл
-                if os.path.exists(filepath):
-                    os.remove(filepath)
-                os.rename(temp_file, filepath)
+        """
+        Сохранить данные в файл (безопасно с retry логикой)
+        
+        Использует временный файл и атомарную замену для избежания конфликтов
+        """
+        max_retries = 5
+        retry_delay = 0.5  # секунд
+        
+        for attempt in range(max_retries):
+            try:
+                with self.lock:
+                    # Создаем уникальное имя временного файла
+                    import uuid
+                    temp_file = f"{filepath}.tmp.{uuid.uuid4().hex[:8]}"
                     
-        except Exception as e:
-            logger.error(f"❌ Ошибка сохранения данных в {filepath}: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
+                    # Сохраняем во временный файл сначала
+                    try:
+                        with open(temp_file, 'w', encoding='utf-8') as f:
+                            json.dump(data, f, ensure_ascii=False, indent=2)
+                    except Exception as write_error:
+                        # Удаляем временный файл если ошибка записи
+                        try:
+                            if os.path.exists(temp_file):
+                                os.remove(temp_file)
+                        except:
+                            pass
+                        raise write_error
+                    
+                    # Заменяем оригинальный файл атомарно
+                    if os.path.exists(filepath):
+                        try:
+                            os.remove(filepath)
+                        except PermissionError as perm_error:
+                            # Файл занят - ждем и пробуем снова
+                            if attempt < max_retries - 1:
+                                try:
+                                    if os.path.exists(temp_file):
+                                        os.remove(temp_file)
+                                except:
+                                    pass
+                                time.sleep(retry_delay * (attempt + 1))  # Увеличиваем задержку
+                                continue
+                            else:
+                                raise perm_error
+                    
+                    # Переименовываем временный файл
+                    try:
+                        os.rename(temp_file, filepath)
+                    except PermissionError as perm_error:
+                        # Файл все еще занят
+                        if attempt < max_retries - 1:
+                            try:
+                                if os.path.exists(temp_file):
+                                    os.remove(temp_file)
+                            except:
+                                pass
+                            time.sleep(retry_delay * (attempt + 1))
+                            continue
+                        else:
+                            raise perm_error
+                    
+                    # Успешно сохранено
+                    return
+                    
+            except PermissionError as perm_error:
+                # Windows: файл занят другим процессом
+                if attempt < max_retries - 1:
+                    logger.debug(f"⚠️ Файл {filepath} занят, повторная попытка {attempt + 1}/{max_retries}...")
+                    time.sleep(retry_delay * (attempt + 1))
+                    continue
+                else:
+                    logger.warning(f"⚠️ Не удалось сохранить {filepath} после {max_retries} попыток (файл занят другим процессом)")
+                    logger.debug(f"   Ошибка: {perm_error}")
+            except OSError as os_error:
+                # Другие ошибки ОС (WinError 32 и т.д.)
+                if attempt < max_retries - 1:
+                    logger.debug(f"⚠️ Ошибка доступа к файлу {filepath}, повторная попытка {attempt + 1}/{max_retries}...")
+                    time.sleep(retry_delay * (attempt + 1))
+                    continue
+                else:
+                    logger.warning(f"⚠️ Не удалось сохранить {filepath} после {max_retries} попыток")
+                    logger.debug(f"   Ошибка: {os_error}")
+            except Exception as e:
+                # Другие ошибки
+                logger.error(f"❌ Ошибка сохранения данных в {filepath}: {e}")
+                import traceback
+                logger.debug(traceback.format_exc())
+                return  # Не повторяем для других ошибок
     
     def _call_bots_api(self, endpoint: str, method: str = 'GET', data: Dict = None, silent: bool = False) -> Optional[Dict]:
         """
@@ -285,7 +356,8 @@ class AIDataCollector:
         Загружает ВСЕ доступные свечи для всех монет
         
         Использует AICandlesLoader для загрузки максимального количества свечей
-        (до 1000 свечей на монету вместо ~1000 из candles_cache.json)
+        (до 2000-5000 свечей на монету с пагинацией для качественного обучения)
+        Минимум 2000 свечей на монету для качественного обучения (~1 год истории на 6H)
         
         Returns:
             True если успешно загружено
