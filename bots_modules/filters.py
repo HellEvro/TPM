@@ -924,17 +924,39 @@ def load_all_coins_candles_fast():
             delay_before_batch = current_exchange.current_request_delay if hasattr(current_exchange, 'current_request_delay') else None
             
             with concurrent.futures.ThreadPoolExecutor(max_workers=current_max_workers) as executor:
-                future_to_symbol = {executor.submit(get_coin_candles_only, symbol, current_exchange): symbol for symbol in batch}
+                future_to_symbol = {
+                    executor.submit(get_coin_candles_only, symbol, current_exchange): symbol 
+                    for symbol in batch
+                }
                 
                 completed = 0
-                for future in concurrent.futures.as_completed(future_to_symbol, timeout=90):
+                done, not_done = concurrent.futures.wait(
+                    future_to_symbol.keys(),
+                    timeout=90,
+                    return_when=concurrent.futures.ALL_COMPLETED
+                )
+                
+                for future in done:
+                    symbol = future_to_symbol.get(future)
                     try:
-                        result = future.result(timeout=30)
+                        result = future.result()
                         if result:
                             candles_cache[result['symbol']] = result
                             completed += 1
-                    except Exception as e:
+                    except Exception:
                         pass
+                
+                if not_done:
+                    unfinished_symbols = [future_to_symbol.get(future) for future in not_done if future in future_to_symbol]
+                    logger.error(f"[CANDLES_FAST] ❌ Timeout: {len(unfinished_symbols)} (of {len(future_to_symbol)}) futures unfinished")
+                    
+                    # Отменяем незавершенные задачи и фиксируем возможный rate limit
+                    for future in not_done:
+                        try:
+                            future.cancel()
+                        except Exception:
+                            pass
+                    rate_limit_detected = True
                 
                 # Проверяем, увеличилась ли задержка после батча (признак rate limit)
                 delay_after_batch = current_exchange.current_request_delay if hasattr(current_exchange, 'current_request_delay') else None
