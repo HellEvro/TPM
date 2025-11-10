@@ -212,6 +212,9 @@ class BybitExchange(BaseExchange):
                             if symbol not in self.max_loss_values or current_pnl < self.max_loss_values[symbol]:
                                 self.max_loss_values[symbol] = current_pnl
                         
+                        avg_price = float(position.get('avgPrice', 0) or 0)
+                        mark_price = float(position.get('markPrice', 0) or 0)
+
                         position_info = {
                             'symbol': symbol,
                             'pnl': current_pnl,
@@ -224,8 +227,10 @@ class BybitExchange(BaseExchange):
                             'size': position_size,
                             'take_profit': position.get('takeProfit', ''),
                             'stop_loss': position.get('stopLoss', ''),
-                            'mark_price': position.get('markPrice', ''),
-                            'avg_price': position.get('avgPrice', ''),
+                            'mark_price': mark_price,
+                            'avg_price': avg_price,
+                            'entry_price': avg_price,
+                            'current_price': mark_price,
                             'realized_pnl': float(position.get('cumRealisedPnl', 0)),
                             'leverage': float(position.get('leverage', 1))
                         }
