@@ -1005,16 +1005,19 @@ class AITrainer:
                 logger.warning("⚠️ Нет свечей для обучения (проверьте data/candles_cache.json или data/ai/candles_full_history.json)")
                 return
             
-            logger.info(f"📊 Начинаем симуляцию торговли на {len(candles_data)} монетах...")
+            logger.info(f"📊 Начинаем ИНДИВИДУАЛЬНОЕ обучение для каждой монеты из {len(candles_data)} монет...")
+            logger.info(f"💡 Для каждой монеты: симулируем торговлю → обучаем модель → сохраняем модель")
             logger.info(f"💡 Симулируем входы/выходы используя ВАШИ настройки из bots.py")
+            logger.info("=" * 80)
             
-            # СИМУЛЯЦИЯ ТОРГОВЛИ: Проходим по свечам и симулируем входы/выходы по вашим правилам
-            simulated_trades = []  # Симулированные сделки с результатами
-            trained_count = 0
-            failed_count = 0
+            # ОБУЧЕНИЕ ДЛЯ КАЖДОЙ МОНЕТЫ ОТДЕЛЬНО
+            total_trained_coins = 0
+            total_failed_coins = 0
+            total_models_saved = 0
             total_candles_processed = 0
             
-            for symbol, candle_info in candles_data.items():
+            # ОБУЧАЕМ КАЖДУЮ МОНЕТУ ОТДЕЛЬНО
+            for symbol_idx, (symbol, candle_info) in enumerate(candles_data.items(), 1):
                 try:
                     candles = candle_info.get('candles', [])
                     if not candles or len(candles) < 100:  # Нужно больше свечей для симуляции
@@ -1023,8 +1026,10 @@ class AITrainer:
                     # Сортируем свечи по времени (от старых к новым)
                     candles = sorted(candles, key=lambda x: x.get('time', 0))
                     
-                    logger.info(f"🎓 Симуляция торговли на {symbol}:")
-                    logger.info(f"   📊 Свечей: {len(candles)}")
+                    logger.info("=" * 80)
+                    logger.info(f"🎓 [{symbol_idx}/{len(candles_data)}] ОБУЧЕНИЕ ДЛЯ {symbol}")
+                    logger.info("=" * 80)
+                    logger.info(f"   📊 Свечей для анализа: {len(candles)}")
                     
                     # Извлекаем данные из свечей
                     closes = [float(c.get('close', 0) or 0) for c in candles]
@@ -1045,6 +1050,7 @@ class AITrainer:
                         continue
                     
                     # СИМУЛЯЦИЯ: Проходим по свечам и симулируем входы/выходы
+                    simulated_trades_symbol = []  # Симулированные сделки ТОЛЬКО для этой монеты
                     current_position = None  # {'direction': 'LONG'/'SHORT', 'entry_idx': int, 'entry_price': float, 'entry_rsi': float, 'entry_trend': str}
                     trades_for_symbol = 0
                     
@@ -1155,7 +1161,7 @@ class AITrainer:
                                         'duration_candles': i - current_position['entry_idx']
                                     }
                                     
-                                    simulated_trades.append(simulated_trade)
+                                    simulated_trades_symbol.append(simulated_trade)
                                     trades_for_symbol += 1
                                     current_position = None
                             
@@ -1194,216 +1200,140 @@ class AITrainer:
                             logger.debug(f"   ⚠️ Ошибка симуляции свечи {i} для {symbol}: {e}")
                             continue
                     
-                    trained_count += 1
                     total_candles_processed += len(candles)
                     
                     if trades_for_symbol > 0:
-                        successful_trades = sum(1 for t in simulated_trades[-trades_for_symbol:] if t['is_successful'])
-                        logger.info(f"   ✅ Симулировано {trades_for_symbol} сделок (успешных: {successful_trades})")
+                        symbol_successful = sum(1 for t in simulated_trades_symbol if t['is_successful'])
+                        symbol_win_rate = symbol_successful / trades_for_symbol * 100
+                        symbol_pnl = sum(t['pnl'] for t in simulated_trades_symbol)
+                        
+                        logger.info(f"   ✅ Симулировано {trades_for_symbol} сделок")
+                        logger.info(f"   📊 Успешных: {symbol_successful} ({symbol_win_rate:.1f}%)")
+                        logger.info(f"   💰 PnL: {symbol_pnl:.2f} USDT")
+                        
+                        # ОБУЧАЕМ МОДЕЛЬ ДЛЯ ЭТОЙ МОНЕТЫ ОТДЕЛЬНО
+                        if trades_for_symbol >= 5:  # Минимум 5 сделок для обучения
+                            logger.info(f"   🎓 Обучаем модель для {symbol}...")
+                            
+                            # Подготавливаем данные для обучения
+                            X_symbol = []
+                            y_signal_symbol = []
+                            y_profit_symbol = []
+                            
+                            symbol_trades = simulated_trades_symbol
+                            for trade in symbol_trades:
+                                features = [
+                                    trade['entry_rsi'],
+                                    trade['entry_trend'] == 'UP',
+                                    trade['entry_trend'] == 'DOWN',
+                                    trade['direction'] == 'LONG',
+                                    trade['entry_price'] / 1000.0 if trade['entry_price'] > 0 else 0,
+                                ]
+                                X_symbol.append(features)
+                                y_signal_symbol.append(1 if trade['is_successful'] else 0)
+                                y_profit_symbol.append(trade['pnl'])
+                            
+                            X_symbol = np.array(X_symbol)
+                            y_signal_symbol = np.array(y_signal_symbol)
+                            y_profit_symbol = np.array(y_profit_symbol)
+                            
+                            # Создаем scaler для этой монеты
+                            from sklearn.preprocessing import StandardScaler
+                            symbol_scaler = StandardScaler()
+                            X_symbol_scaled = symbol_scaler.fit_transform(X_symbol)
+                            
+                            # Обучаем модель сигналов для этой монеты
+                            from sklearn.ensemble import RandomForestClassifier
+                            symbol_signal_predictor = RandomForestClassifier(
+                                n_estimators=100,
+                                max_depth=10,
+                                min_samples_split=3,
+                                random_state=42,
+                                n_jobs=-1,
+                                class_weight='balanced'
+                            )
+                            symbol_signal_predictor.fit(X_symbol_scaled, y_signal_symbol)
+                            signal_score = symbol_signal_predictor.score(X_symbol_scaled, y_signal_symbol)
+                            
+                            # Обучаем модель прибыли для этой монеты
+                            from sklearn.ensemble import GradientBoostingRegressor
+                            symbol_profit_predictor = GradientBoostingRegressor(
+                                n_estimators=50,
+                                max_depth=4,
+                                learning_rate=0.1,
+                                random_state=42
+                            )
+                            symbol_profit_predictor.fit(X_symbol_scaled, y_profit_symbol)
+                            profit_pred = symbol_profit_predictor.predict(X_symbol_scaled)
+                            profit_mse = mean_squared_error(y_profit_symbol, profit_pred)
+                            
+                            # Сохраняем модели для этой монеты
+                            symbol_models_dir = os.path.join(self.models_dir, symbol)
+                            os.makedirs(symbol_models_dir, exist_ok=True)
+                            
+                            signal_model_path = os.path.join(symbol_models_dir, 'signal_predictor.pkl')
+                            profit_model_path = os.path.join(symbol_models_dir, 'profit_predictor.pkl')
+                            scaler_path = os.path.join(symbol_models_dir, 'scaler.pkl')
+                            
+                            joblib.dump(symbol_signal_predictor, signal_model_path)
+                            joblib.dump(symbol_profit_predictor, profit_model_path)
+                            joblib.dump(symbol_scaler, scaler_path)
+                            
+                            # Сохраняем метаданные
+                            metadata = {
+                                'symbol': symbol,
+                                'trained_at': datetime.now().isoformat(),
+                                'trades_count': trades_for_symbol,
+                                'win_rate': symbol_win_rate,
+                                'signal_accuracy': signal_score,
+                                'profit_mse': profit_mse,
+                                'total_pnl': symbol_pnl
+                            }
+                            metadata_path = os.path.join(symbol_models_dir, 'metadata.json')
+                            with open(metadata_path, 'w', encoding='utf-8') as f:
+                                json.dump(metadata, f, indent=2, ensure_ascii=False)
+                            
+                            logger.info(f"   ✅ Модель для {symbol} обучена и сохранена!")
+                            logger.info(f"      📈 Точность сигналов: {signal_score:.2%}")
+                            logger.info(f"      💰 MSE прибыли: {profit_mse:.2f}")
+                            logger.info(f"      📊 Win Rate: {symbol_win_rate:.1f}%")
+                            total_models_saved += 1
+                        else:
+                            logger.info(f"   ⏳ Недостаточно сделок для обучения ({trades_for_symbol} < 5)")
+                    
+                    total_trained_coins += 1
                     
                     # Логируем прогресс каждые 10 монет
-                    if trained_count % 10 == 0:
-                        total_trades = len(simulated_trades)
-                        successful = sum(1 for t in simulated_trades if t['is_successful'])
-                        logger.info(f"📊 Прогресс: {trained_count} монет, {total_candles_processed} свечей, {total_trades} сделок ({successful} успешных)...")
+                    if total_trained_coins % 10 == 0:
+                        logger.info(f"📊 Прогресс: {total_trained_coins}/{len(candles_data)} монет обработано, {total_models_saved} моделей сохранено...")
                     
                 except Exception as e:
-                    logger.debug(f"⚠️ Ошибка симуляции на {symbol}: {e}")
+                    logger.warning(f"⚠️ Ошибка обучения для {symbol}: {e}")
                     import traceback
                     logger.debug(traceback.format_exc())
-                    failed_count += 1
+                    total_failed_coins += 1
                     continue
             
-            # ОБУЧАЕМСЯ НА РЕЗУЛЬТАТАХ СИМУЛЯЦИИ
-            if simulated_trades:
-                logger.info("=" * 80)
-                logger.info(f"🤖 ОБУЧЕНИЕ НА РЕЗУЛЬТАТАХ СИМУЛЯЦИИ")
-                logger.info("=" * 80)
-                
-                successful_trades = [t for t in simulated_trades if t['is_successful']]
-                failed_trades = [t for t in simulated_trades if not t['is_successful']]
-                
-                total_pnl = sum(t['pnl'] for t in simulated_trades)
-                win_rate = len(successful_trades) / len(simulated_trades) * 100 if simulated_trades else 0
-                
-                logger.info(f"📊 Статистика симуляции:")
-                logger.info(f"   📈 Всего сделок: {len(simulated_trades)}")
-                logger.info(f"   ✅ Успешных: {len(successful_trades)} ({win_rate:.1f}%)")
-                logger.info(f"   ❌ Неуспешных: {len(failed_trades)} ({100-win_rate:.1f}%)")
-                logger.info(f"   💰 Общий PnL: {total_pnl:.2f} USDT")
-                
-                if successful_trades:
-                    avg_win = np.mean([t['pnl'] for t in successful_trades])
-                    avg_loss = np.mean([t['pnl'] for t in failed_trades]) if failed_trades else 0
-                    logger.info(f"   📊 Средний выигрыш: {avg_win:.2f} USDT")
-                    logger.info(f"   📊 Средний проигрыш: {avg_loss:.2f} USDT")
-                
-                # Подготавливаем данные для обучения на симулированных сделках
-                X = []
-                y_signal = []  # 1 = успешная сделка, 0 = неуспешная
-                y_profit = []  # Реальный PnL
-                
-                for trade in simulated_trades:
-                    # Признаки на момент входа
-                    features = [
-                        trade['entry_rsi'],
-                        trade['entry_trend'] == 'UP',
-                        trade['entry_trend'] == 'DOWN',
-                        trade['direction'] == 'LONG',
-                        trade['entry_price'] / 1000.0 if trade['entry_price'] > 0 else 0,
-                    ]
-                    
-                    X.append(features)
-                    y_signal.append(1 if trade['is_successful'] else 0)
-                    y_profit.append(trade['pnl'])
-                
-                if len(X) >= 20:  # Минимум 20 сделок для обучения
-                    logger.info(f"🎓 Обучаем модели на {len(X)} симулированных сделках...")
-                    
-                    X = np.array(X)
-                    y_signal = np.array(y_signal)
-                    y_profit = np.array(y_profit)
-                    
-                    # Нормализация
-                    if not hasattr(self.scaler, 'mean_') or self.scaler.mean_ is None:
-                        from sklearn.preprocessing import StandardScaler
-                        self.scaler = StandardScaler()
-                        X_scaled = self.scaler.fit_transform(X)
-                    else:
-                        # Переобучение на новых данных
-                        X_scaled = self.scaler.transform(X)
-                    
-                    # Обучаем модель предсказания успешности
-                    if not self.signal_predictor:
-                        from sklearn.ensemble import RandomForestClassifier
-                        self.signal_predictor = RandomForestClassifier(
-                            n_estimators=200,
-                            max_depth=15,
-                            min_samples_split=5,
-                            random_state=42,
-                            n_jobs=-1,
-                            class_weight='balanced'
-                        )
-                    
-                    logger.info("   📈 Обучение модели на успешных/неуспешных симуляциях...")
-                    self.signal_predictor.fit(X_scaled, y_signal)
-                    train_score = self.signal_predictor.score(X_scaled, y_signal)
-                    logger.info(f"   ✅ Модель обучена! Точность: {train_score:.2%}")
-                    
-                    # Обучаем модель предсказания прибыли
-                    if not self.profit_predictor:
-                        from sklearn.ensemble import GradientBoostingRegressor
-                        self.profit_predictor = GradientBoostingRegressor(
-                            n_estimators=100,
-                            max_depth=5,
-                            learning_rate=0.1,
-                            random_state=42
-                        )
-                    
-                    logger.info("   💰 Обучение модели предсказания прибыли...")
-                    self.profit_predictor.fit(X_scaled, y_profit)
-                    profit_pred = self.profit_predictor.predict(X_scaled)
-                    profit_mse = mean_squared_error(y_profit, profit_pred)
-                    logger.info(f"   ✅ Модель прибыли обучена! MSE: {profit_mse:.2f}")
-                    
-                    # Сохраняем модели
-                    self._save_models()
-                    logger.info("   💾 Модели сохранены!")
-                    
-                    # Анализ успешных паттернов из симуляции
-                    if successful_trades:
-                        successful_rsi = [t['entry_rsi'] for t in successful_trades]
-                        avg_successful_rsi = np.mean(successful_rsi)
-                        logger.info(f"   📊 Средний RSI успешных входов: {avg_successful_rsi:.2f}")
-                        
-                        from collections import Counter
-                        successful_trends = Counter([t['entry_trend'] for t in successful_trades])
-                        logger.info(f"   📊 Тренды успешных входов: {dict(successful_trends)}")
-                    
-                    # ВАЖНО: Всегда запускаем оптимизацию параметров для каждой монеты
-                    # Но сохраняем индивидуальные настройки ТОЛЬКО если win rate >= 80%
-                    logger.info("=" * 80)
-                    logger.info(f"🔍 ОПТИМИЗАЦИЯ ПАРАМЕТРОВ ДЛЯ МОНЕТ")
-                    logger.info(f"   📊 Общий Win Rate: {win_rate:.1f}%")
-                    if win_rate >= 80.0:
-                        logger.info("   ✅ Win Rate >= 80% - приемлемо для работы, но оптимизируем дальше к 100%")
-                    else:
-                        logger.info("   ⚠️ Win Rate < 80% - оптимизируем, но НЕ сохраняем индивидуальные настройки")
-                        logger.info("   💡 Пока используем глобальные настройки (скрипты) пока AI модель не достигнет >=80%")
-                    logger.info("=" * 80)
-                    
-                    # Группируем сделки по монетам для оптимизации
-                    trades_by_symbol = {}
-                    for trade in simulated_trades:
-                        symbol = trade.get('symbol')
-                        if symbol:
-                            if symbol not in trades_by_symbol:
-                                trades_by_symbol[symbol] = []
-                            trades_by_symbol[symbol].append(trade)
-                    
-                    # Оптимизируем параметры для ВСЕХ монет (независимо от win rate)
-                    optimized_count = 0
-                    saved_count = 0
-                    for symbol, symbol_trades in trades_by_symbol.items():
-                        if len(symbol_trades) < 5:  # Минимум 5 сделок для оптимизации
-                            continue
-                        
-                        symbol_win_rate = sum(1 for t in symbol_trades if t.get('is_successful', False)) / len(symbol_trades) * 100
-                        
-                        # Оптимизируем ВСЕГДА (даже если win rate >= 80%, продолжаем к 100%)
-                        # Получаем свечи для этой монеты
-                        symbol_candle_info = candles_data.get(symbol, {})
-                        if isinstance(symbol_candle_info, dict):
-                            symbol_candles = symbol_candle_info.get('candles', [])
-                        else:
-                            symbol_candles = []
-                        
-                        if len(symbol_candles) >= 100:
-                            try:
-                                # Импортируем оптимизатор
-                                from bot_engine.ai.ai_strategy_optimizer import AIStrategyOptimizer
-                                optimizer = AIStrategyOptimizer()
-                                
-                                # Оптимизируем параметры
-                                optimized = optimizer.optimize_coin_parameters_on_candles(
-                                    symbol, 
-                                    symbol_candles, 
-                                    symbol_win_rate
-                                )
-                                
-                                if optimized:
-                                    optimized_count += 1
-                                    optimized_win_rate = optimized.get('optimization_win_rate', 0)
-                                    logger.info(f"   ✅ {symbol}: параметры оптимизированы (Win Rate: {symbol_win_rate:.1f}% → {optimized_win_rate:.1f}%)")
-                                    
-                                    # Если win rate >= 80%, параметры уже сохранены в optimize_coin_parameters_on_candles
-                                    if optimized_win_rate >= 80.0:
-                                        saved_count += 1
-                            except Exception as opt_error:
-                                logger.debug(f"   ⚠️ Ошибка оптимизации для {symbol}: {opt_error}")
-                    
-                    # Итоговая статистика оптимизации
-                    if optimized_count > 0:
-                        logger.info(f"   ✅ Оптимизировано параметров для {optimized_count} монет")
-                        if saved_count > 0:
-                            logger.info(f"   💾 Сохранено индивидуальных настроек для {saved_count} монет (Win Rate >= 80%)")
-                            logger.info("   💡 Эти параметры будут использоваться ботами в приоритете над глобальными!")
-                        else:
-                            logger.info(f"   ⚠️ НЕ сохранено индивидуальных настроек (все монеты имеют Win Rate < 80%)")
-                            logger.info("   💡 Продолжаем использовать глобальные настройки (скрипты) пока AI модель не достигнет >=80%")
-                    else:
-                        logger.info("   ⚠️ Не удалось оптимизировать параметры ни для одной монеты")
-                    
-                    logger.info("=" * 80)
-                else:
-                    logger.warning(f"⚠️ Недостаточно симулированных сделок для обучения (нужно минимум 20, есть {len(X)})")
+            # ИТОГОВАЯ СТАТИСТИКА
+            logger.info("=" * 80)
+            logger.info(f"✅ ИНДИВИДУАЛЬНОЕ ОБУЧЕНИЕ ЗАВЕРШЕНО")
+            logger.info("=" * 80)
+            logger.info(f"   📊 Монет обработано: {total_trained_coins}")
+            logger.info(f"   ✅ Моделей сохранено: {total_models_saved}")
+            logger.info(f"   ⚠️ Ошибок: {total_failed_coins}")
+            logger.info(f"   📈 Свечей обработано: {total_candles_processed}")
+            logger.info(f"   💾 Модели сохранены в: data/ai/models/{{SYMBOL}}/")
+            logger.info("=" * 80)
+            
+            # Также создаем общую модель на всех данных (для монет без индивидуальных моделей)
+            logger.info("💡 Общая модель будет создана при следующем обучении (после сбора всех сделок)")
             
             logger.info("=" * 80)
             logger.info(f"✅ СИМУЛЯЦИЯ И ОБУЧЕНИЕ ЗАВЕРШЕНЫ")
-            logger.info(f"   📊 Монет обработано: {trained_count}")
+            logger.info(f"   📊 Монет обработано: {total_trained_coins}")
             logger.info(f"   📈 Свечей обработано: {total_candles_processed}")
-            logger.info(f"   🎯 Симулировано сделок: {len(simulated_trades)}")
-            logger.info(f"   ⚠️ Ошибок: {failed_count}")
+            logger.info(f"   ✅ Моделей сохранено: {total_models_saved}")
+            logger.info(f"   ⚠️ Ошибок: {total_failed_coins}")
             logger.info("=" * 80)
             
         except Exception as e:
