@@ -156,18 +156,18 @@ class AIDataCollector:
         }
         
         try:
-            # Получаем список ботов
-            bots_response = self._call_bots_api('/api/bots/list')
+            # Получаем список ботов (неблокирующий вызов)
+            bots_response = self._call_bots_api('/api/bots/list', silent=True)
             if bots_response and bots_response.get('success'):
                 collected_data['bots'] = bots_response.get('bots', [])
             
-            # Получаем RSI данные для монет
-            rsi_response = self._call_bots_api('/api/bots/coins-with-rsi')
+            # Получаем RSI данные для монет (неблокирующий вызов)
+            rsi_response = self._call_bots_api('/api/bots/coins-with-rsi', silent=True)
             if rsi_response and rsi_response.get('success'):
                 collected_data['rsi_data'] = rsi_response.get('coins', {})
             
-            # Получаем статус ботов
-            status_response = self._call_bots_api('/api/bots/status')
+            # Получаем статус ботов (неблокирующий вызов)
+            status_response = self._call_bots_api('/api/bots/status', silent=True)
             if status_response and status_response.get('success'):
                 collected_data['bots_status'] = status_response.get('status', {})
             
@@ -235,8 +235,8 @@ class AIDataCollector:
             logger.debug(f"⚠️ Ошибка загрузки bot_history.json: {e}")
         
         try:
-            # Получаем историю сделок через API (дополняем прямую загрузку)
-            trades_response = self._call_bots_api('/api/bots/trades?limit=1000')
+            # Получаем историю сделок через API (дополняем прямую загрузку) - неблокирующий вызов
+            trades_response = self._call_bots_api('/api/bots/trades?limit=1000', silent=True)
             if trades_response and trades_response.get('success'):
                 api_trades = trades_response.get('trades', [])
                 # Объединяем с уже загруженными из bot_history.json (избегаем дубликатов)
@@ -246,13 +246,13 @@ class AIDataCollector:
                     if trade_id not in existing_ids:
                         collected_data['trades'].append(trade)
             
-            # Получаем статистику
-            stats_response = self._call_bots_api('/api/bots/statistics')
+            # Получаем статистику - неблокирующий вызов
+            stats_response = self._call_bots_api('/api/bots/statistics', silent=True)
             if stats_response and stats_response.get('success'):
                 collected_data['statistics'] = stats_response.get('statistics', {})
             
-            # Получаем историю действий
-            history_response = self._call_bots_api('/api/bots/history?limit=500')
+            # Получаем историю действий - неблокирующий вызов
+            history_response = self._call_bots_api('/api/bots/history?limit=500', silent=True)
             if history_response and history_response.get('success'):
                 collected_data['actions'] = history_response.get('history', [])
             
@@ -294,29 +294,29 @@ class AIDataCollector:
             from bot_engine.ai.ai_candles_loader import AICandlesLoader
             from bots_modules.imports_and_globals import get_exchange
             
-            logger.info("=" * 80)
-            logger.info("📊 ЗАГРУЗКА ВСЕХ ДОСТУПНЫХ СВЕЧЕЙ ДЛЯ AI ОБУЧЕНИЯ")
-            logger.info("=" * 80)
+            logger.debug("=" * 80)
+            logger.debug("📊 ЗАГРУЗКА ВСЕХ ДОСТУПНЫХ СВЕЧЕЙ ДЛЯ AI ОБУЧЕНИЯ")
+            logger.debug("=" * 80)
             
-            # Пробуем получить exchange с таймаутом и повторными попытками
+            # Пробуем получить exchange быстро (не блокируем)
             exchange = None
-            max_attempts = 3
+            max_attempts = 2  # Меньше попыток для быстроты
             for attempt in range(max_attempts):
                 try:
                     exchange = get_exchange()
                     if exchange:
+                        logger.debug(f"✅ Получен объект биржи (попытка {attempt + 1})")
                         break
                 except Exception as e:
                     if attempt < max_attempts - 1:
                         logger.debug(f"   ⏳ Попытка {attempt + 1}/{max_attempts} получить биржу...")
                         import time
-                        time.sleep(2)  # Короткая задержка между попытками
+                        time.sleep(1)  # Короткая задержка между попытками
                     else:
-                        logger.debug(f"⚠️ Ошибка получения биржи после {max_attempts} попыток: {e}")
+                        logger.debug(f"⚠️ Не удалось получить биржу после {max_attempts} попыток (продолжаем в фоне)")
             
             if not exchange:
-                logger.debug("⚠️ Не удалось получить объект биржи (возможно bots.py еще не запущен)")
-                logger.debug("💡 Продолжаем попытки в фоне, используем доступные данные")
+                logger.debug("💡 bots.py еще не готов, продолжаем попытки в фоне")
                 return False
             
             loader = AICandlesLoader(exchange_obj=exchange)
