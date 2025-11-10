@@ -1603,32 +1603,67 @@ class AITrainer:
                                     'ai_total_pnl': symbol_pnl
                                 }
                                 
-                                # Сохраняем через API или напрямую
+                                # ВАЖНО: Используем ТЕ ЖЕ функции что и bots.py для бесшовной интеграции
+                                # Сначала пробуем через прямой импорт (работает если bots.py запущен)
                                 try:
-                                    import requests
-                                    response = requests.post(
-                                        f'http://localhost:5001/api/bots/individual-settings/{symbol}',
-                                        json=individual_settings,
-                                        timeout=5
+                                    from bots_modules.imports_and_globals import (
+                                        set_individual_coin_settings,
+                                        get_individual_coin_settings,
+                                        load_individual_coin_settings
                                     )
-                                    if response.status_code == 200:
-                                        logger.info(f"   💾 Параметры сохранены в индивидуальные настройки для {symbol}")
-                                    else:
-                                        # Пробуем напрямую через импорт
-                                        try:
-                                            from bots_modules.imports_and_globals import set_individual_coin_settings
-                                            set_individual_coin_settings(symbol, individual_settings, persist=True)
-                                            logger.info(f"   💾 Параметры сохранены напрямую для {symbol}")
-                                        except Exception as direct_error:
-                                            logger.warning(f"   ⚠️ Не удалось сохранить параметры для {symbol}: {direct_error}")
-                                except Exception as save_error:
-                                    # Пробуем напрямую через импорт если API недоступен
+                                    
+                                    # Загружаем существующие настройки если они есть (чтобы не потерять другие параметры)
+                                    existing_settings = get_individual_coin_settings(symbol) or {}
+                                    
+                                    # Объединяем существующие настройки с новыми (новые имеют приоритет)
+                                    merged_settings = {**existing_settings, **individual_settings}
+                                    merged_settings['updated_at'] = datetime.now().isoformat()
+                                    
+                                    # Сохраняем используя ТУ ЖЕ функцию что и bots.py
+                                    set_individual_coin_settings(symbol, merged_settings, persist=True)
+                                    logger.info(f"   💾 Параметры сохранены в индивидуальные настройки для {symbol} (через bots_modules)")
+                                    
+                                except ImportError:
+                                    # Если bots.py не запущен - используем прямое сохранение в файл
                                     try:
-                                        from bots_modules.imports_and_globals import set_individual_coin_settings
-                                        set_individual_coin_settings(symbol, individual_settings, persist=True)
-                                        logger.info(f"   💾 Параметры сохранены напрямую для {symbol} (API недоступен)")
-                                    except Exception as direct_error:
-                                        logger.warning(f"   ⚠️ Не удалось сохранить параметры для {symbol}: {direct_error}")
+                                        from bot_engine.storage import (
+                                            save_individual_coin_settings,
+                                            load_individual_coin_settings as storage_load_individual_coin_settings
+                                        )
+                                        
+                                        # Загружаем существующие настройки из файла
+                                        existing_all_settings = storage_load_individual_coin_settings() or {}
+                                        
+                                        # Объединяем с новыми настройками для этой монеты
+                                        existing_settings = existing_all_settings.get(symbol.upper(), {})
+                                        merged_settings = {**existing_settings, **individual_settings}
+                                        merged_settings['updated_at'] = datetime.now().isoformat()
+                                        
+                                        # Обновляем все настройки
+                                        existing_all_settings[symbol.upper()] = merged_settings
+                                        
+                                        # Сохраняем используя ТУ ЖЕ функцию что и bots.py
+                                        save_individual_coin_settings(existing_all_settings)
+                                        logger.info(f"   💾 Параметры сохранены в файл для {symbol} (bots.py не запущен)")
+                                        
+                                    except Exception as storage_error:
+                                        logger.warning(f"   ⚠️ Не удалось сохранить параметры для {symbol}: {storage_error}")
+                                        
+                                except Exception as save_error:
+                                    # Если не получилось через bots_modules - пробуем через API
+                                    try:
+                                        import requests
+                                        response = requests.post(
+                                            f'http://localhost:5001/api/bots/individual-settings/{symbol}',
+                                            json=individual_settings,
+                                            timeout=5
+                                        )
+                                        if response.status_code == 200:
+                                            logger.info(f"   💾 Параметры сохранены через API для {symbol}")
+                                        else:
+                                            logger.warning(f"   ⚠️ API вернул код {response.status_code} для {symbol}")
+                                    except Exception as api_error:
+                                        logger.warning(f"   ⚠️ Не удалось сохранить параметры для {symbol} (API недоступен): {api_error}")
                             else:
                                 logger.debug(f"   ⏳ {symbol}: Win Rate {symbol_win_rate:.1f}% < 80% - параметры НЕ сохраняются в индивидуальные настройки")
                             
