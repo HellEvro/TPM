@@ -48,6 +48,14 @@ class AITrainer:
         # Файл для отслеживания сделок с AI решениями
         self.ai_decisions_file = os.path.join(self.data_dir, 'ai_decisions_tracking.json')
         
+        # Инициализируем хранилище данных AI
+        try:
+            from bot_engine.ai.ai_data_storage import AIDataStorage
+            self.data_storage = AIDataStorage(self.data_dir)
+        except Exception as e:
+            logger.debug(f"⚠️ Не удалось инициализировать AIDataStorage: {e}")
+            self.data_storage = None
+        
         # Загружаем существующие модели
         self._load_models()
         

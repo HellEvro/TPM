@@ -1053,6 +1053,25 @@ class NewTradingBot:
                 self.entry_timestamp = datetime.now().isoformat()
                 logger.info(f"[NEW_BOT_{self.symbol}] ✅ Позиция {side} открыта")
                 
+                # Определяем источник решения (AI или SCRIPT)
+                decision_source = 'SCRIPT'
+                ai_decision_id = None
+                ai_confidence = None
+                ai_signal = None
+                
+                if hasattr(self, 'ai_decision_id') and self.ai_decision_id:
+                    decision_source = 'AI'
+                    ai_decision_id = self.ai_decision_id
+                    # Получаем данные AI решения если доступны
+                    try:
+                        from bot_engine.ai.ai_integration import get_ai_decision
+                        ai_decision = get_ai_decision(self.ai_decision_id)
+                        if ai_decision:
+                            ai_confidence = ai_decision.get('ai_confidence')
+                            ai_signal = ai_decision.get('ai_signal')
+                    except:
+                        pass
+                
                 # ШАГ 2: Получаем реальные данные позиции (entry_price, leverage, quantity) с RETRY
                 
                 actual_entry_price = None
@@ -1303,6 +1322,44 @@ class NewTradingBot:
                         logger.info(f"[NEW_BOT_{self.symbol}] ✅ Take Profit установлен: {take_profit_price:.6f}")
                     else:
                         logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось установить TP: {tp_result.get('message') if tp_result else 'Unknown'}")
+                
+                # Сохраняем данные позиции в боте
+                self.entry_price = actual_entry_price
+                self.position_side = side
+                
+                # Получаем RSI и тренд для логирования
+                current_rsi = None
+                current_trend = None
+                try:
+                    with rsi_data_lock:
+                        coin_data = coins_rsi_data['coins'].get(self.symbol)
+                        if coin_data:
+                            current_rsi = coin_data.get('rsi')
+                            current_trend = coin_data.get('trend6h')
+                except:
+                    pass
+                
+                # ВАЖНО: Логируем открытие позиции с информацией об источнике решения
+                try:
+                    from bot_engine.bot_history import bot_history_manager
+                    position_size_usdt = abs(actual_qty) * actual_entry_price if actual_qty else self.volume_value
+                    bot_history_manager.log_position_opened(
+                        bot_id=self.symbol,
+                        symbol=self.symbol,
+                        direction=side,
+                        size=position_size_usdt,
+                        entry_price=actual_entry_price,
+                        stop_loss=stop_loss_price,
+                        take_profit=take_profit_price,
+                        decision_source=decision_source,
+                        ai_decision_id=ai_decision_id,
+                        ai_confidence=ai_confidence,
+                        ai_signal=ai_signal,
+                        rsi=current_rsi,
+                        trend=current_trend
+                    )
+                except Exception as log_error:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка логирования открытия: {log_error}")
                 
                 logger.info(f"[NEW_BOT_{self.symbol}] ✅ Позиция успешно открыта с TP/SL")
                 return True
