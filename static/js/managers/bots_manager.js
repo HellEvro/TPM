@@ -2158,11 +2158,14 @@ class BotsManager {
                         description = 'Бот не создан';
                         valueElement.style.color = 'var(--text-muted, var(--text-color))';
                         
-                        // Показываем кнопку "Включить" только для монет с сигналами LONG/SHORT
+                        // Показываем кнопку "Включить" для монет с сигналами LONG/SHORT ИЛИ для ручных позиций
                         const enableBotBtn = document.getElementById('enableBotBtn');
                         if (enableBotBtn && this.selectedCoin) {
                             const signal = this.selectedCoin.signal;
-                            if (signal === 'ENTER_LONG' || signal === 'ENTER_SHORT') {
+                            const isManualPosition = this.selectedCoin.manual_position === true || this.selectedCoin.is_manual_position === true;
+                            
+                            // Показываем кнопку если есть сигнал LONG/SHORT ИЛИ есть ручная позиция
+                            if (signal === 'ENTER_LONG' || signal === 'ENTER_SHORT' || isManualPosition) {
                                 enableBotBtn.style.display = 'inline-block';
                             } else {
                                 enableBotBtn.style.display = 'none';
@@ -8581,6 +8584,18 @@ class BotsManager {
 
 // Экспортируем класс глобально сразу после определения
 window.BotsManager = BotsManager;
+
+// Глобальная функция для включения бота для текущей монеты (используется в HTML onclick)
+window.enableBotForCurrentCoin = function() {
+    if (window.botsManager && window.botsManager.selectedCoin) {
+        window.botsManager.createBot();
+    } else {
+        console.error('[enableBotForCurrentCoin] BotsManager не инициализирован или монета не выбрана');
+        if (window.showToast) {
+            window.showToast('Выберите монету для создания бота', 'warning');
+        }
+    }
+};
 
 // BotsManager инициализируется в app.js, не здесь
 // Version: 2025-10-21 03:47:29
