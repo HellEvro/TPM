@@ -404,6 +404,13 @@ class AICandlesLoader:
                     return None
             
             # Загружаем параллельно
+            logger.info("=" * 80)
+            logger.info("🚀 НАЧАЛО ПАРАЛЛЕЛЬНОЙ ЗАГРУЗКИ СВЕЧЕЙ")
+            logger.info("=" * 80)
+            logger.info(f"   📊 Всего пар для загрузки: {len(pairs)}")
+            logger.info(f"   🔄 Параллельных потоков: {max_workers}")
+            logger.info("=" * 80)
+            
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                 futures = {executor.submit(load_symbol_candles, symbol): symbol for symbol in pairs}
                 
@@ -432,6 +439,15 @@ class AICandlesLoader:
                         logger.debug(f"⚠️ Ошибка для {symbol}: {e}")
                         failed_count += 1
             
+            logger.info("=" * 80)
+            logger.info("✅ ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ЗАВЕРШЕНА")
+            logger.info("=" * 80)
+            logger.info(f"   📊 Успешно загружено: {loaded_count} монет")
+            logger.info(f"   📈 Всего свечей: {total_candles}")
+            logger.info(f"   ⚠️ Ошибок: {failed_count}")
+            logger.info(f"   📊 Данных в candles_data: {len(candles_data)} монет")
+            logger.info("=" * 80)
+            
             # Объединяем с существующими данными
             if existing_candles:
                 logger.info(f"📊 Объединяем с существующими данными ({len(existing_candles)} монет)...")
@@ -440,6 +456,15 @@ class AICandlesLoader:
                         candles_data[symbol] = data
             
             # ВАЖНО: Проверяем что есть данные для сохранения
+            logger.info("=" * 80)
+            logger.info("📊 ПРОВЕРКА ДАННЫХ ПЕРЕД СОХРАНЕНИЕМ")
+            logger.info("=" * 80)
+            logger.info(f"   📊 Загружено монет в candles_data: {len(candles_data)}")
+            logger.info(f"   📊 loaded_count: {loaded_count}")
+            logger.info(f"   📊 failed_count: {failed_count}")
+            logger.info(f"   📊 total_candles: {total_candles}")
+            logger.info("=" * 80)
+            
             if not candles_data:
                 logger.error("=" * 80)
                 logger.error("❌ КРИТИЧЕСКАЯ ОШИБКА: НЕТ ДАННЫХ ДЛЯ СОХРАНЕНИЯ!")
@@ -447,6 +472,27 @@ class AICandlesLoader:
                 logger.error(f"   📊 Загружено монет: {loaded_count}")
                 logger.error(f"   ⚠️ Ошибок: {failed_count}")
                 logger.error(f"   💡 Проверьте логи выше для деталей")
+                logger.error("=" * 80)
+                return False
+            
+            # Дополнительная проверка: убеждаемся что candles_data содержит валидные данные
+            valid_symbols = 0
+            total_valid_candles = 0
+            for symbol, data in candles_data.items():
+                if isinstance(data, dict) and 'candles' in data:
+                    candles_list = data.get('candles', [])
+                    if candles_list and len(candles_list) > 0:
+                        valid_symbols += 1
+                        total_valid_candles += len(candles_list)
+            
+            logger.info(f"   ✅ Валидных монет: {valid_symbols}")
+            logger.info(f"   ✅ Валидных свечей: {total_valid_candles}")
+            
+            if valid_symbols == 0:
+                logger.error("=" * 80)
+                logger.error("❌ КРИТИЧЕСКАЯ ОШИБКА: НЕТ ВАЛИДНЫХ ДАННЫХ ДЛЯ СОХРАНЕНИЯ!")
+                logger.error("=" * 80)
+                logger.error(f"   📊 candles_data содержит {len(candles_data)} записей, но нет валидных свечей")
                 logger.error("=" * 80)
                 return False
             
@@ -584,13 +630,15 @@ class AICandlesLoader:
                 # Создаем уникальное имя временного файла
                 temp_file = self.candles_file.with_suffix(f'.json.tmp.{uuid.uuid4().hex[:8]}')
                 
-                logger.debug(f"   💾 Сохранение во временный файл: {temp_file}")
+                logger.info(f"   💾 Сохранение во временный файл: {temp_file}")
                 
                 # Сохраняем во временный файл сначала
                 try:
+                    logger.info(f"   📝 Запись данных в файл...")
                     with open(temp_file, 'w', encoding='utf-8') as f:
                         json.dump(data_to_save, f, indent=2, ensure_ascii=False)
-                    logger.debug(f"   ✅ Временный файл создан, размер: {temp_file.stat().st_size / 1024 / 1024:.2f} MB")
+                    file_size_mb = temp_file.stat().st_size / 1024 / 1024
+                    logger.info(f"   ✅ Временный файл создан, размер: {file_size_mb:.2f} MB")
                 except Exception as write_error:
                     logger.error(f"   ❌ Ошибка записи во временный файл: {write_error}")
                     try:
@@ -602,9 +650,10 @@ class AICandlesLoader:
                 
                 # Заменяем оригинальный файл атомарно
                 if self.candles_file.exists():
-                    logger.debug(f"   🔄 Замена существующего файла: {self.candles_file}")
+                    logger.info(f"   🔄 Замена существующего файла: {self.candles_file}")
                     try:
                         self.candles_file.unlink()
+                        logger.info(f"   ✅ Старый файл удален")
                     except PermissionError:
                         if attempt < max_retries - 1:
                             try:
@@ -618,12 +667,13 @@ class AICandlesLoader:
                         else:
                             raise
                 else:
-                    logger.debug(f"   📁 Создание нового файла: {self.candles_file}")
+                    logger.info(f"   📁 Создание нового файла: {self.candles_file}")
                 
                 # Переименовываем временный файл
                 try:
+                    logger.info(f"   🔄 Переименование временного файла в {self.candles_file}...")
                     temp_file.rename(self.candles_file)
-                    logger.debug(f"   ✅ Файл переименован: {self.candles_file}")
+                    logger.info(f"   ✅ Файл переименован: {self.candles_file}")
                 except PermissionError:
                     if attempt < max_retries - 1:
                         try:
