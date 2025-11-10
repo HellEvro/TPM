@@ -1425,7 +1425,7 @@ class AITrainer:
                     
                     # Проверяем что количество не изменилось после сортировки
                     if len(candles) != original_count:
-                        logger.warning(f"   ⚠️ {symbol}: количество свечей изменилось после сортировки ({original_count} -> {len(candles)})")
+                        logger.debug(f"   ℹ️ {symbol}: количество свечей изменилось после сортировки ({original_count} -> {len(candles)})")
                     
                     # Проверяем существующую модель и количество свечей при предыдущем обучении
                     symbol_models_dir = os.path.join(self.models_dir, symbol)
