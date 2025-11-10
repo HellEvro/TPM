@@ -366,43 +366,75 @@ class AIDataCollector:
             from bot_engine.ai.ai_candles_loader import AICandlesLoader
             from bots_modules.imports_and_globals import get_exchange
             
-            logger.debug("=" * 80)
-            logger.debug("📊 ЗАГРУЗКА ВСЕХ ДОСТУПНЫХ СВЕЧЕЙ ДЛЯ AI ОБУЧЕНИЯ")
-            logger.debug("=" * 80)
+            logger.info("=" * 80)
+            logger.info("📊 ЗАГРУЗКА ВСЕХ ДОСТУПНЫХ СВЕЧЕЙ ДЛЯ AI ОБУЧЕНИЯ")
+            logger.info("=" * 80)
+            logger.info("   💡 Пытаемся получить объект биржи...")
             
-            # Пробуем получить exchange быстро (не блокируем)
+            # Пробуем получить exchange (больше попыток для надежности)
             exchange = None
-            max_attempts = 2  # Меньше попыток для быстроты
+            max_attempts = 10  # Больше попыток для надежности
+            retry_delay = 3  # секунд между попытками
+            
             for attempt in range(max_attempts):
                 try:
                     exchange = get_exchange()
                     if exchange:
-                        logger.debug(f"✅ Получен объект биржи (попытка {attempt + 1})")
+                        logger.info(f"✅ Получен объект биржи (попытка {attempt + 1}/{max_attempts})")
                         break
                 except Exception as e:
                     if attempt < max_attempts - 1:
-                        logger.debug(f"   ⏳ Попытка {attempt + 1}/{max_attempts} получить биржу...")
+                        logger.info(f"   ⏳ Попытка {attempt + 1}/{max_attempts}: bots.py еще не готов, ждем {retry_delay} сек... ({e})")
                         import time
-                        time.sleep(1)  # Короткая задержка между попытками
+                        time.sleep(retry_delay)
                     else:
-                        logger.debug(f"⚠️ Не удалось получить биржу после {max_attempts} попыток (продолжаем в фоне)")
+                        logger.warning(f"⚠️ Не удалось получить биржу после {max_attempts} попыток")
+                        logger.warning(f"   Ошибка: {e}")
             
             if not exchange:
-                logger.debug("💡 bots.py еще не готов, продолжаем попытки в фоне")
+                logger.warning("=" * 80)
+                logger.warning("⚠️ НЕ УДАЛОСЬ ПОЛУЧИТЬ ОБЪЕКТ БИРЖИ")
+                logger.warning("=" * 80)
+                logger.warning("   💡 Убедитесь что bots.py запущен и готов к работе")
+                logger.warning("   💡 Загрузка свечей будет повторена при следующей попытке")
+                logger.warning("=" * 80)
                 return False
+            
+            logger.info("=" * 80)
+            logger.info("🚀 НАЧИНАЕМ ЗАГРУЗКУ СВЕЧЕЙ")
+            logger.info("=" * 80)
+            logger.info("   💡 Это может занять несколько минут")
+            logger.info("   💡 Загружаем ПО 2000 свечей за запрос для каждой монеты")
+            logger.info("   💡 Загружаем ВСЕ доступные свечи через пагинацию")
+            logger.info("=" * 80)
             
             loader = AICandlesLoader(exchange_obj=exchange)
             success = loader.load_all_candles_full_history(max_workers=10)
             
             if success:
-                logger.info("✅ Полная история свечей загружена в data/ai/candles_full_history.json")
+                logger.info("=" * 80)
+                logger.info("✅ ПОЛНАЯ ИСТОРИЯ СВЕЧЕЙ ЗАГРУЖЕНА")
+                logger.info("=" * 80)
+                logger.info("   📁 Файл: data/ai/candles_full_history.json")
+                logger.info("   💡 Теперь AI может использовать эти данные для обучения")
+                logger.info("=" * 80)
+            else:
+                logger.warning("=" * 80)
+                logger.warning("⚠️ ЗАГРУЗКА СВЕЧЕЙ НЕ ЗАВЕРШИЛАСЬ УСПЕШНО")
+                logger.warning("=" * 80)
+                logger.warning("   💡 Проверьте логи выше для деталей")
+                logger.warning("=" * 80)
             
             return success
             
         except Exception as e:
-            logger.error(f"❌ Ошибка загрузки полной истории свечей: {e}")
+            logger.error("=" * 80)
+            logger.error("❌ ОШИБКА ЗАГРУЗКИ ПОЛНОЙ ИСТОРИИ СВЕЧЕЙ")
+            logger.error("=" * 80)
+            logger.error(f"   Ошибка: {e}")
             import traceback
             logger.error(traceback.format_exc())
+            logger.error("=" * 80)
             return False
     
     def collect_market_data(self) -> Dict:
