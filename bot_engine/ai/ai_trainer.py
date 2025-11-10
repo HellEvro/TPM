@@ -1256,7 +1256,8 @@ class AITrainer:
                 return
             
             # Сокращенный лог начала обучения
-            logger.info(f"📊 Обучение для {len(candles_data)} монет...")
+            total_coins = len(candles_data)
+            logger.info(f"📊 Обучение для {total_coins} монет...")
             
             # ОБУЧЕНИЕ ДЛЯ КАЖДОЙ МОНЕТЫ ОТДЕЛЬНО
             total_trained_coins = 0
@@ -1264,8 +1265,14 @@ class AITrainer:
             total_models_saved = 0
             total_candles_processed = 0
             
+            # ВАЖНО: Логируем прогресс каждые 50 монет
+            progress_interval = 50
+            
             # ОБУЧАЕМ КАЖДУЮ МОНЕТУ ОТДЕЛЬНО
             for symbol_idx, (symbol, candle_info) in enumerate(candles_data.items(), 1):
+                # Показываем прогресс каждые 50 монет
+                if symbol_idx % progress_interval == 0 or symbol_idx == 1:
+                    logger.info(f"   📈 Прогресс: {symbol_idx}/{total_coins} монет обработано ({symbol_idx/total_coins*100:.1f}%)")
                 try:
                     candles = candle_info.get('candles', [])
                     if not candles or len(candles) < 100:  # Нужно больше свечей для симуляции
@@ -1326,9 +1333,12 @@ class AITrainer:
                     candles_increased = current_candles_count > previous_candles_count
                     increase_percent = ((current_candles_count - previous_candles_count) / previous_candles_count * 100) if previous_candles_count > 0 else 0
                     
-                    # Детальные логи только для DEBUG (оптимизация производительности)
-                    logger.debug(f"🎓 [{symbol_idx}/{len(candles_data)}] ОБУЧЕНИЕ ДЛЯ {symbol}")
-                    logger.debug(f"   📊 Свечей: {len(candles)}")
+                    # Показываем прогресс для каждой монеты (но не слишком часто)
+                    if symbol_idx % progress_interval == 0 or symbol_idx == 1 or symbol_idx == total_coins:
+                        logger.info(f"   🎓 [{symbol_idx}/{total_coins}] Обработка {symbol}... ({len(candles)} свечей)")
+                    else:
+                        logger.debug(f"🎓 [{symbol_idx}/{total_coins}] ОБУЧЕНИЕ ДЛЯ {symbol}")
+                        logger.debug(f"   📊 Свечей: {len(candles)}")
                     
                     if model_exists:
                         if candles_increased:
@@ -1820,9 +1830,9 @@ class AITrainer:
                     
                     total_trained_coins += 1
                     
-                    # Логируем прогресс каждые 50 монет (реже для оптимизации)
-                    if total_trained_coins % 50 == 0:
-                        logger.info(f"📊 Прогресс: {total_trained_coins}/{len(candles_data)} монет, {total_models_saved} моделей сохранено...")
+                    # Логируем прогресс каждые 50 монет или при сохранении модели с Win Rate >= 80%
+                    if total_trained_coins % progress_interval == 0:
+                        logger.info(f"   📊 Прогресс: {total_trained_coins}/{total_coins} монет обработано ({total_trained_coins/total_coins*100:.1f}%), {total_models_saved} моделей сохранено")
                     
                 except Exception as e:
                     logger.warning(f"⚠️ Ошибка обучения для {symbol}: {e}")
@@ -1831,15 +1841,21 @@ class AITrainer:
                     total_failed_coins += 1
                     continue
             
-            # Итоговая статистика (кратко)
-            logger.info(f"✅ Обучение завершено: {total_trained_coins} монет, {total_models_saved} моделей сохранено, {total_failed_coins} ошибок")
+            # Итоговая статистика
+            logger.info("=" * 80)
+            logger.info(f"✅ ОБУЧЕНИЕ ЗАВЕРШЕНО")
+            logger.info(f"   📈 Монет обработано: {total_trained_coins}")
+            logger.info(f"   ✅ Моделей сохранено: {total_models_saved}")
+            logger.info(f"   ⚠️ Ошибок: {total_failed_coins}")
+            logger.info(f"   📊 Свечей обработано: {total_candles_processed:,}")
             
             # Статистика использования параметров
             if self.param_tracker:
                 stats = self.param_tracker.get_usage_stats()
-                logger.info(f"📊 Параметры: использовано {stats['used_combinations']} из {stats['total_combinations']} комбинаций ({stats['usage_percentage']:.2f}%)")
+                logger.info(f"   📊 Параметры: использовано {stats['used_combinations']} из {stats['total_combinations']} комбинаций ({stats['usage_percentage']:.2f}%)")
                 if stats['is_exhausted']:
-                    logger.warning("⚠️ Параметры почти исчерпаны! Рекомендуется переключиться на обучение на реальных сделках")
+                    logger.warning("   ⚠️ Параметры почти исчерпаны! Рекомендуется переключиться на обучение на реальных сделках")
+            logger.info("=" * 80)
             
             # Также создаем общую модель на всех данных (для монет без индивидуальных моделей)
             logger.info("💡 Общая модель будет создана при следующем обучении (после сбора всех сделок)")
