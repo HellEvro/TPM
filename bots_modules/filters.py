@@ -925,7 +925,7 @@ def load_all_coins_candles_fast():
             
             with concurrent.futures.ThreadPoolExecutor(max_workers=current_max_workers) as executor:
                 future_to_symbol = {
-                    executor.submit(get_coin_candles_only, symbol, current_exchange): symbol 
+                    executor.submit(get_coin_candles_only, symbol, current_exchange): symbol
                     for symbol in batch
                 }
                 
