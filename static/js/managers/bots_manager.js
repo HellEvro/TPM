@@ -7939,10 +7939,15 @@ class BotsManager {
                 case 'signals':
                     await this.loadBotSignals(filters);
                     break;
+                case 'ai':
+                    await this.loadAIHistory();
+                    break;
             }
             
-            // Загружаем статистику
-            await this.loadHistoryStatistics(filters);
+            // Загружаем статистику (если не AI вкладка)
+            if (targetTab !== 'ai') {
+                await this.loadHistoryStatistics(filters);
+            }
             
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка загрузки данных истории:', error);
@@ -7963,13 +7968,139 @@ class BotsManager {
         const actionValue = actionValueRaw !== 'all' ? actionValueRaw.toUpperCase() : 'all';
         const periodValue = dateFilter ? (dateFilter.value || 'all') : 'all';
 
+        const decisionSourceFilter = document.getElementById('historyDecisionSourceFilter');
+        const resultFilter = document.getElementById('historyResultFilter');
+        
         return {
             symbol: symbolValue,
             action_type: actionValue,
             trade_type: actionValue,
             period: periodValue,
+            decision_source: decisionSourceFilter ? decisionSourceFilter.value : 'all',
+            result: resultFilter ? resultFilter.value : 'all',
             limit: 100
         };
+    }
+    
+    /**
+     * Загружает AI историю
+     */
+    async loadAIHistory() {
+        try {
+            // Загружаем статистику AI vs скриптовые
+            await this.loadAIStats();
+            
+            // Загружаем решения AI
+            await this.loadAIDecisions();
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка загрузки AI истории:', error);
+        }
+    }
+    
+    /**
+     * Загружает статистику AI vs скриптовые
+     */
+    async loadAIStats() {
+        try {
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/ai/stats`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const { ai, script, comparison } = data;
+                
+                // Обновляем UI
+                const aiTotalEl = document.getElementById('aiTotalDecisions');
+                const aiWinRateEl = document.getElementById('aiWinRate');
+                const scriptTotalEl = document.getElementById('scriptTotalDecisions');
+                const scriptWinRateEl = document.getElementById('scriptWinRate');
+                const comparisonWinRateEl = document.getElementById('comparisonWinRate');
+                const comparisonAvgPnlEl = document.getElementById('comparisonAvgPnl');
+                
+                if (aiTotalEl) aiTotalEl.textContent = ai.total || 0;
+                if (aiWinRateEl) aiWinRateEl.textContent = `Win Rate: ${ai.win_rate?.toFixed(1) || 0}%`;
+                
+                if (scriptTotalEl) scriptTotalEl.textContent = script.total || 0;
+                if (scriptWinRateEl) scriptWinRateEl.textContent = `Win Rate: ${script.win_rate?.toFixed(1) || 0}%`;
+                
+                const winRateDiff = comparison.win_rate_diff || 0;
+                const avgPnlDiff = comparison.avg_pnl_diff || 0;
+                
+                if (comparisonWinRateEl) {
+                    comparisonWinRateEl.textContent = `${winRateDiff >= 0 ? '+' : ''}${winRateDiff.toFixed(1)}%`;
+                    comparisonWinRateEl.className = `stat-value ${winRateDiff >= 0 ? 'profit' : 'loss'}`;
+                }
+                
+                if (comparisonAvgPnlEl) {
+                    comparisonAvgPnlEl.textContent = `Avg PnL: ${avgPnlDiff >= 0 ? '+' : ''}${avgPnlDiff.toFixed(2)} USDT`;
+                }
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка загрузки статистики AI:', error);
+        }
+    }
+    
+    /**
+     * Загружает решения AI
+     */
+    async loadAIDecisions() {
+        try {
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/ai/decisions?limit=100`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.displayAIDecisions(data.decisions || []);
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка загрузки решений AI:', error);
+        }
+    }
+    
+    /**
+     * Отображает решения AI
+     */
+    displayAIDecisions(decisions) {
+        const container = document.getElementById('aiDecisionsList');
+        if (!container) return;
+        
+        if (decisions.length === 0) {
+            container.innerHTML = `
+                <div class="empty-history-state">
+                    <div class="empty-icon">🤖</div>
+                    <p>Решения AI не найдены</p>
+                    <small>Решения AI будут отображаться здесь</small>
+                </div>
+            `;
+            return;
+        }
+        
+        const html = decisions.map(decision => {
+            const status = decision.status || 'PENDING';
+            const statusClass = status === 'SUCCESS' ? 'success' : status === 'FAILED' ? 'failed' : 'pending';
+            const statusIcon = status === 'SUCCESS' ? '✅' : status === 'FAILED' ? '❌' : '⏳';
+            
+            return `
+            <div class="history-item ai-decision-item ${statusClass}">
+                <div class="history-item-header">
+                    <span class="ai-decision-symbol">${decision.symbol || 'N/A'}</span>
+                    <span class="ai-decision-status">${statusIcon} ${status}</span>
+                    <span class="history-timestamp">${this.formatTimestamp(decision.timestamp)}</span>
+                </div>
+                <div class="history-item-content">
+                    <div class="ai-decision-details">
+                        <div>Направление: <strong>${decision.direction || 'N/A'}</strong></div>
+                        <div>RSI: ${decision.rsi?.toFixed(2) || 'N/A'}</div>
+                        <div>Тренд: ${decision.trend || 'N/A'}</div>
+                        <div>Цена: ${decision.price?.toFixed(4) || 'N/A'}</div>
+                        ${decision.ai_confidence ? `<div>Уверенность AI: <strong>${(decision.ai_confidence * 100).toFixed(0)}%</strong></div>` : ''}
+                        ${decision.pnl !== undefined ? `<div class="trade-pnl ${decision.pnl >= 0 ? 'profit' : 'loss'}">PnL: ${decision.pnl.toFixed(2)} USDT</div>` : ''}
+                        ${decision.roi !== undefined ? `<div class="trade-roi ${decision.roi >= 0 ? 'profit' : 'loss'}">ROI: ${decision.roi.toFixed(2)}%</div>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        }).join('');
+        
+        container.innerHTML = html;
     }
 
     /**
@@ -8012,7 +8143,23 @@ class BotsManager {
             const data = await response.json();
             
             if (data.success) {
-                this.displayBotTrades(data.trades);
+                let trades = data.trades || [];
+                
+                // Фильтруем по источнику решения
+                if (filters.decision_source && filters.decision_source !== 'all') {
+                    trades = trades.filter(t => t.decision_source === filters.decision_source);
+                }
+                
+                // Фильтруем по результату
+                if (filters.result && filters.result !== 'all') {
+                    if (filters.result === 'successful') {
+                        trades = trades.filter(t => t.is_successful === true || (t.pnl !== null && t.pnl > 0));
+                    } else if (filters.result === 'failed') {
+                        trades = trades.filter(t => t.is_successful === false || (t.pnl !== null && t.pnl <= 0));
+                    }
+                }
+                
+                this.displayBotTrades(trades);
             } else {
                 throw new Error(data.error || 'Ошибка загрузки сделок');
             }
@@ -8123,10 +8270,23 @@ class BotsManager {
             return;
         }
         
-        const html = trades.map(trade => `
-            <div class="history-item trade-item ${trade.status === 'CLOSED' ? 'closed' : 'open'}">
+        const html = trades.map(trade => {
+            // Определяем индикатор источника решения
+            const decisionSource = trade.decision_source || 'SCRIPT';
+            const aiIndicator = decisionSource === 'AI' 
+                ? `<span class="ai-indicator" title="AI решение${trade.ai_confidence ? ` (уверенность: ${(trade.ai_confidence * 100).toFixed(0)}%)` : ''}">🤖 AI</span>`
+                : `<span class="script-indicator" title="Скриптовое правило">📜 SCRIPT</span>`;
+            
+            const resultIndicator = trade.is_successful !== undefined 
+                ? (trade.is_successful ? '<span class="result-indicator success" title="Успешная сделка">✅</span>' : '<span class="result-indicator failed" title="Неуспешная сделка">❌</span>')
+                : '';
+            
+            return `
+            <div class="history-item trade-item ${trade.status === 'CLOSED' ? 'closed' : 'open'} ${decisionSource.toLowerCase()}">
                 <div class="history-item-header">
                     <span class="history-trade-direction ${trade.direction.toLowerCase()}">${trade.direction}</span>
+                    ${aiIndicator}
+                    ${resultIndicator}
                     <span class="history-timestamp">${this.formatTimestamp(trade.timestamp)}</span>
                 </div>
                 <div class="history-item-content">
@@ -8137,11 +8297,13 @@ class BotsManager {
                         <div class="trade-size">Размер: ${trade.size}</div>
                         ${trade.pnl !== null ? `<div class="trade-pnl ${trade.pnl >= 0 ? 'profit' : 'loss'}">PnL: ${trade.pnl.toFixed(2)} USDT</div>` : ''}
                         ${trade.roi !== null ? `<div class="trade-roi ${trade.roi >= 0 ? 'profit' : 'loss'}">ROI: ${trade.roi.toFixed(2)}%</div>` : ''}
+                        ${trade.ai_confidence ? `<div class="ai-confidence">AI уверенность: ${(trade.ai_confidence * 100).toFixed(0)}%</div>` : ''}
                     </div>
                     <div class="trade-status">Статус: ${trade.status === 'OPEN' ? 'Открыта' : 'Закрыта'}</div>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
         
         container.innerHTML = html;
     }
