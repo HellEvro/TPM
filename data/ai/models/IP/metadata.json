@@ -1,0 +1,22 @@
+{
+  "symbol": "IP",
+  "trained_at": "2025-11-10T06:27:04.485416",
+  "training_seed": 217502,
+  "coin_model_seed": 217666,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 68,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 36
+  },
+  "candles_count": 1094,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.604324845111876e-05,
+  "total_pnl": 5.221514348918199,
+  "previous_candles_count": 1092,
+  "candles_increased": true
+}
