@@ -14,6 +14,8 @@
 import os
 import json
 import logging
+import time
+import uuid
 from typing import Dict, List, Optional
 from datetime import datetime
 import numpy as np
@@ -71,13 +73,74 @@ class AIContinuousLearning:
         }
     
     def _save_knowledge_base(self):
-        """Сохранить базу знаний"""
-        try:
-            self.knowledge_base['last_update'] = datetime.now().isoformat()
-            with open(self.knowledge_base_file, 'w', encoding='utf-8') as f:
-                json.dump(self.knowledge_base, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            logger.error(f"❌ Ошибка сохранения базы знаний: {e}")
+        """Сохранить базу знаний (безопасно с retry логикой)"""
+        max_retries = 5
+        retry_delay = 0.5
+        
+        for attempt in range(max_retries):
+            try:
+                self.knowledge_base['last_update'] = datetime.now().isoformat()
+                
+                # Создаем уникальное имя временного файла
+                temp_file = f"{self.knowledge_base_file}.tmp.{uuid.uuid4().hex[:8]}"
+                
+                # Сохраняем во временный файл
+                try:
+                    with open(temp_file, 'w', encoding='utf-8') as f:
+                        json.dump(self.knowledge_base, f, indent=2, ensure_ascii=False)
+                except Exception as write_error:
+                    try:
+                        if os.path.exists(temp_file):
+                            os.remove(temp_file)
+                    except:
+                        pass
+                    raise write_error
+                
+                # Заменяем оригинальный файл
+                if os.path.exists(self.knowledge_base_file):
+                    try:
+                        os.remove(self.knowledge_base_file)
+                    except PermissionError:
+                        if attempt < max_retries - 1:
+                            try:
+                                if os.path.exists(temp_file):
+                                    os.remove(temp_file)
+                            except:
+                                pass
+                            time.sleep(retry_delay * (attempt + 1))
+                            continue
+                        else:
+                            raise
+                
+                # Переименовываем временный файл
+                try:
+                    os.rename(temp_file, self.knowledge_base_file)
+                except PermissionError:
+                    if attempt < max_retries - 1:
+                        try:
+                            if os.path.exists(temp_file):
+                                os.remove(temp_file)
+                        except:
+                            pass
+                        time.sleep(retry_delay * (attempt + 1))
+                        continue
+                    else:
+                        raise
+                
+                # Успешно сохранено
+                return
+                
+            except (PermissionError, OSError) as file_error:
+                if attempt < max_retries - 1:
+                    logger.debug(f"⚠️ Файл {self.knowledge_base_file} занят, повторная попытка {attempt + 1}/{max_retries}...")
+                    time.sleep(retry_delay * (attempt + 1))
+                    continue
+                else:
+                    logger.warning(f"⚠️ Не удалось сохранить базу знаний после {max_retries} попыток")
+                    logger.debug(f"   Ошибка: {file_error}")
+            except Exception as e:
+                logger.error(f"❌ Ошибка сохранения базы знаний: {e}")
+                return
     
     def analyze_trade_results(self, trades: List[Dict]) -> Dict:
         """
