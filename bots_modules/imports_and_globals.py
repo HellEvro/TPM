@@ -51,8 +51,7 @@ try:
         save_process_state as storage_save_process_state,
         load_process_state as storage_load_process_state,
         save_system_config as storage_save_system_config,
-        load_system_config as storage_load_system_config,
-        INDIVIDUAL_COIN_SETTINGS_FILE
+        load_system_config as storage_load_system_config
     )
     from bot_engine.signal_processor import get_effective_signal, check_autobot_filters, process_auto_bot_signals
     # ❌ ОТКЛЮЧЕНО: optimal_ema_manager перемещен в backup (EMA фильтр убран)
@@ -561,13 +560,6 @@ bots_data = {
 rsi_data_lock = threading.Lock()
 bots_data_lock = threading.Lock()
 
-# Служебные данные для отслеживания обновлений индивидуальных настроек
-_individual_settings_state = {
-    'last_check': 0.0,
-    'last_mtime': None
-}
-_individual_settings_lock = threading.Lock()
-
 # Загружаем сохраненную конфигурацию Auto Bot
 def load_auto_bot_config():
     """Загружает конфигурацию Auto Bot из bot_config.py
@@ -662,54 +654,6 @@ def set_individual_coin_settings(symbol, settings, persist=True):
         save_individual_coin_settings()
     logger.info(f"[COIN_SETTINGS] 💾 Настройки для {normalized} обновлены")
     return get_individual_coin_settings(normalized)
-
-
-def refresh_individual_coin_settings_if_needed(force=False, check_interval=None):
-    """
-    Перечитывает файл индивидуальных настроек при изменении.
-
-    Args:
-        force (bool): Принудительно загрузить файл независимо от условий.
-        check_interval (int | None): Минимальный интервал между проверками (сек).
-                                     По умолчанию используется SystemConfig.UI_REFRESH_INTERVAL.
-
-    Returns:
-        bool: True если настройки были обновлены, иначе False.
-    """
-    try:
-        if check_interval is None:
-            check_interval = max(1, int(SystemConfig.UI_REFRESH_INTERVAL))
-    except Exception:
-        check_interval = 3
-
-    now = time.time()
-    with _individual_settings_lock:
-        last_check = _individual_settings_state['last_check']
-        if not force and (now - last_check) < check_interval:
-            return False
-        _individual_settings_state['last_check'] = now
-
-    file_path = INDIVIDUAL_COIN_SETTINGS_FILE
-    if not os.path.isabs(file_path):
-        file_path = os.path.abspath(file_path)
-
-    try:
-        mtime = os.path.getmtime(file_path)
-    except FileNotFoundError:
-        mtime = None
-    except Exception as exc:
-        logger.debug(f"[COIN_SETTINGS] ⚠️ Не удалось получить mtime файла индивидуальных настроек: {exc}")
-        mtime = None
-
-    with _individual_settings_lock:
-        last_mtime = _individual_settings_state['last_mtime']
-        if not force and mtime == last_mtime:
-            return False
-        _individual_settings_state['last_mtime'] = mtime
-
-    load_individual_coin_settings()
-    logger.debug("[COIN_SETTINGS] 🔄 Индивидуальные настройки обновлены из файла")
-    return True
 
 
 def remove_individual_coin_settings(symbol, persist=True):
@@ -947,13 +891,7 @@ def restore_lost_bots():
         if restored_bots:
             logger.info(f"[REGISTRY] 🎯 Восстановлено {len(restored_bots)} ботов: {restored_bots}")
             # Сохраняем состояние
-            try:
-                with bots_data_lock:
-                    bots_snapshot = deepcopy(bots_data.get('bots', {}))
-                    config_snapshot = deepcopy(bots_data.get('auto_bot_config', {}))
-                storage_save_bots_state(bots_snapshot, config_snapshot)
-            except Exception as save_error:
-                logger.error(f"[REGISTRY] ❌ Не удалось сохранить состояние ботов после восстановления: {save_error}")
+            save_bots_state()
         else:
             logger.info("[REGISTRY] ℹ️ Ботов для восстановления не найдено")
         
