@@ -163,14 +163,14 @@ class AITrainer:
                     json.dump(metadata, f, indent=2, ensure_ascii=False)
             
             if self.scaler:
-                joblib.dump(self.scaler, scaler_path)
+            joblib.dump(self.scaler, scaler_path)
                 logger.info(f"✅ Сохранен scaler: {scaler_path}")
                 saved_count += 1
             
             logger.info(f"💾 Сохранено моделей: {saved_count}/3")
             logger.info(f"📁 Модели сохранены в: {self.models_dir}")
             logger.info("🤖 Модели готовы к использованию ботами!")
-                
+            
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения моделей: {e}")
             import traceback
@@ -188,16 +188,10 @@ class AITrainer:
         ВАЖНО: AI использует ТОЛЬКО закрытые сделки с PnL (status='CLOSED' и pnl != None)
         Это нужно для обучения на реальных результатах торговли
         """
-        logger.info("=" * 80)
-        logger.info("📊 ЗАГРУЗКА РЕАЛЬНЫХ СДЕЛОК ДЛЯ ОБУЧЕНИЯ AI")
-        logger.info("=" * 80)
-        logger.info("   💡 AI получает сделки из следующих источников:")
-        logger.info("      1. data/ai/history_data.json (данные через API)")
-        logger.info("      2. data/bot_history.json (основной файл bots.py)")
-        logger.info("      3. API /api/bots/trades (если файлы недоступны)")
-        logger.info("   💡 AI использует ТОЛЬКО закрытые сделки с PnL")
-        logger.info("      (status='CLOSED' и pnl != None)")
-        logger.info("=" * 80)
+        # Сокращенные логи (детали только для DEBUG)
+        logger.debug("📊 Загрузка реальных сделок для обучения AI")
+        logger.debug("   Источники: history_data.json, bot_history.json, API /api/bots/trades")
+        logger.debug("   Используются только закрытые сделки с PnL")
         
         trades = []
         source_counts = {}
@@ -206,7 +200,7 @@ class AITrainer:
         try:
             history_file = os.path.join(self.data_dir, 'history_data.json')
             if os.path.exists(history_file):
-                logger.info(f"📖 Источник 1: Чтение {history_file}...")
+                logger.debug(f"📖 Источник 1: {history_file}")
                 with open(history_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 
@@ -218,7 +212,7 @@ class AITrainer:
                 latest_trades = latest.get('trades', []) if latest else []
                 if latest_trades:
                     trades.extend(latest_trades)
-                    logger.info(f"   ✅ Загружено {len(latest_trades)} сделок из 'latest'")
+                    logger.debug(f"   ✅ Загружено {len(latest_trades)} сделок из 'latest'")
                 
                 # Добавляем сделки из истории
                 history_trades_count = 0
@@ -229,11 +223,11 @@ class AITrainer:
                         history_trades_count += len(entry_trades)
                 
                 if history_trades_count > 0:
-                    logger.info(f"   ✅ Загружено {history_trades_count} сделок из 'history'")
+                    logger.debug(f"   ✅ Загружено {history_trades_count} сделок из 'history'")
                 
                 source_counts['history_data.json'] = len(latest_trades) + history_trades_count
             else:
-                logger.info(f"   ⏳ Файл {history_file} не найден (пропускаем)")
+                logger.debug(f"   ⏳ Файл {history_file} не найден")
         except Exception as e:
             logger.warning(f"   ⚠️ Ошибка загрузки history_data.json: {e}")
         
@@ -241,7 +235,7 @@ class AITrainer:
         try:
             bot_history_file = os.path.join('data', 'bot_history.json')
             if os.path.exists(bot_history_file):
-                logger.info(f"📖 Источник 2: Чтение {bot_history_file}...")
+                logger.debug(f"📖 Источник 2: {bot_history_file}")
                 with open(bot_history_file, 'r', encoding='utf-8') as f:
                     bot_history_data = json.load(f)
                 
@@ -257,14 +251,12 @@ class AITrainer:
                             trades.append(trade)
                             new_trades.append(trade)
                     
-                    logger.info(f"   ✅ Найдено {len(bot_trades)} сделок в файле")
-                    logger.info(f"   ✅ Добавлено {len(new_trades)} новых сделок (без дубликатов)")
+                    logger.debug(f"   ✅ Найдено {len(bot_trades)} сделок, добавлено {len(new_trades)} новых")
                     source_counts['bot_history.json'] = len(new_trades)
                 else:
-                    logger.info(f"   ⏳ В файле нет сделок (trades пустой)")
+                    logger.debug(f"   ⏳ В файле нет сделок")
             else:
-                logger.info(f"   ⏳ Файл {bot_history_file} не найден")
-                logger.info(f"   💡 Этот файл создается автоматически когда bots.py совершает сделки")
+                logger.debug(f"   ⏳ Файл {bot_history_file} не найден")
         except json.JSONDecodeError as json_error:
             logger.warning(f"   ⚠️ Файл bot_history.json поврежден (JSON ошибка на позиции {json_error.pos})")
             logger.info("   🗑️ Удаляем поврежденный файл, bots.py пересоздаст его автоматически")
@@ -276,14 +268,11 @@ class AITrainer:
         except Exception as e:
             logger.warning(f"   ⚠️ Ошибка загрузки bot_history.json: {e}")
         
-        # 3. Анализируем загруженные сделки
-        logger.info("=" * 80)
-        logger.info("📊 АНАЛИЗ ЗАГРУЖЕННЫХ СДЕЛОК")
-        logger.info("=" * 80)
-        logger.info(f"   📊 Всего загружено сделок: {len(trades)}")
+        # 3. Анализируем загруженные сделки (сокращенные логи)
+        logger.debug(f"📊 Всего загружено сделок: {len(trades)}")
         
         if trades:
-            # Анализируем статусы сделок
+            # Анализируем статусы сделок (только для DEBUG)
             statuses = {}
             pnl_count = 0
             closed_count = 0
@@ -298,24 +287,16 @@ class AITrainer:
                 if status == 'CLOSED':
                     closed_count += 1
             
-            logger.info(f"   📊 По статусам:")
-            for status, count in statuses.items():
-                logger.info(f"      - {status}: {count}")
-            logger.info(f"   📊 С PnL: {pnl_count}")
-            logger.info(f"   📊 Закрытых: {closed_count}")
+            logger.debug(f"   По статусам: {dict(statuses)}, С PnL: {pnl_count}, Закрытых: {closed_count}")
         else:
-            logger.warning("   ⚠️ Сделки не найдены ни в одном источнике!")
-            logger.info("   💡 Убедитесь что:")
-            logger.info("      1. bots.py запущен и работает")
-            logger.info("      2. Боты совершают сделки")
-            logger.info("      3. Сделки закрываются с PnL")
+            logger.warning("⚠️ Сделки не найдены! Убедитесь что bots.py запущен и совершает сделки.")
         
         # 4. Фильтруем только закрытые сделки с PnL
-        closed_trades = [
-            t for t in trades
-            if t.get('status') == 'CLOSED' and t.get('pnl') is not None
-        ]
-        
+            closed_trades = [
+                t for t in trades
+                if t.get('status') == 'CLOSED' and t.get('pnl') is not None
+            ]
+            
         logger.info("=" * 80)
         logger.info("✅ РЕЗУЛЬТАТ ФИЛЬТРАЦИИ")
         logger.info("=" * 80)
@@ -1077,12 +1058,8 @@ class AITrainer:
         random.seed(training_seed)
         np.random.seed(training_seed)
         
-        logger.info("=" * 80)
-        logger.info("🤖 ОБУЧЕНИЕ НА ИСТОРИЧЕСКИХ ДАННЫХ (СИМУЛЯЦИЯ ТОРГОВЛИ)")
-        logger.info("=" * 80)
-        logger.info(f"🎲 Seed для этого обучения: {training_seed}")
-        logger.info("💡 Каждое обучение использует РАЗНЫЕ параметры и РАЗНЫЕ данные!")
-        logger.info("💡 Это обеспечивает разнообразие и предотвращает переобучение")
+        # Сокращенные логи - только seed для отслеживания
+        logger.debug(f"🎲 Seed обучения: {training_seed}")
         
         try:
             # Импортируем ВАШИ настройки из bots.py
@@ -1132,12 +1109,8 @@ class AITrainer:
             RSI_EXIT_SHORT_AGAINST_TREND = base_exit_short_against + random.randint(-5, 5)
             RSI_EXIT_SHORT_AGAINST_TREND = max(30, min(45, RSI_EXIT_SHORT_AGAINST_TREND))
             
-            logger.info("✅ Загружены настройки из bot_config.py (с вариацией для разнообразия)")
-            logger.info(f"   📊 RSI вход LONG: <= {RSI_OVERSOLD} (базовое: {base_rsi_oversold})")
-            logger.info(f"   📊 RSI вход SHORT: >= {RSI_OVERBOUGHT} (базовое: {base_rsi_overbought})")
-            logger.info(f"   📊 RSI выход LONG: {RSI_EXIT_LONG_WITH_TREND}/{RSI_EXIT_LONG_AGAINST_TREND} (базовое: {base_exit_long_with}/{base_exit_long_against})")
-            logger.info(f"   📊 RSI выход SHORT: {RSI_EXIT_SHORT_WITH_TREND}/{RSI_EXIT_SHORT_AGAINST_TREND} (базовое: {base_exit_short_with}/{base_exit_short_against})")
-            logger.info(f"   🎲 Seed: {training_seed} (обеспечивает уникальность данных)")
+            # Параметры только для DEBUG
+            logger.debug(f"RSI параметры: LONG {RSI_OVERSOLD}/{RSI_EXIT_LONG_WITH_TREND}/{RSI_EXIT_LONG_AGAINST_TREND}, SHORT {RSI_OVERBOUGHT}/{RSI_EXIT_SHORT_WITH_TREND}/{RSI_EXIT_SHORT_AGAINST_TREND}")
             
             # Импортируем функцию расчета RSI истории
             try:
@@ -1169,10 +1142,8 @@ class AITrainer:
                 logger.info("   💡 Это загрузит ВСЕ доступные свечи для всех монет через пагинацию")
                 return
             
-            logger.info(f"📊 Начинаем ИНДИВИДУАЛЬНОЕ обучение для каждой монеты из {len(candles_data)} монет...")
-            logger.info(f"💡 Для каждой монеты: симулируем торговлю → обучаем модель → сохраняем модель")
-            logger.info(f"💡 Симулируем входы/выходы используя ВАШИ настройки из bots.py")
-            logger.info("=" * 80)
+            # Сокращенный лог начала обучения
+            logger.info(f"📊 Обучение для {len(candles_data)} монет...")
             
             # ОБУЧЕНИЕ ДЛЯ КАЖДОЙ МОНЕТЫ ОТДЕЛЬНО
             total_trained_coins = 0
@@ -1233,27 +1204,21 @@ class AITrainer:
                     candles_increased = current_candles_count > previous_candles_count
                     increase_percent = ((current_candles_count - previous_candles_count) / previous_candles_count * 100) if previous_candles_count > 0 else 0
                     
-                    logger.info("=" * 80)
-                    logger.info(f"🎓 [{symbol_idx}/{len(candles_data)}] ОБУЧЕНИЕ ДЛЯ {symbol}")
-                    logger.info("=" * 80)
-                    logger.info(f"   📊 Свечей для анализа: {len(candles)} (используем ВСЕ доступные свечи)")
+                    # Детальные логи только для DEBUG (оптимизация производительности)
+                    logger.debug(f"🎓 [{symbol_idx}/{len(candles_data)}] ОБУЧЕНИЕ ДЛЯ {symbol}")
+                    logger.debug(f"   📊 Свечей: {len(candles)}")
                     
                     if model_exists:
                         if candles_increased:
-                            logger.info(f"   🔄 Модель будет ПЕРЕОБУЧЕНА: свечей стало больше!")
-                            logger.info(f"      📈 Было: {previous_candles_count} свечей")
-                            logger.info(f"      📈 Стало: {current_candles_count} свечей (+{increase_percent:.1f}%)")
-                            logger.info(f"      💡 Модель переобучится на всех {current_candles_count} свечах для лучшего качества")
+                            logger.debug(f"   🔄 Переобучение: {previous_candles_count} → {current_candles_count} (+{increase_percent:.1f}%)")
                         else:
-                            logger.info(f"   ✅ Модель существует: обучена на {previous_candles_count} свечах")
-                            logger.info(f"      💡 Переобучаем на всех {current_candles_count} свечах для актуальности")
+                            logger.debug(f"   ✅ Модель существует, переобучаем на {current_candles_count} свечах")
                     else:
-                        logger.info(f"   🆕 Новая модель: будет обучена на {current_candles_count} свечах")
+                        logger.debug(f"   🆕 Новая модель на {current_candles_count} свечах")
                     
-                    # Предупреждение если свечей меньше 1000 (возможно используется кэш вместо полной истории)
+                    # Предупреждение только если критично
                     if len(candles) <= 1000:
-                        logger.warning(f"   ⚠️ {symbol}: только {len(candles)} свечей (возможно используется candles_cache.json вместо полной истории)")
-                        logger.info(f"   💡 Убедитесь что файл data/ai/candles_full_history.json содержит больше свечей для {symbol}")
+                        logger.debug(f"   ⚠️ {symbol}: только {len(candles)} свечей (возможно кэш)")
                     
                     # Извлекаем данные из свечей
                     closes = [float(c.get('close', 0) or 0) for c in candles]
@@ -1431,13 +1396,12 @@ class AITrainer:
                         symbol_win_rate = symbol_successful / trades_for_symbol * 100
                         symbol_pnl = sum(t['pnl'] for t in simulated_trades_symbol)
                         
-                        logger.info(f"   ✅ Симулировано {trades_for_symbol} сделок")
-                        logger.info(f"   📊 Успешных: {symbol_successful} ({symbol_win_rate:.1f}%)")
-                        logger.info(f"   💰 PnL: {symbol_pnl:.2f} USDT")
+                        # Детальные логи только для DEBUG
+                        logger.debug(f"   ✅ {symbol}: {trades_for_symbol} сделок, Win Rate: {symbol_win_rate:.1f}%, PnL: {symbol_pnl:.2f} USDT")
                         
                         # ОБУЧАЕМ МОДЕЛЬ ДЛЯ ЭТОЙ МОНЕТЫ ОТДЕЛЬНО
                         if trades_for_symbol >= 5:  # Минимум 5 сделок для обучения
-                            logger.info(f"   🎓 Обучаем модель для {symbol}...")
+                            logger.debug(f"   🎓 Обучаем модель для {symbol}...")
                             
                             # Подготавливаем данные для обучения
                             X_symbol = []
@@ -1534,19 +1498,17 @@ class AITrainer:
                             with open(metadata_path, 'w', encoding='utf-8') as f:
                                 json.dump(metadata, f, indent=2, ensure_ascii=False)
                             
-                            logger.info(f"   ✅ Модель для {symbol} обучена и сохранена!")
-                            logger.info(f"      📈 Точность сигналов: {signal_score:.2%}")
-                            logger.info(f"      💰 MSE прибыли: {profit_mse:.2f}")
-                            logger.info(f"      📊 Win Rate: {symbol_win_rate:.1f}%")
+                            # Детальные метрики только для DEBUG
+                            logger.debug(f"   ✅ {symbol}: модель обучена! Accuracy: {signal_score:.2%}, MSE: {profit_mse:.2f}, Win Rate: {symbol_win_rate:.1f}%")
                             total_models_saved += 1
                         else:
-                            logger.info(f"   ⏳ Недостаточно сделок для обучения ({trades_for_symbol} < 5)")
+                            logger.debug(f"   ⏳ {symbol}: недостаточно сделок ({trades_for_symbol} < 5)")
                     
                     total_trained_coins += 1
                     
-                    # Логируем прогресс каждые 10 монет
-                    if total_trained_coins % 10 == 0:
-                        logger.info(f"📊 Прогресс: {total_trained_coins}/{len(candles_data)} монет обработано, {total_models_saved} моделей сохранено...")
+                    # Логируем прогресс каждые 50 монет (реже для оптимизации)
+                    if total_trained_coins % 50 == 0:
+                        logger.info(f"📊 Прогресс: {total_trained_coins}/{len(candles_data)} монет, {total_models_saved} моделей сохранено...")
                     
                 except Exception as e:
                     logger.warning(f"⚠️ Ошибка обучения для {symbol}: {e}")
