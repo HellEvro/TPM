@@ -163,7 +163,7 @@ class AITrainer:
                     json.dump(metadata, f, indent=2, ensure_ascii=False)
             
             if self.scaler:
-            joblib.dump(self.scaler, scaler_path)
+                joblib.dump(self.scaler, scaler_path)
                 logger.info(f"✅ Сохранен scaler: {scaler_path}")
                 saved_count += 1
             
