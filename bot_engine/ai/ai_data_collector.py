@@ -364,40 +364,59 @@ class AIDataCollector:
         """
         try:
             from bot_engine.ai.ai_candles_loader import AICandlesLoader
-            from bots_modules.imports_and_globals import get_exchange
             
             logger.info("=" * 80)
             logger.info("📊 ЗАГРУЗКА ВСЕХ ДОСТУПНЫХ СВЕЧЕЙ ДЛЯ AI ОБУЧЕНИЯ")
             logger.info("=" * 80)
-            logger.info("   💡 Пытаемся получить объект биржи...")
+            logger.info("   💡 Инициализируем биржу напрямую для загрузки свечей...")
             
-            # Пробуем получить exchange (больше попыток для надежности)
+            # ВАЖНО: Инициализируем биржу напрямую, как в bots.py
+            # Это позволяет ai.py работать независимо от bots.py
             exchange = None
-            max_attempts = 10  # Больше попыток для надежности
-            retry_delay = 3  # секунд между попытками
             
-            for attempt in range(max_attempts):
+            # Сначала пробуем получить из bots.py (если он запущен)
+            try:
+                from bots_modules.imports_and_globals import get_exchange
+                exchange = get_exchange()
+                if exchange:
+                    logger.info("✅ Получен объект биржи из bots.py")
+            except Exception as e:
+                logger.debug(f"   ⏳ Не удалось получить биржу из bots.py: {e}")
+            
+            # Если не получилось - инициализируем напрямую
+            if not exchange:
                 try:
-                    exchange = get_exchange()
+                    logger.info("   💡 Инициализируем биржу напрямую...")
+                    from exchanges.exchange_factory import ExchangeFactory
+                    from app.config import EXCHANGES
+                    
+                    exchange = ExchangeFactory.create_exchange(
+                        'BYBIT',
+                        EXCHANGES['BYBIT']['api_key'],
+                        EXCHANGES['BYBIT']['api_secret']
+                    )
+                    
                     if exchange:
-                        logger.info(f"✅ Получен объект биржи (попытка {attempt + 1}/{max_attempts})")
-                        break
-                except Exception as e:
-                    if attempt < max_attempts - 1:
-                        logger.info(f"   ⏳ Попытка {attempt + 1}/{max_attempts}: bots.py еще не готов, ждем {retry_delay} сек... ({e})")
-                        import time
-                        time.sleep(retry_delay)
+                        logger.info("✅ Биржа инициализирована напрямую")
                     else:
-                        logger.warning(f"⚠️ Не удалось получить биржу после {max_attempts} попыток")
-                        logger.warning(f"   Ошибка: {e}")
+                        logger.error("❌ ExchangeFactory вернул None")
+                        return False
+                except Exception as init_error:
+                    logger.error("=" * 80)
+                    logger.error("❌ ОШИБКА ИНИЦИАЛИЗАЦИИ БИРЖИ")
+                    logger.error("=" * 80)
+                    logger.error(f"   Ошибка: {init_error}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+                    logger.error("=" * 80)
+                    return False
             
             if not exchange:
-                logger.warning("=" * 80)
-                logger.warning("⚠️ НЕ УДАЛОСЬ ПОЛУЧИТЬ ОБЪЕКТ БИРЖИ")
-                logger.warning("=" * 80)
-                logger.warning("   💡 Убедитесь что bots.py запущен и готов к работе")
-                logger.warning("   💡 Загрузка свечей будет повторена при следующей попытке")
-                logger.warning("=" * 80)
+                logger.error("=" * 80)
+                logger.error("❌ НЕ УДАЛОСЬ ПОЛУЧИТЬ ОБЪЕКТ БИРЖИ")
+                logger.error("=" * 80)
+                logger.error("   💡 Проверьте настройки API ключей в app.config")
+                logger.error("=" * 80)
                 return False
             
             logger.info("=" * 80)
