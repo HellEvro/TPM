@@ -145,11 +145,71 @@
       "timestamp": "2025-11-10T01:50:22.428273",
       "trades": [],
       "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T06:58:40.005329",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T06:59:52.638845",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:00:24.081642",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:00:21.295482",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:01:12.358690",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:02:28.083110",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:03:15.572018",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:03:44.195003",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:04:21.306086",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:05:41.396081",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:07:06.611933",
+      "trades": [],
+      "statistics": {}
+    },
+    {
+      "timestamp": "2025-11-10T07:08:33.570264",
+      "trades": [],
+      "statistics": {}
     }
   ],
-  "last_update": "2025-11-10T01:50:28.519075",
+  "last_update": "2025-11-10T07:08:39.659007",
   "latest": {
-    "timestamp": "2025-11-10T01:50:22.428273",
+    "timestamp": "2025-11-10T07:08:33.570264",
     "trades": [],
     "statistics": {}
   }
