@@ -1,6 +1,8 @@
 from pybit.unified_trading import HTTP
 from .base_exchange import BaseExchange, with_timeout
 from http.client import IncompleteRead, RemoteDisconnected
+from collections import deque
+import threading
 import requests.exceptions
 import requests
 import time
@@ -96,6 +98,91 @@ class BybitExchange(BaseExchange):
         # Управление задержкой между запросами для предотвращения rate limit
         self.base_request_delay = 0.2  # Базовая задержка между запросами (200ms)
         self.current_request_delay = 0.2  # Текущая задержка (может увеличиваться при rate limit)
+        
+        # 📊 Кеширование и адаптивная нагрузка
+        self.chart_cache_ttl = 45  # секунды «свежести» данных
+        self._chart_cache = {}
+        self._chart_cache_lock = threading.Lock()
+        
+        self._request_window_seconds = 60
+        self._max_requests_per_window = 90
+        self._request_timestamps = deque()
+        self._throttle_lock = threading.Lock()
+        
+        self._symbol_failure_counts = {}
+        self._symbol_cooldowns = {}
+        self._cooldown_base_seconds = 20
+        self._cooldown_cap_seconds = 300
+
+    def _build_chart_cache_key(self, symbol, timeframe, period):
+        return f"{symbol}:{timeframe}:{period}"
+
+    def _get_cached_chart(self, cache_key):
+        with self._chart_cache_lock:
+            return self._chart_cache.get(cache_key)
+
+    def _store_chart_cache(self, cache_key, payload):
+        payload_copy = payload.copy()
+        payload_copy.pop('meta', None)
+        with self._chart_cache_lock:
+            self._chart_cache[cache_key] = {
+                'timestamp': time.time(),
+                'payload': payload_copy
+            }
+
+    def _cached_response(self, cached_entry, fresh=True, reason=None):
+        payload = cached_entry['payload'].copy()
+        meta = dict(payload.get('meta', {}))
+        meta.update({
+            'source': 'cache',
+            'age_seconds': max(0.0, time.time() - cached_entry['timestamp']),
+            'fresh': fresh,
+            'reason': reason
+        })
+        payload['meta'] = meta
+        return payload
+
+    def _schedule_symbol_cooldown(self, symbol):
+        failure_count = self._symbol_failure_counts.get(symbol, 0) + 1
+        self._symbol_failure_counts[symbol] = failure_count
+        cooldown = min(
+            self._cooldown_base_seconds * (2 ** (failure_count - 1)),
+            self._cooldown_cap_seconds
+        )
+        self._symbol_cooldowns[symbol] = time.time() + cooldown
+        logger.debug(f"[BYBIT] ⏳ Устанавливаем кулдаун для {symbol}: {cooldown:.1f}с (попытка {failure_count})")
+
+    def _mark_symbol_success(self, symbol):
+        if symbol in self._symbol_failure_counts:
+            logger.debug(f"[BYBIT] ✅ Сбрасываем счетчик ошибок для {symbol}")
+        self._symbol_failure_counts.pop(symbol, None)
+        self._symbol_cooldowns.pop(symbol, None)
+        self.reset_request_delay()
+
+    def _can_request_symbol(self, symbol):
+        cooldown_until = self._symbol_cooldowns.get(symbol)
+        if cooldown_until:
+            if cooldown_until > time.time():
+                return False
+            self._symbol_cooldowns.pop(symbol, None)
+        return True
+
+    def _throttle_requests(self):
+        sleep_for = 0.0
+        now = time.time()
+        with self._throttle_lock:
+            while self._request_timestamps and now - self._request_timestamps[0] > self._request_window_seconds:
+                self._request_timestamps.popleft()
+            if len(self._request_timestamps) >= self._max_requests_per_window:
+                sleep_for = self._request_window_seconds - (now - self._request_timestamps[0]) + 0.01
+        if sleep_for > 0:
+            logger.debug(f"[BYBIT] 💤 Пауза для сглаживания нагрузки: {sleep_for:.2f}с")
+            time.sleep(max(0.0, sleep_for))
+        with self._throttle_lock:
+            now = time.time()
+            while self._request_timestamps and now - self._request_timestamps[0] > self._request_window_seconds:
+                self._request_timestamps.popleft()
+            self._request_timestamps.append(now)
     
     def _setup_connection_pool(self):
         """Настраивает пул соединений для requests и pybit"""
@@ -666,6 +753,34 @@ class BybitExchange(BaseExchange):
         Returns:
             dict: Данные для построения графика
         """
+        cache_key = self._build_chart_cache_key(symbol, timeframe, period)
+        now = time.time()
+        
+        cached_entry = self._get_cached_chart(cache_key)
+        if cached_entry and now - cached_entry['timestamp'] <= self.chart_cache_ttl:
+            return self._cached_response(cached_entry, fresh=True)
+        
+        if not self._can_request_symbol(symbol):
+            if cached_entry:
+                return self._cached_response(cached_entry, fresh=False, reason='cooldown')
+            return {
+                'success': False,
+                'error': 'symbol_in_cooldown'
+            }
+        
+        def fallback_response(reason, message):
+            latest_entry = self._get_cached_chart(cache_key)
+            if latest_entry:
+                age = time.time() - latest_entry['timestamp']
+                if age <= self.chart_cache_ttl * 6:
+                    return self._cached_response(latest_entry, fresh=False, reason=reason)
+            return {
+                'success': False,
+                'error': message
+            }
+        
+        self._throttle_requests()
+        
         # Добавляем задержку для предотвращения rate limiting (динамическая задержка)
         time.sleep(self.current_request_delay)
         
@@ -714,6 +829,7 @@ class BybitExchange(BaseExchange):
                                     old_delay = self.current_request_delay
                                     self.current_request_delay *= 2
                                     logger.warning(f"[BYBIT] ⚠️ Rate limit для {symbol} ({interval_name}). Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
+                                    self._schedule_symbol_cooldown(symbol)
                                     
                                     # Ждем с увеличенной задержкой
                                     time.sleep(self.current_request_delay)
@@ -736,6 +852,7 @@ class BybitExchange(BaseExchange):
                                     old_delay = self.current_request_delay
                                     self.current_request_delay *= 2
                                     logger.warning(f"[BYBIT] ⚠️ Rate limit (исключение) для {symbol} ({interval_name}). Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
+                                    self._schedule_symbol_cooldown(symbol)
                                     
                                     # Ждем с увеличенной задержкой
                                     time.sleep(self.current_request_delay)
@@ -791,17 +908,19 @@ class BybitExchange(BaseExchange):
                     # Сортируем свечи от старых к новым
                     candles.sort(key=lambda x: x['time'])
                     
-                    return {
+                    payload = {
                         'success': True,
                         'data': {
                             'candles': candles
                         }
                     }
+                    self._store_chart_cache(cache_key, payload)
+                    self._mark_symbol_success(symbol)
+                    
+                    return payload
                 else:
-                    return {
-                        'success': False,
-                        'error': "Не удалось получить данные ни для одного интервала"
-                    }
+                    self._schedule_symbol_cooldown(symbol)
+                    return fallback_response('no_interval', "Не удалось получить данные ни для одного интервала")
             else:
                 # Стандартная обработка для конкретного таймфрейма
                 timeframe_map = {
@@ -847,6 +966,7 @@ class BybitExchange(BaseExchange):
                             old_delay = self.current_request_delay
                             self.current_request_delay *= 2
                             logger.warning(f"[BYBIT] ⚠️ Rate limit для {symbol}. Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
+                            self._schedule_symbol_cooldown(symbol)
                             
                             # Ждем с увеличенной задержкой
                             time.sleep(self.current_request_delay)
@@ -872,6 +992,7 @@ class BybitExchange(BaseExchange):
                             old_delay = self.current_request_delay
                             self.current_request_delay *= 2
                             logger.warning(f"[BYBIT] ⚠️ Rate limit (исключение) для {symbol}. Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
+                            self._schedule_symbol_cooldown(symbol)
                             
                             # Ждем с увеличенной задержкой
                             time.sleep(self.current_request_delay)
@@ -892,15 +1013,11 @@ class BybitExchange(BaseExchange):
                 
                 # Если все попытки исчерпаны
                 if response and response.get('retCode') == 10006:
-                    return {
-                        'success': False,
-                        'error': 'Rate limit exceeded, please try again later'
-                    }
+                    self._schedule_symbol_cooldown(symbol)
+                    return fallback_response('rate_limit', 'Rate limit exceeded, please try again later')
                 if response is None:
-                    return {
-                        'success': False,
-                        'error': 'Rate limit exceeded, please try again later'
-                    }
+                    self._schedule_symbol_cooldown(symbol)
+                    return fallback_response('rate_limit', 'Rate limit exceeded, please try again later')
                 
                 if response['retCode'] == 0:
                     candles = []
@@ -917,25 +1034,26 @@ class BybitExchange(BaseExchange):
                     
                     # Сортируем свечи от старых к новым
                     candles.sort(key=lambda x: x['time'])
-                    
-                    return {
+                    payload = {
                         'success': True,
                         'data': {
                             'candles': candles
                         }
                     }
+                    self._store_chart_cache(cache_key, payload)
+                    self._mark_symbol_success(symbol)
+                    
+                    return payload
                 
-                return {
-                    'success': False,
-                    'error': f"Ошибка API: {response.get('retMsg', 'Неизвестная ошибка')}"
-                }
+                self._schedule_symbol_cooldown(symbol)
+                return fallback_response('api_error', f"Ошибка API: {response.get('retMsg', 'Неизвестная ошибка')}")
             
         except Exception as e:
             print(f"[BYBIT] Ошибка получения данных графика: {e}")
-            return {
-                'success': False,
-                'error': str(e)
-            }
+            if isinstance(e, TimeoutError):
+                self._schedule_symbol_cooldown(symbol)
+                return fallback_response('timeout', str(e))
+            return fallback_response('exception', str(e))
 
     def get_indicators(self, symbol, timeframe='1h'):
         """Получение значений индикаторов
