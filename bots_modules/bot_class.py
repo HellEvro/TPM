@@ -158,14 +158,15 @@ class NewTradingBot:
                 logger.warning(f"[NEW_BOT_{self.symbol}] 🚨 ДЕЛИСТИНГ! Не открываем LONG - {delisting_info.get('reason', 'Delisting detected')}")
                 return False
             
-            # Получаем настройки из конфига
+            # Получаем настройки из конфига (ВАЖНО: сначала индивидуальные настройки бота, потом глобальные)
             with bots_data_lock:
                 auto_config = bots_data.get('auto_bot_config', {})
-                rsi_long_threshold = auto_config.get('rsi_long_threshold', 29)
-                avoid_down_trend = auto_config.get('avoid_down_trend', True)
-                rsi_time_filter_enabled = auto_config.get('rsi_time_filter_enabled', True)
-                rsi_time_filter_candles = auto_config.get('rsi_time_filter_candles', 8)
-                rsi_time_filter_lower = auto_config.get('rsi_time_filter_lower', 35)
+                # Используем индивидуальные настройки из self.config если есть, иначе из auto_config
+                rsi_long_threshold = self.config.get('rsi_long_threshold') or auto_config.get('rsi_long_threshold', 29)
+                avoid_down_trend = self.config.get('avoid_down_trend') if 'avoid_down_trend' in self.config else auto_config.get('avoid_down_trend', True)
+                rsi_time_filter_enabled = self.config.get('rsi_time_filter_enabled') if 'rsi_time_filter_enabled' in self.config else auto_config.get('rsi_time_filter_enabled', True)
+                rsi_time_filter_candles = self.config.get('rsi_time_filter_candles') or auto_config.get('rsi_time_filter_candles', 8)
+                rsi_time_filter_lower = self.config.get('rsi_time_filter_lower') or auto_config.get('rsi_time_filter_lower', 35)
                 ai_enabled = auto_config.get('ai_enabled', False)  # Включение AI
             
             # 🤖 ПРОВЕРКА AI ПРЕДСКАЗАНИЯ (если включено)
@@ -238,13 +239,14 @@ class NewTradingBot:
                 logger.warning(f"[NEW_BOT_{self.symbol}] 🚨 ДЕЛИСТИНГ! Не открываем SHORT - {delisting_info.get('reason', 'Delisting detected')}")
                 return False
             
-            # Получаем настройки из конфига
+            # Получаем настройки из конфига (ВАЖНО: сначала индивидуальные настройки бота, потом глобальные)
             with bots_data_lock:
                 auto_config = bots_data.get('auto_bot_config', {})
-                rsi_short_threshold = auto_config.get('rsi_short_threshold', 71)
-                avoid_up_trend = auto_config.get('avoid_up_trend', True)
-                rsi_time_filter_enabled = auto_config.get('rsi_time_filter_enabled', True)
-                rsi_time_filter_candles = auto_config.get('rsi_time_filter_candles', 8)
+                # Используем индивидуальные настройки из self.config если есть, иначе из auto_config
+                rsi_short_threshold = self.config.get('rsi_short_threshold') or auto_config.get('rsi_short_threshold', 71)
+                avoid_up_trend = self.config.get('avoid_up_trend') if 'avoid_up_trend' in self.config else auto_config.get('avoid_up_trend', True)
+                rsi_time_filter_enabled = self.config.get('rsi_time_filter_enabled') if 'rsi_time_filter_enabled' in self.config else auto_config.get('rsi_time_filter_enabled', True)
+                rsi_time_filter_candles = self.config.get('rsi_time_filter_candles') or auto_config.get('rsi_time_filter_candles', 8)
                 rsi_time_filter_upper = auto_config.get('rsi_time_filter_upper', 65)
                 ai_enabled = auto_config.get('ai_enabled', False)  # Включение AI
             
@@ -351,17 +353,19 @@ class NewTradingBot:
                 bot_data = bots_data.get('bots', {}).get(symbol, {})
                 entry_trend = bot_data.get('entry_trend', None)
                 
+                # ВАЖНО: Используем индивидуальные настройки из bot_data если есть, иначе из auto_config
+                
                 if position_side == 'LONG':
                     # Для LONG: проверяем был ли вход по UP тренду или против DOWN тренда
                     if entry_trend == 'UP':
                         # Вход по тренду - можем ждать большего движения
                         config_key = 'rsi_exit_long_with_trend'
-                        threshold = auto_config.get(config_key, 65)
+                        threshold = bot_data.get(config_key) or auto_config.get(config_key, 65)
                         logger.debug(f"[RSI_CHECK_{symbol}] 📈 LONG по тренду → выход на RSI >= {threshold}")
                     else:
                         # Вход против тренда или тренд неизвестен - выходим раньше
                         config_key = 'rsi_exit_long_against_trend'
-                        threshold = auto_config.get(config_key, 60)
+                        threshold = bot_data.get(config_key) or auto_config.get(config_key, 60)
                         logger.debug(f"[RSI_CHECK_{symbol}] 📉 LONG против тренда ({entry_trend}) → выход на RSI >= {threshold}")
                     
                     condition_func = lambda r, t: r >= t  # RSI >= порог для LONG
@@ -372,12 +376,12 @@ class NewTradingBot:
                     if entry_trend == 'DOWN':
                         # Вход по тренду - можем ждать большего движения
                         config_key = 'rsi_exit_short_with_trend'
-                        threshold = auto_config.get(config_key, 35)
+                        threshold = bot_data.get(config_key) or auto_config.get(config_key, 35)
                         logger.debug(f"[RSI_CHECK_{symbol}] 📉 SHORT по тренду → выход на RSI <= {threshold}")
                     else:
                         # Вход против тренда или тренд неизвестен - выходим раньше
                         config_key = 'rsi_exit_short_against_trend'
-                        threshold = auto_config.get(config_key, 40)
+                        threshold = bot_data.get(config_key) or auto_config.get(config_key, 40)
                         logger.debug(f"[RSI_CHECK_{symbol}] 📈 SHORT против тренда ({entry_trend}) → выход на RSI <= {threshold}")
                     
                     condition_func = lambda r, t: r <= t  # RSI <= порог для SHORT
