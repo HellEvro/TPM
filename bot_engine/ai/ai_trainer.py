@@ -2040,7 +2040,16 @@ class AITrainer:
                             )
                         
                             # Детальные метрики только для DEBUG
-                            logger.debug(f"   ✅ {symbol}: модель обучена! Accuracy: {signal_score:.2%}, MSE: {profit_mse:.2f}, Win Rate: {symbol_win_rate:.1f}%")
+                            if signal_score is not None and profit_mse is not None:
+                                logger.debug(
+                                    f"   ✅ {symbol}: модель обучена! Accuracy: {signal_score:.2%}, "
+                                    f"MSE: {profit_mse:.2f}, Win Rate: {symbol_win_rate:.1f}%"
+                                )
+                            else:
+                                logger.debug(
+                                    f"   ✅ {symbol}: модель обучена! Win Rate: {symbol_win_rate:.1f}% "
+                                    "(метрики не вычислены)"
+                                )
                             total_models_saved += 1
                             model_trained = True
 
