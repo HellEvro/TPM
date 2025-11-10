@@ -24,6 +24,8 @@ import json
 import time
 import logging
 import threading
+import argparse
+from multiprocessing import Process
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import requests
@@ -98,6 +100,17 @@ AI_CONFIG = {
     'auto_trading': False,  # Автоматическая торговля через AI
     'min_trades_for_training': 50,  # Минимум сделок для обучения
     'backtest_period_days': 30,  # Период бэктеста
+    # Флаги включения подсистем (используются разными режимами запуска)
+    'enable_data_service': True,
+    'enable_training': True,
+    'enable_backtest': True,
+    'enable_optimizer': True,
+    # Дополнительные настройки для разделения ролей
+    'wait_for_data_service': False,
+    'training_refresh_data': True,
+    'data_status_file': os.path.join('data', 'ai', 'status', 'data_service.json'),
+    'data_ready_timeout': 900,  # 15 минут
+    'instance_name': 'Main',
 }
 
 
@@ -114,6 +127,8 @@ class AISystem:
             config: Конфигурация системы
         """
         self.config = {**AI_CONFIG, **(config or {})}
+        self.instance_name = self.config.get('instance_name', 'Main')
+        self.data_status_file = self.config.get('data_status_file')
         self.running = False
         self.threads = []
         
@@ -140,22 +155,31 @@ class AISystem:
                 logger.debug(f"Существующие AI модули недоступны: {e}")
         
         try:
-            self.data_collector = AIDataCollector(
-                bots_service_url=self.config['bots_service_url'],
-                app_service_url=self.config['app_service_url']
-            )
-            logger.info("✅ AIDataCollector инициализирован")
+            need_data_collector = self.config.get('enable_data_service', False) or self.config.get('training_refresh_data', True)
+            if need_data_collector:
+                self.data_collector = AIDataCollector(
+                    bots_service_url=self.config['bots_service_url'],
+                    app_service_url=self.config['app_service_url']
+                )
+                logger.info("✅ AIDataCollector инициализирован")
+            else:
+                self.data_collector = None
+                logger.debug("ℹ️ AIDataCollector не требуется в текущем режиме")
         except Exception as e:
             logger.error(f"❌ Ошибка инициализации AIDataCollector: {e}")
             self.data_collector = None
         
         try:
-            # Используем существующие данные для обучения если доступны
-            self.trainer = AITrainer()
-            if self.existing_ai_manager:
-                logger.info("✅ AITrainer инициализирован (использует существующие данные)")
+            if self.config.get('enable_training', False):
+                # Используем существующие данные для обучения если доступны
+                self.trainer = AITrainer()
+                if self.existing_ai_manager:
+                    logger.info("✅ AITrainer инициализирован (использует существующие данные)")
+                else:
+                    logger.info("✅ AITrainer инициализирован")
             else:
-                logger.info("✅ AITrainer инициализирован")
+                self.trainer = None
+                logger.debug("ℹ️ AITrainer отключён (режим без обучения)")
         except Exception as e:
             logger.error(f"❌ Ошибка инициализации AITrainer: {e}")
             self.trainer = None
@@ -170,15 +194,23 @@ class AISystem:
                 except:
                     self.existing_backtester = None
             
-            self.backtester = AIBacktester()
-            logger.info("✅ AIBacktester инициализирован")
+            if self.config.get('enable_backtest', False):
+                self.backtester = AIBacktester()
+                logger.info("✅ AIBacktester инициализирован")
+            else:
+                self.backtester = None
+                logger.debug("ℹ️ AIBacktester отключён (режим без бэктеста)")
         except Exception as e:
             logger.error(f"❌ Ошибка инициализации AIBacktester: {e}")
             self.backtester = None
         
         try:
-            self.strategy_optimizer = AIStrategyOptimizer()
-            logger.info("✅ AIStrategyOptimizer инициализирован")
+            if self.config.get('enable_optimizer', False):
+                self.strategy_optimizer = AIStrategyOptimizer()
+                logger.info("✅ AIStrategyOptimizer инициализирован")
+            else:
+                self.strategy_optimizer = None
+                logger.debug("ℹ️ AIStrategyOptimizer отключён (режим без оптимизации)")
         except Exception as e:
             logger.error(f"❌ Ошибка инициализации AIStrategyOptimizer: {e}")
             self.strategy_optimizer = None
@@ -207,9 +239,13 @@ class AISystem:
         logger.info("🚀 Запуск AI системы...")
         
         self.running = True
+        data_service_enabled = self.config.get('enable_data_service', False)
+        training_enabled = self.config.get('enable_training', False)
+        backtest_enabled = self.config.get('enable_backtest', False)
+        optimizer_enabled = self.config.get('enable_optimizer', False)
         
-        # ВАЖНО: Загружаем/обновляем полную историю свечей при каждом запуске
-        if self.data_collector:
+        # ВАЖНО: Загружаем/обновляем полную историю свечей при каждом запуске (только для data-service)
+        if self.data_collector and data_service_enabled:
             full_history_file = os.path.join('data', 'ai', 'candles_full_history.json')
             
             if not os.path.exists(full_history_file):
@@ -231,6 +267,7 @@ class AISystem:
                             success = self.data_collector.load_full_candles_history()
                             if success:
                                 logger.info("✅ История свечей загружена")
+                                self._update_data_status(history_loaded=True, ready=True)
                                 return
                             else:
                                 if attempt < max_retries - 1:
@@ -259,9 +296,11 @@ class AISystem:
             )
             candles_thread.start()
             logger.info("   ✅ Загрузка/обновление свечей запущено в фоне")
+        elif not data_service_enabled:
+            logger.debug("🔕 Режим без загрузки свечей (data-service отключен)")
         
         # Запуск сбора данных (это можно делать параллельно)
-        if self.data_collector:
+        if self.data_collector and data_service_enabled:
             data_thread = threading.Thread(
                 target=self._data_collection_worker,
                 daemon=True,
@@ -270,10 +309,12 @@ class AISystem:
             data_thread.start()
             self.threads.append(data_thread)
             logger.info("✅ Поток сбора данных запущен")
+        elif not data_service_enabled:
+            logger.debug("🔕 Поток сбора данных отключен для данного режима")
         
         # ВАЖНО: Собираем начальные данные (неблокирующий вызов)
         # Обучение продолжается даже если bots.py недоступен
-        if self.data_collector:
+        if self.data_collector and data_service_enabled:
             logger.info("📊 Собираем начальные данные перед обучением...")
             logger.info("   💡 Используем доступные данные (candles_full_history.json, bot_history.json)")
             logger.info("   💡 Обучение НЕ блокируется если bots.py недоступен")
@@ -287,7 +328,7 @@ class AISystem:
                 logger.warning(f"⚠️ Ошибка сбора начальных данных: {e}")
         
         # Запуск обучения (только после загрузки свечей)
-        if self.trainer:
+        if training_enabled and self.trainer:
             training_thread = threading.Thread(
                 target=self._training_worker,
                 daemon=True,
@@ -296,9 +337,11 @@ class AISystem:
             training_thread.start()
             self.threads.append(training_thread)
             logger.info("✅ Поток обучения запущен")
+        elif not training_enabled:
+            logger.debug("🔕 Обучение отключено в этом режиме")
         
         # Запуск бэктеста (только после загрузки свечей)
-        if self.backtester:
+        if backtest_enabled and self.backtester:
             backtest_thread = threading.Thread(
                 target=self._backtest_worker,
                 daemon=True,
@@ -307,9 +350,11 @@ class AISystem:
             backtest_thread.start()
             self.threads.append(backtest_thread)
             logger.info("✅ Поток бэктеста запущен")
+        elif not backtest_enabled:
+            logger.debug("🔕 Поток бэктеста отключен в этом режиме")
         
         # Запуск оптимизации стратегий
-        if self.strategy_optimizer:
+        if optimizer_enabled and self.strategy_optimizer:
             optimization_thread = threading.Thread(
                 target=self._strategy_optimization_worker,
                 daemon=True,
@@ -318,6 +363,8 @@ class AISystem:
             optimization_thread.start()
             self.threads.append(optimization_thread)
             logger.info("✅ Поток оптимизации стратегий запущен")
+        elif not optimizer_enabled:
+            logger.debug("🔕 Поток оптимизации стратегий отключен")
         
         logger.info("=" * 80)
         logger.info("✅ AI СИСТЕМА ЗАПУЩЕНА")
@@ -337,6 +384,54 @@ class AISystem:
                 thread.join(timeout=5)
         
         logger.info("✅ AI система остановлена")
+    
+    # ------------------------------------------------------------------
+    # ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ РЕЖИМОВ
+    # ------------------------------------------------------------------
+    def _update_data_status(self, **kwargs):
+        """Обновить файл статуса data-service."""
+        status_file = self.config.get('data_status_file')
+        if not status_file:
+            return
+        try:
+            status_dir = os.path.dirname(status_file)
+            os.makedirs(status_dir, exist_ok=True)
+            status = {}
+            if os.path.exists(status_file):
+                with open(status_file, 'r', encoding='utf-8') as f:
+                    status = json.load(f)
+            status.update(kwargs)
+            status['timestamp'] = datetime.now().isoformat()
+            with open(status_file, 'w', encoding='utf-8') as f:
+                json.dump(status, f, indent=2, ensure_ascii=False)
+        except Exception as status_error:
+            logger.debug(f"⚠️ Не удалось обновить статус данных: {status_error}")
+    
+    def _wait_for_data_ready(self):
+        """Ожидание готовности данных от data-service."""
+        status_file = self.config.get('data_status_file')
+        if not status_file:
+            return True
+        timeout = self.config.get('data_ready_timeout', 900)
+        poll_interval = 5
+        start_time = time.time()
+        logger.info("⏳ Ожидание готовности данных (data-service)...")
+        while True:
+            if not self.running and self.config.get('enable_training', False):
+                return False
+            if os.path.exists(status_file):
+                try:
+                    with open(status_file, 'r', encoding='utf-8') as f:
+                        status = json.load(f)
+                    if status.get('ready') and status.get('history_loaded'):
+                        logger.info("✅ Данные готовы, запускаем обучение")
+                        return True
+                except Exception as status_error:
+                    logger.debug(f"⚠️ Ошибка чтения статуса данных: {status_error}")
+            if timeout and (time.time() - start_time) > timeout:
+                logger.warning("⚠️ Не удалось дождаться готовности данных за отведённое время")
+                return False
+            time.sleep(poll_interval)
     
     def _data_collection_worker(self):
         """Рабочий поток для сбора данных"""
@@ -383,6 +478,12 @@ class AISystem:
                     logger.info(f"   💡 Используем ПОЛНУЮ ИСТОРИЮ из data/ai/candles_full_history.json (не candles_cache.json!)")
                     
                     logger.info(f"📊 Сбор данных #{collection_count} завершен успешно")
+                    self._update_data_status(
+                        last_collection=datetime.now().isoformat(),
+                        trades=trades_count,
+                        candles=candles_count,
+                        ready=True
+                    )
                 
                 time.sleep(self.config['data_collection_interval'])
                 
@@ -396,6 +497,11 @@ class AISystem:
         """Рабочий поток для обучения - ПОСТОЯННОЕ ОБУЧЕНИЕ БЕЗ ПАУЗ"""
         logger.info("🎓 Запуск потока ПОСТОЯННОГО обучения...")
         logger.info("🔥 Обучение будет идти НЕПРЕРЫВНО для перебора миллиардов комбинаций параметров!")
+
+        if self.config.get('wait_for_data_service'):
+            data_ready = self._wait_for_data_ready()
+            if not data_ready:
+                logger.warning("⚠️ Продолжаем обучение без подтверждённого статуса данных")
         
         # Показываем результаты предыдущего обучения
         try:
@@ -457,8 +563,8 @@ class AISystem:
                 
                 # ВАЖНО: Получаем СВЕЖИЕ данные перед каждым обучением!
                 logger.info("📥 Получение свежих данных перед обучением...")
-                try:
-                    if self.data_collector:
+                if self.config.get('training_refresh_data', True) and self.data_collector:
+                    try:
                         # Обновляем полную историю свечей (инкрементально - только новые)
                         self.data_collector.load_full_candles_history(force_reload=False)
                         # Собираем свежие рыночные данные
@@ -466,9 +572,12 @@ class AISystem:
                         candles_count = len(market_data.get('candles', {}))
                         indicators_count = len(market_data.get('indicators', {}))
                         logger.info(f"   ✅ Свежие данные: {candles_count} монет со свечами, {indicators_count} с индикаторами")
-                except Exception as candles_error:
-                    logger.warning(f"⚠️ Ошибка получения свежих данных: {candles_error}")
-                    logger.info("   ⏭️ Продолжаем обучение на существующих данных...")
+                        self._update_data_status(last_training_refresh=datetime.now().isoformat(), ready=True)
+                    except Exception as candles_error:
+                        logger.warning(f"⚠️ Ошибка получения свежих данных: {candles_error}")
+                        logger.info("   ⏭️ Продолжаем обучение на существующих данных...")
+                elif not self.config.get('training_refresh_data', True):
+                    logger.debug("   💡 Обновление данных отключено для режима обучения (используем готовые данные)")
                 
                 if trades_count >= 10:
                     logger.info(f"✅ Обучение на {trades_count} реальных сделках...")
@@ -478,8 +587,10 @@ class AISystem:
                     
                     # Постоянное улучшение (тихо)
                     try:
-                        history_data = self.data_collector.collect_history_data()
-                        real_trades = history_data.get('trades', [])
+                        history_data = {}
+                        if self.data_collector:
+                            history_data = self.data_collector.collect_history_data()
+                        real_trades = history_data.get('trades', []) if history_data else []
                         if len(real_trades) >= 10:
                             self.continuous_learning.learn_from_real_trades(real_trades)
                     except Exception as cl_error:
@@ -551,6 +662,8 @@ class AISystem:
                 except Exception as e:
                     logger.debug(f"⚠️ Не удалось загрузить результаты: {e}")
                     logger.info("✅ Обучение #{} завершено, запускаем следующее...".format(training_count))
+                finally:
+                    self._update_data_status(last_training=datetime.now().isoformat(), ready=True)
                 
                 # ВАЖНО: НЕТ ПАУЗЫ! Сразу запускаем следующее обучение!
                 # Только небольшая пауза для предотвращения перегрузки системы (1 секунда)
@@ -752,6 +865,73 @@ class AISystem:
 _ai_system = None
 
 
+def create_mode_config(mode: str) -> Dict:
+    """Создать конфигурацию для выбранного режима запуска."""
+    base = {**AI_CONFIG}
+    if mode == 'data-service':
+        base.update({
+            'instance_name': 'DataService',
+            'enable_data_service': True,
+            'enable_training': False,
+            'enable_backtest': False,
+            'enable_optimizer': False,
+            'wait_for_data_service': False,
+            'training_refresh_data': False,
+        })
+    elif mode == 'train':
+        base.update({
+            'instance_name': 'Trainer',
+            'enable_data_service': False,
+            'enable_training': True,
+            'enable_backtest': False,
+            'enable_optimizer': False,
+            'wait_for_data_service': True,
+            'training_refresh_data': False,
+            'data_ready_timeout': 900,
+        })
+    elif mode == 'scheduler':
+        base.update({
+            'instance_name': 'Scheduler',
+            'enable_data_service': False,
+            'enable_training': False,
+            'enable_backtest': True,
+            'enable_optimizer': True,
+            'wait_for_data_service': False,
+            'training_refresh_data': False,
+        })
+    else:  # режим all / совместимый
+        base.update({
+            'instance_name': 'Main',
+            'enable_data_service': True,
+            'enable_training': True,
+            'enable_backtest': True,
+            'enable_optimizer': True,
+            'wait_for_data_service': False,
+            'training_refresh_data': True,
+            'data_ready_timeout': 900,
+        })
+    return base
+
+
+def run_mode(mode: str):
+    """Запуск определённого режима AI системы."""
+    config = create_mode_config(mode)
+    os.makedirs('logs', exist_ok=True)
+    ai_system = AISystem(config)
+    ai_system.start()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        logger.info(f"Остановка режима {mode}...")
+        ai_system.stop()
+    except Exception as run_error:
+        logger.error(f"❌ Критическая ошибка режима {mode}: {run_error}")
+        import traceback
+        logger.error(traceback.format_exc())
+        ai_system.stop()
+
+
 def get_ai_system(config: Dict = None) -> AISystem:
     """Получить глобальный экземпляр AI системы"""
     global _ai_system
@@ -764,33 +944,43 @@ def get_ai_system(config: Dict = None) -> AISystem:
 
 def main():
     """Главная функция для запуска AI системы отдельно"""
-    import signal
-    
-    # Создаем директорию для логов
-    os.makedirs('logs', exist_ok=True)
-    
-    # Инициализация AI системы
-    ai_system = get_ai_system()
-    
-    # Обработчик сигналов для graceful shutdown
-    def signal_handler(signum, frame):
-        logger.info("Получен сигнал остановки...")
-        ai_system.stop()
-        sys.exit(0)
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    
-    # Запуск системы
-    ai_system.start()
-    
-    # Ожидание
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        logger.info("Остановка по запросу пользователя...")
-        ai_system.stop()
+    parser = argparse.ArgumentParser(description="AI система для торговых ботов")
+    parser.add_argument(
+        '--mode',
+        choices=['all', 'data-service', 'train', 'scheduler'],
+        default='all',
+        help='Режим запуска: все сервисы, только сбор данных, только обучение или только планировщик'
+    )
+    args = parser.parse_args()
+
+    if args.mode == 'all':
+        # Оркестратор: запускаем отдельные процессы
+        modes = ['data-service', 'scheduler', 'train']
+        processes: List[Process] = []
+        try:
+            for mode in modes:
+                proc = Process(target=run_mode, args=(mode,), daemon=False)
+                proc.start()
+                processes.append(proc)
+                logger.info(f"🚀 Запущен процесс режима {mode} (PID {proc.pid})")
+            for proc in processes:
+                proc.join()
+        except KeyboardInterrupt:
+            logger.info("Получен сигнал остановки, завершаем процессы...")
+            for proc in processes:
+                if proc.is_alive():
+                    proc.terminate()
+            for proc in processes:
+                proc.join()
+        except Exception as orchestrator_error:
+            logger.error(f"❌ Ошибка оркестратора: {orchestrator_error}")
+            for proc in processes:
+                if proc.is_alive():
+                    proc.terminate()
+            for proc in processes:
+                proc.join()
+    else:
+        run_mode(args.mode)
 
 
 if __name__ == '__main__':
