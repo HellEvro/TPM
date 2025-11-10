@@ -746,9 +746,32 @@ def create_bot_endpoint():
         logger.info(f"[BOT_CREATE] Запрос на создание бота для {symbol}")
         logger.info(f"[BOT_CREATE] Конфигурация: {config}")
         
-        # Проверяем зрелость монеты (если включена проверка для этой монеты)
+        # ✅ Проверяем, есть ли ручная позиция для этой монеты
+        has_manual_position = False
+        try:
+            current_exchange = get_exchange()
+            if current_exchange:
+                positions_response = current_exchange.get_positions()
+                if isinstance(positions_response, tuple):
+                    positions_list = positions_response[0] if positions_response else []
+                else:
+                    positions_list = positions_response if positions_response else []
+                
+                # Проверяем, есть ли позиция для этой монеты без бота в системе
+                for pos in positions_list:
+                    pos_symbol = pos.get('symbol', '').replace('USDT', '')
+                    if pos_symbol == symbol and abs(float(pos.get('size', 0))) > 0:
+                        # Проверяем, нет ли уже бота для этой монеты
+                        if symbol not in bots_data.get('bots', {}):
+                            has_manual_position = True
+                            logger.info(f"[BOT_CREATE] ✋ {symbol}: Обнаружена ручная позиция - пропускаем проверку зрелости")
+                            break
+        except Exception as e:
+            logger.debug(f"[BOT_CREATE] Не удалось проверить ручную позицию: {e}")
+        
+        # Проверяем зрелость монеты (если включена проверка для этой монеты И нет ручной позиции)
         enable_maturity_check_coin = config.get('enable_maturity_check', True)
-        if enable_maturity_check_coin:
+        if enable_maturity_check_coin and not has_manual_position:
             # Получаем данные свечей для проверки зрелости
             current_exchange = get_exchange()
             if not current_exchange:
@@ -780,6 +803,8 @@ def create_bot_endpoint():
                     'success': False, 
                     'error': f'Не удалось получить данные для проверки зрелости монеты {symbol}'
                 }), 400
+        elif has_manual_position:
+            logger.info(f"[BOT_CREATE] ✋ {symbol}: Ручная позиция обнаружена - проверка зрелости пропущена")
         
         # Создаем бота
         bot_config = create_bot(symbol, config, exchange_obj=get_exchange())
