@@ -64,6 +64,11 @@ class AITrainer:
             logger.debug(f"⚠️ Не удалось инициализировать AIParameterTracker: {e}")
             self.param_tracker = None
         
+        # Целевые значения Win Rate для монет с динамическим повышением порога
+        self.win_rate_targets_path = os.path.join(self.data_dir, 'win_rate_targets.json')
+        self.win_rate_targets = self._load_win_rate_targets()
+        self.win_rate_targets_dirty = False
+        
         # Загружаем существующие модели
         self._load_models()
         
@@ -183,6 +188,95 @@ class AITrainer:
             logger.error(f"❌ Ошибка сохранения моделей: {e}")
             import traceback
             logger.error(traceback.format_exc())
+    
+    def _load_win_rate_targets(self) -> Dict[str, Any]:
+        """
+        Загрузить целевые значения Win Rate для монет.
+        
+        Возвращает словарь формата:
+        {
+            "default_target": 80.0,
+            "symbols": {
+                "BTCUSDT": {"target": 84.0, ...},
+                ...
+            }
+        }
+        """
+        default_data = {'default_target': 80.0, 'symbols': {}}
+        try:
+            if os.path.exists(self.win_rate_targets_path):
+                with open(self.win_rate_targets_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    if 'symbols' not in data or not isinstance(data.get('symbols'), dict):
+                        data['symbols'] = {}
+                    if 'default_target' not in data:
+                        data['default_target'] = 80.0
+                    return data
+        except Exception as e:
+            logger.warning(f"⚠️ Не удалось загрузить цели Win Rate: {e}")
+        return default_data
+    
+    def _save_win_rate_targets(self):
+        """Сохранить целевые значения Win Rate, если были изменения."""
+        try:
+            payload = {
+                'default_target': float(self.win_rate_targets.get('default_target', 80.0)),
+                'symbols': self.win_rate_targets.get('symbols', {}),
+                'updated_at': datetime.now().isoformat()
+            }
+            with open(self.win_rate_targets_path, 'w', encoding='utf-8') as f:
+                json.dump(payload, f, indent=2, ensure_ascii=False)
+            self.win_rate_targets_dirty = False
+        except Exception as e:
+            logger.warning(f"⚠️ Не удалось сохранить цели Win Rate: {e}")
+    
+    def _get_win_rate_target(self, symbol: str) -> float:
+        """Получить текущую цель Win Rate для монеты (по умолчанию 80%)."""
+        default_target = float(self.win_rate_targets.get('default_target', 80.0))
+        symbols = self.win_rate_targets.get('symbols', {})
+        entry = symbols.get((symbol or '').upper())
+        if isinstance(entry, dict):
+            return float(entry.get('target', default_target))
+        if isinstance(entry, (int, float)):
+            return float(entry)
+        return default_target
+    
+    def _register_win_rate_success(self, symbol: str, achieved_win_rate: float):
+        """
+        Зафиксировать успешное достижение цели Win Rate и повысить порог на 1%.
+        """
+        try:
+            symbol_key = (symbol or '').upper()
+            default_target = float(self.win_rate_targets.get('default_target', 80.0))
+            symbols = self.win_rate_targets.setdefault('symbols', {})
+            entry = symbols.get(symbol_key)
+            if not isinstance(entry, dict):
+                entry = {'target': self._get_win_rate_target(symbol_key)}
+            
+            current_target = float(entry.get('target', default_target))
+            entry['last_success_at'] = datetime.now().isoformat()
+            entry['last_success_win_rate'] = achieved_win_rate
+            entry['achievements'] = entry.get('achievements', 0) + 1
+            
+            if achieved_win_rate >= current_target and current_target < 100.0:
+                new_target = min(current_target + 1.0, 100.0)
+                if new_target > current_target:
+                    entry['target'] = new_target
+                    entry['last_target_increment_at'] = datetime.now().isoformat()
+                    entry['last_target_increment_win_rate'] = achieved_win_rate
+                    entry['increments'] = entry.get('increments', 0) + 1
+                    logger.info(
+                        f"   🚀 {symbol}: цель Win Rate повышена с {current_target:.1f}% до {new_target:.1f}% "
+                        f"(достигнуто {achieved_win_rate:.1f}%)"
+                    )
+            else:
+                entry['target'] = current_target
+            
+            symbols[symbol_key] = entry
+            self.win_rate_targets_dirty = True
+        except Exception as e:
+            logger.debug(f"⚠️ Не удалось обновить цель Win Rate для {symbol}: {e}")
     
     def _load_history_data(self) -> List[Dict]:
         """
@@ -1647,17 +1741,27 @@ class AITrainer:
                         symbol_successful = sum(1 for t in simulated_trades_symbol if t['is_successful'])
                         symbol_win_rate = symbol_successful / trades_for_symbol * 100
                         symbol_pnl = sum(t['pnl'] for t in simulated_trades_symbol)
+                        win_rate_target = self._get_win_rate_target(symbol)
+                        
+                        if symbol_idx <= 10:
+                            logger.info(f"   🎯 {symbol}: текущая цель Win Rate: {win_rate_target:.1f}%")
                         
                         # Показываем результаты для монет с хорошими результатами или при каждом 50-м прогрессе
-                        if symbol_win_rate >= 80.0 or symbol_idx % progress_interval == 0:
-                            logger.info(f"   ✅ {symbol}: {trades_for_symbol} сделок, Win Rate: {symbol_win_rate:.1f}%, PnL: {symbol_pnl:.2f} USDT")
+                        if symbol_win_rate >= win_rate_target or symbol_idx % progress_interval == 0:
+                            logger.info(
+                                f"   ✅ {symbol}: {trades_for_symbol} сделок, Win Rate: {symbol_win_rate:.1f}% "
+                                f"(цель: {win_rate_target:.1f}%), PnL: {symbol_pnl:.2f} USDT"
+                            )
                         else:
-                            logger.debug(f"   ✅ {symbol}: {trades_for_symbol} сделок, Win Rate: {symbol_win_rate:.1f}%, PnL: {symbol_pnl:.2f} USDT")
+                            logger.debug(
+                                f"   ✅ {symbol}: {trades_for_symbol} сделок, Win Rate: {symbol_win_rate:.1f}% "
+                                f"(цель: {win_rate_target:.1f}%), PnL: {symbol_pnl:.2f} USDT"
+                            )
                         
                         # ОБУЧАЕМ МОДЕЛЬ ДЛЯ ЭТОЙ МОНЕТЫ ОТДЕЛЬНО
                         if trades_for_symbol >= 5:  # Минимум 5 сделок для обучения
                             # Показываем начало обучения модели для важных случаев
-                            if symbol_win_rate >= 80.0 or symbol_idx % progress_interval == 0 or symbol_idx <= 10:
+                            if symbol_win_rate >= win_rate_target or symbol_idx % progress_interval == 0 or symbol_idx <= 10:
                                 logger.info(f"   🎓 Обучаем модель для {symbol}... ({trades_for_symbol} сделок, Win Rate: {symbol_win_rate:.1f}%)")
                             else:
                                 logger.debug(f"   🎓 Обучаем модель для {symbol}... ({trades_for_symbol} сделок)")
@@ -1737,7 +1841,7 @@ class AITrainer:
                                 logger.info(f"   💾 {symbol}: сохранение моделей...")
                             
                             # Логируем завершение обучения модели для важных случаев
-                            if symbol_win_rate >= 80.0 or symbol_idx % progress_interval == 0:
+                            if symbol_win_rate >= win_rate_target or symbol_idx % progress_interval == 0:
                                 logger.info(f"   ✅ {symbol}: модель обучена! Accuracy: {signal_score:.2%}, MSE: {profit_mse:.2f}")
                             
                             # Сохраняем модели для этой монеты
@@ -1824,10 +1928,14 @@ class AITrainer:
                                     import traceback
                                     logger.error(traceback.format_exc())
                             
-                            # ВАЖНО: Сохраняем параметры в индивидуальные настройки ТОЛЬКО если Win Rate >= 80%
-                            if symbol_win_rate >= 80.0:
+                            # ВАЖНО: Сохраняем параметры в индивидуальные настройки ТОЛЬКО если Win Rate достиг цели
+                            if symbol_win_rate >= win_rate_target:
                                 try:
-                                    logger.info(f"   🎯 {symbol}: Win Rate {symbol_win_rate:.1f}% >= 80% - сохраняем параметры в индивидуальные настройки")
+                                    logger.info(
+                                        f"   🎯 {symbol}: Win Rate {symbol_win_rate:.1f}% >= цель {win_rate_target:.1f}% "
+                                        "- сохраняем параметры в индивидуальные настройки"
+                                    )
+                                    self._register_win_rate_success(symbol, symbol_win_rate)
                                     
                                     # Формируем настройки в формате для bots.py (используем формат из bot_config.py)
                                     individual_settings = {
@@ -1910,18 +2018,22 @@ class AITrainer:
                                     logger.error(f"   ❌ {symbol}: ошибка сохранения индивидуальных настроек: {save_params_error}")
                                     import traceback
                                     logger.error(traceback.format_exc())
-                            else:
-                                logger.debug(f"   ⏳ {symbol}: Win Rate {symbol_win_rate:.1f}% < 80% - параметры НЕ сохраняются в индивидуальные настройки")
-                            
+                        else:
+                            logger.debug(
+                                f"   ⏳ {symbol}: Win Rate {symbol_win_rate:.1f}% < цель {win_rate_target:.1f}% "
+                                "- параметры НЕ сохраняются в индивидуальные настройки"
+                            )
+                        
                             # Детальные метрики только для DEBUG
                             logger.debug(f"   ✅ {symbol}: модель обучена! Accuracy: {signal_score:.2%}, MSE: {profit_mse:.2f}, Win Rate: {symbol_win_rate:.1f}%")
                             total_models_saved += 1
-                        else:
+
+                        if trades_for_symbol < 5:
                             if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
                                 logger.info(f"   ⏳ {symbol}: недостаточно сделок для обучения ({trades_for_symbol} < 5)")
                             else:
                                 logger.debug(f"   ⏳ {symbol}: недостаточно сделок ({trades_for_symbol} < 5)")
-                    
+                        
                     # ВАЖНО: Увеличиваем счетчик ВСЕГДА, даже если сделок нет!
                     total_trained_coins += 1
                     
@@ -1954,6 +2066,9 @@ class AITrainer:
                     total_failed_coins += 1
                     continue
             
+            if self.win_rate_targets_dirty:
+                self._save_win_rate_targets()
+            
             # Итоговая статистика
             logger.info("=" * 80)
             logger.info(f"✅ ОБУЧЕНИЕ ЗАВЕРШЕНО")
@@ -1985,6 +2100,11 @@ class AITrainer:
             logger.error(f"❌ Ошибка обучения на исторических данных: {e}")
             import traceback
             logger.error(traceback.format_exc())
+            if self.win_rate_targets_dirty:
+                try:
+                    self._save_win_rate_targets()
+                except Exception as save_error:
+                    logger.debug(f"⚠️ Не удалось сохранить цели Win Rate после ошибки: {save_error}")
     
     def _calculate_ema(self, prices: List[float], period: int) -> Optional[float]:
         """Вычисляет EMA (Exponential Moving Average)"""
