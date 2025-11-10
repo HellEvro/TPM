@@ -13,7 +13,7 @@ import hashlib
 import logging
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
-from threading import Lock
+from threading import RLock
 
 logger = logging.getLogger('AI.ParameterTracker')
 
@@ -25,7 +25,7 @@ class AIParameterTracker:
     
     def __init__(self, data_dir: str = 'data/ai'):
         self.data_dir = data_dir
-        self.lock = Lock()
+        self.lock = RLock()
         self.used_params_file = os.path.join(data_dir, 'used_training_parameters.json')
         
         # Создаем директорию если её нет
