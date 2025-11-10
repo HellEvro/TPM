@@ -84,9 +84,8 @@ class AICandlesLoader:
         Returns:
             True если успешно загружено
         """
-        logger.info("=" * 80)
-        logger.info("📊 ЗАГРУЗКА ВСЕХ ДОСТУПНЫХ СВЕЧЕЙ ДЛЯ AI")
-        logger.info("=" * 80)
+        # Сокращенные логи
+        logger.debug("📊 Загрузка свечей для AI...")
         
         try:
             exchange = self.get_exchange()
@@ -403,13 +402,8 @@ class AICandlesLoader:
                     logger.debug(f"⚠️ Ошибка загрузки свечей для {symbol}: {e}")
                     return None
             
-            # Загружаем параллельно
-            logger.info("=" * 80)
-            logger.info("🚀 НАЧАЛО ПАРАЛЛЕЛЬНОЙ ЗАГРУЗКИ СВЕЧЕЙ")
-            logger.info("=" * 80)
-            logger.info(f"   📊 Всего пар для загрузки: {len(pairs)}")
-            logger.info(f"   🔄 Параллельных потоков: {max_workers}")
-            logger.info("=" * 80)
+            # Загружаем параллельно (сокращенные логи)
+            logger.debug(f"🚀 Параллельная загрузка: {len(pairs)} пар, {max_workers} потоков")
             
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                 futures = {executor.submit(load_symbol_candles, symbol): symbol for symbol in pairs}
@@ -430,23 +424,17 @@ class AICandlesLoader:
                             else:
                                 new_count += 1
                             
-                            # Логируем прогресс каждые 50 монет
-                            if loaded_count % 50 == 0:
-                                logger.info(f"📊 Прогресс: {loaded_count}/{len(pairs)} монет, {total_candles} свечей (новых: {total_new_candles})...")
+                            # Логируем прогресс каждые 100 монет (реже)
+                            if loaded_count % 100 == 0:
+                                logger.info(f"📊 Прогресс: {loaded_count}/{len(pairs)} монет, {total_candles} свечей...")
                         else:
                             failed_count += 1
                     except Exception as e:
                         logger.debug(f"⚠️ Ошибка для {symbol}: {e}")
                         failed_count += 1
             
-            logger.info("=" * 80)
-            logger.info("✅ ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ЗАВЕРШЕНА")
-            logger.info("=" * 80)
-            logger.info(f"   📊 Успешно загружено: {loaded_count} монет")
-            logger.info(f"   📈 Всего свечей: {total_candles}")
-            logger.info(f"   ⚠️ Ошибок: {failed_count}")
-            logger.info(f"   📊 Данных в candles_data: {len(candles_data)} монет")
-            logger.info("=" * 80)
+            # Итоговая статистика (кратко)
+            logger.info(f"✅ Загрузка завершена: {loaded_count} монет, {total_candles} свечей, {failed_count} ошибок")
             
             # Объединяем с существующими данными
             if existing_candles:
@@ -455,98 +443,41 @@ class AICandlesLoader:
                     if symbol not in candles_data:
                         candles_data[symbol] = data
             
-            # ВАЖНО: Проверяем что есть данные для сохранения
-            logger.info("=" * 80)
-            logger.info("📊 ПРОВЕРКА ДАННЫХ ПЕРЕД СОХРАНЕНИЕМ")
-            logger.info("=" * 80)
-            logger.info(f"   📊 Загружено монет в candles_data: {len(candles_data)}")
-            logger.info(f"   📊 loaded_count: {loaded_count}")
-            logger.info(f"   📊 failed_count: {failed_count}")
-            logger.info(f"   📊 total_candles: {total_candles}")
-            logger.info("=" * 80)
-            
+            # Проверка данных (тихо)
             if not candles_data:
-                logger.error("=" * 80)
-                logger.error("❌ КРИТИЧЕСКАЯ ОШИБКА: НЕТ ДАННЫХ ДЛЯ СОХРАНЕНИЯ!")
-                logger.error("=" * 80)
-                logger.error(f"   📊 Загружено монет: {loaded_count}")
-                logger.error(f"   ⚠️ Ошибок: {failed_count}")
-                logger.error(f"   💡 Проверьте логи выше для деталей")
-                logger.error("=" * 80)
+                logger.error(f"❌ Нет данных для сохранения: {loaded_count} монет загружено, {failed_count} ошибок")
                 return False
             
-            # Дополнительная проверка: убеждаемся что candles_data содержит валидные данные
-            valid_symbols = 0
-            total_valid_candles = 0
-            for symbol, data in candles_data.items():
-                if isinstance(data, dict) and 'candles' in data:
-                    candles_list = data.get('candles', [])
-                    if candles_list and len(candles_list) > 0:
-                        valid_symbols += 1
-                        total_valid_candles += len(candles_list)
-            
-            logger.info(f"   ✅ Валидных монет: {valid_symbols}")
-            logger.info(f"   ✅ Валидных свечей: {total_valid_candles}")
+            # Дополнительная проверка валидности
+            valid_symbols = sum(1 for data in candles_data.values() 
+                               if isinstance(data, dict) and data.get('candles') and len(data.get('candles', [])) > 0)
             
             if valid_symbols == 0:
-                logger.error("=" * 80)
-                logger.error("❌ КРИТИЧЕСКАЯ ОШИБКА: НЕТ ВАЛИДНЫХ ДАННЫХ ДЛЯ СОХРАНЕНИЯ!")
-                logger.error("=" * 80)
-                logger.error(f"   📊 candles_data содержит {len(candles_data)} записей, но нет валидных свечей")
-                logger.error("=" * 80)
+                logger.error(f"❌ Нет валидных данных: {len(candles_data)} записей, но нет свечей")
                 return False
             
-            logger.info("=" * 80)
-            logger.info("💾 СОХРАНЕНИЕ СВЕЧЕЙ В ФАЙЛ...")
-            logger.info("=" * 80)
-            logger.info(f"   📊 Монет для сохранения: {len(candles_data)}")
-            logger.info(f"   📈 Всего свечей: {total_candles}")
-            logger.info(f"   📁 Файл: {self.candles_file}")
-            logger.info("=" * 80)
+            logger.debug(f"💾 Сохранение: {len(candles_data)} монет, {total_candles} свечей")
             
             # Сохраняем в файл
             try:
                 self._save_candles(candles_data)
-                logger.info("=" * 80)
-                logger.info("✅ ФАЙЛ УСПЕШНО СОХРАНЕН!")
-                logger.info("=" * 80)
+                logger.debug("✅ Файл сохранен")
             except Exception as save_error:
-                logger.error("=" * 80)
-                logger.error("❌ ОШИБКА СОХРАНЕНИЯ ФАЙЛА!")
-                logger.error("=" * 80)
-                logger.error(f"   Ошибка: {save_error}")
+                logger.error(f"❌ Ошибка сохранения файла: {save_error}")
                 import traceback
-                logger.error(traceback.format_exc())
-                logger.error("=" * 80)
+                logger.debug(traceback.format_exc())
                 return False
             
-            logger.info("=" * 80)
-            logger.info("✅ ЗАГРУЗКА СВЕЧЕЙ ЗАВЕРШЕНА")
-            logger.info("=" * 80)
-            logger.info(f"   📊 Монет загружено: {loaded_count}")
-            logger.info(f"   📈 Всего свечей: {total_candles}")
-            logger.info(f"   ✅ Новых свечей добавлено: {total_new_candles}")
-            logger.info(f"   🔄 Обновлено монет: {updated_count}")
-            logger.info(f"   📊 Новых монет загружено: {new_count}")
-            logger.info(f"   ⚠️ Ошибок: {failed_count}")
-            logger.info(f"   💾 Сохранено в: {self.candles_file}")
-            logger.info("=" * 80)
+            # Итоговая статистика (кратко)
+            logger.info(f"✅ Загрузка завершена: {loaded_count} монет, {total_candles} свечей, {total_new_candles} новых, {failed_count} ошибок")
             
-            if updated_count > 0:
-                logger.info("💡 Инкрементальное обновление работает! При следующем запуске будут загружены только новые свечи.")
-            
-            # ВАЖНО: Проверяем что файл действительно создан
+            # Проверка файла
             if self.candles_file.exists():
                 file_size = self.candles_file.stat().st_size
-                logger.info(f"✅ Файл создан и сохранен! Размер: {file_size / 1024 / 1024:.2f} MB")
+                logger.debug(f"📁 Файл: {file_size / 1024 / 1024:.2f} MB")
                 return True
             else:
-                logger.error("=" * 80)
-                logger.error("❌ КРИТИЧЕСКАЯ ОШИБКА: ФАЙЛ НЕ СОЗДАН!")
-                logger.error("=" * 80)
-                logger.error(f"   📁 Ожидаемый путь: {self.candles_file}")
-                logger.error("   💡 Проверьте права доступа к директории data/ai/")
-                logger.error("=" * 80)
+                logger.error(f"❌ Файл не создан: {self.candles_file}")
                 return False
             
         except Exception as e:
@@ -608,7 +539,7 @@ class AICandlesLoader:
             raise ValueError("candles_data пустой - нечего сохранять")
         
         total_candles_count = sum(info.get('count', 0) if isinstance(info, dict) else 0 for info in candles_data.values())
-        logger.info(f"💾 Сохранение {len(candles_data)} монет, {total_candles_count} свечей...")
+        logger.debug(f"💾 Сохранение {len(candles_data)} монет, {total_candles_count} свечей...")
         
         for attempt in range(max_retries):
             try:
@@ -630,15 +561,14 @@ class AICandlesLoader:
                 # Создаем уникальное имя временного файла
                 temp_file = self.candles_file.with_suffix(f'.json.tmp.{uuid.uuid4().hex[:8]}')
                 
-                logger.info(f"   💾 Сохранение во временный файл: {temp_file}")
+                logger.debug(f"💾 Сохранение во временный файл...")
                 
                 # Сохраняем во временный файл сначала
                 try:
-                    logger.info(f"   📝 Запись данных в файл...")
                     with open(temp_file, 'w', encoding='utf-8') as f:
                         json.dump(data_to_save, f, indent=2, ensure_ascii=False)
                     file_size_mb = temp_file.stat().st_size / 1024 / 1024
-                    logger.info(f"   ✅ Временный файл создан, размер: {file_size_mb:.2f} MB")
+                    logger.debug(f"✅ Временный файл создан: {file_size_mb:.2f} MB")
                 except Exception as write_error:
                     logger.error(f"   ❌ Ошибка записи во временный файл: {write_error}")
                     try:
@@ -650,10 +580,9 @@ class AICandlesLoader:
                 
                 # Заменяем оригинальный файл атомарно
                 if self.candles_file.exists():
-                    logger.info(f"   🔄 Замена существующего файла: {self.candles_file}")
+                    logger.debug(f"🔄 Замена существующего файла...")
                     try:
                         self.candles_file.unlink()
-                        logger.info(f"   ✅ Старый файл удален")
                     except PermissionError:
                         if attempt < max_retries - 1:
                             try:
@@ -661,19 +590,16 @@ class AICandlesLoader:
                                     temp_file.unlink()
                             except:
                                 pass
-                            logger.warning(f"   ⚠️ Файл занят, повторная попытка {attempt + 1}/{max_retries}...")
+                            logger.debug(f"⚠️ Файл занят, повтор {attempt + 1}/{max_retries}...")
                             time.sleep(retry_delay * (attempt + 1))
                             continue
                         else:
                             raise
-                else:
-                    logger.info(f"   📁 Создание нового файла: {self.candles_file}")
                 
                 # Переименовываем временный файл
                 try:
-                    logger.info(f"   🔄 Переименование временного файла в {self.candles_file}...")
                     temp_file.rename(self.candles_file)
-                    logger.info(f"   ✅ Файл переименован: {self.candles_file}")
+                    logger.debug(f"✅ Файл сохранен: {self.candles_file}")
                 except PermissionError:
                     if attempt < max_retries - 1:
                         try:
@@ -691,13 +617,13 @@ class AICandlesLoader:
                 if self.candles_file.exists():
                     file_size = self.candles_file.stat().st_size
                     if file_size > 0:
-                        logger.info(f"✅ Свечи сохранены в {self.candles_file} (размер: {file_size / 1024 / 1024:.2f} MB)")
+                        logger.debug(f"✅ Файл сохранен: {file_size / 1024 / 1024:.2f} MB")
                         return
                     else:
-                        logger.error(f"❌ Файл создан но пустой! {self.candles_file}")
+                        logger.error(f"❌ Файл пустой: {self.candles_file}")
                         raise ValueError("Файл пустой после сохранения")
                 else:
-                    logger.error(f"❌ Файл не создан! {self.candles_file}")
+                    logger.error(f"❌ Файл не создан: {self.candles_file}")
                     raise FileNotFoundError(f"Файл не создан: {self.candles_file}")
                 
             except (PermissionError, OSError) as file_error:

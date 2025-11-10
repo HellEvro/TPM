@@ -380,31 +380,16 @@ class AIDataCollector:
                     
                     # Если файл обновлен менее часа назад - используем его без перезагрузки
                     if file_age_hours < 1.0:
-                        logger.info("=" * 80)
-                        logger.info("✅ ФАЙЛ СВЕЧЕЙ УЖЕ СУЩЕСТВУЕТ И АКТУАЛЕН")
-                        logger.info("=" * 80)
-                        logger.info(f"   📁 Файл: {full_history_file}")
-                        logger.info(f"   ⏰ Последнее обновление: {file_age_hours:.1f} часов назад")
-                        logger.info("   💡 Файл актуален, используем существующие данные")
-                        logger.info("   💡 Для принудительной перезагрузки используйте force_reload=True")
-                        logger.info("=" * 80)
+                        logger.debug(f"✅ Файл свечей актуален ({file_age_hours:.1f}ч назад)")
                         return True
                     else:
-                        logger.info("=" * 80)
-                        logger.info("🔄 ИНКРЕМЕНТАЛЬНОЕ ОБНОВЛЕНИЕ СВЕЧЕЙ")
-                        logger.info("=" * 80)
-                        logger.info(f"   📁 Файл существует: {full_history_file}")
-                        logger.info(f"   ⏰ Последнее обновление: {file_age_hours:.1f} часов назад")
-                        logger.info("   💡 Загружаем только новые свечи (инкрементальное обновление)")
-                        logger.info("=" * 80)
+                        logger.debug(f"🔄 Инкрементальное обновление ({file_age_hours:.1f}ч назад)")
                 except Exception as check_error:
                     logger.debug(f"⚠️ Ошибка проверки файла: {check_error}")
                     # Продолжаем загрузку если не удалось проверить файл
             
-            logger.info("=" * 80)
-            logger.info("📊 ЗАГРУЗКА ВСЕХ ДОСТУПНЫХ СВЕЧЕЙ ДЛЯ AI ОБУЧЕНИЯ")
-            logger.info("=" * 80)
-            logger.info("   💡 Инициализируем биржу напрямую для загрузки свечей...")
+            # Сокращенные логи
+            logger.debug("📊 Загрузка свечей для AI...")
             
             # ВАЖНО: Инициализируем биржу напрямую, как в bots.py
             # Это позволяет ai.py работать независимо от bots.py
@@ -415,14 +400,14 @@ class AIDataCollector:
                 from bots_modules.imports_and_globals import get_exchange
                 exchange = get_exchange()
                 if exchange:
-                    logger.info("✅ Получен объект биржи из bots.py")
+                    logger.debug("✅ Биржа получена из bots.py")
             except Exception as e:
-                logger.debug(f"   ⏳ Не удалось получить биржу из bots.py: {e}")
+                logger.debug(f"⏳ Не удалось получить биржу из bots.py: {e}")
             
             # Если не получилось - инициализируем напрямую
             if not exchange:
                 try:
-                    logger.info("   💡 Инициализируем биржу напрямую...")
+                    logger.debug("💡 Инициализация биржи напрямую...")
                     from exchanges.exchange_factory import ExchangeFactory
                     from app.config import EXCHANGES
                     
@@ -433,52 +418,29 @@ class AIDataCollector:
                     )
                     
                     if exchange:
-                        logger.info("✅ Биржа инициализирована напрямую")
+                        logger.debug("✅ Биржа инициализирована")
                     else:
                         logger.error("❌ ExchangeFactory вернул None")
                         return False
                 except Exception as init_error:
-                    logger.error("=" * 80)
-                    logger.error("❌ ОШИБКА ИНИЦИАЛИЗАЦИИ БИРЖИ")
-                    logger.error("=" * 80)
-                    logger.error(f"   Ошибка: {init_error}")
+                    logger.error(f"❌ Ошибка инициализации биржи: {init_error}")
                     import traceback
-                    logger.error(traceback.format_exc())
-                    logger.error("=" * 80)
+                    logger.debug(traceback.format_exc())
                     return False
             
             if not exchange:
-                logger.error("=" * 80)
-                logger.error("❌ НЕ УДАЛОСЬ ПОЛУЧИТЬ ОБЪЕКТ БИРЖИ")
-                logger.error("=" * 80)
-                logger.error("   💡 Проверьте настройки API ключей в app.config")
-                logger.error("=" * 80)
+                logger.error("❌ Не удалось получить объект биржи, проверьте API ключи")
                 return False
             
-            logger.info("=" * 80)
-            logger.info("🚀 НАЧИНАЕМ ЗАГРУЗКУ СВЕЧЕЙ")
-            logger.info("=" * 80)
-            logger.info("   💡 Это может занять несколько минут")
-            logger.info("   💡 Загружаем ПО 2000 свечей за запрос для каждой монеты")
-            logger.info("   💡 Загружаем ВСЕ доступные свечи через пагинацию")
-            logger.info("=" * 80)
+            logger.debug("🚀 Начинаем загрузку свечей (может занять несколько минут)...")
             
             loader = AICandlesLoader(exchange_obj=exchange)
             success = loader.load_all_candles_full_history(max_workers=10)
             
             if success:
-                logger.info("=" * 80)
-                logger.info("✅ ПОЛНАЯ ИСТОРИЯ СВЕЧЕЙ ЗАГРУЖЕНА")
-                logger.info("=" * 80)
-                logger.info("   📁 Файл: data/ai/candles_full_history.json")
-                logger.info("   💡 Теперь AI может использовать эти данные для обучения")
-                logger.info("=" * 80)
+                logger.info("✅ История свечей загружена")
             else:
-                logger.warning("=" * 80)
-                logger.warning("⚠️ ЗАГРУЗКА СВЕЧЕЙ НЕ ЗАВЕРШИЛАСЬ УСПЕШНО")
-                logger.warning("=" * 80)
-                logger.warning("   💡 Проверьте логи выше для деталей")
-                logger.warning("=" * 80)
+                logger.warning("⚠️ Загрузка свечей не завершена, проверьте логи")
             
             return success
             
@@ -500,7 +462,8 @@ class AIDataCollector:
         Если файла нет - возвращает пустые данные (не использует candles_cache.json!)
         Файл должен быть загружен через load_full_candles_history() перед использованием
         """
-        logger.info("📊 Сбор рыночных данных из полной истории свечей...")
+        # Сокращенные логи
+        logger.debug("📊 Сбор рыночных данных...")
         
         collected_data = {
             'timestamp': datetime.now().isoformat(),
@@ -515,21 +478,12 @@ class AIDataCollector:
             candles_data = {}
             
             if not os.path.exists(full_history_file):
-                logger.warning("=" * 80)
-                logger.warning("⚠️ ФАЙЛ ПОЛНОЙ ИСТОРИИ СВЕЧЕЙ НЕ НАЙДЕН!")
-                logger.warning("=" * 80)
-                logger.warning(f"   📁 Файл: {full_history_file}")
-                logger.warning("   💡 Файл должен быть загружен через load_full_candles_history()")
-                logger.warning("   💡 Загрузка запускается автоматически при старте ai.py")
-                logger.warning("   ⏳ Подождите пока файл не будет создан и загружен")
-                logger.warning("   ❌ НЕ используем candles_cache.json - только полная история!")
-                logger.warning("=" * 80)
+                logger.warning("⚠️ Файл candles_full_history.json не найден, ожидаем загрузки...")
                 return collected_data
             
             # Читаем ТОЛЬКО из полной истории свечей
             try:
-                logger.info(f"📖 Чтение полной истории свечей из {full_history_file}...")
-                logger.info("   💡 Используем ТОЛЬКО полную историю (не используем candles_cache.json)")
+                logger.debug(f"📖 Чтение {full_history_file}...")
                 
                 with open(full_history_file, 'r', encoding='utf-8') as f:
                     full_data = json.load(f)
@@ -537,29 +491,19 @@ class AIDataCollector:
                 # Извлекаем свечи из структуры с метаданными
                 if 'candles' in full_data:
                     candles_data = full_data['candles']
-                    logger.info(f"✅ Загружено полной истории для {len(candles_data)} монет")
                 elif isinstance(full_data, dict) and not full_data.get('metadata'):
-                    # Если структура плоская (без метаданных)
                     candles_data = full_data
-                    logger.info(f"✅ Загружено полной истории для {len(candles_data)} монет")
                 else:
                     logger.warning("⚠️ Неожиданная структура файла candles_full_history.json")
                     candles_data = {}
                     
             except json.JSONDecodeError as json_error:
-                logger.error("=" * 80)
-                logger.error("❌ ФАЙЛ ПОЛНОЙ ИСТОРИИ СВЕЧЕЙ ПОВРЕЖДЕН!")
-                logger.error("=" * 80)
-                logger.error(f"   📁 Файл: {full_history_file}")
-                logger.error(f"   ⚠️ JSON ошибка на позиции {json_error.pos}")
-                logger.error("   🗑️ Удаляем поврежденный файл, он будет пересоздан при следующей загрузке")
+                logger.error(f"❌ Файл candles_full_history.json поврежден (позиция {json_error.pos}), удаляем...")
                 try:
                     os.remove(full_history_file)
-                    logger.info("   ✅ Поврежденный файл удален")
+                    logger.info("✅ Поврежденный файл удален")
                 except Exception as del_error:
-                    logger.debug(f"   ⚠️ Не удалось удалить файл: {del_error}")
-                logger.error("   ⏳ Дождитесь перезагрузки файла через load_full_candles_history()")
-                logger.error("=" * 80)
+                    logger.debug(f"⚠️ Не удалось удалить файл: {del_error}")
                 candles_data = {}
             except Exception as e:
                 logger.error(f"❌ Ошибка чтения полной истории свечей: {e}")
@@ -640,18 +584,10 @@ class AIDataCollector:
                         logger.debug(f"⚠️ Ошибка обработки индикаторов для {symbol}: {e}")
                         continue
                 
-                logger.info(f"✅ Обработано индикаторов: {indicators_count} монет")
+                logger.debug(f"✅ Индикаторы: {indicators_count} монет")
             
-            # Итоговая статистика
-            logger.info("=" * 80)
-            logger.info(f"✅ СБОР РЫНОЧНЫХ ДАННЫХ ЗАВЕРШЕН")
-            if candles_data:
-                logger.info(f"   📊 Свечи: {len(collected_data['candles'])} монет из candles_full_history.json")
-                logger.info(f"   💡 Используется ТОЛЬКО полная история свечей (не candles_cache.json)")
-            else:
-                logger.warning(f"   ⚠️ Свечи: 0 монет (файл candles_full_history.json не найден или пуст)")
-            logger.info(f"   📈 Индикаторы: {len(collected_data['indicators'])} монет из coins_rsi_data")
-            logger.info("=" * 80)
+            # Итоговая статистика (кратко)
+            logger.debug(f"📊 Данные собраны: {len(collected_data['candles'])} монет со свечами, {len(collected_data['indicators'])} с индикаторами")
             
             # ВАЖНО: НЕ сохраняем свечи в market_data.json - они уже в candles_full_history.json!
             # Сохраняем только индикаторы для быстрого доступа (опционально)
