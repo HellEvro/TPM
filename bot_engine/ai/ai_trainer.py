@@ -1168,8 +1168,62 @@ class AITrainer:
                 'exit_short_against_trend': RSI_EXIT_SHORT_AGAINST_TREND
             }
             
-            # Параметры только для DEBUG
-            logger.debug(f"RSI параметры: LONG {RSI_OVERSOLD}/{RSI_EXIT_LONG_WITH_TREND}/{RSI_EXIT_LONG_AGAINST_TREND}, SHORT {RSI_OVERBOUGHT}/{RSI_EXIT_SHORT_WITH_TREND}/{RSI_EXIT_SHORT_AGAINST_TREND}")
+            # ВАЖНО: ВАРИАЦИЯ ВСЕХ ПАРАМЕТРОВ ИЗ КОНФИГА!
+            # Загружаем базовые значения из конфига
+            try:
+                from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
+                base_config = DEFAULT_AUTO_BOT_CONFIG
+            except:
+                base_config = {}
+            
+            # Генерируем ВАРИАЦИЮ для ВСЕХ параметров торговли
+            # Stop Loss: базовое значение ± вариация
+            base_stop_loss = base_config.get('max_loss_percent', 15.0)
+            stop_loss_variation = random.uniform(-3.0, 3.0)  # ±3%
+            MAX_LOSS_PERCENT = max(5.0, min(25.0, base_stop_loss + stop_loss_variation))
+            
+            # Take Profit: базовое значение ± вариация
+            base_take_profit = base_config.get('take_profit_percent', 20.0)
+            take_profit_variation = random.uniform(-5.0, 10.0)  # -5% до +10%
+            TAKE_PROFIT_PERCENT = max(10.0, min(50.0, base_take_profit + take_profit_variation))
+            
+            # Trailing Stop Activation: базовое значение ± вариация
+            base_trailing_activation = base_config.get('trailing_stop_activation', 20.0)
+            trailing_activation_variation = random.uniform(-5.0, 15.0)  # -5% до +15%
+            TRAILING_STOP_ACTIVATION = max(10.0, min(50.0, base_trailing_activation + trailing_activation_variation))
+            
+            # Trailing Stop Distance: базовое значение ± вариация
+            base_trailing_distance = base_config.get('trailing_stop_distance', 15.0)
+            trailing_distance_variation = random.uniform(-5.0, 10.0)  # -5% до +10%
+            TRAILING_STOP_DISTANCE = max(5.0, min(30.0, base_trailing_distance + trailing_distance_variation))
+            
+            # Break Even Trigger: базовое значение ± вариация
+            base_break_even = base_config.get('break_even_trigger', 100.0)
+            break_even_variation = random.uniform(-30.0, 50.0)  # -30% до +50%
+            BREAK_EVEN_TRIGGER = max(50.0, min(200.0, base_break_even + break_even_variation))
+            
+            # Break Even Protection: случайно включен/выключен для разнообразия
+            BREAK_EVEN_PROTECTION = random.choice([True, False])
+            
+            # Max Position Hours: базовое значение ± вариация
+            base_max_hours = base_config.get('max_position_hours', 48)
+            max_hours_variation = random.randint(-24, 48)  # -24 до +48 часов
+            MAX_POSITION_HOURS = max(12, min(168, base_max_hours + max_hours_variation))  # от 12ч до 7 дней
+            
+            # ЛОГИРУЕМ ВСЕ ПАРАМЕТРЫ для каждого обучения!
+            logger.info("=" * 80)
+            logger.info("🎲 ПАРАМЕТРЫ ОБУЧЕНИЯ #{} (Seed: {})".format(training_seed % 1000, training_seed))
+            logger.info("=" * 80)
+            logger.info("📊 RSI Параметры:")
+            logger.info(f"   LONG: вход <= {RSI_OVERSOLD}, выход по тренду >= {RSI_EXIT_LONG_WITH_TREND}, против тренда >= {RSI_EXIT_LONG_AGAINST_TREND}")
+            logger.info(f"   SHORT: вход >= {RSI_OVERBOUGHT}, выход по тренду <= {RSI_EXIT_SHORT_WITH_TREND}, против тренда <= {RSI_EXIT_SHORT_AGAINST_TREND}")
+            logger.info("💰 Риск-менеджмент:")
+            logger.info(f"   Stop Loss: {MAX_LOSS_PERCENT:.1f}%")
+            logger.info(f"   Take Profit: {TAKE_PROFIT_PERCENT:.1f}%")
+            logger.info(f"   Trailing Stop: активация {TRAILING_STOP_ACTIVATION:.1f}%, расстояние {TRAILING_STOP_DISTANCE:.1f}%")
+            logger.info(f"   Break Even: {'✅' if BREAK_EVEN_PROTECTION else '❌'} (триггер {BREAK_EVEN_TRIGGER:.1f}%)")
+            logger.info(f"   Max Position Hours: {MAX_POSITION_HOURS}ч")
+            logger.info("=" * 80)
             
             # Импортируем функцию расчета RSI истории
             try:
@@ -1365,17 +1419,44 @@ class AITrainer:
                                             should_exit = True
                                             exit_reason = 'RSI_EXIT_AGAINST_TREND'
                                     
-                                    # Стоп-лосс (используем настройки из bots.py)
-                                    stop_loss_pct = DEFAULT_AUTO_BOT_CONFIG.get('max_loss_percent', 15)
-                                    if current_price <= current_position['entry_price'] * (1 - stop_loss_pct / 100):
+                                    # Стоп-лосс (используем СГЕНЕРИРОВАННЫЕ параметры для этого обучения!)
+                                    if current_price <= current_position['entry_price'] * (1 - MAX_LOSS_PERCENT / 100):
                                         should_exit = True
                                         exit_reason = 'STOP_LOSS'
                                     
-                                    # Take Profit
-                                    take_profit_pct = DEFAULT_AUTO_BOT_CONFIG.get('take_profit_percent', 20)
-                                    if current_price >= current_position['entry_price'] * (1 + take_profit_pct / 100):
+                                    # Take Profit (используем СГЕНЕРИРОВАННЫЕ параметры!)
+                                    if current_price >= current_position['entry_price'] * (1 + TAKE_PROFIT_PERCENT / 100):
                                         should_exit = True
                                         exit_reason = 'TAKE_PROFIT'
+                                    
+                                    # Trailing Stop (если активирован)
+                                    if current_position.get('max_profit', 0) > 0:
+                                        max_profit_pct = ((current_position['max_profit'] - current_position['entry_price']) / current_position['entry_price']) * 100
+                                        if max_profit_pct >= TRAILING_STOP_ACTIVATION:
+                                            # Trailing stop активирован
+                                            trailing_stop_price = current_position['entry_price'] * (1 + (max_profit_pct - TRAILING_STOP_DISTANCE) / 100)
+                                            if current_price <= trailing_stop_price:
+                                                should_exit = True
+                                                exit_reason = 'TRAILING_STOP'
+                                    
+                                    # Break Even Protection
+                                    if BREAK_EVEN_PROTECTION and current_position.get('max_profit', 0) > 0:
+                                        max_profit_pct = ((current_position['max_profit'] - current_position['entry_price']) / current_position['entry_price']) * 100
+                                        if max_profit_pct >= BREAK_EVEN_TRIGGER:
+                                            # Break even активирован - защищаем безубыточность
+                                            if current_price <= current_position['entry_price']:
+                                                should_exit = True
+                                                exit_reason = 'BREAK_EVEN'
+                                    
+                                    # Max Position Hours
+                                    if current_position.get('entry_time'):
+                                        from datetime import datetime
+                                        entry_time = datetime.fromtimestamp(current_position['entry_time'] / 1000)
+                                        current_time = datetime.fromtimestamp(times[i] / 1000)
+                                        hours_held = (current_time - entry_time).total_seconds() / 3600
+                                        if hours_held >= MAX_POSITION_HOURS:
+                                            should_exit = True
+                                            exit_reason = 'MAX_POSITION_HOURS'
                                 
                                 elif direction == 'SHORT':
                                     if entry_trend == 'DOWN':
@@ -1387,15 +1468,44 @@ class AITrainer:
                                             should_exit = True
                                             exit_reason = 'RSI_EXIT_AGAINST_TREND'
                                     
-                                    stop_loss_pct = DEFAULT_AUTO_BOT_CONFIG.get('max_loss_percent', 15)
-                                    if current_price >= current_position['entry_price'] * (1 + stop_loss_pct / 100):
+                                    # Стоп-лосс (используем СГЕНЕРИРОВАННЫЕ параметры для этого обучения!)
+                                    if current_price >= current_position['entry_price'] * (1 + MAX_LOSS_PERCENT / 100):
                                         should_exit = True
                                         exit_reason = 'STOP_LOSS'
                                     
-                                    take_profit_pct = DEFAULT_AUTO_BOT_CONFIG.get('take_profit_percent', 20)
-                                    if current_price <= current_position['entry_price'] * (1 - take_profit_pct / 100):
+                                    # Take Profit (используем СГЕНЕРИРОВАННЫЕ параметры!)
+                                    if current_price <= current_position['entry_price'] * (1 - TAKE_PROFIT_PERCENT / 100):
                                         should_exit = True
                                         exit_reason = 'TAKE_PROFIT'
+                                    
+                                    # Trailing Stop (если активирован)
+                                    if current_position.get('max_profit', 0) > 0:
+                                        max_profit_pct = ((current_position['entry_price'] - current_position['max_profit']) / current_position['entry_price']) * 100
+                                        if max_profit_pct >= TRAILING_STOP_ACTIVATION:
+                                            # Trailing stop активирован
+                                            trailing_stop_price = current_position['entry_price'] * (1 - (max_profit_pct - TRAILING_STOP_DISTANCE) / 100)
+                                            if current_price >= trailing_stop_price:
+                                                should_exit = True
+                                                exit_reason = 'TRAILING_STOP'
+                                    
+                                    # Break Even Protection
+                                    if BREAK_EVEN_PROTECTION and current_position.get('max_profit', 0) > 0:
+                                        max_profit_pct = ((current_position['entry_price'] - current_position['max_profit']) / current_position['entry_price']) * 100
+                                        if max_profit_pct >= BREAK_EVEN_TRIGGER:
+                                            # Break even активирован - защищаем безубыточность
+                                            if current_price >= current_position['entry_price']:
+                                                should_exit = True
+                                                exit_reason = 'BREAK_EVEN'
+                                    
+                                    # Max Position Hours
+                                    if current_position.get('entry_time'):
+                                        from datetime import datetime
+                                        entry_time = datetime.fromtimestamp(current_position['entry_time'] / 1000)
+                                        current_time = datetime.fromtimestamp(times[i] / 1000)
+                                        hours_held = (current_time - entry_time).total_seconds() / 3600
+                                        if hours_held >= MAX_POSITION_HOURS:
+                                            should_exit = True
+                                            exit_reason = 'MAX_POSITION_HOURS'
                                 
                                 if should_exit:
                                     # Закрываем позицию и записываем результат
@@ -1434,6 +1544,15 @@ class AITrainer:
                                     trades_for_symbol += 1
                                     current_position = None
                             
+                            # ОБНОВЛЯЕМ max_profit для открытых позиций (для trailing stop и break even)
+                            if current_position:
+                                if current_position['direction'] == 'LONG':
+                                    if current_price > current_position.get('max_profit', current_position['entry_price']):
+                                        current_position['max_profit'] = current_price
+                                else:  # SHORT
+                                    if current_price < current_position.get('max_profit', current_position['entry_price']):
+                                        current_position['max_profit'] = current_price
+                            
                             # ПРОВЕРКА ВХОДА (если нет открытой позиции)
                             if not current_position:
                                 # Используем ВАШИ правила входа из bot_config.py
@@ -1443,26 +1562,27 @@ class AITrainer:
                                 # LONG: RSI <= RSI_OVERSOLD (используем параметры для монеты)
                                 if current_rsi <= coin_RSI_OVERSOLD:
                                     should_enter_long = True
-                                
-                                # SHORT: RSI >= RSI_OVERBOUGHT (используем параметры для монеты)
-                                if current_rsi >= coin_RSI_OVERBOUGHT:
-                                    should_enter_short = True
-                                
-                                if should_enter_long:
                                     current_position = {
                                         'direction': 'LONG',
                                         'entry_idx': i,
                                         'entry_price': current_price,
                                         'entry_rsi': current_rsi,
-                                        'entry_trend': trend
+                                        'entry_trend': trend,
+                                        'entry_time': times[i],
+                                        'max_profit': current_price  # Отслеживаем максимальную прибыль для trailing stop
                                     }
-                                elif should_enter_short:
+                                
+                                # SHORT: RSI >= RSI_OVERBOUGHT (используем параметры для монеты)
+                                if current_rsi >= coin_RSI_OVERBOUGHT:
+                                    should_enter_short = True
                                     current_position = {
                                         'direction': 'SHORT',
                                         'entry_idx': i,
                                         'entry_price': current_price,
                                         'entry_rsi': current_rsi,
-                                        'entry_trend': trend
+                                        'entry_trend': trend,
+                                        'entry_time': times[i],
+                                        'max_profit': current_price  # Для SHORT это минимум цены (максимальная прибыль)
                                     }
                             
                         except Exception as e:
@@ -1558,6 +1678,16 @@ class AITrainer:
                                 'training_seed': training_seed,  # Seed для этого обучения (обеспечивает уникальность)
                                 'coin_model_seed': coin_model_seed,  # Уникальный seed для этой монеты
                                 'rsi_params': coin_rsi_params,  # Параметры RSI использованные при обучении (лучшие для монеты или общие)
+                                # ВАЖНО: Сохраняем ВСЕ параметры обучения для полной истории!
+                                'risk_params': {
+                                    'stop_loss': MAX_LOSS_PERCENT,
+                                    'take_profit': TAKE_PROFIT_PERCENT,
+                                    'trailing_stop_activation': TRAILING_STOP_ACTIVATION,
+                                    'trailing_stop_distance': TRAILING_STOP_DISTANCE,
+                                    'break_even_protection': BREAK_EVEN_PROTECTION,
+                                    'break_even_trigger': BREAK_EVEN_TRIGGER,
+                                    'max_position_hours': MAX_POSITION_HOURS
+                                },
                                 'candles_count': len(candles),  # ВАЖНО: сохраняем количество свечей для проверки
                                 'trades_count': trades_for_symbol,
                                 'win_rate': symbol_win_rate,
@@ -1572,7 +1702,22 @@ class AITrainer:
                                 json.dump(metadata, f, indent=2, ensure_ascii=False)
                             
                             # ВАЖНО: Отмечаем параметры как использованные в трекере с рейтингом
+                            # Сохраняем ВСЕ параметры (RSI + риск-менеджмент) для полного отслеживания
                             if self.param_tracker:
+                                # Расширяем параметры для сохранения (включаем все параметры обучения)
+                                full_params = {
+                                    **coin_rsi_params,  # RSI параметры
+                                    'stop_loss': MAX_LOSS_PERCENT,
+                                    'take_profit': TAKE_PROFIT_PERCENT,
+                                    'trailing_stop_activation': TRAILING_STOP_ACTIVATION,
+                                    'trailing_stop_distance': TRAILING_STOP_DISTANCE,
+                                    'break_even_protection': BREAK_EVEN_PROTECTION,
+                                    'break_even_trigger': BREAK_EVEN_TRIGGER,
+                                    'max_position_hours': MAX_POSITION_HOURS
+                                }
+                                
+                                # Сохраняем только RSI параметры в трекер (так как он рассчитан на RSI)
+                                # Но полные параметры сохраняются в metadata.json модели
                                 self.param_tracker.mark_params_used(
                                     coin_rsi_params,  # Используем параметры которые реально использовались для монеты
                                     training_seed,

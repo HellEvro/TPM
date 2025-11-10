@@ -435,6 +435,24 @@ class AISystem:
                 logger.info("=" * 80)
                 logger.info(f"🎓 ОБУЧЕНИЕ #{training_count} (НЕПРЕРЫВНОЕ)")
                 logger.info(f"   📊 Реальных сделок: {trades_count}")
+                
+                # Показываем статистику использования параметров
+                try:
+                    if self.trainer and self.trainer.param_tracker:
+                        stats = self.trainer.param_tracker.get_usage_stats()
+                        logger.info(f"   📊 Параметры: использовано {stats['used_combinations']} из {stats['total_combinations']} комбинаций ({stats['usage_percentage']:.2f}%)")
+                        if stats['is_exhausted']:
+                            logger.warning(f"   ⚠️ Параметры почти исчерпаны ({stats['usage_percentage']:.1f}%)!")
+                        
+                        # Показываем лучшие параметры (топ-3)
+                        best_params = self.trainer.param_tracker.get_best_params(limit=3)
+                        if best_params:
+                            logger.info(f"   🏆 Лучшие параметры (топ-3):")
+                            for idx, bp in enumerate(best_params, 1):
+                                logger.info(f"      {idx}. Win Rate: {bp.get('win_rate', 0):.1f}%, PnL: {bp.get('total_pnl', 0):.2f} USDT, Рейтинг: {bp.get('rating', 0):.1f}")
+                except Exception as stats_error:
+                    logger.debug(f"⚠️ Ошибка получения статистики параметров: {stats_error}")
+                
                 logger.info("=" * 80)
                 
                 # ВАЖНО: Получаем СВЕЖИЕ данные перед каждым обучением!
@@ -512,6 +530,19 @@ class AISystem:
                                 logger.info(f"   💰 PnL улучшился на +{pnl_change:.2f} USDT (было {prev_pnl:.2f})")
                             elif pnl_change < 0:
                                 logger.info(f"   💸 PnL снизился на {pnl_change:.2f} USDT (было {prev_pnl:.2f})")
+                        
+                        # Показываем статистику параметров после обучения
+                        if self.trainer and self.trainer.param_tracker:
+                            stats = self.trainer.param_tracker.get_usage_stats()
+                            logger.info(f"   📊 Параметры: использовано {stats['used_combinations']} из {stats['total_combinations']} комбинаций ({stats['usage_percentage']:.2f}%)")
+                            
+                            # Показываем лучшие параметры (топ-3)
+                            best_params = self.trainer.param_tracker.get_best_params(limit=3)
+                            if best_params:
+                                logger.info(f"   🏆 Лучшие параметры (топ-3):")
+                                for idx, bp in enumerate(best_params, 1):
+                                    rsi = bp.get('rsi_params', {})
+                                    logger.info(f"      {idx}. RSI: {rsi.get('oversold', 0)}/{rsi.get('overbought', 0)}, Win Rate: {bp.get('win_rate', 0):.1f}%, PnL: {bp.get('total_pnl', 0):.2f} USDT, Рейтинг: {bp.get('rating', 0):.1f}")
                         
                         logger.info("   🔥 СРАЗУ ЗАПУСКАЕМ СЛЕДУЮЩЕЕ ОБУЧЕНИЕ С СВЕЖИМИ ДАННЫМИ...")
                         logger.info("=" * 80)
