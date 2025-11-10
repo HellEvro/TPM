@@ -1387,38 +1387,50 @@ class NewTradingBot:
                 logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: position_side не установлен! Невозможно закрыть позицию!")
                 return False
             
-            # Получаем размер позиции (сначала из бота, если нет - с биржи)
+            # Получаем актуальный размер позиции с биржи
             position_size = None
+            expected_side = 'Long' if self.position_side == 'LONG' else 'Short' if self.position_side == 'SHORT' else self.position_side
             
-            # ✅ КРИТИЧНО: Используем сохраненный размер позиции из бота!
-            if self.position_size:
-                position_size = self.position_size
-            else:
-                # Если нет в боте - получаем с биржи
-                try:
-                    positions = self.exchange.get_positions()
-                    if isinstance(positions, tuple):
-                        positions_list = positions[0] if positions else []
-                    else:
-                        positions_list = positions if positions else []
-                    
-                    for pos in positions_list:
-                        if pos.get('symbol', '').replace('USDT', '') == self.symbol:
-                            pos_side = 'Long' if pos.get('side') == 'Buy' else 'Short'
-                            # ✅ КРИТИЧНО: Сравниваем с правильным форматом (Long/Short, а не LONG/SHORT)
-                            expected_side = 'Long' if self.position_side == 'LONG' else 'Short' if self.position_side == 'SHORT' else self.position_side
-                            if pos_side == expected_side and abs(float(pos.get('size', 0))) > 0:
-                                position_size = abs(float(pos.get('size', 0)))
-                                # Сохраняем в бота для будущего использования
-                                self.position_size = position_size
-                                break
-                    
-                    if position_size is None:
-                        logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось найти размер позиции на бирже!")
-                        return False
-                except Exception as e:
-                    logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка получения размера позиции с биржи: {e}")
-                    return False
+            try:
+                positions = self.exchange.get_positions()
+                if isinstance(positions, tuple):
+                    positions_list = positions[0] if positions else []
+                else:
+                    positions_list = positions if positions else []
+                
+                for pos in positions_list:
+                    symbol_name = pos.get('symbol', '')
+                    normalized_symbol = symbol_name.replace('USDT', '')
+                    if normalized_symbol == self.symbol or symbol_name == self.symbol:
+                        pos_side = 'Long' if pos.get('side') in ['Buy', 'Long'] else 'Short'
+                        if pos_side == expected_side and abs(float(pos.get('size', 0))) > 0:
+                            position_size = abs(float(pos.get('size', 0)))
+                            # Сохраняем актуальный размер
+                            self.position_size = position_size
+                            self.position_size_coins = position_size
+                            break
+            except Exception as e:
+                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка получения размера позиции с биржи: {e}")
+            
+            # Если с биржи получить не удалось — используем кешированные значения как fallback
+            if position_size is None or position_size <= 0:
+                cached_sizes = [
+                    self.position_size_coins,
+                    self.position_size,
+                    (self.volume_value / self.entry_price) if self.entry_price else None
+                ]
+                for cached_value in cached_sizes:
+                    try:
+                        if cached_value and abs(float(cached_value)) > 0:
+                            position_size = abs(float(cached_value))
+                            logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Используем кешированный размер позиции: {position_size}")
+                            break
+                    except (TypeError, ValueError):
+                        continue
+            
+            if position_size is None or position_size <= 0:
+                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось определить размер позиции для закрытия!")
+                return False
             
             # ✅ КРИТИЧНО: Преобразуем side в формат, который ожидает биржа ('Long'/'Short')
             side_for_exchange = 'Long' if self.position_side == 'LONG' else 'Short' if self.position_side == 'SHORT' else self.position_side
