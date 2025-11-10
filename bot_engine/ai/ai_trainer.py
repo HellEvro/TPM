@@ -81,10 +81,13 @@ class AITrainer:
     
     def _load_models(self):
         """Загрузить сохраненные модели"""
+        signal_model_path = os.path.join(self.models_dir, 'signal_predictor.pkl')
+        profit_model_path = os.path.join(self.models_dir, 'profit_predictor.pkl')
+        scaler_path = os.path.join(self.models_dir, 'scaler.pkl')
+        ai_decision_model_path = os.path.join(self.models_dir, 'ai_decision_model.pkl')
+        ai_decision_scaler_path = os.path.join(self.models_dir, 'ai_decision_scaler.pkl')
+
         try:
-            signal_model_path = os.path.join(self.models_dir, 'signal_predictor.pkl')
-            profit_model_path = os.path.join(self.models_dir, 'profit_predictor.pkl')
-            scaler_path = os.path.join(self.models_dir, 'scaler.pkl')
             ai_decision_model_path = os.path.join(self.models_dir, 'ai_decision_model.pkl')
             ai_decision_scaler_path = os.path.join(self.models_dir, 'ai_decision_scaler.pkl')
             ai_decision_model_path = os.path.join(self.models_dir, 'ai_decision_model.pkl')
@@ -173,6 +176,8 @@ class AITrainer:
             signal_model_path = os.path.join(self.models_dir, 'signal_predictor.pkl')
             profit_model_path = os.path.join(self.models_dir, 'profit_predictor.pkl')
             scaler_path = os.path.join(self.models_dir, 'scaler.pkl')
+            ai_decision_model_path = os.path.join(self.models_dir, 'ai_decision_model.pkl')
+            ai_decision_scaler_path = os.path.join(self.models_dir, 'ai_decision_scaler.pkl')
             
             saved_count = 0
             
