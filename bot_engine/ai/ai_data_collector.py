@@ -92,29 +92,48 @@ class AIDataCollector:
             import traceback
             logger.error(traceback.format_exc())
     
-    def _call_bots_api(self, endpoint: str, method: str = 'GET', data: Dict = None) -> Optional[Dict]:
-        """Вызов API bots.py"""
+    def _call_bots_api(self, endpoint: str, method: str = 'GET', data: Dict = None, silent: bool = False) -> Optional[Dict]:
+        """
+        Вызов API bots.py (неблокирующий)
+        
+        Args:
+            endpoint: API endpoint
+            method: HTTP метод
+            data: Данные для POST запроса
+            silent: Если True, не логирует предупреждения (для фоновых попыток)
+        """
         try:
             url = f"{self.bots_service_url}{endpoint}"
             
+            # Короткий таймаут для быстрого ответа
+            timeout = 3 if silent else 5
+            
             if method == 'GET':
-                response = requests.get(url, timeout=10)
+                response = requests.get(url, timeout=timeout)
             elif method == 'POST':
-                response = requests.post(url, json=data, timeout=10)
+                response = requests.post(url, json=data, timeout=timeout)
             else:
                 return None
             
             if response.status_code == 200:
                 return response.json()
             else:
-                logger.warning(f"⚠️ API {endpoint} вернул статус {response.status_code}")
+                if not silent:
+                    logger.debug(f"⚠️ API {endpoint} вернул статус {response.status_code}")
                 return None
                 
         except requests.exceptions.ConnectionError:
-            logger.warning(f"⚠️ Сервис bots.py недоступен по адресу {self.bots_service_url}")
+            # Не логируем предупреждения для фоновых попыток
+            if not silent:
+                logger.debug(f"⚠️ Сервис bots.py недоступен по адресу {self.bots_service_url} (продолжаем работу)")
+            return None
+        except requests.exceptions.Timeout:
+            if not silent:
+                logger.debug(f"⏳ Таймаут подключения к bots.py (продолжаем работу)")
             return None
         except Exception as e:
-            logger.error(f"❌ Ошибка вызова API {endpoint}: {e}")
+            if not silent:
+                logger.debug(f"⚠️ Ошибка вызова API {endpoint}: {e}")
             return None
     
     def collect_bots_data(self) -> Dict:
@@ -279,15 +298,25 @@ class AIDataCollector:
             logger.info("📊 ЗАГРУЗКА ВСЕХ ДОСТУПНЫХ СВЕЧЕЙ ДЛЯ AI ОБУЧЕНИЯ")
             logger.info("=" * 80)
             
-            try:
-                exchange = get_exchange()
-            except Exception as e:
-                logger.debug(f"⚠️ Ошибка получения биржи: {e}")
-                exchange = None
+            # Пробуем получить exchange с таймаутом и повторными попытками
+            exchange = None
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                try:
+                    exchange = get_exchange()
+                    if exchange:
+                        break
+                except Exception as e:
+                    if attempt < max_attempts - 1:
+                        logger.debug(f"   ⏳ Попытка {attempt + 1}/{max_attempts} получить биржу...")
+                        import time
+                        time.sleep(2)  # Короткая задержка между попытками
+                    else:
+                        logger.debug(f"⚠️ Ошибка получения биржи после {max_attempts} попыток: {e}")
             
             if not exchange:
-                logger.warning("⚠️ Не удалось получить объект биржи (возможно bots.py еще не запущен)")
-                logger.info("💡 Полная история свечей будет загружена при следующем запуске")
+                logger.debug("⚠️ Не удалось получить объект биржи (возможно bots.py еще не запущен)")
+                logger.debug("💡 Продолжаем попытки в фоне, используем доступные данные")
                 return False
             
             loader = AICandlesLoader(exchange_obj=exchange)
