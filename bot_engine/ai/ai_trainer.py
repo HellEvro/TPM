@@ -1632,6 +1632,8 @@ class AITrainer:
                         logger.debug(f"   ✅ {symbol}: симуляция завершена ({candles_to_process:,} свечей обработано, {trades_for_symbol} сделок)")
                     
                     # ВАЖНО: Логируем сразу после симуляции для отладки
+                    symbol_win_rate = 0.0  # значение по умолчанию, если сделок нет
+                    
                     if symbol_idx <= 10:
                         logger.info(f"   🔍 {symbol}: проверка результатов симуляции... (сделок: {trades_for_symbol})")
                     
@@ -1786,114 +1788,124 @@ class AITrainer:
                             # ВАЖНО: Отмечаем параметры как использованные в трекере с рейтингом
                             # Сохраняем ВСЕ параметры (RSI + риск-менеджмент) для полного отслеживания
                             if self.param_tracker:
-                                # Расширяем параметры для сохранения (включаем все параметры обучения)
-                                full_params = {
-                                    **coin_rsi_params,  # RSI параметры
-                                    'stop_loss': MAX_LOSS_PERCENT,
-                                    'take_profit': TAKE_PROFIT_PERCENT,
-                                    'trailing_stop_activation': TRAILING_STOP_ACTIVATION,
-                                    'trailing_stop_distance': TRAILING_STOP_DISTANCE,
-                                    'break_even_protection': BREAK_EVEN_PROTECTION,
-                                    'break_even_trigger': BREAK_EVEN_TRIGGER,
-                                    'max_position_hours': MAX_POSITION_HOURS
-                                }
-                                
-                                # Сохраняем только RSI параметры в трекер (так как он рассчитан на RSI)
-                                # Но полные параметры сохраняются в metadata.json модели
-                                self.param_tracker.mark_params_used(
-                                    coin_rsi_params,  # Используем параметры которые реально использовались для монеты
-                                    training_seed,
-                                    symbol_win_rate,
-                                    symbol,
-                                    total_pnl=symbol_pnl,
-                                    signal_accuracy=signal_score,
-                                    trades_count=trades_for_symbol
-                                )
-                                
-                                if symbol_idx <= 10:
-                                    logger.info(f"   ✅ {symbol}: параметры сохранены в трекер")
+                                try:
+                                    # Расширяем параметры для сохранения (включаем все параметры обучения)
+                                    full_params = {
+                                        **coin_rsi_params,  # RSI параметры
+                                        'stop_loss': MAX_LOSS_PERCENT,
+                                        'take_profit': TAKE_PROFIT_PERCENT,
+                                        'trailing_stop_activation': TRAILING_STOP_ACTIVATION,
+                                        'trailing_stop_distance': TRAILING_STOP_DISTANCE,
+                                        'break_even_protection': BREAK_EVEN_PROTECTION,
+                                        'break_even_trigger': BREAK_EVEN_TRIGGER,
+                                        'max_position_hours': MAX_POSITION_HOURS
+                                    }
+                                    
+                                    # Сохраняем только RSI параметры в трекер (так как он рассчитан на RSI)
+                                    # Но полные параметры сохраняются в metadata.json модели
+                                    self.param_tracker.mark_params_used(
+                                        coin_rsi_params,  # Используем параметры которые реально использовались для монеты
+                                        training_seed,
+                                        symbol_win_rate,
+                                        symbol,
+                                        total_pnl=symbol_pnl,
+                                        signal_accuracy=signal_score,
+                                        trades_count=trades_for_symbol
+                                    )
+                                    
+                                    if symbol_idx <= 10:
+                                        logger.info(f"   ✅ {symbol}: параметры сохранены в трекер")
+                                except Exception as tracker_error:
+                                    logger.error(f"   ❌ {symbol}: ошибка сохранения параметров в трекер: {tracker_error}")
+                                    import traceback
+                                    logger.error(traceback.format_exc())
                             
                             # ВАЖНО: Сохраняем параметры в индивидуальные настройки ТОЛЬКО если Win Rate >= 80%
                             if symbol_win_rate >= 80.0:
-                                logger.info(f"   🎯 {symbol}: Win Rate {symbol_win_rate:.1f}% >= 80% - сохраняем параметры в индивидуальные настройки")
-                                
-                                # Формируем настройки в формате для bots.py (используем формат из bot_config.py)
-                                individual_settings = {
-                                    'rsi_long_threshold': coin_rsi_params['oversold'],  # Вход в LONG при RSI <=
-                                    'rsi_short_threshold': coin_rsi_params['overbought'],  # Вход в SHORT при RSI >=
-                                    'rsi_exit_long_with_trend': coin_rsi_params['exit_long_with_trend'],
-                                    'rsi_exit_long_against_trend': coin_rsi_params['exit_long_against_trend'],
-                                    'rsi_exit_short_with_trend': coin_rsi_params['exit_short_with_trend'],
-                                    'rsi_exit_short_against_trend': coin_rsi_params['exit_short_against_trend'],
-                                    'ai_trained': True,
-                                    'ai_win_rate': symbol_win_rate,
-                                    'ai_rating': self.param_tracker.calculate_rating(symbol_win_rate, symbol_pnl, signal_score, trades_for_symbol) if self.param_tracker else 0,
-                                    'ai_trained_at': datetime.now().isoformat(),
-                                    'ai_trades_count': trades_for_symbol,
-                                    'ai_total_pnl': symbol_pnl
-                                }
-                                
-                                # ВАЖНО: Используем ТЕ ЖЕ функции что и bots.py для бесшовной интеграции
-                                # Сначала пробуем через прямой импорт (работает если bots.py запущен)
                                 try:
-                                    from bots_modules.imports_and_globals import (
-                                        set_individual_coin_settings,
-                                        get_individual_coin_settings,
-                                        load_individual_coin_settings
-                                    )
+                                    logger.info(f"   🎯 {symbol}: Win Rate {symbol_win_rate:.1f}% >= 80% - сохраняем параметры в индивидуальные настройки")
                                     
-                                    # Загружаем существующие настройки если они есть (чтобы не потерять другие параметры)
-                                    existing_settings = get_individual_coin_settings(symbol) or {}
+                                    # Формируем настройки в формате для bots.py (используем формат из bot_config.py)
+                                    individual_settings = {
+                                        'rsi_long_threshold': coin_rsi_params['oversold'],  # Вход в LONG при RSI <=
+                                        'rsi_short_threshold': coin_rsi_params['overbought'],  # Вход в SHORT при RSI >=
+                                        'rsi_exit_long_with_trend': coin_rsi_params['exit_long_with_trend'],
+                                        'rsi_exit_long_against_trend': coin_rsi_params['exit_long_against_trend'],
+                                        'rsi_exit_short_with_trend': coin_rsi_params['exit_short_with_trend'],
+                                        'rsi_exit_short_against_trend': coin_rsi_params['exit_short_against_trend'],
+                                        'ai_trained': True,
+                                        'ai_win_rate': symbol_win_rate,
+                                        'ai_rating': self.param_tracker.calculate_rating(symbol_win_rate, symbol_pnl, signal_score, trades_for_symbol) if self.param_tracker else 0,
+                                        'ai_trained_at': datetime.now().isoformat(),
+                                        'ai_trades_count': trades_for_symbol,
+                                        'ai_total_pnl': symbol_pnl
+                                    }
                                     
-                                    # Объединяем существующие настройки с новыми (новые имеют приоритет)
-                                    merged_settings = {**existing_settings, **individual_settings}
-                                    merged_settings['updated_at'] = datetime.now().isoformat()
-                                    
-                                    # Сохраняем используя ТУ ЖЕ функцию что и bots.py
-                                    set_individual_coin_settings(symbol, merged_settings, persist=True)
-                                    logger.info(f"   💾 Параметры сохранены в индивидуальные настройки для {symbol} (через bots_modules)")
-                                    
-                                except ImportError:
-                                    # Если bots.py не запущен - используем прямое сохранение в файл
+                                    # ВАЖНО: Используем ТЕ ЖЕ функции что и bots.py для бесшовной интеграции
+                                    # Сначала пробуем через прямой импорт (работает если bots.py запущен)
                                     try:
-                                        from bot_engine.storage import (
-                                            save_individual_coin_settings,
-                                            load_individual_coin_settings as storage_load_individual_coin_settings
+                                        from bots_modules.imports_and_globals import (
+                                            set_individual_coin_settings,
+                                            get_individual_coin_settings,
+                                            load_individual_coin_settings
                                         )
                                         
-                                        # Загружаем существующие настройки из файла
-                                        existing_all_settings = storage_load_individual_coin_settings() or {}
+                                        # Загружаем существующие настройки если они есть (чтобы не потерять другие параметры)
+                                        existing_settings = get_individual_coin_settings(symbol) or {}
                                         
-                                        # Объединяем с новыми настройками для этой монеты
-                                        existing_settings = existing_all_settings.get(symbol.upper(), {})
+                                        # Объединяем существующие настройки с новыми (новые имеют приоритет)
                                         merged_settings = {**existing_settings, **individual_settings}
                                         merged_settings['updated_at'] = datetime.now().isoformat()
                                         
-                                        # Обновляем все настройки
-                                        existing_all_settings[symbol.upper()] = merged_settings
-                                        
                                         # Сохраняем используя ТУ ЖЕ функцию что и bots.py
-                                        save_individual_coin_settings(existing_all_settings)
-                                        logger.info(f"   💾 Параметры сохранены в файл для {symbol} (bots.py не запущен)")
+                                        set_individual_coin_settings(symbol, merged_settings, persist=True)
+                                        logger.info(f"   💾 Параметры сохранены в индивидуальные настройки для {symbol} (через bots_modules)")
                                         
-                                    except Exception as storage_error:
-                                        logger.warning(f"   ⚠️ Не удалось сохранить параметры для {symbol}: {storage_error}")
-                                        
-                                except Exception as save_error:
-                                    # Если не получилось через bots_modules - пробуем через API
-                                    try:
-                                        import requests
-                                        response = requests.post(
-                                            f'http://localhost:5001/api/bots/individual-settings/{symbol}',
-                                            json=individual_settings,
-                                            timeout=5
-                                        )
-                                        if response.status_code == 200:
-                                            logger.info(f"   💾 Параметры сохранены через API для {symbol}")
-                                        else:
-                                            logger.warning(f"   ⚠️ API вернул код {response.status_code} для {symbol}")
-                                    except Exception as api_error:
-                                        logger.warning(f"   ⚠️ Не удалось сохранить параметры для {symbol} (API недоступен): {api_error}")
+                                    except ImportError:
+                                        # Если bots.py не запущен - используем прямое сохранение в файл
+                                        try:
+                                            from bot_engine.storage import (
+                                                save_individual_coin_settings,
+                                                load_individual_coin_settings as storage_load_individual_coin_settings
+                                            )
+                                            
+                                            # Загружаем существующие настройки из файла
+                                            existing_all_settings = storage_load_individual_coin_settings() or {}
+                                            
+                                            # Объединяем с новыми настройками для этой монеты
+                                            existing_settings = existing_all_settings.get(symbol.upper(), {})
+                                            merged_settings = {**existing_settings, **individual_settings}
+                                            merged_settings['updated_at'] = datetime.now().isoformat()
+                                            
+                                            # Обновляем все настройки
+                                            existing_all_settings[symbol.upper()] = merged_settings
+                                            
+                                            # Сохраняем используя ТУ ЖЕ функцию что и bots.py
+                                            save_individual_coin_settings(existing_all_settings)
+                                            logger.info(f"   💾 Параметры сохранены в файл для {symbol} (bots.py не запущен)")
+                                            
+                                        except Exception as storage_error:
+                                            logger.warning(f"   ⚠️ Не удалось сохранить параметры для {symbol}: {storage_error}")
+                                            
+                                    except Exception as save_error:
+                                        # Если не получилось через bots_modules - пробуем через API
+                                        try:
+                                            import requests
+                                            response = requests.post(
+                                                f'http://localhost:5001/api/bots/individual-settings/{symbol}',
+                                                json=individual_settings,
+                                                timeout=5
+                                            )
+                                            if response.status_code == 200:
+                                                logger.info(f"   💾 Параметры сохранены через API для {symbol}")
+                                            else:
+                                                logger.warning(f"   ⚠️ API вернул код {response.status_code} для {symbol}")
+                                        except Exception as api_error:
+                                            logger.warning(f"   ⚠️ Не удалось сохранить параметры для {symbol} (API недоступен): {api_error}")
+                                except Exception as save_params_error:
+                                    logger.error(f"   ❌ {symbol}: ошибка сохранения индивидуальных настроек: {save_params_error}")
+                                    import traceback
+                                    logger.error(traceback.format_exc())
                             else:
                                 logger.debug(f"   ⏳ {symbol}: Win Rate {symbol_win_rate:.1f}% < 80% - параметры НЕ сохраняются в индивидуальные настройки")
                             
