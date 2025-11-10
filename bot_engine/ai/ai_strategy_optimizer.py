@@ -34,35 +34,68 @@ class AIStrategyOptimizer:
     
     def _load_history_data(self) -> List[Dict]:
         """Загрузить историю трейдов"""
+        trades = []
+        
+        # 1. Пробуем загрузить из data/ai/history_data.json (данные собранные через API)
         try:
             history_file = os.path.join(self.data_dir, 'history_data.json')
-            if not os.path.exists(history_file):
-                return []
-            
-            with open(history_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            
-            trades = []
-            latest = data.get('latest', {})
-            history = data.get('history', [])
-            
-            if latest:
-                trades.extend(latest.get('trades', []))
-            
-            for entry in history:
-                trades.extend(entry.get('trades', []))
-            
-            # Фильтруем только закрытые сделки
-            closed_trades = [
-                t for t in trades
-                if t.get('status') == 'CLOSED' and t.get('pnl') is not None
-            ]
-            
-            return closed_trades
-            
+            if os.path.exists(history_file):
+                with open(history_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                latest = data.get('latest', {})
+                history = data.get('history', [])
+                
+                if latest:
+                    trades.extend(latest.get('trades', []))
+                
+                for entry in history:
+                    trades.extend(entry.get('trades', []))
+                
+                logger.debug(f"📊 Загружено {len(trades)} сделок из history_data.json")
         except Exception as e:
-            logger.error(f"❌ Ошибка загрузки истории: {e}")
-            return []
+            logger.debug(f"⚠️ Ошибка загрузки history_data.json: {e}")
+        
+        # 2. Пробуем загрузить напрямую из data/bot_history.json (основной файл bots.py)
+        try:
+            bot_history_file = os.path.join('data', 'bot_history.json')
+            if os.path.exists(bot_history_file):
+                with open(bot_history_file, 'r', encoding='utf-8') as f:
+                    bot_history_data = json.load(f)
+                
+                # Извлекаем сделки из bot_history.json
+                bot_trades = bot_history_data.get('trades', [])
+                if bot_trades:
+                    # Добавляем только новые сделки (избегаем дубликатов)
+                    existing_ids = {t.get('id') for t in trades if t.get('id')}
+                    for trade in bot_trades:
+                        trade_id = trade.get('id') or trade.get('timestamp')
+                        if trade_id not in existing_ids:
+                            trades.append(trade)
+                    
+                    logger.debug(f"📊 Добавлено {len(bot_trades)} сделок из bot_history.json")
+        except json.JSONDecodeError as json_error:
+            logger.warning(f"⚠️ Файл bot_history.json поврежден (JSON ошибка на позиции {json_error.pos})")
+            logger.info("🗑️ Удаляем поврежденный файл, bots.py пересоздаст его автоматически")
+            try:
+                bot_history_file = os.path.join('data', 'bot_history.json')
+                os.remove(bot_history_file)
+                logger.info("✅ Поврежденный файл удален")
+            except Exception as del_error:
+                logger.debug(f"⚠️ Не удалось удалить файл: {del_error}")
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка загрузки bot_history.json: {e}")
+        
+        # 3. Фильтруем только закрытые сделки с PnL
+        closed_trades = [
+            t for t in trades
+            if t.get('status') == 'CLOSED' and t.get('pnl') is not None
+        ]
+        
+        if len(closed_trades) > 0:
+            logger.info(f"✅ Загружено {len(closed_trades)} закрытых сделок для анализа (всего {len(trades)} сделок)")
+        
+        return closed_trades
     
     def analyze_trade_patterns(self) -> Dict:
         """
@@ -81,8 +114,17 @@ class AIStrategyOptimizer:
             
             if len(trades) < 10:
                 logger.warning("⚠️ Недостаточно данных для анализа (нужно минимум 10 сделок)")
-                logger.info("💡 Используем свечи для анализа паттернов...")
-                return self._analyze_patterns_on_candles()
+                logger.info("💡 Возвращаем базовые паттерны...")
+                return {
+                    'total_trades': len(trades),
+                    'profitable_trades': len([t for t in trades if t.get('pnl', 0) > 0]),
+                    'losing_trades': len([t for t in trades if t.get('pnl', 0) <= 0]),
+                    'win_rate': 0,
+                    'rsi_analysis': {},
+                    'trend_analysis': {},
+                    'time_analysis': {},
+                    'note': 'Недостаточно данных для полного анализа'
+                }
             
             # Анализируем прибыльные и убыточные сделки
             profitable_trades = [t for t in trades if t.get('pnl', 0) > 0]
@@ -285,4 +327,451 @@ class AIStrategyOptimizer:
         except Exception as e:
             logger.error(f"❌ Ошибка оптимизации для {symbol}: {e}")
             return {}
+    
+    def optimize_coin_parameters_on_candles(
+        self, 
+        symbol: str, 
+        candles: List[Dict],
+        current_win_rate: float = 0.0
+    ) -> Optional[Dict]:
+        """
+        ОПТИМИЗАЦИЯ ПАРАМЕТРОВ ДЛЯ КОНКРЕТНОЙ МОНЕТЫ через Grid Search
+        
+        Тестирует разные комбинации параметров на исторических свечах
+        и находит оптимальные для этой монеты.
+        
+        Args:
+            symbol: Символ монеты
+            candles: Список свечей для тестирования
+            current_win_rate: Текущий win rate (если < 80%, запускаем оптимизацию)
+        
+        Returns:
+            Оптимизированные параметры или None
+        """
+        logger.info("=" * 80)
+        logger.info(f"🔍 ОПТИМИЗАЦИЯ ПАРАМЕТРОВ ДЛЯ {symbol}")
+        logger.info("=" * 80)
+        if current_win_rate >= 80.0:
+            logger.info(f"   📊 Текущий Win Rate: {current_win_rate:.1f}% (>=80%, приемлемо, но оптимизируем дальше к 100%)")
+        else:
+            logger.info(f"   📊 Текущий Win Rate: {current_win_rate:.1f}% (<80%, оптимизируем, но НЕ сохраняем пока не достигнем >=80%)")
+        logger.info(f"   📈 Свечей для тестирования: {len(candles)}")
+        logger.info(f"   🧠 Используем базу знаний для улучшения торговой методики")
+        
+        # Загружаем базу знаний для использования опыта
+        knowledge_base = {}
+        successful_rsi_ranges = {}
+        try:
+            from bot_engine.ai.ai_continuous_learning import AIContinuousLearning
+            continuous_learning = AIContinuousLearning()
+            knowledge_base = continuous_learning.knowledge_base
+            
+            # Используем знания о успешных RSI диапазонах для приоритизации тестов
+            successful_rsi_ranges = knowledge_base.get('successful_patterns', {}).get('rsi_ranges', {})
+            if successful_rsi_ranges:
+                best_rsi_range = max(successful_rsi_ranges.items(), key=lambda x: x[1])[0] if successful_rsi_ranges else None
+                logger.info(f"   💡 База знаний: успешные входы в диапазоне RSI {best_rsi_range}")
+        except Exception as kb_error:
+            logger.debug(f"   ⚠️ Не удалось загрузить базу знаний: {kb_error}")
+        
+        try:
+            # Загружаем базовые параметры из bot_config.py
+            try:
+                from bot_engine.bot_config import (
+                    RSI_OVERSOLD, RSI_OVERBOUGHT,
+                    RSI_EXIT_LONG_WITH_TREND, RSI_EXIT_LONG_AGAINST_TREND,
+                    RSI_EXIT_SHORT_WITH_TREND, RSI_EXIT_SHORT_AGAINST_TREND,
+                    DEFAULT_AUTO_BOT_CONFIG
+                )
+                base_rsi_long_entry = RSI_OVERSOLD
+                base_rsi_short_entry = RSI_OVERBOUGHT
+                base_rsi_long_exit_with = RSI_EXIT_LONG_WITH_TREND
+                base_rsi_long_exit_against = RSI_EXIT_LONG_AGAINST_TREND
+                base_rsi_short_exit_with = RSI_EXIT_SHORT_WITH_TREND
+                base_rsi_short_exit_against = RSI_EXIT_SHORT_AGAINST_TREND
+                base_stop_loss = DEFAULT_AUTO_BOT_CONFIG.get('max_loss_percent', 15)
+                base_take_profit = DEFAULT_AUTO_BOT_CONFIG.get('take_profit_percent', 20)
+            except ImportError:
+                # Значения по умолчанию
+                base_rsi_long_entry = 29
+                base_rsi_short_entry = 71
+                base_rsi_long_exit_with = 65
+                base_rsi_long_exit_against = 60
+                base_rsi_short_exit_with = 35
+                base_rsi_short_exit_against = 40
+                base_stop_loss = 15
+                base_take_profit = 20
+            
+            # Grid Search: варьируем параметры вокруг базовых значений
+            # RSI вход LONG: от 20 до 35 (шаг 3)
+            rsi_long_entry_range = list(range(20, 36, 3))
+            # RSI вход SHORT: от 65 до 80 (шаг 3)
+            rsi_short_entry_range = list(range(65, 81, 3))
+            # RSI выход LONG: от 55 до 70 (шаг 5)
+            rsi_long_exit_range = list(range(55, 71, 5))
+            # RSI выход SHORT: от 30 до 45 (шаг 5)
+            rsi_short_exit_range = list(range(30, 46, 5))
+            # Stop Loss: от 10% до 20% (шаг 2.5%)
+            stop_loss_range = [10, 12.5, 15, 17.5, 20]
+            # Take Profit: от 15% до 25% (шаг 2.5%)
+            take_profit_range = [15, 17.5, 20, 22.5, 25]
+            # Trailing Stop Activation: от 15% до 30% (шаг 5%)
+            trailing_activation_range = [15, 20, 25, 30]
+            # Trailing Stop Distance: от 10% до 20% (шаг 2.5%)
+            trailing_distance_range = [10, 12.5, 15, 17.5, 20]
+            # Break Even Trigger: от 50% до 150% (шаг 25%)
+            break_even_trigger_range = [50, 75, 100, 125, 150]
+            
+            total_combinations = (len(rsi_long_entry_range) * len(rsi_short_entry_range) * 
+                                len(rsi_long_exit_range) * len(rsi_short_exit_range) * 
+                                len(stop_loss_range) * len(take_profit_range) *
+                                len(trailing_activation_range) * len(trailing_distance_range) *
+                                len(break_even_trigger_range))
+            logger.info(f"   🔍 Тестируем до {total_combinations} комбинаций параметров:")
+            logger.info(f"      📊 RSI входы/выходы, SL/TP, Trailing Stop, Break Even")
+            
+            best_params = None
+            best_win_rate = 0.0
+            best_total_pnl = float('-inf')
+            best_trades_count = 0
+            
+            tested_count = 0
+            max_tests = 200  # Увеличиваем количество тестов для более тщательной оптимизации
+            
+            # Импортируем функцию расчета RSI
+            try:
+                from bot_engine.indicators import TechnicalIndicators
+                calculate_rsi_history_func = TechnicalIndicators.calculate_rsi_history
+            except ImportError:
+                try:
+                    from bots_modules.calculations import calculate_rsi_history
+                    calculate_rsi_history_func = calculate_rsi_history
+                except ImportError:
+                    from bot_engine.utils.rsi_utils import calculate_rsi_history
+                    calculate_rsi_history_func = calculate_rsi_history
+            
+            # Сортируем свечи по времени
+            candles_sorted = sorted(candles, key=lambda x: x.get('time', 0))
+            if len(candles_sorted) < 100:
+                logger.warning(f"⚠️ Недостаточно свечей для оптимизации ({len(candles_sorted)})")
+                return None
+            
+            # Вычисляем RSI один раз для всех свечей
+            rsi_history = calculate_rsi_history_func(candles_sorted, period=14)
+            if not rsi_history or len(rsi_history) < 50:
+                logger.warning(f"⚠️ Недостаточно данных RSI для оптимизации")
+                return None
+            
+            closes = [float(c.get('close', 0) or 0) for c in candles_sorted]
+            
+            # Тестируем комбинации (умный выбор для производительности)
+            # Приоритет: сначала тестируем базовые значения, потом вариации
+            for rsi_long_entry in rsi_long_entry_range[:4]:  # Берем больше значений
+                for rsi_short_entry in rsi_short_entry_range[:4]:
+                    for rsi_long_exit in rsi_long_exit_range[:3]:
+                        for rsi_short_exit in rsi_short_exit_range[:3]:
+                            for stop_loss in stop_loss_range[:4]:
+                                for take_profit in take_profit_range[:4]:
+                                    for trailing_activation in trailing_activation_range[:3]:
+                                        for trailing_distance in trailing_distance_range[:3]:
+                                            for break_even_trigger in break_even_trigger_range[:3]:
+                                                if tested_count >= max_tests:
+                                                    break
+                                                
+                                                tested_count += 1
+                                                
+                                                # Симулируем торговлю с этими параметрами
+                                                simulated_trades = []
+                                                current_position = None
+                                                max_profit_achieved = {}  # Для каждой позиции отслеживаем максимальную прибыль
+                                                trailing_active = {}  # Для каждой позиции отслеживаем активацию трейлинга
+                                                break_even_activated = {}  # Для каждой позиции отслеживаем безубыток
+                                    
+                                    for i in range(14, len(candles_sorted)):
+                                        try:
+                                            rsi_idx = i - 14
+                                            if rsi_idx >= len(rsi_history):
+                                                continue
+                                            
+                                            current_rsi = rsi_history[rsi_idx]
+                                            current_price = closes[i]
+                                            
+                                            # Определяем тренд
+                                            trend = 'NEUTRAL'
+                                            if i >= 50:
+                                                ema_short = self._calculate_ema(closes[max(0, i-50):i+1], 50)
+                                                ema_long = self._calculate_ema(closes[max(0, i-200):i+1], 200)
+                                                if ema_short and ema_long:
+                                                    if ema_short > ema_long:
+                                                        trend = 'UP'
+                                                    elif ema_short < ema_long:
+                                                        trend = 'DOWN'
+                                            
+                                            # Проверка выхода с учетом всех защитных механизмов
+                                            if current_position:
+                                                direction = current_position['direction']
+                                                entry_price = current_position['entry_price']
+                                                position_id = current_position.get('id', id(current_position))
+                                                
+                                                # Вычисляем текущую прибыль
+                                                if direction == 'LONG':
+                                                    profit_pct = ((current_price - entry_price) / entry_price) * 100
+                                                else:  # SHORT
+                                                    profit_pct = ((entry_price - current_price) / entry_price) * 100
+                                                
+                                                # Обновляем максимальную прибыль
+                                                if position_id not in max_profit_achieved:
+                                                    max_profit_achieved[position_id] = profit_pct
+                                                else:
+                                                    max_profit_achieved[position_id] = max(max_profit_achieved[position_id], profit_pct)
+                                                
+                                                # Проверка Break Even
+                                                if position_id not in break_even_activated:
+                                                    break_even_activated[position_id] = False
+                                                
+                                                if not break_even_activated[position_id] and profit_pct >= break_even_trigger:
+                                                    break_even_activated[position_id] = True
+                                                
+                                                # Если безубыток активирован и прибыль упала до 0 или ниже - закрываем
+                                                if break_even_activated[position_id] and profit_pct <= 0:
+                                                    simulated_trades.append({
+                                                        'direction': direction,
+                                                        'entry_price': entry_price,
+                                                        'exit_price': current_price,
+                                                        'pnl_pct': profit_pct,
+                                                        'is_successful': profit_pct > 0,
+                                                        'exit_reason': 'BREAK_EVEN'
+                                                    })
+                                                    current_position = None
+                                                    continue
+                                                
+                                                # Проверка Trailing Stop
+                                                if position_id not in trailing_active:
+                                                    trailing_active[position_id] = False
+                                                
+                                                # Активация trailing stop
+                                                if not trailing_active[position_id] and profit_pct >= trailing_activation:
+                                                    trailing_active[position_id] = True
+                                                
+                                                # Если trailing stop активен, проверяем расстояние
+                                                if trailing_active[position_id]:
+                                                    max_profit = max_profit_achieved[position_id]
+                                                    # Trailing stop срабатывает если цена откатилась на trailing_distance от максимума
+                                                    if direction == 'LONG':
+                                                        trailing_stop_price = entry_price * (1 + (max_profit - trailing_distance) / 100)
+                                                        if current_price <= trailing_stop_price:
+                                                            simulated_trades.append({
+                                                                'direction': direction,
+                                                                'entry_price': entry_price,
+                                                                'exit_price': current_price,
+                                                                'pnl_pct': profit_pct,
+                                                                'is_successful': profit_pct > 0,
+                                                                'exit_reason': 'TRAILING_STOP',
+                                                                'max_profit': max_profit
+                                                            })
+                                                            current_position = None
+                                                            continue
+                                                    else:  # SHORT
+                                                        trailing_stop_price = entry_price * (1 - (max_profit - trailing_distance) / 100)
+                                                        if current_price >= trailing_stop_price:
+                                                            simulated_trades.append({
+                                                                'direction': direction,
+                                                                'entry_price': entry_price,
+                                                                'exit_price': current_price,
+                                                                'pnl_pct': profit_pct,
+                                                                'is_successful': profit_pct > 0,
+                                                                'exit_reason': 'TRAILING_STOP',
+                                                                'max_profit': max_profit
+                                                            })
+                                                            current_position = None
+                                                            continue
+                                                
+                                                # Стандартные проверки выхода
+                                                should_exit = False
+                                                exit_reason = None
+                                                
+                                                if direction == 'LONG':
+                                                    if current_rsi >= rsi_long_exit:
+                                                        should_exit = True
+                                                        exit_reason = 'RSI_EXIT'
+                                                    elif current_price <= entry_price * (1 - stop_loss / 100):
+                                                        should_exit = True
+                                                        exit_reason = 'STOP_LOSS'
+                                                    elif current_price >= entry_price * (1 + take_profit / 100):
+                                                        should_exit = True
+                                                        exit_reason = 'TAKE_PROFIT'
+                                                else:  # SHORT
+                                                    if current_rsi <= rsi_short_exit:
+                                                        should_exit = True
+                                                        exit_reason = 'RSI_EXIT'
+                                                    elif current_price >= entry_price * (1 + stop_loss / 100):
+                                                        should_exit = True
+                                                        exit_reason = 'STOP_LOSS'
+                                                    elif current_price <= entry_price * (1 - take_profit / 100):
+                                                        should_exit = True
+                                                        exit_reason = 'TAKE_PROFIT'
+                                                
+                                                if should_exit:
+                                                    simulated_trades.append({
+                                                        'direction': direction,
+                                                        'entry_price': entry_price,
+                                                        'exit_price': current_price,
+                                                        'pnl_pct': profit_pct,
+                                                        'is_successful': profit_pct > 0,
+                                                        'exit_reason': exit_reason
+                                                    })
+                                                    current_position = None
+                                                    continue
+                                            
+                                            # Проверка входа
+                                            if not current_position:
+                                                if current_rsi <= rsi_long_entry:
+                                                    position_id = len(simulated_trades) + 1
+                                                    current_position = {
+                                                        'id': position_id,
+                                                        'direction': 'LONG',
+                                                        'entry_price': current_price,
+                                                        'entry_rsi': current_rsi,
+                                                        'entry_idx': i
+                                                    }
+                                                    max_profit_achieved[position_id] = 0
+                                                    trailing_active[position_id] = False
+                                                    break_even_activated[position_id] = False
+                                                elif current_rsi >= rsi_short_entry:
+                                                    position_id = len(simulated_trades) + 1
+                                                    current_position = {
+                                                        'id': position_id,
+                                                        'direction': 'SHORT',
+                                                        'entry_price': current_price,
+                                                        'entry_rsi': current_rsi,
+                                                        'entry_idx': i
+                                                    }
+                                                    max_profit_achieved[position_id] = 0
+                                                    trailing_active[position_id] = False
+                                                    break_even_activated[position_id] = False
+                                        except:
+                                            continue
+                                    
+                                    # Оцениваем результаты
+                                    if len(simulated_trades) >= 5:  # Минимум 5 сделок для оценки
+                                        successful = sum(1 for t in simulated_trades if t['is_successful'])
+                                        win_rate = successful / len(simulated_trades) * 100
+                                        total_pnl = sum(t['pnl_pct'] for t in simulated_trades)
+                                        
+                                        # Выбираем лучшую комбинацию (приоритет: win_rate > total_pnl)
+                                        if win_rate > best_win_rate or (win_rate == best_win_rate and total_pnl > best_total_pnl):
+                                            best_win_rate = win_rate
+                                            best_total_pnl = total_pnl
+                                            best_trades_count = len(simulated_trades)
+                                            best_params = {
+                                                'rsi_long_threshold': rsi_long_entry,
+                                                'rsi_short_threshold': rsi_short_entry,
+                                                'rsi_exit_long_with_trend': rsi_long_exit,
+                                                'rsi_exit_long_against_trend': rsi_long_exit - 5,  # Против тренда выходим раньше
+                                                'rsi_exit_short_with_trend': rsi_short_exit,
+                                                'rsi_exit_short_against_trend': rsi_short_exit + 5,
+                                                'max_loss_percent': stop_loss,
+                                                'take_profit_percent': take_profit,
+                                                'trailing_stop_activation': trailing_activation,
+                                                'trailing_stop_distance': trailing_distance,
+                                                'break_even_trigger': break_even_trigger,
+                                                'break_even_protection': True,  # Всегда включен
+                                                'optimized_at': datetime.now().isoformat(),
+                                                'optimization_win_rate': win_rate,
+                                                'optimization_total_pnl': total_pnl,
+                                                'optimization_trades_count': len(simulated_trades)
+                                            }
+                                            
+                                            # Анализ причин выхода для улучшения стратегии
+                                            exit_reasons = {}
+                                            for trade in simulated_trades:
+                                                reason = trade.get('exit_reason', 'UNKNOWN')
+                                                exit_reasons[reason] = exit_reasons.get(reason, 0) + 1
+                                            best_params['exit_reasons_analysis'] = exit_reasons
+                                    
+                                    if tested_count >= max_tests:
+                                        break
+                                if tested_count >= max_tests:
+                                    break
+                            if tested_count >= max_tests:
+                                break
+                        if tested_count >= max_tests:
+                            break
+                    if tested_count >= max_tests:
+                        break
+                if tested_count >= max_tests:
+                    break
+            
+            if best_params and best_win_rate > current_win_rate:
+                logger.info(f"   ✅ Найдены оптимальные параметры!")
+                logger.info(f"      📊 Win Rate: {current_win_rate:.1f}% → {best_win_rate:.1f}% (+{best_win_rate - current_win_rate:.1f}%)")
+                logger.info(f"      💰 Total PnL: {best_total_pnl:.2f}%")
+                logger.info(f"      🎯 Сделок: {best_trades_count}")
+                logger.info(f"      📈 Параметры: RSI LONG {best_params['rsi_long_threshold']}/{best_params['rsi_exit_long_with_trend']}, SHORT {best_params['rsi_short_threshold']}/{best_params['rsi_exit_short_with_trend']}")
+                logger.info(f"      🛑 SL: {best_params['max_loss_percent']}%, TP: {best_params['take_profit_percent']}%")
+                logger.info(f"      🚀 Trailing Stop: активация {best_params['trailing_stop_activation']}%, расстояние {best_params['trailing_stop_distance']}%")
+                logger.info(f"      🛡️ Break Even: триггер {best_params['break_even_trigger']}%")
+                
+                # Анализ причин выхода
+                exit_reasons = best_params.get('exit_reasons_analysis', {})
+                if exit_reasons:
+                    logger.info(f"      📊 Анализ выходов: {exit_reasons}")
+                
+                # ВАЖНО: Сохраняем индивидуальные настройки ТОЛЬКО если win rate >= 80%
+                if best_win_rate >= 80.0:
+                    logger.info(f"      🎯 Win Rate >= 80% - СОХРАНЯЕМ индивидуальные настройки для {symbol}")
+                    logger.info(f"      💡 Эти параметры будут использоваться ботами вместо глобальных")
+                    
+                    # Сохраняем оптимальные параметры для монеты через API bots.py
+                    try:
+                        import requests
+                        response = requests.post(
+                            'http://localhost:5001/api/bots/individual-settings/' + symbol,
+                            json=best_params,
+                            timeout=5
+                        )
+                        if response.status_code == 200:
+                            logger.info(f"   💾 Оптимизированные параметры сохранены для {symbol}")
+                        else:
+                            logger.warning(f"   ⚠️ Не удалось сохранить параметры через API: {response.status_code}")
+                            # Пробуем напрямую через импорт
+                            try:
+                                from bots_modules.imports_and_globals import set_individual_coin_settings
+                                set_individual_coin_settings(symbol, best_params, persist=True)
+                                logger.info(f"   💾 Параметры сохранены напрямую для {symbol}")
+                            except Exception as direct_error:
+                                logger.error(f"   ❌ Ошибка прямого сохранения: {direct_error}")
+                    except Exception as save_error:
+                        logger.error(f"   ❌ Ошибка сохранения параметров: {save_error}")
+                else:
+                    logger.info(f"      ⚠️ Win Rate {best_win_rate:.1f}% < 80% - НЕ сохраняем индивидуальные настройки")
+                    logger.info(f"      💡 Продолжаем использовать глобальные настройки (скрипты) пока AI модель не достигнет >=80%")
+                    logger.info(f"      💡 Параметры найдены, но будут применены только когда win rate >= 80%")
+                
+                logger.info("=" * 80)
+                return best_params
+            else:
+                logger.info(f"   ⚠️ Не найдено лучших параметров (текущий: {current_win_rate:.1f}%, лучший найденный: {best_win_rate:.1f}%)")
+                logger.info("=" * 80)
+                return None
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка оптимизации параметров для {symbol}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+    
+    def _calculate_ema(self, prices: List[float], period: int) -> Optional[float]:
+        """Вычисляет EMA (Exponential Moving Average)"""
+        if not prices or len(prices) < period:
+            return None
+        
+        prices_array = np.array(prices[-period:])
+        multiplier = 2.0 / (period + 1)
+        
+        ema = prices_array[0]
+        for price in prices_array[1:]:
+            ema = (price * multiplier) + (ema * (1 - multiplier))
+        
+        return float(ema)
 

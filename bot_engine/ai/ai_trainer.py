@@ -1319,6 +1319,82 @@ class AITrainer:
                         from collections import Counter
                         successful_trends = Counter([t['entry_trend'] for t in successful_trades])
                         logger.info(f"   📊 Тренды успешных входов: {dict(successful_trends)}")
+                    
+                    # ВАЖНО: Всегда запускаем оптимизацию параметров для каждой монеты
+                    # Но сохраняем индивидуальные настройки ТОЛЬКО если win rate >= 80%
+                    logger.info("=" * 80)
+                    logger.info(f"🔍 ОПТИМИЗАЦИЯ ПАРАМЕТРОВ ДЛЯ МОНЕТ")
+                    logger.info(f"   📊 Общий Win Rate: {win_rate:.1f}%")
+                    if win_rate >= 80.0:
+                        logger.info("   ✅ Win Rate >= 80% - приемлемо для работы, но оптимизируем дальше к 100%")
+                    else:
+                        logger.info("   ⚠️ Win Rate < 80% - оптимизируем, но НЕ сохраняем индивидуальные настройки")
+                        logger.info("   💡 Пока используем глобальные настройки (скрипты) пока AI модель не достигнет >=80%")
+                    logger.info("=" * 80)
+                    
+                    # Группируем сделки по монетам для оптимизации
+                    trades_by_symbol = {}
+                    for trade in simulated_trades:
+                        symbol = trade.get('symbol')
+                        if symbol:
+                            if symbol not in trades_by_symbol:
+                                trades_by_symbol[symbol] = []
+                            trades_by_symbol[symbol].append(trade)
+                    
+                    # Оптимизируем параметры для ВСЕХ монет (независимо от win rate)
+                    optimized_count = 0
+                    saved_count = 0
+                    for symbol, symbol_trades in trades_by_symbol.items():
+                        if len(symbol_trades) < 5:  # Минимум 5 сделок для оптимизации
+                            continue
+                        
+                        symbol_win_rate = sum(1 for t in symbol_trades if t.get('is_successful', False)) / len(symbol_trades) * 100
+                        
+                        # Оптимизируем ВСЕГДА (даже если win rate >= 80%, продолжаем к 100%)
+                        # Получаем свечи для этой монеты
+                        symbol_candle_info = candles_data.get(symbol, {})
+                        if isinstance(symbol_candle_info, dict):
+                            symbol_candles = symbol_candle_info.get('candles', [])
+                        else:
+                            symbol_candles = []
+                        
+                        if len(symbol_candles) >= 100:
+                            try:
+                                # Импортируем оптимизатор
+                                from bot_engine.ai.ai_strategy_optimizer import AIStrategyOptimizer
+                                optimizer = AIStrategyOptimizer()
+                                
+                                # Оптимизируем параметры
+                                optimized = optimizer.optimize_coin_parameters_on_candles(
+                                    symbol, 
+                                    symbol_candles, 
+                                    symbol_win_rate
+                                )
+                                
+                                if optimized:
+                                    optimized_count += 1
+                                    optimized_win_rate = optimized.get('optimization_win_rate', 0)
+                                    logger.info(f"   ✅ {symbol}: параметры оптимизированы (Win Rate: {symbol_win_rate:.1f}% → {optimized_win_rate:.1f}%)")
+                                    
+                                    # Если win rate >= 80%, параметры уже сохранены в optimize_coin_parameters_on_candles
+                                    if optimized_win_rate >= 80.0:
+                                        saved_count += 1
+                            except Exception as opt_error:
+                                logger.debug(f"   ⚠️ Ошибка оптимизации для {symbol}: {opt_error}")
+                    
+                    # Итоговая статистика оптимизации
+                    if optimized_count > 0:
+                        logger.info(f"   ✅ Оптимизировано параметров для {optimized_count} монет")
+                        if saved_count > 0:
+                            logger.info(f"   💾 Сохранено индивидуальных настроек для {saved_count} монет (Win Rate >= 80%)")
+                            logger.info("   💡 Эти параметры будут использоваться ботами в приоритете над глобальными!")
+                        else:
+                            logger.info(f"   ⚠️ НЕ сохранено индивидуальных настроек (все монеты имеют Win Rate < 80%)")
+                            logger.info("   💡 Продолжаем использовать глобальные настройки (скрипты) пока AI модель не достигнет >=80%")
+                    else:
+                        logger.info("   ⚠️ Не удалось оптимизировать параметры ни для одной монеты")
+                    
+                    logger.info("=" * 80)
                 else:
                     logger.warning(f"⚠️ Недостаточно симулированных сделок для обучения (нужно минимум 20, есть {len(X)})")
             

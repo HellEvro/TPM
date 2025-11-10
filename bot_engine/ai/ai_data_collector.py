@@ -192,11 +192,40 @@ class AIDataCollector:
             'statistics': {}
         }
         
+        # ВАЖНО: Загружаем напрямую из data/bot_history.json
         try:
-            # Получаем историю сделок
+            bot_history_file = os.path.join('data', 'bot_history.json')
+            if os.path.exists(bot_history_file):
+                with open(bot_history_file, 'r', encoding='utf-8') as f:
+                    bot_history_data = json.load(f)
+                
+                # Извлекаем сделки из bot_history.json
+                bot_trades = bot_history_data.get('trades', [])
+                if bot_trades:
+                    collected_data['trades'].extend(bot_trades)
+                    logger.debug(f"📊 Загружено {len(bot_trades)} сделок напрямую из bot_history.json")
+        except json.JSONDecodeError as json_error:
+            logger.warning(f"⚠️ Файл bot_history.json поврежден (JSON ошибка на позиции {json_error.pos})")
+            logger.info("🗑️ Удаляем поврежденный файл, bots.py пересоздаст его автоматически")
+            try:
+                os.remove(bot_history_file)
+                logger.info("✅ Поврежденный файл удален")
+            except Exception as del_error:
+                logger.debug(f"⚠️ Не удалось удалить файл: {del_error}")
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка загрузки bot_history.json: {e}")
+        
+        try:
+            # Получаем историю сделок через API (дополняем прямую загрузку)
             trades_response = self._call_bots_api('/api/bots/trades?limit=1000')
             if trades_response and trades_response.get('success'):
-                collected_data['trades'] = trades_response.get('trades', [])
+                api_trades = trades_response.get('trades', [])
+                # Объединяем с уже загруженными из bot_history.json (избегаем дубликатов)
+                existing_ids = {t.get('id') for t in collected_data['trades'] if t.get('id')}
+                for trade in api_trades:
+                    trade_id = trade.get('id') or trade.get('timestamp')
+                    if trade_id not in existing_ids:
+                        collected_data['trades'].append(trade)
             
             # Получаем статистику
             stats_response = self._call_bots_api('/api/bots/statistics')
