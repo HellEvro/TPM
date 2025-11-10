@@ -104,8 +104,11 @@ class BybitExchange(BaseExchange):
         self._chart_cache = {}
         self._chart_cache_lock = threading.Lock()
         
-        self._request_window_seconds = 60
-        self._max_requests_per_window = 90
+        # 🛡️ Глобальный троттлинг: мягко ограничиваем скорость запросов, не блокируя систему на минуты
+        #  - Окно 15 секунд, лимит 150 запросов ≈ 10 req/s (600 req/min) — безопасно для Bybit и достаточно быстро
+        #  - При необходимости значения можно донастроить через конфиг или переменные окружения
+        self._request_window_seconds = 15
+        self._max_requests_per_window = 150
         self._request_timestamps = deque()
         self._throttle_lock = threading.Lock()
         
