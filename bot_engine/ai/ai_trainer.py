@@ -401,14 +401,15 @@ class AITrainer:
                     closed_count += 1
             
             logger.debug(f"   По статусам: {dict(statuses)}, С PnL: {pnl_count}, Закрытых: {closed_count}")
-        else:
-            logger.warning("⚠️ Сделки не найдены! Убедитесь что bots.py запущен и совершает сделки.")
-        
-        # 4. Фильтруем только закрытые сделки с PnL
+
             closed_trades = [
                 t for t in trades
                 if t.get('status') == 'CLOSED' and t.get('pnl') is not None
             ]
+        else:
+            logger.warning("⚠️ Сделки не найдены! Убедитесь что bots.py запущен и совершает сделки.")
+            # 4. Фильтруем только закрытые сделки с PnL (пустой список)
+            closed_trades = []
             
         logger.info("=" * 80)
         logger.info("✅ РЕЗУЛЬТАТ ФИЛЬТРАЦИИ")
