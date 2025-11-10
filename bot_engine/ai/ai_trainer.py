@@ -44,6 +44,11 @@ class AITrainer:
         self.signal_predictor = None  # Предсказание сигналов (LONG/SHORT/WAIT)
         self.profit_predictor = None  # Предсказание прибыльности
         self.scaler = StandardScaler()
+        self.ai_decision_model = None  # Модель для анализа решений AI
+        self.ai_decision_scaler = StandardScaler()
+        self.ai_decisions_min_samples = 20
+        self.ai_decisions_last_trained_count = 0
+        self._ai_decision_last_accuracy = None
         
         # Файл для отслеживания сделок с AI решениями
         self.ai_decisions_file = os.path.join(self.data_dir, 'ai_decisions_tracking.json')
@@ -80,6 +85,10 @@ class AITrainer:
             signal_model_path = os.path.join(self.models_dir, 'signal_predictor.pkl')
             profit_model_path = os.path.join(self.models_dir, 'profit_predictor.pkl')
             scaler_path = os.path.join(self.models_dir, 'scaler.pkl')
+            ai_decision_model_path = os.path.join(self.models_dir, 'ai_decision_model.pkl')
+            ai_decision_scaler_path = os.path.join(self.models_dir, 'ai_decision_scaler.pkl')
+            ai_decision_model_path = os.path.join(self.models_dir, 'ai_decision_model.pkl')
+            ai_decision_scaler_path = os.path.join(self.models_dir, 'ai_decision_scaler.pkl')
             
             loaded_count = 0
             
@@ -123,6 +132,30 @@ class AITrainer:
                 loaded_count += 1
             else:
                 logger.info("ℹ️ Scaler не найден (будет создан при обучении)")
+
+            if os.path.exists(ai_decision_model_path):
+                try:
+                    self.ai_decision_model = joblib.load(ai_decision_model_path)
+                    logger.info(f"✅ Загружена модель анализа AI решений: {ai_decision_model_path}")
+                    metadata_path = os.path.join(self.models_dir, 'ai_decision_model_metadata.json')
+                    if os.path.exists(metadata_path):
+                        with open(metadata_path, 'r', encoding='utf-8') as f:
+                            metadata = json.load(f)
+                            logger.info(
+                                f"   📊 Модель решений обучена: {metadata.get('saved_at', 'unknown')}, "
+                                f"образцов: {metadata.get('samples', 'unknown')}, accuracy: {metadata.get('accuracy', 'n/a')}"
+                            )
+                except Exception as ai_load_error:
+                    logger.warning(f"⚠️ Не удалось загрузить модель решений AI: {ai_load_error}")
+                    self.ai_decision_model = None
+
+            if os.path.exists(ai_decision_scaler_path):
+                try:
+                    self.ai_decision_scaler = joblib.load(ai_decision_scaler_path)
+                    logger.info(f"✅ Загружен scaler для AI решений: {ai_decision_scaler_path}")
+                except Exception as ai_scaler_error:
+                    logger.warning(f"⚠️ Не удалось загрузить scaler решений AI: {ai_scaler_error}")
+                    self.ai_decision_scaler = StandardScaler()
             
             if loaded_count > 0:
                 logger.info(f"🤖 Загружено моделей: {loaded_count}/3 - готовы к использованию ботами!")
@@ -179,6 +212,26 @@ class AITrainer:
                 joblib.dump(self.scaler, scaler_path)
                 logger.info(f"✅ Сохранен scaler: {scaler_path}")
                 saved_count += 1
+
+            if self.ai_decision_model:
+                joblib.dump(self.ai_decision_model, ai_decision_model_path)
+                logger.info(f"✅ Сохранена модель анализа AI решений: {ai_decision_model_path}")
+                metadata_path = os.path.join(self.models_dir, 'ai_decision_model_metadata.json')
+                metadata = {
+                    'model_type': type(self.ai_decision_model).__name__,
+                    'saved_at': datetime.now().isoformat(),
+                    'samples': getattr(self, 'ai_decisions_last_trained_count', 0),
+                    'min_samples_required': self.ai_decisions_min_samples
+                }
+                accuracy = getattr(self, '_ai_decision_last_accuracy', None)
+                if accuracy is not None:
+                    metadata['accuracy'] = float(accuracy)
+                with open(metadata_path, 'w', encoding='utf-8') as f:
+                    json.dump(metadata, f, indent=2, ensure_ascii=False)
+
+            if self.ai_decision_scaler:
+                joblib.dump(self.ai_decision_scaler, ai_decision_scaler_path)
+                logger.info(f"✅ Сохранен scaler для AI решений: {ai_decision_scaler_path}")
             
             logger.info(f"💾 Сохранено моделей: {saved_count}/3")
             logger.info(f"📁 Модели сохранены в: {self.models_dir}")
@@ -2218,6 +2271,249 @@ class AITrainer:
         except Exception as e:
             logger.error(f"❌ Ошибка предсказания: {e}")
             return {'error': str(e)}
+    
+    def _prepare_ai_decision_sample(self, decision: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Подготовить данные решения AI к обучению"""
+        try:
+            status = (decision.get('status') or '').upper()
+            if status not in ('SUCCESS', 'FAILED'):
+                return None
+            
+            market_data = decision.get('market_data') or {}
+            
+            confidence = decision.get('ai_confidence')
+            if confidence is None:
+                confidence = market_data.get('confidence')
+            if confidence is None:
+                confidence = 0.0
+            
+            entry_rsi = decision.get('rsi')
+            if entry_rsi is None:
+                entry_rsi = market_data.get('rsi')
+            if entry_rsi is None:
+                entry_rsi = 50.0
+            
+            price = decision.get('price')
+            if price is None:
+                price = market_data.get('price')
+            if price is None:
+                price = 0.0
+            
+            direction = (decision.get('direction') or market_data.get('direction') or 'UNKNOWN').upper()
+            ai_signal = (decision.get('ai_signal') or market_data.get('signal') or 'UNKNOWN').upper()
+            trend = (decision.get('trend') or market_data.get('trend') or 'NEUTRAL').upper()
+            
+            sample = {
+                'decision_id': decision.get('id') or decision.get('decision_id'),
+                'symbol': decision.get('symbol'),
+                'timestamp': decision.get('timestamp'),
+                'target': 1 if status == 'SUCCESS' else 0,
+                'ai_confidence': float(confidence),
+                'entry_rsi': float(entry_rsi),
+                'price': float(price),
+                'direction_long': 1.0 if direction == 'LONG' else 0.0,
+                'direction_short': 1.0 if direction == 'SHORT' else 0.0,
+                'direction_wait': 1.0 if direction == 'WAIT' else 0.0,
+                'signal_long': 1.0 if ai_signal == 'LONG' else 0.0,
+                'signal_short': 1.0 if ai_signal == 'SHORT' else 0.0,
+                'signal_wait': 1.0 if ai_signal == 'WAIT' else 0.0,
+                'trend_up': 1.0 if trend == 'UP' else 0.0,
+                'trend_down': 1.0 if trend == 'DOWN' else 0.0,
+                'trend_neutral': 1.0 if trend not in ('UP', 'DOWN') else 0.0,
+                'pnl': float(decision.get('pnl', 0) or 0),
+                'roi': float(decision.get('roi', 0) or 0),
+            }
+            
+            additional_features = {}
+            for key in ('volatility', 'volume_ratio', 'atr', 'ema_short', 'ema_long'):
+                value = decision.get(key, market_data.get(key))
+                if value is not None:
+                    try:
+                        additional_features[key] = float(value)
+                    except (TypeError, ValueError):
+                        continue
+            
+            sample.update(additional_features)
+            return sample
+        except Exception as sample_error:
+            logger.debug(f"⚠️ Не удалось подготовить решение AI {decision.get('id')}: {sample_error}")
+            return None
+    
+    def retrain_on_ai_decisions(self, force: bool = False) -> int:
+        """
+        Переобучить модели на основе решений AI (реальные сделки с обратной связью)
+        """
+        logger.info("=" * 80)
+        logger.info("🤖 ПЕРЕОБУЧЕНИЕ НА РЕШЕНИЯХ AI")
+        logger.info("=" * 80)
+        
+        if not self.data_storage:
+            logger.debug("⚠️ AIDataStorage недоступен - пропускаем переобучение на решениях AI")
+            return 0
+        
+        try:
+            decisions = self.data_storage.get_ai_decisions()
+            closed_decisions = [
+                d for d in decisions
+                if (d.get('status') or '').upper() in ('SUCCESS', 'FAILED')
+            ]
+            
+            total_closed = len(closed_decisions)
+            logger.info(f"📊 Решений AI с результатом: {total_closed}")
+            
+            if total_closed < self.ai_decisions_min_samples and not force:
+                logger.info(
+                    f"⚠️ Недостаточно решений AI для переобучения "
+                    f"(есть {total_closed}, нужно минимум {self.ai_decisions_min_samples})"
+                )
+                return 0
+            
+            if not force and total_closed <= self.ai_decisions_last_trained_count:
+                logger.debug(
+                    f"ℹ️ Новых решений AI нет (последнее переобучение на {self.ai_decisions_last_trained_count} решениях)"
+                )
+                return 0
+            
+            samples = []
+            for decision in closed_decisions:
+                sample = self._prepare_ai_decision_sample(decision)
+                if sample:
+                    samples.append(sample)
+            
+            if len(samples) < self.ai_decisions_min_samples and not force:
+                logger.info(
+                    f"⚠️ После подготовки осталось {len(samples)} решений AI (нужно минимум {self.ai_decisions_min_samples})"
+                )
+                return 0
+            
+            if not samples:
+                logger.info("ℹ️ Нет данных для переобучения на решениях AI")
+                return 0
+            
+            df = pd.DataFrame(samples)
+            df = df.dropna(subset=['target', 'ai_confidence', 'entry_rsi'])
+            
+            if df.empty:
+                logger.info("ℹ️ После очистки данных нет решений AI для обучения")
+                return 0
+            
+            if df['target'].nunique() < 2:
+                logger.info("⚠️ Все решения AI с одинаковым результатом (нужны успехи и ошибки)")
+                return 0
+            
+            feature_blacklist = {
+                'decision_id', 'symbol', 'timestamp', 'target', 'pnl', 'roi'
+            }
+            feature_columns = [col for col in df.columns if col not in feature_blacklist]
+            
+            if not feature_columns:
+                logger.info("⚠️ Нет признаков для обучения на решениях AI")
+                return 0
+            
+            X = df[feature_columns]
+            y = df['target']
+            
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+            
+            if len(df) >= 10:
+                test_size = 0.2 if len(df) >= 25 else 0.25
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X_scaled, y, test_size=test_size, random_state=42, stratify=y
+                )
+            else:
+                X_train, X_test, y_train, y_test = X_scaled, X_scaled, y, y
+            
+            model = RandomForestClassifier(
+                n_estimators=150,
+                max_depth=6,
+                random_state=42,
+                class_weight='balanced'
+            )
+            model.fit(X_train, y_train)
+            
+            if len(df) >= 10:
+                y_pred = model.predict(X_test)
+                accuracy = accuracy_score(y_test, y_pred)
+                report = classification_report(y_test, y_pred, output_dict=False, zero_division=0)
+                logger.info(f"✅ Модель решений AI обучена (accuracy: {accuracy * 100:.2f}%)")
+                logger.debug(f"📄 Classification report:\n{report}")
+                self._ai_decision_last_accuracy = float(accuracy)
+            else:
+                self._ai_decision_last_accuracy = None
+                logger.info("✅ Модель решений AI обучена (оценка точности пропущена из-за малого набора)")
+            
+            self.ai_decision_model = model
+            self.ai_decision_scaler = scaler
+            self.ai_decisions_last_trained_count = len(df)
+            
+            try:
+                self._save_models()
+            except Exception as save_error:
+                logger.warning(f"⚠️ Не удалось сохранить модель решений AI: {save_error}")
+            
+            # Обновляем метрики производительности
+            try:
+                metrics = self.data_storage.calculate_performance_metrics()
+                if metrics:
+                    self.data_storage.update_performance_metrics(metrics)
+                    logger.debug("📊 Метрики производительности AI обновлены")
+            except Exception as metrics_error:
+                logger.debug(f"⚠️ Не удалось обновить метрики AI решений: {metrics_error}")
+            
+            logger.info(f"🎯 Переобучение на решениях AI завершено (образцов: {len(df)})")
+            return len(df)
+        
+        except Exception as retrain_error:
+            logger.error(f"❌ Ошибка переобучения на решениях AI: {retrain_error}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return 0
+    
+    def update_ai_decision_result(
+        self,
+        decision_id: str,
+        pnl: Optional[float],
+        roi: Optional[float],
+        is_successful: bool,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """
+        Обновить результат решения AI после закрытия сделки
+        """
+        if not decision_id:
+            logger.debug("⚠️ Пустой decision_id для обновления решения AI")
+            return False
+        
+        if not self.data_storage:
+            logger.debug("⚠️ AIDataStorage недоступен - не можем обновить решение AI")
+            return False
+        
+        updates: Dict[str, Any] = {
+            'status': 'SUCCESS' if is_successful else 'FAILED',
+            'pnl': float(pnl) if pnl is not None else None,
+            'roi': float(roi) if roi is not None else None,
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        if metadata:
+            updates.setdefault('metadata', {})
+            if isinstance(updates['metadata'], dict):
+                updates['metadata'].update(metadata)
+        
+        if 'closed_at' not in updates:
+            updates['closed_at'] = metadata.get('closed_at') if metadata else datetime.now().isoformat()
+        
+        try:
+            updated = self.data_storage.update_ai_decision(decision_id, updates)
+            if updated:
+                logger.debug(f"✅ Решение AI {decision_id} обновлено (pnl={updates.get('pnl')}, roi={updates.get('roi')})")
+            else:
+                logger.debug(f"⚠️ Решение AI {decision_id} не найдено в хранилище")
+            return updated
+        except Exception as update_error:
+            logger.warning(f"⚠️ Ошибка обновления решения AI {decision_id}: {update_error}")
+            return False
     
     def get_trades_count(self) -> int:
         """

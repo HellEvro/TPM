@@ -631,7 +631,6 @@ class BotsManager {
             `;
         }
     }
-
     async loadCoinsRsiData() {
         if (!this.serviceOnline) {
             console.warn('[BotsManager] ⚠️ Сервис не онлайн, пропускаем загрузку');
@@ -1258,7 +1257,6 @@ class BotsManager {
         
         this.logDebug(`[BotsManager] 📊 Счетчики фильтров: ALL=${allCount}, BUY=${buyZoneCount}, SELL=${sellZoneCount}, UP=${trendUpCount}, DOWN=${trendDownCount}, LONG=${longCount}, SHORT=${shortCount}, MANUAL=${manualPositionCount}, UNAVAILABLE=${unavailableCount}`);
     }
-
     selectCoin(symbol) {
         this.logDebug('[BotsManager] 🎯 Выбрана монета:', symbol);
         this.logDebug('[BotsManager] 🔍 Доступные монеты в RSI данных:', this.coinsRsiData.length);
@@ -1867,7 +1865,6 @@ class BotsManager {
                 enhancedSignal: enhancedSignal
             };
         };
-        
         // Сводка причин блокировки сигнала
         const effectiveSignal = coin.effective_signal || this.getEffectiveSignal(coin);
         const baseSignal = coin.signal || 'WAIT';
@@ -2503,7 +2500,6 @@ class BotsManager {
             item.style.display = visible ? 'block' : 'none';
         });
     }
-
     applyRsiFilter(filter) {
         // Сохраняем текущий фильтр
         this.currentRsiFilter = filter;
@@ -3134,7 +3130,6 @@ class BotsManager {
             this.showNotification('❌ Ошибка соединения при создании бота', 'error');
         }
     }
-
     async startBot(symbol) {
         const targetSymbol = symbol || this.selectedCoin?.symbol;
         if (!targetSymbol) {
@@ -3764,7 +3759,6 @@ class BotsManager {
             });
         }
     }
-
     async addToWhitelist() {
         const input = document.getElementById('whitelistInput');
         if (!input) return;
@@ -4415,7 +4409,6 @@ class BotsManager {
             }, 1000);
         }
     }
-
     async loadActiveBotsData() {
         this.logDebug('[BotsManager] 🤖 Загрузка данных активных ботов...');
         
@@ -5065,7 +5058,6 @@ class BotsManager {
         
         console.log('[BotsManager] ✅ Кнопки области действия инициализированы');
     }
-    
     // ==========================================
     // ЗАГРУЗКА КОНФИГУРАЦИИ
     // ==========================================
@@ -5184,16 +5176,13 @@ class BotsManager {
         
         // Торговые параметры
         const rsiLongEl = document.getElementById('rsiLongThreshold');
-        if (rsiLongEl) {
+        if (rsiLongEl && rsiLongEl.value) {
             rsiLongEl.value = autoBotConfig.rsi_long_threshold || 29;
             console.log('[BotsManager] 📈 RSI LONG порог:', rsiLongEl.value);
         }
         
         const rsiShortEl = document.getElementById('rsiShortThreshold');
-        if (rsiShortEl) {
-            rsiShortEl.value = autoBotConfig.rsi_short_threshold || 71;
-            console.log('[BotsManager] 📉 RSI SHORT порог:', rsiShortEl.value);
-        }
+        if (rsiShortEl && rsiShortEl.value) settings.rsi_short_threshold = parseInt(rsiShortEl.value);
         
         const positionSizeEl = document.getElementById('defaultPositionSize');
         if (positionSizeEl) {
@@ -5213,7 +5202,7 @@ class BotsManager {
         
         // ✅ Новые параметры RSI выхода с учетом тренда
         const rsiExitLongWithTrendEl = document.getElementById('rsiExitLongWithTrendGlobal');
-        if (rsiExitLongWithTrendEl) {
+        if (rsiExitLongWithTrendEl && rsiExitLongWithTrendEl.value) {
             rsiExitLongWithTrendEl.value = autoBotConfig.rsi_exit_long_with_trend || 65;
             console.log('[BotsManager] 🟢📈 RSI выход LONG (по тренду):', rsiExitLongWithTrendEl.value);
         }
@@ -5707,7 +5696,6 @@ class BotsManager {
             throw error;
         }
     }
-    
     collectConfigurationData() {
         console.log('[BotsManager] 📋 Сбор данных конфигурации...');
         
@@ -6288,7 +6276,6 @@ class BotsManager {
             this.showNotification('✅ Конфигурация корректна!', 'success');
         }
     }
-    
     syncDuplicateSettings(config) {
         console.log('[BotsManager] 🔄 Синхронизация дублированных настроек...');
         
@@ -6925,7 +6912,6 @@ class BotsManager {
                 `Успешно: ${successful}, Ошибок: ${failed}`, 'error');
         }
     }
-    
     async stopAllBots() {
         if (!this.activeBots || this.activeBots.length === 0) {
             this.showNotification('⚠️ Нет ботов для остановки', 'warning');
@@ -7460,7 +7446,6 @@ class BotsManager {
         console.log(`[DEBUG] HTML для сделок ${coinSymbol}:`, tradesHtml);
         tradesContainer.innerHTML = tradesHtml;
     }
-    
     getBotTrades(bot) {
         console.log(`[DEBUG] getBotTrades для ${bot.symbol}:`, {
             position_side: bot.position_side,
@@ -8105,7 +8090,6 @@ class BotsManager {
         
         container.innerHTML = html;
     }
-
     /**
      * Загружает действия ботов
      */
