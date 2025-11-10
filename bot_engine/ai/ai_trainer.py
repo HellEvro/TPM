@@ -1784,6 +1784,9 @@ class AITrainer:
                             metadata_path = os.path.join(symbol_models_dir, 'metadata.json')
                             with open(metadata_path, 'w', encoding='utf-8') as f:
                                 json.dump(metadata, f, indent=2, ensure_ascii=False)
+                            logger.debug(f"   🗄️ {symbol}: metadata.json обновлён")
+                            if symbol_idx <= 10:
+                                logger.info(f"   ✅ {symbol}: метаданные сохранены")
                             
                             # ВАЖНО: Отмечаем параметры как использованные в трекере с рейтингом
                             # Сохраняем ВСЕ параметры (RSI + риск-менеджмент) для полного отслеживания
@@ -1815,6 +1818,7 @@ class AITrainer:
                                     
                                     if symbol_idx <= 10:
                                         logger.info(f"   ✅ {symbol}: параметры сохранены в трекер")
+                                        logger.debug(f"   🧾 {symbol}: параметры отмечены в трекере")
                                 except Exception as tracker_error:
                                     logger.error(f"   ❌ {symbol}: ошибка сохранения параметров в трекер: {tracker_error}")
                                     import traceback
@@ -1921,13 +1925,21 @@ class AITrainer:
                     # ВАЖНО: Увеличиваем счетчик ВСЕГДА, даже если сделок нет!
                     total_trained_coins += 1
                     
-                    # Логируем завершение обработки монеты для первых 10
-                    if symbol_idx <= 10:
-                        logger.info(f"   ✅ {symbol}: обработка завершена ({trades_for_symbol} сделок)")
+                    completion_message = (
+                        f"   ✅ [{symbol_idx}/{total_coins}] {symbol}: обработка завершена "
+                        f"({trades_for_symbol} сделок, Win Rate: {symbol_win_rate:.1f}%)"
+                    )
+                    if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
+                        logger.info(completion_message)
+                    else:
+                        logger.debug(completion_message)
                     
-                    # Логируем прогресс каждые 50 монет или при сохранении модели с Win Rate >= 80%
+                    # Логируем прогресс каждые 50 монет
                     if total_trained_coins % progress_interval == 0:
-                        logger.info(f"   📊 Прогресс: {total_trained_coins}/{total_coins} монет обработано ({total_trained_coins/total_coins*100:.1f}%), {total_models_saved} моделей сохранено")
+                        logger.info(
+                            f"   📊 Прогресс: {total_trained_coins}/{total_coins} монет обработано "
+                            f"({total_trained_coins/total_coins*100:.1f}%), {total_models_saved} моделей сохранено"
+                        )
                     
                 except Exception as e:
                     # Логируем ошибки на INFO для важных монет
