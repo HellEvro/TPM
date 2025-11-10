@@ -407,15 +407,13 @@ class AIDataCollector:
     
     def collect_market_data(self) -> Dict:
         """
-        Сбор рыночных данных напрямую из файлов bots.py
+        Сбор рыночных данных ТОЛЬКО из полной истории свечей
         
-        Использует УЖЕ СОБРАННЫЕ данные:
-        - Свечи из data/candles_cache.json (которые bots.py собирает постоянно)
-        - Индикаторы из API /api/bots/coins-with-rsi (RSI, тренды, сигналы)
-        
-        НЕ делает дополнительных запросов к бирже - использует данные которые уже есть!
+        ВАЖНО: Использует ТОЛЬКО data/ai/candles_full_history.json
+        Если файла нет - возвращает пустые данные (не использует candles_cache.json!)
+        Файл должен быть загружен через load_full_candles_history() перед использованием
         """
-        logger.info("📊 Сбор рыночных данных из файлов bots.py...")
+        logger.info("📊 Сбор рыночных данных из полной истории свечей...")
         
         collected_data = {
             'timestamp': datetime.now().isoformat(),
@@ -424,58 +422,63 @@ class AIDataCollector:
         }
         
         try:
-            # 1. Пробуем читать из полной истории свечей (data/ai/candles_full_history.json)
-            # Если нет - используем candles_cache.json
+            # ВАЖНО: Используем ТОЛЬКО полную историю свечей (data/ai/candles_full_history.json)
+            # НЕ используем candles_cache.json - только полная история!
             full_history_file = os.path.join('data', 'ai', 'candles_full_history.json')
-            candles_cache_file = os.path.join('data', 'candles_cache.json')
             candles_data = {}
-            source_file = None
-            is_full_history = False
             
-            # Приоритет: полная история > кэш bots.py
-            if os.path.exists(full_history_file):
-                try:
-                    logger.info(f"📖 Чтение полной истории свечей из {full_history_file}...")
-                    with open(full_history_file, 'r', encoding='utf-8') as f:
-                        full_data = json.load(f)
-                    
-                    # Извлекаем свечи из структуры с метаданными
-                    if 'candles' in full_data:
-                        candles_data = full_data['candles']
-                        source_file = full_history_file
-                        is_full_history = True
-                        logger.info(f"✅ Загружено полной истории для {len(candles_data)} монет")
-                    elif isinstance(full_data, dict) and not full_data.get('metadata'):
-                        # Если структура плоская (без метаданных)
-                        candles_data = full_data
-                        source_file = full_history_file
-                        is_full_history = True
-                        logger.info(f"✅ Загружено полной истории для {len(candles_data)} монет")
-                except Exception as e:
-                    logger.debug(f"⚠️ Ошибка чтения полной истории: {e}, пробуем candles_cache.json")
+            if not os.path.exists(full_history_file):
+                logger.warning("=" * 80)
+                logger.warning("⚠️ ФАЙЛ ПОЛНОЙ ИСТОРИИ СВЕЧЕЙ НЕ НАЙДЕН!")
+                logger.warning("=" * 80)
+                logger.warning(f"   📁 Файл: {full_history_file}")
+                logger.warning("   💡 Файл должен быть загружен через load_full_candles_history()")
+                logger.warning("   💡 Загрузка запускается автоматически при старте ai.py")
+                logger.warning("   ⏳ Подождите пока файл не будет создан и загружен")
+                logger.warning("   ❌ НЕ используем candles_cache.json - только полная история!")
+                logger.warning("=" * 80)
+                return collected_data
             
-            # Если не удалось загрузить полную историю, используем кэш bots.py
-            if not candles_data and os.path.exists(candles_cache_file):
-                try:
-                    logger.info(f"📖 Чтение свечей из {candles_cache_file}...")
-                    with open(candles_cache_file, 'r', encoding='utf-8') as f:
-                        candles_data = json.load(f)
+            # Читаем ТОЛЬКО из полной истории свечей
+            try:
+                logger.info(f"📖 Чтение полной истории свечей из {full_history_file}...")
+                logger.info("   💡 Используем ТОЛЬКО полную историю (не используем candles_cache.json)")
+                
+                with open(full_history_file, 'r', encoding='utf-8') as f:
+                    full_data = json.load(f)
+                
+                # Извлекаем свечи из структуры с метаданными
+                if 'candles' in full_data:
+                    candles_data = full_data['candles']
+                    logger.info(f"✅ Загружено полной истории для {len(candles_data)} монет")
+                elif isinstance(full_data, dict) and not full_data.get('metadata'):
+                    # Если структура плоская (без метаданных)
+                    candles_data = full_data
+                    logger.info(f"✅ Загружено полной истории для {len(candles_data)} монет")
+                else:
+                    logger.warning("⚠️ Неожиданная структура файла candles_full_history.json")
+                    candles_data = {}
                     
-                    source_file = candles_cache_file
-                    is_full_history = False
-                    logger.info(f"✅ Загружено свечей для {len(candles_data)} монет из кэша bots.py")
-                except json.JSONDecodeError as json_error:
-                    logger.warning(f"⚠️ Файл candles_cache.json поврежден (JSON ошибка на позиции {json_error.pos})")
-                    logger.info("🗑️ Удаляем поврежденный файл, bots.py пересоздаст его автоматически")
-                    try:
-                        os.remove(candles_cache_file)
-                        logger.info("✅ Поврежденный файл удален")
-                    except Exception as del_error:
-                        logger.debug(f"⚠️ Не удалось удалить файл: {del_error}")
-                    candles_data = {}
-                except Exception as e:
-                    logger.warning(f"⚠️ Ошибка чтения candles_cache.json: {e}")
-                    candles_data = {}
+            except json.JSONDecodeError as json_error:
+                logger.error("=" * 80)
+                logger.error("❌ ФАЙЛ ПОЛНОЙ ИСТОРИИ СВЕЧЕЙ ПОВРЕЖДЕН!")
+                logger.error("=" * 80)
+                logger.error(f"   📁 Файл: {full_history_file}")
+                logger.error(f"   ⚠️ JSON ошибка на позиции {json_error.pos}")
+                logger.error("   🗑️ Удаляем поврежденный файл, он будет пересоздан при следующей загрузке")
+                try:
+                    os.remove(full_history_file)
+                    logger.info("   ✅ Поврежденный файл удален")
+                except Exception as del_error:
+                    logger.debug(f"   ⚠️ Не удалось удалить файл: {del_error}")
+                logger.error("   ⏳ Дождитесь перезагрузки файла через load_full_candles_history()")
+                logger.error("=" * 80)
+                candles_data = {}
+            except Exception as e:
+                logger.error(f"❌ Ошибка чтения полной истории свечей: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                candles_data = {}
             
             # Обрабатываем свечи
             if candles_data:
@@ -486,16 +489,26 @@ class AIDataCollector:
                     try:
                         candles = candle_info.get('candles', [])
                         if candles and len(candles) > 0:
+                            # ВАЖНО: Используем ВСЕ свечи без ограничений!
+                            # НЕ обрезаем до 1000 свечей - используем все что есть
+                            candles_list = candles if isinstance(candles, list) else []
+                            
                             collected_data['candles'][symbol] = {
-                                'candles': candles,
-                                'count': len(candles),
+                                'candles': candles_list,  # ВСЕ свечи без ограничений
+                                'count': len(candles_list),
                                 'timeframe': candle_info.get('timeframe', '6h'),
                                 'last_update': candle_info.get('last_update') or candle_info.get('loaded_at'),
-                                'source': source_file or 'candles_cache.json',
-                                'is_full_history': is_full_history
+                                'source': full_history_file,  # ВСЕГДА из полной истории
+                                'is_full_history': True  # ВСЕГДА полная история
                             }
                             candles_count += 1
-                            total_candles += len(candles)
+                            total_candles += len(candles_list)
+                            
+                            # Логируем если свечей больше 1000 (полная история) или меньше (кэш)
+                            if len(candles_list) > 1000:
+                                logger.debug(f"📊 {symbol}: {len(candles_list)} свечей (полная история)")
+                            elif len(candles_list) <= 1000:
+                                logger.debug(f"📊 {symbol}: {len(candles_list)} свечей (возможно кэш, не полная история)")
                             
                             # Логируем каждые 100 монет
                             if candles_count % 100 == 0:
@@ -506,7 +519,7 @@ class AIDataCollector:
                 
                 logger.info(f"✅ Обработано свечей: {candles_count} монет, {total_candles} свечей всего")
             else:
-                logger.warning(f"⚠️ Файл {candles_cache_file} не найден")
+                logger.warning(f"⚠️ Файл {full_history_file} не найден или пуст")
             
             # 2. Получаем индикаторы через API (RSI, тренды, сигналы)
             rsi_response = self._call_bots_api('/api/bots/coins-with-rsi')
@@ -545,26 +558,19 @@ class AIDataCollector:
             # Итоговая статистика
             logger.info("=" * 80)
             logger.info(f"✅ СБОР РЫНОЧНЫХ ДАННЫХ ЗАВЕРШЕН")
-            logger.info(f"   📊 Свечи: {len(collected_data['candles'])} монет из candles_cache.json")
+            if candles_data:
+                logger.info(f"   📊 Свечи: {len(collected_data['candles'])} монет из candles_full_history.json")
+                logger.info(f"   💡 Используется ТОЛЬКО полная история свечей (не candles_cache.json)")
+            else:
+                logger.warning(f"   ⚠️ Свечи: 0 монет (файл candles_full_history.json не найден или пуст)")
             logger.info(f"   📈 Индикаторы: {len(collected_data['indicators'])} монет из coins_rsi_data")
-            logger.info(f"   💡 Все данные уже собраны bots.py - используем без дополнительных запросов к бирже!")
             logger.info("=" * 80)
             
-            # Сохраняем данные
-            existing_data = self._load_data(self.market_data_file)
-            if 'history' not in existing_data:
-                existing_data['history'] = []
-            
-            existing_data['history'].append(collected_data)
-            
-            # Ограничиваем историю
-            if len(existing_data['history']) > 500:
-                existing_data['history'] = existing_data['history'][-500:]
-            
-            existing_data['last_update'] = datetime.now().isoformat()
-            existing_data['latest'] = collected_data
-            
-            self._save_data(self.market_data_file, existing_data)
+            # ВАЖНО: НЕ сохраняем свечи в market_data.json - они уже в candles_full_history.json!
+            # Сохраняем только индикаторы для быстрого доступа (опционально)
+            # Но свечи всегда берутся напрямую из candles_full_history.json
+            # Поэтому market_data.json больше не нужен - удаляем сохранение
+            # (Индикаторы можно получать через API каждый раз, свечи - из candles_full_history.json)
             
         except Exception as e:
             logger.error(f"❌ Ошибка сбора рыночных данных: {e}")
@@ -577,11 +583,14 @@ class AIDataCollector:
         """
         Получить данные для обучения
         
+        ВАЖНО: Свечи берутся напрямую из candles_full_history.json
+        market_data.json больше не используется для свечей!
+        
         Returns:
             Словарь с данными для обучения
         """
         return {
-            'market_data': self._load_data(self.market_data_file),
+            # market_data.json больше не используется - свечи из candles_full_history.json
             'bots_data': self._load_data(self.bots_data_file),
             'history_data': self._load_data(self.history_data_file)
         }
@@ -590,23 +599,55 @@ class AIDataCollector:
         """
         Получить последние рыночные данные для символа
         
+        ВАЖНО: Свечи берутся напрямую из candles_full_history.json
+        market_data.json больше не используется!
+        
         Args:
             symbol: Символ монеты
         
         Returns:
-            Словарь с рыночными данными или None
+            Словарь с данными или None
         """
-        market_data = self._load_data(self.market_data_file)
-        latest = market_data.get('latest', {})
+        # Свечи из полной истории
+        full_history_file = os.path.join('data', 'ai', 'candles_full_history.json')
+        candles = None
         
-        candles = latest.get('candles', {}).get(symbol)
-        indicators = latest.get('indicators', {}).get(symbol)
+        if os.path.exists(full_history_file):
+            try:
+                with open(full_history_file, 'r', encoding='utf-8') as f:
+                    full_data = json.load(f)
+                
+                candles_data = {}
+                if 'candles' in full_data:
+                    candles_data = full_data['candles']
+                elif isinstance(full_data, dict) and not full_data.get('metadata'):
+                    candles_data = full_data
+                
+                if symbol in candles_data:
+                    candle_info = candles_data[symbol]
+                    candles = candle_info.get('candles', []) if isinstance(candle_info, dict) else []
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка чтения candles_full_history.json для {symbol}: {e}")
+        
+        # Индикаторы через API
+        indicators = None
+        rsi_response = self._call_bots_api('/api/bots/coins-with-rsi', silent=True)
+        if rsi_response and rsi_response.get('success'):
+            coins_data = rsi_response.get('coins', {})
+            if symbol in coins_data:
+                indicators = {
+                    'rsi': coins_data[symbol].get('rsi6h'),
+                    'trend': coins_data[symbol].get('trend6h'),
+                    'signal': coins_data[symbol].get('signal'),
+                    'price': coins_data[symbol].get('price'),
+                    'volume': coins_data[symbol].get('volume')
+                }
         
         if candles or indicators:
             return {
                 'candles': candles,
                 'indicators': indicators,
-                'timestamp': latest.get('timestamp')
+                'timestamp': datetime.now().isoformat()
             }
         
         return None
