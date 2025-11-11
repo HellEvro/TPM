@@ -1251,7 +1251,7 @@ class AITrainer:
             
             # ВАРИАЦИЯ ПАРАМЕТРОВ: Добавляем случайное отклонение для разнообразия
             # Это позволяет модели обучаться на разных комбинациях параметров
-            variation_range = 3  # ±3 пункта вариации
+            variation_range = 7  # ±7 пунктов вариации для RSI входов
             
             # Базовые параметры для трекера
             base_params = {
@@ -1290,6 +1290,15 @@ class AITrainer:
             base_break_even = base_config.get('break_even_trigger', 100.0)
             base_break_even_protection = base_config.get('break_even_protection', True)
             base_max_hours = base_config.get('max_position_hours', 48)
+            base_rsi_time_filter_enabled = base_config.get('rsi_time_filter_enabled', True)
+            base_rsi_time_filter_candles = base_config.get('rsi_time_filter_candles', 6)
+            base_rsi_time_filter_upper = base_config.get('rsi_time_filter_upper', 65)
+            base_rsi_time_filter_lower = base_config.get('rsi_time_filter_lower', 35)
+            base_exit_scam_enabled = base_config.get('exit_scam_enabled', True)
+            base_exit_scam_candles = base_config.get('exit_scam_candles', 8)
+            base_exit_scam_single_candle_percent = base_config.get('exit_scam_single_candle_percent', 15.0)
+            base_exit_scam_multi_candle_count = base_config.get('exit_scam_multi_candle_count', 4)
+            base_exit_scam_multi_candle_percent = base_config.get('exit_scam_multi_candle_percent', 50.0)
 
             logger.info("🎲 БАЗОВЫЕ ПАРАМЕТРЫ ОБУЧЕНИЯ (индивидуализация на уровне монеты)")
 
@@ -1301,7 +1310,7 @@ class AITrainer:
 
                 f"   LONG: вход <= {base_rsi_oversold} (±{variation_range}), "
 
-                f"выход по тренду >= {base_exit_long_with} (±5), против тренда >= {base_exit_long_against} (±5)"
+                f"выход по тренду >= {base_exit_long_with} (±8), против тренда >= {base_exit_long_against} (±8)"
 
             )
 
@@ -1309,21 +1318,21 @@ class AITrainer:
 
                 f"   SHORT: вход >= {base_rsi_overbought} (±{variation_range}), "
 
-                f"выход по тренду <= {base_exit_short_with} (±5), против тренда <= {base_exit_short_against} (±5)"
+                f"выход по тренду <= {base_exit_short_with} (±8), против тренда <= {base_exit_short_against} (±8)"
 
             )
 
             logger.info("💰 Риск-менеджмент:")
 
-            logger.info(f"   Stop Loss: {base_stop_loss:.1f}% (±3%)")
+            logger.info(f"   Stop Loss: {base_stop_loss:.1f}% (±6%)")
 
-            logger.info(f"   Take Profit: {base_take_profit:.1f}% (-5% … +10%)")
+            logger.info(f"   Take Profit: {base_take_profit:.1f}% (-12% … +15%)")
 
             logger.info(
 
-                f"   Trailing Stop: активация {base_trailing_activation:.1f}% (±5…15%), "
+                f"   Trailing Stop: активация {base_trailing_activation:.1f}% (-12% … +25%), "
 
-                f"расстояние {base_trailing_distance:.1f}% (±5…10%)"
+                f"расстояние {base_trailing_distance:.1f}% (-12% … +18%)"
 
             )
 
@@ -1331,11 +1340,11 @@ class AITrainer:
 
                 f"   Break Even: {'✅' if base_break_even_protection else '❌'} "
 
-                f"(триггер {base_break_even:.1f}% ±30…50%)"
+                f"(триггер {base_break_even:.1f}% (-60% … +90%))"
 
             )
 
-            logger.info(f"   Max Position Hours: {base_max_hours}ч (-24…+48ч)")
+            logger.info(f"   Max Position Hours: {base_max_hours}ч (-72…+120ч)")
 
             logger.info("=" * 80)
 
@@ -1493,13 +1502,14 @@ class AITrainer:
                                 coin_rsi_params = suggested_params
                                 logger.debug(f"   🎯 {symbol}: получили новую комбинацию параметров из трекера")
                         if not coin_rsi_params:
+                            exit_variation = 8
                             coin_rsi_params = {
                                 'oversold': max(20, min(35, base_rsi_oversold + coin_rng.randint(-variation_range, variation_range))),
                                 'overbought': max(65, min(80, base_rsi_overbought + coin_rng.randint(-variation_range, variation_range))),
-                                'exit_long_with_trend': max(55, min(70, base_exit_long_with + coin_rng.randint(-5, 5))),
-                                'exit_long_against_trend': max(50, min(65, base_exit_long_against + coin_rng.randint(-5, 5))),
-                                'exit_short_with_trend': max(25, min(40, base_exit_short_with + coin_rng.randint(-5, 5))),
-                                'exit_short_against_trend': max(30, min(45, base_exit_short_against + coin_rng.randint(-5, 5)))
+                                'exit_long_with_trend': max(55, min(70, base_exit_long_with + coin_rng.randint(-exit_variation, exit_variation))),
+                                'exit_long_against_trend': max(50, min(65, base_exit_long_against + coin_rng.randint(-exit_variation, exit_variation))),
+                                'exit_short_with_trend': max(25, min(40, base_exit_short_with + coin_rng.randint(-exit_variation, exit_variation))),
+                                'exit_short_against_trend': max(30, min(45, base_exit_short_against + coin_rng.randint(-exit_variation, exit_variation)))
                             }
                             logger.debug(f"   🎲 {symbol}: сгенерировали уникальные RSI параметры")
 
@@ -1516,14 +1526,34 @@ class AITrainer:
                     coin_RSI_EXIT_SHORT_WITH_TREND = coin_rsi_params['exit_short_with_trend']
                     coin_RSI_EXIT_SHORT_AGAINST_TREND = coin_rsi_params['exit_short_against_trend']
 
-                    MAX_LOSS_PERCENT = max(5.0, min(25.0, base_stop_loss + coin_rng.uniform(-3.0, 3.0)))
-                    TAKE_PROFIT_PERCENT = max(10.0, min(50.0, base_take_profit + coin_rng.uniform(-5.0, 10.0)))
-                    TRAILING_STOP_ACTIVATION = max(10.0, min(50.0, base_trailing_activation + coin_rng.uniform(-5.0, 15.0)))
-                    TRAILING_STOP_DISTANCE = max(5.0, min(30.0, base_trailing_distance + coin_rng.uniform(-5.0, 10.0)))
-                    BREAK_EVEN_TRIGGER = max(50.0, min(200.0, base_break_even + coin_rng.uniform(-30.0, 50.0)))
+                    MAX_LOSS_PERCENT = max(5.0, min(30.0, base_stop_loss + coin_rng.uniform(-6.0, 6.0)))
+                    TAKE_PROFIT_PERCENT = max(10.0, min(70.0, base_take_profit + coin_rng.uniform(-12.0, 15.0)))
+                    TRAILING_STOP_ACTIVATION = max(8.0, min(70.0, base_trailing_activation + coin_rng.uniform(-12.0, 25.0)))
+                    TRAILING_STOP_DISTANCE = max(5.0, min(45.0, base_trailing_distance + coin_rng.uniform(-12.0, 18.0)))
+                    BREAK_EVEN_TRIGGER = max(30.0, min(250.0, base_break_even + coin_rng.uniform(-60.0, 90.0)))
                     base_break_even_flag = bool(base_break_even_protection)
                     BREAK_EVEN_PROTECTION = base_break_even_flag if coin_rng.random() < 0.5 else not base_break_even_flag
-                    MAX_POSITION_HOURS = max(12, min(168, base_max_hours + coin_rng.randint(-24, 48)))
+                    MAX_POSITION_HOURS = max(12, min(336, base_max_hours + coin_rng.randint(-72, 120)))
+
+                    # Фильтры: RSI временной и ExitScam (индивидуализация на уровне монеты)
+                    coin_rsi_time_filter_enabled = bool(base_rsi_time_filter_enabled)
+                    coin_rsi_time_filter_candles = max(3, min(30, base_rsi_time_filter_candles + coin_rng.randint(-4, 4)))
+                    coin_rsi_time_filter_upper = max(50, min(85, base_rsi_time_filter_upper + coin_rng.randint(-6, 6)))
+                    coin_rsi_time_filter_lower = max(15, min(50, base_rsi_time_filter_lower + coin_rng.randint(-6, 6)))
+                    if coin_rsi_time_filter_lower >= coin_rsi_time_filter_upper:
+                        # Гарантируем корректный диапазон
+                        coin_rsi_time_filter_lower = max(15, coin_rsi_time_filter_upper - 1)
+                    coin_exit_scam_enabled = bool(base_exit_scam_enabled)
+                    coin_exit_scam_candles = max(4, min(30, base_exit_scam_candles + coin_rng.randint(-4, 4)))
+                    coin_exit_scam_single_candle_percent = max(
+                        5.0, min(60.0, base_exit_scam_single_candle_percent + coin_rng.uniform(-10.0, 10.0))
+                    )
+                    coin_exit_scam_multi_candle_count = max(
+                        2, min(12, base_exit_scam_multi_candle_count + coin_rng.randint(-2, 2))
+                    )
+                    coin_exit_scam_multi_candle_percent = max(
+                        20.0, min(150.0, base_exit_scam_multi_candle_percent + coin_rng.uniform(-20.0, 20.0))
+                    )
 
                     if symbol_idx <= 5 or symbol_idx % progress_interval == 0:
                         logger.info(
@@ -1531,11 +1561,22 @@ class AITrainer:
                             f"TS {TRAILING_STOP_ACTIVATION:.1f}%/{TRAILING_STOP_DISTANCE:.1f}% | "
                             f"BE {'✅' if BREAK_EVEN_PROTECTION else '❌'} ({BREAK_EVEN_TRIGGER:.1f}%) | MaxHold {MAX_POSITION_HOURS}ч"
                         )
+                        logger.info(
+                            f"   🛡️ {symbol}: RSI time filter {coin_rsi_time_filter_candles} свечей "
+                            f"[{coin_rsi_time_filter_lower}/{coin_rsi_time_filter_upper}] | "
+                            f"ExitScam: N={coin_exit_scam_candles}, 1св {coin_exit_scam_single_candle_percent:.1f}%, "
+                            f"{coin_exit_scam_multi_candle_count}св {coin_exit_scam_multi_candle_percent:.1f}%"
+                        )
                     else:
                         logger.debug(
                             f"   📐 {symbol}: SL {MAX_LOSS_PERCENT:.1f}%, TP {TAKE_PROFIT_PERCENT:.1f}%, "
                             f"TS {TRAILING_STOP_ACTIVATION:.1f}%/{TRAILING_STOP_DISTANCE:.1f}%, "
                             f"BE {'✅' if BREAK_EVEN_PROTECTION else '❌'} ({BREAK_EVEN_TRIGGER:.1f}%), MaxHold {MAX_POSITION_HOURS}ч"
+                        )
+                        logger.debug(
+                            f"   🛡️ {symbol}: RSI TF {coin_rsi_time_filter_candles} [{coin_rsi_time_filter_lower}/{coin_rsi_time_filter_upper}] | "
+                            f"ExitScam: N={coin_exit_scam_candles}, 1св {coin_exit_scam_single_candle_percent:.1f}%, "
+                            f"{coin_exit_scam_multi_candle_count}св {coin_exit_scam_multi_candle_percent:.1f}%"
                         )
 
                     
@@ -1943,6 +1984,21 @@ class AITrainer:
                                     'break_even_trigger': BREAK_EVEN_TRIGGER,
                                     'max_position_hours': MAX_POSITION_HOURS
                                 },
+                                'filter_params': {
+                                    'rsi_time_filter': {
+                                        'enabled': coin_rsi_time_filter_enabled,
+                                        'candles': coin_rsi_time_filter_candles,
+                                        'upper': coin_rsi_time_filter_upper,
+                                        'lower': coin_rsi_time_filter_lower
+                                    },
+                                    'exit_scam_filter': {
+                                        'enabled': coin_exit_scam_enabled,
+                                        'candles': coin_exit_scam_candles,
+                                        'single_candle_percent': coin_exit_scam_single_candle_percent,
+                                        'multi_candle_count': coin_exit_scam_multi_candle_count,
+                                        'multi_candle_percent': coin_exit_scam_multi_candle_percent
+                                    }
+                                },
                                 'candles_count': len(candles),  # ВАЖНО: сохраняем количество свечей для проверки
                                 'trades_count': trades_for_symbol,
                                 'win_rate': symbol_win_rate,
@@ -1972,7 +2028,16 @@ class AITrainer:
                                         'trailing_stop_distance': TRAILING_STOP_DISTANCE,
                                         'break_even_protection': BREAK_EVEN_PROTECTION,
                                         'break_even_trigger': BREAK_EVEN_TRIGGER,
-                                        'max_position_hours': MAX_POSITION_HOURS
+                                        'max_position_hours': MAX_POSITION_HOURS,
+                                        'rsi_time_filter_enabled': coin_rsi_time_filter_enabled,
+                                        'rsi_time_filter_candles': coin_rsi_time_filter_candles,
+                                        'rsi_time_filter_upper': coin_rsi_time_filter_upper,
+                                        'rsi_time_filter_lower': coin_rsi_time_filter_lower,
+                                        'exit_scam_enabled': coin_exit_scam_enabled,
+                                        'exit_scam_candles': coin_exit_scam_candles,
+                                        'exit_scam_single_candle_percent': coin_exit_scam_single_candle_percent,
+                                        'exit_scam_multi_candle_count': coin_exit_scam_multi_candle_count,
+                                        'exit_scam_multi_candle_percent': coin_exit_scam_multi_candle_percent
                                     }
                                     
                                     # Сохраняем только RSI параметры в трекер (так как он рассчитан на RSI)
@@ -2012,6 +2077,15 @@ class AITrainer:
                                         'rsi_exit_long_against_trend': coin_rsi_params['exit_long_against_trend'],
                                         'rsi_exit_short_with_trend': coin_rsi_params['exit_short_with_trend'],
                                         'rsi_exit_short_against_trend': coin_rsi_params['exit_short_against_trend'],
+                                        'rsi_time_filter_enabled': coin_rsi_time_filter_enabled,
+                                        'rsi_time_filter_candles': coin_rsi_time_filter_candles,
+                                        'rsi_time_filter_upper': coin_rsi_time_filter_upper,
+                                        'rsi_time_filter_lower': coin_rsi_time_filter_lower,
+                                        'exit_scam_enabled': coin_exit_scam_enabled,
+                                        'exit_scam_candles': coin_exit_scam_candles,
+                                        'exit_scam_single_candle_percent': coin_exit_scam_single_candle_percent,
+                                        'exit_scam_multi_candle_count': coin_exit_scam_multi_candle_count,
+                                        'exit_scam_multi_candle_percent': coin_exit_scam_multi_candle_percent,
                                         'ai_trained': True,
                                         'ai_win_rate': symbol_win_rate,
                                         'ai_rating': self.param_tracker.calculate_rating(symbol_win_rate, symbol_pnl, signal_score, trades_for_symbol) if self.param_tracker else 0,
