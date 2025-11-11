@@ -96,6 +96,7 @@ class BybitExchange(BaseExchange):
         # Управление задержкой между запросами для предотвращения rate limit
         self.base_request_delay = 0.2  # Базовая задержка между запросами (200ms)
         self.current_request_delay = 0.2  # Текущая задержка (может увеличиваться при rate limit)
+        self.max_request_delay = 5.0  # Максимальная задержка для предотвращения таймаутов
     
     def _setup_connection_pool(self):
         """Настраивает пул соединений для requests и pybit"""
@@ -144,6 +145,19 @@ class BybitExchange(BaseExchange):
         if self.current_request_delay != self.base_request_delay:
             logger.info(f"[BYBIT] 🔄 Сброс задержки запросов: {self.current_request_delay:.3f}с → {self.base_request_delay:.3f}с")
             self.current_request_delay = self.base_request_delay
+
+    def increase_request_delay(self, multiplier=2.0, reason='Rate limit'):
+        """Увеличивает задержку запросов с учетом максимального порога"""
+        old_delay = self.current_request_delay
+        new_delay = min(self.current_request_delay * multiplier, self.max_request_delay)
+        self.current_request_delay = new_delay
+
+        if new_delay > old_delay:
+            logger.warning(f"[BYBIT] ⚠️ {reason}. Увеличиваем задержку: {old_delay:.3f}с → {new_delay:.3f}с")
+        else:
+            logger.warning(f"[BYBIT] ⚠️ {reason}. Задержка уже максимальная: {new_delay:.3f}с")
+
+        return new_delay
     
     def reset_daily_pnl(self, positions):
         """Сброс значений PnL в 00:00"""
@@ -710,13 +724,13 @@ class BybitExchange(BaseExchange):
                                 
                                 # Обработка rate limiting в ответе
                                 if response.get('retCode') == 10006:
-                                    # Увеличиваем задержку в 2 раза
-                                    old_delay = self.current_request_delay
-                                    self.current_request_delay *= 2
-                                    logger.warning(f"[BYBIT] ⚠️ Rate limit для {symbol} ({interval_name}). Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
-                                    
+                                    # Увеличиваем задержку, но не превышаем максимум
+                                    delay = self.increase_request_delay(
+                                        reason=f"Rate limit для {symbol} ({interval_name})"
+                                    )
+
                                     # Ждем с увеличенной задержкой
-                                    time.sleep(self.current_request_delay)
+                                    time.sleep(delay)
                                     retry_count += 1
                                     
                                     if retry_count < max_retries:
@@ -732,13 +746,13 @@ class BybitExchange(BaseExchange):
                                 # Перехватываем исключения от pybit (rate limit выбрасывает исключение)
                                 error_str = str(api_error).lower()
                                 if 'rate limit' in error_str or 'too many' in error_str or '10006' in error_str or 'x-bapi-limit-reset-timestamp' in error_str:
-                                    # Увеличиваем задержку в 2 раза
-                                    old_delay = self.current_request_delay
-                                    self.current_request_delay *= 2
-                                    logger.warning(f"[BYBIT] ⚠️ Rate limit (исключение) для {symbol} ({interval_name}). Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
-                                    
+                                    # Увеличиваем задержку, но не превышаем максимум
+                                    delay = self.increase_request_delay(
+                                        reason=f"Rate limit (исключение) для {symbol} ({interval_name})"
+                                    )
+
                                     # Ждем с увеличенной задержкой
-                                    time.sleep(self.current_request_delay)
+                                    time.sleep(delay)
                                     retry_count += 1
                                     
                                     if retry_count < max_retries:
@@ -791,6 +805,7 @@ class BybitExchange(BaseExchange):
                     # Сортируем свечи от старых к новым
                     candles.sort(key=lambda x: x['time'])
                     
+                    self.reset_request_delay()
                     return {
                         'success': True,
                         'data': {
@@ -843,13 +858,13 @@ class BybitExchange(BaseExchange):
                         
                         # Обработка rate limiting в ответе
                         if response.get('retCode') == 10006:
-                            # Увеличиваем задержку в 2 раза
-                            old_delay = self.current_request_delay
-                            self.current_request_delay *= 2
-                            logger.warning(f"[BYBIT] ⚠️ Rate limit для {symbol}. Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
-                            
+                            # Увеличиваем задержку, но не превышаем максимум
+                            delay = self.increase_request_delay(
+                                reason=f"Rate limit для {symbol}"
+                            )
+
                             # Ждем с увеличенной задержкой
-                            time.sleep(self.current_request_delay)
+                            time.sleep(delay)
                             retry_count += 1
                             
                             if retry_count < max_retries:
@@ -868,13 +883,13 @@ class BybitExchange(BaseExchange):
                         # Перехватываем исключения от pybit (rate limit выбрасывает исключение)
                         error_str = str(api_error).lower()
                         if 'rate limit' in error_str or 'too many' in error_str or '10006' in error_str or 'x-bapi-limit-reset-timestamp' in error_str:
-                            # Увеличиваем задержку в 2 раза
-                            old_delay = self.current_request_delay
-                            self.current_request_delay *= 2
-                            logger.warning(f"[BYBIT] ⚠️ Rate limit (исключение) для {symbol}. Увеличиваем задержку: {old_delay:.3f}с → {self.current_request_delay:.3f}с")
-                            
+                            # Увеличиваем задержку, но не превышаем максимум
+                            delay = self.increase_request_delay(
+                                reason=f"Rate limit (исключение) для {symbol}"
+                            )
+
                             # Ждем с увеличенной задержкой
-                            time.sleep(self.current_request_delay)
+                            time.sleep(delay)
                             retry_count += 1
                             
                             if retry_count < max_retries:
@@ -918,6 +933,7 @@ class BybitExchange(BaseExchange):
                     # Сортируем свечи от старых к новым
                     candles.sort(key=lambda x: x['time'])
                     
+                    self.reset_request_delay()
                     return {
                         'success': True,
                         'data': {
