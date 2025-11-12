@@ -42,7 +42,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 VENV_DIR = PROJECT_ROOT / ".venv"
 DEFAULT_REMOTE_URL = "git@github.com:HellEvro/TPM_Public.git"
 STATE_FILE = PROJECT_ROOT / "launcher" / ".infobot_manager_state.json"
-DEFAULT_GEOMETRY = "850x1050"
+DEFAULT_GEOMETRY = "850x930"
 
 
 def _detect_python_executable() -> str:
@@ -313,6 +313,10 @@ class InfoBotManager(tk.Tk):
         self.max_log_lines = 2000
         self.active_log_channel = "system"
         self.pending_logs: Dict[str, List[str]] = defaultdict(list)
+        self._bootstrap_ready = False
+        self._service_control_buttons: List[ttk.Button] = []
+        self._git_upstream_warned = False
+        self._git_log_warned = False
         atexit.register(self._cleanup_processes)
 
         self._ensure_utf8_console()
@@ -328,6 +332,8 @@ class InfoBotManager(tk.Tk):
         self.service_status_vars: Dict[str, tk.StringVar] = {}
 
         self._build_ui()
+        self._set_service_controls_enabled(False)
+        self.after(0, self._start_bootstrap)
         self.after(0, self._apply_saved_geometry)
         self.after(200, self._flush_logs)
         self.after(1200, self._refresh_service_statuses)
@@ -393,56 +399,20 @@ class InfoBotManager(tk.Tk):
         separator = ttk.Separator(main, orient="horizontal")
         separator.grid(row=1, column=0, sticky="ew", padx=4)
 
-        venv_frame = ttk.LabelFrame(main, text="1. Виртуальное окружение (рекомендуется, вместо прямой установки в системный Python в п.2)", padding=10)
+        venv_frame = ttk.LabelFrame(main, text="1. Виртуальное окружение (управляется автоматически)", padding=10)
         venv_frame.grid(row=2, column=0, sticky="new", padx=4, pady=(4, 4))
         venv_frame.columnconfigure(1, weight=1)
 
         ttk.Label(venv_frame, text="Статус:").grid(row=0, column=0, sticky="w")
         ttk.Label(venv_frame, textvariable=self.env_status_var).grid(row=0, column=1, sticky="w")
-        btn_create_venv = ttk.Button(
-            venv_frame,
-            text="Создать/обновить окружение (.venv)",
-        )
-        btn_create_venv.grid(row=1, column=0, sticky="w", pady=(6, 0))
-        btn_create_venv.configure(command=lambda b=btn_create_venv: self.install_dependencies(b))
-        btn_delete_venv = ttk.Button(
-            venv_frame,
-            text="Удалить окружение (.venv)",
-        )
-        btn_delete_venv.grid(row=1, column=1, sticky="w", pady=(6, 0))
-        btn_delete_venv.configure(command=lambda b=btn_delete_venv: self.delete_environment(b))
-
-        install_frame = ttk.LabelFrame(main, text="2. Установка зависимостей напрямую (опционально, изменяет системный Python)", padding=10)
-        install_frame.grid(row=3, column=0, sticky="new", padx=4, pady=4)
-        install_frame.columnconfigure(0, weight=1)
-
-        self.btn_install_global = ttk.Button(
-            install_frame,
-            text="Установить/обновить зависимости (pip install -r requirements.txt)",
-        )
-        self.btn_install_global.grid(row=0, column=0, sticky="w")
-        self.btn_install_global.configure(command=lambda b=self.btn_install_global: self.install_dependencies_global(b))
-
-        self.install_note_var = tk.StringVar()
-        ttk.Label(install_frame, textvariable=self.install_note_var, foreground="#707070").grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 0))
-        ttk.Button(
-            install_frame,
-            text="Открыть каталог проекта",
-            command=lambda: self.open_path(PROJECT_ROOT),
-        ).grid(row=0, column=1, sticky="w", padx=(8, 0))
-
-        git_frame = ttk.LabelFrame(main, text="3. Обновления из Git", padding=10)
-        git_frame.grid(row=4, column=0, sticky="new", padx=4, pady=4)
+        git_frame = ttk.LabelFrame(main, text="2. Обновления из Git", padding=10)
+        git_frame.grid(row=3, column=0, sticky="new", padx=4, pady=4)
         git_frame.columnconfigure(1, weight=1)
 
         ttk.Label(git_frame, text="Статус репозитория:").grid(row=0, column=0, sticky="w")
         ttk.Label(git_frame, textvariable=self.git_status_var).grid(row=0, column=1, sticky="w")
 
-        btn_git_sync = ttk.Button(git_frame, text="Получить обновления (fetch + reset)")
-        btn_git_sync.grid(row=1, column=0, sticky="w", pady=(6, 0))
-        btn_git_sync.configure(command=lambda b=btn_git_sync: self.sync_with_remote(b))
-
-        license_frame = ttk.LabelFrame(main, text="4. Лицензия и ключи (опционально)", padding=10)
+        license_frame = ttk.LabelFrame(main, text="3. Лицензия и ключи (опционально)", padding=10)
         license_frame.grid(row=5, column=0, sticky="new", padx=4, pady=4)
         license_frame.columnconfigure(1, weight=1)
 
@@ -461,7 +431,7 @@ class InfoBotManager(tk.Tk):
             command=lambda: self.open_path(PROJECT_ROOT / "docs" / "INSTALL.md"),
         ).grid(row=1, column=2, sticky="w", pady=(6, 0))
 
-        services_frame = ttk.LabelFrame(main, text="5. Запуск сервисов", padding=10, style="Services.TLabelframe")
+        services_frame = ttk.LabelFrame(main, text="4. Запуск сервисов", padding=10, style="Services.TLabelframe")
         services_frame.grid(row=6, column=0, sticky="new", padx=4, pady=4)
         services_frame.columnconfigure(1, weight=1)
 
@@ -470,12 +440,12 @@ class InfoBotManager(tk.Tk):
         header_frame.columnconfigure(0, weight=1)
 
         ttk.Label(header_frame, text="Управление сервисами:", style="Services.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Button(header_frame, text="Запустить все", command=self.start_all_services).grid(
-            row=0, column=1, padx=(8, 4), sticky="e"
-        )
-        ttk.Button(header_frame, text="Остановить все", command=self.stop_all_services).grid(
-            row=0, column=2, sticky="e"
-        )
+        btn_start_all = ttk.Button(header_frame, text="Запустить все", command=self.start_all_services)
+        btn_start_all.grid(row=0, column=1, padx=(8, 4), sticky="e")
+        self._service_control_buttons.append(btn_start_all)
+        btn_stop_all = ttk.Button(header_frame, text="Остановить все", command=self.stop_all_services)
+        btn_stop_all.grid(row=0, column=2, sticky="e")
+        self._service_control_buttons.append(btn_stop_all)
 
         config_frame = ttk.Frame(services_frame, style="Services.TFrame")
         config_frame.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(0, 8))
@@ -489,27 +459,35 @@ class InfoBotManager(tk.Tk):
             ttk.Label(services_frame, textvariable=status_var, style="Services.TLabel").grid(row=idx, column=1, sticky="w")
             button_frame = ttk.Frame(services_frame, style="Services.TFrame")
             button_frame.grid(row=idx, column=2, sticky="w")
-            ttk.Button(button_frame, text="Запустить", command=lambda sid=service_id: self.start_service(sid)).pack(
-                side=tk.LEFT, padx=(0, 4)
-            )
-            ttk.Button(button_frame, text="Остановить", command=lambda sid=service_id: self.stop_service(sid)).pack(
-                side=tk.LEFT
-            )
+            start_btn = ttk.Button(button_frame, text="Запустить", command=lambda sid=service_id: self.start_service(sid))
+            start_btn.pack(side=tk.LEFT, padx=(0, 4))
+            stop_btn = ttk.Button(button_frame, text="Остановить", command=lambda sid=service_id: self.stop_service(sid))
+            stop_btn.pack(side=tk.LEFT)
+            self._service_control_buttons.extend([start_btn, stop_btn])
 
-        docs_frame = ttk.LabelFrame(main, text="6. Документация и файлы", padding=10)
+        docs_frame = ttk.LabelFrame(main, text="5. Документация и файлы", padding=10)
         docs_frame.grid(row=7, column=0, sticky="new", padx=4, pady=4)
         docs_frame.columnconfigure(0, weight=1)
 
-        ttk.Button(docs_frame, text="Открыть README", command=lambda: self.open_path(PROJECT_ROOT / "README.md")).pack(
-            anchor="w"
-        )
+        docs_buttons = ttk.Frame(docs_frame)
+        docs_buttons.pack(anchor="w")
         ttk.Button(
-            docs_frame,
+            docs_buttons,
+            text="Открыть README",
+            command=lambda: self.open_path(PROJECT_ROOT / "README.md"),
+        ).pack(side=tk.LEFT)
+        ttk.Button(
+            docs_buttons,
             text="Открыть лог ботов",
             command=self.open_bots_log,
-        ).pack(anchor="w", pady=(4, 0))
+        ).pack(side=tk.LEFT, padx=(8, 0))
+        ttk.Button(
+            docs_buttons,
+            text="Открыть каталог проекта",
+            command=lambda: self.open_path(PROJECT_ROOT),
+        ).pack(side=tk.LEFT, padx=(8, 0))
 
-        log_frame = ttk.LabelFrame(main, text="7. Логи и вывод команд", padding=10)
+        log_frame = ttk.LabelFrame(main, text="6. Логи и вывод команд", padding=10)
         log_frame.grid(row=8, column=0, sticky="nsew", padx=4, pady=4)
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
@@ -546,11 +524,18 @@ class InfoBotManager(tk.Tk):
             text_widget.bind("<Button-3>", lambda event, widget=text_widget: self._show_log_context_menu(event, widget))
             self.log_text_widgets[channel] = text_widget
 
+        log_controls = ttk.Frame(log_frame)
+        log_controls.grid(row=1, column=0, sticky="w", pady=(8, 0))
         ttk.Button(
-            log_frame,
+            log_controls,
             text="Скопировать текущий лог",
             command=self.copy_current_log,
-        ).grid(row=1, column=0, sticky="w", pady=(8, 0))
+        ).pack(side=tk.LEFT)
+        ttk.Button(
+            log_controls,
+            text="Очистить текущий лог",
+            command=self.clear_current_log,
+        ).pack(side=tk.LEFT, padx=(8, 0))
 
         contacts_frame = ttk.Frame(main, padding=(10, 0, 10, 12))
         contacts_frame.grid(row=9, column=0, sticky="ew", padx=4, pady=(0, 0))
@@ -671,17 +656,47 @@ class InfoBotManager(tk.Tk):
     def update_environment_status(self) -> None:
         if VENV_DIR.exists():
             python = "python.exe" if os.name == "nt" else "python"
-            self.env_status_var.set(f".venv найден (используется {python})")
-            if hasattr(self, "btn_install_global"):
-                self.btn_install_global.configure(state=tk.DISABLED)
-            if hasattr(self, "install_note_var"):
-                self.install_note_var.set("Виртуальное окружение активно. Чтобы установить зависимости в системный Python, удалите папку .venv.")
+            self.env_status_var.set(f"Готово: .venv найден (используется {python})")
         else:
-            self.env_status_var.set("Виртуальное окружение не создано (используется системный Python)")
-            if hasattr(self, "btn_install_global"):
-                self.btn_install_global.configure(state=tk.NORMAL)
-            if hasattr(self, "install_note_var"):
-                self.install_note_var.set("")
+            self.env_status_var.set("Создание окружения... (выполняется автоматически)")
+
+    def _set_service_controls_enabled(self, enabled: bool) -> None:
+        state = tk.NORMAL if enabled else tk.DISABLED
+        for button in self._service_control_buttons:
+            try:
+                button.config(state=state)
+            except tk.TclError:
+                continue
+
+    def _start_bootstrap(self) -> None:
+        self.ensure_git_repository()
+        self._run_task("auto_bootstrap", None, "Автонастройка проекта", self._bootstrap_worker)
+
+    def _bootstrap_worker(self) -> None:
+        success = True
+        try:
+            self._git_sync_worker()
+            success = self._ensure_venv_with_dependencies(update_existing=False)
+        except Exception as exc:  # pylint: disable=broad-except
+            success = False
+            self.log(f"Ошибка автоматической подготовки: {exc}", channel="system")
+        finally:
+            self.after(0, lambda: self._on_bootstrap_completed(success))
+
+    def _on_bootstrap_completed(self, success: bool) -> None:
+        self.update_environment_status()
+        self.update_git_status()
+        if success and VENV_DIR.exists():
+            self._bootstrap_ready = True
+            self._set_service_controls_enabled(True)
+            self.log("Автоматическая подготовка завершена. Сервисы готовы к запуску.", channel="system")
+        else:
+            self._bootstrap_ready = False
+            self._set_service_controls_enabled(False)
+            self.log(
+                "Автоматическая подготовка завершена с ошибками. Проверьте логи и повторите попытку.",
+                channel="system",
+            )
 
     def ensure_git_repository(self) -> None:
         git_dir = PROJECT_ROOT / ".git"
@@ -708,7 +723,6 @@ class InfoBotManager(tk.Tk):
                     self.log("Переименована ветка master → main", channel="system")
                     self.update_git_status()
                 self._configure_git_upstream()
-                self._auto_align_main_with_remote()
             except subprocess.CalledProcessError:
                 pass
             return
@@ -746,7 +760,6 @@ class InfoBotManager(tk.Tk):
             if remote_result.stdout.strip():
                 self.log(remote_result.stdout.strip())
             self._configure_git_upstream()
-            self._auto_align_main_with_remote()
             self.log(f"Git репозиторий инициализирован. origin → {DEFAULT_REMOTE_URL}")
         except subprocess.CalledProcessError as exc:
             stderr = exc.stderr.strip() if exc.stderr else str(exc)
@@ -916,47 +929,56 @@ class InfoBotManager(tk.Tk):
         if return_code != 0:
             raise subprocess.CalledProcessError(return_code, command)
 
+    def _ensure_venv_with_dependencies(self, update_existing: bool) -> bool:
+        global PYTHON_EXECUTABLE
+        try:
+            need_install = update_existing
+            if not VENV_DIR.exists():
+                try:
+                    self._stream_command(
+                        "Создание окружения",
+                        [sys.executable, "-m", "venv", str(VENV_DIR)],
+                        channel="system",
+                    )
+                    need_install = True
+                except subprocess.CalledProcessError as exc:
+                    self.log(
+                        f"Ошибка при создании виртуального окружения (.venv): {exc.returncode}",
+                        channel="system",
+                    )
+                    return False
+            if not need_install:
+                PYTHON_EXECUTABLE = _detect_python_executable()
+                self.log(".venv уже существует. Установка зависимостей пропущена.", channel="system")
+                return True
+
+            python_exec = _detect_python_executable()
+            if not python_exec:
+                self.log("Не удалось определить Python для установки зависимостей.", channel="system")
+                return False
+
+            pip_cmd = _split_command(python_exec) + ["-m", "pip"]
+            self._preinstall_ccxt_without_coincurve(pip_cmd)
+            requirements_file = self._prepare_requirements_file()
+            commands = [
+                ("Обновление pip", pip_cmd + ["install", "--upgrade", "pip", "setuptools", "wheel"]),
+                ("Установка зависимостей", pip_cmd + ["install", "-r", requirements_file]),
+            ]
+            for title, command in commands:
+                try:
+                    self._stream_command(title, command, channel="system")
+                except subprocess.CalledProcessError as exc:
+                    self.log(f"[{title}] Ошибка установки ({exc.returncode})", channel="system")
+                    return False
+            PYTHON_EXECUTABLE = _detect_python_executable()
+            return True
+        finally:
+            self._cleanup_temp_requirements()
+
     def install_dependencies(self, button: Optional[ttk.Button] = None) -> None:
         def worker() -> None:
-            try:
-                global PYTHON_EXECUTABLE
-
-                if not VENV_DIR.exists():
-                    try:
-                        self._stream_command(
-                            "Создание окружения",
-                            [sys.executable, "-m", "venv", str(VENV_DIR)],
-                            channel="system",
-                        )
-                    except subprocess.CalledProcessError as exc:
-                        self.log(
-                            f"Ошибка при создании виртуального окружения (.venv): {exc.returncode}",
-                            channel="system",
-                        )
-                        return
-
-                python_exec = _detect_python_executable()
-                if not python_exec:
-                    self.log("Не удалось определить Python для установки зависимостей.", channel="system")
-                    return
-
-                pip_cmd = _split_command(python_exec) + ["-m", "pip"]
-                self._preinstall_ccxt_without_coincurve(pip_cmd)
-                requirements_file = self._prepare_requirements_file()
-                commands = [
-                    ("Обновление pip", pip_cmd + ["install", "--upgrade", "pip", "setuptools", "wheel"]),
-                    ("Установка зависимостей", pip_cmd + ["install", "-r", requirements_file]),
-                ]
-                for title, command in commands:
-                    try:
-                        self._stream_command(title, command, channel="system")
-                    except subprocess.CalledProcessError as exc:
-                        self.log(f"[{title}] Ошибка установки ({exc.returncode})", channel="system")
-                        return
-                self.update_environment_status()
-                PYTHON_EXECUTABLE = _detect_python_executable()
-            finally:
-                self._cleanup_temp_requirements()
+            self._ensure_venv_with_dependencies(update_existing=True)
+            self.after(0, self.update_environment_status)
 
         self._run_task("install_venv", button, "Создание/обновление окружения", worker)
 
@@ -1016,6 +1038,7 @@ class InfoBotManager(tk.Tk):
         if not shutil.which("git"):
             messagebox.showwarning("Git не найден", "Для обновления необходимо установить Git.")
             return
+        self.ensure_git_repository()
         self._run_task("git_sync", button, "Получение обновлений", self._git_sync_worker)
 
     def run_license_activation(self, button: Optional[ttk.Button] = None) -> None:
@@ -1045,6 +1068,9 @@ class InfoBotManager(tk.Tk):
             messagebox.showerror("Ошибка копирования", str(exc))
 
     def start_service(self, service_id: str) -> None:
+        if not self._bootstrap_ready:
+            self.log("Дождитесь завершения автоматической подготовки перед запуском сервисов.", channel="system")
+            return
         if service_id in self.processes and self.processes[service_id].is_running:
             messagebox.showinfo("Уже запущено", f"Сервис {service_id} уже запущен.")
             return
@@ -1077,6 +1103,9 @@ class InfoBotManager(tk.Tk):
             self.stop_service(service_id)
 
     def start_all_services(self) -> None:
+        if not self._bootstrap_ready:
+            self.log("Дождитесь завершения автоматической подготовки перед запуском сервисов.", channel="system")
+            return
         for service_id in self._services().keys():
             self.start_service(service_id)
 
@@ -1192,19 +1221,43 @@ class InfoBotManager(tk.Tk):
         self.clipboard_append(text)
         messagebox.showinfo("Готово", "Содержимое лога скопировано в буфер обмена.")
 
+    def clear_current_log(self) -> None:
+        if not self.log_notebook:
+            return
+        current_tab = self.log_notebook.select()
+        channel = self.log_tab_ids.get(current_tab, "system")
+        widget = self.log_text_widgets.get(channel)
+        if not widget:
+            return
+        try:
+            widget.delete("1.0", tk.END)
+        except tk.TclError:
+            pass
+        self.pending_logs[channel].clear()
+
     def _git_sync_worker(self) -> None:
-        self.ensure_git_repository()
+        if not shutil.which("git"):
+            return
         try:
             self._stream_command("git fetch", ["git", "fetch", "--all", "--prune"])
-            self._stream_command("git status", ["git", "status", "-sb"])
-            self._stream_command("git pull", ["git", "pull", "--ff-only"])
+            self.log(
+                "[git] Локальные изменения будут перезаписаны состоянием origin/main (игнорируются только файлы из .gitignore).",
+                channel="system",
+            )
+            try:
+                self._stream_command("git reset", ["git", "reset", "--hard", "origin/main"])
+            except subprocess.CalledProcessError:
+                return
+            try:
+                self._stream_command("git clean", ["git", "clean", "-fd"])
+            except subprocess.CalledProcessError:
+                pass
         except subprocess.CalledProcessError:
             pass
+        finally:
+            self.after(0, self.update_git_status)
         self._configure_git_upstream()
-        self._auto_align_main_with_remote()
         self._run_git_log_preview()
-        self.update_git_status()
-        self._auto_align_main_with_remote()
 
     def _license_worker(self, command: List[str]) -> None:
         try:
@@ -1275,6 +1328,8 @@ class InfoBotManager(tk.Tk):
             )
 
     def _configure_git_upstream(self) -> None:
+        if not shutil.which("git"):
+            return
         try:
             branch_result = subprocess.run(
                 ["git", "symbolic-ref", "--short", "HEAD"],
@@ -1303,42 +1358,22 @@ class InfoBotManager(tk.Tk):
                     encoding="utf-8",
                     check=True,
                 )
+                self._git_upstream_warned = False
                 self.log("Ветка main теперь отслеживает origin/main.", channel="system")
-        except subprocess.CalledProcessError:
-            self.log("[git] Не удалось настроить upstream для ветки main.", channel="system")
-
-    def _auto_align_main_with_remote(self) -> None:
-        try:
-            # Проверяем количество коммитов в локальной ветке
-            remote_check = subprocess.run(
-                ["git", "rev-parse", "--verify", "origin/main"],
-                cwd=str(PROJECT_ROOT),
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-            )
-            if remote_check.returncode != 0:
-                return
-
-            # Сбрасываем локальную ветку к origin/main
-            reset_result = subprocess.run(
-                ["git", "reset", "--hard", "origin/main"],
-                cwd=str(PROJECT_ROOT),
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-            )
-            if reset_result.returncode == 0:
-                self.log("Локальная ветка main сброшена к origin/main.", channel="system")
-            else:
-                self.log(
-                    f"[git] Не удалось сбросить ветку main: {reset_result.stderr.strip()}",
-                    channel="system",
-                )
-        except subprocess.CalledProcessError:
-            self.log("[git] Не удалось синхронизировать ветку main с origin/main.", channel="system")
+        except subprocess.CalledProcessError as exc:
+            if not self._git_upstream_warned:
+                detail = ""
+                if isinstance(exc, subprocess.CalledProcessError):
+                    detail = (exc.stderr or "").strip() if getattr(exc, "stderr", None) else ""
+                message = "[git] Не удалось настроить upstream для ветки main."
+                if detail:
+                    message = f"{message} {detail}"
+                self.log(message, channel="system")
+                self._git_upstream_warned = True
 
     def _run_git_log_preview(self) -> None:
+        if not shutil.which("git"):
+            return
         try:
             commit_check = subprocess.run(
                 ["git", "rev-list", "--count", "HEAD"],
@@ -1350,6 +1385,7 @@ class InfoBotManager(tk.Tk):
             )
             if commit_check.stdout.strip() == "0":
                 self.log("[git log] Нет коммитов для отображения истории.", channel="system")
+                self._git_log_warned = False
                 return
             # Показываем новый и предыдущий коммит(c) c датами
             result = subprocess.run(
@@ -1363,8 +1399,15 @@ class InfoBotManager(tk.Tk):
             output = result.stdout.strip()
             if output:
                 self.log_queue.put(("system", f"[git log] Последние коммиты:\n{output}"))
-        except subprocess.CalledProcessError:
-            self.log("[git log] Не удалось получить историю коммитов.", channel="system")
+            self._git_log_warned = False
+        except subprocess.CalledProcessError as exc:
+            if not self._git_log_warned:
+                detail = (exc.stderr or "").strip() if getattr(exc, "stderr", None) else ""
+                message = "[git log] Не удалось получить историю коммитов."
+                if detail:
+                    message = f"{message} {detail}"
+                self.log(message, channel="system")
+                self._git_log_warned = True
 
     def _ensure_utf8_console(self) -> None:
         if os.name != "nt":

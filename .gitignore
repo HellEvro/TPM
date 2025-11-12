@@ -230,6 +230,16 @@ data/ai/candles_full_history.json
 data/ai/history_data.json
 data/ai/bots_data.json
 data/maturity_check_cache.json
+data/bots_state.json
+data/bot_history.json
+data/default_auto_bot_config.json
+data/delisted.json
+data/individual_coin_settings.json
+data/mature_coins.json
+data/system_config.json
+data/telegram_states.json
+app/config.py
+app/keys.py
 # Эти файлы пересоздаются автоматически при работе системы
 
 *.json.backup
