@@ -366,6 +366,13 @@ class InfoBotManager(tk.Tk):
         main.columnconfigure(0, weight=1)
         main.rowconfigure(8, weight=1)
 
+        style = ttk.Style(self)
+        services_bg = "#dff5d8"
+        style.configure("Services.TLabelframe", background=services_bg)
+        style.configure("Services.TLabelframe.Label", background=services_bg)
+        style.configure("Services.TFrame", background=services_bg)
+        style.configure("Services.TLabel", background=services_bg)
+
         self._enable_mousewheel(canvas)
 
         status_frame = ttk.Frame(main, padding=(0, 0, 0, 6))
@@ -449,15 +456,15 @@ class InfoBotManager(tk.Tk):
             command=lambda: self.open_path(PROJECT_ROOT / "docs" / "INSTALL.md"),
         ).grid(row=1, column=2, sticky="w", pady=(6, 0))
 
-        services_frame = ttk.LabelFrame(main, text="5. Запуск сервисов", padding=10)
+        services_frame = ttk.LabelFrame(main, text="5. Запуск сервисов", padding=10, style="Services.TLabelframe")
         services_frame.grid(row=6, column=0, sticky="new", padx=4, pady=4)
         services_frame.columnconfigure(1, weight=1)
 
-        header_frame = ttk.Frame(services_frame)
+        header_frame = ttk.Frame(services_frame, style="Services.TFrame")
         header_frame.grid(row=0, column=0, columnspan=3, sticky="ew", pady=(0, 8))
         header_frame.columnconfigure(0, weight=1)
 
-        ttk.Label(header_frame, text="Управление сервисами:").grid(row=0, column=0, sticky="w")
+        ttk.Label(header_frame, text="Управление сервисами:", style="Services.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Button(header_frame, text="Запустить все", command=self.start_all_services).grid(
             row=0, column=1, padx=(8, 4), sticky="e"
         )
@@ -465,7 +472,7 @@ class InfoBotManager(tk.Tk):
             row=0, column=2, sticky="e"
         )
 
-        config_frame = ttk.Frame(services_frame)
+        config_frame = ttk.Frame(services_frame, style="Services.TFrame")
         config_frame.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(0, 8))
         ttk.Button(config_frame, text="Редактировать конфиг (app/config.py)", command=self.open_config_file).pack(side=tk.LEFT)
         ttk.Button(config_frame, text="Редактировать ключи (app/keys.py)", command=self.open_keys_file).pack(side=tk.LEFT, padx=(8, 0))
@@ -473,9 +480,9 @@ class InfoBotManager(tk.Tk):
         for idx, (service_id, meta) in enumerate(self._services().items(), start=2):
             status_var = tk.StringVar(value="Не запущен")
             self.service_status_vars[service_id] = status_var
-            ttk.Label(services_frame, text=meta["title"]).grid(row=idx, column=0, sticky="w")
-            ttk.Label(services_frame, textvariable=status_var).grid(row=idx, column=1, sticky="w")
-            button_frame = ttk.Frame(services_frame)
+            ttk.Label(services_frame, text=meta["title"], style="Services.TLabel").grid(row=idx, column=0, sticky="w")
+            ttk.Label(services_frame, textvariable=status_var, style="Services.TLabel").grid(row=idx, column=1, sticky="w")
+            button_frame = ttk.Frame(services_frame, style="Services.TFrame")
             button_frame.grid(row=idx, column=2, sticky="w")
             ttk.Button(button_frame, text="Запустить", command=lambda sid=service_id: self.start_service(sid)).pack(
                 side=tk.LEFT, padx=(0, 4)
@@ -547,7 +554,7 @@ class InfoBotManager(tk.Tk):
 
         repo_label = tk.Label(
             contacts_frame,
-            text="🔗 Проект: github.com/HellEvro/TPM_Public",
+            text="Проект: github.com/HellEvro/TPM_Public",
             **link_style,
         )
         repo_label.grid(row=0, column=0, sticky="w")
@@ -556,7 +563,7 @@ class InfoBotManager(tk.Tk):
 
         telegram_label = tk.Label(
             contacts_frame,
-            text="✈️ Telegram: h3113vr0",
+            text="Telegram: h3113vr0",
             **link_style,
         )
         telegram_label.grid(row=0, column=1, sticky="w", padx=(18, 0))
@@ -565,7 +572,7 @@ class InfoBotManager(tk.Tk):
 
         email_label = tk.Label(
             contacts_frame,
-            text="📧 Email: gci.company.ou@gmail.com",
+            text="Email: gci.company.ou@gmail.com",
             **link_style,
         )
         email_label.grid(row=0, column=2, sticky="w", padx=(18, 0))
