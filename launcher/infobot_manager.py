@@ -193,11 +193,17 @@ class InfoBotManager(tk.Tk):
         ttk.Label(env_frame, text="Статус виртуального окружения:").grid(row=0, column=0, sticky="w")
         ttk.Label(env_frame, textvariable=self.env_status_var).grid(row=0, column=1, sticky="w")
 
-        ttk.Button(env_frame, text="Создать/обновить окружение", command=self.install_dependencies).grid(
+        ttk.Button(env_frame, text="Установить/обновить зависимости", command=self.install_dependencies_global).grid(
             row=1, column=0, sticky="w", pady=(6, 0)
         )
-        ttk.Button(env_frame, text="Открыть каталог проекта", command=lambda: self.open_path(PROJECT_ROOT)).grid(
+        ttk.Button(env_frame, text="Создать/обновить окружение (.venv)", command=self.install_dependencies).grid(
             row=1, column=1, sticky="w", pady=(6, 0)
+        )
+        ttk.Button(env_frame, text="Удалить окружение (.venv)", command=self.delete_environment).grid(
+            row=1, column=2, sticky="w", pady=(6, 0)
+        )
+        ttk.Button(env_frame, text="Открыть каталог проекта", command=lambda: self.open_path(PROJECT_ROOT)).grid(
+            row=1, column=3, sticky="w", pady=(6, 0)
         )
 
         git_frame = ttk.LabelFrame(main, text="Обновления из Git", padding=10)
@@ -497,6 +503,41 @@ class InfoBotManager(tk.Tk):
             PYTHON_EXECUTABLE = _detect_python_executable()
 
         threading.Thread(target=worker, daemon=True).start()
+
+    def install_dependencies_global(self) -> None:
+        def worker() -> None:
+            python_cmd = _split_command(sys.executable) + ["-m", "pip", "install", "-r", "requirements.txt"]
+            try:
+                self._stream_command("Установка зависимостей (глобально)", python_cmd, channel="system")
+                self.log("Глобальная установка зависимостей завершена.", channel="system")
+            except subprocess.CalledProcessError as exc:
+                self.log(
+                    f"[Установка зависимостей (глобально)] Ошибка ({exc.returncode}). Убедитесь, что есть права и активный pip.",
+                    channel="system",
+                )
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def delete_environment(self) -> None:
+        if not VENV_DIR.exists():
+            messagebox.showinfo("Информация", "Виртуальное окружение (.venv) отсутствует.")
+            return
+        if messagebox.askyesno(
+            "Удалить .venv",
+            "Удалить виртуальное окружение (.venv)? Все запущенные сервисы будут остановлены.",
+        ):
+            self.stop_all_services()
+            try:
+                shutil.rmtree(VENV_DIR)
+                self.log("Виртуальное окружение (.venv) удалено.", channel="system")
+                self.update_environment_status()
+                global PYTHON_EXECUTABLE
+                PYTHON_EXECUTABLE = _detect_python_executable()
+            except OSError as exc:
+                messagebox.showerror(
+                    "Ошибка удаления",
+                    f"{exc}\n\nЕсли проблема сохраняется, закройте менеджер и удалите папку .venv вручную.",
+                )
 
     def check_for_updates(self) -> None:
         if not shutil.which("git"):
