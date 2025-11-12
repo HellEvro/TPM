@@ -1374,6 +1374,29 @@ input:checked + .slider:before {
     box-shadow: 0 2px 8px rgba(79, 172, 254, 0.1);
 }
 
+.config-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.break-even-config .config-row .toggle-switch {
+    margin-right: 4px;
+}
+
+.break-even-trigger-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.break-even-trigger-label {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
 .config-label {
     display: flex;
     align-items: center;
