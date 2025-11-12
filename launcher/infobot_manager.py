@@ -592,7 +592,7 @@ class InfoBotManager(tk.Tk):
                 "command": python + ["bots.py"],
             },
             "ai": {
-                "title": "AI Engine (ai.py)",
+                "title": "AI Engine (ai.py) (не обязателен)",
                 "command": python + ["ai.py"],
             },
         }
