@@ -410,6 +410,27 @@ class InfoBotManager(tk.Tk):
     def ensure_git_repository(self) -> None:
         git_dir = PROJECT_ROOT / ".git"
         if git_dir.exists():
+            try:
+                result = subprocess.run(
+                    ["git", "symbolic-ref", "--short", "HEAD"],
+                    cwd=str(PROJECT_ROOT),
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                current_branch = result.stdout.strip()
+                if current_branch == "master":
+                    subprocess.run(
+                        ["git", "branch", "-m", "main"],
+                        cwd=str(PROJECT_ROOT),
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    )
+                    self.log("Переименована ветка master → main", channel="system")
+                    self.update_git_status()
+            except subprocess.CalledProcessError:
+                pass
             return
         if not shutil.which("git"):
             self.git_status_var.set("git не найден (обновления недоступны)")
