@@ -64,6 +64,28 @@ def _detect_python_executable() -> str:
 PYTHON_EXECUTABLE = _detect_python_executable()
 
 
+ERROR_KEYWORDS = (
+    "error",
+    "exception",
+    "traceback",
+    "critical",
+    "fatal",
+    "fail",
+    "stderr",
+    "ошиб",
+    "критич",
+    "аварийн",
+    "предупрежд",
+    "warning",
+    "не удалось",
+    "cannot",
+    "refused",
+    "denied",
+    "timeout",
+    "failed",
+)
+
+
 class ManagedProcess:
     """Wraps a subprocess and streams its output to a Tkinter-safe queue."""
 
@@ -127,9 +149,17 @@ class ManagedProcess:
         def _reader() -> None:
             assert self.process and self.process.stdout
             _snapshot_children()
+            startup_message = f"{self.name} запущен и работает. Все ошибки будут показаны здесь."
+            _safe_put((self.channel, startup_message))
+            _safe_put(("system", startup_message))
             for line in self.process.stdout:
-                message = f"[{self.name}] {line.rstrip()}"
-                _safe_put((self.channel, message))
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                if self._is_error_line(stripped):
+                    message = f"[{self.name}] {stripped}"
+                    _safe_put((self.channel, message))
+                    _safe_put(("system", message))
             self.process.stdout.close()
 
         self._reader_thread = threading.Thread(target=_reader, daemon=True)
@@ -204,6 +234,10 @@ class ManagedProcess:
             except Exception:
                 continue
         self.child_pids.clear()
+
+    def _is_error_line(self, text: str) -> bool:
+        lowered = text.lower()
+        return any(keyword in lowered for keyword in ERROR_KEYWORDS)
 
 
 class InfoBotManager(tk.Tk):
@@ -914,6 +948,7 @@ class InfoBotManager(tk.Tk):
         services = self._services()
         title = services.get(service_id, {}).get("title", service_id)
         self.log(f"{title} остановлен.", channel=service_id)
+        self.log(f"{title} остановлен.", channel="system", broadcast=False)
 
     def stop_all_services(self) -> None:
         for service_id in list(self.processes.keys()):
