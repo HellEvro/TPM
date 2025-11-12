@@ -498,7 +498,36 @@ class NewTradingBot:
         except Exception as e:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка обновления: {e}")
             return {'success': False, 'error': str(e)}
-    
+
+    def _get_market_price(self, fallback_price: float = None) -> float:
+        """Возвращает актуальную цену из биржи (last/mark), если доступна"""
+        if not self.exchange:
+            return fallback_price
+        try:
+            ticker = self.exchange.get_ticker(self.symbol)
+            if not ticker:
+                return fallback_price
+
+            candidates = (
+                ticker.get('last'),
+                ticker.get('markPrice'),
+                ticker.get('price'),
+                ticker.get('lastPrice'),
+                ticker.get('mark'),
+            )
+            for candidate in candidates:
+                if candidate is None:
+                    continue
+                try:
+                    value = float(candidate)
+                except (TypeError, ValueError):
+                    continue
+                if value > 0:
+                    return value
+        except Exception as e:
+            logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось получить цену с биржи: {e}")
+        return fallback_price
+
     def _handle_idle_state(self, rsi, trend, candles, price):
         """Обрабатывает состояние IDLE (ожидание сигнала)"""
         try:
@@ -547,6 +576,17 @@ class NewTradingBot:
                 logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Нет цены входа - обновляем из биржи")
                 self._sync_position_with_exchange()
             
+            # Обновляем цену из биржи, чтобы trailing работал по реальному значению
+            market_price = self._get_market_price(price)
+            if market_price and market_price > 0:
+                if price and abs(market_price - price) / max(price, 1e-9) >= 0.01:
+                    logger.debug(
+                        f"[NEW_BOT_{self.symbol}] 📉 Обновили цену по бирже: {price} → {market_price}"
+                    )
+                price = market_price
+
+            self.current_price = price
+
             # 1. Проверяем защитные механизмы
             protection_result = self.check_protection_mechanisms(price)
             if protection_result['should_close']:

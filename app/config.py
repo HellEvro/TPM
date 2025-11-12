@@ -122,4 +122,3 @@ TELEGRAM_NOTIFY = {
     'STATISTICS_TIME_ENABLED': False,     # Включить/выключить отправку в определенное время
     'STATISTICS_TIME': ['09:00', '21:00']  # Время отправки (если включено)
 }
-
