@@ -1,0 +1,46 @@
+{
+  "symbol": "AGI",
+  "trained_at": "2025-11-12T13:10:57.387094",
+  "training_seed": 250888,
+  "coin_model_seed": 251822,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 69,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 15.713606211997055,
+    "take_profit": 13.95076354981821,
+    "trailing_stop_activation": 28.97011507004478,
+    "trailing_stop_distance": 7.550119603437432,
+    "break_even_protection": true,
+    "break_even_trigger": 42.46166002944212,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 71,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 8.031338336713878,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 39.60556168554439
+    }
+  },
+  "candles_count": 2778,
+  "trades_count": 7,
+  "win_rate": 14.285714285714285,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.5153922950753777e-06,
+  "total_pnl": -1.3240910669417512,
+  "previous_candles_count": 2845,
+  "candles_increased": false
+}

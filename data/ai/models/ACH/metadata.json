@@ -1,0 +1,46 @@
+{
+  "symbol": "ACH",
+  "trained_at": "2025-11-12T13:11:49.452618",
+  "training_seed": 300622,
+  "coin_model_seed": 301479,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 66,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 20.488091038985477,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 38.23258192538805,
+    "trailing_stop_distance": 23.363038992710678,
+    "break_even_protection": false,
+    "break_even_trigger": 175.18016767647703,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 68,
+      "lower": 33
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 15.469693034170543,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 42.082959427479196
+    }
+  },
+  "candles_count": 4931,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.5126538736895074e-07,
+  "total_pnl": 0.2392023312060384,
+  "previous_candles_count": 4816,
+  "candles_increased": true
+}

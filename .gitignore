@@ -218,26 +218,18 @@ logs/
 # Data files (trading data, positions, etc.)
 # data/
 # Исключения: ИИ данные ДОЛЖНЫ быть в git
-!data/ai/
+data/ai/*
 !data/ai/models/
-!data/ai/models/*.pkl
-!data/ai/models/*.h5
-!data/ai/models/*.pt
-!data/ai/models/*.pth
-!data/ai/models/*.onnx
-!data/ai/historical/
-!data/ai/historical/*.csv
-!data/ai/training/
-!data/ai/.gitkeep
-!data/ai/historical/.gitkeep
-!data/ai/training/.gitkeep
-!data/ai/models/.gitkeep
+!data/ai/models/**
 
 data/process_state.json
 data/candles_cache.json
 # Большие файлы данных AI (не коммитим в Git)
 data/ai/market_data.json
 data/ai/candles_full_history.json
+data/ai/history_data.json
+data/ai/bots_data.json
+data/maturity_check_cache.json
 # Эти файлы пересоздаются автоматически при работе системы
 
 *.json.backup
@@ -404,4 +396,4 @@ scripts/hardware_id.build/
 
 # Source files should not be in public (keep only compiled .pyc)
 license_generator/source/
-
+license_generator/source/

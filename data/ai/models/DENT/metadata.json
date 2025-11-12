@@ -1,0 +1,46 @@
+{
+  "symbol": "DENT",
+  "trained_at": "2025-11-12T13:18:01.851772",
+  "training_seed": 628096,
+  "coin_model_seed": 628107,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 68,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 18.27666890667347,
+    "take_profit": 21.868356381521174,
+    "trailing_stop_activation": 24.84516425782183,
+    "trailing_stop_distance": 9.806732912289874,
+    "break_even_protection": true,
+    "break_even_trigger": 43.139644967438954,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 70,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 9.429237527828109,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 50.14234395926917
+    }
+  },
+  "candles_count": 4929,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.948544434529118e-08,
+  "total_pnl": 0.27341804274630727,
+  "previous_candles_count": 4907,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "1000LUNC",
+  "trained_at": "2025-11-12T13:22:57.879513",
+  "training_seed": 972324,
+  "coin_model_seed": 972966,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 78,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 16.96931529584079,
+    "take_profit": 28.25316968967693,
+    "trailing_stop_activation": 16.038619666113256,
+    "trailing_stop_distance": 25.154854818169333,
+    "break_even_protection": true,
+    "break_even_trigger": 82.8430812900414,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 66,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 8.85769902692932,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 55.57714287561643
+    }
+  },
+  "candles_count": 4595,
+  "trades_count": 9,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.415838114717866e-06,
+  "total_pnl": 1.5016504364432275,
+  "previous_candles_count": 4585,
+  "candles_increased": true
+}

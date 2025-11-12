@@ -1,0 +1,46 @@
+{
+  "symbol": "DOLO",
+  "trained_at": "2025-11-12T13:15:24.065345",
+  "training_seed": 500326,
+  "coin_model_seed": 500475,
+  "rsi_params": {
+    "oversold": 30,
+    "overbought": 67,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 10.921547157481083,
+    "take_profit": 32.34549739444874,
+    "trailing_stop_activation": 18.253644890165,
+    "trailing_stop_distance": 23.615906932888944,
+    "break_even_protection": true,
+    "break_even_trigger": 154.70786575745018,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 64,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 21.974574889773407,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 36.08770033455514
+    }
+  },
+  "candles_count": 429,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.130775116397669e-06,
+  "total_pnl": 0.4600692557505562,
+  "previous_candles_count": 429,
+  "candles_increased": false
+}

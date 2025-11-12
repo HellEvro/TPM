@@ -1,0 +1,46 @@
+{
+  "symbol": "EDEN",
+  "trained_at": "2025-11-12T13:18:02.889682",
+  "training_seed": 628096,
+  "coin_model_seed": 628744,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 76,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 15.257970276399346,
+    "take_profit": 18.559326002318272,
+    "trailing_stop_activation": 11.17559422769365,
+    "trailing_stop_distance": 13.920026497601377,
+    "break_even_protection": true,
+    "break_even_trigger": 143.35466625039788,
+    "max_position_hours": 15
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 71,
+      "lower": 41
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 13.79924486644336,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 50.694600467478004
+    }
+  },
+  "candles_count": 173,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 9.457386392913001e-07,
+  "total_pnl": -1.4366648835028184,
+  "previous_candles_count": 173,
+  "candles_increased": false
+}

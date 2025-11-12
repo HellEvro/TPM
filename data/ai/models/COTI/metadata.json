@@ -1,0 +1,46 @@
+{
+  "symbol": "COTI",
+  "trained_at": "2025-11-12T13:23:11.854363",
+  "training_seed": 972324,
+  "coin_model_seed": 972445,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 20.06543820474544,
+    "take_profit": 17.14643643283124,
+    "trailing_stop_activation": 11.526300489862287,
+    "trailing_stop_distance": 14.803089074416688,
+    "break_even_protection": false,
+    "break_even_trigger": 44.700156486865595,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 71,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 24.37985627947016,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 44.74076242816605
+    }
+  },
+  "candles_count": 4920,
+  "trades_count": 8,
+  "win_rate": 62.5,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.819241164422445e-07,
+  "total_pnl": 0.05484301654591633,
+  "previous_candles_count": 4983,
+  "candles_increased": false
+}

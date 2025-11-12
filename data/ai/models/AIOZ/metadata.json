@@ -1,0 +1,46 @@
+{
+  "symbol": "AIOZ",
+  "trained_at": "2025-11-12T13:11:50.545355",
+  "training_seed": 300622,
+  "coin_model_seed": 301423,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 73,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 17.699761268266087,
+    "take_profit": 13.813795366458425,
+    "trailing_stop_activation": 44.887736099267585,
+    "trailing_stop_distance": 24.465802723464396,
+    "break_even_protection": true,
+    "break_even_trigger": 148.03504635287638,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 61,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 22.017417450719087,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 57.9413539482691
+    }
+  },
+  "candles_count": 1922,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.597241241716353e-06,
+  "total_pnl": 1.0798193318964475,
+  "previous_candles_count": 1897,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "DYDX",
+  "trained_at": "2025-11-12T13:23:14.394672",
+  "training_seed": 972324,
+  "coin_model_seed": 972787,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 10.975193111285114,
+    "take_profit": 33.186165556422466,
+    "trailing_stop_activation": 37.3078192612534,
+    "trailing_stop_distance": 22.59081950997694,
+    "break_even_protection": true,
+    "break_even_trigger": 94.56035701292808,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 64,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 16.074218169416767,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 53.905456411634816
+    }
+  },
+  "candles_count": 4902,
+  "trades_count": 7,
+  "win_rate": 42.857142857142854,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.4033807403741239e-06,
+  "total_pnl": -0.24422648489083035,
+  "previous_candles_count": 4954,
+  "candles_increased": false
+}

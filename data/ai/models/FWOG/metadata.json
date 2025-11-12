@@ -1,0 +1,46 @@
+{
+  "symbol": "FWOG",
+  "trained_at": "2025-11-12T13:23:18.377631",
+  "training_seed": 972324,
+  "coin_model_seed": 972390,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 70,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 9.43792389638696,
+    "take_profit": 12.164640799115642,
+    "trailing_stop_activation": 12.862105247700924,
+    "trailing_stop_distance": 23.25062377050747,
+    "break_even_protection": true,
+    "break_even_trigger": 40.17181882142487,
+    "max_position_hours": 13
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 61,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 10.057188546625277,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 39.08246460780556
+    }
+  },
+  "candles_count": 1298,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 9.11814236811369e-06,
+  "total_pnl": -0.4356377248508978,
+  "previous_candles_count": 1410,
+  "candles_increased": false
+}

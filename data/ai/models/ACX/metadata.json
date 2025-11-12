@@ -1,0 +1,46 @@
+{
+  "symbol": "ACX",
+  "trained_at": "2025-11-12T13:16:12.711310",
+  "training_seed": 564094,
+  "coin_model_seed": 564664,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 71,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 13.297426190190558,
+    "take_profit": 11.074636627959471,
+    "trailing_stop_activation": 43.14171082679618,
+    "trailing_stop_distance": 15.536216290133472,
+    "break_even_protection": false,
+    "break_even_trigger": 143.53351826970572,
+    "max_position_hours": 18
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 71,
+      "lower": 33
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 5.135839393320026,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 61.33968035004855
+    }
+  },
+  "candles_count": 1311,
+  "trades_count": 7,
+  "win_rate": 57.14285714285714,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.5840091285806786e-06,
+  "total_pnl": 0.16083702563975083,
+  "previous_candles_count": 1178,
+  "candles_increased": true
+}

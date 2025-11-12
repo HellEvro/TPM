@@ -1,0 +1,46 @@
+{
+  "symbol": "CHR",
+  "trained_at": "2025-11-12T13:23:10.336263",
+  "training_seed": 972324,
+  "coin_model_seed": 972422,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 10.19057563308225,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 12.08974718786289,
+    "trailing_stop_distance": 23.62313941259471,
+    "break_even_protection": false,
+    "break_even_trigger": 141.92613527888238,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 66,
+      "lower": 35
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 20.148021002657373,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 57.11778723414801
+    }
+  },
+  "candles_count": 4896,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.1945404557330125e-07,
+  "total_pnl": 0.21186890468868952,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}
