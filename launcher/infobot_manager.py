@@ -13,6 +13,7 @@ Provides a cross-platform control panel to:
 from __future__ import annotations
 
 import atexit
+import json
 import os
 import queue
 import re
@@ -21,8 +22,8 @@ import signal
 import subprocess
 import sys
 import tempfile
-import time
 import threading
+import time
 import webbrowser
 from collections import defaultdict
 from pathlib import Path
@@ -40,6 +41,8 @@ except ImportError as exc:  # pragma: no cover - tkinter should be available on 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 VENV_DIR = PROJECT_ROOT / ".venv"
 DEFAULT_REMOTE_URL = "git@github.com:HellEvro/TPM_Public.git"
+STATE_FILE = PROJECT_ROOT / "launcher" / ".infobot_manager_state.json"
+DEFAULT_GEOMETRY = "850x1050"
 
 
 def _detect_python_executable() -> str:
@@ -295,7 +298,8 @@ class InfoBotManager(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("InfoBot Manager")
-        self.geometry("980x720")
+        self._default_geometry = self._load_saved_geometry()
+        self.geometry(self._default_geometry)
         self.minsize(820, 600)
 
         self.log_queue: "queue.Queue[Tuple[str, str]]" = queue.Queue(maxsize=3000)
@@ -324,6 +328,7 @@ class InfoBotManager(tk.Tk):
         self.service_status_vars: Dict[str, tk.StringVar] = {}
 
         self._build_ui()
+        self.after(0, self._apply_saved_geometry)
         self.after(200, self._flush_logs)
         self.after(1200, self._refresh_service_statuses)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -582,6 +587,33 @@ class InfoBotManager(tk.Tk):
         # Обновляем статус окружения после создания элементов UI,
         # чтобы кнопка глобальной установки корректно отразила состояние.
         self.update_environment_status()
+
+    def _load_saved_geometry(self) -> str:
+        if STATE_FILE.exists():
+            try:
+                with STATE_FILE.open("r", encoding="utf-8") as fh:
+                    data = json.load(fh)
+                geometry = data.get("geometry")
+                if isinstance(geometry, str) and geometry:
+                    return geometry
+            except Exception:
+                pass
+        return DEFAULT_GEOMETRY
+
+    def _apply_saved_geometry(self) -> None:
+        try:
+            self.update_idletasks()
+            self.geometry(self._default_geometry)
+        except Exception:
+            pass
+
+    def _save_window_geometry(self) -> None:
+        try:
+            STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with STATE_FILE.open("w", encoding="utf-8") as fh:
+                json.dump({"geometry": self.geometry()}, fh)
+        except Exception:
+            pass
 
     def _enable_mousewheel(self, widget: tk.Widget) -> None:
         if sys.platform == "darwin":
@@ -1049,6 +1081,7 @@ class InfoBotManager(tk.Tk):
             self.start_service(service_id)
 
     def _on_close(self) -> None:
+        self._save_window_geometry()
         self.stop_all_services()
         self.destroy()
 
