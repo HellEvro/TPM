@@ -11,8 +11,7 @@
 """
 
 # ========== ИМПОРТ API КЛЮЧЕЙ ==========
-# После копирования этого файла в config.py, раскомментируйте строку ниже:
-# from .keys import EXCHANGES, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from .keys import EXCHANGES, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 
 # ========== НАСТРОЙКИ БИРЖИ ==========
 # Выбор активной биржи (должна быть настроена в keys.py)
@@ -22,6 +21,13 @@ ACTIVE_EXCHANGE = 'BYBIT'
 APP_HOST = '0.0.0.0'  # '0.0.0.0' для доступа из сети, 'localhost' только локально
 APP_PORT = 5000
 APP_DEBUG = False
+
+# ========== ПОЗИЦИОННЫЕ НАСТРОЙКИ ==========
+GROWTH_MULTIPLIER = 1.0
+DEFAULT_PNL_THRESHOLD = 1000
+MIN_PNL_THRESHOLD = 5
+HIGH_ROI_THRESHOLD = 100
+HIGH_LOSS_THRESHOLD = -40
 
 # ========== TELEGRAM УВЕДОМЛЕНИЯ ==========
 # Токены настраиваются в keys.py
@@ -41,6 +47,10 @@ TRAILING_STOP_DISTANCE = 150.0        # Расстояние трейлинг с
 # ========== РИСК-МЕНЕДЖМЕНТ ==========
 MAX_CONCURRENT_BOTS = 5               # Максимум одновременных ботов
 RISK_CAP_PERCENT = 10.0               # Лимит риска (% от депозита)
+MIN_BALANCE_USDT = 10.0
+MAX_ACTIVE_BOTS = 10
+MIN_RISK_PROFILE = 0.5
+MAX_RISK_PROFILE = 2.0
 
 # ========== RSI ПАРАМЕТРЫ ==========
 RSI_PERIOD = 14

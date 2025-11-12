@@ -794,16 +794,17 @@ class InfoBotManager(tk.Tk):
         target = PROJECT_ROOT / "app" / "keys.py"
         example = PROJECT_ROOT / "app" / "keys.example.py"
         if not target.exists():
-            if example.exists() and messagebox.askyesno(
-                "Создать файл ключей",
-                "Файл app/keys.py не найден. Создать его из app/keys.example.py?",
-            ):
-                try:
-                    shutil.copy2(example, target)
-                    self.log("Создан app/keys.py из app/keys.example.py", channel="system")
-                except OSError as exc:
-                    messagebox.showerror("Ошибка копирования", str(exc))
-                    return
+            if example.exists():
+                if messagebox.askyesno(
+                    "Создать файл ключей",
+                    "Файл app/keys.py не найден. Создать его из app/keys.example.py?",
+                ):
+                    try:
+                        shutil.copy2(example, target)
+                        self.log("Создан app/keys.py из app/keys.example.py", channel="system")
+                    except OSError as exc:
+                        messagebox.showerror("Ошибка копирования", str(exc))
+                        return
             else:
                 messagebox.showwarning(
                     "Файл не найден",
@@ -1055,6 +1056,10 @@ class InfoBotManager(tk.Tk):
     def _restore_missing_config_entries(self, config_path: Path) -> None:
         required_entries = {
             "GROWTH_MULTIPLIER": "GROWTH_MULTIPLIER = 1.0",
+            "MIN_BALANCE_USDT": "MIN_BALANCE_USDT = 10.0",
+            "MAX_ACTIVE_BOTS": "MAX_ACTIVE_BOTS = 10",
+            "MIN_RISK_PROFILE": "MIN_RISK_PROFILE = 0.5",
+            "MAX_RISK_PROFILE": "MAX_RISK_PROFILE = 2.0",
         }
         try:
             text = config_path.read_text(encoding="utf-8")
