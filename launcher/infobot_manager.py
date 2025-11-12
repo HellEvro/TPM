@@ -462,23 +462,37 @@ class InfoBotManager(tk.Tk):
     def install_dependencies(self) -> None:
         def worker() -> None:
             global PYTHON_EXECUTABLE
-            steps: List[tuple[str, List[str]]] = []
+
             if not VENV_DIR.exists():
-                steps.append(("Создание окружения", [sys.executable, "-m", "venv", str(VENV_DIR)]))
-            python_exec = _detect_python_executable()
-            pip_cmd = _split_command(python_exec) + ["-m", "pip"]
-            steps.extend(
-                [
-                    ("Обновление pip", pip_cmd + ["install", "--upgrade", "pip", "setuptools", "wheel"]),
-                    ("Установка зависимостей", pip_cmd + ["install", "-r", "requirements.txt"]),
-                ]
-            )
-            for title, command in steps:
                 try:
-                    self._stream_command(title, command)
+                    self._stream_command(
+                        "Создание окружения",
+                        [sys.executable, "-m", "venv", str(VENV_DIR)],
+                        channel="system",
+                    )
                 except subprocess.CalledProcessError as exc:
-                    self.log(f"[{title}] Ошибка установки ({exc.returncode})")
-                    break
+                    self.log(
+                        f"Ошибка при создании виртуального окружения (.venv): {exc.returncode}",
+                        channel="system",
+                    )
+                    return
+
+            python_exec = _detect_python_executable()
+            if not python_exec:
+                self.log("Не удалось определить Python для установки зависимостей.", channel="system")
+                return
+
+            pip_cmd = _split_command(python_exec) + ["-m", "pip"]
+            commands = [
+                ("Обновление pip", pip_cmd + ["install", "--upgrade", "pip", "setuptools", "wheel"]),
+                ("Установка зависимостей", pip_cmd + ["install", "-r", "requirements.txt"]),
+            ]
+            for title, command in commands:
+                try:
+                    self._stream_command(title, command, channel="system")
+                except subprocess.CalledProcessError as exc:
+                    self.log(f"[{title}] Ошибка установки ({exc.returncode})", channel="system")
+                    return
             self.update_environment_status()
             PYTHON_EXECUTABLE = _detect_python_executable()
 
