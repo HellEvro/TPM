@@ -1,0 +1,46 @@
+{
+  "symbol": "BROCCOLI",
+  "trained_at": "2025-11-13T01:56:07.940565",
+  "training_seed": 142038,
+  "coin_model_seed": 142278,
+  "rsi_params": {
+    "oversold": 30,
+    "overbought": 72,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 17.520551345001355,
+    "take_profit": 14.894574328178392,
+    "trailing_stop_activation": 33.248100558657185,
+    "trailing_stop_distance": 11.298350644721417,
+    "break_even_protection": true,
+    "break_even_trigger": 122.62316342634597,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 70,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 21.40920195525912,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 67.00914153917485
+    }
+  },
+  "candles_count": 892,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.0173911961892153e-06,
+  "total_pnl": 0.18208586720941128,
+  "previous_candles_count": 930,
+  "candles_increased": false
+}

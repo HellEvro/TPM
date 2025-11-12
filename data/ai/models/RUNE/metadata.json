@@ -1,0 +1,46 @@
+{
+  "symbol": "RUNE",
+  "trained_at": "2025-11-13T01:55:01.768912",
+  "training_seed": 981100,
+  "coin_model_seed": 981884,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 66,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 15.233075892026305,
+    "take_profit": 21.93333240105371,
+    "trailing_stop_activation": 16.81333454783854,
+    "trailing_stop_distance": 6.745885041062911,
+    "break_even_protection": true,
+    "break_even_trigger": 96.63161561347768,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 63,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 23.40067302122194,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 68.95976874475812
+    }
+  },
+  "candles_count": 4858,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.866783405464153e-07,
+  "total_pnl": -0.35320742455886867,
+  "previous_candles_count": 4875,
+  "candles_increased": false
+}

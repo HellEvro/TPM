@@ -1,0 +1,46 @@
+{
+  "symbol": "PHB",
+  "trained_at": "2025-11-13T01:54:45.488210",
+  "training_seed": 981100,
+  "coin_model_seed": 981400,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 66,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 18.445691555502016,
+    "take_profit": 34.55565018379403,
+    "trailing_stop_activation": 8.3920764507021,
+    "trailing_stop_distance": 29.264609494386285,
+    "break_even_protection": false,
+    "break_even_trigger": 99.46029838059972,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 65,
+      "lower": 35
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 6.792656470108813,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 40.282287039898534
+    }
+  },
+  "candles_count": 3553,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.640495286442679e-07,
+  "total_pnl": 0.5637228925160847,
+  "previous_candles_count": 3481,
+  "candles_increased": true
+}

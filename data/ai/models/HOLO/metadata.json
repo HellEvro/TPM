@@ -1,0 +1,46 @@
+{
+  "symbol": "HOLO",
+  "trained_at": "2025-11-13T01:46:33.664382",
+  "training_seed": 514320,
+  "coin_model_seed": 514478,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 68,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 13.10198562495693,
+    "take_profit": 26.458582665549926,
+    "trailing_stop_activation": 27.351528547935807,
+    "trailing_stop_distance": 27.555031806201928,
+    "break_even_protection": true,
+    "break_even_trigger": 80.2502662424161,
+    "max_position_hours": 19
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 66,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 7.269621805219155,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 53.08040712384858
+    }
+  },
+  "candles_count": 248,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.129676561026669e-06,
+  "total_pnl": -1.065924958592188,
+  "previous_candles_count": 248,
+  "candles_increased": false
+}

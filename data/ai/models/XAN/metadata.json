@@ -1,0 +1,46 @@
+{
+  "symbol": "XAN",
+  "trained_at": "2025-11-13T01:11:59.850174",
+  "training_seed": 363334,
+  "coin_model_seed": 363868,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 77,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 15.762465619522192,
+    "take_profit": 21.180300720649697,
+    "trailing_stop_activation": 43.40090542518655,
+    "trailing_stop_distance": 24.712794016650566,
+    "break_even_protection": true,
+    "break_even_trigger": 57.985880279526825,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 68,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 21.191860915793423,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 65.15720736983117
+    }
+  },
+  "candles_count": 177,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 9.490595968264626e-07,
+  "total_pnl": -0.5098782010660246,
+  "previous_candles_count": 177,
+  "candles_increased": false
+}

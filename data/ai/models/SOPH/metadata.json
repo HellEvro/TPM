@@ -1,0 +1,46 @@
+{
+  "symbol": "SOPH",
+  "trained_at": "2025-11-13T00:51:04.517040",
+  "training_seed": 130334,
+  "coin_model_seed": 130585,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 68,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 18.770001511009077,
+    "take_profit": 32.82397336368486,
+    "trailing_stop_activation": 16.235939356940122,
+    "trailing_stop_distance": 28.646241292572157,
+    "break_even_protection": false,
+    "break_even_trigger": 156.77897404733687,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 61,
+      "lower": 35
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 6.359824325024324,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 41.57098195734231
+    }
+  },
+  "candles_count": 610,
+  "trades_count": 7,
+  "win_rate": 28.57142857142857,
+  "signal_accuracy": 1.0,
+  "profit_mse": 9.070958193842987e-07,
+  "total_pnl": -0.7753742505108718,
+  "previous_candles_count": 665,
+  "candles_increased": false
+}

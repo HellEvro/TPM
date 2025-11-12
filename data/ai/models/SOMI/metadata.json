@@ -1,0 +1,46 @@
+{
+  "symbol": "SOMI",
+  "trained_at": "2025-11-13T01:44:41.191846",
+  "training_seed": 360166,
+  "coin_model_seed": 360921,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 72,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 14.09728919279502,
+    "take_profit": 13.380898251545958,
+    "trailing_stop_activation": 35.517839864327954,
+    "trailing_stop_distance": 27.080404272421234,
+    "break_even_protection": false,
+    "break_even_trigger": 73.34947580638081,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 62,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 13.047324211929016,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 67.75585780138604
+    }
+  },
+  "candles_count": 284,
+  "trades_count": 8,
+  "win_rate": 50.0,
+  "signal_accuracy": 0.875,
+  "profit_mse": 2.403467431977459e-05,
+  "total_pnl": 1.5485173974189756,
+  "previous_candles_count": 284,
+  "candles_increased": false
+}

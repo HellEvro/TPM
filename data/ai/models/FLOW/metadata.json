@@ -1,0 +1,46 @@
+{
+  "symbol": "FLOW",
+  "trained_at": "2025-11-13T01:54:01.778470",
+  "training_seed": 981100,
+  "coin_model_seed": 981888,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 65,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 13.109804951513066,
+    "take_profit": 25.20715368484119,
+    "trailing_stop_activation": 14.320412415594921,
+    "trailing_stop_distance": 19.2427091921721,
+    "break_even_protection": true,
+    "break_even_trigger": 114.08307889797639,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 62,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 7.487873739285417,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 37.368601233123854
+    }
+  },
+  "candles_count": 4801,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.995202609957342e-06,
+  "total_pnl": 0.9502190762318913,
+  "previous_candles_count": 4893,
+  "candles_increased": false
+}

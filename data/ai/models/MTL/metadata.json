@@ -1,0 +1,46 @@
+{
+  "symbol": "MTL",
+  "trained_at": "2025-11-13T01:54:36.512885",
+  "training_seed": 981100,
+  "coin_model_seed": 982055,
+  "rsi_params": {
+    "oversold": 28,
+    "overbought": 77,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 9.548743017428466,
+    "take_profit": 13.172305462611682,
+    "trailing_stop_activation": 32.11394225378404,
+    "trailing_stop_distance": 7.867224699141307,
+    "break_even_protection": false,
+    "break_even_trigger": 109.09602697398101,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 63,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 13.658181925429847,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 59.24636826791826
+    }
+  },
+  "candles_count": 4990,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.9284397158125348e-06,
+  "total_pnl": 0.07275914672391909,
+  "previous_candles_count": 4914,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "THE",
+  "trained_at": "2025-11-13T01:52:40.687790",
+  "training_seed": 832719,
+  "coin_model_seed": 832966,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 77,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 9.116117311314742,
+    "take_profit": 17.79763864983739,
+    "trailing_stop_activation": 17.48483979774121,
+    "trailing_stop_distance": 22.61863697830919,
+    "break_even_protection": false,
+    "break_even_trigger": 74.7973651731673,
+    "max_position_hours": 18
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 60,
+      "lower": 29
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 6.931442017851328,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 46.41122852888081
+    }
+  },
+  "candles_count": 1372,
+  "trades_count": 11,
+  "win_rate": 36.36363636363637,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.460397335496392e-06,
+  "total_pnl": -1.4247420389528789,
+  "previous_candles_count": 1328,
+  "candles_increased": true
+}

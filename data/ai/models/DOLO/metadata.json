@@ -1,46 +1,46 @@
 {
   "symbol": "DOLO",
-  "trained_at": "2025-11-12T13:15:24.065345",
-  "training_seed": 500326,
-  "coin_model_seed": 500475,
+  "trained_at": "2025-11-13T01:35:45.578255",
+  "training_seed": 911156,
+  "coin_model_seed": 911952,
   "rsi_params": {
-    "oversold": 30,
-    "overbought": 67,
-    "exit_long_with_trend": 64,
-    "exit_long_against_trend": 65,
-    "exit_short_with_trend": 35,
-    "exit_short_against_trend": 39
+    "oversold": 31,
+    "overbought": 77,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 35
   },
   "risk_params": {
-    "stop_loss": 10.921547157481083,
-    "take_profit": 32.34549739444874,
-    "trailing_stop_activation": 18.253644890165,
-    "trailing_stop_distance": 23.615906932888944,
+    "stop_loss": 20.213067772715746,
+    "take_profit": 29.669332586455965,
+    "trailing_stop_activation": 37.467087568577504,
+    "trailing_stop_distance": 6.736652717223976,
     "break_even_protection": true,
-    "break_even_trigger": 154.70786575745018,
+    "break_even_trigger": 158.2099822800077,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 5,
-      "upper": 64,
-      "lower": 31
+      "upper": 70,
+      "lower": 36
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 5,
-      "single_candle_percent": 21.974574889773407,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 36.08770033455514
+      "candles": 6,
+      "single_candle_percent": 6.029652938995403,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 54.53009947015653
     }
   },
   "candles_count": 429,
   "trades_count": 5,
   "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 2.130775116397669e-06,
-  "total_pnl": 0.4600692557505562,
+  "profit_mse": 1.8964267077062035e-06,
+  "total_pnl": 0.30058748547385994,
   "previous_candles_count": 429,
   "candles_increased": false
 }

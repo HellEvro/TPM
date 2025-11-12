@@ -1,0 +1,46 @@
+{
+  "symbol": "OKB",
+  "trained_at": "2025-11-13T01:49:37.327912",
+  "training_seed": 688111,
+  "coin_model_seed": 688898,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 71,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 9.707943971962955,
+    "take_profit": 17.08410222236507,
+    "trailing_stop_activation": 15.262621498685244,
+    "trailing_stop_distance": 18.74055262999578,
+    "break_even_protection": true,
+    "break_even_trigger": 148.58268645892196,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 61,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 11.825713155687561,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 43.43925331674413
+    }
+  },
+  "candles_count": 248,
+  "trades_count": 15,
+  "win_rate": 46.666666666666664,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.613649709017776e-07,
+  "total_pnl": -0.2798802768577901,
+  "previous_candles_count": 248,
+  "candles_increased": false
+}

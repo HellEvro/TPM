@@ -1,0 +1,46 @@
+{
+  "symbol": "QNT",
+  "trained_at": "2025-11-13T01:49:49.993308",
+  "training_seed": 688111,
+  "coin_model_seed": 688480,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 68,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 18.379134356971786,
+    "take_profit": 22.55414287307263,
+    "trailing_stop_activation": 30.099418435592078,
+    "trailing_stop_distance": 31.41921419087627,
+    "break_even_protection": true,
+    "break_even_trigger": 163.4536426974153,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 69,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 22.29812221240477,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 63.119391577810525
+    }
+  },
+  "candles_count": 3427,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.495410483529596e-08,
+  "total_pnl": 0.01565669551699552,
+  "previous_candles_count": 3398,
+  "candles_increased": true
+}

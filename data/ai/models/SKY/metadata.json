@@ -1,0 +1,46 @@
+{
+  "symbol": "SKY",
+  "trained_at": "2025-11-13T00:31:18.826618",
+  "training_seed": 936610,
+  "coin_model_seed": 936709,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 70,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 13.951067542483882,
+    "take_profit": 21.267037673830703,
+    "trailing_stop_activation": 42.52218170077985,
+    "trailing_stop_distance": 11.876806191608186,
+    "break_even_protection": false,
+    "break_even_trigger": 145.14970640265267,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 66,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 17.30886269678701,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 65.79914059785466
+    }
+  },
+  "candles_count": 373,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.798653248777677e-07,
+  "total_pnl": -0.23623819358098516,
+  "previous_candles_count": 373,
+  "candles_increased": false
+}

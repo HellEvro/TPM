@@ -1,0 +1,46 @@
+{
+  "symbol": "MANTA",
+  "trained_at": "2025-11-13T01:54:25.972234",
+  "training_seed": 981100,
+  "coin_model_seed": 982063,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 68,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 17.905531493666057,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 11.855891878147427,
+    "trailing_stop_distance": 16.66383191765457,
+    "break_even_protection": true,
+    "break_even_trigger": 143.6132203309906,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 68,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 22.664028375487472,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 31.53708315546011
+    }
+  },
+  "candles_count": 2558,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 0.8,
+  "profit_mse": 6.038896461658763e-07,
+  "total_pnl": 0.30957182729880517,
+  "previous_candles_count": 2638,
+  "candles_increased": false
+}

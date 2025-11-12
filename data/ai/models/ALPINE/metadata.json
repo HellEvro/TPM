@@ -1,38 +1,38 @@
 {
   "symbol": "ALPINE",
-  "trained_at": "2025-11-12T13:19:26.675925",
-  "training_seed": 752744,
-  "coin_model_seed": 753022,
+  "trained_at": "2025-11-13T01:50:54.122075",
+  "training_seed": 832719,
+  "coin_model_seed": 833140,
   "rsi_params": {
     "oversold": 34,
-    "overbought": 74,
-    "exit_long_with_trend": 65,
-    "exit_long_against_trend": 57,
-    "exit_short_with_trend": 36,
-    "exit_short_against_trend": 42
+    "overbought": 68,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 37
   },
   "risk_params": {
-    "stop_loss": 13.171185007382732,
-    "take_profit": 24.467785300433967,
-    "trailing_stop_activation": 13.740987204856019,
-    "trailing_stop_distance": 5.0,
-    "break_even_protection": false,
-    "break_even_trigger": 89.5307904844492,
+    "stop_loss": 20.424637040753215,
+    "take_profit": 22.704079603647106,
+    "trailing_stop_activation": 42.73087939563503,
+    "trailing_stop_distance": 21.80422835138849,
+    "break_even_protection": true,
+    "break_even_trigger": 157.6889645612292,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 8,
-      "upper": 59,
-      "lower": 33
+      "candles": 10,
+      "upper": 64,
+      "lower": 30
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 6,
-      "single_candle_percent": 11.271397211631623,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 67.79578225316182
+      "candles": 9,
+      "single_candle_percent": 22.673241763522725,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 44.51250730739137
     }
   },
   "candles_count": 361,

@@ -1,0 +1,46 @@
+{
+  "symbol": "SKYAI",
+  "trained_at": "2025-11-13T01:19:22.548066",
+  "training_seed": 831549,
+  "coin_model_seed": 831919,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 69,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 12.620276708198386,
+    "take_profit": 15.109442806038352,
+    "trailing_stop_activation": 18.812972125055477,
+    "trailing_stop_distance": 28.261355088005942,
+    "break_even_protection": true,
+    "break_even_trigger": 134.53907604683894,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 63,
+      "lower": 39
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 14.652577721055302,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 52.12906801457923
+    }
+  },
+  "candles_count": 689,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.1023605086872752e-06,
+  "total_pnl": 0.16622390001924495,
+  "previous_candles_count": 632,
+  "candles_increased": true
+}

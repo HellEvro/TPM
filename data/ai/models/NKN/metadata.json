@@ -1,0 +1,46 @@
+{
+  "symbol": "NKN",
+  "trained_at": "2025-11-13T01:52:05.646746",
+  "training_seed": 832719,
+  "coin_model_seed": 833176,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 74,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 14.79012655970558,
+    "take_profit": 12.836933948951533,
+    "trailing_stop_activation": 17.23488304207119,
+    "trailing_stop_distance": 8.395672661932837,
+    "break_even_protection": true,
+    "break_even_trigger": 80.71549884052882,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 71,
+      "lower": 33
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 7.330149235519174,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 68.37071653344385
+    }
+  },
+  "candles_count": 3958,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.987390801129753e-07,
+  "total_pnl": -0.26835397178721265,
+  "previous_candles_count": 3949,
+  "candles_increased": true
+}

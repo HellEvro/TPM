@@ -1,46 +1,46 @@
 {
   "symbol": "KSM",
-  "trained_at": "2025-11-12T13:12:04.110277",
-  "training_seed": 300622,
-  "coin_model_seed": 300774,
+  "trained_at": "2025-11-13T01:54:21.737525",
+  "training_seed": 981100,
+  "coin_model_seed": 981524,
   "rsi_params": {
     "oversold": 35,
-    "overbought": 66,
-    "exit_long_with_trend": 64,
-    "exit_long_against_trend": 57,
-    "exit_short_with_trend": 34,
+    "overbought": 67,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 32,
     "exit_short_against_trend": 36
   },
   "risk_params": {
-    "stop_loss": 18.467972104636544,
-    "take_profit": 33.394503125104904,
-    "trailing_stop_activation": 27.40917765067083,
-    "trailing_stop_distance": 7.720442631354908,
+    "stop_loss": 19.453498628398787,
+    "take_profit": 32.41572382250582,
+    "trailing_stop_activation": 21.376220950011554,
+    "trailing_stop_distance": 6.452193806566472,
     "break_even_protection": true,
-    "break_even_trigger": 175.30227333600718,
+    "break_even_trigger": 119.83301321451867,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 8,
-      "upper": 65,
-      "lower": 34
+      "candles": 6,
+      "upper": 67,
+      "lower": 36
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 9,
-      "single_candle_percent": 16.583807252671615,
-      "multi_candle_count": 4,
-      "multi_candle_percent": 44.59344256198128
+      "candles": 12,
+      "single_candle_percent": 14.535887109690186,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 36.0056095875234
     }
   },
-  "candles_count": 4861,
+  "candles_count": 4852,
   "trades_count": 5,
-  "win_rate": 0.0,
+  "win_rate": 40.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 8.694365453417462e-07,
-  "total_pnl": -1.116588562297675,
-  "previous_candles_count": 4967,
-  "candles_increased": false
+  "profit_mse": 8.06569120492864e-07,
+  "total_pnl": -0.1490978729975651,
+  "previous_candles_count": 4809,
+  "candles_increased": true
 }

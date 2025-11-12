@@ -1,0 +1,46 @@
+{
+  "symbol": "PEAQ",
+  "trained_at": "2025-11-13T01:49:41.709331",
+  "training_seed": 688111,
+  "coin_model_seed": 689052,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 74,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 11.108209481913994,
+    "take_profit": 29.62673484371445,
+    "trailing_stop_activation": 36.95716096972292,
+    "trailing_stop_distance": 5.510149449347351,
+    "break_even_protection": true,
+    "break_even_trigger": 136.67145798835747,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 68,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 23.99249052136131,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 57.767746788639585
+    }
+  },
+  "candles_count": 1267,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.79597636729713e-07,
+  "total_pnl": -0.9296799290326739,
+  "previous_candles_count": 1268,
+  "candles_increased": false
+}

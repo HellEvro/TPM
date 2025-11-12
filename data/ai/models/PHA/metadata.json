@@ -1,0 +1,46 @@
+{
+  "symbol": "PHA",
+  "trained_at": "2025-11-13T01:44:20.970122",
+  "training_seed": 360166,
+  "coin_model_seed": 360425,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 67,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 12.563075619048877,
+    "take_profit": 33.195134548125296,
+    "trailing_stop_activation": 30.335937299230388,
+    "trailing_stop_distance": 25.429686118421447,
+    "break_even_protection": true,
+    "break_even_trigger": 141.99174900915125,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 67,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 19.140283881471515,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 46.14881140571959
+    }
+  },
+  "candles_count": 2045,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.1692582661074913e-06,
+  "total_pnl": -0.5606573289623411,
+  "previous_candles_count": 2034,
+  "candles_increased": true
+}

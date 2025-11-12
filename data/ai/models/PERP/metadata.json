@@ -1,0 +1,46 @@
+{
+  "symbol": "PERP",
+  "trained_at": "2025-11-13T01:54:47.572611",
+  "training_seed": 981100,
+  "coin_model_seed": 981682,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 78,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 19.956171184254575,
+    "take_profit": 30.82312784215624,
+    "trailing_stop_activation": 36.24060759836403,
+    "trailing_stop_distance": 27.67338606587549,
+    "break_even_protection": false,
+    "break_even_trigger": 89.97565082574485,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 68,
+      "lower": 39
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 15.97980629556432,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 40.40451249236009
+    }
+  },
+  "candles_count": 3021,
+  "trades_count": 8,
+  "win_rate": 37.5,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.4549981796716043e-07,
+  "total_pnl": 0.09635751926624064,
+  "previous_candles_count": 3081,
+  "candles_increased": false
+}

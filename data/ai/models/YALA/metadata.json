@@ -1,0 +1,46 @@
+{
+  "symbol": "YALA",
+  "trained_at": "2025-11-13T01:52:54.569969",
+  "training_seed": 832719,
+  "coin_model_seed": 832959,
+  "rsi_params": {
+    "oversold": 25,
+    "overbought": 73,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 16.222940569757768,
+    "take_profit": 33.884778096207626,
+    "trailing_stop_activation": 20.737233905702205,
+    "trailing_stop_distance": 23.55063467453843,
+    "break_even_protection": true,
+    "break_even_trigger": 41.44139086891338,
+    "max_position_hours": 15
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 71,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 14.758317108199517,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 68.12211543714236
+    }
+  },
+  "candles_count": 385,
+  "trades_count": 6,
+  "win_rate": 16.666666666666664,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.316925897687119e-07,
+  "total_pnl": -0.7417669173982478,
+  "previous_candles_count": 385,
+  "candles_increased": false
+}

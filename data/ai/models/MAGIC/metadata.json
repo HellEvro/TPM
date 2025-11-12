@@ -1,0 +1,46 @@
+{
+  "symbol": "MAGIC",
+  "trained_at": "2025-11-13T01:54:29.244010",
+  "training_seed": 981100,
+  "coin_model_seed": 982062,
+  "rsi_params": {
+    "oversold": 30,
+    "overbought": 69,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 19.22808166682051,
+    "take_profit": 30.29123393363811,
+    "trailing_stop_activation": 41.19632794747978,
+    "trailing_stop_distance": 29.11283597268713,
+    "break_even_protection": true,
+    "break_even_trigger": 167.22655926172087,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 64,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 19.124187496256997,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 31.55332065551701
+    }
+  },
+  "candles_count": 4118,
+  "trades_count": 7,
+  "win_rate": 57.14285714285714,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.632700081759692e-06,
+  "total_pnl": 0.8369156269413669,
+  "previous_candles_count": 4191,
+  "candles_increased": false
+}

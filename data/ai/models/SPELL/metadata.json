@@ -1,0 +1,46 @@
+{
+  "symbol": "SPELL",
+  "trained_at": "2025-11-13T01:55:13.162680",
+  "training_seed": 981100,
+  "coin_model_seed": 981594,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 78,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 11.308560007780564,
+    "take_profit": 22.485265004087204,
+    "trailing_stop_activation": 36.80453049744238,
+    "trailing_stop_distance": 26.030949914589034,
+    "break_even_protection": false,
+    "break_even_trigger": 125.0899931259558,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 60,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 5.259579705297915,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 37.97617472612828
+    }
+  },
+  "candles_count": 4901,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.32331251668983e-07,
+  "total_pnl": 0.32560130671105453,
+  "previous_candles_count": 4801,
+  "candles_increased": true
+}

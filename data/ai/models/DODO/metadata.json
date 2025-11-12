@@ -1,46 +1,46 @@
 {
   "symbol": "DODO",
-  "trained_at": "2025-11-12T13:16:25.639111",
-  "training_seed": 564094,
-  "coin_model_seed": 564597,
+  "trained_at": "2025-11-13T01:28:09.469100",
+  "training_seed": 436336,
+  "coin_model_seed": 437023,
   "rsi_params": {
-    "oversold": 34,
-    "overbought": 73,
-    "exit_long_with_trend": 65,
-    "exit_long_against_trend": 62,
-    "exit_short_with_trend": 35,
-    "exit_short_against_trend": 35
+    "oversold": 35,
+    "overbought": 69,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 44
   },
   "risk_params": {
-    "stop_loss": 18.342064483103226,
-    "take_profit": 10.762206773072949,
-    "trailing_stop_activation": 37.03034347879897,
-    "trailing_stop_distance": 31.956880607639654,
-    "break_even_protection": true,
-    "break_even_trigger": 179.42063599457657,
+    "stop_loss": 9.888445943107968,
+    "take_profit": 14.085923961131169,
+    "trailing_stop_activation": 8.679837003538873,
+    "trailing_stop_distance": 24.826439594444214,
+    "break_even_protection": false,
+    "break_even_trigger": 159.453434237926,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 3,
-      "upper": 61,
-      "lower": 39
+      "candles": 6,
+      "upper": 59,
+      "lower": 38
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 6,
-      "single_candle_percent": 12.110872230343189,
-      "multi_candle_count": 4,
-      "multi_candle_percent": 39.081832926486726
+      "candles": 5,
+      "single_candle_percent": 24.65371873111023,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 57.90841550653923
     }
   },
-  "candles_count": 4847,
+  "candles_count": 4808,
   "trades_count": 7,
-  "win_rate": 85.71428571428571,
-  "signal_accuracy": 0.8571428571428571,
-  "profit_mse": 6.271055250866914e-07,
-  "total_pnl": 1.0587583879588254,
-  "previous_candles_count": 4829,
-  "candles_increased": true
+  "win_rate": 28.57142857142857,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.0630258024630776e-07,
+  "total_pnl": 0.06497760769726241,
+  "previous_candles_count": 4864,
+  "candles_increased": false
 }

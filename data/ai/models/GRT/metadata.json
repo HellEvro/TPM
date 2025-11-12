@@ -1,0 +1,46 @@
+{
+  "symbol": "GRT",
+  "trained_at": "2025-11-12T23:59:34.458085",
+  "training_seed": 119198,
+  "coin_model_seed": 119532,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 65,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 12.992584891165137,
+    "take_profit": 15.199531014291658,
+    "trailing_stop_activation": 43.011163648883276,
+    "trailing_stop_distance": 26.135093876387792,
+    "break_even_protection": true,
+    "break_even_trigger": 147.65408873209864,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 71,
+      "lower": 41
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 21.734026621420153,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 39.511007429171514
+    }
+  },
+  "candles_count": 4925,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.477702049920926e-07,
+  "total_pnl": 0.1709523480470587,
+  "previous_candles_count": 4999,
+  "candles_increased": false
+}

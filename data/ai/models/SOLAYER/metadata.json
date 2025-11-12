@@ -1,0 +1,46 @@
+{
+  "symbol": "SOLAYER",
+  "trained_at": "2025-11-13T01:55:04.894719",
+  "training_seed": 981100,
+  "coin_model_seed": 981177,
+  "rsi_params": {
+    "oversold": 28,
+    "overbought": 66,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 13.927968883985773,
+    "take_profit": 22.532417687077576,
+    "trailing_stop_activation": 14.055649317638956,
+    "trailing_stop_distance": 27.469910749101814,
+    "break_even_protection": false,
+    "break_even_trigger": 62.301824167202184,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 60,
+      "lower": 30
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 21.161029797084158,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 32.96839562740156
+    }
+  },
+  "candles_count": 1088,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.0409380891500329e-06,
+  "total_pnl": 0.008282566504629149,
+  "previous_candles_count": 1040,
+  "candles_increased": true
+}

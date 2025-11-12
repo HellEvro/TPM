@@ -1,0 +1,46 @@
+{
+  "symbol": "RIF",
+  "trained_at": "2025-11-13T01:31:48.725445",
+  "training_seed": 600123,
+  "coin_model_seed": 600981,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 65,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 20.575975315667208,
+    "take_profit": 20.085273500576704,
+    "trailing_stop_activation": 13.387175861430052,
+    "trailing_stop_distance": 6.241352898251311,
+    "break_even_protection": true,
+    "break_even_trigger": 182.2420531062449,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 66,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 8.795999409775524,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 54.8995208266209
+    }
+  },
+  "candles_count": 2892,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.0773991036327384e-06,
+  "total_pnl": 0.22204580786423034,
+  "previous_candles_count": 2880,
+  "candles_increased": true
+}

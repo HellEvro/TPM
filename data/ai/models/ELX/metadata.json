@@ -1,0 +1,46 @@
+{
+  "symbol": "ELX",
+  "trained_at": "2025-11-13T01:48:53.587252",
+  "training_seed": 688111,
+  "coin_model_seed": 688206,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 74,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 11.580179034061462,
+    "take_profit": 16.57271210874871,
+    "trailing_stop_activation": 26.478379193161544,
+    "trailing_stop_distance": 9.435855350423168,
+    "break_even_protection": true,
+    "break_even_trigger": 146.87774485048655,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 62,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 22.73229131367218,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 43.03799481426049
+    }
+  },
+  "candles_count": 927,
+  "trades_count": 7,
+  "win_rate": 14.285714285714285,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.0813756759558374e-06,
+  "total_pnl": -1.3847149207042302,
+  "previous_candles_count": 975,
+  "candles_increased": false
+}

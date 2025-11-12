@@ -1,0 +1,46 @@
+{
+  "symbol": "OGN",
+  "trained_at": "2025-11-13T01:49:39.490459",
+  "training_seed": 688111,
+  "coin_model_seed": 688320,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 65,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 12.950281969677219,
+    "take_profit": 21.73577638497494,
+    "trailing_stop_activation": 8.208064838015664,
+    "trailing_stop_distance": 22.754179936052974,
+    "break_even_protection": false,
+    "break_even_trigger": 102.97487505150573,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 59,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 5.140526316512837,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 42.28372871850418
+    }
+  },
+  "candles_count": 4930,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.3094905702919824e-06,
+  "total_pnl": 0.3099709902405827,
+  "previous_candles_count": 4804,
+  "candles_increased": true
+}

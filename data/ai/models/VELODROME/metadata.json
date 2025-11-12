@@ -1,0 +1,46 @@
+{
+  "symbol": "VELODROME",
+  "trained_at": "2025-11-13T01:47:49.804412",
+  "training_seed": 514320,
+  "coin_model_seed": 514913,
+  "rsi_params": {
+    "oversold": 25,
+    "overbought": 65,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 9.282854060545365,
+    "take_profit": 30.248347103799535,
+    "trailing_stop_activation": 32.37280573071187,
+    "trailing_stop_distance": 21.961924357653473,
+    "break_even_protection": false,
+    "break_even_trigger": 169.8524821606925,
+    "max_position_hours": 21
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 63,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 21.291060651602482,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 31.33340186736323
+    }
+  },
+  "candles_count": 1333,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.936071697917076e-06,
+  "total_pnl": -0.8714654052372569,
+  "previous_candles_count": 1305,
+  "candles_increased": true
+}

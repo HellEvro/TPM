@@ -1,0 +1,46 @@
+{
+  "symbol": "UMA",
+  "trained_at": "2025-11-13T01:55:23.627094",
+  "training_seed": 981100,
+  "coin_model_seed": 981120,
+  "rsi_params": {
+    "oversold": 28,
+    "overbought": 65,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 10.008971532247909,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 16.062219577662198,
+    "trailing_stop_distance": 21.968852752665544,
+    "break_even_protection": false,
+    "break_even_trigger": 146.93151763954535,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 62,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 19.18608086932072,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 61.92409012410833
+    }
+  },
+  "candles_count": 3494,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.3626288199705468e-07,
+  "total_pnl": 0.10414879365198564,
+  "previous_candles_count": 3475,
+  "candles_increased": true
+}

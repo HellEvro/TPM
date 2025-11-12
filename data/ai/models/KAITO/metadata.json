@@ -1,0 +1,46 @@
+{
+  "symbol": "KAITO",
+  "trained_at": "2025-11-13T01:36:13.014272",
+  "training_seed": 911156,
+  "coin_model_seed": 912094,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 12.559747170207379,
+    "take_profit": 11.12832599557063,
+    "trailing_stop_activation": 22.78331288773067,
+    "trailing_stop_distance": 32.233060037862266,
+    "break_even_protection": false,
+    "break_even_trigger": 116.80475597665144,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 59,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 6.8020856532894705,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 58.452321288856254
+    }
+  },
+  "candles_count": 923,
+  "trades_count": 8,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.3201334358741786e-06,
+  "total_pnl": -0.026993894348246762,
+  "previous_candles_count": 1033,
+  "candles_increased": false
+}

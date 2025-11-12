@@ -1,0 +1,46 @@
+{
+  "symbol": "STEEM",
+  "trained_at": "2025-11-13T01:55:10.984072",
+  "training_seed": 981100,
+  "coin_model_seed": 981215,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 65,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 13.061643720280987,
+    "take_profit": 24.240936944214,
+    "trailing_stop_activation": 37.15685593173703,
+    "trailing_stop_distance": 13.457385167973296,
+    "break_even_protection": true,
+    "break_even_trigger": 134.47364077970414,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 61,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 13.954325287497962,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 35.71556393785512
+    }
+  },
+  "candles_count": 2916,
+  "trades_count": 7,
+  "win_rate": 42.857142857142854,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.425759193331013e-07,
+  "total_pnl": -0.6294546192954757,
+  "previous_candles_count": 2877,
+  "candles_increased": true
+}

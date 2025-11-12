@@ -1,0 +1,46 @@
+{
+  "symbol": "SUNDOG",
+  "trained_at": "2025-11-13T01:52:38.479831",
+  "training_seed": 832719,
+  "coin_model_seed": 833407,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 67,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 13.497678295289802,
+    "take_profit": 30.819246878771168,
+    "trailing_stop_activation": 19.717115103273326,
+    "trailing_stop_distance": 19.415730996499708,
+    "break_even_protection": false,
+    "break_even_trigger": 151.9072052022925,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 60,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 11.967173316570603,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 53.40704710625161
+    }
+  },
+  "candles_count": 1668,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.209296833774731e-07,
+  "total_pnl": -0.29061073496452083,
+  "previous_candles_count": 1607,
+  "candles_increased": true
+}
