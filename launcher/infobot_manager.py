@@ -796,7 +796,6 @@ class InfoBotManager(tk.Tk):
                     try:
                         shutil.copy2(example, target)
                         self.log("Создан app/config.py", channel="system")
-                        self._restore_missing_config_entries(target)
                     except OSError as exc:
                         messagebox.showerror("Ошибка копирования", str(exc))
                         return
@@ -1070,33 +1069,6 @@ class InfoBotManager(tk.Tk):
                 )
             except Exception:
                 pass
-
-    def _restore_missing_config_entries(self, config_path: Path) -> None:
-        required_entries = {
-            "GROWTH_MULTIPLIER": "GROWTH_MULTIPLIER = 1.0",
-            "MIN_BALANCE_USDT": "MIN_BALANCE_USDT = 10.0",
-            "MAX_ACTIVE_BOTS": "MAX_ACTIVE_BOTS = 10",
-            "MIN_RISK_PROFILE": "MIN_RISK_PROFILE = 0.5",
-            "MAX_RISK_PROFILE": "MAX_RISK_PROFILE = 2.0",
-        }
-        try:
-            text = config_path.read_text(encoding="utf-8")
-        except OSError:
-            return
-        updated = False
-        for key, snippet in required_entries.items():
-            if key not in text:
-                text += f"\n{snippet}\n"
-                updated = True
-        if updated:
-            try:
-                config_path.write_text(text, encoding="utf-8")
-                self.log(
-                    "app/config.py дополнен недостающими настройками (например, GROWTH_MULTIPLIER).",
-                    channel="system",
-                )
-            except OSError as exc:
-                self.log(f"[config] Не удалось обновить config.py: {exc}", channel="system")
 
     def _prepare_requirements_file(self) -> str:
         base_path = PROJECT_ROOT / "requirements.txt"
