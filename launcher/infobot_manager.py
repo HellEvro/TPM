@@ -75,14 +75,31 @@ ERROR_KEYWORDS = (
     "ошиб",
     "критич",
     "аварийн",
-    "предупрежд",
-    "warning",
     "не удалось",
+    "errno",
     "cannot",
     "refused",
     "denied",
     "timeout",
     "failed",
+    "panic",
+    "stacktrace",
+)
+
+SUPPRESSED_SEVERITIES = (
+    "warning",
+    "warn",
+    "предупрежд",
+    "caution",
+    "info",
+    "инфо",
+    "inform",
+    "success",
+    "успех",
+    "debug",
+    "trace",
+    "verbose",
+    "notice",
 )
 
 
@@ -132,27 +149,18 @@ class ManagedProcess:
                     except queue.Empty:
                         break
 
-        def _snapshot_children() -> None:
-            if not self.process:
-                return
-            try:
-                # Requires psutil to be installed; fall back gracefully otherwise.
-                import psutil  # type: ignore import
-
-                parent = psutil.Process(self.process.pid)
-                descendants = parent.children(recursive=True)
-                self.child_pids = {proc.pid for proc in descendants}
-            except Exception:
-                # psutil not available or failed; we best-effort track only the root PID.
-                self.child_pids = set()
-
         def _reader() -> None:
             assert self.process and self.process.stdout
-            _snapshot_children()
+            self._snapshot_children()
             startup_message = f"{self.name} запущен и работает. Все ошибки будут показаны здесь."
             _safe_put((self.channel, startup_message))
             _safe_put(("system", startup_message))
+            last_snapshot = time.monotonic()
             for line in self.process.stdout:
+                now = time.monotonic()
+                if now - last_snapshot >= 1.0:
+                    self._snapshot_children()
+                    last_snapshot = now
                 stripped = line.strip()
                 if not stripped:
                     continue
@@ -161,6 +169,7 @@ class ManagedProcess:
                     _safe_put((self.channel, message))
                     _safe_put(("system", message))
             self.process.stdout.close()
+            self._snapshot_children()
 
         self._reader_thread = threading.Thread(target=_reader, daemon=True)
         self._reader_thread.start()
@@ -169,6 +178,7 @@ class ManagedProcess:
         if not self.process or self.process.poll() is not None:
             return
 
+        self._snapshot_children()
         self._kill_children()
 
         self.process.terminate()
@@ -183,6 +193,7 @@ class ManagedProcess:
 
         self.process = None
         self._reader_thread = None
+        self.child_pids.clear()
 
     @property
     def is_running(self) -> bool:
@@ -214,6 +225,7 @@ class ManagedProcess:
             pass
 
     def _kill_children(self) -> None:
+        self._snapshot_children()
         if os.name == "nt":
             self._kill_process_tree_win()
         else:
@@ -235,9 +247,31 @@ class ManagedProcess:
                 continue
         self.child_pids.clear()
 
+    def _snapshot_children(self) -> None:
+        if not self.process:
+            return
+        try:
+            import psutil  # type: ignore import
+        except Exception:
+            return
+
+        try:
+            parent = psutil.Process(self.process.pid)
+            descendants = parent.children(recursive=True)
+            current = {proc.pid for proc in descendants if proc.is_running()}
+            self.child_pids = current
+        except Exception:
+            pass
+
     def _is_error_line(self, text: str) -> bool:
         lowered = text.lower()
-        return any(keyword in lowered for keyword in ERROR_KEYWORDS)
+        if any(keyword in lowered for keyword in ERROR_KEYWORDS):
+            return True
+        if any(keyword in lowered for keyword in SUPPRESSED_SEVERITIES):
+            return False
+        if "traceback (most recent call last" in lowered:
+            return True
+        return False
 
 
 class InfoBotManager(tk.Tk):
