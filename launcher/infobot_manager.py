@@ -372,6 +372,10 @@ class InfoBotManager(tk.Tk):
             command=self.copy_current_log,
         ).grid(row=1, column=0, sticky="w", pady=(8, 0))
 
+        # Обновляем статус окружения после создания элементов UI,
+        # чтобы кнопка глобальной установки корректно отразила состояние.
+        self.update_environment_status()
+
     def _enable_mousewheel(self, widget: tk.Widget) -> None:
         if sys.platform == "darwin":
             widget.bind_all("<MouseWheel>", lambda event: widget.yview_scroll(int(-event.delta), "units"))
