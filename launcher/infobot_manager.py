@@ -551,7 +551,9 @@ class InfoBotManager(tk.Tk):
         self._enqueue_log(channel, formatted, broadcast=broadcast)
 
     def _flush_logs(self) -> None:
-        while True:
+        max_lines_per_tick = 400
+        processed = 0
+        while processed < max_lines_per_tick:
             try:
                 channel, line = self.log_queue.get_nowait()
             except queue.Empty:
@@ -561,7 +563,9 @@ class InfoBotManager(tk.Tk):
                 continue
             widget.insert(tk.END, line + "\n")
             widget.see(tk.END)
-        self.after(200, self._flush_logs)
+            processed += 1
+        delay = 50 if not self.log_queue.empty() else 200
+        self.after(delay, self._flush_logs)
 
     def _refresh_service_statuses(self) -> None:
         for service_id, status_var in self.service_status_vars.items():
