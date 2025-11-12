@@ -2721,7 +2721,11 @@ class BotsManager {
         if (breakEvenEl) settings.break_even_protection = breakEvenEl.checked;
         
         const breakEvenTriggerEl = document.getElementById('breakEvenTriggerDup');
-        if (breakEvenTriggerEl && breakEvenTriggerEl.value) settings.break_even_trigger = parseFloat(breakEvenTriggerEl.value);
+        if (breakEvenTriggerEl && breakEvenTriggerEl.value) {
+            const triggerValue = parseFloat(breakEvenTriggerEl.value);
+            settings.break_even_trigger = triggerValue;
+            settings.break_even_trigger_percent = triggerValue;
+        }
         
         console.log('[BotsManager] 📋 Собранные настройки:', settings);
         return settings;
@@ -2900,8 +2904,9 @@ class BotsManager {
         }
         
         const breakEvenTriggerEl = document.getElementById('breakEvenTriggerDup');
-        if (breakEvenTriggerEl && settings.break_even_trigger !== undefined) {
-            breakEvenTriggerEl.value = settings.break_even_trigger;
+        const breakEvenTriggerValue = settings.break_even_trigger_percent ?? settings.break_even_trigger;
+        if (breakEvenTriggerEl && breakEvenTriggerValue !== undefined) {
+            breakEvenTriggerEl.value = breakEvenTriggerValue;
         }
         
         // Трендовые настройки
@@ -5345,7 +5350,8 @@ class BotsManager {
         
         const breakEvenTriggerEl = document.getElementById('breakEvenTrigger');
         if (breakEvenTriggerEl) {
-            breakEvenTriggerEl.value = autoBotConfig.break_even_trigger || 100.0;
+            const triggerValue = autoBotConfig.break_even_trigger_percent ?? autoBotConfig.break_even_trigger ?? 100.0;
+            breakEvenTriggerEl.value = triggerValue;
             console.log('[BotsManager] 🎯 Триггер безубыточности:', breakEvenTriggerEl.value);
         }
         
@@ -5809,7 +5815,13 @@ class BotsManager {
             trend_analysis_period: parseInt(document.getElementById('trendAnalysisPeriod')?.value) || 30,
             trend_price_change_threshold: parseFloat(document.getElementById('trendPriceChangeThreshold')?.value) || 7,
             trend_candles_threshold: parseFloat(document.getElementById('trendCandlesThreshold')?.value) || 70,
-            break_even_trigger: parseFloat(document.getElementById('breakEvenTrigger')?.value) || 100.0,
+            ...(() => {
+                const triggerValue = parseFloat(document.getElementById('breakEvenTrigger')?.value) || 100.0;
+                return {
+                    break_even_trigger: triggerValue,
+                    break_even_trigger_percent: triggerValue,
+                };
+            })(),
             enable_maturity_check: document.getElementById('enableMaturityCheck')?.checked !== false,
             min_candles_for_maturity: parseInt(document.getElementById('minCandlesForMaturity')?.value) || 200,
             min_rsi_low: parseInt(document.getElementById('minRsiLow')?.value) || 35,
@@ -6416,7 +6428,10 @@ class BotsManager {
         if (enableMaturityCheckDupEl) enableMaturityCheckDupEl.checked = config.enable_maturity_check !== false;
         
         const breakEvenTriggerDupEl = document.getElementById('breakEvenTriggerDup');
-        if (breakEvenTriggerDupEl) breakEvenTriggerDupEl.value = config.break_even_trigger || 100.0;
+        if (breakEvenTriggerDupEl) {
+            const triggerValue = config.break_even_trigger_percent ?? config.break_even_trigger ?? 100.0;
+            breakEvenTriggerDupEl.value = triggerValue;
+        }
         
         console.log('[BotsManager] ✅ Дублированные настройки синхронизированы');
         
