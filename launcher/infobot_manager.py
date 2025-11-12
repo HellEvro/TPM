@@ -12,6 +12,7 @@ Provides a cross-platform control panel to:
 
 from __future__ import annotations
 
+import atexit
 import os
 import queue
 import shutil
@@ -91,12 +92,22 @@ class ManagedProcess:
             env=env,
         )
 
+        def _safe_put(item: Tuple[str, str]) -> None:
+            while True:
+                try:
+                    log_queue.put_nowait(item)
+                    break
+                except queue.Full:
+                    try:
+                        log_queue.get_nowait()
+                    except queue.Empty:
+                        break
+
         def _reader() -> None:
             assert self.process and self.process.stdout
             for line in self.process.stdout:
                 message = f"[{self.name}] {line.rstrip()}"
-                log_queue.put(("system", message))
-                log_queue.put((self.channel, message))
+                _safe_put((self.channel, message))
             self.process.stdout.close()
 
         self._reader_thread = threading.Thread(target=_reader, daemon=True)
@@ -135,7 +146,7 @@ class InfoBotManager(tk.Tk):
         self.geometry("980x720")
         self.minsize(820, 600)
 
-        self.log_queue: "queue.Queue[Tuple[str, str]]" = queue.Queue()
+        self.log_queue: "queue.Queue[Tuple[str, str]]" = queue.Queue(maxsize=5000)
         self.processes: Dict[str, ManagedProcess] = {}
         self.log_text_widgets: Dict[str, tk.Text] = {}
         self.log_tab_ids: Dict[str, str] = {}
@@ -143,6 +154,8 @@ class InfoBotManager(tk.Tk):
         self._temp_requirements_path: Optional[Path] = None
         self.status_var = tk.StringVar(value="Готово")
         self._active_tasks: Set[str] = set()
+        self.max_log_lines = 2000
+        atexit.register(self._cleanup_processes)
 
         self._ensure_utf8_console()
 
@@ -542,8 +555,8 @@ class InfoBotManager(tk.Tk):
 
     def _enqueue_log(self, channel: str, message: str, broadcast: bool = True) -> None:
         if broadcast and channel != "system":
-            self.log_queue.put(("system", message))
-        self.log_queue.put((channel, message))
+            self._safe_put_log(("system", message))
+        self._safe_put_log((channel, message))
 
     def log(self, message: str, channel: str = "system", broadcast: bool = True) -> None:
         timestamp = time.strftime("%H:%M:%S")
@@ -561,11 +574,52 @@ class InfoBotManager(tk.Tk):
             widget = self.log_text_widgets.get(channel) or self.log_text_widgets.get("system")
             if widget is None:
                 continue
-            widget.insert(tk.END, line + "\n")
-            widget.see(tk.END)
+            self._append_log_line(widget, line)
             processed += 1
         delay = 50 if not self.log_queue.empty() else 200
         self.after(delay, self._flush_logs)
+
+    def _append_log_line(self, widget: tk.Text, line: str) -> None:
+        widget.insert(tk.END, line + "\n")
+        widget.see(tk.END)
+        self._trim_text_widget(widget)
+
+    def _trim_text_widget(self, widget: tk.Text) -> None:
+        max_lines = getattr(self, "max_log_lines", 2000)
+        try:
+            end_index = widget.index("end-1c")
+        except tk.TclError:
+            return
+        if not end_index:
+            return
+        try:
+            total_lines = int(end_index.split(".")[0])
+        except (ValueError, IndexError):
+            return
+        if total_lines <= max_lines:
+            return
+        lines_to_remove = total_lines - max_lines
+        try:
+            widget.delete("1.0", f"{lines_to_remove + 1}.0")
+        except tk.TclError:
+            pass
+
+    def _safe_put_log(self, item: Tuple[str, str]) -> None:
+        while True:
+            try:
+                self.log_queue.put_nowait(item)
+                break
+            except queue.Full:
+                try:
+                    self.log_queue.get_nowait()
+                except queue.Empty:
+                    break
+
+    def _cleanup_processes(self) -> None:
+        try:
+            self.stop_all_services()
+        except Exception:
+            pass
 
     def _refresh_service_statuses(self) -> None:
         for service_id, status_var in self.service_status_vars.items():
