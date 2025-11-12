@@ -429,6 +429,8 @@ class InfoBotManager(tk.Tk):
                     )
                     self.log("Переименована ветка master → main", channel="system")
                     self.update_git_status()
+                self._configure_git_upstream()
+                self._auto_align_main_with_remote()
             except subprocess.CalledProcessError:
                 pass
             return
@@ -462,6 +464,8 @@ class InfoBotManager(tk.Tk):
             )
             if remote_result.stdout.strip():
                 self.log(remote_result.stdout.strip())
+            self._configure_git_upstream()
+            self._auto_align_main_with_remote()
             self.log(f"Git репозиторий инициализирован. origin → {DEFAULT_REMOTE_URL}")
         except subprocess.CalledProcessError as exc:
             stderr = exc.stderr.strip() if exc.stderr else str(exc)
@@ -819,20 +823,27 @@ class InfoBotManager(tk.Tk):
         messagebox.showinfo("Готово", "Содержимое лога скопировано в буфер обмена.")
 
     def _git_fetch_worker(self) -> None:
+        self.ensure_git_repository()
         try:
             self._stream_command("git fetch", ["git", "fetch", "--all", "--prune"])
             self._stream_command("git status", ["git", "status", "-sb"])
-            self._stream_command("git log", ["git", "log", "-5", "--oneline", "--decorate", "--graph"])
+            self._run_git_log_preview()
         except subprocess.CalledProcessError:
             pass
         self.update_git_status()
+        self._configure_git_upstream()
+        self._auto_align_main_with_remote()
 
     def _git_pull_worker(self) -> None:
+        self.ensure_git_repository()
         try:
             self._stream_command("git pull", ["git", "pull", "--ff-only"])
+            self._run_git_log_preview()
         except subprocess.CalledProcessError:
             pass
         self.update_git_status()
+        self._configure_git_upstream()
+        self._auto_align_main_with_remote()
 
     def _license_worker(self, command: List[str]) -> None:
         try:
@@ -901,6 +912,81 @@ class InfoBotManager(tk.Tk):
                 "[Подготовка ccxt] Не удалось установить ccxt без дополнительных зависимостей. Продолжаем стандартную установку.",
                 channel="system",
             )
+
+    def _configure_git_upstream(self) -> None:
+        try:
+            branch_result = subprocess.run(
+                ["git", "symbolic-ref", "--short", "HEAD"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            current_branch = branch_result.stdout.strip()
+            if current_branch != "main":
+                return
+            tracking_result = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "main@{upstream}"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+            )
+            if tracking_result.returncode != 0:
+                subprocess.run(
+                    ["git", "branch", "--set-upstream-to=origin/main", "main"],
+                    cwd=str(PROJECT_ROOT),
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self.log("Ветка main теперь отслеживает origin/main.", channel="system")
+        except subprocess.CalledProcessError:
+            self.log("[git] Не удалось настроить upstream для ветки main.", channel="system")
+
+    def _auto_align_main_with_remote(self) -> None:
+        try:
+            # Проверяем количество коммитов в локальной ветке
+            remote_check = subprocess.run(
+                ["git", "rev-parse", "--verify", "origin/main"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+            )
+            if remote_check.returncode != 0:
+                return
+
+            # Сбрасываем локальную ветку к origin/main
+            reset_result = subprocess.run(
+                ["git", "reset", "--hard", "origin/main"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+            )
+            if reset_result.returncode == 0:
+                self.log("Локальная ветка main сброшена к origin/main.", channel="system")
+            else:
+                self.log(
+                    f"[git] Не удалось сбросить ветку main: {reset_result.stderr.strip()}",
+                    channel="system",
+                )
+        except subprocess.CalledProcessError:
+            self.log("[git] Не удалось синхронизировать ветку main с origin/main.", channel="system")
+
+    def _run_git_log_preview(self) -> None:
+        try:
+            commit_check = subprocess.run(
+                ["git", "rev-list", "--count", "HEAD"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            if commit_check.stdout.strip() == "0":
+                self.log("[git log] Нет коммитов для отображения истории.", channel="system")
+                return
+            self._stream_command("git log", ["git", "log", "-5", "--oneline", "--decorate", "--graph"])
+        except subprocess.CalledProcessError:
+            self.log("[git log] Не удалось получить историю коммитов.", channel="system")
 
     def _prepare_requirements_file(self) -> str:
         base_path = PROJECT_ROOT / "requirements.txt"
