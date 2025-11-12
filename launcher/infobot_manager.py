@@ -530,6 +530,7 @@ class InfoBotManager(tk.Tk):
                 return
 
             pip_cmd = _split_command(python_exec) + ["-m", "pip"]
+            self._preinstall_ccxt_without_coincurve(pip_cmd)
             commands = [
                 ("Обновление pip", pip_cmd + ["install", "--upgrade", "pip", "setuptools", "wheel"]),
                 ("Установка зависимостей", pip_cmd + ["install", "-r", "requirements.txt"]),
@@ -547,7 +548,9 @@ class InfoBotManager(tk.Tk):
 
     def install_dependencies_global(self) -> None:
         def worker() -> None:
-            python_cmd = _split_command(sys.executable) + ["-m", "pip", "install", "-r", "requirements.txt"]
+            pip_cmd = _split_command(sys.executable) + ["-m", "pip"]
+            self._preinstall_ccxt_without_coincurve(pip_cmd)
+            python_cmd = pip_cmd + ["install", "-r", "requirements.txt"]
             try:
                 self._stream_command("Установка зависимостей (глобально)", python_cmd, channel="system")
                 self.log("Глобальная установка зависимостей завершена.", channel="system")
@@ -771,6 +774,21 @@ class InfoBotManager(tk.Tk):
         self.clipboard_clear()
         self.clipboard_append(text)
         messagebox.showinfo("Готово", "Содержимое лога скопировано в буфер обмена.")
+
+    def _preinstall_ccxt_without_coincurve(self, pip_cmd: List[str]) -> None:
+        if os.name != "nt":
+            return
+        try:
+            self._stream_command(
+                "Подготовка ccxt (без optional зависимостей)",
+                pip_cmd + ["install", "--upgrade", "ccxt", "--no-deps"],
+                channel="system",
+            )
+        except subprocess.CalledProcessError:
+            self.log(
+                "[Подготовка ccxt] Не удалось установить ccxt без дополнительных зависимостей. Продолжаем стандартную установку.",
+                channel="system",
+            )
 
 
 def _split_command(command: str) -> List[str]:
