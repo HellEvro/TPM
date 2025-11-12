@@ -1,0 +1,46 @@
+{
+  "symbol": "BERA",
+  "trained_at": "2025-11-12T13:19:30.449397",
+  "training_seed": 752744,
+  "coin_model_seed": 753672,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 76,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 15.070939212517898,
+    "take_profit": 15.773785690003844,
+    "trailing_stop_activation": 18.274084203985844,
+    "trailing_stop_distance": 9.3142592039427,
+    "break_even_protection": false,
+    "break_even_trigger": 170.9139374206826,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 66,
+      "lower": 29
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 20.735473563389824,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 61.62310989310137
+    }
+  },
+  "candles_count": 1113,
+  "trades_count": 8,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.6515062784863734e-06,
+  "total_pnl": 0.41939978456164534,
+  "previous_candles_count": 995,
+  "candles_increased": true
+}

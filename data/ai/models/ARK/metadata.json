@@ -1,0 +1,46 @@
+{
+  "symbol": "ARK",
+  "trained_at": "2025-11-12T13:23:06.465505",
+  "training_seed": 972324,
+  "coin_model_seed": 973128,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 66,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 11.964760573487307,
+    "take_profit": 34.47627537585412,
+    "trailing_stop_activation": 37.0737516083143,
+    "trailing_stop_distance": 17.393286943099817,
+    "break_even_protection": false,
+    "break_even_trigger": 49.833817078152805,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 66,
+      "lower": 35
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 15.943843257498479,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 45.27205028231002
+    }
+  },
+  "candles_count": 3184,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.151675342415261e-05,
+  "total_pnl": 1.7455783213150202,
+  "previous_candles_count": 3333,
+  "candles_increased": false
+}

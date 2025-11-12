@@ -1,0 +1,46 @@
+{
+  "symbol": "BNT",
+  "trained_at": "2025-11-12T13:19:31.840001",
+  "training_seed": 752744,
+  "coin_model_seed": 752915,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 70,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 15.16510505054752,
+    "take_profit": 10.21820718458489,
+    "trailing_stop_activation": 26.12522109299888,
+    "trailing_stop_distance": 18.827679834478953,
+    "break_even_protection": false,
+    "break_even_trigger": 175.9974647463237,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 60,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 24.966071817594695,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 43.50051969938309
+    }
+  },
+  "candles_count": 3272,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.310929392599026e-08,
+  "total_pnl": -0.17456509049420665,
+  "previous_candles_count": 3208,
+  "candles_increased": true
+}

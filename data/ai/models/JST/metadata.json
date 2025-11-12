@@ -1,0 +1,46 @@
+{
+  "symbol": "JST",
+  "trained_at": "2025-11-12T13:16:43.187853",
+  "training_seed": 564094,
+  "coin_model_seed": 564606,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 15.376305833046914,
+    "take_profit": 17.85199210590166,
+    "trailing_stop_activation": 34.66570138278141,
+    "trailing_stop_distance": 16.193246631076505,
+    "break_even_protection": true,
+    "break_even_trigger": 187.60221453352696,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 67,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 13.787225165284065,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 40.17012012651011
+    }
+  },
+  "candles_count": 4981,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.894093202240497e-07,
+  "total_pnl": -0.12962721509385786,
+  "previous_candles_count": 4857,
+  "candles_increased": true
+}

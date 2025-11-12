@@ -1,0 +1,46 @@
+{
+  "symbol": "EIGEN",
+  "trained_at": "2025-11-12T13:22:21.141431",
+  "training_seed": 925645,
+  "coin_model_seed": 926112,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 67,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 17.160910308649317,
+    "take_profit": 29.307102473129877,
+    "trailing_stop_activation": 38.28561212501552,
+    "trailing_stop_distance": 31.904507404148937,
+    "break_even_protection": true,
+    "break_even_trigger": 113.63027550140849,
+    "max_position_hours": 38
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 62,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 5.818016465444401,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 51.36759135694618
+    }
+  },
+  "candles_count": 1729,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.1528124610836887e-07,
+  "total_pnl": 0.13486844503771864,
+  "previous_candles_count": 1841,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "BAN",
+  "trained_at": "2025-11-12T13:16:18.062703",
+  "training_seed": 564094,
+  "coin_model_seed": 564346,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 11.339351481326196,
+    "take_profit": 17.915326438876868,
+    "trailing_stop_activation": 42.687025917335596,
+    "trailing_stop_distance": 9.49107610922347,
+    "break_even_protection": false,
+    "break_even_trigger": 161.16507356784086,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 63,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 5.315193342287772,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 67.23596683044799
+    }
+  },
+  "candles_count": 1306,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.8672045724199409e-06,
+  "total_pnl": 0.4657146156677228,
+  "previous_candles_count": 1387,
+  "candles_increased": false
+}

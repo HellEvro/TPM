@@ -1,0 +1,46 @@
+{
+  "symbol": "CLOUD",
+  "trained_at": "2025-11-12T13:23:09.995380",
+  "training_seed": 972324,
+  "coin_model_seed": 972625,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 76,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 16.05615579567899,
+    "take_profit": 13.020164658310826,
+    "trailing_stop_activation": 31.477756479976744,
+    "trailing_stop_distance": 24.765438899485147,
+    "break_even_protection": false,
+    "break_even_trigger": 112.55629514223892,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 70,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 22.71431675985176,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 57.587154224151746
+    }
+  },
+  "candles_count": 1841,
+  "trades_count": 16,
+  "win_rate": 43.75,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.637724523264445e-06,
+  "total_pnl": -0.1829929125360495,
+  "previous_candles_count": 1758,
+  "candles_increased": true
+}

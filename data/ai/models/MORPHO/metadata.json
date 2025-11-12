@@ -1,0 +1,46 @@
+{
+  "symbol": "MORPHO",
+  "trained_at": "2025-11-12T13:18:30.311717",
+  "training_seed": 628096,
+  "coin_model_seed": 628755,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 68,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 19.818379735466266,
+    "take_profit": 23.21309053137989,
+    "trailing_stop_activation": 31.296227740498413,
+    "trailing_stop_distance": 10.874211243300596,
+    "break_even_protection": false,
+    "break_even_trigger": 56.65174197708008,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 61,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 24.346765677403212,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 65.17643964641468
+    }
+  },
+  "candles_count": 1250,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.609114141063009e-06,
+  "total_pnl": -0.40663731100161005,
+  "previous_candles_count": 1255,
+  "candles_increased": false
+}

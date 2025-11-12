@@ -1,0 +1,46 @@
+{
+  "symbol": "AWE",
+  "trained_at": "2025-11-12T12:55:44.839794",
+  "training_seed": 338535,
+  "coin_model_seed": 338688,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 78,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 17.549751740616337,
+    "take_profit": 27.70644453909982,
+    "trailing_stop_activation": 10.788868556330048,
+    "trailing_stop_distance": 30.429509540722094,
+    "break_even_protection": true,
+    "break_even_trigger": 124.26669185216402,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 71,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 6.9373891554912035,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 50.89405260005253
+    }
+  },
+  "candles_count": 585,
+  "trades_count": 7,
+  "win_rate": 71.42857142857143,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.510456597662621e-07,
+  "total_pnl": 0.49684688836335256,
+  "previous_candles_count": 600,
+  "candles_increased": false
+}

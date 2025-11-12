@@ -1,0 +1,46 @@
+{
+  "symbol": "BRETT",
+  "trained_at": "2025-11-12T13:04:09.079924",
+  "training_seed": 833723,
+  "coin_model_seed": 834266,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 74,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 13.014272328669563,
+    "take_profit": 15.913267944605865,
+    "trailing_stop_activation": 12.35377344530199,
+    "trailing_stop_distance": 31.60605777946786,
+    "break_even_protection": true,
+    "break_even_trigger": 185.39762978339672,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 64,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 6.548984080608221,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 53.77205262396698
+    }
+  },
+  "candles_count": 2171,
+  "trades_count": 7,
+  "win_rate": 71.42857142857143,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.856253763354254e-06,
+  "total_pnl": 1.9374231671521598,
+  "previous_candles_count": 2082,
+  "candles_increased": true
+}
