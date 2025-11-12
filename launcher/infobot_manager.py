@@ -185,17 +185,17 @@ class InfoBotManager(tk.Tk):
 
         canvas.bind("<Configure>", _resize_canvas)
 
-        main = ttk.Frame(scrollable, padding=12)
+        main = ttk.Frame(scrollable, padding=(12, 0, 12, 12))
         main.grid(row=0, column=0, sticky="nsew")
 
         scrollable.columnconfigure(0, weight=1)
         main.columnconfigure(0, weight=1)
-        main.rowconfigure(7, weight=1)
+        main.rowconfigure(8, weight=1)
 
         self._enable_mousewheel(canvas)
 
         status_frame = ttk.Frame(main, padding=(0, 0, 0, 6))
-        status_frame.grid(row=0, column=0, sticky="ew", padx=4, pady=4)
+        status_frame.grid(row=0, column=0, sticky="ew", padx=4, pady=(0, 0))
         status_frame.columnconfigure(1, weight=1)
         ttk.Label(status_frame, text="Статус операций:").grid(row=0, column=0, sticky="w")
         ttk.Label(status_frame, textvariable=self.status_var).grid(row=0, column=1, sticky="w")
@@ -204,8 +204,11 @@ class InfoBotManager(tk.Tk):
         self.loader.stop()
         self.loader.grid_remove()
 
+        separator = ttk.Separator(main, orient="horizontal")
+        separator.grid(row=1, column=0, sticky="ew", padx=4)
+
         venv_frame = ttk.LabelFrame(main, text="1. Виртуальное окружение (рекомендуется, вместо прямой установки в системный Python в п.2)", padding=10)
-        venv_frame.grid(row=1, column=0, sticky="ew", padx=4, pady=4)
+        venv_frame.grid(row=2, column=0, sticky="ew", padx=4, pady=4)
         venv_frame.columnconfigure(1, weight=1)
 
         ttk.Label(venv_frame, text="Статус:").grid(row=0, column=0, sticky="w")
@@ -224,7 +227,7 @@ class InfoBotManager(tk.Tk):
         btn_delete_venv.configure(command=lambda b=btn_delete_venv: self.delete_environment(b))
 
         install_frame = ttk.LabelFrame(main, text="2. Установка зависимостей напрямую (опционально, изменяет системный Python)", padding=10)
-        install_frame.grid(row=2, column=0, sticky="ew", padx=4, pady=4)
+        install_frame.grid(row=3, column=0, sticky="ew", padx=4, pady=4)
         install_frame.columnconfigure(0, weight=1)
 
         btn_install_global = ttk.Button(
@@ -240,21 +243,18 @@ class InfoBotManager(tk.Tk):
         ).grid(row=0, column=1, sticky="w", padx=(8, 0))
 
         git_frame = ttk.LabelFrame(main, text="3. Обновления из Git", padding=10)
-        git_frame.grid(row=3, column=0, sticky="ew", padx=4, pady=4)
+        git_frame.grid(row=4, column=0, sticky="ew", padx=4, pady=4)
         git_frame.columnconfigure(1, weight=1)
 
         ttk.Label(git_frame, text="Статус репозитория:").grid(row=0, column=0, sticky="w")
         ttk.Label(git_frame, textvariable=self.git_status_var).grid(row=0, column=1, sticky="w")
 
-        btn_git_fetch = ttk.Button(git_frame, text="Проверить обновления")
-        btn_git_fetch.grid(row=1, column=0, sticky="w", pady=(6, 0))
-        btn_git_fetch.configure(command=lambda b=btn_git_fetch: self.check_for_updates(b))
-        btn_git_pull = ttk.Button(git_frame, text="Обновить (git pull)")
-        btn_git_pull.grid(row=1, column=1, sticky="w", pady=(6, 0))
-        btn_git_pull.configure(command=lambda b=btn_git_pull: self.pull_updates(b))
+        btn_git_sync = ttk.Button(git_frame, text="Получить обновления (fetch + reset)")
+        btn_git_sync.grid(row=1, column=0, sticky="w", pady=(6, 0))
+        btn_git_sync.configure(command=lambda b=btn_git_sync: self.sync_with_remote(b))
 
         license_frame = ttk.LabelFrame(main, text="4. Лицензия и ключи (опционально)", padding=10)
-        license_frame.grid(row=4, column=0, sticky="ew", padx=4, pady=4)
+        license_frame.grid(row=5, column=0, sticky="ew", padx=4, pady=4)
         license_frame.columnconfigure(1, weight=1)
 
         ttk.Label(license_frame, text="Статус лицензии:").grid(row=0, column=0, sticky="w")
@@ -273,7 +273,7 @@ class InfoBotManager(tk.Tk):
         ).grid(row=1, column=2, sticky="w", pady=(6, 0))
 
         services_frame = ttk.LabelFrame(main, text="5. Запуск сервисов", padding=10)
-        services_frame.grid(row=5, column=0, sticky="ew", padx=4, pady=4)
+        services_frame.grid(row=6, column=0, sticky="ew", padx=4, pady=4)
         services_frame.columnconfigure(1, weight=1)
 
         ttk.Button(services_frame, text="Остановить все", command=self.stop_all_services).grid(
@@ -295,7 +295,7 @@ class InfoBotManager(tk.Tk):
             )
 
         docs_frame = ttk.LabelFrame(main, text="6. Документация и файлы", padding=10)
-        docs_frame.grid(row=6, column=0, sticky="ew", padx=4, pady=4)
+        docs_frame.grid(row=7, column=0, sticky="ew", padx=4, pady=4)
         docs_frame.columnconfigure(0, weight=1)
 
         ttk.Button(docs_frame, text="Открыть README", command=lambda: self.open_path(PROJECT_ROOT / "README.md")).pack(
@@ -318,7 +318,7 @@ class InfoBotManager(tk.Tk):
         ).pack(anchor="w", pady=(4, 0))
 
         log_frame = ttk.LabelFrame(main, text="7. Логи и вывод команд", padding=10)
-        log_frame.grid(row=7, column=0, sticky="nsew", padx=4, pady=4)
+        log_frame.grid(row=8, column=0, sticky="nsew", padx=4, pady=4)
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
 
@@ -670,17 +670,11 @@ class InfoBotManager(tk.Tk):
 
             self._run_task("delete_venv", button, "Удаление окружения", worker)
 
-    def check_for_updates(self, button: Optional[ttk.Button] = None) -> None:
-        if not shutil.which("git"):
-            messagebox.showwarning("Git не найден", "Для проверки обновлений необходимо установить Git.")
-            return
-        self._run_task("git_fetch", button, "Проверка обновлений", self._git_fetch_worker)
-
-    def pull_updates(self, button: Optional[ttk.Button] = None) -> None:
+    def sync_with_remote(self, button: Optional[ttk.Button] = None) -> None:
         if not shutil.which("git"):
             messagebox.showwarning("Git не найден", "Для обновления необходимо установить Git.")
             return
-        self._run_task("git_pull", button, "Обновление из репозитория", self._git_pull_worker)
+        self._run_task("git_sync", button, "Получение обновлений", self._git_sync_worker)
 
     def run_license_activation(self, button: Optional[ttk.Button] = None) -> None:
         python_cmd = _split_command(PYTHON_EXECUTABLE)
@@ -841,21 +835,11 @@ class InfoBotManager(tk.Tk):
         self.clipboard_append(text)
         messagebox.showinfo("Готово", "Содержимое лога скопировано в буфер обмена.")
 
-    def _git_fetch_worker(self) -> None:
+    def _git_sync_worker(self) -> None:
         self.ensure_git_repository()
         try:
             self._stream_command("git fetch", ["git", "fetch", "--all", "--prune"])
             self._stream_command("git status", ["git", "status", "-sb"])
-        except subprocess.CalledProcessError:
-            pass
-        self._auto_align_main_with_remote()
-        self._run_git_log_preview()
-        self.update_git_status()
-        self._configure_git_upstream()
-
-    def _git_pull_worker(self) -> None:
-        self.ensure_git_repository()
-        try:
             self._stream_command("git pull", ["git", "pull", "--ff-only"])
         except subprocess.CalledProcessError:
             pass
@@ -1010,7 +994,18 @@ class InfoBotManager(tk.Tk):
             if commit_check.stdout.strip() == "0":
                 self.log("[git log] Нет коммитов для отображения истории.", channel="system")
                 return
-            self._stream_command("git log", ["git", "log", "-5", "--oneline", "--decorate", "--graph"])
+            # Показываем новый и предыдущий коммит(c) c датами
+            result = subprocess.run(
+                ["git", "log", "-2", "--pretty=format:%h %cd %an%n    %s", "--graph", "--date=short"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=True,
+            )
+            output = result.stdout.strip()
+            if output:
+                self.log_queue.put(("system", f"[git log] Последние коммиты:\n{output}"))
         except subprocess.CalledProcessError:
             self.log("[git log] Не удалось получить историю коммитов.", channel="system")
 
