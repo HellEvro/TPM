@@ -144,6 +144,8 @@ class InfoBotManager(tk.Tk):
         self.status_var = tk.StringVar(value="Готово")
         self._active_tasks: Set[str] = set()
 
+        self._ensure_utf8_console()
+
         self.env_status_var = tk.StringVar()
         self.git_status_var = tk.StringVar()
         self.license_status_var = tk.StringVar()
@@ -348,6 +350,7 @@ class InfoBotManager(tk.Tk):
             text_widget.bind("<Key>", self._log_text_key_handler)
             text_widget.bind("<<Paste>>", lambda event: "break")
             text_widget.bind("<<Cut>>", lambda event: "break")
+            text_widget.bind("<Button-3>", lambda event, widget=text_widget: self._show_log_context_menu(event, widget))
             self.log_text_widgets[channel] = text_widget
 
         ttk.Button(
@@ -381,6 +384,15 @@ class InfoBotManager(tk.Tk):
                 return "break"
 
         return "break"
+
+    def _show_log_context_menu(self, event: tk.Event, widget: tk.Text) -> None:
+        menu = tk.Menu(self, tearoff=False)
+        menu.add_command(label="Копировать", command=lambda: widget.event_generate("<<Copy>>"))
+        menu.add_command(label="Выделить всё", command=lambda: widget.tag_add("sel", "1.0", tk.END))
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
 
     # ------------------------------------------------------------------ Helpers
     def _services(self) -> Dict[str, Dict[str, str]]:
@@ -416,6 +428,7 @@ class InfoBotManager(tk.Tk):
                     cwd=str(PROJECT_ROOT),
                     capture_output=True,
                     text=True,
+                    encoding="utf-8",
                     check=True,
                 )
                 current_branch = result.stdout.strip()
@@ -425,6 +438,7 @@ class InfoBotManager(tk.Tk):
                         cwd=str(PROJECT_ROOT),
                         capture_output=True,
                         text=True,
+                        encoding="utf-8",
                         check=True,
                     )
                     self.log("Переименована ветка master → main", channel="system")
@@ -444,6 +458,7 @@ class InfoBotManager(tk.Tk):
                 cwd=str(PROJECT_ROOT),
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 check=True,
             )
             subprocess.run(
@@ -451,6 +466,7 @@ class InfoBotManager(tk.Tk):
                 cwd=str(PROJECT_ROOT),
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 check=True,
             )
             if init_result.stdout.strip():
@@ -460,6 +476,7 @@ class InfoBotManager(tk.Tk):
                 cwd=str(PROJECT_ROOT),
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 check=True,
             )
             if remote_result.stdout.strip():
@@ -542,6 +559,8 @@ class InfoBotManager(tk.Tk):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
             )
         except FileNotFoundError:
             self.log(f"[{title}] Команда не найдена: {command[0]}", channel=channel)
@@ -827,22 +846,23 @@ class InfoBotManager(tk.Tk):
         try:
             self._stream_command("git fetch", ["git", "fetch", "--all", "--prune"])
             self._stream_command("git status", ["git", "status", "-sb"])
-            self._run_git_log_preview()
         except subprocess.CalledProcessError:
             pass
+        self._auto_align_main_with_remote()
+        self._run_git_log_preview()
         self.update_git_status()
         self._configure_git_upstream()
-        self._auto_align_main_with_remote()
 
     def _git_pull_worker(self) -> None:
         self.ensure_git_repository()
         try:
             self._stream_command("git pull", ["git", "pull", "--ff-only"])
-            self._run_git_log_preview()
         except subprocess.CalledProcessError:
             pass
-        self.update_git_status()
         self._configure_git_upstream()
+        self._auto_align_main_with_remote()
+        self._run_git_log_preview()
+        self.update_git_status()
         self._auto_align_main_with_remote()
 
     def _license_worker(self, command: List[str]) -> None:
@@ -920,6 +940,7 @@ class InfoBotManager(tk.Tk):
                 cwd=str(PROJECT_ROOT),
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 check=True,
             )
             current_branch = branch_result.stdout.strip()
@@ -930,6 +951,7 @@ class InfoBotManager(tk.Tk):
                 cwd=str(PROJECT_ROOT),
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
             )
             if tracking_result.returncode != 0:
                 subprocess.run(
@@ -937,6 +959,7 @@ class InfoBotManager(tk.Tk):
                     cwd=str(PROJECT_ROOT),
                     capture_output=True,
                     text=True,
+                    encoding="utf-8",
                     check=True,
                 )
                 self.log("Ветка main теперь отслеживает origin/main.", channel="system")
@@ -951,6 +974,7 @@ class InfoBotManager(tk.Tk):
                 cwd=str(PROJECT_ROOT),
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
             )
             if remote_check.returncode != 0:
                 return
@@ -961,6 +985,7 @@ class InfoBotManager(tk.Tk):
                 cwd=str(PROJECT_ROOT),
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
             )
             if reset_result.returncode == 0:
                 self.log("Локальная ветка main сброшена к origin/main.", channel="system")
@@ -979,6 +1004,7 @@ class InfoBotManager(tk.Tk):
                 cwd=str(PROJECT_ROOT),
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 check=True,
             )
             if commit_check.stdout.strip() == "0":
@@ -987,6 +1013,33 @@ class InfoBotManager(tk.Tk):
             self._stream_command("git log", ["git", "log", "-5", "--oneline", "--decorate", "--graph"])
         except subprocess.CalledProcessError:
             self.log("[git log] Не удалось получить историю коммитов.", channel="system")
+
+    def _ensure_utf8_console(self) -> None:
+        if os.name != "nt":
+            return
+        try:
+            subprocess.run(
+                "chcp 65001",
+                shell=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+        for cmd in [
+            ["git", "config", "--global", "core.quotepath", "off"],
+            ["git", "config", "--global", "i18n.logOutputEncoding", "utf-8"],
+        ]:
+            try:
+                subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                )
+            except Exception:
+                pass
 
     def _prepare_requirements_file(self) -> str:
         base_path = PROJECT_ROOT / "requirements.txt"
