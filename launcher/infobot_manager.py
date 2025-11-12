@@ -34,6 +34,7 @@ except ImportError as exc:  # pragma: no cover - tkinter should be available on 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 VENV_DIR = PROJECT_ROOT / ".venv"
+DEFAULT_REMOTE_URL = "git@github.com:HellEvro/TPM_Public.git"
 
 
 def _detect_python_executable() -> str:
@@ -141,6 +142,7 @@ class InfoBotManager(tk.Tk):
         self.git_status_var = tk.StringVar()
         self.license_status_var = tk.StringVar()
         self.update_environment_status()
+        self.ensure_git_repository()
         self.update_git_status(initial=True)
         self.update_license_status()
 
@@ -153,12 +155,36 @@ class InfoBotManager(tk.Tk):
 
     # ------------------------------------------------------------------ UI builder
     def _build_ui(self) -> None:
-        main = ttk.Frame(self, padding=12)
-        main.pack(fill=tk.BOTH, expand=True)
+        container = ttk.Frame(self)
+        container.pack(fill=tk.BOTH, expand=True)
 
-        grid_opts = {"sticky": "nsew", "padx": 6, "pady": 6}
+        canvas = tk.Canvas(container, highlightthickness=0)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        scrollable = ttk.Frame(canvas)
+        scrollable.bind(
+            "<Configure>", lambda event: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        window_id = canvas.create_window((0, 0), window=scrollable, anchor="nw")
+
+        def _resize_canvas(event: tk.Event) -> None:  # type: ignore[override]
+            canvas.itemconfigure(window_id, width=event.width)
+
+        canvas.bind("<Configure>", _resize_canvas)
+
+        main = ttk.Frame(scrollable, padding=12)
+        main.grid(row=0, column=0, sticky="nsew")
+
+        scrollable.columnconfigure(0, weight=1)
         main.columnconfigure(0, weight=1)
-        main.rowconfigure(4, weight=1)
+        main.rowconfigure(5, weight=1)
+
+        self._enable_mousewheel(canvas)
 
         env_frame = ttk.LabelFrame(main, text="Окружение", padding=10)
         env_frame.grid(row=0, column=0, sticky="ew", padx=4, pady=4)
@@ -280,6 +306,16 @@ class InfoBotManager(tk.Tk):
             text_widget["yscrollcommand"] = scrollbar.set
             self.log_text_widgets[channel] = text_widget
 
+    def _enable_mousewheel(self, widget: tk.Widget) -> None:
+        if sys.platform == "darwin":
+            widget.bind_all("<MouseWheel>", lambda event: widget.yview_scroll(int(-event.delta), "units"))
+            widget.bind_all("<Button-4>", lambda event: widget.yview_scroll(-1, "units"))
+            widget.bind_all("<Button-5>", lambda event: widget.yview_scroll(1, "units"))
+        else:
+            widget.bind_all("<MouseWheel>", lambda event: widget.yview_scroll(int(-event.delta / 120), "units"))
+            widget.bind_all("<Button-4>", lambda event: widget.yview_scroll(-1, "units"))
+            widget.bind_all("<Button-5>", lambda event: widget.yview_scroll(1, "units"))
+
     # ------------------------------------------------------------------ Helpers
     def _services(self) -> Dict[str, Dict[str, str]]:
         python = PYTHON_EXECUTABLE.split() if " " in PYTHON_EXECUTABLE else [PYTHON_EXECUTABLE]
@@ -303,7 +339,39 @@ class InfoBotManager(tk.Tk):
             python = "python.exe" if os.name == "nt" else "python"
             self.env_status_var.set(f".venv найден (используется {python})")
         else:
-            self.env_status_var.set("Виртуальное окружение не создано")
+            self.env_status_var.set("Виртуальное окружение не создано (используется системный Python)")
+
+    def ensure_git_repository(self) -> None:
+        git_dir = PROJECT_ROOT / ".git"
+        if git_dir.exists():
+            return
+        if not shutil.which("git"):
+            self.git_status_var.set("git не найден (обновления недоступны)")
+            self.log("Git не установлен: обновления репозитория отключены.")
+            return
+        try:
+            init_result = subprocess.run(
+                ["git", "init"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            if init_result.stdout.strip():
+                self.log(init_result.stdout.strip())
+            remote_result = subprocess.run(
+                ["git", "remote", "add", "origin", DEFAULT_REMOTE_URL],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            if remote_result.stdout.strip():
+                self.log(remote_result.stdout.strip())
+            self.log(f"Git репозиторий инициализирован. origin → {DEFAULT_REMOTE_URL}")
+        except subprocess.CalledProcessError as exc:
+            stderr = exc.stderr.strip() if exc.stderr else str(exc)
+            self.log(f"[git] Не удалось инициализировать репозиторий: {stderr}")
 
     def update_git_status(self, initial: bool = False) -> None:
         if not shutil.which("git"):
