@@ -13,21 +13,24 @@
 # ========== ИМПОРТ API КЛЮЧЕЙ ==========
 from .keys import EXCHANGES, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 
-# ========== НАСТРОЙКИ БИРЖИ ==========
-# Выбор активной биржи (должна быть настроена в keys.py)
+APP_HOST = '0.0.0.0'  # 'localhost' для только локального доступа, '0.0.0.0' для доступа из сети
+APP_PORT = 5000
+APP_DEBUG = True
+
+# Активная биржа
 ACTIVE_EXCHANGE = 'BYBIT'
 
-# ========== НАСТРОЙКИ СЕРВЕРА ==========
-APP_HOST = '0.0.0.0'  # '0.0.0.0' для доступа из сети, 'localhost' только локально
-APP_PORT = 5000
-APP_DEBUG = False
-
-# ========== ПОЗИЦИОННЫЕ НАСТРОЙКИ ==========
-GROWTH_MULTIPLIER = 1.0
+# Настройки позиций
+GROWTH_MULTIPLIER = 3.0
 DEFAULT_PNL_THRESHOLD = 1000
 MIN_PNL_THRESHOLD = 5
 HIGH_ROI_THRESHOLD = 100
 HIGH_LOSS_THRESHOLD = -40
+
+# Настройки обновления данных
+UPDATE_INTERVAL = 2000  # Интервал обновления основных данных (мс)
+CHART_UPDATE_INTERVAL = 60000  # Интервал обновления графика (мс)
+CLOSED_PNL_UPDATE_INTERVAL = 10000  # Интервал обновления закрытых позиций (мс)
 
 # ========== TELEGRAM УВЕДОМЛЕНИЯ ==========
 # Токены настраиваются в keys.py
@@ -38,6 +41,7 @@ TELEGRAM_NOTIFY = {
     'DAILY_REPORT': True,
     'REPORT_TIME': '21:00'            # Время ежедневного отчета
 }
+TELEGRAM_NOTIFICATIONS_ENABLED = True
 
 # ========== ЗАЩИТНЫЕ МЕХАНИЗМЫ ==========
 MAX_LOSS_PERCENT = 15.0               # Максимальные потери (%)
