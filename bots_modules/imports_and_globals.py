@@ -889,7 +889,7 @@ def restore_lost_bots():
                 # Создаём восстановленного бота
                 restored_bot = {
                     'symbol': symbol,
-                    'status': 'IN_POSITION_LONG' if registry_side == 'LONG' else 'IN_POSITION_SHORT',
+                    'status': 'in_position_long' if registry_side == 'LONG' else 'in_position_short',
                     'position': {
                         'side': registry_side,
                         'quantity': float(exchange_position.get('size', 0)),
