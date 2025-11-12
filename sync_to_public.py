@@ -31,6 +31,19 @@ INCLUDE = [
     "static/", "templates/", "docs/", "data/", "scripts/", "installer/", "launcher/",
 ]
 
+# Обязательные элементы: гарантируем, что они присутствуют в списке на копирование.
+MANDATORY_ITEMS = [
+    "start_infobot_manager.cmd",
+    "start_infobot_manager.sh",
+    "start_infobot_manager.vbs",
+    "launcher/",
+    "installer/",
+]
+
+for mandatory in MANDATORY_ITEMS:
+    if mandatory not in INCLUDE:
+        INCLUDE.append(mandatory)
+
 # Что НЕ копируем
 EXCLUDE_DIRS = [
     ".git", "__pycache__", "node_modules",
