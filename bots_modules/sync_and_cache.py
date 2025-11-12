@@ -22,6 +22,7 @@ logger = logging.getLogger('BotsService')
 
 # Импорт SystemConfig
 from bot_engine.bot_config import SystemConfig
+from bot_engine.bot_history import log_position_closed as history_log_position_closed
 
 # Константы теперь в SystemConfig
 
@@ -2418,6 +2419,96 @@ def sync_bots_with_exchange():
                             # Нет позиции на бирже - проверяем статус инструмента
                             old_status = bot_data.get('status', 'UNKNOWN')
                             old_position_size = bot_data.get('position_size', 0)
+                            manual_closed = old_status in [
+                                BOT_STATUS.get('IN_POSITION_LONG'),
+                                BOT_STATUS.get('IN_POSITION_SHORT')
+                            ]
+
+                            exit_price = None
+                            entry_price = None
+                            pnl_usdt = 0.0
+                            roi_percent = 0.0
+                            direction = bot_data.get('position_side')
+                            position_size_coins = abs(float(bot_data.get('position_size_coins') or bot_data.get('position_size') or 0))
+
+                            try:
+                                entry_price = float(bot_data.get('entry_price') or 0.0)
+                            except (TypeError, ValueError):
+                                entry_price = 0.0
+
+                            # Получаем рыночную цену для фиксации закрытия
+                            if manual_closed:
+                                try:
+                                    exchange_obj = get_exchange()
+                                    if exchange_obj and hasattr(exchange_obj, 'get_ticker'):
+                                        ticker = exchange_obj.get_ticker(symbol)
+                                        if ticker and ticker.get('last'):
+                                            exit_price = float(ticker.get('last'))
+                                except Exception as manual_price_error:
+                                    logger.debug(f"[SYNC_EXCHANGE] ⚠️ Не удалось получить цену для ручного закрытия {symbol}: {manual_price_error}")
+
+                            if not exit_price:
+                                try:
+                                    exit_price = float(bot_data.get('current_price') or 0.0)
+                                except (TypeError, ValueError):
+                                    exit_price = 0.0
+
+                            if not direction:
+                                if old_status == BOT_STATUS.get('IN_POSITION_LONG'):
+                                    direction = 'LONG'
+                                elif old_status == BOT_STATUS.get('IN_POSITION_SHORT'):
+                                    direction = 'SHORT'
+
+                            direction_upper = (direction or '').upper()
+                            if manual_closed and entry_price and exit_price and position_size_coins and direction_upper in ('LONG', 'SHORT'):
+                                price_diff = (exit_price - entry_price) if direction_upper == 'LONG' else (entry_price - exit_price)
+                                pnl_usdt = price_diff * position_size_coins
+                                margin_usdt = bot_data.get('margin_usdt')
+                                try:
+                                    margin_val = float(margin_usdt) if margin_usdt is not None else None
+                                except (TypeError, ValueError):
+                                    margin_val = None
+                                if margin_val and margin_val != 0:
+                                    roi_percent = (pnl_usdt / margin_val) * 100.0
+
+                            if manual_closed:
+                                entry_time_str = bot_data.get('position_start_time') or bot_data.get('entry_time')
+                                duration_hours = 0.0
+                                if entry_time_str:
+                                    try:
+                                        entry_time = datetime.fromisoformat(entry_time_str.replace('Z', ''))
+                                        duration_hours = (datetime.utcnow() - entry_time).total_seconds() / 3600.0
+                                    except Exception:
+                                        duration_hours = 0.0
+
+                                entry_data = {
+                                    'entry_price': entry_price or None,
+                                    'trend': bot_data.get('entry_trend'),
+                                    'volatility': bot_data.get('entry_volatility'),
+                                    'duration_hours': duration_hours,
+                                    'max_profit_achieved': bot_data.get('max_profit_achieved')
+                                }
+                                market_data = {
+                                    'exit_price': exit_price or entry_price or 0.0,
+                                    'price_movement': ((exit_price - entry_price) / entry_price * 100.0) if entry_price else 0.0
+                                }
+
+                                bot_id = bot_data.get('id') or symbol
+                                history_log_position_closed(
+                                    bot_id=bot_id,
+                                    symbol=symbol,
+                                    direction=direction or 'UNKNOWN',
+                                    exit_price=exit_price or entry_price or 0.0,
+                                    pnl=pnl_usdt,
+                                    roi=roi_percent,
+                                    reason='MANUAL_CLOSE',
+                                    entry_data=entry_data,
+                                    market_data=market_data
+                                )
+                                logger.info(
+                                    f"[SYNC_EXCHANGE] ✋ {symbol}: позиция закрыта вручную на бирже "
+                                    f"(entry={entry_price:.6f}, exit={exit_price:.6f}, pnl={pnl_usdt:.2f} USDT)"
+                                )
                             
                             # ✅ ПРОВЕРЯЕМ ДЕЛИСТИНГ: Получаем статус инструмента
                             try:
