@@ -15,6 +15,7 @@ from __future__ import annotations
 import atexit
 import atexit
 import os
+import signal
 from collections import defaultdict
 import queue
 import shutil
@@ -72,6 +73,7 @@ class ManagedProcess:
         self.channel = channel
         self.process: Optional[subprocess.Popen[str]] = None
         self._reader_thread: Optional[threading.Thread] = None
+        self.child_pids: Set[int] = set()
 
     def start(self, log_queue: "queue.Queue[Tuple[str, str]]") -> None:
         if self.is_running:
@@ -82,17 +84,20 @@ class ManagedProcess:
         env["PYTHONPATH"] = f"{PROJECT_ROOT}{os.pathsep}{pythonpath}" if pythonpath else str(PROJECT_ROOT)
 
         # On Windows we can optionally create a new console window.
-        self.process = subprocess.Popen(
-            self.command,
-            cwd=str(PROJECT_ROOT),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            bufsize=1,
-            env=env,
-        )
+        popen_kwargs: Dict[str, object] = {
+            "cwd": str(PROJECT_ROOT),
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.STDOUT,
+            "text": True,
+            "encoding": "utf-8",
+            "errors": "replace",
+            "bufsize": 1,
+            "env": env,
+        }
+        if os.name != "nt":
+            popen_kwargs["start_new_session"] = True
+
+        self.process = subprocess.Popen(self.command, **popen_kwargs)  # type: ignore[arg-type]
 
         def _safe_put(item: Tuple[str, str]) -> None:
             while True:
@@ -105,8 +110,23 @@ class ManagedProcess:
                     except queue.Empty:
                         break
 
+        def _snapshot_children() -> None:
+            if not self.process:
+                return
+            try:
+                # Requires psutil to be installed; fall back gracefully otherwise.
+                import psutil  # type: ignore import
+
+                parent = psutil.Process(self.process.pid)
+                descendants = parent.children(recursive=True)
+                self.child_pids = {proc.pid for proc in descendants}
+            except Exception:
+                # psutil not available or failed; we best-effort track only the root PID.
+                self.child_pids = set()
+
         def _reader() -> None:
             assert self.process and self.process.stdout
+            _snapshot_children()
             for line in self.process.stdout:
                 message = f"[{self.name}] {line.rstrip()}"
                 _safe_put((self.channel, message))
@@ -118,6 +138,8 @@ class ManagedProcess:
     def stop(self, timeout: float = 10.0) -> None:
         if not self.process or self.process.poll() is not None:
             return
+
+        self._kill_children()
 
         self.process.terminate()
         try:
@@ -139,6 +161,49 @@ class ManagedProcess:
     @property
     def pid(self) -> Optional[int]:
         return self.process.pid if self.process else None
+
+    def _kill_process_tree_win(self) -> None:
+        if not self.process:
+            return
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(self.process.pid), "/T", "/F"],
+                capture_output=True,
+                check=False,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        except Exception:
+            pass
+
+    def _kill_process_tree_posix(self) -> None:
+        if not self.process:
+            return
+        try:
+            os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+        except Exception:
+            pass
+
+    def _kill_children(self) -> None:
+        if os.name == "nt":
+            self._kill_process_tree_win()
+        else:
+            self._kill_process_tree_posix()
+        if not self.child_pids:
+            return
+        for pid in list(self.child_pids):
+            try:
+                if os.name == "nt":
+                    subprocess.run(
+                        ["taskkill", "/PID", str(pid), "/T", "/F"],
+                        capture_output=True,
+                        check=False,
+                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                    )
+                else:
+                    os.kill(pid, signal.SIGTERM)
+            except Exception:
+                continue
+        self.child_pids.clear()
 
 
 class InfoBotManager(tk.Tk):
