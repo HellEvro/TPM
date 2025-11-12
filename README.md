@@ -5,6 +5,7 @@
 **Статус:** ✅ Production Ready + AI (Anomaly + Risk Manager)  
 **AI прогресс:** 42% (2/4 модулей активны, 32/76 задач)  
 **Автопроверка:** `python scripts/verify_ai_ready.py` → 10/10 ✅
+**Репозиторий:** [github.com/HellEvro/TPM_Public](https://github.com/HellEvro/TPM_Public)
 
 > Интеллектуальная торговая система с AI модулями: защита от pump/dump, адаптивные SL/TP, умный размер позиции, полная история действий.
 
@@ -141,6 +142,8 @@ python scripts/verify_ai_ready.py         # Финальная проверка 
 - Логи: `logs/bots.log`
 - Web UI: http://localhost:5000 (вкладка «Боты» → «Конфигурация» → «AI»)
 - API статус: http://localhost:5001/api/status, http://localhost:5001/api/ai/status
+- Telegram: [H3113vr0](https://t.me/H3113vr0)
+- Email: gci.company.ou@gmail.com
 
 ---
 

@@ -364,7 +364,7 @@ class InfoBotManager(tk.Tk):
         scrollable.columnconfigure(0, weight=1)
         scrollable.rowconfigure(0, weight=1)
         main.columnconfigure(0, weight=1)
-        main.rowconfigure(8, weight=1)
+        main.rowconfigure(9, weight=1)
 
         self._enable_mousewheel(canvas)
 
@@ -497,8 +497,31 @@ class InfoBotManager(tk.Tk):
             command=self.open_bots_log,
         ).pack(anchor="w", pady=(4, 0))
 
+        contacts_frame = ttk.Frame(main, padding=10)
+        contacts_frame.grid(row=8, column=0, sticky="ew", padx=4, pady=(0, 4))
+        contacts_frame.columnconfigure(0, weight=1)
+
+        link_style = {"fg": "#0a66c2", "cursor": "hand2"}
+
+        telegram_label = tk.Label(
+            contacts_frame,
+            text="📨 Telegram: h3113vr0",
+            **link_style,
+        )
+        telegram_label.grid(row=0, column=0, sticky="w")
+        telegram_label.config(font=(telegram_label.cget("font"), 10, "underline"))
+        telegram_label.bind("<Button-1>", lambda _event: self.open_link("https://t.me/H3113vr0"))
+
+        email_label = tk.Label(
+            contacts_frame,
+            text="📧 Email: gci.company.ou@gmail.com",
+            **link_style,
+        )
+        email_label.grid(row=0, column=1, sticky="w", padx=(16, 0))
+        email_label.config(font=(email_label.cget("font"), 10, "underline"))
+        email_label.bind("<Button-1>", lambda _event: self.open_link("mailto:gci.company.ou@gmail.com"))
         log_frame = ttk.LabelFrame(main, text="7. Логи и вывод команд", padding=10)
-        log_frame.grid(row=8, column=0, sticky="nsew", padx=4, pady=4)
+        log_frame.grid(row=9, column=0, sticky="nsew", padx=4, pady=4)
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
 
@@ -1027,6 +1050,12 @@ class InfoBotManager(tk.Tk):
                 subprocess.run(["xdg-open", str(path)], check=False)
         except Exception as exc:  # pylint: disable=broad-except
             messagebox.showerror("Ошибка открытия", str(exc))
+
+    def open_link(self, url: str) -> None:
+        try:
+            webbrowser.open(url, new=2)
+        except Exception as exc:  # pylint: disable=broad-except
+            messagebox.showerror("Ошибка открытия ссылки", str(exc))
 
     def open_config_file(self) -> None:
         target = PROJECT_ROOT / "app" / "config.py"
