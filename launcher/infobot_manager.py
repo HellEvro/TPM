@@ -42,7 +42,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 VENV_DIR = PROJECT_ROOT / ".venv"
 DEFAULT_REMOTE_URL = "git@github.com:HellEvro/TPM_Public.git"
 STATE_FILE = PROJECT_ROOT / "launcher" / ".infobot_manager_state.json"
-DEFAULT_GEOMETRY = "850x930"
+DEFAULT_GEOMETRY = "850x874"
 
 
 def _detect_python_executable() -> str:

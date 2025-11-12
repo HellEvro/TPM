@@ -57,6 +57,7 @@ EXCLUDE_DIRS = [
 
 EXCLUDE_FILES = [
     "app/keys.py", "app/config.py", "app/current_language.txt", "app/telegram_states.json",
+    "launcher/.infobot_manager_state.json",
     "scripts/test_*.py", "scripts/verify_*.py",
     "*.pyc",  # Скомпилированные файлы
 ]
