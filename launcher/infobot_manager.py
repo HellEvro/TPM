@@ -795,6 +795,7 @@ class InfoBotManager(tk.Tk):
                 ):
                     try:
                         shutil.copy2(example, target)
+                        self._strip_example_header(target)
                         self.log("Создан app/config.py", channel="system")
                     except OSError as exc:
                         messagebox.showerror("Ошибка копирования", str(exc))
@@ -1069,6 +1070,26 @@ class InfoBotManager(tk.Tk):
                 )
             except Exception:
                 pass
+
+    def _strip_example_header(self, config_path: Path) -> None:
+        try:
+            text = config_path.read_text(encoding="utf-8")
+        except OSError:
+            return
+
+        stripped = text.lstrip()
+        if stripped.startswith('"""'):
+            start_index = text.find('"""')
+            end_index = text.find('"""', start_index + 3)
+            if end_index != -1:
+                new_text = text[end_index + 3 :]
+                # remove leading blank lines
+                new_text = new_text.lstrip("\n")
+                try:
+                    config_path.write_text(new_text, encoding="utf-8")
+                    self.log("Удалён пояснительный блок из app/config.py.", channel="system")
+                except OSError as exc:
+                    self.log(f"[config] Не удалось очистить заголовок config.py: {exc}", channel="system")
 
     def _prepare_requirements_file(self) -> str:
         base_path = PROJECT_ROOT / "requirements.txt"
