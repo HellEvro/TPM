@@ -21,7 +21,7 @@ import threading
 import time
 import webbrowser
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 try:
     import tkinter as tk
@@ -61,13 +61,14 @@ PYTHON_EXECUTABLE = _detect_python_executable()
 class ManagedProcess:
     """Wraps a subprocess and streams its output to a Tkinter-safe queue."""
 
-    def __init__(self, name: str, command: List[str]):
+    def __init__(self, name: str, command: List[str], channel: str):
         self.name = name
         self.command = command
+        self.channel = channel
         self.process: Optional[subprocess.Popen[str]] = None
         self._reader_thread: Optional[threading.Thread] = None
 
-    def start(self, log_queue: "queue.Queue[str]") -> None:
+    def start(self, log_queue: "queue.Queue[Tuple[str, str]]") -> None:
         if self.is_running:
             raise RuntimeError(f"{self.name} already running")
 
@@ -76,25 +77,24 @@ class ManagedProcess:
         env["PYTHONPATH"] = f"{PROJECT_ROOT}{os.pathsep}{pythonpath}" if pythonpath else str(PROJECT_ROOT)
 
         # On Windows we can optionally create a new console window.
-        creationflags = 0
-        if os.name == "nt":
-            creationflags = subprocess.CREATE_NEW_CONSOLE  # type: ignore[attr-defined]
-
         self.process = subprocess.Popen(
             self.command,
             cwd=str(PROJECT_ROOT),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             bufsize=1,
             env=env,
-            creationflags=creationflags,
         )
 
         def _reader() -> None:
             assert self.process and self.process.stdout
             for line in self.process.stdout:
-                log_queue.put(f"[{self.name}] {line.rstrip()}")
+                message = f"[{self.name}] {line.rstrip()}"
+                log_queue.put(("system", message))
+                log_queue.put((self.channel, message))
             self.process.stdout.close()
 
         self._reader_thread = threading.Thread(target=_reader, daemon=True)
@@ -133,8 +133,9 @@ class InfoBotManager(tk.Tk):
         self.geometry("980x720")
         self.minsize(820, 600)
 
-        self.log_queue: "queue.Queue[str]" = queue.Queue()
+        self.log_queue: "queue.Queue[Tuple[str, str]]" = queue.Queue()
         self.processes: Dict[str, ManagedProcess] = {}
+        self.log_text_widgets: Dict[str, tk.Text] = {}
 
         self.env_status_var = tk.StringVar()
         self.git_status_var = tk.StringVar()
@@ -255,11 +256,28 @@ class InfoBotManager(tk.Tk):
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
 
-        self.log_text = tk.Text(log_frame, wrap="word", height=12, state=tk.DISABLED)
-        self.log_text.grid(row=0, column=0, sticky="nsew")
-        scroll = ttk.Scrollbar(log_frame, command=self.log_text.yview)
-        scroll.grid(row=0, column=1, sticky="ns")
-        self.log_text["yscrollcommand"] = scroll.set
+        notebook = ttk.Notebook(log_frame)
+        notebook.grid(row=0, column=0, sticky="nsew")
+
+        log_tabs = [
+            ("system", "Системные события"),
+            ("app", "Web UI (app.py)"),
+            ("bots", "Bots Service (bots.py)"),
+            ("ai", "AI Engine (ai.py)"),
+        ]
+
+        for channel, title in log_tabs:
+            tab = ttk.Frame(notebook)
+            tab.columnconfigure(0, weight=1)
+            tab.rowconfigure(0, weight=1)
+            notebook.add(tab, text=title)
+
+            text_widget = tk.Text(tab, wrap="word", height=12, state=tk.DISABLED)
+            text_widget.grid(row=0, column=0, sticky="nsew")
+            scrollbar = ttk.Scrollbar(tab, command=text_widget.yview)
+            scrollbar.grid(row=0, column=1, sticky="ns")
+            text_widget["yscrollcommand"] = scrollbar.set
+            self.log_text_widgets[channel] = text_widget
 
     # ------------------------------------------------------------------ Helpers
     def _services(self) -> Dict[str, Dict[str, str]]:
@@ -304,7 +322,7 @@ class InfoBotManager(tk.Tk):
             if initial:
                 self.git_status_var.set(f"Ошибка git status: {exc.returncode}")
             else:
-                self.log_queue.put(f"[git] Ошибка git status: {exc}")
+                self.log(f"[git] Ошибка git status: {exc}")
 
     def update_license_status(self) -> None:
         lic_files = sorted(PROJECT_ROOT.glob("*.lic"))
@@ -313,20 +331,29 @@ class InfoBotManager(tk.Tk):
         else:
             self.license_status_var.set("Лицензия не найдена (.lic файл в корне проекта)")
 
-    def log(self, message: str) -> None:
+    def _enqueue_log(self, channel: str, message: str, broadcast: bool = True) -> None:
+        if broadcast and channel != "system":
+            self.log_queue.put(("system", message))
+        self.log_queue.put((channel, message))
+
+    def log(self, message: str, channel: str = "system", broadcast: bool = True) -> None:
         timestamp = time.strftime("%H:%M:%S")
-        self.log_queue.put(f"[{timestamp}] {message}")
+        formatted = f"[{timestamp}] {message}"
+        self._enqueue_log(channel, formatted, broadcast=broadcast)
 
     def _flush_logs(self) -> None:
         while True:
             try:
-                line = self.log_queue.get_nowait()
+                channel, line = self.log_queue.get_nowait()
             except queue.Empty:
                 break
-            self.log_text.configure(state=tk.NORMAL)
-            self.log_text.insert(tk.END, line + "\n")
-            self.log_text.see(tk.END)
-            self.log_text.configure(state=tk.DISABLED)
+            widget = self.log_text_widgets.get(channel) or self.log_text_widgets.get("system")
+            if widget is None:
+                continue
+            widget.configure(state=tk.NORMAL)
+            widget.insert(tk.END, line + "\n")
+            widget.see(tk.END)
+            widget.configure(state=tk.DISABLED)
         self.after(200, self._flush_logs)
 
     def _refresh_service_statuses(self) -> None:
@@ -341,8 +368,8 @@ class InfoBotManager(tk.Tk):
         self.after(1200, self._refresh_service_statuses)
 
     # ------------------------------------------------------------------ Command execution
-    def _stream_command(self, title: str, command: List[str]) -> None:
-        self.log(f"[{title}] Запуск: {' '.join(command)}")
+    def _stream_command(self, title: str, command: List[str], channel: str = "system") -> None:
+        self.log(f"[{title}] Запуск: {' '.join(command)}", channel=channel)
         try:
             proc = subprocess.Popen(
                 command,
@@ -352,20 +379,20 @@ class InfoBotManager(tk.Tk):
                 text=True,
             )
         except FileNotFoundError:
-            self.log(f"[{title}] Команда не найдена: {command[0]}")
+            self.log(f"[{title}] Команда не найдена: {command[0]}", channel=channel)
             return
 
         assert proc.stdout
         for line in proc.stdout:
-            self.log_queue.put(f"[{title}] {line.rstrip()}")
+            self._enqueue_log(channel, f"[{title}] {line.rstrip()}")
         return_code = proc.wait()
-        self.log(f"[{title}] Завершено (код {return_code})")
+        self.log(f"[{title}] Завершено (код {return_code})", channel=channel)
         if return_code != 0:
             raise subprocess.CalledProcessError(return_code, command)
 
     def install_dependencies(self) -> None:
         def worker() -> None:
-            python_cmd = sys.executable if not VENV_DIR.exists() else PYTHON_EXECUTABLE
+            global PYTHON_EXECUTABLE
             steps: List[tuple[str, List[str]]] = []
             if not VENV_DIR.exists():
                 steps.append(("Создание окружения", [sys.executable, "-m", "venv", str(VENV_DIR)]))
@@ -384,7 +411,6 @@ class InfoBotManager(tk.Tk):
                     self.log(f"[{title}] Ошибка установки ({exc.returncode})")
                     break
             self.update_environment_status()
-            global PYTHON_EXECUTABLE
             PYTHON_EXECUTABLE = _detect_python_executable()
 
         threading.Thread(target=worker, daemon=True).start()
@@ -453,23 +479,27 @@ class InfoBotManager(tk.Tk):
             messagebox.showinfo("Уже запущено", f"Сервис {service_id} уже запущен.")
             return
 
-        service = self._services()[service_id]
-        process = ManagedProcess(service["title"], service["command"])
+        services = self._services()
+        service = services[service_id]
+        process = ManagedProcess(service["title"], service["command"], service_id)
         try:
             process.start(self.log_queue)
         except Exception as exc:  # pylint: disable=broad-except
             messagebox.showerror("Ошибка запуска", str(exc))
             return
         self.processes[service_id] = process
-        self.log(f"[{service['title']}] Запущен (PID {process.pid})")
+        self.log(f"{service['title']} запущен (PID {process.pid})", channel=service_id)
 
     def stop_service(self, service_id: str) -> None:
         process = self.processes.get(service_id)
         if not process or not process.is_running:
-            self.log(f"[{service_id}] Сервис не запущен.")
+            self.log(f"Сервис {service_id} не запущен.", channel=service_id)
             return
         process.stop()
-        self.log(f"[{service_id}] Остановлен.")
+        self.processes.pop(service_id, None)
+        services = self._services()
+        title = services.get(service_id, {}).get("title", service_id)
+        self.log(f"{title} остановлен.", channel=service_id)
 
     def stop_all_services(self) -> None:
         for service_id in list(self.processes.keys()):

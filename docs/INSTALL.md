@@ -19,6 +19,7 @@
 ### 2. Запустите менеджер
 
 - Windows: `start_infobot_manager.cmd`
+- Windows (без консоли): двойной клик `start_infobot_manager.vbs`
 - Linux/macOS: `./start_infobot_manager.sh`
 
 Менеджер позволяет:
