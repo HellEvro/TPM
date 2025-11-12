@@ -883,6 +883,12 @@ class NewTradingBot:
                 profit_percent = ((current_price - self.entry_price) / self.entry_price) * 100
             else:  # SHORT
                 profit_percent = ((self.entry_price - current_price) / self.entry_price) * 100
+
+            logger.info(
+                f"[NEW_BOT_{self.symbol}] 🛡️ Break-even статус: enabled={break_even_enabled} "
+                f"trigger={break_even_trigger_percent:.2f}% profit={profit_percent:.2f}% "
+                f"activated={self.break_even_activated} stop={self.break_even_stop_price}"
+            )
             
             # 1. Проверка стоп-лосса
             if profit_percent <= -stop_loss_percent:
