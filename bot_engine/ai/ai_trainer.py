@@ -662,6 +662,13 @@ class AITrainer:
                     features.append(0)
             else:
                 features.append(0)
+
+            # Признаки по причине закрытия
+            close_reason = (trade.get('close_reason') or '').upper()
+            features.append(1 if 'MANUAL' in close_reason else 0)
+            features.append(1 if 'STOP' in close_reason else 0)
+            features.append(1 if 'TAKE' in close_reason else 0)
+            features.append(1 if 'TRAIL' in close_reason else 0)
             
             return np.array(features)
             
