@@ -237,12 +237,15 @@ class InfoBotManager(tk.Tk):
         install_frame.grid(row=3, column=0, sticky="new", padx=4, pady=4)
         install_frame.columnconfigure(0, weight=1)
 
-        btn_install_global = ttk.Button(
+        self.btn_install_global = ttk.Button(
             install_frame,
             text="Установить/обновить зависимости (pip install -r requirements.txt)",
         )
-        btn_install_global.grid(row=0, column=0, sticky="w")
-        btn_install_global.configure(command=lambda b=btn_install_global: self.install_dependencies_global(b))
+        self.btn_install_global.grid(row=0, column=0, sticky="w")
+        self.btn_install_global.configure(command=lambda b=self.btn_install_global: self.install_dependencies_global(b))
+
+        self.install_note_var = tk.StringVar()
+        ttk.Label(install_frame, textvariable=self.install_note_var, foreground="#707070").grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 0))
         ttk.Button(
             install_frame,
             text="Открыть каталог проекта",
@@ -426,8 +429,16 @@ class InfoBotManager(tk.Tk):
         if VENV_DIR.exists():
             python = "python.exe" if os.name == "nt" else "python"
             self.env_status_var.set(f".venv найден (используется {python})")
+            if hasattr(self, "btn_install_global"):
+                self.btn_install_global.configure(state=tk.DISABLED)
+            if hasattr(self, "install_note_var"):
+                self.install_note_var.set("Виртуальное окружение активно. Чтобы установить зависимости в системный Python, удалите папку .venv.")
         else:
             self.env_status_var.set("Виртуальное окружение не создано (используется системный Python)")
+            if hasattr(self, "btn_install_global"):
+                self.btn_install_global.configure(state=tk.NORMAL)
+            if hasattr(self, "install_note_var"):
+                self.install_note_var.set("")
 
     def ensure_git_repository(self) -> None:
         git_dir = PROJECT_ROOT / ".git"
@@ -580,7 +591,10 @@ class InfoBotManager(tk.Tk):
         for line in proc.stdout:
             self._enqueue_log(channel, f"[{title}] {line.rstrip()}")
         return_code = proc.wait()
-        self.log(f"[{title}] Завершено (код {return_code})", channel=channel)
+        if return_code == 0:
+            self.log(f"[{title}] Успешно завершено.", channel=channel)
+        else:
+            self.log(f"[{title}] Завершено с ошибкой (код {return_code}).", channel=channel)
         if return_code != 0:
             raise subprocess.CalledProcessError(return_code, command)
 
