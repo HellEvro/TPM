@@ -329,6 +329,9 @@ InfoBot_Public/
 *.md.tmp
 *.md.backup
 
+# UI state
+launcher/.infobot_manager_state.json
+
 # Process files
 *.pid
 *.lock
