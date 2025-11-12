@@ -13,18 +13,18 @@ Provides a cross-platform control panel to:
 from __future__ import annotations
 
 import atexit
-import atexit
 import os
-import signal
-from collections import defaultdict
 import queue
+import re
 import shutil
+import signal
 import subprocess
 import sys
-import threading
-import time
 import tempfile
+import time
+import threading
 import webbrowser
+from collections import defaultdict
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
@@ -71,19 +71,24 @@ ERROR_KEYWORDS = (
     "critical",
     "fatal",
     "fail",
+    "failed",
     "stderr",
-    "ошиб",
+    "не удалось",
+    "невозможно",
+    "ошибк",
     "критич",
     "аварийн",
-    "не удалось",
-    "errno",
+    "stacktrace",
+    "panic",
     "cannot",
+    "can't",
     "refused",
     "denied",
+    "permission denied",
     "timeout",
-    "failed",
-    "panic",
-    "stacktrace",
+    "timed out",
+    "errno",
+    "traceback (most recent call last",
 )
 
 SUPPRESSED_SEVERITIES = (
@@ -100,7 +105,12 @@ SUPPRESSED_SEVERITIES = (
     "trace",
     "verbose",
     "notice",
+    "ℹ️",
+    "⚠️",
+    "✅",
 )
+
+ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
 
 class ManagedProcess:
@@ -164,7 +174,7 @@ class ManagedProcess:
                 stripped = line.strip()
                 if not stripped:
                     continue
-                if self._is_error_line(stripped):
+                if self._is_error_line(stripped, service_channel=self.channel):
                     message = f"[{self.name}] {stripped}"
                     _safe_put((self.channel, message))
                     _safe_put(("system", message))
@@ -263,15 +273,22 @@ class ManagedProcess:
         except Exception:
             pass
 
-    def _is_error_line(self, text: str) -> bool:
-        lowered = text.lower()
-        if any(keyword in lowered for keyword in ERROR_KEYWORDS):
-            return True
-        if any(keyword in lowered for keyword in SUPPRESSED_SEVERITIES):
+    def _is_error_line(self, text: str, service_channel: Optional[str] = None) -> bool:
+        cleaned = ANSI_ESCAPE_RE.sub("", text)
+        lowered = cleaned.lower()
+
+        if any(marker in lowered for marker in SUPPRESSED_SEVERITIES):
             return False
-        if "traceback (most recent call last" in lowered:
-            return True
-        return False
+        if "ошибок: 0" in lowered or "ошибок 0" in lowered:
+            return False
+
+        if service_channel == "system":
+            return any(keyword in lowered for keyword in ERROR_KEYWORDS)
+
+        if " warning " in lowered or lowered.startswith("warning"):
+            return False
+
+        return any(keyword in lowered for keyword in ERROR_KEYWORDS)
 
 
 class InfoBotManager(tk.Tk):
