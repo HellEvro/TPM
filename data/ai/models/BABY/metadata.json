@@ -1,0 +1,46 @@
+{
+  "symbol": "BABY",
+  "trained_at": "2025-11-12T13:06:24.684925",
+  "training_seed": 977579,
+  "coin_model_seed": 978198,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 68,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 17.337048559040895,
+    "take_profit": 20.353206575551038,
+    "trailing_stop_activation": 25.557084898931855,
+    "trailing_stop_distance": 9.910928857106232,
+    "break_even_protection": false,
+    "break_even_trigger": 53.973768930983496,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 70,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 13.102209851608961,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 56.049636834407785
+    }
+  },
+  "candles_count": 755,
+  "trades_count": 10,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.48223551584833e-06,
+  "total_pnl": -0.31360840653999383,
+  "previous_candles_count": 791,
+  "candles_increased": false
+}

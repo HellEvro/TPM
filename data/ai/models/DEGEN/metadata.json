@@ -1,0 +1,46 @@
+{
+  "symbol": "DEGEN",
+  "trained_at": "2025-11-12T13:11:06.493387",
+  "training_seed": 250888,
+  "coin_model_seed": 251258,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 75,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 19.65809113106434,
+    "take_profit": 32.0051862905029,
+    "trailing_stop_activation": 35.24381991395193,
+    "trailing_stop_distance": 10.841471424683789,
+    "break_even_protection": false,
+    "break_even_trigger": 104.31710271078711,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 66,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 24.00001307131826,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 47.97650272728994
+    }
+  },
+  "candles_count": 2272,
+  "trades_count": 7,
+  "win_rate": 42.857142857142854,
+  "signal_accuracy": 0.8571428571428571,
+  "profit_mse": 2.6148590408099683e-06,
+  "total_pnl": 0.23557274276060214,
+  "previous_candles_count": 2301,
+  "candles_increased": false
+}

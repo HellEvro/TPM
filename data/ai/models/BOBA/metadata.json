@@ -1,0 +1,46 @@
+{
+  "symbol": "BOBA",
+  "trained_at": "2025-11-12T13:22:17.537974",
+  "training_seed": 925645,
+  "coin_model_seed": 926107,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 74,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 18.856169473766293,
+    "take_profit": 34.55015215206458,
+    "trailing_stop_activation": 26.399783632343055,
+    "trailing_stop_distance": 25.569806699775235,
+    "break_even_protection": false,
+    "break_even_trigger": 92.13172110777067,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 64,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 7.95390234255801,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 39.823828473187845
+    }
+  },
+  "candles_count": 4824,
+  "trades_count": 8,
+  "win_rate": 50.0,
+  "signal_accuracy": 0.875,
+  "profit_mse": 7.457420207152241e-07,
+  "total_pnl": 0.6236762262538892,
+  "previous_candles_count": 5008,
+  "candles_increased": false
+}

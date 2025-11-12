@@ -1,0 +1,46 @@
+{
+  "symbol": "CAKE",
+  "trained_at": "2025-11-12T13:01:32.087152",
+  "training_seed": 679109,
+  "coin_model_seed": 679263,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 75,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 15.178118117040444,
+    "take_profit": 21.757701804095944,
+    "trailing_stop_activation": 37.75204019343805,
+    "trailing_stop_distance": 13.991896636597478,
+    "break_even_protection": true,
+    "break_even_trigger": 56.565376388212286,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 69,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 7.479802324359555,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 56.53132632971126
+    }
+  },
+  "candles_count": 2870,
+  "trades_count": 6,
+  "win_rate": 83.33333333333334,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.655187238810728e-08,
+  "total_pnl": 0.19329256333384956,
+  "previous_candles_count": 2916,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "BR",
+  "trained_at": "2025-11-12T13:22:16.658638",
+  "training_seed": 925645,
+  "coin_model_seed": 925904,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 66,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 12.483202420704579,
+    "take_profit": 22.38577981241673,
+    "trailing_stop_activation": 30.067643873289235,
+    "trailing_stop_distance": 15.650451457275608,
+    "break_even_protection": false,
+    "break_even_trigger": 157.87269561857704,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 59,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 15.131051742081823,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 43.68079664116172
+    }
+  },
+  "candles_count": 939,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.316515976421334e-06,
+  "total_pnl": 1.6691930545599059,
+  "previous_candles_count": 923,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "CATI",
+  "trained_at": "2025-11-12T13:19:32.618675",
+  "training_seed": 752744,
+  "coin_model_seed": 753114,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 73,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 20.152635132803134,
+    "take_profit": 23.734351864112668,
+    "trailing_stop_activation": 24.546754122457713,
+    "trailing_stop_distance": 18.291529031725226,
+    "break_even_protection": false,
+    "break_even_trigger": 148.92830292552873,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 69,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 18.056982512331444,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 30.731439451960387
+    }
+  },
+  "candles_count": 1600,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.355340652120797e-07,
+  "total_pnl": -0.49000167754252016,
+  "previous_candles_count": 1635,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "ICP",
+  "trained_at": "2025-11-12T13:21:37.680559",
+  "training_seed": 875017,
+  "coin_model_seed": 875945,
+  "rsi_params": {
+    "oversold": 23,
+    "overbought": 76,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 15.217483973764427,
+    "take_profit": 25.398298576962667,
+    "trailing_stop_activation": 14.151915852956732,
+    "trailing_stop_distance": 7.486384157276352,
+    "break_even_protection": true,
+    "break_even_trigger": 93.0987834198043,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 70,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 11.732391893432768,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 58.24136631376268
+    }
+  },
+  "candles_count": 4999,
+  "trades_count": 7,
+  "win_rate": 42.857142857142854,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.3320211636682884e-06,
+  "total_pnl": 0.07605995888821157,
+  "previous_candles_count": 5006,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "DOOD",
+  "trained_at": "2025-11-12T12:55:49.613579",
+  "training_seed": 338535,
+  "coin_model_seed": 338635,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 72,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 14.297826274733493,
+    "take_profit": 28.40521082195491,
+    "trailing_stop_activation": 34.38661178935165,
+    "trailing_stop_distance": 21.916128982589232,
+    "break_even_protection": true,
+    "break_even_trigger": 154.0217913499638,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 68,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 18.235186073496056,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 50.98506946570189
+    }
+  },
+  "candles_count": 719,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.413304109658202e-07,
+  "total_pnl": -0.648967968921172,
+  "previous_candles_count": 690,
+  "candles_increased": true
+}

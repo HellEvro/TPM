@@ -1,0 +1,46 @@
+{
+  "symbol": "HEMI",
+  "trained_at": "2025-11-12T13:21:34.812418",
+  "training_seed": 875017,
+  "coin_model_seed": 875348,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 65,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 14.121441054503403,
+    "take_profit": 31.07449892636841,
+    "trailing_stop_activation": 29.721935123251708,
+    "trailing_stop_distance": 27.6921443216536,
+    "break_even_protection": true,
+    "break_even_trigger": 65.84325128735779,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 59,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 11.21795761700044,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 34.03318659239613
+    }
+  },
+  "candles_count": 200,
+  "trades_count": 8,
+  "win_rate": 12.5,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.4177258404225264e-06,
+  "total_pnl": -1.1659839708241877,
+  "previous_candles_count": 200,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "DAM",
+  "trained_at": "2025-11-12T13:19:35.959299",
+  "training_seed": 752744,
+  "coin_model_seed": 753335,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 70,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 11.836982789777371,
+    "take_profit": 16.920642372094363,
+    "trailing_stop_activation": 37.41119944764706,
+    "trailing_stop_distance": 18.461871598592943,
+    "break_even_protection": true,
+    "break_even_trigger": 81.58694165311073,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 70,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 19.274540784494786,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 54.76617985369817
+    }
+  },
+  "candles_count": 344,
+  "trades_count": 7,
+  "win_rate": 42.857142857142854,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.678813923598373e-06,
+  "total_pnl": 0.30543972726020197,
+  "previous_candles_count": 344,
+  "candles_increased": false
+}

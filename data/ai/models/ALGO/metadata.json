@@ -1,0 +1,46 @@
+{
+  "symbol": "ALGO",
+  "trained_at": "2025-11-12T13:19:27.144536",
+  "training_seed": 752744,
+  "coin_model_seed": 753284,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 77,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 18.079848388232357,
+    "take_profit": 16.07674028779718,
+    "trailing_stop_activation": 18.497005839104883,
+    "trailing_stop_distance": 29.25023522504459,
+    "break_even_protection": true,
+    "break_even_trigger": 105.207507383227,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 70,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 12.079126830570285,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 50.09824014311984
+    }
+  },
+  "candles_count": 4900,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.49755497014787e-07,
+  "total_pnl": 0.34536805149201083,
+  "previous_candles_count": 4841,
+  "candles_increased": true
+}

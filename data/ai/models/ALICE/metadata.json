@@ -1,0 +1,46 @@
+{
+  "symbol": "ALICE",
+  "trained_at": "2025-11-12T13:23:05.395860",
+  "training_seed": 972324,
+  "coin_model_seed": 972448,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 66,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 12.346392219426729,
+    "take_profit": 20.242910441710062,
+    "trailing_stop_activation": 35.125321394644914,
+    "trailing_stop_distance": 22.391615412044022,
+    "break_even_protection": false,
+    "break_even_trigger": 136.74138767369314,
+    "max_position_hours": 22
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 68,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 16.745210453874677,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 52.420885807911354
+    }
+  },
+  "candles_count": 4859,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.2901067760590132e-06,
+  "total_pnl": -0.9180224067085332,
+  "previous_candles_count": 4823,
+  "candles_increased": true
+}
