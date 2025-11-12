@@ -189,6 +189,7 @@ class InfoBotManager(tk.Tk):
         main.grid(row=0, column=0, sticky="nsew")
 
         scrollable.columnconfigure(0, weight=1)
+        scrollable.rowconfigure(0, weight=1)
         main.columnconfigure(0, weight=1)
         main.rowconfigure(8, weight=1)
 
@@ -208,7 +209,7 @@ class InfoBotManager(tk.Tk):
         separator.grid(row=1, column=0, sticky="ew", padx=4)
 
         venv_frame = ttk.LabelFrame(main, text="1. Виртуальное окружение (рекомендуется, вместо прямой установки в системный Python в п.2)", padding=10)
-        venv_frame.grid(row=2, column=0, sticky="ew", padx=4, pady=4)
+        venv_frame.grid(row=2, column=0, sticky="new", padx=4, pady=4)
         venv_frame.columnconfigure(1, weight=1)
 
         ttk.Label(venv_frame, text="Статус:").grid(row=0, column=0, sticky="w")
@@ -227,7 +228,7 @@ class InfoBotManager(tk.Tk):
         btn_delete_venv.configure(command=lambda b=btn_delete_venv: self.delete_environment(b))
 
         install_frame = ttk.LabelFrame(main, text="2. Установка зависимостей напрямую (опционально, изменяет системный Python)", padding=10)
-        install_frame.grid(row=3, column=0, sticky="ew", padx=4, pady=4)
+        install_frame.grid(row=3, column=0, sticky="new", padx=4, pady=4)
         install_frame.columnconfigure(0, weight=1)
 
         btn_install_global = ttk.Button(
@@ -243,7 +244,7 @@ class InfoBotManager(tk.Tk):
         ).grid(row=0, column=1, sticky="w", padx=(8, 0))
 
         git_frame = ttk.LabelFrame(main, text="3. Обновления из Git", padding=10)
-        git_frame.grid(row=4, column=0, sticky="ew", padx=4, pady=4)
+        git_frame.grid(row=4, column=0, sticky="new", padx=4, pady=4)
         git_frame.columnconfigure(1, weight=1)
 
         ttk.Label(git_frame, text="Статус репозитория:").grid(row=0, column=0, sticky="w")
@@ -254,7 +255,7 @@ class InfoBotManager(tk.Tk):
         btn_git_sync.configure(command=lambda b=btn_git_sync: self.sync_with_remote(b))
 
         license_frame = ttk.LabelFrame(main, text="4. Лицензия и ключи (опционально)", padding=10)
-        license_frame.grid(row=5, column=0, sticky="ew", padx=4, pady=4)
+        license_frame.grid(row=5, column=0, sticky="new", padx=4, pady=4)
         license_frame.columnconfigure(1, weight=1)
 
         ttk.Label(license_frame, text="Статус лицензии:").grid(row=0, column=0, sticky="w")
@@ -273,7 +274,7 @@ class InfoBotManager(tk.Tk):
         ).grid(row=1, column=2, sticky="w", pady=(6, 0))
 
         services_frame = ttk.LabelFrame(main, text="5. Запуск сервисов", padding=10)
-        services_frame.grid(row=6, column=0, sticky="ew", padx=4, pady=4)
+        services_frame.grid(row=6, column=0, sticky="new", padx=4, pady=4)
         services_frame.columnconfigure(1, weight=1)
 
         ttk.Button(services_frame, text="Остановить все", command=self.stop_all_services).grid(
@@ -295,7 +296,7 @@ class InfoBotManager(tk.Tk):
             )
 
         docs_frame = ttk.LabelFrame(main, text="6. Документация и файлы", padding=10)
-        docs_frame.grid(row=7, column=0, sticky="ew", padx=4, pady=4)
+        docs_frame.grid(row=7, column=0, sticky="new", padx=4, pady=4)
         docs_frame.columnconfigure(0, weight=1)
 
         ttk.Button(docs_frame, text="Открыть README", command=lambda: self.open_path(PROJECT_ROOT / "README.md")).pack(
