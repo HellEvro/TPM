@@ -488,6 +488,10 @@ def create_bot(symbol, config=None, exchange_obj=None):
         'max_position_hours': auto_bot_config.get('max_position_hours', 48),
         'break_even_protection': auto_bot_config.get('break_even_protection', True),
         'break_even_trigger': auto_bot_config.get('break_even_trigger', 100.0),
+        'break_even_trigger_percent': auto_bot_config.get(
+            'break_even_trigger_percent',
+            auto_bot_config.get('break_even_trigger', 100.0)
+        ),
         'avoid_down_trend': auto_bot_config.get('avoid_down_trend', True),
         'avoid_up_trend': auto_bot_config.get('avoid_up_trend', True),
         'enable_maturity_check': auto_bot_config.get('enable_maturity_check', True)

@@ -11,6 +11,7 @@ from datetime import datetime
 import time
 import threading
 import math
+from typing import Optional
 
 logger = logging.getLogger('BotsService')
 
@@ -58,6 +59,8 @@ except ImportError:
 class NewTradingBot:
     """Новый торговый бот согласно требованиям"""
     
+    BREAK_EVEN_FEE_MULTIPLIER = 2.5
+    
     def __init__(self, symbol, config=None, exchange=None):
         self.symbol = symbol
         self.config = config or {}
@@ -88,6 +91,11 @@ class NewTradingBot:
         self.max_profit_achieved = self.config.get('max_profit_achieved', 0.0)
         self.trailing_stop_price = self.config.get('trailing_stop_price', None)
         self.break_even_activated = bool(self.config.get('break_even_activated', False))
+        break_even_stop = self.config.get('break_even_stop_price')
+        try:
+            self.break_even_stop_price = float(break_even_stop) if break_even_stop is not None else None
+        except (TypeError, ValueError):
+            self.break_even_stop_price = None
         self.trailing_activation_threshold = self.config.get('trailing_activation_threshold', 0.0)
         self.trailing_active = bool(self.config.get('trailing_active', False))
         self.trailing_max_profit_usdt = float(self.config.get('trailing_max_profit_usdt', 0.0) or 0.0)
@@ -135,6 +143,7 @@ class NewTradingBot:
             self.max_profit_achieved = 0.0
             self.trailing_stop_price = None
             self.break_even_activated = False
+            self.break_even_stop_price = None
             self.trailing_active = False
             self.trailing_activation_profit = 0.0
             self.trailing_activation_threshold = 0.0
@@ -748,6 +757,104 @@ class NewTradingBot:
             'steps': steps
         }
 
+    def _get_position_quantity(self) -> float:
+        """Возвращает количество монет в позиции"""
+        quantity = self.position_size_coins
+        try:
+            if quantity is not None:
+                quantity = float(quantity)
+        except (TypeError, ValueError):
+            quantity = None
+
+        if not quantity and self.position_size and self.entry_price:
+            try:
+                quantity = abs(float(self.position_size) / float(self.entry_price))
+            except (TypeError, ValueError, ZeroDivisionError):
+                quantity = None
+
+        if not quantity and self.volume_value and self.entry_price:
+            try:
+                quantity = abs(float(self.volume_value) / float(self.entry_price))
+            except (TypeError, ValueError, ZeroDivisionError):
+                quantity = None
+
+        try:
+            return abs(float(quantity)) if quantity is not None else 0.0
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _calculate_break_even_stop_price(self, current_price: Optional[float] = None) -> Optional[float]:
+        """Рассчитывает цену стоп-лосса для безубыточности"""
+        if not self.entry_price or self.position_side not in ('LONG', 'SHORT'):
+            return None
+
+        quantity = self._get_position_quantity()
+        if quantity <= 0:
+            return None
+
+        try:
+            fee_usdt = abs(float(self.realized_pnl or 0.0))
+        except (TypeError, ValueError):
+            fee_usdt = 0.0
+        if fee_usdt <= 0:
+            return None
+
+        buffer_usdt = fee_usdt * self.BREAK_EVEN_FEE_MULTIPLIER
+        buffer_per_coin = buffer_usdt / quantity if quantity > 0 else 0.0
+        if buffer_per_coin <= 0:
+            return None
+
+        try:
+            entry_price = float(self.entry_price)
+        except (TypeError, ValueError):
+            return None
+
+        price = float(current_price) if current_price is not None else None
+
+        if self.position_side == 'LONG':
+            stop_price = entry_price + buffer_per_coin
+            if price:
+                stop_price = min(stop_price, price)
+            stop_price = max(stop_price, entry_price)
+        else:  # SHORT
+            stop_price = entry_price - buffer_per_coin
+            if price:
+                stop_price = max(stop_price, price)
+            stop_price = min(stop_price, entry_price)
+
+        return stop_price
+
+    def _ensure_break_even_stop(self, current_price: Optional[float], force: bool = False) -> None:
+        """Устанавливает/обновляет стоп-лосс для безубыточности"""
+        if not self.exchange or self.position_side not in ('LONG', 'SHORT'):
+            return
+
+        stop_price = self._calculate_break_even_stop_price(current_price)
+        if stop_price is None:
+            return
+
+        if not force and self.break_even_stop_price is not None:
+            tolerance = 1e-8
+            if self.position_side == 'LONG':
+                if stop_price <= self.break_even_stop_price + tolerance:
+                    return
+            else:  # SHORT
+                if stop_price >= self.break_even_stop_price - tolerance:
+                    return
+
+        try:
+            result = self.exchange.update_stop_loss(self.symbol, stop_price, self.position_side)
+            if result and result.get('success'):
+                self.break_even_stop_price = stop_price
+                logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Break-even стоп обновлён: {stop_price:.6f}")
+            else:
+                logger.warning(
+                    f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось установить break-even стоп: "
+                    f"{(result or {}).get('message', 'Unknown')}"
+                )
+        except Exception as exc:
+            logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка установки break-even стопа: {exc}")
+
     def check_protection_mechanisms(self, current_price):
         """Проверяет все защитные механизмы"""
         try:
@@ -758,7 +865,18 @@ class NewTradingBot:
             with bots_data_lock:
                 auto_config = bots_data.get('auto_bot_config', {})
                 stop_loss_percent = auto_config.get('stop_loss_percent', 15.0)
-                break_even_trigger_percent = auto_config.get('break_even_trigger_percent', 100.0)
+                break_even_enabled = bool(auto_config.get('break_even_protection', True))
+                break_even_trigger_raw = auto_config.get(
+                    'break_even_trigger_percent',
+                    auto_config.get('break_even_trigger', 100.0)
+                )
+
+            try:
+                break_even_trigger_percent = float(break_even_trigger_raw if break_even_trigger_raw is not None else 0.0)
+            except (TypeError, ValueError):
+                break_even_trigger_percent = 0.0
+            if break_even_trigger_percent < 0:
+                break_even_trigger_percent = 0.0
             
             # Вычисляем текущую прибыль в процентах
             if self.position_side == 'LONG':
@@ -777,13 +895,22 @@ class NewTradingBot:
                 logger.debug(f"[NEW_BOT_{self.symbol}] 📈 Новая максимальная прибыль: {profit_percent:.2f}%")
             
             # 3. Проверка безубыточности
-            if not self.break_even_activated and profit_percent >= break_even_trigger_percent:
-                self.break_even_activated = True
-                logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Безубыток активирован: {profit_percent:.2f}%")
-            
-            if self.break_even_activated and profit_percent <= 0:
-                logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Закрываем по безубытку")
-                return {'should_close': True, 'reason': f'BREAK_EVEN_MAX_{self.max_profit_achieved:.2f}%'}
+            if break_even_enabled and break_even_trigger_percent > 0:
+                if not self.break_even_activated and profit_percent >= break_even_trigger_percent:
+                    self.break_even_activated = True
+                    logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Безубыток активирован: {profit_percent:.2f}%")
+                    self._ensure_break_even_stop(current_price, force=True)
+
+                if self.break_even_activated:
+                    self._ensure_break_even_stop(current_price)
+                    if profit_percent <= 0:
+                        logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Закрываем по безубытку")
+                        return {'should_close': True, 'reason': f'BREAK_EVEN_MAX_{self.max_profit_achieved:.2f}%'}
+            else:
+                if self.break_even_activated or self.break_even_stop_price is not None:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] 🛡️ Безубыток отключен настройками")
+                self.break_even_activated = False
+                self.break_even_stop_price = None
             
             # 4. Проверка trailing stop
             trailing_info = self._calculate_trailing_by_margin(profit_percent, current_price)
@@ -887,6 +1014,9 @@ class NewTradingBot:
             self.trailing_step_price = trailing_info.get('trailing_step_price', self.trailing_step_price)
             self.trailing_steps = trailing_info.get('steps', self.trailing_steps)
 
+            if self.break_even_activated:
+                self._ensure_break_even_stop(current_price)
+
             activation_threshold_usdt = trailing_info.get('activation_threshold_usdt', 0.0)
             profit_usdt = trailing_info.get('profit_usdt', 0.0)
             profit_usdt_max = trailing_info.get('profit_usdt_max', self.trailing_max_profit_usdt)
@@ -914,6 +1044,13 @@ class NewTradingBot:
                 return
 
             desired_stop = trailing_info.get('stop_price')
+            if self.break_even_stop_price is not None:
+                if self.position_side == 'LONG':
+                    if desired_stop is None or desired_stop < self.break_even_stop_price:
+                        desired_stop = self.break_even_stop_price
+                elif self.position_side == 'SHORT':
+                    if desired_stop is None or desired_stop > self.break_even_stop_price:
+                        desired_stop = self.break_even_stop_price
             if desired_stop is None:
                 logger.debug(f"[NEW_BOT_{self.symbol}] 🔁 Trailing: стоп не рассчитан")
                 return
@@ -1530,6 +1667,7 @@ class NewTradingBot:
                 self.position_side = None
                 self.entry_price = None
                 self.unrealized_pnl = 0
+                self.break_even_stop_price = None
                 
                 logger.info(f"[NEW_BOT_{self.symbol}] ✅ Статус бота обновлен: {old_status} → {BOT_STATUS['IDLE']}")
                 
@@ -1627,6 +1765,7 @@ class NewTradingBot:
                 self.trailing_step_usdt = 0.0
                 self.trailing_step_price = 0.0
                 self.trailing_steps = 0
+                self.break_even_stop_price = None
                 
                 return True
             else:
@@ -1823,6 +1962,7 @@ class NewTradingBot:
             'trailing_step_price': self.trailing_step_price,
             'trailing_steps': self.trailing_steps,
             'break_even_activated': self.break_even_activated,
+            'break_even_stop_price': self.break_even_stop_price,
             'position_start_time': self.position_start_time.isoformat() if self.position_start_time else None,
             'order_id': self.order_id,
             'entry_timestamp': self.entry_timestamp,
