@@ -787,6 +787,18 @@ class NewTradingBot:
             
             # 4. Проверка trailing stop
             trailing_info = self._calculate_trailing_by_margin(profit_percent, current_price)
+            try:
+                logger.info(
+                    f"[NEW_BOT_{self.symbol}] 🌀 Trailing расчёт: profit={trailing_info.get('profit_usdt', 0.0):.4f} "
+                    f"max={trailing_info.get('profit_usdt_max', 0.0):.4f} "
+                    f"threshold={trailing_info.get('activation_threshold_usdt', 0.0):.4f} "
+                    f"locked={trailing_info.get('locked_profit_usdt', 0.0):.4f} "
+                    f"steps={trailing_info.get('steps', 0)} "
+                    f"active={trailing_info.get('active', False)} "
+                    f"stop={trailing_info.get('stop_price')}"
+                )
+            except Exception:
+                logger.debug(f"[NEW_BOT_{self.symbol}] 🌀 Trailing расчёт: {trailing_info}")
             self.trailing_activation_profit = trailing_info.get('activation_profit_usdt', 0.0)
             self.trailing_activation_threshold = trailing_info.get('activation_threshold_usdt', self.trailing_activation_threshold)
             self.trailing_locked_profit = trailing_info.get('locked_profit_usdt', 0.0)
@@ -853,6 +865,18 @@ class NewTradingBot:
                 trailing_distance_percent = auto_config.get('trailing_stop_distance', 150.0)
 
             trailing_info = self._calculate_trailing_by_margin(profit_percent, current_price)
+            try:
+                logger.info(
+                    f"[NEW_BOT_{self.symbol}] 🔁 Trailing обновление: profit={trailing_info.get('profit_usdt', 0.0):.4f} "
+                    f"max={trailing_info.get('profit_usdt_max', 0.0):.4f} "
+                    f"threshold={trailing_info.get('activation_threshold_usdt', 0.0):.4f} "
+                    f"locked={trailing_info.get('locked_profit_usdt', 0.0):.4f} "
+                    f"steps={trailing_info.get('steps', 0)} "
+                    f"active={trailing_info.get('active', False)} "
+                    f"stop={trailing_info.get('stop_price')}"
+                )
+            except Exception:
+                logger.debug(f"[NEW_BOT_{self.symbol}] 🔁 Trailing обновление: {trailing_info}")
             self.trailing_activation_profit = trailing_info.get('activation_profit_usdt', 0.0)
             self.trailing_activation_threshold = trailing_info.get('activation_threshold_usdt', self.trailing_activation_threshold)
             self.trailing_locked_profit = trailing_info.get('locked_profit_usdt', 0.0)
@@ -891,6 +915,7 @@ class NewTradingBot:
 
             desired_stop = trailing_info.get('stop_price')
             if desired_stop is None:
+                logger.debug(f"[NEW_BOT_{self.symbol}] 🔁 Trailing: стоп не рассчитан")
                 return
 
             self.trailing_stop_price = desired_stop
