@@ -202,7 +202,7 @@ class InfoBotManager(tk.Tk):
         self._enable_mousewheel(canvas)
 
         status_frame = ttk.Frame(main, padding=(0, 0, 0, 6))
-        status_frame.grid(row=0, column=0, sticky="ew", padx=4, pady=(0, 0))
+        status_frame.grid(row=0, column=0, sticky="ew", padx=4, pady=(4, 0))
         status_frame.columnconfigure(1, weight=1)
         ttk.Label(status_frame, text="Статус операций:").grid(row=0, column=0, sticky="w")
         ttk.Label(status_frame, textvariable=self.status_var).grid(row=0, column=1, sticky="w")
@@ -215,7 +215,7 @@ class InfoBotManager(tk.Tk):
         separator.grid(row=1, column=0, sticky="ew", padx=4)
 
         venv_frame = ttk.LabelFrame(main, text="1. Виртуальное окружение (рекомендуется, вместо прямой установки в системный Python в п.2)", padding=10)
-        venv_frame.grid(row=2, column=0, sticky="new", padx=4, pady=4)
+        venv_frame.grid(row=2, column=0, sticky="new", padx=4, pady=(4, 4))
         venv_frame.columnconfigure(1, weight=1)
 
         ttk.Label(venv_frame, text="Статус:").grid(row=0, column=0, sticky="w")
@@ -283,11 +283,24 @@ class InfoBotManager(tk.Tk):
         services_frame.grid(row=6, column=0, sticky="new", padx=4, pady=4)
         services_frame.columnconfigure(1, weight=1)
 
-        ttk.Button(services_frame, text="Остановить все", command=self.stop_all_services).grid(
-            row=0, column=0, sticky="w", pady=(0, 8)
+        header_frame = ttk.Frame(services_frame)
+        header_frame.grid(row=0, column=0, columnspan=3, sticky="ew", pady=(0, 8))
+        header_frame.columnconfigure(0, weight=1)
+
+        ttk.Label(header_frame, text="Управление сервисами:").grid(row=0, column=0, sticky="w")
+        ttk.Button(header_frame, text="Запустить все", command=self.start_all_services).grid(
+            row=0, column=1, padx=(8, 4), sticky="e"
+        )
+        ttk.Button(header_frame, text="Остановить все", command=self.stop_all_services).grid(
+            row=0, column=2, sticky="e"
         )
 
-        for idx, (service_id, meta) in enumerate(self._services().items(), start=1):
+        config_frame = ttk.Frame(services_frame)
+        config_frame.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(0, 8))
+        ttk.Button(config_frame, text="Редактировать конфиг (app/config.py)", command=self.open_config_file).pack(side=tk.LEFT)
+        ttk.Button(config_frame, text="Редактировать ключи (app/keys.py)", command=self.open_keys_file).pack(side=tk.LEFT, padx=(8, 0))
+
+        for idx, (service_id, meta) in enumerate(self._services().items(), start=2):
             status_var = tk.StringVar(value="Не запущен")
             self.service_status_vars[service_id] = status_var
             ttk.Label(services_frame, text=meta["title"]).grid(row=idx, column=0, sticky="w")
@@ -312,16 +325,6 @@ class InfoBotManager(tk.Tk):
             docs_frame,
             text="Открыть лог ботов",
             command=self.open_bots_log,
-        ).pack(anchor="w", pady=(4, 0))
-        ttk.Button(
-            docs_frame,
-            text="Редактировать конфиг (app/config.py)",
-            command=self.open_config_file,
-        ).pack(anchor="w", pady=(4, 0))
-        ttk.Button(
-            docs_frame,
-            text="Редактировать ключи (app/keys.py)",
-            command=self.open_keys_file,
         ).pack(anchor="w", pady=(4, 0))
 
         log_frame = ttk.LabelFrame(main, text="7. Логи и вывод команд", padding=10)
@@ -739,6 +742,10 @@ class InfoBotManager(tk.Tk):
     def stop_all_services(self) -> None:
         for service_id in list(self.processes.keys()):
             self.stop_service(service_id)
+
+    def start_all_services(self) -> None:
+        for service_id in self._services().keys():
+            self.start_service(service_id)
 
     def _on_close(self) -> None:
         self.stop_all_services()
