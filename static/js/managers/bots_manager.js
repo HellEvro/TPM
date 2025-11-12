@@ -6078,9 +6078,11 @@ class BotsManager {
                 take_profit_percent: config.autoBot.take_profit_percent,
                 trailing_stop_activation: config.autoBot.trailing_stop_activation,
                 trailing_stop_distance: config.autoBot.trailing_stop_distance,
+                trailing_take_distance: config.autoBot.trailing_take_distance,
                 max_position_hours: config.autoBot.max_position_hours,
                 break_even_protection: config.autoBot.break_even_protection,
                 break_even_trigger: config.autoBot.break_even_trigger,
+                break_even_trigger_percent: config.autoBot.break_even_trigger_percent,
                 avoid_down_trend: config.autoBot.avoid_down_trend,
                 avoid_up_trend: config.autoBot.avoid_up_trend
             };

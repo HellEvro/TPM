@@ -102,6 +102,7 @@ class NewTradingBot:
         self.trailing_step_usdt = float(self.config.get('trailing_step_usdt', 0.0) or 0.0)
         self.trailing_step_price = float(self.config.get('trailing_step_price', 0.0) or 0.0)
         self.trailing_steps = int(self.config.get('trailing_steps', 0) or 0)
+        self.trailing_take_profit_price = self.config.get('trailing_take_profit_price', None)
         
         # Время входа в позицию
         position_start_str = self.config.get('position_start_time', None)
@@ -152,6 +153,7 @@ class NewTradingBot:
             self.trailing_step_usdt = 0.0
             self.trailing_step_price = 0.0
             self.trailing_steps = 0
+            self.trailing_take_profit_price = None
             
     
     def should_open_long(self, rsi, trend, candles):
@@ -754,7 +756,8 @@ class NewTradingBot:
             'profit_usdt_max': profit_usdt_max,
             'trailing_step_usdt': trailing_step_usdt,
             'trailing_step_price': trailing_step_price,
-            'steps': steps
+            'steps': steps,
+            'trailing_distance_percent': trailing_distance_percent
         }
 
     def _get_position_quantity(self) -> float:
@@ -953,6 +956,12 @@ class NewTradingBot:
                     logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Trailing Stop (SHORT) достигнут: {stop_price:.6f}")
                     return {'should_close': True, 'reason': f'TRAILING_STOP_USD_{self.trailing_locked_profit:.4f}'}
             
+            try:
+                trailing_take_distance_percent = auto_config.get('trailing_take_distance', trailing_info.get('trailing_distance_percent'))
+            except Exception:
+                trailing_take_distance_percent = trailing_info.get('trailing_distance_percent')
+            self._update_trailing_take_profit(current_price, trailing_take_distance_percent or auto_config.get('trailing_stop_distance'))
+
             return {'should_close': False, 'reason': None}
             
         except Exception as e:
@@ -996,6 +1005,7 @@ class NewTradingBot:
                 auto_config = bots_data.get('auto_bot_config', {})
                 trailing_activation_percent = auto_config.get('trailing_stop_activation', 300.0)
                 trailing_distance_percent = auto_config.get('trailing_stop_distance', 150.0)
+                trailing_take_distance_percent = auto_config.get('trailing_take_distance', trailing_distance_percent)
 
             trailing_info = self._calculate_trailing_by_margin(profit_percent, current_price)
             try:
@@ -1075,10 +1085,62 @@ class NewTradingBot:
                         )
                 except Exception as exc:
                     logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка обновления trailing stop: {exc}")
+
+            self._update_trailing_take_profit(current_price, trailing_take_distance_percent)
             
         except Exception as e:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка расчета программного trailing stop: {e}")
     
+    def _update_trailing_take_profit(self, current_price: Optional[float], distance_percent: Optional[float]) -> None:
+        """Поддерживает резервный trailing take-profit через API биржи."""
+        if not self.exchange or current_price is None:
+            return
+        try:
+            price = float(current_price)
+        except (TypeError, ValueError):
+            return
+        if price <= 0 or self.position_side not in ('LONG', 'SHORT'):
+            return
+
+        try:
+            distance = float(distance_percent or 0.0)
+        except (TypeError, ValueError):
+            distance = 0.0
+        if distance <= 0:
+            return
+
+        candidate_price: Optional[float] = None
+        if self.position_side == 'LONG':
+            candidate_price = price * (1 + distance / 100.0)
+            if candidate_price <= self.entry_price:
+                candidate_price = None
+            elif self.trailing_take_profit_price is not None and candidate_price <= self.trailing_take_profit_price:
+                candidate_price = None
+        elif self.position_side == 'SHORT':
+            candidate_price = price * (1 - distance / 100.0)
+            if candidate_price >= self.entry_price or candidate_price <= 0:
+                candidate_price = None
+            elif self.trailing_take_profit_price is not None and candidate_price >= self.trailing_take_profit_price:
+                candidate_price = None
+
+        if candidate_price is None:
+            return
+
+        try:
+            result = self.exchange.update_take_profit(self.symbol, candidate_price, self.position_side)
+            if result and result.get('success'):
+                self.trailing_take_profit_price = candidate_price
+                logger.debug(f"[NEW_BOT_{self.symbol}] 🎯 Trailing TP обновлён: {candidate_price:.6f}")
+            else:
+                logger.warning(
+                    f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось обновить trailing TP: "
+                    f"{(result or {}).get('message', 'Unknown error')}"
+                )
+        except AttributeError:
+            logger.debug(f"[NEW_BOT_{self.symbol}] ℹ️ Биржа не поддерживает update_take_profit")
+        except Exception as exc:
+            logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка обновления trailing TP: {exc}")
+
     def _sync_position_with_exchange(self):
         """Синхронизирует данные бота с позицией на бирже"""
         try:
@@ -1967,6 +2029,7 @@ class NewTradingBot:
             'trailing_step_usdt': self.trailing_step_usdt,
             'trailing_step_price': self.trailing_step_price,
             'trailing_steps': self.trailing_steps,
+            'trailing_take_profit_price': self.trailing_take_profit_price,
             'break_even_activated': self.break_even_activated,
             'break_even_stop_price': self.break_even_stop_price,
             'position_start_time': self.position_start_time.isoformat() if self.position_start_time else None,
