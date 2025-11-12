@@ -1952,6 +1952,156 @@ input:checked + .toggle-slider:before {
     padding: 8px;
 }
 
+.bot-card {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.bot-card:hover {
+    background: var(--hover-bg);
+    border-color: var(--blue-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.bot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.bot-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-color);
+    min-width: 0;
+    word-break: break-word;
+}
+
+.bot-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    white-space: nowrap;
+    gap: 4px;
+}
+
+.bot-status.running,
+.bot-status.active,
+.bot-status.in_position_long,
+.bot-status.in_position_short,
+.bot-status.status-active {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--green-color);
+}
+
+.bot-status.paused,
+.bot-status.idle,
+.bot-status.status-paused,
+.bot-status.status-stopped {
+    background: rgba(250, 204, 21, 0.15);
+    color: #f59e0b;
+}
+
+.bot-status.stopped,
+.bot-status.error,
+.bot-status.status-deleting,
+.bot-status.status-stopping {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--red-color);
+}
+
+.bot-details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.bot-details p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.bot-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: var(--text-color);
+    font-size: 12px;
+}
+
+.bot-metrics-item {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px 8px;
+    min-width: 80px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.bot-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+}
+
+.bot-actions .btn,
+.bot-actions button {
+    flex: 1 1 120px;
+    max-width: 100%;
+    min-height: 32px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.bot-actions .btn:only-child,
+.bot-actions button:only-child {
+    flex: 0 1 auto;
+}
+
+.bot-actions .btn-danger,
+.bot-actions .btn.stop-bot-btn {
+    background: var(--red-color);
+    color: #ffffff;
+}
+
+.bot-actions .btn-success,
+.bot-actions .btn.start-bot-btn {
+    background: var(--green-color);
+    color: #ffffff;
+}
+
+.bot-actions .btn-secondary,
+.bot-actions .btn.delete-bot-btn {
+    background: #6b7280;
+    color: #ffffff;
+}
+
 .active-bot-item {
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
