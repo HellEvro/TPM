@@ -149,6 +149,7 @@ class InfoBotManager(tk.Tk):
         self._build_ui()
         self.after(200, self._flush_logs)
         self.after(1200, self._refresh_service_statuses)
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
 
     # ------------------------------------------------------------------ UI builder
     def _build_ui(self) -> None:
@@ -504,6 +505,10 @@ class InfoBotManager(tk.Tk):
     def stop_all_services(self) -> None:
         for service_id in list(self.processes.keys()):
             self.stop_service(service_id)
+
+    def _on_close(self) -> None:
+        self.stop_all_services()
+        self.destroy()
 
     def open_path(self, path: Path) -> None:
         path = path if path.is_absolute() else PROJECT_ROOT / path
