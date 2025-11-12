@@ -174,9 +174,15 @@ class InfoBotManager(tk.Tk):
         canvas.configure(yscrollcommand=scrollbar.set)
 
         scrollable = ttk.Frame(canvas)
-        scrollable.bind(
-            "<Configure>", lambda event: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
+        def _on_scrollable_configure(event: tk.Event) -> None:
+            bbox = canvas.bbox("all")
+            if bbox:
+                canvas.configure(scrollregion=bbox)
+                content_height = bbox[3] - bbox[1]
+                if content_height <= canvas.winfo_height():
+                    canvas.yview_moveto(0)
+
+        scrollable.bind("<Configure>", _on_scrollable_configure)
 
         window_id = canvas.create_window((0, 0), window=scrollable, anchor="nw")
 
