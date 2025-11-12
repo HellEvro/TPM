@@ -137,6 +137,8 @@ class InfoBotManager(tk.Tk):
         self.log_queue: "queue.Queue[Tuple[str, str]]" = queue.Queue()
         self.processes: Dict[str, ManagedProcess] = {}
         self.log_text_widgets: Dict[str, tk.Text] = {}
+        self.log_tab_ids: Dict[str, str] = {}
+        self.log_notebook: Optional[ttk.Notebook] = None
 
         self.env_status_var = tk.StringVar()
         self.git_status_var = tk.StringVar()
@@ -283,17 +285,17 @@ class InfoBotManager(tk.Tk):
         ttk.Button(
             docs_frame,
             text="Открыть лог ботов",
-            command=lambda: self.open_path(PROJECT_ROOT / "logs" / "bots.log"),
+            command=self.open_bots_log,
         ).pack(anchor="w", pady=(4, 0))
         ttk.Button(
             docs_frame,
             text="Редактировать конфиг (app/config.py)",
-            command=lambda: self.open_path(PROJECT_ROOT / "app" / "config.py"),
+            command=self.open_config_file,
         ).pack(anchor="w", pady=(4, 0))
         ttk.Button(
             docs_frame,
             text="Редактировать ключи (app/keys.py)",
-            command=lambda: self.open_path(PROJECT_ROOT / "app" / "keys.py"),
+            command=self.open_keys_file,
         ).pack(anchor="w", pady=(4, 0))
 
         log_frame = ttk.LabelFrame(main, text="7. Логи и вывод команд", padding=10)
@@ -303,6 +305,8 @@ class InfoBotManager(tk.Tk):
 
         notebook = ttk.Notebook(log_frame)
         notebook.grid(row=0, column=0, sticky="nsew")
+        self.log_notebook = notebook
+        self.log_tab_ids = {}
 
         log_tabs = [
             ("system", "Системные события"),
@@ -316,13 +320,24 @@ class InfoBotManager(tk.Tk):
             tab.columnconfigure(0, weight=1)
             tab.rowconfigure(0, weight=1)
             notebook.add(tab, text=title)
+            tab_id = notebook.tabs()[-1]
+            self.log_tab_ids[tab_id] = channel
 
-            text_widget = tk.Text(tab, wrap="word", height=12, state=tk.DISABLED)
+            text_widget = tk.Text(tab, wrap="word", height=12)
             text_widget.grid(row=0, column=0, sticky="nsew")
             scrollbar = ttk.Scrollbar(tab, command=text_widget.yview)
             scrollbar.grid(row=0, column=1, sticky="ns")
             text_widget["yscrollcommand"] = scrollbar.set
+            text_widget.bind("<Key>", self._log_text_key_handler)
+            text_widget.bind("<<Paste>>", lambda event: "break")
+            text_widget.bind("<<Cut>>", lambda event: "break")
             self.log_text_widgets[channel] = text_widget
+
+        ttk.Button(
+            log_frame,
+            text="Скопировать текущий лог",
+            command=self.copy_current_log,
+        ).grid(row=1, column=0, sticky="w", pady=(8, 0))
 
     def _enable_mousewheel(self, widget: tk.Widget) -> None:
         if sys.platform == "darwin":
@@ -333,6 +348,22 @@ class InfoBotManager(tk.Tk):
             widget.bind_all("<MouseWheel>", lambda event: widget.yview_scroll(int(-event.delta / 120), "units"))
             widget.bind_all("<Button-4>", lambda event: widget.yview_scroll(-1, "units"))
             widget.bind_all("<Button-5>", lambda event: widget.yview_scroll(1, "units"))
+
+    def _log_text_key_handler(self, event: tk.Event) -> Optional[str]:
+        nav_keys = {"Left", "Right", "Up", "Down", "Home", "End", "Prior", "Next"}
+        if event.keysym in nav_keys:
+            return None
+
+        ctrl_pressed = (event.state & 0x4) != 0
+        if ctrl_pressed:
+            lowered = event.keysym.lower()
+            if lowered == "c":
+                return None
+            if lowered == "a":
+                event.widget.tag_add("sel", "1.0", tk.END)
+                return "break"
+
+        return "break"
 
     # ------------------------------------------------------------------ Helpers
     def _services(self) -> Dict[str, Dict[str, str]]:
@@ -437,10 +468,8 @@ class InfoBotManager(tk.Tk):
             widget = self.log_text_widgets.get(channel) or self.log_text_widgets.get("system")
             if widget is None:
                 continue
-            widget.configure(state=tk.NORMAL)
             widget.insert(tk.END, line + "\n")
             widget.see(tk.END)
-            widget.configure(state=tk.DISABLED)
         self.after(200, self._flush_logs)
 
     def _refresh_service_statuses(self) -> None:
@@ -659,6 +688,89 @@ class InfoBotManager(tk.Tk):
                 subprocess.run(["xdg-open", str(path)], check=False)
         except Exception as exc:  # pylint: disable=broad-except
             messagebox.showerror("Ошибка открытия", str(exc))
+
+    def open_config_file(self) -> None:
+        target = PROJECT_ROOT / "app" / "config.py"
+        example = PROJECT_ROOT / "app" / "config.example.py"
+        if not target.exists():
+            if example.exists() and messagebox.askyesno(
+                "Создать конфиг",
+                "Файл app/config.py не найден. Создать его из app/config.example.py?",
+            ):
+                try:
+                    shutil.copy2(example, target)
+                    self.log("Создан app/config.py из app/config.example.py", channel="system")
+                except OSError as exc:
+                    messagebox.showerror("Ошибка копирования", str(exc))
+                    return
+            else:
+                messagebox.showwarning(
+                    "Файл не найден",
+                    "Файл app/config.py отсутствует. Скопируйте app/config.example.py и заполните его вручную.",
+                )
+                return
+        self.open_path(target)
+
+    def open_keys_file(self) -> None:
+        target = PROJECT_ROOT / "app" / "keys.py"
+        example = PROJECT_ROOT / "app" / "keys.example.py"
+        if not target.exists():
+            if example.exists() and messagebox.askyesno(
+                "Создать файл ключей",
+                "Файл app/keys.py не найден. Создать его из app/keys.example.py?",
+            ):
+                try:
+                    shutil.copy2(example, target)
+                    self.log("Создан app/keys.py из app/keys.example.py", channel="system")
+                except OSError as exc:
+                    messagebox.showerror("Ошибка копирования", str(exc))
+                    return
+            else:
+                messagebox.showwarning(
+                    "Файл не найден",
+                    "Файл app/keys.py отсутствует. Скопируйте app/keys.example.py и заполните его вручную.",
+                )
+                return
+        self.open_path(target)
+
+    def open_bots_log(self) -> None:
+        target = PROJECT_ROOT / "logs" / "bots.log"
+        if not target.exists():
+            if messagebox.askyesno(
+                "Лог не найден",
+                "Файл logs/bots.log ещё не создан. Создать пустой файл?",
+            ):
+                try:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.touch()
+                    self.log("Создан пустой файл logs/bots.log", channel="system")
+                except OSError as exc:
+                    messagebox.showerror("Ошибка создания файла", str(exc))
+                    return
+            else:
+                messagebox.showinfo(
+                    "Лог отсутствует",
+                    "Файл logs/bots.log появится после первого запуска сервиса bots.py.",
+                )
+                return
+        self.open_path(target)
+
+    def copy_current_log(self) -> None:
+        if not self.log_notebook:
+            return
+        current_tab = self.log_notebook.select()
+        channel = self.log_tab_ids.get(current_tab, "system")
+        widget = self.log_text_widgets.get(channel)
+        if not widget:
+            messagebox.showinfo("Лог не найден", "Не удалось определить активный лог.")
+            return
+        text = widget.get("1.0", tk.END).strip()
+        if not text:
+            messagebox.showinfo("Пусто", "В текущем логе нет данных для копирования.")
+            return
+        self.clipboard_clear()
+        self.clipboard_append(text)
+        messagebox.showinfo("Готово", "Содержимое лога скопировано в буфер обмена.")
 
 
 def _split_command(command: str) -> List[str]:
