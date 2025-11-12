@@ -19,6 +19,7 @@ import subprocess
 import sys
 import threading
 import time
+import tempfile
 import webbrowser
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -139,6 +140,7 @@ class InfoBotManager(tk.Tk):
         self.log_text_widgets: Dict[str, tk.Text] = {}
         self.log_tab_ids: Dict[str, str] = {}
         self.log_notebook: Optional[ttk.Notebook] = None
+        self._temp_requirements_path: Optional[Path] = None
 
         self.env_status_var = tk.StringVar()
         self.git_status_var = tk.StringVar()
@@ -188,23 +190,8 @@ class InfoBotManager(tk.Tk):
 
         self._enable_mousewheel(canvas)
 
-        install_frame = ttk.LabelFrame(main, text="1. Установка зависимостей (обязательно)", padding=10)
-        install_frame.grid(row=0, column=0, sticky="ew", padx=4, pady=4)
-        install_frame.columnconfigure(0, weight=1)
-
-        ttk.Button(
-            install_frame,
-            text="Установить/обновить зависимости (pip install -r requirements.txt)",
-            command=self.install_dependencies_global,
-        ).grid(row=0, column=0, sticky="w")
-        ttk.Button(
-            install_frame,
-            text="Открыть каталог проекта",
-            command=lambda: self.open_path(PROJECT_ROOT),
-        ).grid(row=0, column=1, sticky="w", padx=(8, 0))
-
-        venv_frame = ttk.LabelFrame(main, text="2. Виртуальное окружение (опционально)", padding=10)
-        venv_frame.grid(row=1, column=0, sticky="ew", padx=4, pady=4)
+        venv_frame = ttk.LabelFrame(main, text="1. Виртуальное окружение (рекомендуется)", padding=10)
+        venv_frame.grid(row=0, column=0, sticky="ew", padx=4, pady=4)
         venv_frame.columnconfigure(1, weight=1)
 
         ttk.Label(venv_frame, text="Статус:").grid(row=0, column=0, sticky="w")
@@ -219,6 +206,21 @@ class InfoBotManager(tk.Tk):
             text="Удалить окружение (.venv)",
             command=self.delete_environment,
         ).grid(row=1, column=1, sticky="w", pady=(6, 0))
+
+        install_frame = ttk.LabelFrame(main, text="2. Установка зависимостей напрямую (опционально, изменяет системный Python)", padding=10)
+        install_frame.grid(row=1, column=0, sticky="ew", padx=4, pady=4)
+        install_frame.columnconfigure(0, weight=1)
+
+        ttk.Button(
+            install_frame,
+            text="Установить/обновить зависимости (pip install -r requirements.txt)",
+            command=self.install_dependencies_global,
+        ).grid(row=0, column=0, sticky="w")
+        ttk.Button(
+            install_frame,
+            text="Открыть каталог проекта",
+            command=lambda: self.open_path(PROJECT_ROOT),
+        ).grid(row=0, column=1, sticky="w", padx=(8, 0))
 
         git_frame = ttk.LabelFrame(main, text="3. Обновления из Git", padding=10)
         git_frame.grid(row=2, column=0, sticky="ew", padx=4, pady=4)
@@ -531,18 +533,21 @@ class InfoBotManager(tk.Tk):
 
             pip_cmd = _split_command(python_exec) + ["-m", "pip"]
             self._preinstall_ccxt_without_coincurve(pip_cmd)
+            requirements_file = self._prepare_requirements_file()
             commands = [
                 ("Обновление pip", pip_cmd + ["install", "--upgrade", "pip", "setuptools", "wheel"]),
-                ("Установка зависимостей", pip_cmd + ["install", "-r", "requirements.txt"]),
+                ("Установка зависимостей", pip_cmd + ["install", "-r", requirements_file]),
             ]
             for title, command in commands:
                 try:
                     self._stream_command(title, command, channel="system")
                 except subprocess.CalledProcessError as exc:
                     self.log(f"[{title}] Ошибка установки ({exc.returncode})", channel="system")
+                    self._cleanup_temp_requirements()
                     return
             self.update_environment_status()
             PYTHON_EXECUTABLE = _detect_python_executable()
+            self._cleanup_temp_requirements()
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -550,7 +555,8 @@ class InfoBotManager(tk.Tk):
         def worker() -> None:
             pip_cmd = _split_command(sys.executable) + ["-m", "pip"]
             self._preinstall_ccxt_without_coincurve(pip_cmd)
-            python_cmd = pip_cmd + ["install", "-r", "requirements.txt"]
+            requirements_file = self._prepare_requirements_file()
+            python_cmd = pip_cmd + ["install", "-r", requirements_file]
             try:
                 self._stream_command("Установка зависимостей (глобально)", python_cmd, channel="system")
                 self.log("Глобальная установка зависимостей завершена.", channel="system")
@@ -559,6 +565,8 @@ class InfoBotManager(tk.Tk):
                     f"[Установка зависимостей (глобально)] Ошибка ({exc.returncode}). Убедитесь, что есть права и активный pip.",
                     channel="system",
                 )
+            finally:
+                self._cleanup_temp_requirements()
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -776,7 +784,7 @@ class InfoBotManager(tk.Tk):
         messagebox.showinfo("Готово", "Содержимое лога скопировано в буфер обмена.")
 
     def _preinstall_ccxt_without_coincurve(self, pip_cmd: List[str]) -> None:
-        if os.name != "nt":
+        if os.name != "nt" or sys.version_info < (3, 13):
             return
         try:
             self._stream_command(
@@ -789,6 +797,47 @@ class InfoBotManager(tk.Tk):
                 "[Подготовка ccxt] Не удалось установить ccxt без дополнительных зависимостей. Продолжаем стандартную установку.",
                 channel="system",
             )
+
+    def _prepare_requirements_file(self) -> str:
+        base_path = PROJECT_ROOT / "requirements.txt"
+        if os.name != "nt" or sys.version_info < (3, 13):
+            return str(base_path)
+
+        try:
+            lines = base_path.read_text(encoding="utf-8").splitlines()
+        except OSError as exc:
+            self.log(f"Не удалось прочитать requirements.txt: {exc}", channel="system")
+            return str(base_path)
+
+        filtered = []
+        ccxt_skipped = False
+        for line in lines:
+            stripped = line.strip()
+            if stripped.lower().startswith("ccxt"):
+                ccxt_skipped = True
+                continue
+            filtered.append(line)
+
+        if not ccxt_skipped:
+            return str(base_path)
+
+        fd, temp_path = tempfile.mkstemp(prefix="requirements_filtered_", suffix=".txt")
+        with os.fdopen(fd, "w", encoding="utf-8") as temp_file:
+            temp_file.write("\n".join(filtered) + "\n")
+        self._temp_requirements_path = Path(temp_path)
+        self.log(
+            "Используем requirements без ccxt (уже установлен отдельно, чтобы избежать установки coincurve).",
+            channel="system",
+        )
+        return temp_path
+
+    def _cleanup_temp_requirements(self) -> None:
+        if self._temp_requirements_path and self._temp_requirements_path.exists():
+            try:
+                self._temp_requirements_path.unlink()
+            except OSError:
+                pass
+        self._temp_requirements_path = None
 
 
 def _split_command(command: str) -> List[str]:
