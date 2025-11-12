@@ -45,8 +45,8 @@ except ImportError:
 try:
     from bots_modules.sync_and_cache import (
         update_bots_cache_data, save_system_config, load_system_config,
-        save_auto_bot_config, save_bots_state,
-        restore_default_config, load_default_config
+        save_auto_bot_config, save_bots_state, save_rsi_cache,
+        save_process_state, restore_default_config, load_default_config
     )
     from bots_modules.init_functions import (
         ensure_exchange_initialized,
@@ -86,6 +86,10 @@ except ImportError as e:
     def save_auto_bot_config():
         pass
     def save_bots_state():
+        pass
+    def save_rsi_cache():
+        pass
+    def save_process_state():
         pass
     def get_effective_signal(coin):
         # Используем настоящую функцию из filters.py
