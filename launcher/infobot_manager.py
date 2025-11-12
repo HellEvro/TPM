@@ -13,7 +13,9 @@ Provides a cross-platform control panel to:
 from __future__ import annotations
 
 import atexit
+import atexit
 import os
+from collections import defaultdict
 import queue
 import shutil
 import subprocess
@@ -146,7 +148,7 @@ class InfoBotManager(tk.Tk):
         self.geometry("980x720")
         self.minsize(820, 600)
 
-        self.log_queue: "queue.Queue[Tuple[str, str]]" = queue.Queue(maxsize=5000)
+        self.log_queue: "queue.Queue[Tuple[str, str]]" = queue.Queue(maxsize=3000)
         self.processes: Dict[str, ManagedProcess] = {}
         self.log_text_widgets: Dict[str, tk.Text] = {}
         self.log_tab_ids: Dict[str, str] = {}
@@ -155,6 +157,8 @@ class InfoBotManager(tk.Tk):
         self.status_var = tk.StringVar(value="Готово")
         self._active_tasks: Set[str] = set()
         self.max_log_lines = 2000
+        self.active_log_channel = "system"
+        self.pending_logs: Dict[str, List[str]] = defaultdict(list)
         atexit.register(self._cleanup_processes)
 
         self._ensure_utf8_console()
@@ -352,6 +356,7 @@ class InfoBotManager(tk.Tk):
         notebook.grid(row=0, column=0, sticky="nsew")
         self.log_notebook = notebook
         self.log_tab_ids = {}
+        notebook.bind("<<NotebookTabChanged>>", self._on_log_tab_changed)
 
         log_tabs = [
             ("system", "Системные события"),
@@ -558,13 +563,13 @@ class InfoBotManager(tk.Tk):
             self._safe_put_log(("system", message))
         self._safe_put_log((channel, message))
 
-    def log(self, message: str, channel: str = "system", broadcast: bool = True) -> None:
+    def log(self, message: str, channel: str = "system", broadcast: bool = False) -> None:
         timestamp = time.strftime("%H:%M:%S")
         formatted = f"[{timestamp}] {message}"
         self._enqueue_log(channel, formatted, broadcast=broadcast)
 
     def _flush_logs(self) -> None:
-        max_lines_per_tick = 400
+        max_lines_per_tick = 150
         processed = 0
         while processed < max_lines_per_tick:
             try:
@@ -574,14 +579,21 @@ class InfoBotManager(tk.Tk):
             widget = self.log_text_widgets.get(channel) or self.log_text_widgets.get("system")
             if widget is None:
                 continue
-            self._append_log_line(widget, line)
+            self._append_log_line(widget, line, channel)
             processed += 1
         delay = 50 if not self.log_queue.empty() else 200
         self.after(delay, self._flush_logs)
 
-    def _append_log_line(self, widget: tk.Text, line: str) -> None:
+    def _append_log_line(self, widget: tk.Text, line: str, channel: str) -> None:
+        if channel != self.active_log_channel:
+            buffer = self.pending_logs[channel]
+            buffer.append(line)
+            if len(buffer) > self.max_log_lines:
+                del buffer[: len(buffer) - self.max_log_lines]
+            return
         widget.insert(tk.END, line + "\n")
-        widget.see(tk.END)
+        if channel == self.active_log_channel:
+            widget.see(tk.END)
         self._trim_text_widget(widget)
 
     def _trim_text_widget(self, widget: tk.Text) -> None:
@@ -620,6 +632,29 @@ class InfoBotManager(tk.Tk):
             self.stop_all_services()
         except Exception:
             pass
+
+    def _on_log_tab_changed(self, event: tk.Event) -> None:
+        widget = event.widget
+        if not isinstance(widget, ttk.Notebook):
+            return
+        selected = widget.select()
+        channel = self.log_tab_ids.get(selected)
+        if channel:
+            self.active_log_channel = channel
+            self._flush_pending_logs(channel)
+
+    def _flush_pending_logs(self, channel: str) -> None:
+        pending = self.pending_logs.get(channel)
+        if not pending:
+            return
+        widget = self.log_text_widgets.get(channel)
+        if not widget:
+            return
+        text = "".join(f"{line}\n" for line in pending)
+        widget.insert(tk.END, text)
+        widget.see(tk.END)
+        self._trim_text_widget(widget)
+        pending.clear()
 
     def _refresh_service_statuses(self) -> None:
         for service_id, status_var in self.service_status_vars.items():
