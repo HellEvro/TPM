@@ -1,0 +1,46 @@
+{
+  "symbol": "ARKM",
+  "trained_at": "2025-11-12T13:07:08.960276",
+  "training_seed": 21462,
+  "coin_model_seed": 22099,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 67,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 17.6248345547274,
+    "take_profit": 18.315116887827493,
+    "trailing_stop_activation": 39.67535035847976,
+    "trailing_stop_distance": 20.6336545332579,
+    "break_even_protection": true,
+    "break_even_trigger": 118.93412644512783,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 68,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 9.932628040213181,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 65.54347495616585
+    }
+  },
+  "candles_count": 3274,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.888921326968267e-07,
+  "total_pnl": -0.37955942309867324,
+  "previous_candles_count": 3324,
+  "candles_increased": false
+}

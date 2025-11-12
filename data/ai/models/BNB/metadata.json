@@ -1,0 +1,46 @@
+{
+  "symbol": "BNB",
+  "trained_at": "2025-11-12T13:19:31.167116",
+  "training_seed": 752744,
+  "coin_model_seed": 753342,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 70,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 10.052718079169825,
+    "take_profit": 20.893182030801675,
+    "trailing_stop_activation": 18.711663089519202,
+    "trailing_stop_distance": 28.745881561739058,
+    "break_even_protection": false,
+    "break_even_trigger": 92.24400799606838,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 65,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 24.670848903358184,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 48.25418510911068
+    }
+  },
+  "candles_count": 4922,
+  "trades_count": 8,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.259746933962014e-07,
+  "total_pnl": -0.1399218273952919,
+  "previous_candles_count": 4990,
+  "candles_increased": false
+}

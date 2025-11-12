@@ -1,0 +1,46 @@
+{
+  "symbol": "DEXE",
+  "trained_at": "2025-11-12T12:50:09.875091",
+  "training_seed": 996243,
+  "coin_model_seed": 996423,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 13.685790382290286,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 19.704263206069122,
+    "trailing_stop_distance": 11.72370494987063,
+    "break_even_protection": false,
+    "break_even_trigger": 109.35950574632211,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 62,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 12.830915238059042,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 67.76876762914108
+    }
+  },
+  "candles_count": 1718,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.6835162558874936e-07,
+  "total_pnl": 0.5700817121027347,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

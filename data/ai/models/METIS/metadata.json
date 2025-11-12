@@ -1,0 +1,46 @@
+{
+  "symbol": "METIS",
+  "trained_at": "2025-11-12T13:22:28.854114",
+  "training_seed": 925645,
+  "coin_model_seed": 926328,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 65,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 18.17512700461315,
+    "take_profit": 17.1579946741495,
+    "trailing_stop_activation": 29.4540812717301,
+    "trailing_stop_distance": 11.13850651366369,
+    "break_even_protection": false,
+    "break_even_trigger": 136.65124656396665,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 65,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 13.980729265565188,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 34.74662339071725
+    }
+  },
+  "candles_count": 2656,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.7637446751084362e-06,
+  "total_pnl": 0.28884006064718915,
+  "previous_candles_count": 2618,
+  "candles_increased": true
+}

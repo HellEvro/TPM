@@ -1,0 +1,46 @@
+{
+  "symbol": "EPT",
+  "trained_at": "2025-11-12T13:23:14.875631",
+  "training_seed": 972324,
+  "coin_model_seed": 972954,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 75,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 17.25907054772802,
+    "take_profit": 14.426351964972032,
+    "trailing_stop_activation": 24.451161451841752,
+    "trailing_stop_distance": 9.520987137687975,
+    "break_even_protection": true,
+    "break_even_trigger": 63.66187495915606,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 63,
+      "lower": 30
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 19.528905179934952,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 45.909286213229755
+    }
+  },
+  "candles_count": 725,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.718882544855013e-06,
+  "total_pnl": -0.5975453345980253,
+  "previous_candles_count": 794,
+  "candles_increased": false
+}

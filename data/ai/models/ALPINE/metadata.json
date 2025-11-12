@@ -1,0 +1,46 @@
+{
+  "symbol": "ALPINE",
+  "trained_at": "2025-11-12T13:19:26.675925",
+  "training_seed": 752744,
+  "coin_model_seed": 753022,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 74,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 13.171185007382732,
+    "take_profit": 24.467785300433967,
+    "trailing_stop_activation": 13.740987204856019,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 89.5307904844492,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 59,
+      "lower": 33
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 11.271397211631623,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 67.79578225316182
+    }
+  },
+  "candles_count": 361,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.948764055426478e-06,
+  "total_pnl": 0.31087399934770665,
+  "previous_candles_count": 361,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "INJ",
+  "trained_at": "2025-11-12T13:22:25.143029",
+  "training_seed": 925645,
+  "coin_model_seed": 926312,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 76,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 10.936749149513703,
+    "take_profit": 34.02647192915828,
+    "trailing_stop_activation": 10.941797137914753,
+    "trailing_stop_distance": 5.82738209288142,
+    "break_even_protection": true,
+    "break_even_trigger": 157.022364327535,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 60,
+      "lower": 30
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 18.479159228469666,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 56.43999705195649
+    }
+  },
+  "candles_count": 4658,
+  "trades_count": 9,
+  "win_rate": 55.55555555555556,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.116449247851259e-06,
+  "total_pnl": 0.05856486587092687,
+  "previous_candles_count": 4602,
+  "candles_increased": true
+}

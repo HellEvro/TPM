@@ -1,0 +1,46 @@
+{
+  "symbol": "CTC",
+  "trained_at": "2025-11-12T13:21:30.773625",
+  "training_seed": 875017,
+  "coin_model_seed": 875226,
+  "rsi_params": {
+    "oversold": 30,
+    "overbought": 73,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 19.146570027516226,
+    "take_profit": 27.92147674045257,
+    "trailing_stop_activation": 39.60101213145005,
+    "trailing_stop_distance": 10.587328209995428,
+    "break_even_protection": true,
+    "break_even_trigger": 141.95978954961907,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 60,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 8.958204174135618,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 33.93029531562558
+    }
+  },
+  "candles_count": 4927,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.7225459316332203e-06,
+  "total_pnl": -0.1261723482749244,
+  "previous_candles_count": 4983,
+  "candles_increased": false
+}

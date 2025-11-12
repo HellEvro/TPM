@@ -1,0 +1,46 @@
+{
+  "symbol": "LRC",
+  "trained_at": "2025-11-12T13:09:43.874905",
+  "training_seed": 159632,
+  "coin_model_seed": 160312,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 68,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 14.279485475466704,
+    "take_profit": 27.388564892551663,
+    "trailing_stop_activation": 28.542061920543993,
+    "trailing_stop_distance": 25.10442621965198,
+    "break_even_protection": true,
+    "break_even_trigger": 48.851203475506324,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 64,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 15.851194315662202,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 43.97903449941873
+    }
+  },
+  "candles_count": 4851,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.7022464544730388e-06,
+  "total_pnl": 0.18167211418020388,
+  "previous_candles_count": 4837,
+  "candles_increased": true
+}

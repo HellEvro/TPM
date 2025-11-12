@@ -1,0 +1,46 @@
+{
+  "symbol": "HANA",
+  "trained_at": "2025-11-12T13:18:11.879591",
+  "training_seed": 628096,
+  "coin_model_seed": 628269,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 65,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 12.462675936227559,
+    "take_profit": 12.851407824221102,
+    "trailing_stop_activation": 17.625127228409468,
+    "trailing_stop_distance": 28.876494007138373,
+    "break_even_protection": true,
+    "break_even_trigger": 130.53808914355747,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 62,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 19.234477626600004,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 45.406869622257595
+    }
+  },
+  "candles_count": 104,
+  "trades_count": 12,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.2485690505123814e-05,
+  "total_pnl": -0.12712770327726108,
+  "previous_candles_count": 104,
+  "candles_increased": false
+}
