@@ -26,8 +26,9 @@ PUBLIC = ROOT / "InfoBot_Public"
 INCLUDE = [
     "app.py", "bots.py", "README.md", "requirements.txt", "requirements_ai.txt",
     "INSTALL.md", "LICENSE",
+    "start_infobot_manager.cmd", "start_infobot_manager.sh", "start_infobot_manager.vbs",
     "app/", "bot_engine/", "bots_modules/", "exchanges/", "utils/",
-    "static/", "templates/", "docs/", "data/", "scripts/",
+    "static/", "templates/", "docs/", "data/", "scripts/", "installer/", "launcher/",
 ]
 
 # Что НЕ копируем
