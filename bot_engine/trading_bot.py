@@ -109,9 +109,16 @@ class TradingBot:
     
     def to_dict(self) -> Dict:
         """Преобразует состояние бота в словарь для сохранения"""
+        if hasattr(self.status, 'value'):
+            raw_status = self.status.value
+        else:
+            raw_status = str(self.status) if self.status is not None else ''
+
+        normalized_status = raw_status.lower()
+
         return {
             'symbol': self.symbol,
-            'status': self.status.value if hasattr(self.status, 'value') else str(self.status),
+            'status': normalized_status,
             'auto_managed': self.auto_managed,
             'volume_mode': self.volume_mode.value if hasattr(self.volume_mode, 'value') else str(self.volume_mode),
             'volume_value': self.volume_value,

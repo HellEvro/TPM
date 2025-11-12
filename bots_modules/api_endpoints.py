@@ -2295,8 +2295,11 @@ def auto_bot_config():
                 
                 with bots_data_lock:
                     bots_count = len(bots_data['bots'])
-                    bots_in_position = sum(1 for bot in bots_data['bots'].values() 
-                                          if bot.get('status') in ['IN_POSITION_LONG', 'IN_POSITION_SHORT'])
+                    bots_in_position = sum(
+                        1
+                        for bot in bots_data['bots'].values()
+                        if bot.get('status', '').lower() in ['in_position_long', 'in_position_short']
+                    )
                 
                 if bots_count > 0:
                     logger.info(f"💾 Сохранено {bots_count} ботов:")
