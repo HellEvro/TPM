@@ -48,7 +48,13 @@ try:
         save_auto_bot_config, save_bots_state,
         restore_default_config, load_default_config
     )
-    from bots_modules.init_functions import ensure_exchange_initialized, create_bot
+    from bots_modules.init_functions import (
+        ensure_exchange_initialized,
+        create_bot,
+        init_bot_service,
+        start_async_processor,
+        stop_async_processor,
+    )
     from bots_modules.maturity import (
         save_mature_coins_storage, load_mature_coins_storage,
         remove_mature_coin_from_storage, check_coin_maturity_with_storage
@@ -129,12 +135,6 @@ except:
 # except:
 #     def get_optimal_ema_periods(symbol):
 #         return {}
-
-def start_async_processor():
-    pass
-
-def stop_async_processor():
-    pass
 
 def health_check():
     """Проверка состояния сервиса"""
@@ -2657,6 +2657,34 @@ def internal_error(error):
     logger.error(f"[ERROR] Внутренняя ошибка сервера: {str(error)}")
     return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
+
+def _soft_restart_bots_service():
+    """Перезапускает основные компоненты сервиса без остановки Flask."""
+    try:
+        logger.info("[HOT_RELOAD] ♻️ Мягкий перезапуск сервисных компонентов...")
+
+        try:
+            cleanup_bot_service()
+        except Exception as cleanup_error:
+            logger.warning(f"[HOT_RELOAD] ⚠️ Ошибка при очистке перед перезапуском: {cleanup_error}")
+
+        init_success = init_bot_service()
+        if not init_success:
+            logger.error("[HOT_RELOAD] ❌ init_bot_service вернул False при мягком перезапуске")
+            return False, "init_bot_service() вернул False"
+
+        try:
+            start_async_processor()
+        except Exception as start_error:
+            logger.warning(f"[HOT_RELOAD] ⚠️ Не удалось запустить асинхронный процессор после перезапуска: {start_error}")
+
+        logger.info("[HOT_RELOAD] ✅ Мягкий перезапуск выполнен без остановки Flask")
+        return True, None
+
+    except Exception as exc:
+        logger.error(f"[HOT_RELOAD] ❌ Ошибка мягкого перезапуска: {exc}")
+        return False, str(exc)
+
 def signal_handler(signum, frame):
     """Обработчик сигналов завершения с принудительным завершением"""
     global graceful_shutdown
@@ -2692,10 +2720,6 @@ def reload_modules():
     try:
         import importlib
         import sys
-        import os
-        import threading
-        import time
-        
         # Определяем модули для перезагрузки в порядке зависимостей
         modules_to_reload = [
             'bot_engine.bot_config',
@@ -2714,7 +2738,6 @@ def reload_modules():
         
         reloaded = []
         failed = []
-        flask_restart_required = False
         
         logger.info("[HOT_RELOAD] 🔄 Начинаем умную горячую перезагрузку...")
         
@@ -2746,7 +2769,7 @@ def reload_modules():
         
         # Этап 2: Проверяем нужен ли перезапуск Flask сервера
         try:
-            request_data = request.get_json() or {}
+            request_data = request.get_json(silent=True) or {}
             force_flask_restart = request_data.get('force_flask_restart', False)
             logger.info(f"[HOT_RELOAD] 📋 Данные запроса: {request_data}")
         except Exception as e:
@@ -2754,22 +2777,14 @@ def reload_modules():
             request_data = {}
             force_flask_restart = False
         
-        if force_flask_restart or any(module in sys.modules for module in flask_restart_modules):
-            flask_restart_required = True
-            logger.info("[HOT_RELOAD] 🔄 Требуется перезапуск Flask сервера...")
-            
-            # Сохраняем состояние перед перезапуском
-            save_bots_state()
-            logger.info("[HOT_RELOAD] 💾 Состояние ботов сохранено")
-            
-            # Запускаем перезапуск сервера в отдельном потоке
-            def restart_server():
-                time.sleep(2)  # Даем время для ответа клиенту
-                logger.info("[HOT_RELOAD] 🔄 Перезапуск Flask сервера...")
-                os._exit(42)  # Специальный код для перезапуска
-            
-            restart_thread = threading.Thread(target=restart_server, daemon=True)
-            restart_thread.start()
+        restart_requested = force_flask_restart or any(module in sys.modules for module in flask_restart_modules)
+        soft_restart_performed = False
+        soft_restart_error = None
+
+        if restart_requested:
+            logger.info("[HOT_RELOAD] 🔄 Требуется мягкий перезапуск сервисных компонентов (Flask останется активным)...")
+        else:
+            logger.info("[HOT_RELOAD] ✅ Перезапуск Flask компонентов не требуется")
         
         # Этап 3: Перезагружаем конфигурацию
         try:
@@ -2778,19 +2793,31 @@ def reload_modules():
             logger.info("[HOT_RELOAD] ✅ Конфигурация Auto Bot перезагружена")
         except Exception as e:
             logger.error(f"[HOT_RELOAD] ❌ Ошибка перезагрузки конфигурации: {e}")
+
+        if restart_requested:
+            soft_restart_performed, soft_restart_error = _soft_restart_bots_service()
+            if soft_restart_performed:
+                logger.info("[HOT_RELOAD] ✅ Мягкий перезапуск сервисных компонентов выполнен")
+            else:
+                logger.error(f"[HOT_RELOAD] ❌ Ошибка мягкого перезапуска: {soft_restart_error}")
         
         # Формируем ответ
         response_data = {
             'success': True,
             'reloaded': reloaded,
             'failed': failed,
-            'flask_restart_required': flask_restart_required,
+            'flask_restart_required': False,
+            'restart_requested': restart_requested,
+            'soft_restart_performed': soft_restart_performed,
             'message': f'Перезагружено {len(reloaded)} модулей'
         }
         
-        if flask_restart_required:
-            response_data['message'] += '. Сервер будет перезапущен через 2 секунды...'
-            response_data['restart_in_seconds'] = 2
+        if soft_restart_performed:
+            response_data['message'] += '. Выполнен мягкий перезапуск сервисов без остановки Flask.'
+        elif restart_requested:
+            response_data['message'] += '. Требовался мягкий перезапуск, но завершился с ошибкой.'
+            if soft_restart_error:
+                response_data['soft_restart_error'] = soft_restart_error
         
         logger.info(f"[HOT_RELOAD] ✅ Горячая перезагрузка завершена: {len(reloaded)} модулей")
         return jsonify(response_data)
