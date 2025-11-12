@@ -401,13 +401,28 @@ class InfoBotManager(tk.Tk):
             self.log("Git не установлен: обновления репозитория отключены.")
             return
         try:
+            init_command = ["git", "init", "--initial-branch=main"]
             init_result = subprocess.run(
-                ["git", "init"],
+                init_command,
                 cwd=str(PROJECT_ROOT),
                 capture_output=True,
                 text=True,
-                check=True,
             )
+            if init_result.returncode != 0:
+                init_result = subprocess.run(
+                    ["git", "init"],
+                    cwd=str(PROJECT_ROOT),
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                subprocess.run(
+                    ["git", "symbolic-ref", "HEAD", "refs/heads/main"],
+                    cwd=str(PROJECT_ROOT),
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
             if init_result.stdout.strip():
                 self.log(init_result.stdout.strip())
             remote_result = subprocess.run(
