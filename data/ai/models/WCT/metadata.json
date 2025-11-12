@@ -1,0 +1,46 @@
+{
+  "symbol": "WCT",
+  "trained_at": "2025-11-13T01:52:48.235937",
+  "training_seed": 832719,
+  "coin_model_seed": 833677,
+  "rsi_params": {
+    "oversold": 30,
+    "overbought": 68,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 9.154155931146533,
+    "take_profit": 22.912132788555134,
+    "trailing_stop_activation": 14.877693675370264,
+    "trailing_stop_distance": 15.697856342350411,
+    "break_even_protection": false,
+    "break_even_trigger": 152.65441065716965,
+    "max_position_hours": 19
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 69,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 8.297637527361449,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 48.28644044465139
+    }
+  },
+  "candles_count": 651,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.4774818856941823e-06,
+  "total_pnl": 0.08186100055485254,
+  "previous_candles_count": 746,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "QTUM",
+  "trained_at": "2025-11-13T01:54:54.853784",
+  "training_seed": 981100,
+  "coin_model_seed": 981597,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 76,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 17.293607731039003,
+    "take_profit": 29.382216786496063,
+    "trailing_stop_activation": 8.928605343358193,
+    "trailing_stop_distance": 32.16245765730713,
+    "break_even_protection": true,
+    "break_even_trigger": 153.3238584083726,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 64,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 8.479327518089839,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 45.489904312912515
+    }
+  },
+  "candles_count": 4996,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.5348093074141397e-07,
+  "total_pnl": 0.14896970459462777,
+  "previous_candles_count": 4844,
+  "candles_increased": true
+}

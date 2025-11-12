@@ -1,0 +1,46 @@
+{
+  "symbol": "COAI",
+  "trained_at": "2025-11-13T01:51:12.485067",
+  "training_seed": 832719,
+  "coin_model_seed": 833531,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 77,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 9.971656388825826,
+    "take_profit": 32.760766639966164,
+    "trailing_stop_activation": 20.907866922295156,
+    "trailing_stop_distance": 10.241470227608787,
+    "break_even_protection": true,
+    "break_even_trigger": 43.92258074671883,
+    "max_position_hours": 16
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 68,
+      "lower": 29
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 15.071369608642618,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 68.51589356098953
+    }
+  },
+  "candles_count": 165,
+  "trades_count": 9,
+  "win_rate": 77.77777777777779,
+  "signal_accuracy": 1.0,
+  "profit_mse": 0.0007476499471713206,
+  "total_pnl": 24.600623248985553,
+  "previous_candles_count": 165,
+  "candles_increased": false
+}

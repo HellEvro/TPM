@@ -1,0 +1,46 @@
+{
+  "symbol": "XVG",
+  "trained_at": "2025-11-13T01:47:59.500928",
+  "training_seed": 514320,
+  "coin_model_seed": 514733,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 19.40755065781363,
+    "take_profit": 13.018304449824038,
+    "trailing_stop_activation": 39.39850234314445,
+    "trailing_stop_distance": 15.481900973497233,
+    "break_even_protection": false,
+    "break_even_trigger": 104.53330352984659,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 69,
+      "lower": 39
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 8.5183621591505,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 63.48190009810385
+    }
+  },
+  "candles_count": 3415,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.1958620475502416e-07,
+  "total_pnl": 0.13068722940386276,
+  "previous_candles_count": 3394,
+  "candles_increased": true
+}

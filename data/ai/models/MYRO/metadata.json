@@ -1,0 +1,46 @@
+{
+  "symbol": "MYRO",
+  "trained_at": "2025-11-13T01:54:38.545338",
+  "training_seed": 981100,
+  "coin_model_seed": 981770,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 76,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 11.29266860697673,
+    "take_profit": 15.129275058488036,
+    "trailing_stop_activation": 37.97980165435253,
+    "trailing_stop_distance": 18.76606703932669,
+    "break_even_protection": false,
+    "break_even_trigger": 40.55276713584556,
+    "max_position_hours": 23
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 68,
+      "lower": 30
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 6.583686023697599,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 60.98964172323859
+    }
+  },
+  "candles_count": 2515,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.6742504319167336e-05,
+  "total_pnl": 3.441539330554651,
+  "previous_candles_count": 2634,
+  "candles_increased": false
+}

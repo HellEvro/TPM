@@ -1,0 +1,46 @@
+{
+  "symbol": "MUBARAK",
+  "trained_at": "2025-11-13T01:51:55.355670",
+  "training_seed": 832719,
+  "coin_model_seed": 832775,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 69,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 14.51636057643662,
+    "take_profit": 26.91310906946793,
+    "trailing_stop_activation": 27.391279245848697,
+    "trailing_stop_distance": 11.532666868868477,
+    "break_even_protection": false,
+    "break_even_trigger": 142.42418822819872,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 66,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 6.366845783096405,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 43.21675213868976
+    }
+  },
+  "candles_count": 894,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.205223812502439e-06,
+  "total_pnl": -0.11433522160378227,
+  "previous_candles_count": 824,
+  "candles_increased": true
+}

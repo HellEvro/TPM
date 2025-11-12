@@ -1,0 +1,46 @@
+{
+  "symbol": "RSR",
+  "trained_at": "2025-11-13T01:54:58.527820",
+  "training_seed": 981100,
+  "coin_model_seed": 981282,
+  "rsi_params": {
+    "oversold": 28,
+    "overbought": 75,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 10.86973602386844,
+    "take_profit": 32.30078454222098,
+    "trailing_stop_activation": 18.77052838139023,
+    "trailing_stop_distance": 9.89350102757809,
+    "break_even_protection": false,
+    "break_even_trigger": 100.81327318419619,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 63,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 8.357604472789147,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 36.815373879847925
+    }
+  },
+  "candles_count": 4930,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.178552151762589e-07,
+  "total_pnl": 0.2229888458236784,
+  "previous_candles_count": 4957,
+  "candles_increased": false
+}

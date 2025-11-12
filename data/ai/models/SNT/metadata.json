@@ -1,0 +1,46 @@
+{
+  "symbol": "SNT",
+  "trained_at": "2025-11-13T01:47:34.833849",
+  "training_seed": 514320,
+  "coin_model_seed": 514717,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 69,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 13.306862271786764,
+    "take_profit": 11.795700462505819,
+    "trailing_stop_activation": 17.36512096788855,
+    "trailing_stop_distance": 23.6591210457313,
+    "break_even_protection": false,
+    "break_even_trigger": 188.4087348043738,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 71,
+      "lower": 33
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 17.87739797968863,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 49.36410662316808
+    }
+  },
+  "candles_count": 2963,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.7410108010238585e-07,
+  "total_pnl": -0.19134988343494314,
+  "previous_candles_count": 2894,
+  "candles_increased": true
+}

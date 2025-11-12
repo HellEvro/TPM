@@ -1,0 +1,46 @@
+{
+  "symbol": "1000NEIROCTO",
+  "trained_at": "2025-11-12T18:23:58.307476",
+  "training_seed": 33326,
+  "coin_model_seed": 34175,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 77,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 18.075610286738925,
+    "take_profit": 21.687901676285946,
+    "trailing_stop_activation": 32.23767906564281,
+    "trailing_stop_distance": 19.27087561743725,
+    "break_even_protection": false,
+    "break_even_trigger": 109.784546334166,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 65,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 11.969565968041081,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 66.38549978839133
+    }
+  },
+  "candles_count": 1515,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.8776945363038554e-06,
+  "total_pnl": 3.1425995232679655,
+  "previous_candles_count": 1566,
+  "candles_increased": false
+}

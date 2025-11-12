@@ -1,0 +1,46 @@
+{
+  "symbol": "ENA",
+  "trained_at": "2025-11-13T01:56:26.700259",
+  "training_seed": 142038,
+  "coin_model_seed": 142258,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 74,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 17.680590957985018,
+    "take_profit": 34.42094066330549,
+    "trailing_stop_activation": 36.4545148291587,
+    "trailing_stop_distance": 12.352363527823872,
+    "break_even_protection": false,
+    "break_even_trigger": 153.74057002402247,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 63,
+      "lower": 29
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 21.605745941732643,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 48.13430077175357
+    }
+  },
+  "candles_count": 2316,
+  "trades_count": 15,
+  "win_rate": 53.333333333333336,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.75109311698483e-05,
+  "total_pnl": -0.017573061358644775,
+  "previous_candles_count": 2233,
+  "candles_increased": true
+}

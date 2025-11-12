@@ -1,46 +1,46 @@
 {
   "symbol": "KAVA",
-  "trained_at": "2025-11-12T13:09:42.767485",
-  "training_seed": 159632,
-  "coin_model_seed": 160202,
+  "trained_at": "2025-11-13T01:38:47.435079",
+  "training_seed": 48309,
+  "coin_model_seed": 49013,
   "rsi_params": {
-    "oversold": 35,
-    "overbought": 72,
-    "exit_long_with_trend": 64,
+    "oversold": 29,
+    "overbought": 69,
+    "exit_long_with_trend": 67,
     "exit_long_against_trend": 63,
-    "exit_short_with_trend": 37,
-    "exit_short_against_trend": 44
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 39
   },
   "risk_params": {
-    "stop_loss": 16.12043945839738,
-    "take_profit": 32.942622844766234,
-    "trailing_stop_activation": 27.855435584941475,
-    "trailing_stop_distance": 15.627283261164852,
-    "break_even_protection": false,
-    "break_even_trigger": 181.56356036680583,
+    "stop_loss": 9.885887599981695,
+    "take_profit": 29.205530135538186,
+    "trailing_stop_activation": 33.815309210399775,
+    "trailing_stop_distance": 31.599639246740516,
+    "break_even_protection": true,
+    "break_even_trigger": 46.311631186325634,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 9,
+      "candles": 3,
       "upper": 64,
-      "lower": 37
+      "lower": 40
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 12,
-      "single_candle_percent": 11.01651730077312,
+      "candles": 10,
+      "single_candle_percent": 6.903475552241806,
       "multi_candle_count": 2,
-      "multi_candle_percent": 59.75309506221884
+      "multi_candle_percent": 38.386436509951096
     }
   },
-  "candles_count": 4910,
-  "trades_count": 11,
-  "win_rate": 36.36363636363637,
+  "candles_count": 4879,
+  "trades_count": 5,
+  "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.11550495159269e-06,
-  "total_pnl": -0.32550804842408265,
-  "previous_candles_count": 4927,
+  "profit_mse": 8.708410819943869e-07,
+  "total_pnl": 0.05930427209946133,
+  "previous_candles_count": 4901,
   "candles_increased": false
 }

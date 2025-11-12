@@ -1,0 +1,46 @@
+{
+  "symbol": "TON",
+  "trained_at": "2025-11-13T01:50:17.148055",
+  "training_seed": 688111,
+  "coin_model_seed": 689040,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 69,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 11.284837509838878,
+    "take_profit": 25.40389417873595,
+    "trailing_stop_activation": 8.381567189149493,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 95.73127596906266,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 68,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 14.384661716576051,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 32.65946188148881
+    }
+  },
+  "candles_count": 3079,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.182482876963516e-07,
+  "total_pnl": -0.21602788013319363,
+  "previous_candles_count": 3212,
+  "candles_increased": false
+}

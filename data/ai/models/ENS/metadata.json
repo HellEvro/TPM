@@ -1,0 +1,46 @@
+{
+  "symbol": "ENS",
+  "trained_at": "2025-11-13T01:53:54.400036",
+  "training_seed": 981100,
+  "coin_model_seed": 982043,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 75,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 16.336923687267603,
+    "take_profit": 15.356100532406524,
+    "trailing_stop_activation": 35.200249932771406,
+    "trailing_stop_distance": 27.877180865484934,
+    "break_even_protection": true,
+    "break_even_trigger": 150.72796277808794,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 64,
+      "lower": 39
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 15.635848954279519,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 35.41817316211559
+    }
+  },
+  "candles_count": 4841,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.24663977110073e-07,
+  "total_pnl": 0.028607643071529642,
+  "previous_candles_count": 4826,
+  "candles_increased": true
+}

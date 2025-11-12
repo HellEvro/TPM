@@ -1,0 +1,46 @@
+{
+  "symbol": "PENDLE",
+  "trained_at": "2025-11-13T01:52:14.169390",
+  "training_seed": 832719,
+  "coin_model_seed": 832879,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 73,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 11.784199290861293,
+    "take_profit": 21.530609720804016,
+    "trailing_stop_activation": 15.34820188027268,
+    "trailing_stop_distance": 26.74238622878802,
+    "break_even_protection": true,
+    "break_even_trigger": 119.31629640791483,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 61,
+      "lower": 35
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 21.645541599460966,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 65.80261062950515
+    }
+  },
+  "candles_count": 3422,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.309567753812375e-07,
+  "total_pnl": -0.0772916994270963,
+  "previous_candles_count": 3326,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "ICX",
+  "trained_at": "2025-11-13T01:36:08.179507",
+  "training_seed": 911156,
+  "coin_model_seed": 911672,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 78,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 11.28866874543457,
+    "take_profit": 31.857530883748833,
+    "trailing_stop_activation": 42.2015778775964,
+    "trailing_stop_distance": 13.333254468589601,
+    "break_even_protection": true,
+    "break_even_trigger": 122.45114899536976,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 61,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 7.199779091757765,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 33.53569938786592
+    }
+  },
+  "candles_count": 4916,
+  "trades_count": 8,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.015969566125962e-07,
+  "total_pnl": -0.40311147852337753,
+  "previous_candles_count": 4819,
+  "candles_increased": true
+}

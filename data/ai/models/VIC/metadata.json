@@ -1,0 +1,46 @@
+{
+  "symbol": "VIC",
+  "trained_at": "2025-11-13T01:26:58.525641",
+  "training_seed": 297914,
+  "coin_model_seed": 298656,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 67,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 13.023856106136162,
+    "take_profit": 30.973192092040772,
+    "trailing_stop_activation": 37.1403407722631,
+    "trailing_stop_distance": 31.628323699059386,
+    "break_even_protection": true,
+    "break_even_trigger": 157.75494610160922,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 64,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 16.068063190437407,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 54.069254546441435
+    }
+  },
+  "candles_count": 824,
+  "trades_count": 7,
+  "win_rate": 85.71428571428571,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.3453188953286926e-07,
+  "total_pnl": 0.44163629476862726,
+  "previous_candles_count": 902,
+  "candles_increased": false
+}

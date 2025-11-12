@@ -1,0 +1,46 @@
+{
+  "symbol": "VFY",
+  "trained_at": "2025-11-13T01:11:54.619980",
+  "training_seed": 363334,
+  "coin_model_seed": 363567,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 76,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 20.724031688702418,
+    "take_profit": 19.3873617981316,
+    "trailing_stop_activation": 26.944088778080186,
+    "trailing_stop_distance": 32.69319466570096,
+    "break_even_protection": true,
+    "break_even_trigger": 143.7116149740993,
+    "max_position_hours": 18
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 66,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 17.125279480177074,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 60.75598280560444
+    }
+  },
+  "candles_count": 172,
+  "trades_count": 8,
+  "win_rate": 37.5,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.20025996358039e-05,
+  "total_pnl": 0.1822009847938284,
+  "previous_candles_count": 172,
+  "candles_increased": false
+}

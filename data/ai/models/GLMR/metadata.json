@@ -1,0 +1,46 @@
+{
+  "symbol": "GLMR",
+  "trained_at": "2025-11-13T01:54:06.876796",
+  "training_seed": 981100,
+  "coin_model_seed": 981269,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 78,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 17.39097734523523,
+    "take_profit": 18.087628032390118,
+    "trailing_stop_activation": 32.178036957483904,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 138.7915449875655,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 71,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 13.04235389939353,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 67.54437589822183
+    }
+  },
+  "candles_count": 4906,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.6862964422527574e-07,
+  "total_pnl": -0.018805081904501662,
+  "previous_candles_count": 4804,
+  "candles_increased": true
+}

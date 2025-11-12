@@ -1,0 +1,46 @@
+{
+  "symbol": "ZIL",
+  "trained_at": "2025-11-13T01:55:39.742810",
+  "training_seed": 981100,
+  "coin_model_seed": 981433,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 13.55266086710775,
+    "take_profit": 30.636164381782006,
+    "trailing_stop_activation": 15.210759470857113,
+    "trailing_stop_distance": 7.395296888332694,
+    "break_even_protection": true,
+    "break_even_trigger": 64.65212487057325,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 63,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 8.984356716957862,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 57.03341742995611
+    }
+  },
+  "candles_count": 4879,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.5918704973945577e-06,
+  "total_pnl": -0.1953191850017078,
+  "previous_candles_count": 4842,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "TLM",
+  "trained_at": "2025-11-13T01:47:47.470203",
+  "training_seed": 514320,
+  "coin_model_seed": 514411,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 70,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 19.98428915807474,
+    "take_profit": 30.401673222368036,
+    "trailing_stop_activation": 34.05795691176717,
+    "trailing_stop_distance": 22.270934234038762,
+    "break_even_protection": false,
+    "break_even_trigger": 185.49844296308763,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 59,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 12.677597981246784,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 55.136896441539065
+    }
+  },
+  "candles_count": 4819,
+  "trades_count": 5,
+  "win_rate": 100.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.785702157998348e-08,
+  "total_pnl": 0.27213417643639437,
+  "previous_candles_count": 4890,
+  "candles_increased": false
+}

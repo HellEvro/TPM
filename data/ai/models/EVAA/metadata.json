@@ -1,0 +1,46 @@
+{
+  "symbol": "EVAA",
+  "trained_at": "2025-11-13T01:56:29.191105",
+  "training_seed": 142038,
+  "coin_model_seed": 142776,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 72,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 13.617902379203137,
+    "take_profit": 28.089303439644368,
+    "trailing_stop_activation": 39.04314294231719,
+    "trailing_stop_distance": 18.07670127199414,
+    "break_even_protection": true,
+    "break_even_trigger": 73.12410063407529,
+    "max_position_hours": 16
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 64,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 19.844714813037207,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 36.27053795342964
+    }
+  },
+  "candles_count": 104,
+  "trades_count": 14,
+  "win_rate": 42.857142857142854,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.5745304558172683e-05,
+  "total_pnl": 1.071992133329673,
+  "previous_candles_count": 104,
+  "candles_increased": false
+}

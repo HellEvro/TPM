@@ -1,0 +1,46 @@
+{
+  "symbol": "TAO",
+  "trained_at": "2025-11-13T01:55:20.051115",
+  "training_seed": 981100,
+  "coin_model_seed": 982068,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 69,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 11.093266496518206,
+    "take_profit": 11.418231296474886,
+    "trailing_stop_activation": 37.21202950662091,
+    "trailing_stop_distance": 31.625995992966608,
+    "break_even_protection": false,
+    "break_even_trigger": 94.63436296840072,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 65,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 12.460215496165091,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 44.05926543909602
+    }
+  },
+  "candles_count": 2439,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.7952618189622417e-06,
+  "total_pnl": -1.1109193613816475,
+  "previous_candles_count": 2592,
+  "candles_increased": false
+}

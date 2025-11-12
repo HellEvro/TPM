@@ -1,0 +1,46 @@
+{
+  "symbol": "GLM",
+  "trained_at": "2025-11-13T01:51:36.653542",
+  "training_seed": 832719,
+  "coin_model_seed": 833222,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 68,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 15.275800347939908,
+    "take_profit": 15.53143324860985,
+    "trailing_stop_activation": 41.958664475117665,
+    "trailing_stop_distance": 15.840515090757714,
+    "break_even_protection": false,
+    "break_even_trigger": 163.03950095002043,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 60,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 19.465470419481345,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 35.53393144988196
+    }
+  },
+  "candles_count": 3169,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.914312991474653e-08,
+  "total_pnl": 0.2160359561640988,
+  "previous_candles_count": 3136,
+  "candles_increased": true
+}

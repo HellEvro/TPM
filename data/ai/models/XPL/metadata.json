@@ -1,0 +1,46 @@
+{
+  "symbol": "XPL",
+  "trained_at": "2025-11-13T01:42:29.899725",
+  "training_seed": 198971,
+  "coin_model_seed": 199692,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 71,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 10.415387229739427,
+    "take_profit": 12.116484686552937,
+    "trailing_stop_activation": 33.1696435852015,
+    "trailing_stop_distance": 20.914173694661052,
+    "break_even_protection": false,
+    "break_even_trigger": 89.39955885534386,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 60,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 10.460003527743913,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 50.24863237505743
+    }
+  },
+  "candles_count": 329,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.903671514898023e-06,
+  "total_pnl": 1.4352446492178512,
+  "previous_candles_count": 329,
+  "candles_increased": false
+}

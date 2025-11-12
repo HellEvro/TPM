@@ -1,0 +1,46 @@
+{
+  "symbol": "RARE",
+  "trained_at": "2025-11-13T01:54:52.388075",
+  "training_seed": 981100,
+  "coin_model_seed": 981756,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 68,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 20.638513438401567,
+    "take_profit": 14.147032424601688,
+    "trailing_stop_activation": 13.590122959095496,
+    "trailing_stop_distance": 23.91253120215041,
+    "break_even_protection": false,
+    "break_even_trigger": 172.17508775521358,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 63,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 13.962403373697354,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 58.10922402290352
+    }
+  },
+  "candles_count": 2796,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.6498960967017061e-06,
+  "total_pnl": 0.06157926266234372,
+  "previous_candles_count": 2763,
+  "candles_increased": true
+}

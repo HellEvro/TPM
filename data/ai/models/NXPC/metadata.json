@@ -1,0 +1,46 @@
+{
+  "symbol": "NXPC",
+  "trained_at": "2025-11-13T01:52:02.184387",
+  "training_seed": 832719,
+  "coin_model_seed": 833480,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 67,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 15.245526973578531,
+    "take_profit": 32.43972264571613,
+    "trailing_stop_activation": 16.157494786927487,
+    "trailing_stop_distance": 8.71475603164289,
+    "break_even_protection": true,
+    "break_even_trigger": 66.35725007937995,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 61,
+      "lower": 39
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 7.4685247558337675,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 51.10244386412781
+    }
+  },
+  "candles_count": 555,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.745962959481341e-07,
+  "total_pnl": -0.30076936641085483,
+  "previous_candles_count": 634,
+  "candles_increased": false
+}

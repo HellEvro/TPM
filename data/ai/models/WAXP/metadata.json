@@ -1,0 +1,46 @@
+{
+  "symbol": "WAXP",
+  "trained_at": "2025-11-13T01:55:27.309898",
+  "training_seed": 981100,
+  "coin_model_seed": 981837,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 66,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 15.140835308530411,
+    "take_profit": 12.137301937214293,
+    "trailing_stop_activation": 38.99232666724114,
+    "trailing_stop_distance": 24.891840473865997,
+    "break_even_protection": true,
+    "break_even_trigger": 117.48992561580434,
+    "max_position_hours": 57
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 59,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 17.045412726605964,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 48.50454682586032
+    }
+  },
+  "candles_count": 3044,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.2677280304738178e-05,
+  "total_pnl": 0.2258462316052817,
+  "previous_candles_count": 3020,
+  "candles_increased": true
+}

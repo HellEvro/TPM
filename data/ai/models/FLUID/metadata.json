@@ -1,0 +1,46 @@
+{
+  "symbol": "FLUID",
+  "trained_at": "2025-11-13T01:51:30.832886",
+  "training_seed": 832719,
+  "coin_model_seed": 833591,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 78,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 9.111341448142465,
+    "take_profit": 32.86224611120416,
+    "trailing_stop_activation": 31.282419931233576,
+    "trailing_stop_distance": 30.291764471392803,
+    "break_even_protection": false,
+    "break_even_trigger": 43.0658147133401,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 68,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 5.978278576482305,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 53.07191214923609
+    }
+  },
+  "candles_count": 196,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.5988416369879055e-06,
+  "total_pnl": 0.7952759310824601,
+  "previous_candles_count": 196,
+  "candles_increased": false
+}

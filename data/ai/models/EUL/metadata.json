@@ -1,0 +1,46 @@
+{
+  "symbol": "EUL",
+  "trained_at": "2025-11-13T01:56:27.922385",
+  "training_seed": 142038,
+  "coin_model_seed": 142172,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 65,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 17.065356152257067,
+    "take_profit": 20.73944667808064,
+    "trailing_stop_activation": 23.364743025455127,
+    "trailing_stop_distance": 13.33995631249437,
+    "break_even_protection": false,
+    "break_even_trigger": 61.8233130322395,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 66,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 12.751265738510371,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 56.268944834487975
+    }
+  },
+  "candles_count": 117,
+  "trades_count": 12,
+  "win_rate": 58.333333333333336,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.6335320273746696e-06,
+  "total_pnl": 0.29174220437345805,
+  "previous_candles_count": 117,
+  "candles_increased": false
+}

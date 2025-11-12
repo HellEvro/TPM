@@ -1,0 +1,46 @@
+{
+  "symbol": "SQD",
+  "trained_at": "2025-11-13T01:55:08.995445",
+  "training_seed": 981100,
+  "coin_model_seed": 981105,
+  "rsi_params": {
+    "oversold": 27,
+    "overbought": 65,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 19.22825943575087,
+    "take_profit": 26.994989008364158,
+    "trailing_stop_activation": 14.085953653542273,
+    "trailing_stop_distance": 30.074304486511263,
+    "break_even_protection": false,
+    "break_even_trigger": 64.23750372643693,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 65,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 5.211084702550522,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 40.186939784770374
+    }
+  },
+  "candles_count": 438,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.6902700123624907e-06,
+  "total_pnl": -0.09408599953923101,
+  "previous_candles_count": 442,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "HPOS10I",
+  "trained_at": "2025-11-13T01:43:45.375280",
+  "training_seed": 360166,
+  "coin_model_seed": 360765,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 78,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 11.457264981888935,
+    "take_profit": 31.639416214289522,
+    "trailing_stop_activation": 42.56911390739743,
+    "trailing_stop_distance": 28.044652046556973,
+    "break_even_protection": false,
+    "break_even_trigger": 115.31031178835447,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 62,
+      "lower": 35
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 24.800543185612046,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 60.18069465217725
+    }
+  },
+  "candles_count": 1369,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.6775956892807607e-06,
+  "total_pnl": 0.12204906716432846,
+  "previous_candles_count": 1383,
+  "candles_increased": false
+}

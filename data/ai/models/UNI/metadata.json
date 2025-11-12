@@ -1,0 +1,46 @@
+{
+  "symbol": "UNI",
+  "trained_at": "2025-11-13T01:52:47.069204",
+  "training_seed": 832719,
+  "coin_model_seed": 832750,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 78,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 20.695122362274123,
+    "take_profit": 20.22899113945698,
+    "trailing_stop_activation": 12.764311455596566,
+    "trailing_stop_distance": 14.89745130365773,
+    "break_even_protection": false,
+    "break_even_trigger": 57.25226583482721,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 61,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 17.900248497029086,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 50.18372083647626
+    }
+  },
+  "candles_count": 4975,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.9708834901786008e-07,
+  "total_pnl": -0.13702954374799062,
+  "previous_candles_count": 4975,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "PNUT",
+  "trained_at": "2025-11-12T23:53:02.186960",
+  "training_seed": 685896,
+  "coin_model_seed": 686293,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 17.19185132396617,
+    "take_profit": 28.832879281848562,
+    "trailing_stop_activation": 15.956495484320488,
+    "trailing_stop_distance": 31.461364740830653,
+    "break_even_protection": false,
+    "break_even_trigger": 114.3345700198889,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 69,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 15.496414108621044,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 37.12538997217554
+    }
+  },
+  "candles_count": 1378,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.342433547526661e-06,
+  "total_pnl": 0.5905711852905917,
+  "previous_candles_count": 1453,
+  "candles_increased": false
+}

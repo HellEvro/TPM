@@ -1,0 +1,46 @@
+{
+  "symbol": "PLUME",
+  "trained_at": "2025-11-13T01:54:44.431098",
+  "training_seed": 981100,
+  "coin_model_seed": 981187,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 78,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 12.005140532281738,
+    "take_profit": 15.440330193246002,
+    "trailing_stop_activation": 15.283281620145619,
+    "trailing_stop_distance": 17.573005872728917,
+    "break_even_protection": true,
+    "break_even_trigger": 153.2801529511727,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 69,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 10.065101007209421,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 68.04166472712461
+    }
+  },
+  "candles_count": 1042,
+  "trades_count": 9,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.026637692984296e-06,
+  "total_pnl": 0.845131572415529,
+  "previous_candles_count": 1044,
+  "candles_increased": false
+}

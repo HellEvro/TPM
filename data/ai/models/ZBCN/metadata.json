@@ -1,0 +1,46 @@
+{
+  "symbol": "ZBCN",
+  "trained_at": "2025-11-13T01:55:32.408790",
+  "training_seed": 981100,
+  "coin_model_seed": 981392,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 13.191778434083353,
+    "take_profit": 17.52819947913049,
+    "trailing_stop_activation": 33.68790815714175,
+    "trailing_stop_distance": 25.762803227033622,
+    "break_even_protection": true,
+    "break_even_trigger": 113.24671641996922,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 65,
+      "lower": 39
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 6.26310612275236,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 56.438262146056964
+    }
+  },
+  "candles_count": 2169,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.379347700774892e-07,
+  "total_pnl": 0.04255244011265824,
+  "previous_candles_count": 2132,
+  "candles_increased": true
+}

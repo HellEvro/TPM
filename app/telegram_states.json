@@ -1,7 +1,9 @@
 {
   "high_roi": [],
   "high_loss": [],
-  "rapid_growth": [],
+  "rapid_growth": [
+    "ZEREBRO"
+  ],
   "high_pnl": [],
-  "last_update": "2025-11-12 12:27:52"
+  "last_update": "2025-11-12 23:27:39"
 }

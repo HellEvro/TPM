@@ -1,0 +1,46 @@
+{
+  "symbol": "XDC",
+  "trained_at": "2025-11-13T01:47:54.066208",
+  "training_seed": 514320,
+  "coin_model_seed": 515289,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 74,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 14.840000179784,
+    "take_profit": 23.8246978260309,
+    "trailing_stop_activation": 30.456058921047383,
+    "trailing_stop_distance": 25.49667161604612,
+    "break_even_protection": false,
+    "break_even_trigger": 66.50014738788842,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 69,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 21.123716956033157,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 36.86478434441564
+    }
+  },
+  "candles_count": 1009,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.160972987385826e-07,
+  "total_pnl": -0.1093345745846705,
+  "previous_candles_count": 931,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "POLYX",
+  "trained_at": "2025-11-13T01:36:45.303227",
+  "training_seed": 911156,
+  "coin_model_seed": 911924,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 76,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 17.860199863699258,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 35.23997960980115,
+    "trailing_stop_distance": 14.637577930538512,
+    "break_even_protection": true,
+    "break_even_trigger": 46.29885884906546,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 67,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 16.959021512166395,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 67.47367437740826
+    }
+  },
+  "candles_count": 2873,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 9.623440430694888e-07,
+  "total_pnl": 0.6294050448459233,
+  "previous_candles_count": 2901,
+  "candles_increased": false
+}

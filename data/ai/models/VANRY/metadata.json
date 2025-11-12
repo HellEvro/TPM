@@ -1,0 +1,46 @@
+{
+  "symbol": "VANRY",
+  "trained_at": "2025-11-13T01:55:24.868135",
+  "training_seed": 981100,
+  "coin_model_seed": 981412,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 66,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 16.923009407343667,
+    "take_profit": 33.49313939321519,
+    "trailing_stop_activation": 22.093992951531746,
+    "trailing_stop_distance": 12.462084031283366,
+    "break_even_protection": false,
+    "break_even_trigger": 68.0187059313829,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 67,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 22.324809998259784,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 36.27622631100154
+    }
+  },
+  "candles_count": 2377,
+  "trades_count": 7,
+  "win_rate": 57.14285714285714,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.2400249848230778e-06,
+  "total_pnl": -0.1073157303245644,
+  "previous_candles_count": 2371,
+  "candles_increased": true
+}

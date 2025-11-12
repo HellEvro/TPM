@@ -1,0 +1,46 @@
+{
+  "symbol": "PYR",
+  "trained_at": "2025-11-13T01:54:50.072550",
+  "training_seed": 981100,
+  "coin_model_seed": 981123,
+  "rsi_params": {
+    "oversold": 24,
+    "overbought": 68,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 14.16833375214252,
+    "take_profit": 27.49203796700722,
+    "trailing_stop_activation": 9.617370602437342,
+    "trailing_stop_distance": 9.932000391732343,
+    "break_even_protection": false,
+    "break_even_trigger": 60.9804812501729,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 64,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 21.72996536848374,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 51.322944001828304
+    }
+  },
+  "candles_count": 1441,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 0.8,
+  "profit_mse": 1.032446740895767e-06,
+  "total_pnl": -0.44789270079589083,
+  "previous_candles_count": 1457,
+  "candles_increased": false
+}

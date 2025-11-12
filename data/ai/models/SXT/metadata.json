@@ -1,0 +1,46 @@
+{
+  "symbol": "SXT",
+  "trained_at": "2025-11-13T01:55:14.185248",
+  "training_seed": 981100,
+  "coin_model_seed": 982060,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 77,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 11.286728967931738,
+    "take_profit": 11.686831384574681,
+    "trailing_stop_activation": 34.989611855262666,
+    "trailing_stop_distance": 30.375552860961676,
+    "break_even_protection": false,
+    "break_even_trigger": 181.7725239900654,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 59,
+      "lower": 29
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 22.254890563803453,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 52.192237837741644
+    }
+  },
+  "candles_count": 631,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.828405934792482e-07,
+  "total_pnl": -0.42925600836277683,
+  "previous_candles_count": 692,
+  "candles_increased": false
+}

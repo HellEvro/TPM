@@ -1,0 +1,46 @@
+{
+  "symbol": "SAROS",
+  "trained_at": "2025-11-13T01:55:00.757799",
+  "training_seed": 981100,
+  "coin_model_seed": 981642,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 69,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 9.09120551375729,
+    "take_profit": 32.07496370051097,
+    "trailing_stop_activation": 16.043973860904707,
+    "trailing_stop_distance": 30.448028621036183,
+    "break_even_protection": true,
+    "break_even_trigger": 50.35044640815723,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 59,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 8.469845278263739,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 50.602705940291514
+    }
+  },
+  "candles_count": 506,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.434932361703955e-08,
+  "total_pnl": 0.03416597765166689,
+  "previous_candles_count": 505,
+  "candles_increased": true
+}

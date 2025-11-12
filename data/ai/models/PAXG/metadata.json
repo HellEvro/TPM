@@ -1,0 +1,46 @@
+{
+  "symbol": "PAXG",
+  "trained_at": "2025-11-13T01:31:34.979354",
+  "training_seed": 600123,
+  "coin_model_seed": 600722,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 12.454142141962002,
+    "take_profit": 25.02828542670375,
+    "trailing_stop_activation": 39.56488016323743,
+    "trailing_stop_distance": 27.25699427246182,
+    "break_even_protection": true,
+    "break_even_trigger": 140.542421394054,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 70,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 21.036094165919586,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 32.94475398176573
+    }
+  },
+  "candles_count": 4910,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.967720590986933e-08,
+  "total_pnl": -0.07907597102135383,
+  "previous_candles_count": 4824,
+  "candles_increased": true
+}

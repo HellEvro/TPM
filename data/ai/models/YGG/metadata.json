@@ -1,0 +1,46 @@
+{
+  "symbol": "YGG",
+  "trained_at": "2025-11-13T01:55:33.627870",
+  "training_seed": 981100,
+  "coin_model_seed": 981443,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 78,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 10.663796035581793,
+    "take_profit": 32.03427006948131,
+    "trailing_stop_activation": 39.47091296464688,
+    "trailing_stop_distance": 8.282323329975299,
+    "break_even_protection": true,
+    "break_even_trigger": 173.4549032171137,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 71,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 8.692204300798679,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 38.50122716336435
+    }
+  },
+  "candles_count": 4826,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 0.8,
+  "profit_mse": 1.3983577904928974e-06,
+  "total_pnl": -0.7956020921423153,
+  "previous_candles_count": 4823,
+  "candles_increased": true
+}

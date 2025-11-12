@@ -1,0 +1,46 @@
+{
+  "symbol": "WIF",
+  "trained_at": "2025-11-13T01:14:11.187613",
+  "training_seed": 533548,
+  "coin_model_seed": 534489,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 70,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 9.560279716929314,
+    "take_profit": 12.101514768243447,
+    "trailing_stop_activation": 8.836594423983662,
+    "trailing_stop_distance": 24.798623238595486,
+    "break_even_protection": true,
+    "break_even_trigger": 58.06412076202294,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 67,
+      "lower": 33
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 19.00701770138315,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 56.260550377737665
+    }
+  },
+  "candles_count": 2497,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.8981411156894613e-05,
+  "total_pnl": 0.17374432070427712,
+  "previous_candles_count": 2499,
+  "candles_increased": false
+}

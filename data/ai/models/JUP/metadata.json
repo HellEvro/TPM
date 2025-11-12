@@ -1,0 +1,46 @@
+{
+  "symbol": "JUP",
+  "trained_at": "2025-11-13T01:10:48.253130",
+  "training_seed": 363334,
+  "coin_model_seed": 363960,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 74,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 13.229926513188989,
+    "take_profit": 15.928173975585992,
+    "trailing_stop_activation": 28.884539612046304,
+    "trailing_stop_distance": 7.419745065298231,
+    "break_even_protection": true,
+    "break_even_trigger": 82.31443981392425,
+    "max_position_hours": 16
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 65,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 24.125069163475644,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 43.04866940683206
+    }
+  },
+  "candles_count": 2530,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.521168216704105e-06,
+  "total_pnl": 0.750346064419957,
+  "previous_candles_count": 2578,
+  "candles_increased": false
+}
