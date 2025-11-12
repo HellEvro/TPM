@@ -190,7 +190,7 @@ class InfoBotManager(tk.Tk):
 
         self._enable_mousewheel(canvas)
 
-        venv_frame = ttk.LabelFrame(main, text="1. Виртуальное окружение (рекомендуется)", padding=10)
+        venv_frame = ttk.LabelFrame(main, text="1. Виртуальное окружение (рекомендуется, вместо прямой установки в системный Python)", padding=10)
         venv_frame.grid(row=0, column=0, sticky="ew", padx=4, pady=4)
         venv_frame.columnconfigure(1, weight=1)
 
