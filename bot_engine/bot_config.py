@@ -95,8 +95,8 @@ DEFAULT_AUTO_BOT_CONFIG = {
     'trailing_update_interval': 3,  # Минимальный интервал обновлений стопов/тейков (сек)
     'max_position_hours': 0,     # Максимальное время удержания позиции в часах (0 = отключено)
     'break_even_protection': True,      # Защита безубыточности
-    'break_even_trigger': 23,           # Триггер для break even в % (x1 = 100%, но по умолчанию 20%)
-    'break_even_trigger_percent': 23,  # Дублирующий ключ для UI (совместимость)
+    'break_even_trigger': 100,           # Триггер для break even в % (x1 = 100%, но по умолчанию 20%)
+    'break_even_trigger_percent': 100,  # Дублирующий ключ для UI (совместимость)
     # Фильтры по тренду
     'trend_detection_enabled': True,    # Включить определение тренда (выключить = пропускает анализ трендов)
     'avoid_down_trend': False,          # Не входить в LONG при нисходящем тренде (КРИТИЧЕСКИ ВАЖНО!)

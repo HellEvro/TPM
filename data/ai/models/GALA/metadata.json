@@ -1,46 +1,46 @@
 {
   "symbol": "GALA",
-  "trained_at": "2025-11-13T04:24:57.872528",
-  "training_seed": 91482,
-  "coin_model_seed": 92268,
+  "trained_at": "2025-11-13T15:59:21.920282",
+  "training_seed": 743535,
+  "coin_model_seed": 744436,
   "rsi_params": {
     "oversold": 35,
-    "overbought": 75,
-    "exit_long_with_trend": 63,
-    "exit_long_against_trend": 58,
-    "exit_short_with_trend": 36,
-    "exit_short_against_trend": 37
+    "overbought": 69,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 44
   },
   "risk_params": {
-    "stop_loss": 13.889139772354072,
-    "take_profit": 10.0,
-    "trailing_stop_activation": 12.313373626918402,
-    "trailing_stop_distance": 10.413527999108602,
+    "stop_loss": 16.27405272589963,
+    "take_profit": 30.411563935610918,
+    "trailing_stop_activation": 36.15913853445528,
+    "trailing_stop_distance": 5.0,
     "break_even_protection": false,
-    "break_even_trigger": 67.50823029706727,
+    "break_even_trigger": 133.25058939461735,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 3,
-      "upper": 65,
-      "lower": 41
+      "candles": 8,
+      "upper": 67,
+      "lower": 32
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 9,
-      "single_candle_percent": 19.85374129741735,
+      "candles": 12,
+      "single_candle_percent": 12.196982230389402,
       "multi_candle_count": 3,
-      "multi_candle_percent": 44.99604410390079
+      "multi_candle_percent": 36.85237327065761
     }
   },
-  "candles_count": 4902,
+  "candles_count": 4977,
   "trades_count": 5,
   "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 7.166577928960054e-07,
-  "total_pnl": 0.282003789505766,
-  "previous_candles_count": 4864,
+  "profit_mse": 2.9856531924696888e-06,
+  "total_pnl": 0.4525947415908237,
+  "previous_candles_count": 4937,
   "candles_increased": true
 }

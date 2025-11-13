@@ -1,8 +1,8 @@
 {
   "symbol": "MOCA",
-  "trained_at": "2025-11-13T04:28:47.509582",
-  "training_seed": 316132,
-  "coin_model_seed": 316889,
+  "trained_at": "2025-11-13T16:00:22.966552",
+  "training_seed": 792065,
+  "coin_model_seed": 792827,
   "rsi_params": {
     "oversold": 33,
     "overbought": 73,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 45
   },
   "risk_params": {
-    "stop_loss": 16.23909094502084,
-    "take_profit": 23.549162910996742,
-    "trailing_stop_activation": 41.57168949621768,
-    "trailing_stop_distance": 5.0,
-    "break_even_protection": false,
-    "break_even_trigger": 54.801923631626224,
+    "stop_loss": 9.291252713865141,
+    "take_profit": 32.198560243779326,
+    "trailing_stop_activation": 35.36241394905489,
+    "trailing_stop_distance": 15.30567035352242,
+    "break_even_protection": true,
+    "break_even_trigger": 59.276219332239954,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 8,
-      "upper": 61,
-      "lower": 33
+      "candles": 10,
+      "upper": 63,
+      "lower": 30
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 8,
-      "single_candle_percent": 12.687386754683814,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 66.01361632732781
+      "candles": 5,
+      "single_candle_percent": 11.261394755196545,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 63.53818108122008
     }
   },
-  "candles_count": 1809,
+  "candles_count": 1953,
   "trades_count": 5,
-  "win_rate": 40.0,
+  "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 6.548241919691387e-07,
-  "total_pnl": -0.6832524194644993,
-  "previous_candles_count": 1760,
+  "profit_mse": 2.6287572150293777e-06,
+  "total_pnl": 0.44284544306094376,
+  "previous_candles_count": 1922,
   "candles_increased": true
 }

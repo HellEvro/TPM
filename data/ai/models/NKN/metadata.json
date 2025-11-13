@@ -1,46 +1,46 @@
 {
   "symbol": "NKN",
-  "trained_at": "2025-11-13T04:29:56.100930",
-  "training_seed": 382694,
-  "coin_model_seed": 383428,
+  "trained_at": "2025-11-13T15:59:29.759941",
+  "training_seed": 743535,
+  "coin_model_seed": 743725,
   "rsi_params": {
     "oversold": 32,
-    "overbought": 68,
-    "exit_long_with_trend": 67,
-    "exit_long_against_trend": 65,
-    "exit_short_with_trend": 39,
-    "exit_short_against_trend": 37
+    "overbought": 69,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 43
   },
   "risk_params": {
-    "stop_loss": 15.641679943513068,
-    "take_profit": 33.190639801131674,
-    "trailing_stop_activation": 35.51337142575643,
-    "trailing_stop_distance": 15.674696900296752,
-    "break_even_protection": false,
-    "break_even_trigger": 66.0507166120282,
+    "stop_loss": 12.518581037445653,
+    "take_profit": 10.61735909607105,
+    "trailing_stop_activation": 27.035987252073873,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 100.08366873303933,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 9,
-      "upper": 69,
-      "lower": 39
+      "candles": 6,
+      "upper": 64,
+      "lower": 36
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 6,
-      "single_candle_percent": 22.622043192896793,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 31.272592655283212
+      "candles": 11,
+      "single_candle_percent": 7.270873455170612,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 65.5087186031003
     }
   },
-  "candles_count": 3964,
+  "candles_count": 3906,
   "trades_count": 7,
-  "win_rate": 28.57142857142857,
+  "win_rate": 71.42857142857143,
   "signal_accuracy": 1.0,
-  "profit_mse": 2.322661105438116e-07,
-  "total_pnl": -0.18823141692512557,
-  "previous_candles_count": 3794,
+  "profit_mse": 1.1862350688135424e-06,
+  "total_pnl": 0.19628436675921598,
+  "previous_candles_count": 0,
   "candles_increased": true
 }

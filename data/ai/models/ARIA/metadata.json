@@ -1,0 +1,46 @@
+{
+  "symbol": "ARIA",
+  "trained_at": "2025-11-13T15:54:04.243117",
+  "training_seed": 435942,
+  "coin_model_seed": 436941,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 14.34178478030898,
+    "take_profit": 17.85694542226055,
+    "trailing_stop_activation": 11.656543146689385,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 138.52570271486013,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 69,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 22.657241210961708,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 42.57984900449462
+    }
+  },
+  "candles_count": 284,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.105809719308254e-06,
+  "total_pnl": 0.19191913824183746,
+  "previous_candles_count": 284,
+  "candles_increased": false
+}
