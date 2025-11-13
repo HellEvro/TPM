@@ -576,10 +576,23 @@ def load_auto_bot_config():
     """
     try:
         from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
-        
+
+        # Пытаемся загрузить последнюю сохранённую конфигурацию из JSON
+        persisted_config = storage_load_auto_bot_config()
+
+        merged_config = DEFAULT_AUTO_BOT_CONFIG.copy()
+        if isinstance(persisted_config, dict):
+            merged_config.update(persisted_config)
+
         with bots_data_lock:
-            # Загружаем конфигурацию напрямую из bot_config.py
-            bots_data['auto_bot_config'] = DEFAULT_AUTO_BOT_CONFIG.copy()
+            previous_config = bots_data.get('auto_bot_config')
+            bots_data['auto_bot_config'] = merged_config
+
+            # Сохраняем текущий статус важных флагов, если они уже были выставлены
+            if isinstance(previous_config, dict):
+                for transient_key in ('enabled', 'trading_enabled'):
+                    if transient_key in previous_config:
+                        bots_data['auto_bot_config'][transient_key] = previous_config[transient_key]
         
         logger.info(f"[CONFIG] ✅ Загружена конфигурация Auto Bot из bot_config.py")
             
