@@ -329,6 +329,10 @@ _work_in_progress/
 _work_TRADING_/
 
 # Public version for Git
+# ✅ ИСКЛЮЧЕНИЯ: Файлы лицензирования в публичной версии НУЖНЫ (должны быть ПЕРЕД правилом InfoBot_Public/)
+!InfoBot_Public/bot_engine/ai/license_checker.pyc
+!InfoBot_Public/bot_engine/ai/hardware_id_source.pyc
+!InfoBot_Public/bot_engine/ai/ai_manager.pyc
 InfoBot_Public/
 
 # Test files
