@@ -146,6 +146,51 @@ app.config['DEBUG'] = APP_DEBUG
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
+# ✅ ОТКЛЮЧЕНИЕ КЭША ДЛЯ ВСЕХ СТАТИЧЕСКИХ ФАЙЛОВ (особенно JS)
+# ✅ КРИТИЧНО: Flask по умолчанию может кэшировать статические файлы, поэтому принудительно отключаем
+@app.after_request
+def add_no_cache_headers(response):
+    """Принудительно отключает кэширование для всех статических файлов, особенно JavaScript"""
+    # ✅ Проверяем все возможные варианты статических файлов
+    is_static = (
+        request.endpoint == 'static' or 
+        request.path.startswith('/static/') or
+        '/static/' in request.path or
+        request.path.endswith(('.js', '.css', '.ico', '.png', '.jpg', '.gif', '.svg'))
+    )
+    
+    # ✅ Для JavaScript файлов - ОСОБЕННО СТРОГО отключаем кэш (проверяем первым!)
+    if request.path.endswith('.js'):
+        # Принудительно удаляем ВСЕ заголовки кэширования
+        headers_to_remove = ['Last-Modified', 'ETag', 'Cache-Control', 'Expires', 'Pragma']
+        for header in headers_to_remove:
+            response.headers.pop(header, None)
+        
+        # Устанавливаем строгие заголовки против кэширования
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        
+        # ✅ Уникальный ETag с timestamp для принудительной перезагрузки
+        response.headers['ETag'] = f'"nocache-{int(time.time() * 1000)}"'
+        
+        # ✅ Дополнительный заголовок для старых браузеров
+        response.headers['Vary'] = '*'
+        
+        # DEBUG: Логируем в dev режиме
+        if app.config.get('DEBUG'):
+            print(f"[CACHE] ✅ JS файл: {request.path} - кэш отключен")
+    
+    # ✅ Для остальных статических файлов также отключаем кэш
+    elif is_static:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        response.headers['ETag'] = f'"nocache-{int(time.time() * 1000)}"'
+    
+    return response
+
 telegram = TelegramNotifier()
 
 # Создаем директорию для логов, если её нет
@@ -347,12 +392,18 @@ def open_browser():
 
 @app.route('/')
 def index():
-    return render_template('index.html', get_current_language=get_current_language)
+    # ✅ Передаем timestamp для cache-busting JavaScript файлов
+    import time
+    timestamp = int(time.time() * 1000)  # миллисекунды для уникальности
+    return render_template('index.html', get_current_language=get_current_language, cache_version=timestamp)
 
 @app.route('/bots')
 def bots_page():
     """Страница управления ботами"""
-    return render_template('index.html', get_current_language=get_current_language)
+    # ✅ Передаем timestamp для cache-busting JavaScript файлов
+    import time
+    timestamp = int(time.time() * 1000)  # миллисекунды для уникальности
+    return render_template('index.html', get_current_language=get_current_language, cache_version=timestamp)
 
 def analyze_symbol(symbol, force_update=False):
     """Анализирует отдельный символ"""
