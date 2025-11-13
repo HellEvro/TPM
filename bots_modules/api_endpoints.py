@@ -430,18 +430,18 @@ def get_coins_with_rsi():
         # Проверяем параметр refresh_symbol для обновления конкретной монеты
         refresh_symbol = request.args.get('refresh_symbol')
         if refresh_symbol:
-            logger.info(f"[API] 🔄 Запрос на обновление RSI данных для {refresh_symbol}")
+            logger.info(f"🔄 Запрос на обновление RSI данных для {refresh_symbol}")
             try:
                 if ensure_exchange_initialized():
                     coin_data = get_coin_rsi_data(refresh_symbol, get_exchange())
                     if coin_data:
                         # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает запись атомарной
                         coins_rsi_data['coins'][refresh_symbol] = coin_data
-                        logger.info(f"[API] ✅ RSI данные для {refresh_symbol} обновлены")
+                        logger.info(f"✅ RSI данные для {refresh_symbol} обновлены")
                     else:
-                        logger.warning(f"[API] ⚠️ Не удалось обновить RSI данные для {refresh_symbol}")
+                        logger.warning(f"⚠️ Не удалось обновить RSI данные для {refresh_symbol}")
             except Exception as e:
-                logger.error(f"[API] ❌ Ошибка обновления RSI для {refresh_symbol}: {e}")
+                logger.error(f"❌ Ошибка обновления RSI для {refresh_symbol}: {e}")
         
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
         # Проверяем возраст кэша
@@ -721,7 +721,7 @@ def get_bots_list():
         return jsonify(response_data)
         
     except Exception as e:
-        logger.error(f"[API] ❌ Ошибка получения списка ботов: {e}")
+        logger.error(f"❌ Ошибка получения списка ботов: {e}")
         return jsonify({
             'success': False,
             'error': str(e),
@@ -930,23 +930,23 @@ def start_bot_endpoint():
 def stop_bot_endpoint():
     """Остановить бота"""
     try:
-        logger.info(f"[API] 📥 Получен запрос остановки бота: {request.get_data()}")
+        logger.info(f"📥 Получен запрос остановки бота: {request.get_data()}")
         
         # Пробуем разные способы получения данных
         try:
             data = request.get_json()
         except Exception as json_error:
-            logger.error(f"[API] ❌ Ошибка парсинга JSON: {json_error}")
+            logger.error(f"❌ Ошибка парсинга JSON: {json_error}")
             # Пробуем получить данные как form data
             data = request.form.to_dict()
             if not data:
                 # Пробуем получить данные из args
                 data = request.args.to_dict()
         
-        logger.info(f"[API] 📊 Распарсенные данные: {data}")
+        logger.info(f"📊 Распарсенные данные: {data}")
         
         if not data or not data.get('symbol'):
-            logger.error(f"[API] ❌ Отсутствует symbol в данных: {data}")
+            logger.error(f"❌ Отсутствует symbol в данных: {data}")
             return jsonify({'success': False, 'error': 'Symbol required'}), 400
         
         symbol = data['symbol']
@@ -956,18 +956,18 @@ def stop_bot_endpoint():
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение и простое присваивание - атомарные операции
         position_to_close = None
         
-        logger.info(f"[API] 🔍 Проверяем наличие бота {symbol}...")
+        logger.info(f"🔍 Проверяем наличие бота {symbol}...")
         if symbol not in bots_data['bots']:
-            logger.error(f"[API] ❌ Бот {symbol} не найден!")
+            logger.error(f"❌ Бот {symbol} не найден!")
             return jsonify({'success': False, 'error': 'Bot not found'}), 404
         
-        logger.info(f"[API] ✅ Бот {symbol} найден, останавливаем...")
+        logger.info(f"✅ Бот {symbol} найден, останавливаем...")
         
         # ⚡ КРИТИЧНО: Используем блокировку для атомарной операции!
         with bots_data_lock:
             bot_data = bots_data['bots'][symbol]
             old_status = bot_data['status']
-            logger.info(f"[API] 📊 Старый статус: {old_status}")
+            logger.info(f"📊 Старый статус: {old_status}")
             
             # Проверяем, есть ли открытая позиция
             if bot_data.get('position_side') in ['LONG', 'SHORT']:
@@ -1065,32 +1065,32 @@ def pause_bot_endpoint():
 def delete_bot_endpoint():
     """Удалить бота"""
     try:
-        logger.info(f"[API] 📥 Получен запрос удаления бота: {request.get_data()}")
+        logger.info(f"📥 Получен запрос удаления бота: {request.get_data()}")
         
         # Пробуем разные способы получения данных
         try:
             data = request.get_json()
         except Exception as json_error:
-            logger.error(f"[API] ❌ Ошибка парсинга JSON: {json_error}")
+            logger.error(f"❌ Ошибка парсинга JSON: {json_error}")
             # Пробуем получить данные как form data
             data = request.form.to_dict()
             if not data:
                 # Пробуем получить данные из args
                 data = request.args.to_dict()
         
-        logger.info(f"[API] 📊 Распарсенные данные: {data}")
+        logger.info(f"📊 Распарсенные данные: {data}")
         
         if not data or not data.get('symbol'):
-            logger.error(f"[API] ❌ Отсутствует symbol в данных: {data}")
+            logger.error(f"❌ Отсутствует symbol в данных: {data}")
             return jsonify({'success': False, 'error': 'Symbol required'}), 400
         
         symbol = data['symbol']
         reason = data.get('reason', 'Удален пользователем')
         
         # ⚡ БЕЗ БЛОКИРОВКИ: операции с dict атомарны в Python
-        logger.info(f"[API] 🔍 Ищем бота {symbol} в bots_data. Доступные боты: {list(bots_data['bots'].keys())}")
+        logger.info(f"🔍 Ищем бота {symbol} в bots_data. Доступные боты: {list(bots_data['bots'].keys())}")
         if symbol not in bots_data['bots']:
-            logger.error(f"[API] ❌ Бот {symbol} не найден в bots_data")
+            logger.error(f"❌ Бот {symbol} не найден в bots_data")
             return jsonify({'success': False, 'error': 'Bot not found'}), 404
         
         # ✅ ТУПО УДАЛЯЕМ БОТА ИЗ ФАЙЛА!
@@ -1120,23 +1120,23 @@ def delete_bot_endpoint():
 def close_position_endpoint():
     """Принудительно закрыть позицию бота"""
     try:
-        logger.info(f"[API] 📥 Получен запрос закрытия позиции: {request.get_data()}")
+        logger.info(f"📥 Получен запрос закрытия позиции: {request.get_data()}")
         
         # Пробуем разные способы получения данных
         try:
             data = request.get_json()
         except Exception as json_error:
-            logger.error(f"[API] ❌ Ошибка парсинга JSON: {json_error}")
+            logger.error(f"❌ Ошибка парсинга JSON: {json_error}")
             # Пробуем получить данные как form data
             data = request.form.to_dict()
             if not data:
                 # Пробуем получить данные из args
                 data = request.args.to_dict()
         
-        logger.info(f"[API] 📊 Распарсенные данные: {data}")
+        logger.info(f"📊 Распарсенные данные: {data}")
         
         if not data or not data.get('symbol'):
-            logger.error(f"[API] ❌ Отсутствует symbol в данных: {data}")
+            logger.error(f"❌ Отсутствует symbol в данных: {data}")
             return jsonify({'success': False, 'error': 'Symbol required'}), 400
         
         symbol = data['symbol']
@@ -1283,10 +1283,8 @@ def log_config_change(key, old_value, new_value, description=""):
         arrow = '→'
         # Используем понятное название из словаря или техническое название
         display_name = description or CONFIG_NAMES.get(key, key)
-        # КРИТИЧЕСКИ ВАЖНО: Используем logger для записи в файл
-        logger.info(f"[CONFIG] ✓ {display_name}: {old_value} {arrow} {new_value}")
-        # Дополнительно выводим на экран с ANSI кодами
-        print(f"\033[92m[CONFIG] ✓ {display_name}: {old_value} {arrow} {new_value}\033[0m")
+        # Используем logger для записи в файл и консоль
+        logger.info(f"✓ {display_name}: {old_value} {arrow} {new_value}")
         return True
     return False
 
@@ -1549,15 +1547,15 @@ def system_config():
             
             # Выводим итоговое сообщение
             if changes_count > 0:
-                print(f"\033[92m[CONFIG] ✅ Изменено параметров: {changes_count}, конфигурация сохранена\033[0m")
+                logger.info(f"✅ Изменено параметров: {changes_count}, конфигурация сохранена")
             else:
-                logger.info("[CONFIG] ℹ️  Изменений не обнаружено")
+                logger.info("ℹ️  Изменений не обнаружено")
             
             # Выводим сообщение для system config
             if system_changes_count > 0:
-                print(f"\033[92m[CONFIG] ✅ System config: изменено параметров: {system_changes_count}, конфигурация сохранена\033[0m")
+                logger.info(f"✅ System config: изменено параметров: {system_changes_count}, конфигурация сохранена")
             else:
-                logger.info("[CONFIG] ℹ️  System config: изменений не обнаружено")
+                logger.info("ℹ️  System config: изменений не обнаружено")
             
             if saved_to_file and (changes_count > 0 or system_changes_count > 0):
                 # Перезагружаем конфигурацию, чтобы применить изменения
@@ -2307,9 +2305,9 @@ def auto_bot_config():
             
             # Выводим итоговое сообщение
             if changes_count > 0:
-                print(f"\033[92m[CONFIG] ✅ Auto Bot: изменено параметров: {changes_count}, конфигурация сохранена и перезагружена\033[0m")
+                logger.info(f"✅ Auto Bot: изменено параметров: {changes_count}, конфигурация сохранена и перезагружена")
             else:
-                logger.info("[CONFIG] ℹ️  Auto Bot: изменений не обнаружено")
+                logger.info("ℹ️  Auto Bot: изменений не обнаружено")
             
             # ✅ АВТОМАТИЧЕСКАЯ ОЧИСТКА при изменении критериев зрелости
             if maturity_params_changed:

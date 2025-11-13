@@ -162,24 +162,24 @@ from bots_modules.workers import *
 from bots_modules.init_functions import *
 
 # Импорт системы истории ботов (ПЕРЕД импортом API endpoints!)
+# Настройка логирования (раньше, чтобы использовать logger)
+setup_color_logging()
+logger = logging.getLogger('BotsService')
+
 try:
-    print("[BOT_HISTORY] 🔄 Попытка импорта bot_history...")
     from bot_engine.bot_history import (
         bot_history_manager, log_bot_start, log_bot_stop, log_bot_signal,
         log_position_opened, log_position_closed
     )
-    print(f"[BOT_HISTORY] ✅ Импорт успешен, bot_history_manager: {bot_history_manager}")
     BOT_HISTORY_AVAILABLE = True
-    logger = logging.getLogger('BotsService')
-    logger.info("[BOT_HISTORY] ✅ Модуль bot_history загружен успешно")
+    logger.info("✅ Модуль bot_history загружен успешно")
     
     # Устанавливаем bot_history_manager в глобальный модуль
     import bots_modules.imports_and_globals as globals_module
     globals_module.bot_history_manager = bot_history_manager
     globals_module.BOT_HISTORY_AVAILABLE = True
-    print(f"[BOT_HISTORY] ✅ Установлен в глобальный модуль: {globals_module.bot_history_manager}")
 except ImportError as e:
-    print(f"[WARNING] Модуль bot_history недоступен: {e}")
+    logger.warning(f"⚠️ Модуль bot_history недоступен: {e}")
     # Создаем заглушки
     class DummyHistoryManager:
         def get_bot_history(self, *args, **kwargs): return []
@@ -199,19 +199,16 @@ except ImportError as e:
     import bots_modules.imports_and_globals as globals_module
     globals_module.bot_history_manager = bot_history_manager
     globals_module.BOT_HISTORY_AVAILABLE = False
-    print(f"[BOT_HISTORY] ⚠️ Установлена заглушка в глобальный модуль: {globals_module.bot_history_manager}")
+    logger.warning("⚠️ Установлена заглушка для bot_history")
 except Exception as e:
-    print(f"[ERROR] Неожиданная ошибка при импорте bot_history: {e}")
+    logger.error(f"❌ Неожиданная ошибка при импорте bot_history: {e}")
     import traceback
     traceback.print_exc()
 
 # Теперь импортируем API endpoints (после установки bot_history_manager)
 from bots_modules.api_endpoints import *
 
-print("Все модули загружены!")
-
-# Настройка логирования
-setup_color_logging()
+logger.info("✅ Все модули загружены")
 
 # Добавляем файловый логгер
 file_handler = logging.FileHandler('logs/bots.log', encoding='utf-8')
@@ -255,7 +252,7 @@ def open_firewall_port_5001():
         import subprocess
         import platform
         
-        print("[BOTS] 🔥 Проверка открытия порта 5001 в брандмауэре...")
+        logger.info("🔥 Проверка открытия порта 5001 в брандмауэре...")
         
         system = platform.system()
         port = 5001
@@ -269,7 +266,7 @@ def open_firewall_port_5001():
             )
             
             if 'InfoBot Bot Service' not in result.stdout:
-                print("[BOTS] 🔥 Открываем порт 5001...")
+                logger.info("🔥 Открываем порт 5001...")
                 subprocess.run([
                     'netsh', 'advfirewall', 'firewall', 'add', 'rule',
                     'name=InfoBot Bot Service',
@@ -278,12 +275,12 @@ def open_firewall_port_5001():
                     'protocol=TCP',
                     f'localport={port}'
                 ], check=True)
-                print("[BOTS] ✅ Порт 5001 открыт")
+                logger.info("✅ Порт 5001 открыт")
             else:
-                print("[BOTS] ✅ Порт 5001 уже открыт")
+                logger.info("✅ Порт 5001 уже открыт")
         
         elif system == 'Darwin':  # macOS
-            print("[BOTS] 💡 На macOS откройте порт 5001 вручную")
+            logger.info("💡 На macOS откройте порт 5001 вручную")
         
         elif system == 'Linux':
             try:
@@ -292,19 +289,19 @@ def open_firewall_port_5001():
                 result = subprocess.run(['ufw', 'status'], capture_output=True, text=True)
                 if f'{port}/tcp' not in result.stdout:
                     subprocess.run(['sudo', 'ufw', 'allow', str(port), '/tcp'], check=True)
-                    print(f"[BOTS] ✅ Порт {port} открыт")
+                    logger.info(f"✅ Порт {port} открыт")
                 else:
-                    print(f"[BOTS] ✅ Порт {port} уже открыт")
+                    logger.info(f"✅ Порт {port} уже открыт")
             except:
-                print(f"[BOTS] ⚠️ Настройте порт {port} вручную")
+                logger.warning(f"⚠️ Настройте порт {port} вручную")
         
         else:
-            print(f"[BOTS] ⚠️ Неизвестная система: {system}")
-            print("[BOTS] 💡 Настройте порт вручную см. docs/INSTALL.md")
+            logger.warning(f"⚠️ Неизвестная система: {system}")
+            logger.info("💡 Настройте порт вручную см. docs/INSTALL.md")
             
     except Exception as e:
-        print(f"[BOTS] ⚠️ Не удалось открыть порт 5001 автоматически: {e}")
-        print("[BOTS] 💡 Откройте порт вручную см. docs/INSTALL.md")
+        logger.warning(f"⚠️ Не удалось открыть порт 5001 автоматически: {e}")
+        logger.info("💡 Откройте порт вручную см. docs/INSTALL.md")
 
 def cleanup_bot_service():
     """Очистка ресурсов перед остановкой"""
@@ -438,9 +435,22 @@ if __name__ == '__main__':
                 
                 # ✅ Обучение перенесено в ai.py - здесь только проверка доступности модулей
                 if ai_manager.is_available():
+                    logger.info("")
+                    logger.info("=" * 80)
+                    logger.info("🟢 AI МОДУЛИ АКТИВНЫ - ЛИЦЕНЗИЯ ВАЛИДНА 🟢")
+                    logger.info("=" * 80)
                     logger.info("🤖 AI модули активны (обучение выполняется в ai.py)")
+                    logger.info("=" * 80)
+                    logger.info("")
                 else:
+                    logger.warning("")
+                    logger.warning("=" * 80)
+                    logger.warning("🔴 AI МОДУЛИ НЕ ЗАГРУЖЕНЫ - ЛИЦЕНЗИЯ НЕ ВАЛИДНА 🔴")
+                    logger.warning("=" * 80)
                     logger.warning("⚠️ AI модули не загружены (проверьте лицензию)")
+                    logger.warning("💡 Получите HWID: python scripts/activate_premium.py")
+                    logger.warning("=" * 80)
+                    logger.warning("")
             else:
                 logger.info("ℹ️ AI модули отключены в конфигурации")
         except ImportError as ai_import_error:

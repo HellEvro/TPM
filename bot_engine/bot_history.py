@@ -54,13 +54,13 @@ class BotHistoryManager:
                     data = json.load(f)
                     self.history = data.get('history', [])
                     self.trades = data.get('trades', [])
-                    logger.info(f"[BOT_HISTORY] ✅ Загружено записей: {len(self.history)} действий, {len(self.trades)} сделок")
+                    logger.info(f"✅ Загружено записей: {len(self.history)} действий, {len(self.trades)} сделок")
             else:
-                logger.info("[BOT_HISTORY] 📝 Файл истории не найден, создается новый")
+                logger.info("📝 Файл истории не найден, создается новый")
                 self.history = []
                 self.trades = []
         except Exception as e:
-            logger.error(f"[BOT_HISTORY] ❌ Ошибка загрузки истории: {e}")
+            logger.error(f"❌ Ошибка загрузки истории: {e}")
             self.history = []
             self.trades = []
     
@@ -76,7 +76,7 @@ class BotHistoryManager:
                 with open(self.history_file, 'w', encoding='utf-8') as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            logger.error(f"[BOT_HISTORY] ❌ Ошибка сохранения истории: {e}")
+            logger.error(f"❌ Ошибка сохранения истории: {e}")
     
     def _add_history_entry(self, entry: Dict[str, Any]):
         """Добавляет запись в историю"""
@@ -173,7 +173,7 @@ class BotHistoryManager:
             'details': f"Запущен бот {direction} для {symbol}"
         }
         self._add_history_entry(entry)
-        logger.info(f"[BOT_HISTORY] 🚀 {entry['details']}")
+        logger.info(f"🚀 {entry['details']}")
     
     def log_bot_stop(self, bot_id: str, symbol: str, reason: str = None, pnl: float = None):
         """Логирование остановки бота"""
@@ -192,7 +192,7 @@ class BotHistoryManager:
             entry['details'] += f" (PnL: {pnl:.2f} USDT)"
         
         self._add_history_entry(entry)
-        logger.info(f"[BOT_HISTORY] 🛑 {entry['details']}")
+        logger.info(f"🛑 {entry['details']}")
     
     def log_bot_signal(self, symbol: str, signal_type: str, rsi: float, price: float, details: Dict = None):
         """Логирование торгового сигнала"""
@@ -209,7 +209,7 @@ class BotHistoryManager:
             'details': f"Сигнал {signal_type} для {symbol} (RSI: {rsi:.2f}, цена: {price:.2f})"
         }
         self._add_history_entry(entry)
-        logger.info(f"[BOT_HISTORY] 📊 {entry['details']}")
+        logger.info(f"📊 {entry['details']}")
     
     def log_position_opened(self, bot_id: str, symbol: str, direction: str, size: float, 
                            entry_price: float, stop_loss: float = None, take_profit: float = None,
@@ -283,7 +283,7 @@ class BotHistoryManager:
         }
         self._add_trade_entry(trade)
         
-        logger.info(f"[BOT_HISTORY] 📈 {entry['details']}")
+        logger.info(f"📈 {entry['details']}")
     
     def log_position_closed(self, bot_id: str, symbol: str, direction: str, exit_price: float, 
                            pnl: float, roi: float, reason: str = None, entry_data: Dict = None,
@@ -385,7 +385,7 @@ class BotHistoryManager:
                     break
         self._save_history()
         
-        logger.info(f"[BOT_HISTORY] 💰 {entry['details']}")
+        logger.info(f"💰 {entry['details']}")
     
     # ==================== Методы получения данных ====================
     
@@ -570,11 +570,11 @@ class BotHistoryManager:
             if symbol:
                 self.history = [h for h in self.history if h.get('symbol') != symbol]
                 self.trades = [t for t in self.trades if t.get('symbol') != symbol]
-                logger.info(f"[BOT_HISTORY] 🗑️ Очищена история для {symbol}")
+                logger.info(f"🗑️ Очищена история для {symbol}")
             else:
                 self.history = []
                 self.trades = []
-                logger.info("[BOT_HISTORY] 🗑️ Вся история очищена")
+                logger.info("🗑️ Вся история очищена")
         
         self._save_history()
 
@@ -636,7 +636,7 @@ def create_demo_data() -> bool:
         
         symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'SOLUSDT']
         
-        logger.info("[BOT_HISTORY] 📝 Создание демо-данных...")
+        logger.info("📝 Создание демо-данных...")
         
         for i in range(20):
             symbol = random.choice(symbols)
@@ -667,11 +667,11 @@ def create_demo_data() -> bool:
                 
                 log_bot_stop(bot_id, symbol, 'Позиция закрыта', pnl)
         
-        logger.info("[BOT_HISTORY] ✅ Демо-данные созданы успешно!")
+        logger.info("✅ Демо-данные созданы успешно!")
         return True
         
     except Exception as e:
-        logger.error(f"[BOT_HISTORY] ❌ Ошибка создания демо-данных: {e}")
+        logger.error(f"❌ Ошибка создания демо-данных: {e}")
         return False
 
 
