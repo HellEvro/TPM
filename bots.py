@@ -436,13 +436,9 @@ if __name__ == '__main__':
                 from bot_engine.ai.ai_manager import get_ai_manager
                 ai_manager = get_ai_manager()
                 
-                # Если лицензия валидна и модули загружены, запускаем Auto Trainer
-                if ai_manager.is_available() and AIConfig.AI_AUTO_TRAIN_ENABLED:
-                    from bot_engine.ai.auto_trainer import start_auto_trainer
-                    start_auto_trainer()
-                    logger.info("🤖 AI Auto Trainer запущен (автообновление данных и переобучение)")
-                elif ai_manager.is_available():
-                    logger.info("🤖 AI модули активны (автообучение отключено)")
+                # ✅ Обучение перенесено в ai.py - здесь только проверка доступности модулей
+                if ai_manager.is_available():
+                    logger.info("🤖 AI модули активны (обучение выполняется в ai.py)")
                 else:
                     logger.warning("⚠️ AI модули не загружены (проверьте лицензию)")
             else:
@@ -466,12 +462,7 @@ if __name__ == '__main__':
         traceback.print_exc()
     finally:
         try:
-            # Останавливаем AI Auto Trainer
-            try:
-                from bot_engine.ai.auto_trainer import stop_auto_trainer
-                stop_auto_trainer()
-            except:
-                pass
+            # ✅ Auto Trainer останавливается в ai.py, здесь не требуется
             
             cleanup_bot_service()
             print("✅ Сервис остановлен\n")
