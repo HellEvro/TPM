@@ -1919,8 +1919,8 @@ def check_missing_stop_losses():
         with bots_data_lock:
             # Получаем конфигурацию трейлинг стопа
             auto_config = bots_data.get('auto_bot_config', {})
-            trailing_activation = float(auto_config.get('trailing_stop_activation', 300.0))  # в %
-            trailing_distance = float(auto_config.get('trailing_stop_distance', 150.0))      # в %
+            trailing_activation = float(auto_config.get('trailing_stop_activation', 20.0))  # в %
+            trailing_distance = float(auto_config.get('trailing_stop_distance', 5.0))      # в %
             
             # Получаем все позиции с биржи
             try:

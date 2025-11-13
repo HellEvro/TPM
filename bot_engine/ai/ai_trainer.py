@@ -1294,6 +1294,8 @@ class AITrainer:
             base_take_profit = base_config.get('take_profit_percent', 20.0)
             base_trailing_activation = base_config.get('trailing_stop_activation', 20.0)
             base_trailing_distance = base_config.get('trailing_stop_distance', 15.0)
+            base_trailing_take_distance = base_config.get('trailing_take_distance', 0.5)
+            base_trailing_update_interval = base_config.get('trailing_update_interval', 3.0)
             base_break_even = base_config.get('break_even_trigger', 100.0)
             base_break_even_protection = base_config.get('break_even_protection', True)
             base_max_hours = base_config.get('max_position_hours', 48)
@@ -1340,6 +1342,14 @@ class AITrainer:
                 f"   Trailing Stop: активация {base_trailing_activation:.1f}% (-12% … +25%), "
 
                 f"расстояние {base_trailing_distance:.1f}% (-12% … +18%)"
+
+            )
+
+            logger.info(
+
+                f"   Trailing Take: расстояние {base_trailing_take_distance:.2f}% (±0.2%), "
+
+                f"интервал {base_trailing_update_interval:.1f}с (±1.0с)"
 
             )
 
@@ -1448,8 +1458,10 @@ class AITrainer:
                             logger.debug(f"   🎲 {symbol}: используем подмножество свечей с offset {start_offset} (всего {len(candles)} свечей)")
 
                     # Проверяем существующую модель и количество свечей при предыдущем обучении
-                    symbol_models_dir = os.path.join(self.models_dir, symbol)
-                    metadata_path = os.path.join(symbol_models_dir, 'metadata.json')
+                    # Нормализуем путь и имя символа для Windows
+                    safe_symbol = symbol.replace('/', '_').replace('\\', '_').replace(':', '_')
+                    symbol_models_dir = os.path.normpath(os.path.join(self.models_dir, safe_symbol))
+                    metadata_path = os.path.normpath(os.path.join(symbol_models_dir, 'metadata.json'))
                     previous_candles_count = 0
                     model_exists = False
                     
@@ -1537,6 +1549,8 @@ class AITrainer:
                     TAKE_PROFIT_PERCENT = max(10.0, min(70.0, base_take_profit + coin_rng.uniform(-12.0, 15.0)))
                     TRAILING_STOP_ACTIVATION = max(8.0, min(70.0, base_trailing_activation + coin_rng.uniform(-12.0, 25.0)))
                     TRAILING_STOP_DISTANCE = max(5.0, min(45.0, base_trailing_distance + coin_rng.uniform(-12.0, 18.0)))
+                    TRAILING_TAKE_DISTANCE = max(0.1, min(2.0, base_trailing_take_distance + coin_rng.uniform(-0.2, 0.2)))
+                    TRAILING_UPDATE_INTERVAL = max(1.0, min(10.0, base_trailing_update_interval + coin_rng.uniform(-1.0, 1.0)))
                     BREAK_EVEN_TRIGGER = max(30.0, min(250.0, base_break_even + coin_rng.uniform(-60.0, 90.0)))
                     base_break_even_flag = bool(base_break_even_protection)
                     BREAK_EVEN_PROTECTION = base_break_even_flag if coin_rng.random() < 0.5 else not base_break_even_flag
@@ -1566,6 +1580,7 @@ class AITrainer:
                         logger.info(
                             f"   📐 {symbol}: риск-параметры SL {MAX_LOSS_PERCENT:.1f}% | TP {TAKE_PROFIT_PERCENT:.1f}% | "
                             f"TS {TRAILING_STOP_ACTIVATION:.1f}%/{TRAILING_STOP_DISTANCE:.1f}% | "
+                            f"TT {TRAILING_TAKE_DISTANCE:.2f}%/{TRAILING_UPDATE_INTERVAL:.1f}с | "
                             f"BE {'✅' if BREAK_EVEN_PROTECTION else '❌'} ({BREAK_EVEN_TRIGGER:.1f}%) | MaxHold {MAX_POSITION_HOURS}ч"
                         )
                         logger.info(
@@ -1578,6 +1593,7 @@ class AITrainer:
                         logger.debug(
                             f"   📐 {symbol}: SL {MAX_LOSS_PERCENT:.1f}%, TP {TAKE_PROFIT_PERCENT:.1f}%, "
                             f"TS {TRAILING_STOP_ACTIVATION:.1f}%/{TRAILING_STOP_DISTANCE:.1f}%, "
+                            f"TT {TRAILING_TAKE_DISTANCE:.2f}%/{TRAILING_UPDATE_INTERVAL:.1f}с, "
                             f"BE {'✅' if BREAK_EVEN_PROTECTION else '❌'} ({BREAK_EVEN_TRIGGER:.1f}%), MaxHold {MAX_POSITION_HOURS}ч"
                         )
                         logger.debug(
@@ -1960,12 +1976,14 @@ class AITrainer:
                                 logger.info(f"   ✅ {symbol}: модель обучена! Accuracy: {signal_score:.2%}, MSE: {profit_mse:.2f}")
                             
                             # Сохраняем модели для этой монеты
-                            symbol_models_dir = os.path.join(self.models_dir, symbol)
+                            # Нормализуем путь и имя символа для Windows
+                            safe_symbol = symbol.replace('/', '_').replace('\\', '_').replace(':', '_')
+                            symbol_models_dir = os.path.normpath(os.path.join(self.models_dir, safe_symbol))
                             os.makedirs(symbol_models_dir, exist_ok=True)
                             
-                            signal_model_path = os.path.join(symbol_models_dir, 'signal_predictor.pkl')
-                            profit_model_path = os.path.join(symbol_models_dir, 'profit_predictor.pkl')
-                            scaler_path = os.path.join(symbol_models_dir, 'scaler.pkl')
+                            signal_model_path = os.path.normpath(os.path.join(symbol_models_dir, 'signal_predictor.pkl'))
+                            profit_model_path = os.path.normpath(os.path.join(symbol_models_dir, 'profit_predictor.pkl'))
+                            scaler_path = os.path.normpath(os.path.join(symbol_models_dir, 'scaler.pkl'))
                             
                             joblib.dump(symbol_signal_predictor, signal_model_path)
                             joblib.dump(symbol_profit_predictor, profit_model_path)
@@ -2015,7 +2033,7 @@ class AITrainer:
                                 'previous_candles_count': previous_candles_count if 'previous_candles_count' in locals() else 0,
                                 'candles_increased': candles_increased if 'candles_increased' in locals() else False
                             }
-                            metadata_path = os.path.join(symbol_models_dir, 'metadata.json')
+                            metadata_path = os.path.normpath(os.path.join(symbol_models_dir, 'metadata.json'))
                             with open(metadata_path, 'w', encoding='utf-8') as f:
                                 json.dump(metadata, f, indent=2, ensure_ascii=False)
                             logger.debug(f"   🗄️ {symbol}: metadata.json обновлён")
@@ -2084,6 +2102,15 @@ class AITrainer:
                                         'rsi_exit_long_against_trend': coin_rsi_params['exit_long_against_trend'],
                                         'rsi_exit_short_with_trend': coin_rsi_params['exit_short_with_trend'],
                                         'rsi_exit_short_against_trend': coin_rsi_params['exit_short_against_trend'],
+                                        'max_loss_percent': MAX_LOSS_PERCENT,
+                                        'take_profit_percent': TAKE_PROFIT_PERCENT,
+                                        'trailing_stop_activation': TRAILING_STOP_ACTIVATION,
+                                        'trailing_stop_distance': TRAILING_STOP_DISTANCE,
+                                        'trailing_take_distance': TRAILING_TAKE_DISTANCE,
+                                        'trailing_update_interval': TRAILING_UPDATE_INTERVAL,
+                                        'break_even_trigger': BREAK_EVEN_TRIGGER,
+                                        'break_even_protection': BREAK_EVEN_PROTECTION,
+                                        'max_position_hours': MAX_POSITION_HOURS,
                                         'rsi_time_filter_enabled': coin_rsi_time_filter_enabled,
                                         'rsi_time_filter_candles': coin_rsi_time_filter_candles,
                                         'rsi_time_filter_upper': coin_rsi_time_filter_upper,

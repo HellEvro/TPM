@@ -1,46 +1,46 @@
 {
   "symbol": "FARTCOIN",
-  "trained_at": "2025-11-13T01:56:30.698092",
-  "training_seed": 142038,
-  "coin_model_seed": 142510,
+  "trained_at": "2025-11-13T04:20:49.006155",
+  "training_seed": 843873,
+  "coin_model_seed": 844819,
   "rsi_params": {
-    "oversold": 35,
-    "overbought": 65,
-    "exit_long_with_trend": 65,
-    "exit_long_against_trend": 59,
-    "exit_short_with_trend": 31,
-    "exit_short_against_trend": 44
+    "oversold": 34,
+    "overbought": 73,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 35
   },
   "risk_params": {
-    "stop_loss": 18.877416019300703,
-    "take_profit": 24.47486320994974,
-    "trailing_stop_activation": 22.718302518640176,
-    "trailing_stop_distance": 7.501781978289708,
-    "break_even_protection": true,
-    "break_even_trigger": 189.4322042188146,
+    "stop_loss": 20.663169103650993,
+    "take_profit": 22.201480410438833,
+    "trailing_stop_activation": 38.87831868677754,
+    "trailing_stop_distance": 7.988401205208962,
+    "break_even_protection": false,
+    "break_even_trigger": 31.251296944413397,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 9,
-      "upper": 69,
-      "lower": 33
+      "candles": 5,
+      "upper": 68,
+      "lower": 34
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 12,
-      "single_candle_percent": 22.47285532320521,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 33.933166618844794
+      "candles": 7,
+      "single_candle_percent": 20.682472165666375,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 63.05832655122957
     }
   },
-  "candles_count": 1118,
-  "trades_count": 7,
-  "win_rate": 57.14285714285714,
+  "candles_count": 1240,
+  "trades_count": 5,
+  "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.2571765229353078e-05,
-  "total_pnl": 0.7222014130826544,
-  "previous_candles_count": 1151,
-  "candles_increased": false
+  "profit_mse": 1.50302108627442e-05,
+  "total_pnl": 2.4733391564828535,
+  "previous_candles_count": 1118,
+  "candles_increased": true
 }

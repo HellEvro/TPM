@@ -211,7 +211,7 @@
 
 ### 7.5. Защитные механизмы
 - `MAX_LOSS_PERCENT = 15.0` - максимальные потери (%)
-- `TRAILING_STOP_ACTIVATION = 300.0` - активация трейлинг стопа (%)
+- `TRAILING_STOP_ACTIVATION = 20.0` - активация трейлинг стопа (%)
 - `TRAILING_STOP_DISTANCE = 150.0` - расстояние трейлинг стопа (%)
 - `MAX_POSITION_TIME_HOURS = 48` - макс. время позиции (часы)
 - `BREAK_EVEN_PROTECTION = true` - защита безубыточности

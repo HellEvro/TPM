@@ -89,16 +89,18 @@ DEFAULT_AUTO_BOT_CONFIG = {
     # Защитные механизмы
     'max_loss_percent': 15,   # Максимальный убыток в % от входа (стоп-лосс)
     'take_profit_percent': 20,  # Защитный Take Profit в % от входа (рассчитывается как стоп-лосс)
-    'trailing_stop_activation': 20,  # Активация trailing stop при прибыли в % (x3 = 300%)
-    'trailing_stop_distance': 15,    # Расстояние trailing stop в % (x1.5 = 150%)
+    'trailing_stop_activation': 30,   # Процент прибыли, после которого активируется трейлинг
+    'trailing_stop_distance': 10,      # Дистанция трейлинга от максимальной цены, %
+    'trailing_take_distance': 0.5,    # Резервный trailing-тейк (лимит) в %, когда процесс упадет
+    'trailing_update_interval': 3,  # Минимальный интервал обновлений стопов/тейков (сек)
     'max_position_hours': 0,     # Максимальное время удержания позиции в часах (0 = отключено)
     'break_even_protection': True,      # Защита безубыточности
-    'break_even_trigger': 20,          # Триггер для break even в % (x1 = 100%)
+    'break_even_trigger': 20,           # Триггер для break even в % (x1 = 100%, но по умолчанию 20%)
     'break_even_trigger_percent': 20,  # Дублирующий ключ для UI (совместимость)
     # Фильтры по тренду
     'trend_detection_enabled': True,    # Включить определение тренда (выключить = пропускает анализ трендов)
-    'avoid_down_trend': False,          # Не входить в LONG при нисходящем тренде (КРИТИЧЕСКИ ВАЖНО!)
-    'avoid_up_trend': False,            # Не входить в SHORT при восходящем тренде (КРИТИЧЕСКИ ВАЖНО!)
+    'avoid_down_trend': True,          # Не входить в LONG при нисходящем тренде (КРИТИЧЕСКИ ВАЖНО!)
+    'avoid_up_trend': True,            # Не входить в SHORT при восходящем тренде (КРИТИЧЕСКИ ВАЖНО!)
     # Параметры анализа тренда (простой ценовой анализ)
     'trend_analysis_period': 30,       # Количество свечей для анализа тренда (20-50, по умолчанию 30 = 7.5 дней на 6h)
     'trend_price_change_threshold': 7, # Процент изменения цены для определения тренда (3-15%, чем меньше - тем чувствительнее)
@@ -214,7 +216,7 @@ class SystemConfig:
 class RiskConfig:
     # Стоп-лосс и защитные механизмы
     STOP_LOSS_PERCENT = 15.0
-    TRAILING_STOP_ACTIVATION = 300.0  # x3 от входа
+    TRAILING_STOP_ACTIVATION = 20.0  # Процент прибыли для активации трейлинга
     TRAILING_STOP_DISTANCE = 150.0    # x1.5 от входа
     MAX_POSITION_TIME_HOURS = 48
     SECURITY_PROTECTION = True
