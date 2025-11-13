@@ -152,17 +152,26 @@ class AISystem:
             self.license_info = license_checker.get_info()
             
             if not self.license_valid:
+                logger.error("")
                 logger.error("=" * 80)
-                logger.error("❌ ЛИЦЕНЗИЯ НЕ ВАЛИДНА!")
+                logger.error("🔴🔴🔴 ЛИЦЕНЗИЯ НЕ ВАЛИДНА - AI ФУНКЦИИ ОТКЛЮЧЕНЫ 🔴🔴🔴")
                 logger.error("=" * 80)
                 logger.error("⚠️ Весь функционал AI системы требует валидной лицензии")
                 logger.error("💡 Для активации лицензии поместите файл .lic в корень проекта")
+                logger.error("💡 Получите HWID: python scripts/activate_premium.py")
                 logger.error("=" * 80)
+                logger.error("")
             else:
+                license_type = self.license_info.get('type', 'premium')
+                expires_at = self.license_info.get('expires_at', 'N/A')
+                logger.info("")
                 logger.info("=" * 80)
-                logger.info(f"✅ ЛИЦЕНЗИЯ ВАЛИДНА: {self.license_info.get('type', 'premium')}")
-                logger.info(f"📅 Действительна до: {self.license_info.get('expires_at', 'N/A')}")
+                logger.info("🟢🟢🟢 ЛИЦЕНЗИЯ АКТИВНА - AI ФУНКЦИИ ДОСТУПНЫ 🟢🟢🟢")
                 logger.info("=" * 80)
+                logger.info(f"🎫 Тип лицензии: {license_type.upper()}")
+                logger.info(f"📅 Действительна до: {expires_at}")
+                logger.info("=" * 80)
+                logger.info("")
         else:
             logger.warning("⚠️ Проверка лицензии недоступна, продолжаем без проверки")
             self.license_valid = True  # В режиме разработки разрешаем без лицензии
