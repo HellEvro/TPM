@@ -5266,13 +5266,16 @@ class BotsManager {
         
         // Торговые параметры
         const rsiLongEl = document.getElementById('rsiLongThreshold');
-        if (rsiLongEl && rsiLongEl.value) {
+        if (rsiLongEl) {
             rsiLongEl.value = autoBotConfig.rsi_long_threshold || 29;
             console.log('[BotsManager] 📈 RSI LONG порог:', rsiLongEl.value);
         }
         
         const rsiShortEl = document.getElementById('rsiShortThreshold');
-        if (rsiShortEl && rsiShortEl.value) settings.rsi_short_threshold = parseInt(rsiShortEl.value);
+        if (rsiShortEl) {
+            rsiShortEl.value = autoBotConfig.rsi_short_threshold || 71;
+            console.log('[BotsManager] 📈 RSI SHORT порог:', rsiShortEl.value);
+        }
         
         const positionSizeEl = document.getElementById('defaultPositionSize');
         if (positionSizeEl) {
