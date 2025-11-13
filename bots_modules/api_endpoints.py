@@ -2196,31 +2196,32 @@ def auto_bot_config():
         if request.method == 'GET':
             # ✅ КРИТИЧЕСКИ ВАЖНО: Принудительно перезагружаем модуль и конфигурацию
             # Это гарантирует, что UI всегда получает актуальные данные из файла
-            import importlib
-            import sys
-            
-            # Принудительно перезагружаем модуль bot_config (без логирования, чтобы не спамить)
-            if 'bot_engine.bot_config' in sys.modules:
-                import bot_engine.bot_config
-                importlib.reload(bot_engine.bot_config)
-            
-            # Загружаем конфигурацию из перезагруженного модуля
             from bots_modules.imports_and_globals import load_auto_bot_config
+            
+            # ✅ КРИТИЧНО: Сбрасываем кэш времени модификации ПЕРЕД вызовом load_auto_bot_config
+            # Это заставит load_auto_bot_config() перезагрузить модуль внутри себя
+            if hasattr(load_auto_bot_config, '_last_mtime'):
+                load_auto_bot_config._last_mtime = 0
+                logger.debug(f"[CONFIG_API] 🔄 Сброшен кэш времени модификации для принудительной перезагрузки")
+            
+            # ✅ Принудительно перезагружаем конфигурацию из файла
+            # load_auto_bot_config() сама перезагрузит модуль, т.к. _last_mtime == 0
             load_auto_bot_config()
             
             with bots_data_lock:
                 config = bots_data['auto_bot_config'].copy()
                 
-                # ✅ Логируем только на уровне DEBUG, чтобы не спамить логи
-                # (UI часто опрашивает API, поэтому INFO уровень создает слишком много логов)
-                logger.debug(f"[CONFIG_API] 📤 Возвращаем конфигурацию в UI:")
-                logger.debug(f"  trailing_stop_activation: {config.get('trailing_stop_activation')} (тип: {type(config.get('trailing_stop_activation')).__name__})")
-                logger.debug(f"  trailing_stop_distance: {config.get('trailing_stop_distance')} (тип: {type(config.get('trailing_stop_distance')).__name__})")
-                logger.debug(f"  break_even_trigger: {config.get('break_even_trigger')} (тип: {type(config.get('break_even_trigger')).__name__})")
+                # ✅ Логируем ключевые значения на уровне INFO для отладки (после перезагрузки страницы)
+                # Добавляем timestamp для отслеживания, что данные действительно свежие
+                import time
+                logger.info(f"[CONFIG_API] 📤 Возвращаем конфигурацию в UI (timestamp: {time.time()}):")
+                logger.info(f"  trailing_stop_activation: {config.get('trailing_stop_activation')} (тип: {type(config.get('trailing_stop_activation')).__name__})")
+                logger.info(f"  trailing_stop_distance: {config.get('trailing_stop_distance')} (тип: {type(config.get('trailing_stop_distance')).__name__})")
+                logger.info(f"  break_even_trigger: {config.get('break_even_trigger')} (тип: {type(config.get('break_even_trigger')).__name__})")
                 avoid_down_trend_val = config.get('avoid_down_trend')
                 avoid_up_trend_val = config.get('avoid_up_trend')
-                logger.debug(f"  avoid_down_trend: {avoid_down_trend_val} (тип: {type(avoid_down_trend_val).__name__}, bool: {bool(avoid_down_trend_val)}, repr: {repr(avoid_down_trend_val)})")
-                logger.debug(f"  avoid_up_trend: {avoid_up_trend_val} (тип: {type(avoid_up_trend_val).__name__}, bool: {bool(avoid_up_trend_val)}, repr: {repr(avoid_up_trend_val)})")
+                logger.info(f"  avoid_down_trend: {avoid_down_trend_val} (тип: {type(avoid_down_trend_val).__name__}, bool: {bool(avoid_down_trend_val)}, repr: {repr(avoid_down_trend_val)})")
+                logger.info(f"  avoid_up_trend: {avoid_up_trend_val} (тип: {type(avoid_up_trend_val).__name__}, bool: {bool(avoid_up_trend_val)}, repr: {repr(avoid_up_trend_val)})")
                 
                 # ✅ Flask jsonify автоматически преобразует Python bool в JSON boolean
                 # Проверяем, что ключевые булевы значения действительно булевы
@@ -2256,9 +2257,9 @@ def auto_bot_config():
                     logger.warning(f"[CONFIG_API] ✅ avoid_up_trend преобразовано в: {config['avoid_up_trend']} (тип: {type(config['avoid_up_trend']).__name__})")
                 
                 # ✅ Финальная проверка перед возвратом
-                logger.debug(f"[CONFIG_API] ✅ Финальные значения перед отправкой в UI:")
-                logger.debug(f"  avoid_down_trend: {config.get('avoid_down_trend')} (тип: {type(config.get('avoid_down_trend')).__name__}, это bool: {isinstance(config.get('avoid_down_trend'), bool)})")
-                logger.debug(f"  avoid_up_trend: {config.get('avoid_up_trend')} (тип: {type(config.get('avoid_up_trend')).__name__}, это bool: {isinstance(config.get('avoid_up_trend'), bool)})")
+                logger.info(f"[CONFIG_API] ✅ Финальные значения перед отправкой в UI:")
+                logger.info(f"  avoid_down_trend: {config.get('avoid_down_trend')} (тип: {type(config.get('avoid_down_trend')).__name__}, это bool: {isinstance(config.get('avoid_down_trend'), bool)})")
+                logger.info(f"  avoid_up_trend: {config.get('avoid_up_trend')} (тип: {type(config.get('avoid_up_trend')).__name__}, это bool: {isinstance(config.get('avoid_up_trend'), bool)})")
                 
                 return jsonify({
                     'success': True,
