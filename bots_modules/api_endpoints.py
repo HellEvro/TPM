@@ -2213,15 +2213,9 @@ def auto_bot_config():
                 
                 # ✅ Логируем ключевые значения на уровне INFO для отладки (после перезагрузки страницы)
                 # Добавляем timestamp для отслеживания, что данные действительно свежие
-                import time
-                logger.info(f"[CONFIG_API] 📤 Возвращаем конфигурацию в UI (timestamp: {time.time()}):")
-                logger.info(f"  trailing_stop_activation: {config.get('trailing_stop_activation')} (тип: {type(config.get('trailing_stop_activation')).__name__})")
-                logger.info(f"  trailing_stop_distance: {config.get('trailing_stop_distance')} (тип: {type(config.get('trailing_stop_distance')).__name__})")
-                logger.info(f"  break_even_trigger: {config.get('break_even_trigger')} (тип: {type(config.get('break_even_trigger')).__name__})")
+                # Логирование конфигурации убрано для уменьшения спама (переведено в DEBUG если нужно)
                 avoid_down_trend_val = config.get('avoid_down_trend')
                 avoid_up_trend_val = config.get('avoid_up_trend')
-                logger.info(f"  avoid_down_trend: {avoid_down_trend_val} (тип: {type(avoid_down_trend_val).__name__}, bool: {bool(avoid_down_trend_val)}, repr: {repr(avoid_down_trend_val)})")
-                logger.info(f"  avoid_up_trend: {avoid_up_trend_val} (тип: {type(avoid_up_trend_val).__name__}, bool: {bool(avoid_up_trend_val)}, repr: {repr(avoid_up_trend_val)})")
                 
                 # ✅ Flask jsonify автоматически преобразует Python bool в JSON boolean
                 # Проверяем, что ключевые булевы значения действительно булевы
@@ -2256,10 +2250,7 @@ def auto_bot_config():
                         config['avoid_up_trend'] = False
                     logger.warning(f"[CONFIG_API] ✅ avoid_up_trend преобразовано в: {config['avoid_up_trend']} (тип: {type(config['avoid_up_trend']).__name__})")
                 
-                # ✅ Финальная проверка перед возвратом
-                logger.info(f"[CONFIG_API] ✅ Финальные значения перед отправкой в UI:")
-                logger.info(f"  avoid_down_trend: {config.get('avoid_down_trend')} (тип: {type(config.get('avoid_down_trend')).__name__}, это bool: {isinstance(config.get('avoid_down_trend'), bool)})")
-                logger.info(f"  avoid_up_trend: {config.get('avoid_up_trend')} (тип: {type(config.get('avoid_up_trend')).__name__}, это bool: {isinstance(config.get('avoid_up_trend'), bool)})")
+                # ✅ Финальная проверка перед возвратом (логирование убрано для уменьшения спама)
                 
                 return jsonify({
                     'success': True,
