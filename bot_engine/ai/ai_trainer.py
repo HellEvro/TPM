@@ -33,8 +33,9 @@ class AITrainer:
     
     def __init__(self):
         """Инициализация тренера"""
-        self.models_dir = 'data/ai/models'
-        self.data_dir = 'data/ai'
+        # Нормализуем пути для кроссплатформенной совместимости (особенно для Windows)
+        self.models_dir = os.path.normpath('data/ai/models')
+        self.data_dir = os.path.normpath('data/ai')
         
         # Создаем директории
         os.makedirs(self.models_dir, exist_ok=True)
@@ -49,16 +50,16 @@ class AITrainer:
         self.ai_decisions_min_samples = 20
         self.ai_decisions_last_trained_count = 0
         self._ai_decision_last_accuracy = None
-        # Пути моделей
-        self.signal_model_path = os.path.join(self.models_dir, 'signal_predictor.pkl')
-        self.profit_model_path = os.path.join(self.models_dir, 'profit_predictor.pkl')
-        self.scaler_path = os.path.join(self.models_dir, 'scaler.pkl')
-        self.ai_decision_model_path = os.path.join(self.models_dir, 'ai_decision_model.pkl')
-        self.ai_decision_scaler_path = os.path.join(self.models_dir, 'ai_decision_scaler.pkl')
+        # Пути моделей (нормализуем все пути)
+        self.signal_model_path = os.path.normpath(os.path.join(self.models_dir, 'signal_predictor.pkl'))
+        self.profit_model_path = os.path.normpath(os.path.join(self.models_dir, 'profit_predictor.pkl'))
+        self.scaler_path = os.path.normpath(os.path.join(self.models_dir, 'scaler.pkl'))
+        self.ai_decision_model_path = os.path.normpath(os.path.join(self.models_dir, 'ai_decision_model.pkl'))
+        self.ai_decision_scaler_path = os.path.normpath(os.path.join(self.models_dir, 'ai_decision_scaler.pkl'))
 
         
         # Файл для отслеживания сделок с AI решениями
-        self.ai_decisions_file = os.path.join(self.data_dir, 'ai_decisions_tracking.json')
+        self.ai_decisions_file = os.path.normpath(os.path.join(self.data_dir, 'ai_decisions_tracking.json'))
         
         # Инициализируем хранилище данных AI
         try:
@@ -77,7 +78,7 @@ class AITrainer:
             self.param_tracker = None
         
         # Целевые значения Win Rate для монет с динамическим повышением порога
-        self.win_rate_targets_path = os.path.join(self.data_dir, 'win_rate_targets.json')
+        self.win_rate_targets_path = os.path.normpath(os.path.join(self.data_dir, 'win_rate_targets.json'))
         self.win_rate_targets = self._load_win_rate_targets()
         self.win_rate_targets_dirty = False
         
@@ -97,7 +98,7 @@ class AITrainer:
                 loaded_count += 1
                 
                 # Загружаем метаданные если есть
-                metadata_path = os.path.join(self.models_dir, 'signal_predictor_metadata.json')
+                metadata_path = os.path.normpath(os.path.join(self.models_dir, 'signal_predictor_metadata.json'))
                 if os.path.exists(metadata_path):
                     try:
                         with open(metadata_path, 'r', encoding='utf-8') as f:
@@ -114,7 +115,7 @@ class AITrainer:
                 loaded_count += 1
                 
                 # Загружаем метаданные если есть
-                metadata_path = os.path.join(self.models_dir, 'profit_predictor_metadata.json')
+                metadata_path = os.path.normpath(os.path.join(self.models_dir, 'profit_predictor_metadata.json'))
                 if os.path.exists(metadata_path):
                     try:
                         with open(metadata_path, 'r', encoding='utf-8') as f:
@@ -136,7 +137,7 @@ class AITrainer:
                 try:
                     self.ai_decision_model = joblib.load(self.ai_decision_model_path)
                     logger.info(f"✅ Загружена модель анализа AI решений: {self.ai_decision_model_path}")
-                    metadata_path = os.path.join(self.models_dir, 'ai_decision_model_metadata.json')
+                    metadata_path = os.path.normpath(os.path.join(self.models_dir, 'ai_decision_model_metadata.json'))
                     if os.path.exists(metadata_path):
                         with open(metadata_path, 'r', encoding='utf-8') as f:
                             metadata = json.load(f)
@@ -177,7 +178,7 @@ class AITrainer:
                 saved_count += 1
                 
                 # Сохраняем метаданные модели
-                metadata_path = os.path.join(self.models_dir, 'signal_predictor_metadata.json')
+                metadata_path = os.path.normpath(os.path.join(self.models_dir, 'signal_predictor_metadata.json'))
                 metadata = {
                     'model_type': 'RandomForestClassifier',
                     'saved_at': datetime.now().isoformat(),
@@ -193,7 +194,7 @@ class AITrainer:
                 saved_count += 1
                 
                 # Сохраняем метаданные модели
-                metadata_path = os.path.join(self.models_dir, 'profit_predictor_metadata.json')
+                metadata_path = os.path.normpath(os.path.join(self.models_dir, 'profit_predictor_metadata.json'))
                 metadata = {
                     'model_type': 'GradientBoostingRegressor',
                     'saved_at': datetime.now().isoformat(),
@@ -211,7 +212,7 @@ class AITrainer:
             if self.ai_decision_model:
                 joblib.dump(self.ai_decision_model, self.ai_decision_model_path)
                 logger.info(f"✅ Сохранена модель анализа AI решений: {self.ai_decision_model_path}")
-                metadata_path = os.path.join(self.models_dir, 'ai_decision_model_metadata.json')
+                metadata_path = os.path.normpath(os.path.join(self.models_dir, 'ai_decision_model_metadata.json'))
                 metadata = {
                     'model_type': type(self.ai_decision_model).__name__,
                     'saved_at': datetime.now().isoformat(),
@@ -359,7 +360,7 @@ class AITrainer:
         
         # 1. Пробуем загрузить из data/ai/history_data.json (данные собранные через API)
         try:
-            history_file = os.path.join(self.data_dir, 'history_data.json')
+            history_file = os.path.normpath(os.path.join(self.data_dir, 'history_data.json'))
             if os.path.exists(history_file):
                 logger.debug(f"📖 Источник 1: {history_file}")
                 with open(history_file, 'r', encoding='utf-8') as f:
@@ -394,7 +395,7 @@ class AITrainer:
         
         # 2. Пробуем загрузить напрямую из data/bot_history.json (основной файл bots.py)
         try:
-            bot_history_file = os.path.join('data', 'bot_history.json')
+            bot_history_file = os.path.normpath(os.path.join('data', 'bot_history.json'))
             if os.path.exists(bot_history_file):
                 logger.debug(f"📖 Источник 2: {bot_history_file}")
                 with open(bot_history_file, 'r', encoding='utf-8') as f:
@@ -499,7 +500,7 @@ class AITrainer:
             # НЕ используем market_data.json - свечи всегда из candles_full_history.json!
             # НЕ используем candles_cache.json - только полная история!
             # Если файла нет - возвращаем пустые данные (не fallback на кэш!)
-            full_history_file = os.path.join('data', 'ai', 'candles_full_history.json')
+            full_history_file = os.path.normpath(os.path.join('data', 'ai', 'candles_full_history.json'))
             market_data = {'latest': {'candles': {}}}
             
             # Загружаем свечи напрямую из полной истории (ВСЕГДА)
@@ -853,7 +854,7 @@ class AITrainer:
                         break
             
             # Сохраняем результаты анализа
-            analysis_file = os.path.join(self.models_dir, 'strategy_analysis.json')
+            analysis_file = os.path.normpath(os.path.join(self.models_dir, 'strategy_analysis.json'))
             with open(analysis_file, 'w', encoding='utf-8') as f:
                 json.dump(results, f, ensure_ascii=False, indent=2)
             
@@ -2239,14 +2240,13 @@ class AITrainer:
                         )
                     
                 except Exception as e:
-                    # Логируем ошибки на INFO для важных монет
+                    # Все ошибки обучения - это критичные ERROR, а не WARNING!
+                    logger.error(f"   ❌ Ошибка обучения для {symbol}: {e}")
+                    import traceback
+                    # Для важных монет показываем полный traceback, для остальных - краткий
                     if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
-                        logger.error(f"   ❌ Ошибка обучения для {symbol}: {e}")
-                        import traceback
                         logger.error(traceback.format_exc())
                     else:
-                        logger.warning(f"⚠️ Ошибка обучения для {symbol}: {e}")
-                        import traceback
                         logger.debug(traceback.format_exc())
                     total_failed_coins += 1
                     continue
