@@ -25,7 +25,6 @@ def _get_file_lock(filepath):
 # Пути к файлам
 RSI_CACHE_FILE = 'data/rsi_cache.json'
 BOTS_STATE_FILE = 'data/bots_state.json'
-AUTO_BOT_CONFIG_FILE = 'data/auto_bot_config.json'
 INDIVIDUAL_COIN_SETTINGS_FILE = 'data/individual_coin_settings.json'
 MATURE_COINS_FILE = 'data/mature_coins.json'
 # ❌ ОТКЛЮЧЕНО: optimal_ema удален (EMA фильтр убран)
@@ -177,16 +176,21 @@ def load_bots_state():
 
 # Auto Bot Config
 def save_auto_bot_config(config):
-    """Сохраняет конфигурацию автобота"""
-    success = save_json_file(AUTO_BOT_CONFIG_FILE, config, "конфигурация автобота")
-    if success:
-        logger.info("[STORAGE] Конфигурация автобота сохранена")
-    return success
+    """Больше не сохраняет конфигурацию автобота в JSON.
+    
+    Настройки хранятся только в bot_engine/bot_config.py
+    """
+    logger.debug("[STORAGE] Пропуск сохранения конфигурации автобота (используется bot_config.py)")
+    return True
 
 
 def load_auto_bot_config():
-    """Загружает конфигурацию автобота"""
-    return load_json_file(AUTO_BOT_CONFIG_FILE, description="конфигурация автобота")
+    """Не загружает конфигурацию автобота из JSON.
+    
+    Настройки читаются напрямую из bot_engine/bot_config.py
+    """
+    logger.debug("[STORAGE] Пропуск загрузки конфигурации автобота из JSON (используется bot_config.py)")
+    return {}
 
 
 # Individual coin settings

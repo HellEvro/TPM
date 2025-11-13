@@ -33,10 +33,9 @@ try:
         bots_cache_data, bots_cache_lock, process_state, exchange,
         mature_coins_storage, mature_coins_lock, BOT_STATUS,
         DEFAULT_AUTO_BOT_CONFIG, RSI_CACHE_FILE, PROCESS_STATE_FILE,
-        SYSTEM_CONFIG_FILE, BOTS_STATE_FILE, AUTO_BOT_CONFIG_FILE,
-        DEFAULT_CONFIG_FILE, should_log_message,
-        get_coin_processing_lock, get_exchange,
-        save_individual_coin_settings, storage_save_auto_bot_config
+        SYSTEM_CONFIG_FILE, BOTS_STATE_FILE, DEFAULT_CONFIG_FILE,
+        should_log_message, get_coin_processing_lock, get_exchange,
+        save_individual_coin_settings
     )
     # MATURE_COINS_FILE определен в maturity.py
     try:
@@ -75,7 +74,6 @@ except ImportError as e:
     PROCESS_STATE_FILE = 'data/process_state.json'
     SYSTEM_CONFIG_FILE = 'data/system_config.json'
     BOTS_STATE_FILE = 'data/bots_state.json'
-    AUTO_BOT_CONFIG_FILE = 'data/auto_bot_config.json'
     MATURE_COINS_FILE = 'data/mature_coins.json'
     DEFAULT_CONFIG_FILE = 'data/default_auto_bot_config.json'
     def should_log_message(cat, msg, interval=60):
@@ -595,12 +593,6 @@ def save_auto_bot_config():
         
         if success:
             logger.info(f"[SAVE_CONFIG] ✅ Конфигурация автобота сохранена в bot_engine/bot_config.py")
-            # Дополнительно сохраняем в JSON для быстрого доступа и восстановления
-            try:
-                storage_save_auto_bot_config(config_data)
-            except Exception as storage_error:
-                logger.warning(f"[SAVE_CONFIG] ⚠️ Не удалось сохранить конфигурацию в JSON: {storage_error}")
-            
             # ✅ КРИТИЧНО: Обновляем конфигурацию в памяти из СОХРАНЕННЫХ данных (не из DEFAULT!)
             with bots_data_lock:
                 # ✅ Используем новые RSI exit с учетом тренда
@@ -643,13 +635,25 @@ def save_auto_bot_config():
             else:
                 logger.error(f"[SAVE_CONFIG] ❌ НЕКОТОРЫЕ RSI exit пороги отсутствуют в конфигурации!")
             
-            # ✅ Опционально: Перезагружаем модуль bot_config для будущих запусков (но не используем его значения!)
+            # ✅ Перезагружаем модуль bot_config и обновляем конфигурацию из него
             try:
                 if 'bot_engine.bot_config' in sys.modules:
-                    logger.debug(f"[SAVE_CONFIG] 🔄 Перезагружаем модуль bot_config для будущих запусков...")
+                    logger.debug(f"[SAVE_CONFIG] 🔄 Перезагружаем модуль bot_config...")
                     import bot_engine.bot_config
                     importlib.reload(bot_engine.bot_config)
-                    logger.debug(f"[SAVE_CONFIG] ✅ Модуль перезагружен (для будущих запусков)")
+                    logger.debug(f"[SAVE_CONFIG] ✅ Модуль перезагружен")
+                    
+                    # ✅ КРИТИЧЕСКИ ВАЖНО: Перезагружаем конфигурацию из обновленного bot_config.py
+                    # Это нужно, чтобы значения сразу брались из файла, а не из старой памяти
+                    from bots_modules.imports_and_globals import load_auto_bot_config
+                    
+                    # ✅ СБРАСЫВАЕМ кэш времени модификации файла, чтобы при следующем вызове модуль перезагрузился
+                    if hasattr(load_auto_bot_config, '_last_mtime'):
+                        load_auto_bot_config._last_mtime = 0
+                        logger.debug(f"[SAVE_CONFIG] 🔄 Сброшен кэш времени модификации файла")
+                    
+                    load_auto_bot_config()
+                    logger.info(f"[SAVE_CONFIG] ✅ Конфигурация перезагружена из bot_config.py после сохранения")
             except Exception as reload_error:
                 logger.warning(f"[SAVE_CONFIG] ⚠️ Не удалось перезагрузить модуль (не критично): {reload_error}")
         
@@ -681,12 +685,12 @@ def load_bots_state():
         
         logger.info(f"[LOAD_STATE] 📊 Версия состояния: {version}, последнее сохранение: {last_saved}")
         
-        # ✅ ИСПРАВЛЕНИЕ: НЕ перезаписываем конфигурацию Auto Bot из bots_state.json!
-        # Конфигурация должна загружаться ТОЛЬКО из auto_bot_config.json
+        # ✅ Конфигурация Auto Bot никогда не берётся из bots_state.json
+        # Настройки загружаются только из bot_engine/bot_config.py
         # bots_state.json содержит только состояние ботов и глобальную статистику
         
         logger.info(f"[LOAD_STATE] ⚙️ Конфигурация Auto Bot НЕ загружается из bots_state.json")
-        logger.info(f"[LOAD_STATE] 💡 Конфигурация загружается только из auto_bot_config.json")
+        logger.info(f"[LOAD_STATE] 💡 Конфигурация загружается только из bot_engine/bot_config.py")
         
         # Восстанавливаем ботов
         restored_bots = 0

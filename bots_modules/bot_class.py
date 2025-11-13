@@ -193,7 +193,8 @@ class NewTradingBot:
                 auto_config = bots_data.get('auto_bot_config', {})
                 # Используем индивидуальные настройки из self.config если есть, иначе из auto_config
                 rsi_long_threshold = self.config.get('rsi_long_threshold') or auto_config.get('rsi_long_threshold', 29)
-                avoid_down_trend = self.config.get('avoid_down_trend') if 'avoid_down_trend' in self.config else auto_config.get('avoid_down_trend', True)
+                # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
+                avoid_down_trend = self.config.get('avoid_down_trend') if 'avoid_down_trend' in self.config else auto_config.get('avoid_down_trend', False)
                 rsi_time_filter_enabled = self.config.get('rsi_time_filter_enabled') if 'rsi_time_filter_enabled' in self.config else auto_config.get('rsi_time_filter_enabled', True)
                 rsi_time_filter_candles = self.config.get('rsi_time_filter_candles') or auto_config.get('rsi_time_filter_candles', 8)
                 rsi_time_filter_lower = self.config.get('rsi_time_filter_lower') or auto_config.get('rsi_time_filter_lower', 35)
@@ -274,7 +275,8 @@ class NewTradingBot:
                 auto_config = bots_data.get('auto_bot_config', {})
                 # Используем индивидуальные настройки из self.config если есть, иначе из auto_config
                 rsi_short_threshold = self.config.get('rsi_short_threshold') or auto_config.get('rsi_short_threshold', 71)
-                avoid_up_trend = self.config.get('avoid_up_trend') if 'avoid_up_trend' in self.config else auto_config.get('avoid_up_trend', True)
+                # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
+                avoid_up_trend = self.config.get('avoid_up_trend') if 'avoid_up_trend' in self.config else auto_config.get('avoid_up_trend', False)
                 rsi_time_filter_enabled = self.config.get('rsi_time_filter_enabled') if 'rsi_time_filter_enabled' in self.config else auto_config.get('rsi_time_filter_enabled', True)
                 rsi_time_filter_candles = self.config.get('rsi_time_filter_candles') or auto_config.get('rsi_time_filter_candles', 8)
                 rsi_time_filter_upper = auto_config.get('rsi_time_filter_upper', 65)

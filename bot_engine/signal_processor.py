@@ -21,8 +21,9 @@ def get_effective_signal(coin, config):
     symbol = coin.get('symbol', 'UNKNOWN')
     
     # Получаем настройки
-    avoid_down_trend = config.get('avoid_down_trend', True)
-    avoid_up_trend = config.get('avoid_up_trend', True)
+    # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
+    avoid_down_trend = config.get('avoid_down_trend', False)
+    avoid_up_trend = config.get('avoid_up_trend', False)
     rsi_long_threshold = config.get('rsi_long_threshold', 29)
     rsi_short_threshold = config.get('rsi_short_threshold', 71)
     
@@ -86,8 +87,9 @@ def check_autobot_filters(symbol, signal, coin_data, config, maturity_check_func
         
         # 3. Проверка тренда
         trend = coin_data.get('trend6h', 'NEUTRAL')
-        avoid_down_trend = config.get('avoid_down_trend', True)
-        avoid_up_trend = config.get('avoid_up_trend', True)
+        # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
+        avoid_down_trend = config.get('avoid_down_trend', False)
+        avoid_up_trend = config.get('avoid_up_trend', False)
         
         if signal == 'ENTER_LONG' and avoid_down_trend and trend == 'DOWN':
             logger.debug(f"[AUTOBOT_FILTER] {symbol}: DOWN тренд - не открываем LONG")

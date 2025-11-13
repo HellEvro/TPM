@@ -185,6 +185,78 @@
       "exit_volatility": null,
       "exit_trend": null,
       "price_movement": -17.81148694109732
+    },
+    {
+      "id": "close_MYRO_1763054558.643021",
+      "timestamp": "2025-11-13T20:22:38.643028",
+      "action_type": "POSITION_CLOSED",
+      "action_name": "Закрытие позиции",
+      "bot_id": "MYRO",
+      "symbol": "MYRO",
+      "direction": "LONG",
+      "exit_price": 0.01105,
+      "pnl": 0.06885000000000038,
+      "roi": 13.761467889908333,
+      "reason": "MANUAL_CLOSE",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "is_successful": true,
+      "details": "Закрыта позиция LONG для MYRO: цена выхода 0.0111, PnL: 0.07 USDT (13.76%) [SCRIPT, ✅]",
+      "entry_data": {
+        "entry_price": 0.0109,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 20.361857556388888,
+        "max_profit_achieved": 0.0
+      },
+      "entry_price": 0.0109,
+      "entry_rsi": null,
+      "entry_volatility": null,
+      "entry_trend": null,
+      "market_data": {
+        "exit_price": 0.01105,
+        "price_movement": 1.3761467889908332
+      },
+      "exit_volatility": null,
+      "exit_trend": null,
+      "price_movement": 1.3761467889908332
+    },
+    {
+      "id": "close_ZEREBRO_1763060426.756563",
+      "timestamp": "2025-11-13T22:00:26.756567",
+      "action_type": "POSITION_CLOSED",
+      "action_name": "Закрытие позиции",
+      "bot_id": "ZEREBRO",
+      "symbol": "ZEREBRO",
+      "direction": "LONG",
+      "exit_price": 0.03334,
+      "pnl": 0.07803000000000054,
+      "roi": 15.534572037770438,
+      "reason": "MANUAL_CLOSE",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "is_successful": true,
+      "details": "Закрыта позиция LONG для ZEREBRO: цена выхода 0.0333, PnL: 0.08 USDT (15.53%) [SCRIPT, ✅]",
+      "entry_data": {
+        "entry_price": 0.03283,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 27.987403990555556,
+        "max_profit_achieved": 0.0
+      },
+      "entry_price": 0.03283,
+      "entry_rsi": null,
+      "entry_volatility": null,
+      "entry_trend": null,
+      "market_data": {
+        "exit_price": 0.03334,
+        "price_movement": 1.553457203777044
+      },
+      "exit_volatility": null,
+      "exit_trend": null,
+      "price_movement": 1.553457203777044
     }
   ],
   "trades": [
@@ -245,14 +317,29 @@
       "direction": "LONG",
       "size": 5.02299,
       "entry_price": 0.03283,
-      "exit_price": null,
-      "pnl": null,
-      "status": "OPEN",
+      "exit_price": 0.03334,
+      "pnl": 0.07803000000000054,
+      "status": "CLOSED",
       "decision_source": "SCRIPT",
       "ai_decision_id": null,
       "ai_confidence": null,
       "rsi": null,
-      "trend": "DOWN"
+      "trend": "DOWN",
+      "roi": 15.534572037770438,
+      "close_timestamp": "2025-11-13T22:00:26.757233",
+      "close_reason": "MANUAL_CLOSE",
+      "is_successful": true,
+      "entry_data": {
+        "entry_price": 0.03283,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 27.987403990555556,
+        "max_profit_achieved": 0.0
+      },
+      "exit_market_data": {
+        "exit_price": 0.03334,
+        "price_movement": 1.553457203777044
+      }
     },
     {
       "id": "trade_MYRO_1762970455.95482",
@@ -262,14 +349,29 @@
       "direction": "LONG",
       "size": 5.0031,
       "entry_price": 0.0109,
-      "exit_price": null,
-      "pnl": null,
-      "status": "OPEN",
+      "exit_price": 0.01105,
+      "pnl": 0.06885000000000038,
+      "status": "CLOSED",
       "decision_source": "SCRIPT",
       "ai_decision_id": null,
       "ai_confidence": null,
       "rsi": null,
-      "trend": "DOWN"
+      "trend": "DOWN",
+      "roi": 13.761467889908333,
+      "close_timestamp": "2025-11-13T20:22:38.644122",
+      "close_reason": "MANUAL_CLOSE",
+      "is_successful": true,
+      "entry_data": {
+        "entry_price": 0.0109,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 20.361857556388888,
+        "max_profit_achieved": 0.0
+      },
+      "exit_market_data": {
+        "exit_price": 0.01105,
+        "price_movement": 1.3761467889908332
+      }
     },
     {
       "id": "trade_XNO_1762970458.599812",
@@ -304,5 +406,5 @@
       }
     }
   ],
-  "last_update": "2025-11-13T04:15:29.834587"
+  "last_update": "2025-11-13T22:00:26.757238"
 }
