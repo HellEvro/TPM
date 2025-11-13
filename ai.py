@@ -45,15 +45,29 @@ if os.name == 'nt':
         except:
             pass
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='[AI] %(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('logs/ai.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
+# Настройка логирования - используем цветной форматтер как в bots.py
+from utils.color_logger import setup_color_logging
+from utils.log_rotation import RotatingFileHandlerWithSizeLimit
+
+# Настраиваем цветное логирование для консоли
+setup_color_logging()
+
+# Добавляем файловый логгер с ротацией для сохранения в файл
+os.makedirs('logs', exist_ok=True)
+file_handler = RotatingFileHandlerWithSizeLimit(
+    filename='logs/ai.log',
+    max_bytes=10 * 1024 * 1024,  # 10MB
+    backup_count=0,  # Перезаписываем файл
+    encoding='utf-8'
 )
+file_handler.setLevel(logging.INFO)
+file_formatter = logging.Formatter('[AI] %(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(file_formatter)
+
+# Получаем корневой логгер и добавляем файловый обработчик
+root_logger = logging.getLogger()
+root_logger.addHandler(file_handler)
+
 logger = logging.getLogger('AI.Main')
 
 # Добавляем текущую директорию в путь
