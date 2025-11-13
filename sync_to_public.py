@@ -59,7 +59,15 @@ EXCLUDE_FILES = [
     "app/keys.py", "app/config.py", "app/current_language.txt", "app/telegram_states.json",
     "launcher/.infobot_manager_state.json",
     "scripts/test_*.py", "scripts/verify_*.py",
-    "*.pyc",  # Скомпилированные файлы
+    "*.pyc",  # Скомпилированные файлы (общее правило)
+]
+
+# ✅ ИСКЛЮЧЕНИЯ: Скомпилированные файлы лицензирования НУЖНЫ в публичной версии
+INCLUDE_PYC = [
+    "bot_engine/ai/license_checker.pyc",
+    "bot_engine/ai/hardware_id_source.pyc",
+    "bot_engine/ai/ai_manager.pyc",
+    "scripts/hardware_id.pyc",
 ]
 
 # Файлы которые генерируются системой при работе
@@ -98,6 +106,12 @@ DEV_DOCS = [
 def should_exclude(path_str):
     """Проверяет нужно ли исключить путь"""
     import fnmatch
+    
+    # ✅ ПЕРВЫМ ДЕЛОМ: Проверяем исключения для .pyc файлов лицензирования
+    # Эти файлы НУЖНЫ в публичной версии, поэтому не исключаем их
+    for include_pyc in INCLUDE_PYC:
+        if path_str == include_pyc or path_str.replace('\\', '/') == include_pyc.replace('\\', '/'):
+            return False  # НЕ исключаем эти файлы!
     
     # Проверяем директории
     for exc in EXCLUDE_DIRS:
@@ -169,7 +183,10 @@ for pattern in INCLUDE:
                 src_file = Path(root) / file
                 rel_path = src_file.relative_to(ROOT)
                 
-                if should_exclude(str(rel_path)):
+                # Нормализуем путь для сравнения (Windows/Linux совместимость)
+                rel_path_str = str(rel_path).replace('\\', '/')
+                
+                if should_exclude(rel_path_str):
                     continue
                 
                 dst_file = PUBLIC / rel_path
