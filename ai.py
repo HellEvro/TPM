@@ -71,10 +71,18 @@ except ImportError as e:
     logger.error("Убедитесь, что все модули созданы в директории bot_engine/ai/")
     sys.exit(1)
 
+# Импорт модуля проверки лицензии
+try:
+    from bot_engine.ai.license_checker import get_license_checker, check_ai_license
+    LICENSE_CHECKER_AVAILABLE = True
+except ImportError:
+    LICENSE_CHECKER_AVAILABLE = False
+    logger.warning("⚠️ Модуль проверки лицензии недоступен")
+
 # Импорт существующих AI модулей из bot_engine/ai
 try:
     from bot_engine.ai.ai_manager import get_ai_manager
-    from bot_engine.ai.auto_trainer import AutoTrainer
+    from bot_engine.ai.auto_trainer import AutoTrainer, get_auto_trainer
     # SmartRiskManager может требовать лицензию, но это не критично
     try:
         from bot_engine.ai.smart_risk_manager import SmartRiskManager
@@ -132,6 +140,30 @@ class AISystem:
         self.running = False
         self.threads = []
         
+        # ✅ КРИТИЧНО: Проверка лицензии перед инициализацией
+        self.license_valid = False
+        self.license_info = None
+        if LICENSE_CHECKER_AVAILABLE:
+            license_checker = get_license_checker()
+            self.license_valid = license_checker.is_valid()
+            self.license_info = license_checker.get_info()
+            
+            if not self.license_valid:
+                logger.error("=" * 80)
+                logger.error("❌ ЛИЦЕНЗИЯ НЕ ВАЛИДНА!")
+                logger.error("=" * 80)
+                logger.error("⚠️ Весь функционал AI системы требует валидной лицензии")
+                logger.error("💡 Для активации лицензии поместите файл .lic в корень проекта")
+                logger.error("=" * 80)
+            else:
+                logger.info("=" * 80)
+                logger.info(f"✅ ЛИЦЕНЗИЯ ВАЛИДНА: {self.license_info.get('type', 'premium')}")
+                logger.info(f"📅 Действительна до: {self.license_info.get('expires_at', 'N/A')}")
+                logger.info("=" * 80)
+        else:
+            logger.warning("⚠️ Проверка лицензии недоступна, продолжаем без проверки")
+            self.license_valid = True  # В режиме разработки разрешаем без лицензии
+        
         # Инициализация подмодулей
         logger.info("🤖 Инициализация AI модулей...")
         
@@ -171,12 +203,20 @@ class AISystem:
         
         try:
             if self.config.get('enable_training', False):
-                # Используем существующие данные для обучения если доступны
-                self.trainer = AITrainer()
-                if self.existing_ai_manager:
-                    logger.info("✅ AITrainer инициализирован (использует существующие данные)")
+                # ✅ Проверка лицензии для обучения
+                if not self.license_valid:
+                    logger.error("❌ Обучение недоступно: требуется валидная лицензия")
+                    self.trainer = None
+                elif not (self.license_info and self.license_info.get('features', {}).get('ai_training', False)):
+                    logger.error("❌ Обучение недоступно: функция 'ai_training' не включена в лицензию")
+                    self.trainer = None
                 else:
-                    logger.info("✅ AITrainer инициализирован")
+                    # Используем существующие данные для обучения если доступны
+                    self.trainer = AITrainer()
+                    if self.existing_ai_manager:
+                        logger.info("✅ AITrainer инициализирован (использует существующие данные)")
+                    else:
+                        logger.info("✅ AITrainer инициализирован")
             else:
                 self.trainer = None
                 logger.debug("ℹ️ AITrainer отключён (режим без обучения)")
@@ -195,8 +235,16 @@ class AISystem:
                     self.existing_backtester = None
             
             if self.config.get('enable_backtest', False):
-                self.backtester = AIBacktester()
-                logger.info("✅ AIBacktester инициализирован")
+                # ✅ Проверка лицензии для бэктеста
+                if not self.license_valid:
+                    logger.error("❌ Бэктест недоступен: требуется валидная лицензия")
+                    self.backtester = None
+                elif not (self.license_info and self.license_info.get('features', {}).get('ai_backtest', False)):
+                    logger.error("❌ Бэктест недоступен: функция 'ai_backtest' не включена в лицензию")
+                    self.backtester = None
+                else:
+                    self.backtester = AIBacktester()
+                    logger.info("✅ AIBacktester инициализирован")
             else:
                 self.backtester = None
                 logger.debug("ℹ️ AIBacktester отключён (режим без бэктеста)")
@@ -206,8 +254,16 @@ class AISystem:
         
         try:
             if self.config.get('enable_optimizer', False):
-                self.strategy_optimizer = AIStrategyOptimizer()
-                logger.info("✅ AIStrategyOptimizer инициализирован")
+                # ✅ Проверка лицензии для оптимизации
+                if not self.license_valid:
+                    logger.error("❌ Оптимизация недоступна: требуется валидная лицензия")
+                    self.strategy_optimizer = None
+                elif not (self.license_info and self.license_info.get('features', {}).get('ai_optimization', False)):
+                    logger.error("❌ Оптимизация недоступна: функция 'ai_optimization' не включена в лицензию")
+                    self.strategy_optimizer = None
+                else:
+                    self.strategy_optimizer = AIStrategyOptimizer()
+                    logger.info("✅ AIStrategyOptimizer инициализирован")
             else:
                 self.strategy_optimizer = None
                 logger.debug("ℹ️ AIStrategyOptimizer отключён (режим без оптимизации)")
@@ -327,6 +383,23 @@ class AISystem:
             except Exception as e:
                 logger.warning(f"⚠️ Ошибка сбора начальных данных: {e}")
         
+        # ✅ Запуск Auto Trainer (автоматическое обновление данных и переобучение)
+        # Перенесено из bots.py - теперь обучение полностью в ai.py
+        if EXISTING_AI_AVAILABLE and self.license_valid:
+            try:
+                from bot_engine.bot_config import AIConfig
+                if AIConfig.AI_AUTO_TRAIN_ENABLED:
+                    auto_trainer = get_auto_trainer()
+                    auto_trainer.start()
+                    self.existing_auto_trainer = auto_trainer
+                    logger.info("✅ AI Auto Trainer запущен (автообновление данных и переобучение)")
+                else:
+                    logger.debug("ℹ️ AI Auto Trainer отключен в конфигурации")
+            except Exception as e:
+                logger.warning(f"⚠️ Не удалось запустить Auto Trainer: {e}")
+        elif not self.license_valid:
+            logger.debug("🔕 AI Auto Trainer недоступен: требуется валидная лицензия")
+        
         # Запуск обучения (только после загрузки свечей)
         if training_enabled and self.trainer:
             training_thread = threading.Thread(
@@ -377,6 +450,14 @@ class AISystem:
         
         logger.info("🛑 Остановка AI системы...")
         self.running = False
+        
+        # Останавливаем Auto Trainer
+        if self.existing_auto_trainer:
+            try:
+                self.existing_auto_trainer.stop()
+                logger.info("✅ AI Auto Trainer остановлен")
+            except Exception as e:
+                logger.warning(f"⚠️ Ошибка остановки Auto Trainer: {e}")
         
         # Ждем завершения потоков
         for thread in self.threads:
