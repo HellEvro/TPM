@@ -604,9 +604,9 @@ def load_auto_bot_config():
                     import bot_engine.bot_config
                     importlib.reload(bot_engine.bot_config)
                     if is_forced_reload:
-                        logger.info("[CONFIG] 🔄 Модуль bot_config перезагружен (принудительная перезагрузка из API)")
+                        logger.debug("[CONFIG] 🔄 Модуль bot_config перезагружен (принудительная перезагрузка из API)")
                     else:
-                        logger.info("[CONFIG] 🔄 Модуль bot_config перезагружен (файл изменился)")
+                        logger.debug("[CONFIG] 🔄 Модуль bot_config перезагружен (файл изменился)")
                 # ✅ ВАЖНО: ВСЕГДА обновляем _last_mtime после перезагрузки модуля
                 # Это предотвращает бесконечную перезагрузку при принудительной перезагрузке
                 load_auto_bot_config._last_mtime = current_mtime
@@ -634,21 +634,7 @@ def load_auto_bot_config():
         # (не логируем при принудительной перезагрузке модуля из API, чтобы не спамить)
         should_log_verbose = (reloaded and load_auto_bot_config._last_mtime != 0) or not getattr(load_auto_bot_config, '_logged_once', False)
         if should_log_verbose:
-            logger.info(f"[CONFIG] 📋 Значения из bot_config.py:")
-            logger.info(f"  trailing_stop_activation: {merged_config.get('trailing_stop_activation')}")
-            logger.info(f"  trailing_stop_distance: {merged_config.get('trailing_stop_distance')}")
-            logger.info(f"  break_even_trigger: {merged_config.get('break_even_trigger')}")
-            avoid_down_trend_val = merged_config.get('avoid_down_trend')
-            avoid_up_trend_val = merged_config.get('avoid_up_trend')
-            logger.info(f"  avoid_down_trend: {avoid_down_trend_val} (тип: {type(avoid_down_trend_val).__name__}, это bool: {isinstance(avoid_down_trend_val, bool)})")
-            logger.info(f"  avoid_up_trend: {avoid_up_trend_val} (тип: {type(avoid_up_trend_val).__name__}, это bool: {isinstance(avoid_up_trend_val, bool)})")
-            
-            logger.info(f"[CONFIG] ✅ Финальные значения после загрузки:")
-            logger.info(f"  trailing_stop_activation: {merged_config.get('trailing_stop_activation')}")
-            logger.info(f"  trailing_stop_distance: {merged_config.get('trailing_stop_distance')}")
-            logger.info(f"  break_even_trigger: {merged_config.get('break_even_trigger')}")
-            logger.info(f"  avoid_down_trend: {avoid_down_trend_val} (тип: {type(avoid_down_trend_val).__name__}, это bool: {isinstance(avoid_down_trend_val, bool)})")
-            logger.info(f"  avoid_up_trend: {avoid_up_trend_val} (тип: {type(avoid_up_trend_val).__name__}, это bool: {isinstance(avoid_up_trend_val, bool)})")
+            # Детальное логирование убрано для уменьшения спама (переведено в DEBUG если нужно)
             load_auto_bot_config._logged_once = True
         else:
             logger.debug("[CONFIG] ✅ Конфигурация загружена (без изменений в файле)")
@@ -658,9 +644,9 @@ def load_auto_bot_config():
         with bots_data_lock:
             bots_data['auto_bot_config'] = merged_config
         
-        # ✅ Логируем только при реальном изменении файла или первом вызове
+        # ✅ Логируем только при реальном изменении файла или первом вызове (убрано для уменьшения спама)
         if should_log_verbose:
-            logger.info(f"[CONFIG] ✅ Загружена конфигурация Auto Bot из bot_config.py (JSON больше не используется)")
+            logger.debug(f"[CONFIG] ✅ Загружена конфигурация Auto Bot из bot_config.py (JSON больше не используется)")
         else:
             logger.debug(f"[CONFIG] ✅ Конфигурация обновлена в bots_data (модуль был перезагружен извне)")
             
