@@ -1,8 +1,8 @@
 {
   "symbol": "XDC",
-  "trained_at": "2025-11-13T16:19:12.970768",
-  "training_seed": 933740,
-  "coin_model_seed": 934277,
+  "trained_at": "2025-11-13T17:01:59.661474",
+  "training_seed": 497197,
+  "coin_model_seed": 497711,
   "rsi_params": {
     "oversold": 31,
     "overbought": 76,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 40
   },
   "risk_params": {
-    "stop_loss": 20.845431417118295,
-    "take_profit": 32.813659048988015,
-    "trailing_stop_activation": 44.71316684350076,
-    "trailing_stop_distance": 18.3808426496948,
-    "break_even_protection": false,
-    "break_even_trigger": 66.82726963198715,
+    "stop_loss": 11.492892505944438,
+    "take_profit": 20.955321944453946,
+    "trailing_stop_activation": 23.528028033549084,
+    "trailing_stop_distance": 18.758475685016027,
+    "break_even_protection": true,
+    "break_even_trigger": 48.354669347266686,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 10,
-      "upper": 70,
-      "lower": 34
+      "candles": 3,
+      "upper": 65,
+      "lower": 32
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 5,
-      "single_candle_percent": 14.49334550567494,
-      "multi_candle_count": 6,
-      "multi_candle_percent": 47.52307163831996
+      "candles": 12,
+      "single_candle_percent": 9.490095713545195,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 45.784876338536066
     }
   },
-  "candles_count": 1080,
+  "candles_count": 931,
   "trades_count": 6,
   "win_rate": 50.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 3.8700929006565446e-07,
-  "total_pnl": -0.48067322587867284,
-  "previous_candles_count": 1005,
-  "candles_increased": true
+  "profit_mse": 1.8740232266912485e-07,
+  "total_pnl": -0.2399038665042339,
+  "previous_candles_count": 937,
+  "candles_increased": false
 }

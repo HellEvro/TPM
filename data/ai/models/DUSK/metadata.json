@@ -1,8 +1,8 @@
 {
   "symbol": "DUSK",
-  "trained_at": "2025-11-13T16:19:52.633707",
-  "training_seed": 984398,
-  "coin_model_seed": 985337,
+  "trained_at": "2025-11-13T17:01:45.116836",
+  "training_seed": 497197,
+  "coin_model_seed": 497245,
   "rsi_params": {
     "oversold": 35,
     "overbought": 67,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 44
   },
   "risk_params": {
-    "stop_loss": 14.865935005936299,
-    "take_profit": 20.862755425187984,
-    "trailing_stop_activation": 29.92105428975535,
-    "trailing_stop_distance": 19.450544236904936,
-    "break_even_protection": true,
-    "break_even_trigger": 74.53971825039687,
+    "stop_loss": 12.251657537505809,
+    "take_profit": 13.34461068217825,
+    "trailing_stop_activation": 8.911756175640187,
+    "trailing_stop_distance": 5.6166302014586105,
+    "break_even_protection": false,
+    "break_even_trigger": 162.57823143267427,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 6,
-      "upper": 68,
-      "lower": 34
+      "candles": 3,
+      "upper": 62,
+      "lower": 38
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 5,
-      "single_candle_percent": 15.945285168521217,
-      "multi_candle_count": 3,
-      "multi_candle_percent": 63.80279654147471
+      "candles": 7,
+      "single_candle_percent": 13.995514104786684,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 63.71469577329753
     }
   },
-  "candles_count": 4954,
+  "candles_count": 4892,
   "trades_count": 5,
-  "win_rate": 20.0,
+  "win_rate": 40.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 6.237366767477777e-08,
-  "total_pnl": -0.312275883035528,
-  "previous_candles_count": 4888,
-  "candles_increased": true
+  "profit_mse": 2.3838565823188846e-06,
+  "total_pnl": -0.9254641758086286,
+  "previous_candles_count": 4968,
+  "candles_increased": false
 }

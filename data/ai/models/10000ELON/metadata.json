@@ -1,46 +1,46 @@
 {
   "symbol": "10000ELON",
-  "trained_at": "2025-11-13T16:17:41.995700",
-  "training_seed": 859906,
-  "coin_model_seed": 860145,
+  "trained_at": "2025-11-13T16:57:27.949707",
+  "training_seed": 245691,
+  "coin_model_seed": 246412,
   "rsi_params": {
     "oversold": 35,
-    "overbought": 70,
-    "exit_long_with_trend": 60,
-    "exit_long_against_trend": 60,
-    "exit_short_with_trend": 40,
-    "exit_short_against_trend": 45
+    "overbought": 71,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 40
   },
   "risk_params": {
-    "stop_loss": 9.173044579010613,
-    "take_profit": 19.554487506622245,
-    "trailing_stop_activation": 17.70381956886175,
-    "trailing_stop_distance": 16.11040391671436,
+    "stop_loss": 12.668545005136208,
+    "take_profit": 19.524975181290653,
+    "trailing_stop_activation": 37.519798892739,
+    "trailing_stop_distance": 5.0,
     "break_even_protection": true,
-    "break_even_trigger": 159.2693020473717,
+    "break_even_trigger": 62.38365251020048,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 10,
-      "upper": 66,
-      "lower": 39
+      "upper": 60,
+      "lower": 41
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 9,
-      "single_candle_percent": 10.15970273532085,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 38.53643425603944
+      "candles": 6,
+      "single_candle_percent": 19.65509921209827,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 67.73085445302178
     }
   },
-  "candles_count": 1032,
+  "candles_count": 996,
   "trades_count": 8,
-  "win_rate": 37.5,
-  "signal_accuracy": 1.0,
-  "profit_mse": 1.6792262328787743e-06,
-  "total_pnl": -0.8365277690561619,
-  "previous_candles_count": 1014,
+  "win_rate": 75.0,
+  "signal_accuracy": 0.875,
+  "profit_mse": 1.881636828549683e-06,
+  "total_pnl": 0.8597776125373434,
+  "previous_candles_count": 945,
   "candles_increased": true
 }

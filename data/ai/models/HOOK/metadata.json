@@ -1,0 +1,46 @@
+{
+  "symbol": "HOOK",
+  "trained_at": "2025-11-13T16:58:37.849387",
+  "training_seed": 304157,
+  "coin_model_seed": 304318,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 65,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 11.391176458548879,
+    "take_profit": 21.19679751295723,
+    "trailing_stop_activation": 44.67833129151104,
+    "trailing_stop_distance": 10.921968392509868,
+    "break_even_protection": false,
+    "break_even_trigger": 164.63520150893925,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 64,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 24.522460437022296,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 59.276875130741765
+    }
+  },
+  "candles_count": 3921,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.24204703502709e-06,
+  "total_pnl": 0.4446359509981466,
+  "previous_candles_count": 3872,
+  "candles_increased": true
+}

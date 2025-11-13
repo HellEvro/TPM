@@ -1,46 +1,46 @@
 {
   "symbol": "ZBCN",
-  "trained_at": "2025-11-13T16:12:34.197673",
-  "training_seed": 529795,
-  "coin_model_seed": 529972,
+  "trained_at": "2025-11-13T17:02:00.366747",
+  "training_seed": 497197,
+  "coin_model_seed": 497797,
   "rsi_params": {
     "oversold": 35,
-    "overbought": 71,
-    "exit_long_with_trend": 70,
-    "exit_long_against_trend": 65,
+    "overbought": 68,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 60,
     "exit_short_with_trend": 32,
     "exit_short_against_trend": 43
   },
   "risk_params": {
-    "stop_loss": 9.870799487120443,
-    "take_profit": 29.53208922387011,
-    "trailing_stop_activation": 19.89649586556658,
-    "trailing_stop_distance": 13.160034201670413,
-    "break_even_protection": true,
-    "break_even_trigger": 169.9456335543945,
+    "stop_loss": 15.364563858172197,
+    "take_profit": 27.845511651568625,
+    "trailing_stop_activation": 29.498355979815837,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 40.1276886752447,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 9,
-      "upper": 68,
-      "lower": 30
+      "candles": 10,
+      "upper": 64,
+      "lower": 29
     },
     "exit_scam_filter": {
       "enabled": true,
       "candles": 6,
-      "single_candle_percent": 20.53326426752794,
-      "multi_candle_count": 5,
-      "multi_candle_percent": 69.95394373863476
+      "single_candle_percent": 6.324892144344819,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 39.22942812437503
     }
   },
-  "candles_count": 2159,
+  "candles_count": 2269,
   "trades_count": 5,
-  "win_rate": 20.0,
+  "win_rate": 80.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 6.473488939861612e-07,
-  "total_pnl": 0.03920565051971419,
-  "previous_candles_count": 0,
+  "profit_mse": 3.08762724275296e-07,
+  "total_pnl": 0.17250280540128282,
+  "previous_candles_count": 2224,
   "candles_increased": true
 }

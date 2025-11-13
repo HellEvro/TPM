@@ -1,0 +1,46 @@
+{
+  "symbol": "SEI",
+  "trained_at": "2025-11-13T16:53:50.935180",
+  "training_seed": 11814,
+  "coin_model_seed": 12331,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 68,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 12.032258579589362,
+    "take_profit": 13.867566308877116,
+    "trailing_stop_activation": 30.201908982453187,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 107.45459585739627,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 70,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 14.557701394246665,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 67.21313774939478
+    }
+  },
+  "candles_count": 3156,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.8744963717898226e-08,
+  "total_pnl": -0.12448688958657286,
+  "previous_candles_count": 3094,
+  "candles_increased": true
+}

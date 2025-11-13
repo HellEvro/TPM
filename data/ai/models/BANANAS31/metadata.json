@@ -1,8 +1,8 @@
 {
   "symbol": "BANANAS31",
-  "trained_at": "2025-11-13T16:19:49.420572",
-  "training_seed": 984398,
-  "coin_model_seed": 984432,
+  "trained_at": "2025-11-13T17:01:41.253677",
+  "training_seed": 497197,
+  "coin_model_seed": 497500,
   "rsi_params": {
     "oversold": 35,
     "overbought": 68,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 39
   },
   "risk_params": {
-    "stop_loss": 9.908915656694035,
-    "take_profit": 32.24472041879689,
-    "trailing_stop_activation": 43.833219935688895,
-    "trailing_stop_distance": 18.257614509695397,
-    "break_even_protection": false,
-    "break_even_trigger": 143.53421710546615,
+    "stop_loss": 9.248660982751232,
+    "take_profit": 14.777116356352094,
+    "trailing_stop_activation": 39.52159406029281,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 148.83849163090258,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 9,
-      "upper": 60,
-      "lower": 41
+      "upper": 69,
+      "lower": 31
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 11,
-      "single_candle_percent": 11.090331741634342,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 33.63921919899735
+      "candles": 12,
+      "single_candle_percent": 21.358854046382408,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 58.89041908964562
     }
   },
-  "candles_count": 852,
+  "candles_count": 840,
   "trades_count": 9,
-  "win_rate": 44.44444444444444,
+  "win_rate": 33.33333333333333,
   "signal_accuracy": 1.0,
-  "profit_mse": 4.956851145962957e-07,
-  "total_pnl": -0.07499299261178201,
-  "previous_candles_count": 852,
+  "profit_mse": 1.0503801926275723e-06,
+  "total_pnl": -0.8459159498189246,
+  "previous_candles_count": 902,
   "candles_increased": false
 }

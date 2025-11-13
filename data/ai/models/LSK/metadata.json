@@ -1,8 +1,8 @@
 {
   "symbol": "LSK",
-  "trained_at": "2025-11-13T16:19:03.681779",
-  "training_seed": 933740,
-  "coin_model_seed": 933920,
+  "trained_at": "2025-11-13T16:57:39.047473",
+  "training_seed": 245691,
+  "coin_model_seed": 246274,
   "rsi_params": {
     "oversold": 33,
     "overbought": 76,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 40
   },
   "risk_params": {
-    "stop_loss": 15.098012839174496,
-    "take_profit": 29.975519387870552,
-    "trailing_stop_activation": 44.422038975757786,
-    "trailing_stop_distance": 13.055467918000243,
+    "stop_loss": 16.0243488446586,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 41.28321296445685,
+    "trailing_stop_distance": 16.785951965374327,
     "break_even_protection": false,
-    "break_even_trigger": 82.56343418026003,
+    "break_even_trigger": 114.81136723364817,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 9,
-      "upper": 59,
+      "candles": 5,
+      "upper": 64,
       "lower": 29
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 10,
-      "single_candle_percent": 11.243956079616291,
-      "multi_candle_count": 5,
-      "multi_candle_percent": 45.07284246689867
+      "candles": 9,
+      "single_candle_percent": 21.26823970459388,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 39.11619934612494
     }
   },
-  "candles_count": 2536,
+  "candles_count": 2585,
   "trades_count": 8,
-  "win_rate": 50.0,
+  "win_rate": 62.5,
   "signal_accuracy": 1.0,
-  "profit_mse": 2.5091647402156805e-06,
-  "total_pnl": -0.20680886088843875,
-  "previous_candles_count": 2601,
-  "candles_increased": false
+  "profit_mse": 1.6111844421612816e-07,
+  "total_pnl": -0.15449273275446543,
+  "previous_candles_count": 2527,
+  "candles_increased": true
 }
