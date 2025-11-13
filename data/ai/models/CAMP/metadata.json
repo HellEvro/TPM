@@ -1,0 +1,46 @@
+{
+  "symbol": "CAMP",
+  "trained_at": "2025-11-13T16:18:35.852929",
+  "training_seed": 911006,
+  "coin_model_seed": 911067,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 20.28568958198653,
+    "take_profit": 13.290796243192807,
+    "trailing_stop_activation": 40.77353278267012,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 168.05620362280592,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 70,
+      "lower": 41
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 8.144866090143484,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 69.87291686896894
+    }
+  },
+  "candles_count": 310,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.906991306980703e-06,
+  "total_pnl": 0.00947820521722939,
+  "previous_candles_count": 310,
+  "candles_increased": false
+}

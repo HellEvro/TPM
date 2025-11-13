@@ -1,0 +1,46 @@
+{
+  "symbol": "APT",
+  "trained_at": "2025-11-13T16:14:33.419711",
+  "training_seed": 668684,
+  "coin_model_seed": 669351,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 76,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 12.072626504513162,
+    "take_profit": 18.911547453618105,
+    "trailing_stop_activation": 11.950796868285986,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 105.5540148983617,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 59,
+      "lower": 41
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 9.79161389577763,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 67.63525573352766
+    }
+  },
+  "candles_count": 4302,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.342556533561086e-07,
+  "total_pnl": -0.3619381792653357,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

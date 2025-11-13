@@ -1,0 +1,46 @@
+{
+  "symbol": "ETHBTC",
+  "trained_at": "2025-11-13T16:17:22.311851",
+  "training_seed": 834785,
+  "coin_model_seed": 835421,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 14.132773273937513,
+    "take_profit": 33.82743719006858,
+    "trailing_stop_activation": 23.81333666457164,
+    "trailing_stop_distance": 17.01975678204002,
+    "break_even_protection": true,
+    "break_even_trigger": 175.42772138528795,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 64,
+      "lower": 33
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 11.056311860178713,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 36.0172425548712
+    }
+  },
+  "candles_count": 1938,
+  "trades_count": 7,
+  "win_rate": 28.57142857142857,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.4680314717356e-07,
+  "total_pnl": -0.4370868966033378,
+  "previous_candles_count": 2062,
+  "candles_increased": false
+}

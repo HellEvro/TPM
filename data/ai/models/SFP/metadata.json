@@ -1,0 +1,46 @@
+{
+  "symbol": "SFP",
+  "trained_at": "2025-11-13T16:17:57.795922",
+  "training_seed": 859906,
+  "coin_model_seed": 860431,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 14.873977944661611,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 14.42293651948427,
+    "trailing_stop_distance": 7.816539086867467,
+    "break_even_protection": false,
+    "break_even_trigger": 177.2509175963349,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 59,
+      "lower": 33
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 11.780357187313559,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 36.946995614255144
+    }
+  },
+  "candles_count": 4868,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.413255354855393e-07,
+  "total_pnl": 0.3920733891851904,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

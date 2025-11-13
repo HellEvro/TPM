@@ -1,0 +1,46 @@
+{
+  "symbol": "XAUT",
+  "trained_at": "2025-11-13T16:19:12.815114",
+  "training_seed": 933740,
+  "coin_model_seed": 934731,
+  "rsi_params": {
+    "oversold": 28,
+    "overbought": 65,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 12.727617937729017,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 40.64995145614696,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 131.8735311074929,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 62,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 17.33147962556096,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 57.07927545664081
+    }
+  },
+  "candles_count": 889,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.410333533253644e-08,
+  "total_pnl": -0.10352495973746927,
+  "previous_candles_count": 759,
+  "candles_increased": true
+}

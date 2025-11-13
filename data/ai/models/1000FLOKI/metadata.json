@@ -1,0 +1,46 @@
+{
+  "symbol": "1000FLOKI",
+  "trained_at": "2025-11-13T16:12:36.284133",
+  "training_seed": 554157,
+  "coin_model_seed": 554380,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 71,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 19.827820020950575,
+    "take_profit": 33.146821036416284,
+    "trailing_stop_activation": 42.66831521442062,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 92.74941330915195,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 62,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 20.255648446755963,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 67.82439739802946
+    }
+  },
+  "candles_count": 3931,
+  "trades_count": 7,
+  "win_rate": 71.42857142857143,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.2839505406422846e-06,
+  "total_pnl": 0.9282197620580931,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

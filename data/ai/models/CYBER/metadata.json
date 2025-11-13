@@ -1,0 +1,46 @@
+{
+  "symbol": "CYBER",
+  "trained_at": "2025-11-13T16:14:33.642675",
+  "training_seed": 665913,
+  "coin_model_seed": 666079,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 73,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 17.760575804584914,
+    "take_profit": 16.368749040913222,
+    "trailing_stop_activation": 33.48763678706011,
+    "trailing_stop_distance": 17.201406709053717,
+    "break_even_protection": true,
+    "break_even_trigger": 144.8683932915908,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 71,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 6.276842440796656,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 44.53860972966234
+    }
+  },
+  "candles_count": 3251,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.4597668209583297e-05,
+  "total_pnl": 2.4870830299371356,
+  "previous_candles_count": 3175,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "RPL",
+  "trained_at": "2025-11-13T16:19:35.749773",
+  "training_seed": 958660,
+  "coin_model_seed": 958985,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 78,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 12.05550320361064,
+    "take_profit": 30.66033744237926,
+    "trailing_stop_activation": 13.099772393822853,
+    "trailing_stop_distance": 17.175521788430938,
+    "break_even_protection": true,
+    "break_even_trigger": 53.21822941591753,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 61,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 12.927143455603128,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 53.58494968352309
+    }
+  },
+  "candles_count": 3759,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.647658991200529e-07,
+  "total_pnl": 0.20952486941708448,
+  "previous_candles_count": 3870,
+  "candles_increased": false
+}

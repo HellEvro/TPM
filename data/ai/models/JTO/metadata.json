@@ -1,0 +1,46 @@
+{
+  "symbol": "JTO",
+  "trained_at": "2025-11-13T16:19:30.389679",
+  "training_seed": 958660,
+  "coin_model_seed": 958702,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 75,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 15.65469263497755,
+    "take_profit": 12.317561915083672,
+    "trailing_stop_activation": 11.342945715370194,
+    "trailing_stop_distance": 19.25798506673003,
+    "break_even_protection": false,
+    "break_even_trigger": 129.9060917816049,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 67,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 8.754581959727364,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 51.67582275603955
+    }
+  },
+  "candles_count": 2636,
+  "trades_count": 7,
+  "win_rate": 14.285714285714285,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.959652184809512e-07,
+  "total_pnl": -1.0924961517181502,
+  "previous_candles_count": 2811,
+  "candles_increased": false
+}

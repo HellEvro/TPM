@@ -1,0 +1,46 @@
+{
+  "symbol": "XION",
+  "trained_at": "2025-11-13T16:17:33.804192",
+  "training_seed": 834785,
+  "coin_model_seed": 835134,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 76,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 18.80047307570721,
+    "take_profit": 13.962876234265467,
+    "trailing_stop_activation": 16.977719084435716,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 89.57953945983134,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 71,
+      "lower": 29
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 13.586368909172302,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 38.42320392424872
+    }
+  },
+  "candles_count": 1240,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.62384003228676e-06,
+  "total_pnl": 0.725535126640528,
+  "previous_candles_count": 1357,
+  "candles_increased": false
+}

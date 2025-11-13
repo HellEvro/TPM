@@ -1,0 +1,46 @@
+{
+  "symbol": "WAVES",
+  "trained_at": "2025-11-13T16:19:38.421522",
+  "training_seed": 958660,
+  "coin_model_seed": 958763,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 72,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 18.662391993818773,
+    "take_profit": 11.978376920050056,
+    "trailing_stop_activation": 27.499977693987287,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 56.244766951902676,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 66,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 16.99768336912907,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 54.16982232894047
+    }
+  },
+  "candles_count": 4814,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.970964194126554e-07,
+  "total_pnl": 0.3761138789833492,
+  "previous_candles_count": 4888,
+  "candles_increased": false
+}

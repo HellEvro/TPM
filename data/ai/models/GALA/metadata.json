@@ -1,8 +1,8 @@
 {
   "symbol": "GALA",
-  "trained_at": "2025-11-13T15:59:21.920282",
-  "training_seed": 743535,
-  "coin_model_seed": 744436,
+  "trained_at": "2025-11-13T16:19:53.974536",
+  "training_seed": 984398,
+  "coin_model_seed": 984875,
   "rsi_params": {
     "oversold": 35,
     "overbought": 69,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 44
   },
   "risk_params": {
-    "stop_loss": 16.27405272589963,
-    "take_profit": 30.411563935610918,
-    "trailing_stop_activation": 36.15913853445528,
+    "stop_loss": 14.043509026881516,
+    "take_profit": 24.168627963902797,
+    "trailing_stop_activation": 34.78838607355118,
     "trailing_stop_distance": 5.0,
-    "break_even_protection": false,
-    "break_even_trigger": 133.25058939461735,
+    "break_even_protection": true,
+    "break_even_trigger": 128.57893027114443,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 8,
-      "upper": 67,
-      "lower": 32
+      "candles": 10,
+      "upper": 59,
+      "lower": 37
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 12,
-      "single_candle_percent": 12.196982230389402,
-      "multi_candle_count": 3,
-      "multi_candle_percent": 36.85237327065761
+      "candles": 4,
+      "single_candle_percent": 17.386839604025177,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 37.61555846163399
     }
   },
-  "candles_count": 4977,
+  "candles_count": 4985,
   "trades_count": 5,
   "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 2.9856531924696888e-06,
-  "total_pnl": 0.4525947415908237,
-  "previous_candles_count": 4937,
-  "candles_increased": true
+  "profit_mse": 3.564364529705183e-07,
+  "total_pnl": 0.3223876119100095,
+  "previous_candles_count": 4999,
+  "candles_increased": false
 }

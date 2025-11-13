@@ -1,0 +1,46 @@
+{
+  "symbol": "VVV",
+  "trained_at": "2025-11-13T16:12:33.340614",
+  "training_seed": 529795,
+  "coin_model_seed": 529799,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 71,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 10.57854555233089,
+    "take_profit": 11.838029166873117,
+    "trailing_stop_activation": 32.433030494378755,
+    "trailing_stop_distance": 11.15482167922979,
+    "break_even_protection": false,
+    "break_even_trigger": 181.19134367126355,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 62,
+      "lower": 33
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 17.26271833709654,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 64.11961266978287
+    }
+  },
+  "candles_count": 969,
+  "trades_count": 7,
+  "win_rate": 57.14285714285714,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.0511349743570928e-06,
+  "total_pnl": 0.12192067113957794,
+  "previous_candles_count": 1053,
+  "candles_increased": false
+}

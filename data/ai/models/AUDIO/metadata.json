@@ -1,0 +1,46 @@
+{
+  "symbol": "AUDIO",
+  "trained_at": "2025-11-13T16:19:49.058846",
+  "training_seed": 984398,
+  "coin_model_seed": 984623,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 65,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 13.470976266795489,
+    "take_profit": 23.23653637210146,
+    "trailing_stop_activation": 19.99805551293873,
+    "trailing_stop_distance": 17.61242449199053,
+    "break_even_protection": true,
+    "break_even_trigger": 83.8375056372784,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 71,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 13.60501804043055,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 54.46826682379689
+    }
+  },
+  "candles_count": 4887,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.0363219587014747e-06,
+  "total_pnl": 0.6310177265470808,
+  "previous_candles_count": 4974,
+  "candles_increased": false
+}

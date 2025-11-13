@@ -1,0 +1,46 @@
+{
+  "symbol": "JELLYJELLY",
+  "trained_at": "2025-11-13T16:11:32.434098",
+  "training_seed": 481714,
+  "coin_model_seed": 481990,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 67,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 14.8729805120572,
+    "take_profit": 13.328336960465318,
+    "trailing_stop_activation": 22.87542192023431,
+    "trailing_stop_distance": 8.20703150167243,
+    "break_even_protection": false,
+    "break_even_trigger": 181.2506604023341,
+    "max_position_hours": 99
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 62,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 9.971675537437559,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 65.56531668085259
+    }
+  },
+  "candles_count": 1078,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.2517321136799674e-05,
+  "total_pnl": 4.68970378854893,
+  "previous_candles_count": 1122,
+  "candles_increased": false
+}

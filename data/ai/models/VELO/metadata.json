@@ -1,0 +1,46 @@
+{
+  "symbol": "VELO",
+  "trained_at": "2025-11-13T16:17:07.725227",
+  "training_seed": 806767,
+  "coin_model_seed": 807465,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 76,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 10.296685181273567,
+    "take_profit": 24.38381160141592,
+    "trailing_stop_activation": 26.967691794671715,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 95.18055638237357,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 69,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 20.181541585988498,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 59.67292296656578
+    }
+  },
+  "candles_count": 1975,
+  "trades_count": 9,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.923078339930554e-07,
+  "total_pnl": 0.18712317965807485,
+  "previous_candles_count": 2077,
+  "candles_increased": false
+}

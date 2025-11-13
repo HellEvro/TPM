@@ -1,0 +1,46 @@
+{
+  "symbol": "TRB",
+  "trained_at": "2025-11-13T16:12:33.031480",
+  "training_seed": 529795,
+  "coin_model_seed": 530536,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 16.910478955097187,
+    "take_profit": 20.377331983137612,
+    "trailing_stop_activation": 21.104172567782726,
+    "trailing_stop_distance": 6.060943179584111,
+    "break_even_protection": true,
+    "break_even_trigger": 119.7410176948945,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 67,
+      "lower": 35
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 20.307758243455563,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 39.79484654009495
+    }
+  },
+  "candles_count": 4996,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.1450691620418777e-06,
+  "total_pnl": 0.4051158676571033,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

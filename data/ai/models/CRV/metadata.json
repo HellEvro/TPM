@@ -1,0 +1,46 @@
+{
+  "symbol": "CRV",
+  "trained_at": "2025-11-13T16:19:51.247328",
+  "training_seed": 984398,
+  "coin_model_seed": 985165,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 78,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 10.81553782731514,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 32.28737736450533,
+    "trailing_stop_distance": 20.36950258284685,
+    "break_even_protection": true,
+    "break_even_trigger": 177.3458016296914,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 68,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 13.998995468037705,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 58.04617658106368
+    }
+  },
+  "candles_count": 4945,
+  "trades_count": 7,
+  "win_rate": 85.71428571428571,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.247742417412702e-06,
+  "total_pnl": 2.157776594957972,
+  "previous_candles_count": 4840,
+  "candles_increased": true
+}

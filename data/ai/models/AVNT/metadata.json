@@ -1,0 +1,46 @@
+{
+  "symbol": "AVNT",
+  "trained_at": "2025-11-13T16:14:56.611500",
+  "training_seed": 691611,
+  "coin_model_seed": 692533,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 77,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 16.25286260104966,
+    "take_profit": 24.394165782818988,
+    "trailing_stop_activation": 28.27632943157856,
+    "trailing_stop_distance": 16.735114623854653,
+    "break_even_protection": false,
+    "break_even_trigger": 167.98338035086311,
+    "max_position_hours": 14
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 68,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 18.12151900244124,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 57.5317788172503
+    }
+  },
+  "candles_count": 261,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.631350849429098e-06,
+  "total_pnl": -1.3937201458620105,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

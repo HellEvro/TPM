@@ -1,0 +1,46 @@
+{
+  "symbol": "BANANA",
+  "trained_at": "2025-11-13T16:19:49.255144",
+  "training_seed": 984398,
+  "coin_model_seed": 984948,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 74,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 15.52730844618113,
+    "take_profit": 20.333161283974462,
+    "trailing_stop_activation": 19.78745291470848,
+    "trailing_stop_distance": 18.775013810093796,
+    "break_even_protection": false,
+    "break_even_trigger": 79.6857976927536,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 59,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 14.483222398449659,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 35.54673075111603
+    }
+  },
+  "candles_count": 1742,
+  "trades_count": 8,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.98061759045063e-07,
+  "total_pnl": -0.009732243526640035,
+  "previous_candles_count": 1823,
+  "candles_increased": false
+}

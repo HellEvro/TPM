@@ -1,0 +1,46 @@
+{
+  "symbol": "LTC",
+  "trained_at": "2025-11-13T16:19:03.847268",
+  "training_seed": 933740,
+  "coin_model_seed": 933875,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 67,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 14.130288421207233,
+    "take_profit": 31.3925259409647,
+    "trailing_stop_activation": 44.83362343796174,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 72.41687051896358,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 60,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 14.027359597248676,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 64.19604581651865
+    }
+  },
+  "candles_count": 4971,
+  "trades_count": 6,
+  "win_rate": 83.33333333333334,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.119189747603772e-07,
+  "total_pnl": 0.45021798256829826,
+  "previous_candles_count": 4886,
+  "candles_increased": true
+}

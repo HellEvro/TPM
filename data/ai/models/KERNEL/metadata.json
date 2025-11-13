@@ -1,8 +1,8 @@
 {
   "symbol": "KERNEL",
-  "trained_at": "2025-11-13T16:00:18.898368",
-  "training_seed": 793099,
-  "coin_model_seed": 793877,
+  "trained_at": "2025-11-13T16:19:30.752070",
+  "training_seed": 958660,
+  "coin_model_seed": 959471,
   "rsi_params": {
     "oversold": 30,
     "overbought": 68,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 45
   },
   "risk_params": {
-    "stop_loss": 20.967755252050683,
-    "take_profit": 30.30660003001977,
-    "trailing_stop_activation": 35.80512941339568,
+    "stop_loss": 10.085939435669163,
+    "take_profit": 24.56858182436399,
+    "trailing_stop_activation": 38.25195447266445,
     "trailing_stop_distance": 5.0,
-    "break_even_protection": false,
-    "break_even_trigger": 46.25196634145682,
+    "break_even_protection": true,
+    "break_even_trigger": 163.23724967737104,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 8,
-      "upper": 65,
-      "lower": 32
+      "upper": 70,
+      "lower": 36
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 4,
-      "single_candle_percent": 9.745002829636487,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 69.45068447254229
+      "candles": 8,
+      "single_candle_percent": 21.775427809363286,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 46.795893968640684
     }
   },
-  "candles_count": 792,
+  "candles_count": 851,
   "trades_count": 5,
-  "win_rate": 40.0,
+  "win_rate": 20.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.5658725734835394e-06,
-  "total_pnl": -0.31346508662826916,
-  "previous_candles_count": 758,
+  "profit_mse": 6.356487632668447e-07,
+  "total_pnl": -0.6207515899112237,
+  "previous_candles_count": 823,
   "candles_increased": true
 }

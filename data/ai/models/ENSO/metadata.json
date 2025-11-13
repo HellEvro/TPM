@@ -1,0 +1,46 @@
+{
+  "symbol": "ENSO",
+  "trained_at": "2025-11-13T16:18:59.991531",
+  "training_seed": 933740,
+  "coin_model_seed": 934104,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 19.127676936033154,
+    "take_profit": 18.87330619974737,
+    "trailing_stop_activation": 14.233435190161279,
+    "trailing_stop_distance": 8.84372893187851,
+    "break_even_protection": false,
+    "break_even_trigger": 52.8166354642484,
+    "max_position_hours": 15
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 63,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 14.390330464875998,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 55.427334757603916
+    }
+  },
+  "candles_count": 122,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.302443009019361e-06,
+  "total_pnl": -0.5074785095757496,
+  "previous_candles_count": 122,
+  "candles_increased": false
+}

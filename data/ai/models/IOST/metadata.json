@@ -1,0 +1,46 @@
+{
+  "symbol": "IOST",
+  "trained_at": "2025-11-13T16:18:16.174834",
+  "training_seed": 886151,
+  "coin_model_seed": 886302,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 77,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 18.9991497768308,
+    "take_profit": 14.158168428221618,
+    "trailing_stop_activation": 29.747925004243154,
+    "trailing_stop_distance": 7.342992282537709,
+    "break_even_protection": true,
+    "break_even_trigger": 106.60934613448075,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 61,
+      "lower": 41
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 9.954311501709633,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 57.38458929438988
+    }
+  },
+  "candles_count": 4922,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.1282316311706578e-07,
+  "total_pnl": 0.15325390702234976,
+  "previous_candles_count": 4856,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "SPX",
+  "trained_at": "2025-11-13T16:18:46.060435",
+  "training_seed": 911006,
+  "coin_model_seed": 911999,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 67,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 11.907093453169136,
+    "take_profit": 27.71805156614044,
+    "trailing_stop_activation": 18.627753781256857,
+    "trailing_stop_distance": 17.959948067204852,
+    "break_even_protection": false,
+    "break_even_trigger": 73.89090144667176,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 63,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 11.503201561228488,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 68.85576735406613
+    }
+  },
+  "candles_count": 1479,
+  "trades_count": 8,
+  "win_rate": 37.5,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.51928718866138e-06,
+  "total_pnl": -0.4475238689234708,
+  "previous_candles_count": 1400,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "STORJ",
+  "trained_at": "2025-11-13T16:14:19.794733",
+  "training_seed": 642301,
+  "coin_model_seed": 642633,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 78,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 14.266261947958647,
+    "take_profit": 26.58484730684569,
+    "trailing_stop_activation": 30.113505446936955,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 132.1241776982123,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 66,
+      "lower": 29
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 5.8839588390175805,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 41.11131995756776
+    }
+  },
+  "candles_count": 4884,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 9.246406498363996e-07,
+  "total_pnl": -0.044361913173776094,
+  "previous_candles_count": 4808,
+  "candles_increased": true
+}

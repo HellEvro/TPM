@@ -1,0 +1,46 @@
+{
+  "symbol": "ANKR",
+  "trained_at": "2025-11-13T16:03:43.220325",
+  "training_seed": 18288,
+  "coin_model_seed": 19154,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 67,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 16.486229454539696,
+    "take_profit": 14.950716820213657,
+    "trailing_stop_activation": 23.399996981631347,
+    "trailing_stop_distance": 16.05386023029233,
+    "break_even_protection": true,
+    "break_even_trigger": 163.94867081525797,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 71,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 10.930174434163298,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 39.09797061798052
+    }
+  },
+  "candles_count": 4890,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.575222090819182e-07,
+  "total_pnl": 0.671672778902404,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

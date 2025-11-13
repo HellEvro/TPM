@@ -1,8 +1,8 @@
 {
   "symbol": "BCH",
-  "trained_at": "2025-11-13T16:00:03.578830",
-  "training_seed": 792065,
-  "coin_model_seed": 792126,
+  "trained_at": "2025-11-13T16:18:35.501394",
+  "training_seed": 911006,
+  "coin_model_seed": 911316,
   "rsi_params": {
     "oversold": 35,
     "overbought": 65,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 43
   },
   "risk_params": {
-    "stop_loss": 11.474757277613156,
-    "take_profit": 15.605713760152867,
-    "trailing_stop_activation": 11.368422624478772,
-    "trailing_stop_distance": 10.060121416336415,
+    "stop_loss": 14.339290514457208,
+    "take_profit": 20.272633296897872,
+    "trailing_stop_activation": 22.599526583234073,
+    "trailing_stop_distance": 19.19415763736787,
     "break_even_protection": false,
-    "break_even_trigger": 145.10854139183095,
+    "break_even_trigger": 118.96302848620026,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 10,
-      "upper": 62,
-      "lower": 38
+      "candles": 6,
+      "upper": 60,
+      "lower": 30
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 7,
-      "single_candle_percent": 16.462937556993552,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 65.46532497754305
+      "candles": 8,
+      "single_candle_percent": 14.452877447440267,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 62.323660801427366
     }
   },
-  "candles_count": 4935,
+  "candles_count": 4948,
   "trades_count": 5,
-  "win_rate": 60.0,
-  "signal_accuracy": 1.0,
-  "profit_mse": 5.267917102768737e-07,
-  "total_pnl": 0.002972580720542302,
-  "previous_candles_count": 4852,
-  "candles_increased": true
+  "win_rate": 80.0,
+  "signal_accuracy": 0.8,
+  "profit_mse": 2.856379333118188e-07,
+  "total_pnl": 0.21663824089687123,
+  "previous_candles_count": 4972,
+  "candles_increased": false
 }

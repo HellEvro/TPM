@@ -1,8 +1,8 @@
 {
   "symbol": "YGG",
-  "trained_at": "2025-11-13T15:59:45.415161",
-  "training_seed": 743535,
-  "coin_model_seed": 743833,
+  "trained_at": "2025-11-13T16:19:39.141279",
+  "training_seed": 958660,
+  "coin_model_seed": 959307,
   "rsi_params": {
     "oversold": 32,
     "overbought": 76,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 38
   },
   "risk_params": {
-    "stop_loss": 17.127906042251148,
-    "take_profit": 28.153889042602728,
-    "trailing_stop_activation": 18.84854029965129,
-    "trailing_stop_distance": 5.0,
-    "break_even_protection": false,
-    "break_even_trigger": 97.27594290302338,
-    "max_position_hours": 13
+    "stop_loss": 13.992941522172863,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 34.00967014047001,
+    "trailing_stop_distance": 14.940615190472187,
+    "break_even_protection": true,
+    "break_even_trigger": 171.88655092631274,
+    "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 8,
-      "upper": 59,
-      "lower": 39
+      "candles": 10,
+      "upper": 63,
+      "lower": 37
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 4,
-      "single_candle_percent": 8.876554823563534,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 45.63374370028937
+      "candles": 6,
+      "single_candle_percent": 12.474936134635197,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 64.35968024116247
     }
   },
-  "candles_count": 4887,
+  "candles_count": 4956,
   "trades_count": 5,
-  "win_rate": 80.0,
+  "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.099478222312042e-05,
-  "total_pnl": 2.424805746308462,
-  "previous_candles_count": 0,
-  "candles_increased": true
+  "profit_mse": 9.857077284641116e-07,
+  "total_pnl": 0.6817769437195099,
+  "previous_candles_count": 4971,
+  "candles_increased": false
 }

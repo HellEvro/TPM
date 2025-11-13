@@ -1,0 +1,46 @@
+{
+  "symbol": "A8",
+  "trained_at": "2025-11-13T16:17:42.683795",
+  "training_seed": 859906,
+  "coin_model_seed": 859974,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 12.307243308218743,
+    "take_profit": 13.907927540512103,
+    "trailing_stop_activation": 10.135303089649812,
+    "trailing_stop_distance": 12.36058334387236,
+    "break_even_protection": false,
+    "break_even_trigger": 147.7614430405789,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 71,
+      "lower": 30
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 12.501648261414271,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 59.328018212307924
+    }
+  },
+  "candles_count": 1772,
+  "trades_count": 8,
+  "win_rate": 62.5,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.378936792253642e-07,
+  "total_pnl": 0.6455637846477498,
+  "previous_candles_count": 1797,
+  "candles_increased": false
+}

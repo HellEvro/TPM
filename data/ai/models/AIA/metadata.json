@@ -1,0 +1,46 @@
+{
+  "symbol": "AIA",
+  "trained_at": "2025-11-13T16:14:56.427805",
+  "training_seed": 692580,
+  "coin_model_seed": 692881,
+  "rsi_params": {
+    "oversold": 22,
+    "overbought": 65,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 20.990778081220142,
+    "take_profit": 14.650864545999253,
+    "trailing_stop_activation": 21.70247617533851,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 76.53149954185972,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 65,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 13.29676216191249,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 61.54341900317606
+    }
+  },
+  "candles_count": 226,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.6090810150090652e-06,
+  "total_pnl": -0.6731511865244593,
+  "previous_candles_count": 226,
+  "candles_increased": false
+}

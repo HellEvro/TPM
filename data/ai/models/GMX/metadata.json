@@ -1,8 +1,8 @@
 {
   "symbol": "GMX",
-  "trained_at": "2025-11-13T15:59:22.343945",
-  "training_seed": 743535,
-  "coin_model_seed": 744235,
+  "trained_at": "2025-11-13T16:19:54.653435",
+  "training_seed": 984398,
+  "coin_model_seed": 984477,
   "rsi_params": {
     "oversold": 35,
     "overbought": 65,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 43
   },
   "risk_params": {
-    "stop_loss": 11.907257128801387,
-    "take_profit": 20.897462517290798,
-    "trailing_stop_activation": 25.88107699495704,
-    "trailing_stop_distance": 5.0,
-    "break_even_protection": false,
-    "break_even_trigger": 182.27301719716667,
+    "stop_loss": 9.478581988687909,
+    "take_profit": 14.21864327982156,
+    "trailing_stop_activation": 12.696355876461,
+    "trailing_stop_distance": 18.58346599339414,
+    "break_even_protection": true,
+    "break_even_trigger": 59.6416922805452,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 3,
-      "upper": 71,
-      "lower": 40
+      "upper": 68,
+      "lower": 32
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 10,
-      "single_candle_percent": 9.61122229927198,
-      "multi_candle_count": 4,
-      "multi_candle_percent": 40.16572468556693
+      "candles": 11,
+      "single_candle_percent": 22.68568870324527,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 63.0169259264914
     }
   },
-  "candles_count": 4479,
+  "candles_count": 4322,
   "trades_count": 5,
   "win_rate": 40.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 9.54630422441211e-07,
-  "total_pnl": -0.04451010997960608,
-  "previous_candles_count": 0,
-  "candles_increased": true
+  "profit_mse": 6.790227043361249e-07,
+  "total_pnl": -0.0439335291709607,
+  "previous_candles_count": 4347,
+  "candles_increased": false
 }
