@@ -28,7 +28,7 @@ class PrefixedLogger:
     def debug(self, msg):
         self.logger.debug(f"{self.prefix} {msg}")
 
-logger = PrefixedLogger(logger, "🔄 [CONTINUOUS]")
+logger = PrefixedLogger(logger, "🔄")
 
 class ContinuousDataLoader:
     def __init__(self, exchange_obj=None, update_interval=180):
@@ -54,7 +54,7 @@ class ContinuousDataLoader:
         self.is_running = True
         self.thread = threading.Thread(target=self._continuous_loop, daemon=True)
         self.thread.start()
-        logger.info(f"🚀 Воркер запущен (интервал: {self.update_interval}с)")
+        logger.info(f"Воркер запущен (интервал: {self.update_interval}с)")
         
     def stop(self):
         """🛑 Останавливает воркер"""
@@ -69,7 +69,7 @@ class ContinuousDataLoader:
         
     def _continuous_loop(self):
         """🔄 Основной цикл обновления данных"""
-        logger.info("🔄 Входим в непрерывный цикл обновления...")
+        logger.info("Входим в непрерывный цикл обновления...")
         
         # ⚡ ТРЕЙСИНГ ОТКЛЮЧЕН - проблема решена (deadlock на bots_data_lock)
         # try:
@@ -93,10 +93,10 @@ class ContinuousDataLoader:
                 # ✅ ОПТИМИЗАЦИЯ: НЕ блокируем UI обновления - загрузка свечей и RSI теперь неблокирующие
                 from bots_modules.imports_and_globals import coins_rsi_data
                 coins_rsi_data['processing_cycle'] = True  # Только флаг обработки
-                logger.info("🔄 Начинаем обработку данных (неблокирующий режим)")
+                logger.info("Начинаем обработку данных (неблокирующий режим)")
                 
                 logger.info("=" * 80)
-                logger.info(f"🔄 РАУНД #{self.update_count} НАЧАТ")
+                logger.info(f"РАУНД #{self.update_count} НАЧАТ")
                 logger.info(f"🕐 Время: {datetime.now().strftime('%H:%M:%S')}")
                 logger.info("=" * 80)
                 
@@ -172,7 +172,7 @@ class ContinuousDataLoader:
             logger.info("📦 Этап 1/6: Загружаем свечи...")
             start = time.time()
             
-            logger.info("🔄 Вызываем load_all_coins_candles_fast()...")
+            logger.info("Вызываем load_all_coins_candles_fast()...")
             from bots_modules.filters import load_all_coins_candles_fast
             success = load_all_coins_candles_fast()
             logger.info(f"📊 load_all_coins_candles_fast() вернула: {success}")
@@ -216,7 +216,7 @@ class ContinuousDataLoader:
             import threading
             def load_candles_thread():
                 try:
-                    logger.info("🔄 Запускаем load_all_coins_candles_fast() в отдельном потоке...")
+                    logger.info("Запускаем load_all_coins_candles_fast() в отдельном потоке...")
                     from bots_modules.filters import load_all_coins_candles_fast
                     success = load_all_coins_candles_fast()
                     logger.info(f"📊 load_all_coins_candles_fast() завершена: {success}")
@@ -256,7 +256,7 @@ class ContinuousDataLoader:
             
             # ⚡ УПРОЩЕНИЕ: Запускаем напрямую без threading timeout
             # Threading timeout может вызывать проблемы в Windows
-            logger.info("🔄 Вызываем load_all_coins_rsi()...")
+            logger.info("Вызываем load_all_coins_rsi()...")
             from bots_modules.filters import load_all_coins_rsi
             success = load_all_coins_rsi()
             logger.info(f"📊 load_all_coins_rsi() вернула: {success}")
@@ -300,7 +300,7 @@ class ContinuousDataLoader:
             import threading
             def calculate_rsi_thread():
                 try:
-                    logger.info("🔄 Запускаем load_all_coins_rsi() в отдельном потоке...")
+                    logger.info("Запускаем load_all_coins_rsi() в отдельном потоке...")
                     from bots_modules.filters import load_all_coins_rsi
                     success = load_all_coins_rsi()
                     logger.info(f"📊 load_all_coins_rsi() завершена: {success}")
