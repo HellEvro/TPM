@@ -2194,8 +2194,72 @@ def auto_bot_config():
             logger.info(f"[CONFIG_API] 📝 Изменение конфигурации Auto Bot")
         
         if request.method == 'GET':
+            # ✅ КРИТИЧЕСКИ ВАЖНО: Принудительно перезагружаем модуль и конфигурацию
+            # Это гарантирует, что UI всегда получает актуальные данные из файла
+            import importlib
+            import sys
+            
+            # Принудительно перезагружаем модуль bot_config (без логирования, чтобы не спамить)
+            if 'bot_engine.bot_config' in sys.modules:
+                import bot_engine.bot_config
+                importlib.reload(bot_engine.bot_config)
+            
+            # Загружаем конфигурацию из перезагруженного модуля
+            from bots_modules.imports_and_globals import load_auto_bot_config
+            load_auto_bot_config()
+            
             with bots_data_lock:
                 config = bots_data['auto_bot_config'].copy()
+                
+                # ✅ Логируем только на уровне DEBUG, чтобы не спамить логи
+                # (UI часто опрашивает API, поэтому INFO уровень создает слишком много логов)
+                logger.debug(f"[CONFIG_API] 📤 Возвращаем конфигурацию в UI:")
+                logger.debug(f"  trailing_stop_activation: {config.get('trailing_stop_activation')} (тип: {type(config.get('trailing_stop_activation')).__name__})")
+                logger.debug(f"  trailing_stop_distance: {config.get('trailing_stop_distance')} (тип: {type(config.get('trailing_stop_distance')).__name__})")
+                logger.debug(f"  break_even_trigger: {config.get('break_even_trigger')} (тип: {type(config.get('break_even_trigger')).__name__})")
+                avoid_down_trend_val = config.get('avoid_down_trend')
+                avoid_up_trend_val = config.get('avoid_up_trend')
+                logger.debug(f"  avoid_down_trend: {avoid_down_trend_val} (тип: {type(avoid_down_trend_val).__name__}, bool: {bool(avoid_down_trend_val)}, repr: {repr(avoid_down_trend_val)})")
+                logger.debug(f"  avoid_up_trend: {avoid_up_trend_val} (тип: {type(avoid_up_trend_val).__name__}, bool: {bool(avoid_up_trend_val)}, repr: {repr(avoid_up_trend_val)})")
+                
+                # ✅ Flask jsonify автоматически преобразует Python bool в JSON boolean
+                # Проверяем, что ключевые булевы значения действительно булевы
+                # (на случай если они пришли как строки из какого-то другого источника)
+                # ❌ КРИТИЧЕСКИ ВАЖНО: НЕ используем bool("False") - это вернет True!
+                # Вместо этого проверяем тип и преобразуем правильно
+                if 'avoid_down_trend' in config and not isinstance(config['avoid_down_trend'], bool):
+                    val = config['avoid_down_trend']
+                    logger.warning(f"[CONFIG_API] ⚠️ avoid_down_trend не булево: {type(val).__name__} = {val}, преобразуем правильно")
+                    if isinstance(val, str):
+                        # Строка "False", "false", "0" -> False, иначе True
+                        config['avoid_down_trend'] = val.lower() in ('true', '1', 'yes', 'on')
+                    elif isinstance(val, (int, float)):
+                        # Число 0 -> False, иначе True
+                        config['avoid_down_trend'] = bool(val)
+                    else:
+                        # Другие типы -> False по умолчанию
+                        config['avoid_down_trend'] = False
+                    logger.warning(f"[CONFIG_API] ✅ avoid_down_trend преобразовано в: {config['avoid_down_trend']} (тип: {type(config['avoid_down_trend']).__name__})")
+                
+                if 'avoid_up_trend' in config and not isinstance(config['avoid_up_trend'], bool):
+                    val = config['avoid_up_trend']
+                    logger.warning(f"[CONFIG_API] ⚠️ avoid_up_trend не булево: {type(val).__name__} = {val}, преобразуем правильно")
+                    if isinstance(val, str):
+                        # Строка "False", "false", "0" -> False, иначе True
+                        config['avoid_up_trend'] = val.lower() in ('true', '1', 'yes', 'on')
+                    elif isinstance(val, (int, float)):
+                        # Число 0 -> False, иначе True
+                        config['avoid_up_trend'] = bool(val)
+                    else:
+                        # Другие типы -> False по умолчанию
+                        config['avoid_up_trend'] = False
+                    logger.warning(f"[CONFIG_API] ✅ avoid_up_trend преобразовано в: {config['avoid_up_trend']} (тип: {type(config['avoid_up_trend']).__name__})")
+                
+                # ✅ Финальная проверка перед возвратом
+                logger.debug(f"[CONFIG_API] ✅ Финальные значения перед отправкой в UI:")
+                logger.debug(f"  avoid_down_trend: {config.get('avoid_down_trend')} (тип: {type(config.get('avoid_down_trend')).__name__}, это bool: {isinstance(config.get('avoid_down_trend'), bool)})")
+                logger.debug(f"  avoid_up_trend: {config.get('avoid_up_trend')} (тип: {type(config.get('avoid_up_trend')).__name__}, это bool: {isinstance(config.get('avoid_up_trend'), bool)})")
+                
                 return jsonify({
                     'success': True,
                     'config': config

@@ -60,6 +60,14 @@ def save_auto_bot_config_to_py(config: Dict[str, Any]) -> bool:
         
         logger.info(f"[CONFIG_WRITER] 📝 Найден блок конфигурации: строки {start_idx+1}-{end_idx+1}")
         
+        # ✅ Логируем ключевые значения, которые будут сохранены
+        logger.info(f"[CONFIG_WRITER] 🔍 Сохраняемые значения:")
+        logger.info(f"  trailing_stop_activation: {config.get('trailing_stop_activation')}")
+        logger.info(f"  trailing_stop_distance: {config.get('trailing_stop_distance')}")
+        logger.info(f"  break_even_trigger: {config.get('break_even_trigger')}")
+        logger.info(f"  avoid_down_trend: {config.get('avoid_down_trend')}")
+        logger.info(f"  avoid_up_trend: {config.get('avoid_up_trend')}")
+        
         # Обновляем значения в блоке конфигурации
         updated_lines = lines[:start_idx + 1]  # Все строки до начала блока + строка с DEFAULT_AUTO_BOT_CONFIG
         
@@ -96,7 +104,11 @@ def save_auto_bot_config_to_py(config: Dict[str, Any]) -> bool:
                     
                     # Собираем обновленную строку
                     updated_line = f"{indent}'{key}': {new_value_str}{comma}{comment}\n"
-                    logger.debug(f"[CONFIG_WRITER] ✏️ {key}: {old_value} → {new_value_str}")
+                    # ✅ Логируем ключевые изменения
+                    if key in ('trailing_stop_activation', 'trailing_stop_distance', 'break_even_trigger', 'avoid_down_trend', 'avoid_up_trend'):
+                        logger.info(f"[CONFIG_WRITER] ✏️ {key}: {old_value} → {new_value_str}")
+                    else:
+                        logger.debug(f"[CONFIG_WRITER] ✏️ {key}: {old_value} → {new_value_str}")
             
             updated_lines.append(updated_line)
         
@@ -106,6 +118,24 @@ def save_auto_bot_config_to_py(config: Dict[str, Any]) -> bool:
         # Записываем обратно в файл
         with open(config_file, 'w', encoding='utf-8') as f:
             f.writelines(updated_lines)
+        
+        # ✅ ПРОВЕРЯЕМ, что файл действительно обновлен - читаем обратно ключевые значения
+        try:
+            import importlib
+            import sys
+            # Принудительно перезагружаем модуль
+            if 'bot_engine.bot_config' in sys.modules:
+                import bot_engine.bot_config
+                importlib.reload(bot_engine.bot_config)
+                from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
+                logger.info(f"[CONFIG_WRITER] ✅ Проверка сохраненных значений:")
+                logger.info(f"  trailing_stop_activation: {DEFAULT_AUTO_BOT_CONFIG.get('trailing_stop_activation')}")
+                logger.info(f"  trailing_stop_distance: {DEFAULT_AUTO_BOT_CONFIG.get('trailing_stop_distance')}")
+                logger.info(f"  break_even_trigger: {DEFAULT_AUTO_BOT_CONFIG.get('break_even_trigger')}")
+                logger.info(f"  avoid_down_trend: {DEFAULT_AUTO_BOT_CONFIG.get('avoid_down_trend')}")
+                logger.info(f"  avoid_up_trend: {DEFAULT_AUTO_BOT_CONFIG.get('avoid_up_trend')}")
+        except Exception as check_error:
+            logger.warning(f"[CONFIG_WRITER] ⚠️ Не удалось проверить сохраненные значения: {check_error}")
         
         logger.info(f"[CONFIG_WRITER] ✅ Конфигурация успешно сохранена в {config_file}")
         return True

@@ -557,10 +557,11 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         signal = 'WAIT'
         
         # ✅ ФИЛЬТР 2: Базовый сигнал НА ОСНОВЕ OPTIMAL EMA ПЕРИОДОВ!
-        # Получаем настройки фильтров по тренду (по умолчанию включены)
+        # Получаем настройки фильтров по тренду из конфига
         # ⚡ БЕЗ БЛОКИРОВКИ: конфиг не меняется во время выполнения, безопасно читать
-        avoid_down_trend = bots_data.get('auto_bot_config', {}).get('avoid_down_trend', True)
-        avoid_up_trend = bots_data.get('auto_bot_config', {}).get('avoid_up_trend', True)
+        # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
+        avoid_down_trend = bots_data.get('auto_bot_config', {}).get('avoid_down_trend', False)
+        avoid_up_trend = bots_data.get('auto_bot_config', {}).get('avoid_up_trend', False)
         
         # ✅ КРИТИЧНО: Определяем сигнал на основе Optimal EMA периодов!
         # ✅ УПРОЩЕННАЯ ЛОГИКА: Убрали фильтр по EMA - используем только RSI
@@ -1224,8 +1225,9 @@ def _recalculate_signal_with_trend(rsi, trend, symbol):
     try:
         # Получаем настройки автобота
         auto_config = bots_data.get('auto_bot_config', {})
-        avoid_down_trend = auto_config.get('avoid_down_trend', True)
-        avoid_up_trend = auto_config.get('avoid_up_trend', True)
+        # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
+        avoid_down_trend = auto_config.get('avoid_down_trend', False)
+        avoid_up_trend = auto_config.get('avoid_up_trend', False)
         
         logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI={rsi:.1f}, тренд={trend}, avoid_down={avoid_down_trend}, avoid_up={avoid_up_trend}")
         
@@ -1280,8 +1282,9 @@ def get_effective_signal(coin):
     # Получаем настройки автобота
     # ⚡ БЕЗ БЛОКИРОВКИ: конфиг не меняется, GIL делает чтение атомарным
     auto_config = bots_data.get('auto_bot_config', {})
-    avoid_down_trend = auto_config.get('avoid_down_trend', True)
-    avoid_up_trend = auto_config.get('avoid_up_trend', True)
+    # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
+    avoid_down_trend = auto_config.get('avoid_down_trend', False)
+    avoid_up_trend = auto_config.get('avoid_up_trend', False)
     rsi_long_threshold = auto_config.get('rsi_long_threshold', 29)
     rsi_short_threshold = auto_config.get('rsi_short_threshold', 71)
         

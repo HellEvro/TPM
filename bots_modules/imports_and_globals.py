@@ -43,8 +43,6 @@ try:
         clear_rsi_cache,
         save_bots_state as storage_save_bots_state,
         load_bots_state as storage_load_bots_state,
-        save_auto_bot_config as storage_save_auto_bot_config,
-        load_auto_bot_config as storage_load_auto_bot_config,
         save_individual_coin_settings as storage_save_individual_coin_settings,
         load_individual_coin_settings as storage_load_individual_coin_settings,
         save_mature_coins, load_mature_coins,
@@ -270,7 +268,6 @@ from bot_engine.trading_bot import TradingBot as RealTradingBot
 # Константы для файлов состояния
 BOTS_STATE_FILE = 'data/bots_state.json'
 BOTS_POSITIONS_REGISTRY_FILE = 'data/bot_positions_registry.json'  # Реестр позиций открытых ботами
-AUTO_BOT_CONFIG_FILE = 'data/auto_bot_config.json'
 
 # ✅ ВСЕ КОНСТАНТЫ НАСТРОЕК ПЕРЕНЕСЕНЫ В SystemConfig (bot_engine/bot_config.py)
 # Используйте SystemConfig.КОНСТАНТА для доступа к настройкам
@@ -575,26 +572,89 @@ def load_auto_bot_config():
     - Система читает напрямую из DEFAULT_AUTO_BOT_CONFIG
     """
     try:
+        # ✅ КРИТИЧЕСКИ ВАЖНО: Перезагружаем модуль перед чтением
+        # Это гарантирует, что мы читаем актуальные данные из файла, а не из кэша Python
+        import importlib
+        import sys
+        import os
+        
+        config_file_path = os.path.join('bot_engine', 'bot_config.py')
+        reloaded = False
+
+        if os.path.exists(config_file_path):
+            # Проверяем время модификации файла
+            current_mtime = os.path.getmtime(config_file_path)
+            
+            # Кэшируем время последней модификации
+            if not hasattr(load_auto_bot_config, '_last_mtime'):
+                # При первом вызове принудительно перезагружаем модуль
+                load_auto_bot_config._last_mtime = 0  # Устанавливаем 0, чтобы гарантировать перезагрузку
+                logger.debug(f"[CONFIG] 📋 Первый вызов: принудительная перезагрузка модуля")
+            
+            # Перезагружаем только если файл изменился или это первый вызов
+            if current_mtime > load_auto_bot_config._last_mtime or load_auto_bot_config._last_mtime == 0:
+                # Импортируем модуль, если его еще нет
+                if 'bot_engine.bot_config' not in sys.modules:
+                    import bot_engine.bot_config
+                    logger.debug("[CONFIG] 📦 Модуль bot_config импортирован впервые")
+                else:
+                    import bot_engine.bot_config
+                    importlib.reload(bot_engine.bot_config)
+                    logger.info("[CONFIG] 🔄 Модуль bot_config перезагружен (файл изменился или первый вызов)")
+                load_auto_bot_config._last_mtime = current_mtime
+                reloaded = True
+            else:
+                logger.debug("[CONFIG] 📋 Используем кэшированную версию модуля (файл не изменился)")
+        else:
+            # Если файла нет, просто перезагружаем модуль
+            if 'bot_engine.bot_config' in sys.modules:
+                import bot_engine.bot_config
+                importlib.reload(bot_engine.bot_config)
+                logger.debug("[CONFIG] 🔄 Модуль bot_config перезагружен")
+            else:
+                import bot_engine.bot_config  # pragma: no cover
+                logger.debug("[CONFIG] 📦 Модуль bot_config импортирован (файл отсутствовал)")
+            reloaded = True
+        
         from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
 
-        # Пытаемся загрузить последнюю сохранённую конфигурацию из JSON
-        persisted_config = storage_load_auto_bot_config()
-
+        # ✅ ПРИОРИТЕТ: bot_config.py - это основной источник истины
+        # Начинаем с конфигурации из bot_config.py
         merged_config = DEFAULT_AUTO_BOT_CONFIG.copy()
-        if isinstance(persisted_config, dict):
-            merged_config.update(persisted_config)
-
-        with bots_data_lock:
-            previous_config = bots_data.get('auto_bot_config')
-            bots_data['auto_bot_config'] = merged_config
-
-            # Сохраняем текущий статус важных флагов, если они уже были выставлены
-            if isinstance(previous_config, dict):
-                for transient_key in ('enabled', 'trading_enabled'):
-                    if transient_key in previous_config:
-                        bots_data['auto_bot_config'][transient_key] = previous_config[transient_key]
         
-        logger.info(f"[CONFIG] ✅ Загружена конфигурация Auto Bot из bot_config.py")
+        # ✅ Логируем подробности ТОЛЬКО при первом вызове или при реальном изменении файла
+        # (не логируем при принудительной перезагрузке модуля из API, чтобы не спамить)
+        should_log_verbose = (reloaded and load_auto_bot_config._last_mtime != 0) or not getattr(load_auto_bot_config, '_logged_once', False)
+        if should_log_verbose:
+            logger.info(f"[CONFIG] 📋 Значения из bot_config.py:")
+            logger.info(f"  trailing_stop_activation: {merged_config.get('trailing_stop_activation')}")
+            logger.info(f"  trailing_stop_distance: {merged_config.get('trailing_stop_distance')}")
+            logger.info(f"  break_even_trigger: {merged_config.get('break_even_trigger')}")
+            avoid_down_trend_val = merged_config.get('avoid_down_trend')
+            avoid_up_trend_val = merged_config.get('avoid_up_trend')
+            logger.info(f"  avoid_down_trend: {avoid_down_trend_val} (тип: {type(avoid_down_trend_val).__name__}, это bool: {isinstance(avoid_down_trend_val, bool)})")
+            logger.info(f"  avoid_up_trend: {avoid_up_trend_val} (тип: {type(avoid_up_trend_val).__name__}, это bool: {isinstance(avoid_up_trend_val, bool)})")
+            
+            logger.info(f"[CONFIG] ✅ Финальные значения после загрузки:")
+            logger.info(f"  trailing_stop_activation: {merged_config.get('trailing_stop_activation')}")
+            logger.info(f"  trailing_stop_distance: {merged_config.get('trailing_stop_distance')}")
+            logger.info(f"  break_even_trigger: {merged_config.get('break_even_trigger')}")
+            logger.info(f"  avoid_down_trend: {avoid_down_trend_val} (тип: {type(avoid_down_trend_val).__name__}, это bool: {isinstance(avoid_down_trend_val, bool)})")
+            logger.info(f"  avoid_up_trend: {avoid_up_trend_val} (тип: {type(avoid_up_trend_val).__name__}, это bool: {isinstance(avoid_up_trend_val, bool)})")
+            load_auto_bot_config._logged_once = True
+        else:
+            logger.debug("[CONFIG] ✅ Конфигурация загружена (без изменений в файле)")
+
+        # ✅ ВСЕГДА обновляем bots_data, даже если файл не изменился
+        # Это гарантирует, что данные всегда актуальны, особенно после принудительной перезагрузки модуля в API
+        with bots_data_lock:
+            bots_data['auto_bot_config'] = merged_config
+        
+        # ✅ Логируем только при реальном изменении файла или первом вызове
+        if should_log_verbose:
+            logger.info(f"[CONFIG] ✅ Загружена конфигурация Auto Bot из bot_config.py (JSON больше не используется)")
+        else:
+            logger.debug(f"[CONFIG] ✅ Конфигурация обновлена в bots_data (модуль был перезагружен извне)")
             
     except Exception as e:
         logger.error(f"[CONFIG] ❌ Ошибка загрузки конфигурации: {e}")
