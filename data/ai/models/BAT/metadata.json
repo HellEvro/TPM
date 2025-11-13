@@ -1,0 +1,46 @@
+{
+  "symbol": "BAT",
+  "trained_at": "2025-11-13T17:01:10.864266",
+  "training_seed": 465417,
+  "coin_model_seed": 466187,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 66,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 15.424366580151464,
+    "take_profit": 32.37552063289776,
+    "trailing_stop_activation": 28.83721648990398,
+    "trailing_stop_distance": 17.00335854469593,
+    "break_even_protection": false,
+    "break_even_trigger": 55.64459774253172,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 66,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 10.546702808327645,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 55.82750527517376
+    }
+  },
+  "candles_count": 4986,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.0166914419440644e-07,
+  "total_pnl": 0.441597060881035,
+  "previous_candles_count": 4938,
+  "candles_increased": true
+}

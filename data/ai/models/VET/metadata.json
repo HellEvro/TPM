@@ -1,0 +1,46 @@
+{
+  "symbol": "VET",
+  "trained_at": "2025-11-13T16:57:47.996097",
+  "training_seed": 245691,
+  "coin_model_seed": 246630,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 20.544021707796414,
+    "take_profit": 20.08679561264899,
+    "trailing_stop_activation": 16.784638361576476,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 72.8294497320159,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 69,
+      "lower": 41
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 15.164289361572736,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 59.610477495338614
+    }
+  },
+  "candles_count": 4905,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.392496095328597e-07,
+  "total_pnl": 0.3440912321778918,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

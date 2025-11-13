@@ -1,46 +1,46 @@
 {
   "symbol": "LINK",
-  "trained_at": "2025-11-13T16:19:31.114615",
-  "training_seed": 958660,
-  "coin_model_seed": 959444,
+  "trained_at": "2025-11-13T16:55:15.979988",
+  "training_seed": 100959,
+  "coin_model_seed": 101542,
   "rsi_params": {
     "oversold": 35,
-    "overbought": 71,
-    "exit_long_with_trend": 69,
-    "exit_long_against_trend": 60,
-    "exit_short_with_trend": 35,
-    "exit_short_against_trend": 36
+    "overbought": 65,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 45
   },
   "risk_params": {
-    "stop_loss": 13.498578879458561,
-    "take_profit": 20.941525814532387,
-    "trailing_stop_activation": 13.898428834927609,
+    "stop_loss": 10.769120516695372,
+    "take_profit": 12.622325723435827,
+    "trailing_stop_activation": 26.249122102529203,
     "trailing_stop_distance": 5.0,
-    "break_even_protection": true,
-    "break_even_trigger": 102.3065401407722,
+    "break_even_protection": false,
+    "break_even_trigger": 164.50069652353852,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 4,
-      "upper": 59,
+      "candles": 6,
+      "upper": 61,
       "lower": 30
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 5,
-      "single_candle_percent": 16.008403204043624,
-      "multi_candle_count": 4,
-      "multi_candle_percent": 37.83918825616507
+      "candles": 8,
+      "single_candle_percent": 14.678645544934536,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 65.99347293963508
     }
   },
-  "candles_count": 4897,
+  "candles_count": 4869,
   "trades_count": 6,
   "win_rate": 50.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 4.087074718758991e-07,
-  "total_pnl": 0.06766407142058635,
-  "previous_candles_count": 4954,
+  "profit_mse": 2.9296986207529317e-07,
+  "total_pnl": -0.08118704455591047,
+  "previous_candles_count": 5001,
   "candles_increased": false
 }

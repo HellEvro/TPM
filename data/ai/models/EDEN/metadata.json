@@ -1,38 +1,38 @@
 {
   "symbol": "EDEN",
-  "trained_at": "2025-11-13T16:14:36.152488",
-  "training_seed": 668684,
-  "coin_model_seed": 669290,
+  "trained_at": "2025-11-13T16:59:04.990707",
+  "training_seed": 335006,
+  "coin_model_seed": 335382,
   "rsi_params": {
     "oversold": 35,
-    "overbought": 75,
-    "exit_long_with_trend": 67,
-    "exit_long_against_trend": 62,
-    "exit_short_with_trend": 32,
-    "exit_short_against_trend": 38
+    "overbought": 73,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 41
   },
   "risk_params": {
-    "stop_loss": 16.67197592135281,
-    "take_profit": 27.861744716231662,
-    "trailing_stop_activation": 33.703338392716844,
-    "trailing_stop_distance": 17.260423607708443,
-    "break_even_protection": true,
-    "break_even_trigger": 114.57780723678228,
+    "stop_loss": 11.595859534491236,
+    "take_profit": 24.32098663596808,
+    "trailing_stop_activation": 34.146351911871974,
+    "trailing_stop_distance": 9.34977064881273,
+    "break_even_protection": false,
+    "break_even_trigger": 90.53065245667833,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 6,
-      "upper": 67,
+      "candles": 9,
+      "upper": 64,
       "lower": 41
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 8,
-      "single_candle_percent": 16.49380688949389,
-      "multi_candle_count": 5,
-      "multi_candle_percent": 39.742376784870174
+      "candles": 9,
+      "single_candle_percent": 24.33633488901912,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 48.28528304154073
     }
   },
   "candles_count": 178,

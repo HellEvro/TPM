@@ -1,8 +1,8 @@
 {
   "symbol": "CHZ",
-  "trained_at": "2025-11-13T16:19:50.891239",
-  "training_seed": 984398,
-  "coin_model_seed": 984989,
+  "trained_at": "2025-11-13T17:01:12.256558",
+  "training_seed": 465417,
+  "coin_model_seed": 465817,
   "rsi_params": {
     "oversold": 35,
     "overbought": 73,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 44
   },
   "risk_params": {
-    "stop_loss": 18.01624300492685,
-    "take_profit": 32.60605917378862,
-    "trailing_stop_activation": 8.34309909815952,
-    "trailing_stop_distance": 13.34891641587793,
-    "break_even_protection": false,
-    "break_even_trigger": 110.60439324161271,
+    "stop_loss": 12.078775474167006,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 18.10820127122608,
+    "trailing_stop_distance": 16.097046869863842,
+    "break_even_protection": true,
+    "break_even_trigger": 67.35031706392999,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 7,
-      "upper": 60,
-      "lower": 34
+      "candles": 6,
+      "upper": 66,
+      "lower": 39
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 4,
-      "single_candle_percent": 19.458429705686555,
-      "multi_candle_count": 6,
-      "multi_candle_percent": 54.85733046341561
+      "candles": 11,
+      "single_candle_percent": 12.419241471397676,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 48.17998374300154
     }
   },
-  "candles_count": 4970,
+  "candles_count": 4850,
   "trades_count": 5,
-  "win_rate": 40.0,
+  "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.6145884432904381e-06,
-  "total_pnl": 0.36745323084956305,
-  "previous_candles_count": 4822,
-  "candles_increased": true
+  "profit_mse": 8.355416244561809e-07,
+  "total_pnl": 0.7958989746996991,
+  "previous_candles_count": 4906,
+  "candles_increased": false
 }

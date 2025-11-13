@@ -1,46 +1,46 @@
 {
   "symbol": "SUSHI",
-  "trained_at": "2025-11-13T16:20:04.597248",
-  "training_seed": 984398,
-  "coin_model_seed": 985228,
+  "trained_at": "2025-11-13T16:39:46.242282",
+  "training_seed": 168027,
+  "coin_model_seed": 168616,
   "rsi_params": {
     "oversold": 35,
-    "overbought": 71,
-    "exit_long_with_trend": 62,
-    "exit_long_against_trend": 63,
-    "exit_short_with_trend": 39,
-    "exit_short_against_trend": 39
+    "overbought": 70,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 42
   },
   "risk_params": {
-    "stop_loss": 17.253619101871983,
-    "take_profit": 25.82655520486083,
-    "trailing_stop_activation": 10.301909316751258,
-    "trailing_stop_distance": 5.0,
-    "break_even_protection": true,
-    "break_even_trigger": 143.52935865612918,
+    "stop_loss": 13.383110437347622,
+    "take_profit": 34.31595919409666,
+    "trailing_stop_activation": 34.857281622883576,
+    "trailing_stop_distance": 10.837355624998214,
+    "break_even_protection": false,
+    "break_even_trigger": 110.78740863972568,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 7,
-      "upper": 67,
-      "lower": 41
+      "candles": 5,
+      "upper": 60,
+      "lower": 35
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 5,
-      "single_candle_percent": 19.338979012398195,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 34.59610267733974
+      "candles": 4,
+      "single_candle_percent": 20.035435050810676,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 65.17382320613734
     }
   },
-  "candles_count": 4894,
-  "trades_count": 6,
-  "win_rate": 50.0,
-  "signal_accuracy": 0.8333333333333334,
-  "profit_mse": 1.6869907480082467e-06,
-  "total_pnl": 0.4032035318499714,
-  "previous_candles_count": 4849,
-  "candles_increased": true
+  "candles_count": 4892,
+  "trades_count": 7,
+  "win_rate": 42.857142857142854,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.468716840251193e-07,
+  "total_pnl": -0.3580168408010912,
+  "previous_candles_count": 4998,
+  "candles_increased": false
 }

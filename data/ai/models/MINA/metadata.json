@@ -1,8 +1,8 @@
 {
   "symbol": "MINA",
-  "trained_at": "2025-11-13T16:19:57.631704",
-  "training_seed": 984398,
-  "coin_model_seed": 984693,
+  "trained_at": "2025-11-13T17:01:50.589298",
+  "training_seed": 497197,
+  "coin_model_seed": 497630,
   "rsi_params": {
     "oversold": 28,
     "overbought": 65,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 42
   },
   "risk_params": {
-    "stop_loss": 11.497824205347113,
-    "take_profit": 28.10110882430118,
-    "trailing_stop_activation": 25.643893643805885,
+    "stop_loss": 16.583048646602872,
+    "take_profit": 26.702728348697203,
+    "trailing_stop_activation": 30.95621755647721,
     "trailing_stop_distance": 5.0,
     "break_even_protection": false,
-    "break_even_trigger": 41.49720421722475,
+    "break_even_trigger": 80.99386448956334,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 8,
-      "upper": 62,
+      "candles": 10,
+      "upper": 67,
       "lower": 32
     },
     "exit_scam_filter": {
       "enabled": true,
       "candles": 12,
-      "single_candle_percent": 22.204507850267646,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 53.06433385754123
+      "single_candle_percent": 8.884861058515781,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 67.3048054560897
     }
   },
-  "candles_count": 4964,
+  "candles_count": 4980,
   "trades_count": 5,
-  "win_rate": 60.0,
+  "win_rate": 80.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 4.146244391015189e-07,
-  "total_pnl": 0.07880970685329364,
-  "previous_candles_count": 4815,
+  "profit_mse": 3.883265556117666e-07,
+  "total_pnl": 0.4937525017038699,
+  "previous_candles_count": 4891,
   "candles_increased": true
 }

@@ -1,46 +1,46 @@
 {
   "symbol": "ASTR",
-  "trained_at": "2025-11-13T16:19:22.812473",
-  "training_seed": 958660,
-  "coin_model_seed": 959097,
+  "trained_at": "2025-11-13T17:00:37.787305",
+  "training_seed": 432496,
+  "coin_model_seed": 433349,
   "rsi_params": {
     "oversold": 34,
     "overbought": 66,
-    "exit_long_with_trend": 64,
-    "exit_long_against_trend": 59,
-    "exit_short_with_trend": 37,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 33,
     "exit_short_against_trend": 39
   },
   "risk_params": {
-    "stop_loss": 19.34058943940878,
-    "take_profit": 11.673864890883864,
-    "trailing_stop_activation": 22.941921029525844,
-    "trailing_stop_distance": 5.0,
-    "break_even_protection": false,
-    "break_even_trigger": 112.87358282628333,
+    "stop_loss": 12.518619716882633,
+    "take_profit": 11.636555833544756,
+    "trailing_stop_activation": 10.7577264225995,
+    "trailing_stop_distance": 16.1437515794343,
+    "break_even_protection": true,
+    "break_even_trigger": 143.24681017099076,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 3,
-      "upper": 62,
-      "lower": 41
+      "upper": 63,
+      "lower": 31
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 11,
-      "single_candle_percent": 20.54782885137045,
+      "candles": 4,
+      "single_candle_percent": 7.050212064317092,
       "multi_candle_count": 2,
-      "multi_candle_percent": 31.84516717293944
+      "multi_candle_percent": 32.07321188057361
     }
   },
-  "candles_count": 4998,
+  "candles_count": 4961,
   "trades_count": 7,
-  "win_rate": 71.42857142857143,
+  "win_rate": 28.57142857142857,
   "signal_accuracy": 1.0,
-  "profit_mse": 8.880794597824621e-07,
-  "total_pnl": 0.2972152515976855,
-  "previous_candles_count": 4965,
+  "profit_mse": 1.7771262261819591e-06,
+  "total_pnl": -1.0520084620021966,
+  "previous_candles_count": 4899,
   "candles_increased": true
 }

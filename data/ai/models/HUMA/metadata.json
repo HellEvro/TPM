@@ -1,8 +1,8 @@
 {
   "symbol": "HUMA",
-  "trained_at": "2025-11-13T16:19:29.013207",
-  "training_seed": 958660,
-  "coin_model_seed": 958726,
+  "trained_at": "2025-11-13T17:00:12.832592",
+  "training_seed": 398101,
+  "coin_model_seed": 398801,
   "rsi_params": {
     "oversold": 35,
     "overbought": 78,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 42
   },
   "risk_params": {
-    "stop_loss": 20.899751560715558,
-    "take_profit": 18.126847003469884,
-    "trailing_stop_activation": 22.967046381797992,
-    "trailing_stop_distance": 5.0,
+    "stop_loss": 16.103696325584792,
+    "take_profit": 29.24790097056434,
+    "trailing_stop_activation": 25.007809562115572,
+    "trailing_stop_distance": 11.366459558018914,
     "break_even_protection": true,
-    "break_even_trigger": 127.43148010854819,
+    "break_even_trigger": 172.66334828584033,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 3,
-      "upper": 69,
+      "candles": 7,
+      "upper": 60,
       "lower": 40
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 10,
-      "single_candle_percent": 22.636536094456783,
+      "candles": 8,
+      "single_candle_percent": 14.95142648708506,
       "multi_candle_count": 2,
-      "multi_candle_percent": 61.15067685081662
+      "multi_candle_percent": 57.61410345150353
     }
   },
-  "candles_count": 505,
+  "candles_count": 486,
   "trades_count": 6,
-  "win_rate": 33.33333333333333,
+  "win_rate": 83.33333333333334,
   "signal_accuracy": 1.0,
-  "profit_mse": 4.216772945531923e-07,
-  "total_pnl": -0.06113109332572095,
-  "previous_candles_count": 618,
+  "profit_mse": 1.253982166418772e-06,
+  "total_pnl": 0.9228066367443594,
+  "previous_candles_count": 498,
   "candles_increased": false
 }
