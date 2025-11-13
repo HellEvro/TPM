@@ -353,7 +353,7 @@ def analyze_trend_6h(symbol, exchange_obj=None):
         }
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка анализа тренда для {symbol}: {e}")
+        logger.error(f"Ошибка анализа тренда для {symbol}: {e}")
         return None
 
 def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
@@ -467,7 +467,7 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
                 }
                 
             except Exception as e:
-                logger.error(f"[ENHANCED_RSI] Ошибка анализа для {symbol}: {e}")
+                logger.error(f"Ошибка анализа для {symbol}: {e}")
                 return {
                     'enabled': True,
                     'warning_type': 'ERROR',
@@ -500,7 +500,7 @@ def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
             }
             
     except Exception as e:
-        logger.error(f"[ENHANCED_RSI] Ошибка анализа для {symbol}: {e}")
+        logger.error(f"Ошибка анализа для {symbol}: {e}")
         return {
             'enabled': False,
             'warning_type': 'ERROR',

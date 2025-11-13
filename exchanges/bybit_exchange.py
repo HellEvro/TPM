@@ -56,10 +56,10 @@ def setup_global_connection_pool():
         # Устанавливаем глобальную сессию для requests
         requests.Session = lambda: session
         
-        logging.info("[BYBIT] ✅ Глобальный пул соединений настроен: 100 пулов, 200 соединений на пул")
+        logging.info("✅ Глобальный пул соединений настроен: 100 пулов, 200 соединений на пул")
         
     except Exception as e:
-        logging.warning(f"[BYBIT] ⚠️ Не удалось настроить глобальный пул соединений: {e}")
+        logging.warning(f"⚠️ Не удалось настроить глобальный пул соединений: {e}")
 
 # Настраиваем пул соединений при импорте модуля
 setup_global_connection_pool()
@@ -135,15 +135,15 @@ class BybitExchange(BaseExchange):
             # Устанавливаем глобальную сессию для requests
             requests.Session = lambda: session
             
-            logging.info("[BYBIT] ✅ Пул соединений настроен: 100 пулов, 200 соединений на пул")
+            logging.info("✅ Пул соединений настроен: 100 пулов, 200 соединений на пул")
             
         except Exception as e:
-            logging.warning(f"[BYBIT] ⚠️ Не удалось настроить пул соединений: {e}")
+            logging.warning(f"⚠️ Не удалось настроить пул соединений: {e}")
 
     def reset_request_delay(self):
         """Сбрасывает текущую задержку запросов к базовому значению"""
         if self.current_request_delay != self.base_request_delay:
-            logger.info(f"[BYBIT] 🔄 Сброс задержки запросов: {self.current_request_delay:.3f}с → {self.base_request_delay:.3f}с")
+            logger.info(f"🔄 Сброс задержки запросов: {self.current_request_delay:.3f}с → {self.base_request_delay:.3f}с")
             self.current_request_delay = self.base_request_delay
 
     def increase_request_delay(self, multiplier=2.0, reason='Rate limit'):
@@ -153,9 +153,9 @@ class BybitExchange(BaseExchange):
         self.current_request_delay = new_delay
 
         if new_delay > old_delay:
-            logger.warning(f"[BYBIT] ⚠️ {reason}. Увеличиваем задержку: {old_delay:.3f}с → {new_delay:.3f}с")
+            logger.warning(f"⚠️ {reason}. Увеличиваем задержку: {old_delay:.3f}с → {new_delay:.3f}с")
         else:
-            logger.warning(f"[BYBIT] ⚠️ {reason}. Задержка уже максимальная: {new_delay:.3f}с")
+            logger.warning(f"⚠️ {reason}. Задержка уже максимальная: {new_delay:.3f}с")
 
         return new_delay
     
@@ -486,7 +486,7 @@ class BybitExchange(BaseExchange):
                     'symbol': symbol
                 }
             else:
-                logger.warning(f"[BYBIT] ⚠️ Не удалось получить статус инструмента {symbol}")
+                logger.warning(f"⚠️ Не удалось получить статус инструмента {symbol}")
                 return {
                     'status': 'Unknown',
                     'is_tradeable': False,
@@ -495,7 +495,7 @@ class BybitExchange(BaseExchange):
                 }
                 
         except Exception as e:
-            logger.error(f"[BYBIT] ❌ Ошибка получения статуса инструмента {symbol}: {e}")
+            logger.error(f"❌ Ошибка получения статуса инструмента {symbol}: {e}")
             return {
                 'status': 'Error',
                 'is_tradeable': False,
@@ -624,7 +624,7 @@ class BybitExchange(BaseExchange):
     def get_all_pairs(self):
         """Получение списка всех доступных ессрочных фьючерсов"""
         try:
-            logger.info("[BYBIT] Запрос списка всех торговых пар...")
+            logger.info("Запрос списка всех торговых пар...")
             
             response = self.client.get_instruments_info(
                 category="linear",
@@ -634,21 +634,21 @@ class BybitExchange(BaseExchange):
             
             if response and response.get('retCode') == 0 and response['result']['list']:
                 all_instruments = response['result']['list']
-                logger.info(f"[BYBIT] Получено {len(all_instruments)} инструментов")
+                logger.info(f"Получено {len(all_instruments)} инструментов")
                 
                 # Фильтруем только бессрочные контракты (USDT)
                 usdt_pairs = [
                     item for item in all_instruments
                     if item['symbol'].endswith('USDT')
                 ]
-                logger.info(f"[BYBIT] Найдено {len(usdt_pairs)} USDT пар")
+                logger.info(f"Найдено {len(usdt_pairs)} USDT пар")
                 
                 # Дополнительная фильтрация по статусу
                 trading_pairs = [
                     item for item in usdt_pairs 
                     if item.get('status') == 'Trading'
                 ]
-                logger.info(f"[BYBIT] В торговле: {len(trading_pairs)} пар")
+                logger.info(f"В торговле: {len(trading_pairs)} пар")
                 
                 pairs = [
                     clean_symbol(item['symbol'])
@@ -656,16 +656,16 @@ class BybitExchange(BaseExchange):
                 ]
                 
                 # Логируем только общее количество пар
-                logger.info(f"[BYBIT] ✅ Загружено {len(pairs)} торговых пар")
+                logger.info(f"✅ Загружено {len(pairs)} торговых пар")
                 
                 return sorted(pairs)
             else:
-                logger.error(f"[BYBIT] Ошибка API: {response.get('retMsg', 'Unknown error')}")
+                logger.error(f"Ошибка API: {response.get('retMsg', 'Unknown error')}")
                 return []
         except Exception as e:
-            logger.error(f"[BYBIT] Error getting pairs: {str(e)}")
+            logger.error(f"Error getting pairs: {str(e)}")
             import traceback
-            logger.error(f"[BYBIT] Traceback: {traceback.format_exc()}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return []
 
     @with_timeout(30)  # 30 секунд таймаут для получения данных графика
@@ -734,10 +734,10 @@ class BybitExchange(BaseExchange):
                                     retry_count += 1
                                     
                                     if retry_count < max_retries:
-                                        logger.info(f"[BYBIT] 🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name})...")
+                                        logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name})...")
                                         continue
                                     else:
-                                        logger.error(f"[BYBIT] ❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
+                                        logger.error(f"❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
                                         break
                                 else:
                                     # Успешный ответ - выходим из цикла повторных попыток
@@ -756,10 +756,10 @@ class BybitExchange(BaseExchange):
                                     retry_count += 1
                                     
                                     if retry_count < max_retries:
-                                        logger.info(f"[BYBIT] 🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name}) после исключения...")
+                                        logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name}) после исключения...")
                                         continue
                                     else:
-                                        logger.error(f"[BYBIT] ❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
+                                        logger.error(f"❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
                                         break
                                 else:
                                     # Другая ошибка - пробрасываем дальше
@@ -868,10 +868,10 @@ class BybitExchange(BaseExchange):
                             retry_count += 1
                             
                             if retry_count < max_retries:
-                                logger.info(f"[BYBIT] 🔄 Повторная попытка {retry_count}/{max_retries} для {symbol}...")
+                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol}...")
                                 continue
                             else:
-                                logger.error(f"[BYBIT] ❌ Превышено максимальное количество попыток для {symbol}")
+                                logger.error(f"❌ Превышено максимальное количество попыток для {symbol}")
                                 return {
                                     'success': False,
                                     'error': 'Rate limit exceeded, maximum retries reached'
@@ -893,10 +893,10 @@ class BybitExchange(BaseExchange):
                             retry_count += 1
                             
                             if retry_count < max_retries:
-                                logger.info(f"[BYBIT] 🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} после исключения...")
+                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} после исключения...")
                                 continue
                             else:
-                                logger.error(f"[BYBIT] ❌ Превышено максимальное количество попыток для {symbol}")
+                                logger.error(f"❌ Превышено максимальное количество попыток для {symbol}")
                                 return {
                                     'success': False,
                                     'error': 'Rate limit exceeded, maximum retries reached'
