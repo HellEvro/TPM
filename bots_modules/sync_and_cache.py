@@ -36,7 +36,7 @@ try:
         SYSTEM_CONFIG_FILE, BOTS_STATE_FILE, AUTO_BOT_CONFIG_FILE,
         DEFAULT_CONFIG_FILE, should_log_message,
         get_coin_processing_lock, get_exchange,
-        save_individual_coin_settings
+        save_individual_coin_settings, storage_save_auto_bot_config
     )
     # MATURE_COINS_FILE определен в maturity.py
     try:
