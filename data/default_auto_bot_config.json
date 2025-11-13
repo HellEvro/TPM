@@ -22,7 +22,7 @@
   "trailing_stop_activation": 20,
   "trailing_stop_distance": 5,
   "trailing_take_distance": 0.5,
-  "trailing_update_interval": 3.0,
+  "trailing_update_interval": 3,
   "max_position_hours": 0,
   "break_even_protection": true,
   "break_even_trigger": 20,

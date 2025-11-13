@@ -5207,11 +5207,18 @@ class BotsManager {
         // ✅ Кэшируем конфигурацию Auto Bot для быстрого доступа (для updateCoinInfo и др.)
         this.cachedAutoBotConfig = autoBotConfig;
         
-        // Сохраняем исходные значения всех параметров при первой загрузке (если еще не сохранено)
-        if (this.originalConfig === null) {
-            this.originalConfig = JSON.parse(JSON.stringify(autoBotConfig)); // Глубокое копирование
-            console.log(`[BotsManager] 💾 Сохранена исходная конфигурация для отслеживания изменений`);
-        }
+        // ✅ ВСЕГДА обновляем originalConfig при загрузке конфигурации из бэкенда
+        // Это гарантирует, что после сохранения и перезагрузки конфигурации originalConfig синхронизирован
+        this.originalConfig = {
+            autoBot: JSON.parse(JSON.stringify(autoBotConfig)) // Глубокое копирование
+        };
+        console.log(`[BotsManager] 💾 originalConfig обновлен из бэкенда для отслеживания изменений`);
+        console.log(`[BotsManager] 🔍 originalConfig ключи:`, Object.keys(this.originalConfig.autoBot));
+        console.log(`[BotsManager] 🔍 trailing_stop_activation в originalConfig:`, this.originalConfig.autoBot.trailing_stop_activation);
+        console.log(`[BotsManager] 🔍 trailing_stop_distance в originalConfig:`, this.originalConfig.autoBot.trailing_stop_distance);
+        console.log(`[BotsManager] 🔍 break_even_trigger в originalConfig:`, this.originalConfig.autoBot.break_even_trigger_percent ?? this.originalConfig.autoBot.break_even_trigger);
+        console.log(`[BotsManager] 🔍 avoid_down_trend в originalConfig:`, this.originalConfig.autoBot.avoid_down_trend);
+        console.log(`[BotsManager] 🔍 avoid_up_trend в originalConfig:`, this.originalConfig.autoBot.avoid_up_trend);
         
         // ==========================================
         // КОНФИГУРАЦИЯ AUTO BOT
@@ -5797,123 +5804,161 @@ class BotsManager {
     collectConfigurationData() {
         console.log('[BotsManager] 📋 Сбор данных конфигурации...');
         
-        // 🔍 ОТЛАДКА: Проверяем наличие Enhanced RSI элементов
-        console.log('[BotsManager] 🔍 Проверка Enhanced RSI элементов в DOM:');
-        console.log('  enhancedRsiEnabled элемент:', !!document.getElementById('enhancedRsiEnabled'));
-        console.log('  enhancedRsiVolumeConfirm элемент:', !!document.getElementById('enhancedRsiVolumeConfirm'));
-        console.log('  enhancedRsiDivergenceConfirm элемент:', !!document.getElementById('enhancedRsiDivergenceConfirm'));
-        console.log('  enhancedRsiUseStochRsi элемент:', !!document.getElementById('enhancedRsiUseStochRsi'));
+        // ✅ РАБОТАЕМ НАПРЯМУЮ С КЭШИРОВАННОЙ КОНФИГУРАЦИЕЙ ИЗ БЭКЕНДА
+        // Это гарантирует, что мы используем реальные значения из файла конфига, а не дефолтные из HTML
+        if (!this.cachedAutoBotConfig) {
+            console.warn('[BotsManager] ⚠️ cachedAutoBotConfig не загружен, используем пустой объект');
+            return {
+                autoBot: {},
+                system: {}
+            };
+        }
         
-        // Проверяем значения новых полей
-        const positionSyncEl = document.getElementById('positionSyncInterval');
-        const inactiveCleanupEl = document.getElementById('inactiveBotCleanupInterval');
-        const inactiveTimeoutEl = document.getElementById('inactiveBotTimeout');
-        const stopLossSetupEl = document.getElementById('stopLossSetupInterval');
+        // ✅ ГЛУБОКОЕ КОПИРОВАНИЕ КЭШИРОВАННОЙ КОНФИГУРАЦИИ
+        const autoBotConfig = JSON.parse(JSON.stringify(this.cachedAutoBotConfig));
         
-        console.log('[BotsManager] 🔍 Значения полей:');
-        console.log('  positionSyncInterval:', positionSyncEl?.value);
-        console.log('  inactiveBotCleanupInterval:', inactiveCleanupEl?.value);
-        console.log('  inactiveBotTimeout:', inactiveTimeoutEl?.value);
-        console.log('  stopLossSetupInterval:', stopLossSetupEl?.value);
+        // ✅ ПРИМЕНЯЕМ ИЗМЕНЕНИЯ ИЗ DOM ТОЛЬКО ДЛЯ ПОЛЕЙ, КОТОРЫЕ ПОЛЬЗОВАТЕЛЬ РЕАЛЬНО ИЗМЕНИЛ
+        // Сравниваем значения из DOM с originalConfig, и если они отличаются - применяем
         
-        const trailingStopActivationValue = parseFloat(document.getElementById('trailingStopActivation')?.value);
-        const trailingStopDistanceValue = parseFloat(document.getElementById('trailingStopDistance')?.value);
-        const trailingTakeDistanceValue = parseFloat(document.getElementById('trailingTakeDistance')?.value);
-        const trailingUpdateIntervalValue = parseFloat(document.getElementById('trailingUpdateInterval')?.value);
-        
-        // Собираем данные Auto Bot
-        const autoBotConfig = {
-            enabled: document.getElementById('globalAutoBotToggle')?.checked || false,
-            max_concurrent: parseInt(document.getElementById('autoBotMaxConcurrent')?.value) || 5,
-            risk_cap_percent: parseFloat(document.getElementById('autoBotRiskCap')?.value) || 10,
-            scope: document.getElementById('autoBotScope')?.value || 'all',
-            rsi_long_threshold: parseInt(document.getElementById('rsiLongThreshold')?.value) || 29,
-            rsi_short_threshold: parseInt(document.getElementById('rsiShortThreshold')?.value) || 71,
-            // ✅ Новые параметры RSI выхода с учетом тренда
-            rsi_exit_long_with_trend: parseInt(document.getElementById('rsiExitLongWithTrendGlobal')?.value) || 65,
-            rsi_exit_long_against_trend: parseInt(document.getElementById('rsiExitLongAgainstTrendGlobal')?.value) || 60,
-            rsi_exit_short_with_trend: parseInt(document.getElementById('rsiExitShortWithTrendGlobal')?.value) || 35,
-            rsi_exit_short_against_trend: parseInt(document.getElementById('rsiExitShortAgainstTrendGlobal')?.value) || 40,
-            default_position_size: parseFloat(document.getElementById('defaultPositionSize')?.value) || 10,
-            check_interval: parseInt(document.getElementById('checkInterval')?.value) || 180,
-            max_loss_percent: parseFloat(document.getElementById('maxLossPercent')?.value) || 15.0,
-            take_profit_percent: parseFloat(document.getElementById('takeProfitPercent')?.value) || 20.0,
-            trailing_stop_activation: Number.isFinite(trailingStopActivationValue) ? trailingStopActivationValue : 20.0,
-            trailing_stop_distance: Number.isFinite(trailingStopDistanceValue) ? trailingStopDistanceValue : 5.0,
-            trailing_take_distance: Number.isFinite(trailingTakeDistanceValue) ? trailingTakeDistanceValue : 0.5,
-            trailing_update_interval: Number.isFinite(trailingUpdateIntervalValue) ? trailingUpdateIntervalValue : 3.0,
-            max_position_hours: parseInt(document.getElementById('maxPositionHours')?.value) || 0,
-            break_even_protection: document.getElementById('breakEvenProtection')?.checked !== false,
-            avoid_down_trend: document.getElementById('avoidDownTrend')?.checked !== false,
-            avoid_up_trend: document.getElementById('avoidUpTrend')?.checked !== false,
-            // Параметры анализа тренда
-            trend_detection_enabled: document.getElementById('trendDetectionEnabled')?.checked !== false,
-            trend_analysis_period: parseInt(document.getElementById('trendAnalysisPeriod')?.value) || 30,
-            trend_price_change_threshold: parseFloat(document.getElementById('trendPriceChangeThreshold')?.value) || 7,
-            trend_candles_threshold: parseFloat(document.getElementById('trendCandlesThreshold')?.value) || 70,
-            ...(() => {
-                const breakEvenTriggerEl = document.getElementById('breakEvenTrigger');
-                const triggerValue = breakEvenTriggerEl?.value ? parseFloat(breakEvenTriggerEl.value) : undefined;
-                // Сохраняем только если значение действительно введено пользователем
-                if (triggerValue !== undefined && !isNaN(triggerValue)) {
-                    return {
-                        break_even_trigger: triggerValue,
-                        break_even_trigger_percent: triggerValue,
-                    };
+        const applyDomChange = (key, getDomValue, defaultValue) => {
+            const domValue = getDomValue();
+            const originalValue = this.originalConfig?.autoBot?.[key];
+            
+            // Если значение из DOM отличается от originalConfig - значит пользователь его изменил
+            if (domValue !== undefined && domValue !== null) {
+                if (typeof domValue === 'number' && typeof originalValue === 'number') {
+                    if (Math.abs(domValue - originalValue) > 0.01) {
+                        autoBotConfig[key] = domValue;
+                        console.log(`[BotsManager] 🔄 Применено изменение из DOM: ${key} = ${domValue} (было ${originalValue})`);
+                    }
+                } else if (domValue !== originalValue) {
+                    autoBotConfig[key] = domValue;
+                    console.log(`[BotsManager] 🔄 Применено изменение из DOM: ${key} = ${domValue} (было ${originalValue})`);
                 }
-                return {};
-            })(),
-            enable_maturity_check: document.getElementById('enableMaturityCheck')?.checked !== false,
-            min_candles_for_maturity: parseInt(document.getElementById('minCandlesForMaturity')?.value) || 200,
-            min_rsi_low: parseInt(document.getElementById('minRsiLow')?.value) || 35,
-            max_rsi_high: parseInt(document.getElementById('maxRsiHigh')?.value) || 65,
-            min_volatility_threshold: parseFloat(document.getElementById('minVolatilityThreshold')?.value) || 0.05,
-            // RSI временной фильтр
-            rsi_time_filter_enabled: document.getElementById('rsiTimeFilterEnabled')?.checked !== false,
-            rsi_time_filter_candles: parseInt(document.getElementById('rsiTimeFilterCandles')?.value) || 8,
-            rsi_time_filter_upper: parseInt(document.getElementById('rsiTimeFilterUpper')?.value) || 65,
-            rsi_time_filter_lower: parseInt(document.getElementById('rsiTimeFilterLower')?.value) || 35,
-            // ExitScam фильтр
-            exit_scam_enabled: document.getElementById('exitScamEnabled')?.checked !== false,
-            exit_scam_candles: parseInt(document.getElementById('exitScamCandles')?.value) || 10,
-            exit_scam_single_candle_percent: parseFloat(document.getElementById('exitScamSingleCandlePercent')?.value) || 15.0,
-            exit_scam_multi_candle_count: parseInt(document.getElementById('exitScamMultiCandleCount')?.value) || 4,
-            exit_scam_multi_candle_percent: parseFloat(document.getElementById('exitScamMultiCandlePercent')?.value) || 50.0,
-            trading_enabled: document.getElementById('tradingEnabled')?.checked !== false,
-            use_test_server: document.getElementById('useTestServer')?.checked || false,
-            max_risk_per_trade: parseFloat(document.getElementById('maxRiskPerTrade')?.value) || 2.0,
-            enhanced_rsi_enabled: (() => {
-                const el = document.getElementById('enhancedRsiEnabled');
-                const checked = el?.checked || false;
-                console.log('[BotsManager] 🔍 Enhanced RSI Enabled - элемент:', !!el, 'значение:', checked);
-                return checked;
-            })(),
-            enhanced_rsi_require_volume_confirmation: (() => {
-                const el = document.getElementById('enhancedRsiVolumeConfirm');
-                const checked = el?.checked || false;
-                console.log('[BotsManager] 🔍 Enhanced RSI Volume - элемент:', !!el, 'значение:', checked);
-                return checked;
-            })(),
-            enhanced_rsi_require_divergence_confirmation: (() => {
-                const el = document.getElementById('enhancedRsiDivergenceConfirm');
-                const checked = el?.checked || false;
-                console.log('[BotsManager] 🔍 Enhanced RSI Divergence - элемент:', !!el, 'значение:', checked);
-                return checked;
-            })(),
-            enhanced_rsi_use_stoch_rsi: (() => {
-                const el = document.getElementById('enhancedRsiUseStochRsi');
-                const checked = el?.checked || false;
-                console.log('[BotsManager] 🔍 Enhanced RSI Stoch - элемент:', !!el, 'значение:', checked);
-                return checked;
-            })(),
-            rsi_extreme_zone_timeout: parseInt(document.getElementById('rsiExtremeZoneTimeout')?.value) || 3,
-            rsi_extreme_oversold: parseInt(document.getElementById('rsiExtremeOversold')?.value) || 20,
-            rsi_extreme_overbought: parseInt(document.getElementById('rsiExtremeOverbought')?.value) || 80,
-            rsi_volume_confirmation_multiplier: parseFloat(document.getElementById('rsiVolumeMultiplier')?.value) || 1.2,
-            rsi_divergence_lookback: parseInt(document.getElementById('rsiDivergenceLookback')?.value) || 10
+            }
         };
         
-        // Собираем системные настройки
+        // Применяем изменения из DOM для критичных полей
+        const trailingStopActivationEl = document.getElementById('trailingStopActivation');
+        if (trailingStopActivationEl) {
+            applyDomChange('trailing_stop_activation', () => {
+                const val = parseFloat(trailingStopActivationEl.value);
+                return Number.isFinite(val) ? val : undefined;
+            });
+        }
+        
+        const trailingStopDistanceEl = document.getElementById('trailingStopDistance');
+        if (trailingStopDistanceEl) {
+            applyDomChange('trailing_stop_distance', () => {
+                const val = parseFloat(trailingStopDistanceEl.value);
+                return Number.isFinite(val) ? val : undefined;
+            });
+        }
+        
+        const breakEvenTriggerEl = document.getElementById('breakEvenTrigger');
+        if (breakEvenTriggerEl) {
+            applyDomChange('break_even_trigger_percent', () => {
+                const val = parseFloat(breakEvenTriggerEl.value);
+                return Number.isFinite(val) ? val : undefined;
+            });
+            autoBotConfig.break_even_trigger = autoBotConfig.break_even_trigger_percent;
+        }
+        
+        const avoidDownTrendEl = document.getElementById('avoidDownTrend');
+        if (avoidDownTrendEl) {
+            applyDomChange('avoid_down_trend', () => avoidDownTrendEl.checked);
+        }
+        
+        const avoidUpTrendEl = document.getElementById('avoidUpTrend');
+        if (avoidUpTrendEl) {
+            applyDomChange('avoid_up_trend', () => avoidUpTrendEl.checked);
+        }
+        
+        // ✅ ПРИМЕНЯЕМ ИЗМЕНЕНИЯ ДЛЯ ВСЕХ ОСТАЛЬНЫХ ПОЛЕЙ
+        // Используем универсальную функцию для всех полей формы
+        const applyAllDomChanges = () => {
+            // Все числовые поля
+            const numberFields = [
+                { key: 'max_concurrent', el: 'autoBotMaxConcurrent' },
+                { key: 'risk_cap_percent', el: 'autoBotRiskCap' },
+                { key: 'rsi_long_threshold', el: 'rsiLongThreshold' },
+                { key: 'rsi_short_threshold', el: 'rsiShortThreshold' },
+                { key: 'rsi_exit_long_with_trend', el: 'rsiExitLongWithTrendGlobal' },
+                { key: 'rsi_exit_long_against_trend', el: 'rsiExitLongAgainstTrendGlobal' },
+                { key: 'rsi_exit_short_with_trend', el: 'rsiExitShortWithTrendGlobal' },
+                { key: 'rsi_exit_short_against_trend', el: 'rsiExitShortAgainstTrendGlobal' },
+                { key: 'default_position_size', el: 'defaultPositionSize' },
+                { key: 'check_interval', el: 'checkInterval' },
+                { key: 'max_loss_percent', el: 'maxLossPercent' },
+                { key: 'take_profit_percent', el: 'takeProfitPercent' },
+                { key: 'trailing_take_distance', el: 'trailingTakeDistance' },
+                { key: 'trailing_update_interval', el: 'trailingUpdateInterval' },
+                { key: 'max_position_hours', el: 'maxPositionHours' },
+                { key: 'trend_analysis_period', el: 'trendAnalysisPeriod' },
+                { key: 'trend_price_change_threshold', el: 'trendPriceChangeThreshold' },
+                { key: 'trend_candles_threshold', el: 'trendCandlesThreshold' },
+                { key: 'min_candles_for_maturity', el: 'minCandlesForMaturity' },
+                { key: 'min_rsi_low', el: 'minRsiLow' },
+                { key: 'max_rsi_high', el: 'maxRsiHigh' },
+                { key: 'min_volatility_threshold', el: 'minVolatilityThreshold' },
+                { key: 'rsi_time_filter_candles', el: 'rsiTimeFilterCandles' },
+                { key: 'rsi_time_filter_upper', el: 'rsiTimeFilterUpper' },
+                { key: 'rsi_time_filter_lower', el: 'rsiTimeFilterLower' },
+                { key: 'exit_scam_candles', el: 'exitScamCandles' },
+                { key: 'exit_scam_single_candle_percent', el: 'exitScamSingleCandlePercent' },
+                { key: 'exit_scam_multi_candle_count', el: 'exitScamMultiCandleCount' },
+                { key: 'exit_scam_multi_candle_percent', el: 'exitScamMultiCandlePercent' },
+                { key: 'max_risk_per_trade', el: 'maxRiskPerTrade' },
+                { key: 'rsi_extreme_zone_timeout', el: 'rsiExtremeZoneTimeout' },
+                { key: 'rsi_extreme_oversold', el: 'rsiExtremeOversold' },
+                { key: 'rsi_extreme_overbought', el: 'rsiExtremeOverbought' },
+                { key: 'rsi_volume_confirmation_multiplier', el: 'rsiVolumeMultiplier' },
+                { key: 'rsi_divergence_lookback', el: 'rsiDivergenceLookback' }
+            ];
+            
+            numberFields.forEach(({ key, el }) => {
+                const element = document.getElementById(el);
+                if (element) {
+                    applyDomChange(key, () => {
+                        const val = parseFloat(element.value);
+                        return Number.isFinite(val) ? val : undefined;
+                    });
+                }
+            });
+            
+            // Все булевые поля
+            const boolFields = [
+                { key: 'enabled', el: 'globalAutoBotToggle' },
+                { key: 'break_even_protection', el: 'breakEvenProtection' },
+                { key: 'trend_detection_enabled', el: 'trendDetectionEnabled' },
+                { key: 'enable_maturity_check', el: 'enableMaturityCheck' },
+                { key: 'rsi_time_filter_enabled', el: 'rsiTimeFilterEnabled' },
+                { key: 'exit_scam_enabled', el: 'exitScamEnabled' },
+                { key: 'trading_enabled', el: 'tradingEnabled' },
+                { key: 'use_test_server', el: 'useTestServer' },
+                { key: 'enhanced_rsi_enabled', el: 'enhancedRsiEnabled' },
+                { key: 'enhanced_rsi_require_volume_confirmation', el: 'enhancedRsiVolumeConfirm' },
+                { key: 'enhanced_rsi_require_divergence_confirmation', el: 'enhancedRsiDivergenceConfirm' },
+                { key: 'enhanced_rsi_use_stoch_rsi', el: 'enhancedRsiUseStochRsi' }
+            ];
+            
+            boolFields.forEach(({ key, el }) => {
+                const element = document.getElementById(el);
+                if (element) {
+                    applyDomChange(key, () => element.checked);
+                }
+            });
+            
+            // Строковые поля
+            const scopeEl = document.getElementById('autoBotScope');
+            if (scopeEl) {
+                applyDomChange('scope', () => scopeEl.value);
+            }
+        };
+        
+        applyAllDomChanges();
+        
+        // Собираем системные настройки (они обычно не меняются часто, можно оставить как есть)
         const systemConfig = {
             rsi_update_interval: parseInt(document.getElementById('rsiUpdateInterval')?.value) || 1800,
             auto_save_interval: parseInt(document.getElementById('autoSaveInterval')?.value) || 30,
@@ -5923,19 +5968,7 @@ class BotsManager {
             position_sync_interval: parseInt(document.getElementById('positionSyncInterval')?.value) || 600,
             inactive_bot_cleanup_interval: parseInt(document.getElementById('inactiveBotCleanupInterval')?.value) || 600,
             inactive_bot_timeout: parseInt(document.getElementById('inactiveBotTimeout')?.value) || 600,
-            stop_loss_setup_interval: parseInt(document.getElementById('stopLossSetupInterval')?.value) || 300,
-            // ❌ УСТАРЕВШИЕ НАСТРОЙКИ EMA - УБРАНЫ (больше не используются)
-            // Тренд теперь определяется простым анализом цены
-            // Enhanced RSI настройки
-            enhanced_rsi_enabled: autoBotConfig.enhanced_rsi_enabled,
-            enhanced_rsi_require_volume_confirmation: autoBotConfig.enhanced_rsi_require_volume_confirmation,
-            enhanced_rsi_require_divergence_confirmation: autoBotConfig.enhanced_rsi_require_divergence_confirmation,
-            enhanced_rsi_use_stoch_rsi: autoBotConfig.enhanced_rsi_use_stoch_rsi,
-            rsi_extreme_zone_timeout: autoBotConfig.rsi_extreme_zone_timeout,
-            rsi_extreme_oversold: autoBotConfig.rsi_extreme_oversold,
-            rsi_extreme_overbought: autoBotConfig.rsi_extreme_overbought,
-            rsi_volume_confirmation_multiplier: autoBotConfig.rsi_volume_confirmation_multiplier,
-            rsi_divergence_lookback: autoBotConfig.rsi_divergence_lookback
+            stop_loss_setup_interval: parseInt(document.getElementById('stopLossSetupInterval')?.value) || 300
         };
         
         const result = {
@@ -5943,13 +5976,7 @@ class BotsManager {
             system: systemConfig
         };
         
-        // 🔍 ОТЛАДКА: Показываем итоговую конфигурацию Enhanced RSI
-        console.log('[BotsManager] 🔍 ИТОГОВАЯ конфигурация Enhanced RSI:');
-        console.log('  enhanced_rsi_enabled:', result.autoBot.enhanced_rsi_enabled);
-        console.log('  enhanced_rsi_require_volume_confirmation:', result.autoBot.enhanced_rsi_require_volume_confirmation);
-        console.log('  enhanced_rsi_require_divergence_confirmation:', result.autoBot.enhanced_rsi_require_divergence_confirmation);
-        console.log('  enhanced_rsi_use_stoch_rsi:', result.autoBot.enhanced_rsi_use_stoch_rsi);
-        
+        console.log('[BotsManager] ✅ Конфигурация собрана из cachedAutoBotConfig');
         return result;
     }
 
@@ -6181,26 +6208,124 @@ class BotsManager {
         this.showNotification('ℹ️ Настройки тренда больше не используются (тренд определяется автоматически по цене)', 'info');
     }
     
+    // ✅ ФИЛЬТРАЦИЯ ИЗМЕНЕННЫХ ПАРАМЕТРОВ
+    filterChangedParams(data) {
+        if (!this.originalConfig || !this.originalConfig.autoBot) {
+            // Если нет исходной конфигурации, отправляем все данные
+            console.log('[BotsManager] ⚠️ originalConfig не инициализирован, отправляем все параметры');
+            return data;
+        }
+        
+        const original = this.originalConfig.autoBot;
+        const filtered = {};
+        let changedCount = 0;
+        
+        console.log(`[BotsManager] 🔍 filterChangedParams: сравниваем ${Object.keys(data).length} параметров`);
+        
+        for (const [key, value] of Object.entries(data)) {
+            const originalValue = original[key];
+            
+            // ✅ ОСОБАЯ ОБРАБОТКА ДЛЯ break_even_trigger_percent
+            if (key === 'break_even_trigger_percent' && originalValue === undefined) {
+                // Если в originalConfig нет break_even_trigger_percent, проверяем break_even_trigger
+                const altOriginalValue = original['break_even_trigger'];
+                if (altOriginalValue !== undefined) {
+                    if (typeof value === 'number' && typeof altOriginalValue === 'number') {
+                        if (Math.abs(value - altOriginalValue) > 0.01) {
+                            filtered[key] = value;
+                            changedCount++;
+                            console.log(`[BotsManager] 🔄 Изменен ${key}: ${altOriginalValue} → ${value} (из break_even_trigger)`);
+                        }
+                    }
+                } else {
+                    // Если и break_even_trigger нет, считаем что значение изменилось
+                    filtered[key] = value;
+                    changedCount++;
+                    console.log(`[BotsManager] 🔄 Изменен ${key}: undefined → ${value} (новый параметр)`);
+                }
+                continue;
+            }
+            
+            // Для чисел: сравниваем с точностью 0.01
+            if (typeof value === 'number' && typeof originalValue === 'number') {
+                if (Math.abs(value - originalValue) > 0.01) {
+                    filtered[key] = value;
+                    changedCount++;
+                    console.log(`[BotsManager] 🔄 Изменен ${key}: ${originalValue} → ${value}`);
+                } else {
+                    console.log(`[BotsManager] ⏭️ Пропущен ${key}: ${originalValue} == ${value} (не изменился)`);
+                }
+            }
+            // Для булевых значений: точное сравнение
+            else if (typeof value === 'boolean' && typeof originalValue === 'boolean') {
+                if (value !== originalValue) {
+                    filtered[key] = value;
+                    changedCount++;
+                    console.log(`[BotsManager] 🔄 Изменен ${key}: ${originalValue} → ${value}`);
+                } else {
+                    console.log(`[BotsManager] ⏭️ Пропущен ${key}: ${originalValue} == ${value} (не изменился)`);
+                }
+            }
+            // Для остальных типов: точное сравнение
+            else if (value !== originalValue) {
+                filtered[key] = value;
+                changedCount++;
+                console.log(`[BotsManager] 🔄 Изменен ${key}: ${originalValue} → ${value}`);
+            } else {
+                console.log(`[BotsManager] ⏭️ Пропущен ${key}: ${originalValue} == ${value} (не изменился)`);
+            }
+        }
+        
+        console.log(`[BotsManager] 📊 Отфильтровано: ${changedCount} из ${Object.keys(data).length} параметров изменены`);
+        if (changedCount > 0) {
+            console.log(`[BotsManager] 📤 Отправляемые параметры:`, filtered);
+        }
+        return filtered;
+    }
+    
     // ✅ ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ОТПРАВКИ КОНФИГУРАЦИИ
     async sendConfigUpdate(endpoint, data, sectionName) {
         // БЕЗ БЛОКИРОВКИ - элементы остаются активными!
         
         try {
+            // ✅ ФИЛЬТРУЕМ ТОЛЬКО ИЗМЕНЕННЫЕ ПАРАМЕТРЫ
+            const filteredData = this.filterChangedParams(data);
+            
+            // Если нет изменений, не отправляем запрос
+            if (Object.keys(filteredData).length === 0) {
+                console.log(`[BotsManager] ℹ️ Нет изменений в ${sectionName}, пропускаем отправку`);
+                this.showNotification(`ℹ️ Нет изменений в ${sectionName}`, 'info');
+                return;
+            }
+            
+            console.log(`[BotsManager] 📤 Отправка измененных параметров ${sectionName}:`, filteredData);
+            
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify(filteredData)
             });
             
             if (response.ok) {
+                const responseData = await response.json();
                 this.showNotification(`✅ ${sectionName} сохранены успешно`, 'success');
                 console.log(`[BotsManager] ✅ ${sectionName} сохранены успешно`);
+                
+                // ✅ ОБНОВЛЯЕМ originalConfig после успешного сохранения
+                if (this.originalConfig && this.originalConfig.autoBot) {
+                    // Обновляем только сохраненные параметры
+                    for (const [key, value] of Object.entries(filteredData)) {
+                        this.originalConfig.autoBot[key] = value;
+                    }
+                    console.log(`[BotsManager] 💾 originalConfig обновлен после сохранения ${sectionName}`);
+                }
             } else {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
         } catch (error) {
             console.error(`[BotsManager] ❌ Ошибка сохранения ${sectionName}:`, error);
             this.showNotification(`❌ Ошибка: ${error.message}`, 'error');
+            throw error;
         }
     }
 

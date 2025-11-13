@@ -19,17 +19,17 @@
   "max_risk_per_trade": 2,
   "max_loss_percent": 15,
   "take_profit_percent": 20,
-  "trailing_stop_activation": 30,
-  "trailing_stop_distance": 10,
+  "trailing_stop_activation": 20,
+  "trailing_stop_distance": 5,
   "trailing_take_distance": 0.5,
   "trailing_update_interval": 3,
   "max_position_hours": 0,
   "break_even_protection": true,
-  "break_even_trigger": 100,
-  "break_even_trigger_percent": 100,
+  "break_even_trigger": 23,
+  "break_even_trigger_percent": 23,
   "trend_detection_enabled": true,
-  "avoid_down_trend": true,
-  "avoid_up_trend": true,
+  "avoid_down_trend": false,
+  "avoid_up_trend": false,
   "trend_analysis_period": 30,
   "trend_price_change_threshold": 7,
   "trend_candles_threshold": 70,
@@ -47,8 +47,6 @@
   "exit_scam_multi_candle_count": 4,
   "exit_scam_multi_candle_percent": 50,
   "ai_optimal_entry_enabled": false,
-  "filtered_coins": [
-    "ALCH"
-  ],
-  "last_filter_update": "2025-11-13T04:26:40.986676"
+  "filtered_coins": [],
+  "last_filter_update": "2025-11-13T05:01:54.861231"
 }
