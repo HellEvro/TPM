@@ -34,6 +34,8 @@ class BotsManager {
         
         // Кэш конфигурации Auto Bot для быстрого доступа
         this.cachedAutoBotConfig = null;
+        // Исходные значения всех параметров при загрузке страницы (для отслеживания изменений)
+        this.originalConfig = null;
         
         // URL сервиса ботов - используем тот же хост что и у приложения
         this.BOTS_SERVICE_URL = `${window.location.protocol}//${window.location.hostname}:5001`;
@@ -2709,6 +2711,12 @@ class BotsManager {
         
         const trailingDistanceEl = document.getElementById('trailingStopDistanceDup');
         if (trailingDistanceEl && trailingDistanceEl.value) settings.trailing_stop_distance = parseFloat(trailingDistanceEl.value);
+
+        const trailingTakeEl = document.getElementById('trailingTakeDistanceDup');
+        if (trailingTakeEl && trailingTakeEl.value) settings.trailing_take_distance = parseFloat(trailingTakeEl.value);
+
+        const trailingIntervalEl = document.getElementById('trailingUpdateIntervalDup');
+        if (trailingIntervalEl && trailingIntervalEl.value) settings.trailing_update_interval = parseFloat(trailingIntervalEl.value);
         
         const maxHoursEl = document.getElementById('maxPositionHoursDup');
         if (maxHoursEl) {
@@ -2991,11 +2999,13 @@ class BotsManager {
             rsi_exit_short_against_trend: 40,
             max_loss_percent: 15.0,
             take_profit_percent: 20.0,
-            trailing_stop_activation: 300.0,
-            trailing_stop_distance: 150.0,
+            trailing_stop_activation: 20.0,
+            trailing_stop_distance: 5.0,
+            trailing_take_distance: 0.5,
+            trailing_update_interval: 3.0,
             max_position_hours: 0,
             break_even_protection: true,
-            break_even_trigger: 100.0,
+            break_even_trigger: 20.0,
             avoid_down_trend: config.avoid_down_trend !== false,
             avoid_up_trend: config.avoid_up_trend !== false,
             enable_maturity_check: config.enable_maturity_check !== false
@@ -3023,6 +3033,8 @@ class BotsManager {
         setValue('takeProfitPercentDup', get('take_profit_percent', fallback.take_profit_percent));
         setValue('trailingStopActivationDup', get('trailing_stop_activation', fallback.trailing_stop_activation));
         setValue('trailingStopDistanceDup', get('trailing_stop_distance', fallback.trailing_stop_distance));
+        setValue('trailingTakeDistanceDup', get('trailing_take_distance', fallback.trailing_take_distance));
+        setValue('trailingUpdateIntervalDup', get('trailing_update_interval', fallback.trailing_update_interval));
 
         const maxHoursEl = document.getElementById('maxPositionHoursDup');
         if (maxHoursEl) {
@@ -3119,7 +3131,6 @@ class BotsManager {
         
         console.log('[BotsManager] ✅ Кнопки индивидуальных настроек инициализированы');
     }
-
     initializeQuickLaunchButtons() {
         console.log('[BotsManager] 🚀 Инициализация кнопок быстрого запуска...');
         
@@ -3757,7 +3768,6 @@ class BotsManager {
         this.renderWhitelist();
         this.renderBlacklist();
     }
-
     renderWhitelist() {
         const container = document.getElementById('whitelistContainer');
         const countElement = document.getElementById('whitelistCount');
@@ -4396,7 +4406,6 @@ class BotsManager {
             console.error('[BotsManager] ❌ Ошибка добавления в черный список:', error);
         }
     }
-
     async removeCoinFromFiltersFromSearch(symbol) {
         console.log(`[BotsManager] 🗑️ Удаление ${symbol} из фильтров через поиск`);
         
@@ -4997,7 +5006,6 @@ class BotsManager {
             this.updateSingleBotDisplay(bot);
         });
     }
-    
     updateSingleBotDisplay(bot) {
         // Находим элемент бота в списке
         const botElement = document.querySelector(`[data-bot-symbol="${bot.symbol}"]`);
@@ -5199,6 +5207,12 @@ class BotsManager {
         // ✅ Кэшируем конфигурацию Auto Bot для быстрого доступа (для updateCoinInfo и др.)
         this.cachedAutoBotConfig = autoBotConfig;
         
+        // Сохраняем исходные значения всех параметров при первой загрузке (если еще не сохранено)
+        if (this.originalConfig === null) {
+            this.originalConfig = JSON.parse(JSON.stringify(autoBotConfig)); // Глубокое копирование
+            console.log(`[BotsManager] 💾 Сохранена исходная конфигурация для отслеживания изменений`);
+        }
+        
         // ==========================================
         // КОНФИГУРАЦИЯ AUTO BOT
         // ==========================================
@@ -5326,14 +5340,30 @@ class BotsManager {
         
         const trailingStopActivationEl = document.getElementById('trailingStopActivation');
         if (trailingStopActivationEl) {
-            trailingStopActivationEl.value = autoBotConfig.trailing_stop_activation || 300.0;
+            const value = Number.parseFloat(autoBotConfig.trailing_stop_activation);
+            trailingStopActivationEl.value = Number.isFinite(value) ? value : 20.0;
             console.log('[BotsManager] 📈 Активация trailing stop:', trailingStopActivationEl.value);
         }
         
         const trailingStopDistanceEl = document.getElementById('trailingStopDistance');
         if (trailingStopDistanceEl) {
-            trailingStopDistanceEl.value = autoBotConfig.trailing_stop_distance || 150.0;
+            const value = Number.parseFloat(autoBotConfig.trailing_stop_distance);
+            trailingStopDistanceEl.value = Number.isFinite(value) ? value : 5.0;
             console.log('[BotsManager] 📉 Расстояние trailing stop:', trailingStopDistanceEl.value);
+        }
+
+        const trailingTakeDistanceEl = document.getElementById('trailingTakeDistance');
+        if (trailingTakeDistanceEl) {
+            const value = autoBotConfig.trailing_take_distance;
+            trailingTakeDistanceEl.value = (value !== undefined && value !== null) ? value : 0.5;
+            console.log('[BotsManager] 🎯 Резервный trailing take:', trailingTakeDistanceEl.value);
+        }
+
+        const trailingUpdateIntervalEl = document.getElementById('trailingUpdateInterval');
+        if (trailingUpdateIntervalEl) {
+            const value = autoBotConfig.trailing_update_interval;
+            trailingUpdateIntervalEl.value = (value !== undefined && value !== null) ? value : 3.0;
+            console.log('[BotsManager] ⏱️ Интервал обновления трейлинга:', trailingUpdateIntervalEl.value);
         }
         
         const maxPositionHoursEl = document.getElementById('maxPositionHours');
@@ -5350,7 +5380,7 @@ class BotsManager {
         
         const breakEvenTriggerEl = document.getElementById('breakEvenTrigger');
         if (breakEvenTriggerEl) {
-            const triggerValue = autoBotConfig.break_even_trigger_percent ?? autoBotConfig.break_even_trigger ?? 100.0;
+            const triggerValue = autoBotConfig.break_even_trigger_percent ?? autoBotConfig.break_even_trigger ?? 20.0;
             breakEvenTriggerEl.value = triggerValue;
             console.log('[BotsManager] 🎯 Триггер безубыточности:', breakEvenTriggerEl.value);
         }
@@ -5633,7 +5663,6 @@ class BotsManager {
             rsiExtremeOverboughtEl.value = systemConfig.rsi_extreme_overbought || 80;
             console.log('[BotsManager] 📈 RSI экстремальный overbought:', rsiExtremeOverboughtEl.value);
         }
-        
         const rsiVolumeMultiplierEl = document.getElementById('rsiVolumeMultiplier');
         if (rsiVolumeMultiplierEl) {
             rsiVolumeMultiplierEl.value = systemConfig.rsi_volume_confirmation_multiplier || 1.2;
@@ -5787,6 +5816,11 @@ class BotsManager {
         console.log('  inactiveBotTimeout:', inactiveTimeoutEl?.value);
         console.log('  stopLossSetupInterval:', stopLossSetupEl?.value);
         
+        const trailingStopActivationValue = parseFloat(document.getElementById('trailingStopActivation')?.value);
+        const trailingStopDistanceValue = parseFloat(document.getElementById('trailingStopDistance')?.value);
+        const trailingTakeDistanceValue = parseFloat(document.getElementById('trailingTakeDistance')?.value);
+        const trailingUpdateIntervalValue = parseFloat(document.getElementById('trailingUpdateInterval')?.value);
+        
         // Собираем данные Auto Bot
         const autoBotConfig = {
             enabled: document.getElementById('globalAutoBotToggle')?.checked || false,
@@ -5804,8 +5838,10 @@ class BotsManager {
             check_interval: parseInt(document.getElementById('checkInterval')?.value) || 180,
             max_loss_percent: parseFloat(document.getElementById('maxLossPercent')?.value) || 15.0,
             take_profit_percent: parseFloat(document.getElementById('takeProfitPercent')?.value) || 20.0,
-            trailing_stop_activation: parseFloat(document.getElementById('trailingStopActivation')?.value) || 300.0,
-            trailing_stop_distance: parseFloat(document.getElementById('trailingStopDistance')?.value) || 150.0,
+            trailing_stop_activation: Number.isFinite(trailingStopActivationValue) ? trailingStopActivationValue : 20.0,
+            trailing_stop_distance: Number.isFinite(trailingStopDistanceValue) ? trailingStopDistanceValue : 5.0,
+            trailing_take_distance: Number.isFinite(trailingTakeDistanceValue) ? trailingTakeDistanceValue : 0.5,
+            trailing_update_interval: Number.isFinite(trailingUpdateIntervalValue) ? trailingUpdateIntervalValue : 3.0,
             max_position_hours: parseInt(document.getElementById('maxPositionHours')?.value) || 0,
             break_even_protection: document.getElementById('breakEvenProtection')?.checked !== false,
             avoid_down_trend: document.getElementById('avoidDownTrend')?.checked !== false,
@@ -5816,11 +5852,16 @@ class BotsManager {
             trend_price_change_threshold: parseFloat(document.getElementById('trendPriceChangeThreshold')?.value) || 7,
             trend_candles_threshold: parseFloat(document.getElementById('trendCandlesThreshold')?.value) || 70,
             ...(() => {
-                const triggerValue = parseFloat(document.getElementById('breakEvenTrigger')?.value) || 100.0;
-                return {
-                    break_even_trigger: triggerValue,
-                    break_even_trigger_percent: triggerValue,
-                };
+                const breakEvenTriggerEl = document.getElementById('breakEvenTrigger');
+                const triggerValue = breakEvenTriggerEl?.value ? parseFloat(breakEvenTriggerEl.value) : undefined;
+                // Сохраняем только если значение действительно введено пользователем
+                if (triggerValue !== undefined && !isNaN(triggerValue)) {
+                    return {
+                        break_even_trigger: triggerValue,
+                        break_even_trigger_percent: triggerValue,
+                    };
+                }
+                return {};
             })(),
             enable_maturity_check: document.getElementById('enableMaturityCheck')?.checked !== false,
             min_candles_for_maturity: parseInt(document.getElementById('minCandlesForMaturity')?.value) || 200,
@@ -6073,12 +6114,14 @@ class BotsManager {
         console.log('[BotsManager] 💾 Сохранение защитных механизмов...');
         try {
             const config = this.collectConfigurationData();
+            
             const protectiveMechanisms = {
                 max_loss_percent: config.autoBot.max_loss_percent,
                 take_profit_percent: config.autoBot.take_profit_percent,
                 trailing_stop_activation: config.autoBot.trailing_stop_activation,
                 trailing_stop_distance: config.autoBot.trailing_stop_distance,
                 trailing_take_distance: config.autoBot.trailing_take_distance,
+                trailing_update_interval: config.autoBot.trailing_update_interval,
                 max_position_hours: config.autoBot.max_position_hours,
                 break_even_protection: config.autoBot.break_even_protection,
                 break_even_trigger: config.autoBot.break_even_trigger,
@@ -6087,6 +6130,7 @@ class BotsManager {
                 avoid_up_trend: config.autoBot.avoid_up_trend
             };
             
+            // sendConfigUpdate автоматически отфильтрует только измененные параметры
             await this.sendConfigUpdate('auto-bot', protectiveMechanisms, 'Защитные механизмы');
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка сохранения защитных механизмов:', error);
@@ -6225,7 +6269,6 @@ class BotsManager {
             this.showNotification('❌ Ошибка сохранения конфигурации: ' + error.message, 'error');
         }
     }
-    
     async resetConfiguration() {
         console.log('[BotsManager] 🔄 Сброс конфигурации к умолчаниям...');
         
@@ -6252,8 +6295,10 @@ class BotsManager {
                     check_interval: 180,
                     max_loss_percent: 15.0,
                     take_profit_percent: 20.0,
-                    trailing_stop_activation: 300.0,
-                    trailing_stop_distance: 150.0,
+                    trailing_stop_activation: 20.0,
+                    trailing_stop_distance: 5.0,
+                    trailing_take_distance: 0.5,
+                    trailing_update_interval: 3.0,
                     max_position_hours: 0,
                     break_even_protection: true,
                     avoid_down_trend: true,
@@ -6263,7 +6308,7 @@ class BotsManager {
                     trend_analysis_period: 30,
                     trend_price_change_threshold: 7,
                     trend_candles_threshold: 70,
-                    break_even_trigger: 100.0,
+                    break_even_trigger: 20.0,
                     enable_maturity_check: true,
                     min_candles_for_maturity: 200,
                     min_rsi_low: 35,
@@ -6404,10 +6449,28 @@ class BotsManager {
         if (takeProfitDupEl) takeProfitDupEl.value = config.take_profit_percent || 20.0;
         
         const trailingActivationDupEl = document.getElementById('trailingStopActivationDup');
-        if (trailingActivationDupEl) trailingActivationDupEl.value = config.trailing_stop_activation || 300.0;
+        if (trailingActivationDupEl) {
+            const value = Number.parseFloat(config.trailing_stop_activation);
+            trailingActivationDupEl.value = Number.isFinite(value) ? value : 20.0;
+        }
         
         const trailingDistanceDupEl = document.getElementById('trailingStopDistanceDup');
-        if (trailingDistanceDupEl) trailingDistanceDupEl.value = config.trailing_stop_distance || 150.0;
+        if (trailingDistanceDupEl) {
+            const value = Number.parseFloat(config.trailing_stop_distance);
+            trailingDistanceDupEl.value = Number.isFinite(value) ? value : 5.0;
+        }
+
+        const trailingTakeDupEl = document.getElementById('trailingTakeDistanceDup');
+        if (trailingTakeDupEl) {
+            const value = config.trailing_take_distance;
+            trailingTakeDupEl.value = (value !== undefined && value !== null) ? value : 0.5;
+        }
+
+        const trailingIntervalDupEl = document.getElementById('trailingUpdateIntervalDup');
+        if (trailingIntervalDupEl) {
+            const value = config.trailing_update_interval;
+            trailingIntervalDupEl.value = (value !== undefined && value !== null) ? value : 3.0;
+        }
         
         const maxHoursDupEl = document.getElementById('maxPositionHoursDup');
         if (maxHoursDupEl) {
@@ -6431,8 +6494,11 @@ class BotsManager {
         
         const breakEvenTriggerDupEl = document.getElementById('breakEvenTriggerDup');
         if (breakEvenTriggerDupEl) {
-            const triggerValue = config.break_even_trigger_percent ?? config.break_even_trigger ?? 100.0;
-            breakEvenTriggerDupEl.value = triggerValue;
+            // Используем значение из конфига, если оно есть, иначе не меняем поле (оставляем текущее значение)
+            const triggerValue = config.break_even_trigger_percent ?? config.break_even_trigger;
+            if (triggerValue !== undefined && triggerValue !== null) {
+                breakEvenTriggerDupEl.value = triggerValue;
+            }
         }
         
         console.log('[BotsManager] ✅ Дублированные настройки синхронизированы');
@@ -6772,7 +6838,6 @@ class BotsManager {
             deleteAllBtn.addEventListener('click', () => this.deleteAllBots());
         }
     }
-    
     initializeConfigurationButtons() {
         console.log('[BotsManager] ⚙️ Инициализация кнопок конфигурации...');
         
@@ -8059,7 +8124,6 @@ class BotsManager {
             console.error('[BotsManager] ❌ Ошибка загрузки AI истории:', error);
         }
     }
-    
     /**
      * Загружает статистику AI vs скриптовые
      */

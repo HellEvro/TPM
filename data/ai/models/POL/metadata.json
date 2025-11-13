@@ -1,46 +1,46 @@
 {
   "symbol": "POL",
-  "trained_at": "2025-11-13T01:26:31.631227",
-  "training_seed": 297914,
-  "coin_model_seed": 298703,
+  "trained_at": "2025-11-13T04:24:04.151001",
+  "training_seed": 30843,
+  "coin_model_seed": 31540,
   "rsi_params": {
     "oversold": 35,
-    "overbought": 75,
+    "overbought": 68,
     "exit_long_with_trend": 63,
-    "exit_long_against_trend": 60,
-    "exit_short_with_trend": 38,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 33,
     "exit_short_against_trend": 42
   },
   "risk_params": {
-    "stop_loss": 13.487123545871249,
-    "take_profit": 19.9708161330421,
-    "trailing_stop_activation": 38.74042442157045,
-    "trailing_stop_distance": 12.339850454725424,
+    "stop_loss": 18.328895726758518,
+    "take_profit": 12.003951186354191,
+    "trailing_stop_activation": 15.587738630024345,
+    "trailing_stop_distance": 5.0,
     "break_even_protection": true,
-    "break_even_trigger": 155.86081903981096,
+    "break_even_trigger": 75.04553250046928,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 3,
-      "upper": 63,
-      "lower": 33
+      "candles": 5,
+      "upper": 65,
+      "lower": 31
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 6,
-      "single_candle_percent": 19.498706884289064,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 48.27478734921342
+      "candles": 7,
+      "single_candle_percent": 6.93999101187279,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 58.445072670746434
     }
   },
-  "candles_count": 1568,
+  "candles_count": 1669,
   "trades_count": 5,
   "win_rate": 40.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 3.1105895518072846e-07,
-  "total_pnl": -0.16749966712115136,
-  "previous_candles_count": 1585,
-  "candles_increased": false
+  "profit_mse": 4.713237264365473e-07,
+  "total_pnl": -0.5042037414458014,
+  "previous_candles_count": 1658,
+  "candles_increased": true
 }

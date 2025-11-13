@@ -113,6 +113,78 @@
       "rsi": null,
       "trend": "UP",
       "details": "Открыта позиция SHORT для XNO: размер 6.5396, цена входа 1.6349 [SCRIPT]"
+    },
+    {
+      "id": "close_VELODROME_1762996529.311385",
+      "timestamp": "2025-11-13T04:15:29.311392",
+      "action_type": "POSITION_CLOSED",
+      "action_name": "Закрытие позиции",
+      "bot_id": "VELODROME",
+      "symbol": "VELODROME",
+      "direction": "SHORT",
+      "exit_price": 0.04112,
+      "pnl": 0.9350000000000004,
+      "roi": 185.25856944719646,
+      "reason": "MANUAL_CLOSE",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "is_successful": true,
+      "details": "Закрыта позиция SHORT для VELODROME: цена выхода 0.0411, PnL: 0.94 USDT (185.26%) [SCRIPT, ✅]",
+      "entry_data": {
+        "entry_price": 0.05047,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 11.986575123888889,
+        "max_profit_achieved": 0.0
+      },
+      "entry_price": 0.05047,
+      "entry_rsi": null,
+      "entry_volatility": null,
+      "entry_trend": null,
+      "market_data": {
+        "exit_price": 0.04112,
+        "price_movement": -18.525856944719642
+      },
+      "exit_volatility": null,
+      "exit_trend": null,
+      "price_movement": -18.525856944719642
+    },
+    {
+      "id": "close_XNO_1762996529.834037",
+      "timestamp": "2025-11-13T04:15:29.834041",
+      "action_type": "POSITION_CLOSED",
+      "action_name": "Закрытие позиции",
+      "bot_id": "XNO",
+      "symbol": "XNO",
+      "direction": "SHORT",
+      "exit_price": 1.3437,
+      "pnl": 1.1648000000000005,
+      "roi": 89.05743470548661,
+      "reason": "MANUAL_CLOSE",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "is_successful": true,
+      "details": "Закрыта позиция SHORT для XNO: цена выхода 1.3437, PnL: 1.16 USDT (89.06%) [SCRIPT, ✅]",
+      "entry_data": {
+        "entry_price": 1.6349,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 4.242009149722222,
+        "max_profit_achieved": 0.0
+      },
+      "entry_price": 1.6349,
+      "entry_rsi": null,
+      "entry_volatility": null,
+      "entry_trend": null,
+      "market_data": {
+        "exit_price": 1.3437,
+        "price_movement": -17.81148694109732
+      },
+      "exit_volatility": null,
+      "exit_trend": null,
+      "price_movement": -17.81148694109732
     }
   ],
   "trades": [
@@ -141,14 +213,29 @@
       "direction": "SHORT",
       "size": 5.047,
       "entry_price": 0.05047,
-      "exit_price": null,
-      "pnl": null,
-      "status": "OPEN",
+      "exit_price": 0.04112,
+      "pnl": 0.9350000000000004,
+      "status": "CLOSED",
       "decision_source": "SCRIPT",
       "ai_decision_id": null,
       "ai_confidence": null,
       "rsi": null,
-      "trend": "UP"
+      "trend": "UP",
+      "roi": 185.25856944719646,
+      "close_timestamp": "2025-11-13T04:15:29.312487",
+      "close_reason": "MANUAL_CLOSE",
+      "is_successful": true,
+      "entry_data": {
+        "entry_price": 0.05047,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 11.986575123888889,
+        "max_profit_achieved": 0.0
+      },
+      "exit_market_data": {
+        "exit_price": 0.04112,
+        "price_movement": -18.525856944719642
+      }
     },
     {
       "id": "trade_ZEREBRO_1762948872.100854",
@@ -192,15 +279,30 @@
       "direction": "SHORT",
       "size": 6.5396,
       "entry_price": 1.6349,
-      "exit_price": null,
-      "pnl": null,
-      "status": "OPEN",
+      "exit_price": 1.3437,
+      "pnl": 1.1648000000000005,
+      "status": "CLOSED",
       "decision_source": "SCRIPT",
       "ai_decision_id": null,
       "ai_confidence": null,
       "rsi": null,
-      "trend": "UP"
+      "trend": "UP",
+      "roi": 89.05743470548661,
+      "close_timestamp": "2025-11-13T04:15:29.834581",
+      "close_reason": "MANUAL_CLOSE",
+      "is_successful": true,
+      "entry_data": {
+        "entry_price": 1.6349,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 4.242009149722222,
+        "max_profit_achieved": 0.0
+      },
+      "exit_market_data": {
+        "exit_price": 1.3437,
+        "price_movement": -17.81148694109732
+      }
     }
   ],
-  "last_update": "2025-11-12T21:00:58.599829"
+  "last_update": "2025-11-13T04:15:29.834587"
 }
