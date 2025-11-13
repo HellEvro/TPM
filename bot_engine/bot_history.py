@@ -609,7 +609,8 @@ def log_position_opened(bot_id: str, symbol: str, direction: str, size: float,
 
 
 def log_position_closed(bot_id: str, symbol: str, direction: str, exit_price: float, 
-                       pnl: float, roi: float, reason: str = None, entry_data: Dict = None):
+                       pnl: float, roi: float, reason: str = None, entry_data: Dict = None,
+                       market_data: Optional[Dict] = None, ai_decision_id: Optional[str] = None):
     """Логирование закрытия позиции"""
     bot_history_manager.log_position_closed(
         bot_id,
@@ -620,6 +621,8 @@ def log_position_closed(bot_id: str, symbol: str, direction: str, exit_price: fl
         roi,
         reason,
         entry_data=entry_data,
+        market_data=market_data,
+        ai_decision_id=ai_decision_id,
     )
 
 
