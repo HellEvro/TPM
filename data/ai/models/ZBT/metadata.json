@@ -1,0 +1,46 @@
+{
+  "symbol": "ZBT",
+  "trained_at": "2025-11-13T16:18:25.981141",
+  "training_seed": 886151,
+  "coin_model_seed": 886309,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 70,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 17.925488885473378,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 14.483333154190719,
+    "trailing_stop_distance": 20.69527188877642,
+    "break_even_protection": true,
+    "break_even_trigger": 136.85378171418813,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 59,
+      "lower": 39
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 23.640382774177876,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 62.79275620050305
+    }
+  },
+  "candles_count": 109,
+  "trades_count": 10,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.6837327327889602e-06,
+  "total_pnl": -0.2276331224578362,
+  "previous_candles_count": 109,
+  "candles_increased": false
+}

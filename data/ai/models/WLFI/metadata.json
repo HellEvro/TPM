@@ -1,0 +1,46 @@
+{
+  "symbol": "WLFI",
+  "trained_at": "2025-11-13T16:18:24.768695",
+  "training_seed": 886151,
+  "coin_model_seed": 886843,
+  "rsi_params": {
+    "oversold": 30,
+    "overbought": 67,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 18.79280796533117,
+    "take_profit": 12.383466995788655,
+    "trailing_stop_activation": 37.466765306319424,
+    "trailing_stop_distance": 7.34288214047344,
+    "break_even_protection": false,
+    "break_even_trigger": 103.61134366265446,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 67,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 9.486440617533534,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 58.58365098765579
+    }
+  },
+  "candles_count": 330,
+  "trades_count": 7,
+  "win_rate": 14.285714285714285,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.73389800400065e-06,
+  "total_pnl": -2.0689591314593665,
+  "previous_candles_count": 330,
+  "candles_increased": false
+}

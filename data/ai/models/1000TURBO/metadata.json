@@ -1,0 +1,46 @@
+{
+  "symbol": "1000TURBO",
+  "trained_at": "2025-11-13T16:19:46.898031",
+  "training_seed": 984398,
+  "coin_model_seed": 985384,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 14.09661823248122,
+    "take_profit": 11.522305696387864,
+    "trailing_stop_activation": 42.33372448333979,
+    "trailing_stop_distance": 22.67315613065101,
+    "break_even_protection": false,
+    "break_even_trigger": 154.46283546900736,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 62,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 9.53667026056917,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 35.081431645310474
+    }
+  },
+  "candles_count": 2414,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.0400175973171266e-06,
+  "total_pnl": -0.5508910030971575,
+  "previous_candles_count": 2328,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "1000000CHEEMS",
+  "trained_at": "2025-11-13T16:19:46.746572",
+  "training_seed": 984398,
+  "coin_model_seed": 985041,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 77,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 13.895421744896097,
+    "take_profit": 14.059649752367513,
+    "trailing_stop_activation": 15.060838395427092,
+    "trailing_stop_distance": 16.439466169139077,
+    "break_even_protection": true,
+    "break_even_trigger": 161.29408874927233,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 70,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 6.297066415983361,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 67.78670536946598
+    }
+  },
+  "candles_count": 1313,
+  "trades_count": 9,
+  "win_rate": 55.55555555555556,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.3845118033966373e-06,
+  "total_pnl": 0.2574422607120563,
+  "previous_candles_count": 1260,
+  "candles_increased": true
+}

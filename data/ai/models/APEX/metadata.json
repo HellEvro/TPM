@@ -1,0 +1,46 @@
+{
+  "symbol": "APEX",
+  "trained_at": "2025-11-13T16:14:57.028944",
+  "training_seed": 692580,
+  "coin_model_seed": 692740,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 70,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 13.773640064376565,
+    "take_profit": 26.197084660171114,
+    "trailing_stop_activation": 8.260987857899654,
+    "trailing_stop_distance": 10.95778331284994,
+    "break_even_protection": true,
+    "break_even_trigger": 127.2469775240149,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 71,
+      "lower": 30
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 23.529963244950526,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 48.75595074949835
+    }
+  },
+  "candles_count": 186,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.280072761433616e-06,
+  "total_pnl": 0.1751560374841968,
+  "previous_candles_count": 186,
+  "candles_increased": false
+}

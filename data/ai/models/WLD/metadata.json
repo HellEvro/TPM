@@ -1,0 +1,46 @@
+{
+  "symbol": "WLD",
+  "trained_at": "2025-11-13T16:13:22.219308",
+  "training_seed": 580477,
+  "coin_model_seed": 580625,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 72,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 12.977889476446672,
+    "take_profit": 34.91242608697742,
+    "trailing_stop_activation": 22.254975388508196,
+    "trailing_stop_distance": 5.145244300717481,
+    "break_even_protection": false,
+    "break_even_trigger": 153.51513453475943,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 62,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 24.82971799399728,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 35.75769952009165
+    }
+  },
+  "candles_count": 3186,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.5217227980369175e-05,
+  "total_pnl": 1.8249504849268057,
+  "previous_candles_count": 3243,
+  "candles_increased": false
+}

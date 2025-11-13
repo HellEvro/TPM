@@ -1,8 +1,8 @@
 {
   "symbol": "SYRUP",
-  "trained_at": "2025-11-13T15:59:38.902613",
-  "training_seed": 741147,
-  "coin_model_seed": 741929,
+  "trained_at": "2025-11-13T16:18:46.804621",
+  "training_seed": 911006,
+  "coin_model_seed": 911509,
   "rsi_params": {
     "oversold": 33,
     "overbought": 65,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 44
   },
   "risk_params": {
-    "stop_loss": 15.750713689886007,
-    "take_profit": 14.254671621759668,
-    "trailing_stop_activation": 26.125366326819275,
-    "trailing_stop_distance": 5.0,
+    "stop_loss": 14.720784519521619,
+    "take_profit": 28.54270269200903,
+    "trailing_stop_activation": 33.80800822536095,
+    "trailing_stop_distance": 10.531578938324618,
     "break_even_protection": true,
-    "break_even_trigger": 86.14553862536773,
+    "break_even_trigger": 169.11468531594934,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 10,
-      "upper": 67,
-      "lower": 38
+      "candles": 9,
+      "upper": 64,
+      "lower": 34
     },
     "exit_scam_filter": {
       "enabled": true,
       "candles": 6,
-      "single_candle_percent": 10.60566465802565,
-      "multi_candle_count": 6,
-      "multi_candle_percent": 41.03380081295634
+      "single_candle_percent": 19.006893995760823,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 47.0421721280548
     }
   },
-  "candles_count": 514,
+  "candles_count": 622,
   "trades_count": 5,
-  "win_rate": 100.0,
+  "win_rate": 20.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 2.6557472317907695e-07,
-  "total_pnl": 0.8036984856779892,
-  "previous_candles_count": 0,
-  "candles_increased": true
+  "profit_mse": 6.871797570349589e-07,
+  "total_pnl": -0.9702782695807343,
+  "previous_candles_count": 711,
+  "candles_increased": false
 }

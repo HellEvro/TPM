@@ -1,0 +1,46 @@
+{
+  "symbol": "COW",
+  "trained_at": "2025-11-13T16:12:46.888618",
+  "training_seed": 559809,
+  "coin_model_seed": 560016,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 68,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 14.84202476668105,
+    "take_profit": 18.83247290156605,
+    "trailing_stop_activation": 14.898761589208714,
+    "trailing_stop_distance": 8.110425948111404,
+    "break_even_protection": false,
+    "break_even_trigger": 172.3342562809066,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 59,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 6.1663174828451535,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 62.855621015936464
+    }
+  },
+  "candles_count": 1355,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.6201777342705802e-05,
+  "total_pnl": 1.1838596445646776,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

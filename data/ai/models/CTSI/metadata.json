@@ -1,0 +1,46 @@
+{
+  "symbol": "CTSI",
+  "trained_at": "2025-11-13T16:10:11.409775",
+  "training_seed": 404633,
+  "coin_model_seed": 405585,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 69,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 13.135759916172919,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 19.250636112769726,
+    "trailing_stop_distance": 7.957600493396626,
+    "break_even_protection": true,
+    "break_even_trigger": 111.36544894008429,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 66,
+      "lower": 35
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 12.943621880432616,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 66.54316318400747
+    }
+  },
+  "candles_count": 4949,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.4657193801037447e-07,
+  "total_pnl": -0.07502557896837511,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

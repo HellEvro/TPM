@@ -1,0 +1,46 @@
+{
+  "symbol": "ARPA",
+  "trained_at": "2025-11-13T16:19:48.901707",
+  "training_seed": 984398,
+  "coin_model_seed": 985318,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 67,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 14.253955441853847,
+    "take_profit": 18.36752515384689,
+    "trailing_stop_activation": 19.294479666249245,
+    "trailing_stop_distance": 13.864759140982905,
+    "break_even_protection": true,
+    "break_even_trigger": 188.9321912826463,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 68,
+      "lower": 33
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 23.478602672171878,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 49.633714057105415
+    }
+  },
+  "candles_count": 4870,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 9.375346443499144e-07,
+  "total_pnl": -0.24955578472055368,
+  "previous_candles_count": 4869,
+  "candles_increased": true
+}

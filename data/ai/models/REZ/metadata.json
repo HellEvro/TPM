@@ -1,0 +1,46 @@
+{
+  "symbol": "REZ",
+  "trained_at": "2025-11-13T16:20:02.698577",
+  "training_seed": 984398,
+  "coin_model_seed": 984907,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 65,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 20.26647373099209,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 17.18603035627189,
+    "trailing_stop_distance": 16.583123000171934,
+    "break_even_protection": false,
+    "break_even_trigger": 161.55577714750234,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 65,
+      "lower": 29
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 19.188088116861675,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 49.2903750222754
+    }
+  },
+  "candles_count": 2107,
+  "trades_count": 7,
+  "win_rate": 28.57142857142857,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.337720073667564e-07,
+  "total_pnl": -0.48917872669948625,
+  "previous_candles_count": 2095,
+  "candles_increased": true
+}

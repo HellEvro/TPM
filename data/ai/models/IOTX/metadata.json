@@ -1,0 +1,46 @@
+{
+  "symbol": "IOTX",
+  "trained_at": "2025-11-13T16:19:56.119691",
+  "training_seed": 984398,
+  "coin_model_seed": 984855,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 70,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 9.082104184486601,
+    "take_profit": 26.027428870452763,
+    "trailing_stop_activation": 30.540376814243942,
+    "trailing_stop_distance": 14.436099885408922,
+    "break_even_protection": true,
+    "break_even_trigger": 149.8406734823219,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 69,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 8.64844371604044,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 35.22536916449718
+    }
+  },
+  "candles_count": 4862,
+  "trades_count": 7,
+  "win_rate": 28.57142857142857,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.718791840567264e-07,
+  "total_pnl": -0.7273392902336078,
+  "previous_candles_count": 4824,
+  "candles_increased": true
+}

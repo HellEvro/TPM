@@ -1,0 +1,46 @@
+{
+  "symbol": "WOO",
+  "trained_at": "2025-11-13T16:13:50.016423",
+  "training_seed": 609311,
+  "coin_model_seed": 609325,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 66,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 9.988366076485429,
+    "take_profit": 13.652344262162725,
+    "trailing_stop_activation": 12.279028837679283,
+    "trailing_stop_distance": 5.836588967738342,
+    "break_even_protection": true,
+    "break_even_trigger": 69.94411918470831,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 68,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 20.01396559523838,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 42.04039760945609
+    }
+  },
+  "candles_count": 4851,
+  "trades_count": 6,
+  "win_rate": 83.33333333333334,
+  "signal_accuracy": 1.0,
+  "profit_mse": 9.053486358569827e-07,
+  "total_pnl": 0.5025809460776893,
+  "previous_candles_count": 4990,
+  "candles_increased": false
+}

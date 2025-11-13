@@ -1,0 +1,46 @@
+{
+  "symbol": "TUT",
+  "trained_at": "2025-11-13T16:13:20.272510",
+  "training_seed": 580477,
+  "coin_model_seed": 580684,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 70,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 15.61873352448811,
+    "take_profit": 30.881298738015172,
+    "trailing_stop_activation": 17.45215706354218,
+    "trailing_stop_distance": 19.848466582856517,
+    "break_even_protection": true,
+    "break_even_trigger": 133.268664567679,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 62,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 11.79908794628224,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 64.79318043035263
+    }
+  },
+  "candles_count": 946,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.29659717387525e-06,
+  "total_pnl": -0.0884897012137765,
+  "previous_candles_count": 763,
+  "candles_increased": true
+}

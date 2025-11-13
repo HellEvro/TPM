@@ -1,0 +1,46 @@
+{
+  "symbol": "PUNDIX",
+  "trained_at": "2025-11-13T16:12:58.573550",
+  "training_seed": 559809,
+  "coin_model_seed": 559837,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 12.933712108586779,
+    "take_profit": 29.87237246764713,
+    "trailing_stop_activation": 44.01722879720957,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 107.4185607875013,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 62,
+      "lower": 35
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 18.446678227109203,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 56.064055308939956
+    }
+  },
+  "candles_count": 602,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.1749681676122191e-06,
+  "total_pnl": 0.05413606027211749,
+  "previous_candles_count": 747,
+  "candles_increased": false
+}

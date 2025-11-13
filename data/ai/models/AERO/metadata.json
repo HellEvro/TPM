@@ -1,8 +1,8 @@
 {
   "symbol": "AERO",
-  "trained_at": "2025-11-13T15:59:05.846742",
-  "training_seed": 741147,
-  "coin_model_seed": 741427,
+  "trained_at": "2025-11-13T16:19:47.445813",
+  "training_seed": 984398,
+  "coin_model_seed": 985303,
   "rsi_params": {
     "oversold": 26,
     "overbought": 67,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 45
   },
   "risk_params": {
-    "stop_loss": 18.994325473006686,
-    "take_profit": 23.565237654172883,
-    "trailing_stop_activation": 15.615066549670335,
-    "trailing_stop_distance": 20.48029533738035,
+    "stop_loss": 19.404687145584774,
+    "take_profit": 18.458012188278893,
+    "trailing_stop_activation": 21.131320891891527,
+    "trailing_stop_distance": 21.413970815584282,
     "break_even_protection": false,
-    "break_even_trigger": 61.26407483622733,
+    "break_even_trigger": 157.34981981402257,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 6,
-      "upper": 59,
-      "lower": 34
+      "upper": 68,
+      "lower": 35
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 12,
-      "single_candle_percent": 15.511037478720295,
-      "multi_candle_count": 3,
-      "multi_candle_percent": 69.31776890204526
+      "candles": 4,
+      "single_candle_percent": 15.217349958534056,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 49.92577674831574
     }
   },
-  "candles_count": 1784,
+  "candles_count": 1942,
   "trades_count": 5,
-  "win_rate": 60.0,
+  "win_rate": 80.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.7646743511960717e-07,
-  "total_pnl": 0.10203916198840052,
-  "previous_candles_count": 0,
+  "profit_mse": 5.437621416326423e-07,
+  "total_pnl": -0.026415640535612926,
+  "previous_candles_count": 1818,
   "candles_increased": true
 }

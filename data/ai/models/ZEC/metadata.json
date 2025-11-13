@@ -1,0 +1,46 @@
+{
+  "symbol": "ZEC",
+  "trained_at": "2025-11-13T16:19:39.332981",
+  "training_seed": 958660,
+  "coin_model_seed": 958930,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 66,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 16.796796609647693,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 19.78433360076575,
+    "trailing_stop_distance": 5.704439587290841,
+    "break_even_protection": true,
+    "break_even_trigger": 116.13188139846801,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 65,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 22.70087832411355,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 58.35931819230828
+    }
+  },
+  "candles_count": 4909,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.9102172540172235e-07,
+  "total_pnl": -0.4728934003997724,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

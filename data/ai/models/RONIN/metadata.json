@@ -1,8 +1,8 @@
 {
   "symbol": "RONIN",
-  "trained_at": "2025-11-13T15:59:35.683897",
-  "training_seed": 743535,
-  "coin_model_seed": 744427,
+  "trained_at": "2025-11-13T16:18:44.251878",
+  "training_seed": 911006,
+  "coin_model_seed": 911666,
   "rsi_params": {
     "oversold": 29,
     "overbought": 70,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 42
   },
   "risk_params": {
-    "stop_loss": 18.14836833148736,
-    "take_profit": 16.882610927483473,
-    "trailing_stop_activation": 38.627069236142255,
-    "trailing_stop_distance": 13.67751753165566,
-    "break_even_protection": false,
-    "break_even_trigger": 143.21695337934943,
+    "stop_loss": 10.984386130384625,
+    "take_profit": 29.597143803656007,
+    "trailing_stop_activation": 12.797620355739431,
+    "trailing_stop_distance": 11.247401315964982,
+    "break_even_protection": true,
+    "break_even_trigger": 99.96634178430246,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 7,
-      "upper": 68,
-      "lower": 31
+      "candles": 3,
+      "upper": 67,
+      "lower": 41
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 7,
-      "single_candle_percent": 7.431690102060018,
+      "candles": 11,
+      "single_candle_percent": 9.466275135106311,
       "multi_candle_count": 3,
-      "multi_candle_percent": 36.132049116409036
+      "multi_candle_percent": 35.38552034614128
     }
   },
-  "candles_count": 930,
+  "candles_count": 895,
   "trades_count": 6,
-  "win_rate": 33.33333333333333,
+  "win_rate": 50.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 4.327165616214405e-07,
-  "total_pnl": -0.2941239020955776,
-  "previous_candles_count": 0,
-  "candles_increased": true
+  "profit_mse": 1.1313953708194983e-06,
+  "total_pnl": -0.12550778860394354,
+  "previous_candles_count": 939,
+  "candles_increased": false
 }

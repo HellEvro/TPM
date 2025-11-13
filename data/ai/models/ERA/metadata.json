@@ -1,0 +1,46 @@
+{
+  "symbol": "ERA",
+  "trained_at": "2025-11-13T16:19:27.066663",
+  "training_seed": 958660,
+  "coin_model_seed": 959101,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 72,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 18.47086553370262,
+    "take_profit": 20.747448536935813,
+    "trailing_stop_activation": 16.848046824861797,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 186.7623039571069,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 64,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 21.32333907232667,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 53.9826480250622
+    }
+  },
+  "candles_count": 477,
+  "trades_count": 9,
+  "win_rate": 55.55555555555556,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.560505112725244e-06,
+  "total_pnl": 1.77715948153967,
+  "previous_candles_count": 477,
+  "candles_increased": false
+}

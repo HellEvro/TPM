@@ -1,46 +1,46 @@
 {
   "symbol": "HIVE",
-  "trained_at": "2025-11-13T16:00:15.881035",
-  "training_seed": 793099,
-  "coin_model_seed": 793652,
+  "trained_at": "2025-11-13T16:16:57.641229",
+  "training_seed": 806767,
+  "coin_model_seed": 807114,
   "rsi_params": {
     "oversold": 35,
-    "overbought": 73,
-    "exit_long_with_trend": 69,
-    "exit_long_against_trend": 60,
-    "exit_short_with_trend": 34,
-    "exit_short_against_trend": 38
+    "overbought": 74,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 43
   },
   "risk_params": {
-    "stop_loss": 15.41159833839192,
-    "take_profit": 19.02842378882612,
-    "trailing_stop_activation": 30.2752887166464,
-    "trailing_stop_distance": 7.975009353777416,
+    "stop_loss": 17.91065606704175,
+    "take_profit": 27.33530007315623,
+    "trailing_stop_activation": 11.063485813255035,
+    "trailing_stop_distance": 5.0,
     "break_even_protection": false,
-    "break_even_trigger": 64.58270944830976,
-    "max_position_hours": 13
+    "break_even_trigger": 52.753595268932756,
+    "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 5,
-      "upper": 64,
-      "lower": 40
+      "candles": 8,
+      "upper": 67,
+      "lower": 31
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 9,
-      "single_candle_percent": 11.621637491991487,
+      "candles": 10,
+      "single_candle_percent": 23.00728275864082,
       "multi_candle_count": 4,
-      "multi_candle_percent": 69.06515112525075
+      "multi_candle_percent": 61.87476968253535
     }
   },
-  "candles_count": 1133,
-  "trades_count": 6,
-  "win_rate": 66.66666666666666,
+  "candles_count": 1123,
+  "trades_count": 7,
+  "win_rate": 71.42857142857143,
   "signal_accuracy": 1.0,
-  "profit_mse": 9.377200926660858e-07,
-  "total_pnl": 0.28119407771864174,
-  "previous_candles_count": 1106,
-  "candles_increased": true
+  "profit_mse": 5.957473426222276e-07,
+  "total_pnl": -0.003119671641787704,
+  "previous_candles_count": 1131,
+  "candles_increased": false
 }

@@ -1,8 +1,8 @@
 {
   "symbol": "NTRN",
-  "trained_at": "2025-11-13T16:00:24.769503",
-  "training_seed": 792065,
-  "coin_model_seed": 792914,
+  "trained_at": "2025-11-13T16:19:59.223966",
+  "training_seed": 984398,
+  "coin_model_seed": 984988,
   "rsi_params": {
     "oversold": 28,
     "overbought": 74,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 45
   },
   "risk_params": {
-    "stop_loss": 18.73676934109599,
-    "take_profit": 10.0,
-    "trailing_stop_activation": 21.893806750342826,
-    "trailing_stop_distance": 9.673163361807763,
+    "stop_loss": 16.620025216686066,
+    "take_profit": 18.290522340252856,
+    "trailing_stop_activation": 27.412547910598043,
+    "trailing_stop_distance": 7.686754737477592,
     "break_even_protection": true,
-    "break_even_trigger": 47.45413618504596,
+    "break_even_trigger": 143.49752735211382,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 7,
-      "upper": 62,
-      "lower": 34
+      "candles": 8,
+      "upper": 59,
+      "lower": 40
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 10,
-      "single_candle_percent": 7.343293096355474,
-      "multi_candle_count": 6,
-      "multi_candle_percent": 35.26810438235325
+      "candles": 11,
+      "single_candle_percent": 16.28338056667733,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 69.56410292290417
     }
   },
-  "candles_count": 2989,
+  "candles_count": 2869,
   "trades_count": 5,
-  "win_rate": 60.0,
+  "win_rate": 40.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 5.801555739777472e-07,
-  "total_pnl": -0.05483635454751412,
-  "previous_candles_count": 2948,
-  "candles_increased": true
+  "profit_mse": 6.656101881720486e-06,
+  "total_pnl": 0.7692102086146569,
+  "previous_candles_count": 3032,
+  "candles_increased": false
 }

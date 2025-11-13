@@ -1,8 +1,8 @@
 {
   "symbol": "ETH",
-  "trained_at": "2025-11-13T16:00:10.016773",
-  "training_seed": 793099,
-  "coin_model_seed": 793731,
+  "trained_at": "2025-11-13T16:19:00.180460",
+  "training_seed": 933740,
+  "coin_model_seed": 933833,
   "rsi_params": {
     "oversold": 32,
     "overbought": 66,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 38
   },
   "risk_params": {
-    "stop_loss": 16.097466172559656,
-    "take_profit": 19.624111245644738,
-    "trailing_stop_activation": 26.96920343896341,
-    "trailing_stop_distance": 8.404335125747398,
-    "break_even_protection": true,
-    "break_even_trigger": 53.38100835136501,
+    "stop_loss": 15.520352855160262,
+    "take_profit": 28.659998244255632,
+    "trailing_stop_activation": 20.526433527614,
+    "trailing_stop_distance": 16.61155454014721,
+    "break_even_protection": false,
+    "break_even_trigger": 110.42649242570916,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 8,
-      "upper": 68,
-      "lower": 41
+      "upper": 60,
+      "lower": 30
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 10,
-      "single_candle_percent": 10.033949904427486,
-      "multi_candle_count": 5,
-      "multi_candle_percent": 64.27601642630904
+      "candles": 5,
+      "single_candle_percent": 22.583845450545084,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 65.04235424072391
     }
   },
-  "candles_count": 4833,
+  "candles_count": 4951,
   "trades_count": 6,
-  "win_rate": 50.0,
+  "win_rate": 66.66666666666666,
   "signal_accuracy": 1.0,
-  "profit_mse": 3.2094994116243617e-07,
-  "total_pnl": -0.0376465757683336,
-  "previous_candles_count": 0,
-  "candles_increased": true
+  "profit_mse": 2.391296666605117e-07,
+  "total_pnl": 0.2791153806696785,
+  "previous_candles_count": 4991,
+  "candles_increased": false
 }

@@ -1,8 +1,8 @@
 {
   "symbol": "BNB",
-  "trained_at": "2025-11-13T16:00:03.677454",
-  "training_seed": 793099,
-  "coin_model_seed": 793191,
+  "trained_at": "2025-11-13T16:19:23.362180",
+  "training_seed": 958660,
+  "coin_model_seed": 959400,
   "rsi_params": {
     "oversold": 30,
     "overbought": 78,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 42
   },
   "risk_params": {
-    "stop_loss": 12.440640747238861,
-    "take_profit": 15.850111609904108,
-    "trailing_stop_activation": 13.09062983374103,
-    "trailing_stop_distance": 5.0,
+    "stop_loss": 17.171476602962976,
+    "take_profit": 34.30554404841059,
+    "trailing_stop_activation": 15.004666396541229,
+    "trailing_stop_distance": 12.20640277015346,
     "break_even_protection": false,
-    "break_even_trigger": 111.18857313434432,
+    "break_even_trigger": 42.4795657119937,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 10,
+      "candles": 7,
       "upper": 60,
-      "lower": 39
+      "lower": 37
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 12,
-      "single_candle_percent": 23.99919462561967,
-      "multi_candle_count": 5,
-      "multi_candle_percent": 61.37588196514436
+      "candles": 7,
+      "single_candle_percent": 5.126316050306096,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 37.02253147633833
     }
   },
-  "candles_count": 4863,
+  "candles_count": 4854,
   "trades_count": 5,
-  "win_rate": 60.0,
+  "win_rate": 40.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 5.759296617564123e-07,
-  "total_pnl": -0.18017497324361434,
-  "previous_candles_count": 0,
-  "candles_increased": true
+  "profit_mse": 3.988707816977258e-07,
+  "total_pnl": -0.17384006769639745,
+  "previous_candles_count": 4997,
+  "candles_increased": false
 }
