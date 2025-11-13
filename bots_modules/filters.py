@@ -478,7 +478,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         
         # Проверяем, что биржа доступна
         if exchange_to_use is None:
-            logger.error(f"[ERROR] Ошибка получения данных для {symbol}: 'NoneType' object has no attribute 'get_chart_data'")
+            logger.error(f"Ошибка получения данных для {symbol}: 'NoneType' object has no attribute 'get_chart_data'")
             return None
         
         # ⚡ ОПТИМИЗАЦИЯ: Проверяем кэш свечей ПЕРЕД запросом к бирже!
@@ -632,7 +632,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             original_signal = signal
             enhanced_signal = enhanced_analysis.get('enhanced_signal')
             if enhanced_signal != original_signal:
-                logger.info(f"[ENHANCED_RSI] {symbol}: Сигнал изменен {original_signal} → {enhanced_signal}")
+                logger.info(f"{symbol}: Сигнал изменен {original_signal} → {enhanced_signal}")
                 signal = enhanced_signal
                 # Если Enhanced RSI говорит WAIT - блокируем
                 if signal == 'WAIT':
@@ -874,25 +874,25 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         return result
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка получения данных для {symbol}: {e}")
+        logger.error(f"Ошибка получения данных для {symbol}: {e}")
         return None
 
 def load_all_coins_candles_fast():
     """⚡ БЫСТРАЯ загрузка ТОЛЬКО свечей для всех монет БЕЗ расчетов"""
     try:
-        logger.debug("[CANDLES_FAST] Загрузка свечей...")
+        logger.debug("Загрузка свечей...")
         
         from bots_modules.imports_and_globals import get_exchange
         current_exchange = get_exchange()
         
         if not current_exchange:
-            logger.error("[CANDLES_FAST] ❌ Биржа не инициализирована")
+            logger.error("❌ Биржа не инициализирована")
             return False
         
         # Получаем список всех пар
         pairs = current_exchange.get_all_pairs()
         if not pairs:
-            logger.error("[CANDLES_FAST] ❌ Не удалось получить список пар")
+            logger.error("❌ Не удалось получить список пар")
             return False
         
         # Загружаем ТОЛЬКО свечи пакетами (УСКОРЕННАЯ ВЕРСИЯ)
@@ -912,14 +912,14 @@ def load_all_coins_candles_fast():
             # ⚡ ВРЕМЕННОЕ УМЕНЬШЕНИЕ ВОРКЕРОВ: если в предыдущем батче был rate limit
             if rate_limit_detected:
                 current_max_workers = max(17, current_max_workers - 3)  # Уменьшаем на 3, но не меньше 17
-                logger.warning(f"[CANDLES_FAST] ⚠️ Rate limit обнаружен в предыдущем батче. Временно уменьшаем воркеры до {current_max_workers}")
+                logger.warning(f"⚠️ Rate limit обнаружен в предыдущем батче. Временно уменьшаем воркеры до {current_max_workers}")
                 rate_limit_detected = False  # Сбрасываем флаг для следующего батча
             elif current_max_workers < 20:
                 # Возвращаем к базовому значению после успешного батча
-                logger.info(f"[CANDLES_FAST] ✅ Возвращаем воркеры к базовому значению: {current_max_workers} → 20")
+                logger.info(f"✅ Возвращаем воркеры к базовому значению: {current_max_workers} → 20")
                 current_max_workers = 20
             
-            logger.debug(f"[CANDLES_FAST] Пакет {batch_num}/{total_batches}: загрузка {len(batch)} монет (воркеров: {current_max_workers})...")
+            logger.debug(f"Пакет {batch_num}/{total_batches}: загрузка {len(batch)} монет (воркеров: {current_max_workers})...")
             
             # ⚡ ОТСЛЕЖИВАНИЕ RATE LIMIT: проверяем задержку до и после батча
             delay_before_batch = current_exchange.current_request_delay if hasattr(current_exchange, 'current_request_delay') else None
@@ -949,7 +949,7 @@ def load_all_coins_candles_fast():
                 
                 if not_done:
                     unfinished_symbols = [future_to_symbol.get(future) for future in not_done if future in future_to_symbol]
-                    logger.error(f"[CANDLES_FAST] ❌ Timeout: {len(unfinished_symbols)} (of {len(future_to_symbol)}) futures unfinished")
+                    logger.error(f"❌ Timeout: {len(unfinished_symbols)} (of {len(future_to_symbol)}) futures unfinished")
                     
                     # Отменяем незавершенные задачи и фиксируем возможный rate limit
                     for future in not_done:
@@ -965,24 +965,24 @@ def load_all_coins_candles_fast():
                     if delay_after_batch > delay_before_batch:
                         # Задержка увеличилась - был rate limit
                         rate_limit_detected = True
-                        logger.warning(f"[CANDLES_FAST] ⚠️ Rate limit обнаружен в батче {batch_num}/{total_batches}: задержка увеличилась {delay_before_batch:.3f}с → {delay_after_batch:.3f}с")
+                        logger.warning(f"⚠️ Rate limit обнаружен в батче {batch_num}/{total_batches}: задержка увеличилась {delay_before_batch:.3f}с → {delay_after_batch:.3f}с")
                 
                 # Уменьшили паузу между пакетами
                 import time
                 time.sleep(0.1)  # Уменьшили с 0.3 до 0.1
         
-        logger.info(f"[CANDLES_FAST] ✅ Загрузка завершена: {len(candles_cache)} монет")
+        logger.info(f"✅ Загрузка завершена: {len(candles_cache)} монет")
         
         # ⚡ ИСПРАВЛЕНИЕ DEADLOCK: Сохраняем в глобальный кэш БЕЗ блокировки
         # rsi_data_lock может быть захвачен ContinuousDataLoader в другом потоке
         try:
-            logger.info(f"[CANDLES_FAST] 💾 Сохраняем кэш в глобальное хранилище...")
+            logger.info(f"💾 Сохраняем кэш в глобальное хранилище...")
             coins_rsi_data['candles_cache'] = candles_cache
             coins_rsi_data['last_candles_update'] = datetime.now().isoformat()
-            logger.info(f"[CANDLES_FAST] ✅ Кэш сохранен: {len(candles_cache)} монет")
-            logger.info(f"[CANDLES_FAST] ✅ Проверка: в глобальном кэше сейчас {len(coins_rsi_data.get('candles_cache', {}))} монет")
+            logger.info(f"✅ Кэш сохранен: {len(candles_cache)} монет")
+            logger.info(f"✅ Проверка: в глобальном кэше сейчас {len(coins_rsi_data.get('candles_cache', {}))} монет")
         except Exception as cache_error:
-            logger.warning(f"[CANDLES_FAST] ⚠️ Ошибка сохранения кэша: {cache_error}")
+            logger.warning(f"⚠️ Ошибка сохранения кэша: {cache_error}")
         
         # ✅ ДОПОЛНИТЕЛЬНО: Сохраняем свечи в файл кэша с НАРАЩИВАНИЕМ данных
         # Каждый раунд добавляет новые свечи к существующим, накапливая историю
@@ -1004,9 +1004,9 @@ def load_all_coins_candles_fast():
                 try:
                     with open(candles_cache_file, 'r', encoding='utf-8') as f:
                         file_cache = json.load(f)
-                    logger.debug(f"[CANDLES_FAST] Загружен существующий кэш: {len(file_cache)} монет")
+                    logger.debug(f"Загружен существующий кэш: {len(file_cache)} монет")
                 except Exception as load_error:
-                    logger.debug(f"[CANDLES_FAST] Ошибка загрузки файла кэша: {load_error}")
+                    logger.debug(f"Ошибка загрузки файла кэша: {load_error}")
             
             # ✅ НАРАЩИВАЕМ данные: объединяем старые и новые свечи
             updated_count = 0
@@ -1044,7 +1044,7 @@ def load_all_coins_candles_fast():
                 max_candles = 10000
                 if len(merged_candles) > max_candles:
                     merged_candles = merged_candles[-max_candles:]
-                    logger.debug(f"[CANDLES_FAST] Обрезано до {max_candles} свечей для {symbol}")
+                    logger.debug(f"Обрезано до {max_candles} свечей для {symbol}")
                 
                 # Обновляем кэш для этой монеты
                 old_count = len(existing_candles)
@@ -1063,29 +1063,29 @@ def load_all_coins_candles_fast():
                 total_candles_added += added_count
                 
                 if added_count > 0:
-                    logger.debug(f"[CANDLES_FAST] {symbol}: {old_count} -> {new_count} свечей (+{added_count})")
+                    logger.debug(f"{symbol}: {old_count} -> {new_count} свечей (+{added_count})")
             
             # Сохраняем обновленный кэш
             with open(candles_cache_file, 'w', encoding='utf-8') as f:
                 json.dump(file_cache, f, indent=2, ensure_ascii=False)
             
-            logger.info(f"[CANDLES_FAST] 💾 Кэш накоплен в файл: {updated_count} монет, +{total_candles_added} новых свечей -> {candles_cache_file}")
+            logger.info(f"💾 Кэш накоплен в файл: {updated_count} монет, +{total_candles_added} новых свечей -> {candles_cache_file}")
             
         except Exception as file_error:
-            logger.warning(f"[CANDLES_FAST] ⚠️ Ошибка сохранения в файл кэша: {file_error}")
+            logger.warning(f"⚠️ Ошибка сохранения в файл кэша: {file_error}")
         
         # 🔄 Сбрасываем задержку запросов после успешной загрузки раунда
         try:
             if current_exchange and hasattr(current_exchange, 'reset_request_delay'):
                 current_exchange.reset_request_delay()
-                logger.info(f"[CANDLES_FAST] 🔄 Задержка запросов сброшена к базовому значению")
+                logger.info(f"🔄 Задержка запросов сброшена к базовому значению")
         except Exception as reset_error:
-            logger.warning(f"[CANDLES_FAST] ⚠️ Ошибка сброса задержки: {reset_error}")
+            logger.warning(f"⚠️ Ошибка сброса задержки: {reset_error}")
         
         return True
         
     except Exception as e:
-        logger.error(f"[CANDLES_FAST] ❌ Ошибка: {e}")
+        logger.error(f"❌ Ошибка: {e}")
         return False
 
 def load_all_coins_rsi():
@@ -1106,34 +1106,34 @@ def load_all_coins_rsi():
         # Обновляем coins_rsi_data ТОЛЬКО после завершения всех проверок!
         temp_coins_data = {}
         
-        logger.debug("[RSI] Загрузка RSI для всех монет...")
+        logger.debug("Загрузка RSI для всех монет...")
         
         # Проверяем кэш свечей перед началом
         candles_cache_size = len(coins_rsi_data.get('candles_cache', {}))
-        logger.debug(f"[RSI] Кэш свечей: {candles_cache_size} монет")
+        logger.debug(f"Кэш свечей: {candles_cache_size} монет")
         
         # Получаем актуальную ссылку на биржу
         try:
             from bots_modules.imports_and_globals import get_exchange
             current_exchange = get_exchange()
         except Exception as e:
-            logger.error(f"[RSI] ❌ Ошибка получения биржи: {e}")
+            logger.error(f"❌ Ошибка получения биржи: {e}")
             current_exchange = None
         
         # Получаем список всех пар
         if not current_exchange:
-            logger.error("[RSI] ❌ Биржа не инициализирована")
+            logger.error("❌ Биржа не инициализирована")
             coins_rsi_data['update_in_progress'] = False
             return False
             
         pairs = current_exchange.get_all_pairs()
-        logger.debug(f"[RSI] Получено {len(pairs) if pairs else 0} пар")
+        logger.debug(f"Получено {len(pairs) if pairs else 0} пар")
         
         if not pairs or not isinstance(pairs, list):
-            logger.error("[RSI] ❌ Не удалось получить список пар с биржи")
+            logger.error("❌ Не удалось получить список пар с биржи")
             return False
         
-        logger.debug(f"[RSI] Найдено {len(pairs)} пар для анализа")
+        logger.debug(f"Найдено {len(pairs)} пар для анализа")
         
         # ⚡ БЕЗ БЛОКИРОВКИ: обновляем счетчики напрямую
         coins_rsi_data['total_coins'] = len(pairs)
@@ -1165,13 +1165,13 @@ def load_all_coins_rsi():
                         else:
                             coins_rsi_data['failed_coins'] += 1
                     except Exception as e:
-                        logger.error(f"[RSI] ❌ {symbol}: {e}")
+                        logger.error(f"❌ {symbol}: {e}")
                         coins_rsi_data['failed_coins'] += 1
             
             # ✅ Выводим прогресс в лог
             processed = coins_rsi_data['successful_coins'] + coins_rsi_data['failed_coins']
             if batch_num <= total_batches:
-                logger.info(f"[RSI] 📊 Прогресс: {processed}/{len(pairs)} ({processed*100//len(pairs)}%)")
+                logger.info(f"📊 Прогресс: {processed}/{len(pairs)} ({processed*100//len(pairs)}%)")
         
         # ✅ КРИТИЧНО: АТОМАРНОЕ обновление всех данных ОДНИМ МАХОМ!
         coins_rsi_data['coins'] = temp_coins_data
@@ -1186,30 +1186,30 @@ def load_all_coins_rsi():
         enter_long_count = sum(1 for coin in coins_rsi_data['coins'].values() if coin.get('signal') == 'ENTER_LONG')
         enter_short_count = sum(1 for coin in coins_rsi_data['coins'].values() if coin.get('signal') == 'ENTER_SHORT')
         
-        logger.info(f"[RSI] ✅ {success_count} монет | Сигналы: {enter_long_count} LONG + {enter_short_count} SHORT")
+        logger.info(f"✅ {success_count} монет | Сигналы: {enter_long_count} LONG + {enter_short_count} SHORT")
         
         if failed_count > 0:
-            logger.warning(f"[RSI] ⚠️ Ошибок: {failed_count} монет")
+            logger.warning(f"⚠️ Ошибок: {failed_count} монет")
         
         # Обновляем флаги is_mature
         try:
             update_is_mature_flags_in_rsi_data()
-            logger.debug(f"[RSI] Флаги is_mature обновлены")
+            logger.debug(f"Флаги is_mature обновлены")
         except Exception as update_error:
-            logger.warning(f"[RSI] ⚠️ Не удалось обновить is_mature: {update_error}")
+            logger.warning(f"⚠️ Не удалось обновить is_mature: {update_error}")
         
         # 🔄 Сбрасываем задержку запросов после успешной загрузки раунда
         try:
             if current_exchange and hasattr(current_exchange, 'reset_request_delay'):
                 current_exchange.reset_request_delay()
-                logger.info(f"[RSI] 🔄 Задержка запросов сброшена к базовому значению")
+                logger.info(f"🔄 Задержка запросов сброшена к базовому значению")
         except Exception as reset_error:
-            logger.warning(f"[RSI] ⚠️ Ошибка сброса задержки: {reset_error}")
+            logger.warning(f"⚠️ Ошибка сброса задержки: {reset_error}")
         
         return True
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка загрузки RSI данных: {str(e)}")
+        logger.error(f"Ошибка загрузки RSI данных: {str(e)}")
         # ⚡ БЕЗ БЛОКИРОВКИ: атомарная операция
         coins_rsi_data['update_in_progress'] = False
         return False
@@ -1217,7 +1217,7 @@ def load_all_coins_rsi():
         # Гарантированно сбрасываем флаг обновления
         # ⚡ БЕЗ БЛОКИРОВКИ: атомарная операция
         if coins_rsi_data['update_in_progress']:
-            logger.warning(f"[RSI] ⚠️ Принудительный сброс флага update_in_progress")
+            logger.warning(f"⚠️ Принудительный сброс флага update_in_progress")
             coins_rsi_data['update_in_progress'] = False
 
 def _recalculate_signal_with_trend(rsi, trend, symbol):
@@ -1836,7 +1836,7 @@ def check_exit_scam_filter(symbol, coin_data):
         
         # Если фильтр отключен - разрешаем
         if not exit_scam_enabled:
-            logger.debug(f"[EXIT_SCAM] {symbol}: Фильтр отключен")
+            logger.debug(f"{symbol}: Фильтр отключен")
             return True
         
         # Получаем свечи
@@ -1855,7 +1855,7 @@ def check_exit_scam_filter(symbol, coin_data):
         # Проверяем последние N свечей (из конфига)
         recent_candles = candles[-exit_scam_candles:]
         
-        logger.debug(f"[EXIT_SCAM] {symbol}: Анализ последних {exit_scam_candles} свечей")
+        logger.debug(f"{symbol}: Анализ последних {exit_scam_candles} свечей")
         
         # 1. ПРОВЕРКА: Одна свеча превысила максимальный % изменения
         for i, candle in enumerate(recent_candles):
@@ -1866,8 +1866,8 @@ def check_exit_scam_filter(symbol, coin_data):
             price_change = abs((close_price - open_price) / open_price) * 100
             
             if price_change > single_candle_percent:
-                logger.warning(f"[EXIT_SCAM] {symbol}: ❌ БЛОКИРОВКА: Свеча #{i+1} превысила лимит {single_candle_percent}% (было {price_change:.1f}%)")
-                logger.debug(f"[EXIT_SCAM] {symbol}: Свеча: O={open_price:.4f} C={close_price:.4f} H={candle['high']:.4f} L={candle['low']:.4f}")
+                logger.warning(f"{symbol}: ❌ БЛОКИРОВКА: Свеча #{i+1} превысила лимит {single_candle_percent}% (было {price_change:.1f}%)")
+                logger.debug(f"{symbol}: Свеча: O={open_price:.4f} C={close_price:.4f} H={candle['high']:.4f} L={candle['low']:.4f}")
                 return False
         
         # 2. ПРОВЕРКА: N свечей суммарно превысили максимальный % изменения
@@ -1882,11 +1882,11 @@ def check_exit_scam_filter(symbol, coin_data):
             total_change = abs((last_close - first_open) / first_open) * 100
             
             if total_change > multi_candle_percent:
-                logger.warning(f"[EXIT_SCAM] {symbol}: ❌ БЛОКИРОВКА: {multi_candle_count} свечей превысили суммарный лимит {multi_candle_percent}% (было {total_change:.1f}%)")
-                logger.debug(f"[EXIT_SCAM] {symbol}: Первая свеча: {first_open:.4f}, Последняя свеча: {last_close:.4f}")
+                logger.warning(f"{symbol}: ❌ БЛОКИРОВКА: {multi_candle_count} свечей превысили суммарный лимит {multi_candle_percent}% (было {total_change:.1f}%)")
+                logger.debug(f"{symbol}: Первая свеча: {first_open:.4f}, Последняя свеча: {last_close:.4f}")
                 return False
         
-        logger.debug(f"[EXIT_SCAM] {symbol}: ✅ Базовые проверки пройдены")
+        logger.debug(f"{symbol}: ✅ Базовые проверки пройдены")
         
         # 3. ПРОВЕРКА: AI Anomaly Detection (если включен)
         ai_check_enabled = True  # Включаем обратно - проблема была не в AI!
@@ -1917,33 +1917,33 @@ def check_exit_scam_filter(symbol, coin_data):
                                 # Блокируем если severity > threshold
                                 if severity > AIConfig.AI_ANOMALY_BLOCK_THRESHOLD:
                                     logger.warning(
-                                        f"[EXIT_SCAM] {symbol}: ❌ БЛОКИРОВКА (AI): "
+                                        f"{symbol}: ❌ БЛОКИРОВКА (AI): "
                                         f"Обнаружена аномалия {anomaly_type} "
                                         f"(severity: {severity:.2%})"
                                     )
                                     return False
                                 else:
                                     logger.warning(
-                                        f"[EXIT_SCAM] {symbol}: ⚠️ ПРЕДУПРЕЖДЕНИЕ (AI): "
+                                        f"{symbol}: ⚠️ ПРЕДУПРЕЖДЕНИЕ (AI): "
                                         f"Аномалия {anomaly_type} "
                                         f"(severity: {severity:.2%} - ниже порога {AIConfig.AI_ANOMALY_BLOCK_THRESHOLD:.2%})"
                                     )
                             else:
-                                logger.debug(f"[EXIT_SCAM] {symbol}: ✅ AI: Аномалий не обнаружено")
+                                logger.debug(f"{symbol}: ✅ AI: Аномалий не обнаружено")
                     
                     except ImportError as e:
-                        logger.debug(f"[EXIT_SCAM] {symbol}: AI модуль не доступен: {e}")
+                        logger.debug(f"{symbol}: AI модуль не доступен: {e}")
                     except Exception as e:
-                        logger.error(f"[EXIT_SCAM] {symbol}: Ошибка AI проверки: {e}")
+                        logger.error(f"{symbol}: Ошибка AI проверки: {e}")
         
             except ImportError:
                 pass  # AIConfig не доступен - пропускаем AI проверку
         
-                logger.debug(f"[EXIT_SCAM] {symbol}: ✅ ПРОЙДЕН")
+                logger.debug(f"{symbol}: ✅ ПРОЙДЕН")
         return True
         
     except Exception as e:
-        logger.error(f"[EXIT_SCAM] {symbol}: Ошибка проверки: {e}")
+        logger.error(f"{symbol}: Ошибка проверки: {e}")
         return False
 
 # Алиас для обратной совместимости
