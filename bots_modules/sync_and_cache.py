@@ -595,6 +595,11 @@ def save_auto_bot_config():
         
         if success:
             logger.info(f"[SAVE_CONFIG] ✅ Конфигурация автобота сохранена в bot_engine/bot_config.py")
+            # Дополнительно сохраняем в JSON для быстрого доступа и восстановления
+            try:
+                storage_save_auto_bot_config(config_data)
+            except Exception as storage_error:
+                logger.warning(f"[SAVE_CONFIG] ⚠️ Не удалось сохранить конфигурацию в JSON: {storage_error}")
             
             # ✅ КРИТИЧНО: Обновляем конфигурацию в памяти из СОХРАНЕННЫХ данных (не из DEFAULT!)
             with bots_data_lock:
