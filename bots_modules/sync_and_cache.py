@@ -737,7 +737,7 @@ def load_delisted_coins():
     
     # Если файл не существует или пустой, создаем дефолтный
     if not delisted_file.exists() or delisted_file.stat().st_size == 0:
-        logger.info("[DELISTING_CHECK] Создаем новый файл delisted.json с дефолтными данными")
+        logger.info("Создаем новый файл delisted.json с дефолтными данными")
         # Создаем папку data если её нет
         delisted_file.parent.mkdir(exist_ok=True)
         # Сохраняем дефолтные данные
@@ -745,7 +745,7 @@ def load_delisted_coins():
             with open(delisted_file, 'w', encoding='utf-8') as f:
                 json.dump(default_data, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            logger.warning(f"[DELISTING_CHECK] Не удалось создать файл delisted.json: {e}")
+            logger.warning(f"Не удалось создать файл delisted.json: {e}")
         return default_data
     
     # Пытаемся загрузить существующий файл
@@ -754,7 +754,7 @@ def load_delisted_coins():
             content = f.read().strip()
             # Если файл пустой после trim
             if not content:
-                logger.info("[DELISTING_CHECK] Файл delisted.json пустой, используем дефолтные данные")
+                logger.info("Файл delisted.json пустой, используем дефолтные данные")
                 # Записываем дефолтные данные
                 with open(delisted_file, 'w', encoding='utf-8') as fw:
                     json.dump(default_data, fw, indent=2, ensure_ascii=False)
@@ -763,16 +763,16 @@ def load_delisted_coins():
             data = json.loads(content)
             return data
     except json.JSONDecodeError as e:
-        logger.warning(f"[DELISTING_CHECK] Невалидный JSON в delisted.json, восстанавливаем дефолтные данные: {e}")
+        logger.warning(f"Невалидный JSON в delisted.json, восстанавливаем дефолтные данные: {e}")
         # Перезаписываем файл дефолтными данными
         try:
             with open(delisted_file, 'w', encoding='utf-8') as f:
                 json.dump(default_data, f, indent=2, ensure_ascii=False)
         except Exception as write_error:
-            logger.warning(f"[DELISTING_CHECK] Не удалось восстановить файл: {write_error}")
+            logger.warning(f"Не удалось восстановить файл: {write_error}")
         return default_data
     except Exception as e:
-        logger.warning(f"[DELISTING_CHECK] Ошибка загрузки delisted.json: {e}, используем дефолтные данные")
+        logger.warning(f"Ошибка загрузки delisted.json: {e}, используем дефолтные данные")
         return default_data
 
 def save_delisted_coins(data):
@@ -786,39 +786,39 @@ def save_delisted_coins(data):
         with open(delisted_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"[DELISTING_CHECK] ✅ Обновлен файл delisted.json")
+        logger.info(f"✅ Обновлен файл delisted.json")
         return True
     except Exception as e:
-        logger.error(f"[DELISTING_CHECK] Ошибка сохранения delisted.json: {e}")
+        logger.error(f"Ошибка сохранения delisted.json: {e}")
         return False
 
 def scan_all_coins_for_delisting():
     """Сканирует все монеты на предмет делистинга и обновляет delisted.json"""
     try:
-        logger.info("[DELISTING_CHECK] 🔍 Сканирование всех монет на делистинг...")
+        logger.info("🔍 Сканирование всех монет на делистинг...")
         
         # Загружаем текущие данные
         delisted_data = load_delisted_coins()
         
         if not delisted_data.get('scan_enabled', True):
-            logger.info("[DELISTING_CHECK] ⏸️ Сканирование отключено в конфигурации")
+            logger.info("⏸️ Сканирование отключено в конфигурации")
             return
         
         exchange_obj = get_exchange()
         if not exchange_obj:
-            logger.error("[DELISTING_CHECK] ❌ Exchange не инициализирован")
+            logger.error("❌ Exchange не инициализирован")
             return
         
         # Получаем все пары
         all_pairs = exchange_obj.get_all_pairs()
         if not all_pairs:
-            logger.warning("[DELISTING_CHECK] ⚠️ Не удалось получить список пар")
+            logger.warning("⚠️ Не удалось получить список пар")
             return
         
         # Фильтруем только USDT пары
         usdt_pairs = [pair for pair in all_pairs if pair.endswith('USDT')]
         
-        logger.info(f"[DELISTING_CHECK] 📊 Проверяем {len(usdt_pairs)} USDT пар")
+        logger.info(f"📊 Проверяем {len(usdt_pairs)} USDT пар")
         
         # Инициализируем структуру если её нет
         if 'delisted_coins' not in delisted_data:
@@ -851,13 +851,13 @@ def scan_all_coins_for_delisting():
                         }
                         
                         new_delisted_count += 1
-                        logger.warning(f"[DELISTING_CHECK] 🚨 НОВЫЙ ДЕЛИСТИНГ: {coin_symbol} - {status_info.get('status')}")
+                        logger.warning(f"🚨 НОВЫЙ ДЕЛИСТИНГ: {coin_symbol} - {status_info.get('status')}")
                 
                 # Небольшая задержка чтобы не перегружать API
                 time.sleep(0.05)
                 
             except Exception as e:
-                logger.debug(f"[DELISTING_CHECK] Ошибка проверки {symbol}: {e}")
+                logger.debug(f"Ошибка проверки {symbol}: {e}")
                 continue
         
         # Обновляем время последнего сканирования
@@ -865,13 +865,13 @@ def scan_all_coins_for_delisting():
         
         # Сохраняем обновленные данные
         if save_delisted_coins(delisted_data):
-            logger.info(f"[DELISTING_CHECK] ✅ Сканирование завершено:")
+            logger.info(f"✅ Сканирование завершено:")
             logger.info(f"   - Проверено символов: {checked_count}")
             logger.info(f"   - Новых делистинговых: {new_delisted_count}")
             logger.info(f"   - Всего делистинговых: {len(delisted_data['delisted_coins'])}")
         
     except Exception as e:
-        logger.error(f"[DELISTING_CHECK] ❌ Ошибка сканирования делистинга: {e}")
+        logger.error(f"❌ Ошибка сканирования делистинга: {e}")
 
 def check_delisting_emergency_close():
     """Проверяет делистинг и выполняет экстренное закрытие позиций (раз в 10 минут)"""
@@ -883,7 +883,7 @@ def check_delisting_emergency_close():
         # ✅ СНАЧАЛА: Сканируем все монеты на делистинг
         scan_all_coins_for_delisting()
         
-        logger.info(f"[DELISTING_CHECK] 🔍 Проверка делистинга для активных ботов...")
+        logger.info(f"🔍 Проверка делистинга для активных ботов...")
         
         with bots_data_lock:
             bots_in_position = [
@@ -892,16 +892,16 @@ def check_delisting_emergency_close():
             ]
         
         if not bots_in_position:
-            logger.debug(f"[DELISTING_CHECK] ℹ️ Нет активных ботов для проверки делистинга")
+            logger.debug(f"ℹ️ Нет активных ботов для проверки делистинга")
             return True
         
-        logger.info(f"[DELISTING_CHECK] 📊 Проверяем {len(bots_in_position)} активных ботов")
+        logger.info(f"📊 Проверяем {len(bots_in_position)} активных ботов")
         
         delisting_closed_count = 0
         exchange_obj = get_exchange()
         
         if not exchange_obj:
-            logger.error(f"[DELISTING_CHECK] ❌ Exchange не инициализирован")
+            logger.error(f"❌ Exchange не инициализирован")
             return False
         
         for symbol, bot_data in bots_in_position:
@@ -913,7 +913,7 @@ def check_delisting_emergency_close():
                     is_delisting = rsi_data.get('is_delisting', False) or rsi_data.get('trading_status') in ['Closed', 'Delivering']
                     
                     if is_delisting:
-                        logger.warning(f"[DELISTING_CHECK] 🚨 ДЕЛИСТИНГ ОБНАРУЖЕН для {symbol}! Инициируем экстренное закрытие")
+                        logger.warning(f"🚨 ДЕЛИСТИНГ ОБНАРУЖЕН для {symbol}! Инициируем экстренное закрытие")
                         
                         bot_instance = NewTradingBot(symbol, bot_data, exchange_obj)
                         
@@ -921,7 +921,7 @@ def check_delisting_emergency_close():
                         emergency_result = bot_instance.emergency_close_delisting()
                         
                         if emergency_result:
-                            logger.warning(f"[DELISTING_CHECK] ✅ ЭКСТРЕННОЕ ЗАКРЫТИЕ {symbol} УСПЕШНО")
+                            logger.warning(f"✅ ЭКСТРЕННОЕ ЗАКРЫТИЕ {symbol} УСПЕШНО")
                             # Обновляем статус бота
                             with bots_data_lock:
                                 if symbol in bots_data['bots']:
@@ -933,21 +933,21 @@ def check_delisting_emergency_close():
                             
                             delisting_closed_count += 1
                         else:
-                            logger.error(f"[DELISTING_CHECK] ❌ ЭКСТРЕННОЕ ЗАКРЫТИЕ {symbol} НЕУДАЧНО")
+                            logger.error(f"❌ ЭКСТРЕННОЕ ЗАКРЫТИЕ {symbol} НЕУДАЧНО")
                             
             except Exception as e:
-                logger.error(f"[DELISTING_CHECK] ❌ Ошибка проверки делистинга для {symbol}: {e}")
+                logger.error(f"❌ Ошибка проверки делистинга для {symbol}: {e}")
         
         if delisting_closed_count > 0:
-            logger.warning(f"[DELISTING_CHECK] 🚨 ЭКСТРЕННО ЗАКРЫТО {delisting_closed_count} позиций из-за делистинга!")
+            logger.warning(f"🚨 ЭКСТРЕННО ЗАКРЫТО {delisting_closed_count} позиций из-за делистинга!")
             # Сохраняем состояние после экстренного закрытия
             save_bots_state()
         
-        logger.info(f"[DELISTING_CHECK] ✅ Проверка делистинга завершена")
+        logger.info(f"✅ Проверка делистинга завершена")
         return True
         
     except Exception as e:
-        logger.error(f"[DELISTING_CHECK] ❌ Ошибка проверки делистинга: {e}")
+        logger.error(f"❌ Ошибка проверки делистинга: {e}")
         return False
 
 def update_bots_cache_data():
@@ -1623,7 +1623,7 @@ def cleanup_inactive_bots():
         
         # КРИТИЧЕСКИ ВАЖНО: Если не удалось получить позиции с биржи, НЕ УДАЛЯЕМ ботов!
         if exchange_positions is None:
-            logger.warning(f"[INACTIVE_CLEANUP] ⚠️ Не удалось получить позиции с биржи - пропускаем очистку для безопасности")
+            logger.warning(f" ⚠️ Не удалось получить позиции с биржи - пропускаем очистку для безопасности")
             return False
         
         # Нормализуем символы позиций (убираем USDT если есть)
@@ -1636,8 +1636,8 @@ def cleanup_inactive_bots():
         # Создаем множество нормализованных символов позиций на бирже
         exchange_symbols = {normalize_symbol(pos['symbol']) for pos in exchange_positions}
         
-        logger.info(f"[INACTIVE_CLEANUP] 🔍 Проверка {len(bots_data['bots'])} ботов на неактивность")
-        logger.info(f"[INACTIVE_CLEANUP] 📊 Найдено {len(exchange_symbols)} активных позиций на бирже: {sorted(exchange_symbols)}")
+        logger.info(f" 🔍 Проверка {len(bots_data['bots'])} ботов на неактивность")
+        logger.info(f" 📊 Найдено {len(exchange_symbols)} активных позиций на бирже: {sorted(exchange_symbols)}")
         
         with bots_data_lock:
             bots_to_remove = []
@@ -1648,7 +1648,7 @@ def cleanup_inactive_bots():
                 
                 # КРИТИЧЕСКИ ВАЖНО: НЕ УДАЛЯЕМ ботов, которые находятся в позиции!
                 if bot_status in ['in_position_long', 'in_position_short']:
-                    logger.info(f"[INACTIVE_CLEANUP] 🛡️ Бот {symbol} в позиции {bot_status} - НЕ УДАЛЯЕМ")
+                    logger.info(f" 🛡️ Бот {symbol} в позиции {bot_status} - НЕ УДАЛЯЕМ")
                     continue
                 
                 # Пропускаем ботов, которые имеют реальные позиции на бирже
@@ -1671,10 +1671,10 @@ def cleanup_inactive_bots():
                         created_time = datetime.fromisoformat(created_time_str.replace('Z', '+00:00'))
                         time_since_creation = current_time - created_time.timestamp()
                         if time_since_creation < 300:  # 5 минут
-                            logger.info(f"[INACTIVE_CLEANUP] ⏳ Бот {symbol} создан {time_since_creation//60:.0f} мин назад, пропускаем удаление")
+                            logger.info(f" ⏳ Бот {symbol} создан {time_since_creation//60:.0f} мин назад, пропускаем удаление")
                             continue
                     except Exception as e:
-                        logger.warning(f"[INACTIVE_CLEANUP] ⚠️ Ошибка парсинга времени создания для {symbol}: {e}")
+                        logger.warning(f" ⚠️ Ошибка парсинга времени создания для {symbol}: {e}")
                 
                 # Проверяем время последнего обновления
                 if last_update_str:
@@ -1683,15 +1683,15 @@ def cleanup_inactive_bots():
                         time_since_update = current_time - last_update.timestamp()
                         
                         if time_since_update >= SystemConfig.INACTIVE_BOT_TIMEOUT:
-                            logger.warning(f"[INACTIVE_CLEANUP] ⏰ Бот {symbol} неактивен {time_since_update//60:.0f} мин (статус: {bot_status})")
+                            logger.warning(f" ⏰ Бот {symbol} неактивен {time_since_update//60:.0f} мин (статус: {bot_status})")
                             bots_to_remove.append(symbol)
                             
                             # Логируем удаление неактивного бота в историю
                             # log_bot_stop(symbol, f"Неактивен {time_since_update//60:.0f} мин (статус: {bot_status})")  # TODO: Функция не определена
                         else:
-                            logger.info(f"[INACTIVE_CLEANUP] ⏳ Бот {symbol} неактивен {time_since_update//60:.0f} мин, ждем до {SystemConfig.INACTIVE_BOT_TIMEOUT//60} мин")
+                            logger.info(f" ⏳ Бот {symbol} неактивен {time_since_update//60:.0f} мин, ждем до {SystemConfig.INACTIVE_BOT_TIMEOUT//60} мин")
                     except Exception as e:
-                        logger.error(f"[INACTIVE_CLEANUP] ❌ Ошибка парсинга времени для {symbol}: {e}")
+                        logger.error(f" ❌ Ошибка парсинга времени для {symbol}: {e}")
                         # Если не можем распарсить время, считаем бота неактивным
                         bots_to_remove.append(symbol)
                 else:
@@ -1704,23 +1704,23 @@ def cleanup_inactive_bots():
                             time_since_creation = current_time - created_at.timestamp()
                             
                             if time_since_creation < 300:  # 5 минут
-                                logger.info(f"[INACTIVE_CLEANUP] ⏳ Бот {symbol} создан {time_since_creation//60:.0f} мин назад, нет last_update - пропускаем удаление")
+                                logger.info(f" ⏳ Бот {symbol} создан {time_since_creation//60:.0f} мин назад, нет last_update - пропускаем удаление")
                                 continue
                             else:
-                                logger.warning(f"[INACTIVE_CLEANUP] ⏰ Бот {symbol} без last_update и создан {time_since_creation//60:.0f} мин назад - удаляем")
+                                logger.warning(f" ⏰ Бот {symbol} без last_update и создан {time_since_creation//60:.0f} мин назад - удаляем")
                                 bots_to_remove.append(symbol)
                         except Exception as e:
-                            logger.error(f"[INACTIVE_CLEANUP] ❌ Ошибка парсинга created_at для {symbol}: {e}")
+                            logger.error(f" ❌ Ошибка парсинга created_at для {symbol}: {e}")
                             # Если не можем распарсить, НЕ УДАЛЯЕМ (безопаснее)
-                            logger.warning(f"[INACTIVE_CLEANUP] ⚠️ Бот {symbol} без времени - НЕ УДАЛЯЕМ для безопасности")
+                            logger.warning(f" ⚠️ Бот {symbol} без времени - НЕ УДАЛЯЕМ для безопасности")
                     else:
                         # Нет ни last_update, ни created_at - очень странная ситуация
-                        logger.warning(f"[INACTIVE_CLEANUP] ⚠️ Бот {symbol} без времени обновления и создания - НЕ УДАЛЯЕМ для безопасности")
+                        logger.warning(f" ⚠️ Бот {symbol} без времени обновления и создания - НЕ УДАЛЯЕМ для безопасности")
             
             # Удаляем неактивных ботов
             for symbol in bots_to_remove:
                 bot_data = bots_data['bots'][symbol]
-                logger.info(f"[INACTIVE_CLEANUP] 🗑️ Удаление неактивного бота {symbol} (статус: {bot_data.get('status')})")
+                logger.info(f" 🗑️ Удаление неактивного бота {symbol} (статус: {bot_data.get('status')})")
                 
                 # ✅ УДАЛЯЕМ ПОЗИЦИЮ ИЗ РЕЕСТРА ПРИ УДАЛЕНИИ НЕАКТИВНОГО БОТА
                 try:
@@ -1729,27 +1729,27 @@ def cleanup_inactive_bots():
                     if position and position.get('order_id'):
                         order_id = position['order_id']
                         unregister_bot_position(order_id)
-                        logger.info(f"[INACTIVE_CLEANUP] ✅ Позиция удалена из реестра при удалении неактивного бота {symbol}: order_id={order_id}")
+                        logger.info(f" ✅ Позиция удалена из реестра при удалении неактивного бота {symbol}: order_id={order_id}")
                     else:
-                        logger.info(f"[INACTIVE_CLEANUP] ℹ️ У неактивного бота {symbol} нет позиции в реестре")
+                        logger.info(f" ℹ️ У неактивного бота {symbol} нет позиции в реестре")
                 except Exception as registry_error:
-                    logger.error(f"[INACTIVE_CLEANUP] ❌ Ошибка удаления позиции из реестра для бота {symbol}: {registry_error}")
+                    logger.error(f" ❌ Ошибка удаления позиции из реестра для бота {symbol}: {registry_error}")
                     # Не блокируем удаление бота из-за ошибки реестра
                 
                 del bots_data['bots'][symbol]
                 removed_count += 1
         
         if removed_count > 0:
-            logger.info(f"[INACTIVE_CLEANUP] ✅ Удалено {removed_count} неактивных ботов")
+            logger.info(f" ✅ Удалено {removed_count} неактивных ботов")
             # Сохраняем состояние
             save_bots_state()
         else:
-            logger.info(f"[INACTIVE_CLEANUP] ✅ Неактивных ботов для удаления не найдено")
+            logger.info(f" ✅ Неактивных ботов для удаления не найдено")
         
         return removed_count > 0
         
     except Exception as e:
-        logger.error(f"[INACTIVE_CLEANUP] ❌ Ошибка очистки неактивных ботов: {e}")
+        logger.error(f" ❌ Ошибка очистки неактивных ботов: {e}")
         return False
 
 # УДАЛЕНО: cleanup_mature_coins_without_trades()
@@ -1814,13 +1814,13 @@ def check_trading_rules_activation():
             auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
         
         if not auto_bot_enabled:
-            logger.info(f"[TRADING_RULES] ⏹️ Auto Bot выключен - пропускаем активацию правил торговли")
+            logger.info(f" ⏹️ Auto Bot выключен - пропускаем активацию правил торговли")
             return False
         
         current_time = time.time()
         activated_count = 0
         
-        logger.info(f"[TRADING_RULES] 🔍 Проверка активации правил торговли для зрелых монет")
+        logger.info(f" 🔍 Проверка активации правил торговли для зрелых монет")
         
         # ✅ ИСПРАВЛЕНИЕ: НЕ создаем ботов автоматически для всех зрелых монет!
         # Вместо этого просто обновляем время проверки в mature_coins_storage
@@ -1837,16 +1837,16 @@ def check_trading_rules_activation():
                     activated_count += 1
         
         if activated_count > 0:
-            logger.info(f"[TRADING_RULES] ✅ Обновлено время проверки для {activated_count} зрелых монет")
+            logger.info(f" ✅ Обновлено время проверки для {activated_count} зрелых монет")
             # Сохраняем обновленные данные зрелых монет
             save_mature_coins_storage()
         else:
-            logger.info(f"[TRADING_RULES] ✅ Нет зрелых монет для обновления времени проверки")
+            logger.info(f" ✅ Нет зрелых монет для обновления времени проверки")
         
         return activated_count > 0
         
     except Exception as e:
-        logger.error(f"[TRADING_RULES] ❌ Ошибка активации правил торговли: {e}")
+        logger.error(f" ❌ Ошибка активации правил торговли: {e}")
         return False
 
 def check_missing_stop_losses():
@@ -1867,7 +1867,7 @@ def check_missing_stop_losses():
                 if current_exchange:
                     break
             except (NameError, AttributeError) as e:
-                logger.debug(f"[STOP_LOSS_SETUP] get_exchange() недоступен: {e}")
+                logger.debug(f" get_exchange() недоступен: {e}")
             
             # Попытка 2: Использовать глобальную переменную exchange
             if not current_exchange:
@@ -1880,21 +1880,21 @@ def check_missing_stop_losses():
             
             # Попытка 3: Попытаться инициализировать через ensure_exchange_initialized
             if not current_exchange:
-                logger.error(f"[STOP_LOSS_SETUP] ❌ КРИТИЧЕСКАЯ ОШИБКА: Exchange недоступен (попытка {attempt + 1}/{max_retries})")
+                logger.error(f" ❌ КРИТИЧЕСКАЯ ОШИБКА: Exchange недоступен (попытка {attempt + 1}/{max_retries})")
                 if ensure_exchange_initialized():
                     # После инициализации ВСЕГДА используем get_exchange() (не локальную переменную exchange!)
                     # потому что set_exchange() обновляет _state.exchange, но не локальные переменные
                     try:
                         current_exchange = get_exchange()
                         if current_exchange:
-                            logger.info(f"[STOP_LOSS_SETUP] ✅ Exchange восстановлен после инициализации через get_exchange() (попытка {attempt + 1})")
+                            logger.info(f" ✅ Exchange восстановлен после инициализации через get_exchange() (попытка {attempt + 1})")
                             break
                         else:
-                            logger.error(f"[STOP_LOSS_SETUP] ❌ ensure_exchange_initialized() вернул True, но get_exchange() всё ещё None!")
+                            logger.error(f" ❌ ensure_exchange_initialized() вернул True, но get_exchange() всё ещё None!")
                     except Exception as e:
-                        logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка получения exchange после инициализации: {e}")
+                        logger.error(f" ❌ Ошибка получения exchange после инициализации: {e}")
                 else:
-                    logger.error(f"[STOP_LOSS_SETUP] ❌ КРИТИЧЕСКАЯ ОШИБКА: ensure_exchange_initialized() вернул False (попытка {attempt + 1}/{max_retries})")
+                    logger.error(f" ❌ КРИТИЧЕСКАЯ ОШИБКА: ensure_exchange_initialized() вернул False (попытка {attempt + 1}/{max_retries})")
             
             # Если не получилось, ждем немного перед следующей попыткой
             if attempt < max_retries - 1:
@@ -1903,22 +1903,22 @@ def check_missing_stop_losses():
         
         # ФИНАЛЬНАЯ ПРОВЕРКА: Если exchange всё ещё недоступен - это КРИТИЧЕСКАЯ ОШИБКА
         if not current_exchange:
-            logger.error(f"[STOP_LOSS_SETUP] ❌ КРИТИЧЕСКАЯ ОШИБКА: Exchange объект недоступен после {max_retries} попыток!")
+            logger.error(f" ❌ КРИТИЧЕСКАЯ ОШИБКА: Exchange объект недоступен после {max_retries} попыток!")
             # Безопасная диагностика
             try:
                 get_exchange_result = get_exchange()
-                logger.error(f"[STOP_LOSS_SETUP] ❌ get_exchange() = {get_exchange_result}")
+                logger.error(f" ❌ get_exchange() = {get_exchange_result}")
             except Exception as e:
-                logger.error(f"[STOP_LOSS_SETUP] ❌ get_exchange() недоступен: {e}")
+                logger.error(f" ❌ get_exchange() недоступен: {e}")
             try:
-                logger.error(f"[STOP_LOSS_SETUP] ❌ exchange = {exchange}")
+                logger.error(f" ❌ exchange = {exchange}")
             except Exception as e:
-                logger.error(f"[STOP_LOSS_SETUP] ❌ exchange недоступен: {e}")
-            logger.error(f"[STOP_LOSS_SETUP] ❌ СТОП-ЛОССЫ НЕ МОГУТ БЫТЬ УСТАНОВЛЕНЫ! Это критическая проблема безопасности!")
-            logger.error(f"[STOP_LOSS_SETUP] ❌ Проверьте: 1) Ключи API корректны 2) Сеть доступна 3) Биржа работает")
+                logger.error(f" ❌ exchange недоступен: {e}")
+            logger.error(f" ❌ СТОП-ЛОССЫ НЕ МОГУТ БЫТЬ УСТАНОВЛЕНЫ! Это критическая проблема безопасности!")
+            logger.error(f" ❌ Проверьте: 1) Ключи API корректны 2) Сеть доступна 3) Биржа работает")
             return False
         
-        logger.debug(f"[STOP_LOSS_SETUP] ✅ Exchange получен успешно: {type(current_exchange)}")
+        logger.debug(f" ✅ Exchange получен успешно: {type(current_exchange)}")
         
         with bots_data_lock:
             # Получаем конфигурацию трейлинг стопа
@@ -1935,13 +1935,13 @@ def check_missing_stop_losses():
                 )
                 
                 if positions_response.get('retCode') != 0:
-                    logger.error(f"[STOP_LOSS_SETUP] ❌ КРИТИЧЕСКАЯ ОШИБКА получения позиций: {positions_response.get('retMsg')} (retCode={positions_response.get('retCode')})")
+                    logger.error(f" ❌ КРИТИЧЕСКАЯ ОШИБКА получения позиций: {positions_response.get('retMsg')} (retCode={positions_response.get('retCode')})")
                     return False
                 
                 exchange_positions = positions_response.get('result', {}).get('list', [])
                 
             except Exception as e:
-                logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка получения позиций с биржи: {e}")
+                logger.error(f" ❌ Ошибка получения позиций с биржи: {e}")
                 return False
             
             updated_count = 0
@@ -1961,12 +1961,12 @@ def check_missing_stop_losses():
                             break
                     
                     if not pos:
-                        logger.warning(f"[STOP_LOSS_SETUP] ⚠️ Позиция {symbol} не найдена на бирже")
+                        logger.warning(f" ⚠️ Позиция {symbol} не найдена на бирже")
                         continue
                     
                     position_size = float(pos.get('size', 0))
                     if position_size <= 0:
-                        logger.warning(f"[STOP_LOSS_SETUP] ⚠️ Позиция {symbol} закрыта на бирже")
+                        logger.warning(f" ⚠️ Позиция {symbol} закрыта на бирже")
                         continue
                     
                     # Получаем данные позиции
@@ -1984,16 +1984,16 @@ def check_missing_stop_losses():
                     else:  # SHORT позиция
                         profit_percent = ((entry_price - current_price) / entry_price) * 100
                     
-                    logger.info(f"[STOP_LOSS_SETUP] 📊 {symbol}: PnL {profit_percent:.2f}%, текущая цена {current_price}, вход {entry_price}")
+                    logger.info(f" 📊 {symbol}: PnL {profit_percent:.2f}%, текущая цена {current_price}, вход {entry_price}")
                     
                     # Синхронизируем существующие стопы с биржи
                     if existing_stop_loss:
                         bot_data['stop_loss_price'] = float(existing_stop_loss)
-                        logger.info(f"[STOP_LOSS_SETUP] ✅ Синхронизирован стоп-лосс для {symbol}: {existing_stop_loss}")
+                        logger.info(f" ✅ Синхронизирован стоп-лосс для {symbol}: {existing_stop_loss}")
                     
                     if existing_trailing_stop:
                         bot_data['trailing_stop_price'] = float(existing_trailing_stop)
-                        logger.info(f"[STOP_LOSS_SETUP] ✅ Синхронизирован трейлинг стоп для {symbol}: {existing_trailing_stop}")
+                        logger.info(f" ✅ Синхронизирован трейлинг стоп для {symbol}: {existing_trailing_stop}")
                     
                     # Логика установки стоп-лоссов
                     if not existing_stop_loss:
@@ -2015,12 +2015,12 @@ def check_missing_stop_losses():
                             if stop_result and stop_result.get('retCode') == 0:
                                 bot_data['stop_loss_price'] = stop_price
                                 updated_count += 1
-                                logger.info(f"[STOP_LOSS_SETUP] ✅ Установлен стоп-лосс для {symbol}: {stop_price}")
+                                logger.info(f" ✅ Установлен стоп-лосс для {symbol}: {stop_price}")
                             else:
-                                logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка установки стоп-лосса для {symbol}: {stop_result.get('retMsg')}")
+                                logger.error(f" ❌ Ошибка установки стоп-лосса для {symbol}: {stop_result.get('retMsg')}")
                                 failed_count += 1
                         except Exception as e:
-                            logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка API для {symbol}: {e}")
+                            logger.error(f" ❌ Ошибка API для {symbol}: {e}")
                             failed_count += 1
                     
                     # Логика трейлинг стопа по марже
@@ -2080,19 +2080,19 @@ def check_missing_stop_losses():
                                         bot_data['trailing_stop_price'] = desired_stop
                                         updated_count += 1
                                         logger.info(
-                                            f"[STOP_LOSS_SETUP] ✅ Trailing stop обновлен для {symbol}: цена {desired_stop}"
+                                            f" ✅ Trailing stop обновлен для {symbol}: цена {desired_stop}"
                                         )
                                     else:
                                         logger.error(
-                                            f"[STOP_LOSS_SETUP] ❌ Ошибка обновления trailing stop для {symbol}: "
+                                            f" ❌ Ошибка обновления trailing stop для {symbol}: "
                                             f"{trailing_result.get('retMsg') if trailing_result else 'Unknown'}"
                                         )
                                         failed_count += 1
                                 except Exception as e:
-                                    logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка API trailing stop для {symbol}: {e}")
+                                    logger.error(f" ❌ Ошибка API trailing stop для {symbol}: {e}")
                                     failed_count += 1
                             else:
-                                logger.debug(f"[STOP_LOSS_SETUP] ℹ️ Trailing stop для {symbol} уже актуален")
+                                logger.debug(f" ℹ️ Trailing stop для {symbol} уже актуален")
                         elif abs(realized_pnl) <= 0.0 and trailing_params.get('profit_usdt', 0.0) >= trailing_params.get('activation_threshold_usdt', 0.0):
                             # Fallback на старую схему, если нет данных о комиссиях
                             try:
@@ -2107,52 +2107,52 @@ def check_missing_stop_losses():
                                     bot_data['trailing_stop_price'] = trailing_distance / 100
                                     updated_count += 1
                                     logger.info(
-                                        f"[STOP_LOSS_SETUP] ✅ Установлен fallback trailing stop для {symbol}: "
+                                        f" ✅ Установлен fallback trailing stop для {symbol}: "
                                         f"{trailing_distance / 100}%"
                                     )
                                 else:
                                     logger.error(
-                                        f"[STOP_LOSS_SETUP] ❌ Ошибка установки fallback trailing stop для {symbol}: "
+                                        f" ❌ Ошибка установки fallback trailing stop для {symbol}: "
                                         f"{trailing_result.get('retMsg') if trailing_result else 'Unknown'}"
                                     )
                                     failed_count += 1
                             except Exception as e:
-                                logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка API fallback trailing stop для {symbol}: {e}")
+                                logger.error(f" ❌ Ошибка API fallback trailing stop для {symbol}: {e}")
                                 failed_count += 1
                     
                     # Обновляем время последнего обновления
                     bot_data['last_update'] = datetime.now().isoformat()
                         
                 except Exception as e:
-                    logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка обработки {symbol}: {e}")
+                    logger.error(f" ❌ Ошибка обработки {symbol}: {e}")
                     failed_count += 1
                     continue
             
             if updated_count > 0 or failed_count > 0:
-                logger.info(f"[STOP_LOSS_SETUP] ✅ Установка завершена: установлено {updated_count}, ошибок {failed_count}")
+                logger.info(f" ✅ Установка завершена: установлено {updated_count}, ошибок {failed_count}")
                 
                 # Сохраняем обновленные данные ботов в файл
                 if updated_count > 0:
                     try:
                         save_bots_state()
-                        logger.info(f"[STOP_LOSS_SETUP] 💾 Сохранено состояние ботов в файл")
+                        logger.info(f" 💾 Сохранено состояние ботов в файл")
                     except Exception as save_error:
-                        logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка сохранения состояния ботов: {save_error}")
+                        logger.error(f" ❌ Ошибка сохранения состояния ботов: {save_error}")
             
             return True
             
     except Exception as e:
-        logger.error(f"[STOP_LOSS_SETUP] ❌ Ошибка установки стоп-лоссов: {e}")
+        logger.error(f" ❌ Ошибка установки стоп-лоссов: {e}")
         return False
 
 def check_startup_position_conflicts():
     """Проверяет конфликты позиций при запуске системы и принудительно останавливает проблемные боты"""
     try:
         if not ensure_exchange_initialized():
-            logger.warning("[STARTUP_CONFLICTS] ⚠️ Биржа не инициализирована, пропускаем проверку конфликтов")
+            logger.warning(" ⚠️ Биржа не инициализирована, пропускаем проверку конфликтов")
             return False
         
-        logger.info("[STARTUP_CONFLICTS] 🔍 Проверка конфликтов...")
+        logger.info(" 🔍 Проверка конфликтов...")
         
         conflicts_found = 0
         bots_paused = 0
@@ -2194,7 +2194,7 @@ def check_startup_position_conflicts():
                             # Есть позиция на бирже
                             if bot_status in [BOT_STATUS['RUNNING']]:
                                 # КОНФЛИКТ: бот активен, но позиция уже есть на бирже
-                                logger.warning(f"[STARTUP_CONFLICTS] 🚨 {symbol}: КОНФЛИКТ! Бот {bot_status}, но позиция {side} уже есть на бирже!")
+                                logger.warning(f" 🚨 {symbol}: КОНФЛИКТ! Бот {bot_status}, но позиция {side} уже есть на бирже!")
                                 
                                 # Принудительно останавливаем бота
                                 bot_data['status'] = BOT_STATUS['PAUSED']
@@ -2203,16 +2203,16 @@ def check_startup_position_conflicts():
                                 conflicts_found += 1
                                 bots_paused += 1
                                 
-                                logger.warning(f"[STARTUP_CONFLICTS] 🔴 {symbol}: Бот принудительно остановлен (PAUSED)")
+                                logger.warning(f" 🔴 {symbol}: Бот принудительно остановлен (PAUSED)")
                                 
                             elif bot_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
                                 # Корректное состояние - бот в позиции
-                                logger.debug(f"[STARTUP_CONFLICTS] ✅ {symbol}: Статус корректный - бот в позиции")
+                                logger.debug(f" ✅ {symbol}: Статус корректный - бот в позиции")
                         else:
                             # Нет позиции на бирже
                             if bot_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
                                 # КОНФЛИКТ: бот думает что в позиции, но позиции нет на бирже
-                                logger.warning(f"[STARTUP_CONFLICTS] 🚨 {symbol}: КОНФЛИКТ! Бот показывает позицию, но на бирже её нет!")
+                                logger.warning(f" 🚨 {symbol}: КОНФЛИКТ! Бот показывает позицию, но на бирже её нет!")
                                 
                                 # Сбрасываем статус бота
                                 bot_data['status'] = BOT_STATUS['IDLE']
@@ -2223,27 +2223,27 @@ def check_startup_position_conflicts():
                                 
                                 conflicts_found += 1
                                 
-                                logger.warning(f"[STARTUP_CONFLICTS] 🔄 {symbol}: Статус сброшен в IDLE")
+                                logger.warning(f" 🔄 {symbol}: Статус сброшен в IDLE")
                             else:
                                 # Корректное состояние - нет позиций
-                                logger.debug(f"[STARTUP_CONFLICTS] ✅ {symbol}: Статус корректный - нет позиций")
+                                logger.debug(f" ✅ {symbol}: Статус корректный - нет позиций")
                     else:
-                        logger.warning(f"[STARTUP_CONFLICTS] ❌ {symbol}: Ошибка получения позиций: {positions_response.get('retMsg', 'Unknown error')}")
+                        logger.warning(f" ❌ {symbol}: Ошибка получения позиций: {positions_response.get('retMsg', 'Unknown error')}")
                         
                 except Exception as e:
-                    logger.error(f"[STARTUP_CONFLICTS] ❌ Ошибка проверки {symbol}: {e}")
+                    logger.error(f" ❌ Ошибка проверки {symbol}: {e}")
         
         if conflicts_found > 0:
-            logger.warning(f"[STARTUP_CONFLICTS] 🚨 Найдено {conflicts_found} конфликтов, остановлено {bots_paused} ботов")
+            logger.warning(f" 🚨 Найдено {conflicts_found} конфликтов, остановлено {bots_paused} ботов")
             # Сохраняем обновленное состояние
             save_bots_state()
         else:
-            logger.info("[STARTUP_CONFLICTS] ✅ Конфликтов позиций не найдено")
+            logger.info(" ✅ Конфликтов позиций не найдено")
         
         return conflicts_found > 0
         
     except Exception as e:
-        logger.error(f"[STARTUP_CONFLICTS] ❌ Общая ошибка проверки конфликтов: {e}")
+        logger.error(f" ❌ Общая ошибка проверки конфликтов: {e}")
         return False
 
 def sync_bots_with_exchange():

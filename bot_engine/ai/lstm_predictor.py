@@ -44,7 +44,7 @@ try:
     TENSORFLOW_AVAILABLE = True
 except ImportError:
     TENSORFLOW_AVAILABLE = False
-    logger.warning("[LSTM] TensorFlow не установлен. LSTM Predictor недоступен.")
+    logger.warning("TensorFlow не установлен. LSTM Predictor недоступен.")
 
 
 class LSTMPredictor:
@@ -82,14 +82,14 @@ class LSTMPredictor:
         }
         
         if not TENSORFLOW_AVAILABLE:
-            logger.error("[LSTM] TensorFlow недоступен. Установите: pip install tensorflow")
+            logger.error("TensorFlow недоступен. Установите: pip install tensorflow")
             return
         
         # Загружаем модель, если существует
         if os.path.exists(model_path) and os.path.exists(scaler_path):
             self.load_model()
         else:
-            logger.info("[LSTM] Модель не найдена, создаем новую")
+            logger.info("Модель не найдена, создаем новую")
             self._create_new_model()
     
     def _create_new_model(self):
@@ -139,8 +139,8 @@ class LSTMPredictor:
         # Создаем scaler
         self.scaler = MinMaxScaler(feature_range=(0, 1))
         
-        logger.info("[LSTM] ✅ Создана новая модель")
-        logger.info(f"[LSTM] Архитектура: {sequence_length} свечей → {n_features} признаков")
+        logger.info("✅ Создана новая модель")
+        logger.info(f"Архитектура: {sequence_length} свечей → {n_features} признаков")
     
     def prepare_features(self, candles: List[Dict]) -> np.ndarray:
         """
@@ -153,7 +153,7 @@ class LSTMPredictor:
             Массив признаков для модели
         """
         if len(candles) < self.config['sequence_length']:
-            logger.debug("[LSTM] Недостаточно свечей: %s < %s", len(candles), self.config['sequence_length'])
+            logger.debug("Недостаточно свечей: %s < %s", len(candles), self.config['sequence_length'])
             return None
         
         df = pd.DataFrame(candles)
@@ -165,7 +165,7 @@ class LSTMPredictor:
                 features.append(df[feature].values)
             else:
                 # Если признака нет, заполняем нулями
-                logger.warning(f"[LSTM] Признак {feature} не найден в данных")
+                logger.warning(f"Признак {feature} не найден в данных")
                 features.append(np.zeros(len(df)))
         
         # Транспонируем, чтобы получить (samples, features)
@@ -210,10 +210,10 @@ class LSTMPredictor:
             try:
                 features_scaled = self.scaler.transform(features)
             except NotFittedError:
-                logger.error("[LSTM] Scaler не обучен. Выполните обучение модели")
+                logger.error("Scaler не обучен. Выполните обучение модели")
                 return None
             except Exception as transform_error:
-                logger.error(f"[LSTM] Ошибка нормализации: {transform_error}")
+                logger.error(f"Ошибка нормализации: {transform_error}")
                 return None
             
             # Добавляем batch dimension
@@ -248,7 +248,7 @@ class LSTMPredictor:
             return result
             
         except Exception as e:
-            logger.error(f"[LSTM] Ошибка предсказания: {e}")
+            logger.error(f"Ошибка предсказания: {e}")
             return None
     
     def train(
@@ -274,7 +274,7 @@ class LSTMPredictor:
             return {'error': 'TensorFlow unavailable'}
 
         if not training_data:
-            logger.error("[LSTM] Пустой набор данных для обучения")
+            logger.error("Пустой набор данных для обучения")
             return {'error': 'No training data provided'}
         
         try:
@@ -287,13 +287,13 @@ class LSTMPredictor:
                 raise ValueError(f"Training data X должен иметь размерность (samples, seq_len, features), получено: {X.shape}")
 
             if np.isnan(X).any() or np.isinf(X).any():
-                logger.warning("[LSTM] Обнаружены NaN/Inf в обучающих данных. Выполняем замену на нули")
+                logger.warning("Обнаружены NaN/Inf в обучающих данных. Выполняем замену на нули")
                 X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
 
             # Проверяем наличие признаков
             if X.shape[-1] != len(self.config['features']):
                 logger.warning(
-                    "[LSTM] Количество признаков (%s) не совпадает с конфигурацией (%s). Обновляем конфиг.",
+                    "Количество признаков (%s) не совпадает с конфигурацией (%s). Обновляем конфиг.",
                     X.shape[-1], len(self.config['features'])
                 )
                 self.config['features'] = [f'feature_{i}' for i in range(X.shape[-1])]
@@ -306,8 +306,8 @@ class LSTMPredictor:
             self.scaler.fit(flat_X)
             X_scaled = self.scaler.transform(flat_X).reshape(X.shape).astype(np.float32)
             
-            logger.info(f"[LSTM] Начало обучения: {len(X)} образцов")
-            logger.info(f"[LSTM] Форма X: {X.shape}, форма y: {y.shape}")
+            logger.info(f"Начало обучения: {len(X)} образцов")
+            logger.info(f"Форма X: {X.shape}, форма y: {y.shape}")
             
             # Настраиваем callbacks
             callbacks = [
@@ -341,7 +341,7 @@ class LSTMPredictor:
             # Сохраняем модель
             self.save_model()
             
-            logger.info("[LSTM] ✅ Обучение завершено успешно")
+            logger.info("✅ Обучение завершено успешно")
             
             return {
                 'success': True,
@@ -352,7 +352,7 @@ class LSTMPredictor:
             }
             
         except Exception as e:
-            logger.error(f"[LSTM] ❌ Ошибка обучения: {e}")
+            logger.error(f"❌ Ошибка обучения: {e}")
             return {'error': str(e)}
     
     def save_model(self):
@@ -375,10 +375,10 @@ class LSTMPredictor:
             with open(self.config_path, 'w') as f:
                 json.dump(self.config, f, indent=2)
             
-            logger.info(f"[LSTM] ✅ Модель сохранена: {self.model_path}")
+            logger.info(f"✅ Модель сохранена: {self.model_path}")
             
         except Exception as e:
-            logger.error(f"[LSTM] ❌ Ошибка сохранения модели: {e}")
+            logger.error(f"❌ Ошибка сохранения модели: {e}")
     
     def load_model(self):
         """Загружает модель, scaler и конфигурацию"""
@@ -398,12 +398,12 @@ class LSTMPredictor:
                 with open(self.config_path, 'r') as f:
                     self.config.update(json.load(f))
             
-            logger.info(f"[LSTM] ✅ Модель загружена: {self.model_path}")
-            logger.info(f"[LSTM] Обучена: {self.config.get('trained_at', 'неизвестно')}")
-            logger.info(f"[LSTM] Образцов: {self.config.get('training_samples', 0)}")
+            logger.info(f"✅ Модель загружена: {self.model_path}")
+            logger.info(f"Обучена: {self.config.get('trained_at', 'неизвестно')}")
+            logger.info(f"Образцов: {self.config.get('training_samples', 0)}")
             
         except Exception as e:
-            logger.error(f"[LSTM] ❌ Ошибка загрузки модели: {e}")
+            logger.error(f"❌ Ошибка загрузки модели: {e}")
             self._create_new_model()
     
     def get_status(self) -> Dict:

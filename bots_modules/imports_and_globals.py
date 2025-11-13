@@ -807,13 +807,13 @@ def load_bot_positions_registry():
         if os.path.exists(BOTS_POSITIONS_REGISTRY_FILE):
             with open(BOTS_POSITIONS_REGISTRY_FILE, 'r', encoding='utf-8') as f:
                 registry = json.load(f)
-                logger.info(f"[REGISTRY] ✅ Загружен реестр позиций: {len(registry)} записей")
+                logger.info(f" ✅ Загружен реестр позиций: {len(registry)} записей")
                 return registry
         else:
-            logger.info(f"[REGISTRY] 📁 Реестр позиций не найден, создаём новый")
+            logger.info(f" 📁 Реестр позиций не найден, создаём новый")
             return {}
     except Exception as e:
-        logger.error(f"[REGISTRY] ❌ Ошибка загрузки реестра: {e}")
+        logger.error(f" ❌ Ошибка загрузки реестра: {e}")
         return {}
 
 
@@ -822,10 +822,10 @@ def save_bot_positions_registry(registry):
     try:
         with open(BOTS_POSITIONS_REGISTRY_FILE, 'w', encoding='utf-8') as f:
             json.dump(registry, f, indent=2, ensure_ascii=False)
-        logger.debug(f"[REGISTRY] ✅ Реестр позиций сохранён: {len(registry)} записей")
+        logger.debug(f" ✅ Реестр позиций сохранён: {len(registry)} записей")
         return True
     except Exception as e:
-        logger.error(f"[REGISTRY] ❌ Ошибка сохранения реестра: {e}")
+        logger.error(f" ❌ Ошибка сохранения реестра: {e}")
         return False
 
 
@@ -854,10 +854,10 @@ def register_bot_position(symbol, order_id, side, entry_price, quantity):
         }
         
         save_bot_positions_registry(registry)
-        logger.info(f"[REGISTRY] ✅ Зарегистрирована позиция: {symbol} {side}, order_id={order_id}")
+        logger.info(f" ✅ Зарегистрирована позиция: {symbol} {side}, order_id={order_id}")
         return True
     except Exception as e:
-        logger.error(f"[REGISTRY] ❌ Ошибка регистрации позиции: {e}")
+        logger.error(f" ❌ Ошибка регистрации позиции: {e}")
         return False
 
 
@@ -869,13 +869,13 @@ def unregister_bot_position(order_id):
         if order_id in registry:
             position_info = registry.pop(order_id)
             save_bot_positions_registry(registry)
-            logger.info(f"[REGISTRY] ✅ Удалена позиция из реестра: {position_info.get('symbol')} (order_id={order_id})")
+            logger.info(f" ✅ Удалена позиция из реестра: {position_info.get('symbol')} (order_id={order_id})")
             return True
         else:
-            logger.debug(f"[REGISTRY] ⚠️ Позиция с order_id={order_id} не найдена в реестре")
+            logger.debug(f" ⚠️ Позиция с order_id={order_id} не найдена в реестре")
             return False
     except Exception as e:
-        logger.error(f"[REGISTRY] ❌ Ошибка удаления позиции из реестра: {e}")
+        logger.error(f" ❌ Ошибка удаления позиции из реестра: {e}")
         return False
 
 
@@ -885,7 +885,7 @@ def is_bot_position(order_id):
         registry = load_bot_positions_registry()
         return order_id in registry
     except Exception as e:
-        logger.error(f"[REGISTRY] ❌ Ошибка проверки позиции: {e}")
+        logger.error(f" ❌ Ошибка проверки позиции: {e}")
         return False
 
 
@@ -895,7 +895,7 @@ def get_bot_position_info(order_id):
         registry = load_bot_positions_registry()
         return registry.get(order_id)
     except Exception as e:
-        logger.error(f"[REGISTRY] ❌ Ошибка получения информации о позиции: {e}")
+        logger.error(f" ❌ Ошибка получения информации о позиции: {e}")
         return None
 
 
@@ -904,18 +904,18 @@ def restore_lost_bots():
     try:
         registry = load_bot_positions_registry()
         if not registry:
-            logger.info("[REGISTRY] ℹ️ Реестр позиций пуст - нет ботов для восстановления")
+            logger.info(" ℹ️ Реестр позиций пуст - нет ботов для восстановления")
             return []
         
         # Получаем позиции с биржи
         exch = get_exchange()
         if not exch:
-            logger.error("[REGISTRY] ❌ Биржа не инициализирована")
+            logger.error(" ❌ Биржа не инициализирована")
             return []
         
         exchange_positions = exch.get_positions()
         if not exchange_positions:
-            logger.warning("[REGISTRY] ⚠️ Не удалось получить позиции с биржи")
+            logger.warning(" ⚠️ Не удалось получить позиции с биржи")
             return []
         
         # Преобразуем в словарь для быстрого поиска
@@ -941,7 +941,7 @@ def restore_lost_bots():
                 
                 # Проверяем, есть ли позиция на бирже
                 if symbol not in exchange_positions_dict:
-                    logger.debug(f"[REGISTRY] 🔍 Позиция {symbol} (order_id={order_id}) не найдена на бирже - возможно закрыта")
+                    logger.debug(f" 🔍 Позиция {symbol} (order_id={order_id}) не найдена на бирже - возможно закрыта")
                     continue
                 
                 exchange_position = exchange_positions_dict[symbol]
@@ -950,7 +950,7 @@ def restore_lost_bots():
                 
                 # Проверяем совпадение стороны
                 if exchange_side != registry_side:
-                    logger.warning(f"[REGISTRY] ⚠️ Несовпадение стороны для {symbol}: реестр={registry_side}, биржа={exchange_side}")
+                    logger.warning(f" ⚠️ Несовпадение стороны для {symbol}: реестр={registry_side}, биржа={exchange_side}")
                     continue
                 
                 # Создаём восстановленного бота
@@ -973,10 +973,10 @@ def restore_lost_bots():
                 bots_data['bots'][symbol] = restored_bot
                 restored_bots.append(symbol)
                 
-                logger.info(f"[REGISTRY] ✅ Восстановлен бот {symbol} (order_id={order_id}) из реестра")
+                logger.info(f" ✅ Восстановлен бот {symbol} (order_id={order_id}) из реестра")
         
         if restored_bots:
-            logger.info(f"[REGISTRY] 🎯 Восстановлено {len(restored_bots)} ботов: {restored_bots}")
+            logger.info(f" 🎯 Восстановлено {len(restored_bots)} ботов: {restored_bots}")
             # Сохраняем состояние
             try:
                 with bots_data_lock:
@@ -984,14 +984,14 @@ def restore_lost_bots():
                     config_snapshot = deepcopy(bots_data.get('auto_bot_config', {}))
                 storage_save_bots_state(bots_snapshot, config_snapshot)
             except Exception as save_error:
-                logger.error(f"[REGISTRY] ❌ Не удалось сохранить состояние после восстановления: {save_error}")
+                logger.error(f" ❌ Не удалось сохранить состояние после восстановления: {save_error}")
         else:
-            logger.info("[REGISTRY] ℹ️ Ботов для восстановления не найдено")
+            logger.info(" ℹ️ Ботов для восстановления не найдено")
         
         return restored_bots
         
     except Exception as e:
-        logger.error(f"[REGISTRY] ❌ Ошибка восстановления ботов: {e}")
+        logger.error(f" ❌ Ошибка восстановления ботов: {e}")
         return []
 
 # ✅ ИСПРАВЛЕНИЕ: Загружаем зрелые монеты при импорте модуля
