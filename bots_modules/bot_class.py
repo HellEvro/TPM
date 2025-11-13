@@ -694,7 +694,7 @@ class NewTradingBot:
             return 0.0
 
     def _calculate_break_even_stop_price(self, current_price: Optional[float] = None) -> Optional[float]:
-        """Рассчитывает цену стоп-лосса для безубыточности"""
+        """Рассчитывает цену стоп-лосса для безубыточности на основе realized_pnl * 2.5"""
         if not self.entry_price or self.position_side not in ('LONG', 'SHORT'):
             return None
 
@@ -703,33 +703,54 @@ class NewTradingBot:
             return None
 
         try:
-            fee_usdt = abs(float(self.realized_pnl or 0.0))
-        except (TypeError, ValueError):
-            fee_usdt = 0.0
-        if fee_usdt <= 0:
-            return None
-
-        buffer_usdt = fee_usdt * self.BREAK_EVEN_FEE_MULTIPLIER
-        buffer_per_coin = buffer_usdt / quantity if quantity > 0 else 0.0
-        if buffer_per_coin <= 0:
-            return None
-
-        try:
             entry_price = float(self.entry_price)
         except (TypeError, ValueError):
             return None
 
+        # ✅ Рассчитываем стоп от abs(realized_pnl) * 2.5 (в USDT)
+        # Примечание: realized_pnl обычно отрицательный (комиссии при открытии позиции)
+        # Берем по модулю (abs) и умножаем на 2.5, где:
+        # - *2 = комиссия за открытие + комиссия за закрытие (по половине на каждую операцию)
+        # - +0.5 = запас на проскальзывание при закрытии сделки
+        try:
+            realized_pnl_usdt = float(self.realized_pnl or 0.0)
+        except (TypeError, ValueError):
+            realized_pnl_usdt = 0.0
+        
+        # ✅ Берем по модулю (обычно отрицательный из-за комиссий при открытии)
+        fee_usdt = abs(realized_pnl_usdt)
+        
+        if fee_usdt <= 0:
+            # Минимальная защита - уровень входа
+            return entry_price
+        
+        # ✅ Защищаем от комиссий в размере abs(realized_pnl) * 2.5
+        protected_profit_usdt = fee_usdt * self.BREAK_EVEN_FEE_MULTIPLIER
+        
+        # Преобразуем защищаемую прибыль (USDT) в цену на монету
+        protected_profit_per_coin = protected_profit_usdt / quantity if quantity > 0 else 0.0
+        if protected_profit_per_coin <= 0:
+            # Минимальная защита - уровень входа
+            return entry_price
+
         price = float(current_price) if current_price is not None else None
 
         if self.position_side == 'LONG':
-            stop_price = entry_price + buffer_per_coin
+            # ✅ Для LONG: стоп на уровне entry_price + protected_profit_per_coin
+            # Это означает, что мы защищаем прибыль в размере realized_pnl * 2.5
+            stop_price = entry_price + protected_profit_per_coin
             if price:
+                # Не устанавливаем стоп выше текущей цены
                 stop_price = min(stop_price, price)
+            # Минимально стоп не ниже уровня входа (базовая защита)
             stop_price = max(stop_price, entry_price)
         else:  # SHORT
-            stop_price = entry_price - buffer_per_coin
+            # ✅ Для SHORT: стоп на уровне entry_price - protected_profit_per_coin
+            stop_price = entry_price - protected_profit_per_coin
             if price:
+                # Не устанавливаем стоп ниже текущей цены
                 stop_price = max(stop_price, price)
+            # Максимально стоп не выше уровня входа (базовая защита)
             stop_price = min(stop_price, entry_price)
 
         return stop_price
