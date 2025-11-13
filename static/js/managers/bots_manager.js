@@ -5387,9 +5387,10 @@ class BotsManager {
         
         const breakEvenTriggerEl = document.getElementById('breakEvenTrigger');
         if (breakEvenTriggerEl) {
+            // ✅ ИСПОЛЬЗУЕМ РЕАЛЬНОЕ ЗНАЧЕНИЕ ИЗ КОНФИГА, А НЕ ДЕФОЛТНОЕ
             const triggerValue = autoBotConfig.break_even_trigger_percent ?? autoBotConfig.break_even_trigger ?? 20.0;
             breakEvenTriggerEl.value = triggerValue;
-            console.log('[BotsManager] 🎯 Триггер безубыточности:', breakEvenTriggerEl.value);
+            console.log('[BotsManager] 🎯 Триггер безубыточности:', breakEvenTriggerEl.value, '(из конфига:', autoBotConfig.break_even_trigger_percent ?? autoBotConfig.break_even_trigger, ')');
         }
         
         // ==========================================
@@ -5398,14 +5399,18 @@ class BotsManager {
         
         const avoidDownTrendEl = document.getElementById('avoidDownTrend');
         if (avoidDownTrendEl) {
-            avoidDownTrendEl.checked = autoBotConfig.avoid_down_trend !== false;
-            console.log('[BotsManager] 📉 Избегать DOWN тренд:', avoidDownTrendEl.checked);
+            // ✅ ИСПОЛЬЗУЕМ РЕАЛЬНОЕ ЗНАЧЕНИЕ ИЗ КОНФИГА, А НЕ ДЕФОЛТНОЕ
+            const configValue = autoBotConfig.avoid_down_trend;
+            avoidDownTrendEl.checked = configValue === true;
+            console.log('[BotsManager] 📉 Избегать DOWN тренд:', avoidDownTrendEl.checked, '(из конфига:', configValue, ')');
         }
         
         const avoidUpTrendEl = document.getElementById('avoidUpTrend');
         if (avoidUpTrendEl) {
-            avoidUpTrendEl.checked = autoBotConfig.avoid_up_trend !== false;
-            console.log('[BotsManager] 📈 Избегать UP тренд:', avoidUpTrendEl.checked);
+            // ✅ ИСПОЛЬЗУЕМ РЕАЛЬНОЕ ЗНАЧЕНИЕ ИЗ КОНФИГА, А НЕ ДЕФОЛТНОЕ
+            const configValue = autoBotConfig.avoid_up_trend;
+            avoidUpTrendEl.checked = configValue === true;
+            console.log('[BotsManager] 📈 Избегать UP тренд:', avoidUpTrendEl.checked, '(из конфига:', configValue, ')');
         }
         
         // ==========================================
@@ -5414,8 +5419,10 @@ class BotsManager {
         
         const trendDetectionEnabledEl = document.getElementById('trendDetectionEnabled');
         if (trendDetectionEnabledEl) {
-            trendDetectionEnabledEl.checked = autoBotConfig.trend_detection_enabled !== false;
-            console.log('[BotsManager] 🔍 Анализ трендов включен:', trendDetectionEnabledEl.checked);
+            // ✅ ИСПОЛЬЗУЕМ РЕАЛЬНОЕ ЗНАЧЕНИЕ ИЗ КОНФИГА, А НЕ ДЕФОЛТНОЕ
+            const configValue = autoBotConfig.trend_detection_enabled;
+            trendDetectionEnabledEl.checked = configValue === true;
+            console.log('[BotsManager] 🔍 Анализ трендов включен:', trendDetectionEnabledEl.checked, '(из конфига:', configValue, ')');
         }
         
         const trendAnalysisPeriodEl = document.getElementById('trendAnalysisPeriod');
@@ -5826,12 +5833,23 @@ class BotsManager {
             
             // Если значение из DOM отличается от originalConfig - значит пользователь его изменил
             if (domValue !== undefined && domValue !== null) {
-                if (typeof domValue === 'number' && typeof originalValue === 'number') {
+                // Для булевых значений: нормализуем undefined/null к false для сравнения
+                if (typeof domValue === 'boolean') {
+                    const normalizedOriginal = originalValue === true ? true : false;
+                    if (domValue !== normalizedOriginal) {
+                        autoBotConfig[key] = domValue;
+                        console.log(`[BotsManager] 🔄 Применено изменение из DOM: ${key} = ${domValue} (было ${normalizedOriginal})`);
+                    }
+                }
+                // Для чисел: сравниваем с точностью 0.01
+                else if (typeof domValue === 'number' && typeof originalValue === 'number') {
                     if (Math.abs(domValue - originalValue) > 0.01) {
                         autoBotConfig[key] = domValue;
                         console.log(`[BotsManager] 🔄 Применено изменение из DOM: ${key} = ${domValue} (было ${originalValue})`);
                     }
-                } else if (domValue !== originalValue) {
+                }
+                // Для остальных типов: точное сравнение
+                else if (domValue !== originalValue) {
                     autoBotConfig[key] = domValue;
                     console.log(`[BotsManager] 🔄 Применено изменение из DOM: ${key} = ${domValue} (было ${originalValue})`);
                 }
@@ -5857,21 +5875,55 @@ class BotsManager {
         
         const breakEvenTriggerEl = document.getElementById('breakEvenTrigger');
         if (breakEvenTriggerEl) {
-            applyDomChange('break_even_trigger_percent', () => {
-                const val = parseFloat(breakEvenTriggerEl.value);
-                return Number.isFinite(val) ? val : undefined;
-            });
-            autoBotConfig.break_even_trigger = autoBotConfig.break_even_trigger_percent;
+            const domValue = parseFloat(breakEvenTriggerEl.value);
+            const originalValue = this.originalConfig?.autoBot?.break_even_trigger_percent ?? this.originalConfig?.autoBot?.break_even_trigger;
+            const cachedValue = autoBotConfig.break_even_trigger_percent ?? autoBotConfig.break_even_trigger;
+            
+            console.log(`[BotsManager] 🔍 breakEvenTrigger: DOM=${domValue}, original=${originalValue}, cached=${cachedValue}`);
+            
+            // ✅ ЕСЛИ значение в DOM равно дефолтному из HTML (100.0), а в originalConfig другое - это НЕ изменение пользователя
+            // Используем значение из кэша (которое уже скопировано из cachedAutoBotConfig)
+            if (Number.isFinite(domValue) && domValue === 100.0 && Number.isFinite(originalValue) && originalValue !== 100.0) {
+                console.log(`[BotsManager] ⚠️ breakEvenTrigger: DOM содержит дефолтное значение 100.0, но в originalConfig ${originalValue}. Это НЕ изменение пользователя, используем значение из конфига.`);
+                // НЕ применяем изменение из DOM, значение уже в autoBotConfig из кэша
+            } else if (Number.isFinite(domValue) && Number.isFinite(originalValue)) {
+                // Применяем изменение только если оно действительно отличается от originalConfig
+                applyDomChange('break_even_trigger_percent', () => {
+                    return Number.isFinite(domValue) ? domValue : undefined;
+                });
+                autoBotConfig.break_even_trigger = autoBotConfig.break_even_trigger_percent;
+            } else {
+                // Если originalValue undefined, используем значение из кэша
+                console.log(`[BotsManager] ℹ️ breakEvenTrigger: originalValue undefined, используем значение из кэша: ${cachedValue}`);
+            }
         }
         
         const avoidDownTrendEl = document.getElementById('avoidDownTrend');
         if (avoidDownTrendEl) {
-            applyDomChange('avoid_down_trend', () => avoidDownTrendEl.checked);
+            applyDomChange('avoid_down_trend', () => {
+                const checked = avoidDownTrendEl.checked;
+                console.log(`[BotsManager] 🔍 avoidDownTrend: DOM=${checked}, original=${this.originalConfig?.autoBot?.avoid_down_trend}, cached=${autoBotConfig.avoid_down_trend}`);
+                return checked;
+            });
         }
         
         const avoidUpTrendEl = document.getElementById('avoidUpTrend');
         if (avoidUpTrendEl) {
-            applyDomChange('avoid_up_trend', () => avoidUpTrendEl.checked);
+            applyDomChange('avoid_up_trend', () => {
+                const checked = avoidUpTrendEl.checked;
+                console.log(`[BotsManager] 🔍 avoidUpTrend: DOM=${checked}, original=${this.originalConfig?.autoBot?.avoid_up_trend}, cached=${autoBotConfig.avoid_up_trend}`);
+                return checked;
+            });
+        }
+        
+        // ✅ ПЕРЕКЛЮЧАТЕЛЬ "ВКЛЮЧИТЬ АНАЛИЗ ТРЕНДОВ"
+        const trendDetectionEnabledEl = document.getElementById('trendDetectionEnabled');
+        if (trendDetectionEnabledEl) {
+            applyDomChange('trend_detection_enabled', () => {
+                const checked = trendDetectionEnabledEl.checked;
+                console.log(`[BotsManager] 🔍 trendDetectionEnabled: DOM=${checked}, original=${this.originalConfig?.autoBot?.trend_detection_enabled}, cached=${autoBotConfig.trend_detection_enabled}`);
+                return checked;
+            });
         }
         
         // ✅ ПРИМЕНЯЕМ ИЗМЕНЕНИЯ ДЛЯ ВСЕХ ОСТАЛЬНЫХ ПОЛЕЙ
@@ -5926,11 +5978,10 @@ class BotsManager {
                 }
             });
             
-            // Все булевые поля
+            // Все булевые поля (avoidDownTrend, avoidUpTrend и trendDetectionEnabled уже обработаны выше)
             const boolFields = [
                 { key: 'enabled', el: 'globalAutoBotToggle' },
                 { key: 'break_even_protection', el: 'breakEvenProtection' },
-                { key: 'trend_detection_enabled', el: 'trendDetectionEnabled' },
                 { key: 'enable_maturity_check', el: 'enableMaturityCheck' },
                 { key: 'rsi_time_filter_enabled', el: 'rsiTimeFilterEnabled' },
                 { key: 'exit_scam_enabled', el: 'exitScamEnabled' },
@@ -5940,6 +5991,7 @@ class BotsManager {
                 { key: 'enhanced_rsi_require_volume_confirmation', el: 'enhancedRsiVolumeConfirm' },
                 { key: 'enhanced_rsi_require_divergence_confirmation', el: 'enhancedRsiDivergenceConfirm' },
                 { key: 'enhanced_rsi_use_stoch_rsi', el: 'enhancedRsiUseStochRsi' }
+                // ✅ avoid_down_trend, avoid_up_trend и trend_detection_enabled уже обработаны выше отдельно
             ];
             
             boolFields.forEach(({ key, el }) => {
@@ -6154,7 +6206,12 @@ class BotsManager {
                 break_even_trigger: config.autoBot.break_even_trigger,
                 break_even_trigger_percent: config.autoBot.break_even_trigger_percent,
                 avoid_down_trend: config.autoBot.avoid_down_trend,
-                avoid_up_trend: config.autoBot.avoid_up_trend
+                avoid_up_trend: config.autoBot.avoid_up_trend,
+                // ✅ ПАРАМЕТРЫ АНАЛИЗА ТРЕНДА
+                trend_detection_enabled: config.autoBot.trend_detection_enabled,
+                trend_analysis_period: config.autoBot.trend_analysis_period,
+                trend_price_change_threshold: config.autoBot.trend_price_change_threshold,
+                trend_candles_threshold: config.autoBot.trend_candles_threshold
             };
             
             // sendConfigUpdate автоматически отфильтрует только измененные параметры

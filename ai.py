@@ -28,6 +28,7 @@ import argparse
 from multiprocessing import Process
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
+from pathlib import Path
 import requests
 
 # Настройка кодировки для Windows консоли
@@ -144,7 +145,9 @@ class AISystem:
         self.license_valid = False
         self.license_info = None
         if LICENSE_CHECKER_AVAILABLE:
-            license_checker = get_license_checker()
+            # ✅ ПЕРЕДАЕМ КОРЕНЬ ПРОЕКТА ЯВНО (где находится ai.py)
+            project_root = Path(__file__).parent
+            license_checker = get_license_checker(project_root=project_root)
             self.license_valid = license_checker.is_valid()
             self.license_info = license_checker.get_info()
             

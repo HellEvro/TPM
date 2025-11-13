@@ -1,46 +1,46 @@
 {
   "symbol": "ETHW",
-  "trained_at": "2025-11-13T04:29:51.455321",
-  "training_seed": 382694,
-  "coin_model_seed": 383028,
+  "trained_at": "2025-11-13T16:00:13.505263",
+  "training_seed": 792065,
+  "coin_model_seed": 792135,
   "rsi_params": {
-    "oversold": 31,
-    "overbought": 69,
-    "exit_long_with_trend": 61,
-    "exit_long_against_trend": 55,
-    "exit_short_with_trend": 35,
-    "exit_short_against_trend": 45
+    "oversold": 34,
+    "overbought": 66,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 43
   },
   "risk_params": {
-    "stop_loss": 14.798103438930468,
-    "take_profit": 19.0757679642852,
-    "trailing_stop_activation": 26.700932345149926,
-    "trailing_stop_distance": 24.23865805535242,
+    "stop_loss": 15.588928997349417,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 25.391164476125386,
+    "trailing_stop_distance": 5.0,
     "break_even_protection": false,
-    "break_even_trigger": 189.1132886045572,
+    "break_even_trigger": 127.59005203016599,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 6,
-      "upper": 70,
-      "lower": 31
+      "candles": 7,
+      "upper": 63,
+      "lower": 32
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 7,
-      "single_candle_percent": 14.758921173294574,
-      "multi_candle_count": 6,
-      "multi_candle_percent": 53.8268800916386
+      "candles": 10,
+      "single_candle_percent": 24.85159425667377,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 59.207403242927924
     }
   },
-  "candles_count": 4433,
-  "trades_count": 7,
-  "win_rate": 42.857142857142854,
-  "signal_accuracy": 1.0,
-  "profit_mse": 4.848710461093181e-06,
-  "total_pnl": -1.4755031353013472,
-  "previous_candles_count": 4495,
-  "candles_increased": false
+  "candles_count": 4588,
+  "trades_count": 8,
+  "win_rate": 25.0,
+  "signal_accuracy": 0.875,
+  "profit_mse": 2.6429522423923585e-06,
+  "total_pnl": -0.22060198568952857,
+  "previous_candles_count": 0,
+  "candles_increased": true
 }

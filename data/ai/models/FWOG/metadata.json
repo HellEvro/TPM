@@ -1,46 +1,46 @@
 {
   "symbol": "FWOG",
-  "trained_at": "2025-11-13T04:24:19.453018",
-  "training_seed": 51151,
-  "coin_model_seed": 51538,
+  "trained_at": "2025-11-13T15:59:21.521066",
+  "training_seed": 743535,
+  "coin_model_seed": 743588,
   "rsi_params": {
     "oversold": 34,
-    "overbought": 65,
-    "exit_long_with_trend": 61,
-    "exit_long_against_trend": 55,
-    "exit_short_with_trend": 33,
-    "exit_short_against_trend": 40
+    "overbought": 71,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 42
   },
   "risk_params": {
-    "stop_loss": 11.837947407845029,
-    "take_profit": 33.09788628343825,
-    "trailing_stop_activation": 12.1906284247627,
+    "stop_loss": 9.250116423596486,
+    "take_profit": 16.921031372000616,
+    "trailing_stop_activation": 29.0420668786515,
     "trailing_stop_distance": 5.0,
     "break_even_protection": false,
-    "break_even_trigger": 30.0,
+    "break_even_trigger": 63.61273719090981,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 7,
-      "upper": 67,
-      "lower": 32
+      "upper": 68,
+      "lower": 30
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 8,
-      "single_candle_percent": 7.071332131609371,
+      "candles": 6,
+      "single_candle_percent": 18.101386282055813,
       "multi_candle_count": 6,
-      "multi_candle_percent": 35.02641523045723
+      "multi_candle_percent": 33.76376608976646
     }
   },
-  "candles_count": 1278,
+  "candles_count": 1454,
   "trades_count": 6,
-  "win_rate": 33.33333333333333,
+  "win_rate": 66.66666666666666,
   "signal_accuracy": 1.0,
-  "profit_mse": 4.954377926234076e-06,
-  "total_pnl": -1.0355485712932675,
-  "previous_candles_count": 1445,
-  "candles_increased": false
+  "profit_mse": 3.982086615337477e-06,
+  "total_pnl": 0.09478524875660256,
+  "previous_candles_count": 0,
+  "candles_increased": true
 }

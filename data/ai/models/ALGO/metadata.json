@@ -1,46 +1,46 @@
 {
   "symbol": "ALGO",
-  "trained_at": "2025-11-13T04:22:25.654066",
-  "training_seed": 942178,
-  "coin_model_seed": 942651,
+  "trained_at": "2025-11-13T15:59:12.616804",
+  "training_seed": 743535,
+  "coin_model_seed": 744238,
   "rsi_params": {
-    "oversold": 35,
-    "overbought": 70,
+    "oversold": 31,
+    "overbought": 66,
     "exit_long_with_trend": 61,
-    "exit_long_against_trend": 64,
-    "exit_short_with_trend": 30,
-    "exit_short_against_trend": 39
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 42
   },
   "risk_params": {
-    "stop_loss": 13.151364733716727,
-    "take_profit": 19.550623601332262,
-    "trailing_stop_activation": 28.93879884403222,
-    "trailing_stop_distance": 5.841236887082145,
+    "stop_loss": 15.284720237908303,
+    "take_profit": 25.502666161995,
+    "trailing_stop_activation": 43.68022970908902,
+    "trailing_stop_distance": 22.469053834190543,
     "break_even_protection": true,
-    "break_even_trigger": 59.60083856315079,
+    "break_even_trigger": 94.09743811632663,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 3,
-      "upper": 68,
-      "lower": 36
+      "candles": 5,
+      "upper": 71,
+      "lower": 34
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 11,
-      "single_candle_percent": 16.80840865260835,
+      "candles": 4,
+      "single_candle_percent": 6.286451572303346,
       "multi_candle_count": 6,
-      "multi_candle_percent": 52.58097157485433
+      "multi_candle_percent": 45.30689809002352
     }
   },
-  "candles_count": 4942,
+  "candles_count": 5001,
   "trades_count": 5,
-  "win_rate": 80.0,
+  "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.0297494993254501e-07,
-  "total_pnl": 0.225884431907503,
-  "previous_candles_count": 4932,
+  "profit_mse": 4.213267720147088e-07,
+  "total_pnl": 0.30041635430166524,
+  "previous_candles_count": 4982,
   "candles_increased": true
 }
