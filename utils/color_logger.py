@@ -109,17 +109,22 @@ class ColorFormatter(logging.Formatter):
         # Получаем цвет для уровня логирования
         level_color = self.COLORS.get(record.levelname, Colors.WHITE)
         
+        # Форматируем сообщение
+        message = record.getMessage()
+        
         # Извлекаем категорию из сообщения (например, [INIT], [AUTO], etc.)
         category = 'DEFAULT'
         emoji = '📝'
         
-        if hasattr(record, 'msg') and isinstance(record.msg, str):
-            # Ищем категорию в формате [CATEGORY]
+        if isinstance(message, str):
+            # Ищем категорию в формате [CATEGORY] в начале сообщения
             import re
-            match = re.search(r'\[([A-Z_]+)\]', record.msg)
+            match = re.match(r'\[([A-Z_]+)\]\s*', message)
             if match:
                 category = match.group(1)
                 emoji = self.EMOJIS.get(category, '📝')
+                # Удаляем префикс категории из сообщения, чтобы избежать дубликата
+                message = re.sub(r'^\[([A-Z_]+)\]\s*', '', message)
         
         # Форматируем время
         timestamp = datetime.now().strftime('%H:%M:%S')
@@ -129,9 +134,6 @@ class ColorFormatter(logging.Formatter):
         colored_category = f"{Colors.BRIGHT_MAGENTA}[{category}]{Colors.RESET}"
         colored_emoji = f"{Colors.BRIGHT_YELLOW}{emoji}{Colors.RESET}"
         colored_timestamp = f"{Colors.DIM}{timestamp}{Colors.RESET}"
-        
-        # Форматируем сообщение
-        message = record.getMessage()
         
         # Применяем цвета к разным частям сообщения
         if record.levelname == 'ERROR':

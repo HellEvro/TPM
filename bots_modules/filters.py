@@ -1350,20 +1350,20 @@ def process_auto_bot_signals(exchange_obj=None):
         auto_bot_enabled = bots_data['auto_bot_config']['enabled']
         
         if not auto_bot_enabled:
-            logger.info("[NEW_AUTO] ⏹️ Автобот выключен")  # Изменено на INFO
+            logger.info(" ⏹️ Автобот выключен")  # Изменено на INFO
             return
         
-        logger.info("[NEW_AUTO] ✅ Автобот включен, начинаем проверку сигналов")
+        logger.info(" ✅ Автобот включен, начинаем проверку сигналов")
         
         max_concurrent = bots_data['auto_bot_config']['max_concurrent']
         current_active = sum(1 for bot in bots_data['bots'].values() 
                            if bot['status'] not in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']])
         
         if current_active >= max_concurrent:
-            logger.debug(f"[NEW_AUTO] 🚫 Достигнут лимит активных ботов ({current_active}/{max_concurrent})")
+            logger.debug(f" 🚫 Достигнут лимит активных ботов ({current_active}/{max_concurrent})")
             return
         
-        logger.info("[NEW_AUTO] 🔍 Проверка сигналов для создания новых ботов...")
+        logger.info(" 🔍 Проверка сигналов для создания новых ботов...")
         
         # Получаем монеты с сигналами
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
@@ -1394,7 +1394,7 @@ def process_auto_bot_signals(exchange_obj=None):
                         'coin_data': coin_data
                     })
         
-        logger.info(f"[NEW_AUTO] 🎯 Найдено {len(potential_coins)} потенциальных сигналов")
+        logger.info(f" 🎯 Найдено {len(potential_coins)} потенциальных сигналов")
         
         # Создаем ботов для найденных сигналов
         created_bots = 0
@@ -1404,7 +1404,7 @@ def process_auto_bot_signals(exchange_obj=None):
             # Проверяем, нет ли уже бота для этого символа
             # ⚡ БЕЗ БЛОКИРОВКИ: чтение безопасно
             if symbol in bots_data['bots']:
-                logger.debug(f"[NEW_AUTO] ⚠️ Бот для {symbol} уже существует")
+                logger.debug(f" ⚠️ Бот для {symbol} уже существует")
                 continue
             
             # ✅ ПРОВЕРКА ПОЗИЦИЙ: Есть ли ручная позиция на бирже?
@@ -1422,34 +1422,34 @@ def process_auto_bot_signals(exchange_obj=None):
                     
                     if not has_active_bot:
                         # Позиция есть, но активного бота нет - это РУЧНАЯ позиция!
-                        logger.warning(f"[NEW_AUTO] 🚫 {symbol}: Обнаружена РУЧНАЯ позиция на бирже - блокируем создание бота!")
+                        logger.warning(f" 🚫 {symbol}: Обнаружена РУЧНАЯ позиция на бирже - блокируем создание бота!")
                         continue
                         
             except Exception as pos_error:
-                logger.warning(f"[NEW_AUTO] ⚠️ {symbol}: Ошибка проверки позиций: {pos_error}")
+                logger.warning(f" ⚠️ {symbol}: Ошибка проверки позиций: {pos_error}")
                 # Продолжаем создание бота если проверка не удалась
             
             # Создаем нового бота
             try:
-                logger.info(f"[NEW_AUTO] 🚀 Создаем бота для {symbol} ({coin['signal']}, RSI: {coin['rsi']:.1f})")
+                logger.info(f" 🚀 Создаем бота для {symbol} ({coin['signal']}, RSI: {coin['rsi']:.1f})")
                 new_bot = create_new_bot(symbol, exchange_obj=exchange_obj)
                 
                 # ✅ КРИТИЧНО: Сразу входим в позицию!
                 signal = coin['signal']
                 direction = 'LONG' if signal == 'ENTER_LONG' else 'SHORT'
-                logger.info(f"[NEW_AUTO] 📈 Входим в позицию {direction} для {symbol}")
+                logger.info(f" 📈 Входим в позицию {direction} для {symbol}")
                 new_bot.enter_position(direction)
                 
                 created_bots += 1
                 
             except Exception as e:
-                logger.error(f"[NEW_AUTO] ❌ Ошибка создания бота для {symbol}: {e}")
+                logger.error(f" ❌ Ошибка создания бота для {symbol}: {e}")
         
         if created_bots > 0:
-            logger.info(f"[NEW_AUTO] ✅ Создано {created_bots} новых ботов")
+            logger.info(f" ✅ Создано {created_bots} новых ботов")
         
     except Exception as e:
-        logger.error(f"[NEW_AUTO] ❌ Ошибка обработки сигналов: {e}")
+        logger.error(f" ❌ Ошибка обработки сигналов: {e}")
 
 def process_trading_signals_for_all_bots(exchange_obj=None):
     """Обрабатывает торговые сигналы для всех активных ботов с новым классом"""
@@ -1543,21 +1543,21 @@ def check_new_autobot_filters(symbol, signal, coin_data):
         
         # Дубль-проверка зрелости монеты
         if not check_coin_maturity_stored_or_verify(symbol):
-            logger.debug(f"[NEW_AUTO_FILTER] {symbol}: Монета незрелая")
+            logger.debug(f" {symbol}: Монета незрелая")
             return False
         
         # Дубль-проверка ExitScam
         if not check_exit_scam_filter(symbol, coin_data):
-            logger.warning(f"[NEW_AUTO_FILTER] {symbol}: ❌ БЛОКИРОВКА: Обнаружены резкие движения цены (ExitScam)")
+            logger.warning(f" {symbol}: ❌ БЛОКИРОВКА: Обнаружены резкие движения цены (ExitScam)")
             return False
         else:
-            logger.info(f"[NEW_AUTO_FILTER] {symbol}: ✅ ExitScam фильтр пройден")
+            logger.info(f" {symbol}: ✅ ExitScam фильтр пройден")
         
-        logger.debug(f"[NEW_AUTO_FILTER] {symbol}: ✅ Все дубль-проверки пройдены")
+        logger.debug(f" {symbol}: ✅ Все дубль-проверки пройдены")
         return True
         
     except Exception as e:
-        logger.error(f"[NEW_AUTO_FILTER] {symbol}: Ошибка проверки фильтров: {e}")
+        logger.error(f" {symbol}: Ошибка проверки фильтров: {e}")
         return False
 
 def analyze_trends_for_signal_coins():
@@ -1570,15 +1570,15 @@ def analyze_trends_for_signal_coins():
         trend_detection_enabled = config.get('trend_detection_enabled', True)
         
         if not trend_detection_enabled:
-            logger.info("[TREND_ANALYSIS] ⏸️ Анализ трендов отключен (trend_detection_enabled=False)")
+            logger.info(" ⏸️ Анализ трендов отключен (trend_detection_enabled=False)")
             return False
         
-        logger.info("[TREND_ANALYSIS] 🎯 Начинаем анализ трендов для сигнальных монет...")
+        logger.info(" 🎯 Начинаем анализ трендов для сигнальных монет...")
         from bots_modules.calculations import analyze_trend_6h
         
         exchange = get_exchange()
         if not exchange:
-            logger.error("[TREND_ANALYSIS] ❌ Биржа не инициализирована")
+            logger.error(" ❌ Биржа не инициализирована")
             return False
         
         # ✅ КРИТИЧНО: Создаем ВРЕМЕННОЕ хранилище для обновлений
@@ -1593,10 +1593,10 @@ def analyze_trends_for_signal_coins():
             if rsi is not None and (rsi <= 29 or rsi >= 71):
                 signal_coins.append(symbol)
         
-        logger.info(f"[TREND_ANALYSIS] 📊 Найдено {len(signal_coins)} сигнальных монет для анализа тренда")
+        logger.info(f" 📊 Найдено {len(signal_coins)} сигнальных монет для анализа тренда")
         
         if not signal_coins:
-            logger.warning("[TREND_ANALYSIS] ⚠️ Нет сигнальных монет для анализа тренда")
+            logger.warning(" ⚠️ Нет сигнальных монет для анализа тренда")
             return False
         
         # Анализируем тренд для каждой сигнальной монеты
@@ -1641,13 +1641,13 @@ def analyze_trends_for_signal_coins():
                 
                 # Выводим прогресс каждые 5 монет
                 if i % 5 == 0 or i == len(signal_coins):
-                    logger.info(f"[TREND_ANALYSIS] 📊 Прогресс: {i}/{len(signal_coins)} ({i*100//len(signal_coins)}%)")
+                    logger.info(f" 📊 Прогресс: {i}/{len(signal_coins)} ({i*100//len(signal_coins)}%)")
                 
                 # Небольшая пауза между запросами
                 time.sleep(0.1)
                 
             except Exception as e:
-                logger.error(f"[TREND_ANALYSIS] ❌ {symbol}: {e}")
+                logger.error(f" ❌ {symbol}: {e}")
                 failed_count += 1
         
         # ✅ АТОМАРНО применяем ВСЕ обновления одним махом!
@@ -1656,18 +1656,18 @@ def analyze_trends_for_signal_coins():
             coins_rsi_data['coins'][symbol]['trend_analysis'] = updates['trend_analysis']
             coins_rsi_data['coins'][symbol]['signal'] = updates['signal']
         
-        logger.info(f"[TREND_ANALYSIS] ✅ {analyzed_count} проанализировано | {len(temp_updates)} обновлений")
+        logger.info(f" ✅ {analyzed_count} проанализировано | {len(temp_updates)} обновлений")
         
         return True
         
     except Exception as e:
-        logger.error(f"[TREND_ANALYSIS] ❌ Ошибка анализа трендов: {e}")
+        logger.error(f" ❌ Ошибка анализа трендов: {e}")
         return False
 
 def process_long_short_coins_with_filters():
     """🔍 Обрабатывает лонг/шорт монеты всеми фильтрами"""
     try:
-        logger.info("[FILTER_PROCESSING] 🔍 Начинаем обработку лонг/шорт монет фильтрами...")
+        logger.info(" 🔍 Начинаем обработку лонг/шорт монет фильтрами...")
         
         from bots_modules.imports_and_globals import rsi_data_lock, coins_rsi_data
         
@@ -1679,10 +1679,10 @@ def process_long_short_coins_with_filters():
             if signal in ['ENTER_LONG', 'ENTER_SHORT']:
                 long_short_coins.append(symbol)
         
-        logger.info(f"[FILTER_PROCESSING] 📊 Найдено {len(long_short_coins)} лонг/шорт монет для обработки")
+        logger.info(f" 📊 Найдено {len(long_short_coins)} лонг/шорт монет для обработки")
         
         if not long_short_coins:
-            logger.warning("[FILTER_PROCESSING] ⚠️ Нет лонг/шорт монет для обработки")
+            logger.warning(" ⚠️ Нет лонг/шорт монет для обработки")
             return []
         
         # Обрабатываем каждую монету всеми фильтрами
@@ -1691,14 +1691,14 @@ def process_long_short_coins_with_filters():
         
         for i, symbol in enumerate(long_short_coins, 1):
             try:
-                logger.info(f"[FILTER_PROCESSING] 🔍 {i}/{len(long_short_coins)} Обрабатываем фильтрами {symbol}...")
+                logger.info(f" 🔍 {i}/{len(long_short_coins)} Обрабатываем фильтрами {symbol}...")
                 
                 # Получаем данные монеты
                 # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
                 coin_data = coins_rsi_data['coins'].get(symbol, {})
                 
                 if not coin_data:
-                    logger.warning(f"[FILTER_PROCESSING] ⚠️ {symbol}: Нет данных")
+                    logger.warning(f" ⚠️ {symbol}: Нет данных")
                     blocked_count += 1
                     continue
                 
@@ -1708,30 +1708,30 @@ def process_long_short_coins_with_filters():
                 
                 if passes_filters:
                     filtered_coins.append(symbol)
-                    logger.info(f"[FILTER_PROCESSING] ✅ {symbol}: Прошел все фильтры")
+                    logger.info(f" ✅ {symbol}: Прошел все фильтры")
                 else:
                     blocked_count += 1
-                    logger.info(f"[FILTER_PROCESSING] ❌ {symbol}: Заблокирован фильтрами")
+                    logger.info(f" ❌ {symbol}: Заблокирован фильтрами")
                 
             except Exception as e:
-                logger.error(f"[FILTER_PROCESSING] ❌ {symbol}: Ошибка обработки фильтрами: {e}")
+                logger.error(f" ❌ {symbol}: Ошибка обработки фильтрами: {e}")
                 blocked_count += 1
         
-        logger.info(f"[FILTER_PROCESSING] ✅ Обработка фильтрами завершена:")
-        logger.info(f"[FILTER_PROCESSING] 📊 Прошли фильтры: {len(filtered_coins)}")
-        logger.info(f"[FILTER_PROCESSING] 📊 Заблокированы: {blocked_count}")
-        logger.info(f"[FILTER_PROCESSING] 📊 Всего обработано: {len(filtered_coins) + blocked_count}")
+        logger.info(f" ✅ Обработка фильтрами завершена:")
+        logger.info(f" 📊 Прошли фильтры: {len(filtered_coins)}")
+        logger.info(f" 📊 Заблокированы: {blocked_count}")
+        logger.info(f" 📊 Всего обработано: {len(filtered_coins) + blocked_count}")
         
         return filtered_coins
         
     except Exception as e:
-        logger.error(f"[FILTER_PROCESSING] ❌ Ошибка обработки фильтрами: {e}")
+        logger.error(f" ❌ Ошибка обработки фильтрами: {e}")
         return []
 
 def set_filtered_coins_for_autobot(filtered_coins):
     """✅ Передает отфильтрованные монеты автоботу и СРАЗУ запускает проверку сигналов"""
     try:
-        logger.info(f"[AUTOBOT_SETUP] ✅ Передаем {len(filtered_coins)} отфильтрованных монет автоботу...")
+        logger.info(f" ✅ Передаем {len(filtered_coins)} отфильтрованных монет автоботу...")
         
         from bots_modules.imports_and_globals import bots_data_lock, bots_data
         
@@ -1743,24 +1743,24 @@ def set_filtered_coins_for_autobot(filtered_coins):
         bots_data['auto_bot_config']['filtered_coins'] = filtered_coins
         bots_data['auto_bot_config']['last_filter_update'] = datetime.now().isoformat()
         
-        logger.info(f"[AUTOBOT_SETUP] ✅ Отфильтрованные монеты сохранены в конфиг автобота")
-        logger.info(f"[AUTOBOT_SETUP] 📊 Монеты для автобота: {', '.join(filtered_coins[:10])}{'...' if len(filtered_coins) > 10 else ''}")
+        logger.info(f" ✅ Отфильтрованные монеты сохранены в конфиг автобота")
+        logger.info(f" 📊 Монеты для автобота: {', '.join(filtered_coins[:10])}{'...' if len(filtered_coins) > 10 else ''}")
         
         # ✅ КРИТИЧНО: СРАЗУ проверяем сигналы и создаем ботов без задержки!
         # Не ждем следующего цикла воркера (180 секунд) - обрабатываем немедленно!
         if filtered_coins and bots_data.get('auto_bot_config', {}).get('enabled', False):
-            logger.info(f"[AUTOBOT_SETUP] 🚀 Немедленно проверяем сигналы для {len(filtered_coins)} монет...")
+            logger.info(f" 🚀 Немедленно проверяем сигналы для {len(filtered_coins)} монет...")
             try:
                 from bots_modules.imports_and_globals import get_exchange
                 exchange_obj = get_exchange()
                 process_auto_bot_signals(exchange_obj=exchange_obj)
             except Exception as e:
-                logger.error(f"[AUTOBOT_SETUP] ❌ Ошибка немедленной проверки сигналов: {e}")
+                logger.error(f" ❌ Ошибка немедленной проверки сигналов: {e}")
         
         return True
         
     except Exception as e:
-        logger.error(f"[AUTOBOT_SETUP] ❌ Ошибка передачи монет автоботу: {e}")
+        logger.error(f" ❌ Ошибка передачи монет автоботу: {e}")
         return False
 
 def check_coin_maturity_stored_or_verify(symbol):
@@ -1997,7 +1997,7 @@ def get_lstm_prediction(symbol, signal, current_price):
                 try:
                     prediction = future.result(timeout=5)  # 5 секунд таймаут для LSTM
                 except concurrent.futures.TimeoutError:
-                    logger.warning(f"[AI_LSTM] {symbol}: ⏱️ LSTM prediction таймаут (5с)")
+                    logger.warning(f"{symbol}: ⏱️ LSTM prediction таймаут (5с)")
                     prediction = None  # Пропускаем AI проверку при таймауте
             
             if prediction and prediction.get('confidence', 0) >= AIConfig.AI_LSTM_MIN_CONFIDENCE:
@@ -2007,14 +2007,14 @@ def get_lstm_prediction(symbol, signal, current_price):
                 
                 if lstm_direction == signal:
                     logger.info(
-                        f"[LSTM] {symbol}: ✅ ПОДТВЕРЖДЕНИЕ: "
+                        f"{symbol}: ✅ ПОДТВЕРЖДЕНИЕ: "
                         f"LSTM предсказывает {lstm_direction} "
                         f"(изменение: {prediction['change_percent']:+.2f}%, "
                         f"уверенность: {confidence:.1f}%)"
                     )
                 else:
                     logger.warning(
-                        f"[LSTM] {symbol}: ⚠️ ПРОТИВОРЕЧИЕ: "
+                        f"{symbol}: ⚠️ ПРОТИВОРЕЧИЕ: "
                         f"Сигнал {signal}, но LSTM предсказывает {lstm_direction} "
                         f"(изменение: {prediction['change_percent']:+.2f}%, "
                         f"уверенность: {confidence:.1f}%)"
@@ -2029,10 +2029,10 @@ def get_lstm_prediction(symbol, signal, current_price):
             return None
             
         except ImportError as e:
-            logger.debug(f"[LSTM] {symbol}: AI модуль не доступен: {e}")
+            logger.debug(f"{symbol}: AI модуль не доступен: {e}")
             return None
         except Exception as e:
-            logger.error(f"[LSTM] {symbol}: Ошибка LSTM предсказания: {e}")
+            logger.error(f"{symbol}: Ошибка LSTM предсказания: {e}")
             return None
     
     except ImportError:
@@ -2098,7 +2098,7 @@ def get_pattern_analysis(symbol, signal, current_price):
                 # Проверяем подтверждение
                 if pattern_signal['confirmation']:
                     logger.info(
-                        f"[PATTERN] {symbol}: ✅ ПОДТВЕРЖДЕНИЕ: "
+                        f"{symbol}: ✅ ПОДТВЕРЖДЕНИЕ: "
                         f"Паттерны подтверждают {signal} "
                         f"(найдено: {pattern_signal['patterns_found']}, "
                         f"уверенность: {pattern_signal['confidence']:.1f}%)"
@@ -2107,12 +2107,12 @@ def get_pattern_analysis(symbol, signal, current_price):
                     if pattern_signal['strongest_pattern']:
                         strongest = pattern_signal['strongest_pattern']
                         logger.info(
-                            f"[PATTERN] {symbol}:    └─ {strongest['name']}: "
+                            f"{symbol}:    └─ {strongest['name']}: "
                             f"{strongest['description']}"
                         )
                 else:
                     logger.warning(
-                        f"[PATTERN] {symbol}: ⚠️ ПРОТИВОРЕЧИЕ: "
+                        f"{symbol}: ⚠️ ПРОТИВОРЕЧИЕ: "
                         f"Сигнал {signal}, но паттерны указывают на {pattern_signal['signal']} "
                         f"(уверенность: {pattern_signal['confidence']:.1f}%)"
                     )
@@ -2122,10 +2122,10 @@ def get_pattern_analysis(symbol, signal, current_price):
             return None
             
         except ImportError as e:
-            logger.debug(f"[PATTERN] {symbol}: AI модуль не доступен: {e}")
+            logger.debug(f"{symbol}: AI модуль не доступен: {e}")
             return None
         except Exception as e:
-            logger.error(f"[PATTERN] {symbol}: Ошибка анализа паттернов: {e}")
+            logger.error(f"{symbol}: Ошибка анализа паттернов: {e}")
             return None
     
     except ImportError:

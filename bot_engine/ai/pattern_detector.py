@@ -33,7 +33,7 @@ try:
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
-    logger.warning("[PATTERN] scikit-learn не установлен. Pattern Recognition недоступен.")
+    logger.warning("scikit-learn не установлен. Pattern Recognition недоступен.")
 
 
 class PatternDetector:
@@ -68,7 +68,7 @@ class PatternDetector:
         }
         
         if not SKLEARN_AVAILABLE:
-            logger.error("[PATTERN] scikit-learn недоступен")
+            logger.error("scikit-learn недоступен")
             return
         
         # Загружаем модель, если существует
@@ -93,7 +93,7 @@ class PatternDetector:
         # Scaler для нормализации признаков
         self.scaler = StandardScaler()
         
-        logger.info("[PATTERN] Создана новая модель для распознавания паттернов")
+        logger.info("Создана новая модель для распознавания паттернов")
     
     def detect_patterns(
         self,
@@ -630,15 +630,15 @@ class PatternDetector:
             y_train, y_val = y[:split_idx], y[split_idx:]
             
             # Обучаем модель
-            logger.info(f"[PATTERN] Начало обучения: {len(X_train)} образцов")
+            logger.info(f"Начало обучения: {len(X_train)} образцов")
             self.model.fit(X_train, y_train)
             
             # Проверяем точность
             train_score = self.model.score(X_train, y_train)
             val_score = self.model.score(X_val, y_val)
             
-            logger.info(f"[PATTERN] Train accuracy: {train_score:.3f}")
-            logger.info(f"[PATTERN] Val accuracy: {val_score:.3f}")
+            logger.info(f"Train accuracy: {train_score:.3f}")
+            logger.info(f"Val accuracy: {val_score:.3f}")
             
             # Сохраняем модель
             self.save_model()
@@ -651,7 +651,7 @@ class PatternDetector:
             }
             
         except Exception as e:
-            logger.error(f"[PATTERN] Ошибка обучения: {e}")
+            logger.error(f"Ошибка обучения: {e}")
             return {'success': False, 'error': str(e)}
     
     def load_model(self):
@@ -661,20 +661,20 @@ class PatternDetector:
                 with open(self.model_path, 'rb') as f:
                     self.model = pickle.load(f)
                 
-                logger.info(f"[PATTERN] Модель загружена: {self.model_path}")
+                logger.info(f"Модель загружена: {self.model_path}")
             
             if os.path.exists(self.scaler_path):
                 with open(self.scaler_path, 'rb') as f:
                     self.scaler = pickle.load(f)
                 
-                logger.info(f"[PATTERN] Scaler загружен: {self.scaler_path}")
+                logger.info(f"Scaler загружен: {self.scaler_path}")
             
             if self.model is None:
-                logger.warning("[PATTERN] Модель не найдена, создаем новую")
+                logger.warning("Модель не найдена, создаем новую")
                 self._create_new_model()
         
         except Exception as e:
-            logger.error(f"[PATTERN] Ошибка загрузки модели: {e}")
+            logger.error(f"Ошибка загрузки модели: {e}")
             self._create_new_model()
     
     def save_model(self):
@@ -688,17 +688,17 @@ class PatternDetector:
                 with open(self.model_path, 'wb') as f:
                     pickle.dump(self.model, f)
                 
-                logger.info(f"[PATTERN] Модель сохранена: {self.model_path}")
+                logger.info(f"Модель сохранена: {self.model_path}")
             
             # Сохраняем scaler
             if self.scaler is not None:
                 with open(self.scaler_path, 'wb') as f:
                     pickle.dump(self.scaler, f)
                 
-                logger.info(f"[PATTERN] Scaler сохранен: {self.scaler_path}")
+                logger.info(f"Scaler сохранен: {self.scaler_path}")
         
         except Exception as e:
-            logger.error(f"[PATTERN] Ошибка сохранения модели: {e}")
+            logger.error(f"Ошибка сохранения модели: {e}")
     
     def get_status(self) -> Dict:
         """Возвращает статус модели"""
