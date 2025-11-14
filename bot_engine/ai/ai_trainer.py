@@ -13,6 +13,7 @@ import os
 import json
 import logging
 import pickle
+from copy import deepcopy
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Any
@@ -24,6 +25,46 @@ from sklearn.metrics import accuracy_score, classification_report, mean_squared_
 import joblib
 
 logger = logging.getLogger('AI.Trainer')
+
+
+_existing_coin_settings_cache = None
+
+
+def _get_existing_coin_settings(symbol: str) -> Optional[Dict[str, Any]]:
+    """
+    Возвращает последние индивидуальные настройки монеты, если они есть.
+    Используем для того, чтобы обучение начиналось от последней успешной конфигурации.
+    """
+    global _existing_coin_settings_cache
+
+    if not symbol:
+        return None
+
+    # 1. Пытаемся получить настройки из bots.py, если он запущен
+    try:
+        from bots_modules.imports_and_globals import get_individual_coin_settings  # noqa: WPS433,E402
+
+        current_settings = get_individual_coin_settings(symbol)
+        if current_settings:
+            return deepcopy(current_settings)
+    except Exception:
+        pass
+
+    # 2. Фолбек: читаем напрямую из storage и кэшируем, чтобы не дергать диск на каждую монету
+    try:
+        if _existing_coin_settings_cache is None:
+            from bot_engine.storage import load_individual_coin_settings as storage_load_individual_coin_settings  # noqa: WPS433,E402
+
+            _existing_coin_settings_cache = storage_load_individual_coin_settings() or {}
+
+        normalized_symbol = symbol.upper()
+        cached_settings = _existing_coin_settings_cache.get(normalized_symbol)
+        if cached_settings:
+            return deepcopy(cached_settings)
+    except Exception:
+        pass
+
+    return None
 
 
 class AITrainer:
@@ -1309,6 +1350,16 @@ class AITrainer:
             base_exit_scam_single_candle_percent = base_config.get('exit_scam_single_candle_percent', 15.0)
             base_exit_scam_multi_candle_count = base_config.get('exit_scam_multi_candle_count', 4)
             base_exit_scam_multi_candle_percent = base_config.get('exit_scam_multi_candle_percent', 50.0)
+            base_trend_detection_enabled = base_config.get('trend_detection_enabled', False)
+            base_avoid_down_trend = base_config.get('avoid_down_trend', True)
+            base_avoid_up_trend = base_config.get('avoid_up_trend', True)
+            base_trend_analysis_period = base_config.get('trend_analysis_period', 30)
+            base_trend_price_change_threshold = base_config.get('trend_price_change_threshold', 7)
+            base_trend_candles_threshold = base_config.get('trend_candles_threshold', 70)
+            base_enable_maturity_check = base_config.get('enable_maturity_check', True)
+            base_min_candles_for_maturity = base_config.get('min_candles_for_maturity', 400)
+            base_min_rsi_low = base_config.get('min_rsi_low', 35)
+            base_max_rsi_high = base_config.get('max_rsi_high', 65)
 
             logger.info("🎲 БАЗОВЫЕ ПАРАМЕТРЫ ОБУЧЕНИЯ (индивидуализация на уровне монеты)")
 
@@ -1509,6 +1560,82 @@ class AITrainer:
                     if len(closes) < 100:
                         continue
                     
+                    # Готовим индивидуальную базу конфигурации (общий конфиг + индивидуальные настройки монеты)
+                    existing_coin_settings = _get_existing_coin_settings(symbol) or {}
+                    if existing_coin_settings:
+                        logger.debug(f"   🧩 {symbol}: обнаружены индивидуальные настройки, используем их как базу")
+                    coin_base_config = base_config.copy() if isinstance(base_config, dict) else {}
+                    coin_base_config.update(existing_coin_settings)
+
+                    def _get_float_value(key, default_value):
+                        value = coin_base_config.get(key, default_value)
+                        if value is None:
+                            return default_value
+                        try:
+                            return float(value)
+                        except (TypeError, ValueError):
+                            return default_value
+
+                    def _get_int_value(key, default_value):
+                        value = coin_base_config.get(key, default_value)
+                        if value is None:
+                            return default_value
+                        try:
+                            return int(value)
+                        except (TypeError, ValueError):
+                            return default_value
+
+                    def _get_bool_value(key, default_value):
+                        value = coin_base_config.get(key, default_value)
+                        if isinstance(value, str):
+                            return value.lower() in ('1', 'true', 'yes', 'on')
+                        if value is None:
+                            return default_value
+                        return bool(value)
+
+                    coin_base_rsi_oversold = _get_float_value('rsi_long_threshold', base_rsi_oversold)
+                    coin_base_rsi_overbought = _get_float_value('rsi_short_threshold', base_rsi_overbought)
+                    coin_base_exit_long_with = _get_float_value('rsi_exit_long_with_trend', base_exit_long_with)
+                    coin_base_exit_long_against = _get_float_value('rsi_exit_long_against_trend', base_exit_long_against)
+                    coin_base_exit_short_with = _get_float_value('rsi_exit_short_with_trend', base_exit_short_with)
+                    coin_base_exit_short_against = _get_float_value('rsi_exit_short_against_trend', base_exit_short_against)
+
+                    coin_base_stop_loss = _get_float_value('max_loss_percent', base_stop_loss)
+                    coin_base_take_profit = _get_float_value('take_profit_percent', base_take_profit)
+                    coin_base_trailing_activation = _get_float_value('trailing_stop_activation', base_trailing_activation)
+                    coin_base_trailing_distance = _get_float_value('trailing_stop_distance', base_trailing_distance)
+                    coin_base_trailing_take_distance = _get_float_value('trailing_take_distance', base_trailing_take_distance)
+                    coin_base_trailing_update_interval = _get_float_value('trailing_update_interval', base_trailing_update_interval)
+                    coin_base_break_even_trigger = _get_float_value(
+                        'break_even_trigger_percent',
+                        _get_float_value('break_even_trigger', base_break_even)
+                    )
+                    coin_base_break_even_protection = _get_bool_value('break_even_protection', base_break_even_protection)
+                    coin_base_max_hours = _get_float_value('max_position_hours', base_max_hours)
+
+                    coin_base_rsi_time_filter_enabled = _get_bool_value('rsi_time_filter_enabled', base_rsi_time_filter_enabled)
+                    coin_base_rsi_time_filter_candles = _get_int_value('rsi_time_filter_candles', base_rsi_time_filter_candles)
+                    coin_base_rsi_time_filter_upper = _get_float_value('rsi_time_filter_upper', base_rsi_time_filter_upper)
+                    coin_base_rsi_time_filter_lower = _get_float_value('rsi_time_filter_lower', base_rsi_time_filter_lower)
+
+                    coin_base_exit_scam_enabled = _get_bool_value('exit_scam_enabled', base_exit_scam_enabled)
+                    coin_base_exit_scam_candles = _get_int_value('exit_scam_candles', base_exit_scam_candles)
+                    coin_base_exit_scam_single = _get_float_value('exit_scam_single_candle_percent', base_exit_scam_single_candle_percent)
+                    coin_base_exit_scam_multi_count = _get_int_value('exit_scam_multi_candle_count', base_exit_scam_multi_candle_count)
+                    coin_base_exit_scam_multi_percent = _get_float_value('exit_scam_multi_candle_percent', base_exit_scam_multi_candle_percent)
+
+                    coin_base_trend_detection_enabled = _get_bool_value('trend_detection_enabled', base_trend_detection_enabled)
+                    coin_base_avoid_down_trend = _get_bool_value('avoid_down_trend', base_avoid_down_trend)
+                    coin_base_avoid_up_trend = _get_bool_value('avoid_up_trend', base_avoid_up_trend)
+                    coin_base_trend_analysis_period = _get_int_value('trend_analysis_period', base_trend_analysis_period)
+                    coin_base_trend_price_change_threshold = _get_float_value('trend_price_change_threshold', base_trend_price_change_threshold)
+                    coin_base_trend_candles_threshold = _get_int_value('trend_candles_threshold', base_trend_candles_threshold)
+
+                    coin_base_enable_maturity_check = _get_bool_value('enable_maturity_check', base_enable_maturity_check)
+                    coin_base_min_candles_for_maturity = _get_int_value('min_candles_for_maturity', base_min_candles_for_maturity)
+                    coin_base_min_rsi_low = _get_float_value('min_rsi_low', base_min_rsi_low)
+                    coin_base_max_rsi_high = _get_float_value('max_rsi_high', base_max_rsi_high)
+
                     # ВАЖНО: Используем лучшие параметры для монеты если они есть
                     # Иначе используем общие параметры из начала функции
                     if coin_best_params:
@@ -1524,12 +1651,12 @@ class AITrainer:
                         if not coin_rsi_params:
                             exit_variation = 8
                             coin_rsi_params = {
-                                'oversold': max(20, min(35, base_rsi_oversold + coin_rng.randint(-variation_range, variation_range))),
-                                'overbought': max(65, min(80, base_rsi_overbought + coin_rng.randint(-variation_range, variation_range))),
-                                'exit_long_with_trend': max(55, min(70, base_exit_long_with + coin_rng.randint(-exit_variation, exit_variation))),
-                                'exit_long_against_trend': max(50, min(65, base_exit_long_against + coin_rng.randint(-exit_variation, exit_variation))),
-                                'exit_short_with_trend': max(25, min(40, base_exit_short_with + coin_rng.randint(-exit_variation, exit_variation))),
-                                'exit_short_against_trend': max(30, min(45, base_exit_short_against + coin_rng.randint(-exit_variation, exit_variation)))
+                                'oversold': max(20, min(35, coin_base_rsi_oversold + coin_rng.randint(-variation_range, variation_range))),
+                                'overbought': max(65, min(80, coin_base_rsi_overbought + coin_rng.randint(-variation_range, variation_range))),
+                                'exit_long_with_trend': max(55, min(70, coin_base_exit_long_with + coin_rng.randint(-exit_variation, exit_variation))),
+                                'exit_long_against_trend': max(50, min(65, coin_base_exit_long_against + coin_rng.randint(-exit_variation, exit_variation))),
+                                'exit_short_with_trend': max(25, min(40, coin_base_exit_short_with + coin_rng.randint(-exit_variation, exit_variation))),
+                                'exit_short_against_trend': max(30, min(45, coin_base_exit_short_against + coin_rng.randint(-exit_variation, exit_variation)))
                             }
                             logger.debug(f"   🎲 {symbol}: сгенерировали уникальные RSI параметры")
 
@@ -1546,36 +1673,56 @@ class AITrainer:
                     coin_RSI_EXIT_SHORT_WITH_TREND = coin_rsi_params['exit_short_with_trend']
                     coin_RSI_EXIT_SHORT_AGAINST_TREND = coin_rsi_params['exit_short_against_trend']
 
-                    MAX_LOSS_PERCENT = max(5.0, min(30.0, base_stop_loss + coin_rng.uniform(-6.0, 6.0)))
-                    TAKE_PROFIT_PERCENT = max(10.0, min(70.0, base_take_profit + coin_rng.uniform(-12.0, 15.0)))
-                    TRAILING_STOP_ACTIVATION = max(8.0, min(70.0, base_trailing_activation + coin_rng.uniform(-12.0, 25.0)))
-                    TRAILING_STOP_DISTANCE = max(5.0, min(45.0, base_trailing_distance + coin_rng.uniform(-12.0, 18.0)))
-                    TRAILING_TAKE_DISTANCE = max(0.1, min(2.0, base_trailing_take_distance + coin_rng.uniform(-0.2, 0.2)))
-                    TRAILING_UPDATE_INTERVAL = max(1.0, min(10.0, base_trailing_update_interval + coin_rng.uniform(-1.0, 1.0)))
-                    BREAK_EVEN_TRIGGER = max(30.0, min(250.0, base_break_even + coin_rng.uniform(-60.0, 90.0)))
-                    base_break_even_flag = bool(base_break_even_protection)
+                    MAX_LOSS_PERCENT = max(5.0, min(30.0, coin_base_stop_loss + coin_rng.uniform(-6.0, 6.0)))
+                    TAKE_PROFIT_PERCENT = max(10.0, min(70.0, coin_base_take_profit + coin_rng.uniform(-12.0, 15.0)))
+                    TRAILING_STOP_ACTIVATION = max(8.0, min(70.0, coin_base_trailing_activation + coin_rng.uniform(-12.0, 25.0)))
+                    TRAILING_STOP_DISTANCE = max(5.0, min(45.0, coin_base_trailing_distance + coin_rng.uniform(-12.0, 18.0)))
+                    TRAILING_TAKE_DISTANCE = max(0.1, min(2.0, coin_base_trailing_take_distance + coin_rng.uniform(-0.2, 0.2)))
+                    TRAILING_UPDATE_INTERVAL = max(1.0, min(10.0, coin_base_trailing_update_interval + coin_rng.uniform(-1.0, 1.0)))
+                    BREAK_EVEN_TRIGGER = max(30.0, min(250.0, coin_base_break_even_trigger + coin_rng.uniform(-60.0, 90.0)))
+                    base_break_even_flag = bool(coin_base_break_even_protection)
                     BREAK_EVEN_PROTECTION = base_break_even_flag if coin_rng.random() < 0.5 else not base_break_even_flag
-                    MAX_POSITION_HOURS = max(12, min(336, base_max_hours + coin_rng.randint(-72, 120)))
+                    MAX_POSITION_HOURS = max(12, min(336, coin_base_max_hours + coin_rng.randint(-72, 120)))
 
                     # Фильтры: RSI временной и ExitScam (индивидуализация на уровне монеты)
-                    coin_rsi_time_filter_enabled = bool(base_rsi_time_filter_enabled)
-                    coin_rsi_time_filter_candles = max(3, min(30, base_rsi_time_filter_candles + coin_rng.randint(-4, 4)))
-                    coin_rsi_time_filter_upper = max(50, min(85, base_rsi_time_filter_upper + coin_rng.randint(-6, 6)))
-                    coin_rsi_time_filter_lower = max(15, min(50, base_rsi_time_filter_lower + coin_rng.randint(-6, 6)))
+                    coin_rsi_time_filter_enabled = bool(coin_base_rsi_time_filter_enabled)
+                    coin_rsi_time_filter_candles = max(3, min(30, coin_base_rsi_time_filter_candles + coin_rng.randint(-4, 4)))
+                    coin_rsi_time_filter_upper = max(50, min(85, coin_base_rsi_time_filter_upper + coin_rng.randint(-6, 6)))
+                    coin_rsi_time_filter_lower = max(15, min(50, coin_base_rsi_time_filter_lower + coin_rng.randint(-6, 6)))
                     if coin_rsi_time_filter_lower >= coin_rsi_time_filter_upper:
                         # Гарантируем корректный диапазон
                         coin_rsi_time_filter_lower = max(15, coin_rsi_time_filter_upper - 1)
-                    coin_exit_scam_enabled = bool(base_exit_scam_enabled)
-                    coin_exit_scam_candles = max(4, min(30, base_exit_scam_candles + coin_rng.randint(-4, 4)))
+                    coin_exit_scam_enabled = bool(coin_base_exit_scam_enabled)
+                    coin_exit_scam_candles = max(4, min(30, coin_base_exit_scam_candles + coin_rng.randint(-4, 4)))
                     coin_exit_scam_single_candle_percent = max(
-                        5.0, min(60.0, base_exit_scam_single_candle_percent + coin_rng.uniform(-10.0, 10.0))
+                        5.0, min(60.0, coin_base_exit_scam_single + coin_rng.uniform(-10.0, 10.0))
                     )
                     coin_exit_scam_multi_candle_count = max(
-                        2, min(12, base_exit_scam_multi_candle_count + coin_rng.randint(-2, 2))
+                        2, min(12, coin_base_exit_scam_multi_count + coin_rng.randint(-2, 2))
                     )
                     coin_exit_scam_multi_candle_percent = max(
-                        20.0, min(150.0, base_exit_scam_multi_candle_percent + coin_rng.uniform(-20.0, 20.0))
+                        20.0, min(150.0, coin_base_exit_scam_multi_percent + coin_rng.uniform(-20.0, 20.0))
                     )
+
+                    coin_trend_detection_enabled = bool(coin_base_trend_detection_enabled)
+                    if coin_rng.random() > 0.7:
+                        coin_trend_detection_enabled = not coin_trend_detection_enabled
+                    coin_avoid_down_trend = bool(coin_base_avoid_down_trend)
+                    if coin_rng.random() > 0.8:
+                        coin_avoid_down_trend = not coin_avoid_down_trend
+                    coin_avoid_up_trend = bool(coin_base_avoid_up_trend)
+                    if coin_rng.random() > 0.8:
+                        coin_avoid_up_trend = not coin_avoid_up_trend
+                    coin_trend_analysis_period = max(5, min(120, coin_base_trend_analysis_period + coin_rng.randint(-10, 10)))
+                    coin_trend_price_change_threshold = max(1.0, min(25.0, coin_base_trend_price_change_threshold + coin_rng.uniform(-3.0, 3.0)))
+                    coin_trend_candles_threshold = max(40, min(100, coin_base_trend_candles_threshold + coin_rng.randint(-15, 15)))
+
+                    coin_enable_maturity_check = bool(coin_base_enable_maturity_check)
+                    if coin_rng.random() > 0.85:
+                        coin_enable_maturity_check = not coin_enable_maturity_check
+                    coin_min_candles_for_maturity = max(100, min(900, coin_base_min_candles_for_maturity + coin_rng.randint(-120, 150)))
+                    coin_min_rsi_low = max(15, min(45, coin_base_min_rsi_low + coin_rng.randint(-5, 5)))
+                    coin_max_rsi_high = max(55, min(85, coin_base_max_rsi_high + coin_rng.randint(-5, 5)))
 
                     if symbol_idx <= 5 or symbol_idx % progress_interval == 0:
                         logger.info(
@@ -2121,6 +2268,16 @@ class AITrainer:
                                         'exit_scam_single_candle_percent': coin_exit_scam_single_candle_percent,
                                         'exit_scam_multi_candle_count': coin_exit_scam_multi_candle_count,
                                         'exit_scam_multi_candle_percent': coin_exit_scam_multi_candle_percent,
+                                        'trend_detection_enabled': coin_trend_detection_enabled,
+                                        'avoid_down_trend': coin_avoid_down_trend,
+                                        'avoid_up_trend': coin_avoid_up_trend,
+                                        'trend_analysis_period': coin_trend_analysis_period,
+                                        'trend_price_change_threshold': coin_trend_price_change_threshold,
+                                        'trend_candles_threshold': coin_trend_candles_threshold,
+                                        'enable_maturity_check': coin_enable_maturity_check,
+                                        'min_candles_for_maturity': coin_min_candles_for_maturity,
+                                        'min_rsi_low': coin_min_rsi_low,
+                                        'max_rsi_high': coin_max_rsi_high,
                                         'ai_trained': True,
                                         'ai_win_rate': symbol_win_rate,
                                         'ai_rating': self.param_tracker.calculate_rating(symbol_win_rate, symbol_pnl, signal_score, trades_for_symbol) if self.param_tracker else 0,
