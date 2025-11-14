@@ -9,12 +9,62 @@
 import os
 import json
 import logging
+from copy import deepcopy
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 
 logger = logging.getLogger('AI.Backtester')
+
+_individual_settings_cache: Optional[Dict[str, Dict[str, Any]]] = None
+
+
+def _get_cached_individual_settings(symbol: Optional[str]) -> Optional[Dict[str, Any]]:
+    """Фолбек для получения индивидуальных настроек, когда bots_modules недоступен."""
+    if not symbol:
+        return None
+    normalized = symbol.upper()
+    global _individual_settings_cache  # noqa: WPS420
+    try:
+        if _individual_settings_cache is None:
+            from bot_engine.storage import load_individual_coin_settings  # noqa: WPS433,E402
+
+            _individual_settings_cache = load_individual_coin_settings() or {}
+        settings = _individual_settings_cache.get(normalized)
+        return deepcopy(settings) if settings else None
+    except Exception as exc:  # pragma: no cover - резервный путь
+        logger.debug(f"⚠️ Не удалось загрузить индивидуальные настройки {normalized}: {exc}")
+        return None
+
+
+def _get_config_snapshot(symbol: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Возвращает срез настроек Auto Bot (глобальный + overrides), используется тренером и бэктестером.
+    """
+    try:
+        from bots_modules.imports_and_globals import get_config_snapshot  # noqa: WPS433,E402
+
+        return get_config_snapshot(symbol)
+    except Exception as exc:  # pragma: no cover - fallback при отсутствии сервиса ботов
+        logger.debug(f"⚠️ Не удалось получить конфиг через bots_modules ({exc}), используем bot_config.py")
+        try:
+            from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG  # noqa: WPS433,E402
+
+            global_config = deepcopy(DEFAULT_AUTO_BOT_CONFIG)
+        except Exception:
+            global_config = {}
+        individual_config = _get_cached_individual_settings(symbol) if symbol else None
+        merged_config = deepcopy(global_config)
+        if individual_config:
+            merged_config.update(individual_config)
+        return {
+            'global': global_config,
+            'individual': individual_config,
+            'merged': merged_config,
+            'symbol': symbol.upper() if symbol else None,
+            'timestamp': datetime.utcnow().isoformat()
+        }
 
 
 class AIBacktester:
@@ -26,6 +76,8 @@ class AIBacktester:
         """Инициализация бэктестера"""
         self.results_dir = 'data/ai/backtest_results'
         self.data_dir = 'data/ai'
+        config_snapshot = _get_config_snapshot()
+        self.auto_bot_config = config_snapshot.get('global', {})
         
         # Создаем директории
         os.makedirs(self.results_dir, exist_ok=True)
@@ -225,14 +277,7 @@ class AIBacktester:
                 logger.warning("⚠️ Нет свечей для бэктеста")
                 return {'error': 'No candles available for backtesting'}
             
-            # Параметры стратегии
-            rsi_long_entry = strategy_params.get('rsi_long_entry', 29)
-            rsi_long_exit = strategy_params.get('rsi_long_exit', 65)
-            rsi_short_entry = strategy_params.get('rsi_short_entry', 71)
-            rsi_short_exit = strategy_params.get('rsi_short_exit', 35)
-            stop_loss_pct = strategy_params.get('stop_loss_pct', 2.0)
-            take_profit_pct = strategy_params.get('take_profit_pct', 20.0)
-            position_size_pct = strategy_params.get('position_size_pct', 10.0)
+            base_config = self.auto_bot_config or {}
             
             # Симулируем торговлю на свечах
             initial_balance = 10000.0
@@ -248,6 +293,38 @@ class AIBacktester:
                     continue
                 
                 indicators = latest.get('indicators', {}).get(symbol, {})
+                symbol_config = _get_config_snapshot(symbol).get('merged', base_config)
+
+                rsi_long_entry = strategy_params.get(
+                    'rsi_long_entry',
+                    symbol_config.get('rsi_long_threshold', base_config.get('rsi_long_threshold', 29))
+                )
+                rsi_short_entry = strategy_params.get(
+                    'rsi_short_entry',
+                    symbol_config.get('rsi_short_threshold', base_config.get('rsi_short_threshold', 71))
+                )
+                rsi_long_exit = strategy_params.get(
+                    'rsi_long_exit',
+                    symbol_config.get('rsi_exit_long_with_trend', base_config.get('rsi_exit_long_with_trend', 65))
+                )
+                rsi_short_exit = strategy_params.get(
+                    'rsi_short_exit',
+                    symbol_config.get('rsi_exit_short_with_trend', base_config.get('rsi_exit_short_with_trend', 35))
+                )
+                stop_loss_pct = strategy_params.get(
+                    'stop_loss_pct',
+                    symbol_config.get('max_loss_percent', base_config.get('max_loss_percent', 2.0))
+                )
+                take_profit_pct = strategy_params.get(
+                    'take_profit_pct',
+                    symbol_config.get('take_profit_percent', base_config.get('take_profit_percent', 20.0))
+                )
+                position_size_pct = strategy_params.get('position_size_pct')
+                if position_size_pct is None:
+                    if symbol_config.get('default_position_mode') == 'percent':
+                        position_size_pct = symbol_config.get('default_position_size', 10.0)
+                    else:
+                        position_size_pct = 10.0
                 current_rsi = indicators.get('rsi', 50)
                 
                 # Простая симуляция: проверяем условия входа/выхода на основе RSI
@@ -379,6 +456,8 @@ class AIBacktester:
                 logger.info("⚠️ Недостаточно сделок за период, используем свечи для симуляции...")
                 return self._backtest_on_candles(strategy_params, period_days)
             
+            base_config = _get_config_snapshot().get('global', {})
+
             # Симулируем торговлю с новыми параметрами
             initial_balance = 10000.0
             balance = initial_balance
@@ -386,12 +465,30 @@ class AIBacktester:
             closed_trades = []
             
             # Параметры стратегии
-            rsi_long_entry = strategy_params.get('rsi_long_entry', 29)
-            rsi_long_exit = strategy_params.get('rsi_long_exit', 65)
-            rsi_short_entry = strategy_params.get('rsi_short_entry', 71)
-            rsi_short_exit = strategy_params.get('rsi_short_exit', 35)
-            stop_loss_pct = strategy_params.get('stop_loss_pct', 2.0)
-            take_profit_pct = strategy_params.get('take_profit_pct', 20.0)
+            rsi_long_entry = strategy_params.get(
+                'rsi_long_entry',
+                base_config.get('rsi_long_threshold', 29)
+            )
+            rsi_long_exit = strategy_params.get(
+                'rsi_long_exit',
+                base_config.get('rsi_exit_long_with_trend', 65)
+            )
+            rsi_short_entry = strategy_params.get(
+                'rsi_short_entry',
+                base_config.get('rsi_short_threshold', 71)
+            )
+            rsi_short_exit = strategy_params.get(
+                'rsi_short_exit',
+                base_config.get('rsi_exit_short_with_trend', 35)
+            )
+            stop_loss_pct = strategy_params.get(
+                'stop_loss_pct',
+                base_config.get('max_loss_percent', 2.0)
+            )
+            take_profit_pct = strategy_params.get(
+                'take_profit_pct',
+                base_config.get('take_profit_percent', 20.0)
+            )
             position_size_pct = strategy_params.get('position_size_pct', 10.0)
             
             # Симулируем каждую сделку
