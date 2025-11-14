@@ -13,6 +13,7 @@ Provides a cross-platform control panel to:
 from __future__ import annotations
 
 import atexit
+import importlib
 import json
 import os
 import queue
@@ -27,7 +28,7 @@ import time
 import webbrowser
 from collections import defaultdict
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 try:
     import tkinter as tk
@@ -328,6 +329,7 @@ class InfoBotManager(tk.Tk):
         self.ensure_git_repository()
         self.update_git_status(initial=True)
         self.update_license_status()
+        self._ensure_required_app_files()
 
         self.service_status_vars: Dict[str, tk.StringVar] = {}
 
@@ -788,9 +790,49 @@ class InfoBotManager(tk.Tk):
     def update_license_status(self) -> None:
         lic_files = sorted(PROJECT_ROOT.glob("*.lic"))
         if lic_files:
-            self.license_status_var.set(f"Найден файл: {lic_files[0].name}")
+            lic_name = lic_files[0].name
+            self.license_status_var.set(f"Файл найден: {lic_name} (проверка...)")
+
+            def worker() -> None:
+                os.environ.pop("INFOBOT_LICENSE_STATUS", None)
+                try:
+                    ai_module = importlib.import_module("ai")
+                    ai_module.ensure_license_available(force_refresh=True, silent=True)
+                except SystemExit:
+                    pass
+                except Exception as exc:  # pylint: disable=broad-except
+                    message = f"Ошибка проверки лицензии: {exc}"
+                    self.after(0, lambda: self.license_status_var.set(message))
+                    return
+
+                raw_status = os.environ.get("INFOBOT_LICENSE_STATUS")
+                try:
+                    status_payload = json.loads(raw_status) if raw_status else {}
+                except json.JSONDecodeError:
+                    status_payload = {}
+
+                message = self._format_license_status(status_payload, lic_name)
+                self.after(0, lambda: self.license_status_var.set(message))
+
+            threading.Thread(target=worker, daemon=True).start()
         else:
             self.license_status_var.set("Лицензия не найдена (.lic файл в корне проекта)")
+
+    def _format_license_status(self, status_payload: Dict[str, Any], filename: str) -> str:
+        state = status_payload.get("state")
+        expires_at = status_payload.get("expires_at", "N/A")
+        if state == "valid":
+            source = status_payload.get("time_source", "unknown")
+            source_text = "онлайн" if source == "internet" else "локально"
+            return f"Лицензия активна (до {expires_at}, проверено {source_text})"
+        if state == "expired":
+            return f"Лицензия недействительна (истекла {expires_at})"
+        if state == "invalid":
+            reason = status_payload.get("reason") or "файл не найден или поврежден"
+            return f"Лицензия недействительна ({reason})"
+        if state == "time_unavailable":
+            return "Проверка лицензии недоступна: нет доступа к серверам времени"
+        return f"Ошибка проверки лицензии (файл {filename})"
 
     def _enqueue_log(self, channel: str, message: str, broadcast: bool = True) -> None:
         if broadcast and channel != "system":
@@ -1144,12 +1186,7 @@ class InfoBotManager(tk.Tk):
                     "Создать конфиг",
                     "Файл app/config.py не найден. Создать его из app/config.example.py?",
                 ):
-                    try:
-                        shutil.copy2(example, target)
-                        self._strip_example_header(target)
-                        self.log("Создан app/config.py", channel="system")
-                    except OSError as exc:
-                        messagebox.showerror("Ошибка копирования", str(exc))
+                    if not self._create_config_file_from_example(silent=False):
                         return
             else:
                 messagebox.showwarning(
@@ -1168,11 +1205,7 @@ class InfoBotManager(tk.Tk):
                     "Создать файл ключей",
                     "Файл app/keys.py не найден. Создать его из app/keys.example.py?",
                 ):
-                    try:
-                        shutil.copy2(example, target)
-                        self.log("Создан app/keys.py из app/keys.example.py", channel="system")
-                    except OSError as exc:
-                        messagebox.showerror("Ошибка копирования", str(exc))
+                    if not self._create_keys_file_from_example(silent=False):
                         return
             else:
                 messagebox.showwarning(
@@ -1435,6 +1468,67 @@ class InfoBotManager(tk.Tk):
                 )
             except Exception:
                 pass
+
+    def _ensure_required_app_files(self) -> None:
+        config_path = PROJECT_ROOT / "app" / "config.py"
+        if not config_path.exists():
+            self._create_config_file_from_example(silent=True)
+
+        keys_path = PROJECT_ROOT / "app" / "keys.py"
+        if not keys_path.exists():
+            self._create_keys_file_from_example(silent=True)
+
+    def _create_config_file_from_example(self, silent: bool = False) -> bool:
+        target = PROJECT_ROOT / "app" / "config.py"
+        example = PROJECT_ROOT / "app" / "config.example.py"
+        if not example.exists():
+            message = (
+                "Файл app/config.example.py не найден. Скопируйте шаблон конфигурации вручную."
+            )
+            if silent:
+                self.log(message, channel="system")
+            else:
+                messagebox.showwarning("Файл не найден", message)
+            return False
+
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(example, target)
+            self._strip_example_header(target)
+            self.log("Создан app/config.py из app/config.example.py", channel="system")
+            return True
+        except OSError as exc:
+            message = f"Не удалось создать app/config.py: {exc}"
+            if silent:
+                self.log(message, channel="system")
+            else:
+                messagebox.showerror("Ошибка копирования", str(exc))
+            return False
+
+    def _create_keys_file_from_example(self, silent: bool = False) -> bool:
+        target = PROJECT_ROOT / "app" / "keys.py"
+        example = PROJECT_ROOT / "app" / "keys.example.py"
+        if not example.exists():
+            message = "Файл app/keys.example.py не найден. Скопируйте шаблон ключей вручную."
+            if silent:
+                self.log(message, channel="system")
+            else:
+                messagebox.showwarning("Файл не найден", message)
+            return False
+
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(example, target)
+            self.log("Создан app/keys.py из app/keys.example.py", channel="system")
+            self.log("Добавьте свои API ключи в app/keys.py перед запуском сервисов.", channel="system")
+            return True
+        except OSError as exc:
+            message = f"Не удалось создать app/keys.py: {exc}"
+            if silent:
+                self.log(message, channel="system")
+            else:
+                messagebox.showerror("Ошибка копирования", str(exc))
+            return False
 
     def _strip_example_header(self, config_path: Path) -> None:
         try:
