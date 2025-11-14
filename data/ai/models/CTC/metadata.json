@@ -1,46 +1,46 @@
 {
   "symbol": "CTC",
-  "trained_at": "2025-11-14T20:58:42.379438",
-  "training_seed": 110690,
-  "coin_model_seed": 111086,
+  "trained_at": "2025-11-14T23:57:21.304961",
+  "training_seed": 823293,
+  "coin_model_seed": 824284,
   "rsi_params": {
     "oversold": 30,
-    "overbought": 65,
-    "exit_long_with_trend": 68,
-    "exit_long_against_trend": 58,
+    "overbought": 72,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 63,
     "exit_short_with_trend": 35,
-    "exit_short_against_trend": 37
+    "exit_short_against_trend": 44
   },
   "risk_params": {
-    "stop_loss": 15.75306590919449,
-    "take_profit": 27.04723683875686,
-    "trailing_stop_activation": 45.30222958356008,
-    "trailing_stop_distance": 21.48717000413469,
+    "stop_loss": 16.56063315551834,
+    "take_profit": 37.586944610892395,
+    "trailing_stop_activation": 70.0,
+    "trailing_stop_distance": 21.8077834644224,
     "break_even_protection": true,
-    "break_even_trigger": 30.0,
+    "break_even_trigger": 41.528572297323976,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 3,
-      "upper": 56.0,
-      "lower": 33.0
+      "upper": 64.0,
+      "lower": 28.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 12,
-      "single_candle_percent": 21.797349951866394,
-      "multi_candle_count": 3,
-      "multi_candle_percent": 61.05782750279545
+      "candles": 9,
+      "single_candle_percent": 7.194681296314153,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 39.318113603155844
     }
   },
-  "candles_count": 4810,
+  "candles_count": 4946,
   "trades_count": 5,
   "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 5.218229504933425e-08,
-  "total_pnl": 0.07317645393641378,
-  "previous_candles_count": 4913,
-  "candles_increased": false
+  "profit_mse": 4.029236444429777e-07,
+  "total_pnl": -0.23582493512132868,
+  "previous_candles_count": 4837,
+  "candles_increased": true
 }

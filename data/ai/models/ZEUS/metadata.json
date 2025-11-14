@@ -1,8 +1,8 @@
 {
   "symbol": "ZEUS",
-  "trained_at": "2025-11-14T21:02:21.418725",
-  "training_seed": 294287,
-  "coin_model_seed": 294670,
+  "trained_at": "2025-11-14T23:58:05.009832",
+  "training_seed": 823293,
+  "coin_model_seed": 823985,
   "rsi_params": {
     "oversold": 26,
     "overbought": 69,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 42
   },
   "risk_params": {
-    "stop_loss": 14.214555006283012,
-    "take_profit": 16.268018695116798,
-    "trailing_stop_activation": 32.58801039314649,
-    "trailing_stop_distance": 20.110532972427173,
-    "break_even_protection": false,
-    "break_even_trigger": 100.1905258449502,
+    "stop_loss": 14.805417446491466,
+    "take_profit": 16.461552913497528,
+    "trailing_stop_activation": 34.86625808021634,
+    "trailing_stop_distance": 33.448236495218126,
+    "break_even_protection": true,
+    "break_even_trigger": 46.30271670576134,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 13,
-      "upper": 59.0,
-      "lower": 36.0
+      "upper": 58.0,
+      "lower": 45.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 9,
-      "single_candle_percent": 17.616163058455015,
-      "multi_candle_count": 3,
-      "multi_candle_percent": 62.79848687113527
+      "candles": 13,
+      "single_candle_percent": 15.641185214329314,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 44.37228772769514
     }
   },
-  "candles_count": 2325,
-  "trades_count": 7,
-  "win_rate": 57.14285714285714,
+  "candles_count": 2219,
+  "trades_count": 8,
+  "win_rate": 37.5,
   "signal_accuracy": 1.0,
-  "profit_mse": 5.437418658390431e-07,
-  "total_pnl": 0.3055357924771951,
-  "previous_candles_count": 2143,
-  "candles_increased": true
+  "profit_mse": 8.974707422839314e-07,
+  "total_pnl": -0.16455633293907443,
+  "previous_candles_count": 2292,
+  "candles_increased": false
 }

@@ -1,8 +1,8 @@
 {
   "symbol": "NKN",
-  "trained_at": "2025-11-14T21:02:01.513183",
-  "training_seed": 294287,
-  "coin_model_seed": 294370,
+  "trained_at": "2025-11-14T23:55:03.860595",
+  "training_seed": 668717,
+  "coin_model_seed": 668964,
   "rsi_params": {
     "oversold": 31,
     "overbought": 73,
@@ -12,10 +12,10 @@
     "exit_short_against_trend": 38
   },
   "risk_params": {
-    "stop_loss": 10.420367921276062,
-    "take_profit": 22.644749121719396,
-    "trailing_stop_activation": 22.59846211739105,
-    "trailing_stop_distance": 27.792195018756395,
+    "stop_loss": 8.101014317144735,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 20.78890229127171,
+    "trailing_stop_distance": 30.76300413266312,
     "break_even_protection": true,
     "break_even_trigger": 30.0,
     "max_position_hours": 12
@@ -23,24 +23,24 @@
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 9,
-      "upper": 56.0,
-      "lower": 31.0
+      "candles": 10,
+      "upper": 55.0,
+      "lower": 21.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 6,
-      "single_candle_percent": 35.15282927370092,
+      "candles": 7,
+      "single_candle_percent": 44.63147552391716,
       "multi_candle_count": 4,
-      "multi_candle_percent": 72.83819602708498
+      "multi_candle_percent": 67.81295437003803
     }
   },
-  "candles_count": 3798,
+  "candles_count": 3919,
   "trades_count": 6,
-  "win_rate": 33.33333333333333,
+  "win_rate": 83.33333333333334,
   "signal_accuracy": 1.0,
-  "profit_mse": 2.424271412016698e-07,
-  "total_pnl": -0.19231153869321296,
-  "previous_candles_count": 3984,
-  "candles_increased": false
+  "profit_mse": 1.1378451748552897e-06,
+  "total_pnl": 0.4610321875814974,
+  "previous_candles_count": 3818,
+  "candles_increased": true
 }

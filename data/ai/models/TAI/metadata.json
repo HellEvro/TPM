@@ -1,46 +1,46 @@
 {
   "symbol": "TAI",
-  "trained_at": "2025-11-14T20:57:00.611416",
-  "training_seed": 985209,
-  "coin_model_seed": 985646,
+  "trained_at": "2025-11-14T23:20:26.622082",
+  "training_seed": 581301,
+  "coin_model_seed": 582213,
   "rsi_params": {
     "oversold": 33,
-    "overbought": 68,
-    "exit_long_with_trend": 66,
-    "exit_long_against_trend": 56,
+    "overbought": 74,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 65,
     "exit_short_with_trend": 34,
-    "exit_short_against_trend": 45
+    "exit_short_against_trend": 41
   },
   "risk_params": {
-    "stop_loss": 14.40234455510758,
+    "stop_loss": 16.77545273788443,
     "take_profit": 10.0,
-    "trailing_stop_activation": 33.062827833479595,
-    "trailing_stop_distance": 19.746311451350344,
+    "trailing_stop_activation": 48.28374151180918,
+    "trailing_stop_distance": 15.853338245188079,
     "break_even_protection": false,
-    "break_even_trigger": 30.0,
+    "break_even_trigger": 71.12415296864985,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 6,
-      "upper": 77.0,
-      "lower": 38.0
+      "candles": 9,
+      "upper": 69.0,
+      "lower": 43.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 4,
-      "single_candle_percent": 6.567905119374014,
-      "multi_candle_count": 7,
-      "multi_candle_percent": 38.43264512860961
+      "candles": 5,
+      "single_candle_percent": 11.692327687880129,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 51.99612919770081
     }
   },
-  "candles_count": 1441,
+  "candles_count": 1341,
   "trades_count": 5,
-  "win_rate": 80.0,
-  "signal_accuracy": 1.0,
-  "profit_mse": 8.47850479511929e-06,
-  "total_pnl": 1.8862974411980038,
-  "previous_candles_count": 1447,
+  "win_rate": 40.0,
+  "signal_accuracy": 0.8,
+  "profit_mse": 2.537760024980045e-05,
+  "total_pnl": 0.5208057238269055,
+  "previous_candles_count": 1441,
   "candles_increased": false
 }

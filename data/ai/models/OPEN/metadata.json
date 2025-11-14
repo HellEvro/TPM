@@ -1,46 +1,46 @@
 {
   "symbol": "OPEN",
-  "trained_at": "2025-11-14T20:50:40.352956",
-  "training_seed": 608144,
-  "coin_model_seed": 608257,
+  "trained_at": "2025-11-14T23:52:37.539942",
+  "training_seed": 518180,
+  "coin_model_seed": 518524,
   "rsi_params": {
-    "oversold": 33,
-    "overbought": 71,
-    "exit_long_with_trend": 60,
-    "exit_long_against_trend": 65,
-    "exit_short_with_trend": 32,
+    "oversold": 35,
+    "overbought": 69,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 35,
     "exit_short_against_trend": 35
   },
   "risk_params": {
-    "stop_loss": 11.279718169858947,
-    "take_profit": 20.550655938735822,
-    "trailing_stop_activation": 33.064668491054114,
+    "stop_loss": 13.51476594086262,
+    "take_profit": 26.535857193613857,
+    "trailing_stop_activation": 44.53126871454213,
     "trailing_stop_distance": 5.0,
-    "break_even_protection": false,
-    "break_even_trigger": 107.5765773063606,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 9,
-      "upper": 60.0,
+      "candles": 6,
+      "upper": 57.0,
       "lower": 41.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 10,
-      "single_candle_percent": 20.956723611528776,
+      "candles": 4,
+      "single_candle_percent": 23.010416215838738,
       "multi_candle_count": 4,
-      "multi_candle_percent": 40.89647546907938
+      "multi_candle_percent": 25.528859706845342
     }
   },
-  "candles_count": 269,
-  "trades_count": 8,
-  "win_rate": 37.5,
+  "candles_count": 270,
+  "trades_count": 10,
+  "win_rate": 50.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 2.928544361121851e-06,
-  "total_pnl": -0.5206260940299797,
-  "previous_candles_count": 269,
+  "profit_mse": 2.5202141126233336e-06,
+  "total_pnl": 0.4729737088274498,
+  "previous_candles_count": 270,
   "candles_increased": false
 }

@@ -1,8 +1,8 @@
 {
   "symbol": "ZEREBRO",
-  "trained_at": "2025-11-14T20:57:07.003835",
-  "training_seed": 985209,
-  "coin_model_seed": 985880,
+  "trained_at": "2025-11-14T23:49:07.898491",
+  "training_seed": 298064,
+  "coin_model_seed": 298407,
   "rsi_params": {
     "oversold": 34,
     "overbought": 70,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 35
   },
   "risk_params": {
-    "stop_loss": 14.832786784204494,
-    "take_profit": 25.87612690567148,
-    "trailing_stop_activation": 51.328848415398916,
-    "trailing_stop_distance": 29.209235211539863,
-    "break_even_protection": true,
-    "break_even_trigger": 93.13313232234009,
+    "stop_loss": 20.58481305104106,
+    "take_profit": 22.18561014582938,
+    "trailing_stop_activation": 37.89444523826617,
+    "trailing_stop_distance": 10.838173308577625,
+    "break_even_protection": false,
+    "break_even_trigger": 60.38816826881022,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 13,
-      "upper": 70.0,
-      "lower": 36.0
+      "upper": 63.0,
+      "lower": 29.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 8,
-      "single_candle_percent": 6.32794408517729,
-      "multi_candle_count": 7,
-      "multi_candle_percent": 20.0
+      "candles": 5,
+      "single_candle_percent": 12.091945016861587,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 35.08163484056746
     }
   },
-  "candles_count": 1150,
-  "trades_count": 7,
-  "win_rate": 57.14285714285714,
+  "candles_count": 1238,
+  "trades_count": 8,
+  "win_rate": 62.5,
   "signal_accuracy": 1.0,
-  "profit_mse": 4.746571878714997e-06,
-  "total_pnl": 0.6209142131358107,
-  "previous_candles_count": 1111,
-  "candles_increased": true
+  "profit_mse": 1.9673341980763856e-05,
+  "total_pnl": 1.279305625645754,
+  "previous_candles_count": 1274,
+  "candles_increased": false
 }

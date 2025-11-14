@@ -1,8 +1,8 @@
 {
   "symbol": "OGN",
-  "trained_at": "2025-11-14T21:03:10.166089",
-  "training_seed": 362360,
-  "coin_model_seed": 362560,
+  "trained_at": "2025-11-14T23:57:45.441954",
+  "training_seed": 823293,
+  "coin_model_seed": 824170,
   "rsi_params": {
     "oversold": 34,
     "overbought": 65,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 40
   },
   "risk_params": {
-    "stop_loss": 9.717594235166496,
-    "take_profit": 30.857970393107284,
-    "trailing_stop_activation": 40.17713047141602,
-    "trailing_stop_distance": 16.14899602231104,
-    "break_even_protection": true,
-    "break_even_trigger": 30.0,
+    "stop_loss": 18.179135323278192,
+    "take_profit": 51.71794556530682,
+    "trailing_stop_activation": 70.0,
+    "trailing_stop_distance": 43.464293915163694,
+    "break_even_protection": false,
+    "break_even_trigger": 106.53352976724366,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 7,
-      "upper": 62.0,
-      "lower": 29.0
+      "candles": 3,
+      "upper": 69.0,
+      "lower": 35.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 4,
-      "single_candle_percent": 19.068751486002288,
-      "multi_candle_count": 4,
-      "multi_candle_percent": 33.0995528150036
+      "candles": 5,
+      "single_candle_percent": 24.20141834246679,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 86.59844705259208
     }
   },
-  "candles_count": 4963,
+  "candles_count": 4933,
   "trades_count": 6,
-  "win_rate": 66.66666666666666,
+  "win_rate": 33.33333333333333,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.977817235443529e-06,
-  "total_pnl": 0.19580627492573344,
-  "previous_candles_count": 4960,
+  "profit_mse": 1.677831865681768e-07,
+  "total_pnl": -0.3226746709675378,
+  "previous_candles_count": 4868,
   "candles_increased": true
 }

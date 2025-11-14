@@ -1,8 +1,8 @@
 {
   "symbol": "RAYDIUM",
-  "trained_at": "2025-11-14T21:03:15.984977",
-  "training_seed": 362360,
-  "coin_model_seed": 363248,
+  "trained_at": "2025-11-14T23:59:09.043263",
+  "training_seed": 905549,
+  "coin_model_seed": 906368,
   "rsi_params": {
     "oversold": 30,
     "overbought": 73,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 44
   },
   "risk_params": {
-    "stop_loss": 16.091639221567032,
-    "take_profit": 20.452203828808216,
-    "trailing_stop_activation": 42.629852978266165,
-    "trailing_stop_distance": 8.10813644373699,
-    "break_even_protection": true,
-    "break_even_trigger": 30.0,
+    "stop_loss": 14.086637477733909,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 32.71380899616856,
+    "trailing_stop_distance": 16.286790435094026,
+    "break_even_protection": false,
+    "break_even_trigger": 86.20033071674492,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 5,
-      "upper": 67.0,
-      "lower": 31.0
+      "candles": 7,
+      "upper": 57.0,
+      "lower": 34.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 7,
-      "single_candle_percent": 24.766925415805222,
-      "multi_candle_count": 7,
-      "multi_candle_percent": 41.09863389391258
+      "candles": 4,
+      "single_candle_percent": 7.487537018562117,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 49.046890732921774
     }
   },
-  "candles_count": 1922,
+  "candles_count": 1975,
   "trades_count": 6,
-  "win_rate": 50.0,
+  "win_rate": 33.33333333333333,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.0439425009949512e-06,
-  "total_pnl": 0.03264417770273603,
-  "previous_candles_count": 2054,
-  "candles_increased": false
+  "profit_mse": 1.0699563098700345e-06,
+  "total_pnl": 0.21638927743942984,
+  "previous_candles_count": 1957,
+  "candles_increased": true
 }

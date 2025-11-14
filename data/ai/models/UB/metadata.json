@@ -1,46 +1,46 @@
 {
   "symbol": "UB",
-  "trained_at": "2025-11-14T21:03:24.933207",
-  "training_seed": 362360,
-  "coin_model_seed": 362423,
+  "trained_at": "2025-11-14T23:55:19.498842",
+  "training_seed": 668717,
+  "coin_model_seed": 669658,
   "rsi_params": {
-    "oversold": 35,
-    "overbought": 68,
-    "exit_long_with_trend": 67,
-    "exit_long_against_trend": 63,
+    "oversold": 34,
+    "overbought": 75,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 62,
     "exit_short_with_trend": 37,
-    "exit_short_against_trend": 45
+    "exit_short_against_trend": 36
   },
   "risk_params": {
-    "stop_loss": 12.284777029913617,
-    "take_profit": 10.0,
-    "trailing_stop_activation": 49.73711675091391,
+    "stop_loss": 15.86157462461754,
+    "take_profit": 30.52824177033643,
+    "trailing_stop_activation": 41.8631383460427,
     "trailing_stop_distance": 5.0,
-    "break_even_protection": true,
-    "break_even_trigger": 89.86877788828158,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 4,
-      "upper": 60.0,
-      "lower": 36.0
+      "candles": 11,
+      "upper": 64.0,
+      "lower": 34.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 9,
-      "single_candle_percent": 22.383822449832806,
-      "multi_candle_count": 4,
-      "multi_candle_percent": 57.827608588699064
+      "candles": 6,
+      "single_candle_percent": 10.806998520103189,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 69.5101527005782
     }
   },
-  "candles_count": 254,
-  "trades_count": 15,
-  "win_rate": 13.333333333333334,
+  "candles_count": 255,
+  "trades_count": 8,
+  "win_rate": 50.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 3.6395879160665275e-05,
-  "total_pnl": -3.1600037918484727,
-  "previous_candles_count": 254,
+  "profit_mse": 1.8376743940936918e-05,
+  "total_pnl": 0.8053910622115164,
+  "previous_candles_count": 255,
   "candles_increased": false
 }

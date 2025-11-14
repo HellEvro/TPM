@@ -1,8 +1,8 @@
 {
   "symbol": "FARTCOIN",
-  "trained_at": "2025-11-14T21:01:52.433191",
-  "training_seed": 294287,
-  "coin_model_seed": 295133,
+  "trained_at": "2025-11-14T23:48:36.358840",
+  "training_seed": 298064,
+  "coin_model_seed": 298842,
   "rsi_params": {
     "oversold": 35,
     "overbought": 65,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 44
   },
   "risk_params": {
-    "stop_loss": 16.79750625047039,
-    "take_profit": 10.0,
-    "trailing_stop_activation": 22.81446691732202,
-    "trailing_stop_distance": 9.541099216433729,
-    "break_even_protection": false,
-    "break_even_trigger": 30.0,
-    "max_position_hours": 204.0
+    "stop_loss": 10.931207747303905,
+    "take_profit": 23.33267492970259,
+    "trailing_stop_activation": 65.08673851900424,
+    "trailing_stop_distance": 17.43784860513913,
+    "break_even_protection": true,
+    "break_even_trigger": 48.209697460822824,
+    "max_position_hours": 267.0
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 7,
-      "upper": 70.0,
-      "lower": 30.0
+      "candles": 14,
+      "upper": 76.0,
+      "lower": 39.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 14,
-      "single_candle_percent": 32.09050251057026,
-      "multi_candle_count": 4,
-      "multi_candle_percent": 30.606090387582185
+      "candles": 8,
+      "single_candle_percent": 26.156485815136044,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 69.86739800818685
     }
   },
-  "candles_count": 1141,
-  "trades_count": 6,
-  "win_rate": 66.66666666666666,
+  "candles_count": 1176,
+  "trades_count": 5,
+  "win_rate": 40.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.664827371009064e-05,
-  "total_pnl": 0.6048624787662109,
-  "previous_candles_count": 1292,
+  "profit_mse": 2.2642408277868485e-05,
+  "total_pnl": 1.4333194764566561,
+  "previous_candles_count": 1214,
   "candles_increased": false
 }

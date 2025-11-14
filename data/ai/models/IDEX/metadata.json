@@ -1,8 +1,8 @@
 {
   "symbol": "IDEX",
-  "trained_at": "2025-11-14T21:01:55.308833",
-  "training_seed": 294287,
-  "coin_model_seed": 294535,
+  "trained_at": "2025-11-14T23:53:43.418531",
+  "training_seed": 598996,
+  "coin_model_seed": 599460,
   "rsi_params": {
     "oversold": 35,
     "overbought": 76,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 40
   },
   "risk_params": {
-    "stop_loss": 9.158734059555666,
-    "take_profit": 19.393773545881498,
-    "trailing_stop_activation": 38.70263863157625,
-    "trailing_stop_distance": 8.529250457911928,
-    "break_even_protection": false,
-    "break_even_trigger": 86.81198972970347,
+    "stop_loss": 14.565916426219644,
+    "take_profit": 16.211395061171917,
+    "trailing_stop_activation": 39.85622970625548,
+    "trailing_stop_distance": 9.410192754763715,
+    "break_even_protection": true,
+    "break_even_trigger": 47.672951737421485,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 13,
-      "upper": 61.0,
-      "lower": 30.0
+      "upper": 68.0,
+      "lower": 39.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 8,
-      "single_candle_percent": 16.383765838583393,
-      "multi_candle_count": 6,
-      "multi_candle_percent": 53.653768278728364
+      "candles": 12,
+      "single_candle_percent": 19.333195353057548,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 59.90480758935803
     }
   },
-  "candles_count": 3624,
+  "candles_count": 3487,
   "trades_count": 6,
   "win_rate": 50.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.5599691594344353e-06,
-  "total_pnl": 0.1178960225473207,
-  "previous_candles_count": 3433,
-  "candles_increased": true
+  "profit_mse": 1.5092288687491255e-07,
+  "total_pnl": 0.038114495483072205,
+  "previous_candles_count": 3606,
+  "candles_increased": false
 }

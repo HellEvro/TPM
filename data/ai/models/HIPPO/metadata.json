@@ -1,8 +1,8 @@
 {
   "symbol": "HIPPO",
-  "trained_at": "2025-11-14T20:56:45.987917",
-  "training_seed": 985209,
-  "coin_model_seed": 985806,
+  "trained_at": "2025-11-14T23:58:53.666361",
+  "training_seed": 905549,
+  "coin_model_seed": 905982,
   "rsi_params": {
     "oversold": 29,
     "overbought": 71,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 36
   },
   "risk_params": {
-    "stop_loss": 12.331470128651194,
-    "take_profit": 10.099891646429601,
-    "trailing_stop_activation": 34.364076706655744,
-    "trailing_stop_distance": 13.830811999788796,
+    "stop_loss": 9.745895276070604,
+    "take_profit": 23.48689372626173,
+    "trailing_stop_activation": 48.69814022138725,
+    "trailing_stop_distance": 5.0,
     "break_even_protection": false,
-    "break_even_trigger": 30.0,
+    "break_even_trigger": 64.40358560720708,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 9,
-      "upper": 62.0,
+      "candles": 6,
+      "upper": 74.0,
       "lower": 45.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 8,
-      "single_candle_percent": 13.149232624472837,
-      "multi_candle_count": 4,
-      "multi_candle_percent": 51.90528593844615
+      "candles": 9,
+      "single_candle_percent": 13.460795800467618,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 33.286076870711895
     }
   },
-  "candles_count": 1344,
-  "trades_count": 5,
-  "win_rate": 60.0,
+  "candles_count": 1396,
+  "trades_count": 6,
+  "win_rate": 100.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 3.2018802382915e-06,
-  "total_pnl": 0.12257498560848264,
-  "previous_candles_count": 1439,
+  "profit_mse": 1.306415208645168e-06,
+  "total_pnl": 2.1633833707995715,
+  "previous_candles_count": 1447,
   "candles_increased": false
 }

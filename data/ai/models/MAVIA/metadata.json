@@ -1,21 +1,21 @@
 {
   "symbol": "MAVIA",
-  "trained_at": "2025-11-14T20:10:50.704885",
-  "training_seed": 227828,
-  "coin_model_seed": 228060,
+  "trained_at": "2025-11-14T22:34:31.468741",
+  "training_seed": 834897,
+  "coin_model_seed": 835767,
   "rsi_params": {
     "oversold": 35,
-    "overbought": 77,
-    "exit_long_with_trend": 65,
-    "exit_long_against_trend": 57,
-    "exit_short_with_trend": 37,
-    "exit_short_against_trend": 43
+    "overbought": 75,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 42
   },
   "risk_params": {
-    "stop_loss": 20.886746334953134,
-    "take_profit": 14.329167499685921,
-    "trailing_stop_activation": 34.98635207610833,
-    "trailing_stop_distance": 13.97142804284774,
+    "stop_loss": 12.699626232508633,
+    "take_profit": 21.53583659065218,
+    "trailing_stop_activation": 19.155465536624586,
+    "trailing_stop_distance": 19.70990995115961,
     "break_even_protection": false,
     "break_even_trigger": 30.0,
     "max_position_hours": 12
@@ -23,24 +23,24 @@
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 5,
-      "upper": 69.0,
-      "lower": 38.0
+      "candles": 3,
+      "upper": 65.0,
+      "lower": 34.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 6,
-      "single_candle_percent": 10.046309498962112,
+      "candles": 7,
+      "single_candle_percent": 8.2558519342318,
       "multi_candle_count": 3,
-      "multi_candle_percent": 52.762023606381824
+      "multi_candle_percent": 48.621946364906094
     }
   },
-  "candles_count": 2541,
+  "candles_count": 2557,
   "trades_count": 5,
-  "win_rate": 60.0,
+  "win_rate": 20.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.7704744187866162e-06,
-  "total_pnl": 0.5340532399956358,
-  "previous_candles_count": 2480,
+  "profit_mse": 2.1367169315603025e-06,
+  "total_pnl": -0.9731304711369535,
+  "previous_candles_count": 2528,
   "candles_increased": true
 }

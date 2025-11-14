@@ -1,8 +1,8 @@
 {
   "symbol": "AEVO",
-  "trained_at": "2025-11-14T03:03:18.416326",
-  "training_seed": 592205,
-  "coin_model_seed": 592435,
+  "trained_at": "2025-11-14T23:27:11.091105",
+  "training_seed": 24595,
+  "coin_model_seed": 25041,
   "rsi_params": {
     "oversold": 33,
     "overbought": 72,
@@ -12,27 +12,27 @@
     "exit_short_against_trend": 44
   },
   "risk_params": {
-    "stop_loss": 16.475725867191272,
+    "stop_loss": 17.827493886091016,
     "take_profit": 10.0,
-    "trailing_stop_activation": 28.189018322981095,
-    "trailing_stop_distance": 5.963586211260475,
-    "break_even_protection": false,
-    "break_even_trigger": 39.217657362348255,
+    "trailing_stop_activation": 45.08966941567141,
+    "trailing_stop_distance": 25.307155338837216,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 3,
-      "upper": 62,
-      "lower": 29
+      "upper": 66.0,
+      "lower": 39.0
     },
     "exit_scam_filter": {
       "enabled": true,
       "candles": 10,
-      "single_candle_percent": 19.041475557369772,
-      "multi_candle_count": 3,
-      "multi_candle_percent": 31.447913875970603
+      "single_candle_percent": 5.0,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 82.55914166268506
     }
   },
   "candles_count": 2410,
@@ -41,6 +41,6 @@
   "signal_accuracy": 1.0,
   "profit_mse": 7.195580484041964e-06,
   "total_pnl": 1.4358322513551585,
-  "previous_candles_count": 2298,
-  "candles_increased": true
+  "previous_candles_count": 2410,
+  "candles_increased": false
 }
