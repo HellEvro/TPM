@@ -182,24 +182,14 @@ class ColorFormatter(logging.Formatter):
             else:
                 prefix = '[BOTS]'  # По умолчанию для bots.py
         
-        # Форматируем время с миллисекундами (как в ai.py)
-        # record.created - это timestamp в секундах с дробной частью
+        # Форматируем время без даты и миллисекунд (компактный формат)
         try:
             dt = datetime.fromtimestamp(record.created)
-            # Получаем миллисекунды из дробной части timestamp
-            msecs = int((record.created % 1) * 1000)
-            timestamp = dt.strftime('%Y-%m-%d %H:%M:%S') + f",{msecs:03d}"
+            timestamp = dt.strftime('%H:%M:%S')
         except:
-            # Если не удалось получить миллисекунды, используем текущее время
+            # Если не удалось получить время, используем текущее время
             dt = datetime.now()
-            timestamp = dt.strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]
-        
-        # Получаем имя логгера (как в ai.py: AI.Trainer, BotsService, etc.)
-        # Убираем 'root' и заменяем на более понятное имя
-        if logger_name == 'root':
-            logger_display_name = 'BotsService'
-        else:
-            logger_display_name = logger_name
+            timestamp = dt.strftime('%H:%M:%S')
         
         # Применяем цвета к разным частям сообщения
         if record.levelname == 'ERROR':
@@ -212,16 +202,13 @@ class ColorFormatter(logging.Formatter):
         else:
             colored_message = message
         
-        # Создаем цветные части (как в ai.py с выравниванием)
+        # Создаем цветные части (компактный формат)
         colored_prefix = f"{Colors.BRIGHT_MAGENTA}{prefix}{Colors.RESET}"
         colored_timestamp = f"{Colors.DIM}{timestamp}{Colors.RESET}"
-        colored_logger = f"{Colors.BRIGHT_BLUE}{logger_display_name}{Colors.RESET}"
         colored_level = f"{level_color}{record.levelname}{Colors.RESET}"
         
-        # Форматируем как в ai.py: [PREFIX] timestamp - logger - level - message
-        # Точное соответствие формату файлового вывода ai.py
-        # Выравнивание будет происходить автоматически за счет одинакового формата
-        formatted = f"{colored_prefix} {colored_timestamp} - {colored_logger} - {colored_level} - {colored_message}"
+        # Компактный формат: [PREFIX] HH:MM:SS - LEVEL - message
+        formatted = f"{colored_prefix} {colored_timestamp} - {colored_level} - {colored_message}"
         
         return formatted
     
