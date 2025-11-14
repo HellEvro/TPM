@@ -31,6 +31,16 @@ INCLUDE = [
     "static/", "templates/", "docs/", "data/", "scripts/", "installer/", "launcher/",
 ]
 
+# Файлы, которые нужно ВСЕГДА копировать даже если они попали в исключения.
+ALWAYS_INCLUDE = [
+    "bot_engine/ai/ai_trainer.py",
+    "bot_engine/ai/ai_backtester_new.py",
+    "bot_engine/ai/filter_utils.py",
+    "bot_engine/protections.py",
+    "bots_modules/bot_class.py",
+    "bots_modules/imports_and_globals.py",
+]
+
 # Обязательные элементы: гарантируем, что они присутствуют в списке на копирование.
 MANDATORY_ITEMS = [
     "start_infobot_manager.cmd",
@@ -60,6 +70,7 @@ EXCLUDE_FILES = [
     "launcher/.infobot_manager_state.json",
     "scripts/test_*.py", "scripts/verify_*.py",
     "*.pyc",  # Скомпилированные файлы (общее правило)
+    "docs/AI_README.md",
 ]
 
 # ✅ ИСКЛЮЧЕНИЯ: Скомпилированные файлы лицензирования НУЖНЫ в публичной версии
@@ -112,10 +123,24 @@ DEV_DOCS = [
     
 ]
 
+ALWAYS_INCLUDE = sorted(set(ALWAYS_INCLUDE))
+
+for always_path in ALWAYS_INCLUDE:
+    if always_path not in INCLUDE:
+        INCLUDE.append(always_path)
+
 def should_exclude(path_str):
     """Проверяет нужно ли исключить путь"""
     import fnmatch
     
+    normalized_path = path_str.replace('\\', '/')
+
+    # ✅ Абсолютный приоритет: если файл в списке ALWAYS_INCLUDE — никогда не исключаем
+    for include_path in ALWAYS_INCLUDE:
+        include_norm = include_path.replace('\\', '/')
+        if normalized_path.endswith(include_norm):
+            return False
+
     # ✅ ПЕРВЫМ ДЕЛОМ: Проверяем исключения для .pyc файлов лицензирования
     # Эти файлы НУЖНЫ в публичной версии, поэтому не исключаем их
     for include_pyc in INCLUDE_PYC:
@@ -171,6 +196,7 @@ for item in PUBLIC.iterdir():
 
 # Копируем нужные файлы
 copied = 0
+# Дальше копируем файлы
 for pattern in INCLUDE:
     src = ROOT / pattern
     if not src.exists():
