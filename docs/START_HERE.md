@@ -20,6 +20,7 @@
 
 ## 3. Архитектура и процессы
 
+- `docs/SYSTEM_OVERVIEW.md` — единый обзор сервисов, потоков конфигурации и хранения данных.
 - `docs/ARCHITECTURE.md` — устройство bots/app/ai сервисов.
 - `docs/BOT_SIGNAL_PROCESSING_FLOW.md` и `docs/BOT_HISTORY.md` — цепочка сигналов и исторические данные.
 - `docs/MODULES.md` — разбиение `bot_engine/*`, `bots_modules/*`, вспомогательные сервисы.
