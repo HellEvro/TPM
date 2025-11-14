@@ -113,7 +113,7 @@ def log_system_status(cycle_count, auto_bot_enabled, check_interval_seconds):
 def auto_save_worker():
     """Воркер для автоматического сохранения состояния согласно конфигурации"""
     interval = SystemConfig.AUTO_SAVE_INTERVAL
-    logger.info(f"[AUTO_SAVE] 💾 Запуск Auto Save Worker (сохранение каждые {interval} секунд)")
+    logger.info(f" 💾 Запуск Auto Save Worker (сохранение каждые {interval} секунд)")
     
     while not shutdown_flag.is_set():
         try:
@@ -129,7 +129,7 @@ def auto_save_worker():
                 # Логируем только при первом сохранении или если прошло 5 минут
                 should_log = (getattr(auto_save_worker, '_last_log_time', 0) + 300 < time.time())
                 if should_log:
-                    logger.info(f"[AUTO_SAVE] 💾 Автосохранение состояния {bots_count} ботов...")
+                    logger.info(f" 💾 Автосохранение состояния {bots_count} ботов...")
                     auto_save_worker._last_log_time = time.time()
                 save_result = save_bots_state()
                 
@@ -144,24 +144,24 @@ def auto_save_worker():
                 })
             
         except Exception as e:
-            logger.error(f"[AUTO_SAVE] ❌ Ошибка автосохранения: {e}")
+            logger.error(f" ❌ Ошибка автосохранения: {e}")
     
-    logger.info("[AUTO_SAVE] 💾 Auto Save Worker остановлен")
+    logger.info(" 💾 Auto Save Worker остановлен")
 
 def auto_bot_worker():
     """Воркер для регулярной проверки Auto Bot сигналов"""
-    logger.info("[AUTO_BOT] 🚫 Auto Bot Worker запущен в режиме ожидания")
-    logger.info("[AUTO_BOT] 💡 Автобот НЕ запускается автоматически!")
-    logger.info("[AUTO_BOT] 💡 Включите его ВРУЧНУЮ через UI когда будете готовы")
+    logger.info(" 🚫 Auto Bot Worker запущен в режиме ожидания")
+    logger.info(" 💡 Автобот НЕ запускается автоматически!")
+    logger.info(" 💡 Включите его ВРУЧНУЮ через UI когда будете готовы")
     
     # Проверяем статус Auto Bot
     # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает чтение атомарным
     auto_bot_enabled = bots_data['auto_bot_config']['enabled']
     
     if auto_bot_enabled:
-        logger.info("[AUTO_BOT] ✅ Автобот включен и готов к работе")
+        logger.info(" ✅ Автобот включен и готов к работе")
     else:
-        logger.info("[AUTO_BOT] ⏹️ Автобот выключен. Включите через UI при необходимости.")
+        logger.info(" ⏹️ Автобот выключен. Включите через UI при необходимости.")
     
     # Входим в основной цикл - НО проверяем сигналы ТОЛЬКО если автобот включен вручную
     last_position_update = time.time() - SystemConfig.BOT_STATUS_UPDATE_INTERVAL
@@ -172,7 +172,7 @@ def auto_bot_worker():
     last_trading_signals_check = time.time()  # Время последней проверки торговых сигналов для всех ботов
     last_delisting_check = time.time() - 600  # Время последней проверки делистинга (10 минут назад для первого запуска)
     
-    logger.info("[AUTO_BOT] 🔄 Входим в основной цикл (автобот выключен, ждем ручного включения)...")
+    logger.info(" 🔄 Входим в основной цикл (автобот выключен, ждем ручного включения)...")
     
     # ✅ КРИТИЧНО: Логируем первый запуск цикла
     cycle_count = 0
@@ -199,7 +199,7 @@ def auto_bot_worker():
             time_since_auto_bot_check = current_time - last_auto_bot_check
             
             if auto_bot_enabled and time_since_auto_bot_check >= check_interval_seconds:
-                logger.debug(f"[AUTO_BOT] Проверяем сигналы...")
+                logger.debug(f" Проверяем сигналы...")
                 from bots_modules.imports_and_globals import get_exchange
                 process_auto_bot_signals(exchange_obj=get_exchange())
                 
@@ -215,7 +215,7 @@ def auto_bot_worker():
                     'enabled': True
                 })
             else:
-                logger.debug(f"[AUTO_BOT] Выключен, пропускаем проверку")
+                logger.debug(f" Выключен, пропускаем проверку")
                 update_process_state('auto_bot_worker', {
                     'last_check': datetime.now().isoformat(),
                     'enabled': False,
@@ -264,13 +264,13 @@ def auto_bot_worker():
                 last_delisting_check = current_time
             
         except Exception as e:
-            logger.error(f"[AUTO_BOT] ❌ Ошибка Auto Bot Worker: {e}")
+            logger.error(f" ❌ Ошибка Auto Bot Worker: {e}")
             update_process_state('auto_bot_worker', {
                 'last_error': str(e),
                 'last_check': datetime.now().isoformat()
             })
     
-    logger.info("[AUTO_BOT] 🛑 Auto Bot Worker остановлен")
+    logger.info(" 🛑 Auto Bot Worker остановлен")
 
 
 def positions_monitor_worker():
@@ -280,7 +280,7 @@ def positions_monitor_worker():
     Загружает все позиции с биржи и сохраняет в кэш для быстрого доступа.
     КРИТИЧНО: Проверяет условия закрытия позиций по RSI каждые 3 секунды (согласно refresh_interval)!
     """
-    logger.info("[POSITIONS_MONITOR] 🚀 Запуск мониторинга позиций...")
+    logger.info(" 🚀 Запуск мониторинга позиций...")
     
     # Создаем глобальный кэш позиций
     global positions_cache
@@ -303,7 +303,7 @@ def positions_monitor_worker():
             
             exchange_obj = get_exchange()
             if not exchange_obj:
-                logger.warning("[POSITIONS_MONITOR] ⚠️ Exchange не инициализирован")
+                logger.warning(" ⚠️ Exchange не инициализирован")
                 time.sleep(5)
                 continue
             
@@ -312,7 +312,7 @@ def positions_monitor_worker():
                 # Логируем только каждые 30 секунд чтобы не спамить
                 should_log = (int(time.time()) % 30 == 0)
                 if should_log:
-                    logger.info(f"[POSITIONS_MONITOR] 🔄 Загружаем позиции с биржи...")
+                    logger.info(f" 🔄 Загружаем позиции с биржи...")
                 
                 exchange_positions = exchange_obj.get_positions()
                 if isinstance(exchange_positions, tuple):
@@ -336,13 +336,13 @@ def positions_monitor_worker():
                 
                 # Логируем только каждые 30 секунд
                 if should_log:
-                    logger.info(f"[POSITIONS_MONITOR] 📊 Получено {len(positions_list)} позиций с биржи")
+                    logger.info(f" 📊 Получено {len(positions_list)} позиций с биржи")
                     if active_positions_log:
-                        logger.info(f"[POSITIONS_MONITOR] 📈 Активные позиции: {', '.join(active_positions_log)}")
-                    logger.info(f"[POSITIONS_MONITOR] ✅ Обновлено: {len(positions_list)} позиций, активных: {len(symbols_with_positions)}")
+                        logger.info(f" 📈 Активные позиции: {', '.join(active_positions_log)}")
+                    logger.info(f" ✅ Обновлено: {len(positions_list)} позиций, активных: {len(symbols_with_positions)}")
                 
             except Exception as e:
-                logger.error(f"[POSITIONS_MONITOR] ❌ Ошибка загрузки позиций: {e}")
+                logger.error(f" ❌ Ошибка загрузки позиций: {e}")
                 import traceback
                 traceback.print_exc()
             
@@ -403,35 +403,35 @@ def positions_monitor_worker():
                                 should_close, reason = NewTradingBot.check_should_close_by_rsi(symbol, current_rsi, position_side)
                                 
                                 if should_close:
-                                    logger.info(f"[POSITIONS_MONITOR] 🔴 {symbol}: Закрываем {position_side} (RSI={current_rsi:.2f})")
+                                    logger.info(f" 🔴 {symbol}: Закрываем {position_side} (RSI={current_rsi:.2f})")
                                     # Только теперь создаем объект бота для закрытия позиции
                                     trading_bot = NewTradingBot(symbol, bot_data, exchange_obj)
                                     close_result = trading_bot._close_position_on_exchange(reason)
                                     if close_result:
-                                        logger.info(f"[POSITIONS_MONITOR] ✅ {symbol}: Позиция закрыта")
+                                        logger.info(f" ✅ {symbol}: Позиция закрыта")
                                     else:
-                                        logger.error(f"[POSITIONS_MONITOR] ❌ {symbol}: Ошибка закрытия!")
+                                        logger.error(f" ❌ {symbol}: Ошибка закрытия!")
                                 
                             except Exception as bot_error:
-                                logger.error(f"[POSITIONS_MONITOR] ❌ {symbol}: {bot_error}")
+                                logger.error(f" ❌ {symbol}: {bot_error}")
                                 import traceback
-                                logger.error(f"[POSITIONS_MONITOR] ❌ Traceback: {traceback.format_exc()}")
+                                logger.error(f" ❌ Traceback: {traceback.format_exc()}")
                     
                     last_rsi_close_check = current_time
                     
                 except Exception as e:
-                    logger.error(f"[POSITIONS_MONITOR] ❌ Ошибка проверки закрытия позиций по RSI: {e}")
+                    logger.error(f" ❌ Ошибка проверки закрытия позиций по RSI: {e}")
                     import traceback
-                    logger.error(f"[POSITIONS_MONITOR] ❌ Traceback: {traceback.format_exc()}")
+                    logger.error(f" ❌ Traceback: {traceback.format_exc()}")
             
             # Ждем 1 секунду перед следующей проверкой - КАЖДУЮ СЕКУНДУ!
             time.sleep(1)
             
         except Exception as e:
-            logger.error(f"[POSITIONS_MONITOR] ❌ Критическая ошибка: {e}")
+            logger.error(f" ❌ Критическая ошибка: {e}")
             time.sleep(10)
     
-    logger.info("[POSITIONS_MONITOR] 🛑 Мониторинг позиций остановлен")
+    logger.info(" 🛑 Мониторинг позиций остановлен")
 
 
 # Глобальный кэш позиций

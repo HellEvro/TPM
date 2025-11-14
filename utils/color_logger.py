@@ -103,14 +103,27 @@ class ColorFormatter(logging.Formatter):
         'LOAD_STATE': '📂',
         'SAVE_STATE': '💾',
         'SIGNAL': '🎯',
+        'FILTER_PROCESSING': '🔍',
+        'NEW_AUTO_FILTER': '🔍',
+        'NEW_BOT_SIGNALS': '🎯',
+        'AUTOBOT_FILTER': '🔍',
     }
     
     def format(self, record):
         # Получаем цвет для уровня логирования
         level_color = self.COLORS.get(record.levelname, Colors.WHITE)
         
-        # Форматируем сообщение
-        message = record.getMessage()
+        # Получаем исходное сообщение (до форматирования)
+        # Важно: работаем с record.msg напрямую, чтобы удалить префикс ДО форматирования
+        if hasattr(record, 'msg'):
+            if isinstance(record.msg, str):
+                message = record.msg
+            else:
+                # Если record.msg - это не строка (например, объект форматирования),
+                # получаем отформатированное сообщение
+                message = record.getMessage()
+        else:
+            message = record.getMessage()
         
         # Извлекаем категорию из сообщения (например, [INIT], [AUTO], etc.)
         category = 'DEFAULT'
@@ -119,33 +132,96 @@ class ColorFormatter(logging.Formatter):
         if isinstance(message, str):
             # Ищем категорию в формате [CATEGORY] в начале сообщения
             import re
-            match = re.match(r'\[([A-Z_]+)\]\s*', message)
+            # Ищем категорию в начале сообщения (может быть с пробелами или без)
+            # Используем более точное регулярное выражение
+            match = re.search(r'^\[([A-Z_]+)\]\s*', message)
             if match:
                 category = match.group(1)
                 emoji = self.EMOJIS.get(category, '📝')
                 # Удаляем префикс категории из сообщения, чтобы избежать дубликата
-                message = re.sub(r'^\[([A-Z_]+)\]\s*', '', message)
+                # Удаляем [CATEGORY] и возможные пробелы после него
+                # Важно: удаляем ТОЛЬКО из начала сообщения
+                message_cleaned = re.sub(r'^\[([A-Z_]+)\]\s*', '', message, count=1).strip()
+                # Убеждаемся, что удалили именно этот префикс
+                if message_cleaned != message:
+                    message = message_cleaned
+                    # Обновляем record.msg, чтобы удалить префикс из финального сообщения
+                    if hasattr(record, 'msg') and isinstance(record.msg, str):
+                        record.msg = message
+                    # Переопределяем getMessage() чтобы вернуть очищенное сообщение
+                    try:
+                        # Сохраняем оригинальный getMessage
+                        original_getMessage = record.getMessage
+                        # Переопределяем его
+                        def getMessage_override():
+                            return message
+                        record.getMessage = getMessage_override
+                    except:
+                        pass
         
-        # Форматируем время
-        timestamp = datetime.now().strftime('%H:%M:%S')
+        # ВАЖНО: Удаляем любые оставшиеся префиксы [CATEGORY] из сообщения
+        # Это нужно для случаев, когда префиксы добавляются динамически
+        if isinstance(message, str):
+            import re
+            # Удаляем все префиксы [CATEGORY] из начала сообщения
+            # (на случай, если они добавились после первоначальной обработки)
+            message = re.sub(r'^\[([A-Z_]+)\]\s*', '', message, count=1)
+            # Также удаляем префиксы после ANSI-кодов
+            message = re.sub(r'(\033\[[0-9;]*m)*\[([A-Z_]+)\]\s*', r'\1', message, count=1)
         
-        # Создаем цветное сообщение
-        colored_level = f"{level_color}{record.levelname:<8}{Colors.RESET}"
-        colored_category = f"{Colors.BRIGHT_MAGENTA}[{category}]{Colors.RESET}"
-        colored_emoji = f"{Colors.BRIGHT_YELLOW}{emoji}{Colors.RESET}"
-        colored_timestamp = f"{Colors.DIM}{timestamp}{Colors.RESET}"
+        # Определяем префикс на основе имени логгера (как в ai.py)
+        logger_name = record.name if hasattr(record, 'name') else 'ROOT'
+        if logger_name.startswith('AI.') or logger_name == 'AI.Main':
+            prefix = '[AI]'
+        elif logger_name.startswith('BotsService') or logger_name == 'BotsService' or 'bot' in logger_name.lower():
+            prefix = '[BOTS]'
+        else:
+            # Для остальных логгеров определяем префикс по имени
+            if 'ai' in logger_name.lower():
+                prefix = '[AI]'
+            else:
+                prefix = '[BOTS]'  # По умолчанию для bots.py
+        
+        # Форматируем время с миллисекундами (как в ai.py)
+        # record.created - это timestamp в секундах с дробной частью
+        try:
+            dt = datetime.fromtimestamp(record.created)
+            # Получаем миллисекунды из дробной части timestamp
+            msecs = int((record.created % 1) * 1000)
+            timestamp = dt.strftime('%Y-%m-%d %H:%M:%S') + f",{msecs:03d}"
+        except:
+            # Если не удалось получить миллисекунды, используем текущее время
+            dt = datetime.now()
+            timestamp = dt.strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]
+        
+        # Получаем имя логгера (как в ai.py: AI.Trainer, BotsService, etc.)
+        # Убираем 'root' и заменяем на более понятное имя
+        if logger_name == 'root':
+            logger_display_name = 'BotsService'
+        else:
+            logger_display_name = logger_name
         
         # Применяем цвета к разным частям сообщения
         if record.levelname == 'ERROR':
-            message = f"{Colors.BRIGHT_RED}{message}{Colors.RESET}"
+            colored_message = f"{Colors.BRIGHT_RED}{message}{Colors.RESET}"
         elif record.levelname == 'WARNING':
-            message = f"{Colors.BRIGHT_YELLOW}{message}{Colors.RESET}"
+            colored_message = f"{Colors.BRIGHT_YELLOW}{message}{Colors.RESET}"
         elif record.levelname == 'INFO':
             # Выделяем важные части сообщения
-            message = self._highlight_important_parts(message)
+            colored_message = self._highlight_important_parts(message)
+        else:
+            colored_message = message
         
-        # Собираем финальное сообщение
-        formatted = f"{colored_timestamp} {colored_emoji} {colored_category} {colored_level} {message}"
+        # Создаем цветные части (как в ai.py с выравниванием)
+        colored_prefix = f"{Colors.BRIGHT_MAGENTA}{prefix}{Colors.RESET}"
+        colored_timestamp = f"{Colors.DIM}{timestamp}{Colors.RESET}"
+        colored_logger = f"{Colors.BRIGHT_BLUE}{logger_display_name}{Colors.RESET}"
+        colored_level = f"{level_color}{record.levelname}{Colors.RESET}"
+        
+        # Форматируем как в ai.py: [PREFIX] timestamp - logger - level - message
+        # Точное соответствие формату файлового вывода ai.py
+        # Выравнивание будет происходить автоматически за счет одинакового формата
+        formatted = f"{colored_prefix} {colored_timestamp} - {colored_logger} - {colored_level} - {colored_message}"
         
         return formatted
     

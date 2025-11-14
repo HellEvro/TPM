@@ -46,7 +46,7 @@ def get_cached_ai_manager():
                 _ai_manager_cache = None
                 _ai_available_cache = False
         except Exception as e:
-            logger.debug(f"[FILTERS] AI Manager недоступен: {e}")
+            logger.debug(f" AI Manager недоступен: {e}")
             _ai_manager_cache = None
             _ai_available_cache = False
         
@@ -354,7 +354,7 @@ def check_rsi_time_filter(candles, rsi, signal):
         return {'allowed': True, 'reason': 'Неизвестный сигнал', 'last_extreme_candles_ago': None, 'calm_candles': 0}
     
     except Exception as e:
-        logger.error(f"[RSI_TIME_FILTER] Ошибка проверки временного фильтра: {e}")
+        logger.error(f" Ошибка проверки временного фильтра: {e}")
         return {'allowed': False, 'reason': f'Ошибка анализа: {str(e)}', 'last_extreme_candles_ago': None, 'calm_candles': 0}
 
 def get_coin_candles_only(symbol, exchange_obj=None):
@@ -420,7 +420,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         
         if symbol in delisted_coins:
             delisting_info = delisted_coins[symbol]
-            logger.info(f"[DELISTING_BLACKLIST] {symbol}: Исключаем из всех проверок - {delisting_info.get('reason', 'Delisting detected')}")
+            logger.info(f"{symbol}: Исключаем из всех проверок - {delisting_info.get('reason', 'Delisting detected')}")
             # Возвращаем минимальные данные для делистинговых монет
             return {
                 'symbol': symbol,
@@ -450,22 +450,22 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             # Режим ТОЛЬКО whitelist - работаем ТОЛЬКО с монетами из белого списка
             if symbol not in whitelist:
                 is_blocked_by_scope = True
-                logger.debug(f"[SCOPE_FILTER] {symbol}: ❌ Режим WHITELIST - монета не в белом списке")
+                logger.debug(f"{symbol}: ❌ Режим WHITELIST - монета не в белом списке")
         
         elif scope == 'blacklist':
             # Режим ТОЛЬКО blacklist - работаем со ВСЕМИ монетами КРОМЕ черного списка
             if symbol in blacklist:
                 is_blocked_by_scope = True
-                logger.debug(f"[SCOPE_FILTER] {symbol}: ❌ Режим BLACKLIST - монета в черном списке")
+                logger.debug(f"{symbol}: ❌ Режим BLACKLIST - монета в черном списке")
         
         elif scope == 'all':
             # Режим ALL - работаем со ВСЕМИ монетами, но проверяем оба списка
             if symbol in blacklist:
                 is_blocked_by_scope = True
-                logger.debug(f"[SCOPE_FILTER] {symbol}: ❌ Монета в черном списке")
+                logger.debug(f"{symbol}: ❌ Монета в черном списке")
             # Если в whitelist - даем приоритет (логируем, но не блокируем)
             if whitelist and symbol in whitelist:
-                logger.debug(f"[SCOPE_FILTER] {symbol}: ⭐ В белом списке (приоритет)")
+                logger.debug(f"{symbol}: ⭐ В белом списке (приоритет)")
         
         # БЕЗ задержки - семафор и ThreadPool уже контролируют rate limit
         
@@ -492,26 +492,26 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         
         # Если нет в кэше - загружаем с биржи (с семафором!)
         if not candles:
-            logger.warning(f"[CACHE_MISS] ⚠️ {symbol}: НЕТ в кэше свечей! Загружаем с биржи...")
+            logger.warning(f"⚠️ {symbol}: НЕТ в кэше свечей! Загружаем с биржи...")
             # ⚡ СЕМАФОР: Ограничиваем одновременные запросы к API биржи
             with _exchange_api_semaphore:
                 import time as time_module
                 api_start = time_module.time()
-                logger.info(f"[API_START] 🌐 {symbol}: Начало запроса get_chart_data()...")
+                logger.info(f"🌐 {symbol}: Начало запроса get_chart_data()...")
                 
                 chart_response = exchange_to_use.get_chart_data(symbol, '6h', '30d')
                 
                 api_duration = time_module.time() - api_start
-                logger.info(f"[API_END] 🌐 {symbol}: get_chart_data() завершен за {api_duration:.1f}с")
+                logger.info(f"🌐 {symbol}: get_chart_data() завершен за {api_duration:.1f}с")
                 
                 if not chart_response or not chart_response.get('success'):
-                    logger.warning(f"[API_ERROR] ❌ {symbol}: Ошибка: {chart_response.get('error', 'Неизвестная ошибка') if chart_response else 'Нет ответа'}")
+                    logger.warning(f"❌ {symbol}: Ошибка: {chart_response.get('error', 'Неизвестная ошибка') if chart_response else 'Нет ответа'}")
                     return None
                 
                 candles = chart_response['data']['candles']
-                logger.info(f"[API_LOAD] ✅ {symbol}: Свечи загружены с биржи ({len(candles)} свечей)")
+                logger.info(f"✅ {symbol}: Свечи загружены с биржи ({len(candles)} свечей)")
         if not candles or len(candles) < 15:  # Базовая проверка для RSI(14)
-            logger.debug(f"[WARNING] Недостаточно свечей для {symbol}: {len(candles) if candles else 0}/15")
+            logger.debug(f"Недостаточно свечей для {symbol}: {len(candles) if candles else 0}/15")
             return None
         
         # Рассчитываем RSI для 6H
@@ -521,7 +521,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         rsi = calculate_rsi(closes, 14)
         
         if rsi is None:
-            logger.warning(f"[WARNING] Не удалось рассчитать RSI для {symbol}")
+            logger.warning(f"Не удалось рассчитать RSI для {symbol}")
             return None
         
         # ✅ РАСЧИТЫВАЕМ ТРЕНД СРАЗУ для всех монет - избегаем "гуляния" данных
@@ -535,7 +535,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                 trend = trend_analysis['trend']  # ТОЛЬКО рассчитанное значение!
             # НЕ устанавливаем дефолт если анализ не удался - оставляем None
         except Exception as e:
-            logger.debug(f"[TREND] {symbol}: Ошибка анализа тренда: {e}")
+            logger.debug(f"{symbol}: Ошибка анализа тренда: {e}")
             # НЕ устанавливаем дефолт при ошибке - оставляем None
         
         # Рассчитываем изменение за 24h (примерно 4 свечи 6H)
@@ -588,7 +588,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     # RSI в нейтральной зоне
                     pass
             except Exception as e:
-                logger.debug(f"[RSI_SIGNAL] {symbol}: Ошибка определения RSI сигнала: {e}")
+                logger.debug(f"{symbol}: Ошибка определения RSI сигнала: {e}")
                 # Fallback к базовой логике при ошибке
                 if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
                     rsi_zone = 'BUY_ZONE'
@@ -649,7 +649,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             
             # Если есть сигнал входа И монета незрелая - блокируем сигнал
             if signal in ['ENTER_LONG', 'ENTER_SHORT'] and not is_mature:
-                logger.debug(f"[MATURITY] {symbol}: Монета незрелая - сигнал {signal} заблокирован")
+                logger.debug(f"{symbol}: Монета незрелая - сигнал {signal} заблокирован")
                 # Меняем сигнал на WAIT, но не исключаем монету из списка
                 signal = 'WAIT'
                 rsi_zone = 'NEUTRAL'
@@ -779,7 +779,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                                 'calm_candles': None
                             }
                 except Exception as e:
-                    logger.error(f"[FILTERS] {symbol}: Ошибка проверки временного фильтра: {e}")
+                    logger.error(f" {symbol}: Ошибка проверки временного фильтра: {e}")
                     import traceback
                     logger.debug(traceback.format_exc())
         
@@ -805,11 +805,11 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         if symbol in known_delisting_coins:
             trading_status = 'Closed'
             is_delisting = True
-            logger.info(f"[TRADING_STATUS] {symbol}: Известная делистинговая монета")
+            logger.info(f"{symbol}: Известная делистинговая монета")
         elif symbol in known_new_coins:
             trading_status = 'Delivering'
             is_delisting = True
-            logger.info(f"[TRADING_STATUS] {symbol}: Известная новая монета")
+            logger.info(f"{symbol}: Известная новая монета")
         
         # TODO: Включить полную проверку статуса торговли после оптимизации API запросов
         # try:
@@ -865,11 +865,11 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             trend_emoji = None
         
         if signal in ['ENTER_LONG', 'ENTER_SHORT']:
-            logger.info(f"[SIGNAL] 🎯 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} (${current_price:.4f}) → {signal}")
+            logger.info(f"🎯 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} (${current_price:.4f}) → {signal}")
         elif signal == 'WAIT' and rsi <= SystemConfig.RSI_OVERSOLD and trend == 'DOWN' and avoid_down_trend:
-            logger.debug(f"[FILTER] 🚫 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} LONG заблокирован (фильтр DOWN тренда)")
+            logger.debug(f"🚫 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} LONG заблокирован (фильтр DOWN тренда)")
         elif signal == 'WAIT' and rsi >= SystemConfig.RSI_OVERBOUGHT and trend == 'UP' and avoid_up_trend:
-            logger.debug(f"[FILTER] 🚫 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} SHORT заблокирован (фильтр UP тренда)")
+            logger.debug(f"🚫 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} SHORT заблокирован (фильтр UP тренда)")
         
         return result
         
@@ -1229,36 +1229,36 @@ def _recalculate_signal_with_trend(rsi, trend, symbol):
         avoid_down_trend = auto_config.get('avoid_down_trend', False)
         avoid_up_trend = auto_config.get('avoid_up_trend', False)
         
-        logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI={rsi:.1f}, тренд={trend}, avoid_down={avoid_down_trend}, avoid_up={avoid_up_trend}")
+        logger.debug(f"🔍 {symbol}: RSI={rsi:.1f}, тренд={trend}, avoid_down={avoid_down_trend}, avoid_up={avoid_up_trend}")
         
         # Определяем базовый сигнал по RSI
         if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
             # Проверяем нужно ли избегать DOWN тренда для LONG
             if avoid_down_trend and trend == 'DOWN':
-                logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI {rsi:.1f} ≤ 29, тренд DOWN, избегаем DOWN → WAIT")
+                logger.debug(f"🔍 {symbol}: RSI {rsi:.1f} ≤ 29, тренд DOWN, избегаем DOWN → WAIT")
                 return 'WAIT'  # Ждем улучшения тренда
             else:
                 # НЕ показываем дефолтные значения! Только рассчитанные данные!
                 trend_display = trend if trend is not None else None
-                logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI {rsi:.1f} ≤ 29, тренд {trend_display}, не избегаем → ENTER_LONG")
+                logger.debug(f"🔍 {symbol}: RSI {rsi:.1f} ≤ 29, тренд {trend_display}, не избегаем → ENTER_LONG")
                 return 'ENTER_LONG'  # Входим независимо от тренда или при хорошем тренде
         elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71
             # Проверяем нужно ли избегать UP тренда для SHORT
             if avoid_up_trend and trend == 'UP':
-                logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI {rsi:.1f} ≥ 71, тренд UP, избегаем UP → WAIT")
+                logger.debug(f"🔍 {symbol}: RSI {rsi:.1f} ≥ 71, тренд UP, избегаем UP → WAIT")
                 return 'WAIT'  # Ждем ослабления тренда
             else:
                 # НЕ показываем дефолтные значения! Только рассчитанные данные!
                 trend_display = trend if trend is not None else None
-                logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI {rsi:.1f} ≥ 71, тренд {trend_display}, не избегаем → ENTER_SHORT")
+                logger.debug(f"🔍 {symbol}: RSI {rsi:.1f} ≥ 71, тренд {trend_display}, не избегаем → ENTER_SHORT")
                 return 'ENTER_SHORT'  # Входим независимо от тренда или при хорошем тренде
         else:
             # RSI между 30-70 - нейтральная зона
-            logger.debug(f"[RECALC_SIGNAL] 🔍 {symbol}: RSI {rsi:.1f} между 30-70 → WAIT")
+            logger.debug(f"🔍 {symbol}: RSI {rsi:.1f} между 30-70 → WAIT")
             return 'WAIT'
             
     except Exception as e:
-        logger.error(f"[RECALC_SIGNAL] ❌ Ошибка пересчета сигнала для {symbol}: {e}")
+        logger.error(f"❌ Ошибка пересчета сигнала для {symbol}: {e}")
         return 'WAIT'
 
 def get_effective_signal(coin):
@@ -1316,30 +1316,30 @@ def get_effective_signal(coin):
     
     # Проверяем ExitScam фильтр
     if coin.get('blocked_by_exit_scam', False):
-        logger.debug(f"[SIGNAL] {symbol}: ❌ {signal} заблокирован ExitScam фильтром")
+        logger.debug(f"{symbol}: ❌ {signal} заблокирован ExitScam фильтром")
         return 'WAIT'
     
     # Проверяем RSI Time фильтр
     if coin.get('blocked_by_rsi_time', False):
-        logger.debug(f"[SIGNAL] {symbol}: ❌ {signal} заблокирован RSI Time фильтром")
+        logger.debug(f"{symbol}: ❌ {signal} заблокирован RSI Time фильтром")
         return 'WAIT'
     
     # Проверяем зрелость монеты
     if not coin.get('is_mature', True):
-        logger.debug(f"[SIGNAL] {symbol}: ❌ {signal} заблокирован - монета незрелая")
+        logger.debug(f"{symbol}: ❌ {signal} заблокирован - монета незрелая")
         return 'WAIT'
     
     # УПРОЩЕННАЯ ПРОВЕРКА ТРЕНДОВ - только экстремальные случаи
     if signal == 'ENTER_SHORT' and avoid_up_trend and rsi >= rsi_short_threshold and trend == 'UP':
-        logger.debug(f"[SIGNAL] {symbol}: ❌ SHORT заблокирован (RSI={rsi:.1f} >= {rsi_short_threshold} + UP тренд)")
+        logger.debug(f"{symbol}: ❌ SHORT заблокирован (RSI={rsi:.1f} >= {rsi_short_threshold} + UP тренд)")
         return 'WAIT'
     
     if signal == 'ENTER_LONG' and avoid_down_trend and rsi <= rsi_long_threshold and trend == 'DOWN':
-        logger.debug(f"[SIGNAL] {symbol}: ❌ LONG заблокирован (RSI={rsi:.1f} <= {rsi_long_threshold} + DOWN тренд)")
+        logger.debug(f"{symbol}: ❌ LONG заблокирован (RSI={rsi:.1f} <= {rsi_long_threshold} + DOWN тренд)")
         return 'WAIT'
     
     # Все проверки пройдены
-    logger.debug(f"[SIGNAL] {symbol}: ✅ {signal} разрешен (RSI={rsi:.1f}, Trend={trend})")
+    logger.debug(f"{symbol}: ✅ {signal} разрешен (RSI={rsi:.1f}, Trend={trend})")
     return signal
 
 def process_auto_bot_signals(exchange_obj=None):
@@ -1454,11 +1454,11 @@ def process_auto_bot_signals(exchange_obj=None):
 def process_trading_signals_for_all_bots(exchange_obj=None):
     """Обрабатывает торговые сигналы для всех активных ботов с новым классом"""
     try:
-        logger.info("[NEW_BOT_SIGNALS] 🔄 Начинаем обработку торговых сигналов для всех активных ботов...")
+        logger.info("🔄 Начинаем обработку торговых сигналов для всех активных ботов...")
         
         # Проверяем, инициализирована ли система
         if not system_initialized:
-            logger.warning("[NEW_BOT_SIGNALS] ⏳ Система еще не инициализирована - пропускаем обработку")
+            logger.warning("⏳ Система еще не инициализирована - пропускаем обработку")
             return
         
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
@@ -1467,15 +1467,15 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                       if bot['status'] not in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']]}
         
         if not active_bots:
-            logger.info("[NEW_BOT_SIGNALS] ⏳ Нет активных ботов для обработки")
+            logger.info("⏳ Нет активных ботов для обработки")
             return
         
-        logger.info(f"[NEW_BOT_SIGNALS] 🔍 Обрабатываем {len(active_bots)} активных ботов: {list(active_bots.keys())}")
-        logger.info(f"[NEW_BOT_SIGNALS] 📊 Проверяем условия закрытия позиций по RSI для ботов в позиции...")
+        logger.info(f"🔍 Обрабатываем {len(active_bots)} активных ботов: {list(active_bots.keys())}")
+        logger.info(f"📊 Проверяем условия закрытия позиций по RSI для ботов в позиции...")
         
         for symbol, bot_data in active_bots.items():
             try:
-                logger.info(f"[NEW_BOT_SIGNALS] 🔍 Обрабатываем бота {symbol} (статус: {bot_data.get('status')}, позиция: {bot_data.get('position_side')})...")
+                logger.info(f"🔍 Обрабатываем бота {symbol} (статус: {bot_data.get('status')}, позиция: {bot_data.get('position_side')})...")
                 
                 # Используем переданную биржу или глобальную переменную
                 from bots_modules.imports_and_globals import get_exchange
@@ -1490,12 +1490,12 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                 rsi_data = coins_rsi_data['coins'].get(symbol)
                 
                 if not rsi_data:
-                    logger.warning(f"[NEW_BOT_SIGNALS] ❌ {symbol}: RSI данные не найдены - пропускаем проверку")
+                    logger.warning(f"❌ {symbol}: RSI данные не найдены - пропускаем проверку")
                     continue
                 
                 current_rsi = rsi_data.get('rsi6h')
                 current_trend = rsi_data.get('trend6h')
-                logger.info(f"[NEW_BOT_SIGNALS] ✅ {symbol}: RSI={current_rsi}, Trend={current_trend}, Проверяем условия закрытия...")
+                logger.info(f"✅ {symbol}: RSI={current_rsi}, Trend={current_trend}, Проверяем условия закрытия...")
                 
                 # Обрабатываем торговые сигналы через метод update
                 external_signal = rsi_data.get('signal')
@@ -1507,7 +1507,7 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                     external_trend=external_trend
                 )
                 
-                logger.debug(f"[NEW_BOT_SIGNALS] 🔄 {symbol}: Результат update: {signal_result}")
+                logger.debug(f"🔄 {symbol}: Результат update: {signal_result}")
                 
                 # Обновляем данные бота в хранилище если есть изменения
                 if signal_result and signal_result.get('success', False):
@@ -1517,15 +1517,15 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                     # Логируем торговые действия
                     action = signal_result.get('action')
                     if action in ['OPEN_LONG', 'OPEN_SHORT', 'CLOSE_LONG', 'CLOSE_SHORT']:
-                        logger.info(f"[NEW_BOT_SIGNALS] 🎯 {symbol}: {action} выполнено")
+                        logger.info(f"🎯 {symbol}: {action} выполнено")
                 else:
-                    logger.debug(f"[NEW_BOT_SIGNALS] ⏳ {symbol}: Нет торговых сигналов")
+                    logger.debug(f"⏳ {symbol}: Нет торговых сигналов")
         
             except Exception as e:
-                logger.error(f"[NEW_BOT_SIGNALS] ❌ Ошибка обработки сигналов для {symbol}: {e}")
+                logger.error(f"❌ Ошибка обработки сигналов для {symbol}: {e}")
         
     except Exception as e:
-        logger.error(f"[NEW_BOT_SIGNALS] ❌ Ошибка обработки торговых сигналов: {str(e)}")
+        logger.error(f"❌ Ошибка обработки торговых сигналов: {str(e)}")
 
 def check_new_autobot_filters(symbol, signal, coin_data):
     """Проверяет фильтры для нового автобота"""
@@ -1773,24 +1773,24 @@ def check_coin_maturity_stored_or_verify(symbol):
         # Если нет в хранилище, выполняем проверку
         exch = get_exchange()
         if not exch:
-            logger.warning(f"[MATURITY_CHECK] {symbol}: Биржа не инициализирована")
+            logger.warning(f"{symbol}: Биржа не инициализирована")
             return False
         
         chart_response = exch.get_chart_data(symbol, '6h', '30d')
         if not chart_response or not chart_response.get('success'):
-            logger.warning(f"[MATURITY_CHECK] {symbol}: Не удалось получить свечи")
+            logger.warning(f"{symbol}: Не удалось получить свечи")
             return False
         
         candles = chart_response.get('data', {}).get('candles', [])
         if not candles:
-            logger.warning(f"[MATURITY_CHECK] {symbol}: Нет свечей")
+            logger.warning(f"{symbol}: Нет свечей")
             return False
         
         maturity_result = check_coin_maturity_with_storage(symbol, candles)
         return maturity_result['is_mature']
         
     except Exception as e:
-        logger.error(f"[MATURITY_CHECK] {symbol}: Ошибка проверки зрелости: {e}")
+        logger.error(f"{symbol}: Ошибка проверки зрелости: {e}")
         return False
 
 def update_is_mature_flags_in_rsi_data():
@@ -1811,10 +1811,10 @@ def update_is_mature_flags_in_rsi_data():
             if coin_data['is_mature']:
                 updated_count += 1
         
-        logger.info(f"[MATURITY_FLAGS] ✅ Обновлено флагов: {updated_count} зрелых из {total_count} монет")
+        logger.info(f"✅ Обновлено флагов: {updated_count} зрелых из {total_count} монет")
         
     except Exception as e:
-        logger.error(f"[MATURITY_FLAGS] ❌ Ошибка обновления флагов: {e}")
+        logger.error(f"❌ Ошибка обновления флагов: {e}")
 
 def check_exit_scam_filter(symbol, coin_data):
     """
@@ -2091,7 +2091,7 @@ def get_pattern_analysis(symbol, signal, current_price):
                 try:
                     pattern_signal = future.result(timeout=5)  # 5 секунд таймаут
                 except concurrent.futures.TimeoutError:
-                    logger.warning(f"[AI_PATTERN] {symbol}: ⏱️ Pattern detection таймаут (5с)")
+                    logger.warning(f"{symbol}: ⏱️ Pattern detection таймаут (5с)")
                     pattern_signal = {'patterns_found': 0, 'confirmation': False}  # Пропускаем при таймауте
             
             if pattern_signal['patterns_found'] > 0:
@@ -2151,13 +2151,13 @@ def check_no_existing_position(symbol, signal):
             if pos.get('symbol') == symbol and abs(float(pos.get('size', 0))) > 0:
                 existing_side = pos.get('side', 'UNKNOWN')
                 if existing_side == expected_side:
-                    logger.debug(f"[POSITION_CHECK] {symbol}: Уже есть позиция {existing_side}")
+                    logger.debug(f"{symbol}: Уже есть позиция {existing_side}")
                     return False
         
         return True
         
     except Exception as e:
-        logger.error(f"[POSITION_CHECK] {symbol}: Ошибка проверки позиций: {e}")
+        logger.error(f"{symbol}: Ошибка проверки позиций: {e}")
         return False
 
 def create_new_bot(symbol, config=None, exchange_obj=None):
@@ -2200,11 +2200,11 @@ def create_new_bot(symbol, config=None, exchange_obj=None):
         # ⚡ БЕЗ БЛОКИРОВКИ: присваивание - атомарная операция
         bots_data['bots'][symbol] = new_bot.to_dict()
         
-        logger.info(f"[CREATE_BOT] ✅ Бот для {symbol} создан успешно")
+        logger.info(f"✅ Бот для {symbol} создан успешно")
         return new_bot
         
     except Exception as e:
-        logger.error(f"[CREATE_BOT] ❌ Ошибка создания бота для {symbol}: {e}")
+        logger.error(f"❌ Ошибка создания бота для {symbol}: {e}")
         raise
 
 def check_auto_bot_filters(symbol):
@@ -2222,37 +2222,37 @@ def test_exit_scam_filter(symbol):
         multi_candle_count = bots_data.get('auto_bot_config', {}).get('exit_scam_multi_candle_count', 4)
         multi_candle_percent = bots_data.get('auto_bot_config', {}).get('exit_scam_multi_candle_percent', 50.0)
         
-        logger.info(f"[TEST_EXIT_SCAM] 🔍 Тестируем ExitScam фильтр для {symbol}")
-        logger.info(f"[TEST_EXIT_SCAM] ⚙️ Настройки:")
-        logger.info(f"[TEST_EXIT_SCAM] ⚙️ - Включен: {exit_scam_enabled}")
-        logger.info(f"[TEST_EXIT_SCAM] ⚙️ - Анализ свечей: {exit_scam_candles}")
-        logger.info(f"[TEST_EXIT_SCAM] ⚙️ - Лимит одной свечи: {single_candle_percent}%")
-        logger.info(f"[TEST_EXIT_SCAM] ⚙️ - Лимит {multi_candle_count} свечей: {multi_candle_percent}%")
+        logger.info(f"🔍 Тестируем ExitScam фильтр для {symbol}")
+        logger.info(f"⚙️ Настройки:")
+        logger.info(f"⚙️ - Включен: {exit_scam_enabled}")
+        logger.info(f"⚙️ - Анализ свечей: {exit_scam_candles}")
+        logger.info(f"⚙️ - Лимит одной свечи: {single_candle_percent}%")
+        logger.info(f"⚙️ - Лимит {multi_candle_count} свечей: {multi_candle_percent}%")
         
         if not exit_scam_enabled:
-            logger.info(f"[TEST_EXIT_SCAM] {symbol}: ⚠️ Фильтр ОТКЛЮЧЕН в конфиге")
+            logger.info(f"{symbol}: ⚠️ Фильтр ОТКЛЮЧЕН в конфиге")
             return
         
         # Получаем свечи
         exch = get_exchange()
         if not exch:
-            logger.error(f"[TEST_EXIT_SCAM] {symbol}: Биржа не инициализирована")
+            logger.error(f"{symbol}: Биржа не инициализирована")
             return
         
         chart_response = exch.get_chart_data(symbol, '6h', '30d')
         if not chart_response or not chart_response.get('success'):
-            logger.error(f"[TEST_EXIT_SCAM] {symbol}: Не удалось получить свечи")
+            logger.error(f"{symbol}: Не удалось получить свечи")
             return
         
         candles = chart_response.get('data', {}).get('candles', [])
         if len(candles) < exit_scam_candles:
-            logger.error(f"[TEST_EXIT_SCAM] {symbol}: Недостаточно свечей ({len(candles)})")
+            logger.error(f"{symbol}: Недостаточно свечей ({len(candles)})")
             return
         
         # Анализируем последние N свечей (из конфига)
         recent_candles = candles[-exit_scam_candles:]
         
-        logger.info(f"[TEST_EXIT_SCAM] {symbol}: Анализ последних {exit_scam_candles} свечей (6H каждая)")
+        logger.info(f"{symbol}: Анализ последних {exit_scam_candles} свечей (6H каждая)")
         
         # Показываем детали каждой свечи
         for i, candle in enumerate(recent_candles):
@@ -2264,10 +2264,10 @@ def test_exit_scam_filter(symbol):
             price_change = ((close_price - open_price) / open_price) * 100
             candle_range = ((high_price - low_price) / open_price) * 100
             
-            logger.info(f"[TEST_EXIT_SCAM] {symbol}: Свеча {i+1}: O={open_price:.4f} C={close_price:.4f} H={high_price:.4f} L={low_price:.4f} | Изменение: {price_change:+.1f}% | Диапазон: {candle_range:.1f}%")
+            logger.info(f"{symbol}: Свеча {i+1}: O={open_price:.4f} C={close_price:.4f} H={high_price:.4f} L={low_price:.4f} | Изменение: {price_change:+.1f}% | Диапазон: {candle_range:.1f}%")
         
         # Тестируем фильтр с детальным логированием
-        logger.info(f"[TEST_EXIT_SCAM] {symbol}: 🔍 Запускаем проверку ExitScam фильтра...")
+        logger.info(f"{symbol}: 🔍 Запускаем проверку ExitScam фильтра...")
         result = check_exit_scam_filter(symbol, {})
         
         if result:

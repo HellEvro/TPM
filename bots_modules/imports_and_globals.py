@@ -407,7 +407,7 @@ def should_log_message(category, message, interval_seconds=60):
         # Новое сообщение
         if cache_entry['count'] > 0:
             # Логируем сводку по предыдущему сообщению
-            summary = f"[SUMMARY] Предыдущее сообщение повторилось {cache_entry['count']} раз"
+            summary = f" Предыдущее сообщение повторилось {cache_entry['count']} раз"
             logger.info(f"[{category.upper()}] {summary}")
         
         cache_entry['message'] = message
@@ -452,7 +452,7 @@ except Exception as e:
 def handle_json_error(e):
     """Обрабатывает ошибки JSON сериализации"""
     if "not JSON serializable" in str(e):
-        logger.error(f"[JSON_ERROR] Ошибка JSON сериализации: {e}")
+        logger.error(f" Ошибка JSON сериализации: {e}")
         return jsonify({'success': False, 'error': 'JSON serialization error'}), 500
     return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -589,7 +589,7 @@ def load_auto_bot_config():
             if not hasattr(load_auto_bot_config, '_last_mtime'):
                 # При первом вызове принудительно перезагружаем модуль
                 load_auto_bot_config._last_mtime = 0  # Устанавливаем 0, чтобы гарантировать перезагрузку
-                logger.debug(f"[CONFIG] 📋 Первый вызов: принудительная перезагрузка модуля")
+                logger.debug(f" 📋 Первый вызов: принудительная перезагрузка модуля")
             
             # Перезагружаем только если файл изменился или это первый вызов или принудительная перезагрузка (_last_mtime == 0)
             # ✅ КРИТИЧНО: При _last_mtime == 0 ВСЕГДА перезагружаем модуль, даже если файл не изменился
@@ -599,29 +599,29 @@ def load_auto_bot_config():
                 # Импортируем модуль, если его еще нет
                 if 'bot_engine.bot_config' not in sys.modules:
                     import bot_engine.bot_config
-                    logger.debug("[CONFIG] 📦 Модуль bot_config импортирован впервые")
+                    logger.debug(" 📦 Модуль bot_config импортирован впервые")
                 else:
                     import bot_engine.bot_config
                     importlib.reload(bot_engine.bot_config)
                     if is_forced_reload:
-                        logger.debug("[CONFIG] 🔄 Модуль bot_config перезагружен (принудительная перезагрузка из API)")
+                        logger.debug(" 🔄 Модуль bot_config перезагружен (принудительная перезагрузка из API)")
                     else:
-                        logger.debug("[CONFIG] 🔄 Модуль bot_config перезагружен (файл изменился)")
+                        logger.debug(" 🔄 Модуль bot_config перезагружен (файл изменился)")
                 # ✅ ВАЖНО: ВСЕГДА обновляем _last_mtime после перезагрузки модуля
                 # Это предотвращает бесконечную перезагрузку при принудительной перезагрузке
                 load_auto_bot_config._last_mtime = current_mtime
                 reloaded = True
             else:
-                logger.debug("[CONFIG] 📋 Используем кэшированную версию модуля (файл не изменился)")
+                logger.debug(" 📋 Используем кэшированную версию модуля (файл не изменился)")
         else:
             # Если файла нет, просто перезагружаем модуль
             if 'bot_engine.bot_config' in sys.modules:
                 import bot_engine.bot_config
                 importlib.reload(bot_engine.bot_config)
-                logger.debug("[CONFIG] 🔄 Модуль bot_config перезагружен")
+                logger.debug(" 🔄 Модуль bot_config перезагружен")
             else:
                 import bot_engine.bot_config  # pragma: no cover
-                logger.debug("[CONFIG] 📦 Модуль bot_config импортирован (файл отсутствовал)")
+                logger.debug(" 📦 Модуль bot_config импортирован (файл отсутствовал)")
             reloaded = True
         
         from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
@@ -637,7 +637,7 @@ def load_auto_bot_config():
             # Детальное логирование убрано для уменьшения спама (переведено в DEBUG если нужно)
             load_auto_bot_config._logged_once = True
         else:
-            logger.debug("[CONFIG] ✅ Конфигурация загружена (без изменений в файле)")
+            logger.debug(" ✅ Конфигурация загружена (без изменений в файле)")
 
         # ✅ ВСЕГДА обновляем bots_data, даже если файл не изменился
         # Это гарантирует, что данные всегда актуальны, особенно после принудительной перезагрузки модуля в API
@@ -646,12 +646,12 @@ def load_auto_bot_config():
         
         # ✅ Логируем только при реальном изменении файла или первом вызове (убрано для уменьшения спама)
         if should_log_verbose:
-            logger.debug(f"[CONFIG] ✅ Загружена конфигурация Auto Bot из bot_config.py (JSON больше не используется)")
+            logger.debug(f" ✅ Загружена конфигурация Auto Bot из bot_config.py (JSON больше не используется)")
         else:
-            logger.debug(f"[CONFIG] ✅ Конфигурация обновлена в bots_data (модуль был перезагружен извне)")
+            logger.debug(f" ✅ Конфигурация обновлена в bots_data (модуль был перезагружен извне)")
             
     except Exception as e:
-        logger.error(f"[CONFIG] ❌ Ошибка загрузки конфигурации: {e}")
+        logger.error(f" ❌ Ошибка загрузки конфигурации: {e}")
 
 def get_auto_bot_config():
     """Получает текущую конфигурацию Auto Bot из bots_data"""
@@ -659,7 +659,7 @@ def get_auto_bot_config():
         with bots_data_lock:
             return bots_data.get('auto_bot_config', DEFAULT_AUTO_BOT_CONFIG.copy())
     except Exception as e:
-        logger.error(f"[CONFIG] ❌ Ошибка получения конфигурации: {e}")
+        logger.error(f" ❌ Ошибка получения конфигурации: {e}")
         return DEFAULT_AUTO_BOT_CONFIG.copy()
 
 
@@ -685,12 +685,12 @@ def load_individual_coin_settings():
         except OSError:
             _individual_coin_settings_state['last_mtime'] = None
         logger.info(
-            "[COIN_SETTINGS] ✅ Загружено индивидуальных настроек: %d",
+            " ✅ Загружено индивидуальных настроек: %d",
             len(normalized)
         )
         return deepcopy(normalized)
     except Exception as exc:
-        logger.error(f"[COIN_SETTINGS] ❌ Ошибка загрузки индивидуальных настроек: {exc}")
+        logger.error(f" ❌ Ошибка загрузки индивидуальных настроек: {exc}")
         return {}
 
 
@@ -705,7 +705,7 @@ def save_individual_coin_settings():
             }
         return storage_save_individual_coin_settings(settings)
     except Exception as exc:
-        logger.error(f"[COIN_SETTINGS] ❌ Ошибка сохранения индивидуальных настроек: {exc}")
+        logger.error(f" ❌ Ошибка сохранения индивидуальных настроек: {exc}")
         return False
 
 
@@ -723,7 +723,7 @@ def get_individual_coin_settings(symbol):
             current_mtime = None
         last_mtime = _individual_coin_settings_state.get('last_mtime')
         if current_mtime and current_mtime != last_mtime:
-            logger.debug("[COIN_SETTINGS] 🔄 Обнаружены новые индивидуальные настройки на диске, обновляем кэш")
+            logger.debug(" 🔄 Обнаружены новые индивидуальные настройки на диске, обновляем кэш")
             load_individual_coin_settings()
             with bots_data_lock:
                 settings = bots_data.get('individual_coin_settings', {}).get(normalized)
@@ -739,7 +739,7 @@ def set_individual_coin_settings(symbol, settings, persist=True):
         bots_data.setdefault('individual_coin_settings', {})[normalized] = deepcopy(settings)
     if persist:
         save_individual_coin_settings()
-    logger.info(f"[COIN_SETTINGS] 💾 Настройки для {normalized} обновлены")
+    logger.info(f" 💾 Настройки для {normalized} обновлены")
     return get_individual_coin_settings(normalized)
 
 
@@ -757,9 +757,9 @@ def remove_individual_coin_settings(symbol, persist=True):
     if removed and persist:
         save_individual_coin_settings()
     if removed:
-        logger.info(f"[COIN_SETTINGS] 🗑️ Настройки для {normalized} удалены")
+        logger.info(f" 🗑️ Настройки для {normalized} удалены")
     else:
-        logger.info(f"[COIN_SETTINGS] ℹ️ Настройки для {normalized} отсутствуют")
+        logger.info(f" ℹ️ Настройки для {normalized} отсутствуют")
     return removed
 
 
@@ -788,7 +788,7 @@ def copy_individual_coin_settings_to_all(source_symbol, target_symbols=None, per
         save_individual_coin_settings()
 
     logger.info(
-        "[COIN_SETTINGS] 📋 Настройки %s скопированы к %d монетам",
+        " 📋 Настройки %s скопированы к %d монетам",
         normalized_source,
         copied
     )
@@ -997,9 +997,9 @@ def restore_lost_bots():
 # ✅ ИСПРАВЛЕНИЕ: Загружаем зрелые монеты при импорте модуля
 try:
     load_mature_coins_storage()
-    logger.info(f"[IMPORTS] ✅ Загружено {len(mature_coins_storage)} зрелых монет при импорте")
+    logger.info(f" ✅ Загружено {len(mature_coins_storage)} зрелых монет при импорте")
 except Exception as e:
-    logger.error(f"[IMPORTS] ❌ Ошибка загрузки зрелых монет: {e}")
+    logger.error(f" ❌ Ошибка загрузки зрелых монет: {e}")
 
 
 def open_position_for_bot(symbol, side, volume_value, current_price, take_profit_price=None):
@@ -1019,10 +1019,10 @@ def open_position_for_bot(symbol, side, volume_value, current_price, take_profit
     try:
         exch = get_exchange()
         if not exch:
-            logger.error(f"[OPEN_POSITION] {symbol}: ❌ Биржа не инициализирована")
+            logger.error(f" {symbol}: ❌ Биржа не инициализирована")
             return {'success': False, 'error': 'Exchange not initialized'}
         
-        logger.info(f"[OPEN_POSITION] {symbol}: Открываем {side} позицию на {volume_value} USDT @ {current_price}")
+        logger.info(f" {symbol}: Открываем {side} позицию на {volume_value} USDT @ {current_price}")
         
         # Вызываем place_order с правильными параметрами
         # quantity передаем в USDT (не в монетах!)
@@ -1036,7 +1036,7 @@ def open_position_for_bot(symbol, side, volume_value, current_price, take_profit
         
         if result and result.get('success'):
             order_id = result.get('order_id')
-            logger.info(f"[OPEN_POSITION] {symbol}: ✅ Позиция {side} открыта успешно, order_id={order_id}")
+            logger.info(f" {symbol}: ✅ Позиция {side} открыта успешно, order_id={order_id}")
             
             # Регистрируем позицию в реестре
             register_bot_position(symbol, order_id, side, current_price, volume_value)
@@ -1044,11 +1044,11 @@ def open_position_for_bot(symbol, side, volume_value, current_price, take_profit
             return result
         else:
             error_msg = result.get('message', 'Unknown error') if result else 'No response'
-            logger.error(f"[OPEN_POSITION] {symbol}: ❌ Ошибка открытия позиции: {error_msg}")
+            logger.error(f" {symbol}: ❌ Ошибка открытия позиции: {error_msg}")
             return {'success': False, 'error': error_msg}
             
     except Exception as e:
-        logger.error(f"[OPEN_POSITION] {symbol}: ❌ Ошибка открытия позиции: {e}")
+        logger.error(f" {symbol}: ❌ Ошибка открытия позиции: {e}")
         import traceback
         traceback.print_exc()
         return {'success': False, 'error': str(e)}
@@ -1069,10 +1069,10 @@ def close_position_for_bot(symbol, position_side, reason='Manual close'):
     try:
         exch = get_exchange()
         if not exch:
-            logger.error(f"[CLOSE_POSITION] {symbol}: ❌ Биржа не инициализирована")
+            logger.error(f" {symbol}: ❌ Биржа не инициализирована")
             return {'success': False, 'error': 'Exchange not initialized'}
         
-        logger.info(f"[CLOSE_POSITION] {symbol}: Закрываем {position_side} позицию (причина: {reason})")
+        logger.info(f" {symbol}: Закрываем {position_side} позицию (причина: {reason})")
         
         # Получаем размер позиции с биржи перед закрытием
         position_size = None
@@ -1091,13 +1091,13 @@ def close_position_for_bot(symbol, position_side, reason='Manual close'):
                     pos_side = 'Long' if pos.get('side') == 'Buy' else 'Short'
                     if pos_side == side_for_exchange and abs(float(pos.get('size', 0))) > 0:
                         position_size = abs(float(pos.get('size', 0)))
-                        logger.info(f"[CLOSE_POSITION] {symbol}: Найден размер позиции на бирже: {position_size}")
+                        logger.info(f" {symbol}: Найден размер позиции на бирже: {position_size}")
                         break
         except Exception as e:
-            logger.error(f"[CLOSE_POSITION] {symbol}: ⚠️ Ошибка получения размера позиции с биржи: {e}")
+            logger.error(f" {symbol}: ⚠️ Ошибка получения размера позиции с биржи: {e}")
         
         if not position_size:
-            logger.error(f"[CLOSE_POSITION] {symbol}: ❌ Не удалось определить размер позиции")
+            logger.error(f" {symbol}: ❌ Не удалось определить размер позиции")
             return {'success': False, 'error': 'Position size not found on exchange'}
         
         # Вызываем close_position с размером
@@ -1108,15 +1108,15 @@ def close_position_for_bot(symbol, position_side, reason='Manual close'):
         )
         
         if result and result.get('success'):
-            logger.info(f"[CLOSE_POSITION] {symbol}: ✅ Позиция {position_side} закрыта успешно")
+            logger.info(f" {symbol}: ✅ Позиция {position_side} закрыта успешно")
             return result
         else:
             error_msg = result.get('message', 'Unknown error') if result else 'No response'
-            logger.error(f"[CLOSE_POSITION] {symbol}: ❌ Ошибка закрытия позиции: {error_msg}")
+            logger.error(f" {symbol}: ❌ Ошибка закрытия позиции: {error_msg}")
             return {'success': False, 'error': error_msg}
             
     except Exception as e:
-        logger.error(f"[CLOSE_POSITION] {symbol}: ❌ Ошибка закрытия позиции: {e}")
+        logger.error(f" {symbol}: ❌ Ошибка закрытия позиции: {e}")
         import traceback
         traceback.print_exc()
         return {'success': False, 'error': str(e)}

@@ -213,7 +213,7 @@ def init_bot_service():
                         bots_data['bots'][symbol] = trading_bot.to_dict()
                     
                 except Exception as e:
-                    logger.error(f"[INIT] ❌ Ошибка инициализации бота {symbol}: {e}")
+                    logger.error(f" ❌ Ошибка инициализации бота {symbol}: {e}")
                     # Помечаем бота для удаления
                     bots_to_remove.append(symbol)
             
@@ -231,15 +231,15 @@ def init_bot_service():
                                 if position and position.get('order_id'):
                                     order_id = position['order_id']
                                     unregister_bot_position(order_id)
-                                    logger.info(f"[INIT] ✅ Позиция удалена из реестра при удалении некорректного бота {symbol}: order_id={order_id}")
+                                    logger.info(f" ✅ Позиция удалена из реестра при удалении некорректного бота {symbol}: order_id={order_id}")
                                 else:
-                                    logger.info(f"[INIT] ℹ️ У некорректного бота {symbol} нет позиции в реестре")
+                                    logger.info(f" ℹ️ У некорректного бота {symbol} нет позиции в реестре")
                             except Exception as registry_error:
-                                logger.error(f"[INIT] ❌ Ошибка удаления позиции из реестра для бота {symbol}: {registry_error}")
+                                logger.error(f" ❌ Ошибка удаления позиции из реестра для бота {symbol}: {registry_error}")
                                 # Не блокируем удаление бота из-за ошибки реестра
                             
                             del bots_data['bots'][symbol]
-                logger.info(f"[INIT] 🗑️ Удалено {len(bots_to_remove)} некорректных ботов")
+                logger.info(f" 🗑️ Удалено {len(bots_to_remove)} некорректных ботов")
             
             # 6. ⚠️ Smart RSI Manager ОТКЛЮЧЕН - автобот сам обновляет данные каждые 3 минуты
             # Это избыточно и может привести к конфликтам обновлений
@@ -251,7 +251,7 @@ def init_bot_service():
             # )
             # smart_rsi_manager.start()
             
-            logger.info("[INIT] ℹ️ Smart RSI Manager отключен - автобот обновляет данные самостоятельно")
+            logger.info(" ℹ️ Smart RSI Manager отключен - автобот обновляет данные самостоятельно")
             
             update_process_state('smart_rsi_manager', {
                 'active': False,
@@ -283,9 +283,9 @@ def init_bot_service():
             
             sync_thread = threading.Thread(target=startup_sync, daemon=True, name="StartupSync")
             sync_thread.start()
-            logger.info("[INIT] 🧵 Стартовая синхронизация запущена в фоне")
+            logger.info(" 🧵 Стартовая синхронизация запущена в фоне")
         else:
-            logger.error("[INIT] ❌ Не удалось инициализировать биржу")
+            logger.error(" ❌ Не удалось инициализировать биржу")
             update_process_state('exchange_connection', {
                 'initialized': False,
                 'last_error': 'Initialization failed'
@@ -294,7 +294,7 @@ def init_bot_service():
         # 8. 🔄 ЗАПУСК НЕПРЕРЫВНОГО ЗАГРУЗЧИКА ДАННЫХ
         # Воркер будет постоянно обновлять все данные по кругу
         # Все остальные модули будут просто читать актуальные данные из хранилища
-        logger.info("[INIT] 🔄 Запускаем непрерывный загрузчик данных...")
+        logger.info(" 🔄 Запускаем непрерывный загрузчик данных...")
         try:
             from bots_modules.continuous_data_loader import start_continuous_loader
             
@@ -302,17 +302,17 @@ def init_bot_service():
             continuous_loader = start_continuous_loader(exchange_obj=exchange, update_interval=180)
             
             if continuous_loader:
-                logger.info("[INIT] ✅ Непрерывный загрузчик данных запущен (интервал: 180с)")
-                logger.info("[INIT] 💡 Все данные будут обновляться автоматически по кругу")
-                logger.info("[INIT] 💡 Автобот и API будут использовать актуальные данные из хранилища")
+                logger.info(" ✅ Непрерывный загрузчик данных запущен (интервал: 180с)")
+                logger.info(" 💡 Все данные будут обновляться автоматически по кругу")
+                logger.info(" 💡 Автобот и API будут использовать актуальные данные из хранилища")
             else:
-                logger.error("[INIT] ❌ Не удалось запустить непрерывный загрузчик")
+                logger.error(" ❌ Не удалось запустить непрерывный загрузчик")
                 
         except Exception as e:
-            logger.error(f"[INIT] ❌ Ошибка запуска непрерывного загрузчика: {e}")
+            logger.error(f" ❌ Ошибка запуска непрерывного загрузчика: {e}")
         
         # 9. Воркеры запускаются в main блоке bots.py (после init_bot_service)
-        logger.info("[INIT] ✅ Инициализация завершена, воркеры будут запущены из main блока")
+        logger.info(" ✅ Инициализация завершена, воркеры будут запущены из main блока")
         
         # КРИТИЧЕСКИ ВАЖНО: Устанавливаем флаг инициализации ПОСЛЕ всех загрузок
         global system_initialized
@@ -326,9 +326,9 @@ def init_bot_service():
             
         # Логируем статус Auto Bot
         if auto_bot_enabled:
-            logger.info("[INIT] ✅ Автобот включен и готов к работе")
+            logger.info(" ✅ Автобот включен и готов к работе")
         else:
-            logger.info("[INIT] ⏹️ Автобот выключен. Включите через UI при необходимости.")
+            logger.info(" ⏹️ Автобот выключен. Включите через UI при необходимости.")
         
         # ✅ ИТОГОВАЯ ИНФОРМАЦИЯ О ЗАПУСКЕ
         logger.info("=" * 80)
@@ -361,17 +361,17 @@ def init_bot_service():
             from bots_modules.imports_and_globals import restore_lost_bots
             restored_bots = restore_lost_bots()
             if restored_bots:
-                logger.info(f"[INIT] 🎯 Восстановлено {len(restored_bots)} ботов из реестра позиций")
+                logger.info(f" 🎯 Восстановлено {len(restored_bots)} ботов из реестра позиций")
             else:
-                logger.info("[INIT] ℹ️ Ботов для восстановления не найдено")
+                logger.info(" ℹ️ Ботов для восстановления не найдено")
         except Exception as restore_error:
-            logger.error(f"[INIT] ❌ Ошибка восстановления ботов: {restore_error}")
+            logger.error(f" ❌ Ошибка восстановления ботов: {restore_error}")
             # Не блокируем запуск системы из-за ошибки восстановления
         
         return True
         
     except Exception as e:
-        logger.error(f"[INIT] ❌ Ошибка инициализации сервиса: {e}")
+        logger.error(f" ❌ Ошибка инициализации сервиса: {e}")
         return False
 
 def start_async_processor():
@@ -646,13 +646,13 @@ def delayed_exchange_init():
     global exchange
     
     try:
-        logger.info("[INIT] Начало отложенной инициализации биржи...")
+        logger.info(" Начало отложенной инициализации биржи...")
         
         # Даем время Flask серверу запуститься
         time.sleep(2)
         
-        logger.info("[INIT] Подключение к бирже...")
-        logger.info(f"[INIT] Используем ключи: api_key={EXCHANGES['BYBIT']['api_key'][:10]}...")
+        logger.info(" Подключение к бирже...")
+        logger.info(f" Используем ключи: api_key={EXCHANGES['BYBIT']['api_key'][:10]}...")
         
         exchange = ExchangeFactory.create_exchange(
             'BYBIT', 
@@ -663,22 +663,22 @@ def delayed_exchange_init():
         if not exchange:
             raise Exception("ExchangeFactory вернул None")
         
-        logger.info("[INIT] ✅ Биржа подключена успешно!")
+        logger.info(" ✅ Биржа подключена успешно!")
         
         # Тестируем подключение
         try:
             account_info = exchange.get_unified_account_info()
-            logger.info(f"[INIT] ✅ Тест подключения успешен, баланс: {account_info.get('totalWalletBalance', 'N/A')}")
+            logger.info(f" ✅ Тест подключения успешен, баланс: {account_info.get('totalWalletBalance', 'N/A')}")
         except Exception as test_e:
-            logger.warning(f"[INIT] ⚠️ Тест подключения не удался: {str(test_e)}")
+            logger.warning(f" ⚠️ Тест подключения не удался: {str(test_e)}")
         
         # RSI Worker теперь запускается через SmartRSIManager в init_bot_service()
-        logger.info("[INIT] ✅ Биржа инициализирована")
+        logger.info(" ✅ Биржа инициализирована")
         
     except Exception as e:
-        logger.error(f"[INIT] ❌ Критическая ошибка инициализации биржи: {str(e)}")
+        logger.error(f" ❌ Критическая ошибка инициализации биржи: {str(e)}")
         import traceback
-        logger.error(f"[INIT] Traceback: {traceback.format_exc()}")
+        logger.error(f" Traceback: {traceback.format_exc()}")
 
 def init_exchange_sync():
     """Синхронная инициализация биржи"""
@@ -688,7 +688,7 @@ def init_exchange_sync():
         # Импортируем set_exchange для обновления во всех модулях
         from bots_modules.imports_and_globals import set_exchange
         
-        logger.info("[SYNC] 🔗 Подключение к бирже...")
+        logger.info(" 🔗 Подключение к бирже...")
         
         new_exchange = ExchangeFactory.create_exchange(
             'BYBIT', 
@@ -699,29 +699,29 @@ def init_exchange_sync():
         # Устанавливаем биржу ВО ВСЕХ модулях через GlobalState
         exchange = set_exchange(new_exchange)
         
-        logger.info(f"[SYNC] 🔍 ExchangeFactory создал биржу: {type(new_exchange)}")
-        logger.info(f"[SYNC] 🔍 exchange is None: {new_exchange is None}")
+        logger.info(f" 🔍 ExchangeFactory создал биржу: {type(new_exchange)}")
+        logger.info(f" 🔍 exchange is None: {new_exchange is None}")
         
         if not new_exchange:
-            logger.error("[SYNC] ❌ ExchangeFactory вернул None")
+            logger.error(" ❌ ExchangeFactory вернул None")
             return False
         
         # Тестируем подключение
         try:
             account_info = new_exchange.get_unified_account_info()
-            logger.info(f"[SYNC] ✅ Подключение успешно, баланс: {account_info.get('totalWalletBalance', 'N/A')}")
+            logger.info(f" ✅ Подключение успешно, баланс: {account_info.get('totalWalletBalance', 'N/A')}")
         except Exception as test_e:
-            logger.warning(f"[SYNC] ⚠️ Тест подключения не удался: {str(test_e)}")
+            logger.warning(f" ⚠️ Тест подключения не удался: {str(test_e)}")
         
-        logger.info(f"[SYNC] 🔍 В конце init_exchange_sync exchange: {type(new_exchange)}")
-        logger.info(f"[SYNC] 🔍 В конце init_exchange_sync exchange is None: {new_exchange is None}")
+        logger.info(f" 🔍 В конце init_exchange_sync exchange: {type(new_exchange)}")
+        logger.info(f" 🔍 В конце init_exchange_sync exchange is None: {new_exchange is None}")
         
         return True
         
     except Exception as e:
-        logger.error(f"[SYNC] ❌ Критическая ошибка инициализации биржи: {str(e)}")
+        logger.error(f" ❌ Критическая ошибка инициализации биржи: {str(e)}")
         import traceback
-        logger.error(f"[SYNC] Traceback: {traceback.format_exc()}")
+        logger.error(f" Traceback: {traceback.format_exc()}")
         return False
         
 def ensure_exchange_initialized():
@@ -746,10 +746,10 @@ def ensure_exchange_initialized():
                 logger.info("[OK] Биржа переподключена успешно и обновлена в GlobalState")
                 return True
             else:
-                logger.error("[ERROR] ExchangeFactory вернул None")
+                logger.error(" ExchangeFactory вернул None")
                 return False
         except Exception as e:
-            logger.error(f"[ERROR] Не удалось переподключиться к бирже: {str(e)}")
+            logger.error(f" Не удалось переподключиться к бирже: {str(e)}")
             return False
     else:
         # Обновляем локальную переменную

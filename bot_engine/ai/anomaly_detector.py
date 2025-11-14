@@ -51,7 +51,7 @@ class AnomalyDetector:
                 verbose=0
             )
             self.scaler = StandardScaler()
-            logger.info("[AnomalyDetector] Создана новая модель (не обучена)")
+            logger.info(" Создана новая модель (не обучена)")
     
     def extract_features(self, candles: List[dict]) -> Optional[np.ndarray]:
         """
@@ -154,7 +154,7 @@ class AnomalyDetector:
         try:
             features_scaled = self.scaler.transform(features)
         except Exception as e:
-            logger.error(f"[AnomalyDetector] Ошибка нормализации: {e}")
+            logger.error(f" Ошибка нормализации: {e}")
             features_scaled = features
         
         # Предсказание (-1 = аномалия, 1 = нормально)
@@ -168,7 +168,7 @@ class AnomalyDetector:
             severity = max(0.0, min(1.0, 1.0 - (anomaly_score + 0.5)))
             
         except Exception as e:
-            logger.error(f"[AnomalyDetector] Ошибка предсказания: {e}")
+            logger.error(f" Ошибка предсказания: {e}")
             return self._heuristic_detection(candles, features)
         
         # Определяем тип аномалии
@@ -281,10 +281,10 @@ class AnomalyDetector:
             True если обучение успешно
         """
         if not training_data:
-            logger.error("[AnomalyDetector] Нет данных для обучения")
+            logger.error(" Нет данных для обучения")
             return False
         
-        logger.info(f"[AnomalyDetector] Начинаем обучение на {len(training_data)} примерах...")
+        logger.info(f" Начинаем обучение на {len(training_data)} примерах...")
         
         # Извлекаем признаки из всех примеров
         all_features = []
@@ -294,29 +294,29 @@ class AnomalyDetector:
                 all_features.append(features[0])
         
         if len(all_features) < 10:
-            logger.error(f"[AnomalyDetector] Недостаточно данных: {len(all_features)} примеров")
+            logger.error(f" Недостаточно данных: {len(all_features)} примеров")
             return False
         
         X = np.array(all_features)
         
-        logger.info(f"[AnomalyDetector] Подготовлено {X.shape[0]} примеров с {X.shape[1]} признаками")
+        logger.info(f" Подготовлено {X.shape[0]} примеров с {X.shape[1]} признаками")
         
         # Нормализация
         try:
             X_scaled = self.scaler.fit_transform(X)
-            logger.info("[AnomalyDetector] ✅ Нормализация выполнена")
+            logger.info(" ✅ Нормализация выполнена")
         except Exception as e:
-            logger.error(f"[AnomalyDetector] ❌ Ошибка нормализации: {e}")
+            logger.error(f" ❌ Ошибка нормализации: {e}")
             return False
         
         # Обучение Isolation Forest
         try:
             self.model.fit(X_scaled)
             self.is_trained = True
-            logger.info("[AnomalyDetector] ✅ Модель успешно обучена")
+            logger.info(" ✅ Модель успешно обучена")
             return True
         except Exception as e:
-            logger.error(f"[AnomalyDetector] ❌ Ошибка обучения: {e}")
+            logger.error(f" ❌ Ошибка обучения: {e}")
             return False
     
     def save_model(self, model_path: str, scaler_path: str):
@@ -328,7 +328,7 @@ class AnomalyDetector:
             scaler_path: Путь для сохранения scaler
         """
         if not self.is_trained:
-            logger.warning("[AnomalyDetector] Модель не обучена, нечего сохранять")
+            logger.warning(" Модель не обучена, нечего сохранять")
             return
         
         try:
@@ -339,10 +339,10 @@ class AnomalyDetector:
             joblib.dump(self.model, model_path)
             joblib.dump(self.scaler, scaler_path)
             
-            logger.info(f"[AnomalyDetector] ✅ Модель сохранена: {model_path}")
-            logger.info(f"[AnomalyDetector] ✅ Scaler сохранен: {scaler_path}")
+            logger.info(f" ✅ Модель сохранена: {model_path}")
+            logger.info(f" ✅ Scaler сохранен: {scaler_path}")
         except Exception as e:
-            logger.error(f"[AnomalyDetector] ❌ Ошибка сохранения: {e}")
+            logger.error(f" ❌ Ошибка сохранения: {e}")
     
     def load_model(self, model_path: str, scaler_path: Optional[str] = None):
         """
@@ -359,24 +359,24 @@ class AnomalyDetector:
             # Загружаем модель
             if os.path.exists(model_path):
                 self.model = joblib.load(model_path)
-                logger.info(f"[AnomalyDetector] ✅ Модель загружена: {model_path}")
+                logger.info(f" ✅ Модель загружена: {model_path}")
                 self.is_trained = True
             else:
-                logger.warning(f"[AnomalyDetector] ⚠️ Файл модели не найден: {model_path}")
+                logger.warning(f" ⚠️ Файл модели не найден: {model_path}")
                 return False
             
             # Загружаем scaler
             if os.path.exists(scaler_path):
                 self.scaler = joblib.load(scaler_path)
-                logger.info(f"[AnomalyDetector] ✅ Scaler загружен: {scaler_path}")
+                logger.info(f" ✅ Scaler загружен: {scaler_path}")
             else:
-                logger.warning(f"[AnomalyDetector] ⚠️ Файл scaler не найден: {scaler_path}")
+                logger.warning(f" ⚠️ Файл scaler не найден: {scaler_path}")
                 self.scaler = StandardScaler()
             
             return True
             
         except Exception as e:
-            logger.error(f"[AnomalyDetector] ❌ Ошибка загрузки: {e}")
+            logger.error(f" ❌ Ошибка загрузки: {e}")
             return False
     
     def get_status(self) -> Dict[str, Any]:

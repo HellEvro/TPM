@@ -248,10 +248,10 @@ def save_rsi_cache():
         with open(RSI_CACHE_FILE, 'w', encoding='utf-8') as f:
             json.dump(cache_data, f, indent=2, ensure_ascii=False)
             
-        logger.info(f"[CACHE] RSI данные для {len(cache_data['coins'])} монет сохранены в кэш")
+        logger.info(f" RSI данные для {len(cache_data['coins'])} монет сохранены в кэш")
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка сохранения RSI кэша: {str(e)}")
+        logger.error(f" Ошибка сохранения RSI кэша: {str(e)}")
 
 def load_rsi_cache():
     """Загрузить кэш RSI данных из файла"""
@@ -259,7 +259,7 @@ def load_rsi_cache():
     
     try:
         if not os.path.exists(RSI_CACHE_FILE):
-            logger.info("[CACHE] Файл RSI кэша не найден, будет создан при первом обновлении")
+            logger.info(" Файл RSI кэша не найден, будет создан при первом обновлении")
             return False
             
         with open(RSI_CACHE_FILE, 'r', encoding='utf-8') as f:
@@ -270,7 +270,7 @@ def load_rsi_cache():
         age_hours = (datetime.now() - cache_timestamp).total_seconds() / 3600
         
         if age_hours > 6:
-            logger.warning(f"[CACHE] RSI кэш устарел ({age_hours:.1f} часов), будет обновлен")
+            logger.warning(f" RSI кэш устарел ({age_hours:.1f} часов), будет обновлен")
             return False
         
         # Загружаем данные из кэша
@@ -284,7 +284,7 @@ def load_rsi_cache():
                 if 'symbol' in coin:
                     coins_dict[coin['symbol']] = coin
             cached_coins = coins_dict
-            logger.info("[CACHE] Преобразован старый формат кэша (массив -> словарь)")
+            logger.info(" Преобразован старый формат кэша (массив -> словарь)")
         
         with rsi_data_lock:
             coins_rsi_data.update({
@@ -296,11 +296,11 @@ def load_rsi_cache():
                 'update_in_progress': False
             })
         
-        logger.info(f"[CACHE] Загружено {len(cached_coins)} монет из RSI кэша (возраст: {age_hours:.1f}ч)")
+        logger.info(f" Загружено {len(cached_coins)} монет из RSI кэша (возраст: {age_hours:.1f}ч)")
         return True
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка загрузки RSI кэша: {str(e)}")
+        logger.error(f" Ошибка загрузки RSI кэша: {str(e)}")
         return False
 
 def save_default_config():
@@ -309,11 +309,11 @@ def save_default_config():
         with open(DEFAULT_CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(DEFAULT_AUTO_BOT_CONFIG, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"[DEFAULT_CONFIG] ✅ Дефолтная конфигурация сохранена в {DEFAULT_CONFIG_FILE}")
+        logger.info(f" ✅ Дефолтная конфигурация сохранена в {DEFAULT_CONFIG_FILE}")
         return True
         
     except Exception as e:
-        logger.error(f"[DEFAULT_CONFIG] ❌ Ошибка сохранения дефолтной конфигурации: {e}")
+        logger.error(f" ❌ Ошибка сохранения дефолтной конфигурации: {e}")
         return False
 
 def load_default_config():
@@ -328,7 +328,7 @@ def load_default_config():
             return DEFAULT_AUTO_BOT_CONFIG.copy()
             
     except Exception as e:
-        logger.error(f"[DEFAULT_CONFIG] ❌ Ошибка загрузки дефолтной конфигурации: {e}")
+        logger.error(f" ❌ Ошибка загрузки дефолтной конфигурации: {e}")
         return DEFAULT_AUTO_BOT_CONFIG.copy()
 
 def restore_default_config():
@@ -351,11 +351,11 @@ def restore_default_config():
         # Сохраняем состояние
         save_result = save_bots_state()
         
-        logger.info("[DEFAULT_CONFIG] ✅ Дефолтная конфигурация восстановлена")
+        logger.info(" ✅ Дефолтная конфигурация восстановлена")
         return save_result
         
     except Exception as e:
-        logger.error(f"[DEFAULT_CONFIG] ❌ Ошибка восстановления дефолтной конфигурации: {e}")
+        logger.error(f" ❌ Ошибка восстановления дефолтной конфигурации: {e}")
         return False
 
 def update_process_state(process_name, status_update):
@@ -368,7 +368,7 @@ def update_process_state(process_name, status_update):
             save_process_state()
             
     except Exception as e:
-        logger.error(f"[PROCESS_STATE] ❌ Ошибка обновления состояния {process_name}: {e}")
+        logger.error(f" ❌ Ошибка обновления состояния {process_name}: {e}")
 
 def save_process_state():
     """Сохраняет состояние всех процессов"""
@@ -385,14 +385,14 @@ def save_process_state():
         return True
         
     except Exception as e:
-        logger.error(f"[PROCESS_STATE] ❌ Ошибка сохранения состояния процессов: {e}")
+        logger.error(f" ❌ Ошибка сохранения состояния процессов: {e}")
         return False
 
 def load_process_state():
     """Загружает состояние процессов из файла"""
     try:
         if not os.path.exists(PROCESS_STATE_FILE):
-            logger.info(f"[PROCESS_STATE] 📁 Файл состояния процессов не найден, начинаем с дефолтного")
+            logger.info(f" 📁 Файл состояния процессов не найден, начинаем с дефолтного")
             save_process_state()  # Создаем файл
             return False
         
@@ -406,13 +406,13 @@ def load_process_state():
                     process_state[process_name].update(process_info)
             
             last_saved = state_data.get('last_saved', 'неизвестно')
-            logger.info(f"[PROCESS_STATE] ✅ Состояние процессов восстановлено (сохранено: {last_saved})")
+            logger.info(f" ✅ Состояние процессов восстановлено (сохранено: {last_saved})")
             return True
         
         return False
         
     except Exception as e:
-        logger.error(f"[PROCESS_STATE] ❌ Ошибка загрузки состояния процессов: {e}")
+        logger.error(f" ❌ Ошибка загрузки состояния процессов: {e}")
         return False
 
 def save_system_config(config_data):
@@ -672,10 +672,10 @@ def load_bots_state():
     """Загружает состояние ботов из файла"""
     try:
         if not os.path.exists(BOTS_STATE_FILE):
-            logger.info(f"[LOAD_STATE] 📁 Файл состояния {BOTS_STATE_FILE} не найден, начинаем с пустого состояния")
+            logger.info(f" 📁 Файл состояния {BOTS_STATE_FILE} не найден, начинаем с пустого состояния")
             return False
         
-        logger.info(f"[LOAD_STATE] 📂 Загрузка состояния ботов из {BOTS_STATE_FILE}...")
+        logger.info(f" 📂 Загрузка состояния ботов из {BOTS_STATE_FILE}...")
         
         with open(BOTS_STATE_FILE, 'r', encoding='utf-8') as f:
             state_data = json.load(f)
@@ -683,14 +683,14 @@ def load_bots_state():
         version = state_data.get('version', '1.0')
         last_saved = state_data.get('last_saved', 'неизвестно')
         
-        logger.info(f"[LOAD_STATE] 📊 Версия состояния: {version}, последнее сохранение: {last_saved}")
+        logger.info(f" 📊 Версия состояния: {version}, последнее сохранение: {last_saved}")
         
         # ✅ Конфигурация Auto Bot никогда не берётся из bots_state.json
         # Настройки загружаются только из bot_engine/bot_config.py
         # bots_state.json содержит только состояние ботов и глобальную статистику
         
-        logger.info(f"[LOAD_STATE] ⚙️ Конфигурация Auto Bot НЕ загружается из bots_state.json")
-        logger.info(f"[LOAD_STATE] 💡 Конфигурация загружается только из bot_engine/bot_config.py")
+        logger.info(f" ⚙️ Конфигурация Auto Bot НЕ загружается из bots_state.json")
+        logger.info(f" 💡 Конфигурация загружается только из bot_engine/bot_config.py")
         
         # Восстанавливаем ботов
         restored_bots = 0
@@ -702,7 +702,7 @@ def load_bots_state():
                     try:
                         # Проверяем валидность данных бота
                         if not isinstance(bot_data, dict) or 'status' not in bot_data:
-                            logger.warning(f"[LOAD_STATE] ⚠️ Некорректные данные бота {symbol}, пропускаем")
+                            logger.warning(f" ⚠️ Некорректные данные бота {symbol}, пропускаем")
                             failed_bots += 1
                             continue
                         
@@ -716,18 +716,18 @@ def load_bots_state():
                         bots_data['bots'][symbol] = bot_data
                         restored_bots += 1
                         
-                        logger.info(f"[LOAD_STATE] 🤖 Восстановлен бот {symbol}: статус={bot_data.get('status', 'UNKNOWN')}")
+                        logger.info(f" 🤖 Восстановлен бот {symbol}: статус={bot_data.get('status', 'UNKNOWN')}")
                         
                     except Exception as e:
-                        logger.error(f"[LOAD_STATE] ❌ Ошибка восстановления бота {symbol}: {e}")
+                        logger.error(f" ❌ Ошибка восстановления бота {symbol}: {e}")
                         failed_bots += 1
         
-        logger.info(f"[LOAD_STATE] ✅ Восстановлено ботов: {restored_bots}, ошибок: {failed_bots}")
+        logger.info(f" ✅ Восстановлено ботов: {restored_bots}, ошибок: {failed_bots}")
         
         return restored_bots > 0
         
     except Exception as e:
-        logger.error(f"[LOAD_STATE] ❌ Ошибка загрузки состояния: {e}")
+        logger.error(f" ❌ Ошибка загрузки состояния: {e}")
         return False
 
 def load_delisted_coins():
@@ -965,7 +965,7 @@ def update_bots_cache_data():
             interval_seconds=300  # Логируем раз в 5 минут
         )
         if should_log:
-            logger.info(f"[BOTS_CACHE] {log_message}")
+            logger.info(f" {log_message}")
         
         # Добавляем таймаут для предотвращения зависания (Windows-совместимый)
         import threading
@@ -985,7 +985,7 @@ def update_bots_cache_data():
         for symbol, bot_data in bots_data['bots'].items():
             # Проверяем таймаут
             if timeout_occurred.is_set():
-                logger.warning("[BOTS_CACHE] ⚠️ Таймаут достигнут, прерываем обновление")
+                logger.warning(" ⚠️ Таймаут достигнут, прерываем обновление")
                 break
             
             # Добавляем RSI данные к боту (используем кэшированные данные)
@@ -997,7 +997,7 @@ def update_bots_cache_data():
                 else:
                     bot_data['rsi_data'] = {'rsi': 'N/A', 'signal': 'N/A'}
             except Exception as e:
-                logger.error(f"[BOTS_CACHE] Ошибка получения RSI для {symbol}: {e}")
+                logger.error(f" Ошибка получения RSI для {symbol}: {e}")
                 bot_data['rsi_data'] = {'rsi': 'N/A', 'signal': 'N/A'}
             
             # Добавляем бота в список
@@ -1007,7 +1007,7 @@ def update_bots_cache_data():
         # ✅ КРИТИЧНО: Используем тот же способ что и positions_monitor_worker!
         try:
             # Получаем позиции тем же способом что и positions_monitor_worker
-            logger.debug(f"[BOTS_CACHE] Получаем позиции с биржи...")
+            logger.debug(f" Получаем позиции с биржи...")
             exchange_obj = get_exchange()
             if exchange_obj:
                 exchange_positions = exchange_obj.get_positions()
@@ -1015,10 +1015,10 @@ def update_bots_cache_data():
                     positions_list = exchange_positions[0] if exchange_positions else []
                 else:
                     positions_list = exchange_positions if exchange_positions else []
-                logger.debug(f"[BOTS_CACHE] Получено {len(positions_list)} позиций с биржи")
+                logger.debug(f" Получено {len(positions_list)} позиций с биржи")
             else:
                 positions_list = []
-                logger.warning(f"[BOTS_CACHE] Exchange не инициализирован")
+                logger.warning(f" Exchange не инициализирован")
             
             if positions_list:
                 # Создаем словарь позиций для быстрого поиска
@@ -1084,7 +1084,7 @@ def update_bots_cache_data():
                                         bot_data['current_price'] = current_price
                                         bot_data['mark_price'] = current_price
                             except Exception as e:
-                                logger.error(f"[BOTS_CACHE] ❌ {symbol} - Ошибка получения цены с биржи: {e}")
+                                logger.error(f" ❌ {symbol} - Ошибка получения цены с биржи: {e}")
                         
                         # ✅ КРИТИЧНО: Обновляем PnL ВСЕГДА, даже если он равен 0
                         bot_data['unrealized_pnl'] = exchange_unrealized_pnl
@@ -1135,7 +1135,7 @@ def update_bots_cache_data():
                         # Обновляем время последнего обновления
                         bot_data['last_update'] = datetime.now().isoformat()
         except Exception as e:
-            logger.error(f"[BOTS_CACHE] Ошибка получения позиций с биржи: {e}")
+            logger.error(f" Ошибка получения позиций с биржи: {e}")
         
         # Обновляем кэш (только данные ботов, account_info больше не кэшируется)
         current_time = datetime.now().isoformat()
@@ -1147,24 +1147,24 @@ def update_bots_cache_data():
         
         # ✅ СИНХРОНИЗАЦИЯ: Проверяем закрытые позиции на бирже
         try:
-            logger.debug(f"[BOTS_CACHE] Синхронизация...")
+            logger.debug(f" Синхронизация...")
             sync_bots_with_exchange()
-            logger.debug(f"[BOTS_CACHE] Синхронизация завершена")
+            logger.debug(f" Синхронизация завершена")
         except Exception as e:
-            logger.error(f"[BOTS_CACHE] ❌ Ошибка синхронизации с биржей: {e}")
+            logger.error(f" ❌ Ошибка синхронизации с биржей: {e}")
         
         # ✅ КРИТИЧНО: Обновляем last_update в bots_data для UI
         # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает запись атомарной
         bots_data['last_update'] = current_time
         
         # Отладочный лог для проверки частоты обновлений
-        logger.debug(f"[BOTS_CACHE] 🔄 Обновление завершено: {current_time}")
+        logger.debug(f" 🔄 Обновление завершено: {current_time}")
         
-        logger.debug(f"[BOTS_CACHE] Кэш обновлен: {len(bots_list)} ботов")
+        logger.debug(f" Кэш обновлен: {len(bots_list)} ботов")
         return True
         
     except Exception as e:
-        logger.error(f"[BOTS_CACHE] ❌ Ошибка обновления кэша: {e}")
+        logger.error(f" ❌ Ошибка обновления кэша: {e}")
         return False
 
 def update_bot_positions_status():
