@@ -1964,7 +1964,7 @@ class AITrainer:
                                 should_enter_long = current_rsi <= coin_RSI_OVERSOLD
                                 should_enter_short = current_rsi >= coin_RSI_OVERBOUGHT
                                 
-                                if should_enter_long или should_enter_short:
+                                if should_enter_long or should_enter_short:
                                     signal = 'ENTER_LONG' if should_enter_long else 'ENTER_SHORT'
                                     filters_allowed, filters_reason = apply_entry_filters(
                                         symbol,
