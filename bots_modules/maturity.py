@@ -368,8 +368,8 @@ def check_coin_maturity(symbol, candles):
         if not is_mature:
             failed_checks = [check for check, passed in maturity_checks.items() if not passed]
             reason = f'Не пройдены проверки: {", ".join(failed_checks)}'
-            logger.debug(f"[MATURITY] {symbol}: {reason}")
-            logger.debug(f"[MATURITY] {symbol}: Свечи={len(candles)}, RSI={rsi_min:.1f}-{rsi_max:.1f}")
+            logger.debug(f"{symbol}: {reason}")
+            logger.debug(f"{symbol}: Свечи={len(candles)}, RSI={rsi_min:.1f}-{rsi_max:.1f}")
         else:
             reason = None  # Для зрелых монет reason не нужен
         
@@ -385,7 +385,7 @@ def check_coin_maturity(symbol, candles):
         return result
         
     except Exception as e:
-        logger.error(f"[MATURITY] Ошибка проверки зрелости {symbol}: {e}")
+        logger.error(f"Ошибка проверки зрелости {symbol}: {e}")
         return {
             'is_mature': False,
             'reason': f'Ошибка анализа: {str(e)}',
@@ -395,13 +395,13 @@ def check_coin_maturity(symbol, candles):
 def calculate_all_coins_maturity():
     """🧮 УМНЫЙ расчет зрелости - ТОЛЬКО для незрелых монет!"""
     try:
-        logger.info("[MATURITY_BATCH] 🧮 Начинаем УМНЫЙ расчет зрелости...")
+        logger.info("🧮 Начинаем УМНЫЙ расчет зрелости...")
         
         from bots_modules.imports_and_globals import rsi_data_lock, coins_rsi_data, get_exchange, bots_data
         
         exchange = get_exchange()
         if not exchange:
-            logger.error("[MATURITY_BATCH] ❌ Биржа не инициализирована")
+            logger.error("❌ Биржа не инициализирована")
             return False
         
         # Получаем все монеты с RSI данными
@@ -411,7 +411,7 @@ def calculate_all_coins_maturity():
             if coin_data.get('rsi6h') is not None:
                 all_coins.append(symbol)
         
-        logger.info(f"[MATURITY_BATCH] 📊 Найдено {len(all_coins)} монет с RSI данными")
+        logger.info(f"📊 Найдено {len(all_coins)} монет с RSI данными")
         
         # 🚀 СУПЕР-ОПТИМИЗАЦИЯ: Пропускаем если конфиг + количество монет не изменились!
         global last_maturity_check
@@ -429,18 +429,18 @@ def calculate_all_coins_maturity():
         # Проверяем: изменилось ли что-то с прошлого раза?
         if (last_maturity_check['coins_count'] == current_coins_count and 
             last_maturity_check['config_hash'] == current_config_hash):
-            logger.info(f"[MATURITY_BATCH] ⚡ ПРОПУСК: Конфиг и количество монет ({current_coins_count}) не изменились!")
-            logger.info(f"[MATURITY_BATCH] 📊 Используем кэшированные данные о зрелости")
+            logger.info(f"⚡ ПРОПУСК: Конфиг и количество монет ({current_coins_count}) не изменились!")
+            logger.info(f"📊 Используем кэшированные данные о зрелости")
             return True
         
-        logger.info(f"[MATURITY_BATCH] 🔄 Обновление необходимо:")
+        logger.info(f"🔄 Обновление необходимо:")
         if last_maturity_check['coins_count'] != current_coins_count:
-            logger.info(f"[MATURITY_BATCH] 📊 Монеты: {last_maturity_check['coins_count']} → {current_coins_count}")
+            logger.info(f"📊 Монеты: {last_maturity_check['coins_count']} → {current_coins_count}")
         if last_maturity_check['config_hash'] != current_config_hash:
-            logger.info(f"[MATURITY_BATCH] ⚙️ Конфиг зрелости изменился")
+            logger.info(f"⚙️ Конфиг зрелости изменился")
         
         if not all_coins:
-            logger.warning("[MATURITY_BATCH] ⚠️ Нет монет для проверки зрелости")
+            logger.warning("⚠️ Нет монет для проверки зрелости")
             return False
         
         # 🎯 УМНАЯ ЛОГИКА: Проверяем ТОЛЬКО незрелые монеты!
@@ -451,17 +451,17 @@ def calculate_all_coins_maturity():
             # Проверяем, есть ли монета уже в кэше как зрелая
             if is_coin_mature_stored(symbol):
                 already_mature_count += 1
-                logger.debug(f"[MATURITY_BATCH] ✅ {symbol}: УЖЕ ЗРЕЛАЯ в кэше - пропускаем")
+                logger.debug(f"✅ {symbol}: УЖЕ ЗРЕЛАЯ в кэше - пропускаем")
             else:
                 coins_to_check.append(symbol)
-                logger.debug(f"[MATURITY_BATCH] ❓ {symbol}: НЕЗРЕЛАЯ или НОВАЯ - проверим")
+                logger.debug(f"❓ {symbol}: НЕЗРЕЛАЯ или НОВАЯ - проверим")
         
-        logger.info(f"[MATURITY_BATCH] 🎯 УМНАЯ ФИЛЬТРАЦИЯ:")
-        logger.info(f"[MATURITY_BATCH] 📊 Уже зрелые (пропускаем): {already_mature_count}")
-        logger.info(f"[MATURITY_BATCH] 📊 Нужно проверить: {len(coins_to_check)}")
+        logger.info(f"🎯 УМНАЯ ФИЛЬТРАЦИЯ:")
+        logger.info(f"📊 Уже зрелые (пропускаем): {already_mature_count}")
+        logger.info(f"📊 Нужно проверить: {len(coins_to_check)}")
         
         if not coins_to_check:
-            logger.info("[MATURITY_BATCH] ✅ Все монеты уже зрелые - пересчет не нужен!")
+            logger.info("✅ Все монеты уже зрелые - пересчет не нужен!")
             return True
         
         # Проверяем зрелость ТОЛЬКО для незрелых монет
@@ -472,18 +472,18 @@ def calculate_all_coins_maturity():
             try:
                 # Логируем прогресс каждые 10 монет
                 if i == 1 or i % 10 == 0 or i == len(coins_to_check):
-                    logger.info(f"[MATURITY_BATCH] 📊 Прогресс: {i}/{len(coins_to_check)} монет ({round(i/len(coins_to_check)*100)}%)")
+                    logger.info(f"📊 Прогресс: {i}/{len(coins_to_check)} монет ({round(i/len(coins_to_check)*100)}%)")
                 
                 # Получаем свечи для проверки зрелости
                 chart_response = exchange.get_chart_data(symbol, '6h', '30d')
                 if not chart_response or not chart_response.get('success'):
-                    logger.debug(f"[MATURITY_BATCH] ⚠️ {symbol}: Не удалось получить свечи")
+                    logger.debug(f"⚠️ {symbol}: Не удалось получить свечи")
                     immature_count += 1
                     continue
                 
                 candles = chart_response.get('data', {}).get('candles', [])
                 if not candles:
-                    logger.debug(f"[MATURITY_BATCH] ⚠️ {symbol}: Нет свечей")
+                    logger.debug(f"⚠️ {symbol}: Нет свечей")
                     immature_count += 1
                     continue
                 
@@ -492,42 +492,42 @@ def calculate_all_coins_maturity():
                 
                 if maturity_result['is_mature']:
                     mature_count += 1
-                    logger.debug(f"[MATURITY_BATCH] ✅ {symbol}: СТАЛА ЗРЕЛОЙ ({maturity_result.get('reason', 'Зрелая')})")
+                    logger.debug(f"✅ {symbol}: СТАЛА ЗРЕЛОЙ ({maturity_result.get('reason', 'Зрелая')})")
                 else:
                     immature_count += 1
-                    logger.debug(f"[MATURITY_BATCH] ❌ {symbol}: ОСТАЛАСЬ НЕЗРЕЛОЙ ({maturity_result.get('reason', 'Незрелая')})")
+                    logger.debug(f"❌ {symbol}: ОСТАЛАСЬ НЕЗРЕЛОЙ ({maturity_result.get('reason', 'Незрелая')})")
                 
                 # Минимальная пауза между запросами (УСКОРЕННАЯ ВЕРСИЯ)
                 time.sleep(0.05)  # Уменьшили с 0.1 до 0.05
                 
             except Exception as e:
-                logger.error(f"[MATURITY_BATCH] ❌ {symbol}: Ошибка проверки зрелости: {e}")
+                logger.error(f"❌ {symbol}: Ошибка проверки зрелости: {e}")
                 immature_count += 1
         
-        logger.info(f"[MATURITY_BATCH] ✅ УМНЫЙ расчет зрелости завершен:")
-        logger.info(f"[MATURITY_BATCH] 📊 Уже были зрелыми: {already_mature_count}")
-        logger.info(f"[MATURITY_BATCH] 📊 Стали зрелыми: {mature_count}")
-        logger.info(f"[MATURITY_BATCH] 📊 Остались незрелыми: {immature_count}")
-        logger.info(f"[MATURITY_BATCH] 📊 Всего зрелых: {already_mature_count + mature_count}")
-        logger.info(f"[MATURITY_BATCH] 📊 Всего проверили: {len(coins_to_check)}")
+        logger.info(f"✅ УМНЫЙ расчет зрелости завершен:")
+        logger.info(f"📊 Уже были зрелыми: {already_mature_count}")
+        logger.info(f"📊 Стали зрелыми: {mature_count}")
+        logger.info(f"📊 Остались незрелыми: {immature_count}")
+        logger.info(f"📊 Всего зрелых: {already_mature_count + mature_count}")
+        logger.info(f"📊 Всего проверили: {len(coins_to_check)}")
         
         # 🚀 Обновляем кэш для следующего раза И СОХРАНЯЕМ В ФАЙЛ
         last_maturity_check['coins_count'] = current_coins_count
         last_maturity_check['config_hash'] = current_config_hash
         save_maturity_check_cache()  # 💾 Сохраняем в файл!
-        logger.info(f"[MATURITY_BATCH] 💾 Кэш обновлен и сохранен: {current_coins_count} монет")
+        logger.info(f"💾 Кэш обновлен и сохранен: {current_coins_count} монет")
         
         # 🔧 ОБНОВЛЯЕМ ФЛАГИ is_mature в кэшированных RSI данных
         try:
             from bots_modules.filters import update_is_mature_flags_in_rsi_data
             update_is_mature_flags_in_rsi_data()
-            logger.info(f"[MATURITY_BATCH] ✅ Флаги is_mature обновлены в UI данных")
+            logger.info(f"✅ Флаги is_mature обновлены в UI данных")
         except Exception as update_error:
-            logger.warning(f"[MATURITY_BATCH] ⚠️ Не удалось обновить флаги is_mature: {update_error}")
+            logger.warning(f"⚠️ Не удалось обновить флаги is_mature: {update_error}")
         
         return True
         
     except Exception as e:
-        logger.error(f"[MATURITY_BATCH] ❌ Ошибка умного расчета зрелости: {e}")
+        logger.error(f"❌ Ошибка умного расчета зрелости: {e}")
         return False
 
