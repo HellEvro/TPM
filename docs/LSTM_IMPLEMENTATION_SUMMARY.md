@@ -80,9 +80,9 @@ python bots.py
 3. `bots_modules/filters.py` - функция get_lstm_prediction()
 
 ### Документация (4 файла):
-1. `docs/ai_technical/LSTM_PREDICTOR.md` - техническая документация
-2. `docs/ai_guides/LSTM_QUICK_START.md` - быстрый старт
-3. `docs/ai_development/PHASE_3_LSTM_COMPLETE.md` - полная сводка
+1. `bot_engine/ai/lstm_predictor.py` - исходный код и комментарии
+2. `docs/AI_README.md` - раздел про LSTM Predictor (быстрый старт)
+3. `docs/READY_FOR_YOU.md` - полная сводка статуса LSTM
 4. `docs/FUTURE_FEATURES.md` - идеи для будущего
 
 ### Обновлены:
@@ -90,7 +90,7 @@ python bots.py
 - `bot_engine/ai/auto_trainer.py` - обучение LSTM
 - `bot_engine/bot_config.py` - AI_LSTM_ENABLED = True
 - `requirements.txt` - зависимости TensorFlow
-- `docs/ai_guides/📖_START_HERE.md` - актуальный статус
+- `docs/START_HERE.md` - актуальный статус
 
 ---
 
@@ -251,13 +251,13 @@ AI_LSTM_ENABLED = True  # Должно быть True
 ## 📚 ДОКУМЕНТАЦИЯ
 
 ### Быстрый старт:
-- `docs/ai_guides/LSTM_QUICK_START.md`
+- `docs/AI_README.md`
 
 ### Техническая:
-- `docs/ai_technical/LSTM_PREDICTOR.md`
+- `bot_engine/ai/lstm_predictor.py`
 
 ### Полная сводка:
-- `docs/ai_development/PHASE_3_LSTM_COMPLETE.md`
+- `docs/READY_FOR_YOU.md`
 
 ---
 
