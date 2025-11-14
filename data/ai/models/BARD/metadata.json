@@ -1,8 +1,8 @@
 {
   "symbol": "BARD",
-  "trained_at": "2025-11-14T21:01:43.923815",
-  "training_seed": 294287,
-  "coin_model_seed": 294443,
+  "trained_at": "2025-11-15T00:00:02.022761",
+  "training_seed": 984400,
+  "coin_model_seed": 984404,
   "rsi_params": {
     "oversold": 34,
     "overbought": 67,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 35
   },
   "risk_params": {
-    "stop_loss": 9.281520092907236,
-    "take_profit": 30.7899421436157,
-    "trailing_stop_activation": 38.46240675490921,
-    "trailing_stop_distance": 37.455079497950955,
+    "stop_loss": 19.77911129278858,
+    "take_profit": 21.301331525007367,
+    "trailing_stop_activation": 15.233938905582752,
+    "trailing_stop_distance": 28.92370967099854,
     "break_even_protection": false,
-    "break_even_trigger": 100.53770993358995,
-    "max_position_hours": 34.0
+    "break_even_trigger": 64.46028330973247,
+    "max_position_hours": 20.0
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 3,
       "upper": 61.0,
-      "lower": 37.0
+      "lower": 33.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 4,
-      "single_candle_percent": 14.881641608438308,
+      "candles": 7,
+      "single_candle_percent": 17.094835295782154,
       "multi_candle_count": 2,
-      "multi_candle_percent": 76.27919262099127
+      "multi_candle_percent": 75.86492306328216
     }
   },
-  "candles_count": 238,
-  "trades_count": 6,
-  "win_rate": 33.33333333333333,
+  "candles_count": 239,
+  "trades_count": 5,
+  "win_rate": 40.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 5.565952548785525e-06,
-  "total_pnl": -1.8476574313012695,
-  "previous_candles_count": 238,
+  "profit_mse": 2.101054885370139e-05,
+  "total_pnl": -1.4105580199585408,
+  "previous_candles_count": 239,
   "candles_increased": false
 }

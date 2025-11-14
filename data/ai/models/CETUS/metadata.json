@@ -1,8 +1,8 @@
 {
   "symbol": "CETUS",
-  "trained_at": "2025-11-14T21:00:44.598789",
-  "training_seed": 232680,
-  "coin_model_seed": 232707,
+  "trained_at": "2025-11-14T23:49:42.441266",
+  "training_seed": 368454,
+  "coin_model_seed": 368959,
   "rsi_params": {
     "oversold": 30,
     "overbought": 71,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 40
   },
   "risk_params": {
-    "stop_loss": 6.991954830773402,
+    "stop_loss": 14.315765638410575,
     "take_profit": 10.0,
-    "trailing_stop_activation": 57.17450197237979,
-    "trailing_stop_distance": 19.398938440145727,
+    "trailing_stop_activation": 68.5468591092432,
+    "trailing_stop_distance": 12.86922150712341,
     "break_even_protection": false,
-    "break_even_trigger": 88.26550936483085,
+    "break_even_trigger": 98.56437330458598,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 3,
-      "upper": 60.0,
-      "lower": 34.0
+      "candles": 5,
+      "upper": 62.0,
+      "lower": 36.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 13,
-      "single_candle_percent": 12.236319638783785,
-      "multi_candle_count": 8,
-      "multi_candle_percent": 69.78328075839144
+      "candles": 12,
+      "single_candle_percent": 8.736690591337121,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 45.62896153500778
     }
   },
-  "candles_count": 2538,
+  "candles_count": 2438,
   "trades_count": 5,
   "win_rate": 40.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 3.100830460198968e-07,
-  "total_pnl": -0.1482291564165923,
-  "previous_candles_count": 2516,
-  "candles_increased": true
+  "profit_mse": 7.603643229464182e-06,
+  "total_pnl": 0.988108673732561,
+  "previous_candles_count": 2512,
+  "candles_increased": false
 }

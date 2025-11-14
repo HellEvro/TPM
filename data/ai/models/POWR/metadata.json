@@ -1,8 +1,8 @@
 {
   "symbol": "POWR",
-  "trained_at": "2025-11-14T21:03:14.344938",
-  "training_seed": 362360,
-  "coin_model_seed": 363253,
+  "trained_at": "2025-11-14T23:59:07.353470",
+  "training_seed": 905549,
+  "coin_model_seed": 905680,
   "rsi_params": {
     "oversold": 33,
     "overbought": 72,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 37
   },
   "risk_params": {
-    "stop_loss": 20.01644710899684,
-    "take_profit": 58.67295320321611,
+    "stop_loss": 30.0,
+    "take_profit": 50.12426251380245,
     "trailing_stop_activation": 70.0,
-    "trailing_stop_distance": 11.139202391502398,
-    "break_even_protection": false,
+    "trailing_stop_distance": 30.31596235238969,
+    "break_even_protection": true,
     "break_even_trigger": 30.0,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 6,
-      "upper": 74.0,
-      "lower": 44.0
+      "candles": 3,
+      "upper": 77.0,
+      "lower": 46.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 18,
-      "single_candle_percent": 32.4767498396083,
-      "multi_candle_count": 5,
-      "multi_candle_percent": 34.796634984082004
+      "candles": 7,
+      "single_candle_percent": 30.09465951872368,
+      "multi_candle_count": 7,
+      "multi_candle_percent": 43.27545863596309
     }
   },
-  "candles_count": 2838,
+  "candles_count": 2918,
   "trades_count": 7,
-  "win_rate": 71.42857142857143,
+  "win_rate": 42.857142857142854,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.3339984133738616e-06,
-  "total_pnl": 0.3341298792757002,
-  "previous_candles_count": 2823,
+  "profit_mse": 5.698149394645613e-07,
+  "total_pnl": -0.4044231197866329,
+  "previous_candles_count": 2849,
   "candles_increased": true
 }

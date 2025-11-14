@@ -1,8 +1,8 @@
 {
   "symbol": "PAXG",
-  "trained_at": "2025-11-14T20:59:57.560615",
-  "training_seed": 165295,
-  "coin_model_seed": 165471,
+  "trained_at": "2025-11-14T23:55:06.204078",
+  "training_seed": 668717,
+  "coin_model_seed": 669597,
   "rsi_params": {
     "oversold": 29,
     "overbought": 72,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 39
   },
   "risk_params": {
-    "stop_loss": 9.973146618920222,
-    "take_profit": 16.781680484230932,
-    "trailing_stop_activation": 49.91513849002274,
-    "trailing_stop_distance": 30.403180416316147,
+    "stop_loss": 8.489557775600797,
+    "take_profit": 25.931116737063093,
+    "trailing_stop_activation": 47.57068947017949,
+    "trailing_stop_distance": 32.03945991741493,
     "break_even_protection": false,
-    "break_even_trigger": 30.0,
+    "break_even_trigger": 31.755610299138056,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 9,
-      "upper": 70.0,
-      "lower": 32.0
+      "candles": 6,
+      "upper": 66.0,
+      "lower": 43.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 9,
-      "single_candle_percent": 13.151468198829663,
-      "multi_candle_count": 5,
-      "multi_candle_percent": 76.06308940309452
+      "candles": 5,
+      "single_candle_percent": 14.16498134935032,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 50.70266935902468
     }
   },
-  "candles_count": 4973,
+  "candles_count": 4956,
   "trades_count": 5,
-  "win_rate": 40.0,
+  "win_rate": 80.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 4.890674433964295e-09,
-  "total_pnl": 0.035808099481961855,
-  "previous_candles_count": 5006,
-  "candles_increased": false
+  "profit_mse": 1.502007444486687e-08,
+  "total_pnl": 0.09644776613244613,
+  "previous_candles_count": 4903,
+  "candles_increased": true
 }

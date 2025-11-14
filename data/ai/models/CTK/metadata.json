@@ -1,8 +1,8 @@
 {
   "symbol": "CTK",
-  "trained_at": "2025-11-14T21:02:56.190463",
-  "training_seed": 362360,
-  "coin_model_seed": 363120,
+  "trained_at": "2025-11-14T23:54:47.213423",
+  "training_seed": 668717,
+  "coin_model_seed": 669488,
   "rsi_params": {
     "oversold": 35,
     "overbought": 76,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 40
   },
   "risk_params": {
-    "stop_loss": 10.593709211597215,
-    "take_profit": 16.99720594401556,
-    "trailing_stop_activation": 50.73942506925374,
+    "stop_loss": 10.848193239431069,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 58.94942055973027,
     "trailing_stop_distance": 5.0,
-    "break_even_protection": false,
-    "break_even_trigger": 72.72894094406495,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 6,
-      "upper": 54.0,
-      "lower": 26.0
+      "candles": 8,
+      "upper": 56.0,
+      "lower": 36.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 12,
-      "single_candle_percent": 10.661860443876183,
-      "multi_candle_count": 3,
-      "multi_candle_percent": 56.19845398960567
+      "candles": 10,
+      "single_candle_percent": 20.007113716635807,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 74.55927667799241
     }
   },
-  "candles_count": 4932,
+  "candles_count": 4953,
   "trades_count": 5,
-  "win_rate": 80.0,
-  "signal_accuracy": 0.8,
-  "profit_mse": 8.408665902226619e-07,
-  "total_pnl": 0.5459090276455536,
-  "previous_candles_count": 5009,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.981206602216416e-07,
+  "total_pnl": 0.09429861016386043,
+  "previous_candles_count": 4967,
   "candles_increased": false
 }

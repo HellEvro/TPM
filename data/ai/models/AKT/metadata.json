@@ -1,8 +1,8 @@
 {
   "symbol": "AKT",
-  "trained_at": "2025-11-14T20:59:32.586833",
-  "training_seed": 165295,
-  "coin_model_seed": 166244,
+  "trained_at": "2025-11-14T23:57:10.721317",
+  "training_seed": 823293,
+  "coin_model_seed": 824097,
   "rsi_params": {
     "oversold": 34,
     "overbought": 66,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 41
   },
   "risk_params": {
-    "stop_loss": 19.889445118879642,
-    "take_profit": 31.57935589834476,
-    "trailing_stop_activation": 65.59703647447085,
-    "trailing_stop_distance": 26.95850060144066,
-    "break_even_protection": true,
-    "break_even_trigger": 30.0,
+    "stop_loss": 12.953452330141904,
+    "take_profit": 35.89720988113571,
+    "trailing_stop_activation": 43.71012685964511,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 48.63779688603559,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 10,
-      "upper": 66.0,
-      "lower": 39.0
+      "candles": 5,
+      "upper": 67.0,
+      "lower": 30.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 13,
-      "single_candle_percent": 13.759717001791973,
-      "multi_candle_count": 3,
-      "multi_candle_percent": 64.66550457585649
+      "candles": 7,
+      "single_candle_percent": 25.324727433409034,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 49.901503132644656
     }
   },
-  "candles_count": 1996,
+  "candles_count": 1972,
   "trades_count": 6,
-  "win_rate": 33.33333333333333,
+  "win_rate": 66.66666666666666,
   "signal_accuracy": 1.0,
-  "profit_mse": 4.4476529010376703e-07,
-  "total_pnl": -0.17696451183220555,
-  "previous_candles_count": 2009,
-  "candles_increased": false
+  "profit_mse": 1.175454830343146e-06,
+  "total_pnl": 0.02818973668384743,
+  "previous_candles_count": 1919,
+  "candles_increased": true
 }

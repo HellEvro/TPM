@@ -1,46 +1,46 @@
 {
   "symbol": "AVNT",
-  "trained_at": "2025-11-14T21:01:43.390915",
-  "training_seed": 294287,
-  "coin_model_seed": 295135,
+  "trained_at": "2025-11-14T23:58:36.314163",
+  "training_seed": 905549,
+  "coin_model_seed": 906391,
   "rsi_params": {
-    "oversold": 35,
-    "overbought": 72,
-    "exit_long_with_trend": 66,
-    "exit_long_against_trend": 56,
+    "oversold": 34,
+    "overbought": 65,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 57,
     "exit_short_with_trend": 36,
-    "exit_short_against_trend": 45
+    "exit_short_against_trend": 42
   },
   "risk_params": {
-    "stop_loss": 17.222875537761485,
-    "take_profit": 18.745919922558706,
-    "trailing_stop_activation": 33.809784958849036,
-    "trailing_stop_distance": 18.634528532481184,
-    "break_even_protection": true,
+    "stop_loss": 19.476425536534457,
+    "take_profit": 17.715101393661893,
+    "trailing_stop_activation": 29.394334574920435,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
     "break_even_trigger": 30.0,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 5,
-      "upper": 57.0,
-      "lower": 37.0
+      "candles": 6,
+      "upper": 60.0,
+      "lower": 44.0
     },
     "exit_scam_filter": {
       "enabled": true,
       "candles": 10,
-      "single_candle_percent": 5.0,
+      "single_candle_percent": 17.598170637304825,
       "multi_candle_count": 5,
-      "multi_candle_percent": 43.972957306103
+      "multi_candle_percent": 31.75154553891142
     }
   },
-  "candles_count": 265,
-  "trades_count": 8,
-  "win_rate": 25.0,
+  "candles_count": 266,
+  "trades_count": 5,
+  "win_rate": 20.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 5.330443065601659e-05,
-  "total_pnl": 1.6714922608481746,
-  "previous_candles_count": 265,
+  "profit_mse": 2.4454774995853827e-06,
+  "total_pnl": -0.8583737424783345,
+  "previous_candles_count": 266,
   "candles_increased": false
 }

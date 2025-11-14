@@ -1,8 +1,8 @@
 {
   "symbol": "TAO",
-  "trained_at": "2025-11-14T21:02:14.476771",
-  "training_seed": 294287,
-  "coin_model_seed": 294337,
+  "trained_at": "2025-11-14T23:57:58.121391",
+  "training_seed": 823293,
+  "coin_model_seed": 824171,
   "rsi_params": {
     "oversold": 35,
     "overbought": 69,
@@ -12,12 +12,12 @@
     "exit_short_against_trend": 40
   },
   "risk_params": {
-    "stop_loss": 5.0,
-    "take_profit": 21.800185700521276,
-    "trailing_stop_activation": 21.750644266105162,
-    "trailing_stop_distance": 5.0,
-    "break_even_protection": true,
-    "break_even_trigger": 30.0,
+    "stop_loss": 12.707375367804596,
+    "take_profit": 14.190133713780565,
+    "trailing_stop_activation": 22.027956656738688,
+    "trailing_stop_distance": 21.638271144429382,
+    "break_even_protection": false,
+    "break_even_trigger": 103.86236318474838,
     "max_position_hours": 12
   },
   "filter_params": {
@@ -25,22 +25,22 @@
       "enabled": true,
       "candles": 3,
       "upper": 85,
-      "lower": 31.0
+      "lower": 36.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 8,
-      "single_candle_percent": 16.87974248723912,
+      "candles": 13,
+      "single_candle_percent": 14.707577565749105,
       "multi_candle_count": 2,
-      "multi_candle_percent": 53.92611898582282
+      "multi_candle_percent": 42.33124259244103
     }
   },
-  "candles_count": 2508,
-  "trades_count": 5,
-  "win_rate": 60.0,
+  "candles_count": 2606,
+  "trades_count": 6,
+  "win_rate": 50.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 2.833457239246451e-07,
-  "total_pnl": 0.273153874446561,
-  "previous_candles_count": 2564,
-  "candles_increased": false
+  "profit_mse": 2.717759293817451e-06,
+  "total_pnl": 0.9173251565568263,
+  "previous_candles_count": 2545,
+  "candles_increased": true
 }

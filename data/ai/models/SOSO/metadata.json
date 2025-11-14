@@ -1,8 +1,8 @@
 {
   "symbol": "SOSO",
-  "trained_at": "2025-11-14T21:03:20.250455",
-  "training_seed": 362360,
-  "coin_model_seed": 362845,
+  "trained_at": "2025-11-14T23:57:54.526471",
+  "training_seed": 823293,
+  "coin_model_seed": 823419,
   "rsi_params": {
     "oversold": 26,
     "overbought": 65,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 43
   },
   "risk_params": {
-    "stop_loss": 9.670754132590073,
-    "take_profit": 22.5212310232716,
-    "trailing_stop_activation": 20.00203308903194,
-    "trailing_stop_distance": 8.013358695718452,
-    "break_even_protection": true,
-    "break_even_trigger": 30.0,
+    "stop_loss": 5.738311865386629,
+    "take_profit": 38.61902761123327,
+    "trailing_stop_activation": 70.0,
+    "trailing_stop_distance": 45.0,
+    "break_even_protection": false,
+    "break_even_trigger": 67.21312649928058,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 5,
-      "upper": 65.0,
-      "lower": 27.0
+      "candles": 15,
+      "upper": 70.0,
+      "lower": 29.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 4,
-      "single_candle_percent": 13.57856104356332,
-      "multi_candle_count": 7,
-      "multi_candle_percent": 82.22650600299613
+      "candles": 8,
+      "single_candle_percent": 31.31272665291594,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 114.30834384166103
     }
   },
-  "candles_count": 467,
+  "candles_count": 379,
   "trades_count": 5,
-  "win_rate": 60.0,
+  "win_rate": 40.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 2.0187485405211733e-07,
-  "total_pnl": -0.06807770047738099,
-  "previous_candles_count": 517,
+  "profit_mse": 1.0243520148676121e-07,
+  "total_pnl": -0.09029202355141068,
+  "previous_candles_count": 512,
   "candles_increased": false
 }

@@ -1,8 +1,8 @@
 {
   "symbol": "CHILLGUY",
-  "trained_at": "2025-11-14T21:02:54.760977",
-  "training_seed": 362360,
-  "coin_model_seed": 363094,
+  "trained_at": "2025-11-14T23:58:41.395910",
+  "training_seed": 905549,
+  "coin_model_seed": 906409,
   "rsi_params": {
     "oversold": 34,
     "overbought": 65,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 45
   },
   "risk_params": {
-    "stop_loss": 19.415105847957022,
-    "take_profit": 10.0,
-    "trailing_stop_activation": 29.4513438237735,
-    "trailing_stop_distance": 26.532601829100074,
+    "stop_loss": 20.209466798766304,
+    "take_profit": 18.50221772852415,
+    "trailing_stop_activation": 62.884636062146505,
+    "trailing_stop_distance": 10.946769728979962,
     "break_even_protection": false,
-    "break_even_trigger": 30.0,
+    "break_even_trigger": 100.41203053973265,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 7,
-      "upper": 69.0,
-      "lower": 34.0
+      "candles": 8,
+      "upper": 65.0,
+      "lower": 29.0
     },
     "exit_scam_filter": {
       "enabled": true,
       "candles": 4,
-      "single_candle_percent": 25.63266238503533,
-      "multi_candle_count": 5,
-      "multi_candle_percent": 63.98884729349348
+      "single_candle_percent": 17.460940239564064,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 55.19693957775981
     }
   },
-  "candles_count": 1337,
+  "candles_count": 1370,
   "trades_count": 6,
   "win_rate": 33.33333333333333,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.0624747202630878e-05,
-  "total_pnl": 0.34557335020032204,
-  "previous_candles_count": 1369,
+  "profit_mse": 1.0631359521546542e-05,
+  "total_pnl": -0.29069429708158917,
+  "previous_candles_count": 1423,
   "candles_increased": false
 }

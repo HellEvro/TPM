@@ -1,8 +1,8 @@
 {
   "symbol": "MBOX",
-  "trained_at": "2025-11-14T21:03:07.631005",
-  "training_seed": 362360,
-  "coin_model_seed": 362997,
+  "trained_at": "2025-11-14T23:52:32.948917",
+  "training_seed": 518180,
+  "coin_model_seed": 518448,
   "rsi_params": {
     "oversold": 30,
     "overbought": 65,
@@ -12,35 +12,35 @@
     "exit_short_against_trend": 35
   },
   "risk_params": {
-    "stop_loss": 16.942968937019614,
-    "take_profit": 28.621163442199027,
-    "trailing_stop_activation": 12.609004785511425,
-    "trailing_stop_distance": 31.412067272358268,
-    "break_even_protection": false,
-    "break_even_trigger": 108.41983558895839,
+    "stop_loss": 9.459938546730864,
+    "take_profit": 48.42741346790667,
+    "trailing_stop_activation": 30.48868033958046,
+    "trailing_stop_distance": 32.42917387970148,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
       "candles": 3,
-      "upper": 60.0,
-      "lower": 35.0
+      "upper": 56.0,
+      "lower": 37.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 4,
-      "single_candle_percent": 21.24186491922242,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 42.70048483785731
+      "candles": 10,
+      "single_candle_percent": 17.884413154140532,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 20.0
     }
   },
-  "candles_count": 2532,
+  "candles_count": 2505,
   "trades_count": 5,
   "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 9.996509802159908e-07,
-  "total_pnl": 0.21322184223387075,
-  "previous_candles_count": 2541,
+  "profit_mse": 3.75875705280718e-07,
+  "total_pnl": -0.09365788091141772,
+  "previous_candles_count": 2580,
   "candles_increased": false
 }

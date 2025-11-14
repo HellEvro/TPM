@@ -1,8 +1,8 @@
 {
   "symbol": "ONDO",
-  "trained_at": "2025-11-14T20:59:55.874507",
-  "training_seed": 165295,
-  "coin_model_seed": 165539,
+  "trained_at": "2025-11-14T23:53:50.555917",
+  "training_seed": 598996,
+  "coin_model_seed": 599170,
   "rsi_params": {
     "oversold": 32,
     "overbought": 68,
@@ -12,10 +12,10 @@
     "exit_short_against_trend": 35
   },
   "risk_params": {
-    "stop_loss": 15.380183053600746,
-    "take_profit": 15.839429991690839,
-    "trailing_stop_activation": 31.716504365385134,
-    "trailing_stop_distance": 26.103087750377455,
+    "stop_loss": 19.72573366053495,
+    "take_profit": 23.32986371014794,
+    "trailing_stop_activation": 26.40012522694873,
+    "trailing_stop_distance": 25.222052191565968,
     "break_even_protection": false,
     "break_even_trigger": 30.0,
     "max_position_hours": 12
@@ -23,24 +23,24 @@
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 7,
-      "upper": 62.0,
-      "lower": 36.0
+      "candles": 4,
+      "upper": 59.0,
+      "lower": 22.0
     },
     "exit_scam_filter": {
       "enabled": true,
       "candles": 4,
-      "single_candle_percent": 21.115924491622167,
+      "single_candle_percent": 16.975298208730106,
       "multi_candle_count": 3,
-      "multi_candle_percent": 36.67022311608606
+      "multi_candle_percent": 42.638463069756604
     }
   },
-  "candles_count": 2481,
+  "candles_count": 2601,
   "trades_count": 5,
-  "win_rate": 20.0,
+  "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 7.438484280806093e-08,
-  "total_pnl": -0.2504849470371993,
-  "previous_candles_count": 2567,
+  "profit_mse": 7.37363022005043e-07,
+  "total_pnl": -0.18752235003338077,
+  "previous_candles_count": 2608,
   "candles_increased": false
 }
