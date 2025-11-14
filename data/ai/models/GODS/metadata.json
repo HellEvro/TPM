@@ -1,0 +1,46 @@
+{
+  "symbol": "GODS",
+  "trained_at": "2025-11-14T21:01:53.958517",
+  "training_seed": 294287,
+  "coin_model_seed": 294482,
+  "rsi_params": {
+    "oversold": 30,
+    "overbought": 74,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 17.309155029239925,
+    "take_profit": 36.789433419139144,
+    "trailing_stop_activation": 19.291865952221606,
+    "trailing_stop_distance": 19.661013600991954,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 71.0,
+      "lower": 32.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 17.70628015710965,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 58.7759061925731
+    }
+  },
+  "candles_count": 2839,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.302589071835869e-07,
+  "total_pnl": -0.5827010385000836,
+  "previous_candles_count": 2791,
+  "candles_increased": true
+}

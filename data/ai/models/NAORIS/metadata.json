@@ -1,0 +1,46 @@
+{
+  "symbol": "NAORIS",
+  "trained_at": "2025-11-14T20:53:38.724244",
+  "training_seed": 789914,
+  "coin_model_seed": 790684,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 77,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 9.584973609383988,
+    "take_profit": 16.477401287026954,
+    "trailing_stop_activation": 34.24774610710915,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 68.0,
+      "lower": 35.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 14.097355229928956,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 60.150222791599596
+    }
+  },
+  "candles_count": 425,
+  "trades_count": 7,
+  "win_rate": 57.14285714285714,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.5258745964934238e-06,
+  "total_pnl": -0.1006073354236732,
+  "previous_candles_count": 425,
+  "candles_increased": false
+}

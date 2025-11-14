@@ -1,0 +1,46 @@
+{
+  "symbol": "TAIKO",
+  "trained_at": "2025-11-14T18:27:48.103510",
+  "training_seed": 982962,
+  "coin_model_seed": 983219,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 77,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 10.157556246048017,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 28.276492743480233,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 144.91809153210926,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 63,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 23.053225453869107,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 42.127597580249116
+    }
+  },
+  "candles_count": 1947,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.1718500456495187e-06,
+  "total_pnl": 0.25989891891443173,
+  "previous_candles_count": 2019,
+  "candles_increased": false
+}

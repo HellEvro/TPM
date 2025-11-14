@@ -1,0 +1,46 @@
+{
+  "symbol": "1000TOSHI",
+  "trained_at": "2025-11-14T20:59:29.613942",
+  "training_seed": 165295,
+  "coin_model_seed": 166257,
+  "rsi_params": {
+    "oversold": 26,
+    "overbought": 72,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 8.96404125590486,
+    "take_profit": 30.149834915126387,
+    "trailing_stop_activation": 34.53841801893779,
+    "trailing_stop_distance": 11.216786851212765,
+    "break_even_protection": true,
+    "break_even_trigger": 76.94913516527059,
+    "max_position_hours": 163.0
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 62.0,
+      "lower": 44.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 8.347023170403077,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 66.77000907023252
+    }
+  },
+  "candles_count": 1195,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.9455257239325055e-05,
+  "total_pnl": 4.675535222359356,
+  "previous_candles_count": 1373,
+  "candles_increased": false
+}

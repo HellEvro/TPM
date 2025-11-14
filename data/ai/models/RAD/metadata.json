@@ -1,0 +1,46 @@
+{
+  "symbol": "RAD",
+  "trained_at": "2025-11-13T17:01:24.219779",
+  "training_seed": 465417,
+  "coin_model_seed": 466249,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 9.04850522067693,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 24.953946405647542,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 168.21369583708764,
+    "max_position_hours": 18
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 62,
+      "lower": 39
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 23.38228374999148,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 41.9619916533605
+    }
+  },
+  "candles_count": 3451,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.575339674639152e-08,
+  "total_pnl": 0.21744879881817997,
+  "previous_candles_count": 3478,
+  "candles_increased": false
+}

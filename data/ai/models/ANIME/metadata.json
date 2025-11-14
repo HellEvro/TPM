@@ -1,0 +1,46 @@
+{
+  "symbol": "ANIME",
+  "trained_at": "2025-11-14T20:56:33.816814",
+  "training_seed": 985209,
+  "coin_model_seed": 985326,
+  "rsi_params": {
+    "oversold": 26,
+    "overbought": 75,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 13.087581167412928,
+    "take_profit": 20.0223602785574,
+    "trailing_stop_activation": 20.00484592231013,
+    "trailing_stop_distance": 19.401590545093438,
+    "break_even_protection": true,
+    "break_even_trigger": 30.956780139776285,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 12,
+      "upper": 67.0,
+      "lower": 35.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 24.115909158149893,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 47.3884313228057
+    }
+  },
+  "candles_count": 1089,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.0271809751883289e-06,
+  "total_pnl": 0.19939527641387048,
+  "previous_candles_count": 995,
+  "candles_increased": true
+}

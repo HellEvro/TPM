@@ -1,0 +1,46 @@
+{
+  "symbol": "STBL",
+  "trained_at": "2025-11-14T21:01:09.774811",
+  "training_seed": 232680,
+  "coin_model_seed": 232903,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 71,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 13.169760277056223,
+    "take_profit": 31.86525468653901,
+    "trailing_stop_activation": 32.48524000930593,
+    "trailing_stop_distance": 9.39308245318194,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 62.0,
+      "lower": 32.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 16.172828002443215,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 24.20341396240205
+    }
+  },
+  "candles_count": 234,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.308336294252e-06,
+  "total_pnl": 1.018265959765927,
+  "previous_candles_count": 234,
+  "candles_increased": false
+}

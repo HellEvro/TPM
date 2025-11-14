@@ -1,0 +1,46 @@
+{
+  "symbol": "PUMPBTC",
+  "trained_at": "2025-11-14T20:53:43.967414",
+  "training_seed": 789914,
+  "coin_model_seed": 790415,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 12.75058526862253,
+    "take_profit": 17.576601873663755,
+    "trailing_stop_activation": 46.3316628008475,
+    "trailing_stop_distance": 14.310033598456563,
+    "break_even_protection": false,
+    "break_even_trigger": 102.95652408793723,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 58.0,
+      "lower": 31.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 5.0,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 51.55837607965712
+    }
+  },
+  "candles_count": 844,
+  "trades_count": 7,
+  "win_rate": 57.14285714285714,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.4889212915219543e-05,
+  "total_pnl": -2.7555241246836517,
+  "previous_candles_count": 761,
+  "candles_increased": true
+}

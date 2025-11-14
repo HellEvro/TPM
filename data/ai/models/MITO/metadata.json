@@ -1,0 +1,46 @@
+{
+  "symbol": "MITO",
+  "trained_at": "2025-11-14T20:59:52.169756",
+  "training_seed": 165295,
+  "coin_model_seed": 166158,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 75,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 14.490286911867658,
+    "take_profit": 30.541104729333014,
+    "trailing_stop_activation": 40.08478491664822,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 65.0,
+      "lower": 26.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 18.692310521599424,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 44.19040192629773
+    }
+  },
+  "candles_count": 310,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.520343602586159e-07,
+  "total_pnl": -0.7541331774380273,
+  "previous_candles_count": 310,
+  "candles_increased": false
+}

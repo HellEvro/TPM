@@ -1,0 +1,46 @@
+{
+  "symbol": "SOON",
+  "trained_at": "2025-11-14T21:03:19.669873",
+  "training_seed": 362360,
+  "coin_model_seed": 363246,
+  "rsi_params": {
+    "oversold": 28,
+    "overbought": 65,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 21.21488124892023,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 69.21990552018093,
+    "trailing_stop_distance": 11.66648464918659,
+    "break_even_protection": true,
+    "break_even_trigger": 34.26109901335134,
+    "max_position_hours": 30.0
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 63.0,
+      "lower": 43.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 14,
+      "single_candle_percent": 7.883926551735039,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 20.385434917948885
+    }
+  },
+  "candles_count": 505,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.149401259522547e-07,
+  "total_pnl": 0.06704192898271,
+  "previous_candles_count": 577,
+  "candles_increased": false
+}

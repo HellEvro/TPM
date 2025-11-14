@@ -1,0 +1,46 @@
+{
+  "symbol": "COMP",
+  "trained_at": "2025-11-14T21:01:46.782218",
+  "training_seed": 294287,
+  "coin_model_seed": 295225,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 76,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 13.535607551278506,
+    "take_profit": 40.09493244777503,
+    "trailing_stop_activation": 51.466141266915116,
+    "trailing_stop_distance": 17.105741489222527,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 72.0,
+      "lower": 29.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 25.01810342149932,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 47.48421843756631
+    }
+  },
+  "candles_count": 4874,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.683682964047277e-07,
+  "total_pnl": -0.25417113669986974,
+  "previous_candles_count": 4852,
+  "candles_increased": true
+}

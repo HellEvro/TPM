@@ -1,0 +1,46 @@
+{
+  "symbol": "KERNEL",
+  "trained_at": "2025-11-14T20:58:51.415438",
+  "training_seed": 110690,
+  "coin_model_seed": 110962,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 72,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 9.981417099434866,
+    "take_profit": 41.75682921818067,
+    "trailing_stop_activation": 18.339759579575546,
+    "trailing_stop_distance": 45.0,
+    "break_even_protection": false,
+    "break_even_trigger": 81.1846259100588,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 50,
+      "lower": 32.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 5.0,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 48.89266684521681
+    }
+  },
+  "candles_count": 676,
+  "trades_count": 10,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.220413437015463e-06,
+  "total_pnl": -0.3569534528431363,
+  "previous_candles_count": 750,
+  "candles_increased": false
+}

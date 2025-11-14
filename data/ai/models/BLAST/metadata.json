@@ -1,0 +1,46 @@
+{
+  "symbol": "BLAST",
+  "trained_at": "2025-11-13T17:00:38.921356",
+  "training_seed": 432496,
+  "coin_model_seed": 432909,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 69,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 14.229170807588524,
+    "take_profit": 20.33912760519226,
+    "trailing_stop_activation": 20.987939996860636,
+    "trailing_stop_distance": 12.196959185933252,
+    "break_even_protection": false,
+    "break_even_trigger": 78.71596318396799,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 63,
+      "lower": 31
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 21.812168912829847,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 55.90260092007663
+    }
+  },
+  "candles_count": 1926,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.3066674801236686e-07,
+  "total_pnl": -0.31949771668733495,
+  "previous_candles_count": 2015,
+  "candles_increased": false
+}

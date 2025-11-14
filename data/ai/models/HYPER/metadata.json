@@ -1,0 +1,46 @@
+{
+  "symbol": "HYPER",
+  "trained_at": "2025-11-14T09:34:50.762436",
+  "training_seed": 49113,
+  "coin_model_seed": 49570,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 67,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 9.610229617472525,
+    "take_profit": 34.949037569425386,
+    "trailing_stop_activation": 39.986430020836,
+    "trailing_stop_distance": 22.072997884159577,
+    "break_even_protection": false,
+    "break_even_trigger": 54.95876832529646,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 65,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 7.747051710344421,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 47.73851204401828
+    }
+  },
+  "candles_count": 645,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.0279316522031864e-06,
+  "total_pnl": -0.8739086894288748,
+  "previous_candles_count": 656,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "SLP",
+  "trained_at": "2025-11-14T17:32:02.557076",
+  "training_seed": 625536,
+  "coin_model_seed": 625657,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 74,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 12.708476356349301,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 47.96044484772384,
+    "trailing_stop_distance": 20.12546173231506,
+    "break_even_protection": true,
+    "break_even_trigger": 133.344952079098,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 66,
+      "lower": 29
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 20.938290618106798,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 67.63186947296033
+    }
+  },
+  "candles_count": 4878,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.600840566272039e-06,
+  "total_pnl": 0.035749029735590895,
+  "previous_candles_count": 4995,
+  "candles_increased": false
+}

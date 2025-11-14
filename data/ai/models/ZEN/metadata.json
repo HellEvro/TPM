@@ -1,0 +1,46 @@
+{
+  "symbol": "ZEN",
+  "trained_at": "2025-11-13T04:24:48.637604",
+  "training_seed": 72989,
+  "coin_model_seed": 73950,
+  "rsi_params": {
+    "oversold": 28,
+    "overbought": 65,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 19.032200807410216,
+    "take_profit": 34.57441350587554,
+    "trailing_stop_activation": 36.784272721697576,
+    "trailing_stop_distance": 18.649930248626536,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 61,
+      "lower": 32
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 13.626833564293701,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 43.29273624651796
+    }
+  },
+  "candles_count": 4806,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.058958485292255e-07,
+  "total_pnl": -0.3943207258276023,
+  "previous_candles_count": 4913,
+  "candles_increased": false
+}

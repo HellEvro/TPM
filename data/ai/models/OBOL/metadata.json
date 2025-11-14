@@ -1,0 +1,46 @@
+{
+  "symbol": "OBOL",
+  "trained_at": "2025-11-14T21:03:10.895893",
+  "training_seed": 362360,
+  "coin_model_seed": 363261,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 78,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 12.7954041101545,
+    "take_profit": 24.904404853580658,
+    "trailing_stop_activation": 25.92328766143234,
+    "trailing_stop_distance": 8.281170949922746,
+    "break_even_protection": false,
+    "break_even_trigger": 84.72479723617427,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 62.0,
+      "lower": 33.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 14,
+      "single_candle_percent": 25.264605526590064,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 72.59208924550987
+    }
+  },
+  "candles_count": 593,
+  "trades_count": 7,
+  "win_rate": 14.285714285714285,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.438307301370485e-07,
+  "total_pnl": -0.9254384299874192,
+  "previous_candles_count": 586,
+  "candles_increased": true
+}

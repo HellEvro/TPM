@@ -1,0 +1,46 @@
+{
+  "symbol": "KAVA",
+  "trained_at": "2025-11-13T17:00:47.019052",
+  "training_seed": 432496,
+  "coin_model_seed": 433308,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 65,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 14.860301949863079,
+    "take_profit": 32.324984977889066,
+    "trailing_stop_activation": 16.842273435757704,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 160.75134528608373,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 62,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 23.48776011664779,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 41.00695701783421
+    }
+  },
+  "candles_count": 4818,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.976896136984561e-07,
+  "total_pnl": -0.1235706116109841,
+  "previous_candles_count": 4931,
+  "candles_increased": false
+}

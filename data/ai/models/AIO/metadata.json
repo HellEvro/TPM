@@ -1,0 +1,46 @@
+{
+  "symbol": "AIO",
+  "trained_at": "2025-11-14T21:01:40.442325",
+  "training_seed": 294287,
+  "coin_model_seed": 295258,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 78,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 18.33142748766284,
+    "take_profit": 13.107755521790377,
+    "trailing_stop_activation": 43.12140724117896,
+    "trailing_stop_distance": 20.012683821872848,
+    "break_even_protection": true,
+    "break_even_trigger": 68.7535047981415,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 74.0,
+      "lower": 31.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 13,
+      "single_candle_percent": 19.792492696417312,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 60.870221698100714
+    }
+  },
+  "candles_count": 373,
+  "trades_count": 14,
+  "win_rate": 64.28571428571429,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.4540378634094175e-05,
+  "total_pnl": 0.6762308577334539,
+  "previous_candles_count": 373,
+  "candles_increased": false
+}

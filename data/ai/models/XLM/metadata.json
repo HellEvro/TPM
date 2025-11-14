@@ -1,0 +1,46 @@
+{
+  "symbol": "XLM",
+  "trained_at": "2025-11-14T21:03:28.135830",
+  "training_seed": 362360,
+  "coin_model_seed": 362763,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 72,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 15.524266229081608,
+    "take_profit": 12.720445405351931,
+    "trailing_stop_activation": 56.24460394756443,
+    "trailing_stop_distance": 32.38284815793621,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 63.0,
+      "lower": 50
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 13,
+      "single_candle_percent": 16.642761975733713,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 48.95024667434713
+    }
+  },
+  "candles_count": 4898,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.686474201613422e-07,
+  "total_pnl": -0.0752975771304766,
+  "previous_candles_count": 4872,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "GIGGLE",
+  "trained_at": "2025-11-14T21:01:52.882679",
+  "training_seed": 294287,
+  "coin_model_seed": 294842,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 77,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 17.938797915105166,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 35.78201088944634,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 79.18819157020377,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 69.0,
+      "lower": 23.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 8.409356380852058,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 44.558158176242756
+    }
+  },
+  "candles_count": 145,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.5639870386576574e-06,
+  "total_pnl": -1.1016745148367924,
+  "previous_candles_count": 145,
+  "candles_increased": false
+}

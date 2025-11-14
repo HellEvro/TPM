@@ -1,0 +1,46 @@
+{
+  "symbol": "DOGE",
+  "trained_at": "2025-11-14T21:02:57.101613",
+  "training_seed": 362360,
+  "coin_model_seed": 363271,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 71,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 19.707356048922108,
+    "take_profit": 28.2050707988899,
+    "trailing_stop_activation": 9.17175532382215,
+    "trailing_stop_distance": 13.563570642859297,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 69.0,
+      "lower": 34.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 27.378346051019594,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 68.10731294433577
+    }
+  },
+  "candles_count": 4923,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.85469548613621e-07,
+  "total_pnl": -0.2207705341558035,
+  "previous_candles_count": 4925,
+  "candles_increased": false
+}

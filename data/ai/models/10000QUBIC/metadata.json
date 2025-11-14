@@ -1,0 +1,46 @@
+{
+  "symbol": "10000QUBIC",
+  "trained_at": "2025-11-14T19:25:41.120381",
+  "training_seed": 537034,
+  "coin_model_seed": 537900,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 65,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 13.625768479541597,
+    "take_profit": 28.116658976066663,
+    "trailing_stop_activation": 30.207775645672903,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 154.07563277938505,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 68,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 22.779170265413743,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 65.74608315040061
+    }
+  },
+  "candles_count": 1150,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.2362098631234267e-06,
+  "total_pnl": 0.31494366477007735,
+  "previous_candles_count": 1268,
+  "candles_increased": false
+}

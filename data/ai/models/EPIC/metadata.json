@@ -1,0 +1,46 @@
+{
+  "symbol": "EPIC",
+  "trained_at": "2025-11-14T21:02:58.608482",
+  "training_seed": 362360,
+  "coin_model_seed": 363201,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 77,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 19.8409341049627,
+    "take_profit": 30.035559325638204,
+    "trailing_stop_activation": 45.34000039479436,
+    "trailing_stop_distance": 26.09180784915707,
+    "break_even_protection": true,
+    "break_even_trigger": 36.894340876600054,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 67.0,
+      "lower": 42.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 5.59144549521873,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 50.351761244694465
+    }
+  },
+  "candles_count": 860,
+  "trades_count": 5,
+  "win_rate": 100.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.2970040443247457e-07,
+  "total_pnl": 0.7856260992522995,
+  "previous_candles_count": 877,
+  "candles_increased": false
+}

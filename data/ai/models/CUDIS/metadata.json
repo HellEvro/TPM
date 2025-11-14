@@ -1,0 +1,46 @@
+{
+  "symbol": "CUDIS",
+  "trained_at": "2025-11-14T15:09:46.953977",
+  "training_seed": 154311,
+  "coin_model_seed": 155035,
+  "rsi_params": {
+    "oversold": 28,
+    "overbought": 69,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 10.58045152961538,
+    "take_profit": 34.246127317738356,
+    "trailing_stop_activation": 35.72982819796994,
+    "trailing_stop_distance": 16.938618167810176,
+    "break_even_protection": false,
+    "break_even_trigger": 34.83688162758798,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 59,
+      "lower": 39
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 19.980594061942817,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 36.936277737421904
+    }
+  },
+  "candles_count": 570,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.1547199455669343e-06,
+  "total_pnl": -0.8792865790859744,
+  "previous_candles_count": 569,
+  "candles_increased": true
+}

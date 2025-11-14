@@ -1,0 +1,46 @@
+{
+  "symbol": "ZETA",
+  "trained_at": "2025-11-14T21:01:18.699200",
+  "training_seed": 232680,
+  "coin_model_seed": 233207,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 73,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 21.47958023590195,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 25.075584210046394,
+    "trailing_stop_distance": 23.71975437256671,
+    "break_even_protection": true,
+    "break_even_trigger": 33.15378011117632,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 11,
+      "upper": 60.0,
+      "lower": 38.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 7.763954353615439,
+      "multi_candle_count": 8,
+      "multi_candle_percent": 61.46907376085439
+    }
+  },
+  "candles_count": 2590,
+  "trades_count": 8,
+  "win_rate": 75.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.5314263838211708e-06,
+  "total_pnl": 2.615789790012564,
+  "previous_candles_count": 2518,
+  "candles_increased": true
+}

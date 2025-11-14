@@ -1,0 +1,46 @@
+{
+  "symbol": "ADA",
+  "trained_at": "2025-11-14T21:01:38.738955",
+  "training_seed": 294287,
+  "coin_model_seed": 294510,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 77,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 23.50686533082926,
+    "take_profit": 30.08904234853751,
+    "trailing_stop_activation": 36.32992242803727,
+    "trailing_stop_distance": 5.405374387936747,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 69.0,
+      "lower": 26.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 11.938183463503066,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 20.116076074557014
+    }
+  },
+  "candles_count": 4850,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.3755093800053816e-06,
+  "total_pnl": 0.1044082419960187,
+  "previous_candles_count": 4952,
+  "candles_increased": false
+}

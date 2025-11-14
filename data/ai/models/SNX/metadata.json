@@ -1,0 +1,46 @@
+{
+  "symbol": "SNX",
+  "trained_at": "2025-11-14T21:03:19.148667",
+  "training_seed": 362360,
+  "coin_model_seed": 362409,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 65,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 11.711520120224373,
+    "take_profit": 42.320775459242974,
+    "trailing_stop_activation": 42.19730045867672,
+    "trailing_stop_distance": 14.373635986122185,
+    "break_even_protection": true,
+    "break_even_trigger": 84.72764938745145,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 71.0,
+      "lower": 27.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 15,
+      "single_candle_percent": 5.0,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 33.138190595723785
+    }
+  },
+  "candles_count": 4861,
+  "trades_count": 10,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.4766234893396713e-06,
+  "total_pnl": -0.14237058515793624,
+  "previous_candles_count": 4813,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "STX",
+  "trained_at": "2025-11-14T21:03:21.162066",
+  "training_seed": 362360,
+  "coin_model_seed": 363339,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 76,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 10.001884376714377,
+    "take_profit": 20.26476999451358,
+    "trailing_stop_activation": 28.63362318236753,
+    "trailing_stop_distance": 29.08546193654536,
+    "break_even_protection": true,
+    "break_even_trigger": 88.40280867042739,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 65.0,
+      "lower": 29.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 15,
+      "single_candle_percent": 13.540623421832636,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 53.89394959675944
+    }
+  },
+  "candles_count": 4826,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.4837810088377257e-07,
+  "total_pnl": -0.13435138427725585,
+  "previous_candles_count": 4854,
+  "candles_increased": false
+}

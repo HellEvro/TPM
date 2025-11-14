@@ -1,0 +1,46 @@
+{
+  "symbol": "UB",
+  "trained_at": "2025-11-14T21:03:24.933207",
+  "training_seed": 362360,
+  "coin_model_seed": 362423,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 68,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 12.284777029913617,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 49.73711675091391,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 89.86877788828158,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 60.0,
+      "lower": 36.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 22.383822449832806,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 57.827608588699064
+    }
+  },
+  "candles_count": 254,
+  "trades_count": 15,
+  "win_rate": 13.333333333333334,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.6395879160665275e-05,
+  "total_pnl": -3.1600037918484727,
+  "previous_candles_count": 254,
+  "candles_increased": false
+}

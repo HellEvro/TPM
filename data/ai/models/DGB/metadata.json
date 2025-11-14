@@ -1,0 +1,46 @@
+{
+  "symbol": "DGB",
+  "trained_at": "2025-11-14T21:01:49.178456",
+  "training_seed": 294287,
+  "coin_model_seed": 295082,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 65,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 17.61671733890179,
+    "take_profit": 11.349991631630306,
+    "trailing_stop_activation": 17.14927102999814,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 55.0,
+      "lower": 32.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 33.11230324395189,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 35.7951173965494
+    }
+  },
+  "candles_count": 4953,
+  "trades_count": 8,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.607536506681548e-07,
+  "total_pnl": 0.20009899521326788,
+  "previous_candles_count": 4901,
+  "candles_increased": true
+}

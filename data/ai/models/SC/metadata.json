@@ -1,0 +1,46 @@
+{
+  "symbol": "SC",
+  "trained_at": "2025-11-14T16:16:05.059622",
+  "training_seed": 90206,
+  "coin_model_seed": 90356,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 72,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 9.461669811336034,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 37.8512623666833,
+    "trailing_stop_distance": 15.056194965907094,
+    "break_even_protection": false,
+    "break_even_trigger": 84.9616840061243,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 63,
+      "lower": 34
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 15.442328971771712,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 58.84903203728105
+    }
+  },
+  "candles_count": 5001,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.7702091229072856e-06,
+  "total_pnl": 0.7350818113836382,
+  "previous_candles_count": 5001,
+  "candles_increased": false
+}

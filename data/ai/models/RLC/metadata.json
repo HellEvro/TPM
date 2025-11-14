@@ -1,0 +1,46 @@
+{
+  "symbol": "RLC",
+  "trained_at": "2025-11-14T20:58:03.038954",
+  "training_seed": 46422,
+  "coin_model_seed": 47026,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 67,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 17.37964512736374,
+    "take_profit": 20.43750720730846,
+    "trailing_stop_activation": 51.28495034652762,
+    "trailing_stop_distance": 27.754061652146472,
+    "break_even_protection": true,
+    "break_even_trigger": 54.48051573692187,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 64.0,
+      "lower": 36.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 28.417072082829947,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 54.996953328097156
+    }
+  },
+  "candles_count": 3864,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.646133464161243e-07,
+  "total_pnl": 0.054150817072976615,
+  "previous_candles_count": 3809,
+  "candles_increased": true
+}

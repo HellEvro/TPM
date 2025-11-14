@@ -1,0 +1,46 @@
+{
+  "symbol": "XAI",
+  "trained_at": "2025-11-14T20:58:11.776029",
+  "training_seed": 46422,
+  "coin_model_seed": 47254,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 66,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 15.333696642866089,
+    "take_profit": 26.48612707627445,
+    "trailing_stop_activation": 22.75587230334358,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 40.017709040137575,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 71.0,
+      "lower": 40.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 18.092871305275224,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 69.6301002320426
+    }
+  },
+  "candles_count": 2648,
+  "trades_count": 6,
+  "win_rate": 16.666666666666664,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.280170211820163e-07,
+  "total_pnl": -0.6110181023047121,
+  "previous_candles_count": 2663,
+  "candles_increased": false
+}

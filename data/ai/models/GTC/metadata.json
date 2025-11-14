@@ -1,0 +1,46 @@
+{
+  "symbol": "GTC",
+  "trained_at": "2025-11-13T17:01:47.347877",
+  "training_seed": 497197,
+  "coin_model_seed": 497933,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 69,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 20.876609471040823,
+    "take_profit": 31.325352787443872,
+    "trailing_stop_activation": 18.92268323063074,
+    "trailing_stop_distance": 7.747174283073111,
+    "break_even_protection": true,
+    "break_even_trigger": 167.7726837042344,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 63,
+      "lower": 40
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 22.419258587913397,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 40.04655290864741
+    }
+  },
+  "candles_count": 4864,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.797613161154996e-07,
+  "total_pnl": 0.004633509172563624,
+  "previous_candles_count": 4987,
+  "candles_increased": false
+}

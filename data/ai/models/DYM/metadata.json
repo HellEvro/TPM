@@ -1,0 +1,46 @@
+{
+  "symbol": "DYM",
+  "trained_at": "2025-11-14T20:56:41.643313",
+  "training_seed": 985209,
+  "coin_model_seed": 985502,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 65,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 10.962849532374122,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 29.666063709239896,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 59.24133327009487,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 67.0,
+      "lower": 34.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 18.115037690690585,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 69.55939907063458
+    }
+  },
+  "candles_count": 2410,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.6932069879226717e-06,
+  "total_pnl": 0.5843802028153097,
+  "previous_candles_count": 2513,
+  "candles_increased": false
+}

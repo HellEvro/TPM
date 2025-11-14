@@ -1,0 +1,46 @@
+{
+  "symbol": "BEAM",
+  "trained_at": "2025-11-14T21:02:52.858543",
+  "training_seed": 362360,
+  "coin_model_seed": 363066,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 65,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 5.0,
+    "take_profit": 25.383221649418136,
+    "trailing_stop_activation": 70.0,
+    "trailing_stop_distance": 45.0,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 14,
+      "upper": 50,
+      "lower": 34.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 34.53299382348541,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 54.773489394979514
+    }
+  },
+  "candles_count": 2818,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.516136951265103e-06,
+  "total_pnl": -0.33746878622034693,
+  "previous_candles_count": 2898,
+  "candles_increased": false
+}

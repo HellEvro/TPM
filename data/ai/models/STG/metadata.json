@@ -1,0 +1,46 @@
+{
+  "symbol": "STG",
+  "trained_at": "2025-11-13T04:21:44.205615",
+  "training_seed": 889060,
+  "coin_model_seed": 889529,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 67,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 9.42614943169054,
+    "take_profit": 27.085791870666487,
+    "trailing_stop_activation": 32.0075790840158,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 62,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 21.63116218073152,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 52.164300175082055
+    }
+  },
+  "candles_count": 4637,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.6773997707125618e-06,
+  "total_pnl": -0.49313605342488626,
+  "previous_candles_count": 4662,
+  "candles_increased": false
+}

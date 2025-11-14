@@ -1,0 +1,46 @@
+{
+  "symbol": "SYRUP",
+  "trained_at": "2025-11-13T17:00:55.696796",
+  "training_seed": 432496,
+  "coin_model_seed": 432546,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 65,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 20.691805632909453,
+    "take_profit": 15.613750776467391,
+    "trailing_stop_activation": 8.552523569941453,
+    "trailing_stop_distance": 17.187351208982957,
+    "break_even_protection": true,
+    "break_even_trigger": 120.12048162018299,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 70,
+      "lower": 30
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 20.589023624602635,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 53.31453381917163
+    }
+  },
+  "candles_count": 594,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.7256383914611725e-07,
+  "total_pnl": -0.1101385813984706,
+  "previous_candles_count": 681,
+  "candles_increased": false
+}

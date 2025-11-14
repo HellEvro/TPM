@@ -1,0 +1,46 @@
+{
+  "symbol": "CFX",
+  "trained_at": "2025-11-14T20:11:39.541026",
+  "training_seed": 289910,
+  "coin_model_seed": 290657,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 77,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 20.625468469062653,
+    "take_profit": 15.297552071050102,
+    "trailing_stop_activation": 45.85555234652065,
+    "trailing_stop_distance": 25.350348494623766,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 59.0,
+      "lower": 34.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 6.82517082001092,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 20.0
+    }
+  },
+  "candles_count": 3916,
+  "trades_count": 5,
+  "win_rate": 100.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.889694669277655e-06,
+  "total_pnl": 2.124756211121735,
+  "previous_candles_count": 3921,
+  "candles_increased": false
+}

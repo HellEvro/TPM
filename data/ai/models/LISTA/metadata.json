@@ -1,0 +1,46 @@
+{
+  "symbol": "LISTA",
+  "trained_at": "2025-11-14T21:01:58.686346",
+  "training_seed": 294287,
+  "coin_model_seed": 294319,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 68,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 23.486169972861532,
+    "take_profit": 37.96665278920071,
+    "trailing_stop_activation": 14.30771530993348,
+    "trailing_stop_distance": 45.0,
+    "break_even_protection": true,
+    "break_even_trigger": 108.83282985312084,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 73.0,
+      "lower": 39.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 25.729784297289545,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 35.77067490788524
+    }
+  },
+  "candles_count": 1916,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.1328130395696768e-06,
+  "total_pnl": 1.0068045556983891,
+  "previous_candles_count": 1913,
+  "candles_increased": true
+}

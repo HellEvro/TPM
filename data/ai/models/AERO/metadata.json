@@ -1,0 +1,46 @@
+{
+  "symbol": "AERO",
+  "trained_at": "2025-11-14T21:01:39.058304",
+  "training_seed": 294287,
+  "coin_model_seed": 294447,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 65,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 16.22704298958236,
+    "take_profit": 35.967303443142164,
+    "trailing_stop_activation": 8.0,
+    "trailing_stop_distance": 41.82043459722645,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 76.0,
+      "lower": 41.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 5.0,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 37.91099820899343
+    }
+  },
+  "candles_count": 1793,
+  "trades_count": 6,
+  "win_rate": 83.33333333333334,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.35295156145909e-07,
+  "total_pnl": 0.590138595273741,
+  "previous_candles_count": 1935,
+  "candles_increased": false
+}

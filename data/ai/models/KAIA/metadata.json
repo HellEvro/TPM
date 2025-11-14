@@ -1,0 +1,46 @@
+{
+  "symbol": "KAIA",
+  "trained_at": "2025-11-14T21:03:04.673059",
+  "training_seed": 362360,
+  "coin_model_seed": 363249,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 78,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 14.573903912197258,
+    "take_profit": 51.44484324829547,
+    "trailing_stop_activation": 70.0,
+    "trailing_stop_distance": 22.86099537639102,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 64.0,
+      "lower": 34.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 25.383121300159804,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 34.39515861030353
+    }
+  },
+  "candles_count": 1417,
+  "trades_count": 5,
+  "win_rate": 100.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.5178247103945412e-06,
+  "total_pnl": 2.8488346846536725,
+  "previous_candles_count": 1370,
+  "candles_increased": true
+}

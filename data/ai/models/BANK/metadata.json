@@ -1,0 +1,46 @@
+{
+  "symbol": "BANK",
+  "trained_at": "2025-11-14T21:02:51.395973",
+  "training_seed": 362360,
+  "coin_model_seed": 363335,
+  "rsi_params": {
+    "oversold": 31,
+    "overbought": 67,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 11.912598552090884,
+    "take_profit": 35.87927617529765,
+    "trailing_stop_activation": 64.76915231321769,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 46.31985214653133,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 64.0,
+      "lower": 40.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 5.0,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 40.16291391800395
+    }
+  },
+  "candles_count": 713,
+  "trades_count": 7,
+  "win_rate": 14.285714285714285,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.2581985972330457e-07,
+  "total_pnl": -0.6377000792507572,
+  "previous_candles_count": 661,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "ALCH",
+  "trained_at": "2025-11-14T21:02:48.700684",
+  "training_seed": 362360,
+  "coin_model_seed": 362526,
+  "rsi_params": {
+    "oversold": 25,
+    "overbought": 65,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 18.650178629472887,
+    "take_profit": 19.355895025572117,
+    "trailing_stop_activation": 49.889253543737205,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 61.741785464344204,
+    "max_position_hours": 90.0
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 70.0,
+      "lower": 44.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 5.0,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 28.189184041473403
+    }
+  },
+  "candles_count": 1228,
+  "trades_count": 5,
+  "win_rate": 100.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.2352695869977367e-07,
+  "total_pnl": 5.452639857280767,
+  "previous_candles_count": 1077,
+  "candles_increased": true
+}

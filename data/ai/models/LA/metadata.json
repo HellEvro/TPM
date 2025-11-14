@@ -1,0 +1,46 @@
+{
+  "symbol": "LA",
+  "trained_at": "2025-11-13T00:27:44.653120",
+  "training_seed": 785141,
+  "coin_model_seed": 785966,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 67,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 15.638010740125171,
+    "take_profit": 30.870769541356125,
+    "trailing_stop_activation": 18.371713940271864,
+    "trailing_stop_distance": 31.718051734748055,
+    "break_even_protection": false,
+    "break_even_trigger": 77.40223243295841,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 66,
+      "lower": 38
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 19.318282064954317,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 36.532761992748846
+    }
+  },
+  "candles_count": 591,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.3793935181231127e-06,
+  "total_pnl": -0.19932100237377376,
+  "previous_candles_count": 449,
+  "candles_increased": true
+}

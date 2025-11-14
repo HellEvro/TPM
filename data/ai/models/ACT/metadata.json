@@ -1,0 +1,46 @@
+{
+  "symbol": "ACT",
+  "trained_at": "2025-11-14T20:59:30.873622",
+  "training_seed": 165295,
+  "coin_model_seed": 165976,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 66,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 20.12191575463069,
+    "take_profit": 35.10429696755572,
+    "trailing_stop_activation": 27.572275252728872,
+    "trailing_stop_distance": 34.88621815158512,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 75.0,
+      "lower": 34.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 22.445699762792113,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 57.631609807683745
+    }
+  },
+  "candles_count": 1473,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.0105945494433998e-06,
+  "total_pnl": -0.3317682279429303,
+  "previous_candles_count": 1280,
+  "candles_increased": true
+}
