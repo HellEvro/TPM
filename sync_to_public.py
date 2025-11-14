@@ -102,6 +102,14 @@ DEV_DOCS = [
     "docs/Bots_TZ.md",
     "docs/FUTURE_FEATURES.md",
     "docs/CHANGELOG.md",
+    "docs/DUPLICATES_REPORT.md",
+    "docs/MIGRATION_SUMMARY.md",
+    "docs/ML_MODELS_DISTRIBUTION.md",
+    "docs/MODULES.md",
+    "docs/PREMIUM_STOP_ANALYSIS_ARCHITECTURE.md",
+    "docs/SYSTEM_OVERVIEW.md",
+    "docs/TZ_AI_Extended_Testing.md",
+    
 ]
 
 def should_exclude(path_str):
