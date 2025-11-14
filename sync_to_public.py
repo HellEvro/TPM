@@ -67,6 +67,7 @@ INCLUDE_PYC = [
     "bot_engine/ai/license_checker.pyc",
     "bot_engine/ai/hardware_id_source.pyc",
     "bot_engine/ai/ai_manager.pyc",
+    "bot_engine/ai/_ai_launcher.pyc",
     "scripts/hardware_id.pyc",
 ]
 
