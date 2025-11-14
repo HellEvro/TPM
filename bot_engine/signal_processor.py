@@ -128,7 +128,7 @@ def process_auto_bot_signals(coins_rsi_data, bots_data, config, filter_check_fun
         auto_bot_enabled = config['enabled']
         
         if not auto_bot_enabled:
-            logger.debug("[AUTO_BOT] ⏹️ Автобот выключен")
+            logger.debug(" ⏹️ Автобот выключен")
             return
         
         max_concurrent = config['max_concurrent']
@@ -136,10 +136,10 @@ def process_auto_bot_signals(coins_rsi_data, bots_data, config, filter_check_fun
                            if bot['status'] not in ['idle', 'paused'])
         
         if current_active >= max_concurrent:
-            logger.debug(f"[AUTO_BOT] 🚫 Достигнут лимит активных ботов ({current_active}/{max_concurrent})")
+            logger.debug(f" 🚫 Достигнут лимит активных ботов ({current_active}/{max_concurrent})")
             return
         
-        logger.info("[AUTO_BOT] 🔍 Проверка сигналов для создания новых ботов...")
+        logger.info(" 🔍 Проверка сигналов для создания новых ботов...")
         
         # Получаем монеты с сигналами
         potential_coins = []
@@ -171,7 +171,7 @@ def process_auto_bot_signals(coins_rsi_data, bots_data, config, filter_check_fun
                         'coin_data': coin_data
                     })
         
-        logger.info(f"[AUTO_BOT] 🎯 Найдено {len(potential_coins)} потенциальных сигналов")
+        logger.info(f" 🎯 Найдено {len(potential_coins)} потенциальных сигналов")
         
         # Создаем ботов
         created_bots = 0
@@ -180,21 +180,21 @@ def process_auto_bot_signals(coins_rsi_data, bots_data, config, filter_check_fun
             
             # Проверяем, нет ли уже бота
             if symbol in bots_data:
-                logger.debug(f"[AUTO_BOT] ⚠️ Бот для {symbol} уже существует")
+                logger.debug(f" ⚠️ Бот для {symbol} уже существует")
                 continue
             
             # Создаем бота
             try:
-                logger.info(f"[AUTO_BOT] 🚀 Создаем бота для {symbol} ({coin['signal']}, RSI: {coin['rsi']:.1f})")
+                logger.info(f" 🚀 Создаем бота для {symbol} ({coin['signal']}, RSI: {coin['rsi']:.1f})")
                 create_bot_func(symbol)
                 created_bots += 1
                 
             except Exception as e:
-                logger.error(f"[AUTO_BOT] ❌ Ошибка создания бота для {symbol}: {e}")
+                logger.error(f" ❌ Ошибка создания бота для {symbol}: {e}")
         
         if created_bots > 0:
-            logger.info(f"[AUTO_BOT] ✅ Создано {created_bots} новых ботов")
+            logger.info(f" ✅ Создано {created_bots} новых ботов")
         
     except Exception as e:
-        logger.error(f"[AUTO_BOT] ❌ Ошибка обработки сигналов: {e}")
+        logger.error(f" ❌ Ошибка обработки сигналов: {e}")
 

@@ -98,9 +98,9 @@ class TradingBot:
         # Анализ
         try:
             self.signal_generator = SignalGenerator()
-            self.logger.info(f"[TRADING_BOT] {symbol}: SignalGenerator создан успешно")
+            self.logger.info(f" {symbol}: SignalGenerator создан успешно")
         except Exception as e:
-            self.logger.error(f"[TRADING_BOT] {symbol}: Ошибка создания SignalGenerator: {e}")
+            self.logger.error(f" {symbol}: Ошибка создания SignalGenerator: {e}")
             raise
         self.last_analysis = None
         self.last_bar_timestamp = None
@@ -173,12 +173,12 @@ class TradingBot:
             Словарь с результатами обновления
         """
         try:
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Начинаем update method...")
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: External signal: {external_signal}, trend: {external_trend}")
+            self.logger.info(f" {self.symbol}: Начинаем update method...")
+            self.logger.info(f" {self.symbol}: External signal: {external_signal}, trend: {external_trend}")
             
             # КРИТИЧЕСКАЯ ПРОВЕРКА: если статус указывает на позицию, но position = null, сбрасываем статус
             if self.status in [BotStatus.IN_POSITION_LONG, BotStatus.IN_POSITION_SHORT] and self.position is None:
-                self.logger.warning(f"[TRADING_BOT] {self.symbol}: ⚠️ Несоответствие статуса! Статус: {self.status}, но позиция: {self.position}. Сбрасываем статус.")
+                self.logger.warning(f" {self.symbol}: ⚠️ Несоответствие статуса! Статус: {self.status}, но позиция: {self.position}. Сбрасываем статус.")
                 self.status = BotStatus.IDLE
             
             # КРИТИЧЕСКАЯ СИНХРОНИЗАЦИЯ: проверяем реальные позиции на бирже
@@ -198,7 +198,7 @@ class TradingBot:
                 
                 # Если на бирже есть позиция, но в боте её нет - синхронизируем
                 if real_position and not self.position:
-                    self.logger.warning(f"[TRADING_BOT] {self.symbol}: 🔄 Синхронизация: на бирже есть позиция {real_position}, но в боте нет!")
+                    self.logger.warning(f" {self.symbol}: 🔄 Синхронизация: на бирже есть позиция {real_position}, но в боте нет!")
                     self.position = {
                         'side': 'LONG' if float(real_position.get('size', 0)) > 0 else 'SHORT',
                         'quantity': abs(float(real_position.get('size', 0))),
@@ -207,27 +207,27 @@ class TradingBot:
                     }
                     self.entry_price = real_position.get('entry_price')
                     self.status = BotStatus.IN_POSITION_LONG if self.position['side'] == 'LONG' else BotStatus.IN_POSITION_SHORT
-                    self.logger.info(f"[TRADING_BOT] {self.symbol}: ✅ Синхронизировано: {self.position}")
+                    self.logger.info(f" {self.symbol}: ✅ Синхронизировано: {self.position}")
                 
                 # Если в боте есть позиция, но на бирже нет - очищаем
                 elif self.position and not real_position:
-                    self.logger.warning(f"[TRADING_BOT] {self.symbol}: 🔄 Синхронизация: в боте есть позиция {self.position}, но на бирже нет!")
+                    self.logger.warning(f" {self.symbol}: 🔄 Синхронизация: в боте есть позиция {self.position}, но на бирже нет!")
                     self.position = None
                     self.entry_price = None
                     self.entry_time = None
                     self.status = BotStatus.IDLE
-                    self.logger.info(f"[TRADING_BOT] {self.symbol}: ✅ Позиция очищена")
+                    self.logger.info(f" {self.symbol}: ✅ Позиция очищена")
                     
             except Exception as sync_error:
-                self.logger.warning(f"[TRADING_BOT] {self.symbol}: Ошибка синхронизации с биржей: {sync_error}")
+                self.logger.warning(f" {self.symbol}: Ошибка синхронизации с биржей: {sync_error}")
             
             # Если есть внешний сигнал, используем его вместо генерации
             if external_signal:
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: Используем внешний сигнал: {external_signal}")
+                self.logger.info(f" {self.symbol}: Используем внешний сигнал: {external_signal}")
                 
                 # КРИТИЧЕСКАЯ ПРОВЕРКА: если уже есть позиция, НЕ ОТКРЫВАЕМ новую!
                 if self.position:
-                    self.logger.warning(f"[TRADING_BOT] {self.symbol}: ⚠️ Уже есть позиция {self.position['side']} - ИГНОРИРУЕМ внешний сигнал {external_signal}")
+                    self.logger.warning(f" {self.symbol}: ⚠️ Уже есть позиция {self.position['side']} - ИГНОРИРУЕМ внешний сигнал {external_signal}")
                     analysis = {
                         'signal': 'WAIT',  # Игнорируем внешний сигнал
                         'trend': external_trend or 'NEUTRAL',
@@ -241,46 +241,46 @@ class TradingBot:
                         'rsi': 0,  # Заглушка, так как RSI не используется в торговой логике
                         'price': self._get_current_price() or 0
                     }
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: Внешний анализ: {analysis}")
+                self.logger.info(f" {self.symbol}: Внешний анализ: {analysis}")
             else:
                 # Получаем данные свечей
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: Получаем данные свечей...")
+                self.logger.info(f" {self.symbol}: Получаем данные свечей...")
                 candles_data = self._get_candles_data()
                 if not candles_data:
-                    self.logger.warning(f"[TRADING_BOT] {self.symbol}: Не удалось получить данные свечей")
+                    self.logger.warning(f" {self.symbol}: Не удалось получить данные свечей")
                     return {'success': False, 'error': 'failed_to_get_candles'}
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: Получено {len(candles_data)} свечей")
+                self.logger.info(f" {self.symbol}: Получено {len(candles_data)} свечей")
                 
                 # Проверяем, нужно ли обновлять анализ
                 current_bar_timestamp = candles_data[-1].get('timestamp')
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: Проверяем необходимость обновления: force_analysis={force_analysis}, current_bar={current_bar_timestamp}, last_bar={self.last_bar_timestamp}")
+                self.logger.info(f" {self.symbol}: Проверяем необходимость обновления: force_analysis={force_analysis}, current_bar={current_bar_timestamp}, last_bar={self.last_bar_timestamp}")
                 if not force_analysis and current_bar_timestamp == self.last_bar_timestamp:
                     # Бар не изменился, возвращаем последний анализ
-                    self.logger.info(f"[TRADING_BOT] {self.symbol}: Бар не изменился, возвращаем последний анализ")
+                    self.logger.info(f" {self.symbol}: Бар не изменился, возвращаем последний анализ")
                     return self._get_current_state()
                 else:
-                    self.logger.info(f"[TRADING_BOT] {self.symbol}: Бар изменился или принудительный анализ, продолжаем...")
+                    self.logger.info(f" {self.symbol}: Бар изменился или принудительный анализ, продолжаем...")
                 
                 # Выполняем анализ
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: Генерируем сигналы...")
+                self.logger.info(f" {self.symbol}: Генерируем сигналы...")
                 analysis = self.signal_generator.generate_signals(candles_data)
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: Анализ завершен: {analysis}")
+                self.logger.info(f" {self.symbol}: Анализ завершен: {analysis}")
                 self.last_bar_timestamp = current_bar_timestamp
             
             self.last_analysis = analysis
             
             # Выполняем торговую логику
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Выполняем торговую логику...")
+            self.logger.info(f" {self.symbol}: Выполняем торговую логику...")
             if self.status != BotStatus.PAUSED:
                 action_result = self._execute_trading_logic(analysis)
                 if action_result:
                     self.logger.info(f"Action executed: {action_result}")
                 else:
-                    self.logger.info(f"[TRADING_BOT] {self.symbol}: Нет действий для выполнения")
+                    self.logger.info(f" {self.symbol}: Нет действий для выполнения")
             else:
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: Бот приостановлен")
+                self.logger.info(f" {self.symbol}: Бот приостановлен")
             
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Возвращаем текущее состояние...")
+            self.logger.info(f" {self.symbol}: Возвращаем текущее состояние...")
             return self._get_current_state()
             
         except Exception as e:
@@ -290,15 +290,15 @@ class TradingBot:
     def _get_candles_data(self) -> List[Dict]:
         """Получает данные свечей с биржи"""
         try:
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Получаем данные свечей...")
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Exchange type: {type(self.exchange)}")
+            self.logger.info(f" {self.symbol}: Получаем данные свечей...")
+            self.logger.info(f" {self.symbol}: Exchange type: {type(self.exchange)}")
             # Получаем данные за последние 200 баров 6H для анализа
             chart_response = self.exchange.get_chart_data(
                 symbol=self.symbol,
                 timeframe=TIMEFRAME,
                 period='1w'  # Используем period вместо limit
             )
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Chart response type: {type(chart_response)}")
+            self.logger.info(f" {self.symbol}: Chart response type: {type(chart_response)}")
             
             # Проверяем успешность ответа и извлекаем свечи
             if isinstance(chart_response, dict) and chart_response.get('success'):
@@ -359,7 +359,7 @@ class TradingBot:
             if not self.position:
                 # Если статус IN_POSITION, но позиции нет - это ошибка синхронизации
                 # Возвращаемся в IDLE и пытаемся открыть позицию заново
-                self.logger.warning(f"[TRADING_BOT] {self.symbol}: Статус {self.status} но позиции нет! Возвращаемся в IDLE")
+                self.logger.warning(f" {self.symbol}: Статус {self.status} но позиции нет! Возвращаемся в IDLE")
                 self.status = BotStatus.IDLE
                 return self._handle_idle_state(signal, trend)
             else:
@@ -384,11 +384,11 @@ class TradingBot:
     
     def _handle_idle_state(self, signal: str, trend: str) -> Optional[Dict]:
         """Обрабатывает состояние IDLE - СРАЗУ открывает сделки!"""
-        self.logger.info(f"[TRADING_BOT] {self.symbol}: _handle_idle_state: signal={signal}, trend={trend}")
+        self.logger.info(f" {self.symbol}: _handle_idle_state: signal={signal}, trend={trend}")
         
         # Проверяем, есть ли уже позиция в боте
         if self.position:
-            self.logger.warning(f"[TRADING_BOT] {self.symbol}: ⚠️ Уже есть позиция {self.position['side']} - пропускаем вход")
+            self.logger.warning(f" {self.symbol}: ⚠️ Уже есть позиция {self.position['side']} - пропускаем вход")
             return {'action': 'position_exists', 'side': self.position['side'], 'price': self.position.get('entry_price')}
         
         # КРИТИЧЕСКИ ВАЖНО: Проверяем реальные позиции на бирже!
@@ -405,8 +405,8 @@ class TradingBot:
                     existing_side = pos.get('side', 'UNKNOWN')
                     position_size = pos.get('size', 0)
                     
-                    self.logger.warning(f"[TRADING_BOT] {self.symbol}: 🚫 НА БИРЖЕ УЖЕ ЕСТЬ ПОЗИЦИЯ {existing_side} размер {position_size}!")
-                    self.logger.warning(f"[TRADING_BOT] {self.symbol}: ❌ БЛОКИРУЕМ ОТКРЫТИЕ НОВОЙ ПОЗИЦИИ - ЗАЩИТА ОТ ДУБЛИРОВАНИЯ!")
+                    self.logger.warning(f" {self.symbol}: 🚫 НА БИРЖЕ УЖЕ ЕСТЬ ПОЗИЦИЯ {existing_side} размер {position_size}!")
+                    self.logger.warning(f" {self.symbol}: ❌ БЛОКИРУЕМ ОТКРЫТИЕ НОВОЙ ПОЗИЦИИ - ЗАЩИТА ОТ ДУБЛИРОВАНИЯ!")
                     
                     return {
                         'action': 'blocked_exchange_position', 
@@ -415,11 +415,11 @@ class TradingBot:
                         'message': f'На бирже уже есть позиция {existing_side} размер {position_size}'
                     }
             
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: ✅ На бирже нет позиций - можно открывать сделку")
+            self.logger.info(f" {self.symbol}: ✅ На бирже нет позиций - можно открывать сделку")
             
         except Exception as check_error:
-            self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка проверки позиций на бирже: {check_error}")
-            self.logger.error(f"[TRADING_BOT] {self.symbol}: 🚫 БЛОКИРУЕМ ОТКРЫТИЕ ПОЗИЦИИ ИЗ-ЗА ОШИБКИ ПРОВЕРКИ!")
+            self.logger.error(f" {self.symbol}: ❌ Ошибка проверки позиций на бирже: {check_error}")
+            self.logger.error(f" {self.symbol}: 🚫 БЛОКИРУЕМ ОТКРЫТИЕ ПОЗИЦИИ ИЗ-ЗА ОШИБКИ ПРОВЕРКИ!")
             return {
                 'action': 'blocked_check_error', 
                 'error': str(check_error),
@@ -451,18 +451,18 @@ class TradingBot:
                 time_filter_result = check_rsi_time_filter(candles, current_rsi, signal)
                 
                 if not time_filter_result['allowed']:
-                    self.logger.info(f"[TRADING_BOT] {self.symbol}: ⏰ Временной фильтр блокирует вход: {time_filter_result['reason']}")
+                    self.logger.info(f" {self.symbol}: ⏰ Временной фильтр блокирует вход: {time_filter_result['reason']}")
                     return {
                         'action': 'blocked_time_filter',
                         'reason': time_filter_result['reason'],
                         'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago')
                     }
                 else:
-                    self.logger.info(f"[TRADING_BOT] {self.symbol}: ✅ Временной фильтр разрешает вход: {time_filter_result['reason']}")
+                    self.logger.info(f" {self.symbol}: ✅ Временной фильтр разрешает вход: {time_filter_result['reason']}")
             else:
-                self.logger.warning(f"[TRADING_BOT] {self.symbol}: ⚠️ Не удалось получить свечи для проверки временного фильтра")
+                self.logger.warning(f" {self.symbol}: ⚠️ Не удалось получить свечи для проверки временного фильтра")
         except Exception as e:
-            self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка проверки временного фильтра: {e}")
+            self.logger.error(f" {self.symbol}: ❌ Ошибка проверки временного фильтра: {e}")
             # В случае ошибки разрешаем сделку (безопасность)
         
         # КРИТИЧЕСКИ ВАЖНО: Если автобот выключен - НЕ ОТКРЫВАЕМ новые позиции!
@@ -476,23 +476,23 @@ class TradingBot:
                 auto_bot_enabled = bots_data['auto_bot_config']['enabled']
             
             if not auto_bot_enabled:
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: ⏹️ Auto Bot выключен - НЕ открываем новую позицию из IDLE состояния")
+                self.logger.info(f" {self.symbol}: ⏹️ Auto Bot выключен - НЕ открываем новую позицию из IDLE состояния")
                 return {'action': 'blocked_autobot_disabled', 'reason': 'autobot_off'}
         except Exception as e:
-            self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка проверки автобота: {e}")
+            self.logger.error(f" {self.symbol}: ❌ Ошибка проверки автобота: {e}")
             # В случае ошибки блокируем для безопасности
             return {'action': 'blocked_check_error', 'reason': 'autobot_check_failed'}
         
         # ПРЯМАЯ ЛОГИКА: Сразу открываем сделки без промежуточных состояний
         if signal == 'ENTER_LONG':
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: 🚀 СРАЗУ открываем LONG позицию!")
+            self.logger.info(f" {self.symbol}: 🚀 СРАЗУ открываем LONG позицию!")
             return self._enter_position('LONG')
         
         elif signal == 'ENTER_SHORT':
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: 🚀 СРАЗУ открываем SHORT позицию!")
+            self.logger.info(f" {self.symbol}: 🚀 СРАЗУ открываем SHORT позицию!")
             return self._enter_position('SHORT')
         
-        self.logger.info(f"[TRADING_BOT] {self.symbol}: Нет сигналов для входа: signal={signal}, trend={trend}")
+        self.logger.info(f" {self.symbol}: Нет сигналов для входа: signal={signal}, trend={trend}")
         return None
     
     
@@ -512,10 +512,10 @@ class TradingBot:
                 # Если автобот выключен - только управляем существующими позициями (стопы, трейлинг)
                 # НЕ открываем новые позиции
                 if signal in ['ENTER_LONG', 'ENTER_SHORT']:
-                    self.logger.info(f"[TRADING_BOT] {self.symbol}: ⏹️ Auto Bot выключен - НЕ открываем новые позиции из POSITION состояния")
+                    self.logger.info(f" {self.symbol}: ⏹️ Auto Bot выключен - НЕ открываем новые позиции из POSITION состояния")
                     return {'action': 'blocked_autobot_disabled', 'reason': 'autobot_off', 'status': self.status}
         except Exception as e:
-            self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка проверки автобота: {e}")
+            self.logger.error(f" {self.symbol}: ❌ Ошибка проверки автобота: {e}")
         
         position_type = self.position.get('side') if self.position else None
         
@@ -534,12 +534,12 @@ class TradingBot:
         try:
             # КРИТИЧЕСКАЯ ПРОВЕРКА: не открываем новую позицию, если уже есть открытая
             if self.position is not None:
-                self.logger.warning(f"[TRADING_BOT] {self.symbol}: ⚠️ Позиция уже открыта! Текущая позиция: {self.position}")
+                self.logger.warning(f" {self.symbol}: ⚠️ Позиция уже открыта! Текущая позиция: {self.position}")
                 return {'success': False, 'error': 'position_already_exists', 'message': 'Позиция уже открыта'}
             
             # ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: не открываем позицию, если статус бота указывает на позицию
             if self.status in [BotStatus.IN_POSITION_LONG, BotStatus.IN_POSITION_SHORT]:
-                self.logger.warning(f"[TRADING_BOT] {self.symbol}: ⚠️ Бот уже в позиции! Статус: {self.status}")
+                self.logger.warning(f" {self.symbol}: ⚠️ Бот уже в позиции! Статус: {self.status}")
                 return {'success': False, 'error': 'bot_already_in_position', 'message': f'Бот уже в позиции (статус: {self.status})'}
             
             # КРИТИЧЕСКАЯ ПРОВЕРКА: проверяем реальные позиции на бирже ПЕРЕД открытием!
@@ -556,8 +556,8 @@ class TradingBot:
                         existing_side = pos.get('side', 'UNKNOWN')
                         position_size = pos.get('size', 0)
                         
-                        self.logger.error(f"[TRADING_BOT] {self.symbol}: 🚫 КРИТИЧЕСКАЯ ОШИБКА! НА БИРЖЕ УЖЕ ЕСТЬ ПОЗИЦИЯ {existing_side} размер {position_size}!")
-                        self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ НЕ МОЖЕМ ОТКРЫТЬ ПОЗИЦИЮ {side} - ЗАЩИТА ОТ ДУБЛИРОВАНИЯ!")
+                        self.logger.error(f" {self.symbol}: 🚫 КРИТИЧЕСКАЯ ОШИБКА! НА БИРЖЕ УЖЕ ЕСТЬ ПОЗИЦИЯ {existing_side} размер {position_size}!")
+                        self.logger.error(f" {self.symbol}: ❌ НЕ МОЖЕМ ОТКРЫТЬ ПОЗИЦИЮ {side} - ЗАЩИТА ОТ ДУБЛИРОВАНИЯ!")
                         
                         return {
                             'success': False, 
@@ -567,11 +567,11 @@ class TradingBot:
                             'existing_size': position_size
                         }
                 
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: ✅ Финальная проверка: на бирже нет позиций - открываем {side}")
+                self.logger.info(f" {self.symbol}: ✅ Финальная проверка: на бирже нет позиций - открываем {side}")
                 
             except Exception as exchange_check_error:
-                self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка финальной проверки позиций на бирже: {exchange_check_error}")
-                self.logger.error(f"[TRADING_BOT] {self.symbol}: 🚫 БЛОКИРУЕМ ОТКРЫТИЕ ПОЗИЦИИ ИЗ-ЗА ОШИБКИ ПРОВЕРКИ!")
+                self.logger.error(f" {self.symbol}: ❌ Ошибка финальной проверки позиций на бирже: {exchange_check_error}")
+                self.logger.error(f" {self.symbol}: 🚫 БЛОКИРУЕМ ОТКРЫТИЕ ПОЗИЦИИ ИЗ-ЗА ОШИБКИ ПРОВЕРКИ!")
                 return {
                     'success': False, 
                     'error': 'exchange_check_failed', 
@@ -588,12 +588,12 @@ class TradingBot:
                 
                 for pos in positions_list:
                     if pos.get('symbol') == self.symbol and abs(float(pos.get('size', 0))) > 0:
-                        self.logger.warning(f"[TRADING_BOT] {self.symbol}: ⚠️ На бирже уже есть позиция: {pos}")
+                        self.logger.warning(f" {self.symbol}: ⚠️ На бирже уже есть позиция: {pos}")
                         return {'success': False, 'error': 'exchange_position_exists', 'message': 'На бирже уже есть позиция'}
             except Exception as e:
-                self.logger.warning(f"[TRADING_BOT] {self.symbol}: Не удалось проверить позиции на бирже: {e}")
+                self.logger.warning(f" {self.symbol}: Не удалось проверить позиции на бирже: {e}")
             
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Начинаем открытие {side} позиции...")
+            self.logger.info(f" {self.symbol}: Начинаем открытие {side} позиции...")
             
             # Адаптируем размер позиции с помощью AI (если доступно)
             try:
@@ -617,29 +617,29 @@ class TradingBot:
                             self.volume_value = dynamic_size['size_usdt']
                             
                             self.logger.info(
-                                f"[TRADING_BOT] {self.symbol}: 🤖 AI адаптировал размер: "
+                                f" {self.symbol}: 🤖 AI адаптировал размер: "
                                 f"{original_size} USDT → {self.volume_value} USDT "
                                 f"({dynamic_size['reason']})"
                             )
             except Exception as ai_error:
-                self.logger.debug(f"[TRADING_BOT] {self.symbol}: AI адаптация размера недоступна: {ai_error}")
+                self.logger.debug(f" {self.symbol}: AI адаптация размера недоступна: {ai_error}")
             
             # Рассчитываем размер позиции
             quantity = self._calculate_position_size()
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Рассчитанный размер позиции: {quantity}")
+            self.logger.info(f" {self.symbol}: Рассчитанный размер позиции: {quantity}")
             if not quantity:
-                self.logger.error(f"[TRADING_BOT] {self.symbol}: Не удалось рассчитать размер позиции")
+                self.logger.error(f" {self.symbol}: Не удалось рассчитать размер позиции")
                 return {'success': False, 'error': 'failed_to_calculate_position_size'}
             
             # Размещаем ордер
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Размещаем {side} ордер на {quantity}...")
+            self.logger.info(f" {self.symbol}: Размещаем {side} ордер на {quantity}...")
             order_result = self.exchange.place_order(
                 symbol=self.symbol,
                 side=side,
                 quantity=quantity,
                 order_type='market'
             )
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Результат ордера: {order_result}")
+            self.logger.info(f" {self.symbol}: Результат ордера: {order_result}")
             
             if order_result.get('success'):
                 # Обновляем состояние
@@ -666,11 +666,11 @@ class TradingBot:
                             entry_price=order_result.get('price'),
                             quantity=quantity
                         )
-                        self.logger.info(f"[TRADING_BOT] {self.symbol}: ✅ Позиция зарегистрирована в реестре: order_id={order_id}")
+                        self.logger.info(f" {self.symbol}: ✅ Позиция зарегистрирована в реестре: order_id={order_id}")
                     else:
-                        self.logger.warning(f"[TRADING_BOT] {self.symbol}: ⚠️ Не удалось зарегистрировать позицию - нет order_id")
+                        self.logger.warning(f" {self.symbol}: ⚠️ Не удалось зарегистрировать позицию - нет order_id")
                 except Exception as registry_error:
-                    self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка регистрации позиции в реестре: {registry_error}")
+                    self.logger.error(f" {self.symbol}: ❌ Ошибка регистрации позиции в реестре: {registry_error}")
                     # Не блокируем торговлю из-за ошибки реестра
                 
                 # Устанавливаем стоп-лосс (с AI адаптацией если доступно)
@@ -698,21 +698,21 @@ class TradingBot:
                                     ai_reason = dynamic_sl['reason']
                                     
                                     self.logger.info(
-                                        f"[TRADING_BOT] {self.symbol}: 🤖 AI адаптировал SL: "
+                                        f" {self.symbol}: 🤖 AI адаптировал SL: "
                                         f"{self.max_loss_percent}% → {sl_percent}% "
                                         f"({ai_reason})"
                                     )
                     except Exception as ai_error:
-                        self.logger.debug(f"[TRADING_BOT] {self.symbol}: AI SL недоступен: {ai_error}")
+                        self.logger.debug(f" {self.symbol}: AI SL недоступен: {ai_error}")
                     
                     # Устанавливаем стоп-лосс (стандартный или адаптивный)
                     stop_result = self._place_stop_loss(side, self.entry_price, sl_percent)
                     if stop_result and stop_result.get('success'):
-                        self.logger.info(f"[TRADING_BOT] {self.symbol}: ✅ Стоп-лосс установлен на {sl_percent}%")
+                        self.logger.info(f" {self.symbol}: ✅ Стоп-лосс установлен на {sl_percent}%")
                     else:
-                        self.logger.warning(f"[TRADING_BOT] {self.symbol}: ⚠️ Не удалось установить стоп-лосс")
+                        self.logger.warning(f" {self.symbol}: ⚠️ Не удалось установить стоп-лосс")
                 except Exception as stop_error:
-                    self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка установки стоп-лосса: {stop_error}")
+                    self.logger.error(f" {self.symbol}: ❌ Ошибка установки стоп-лосса: {stop_error}")
                 
                 self.logger.info(f"Entered {side} position: {quantity} at {self.entry_price}")
                 return {
@@ -761,11 +761,11 @@ class TradingBot:
                     order_id = self.position.get('order_id') if self.position else None
                     if order_id:
                         unregister_bot_position(order_id)
-                        self.logger.info(f"[TRADING_BOT] {self.symbol}: ✅ Позиция удалена из реестра: order_id={order_id}")
+                        self.logger.info(f" {self.symbol}: ✅ Позиция удалена из реестра: order_id={order_id}")
                     else:
-                        self.logger.warning(f"[TRADING_BOT] {self.symbol}: ⚠️ Не удалось удалить позицию из реестра - нет order_id")
+                        self.logger.warning(f" {self.symbol}: ⚠️ Не удалось удалить позицию из реестра - нет order_id")
                 except Exception as registry_error:
-                    self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка удаления позиции из реестра: {registry_error}")
+                    self.logger.error(f" {self.symbol}: ❌ Ошибка удаления позиции из реестра: {registry_error}")
                     # Не блокируем торговлю из-за ошибки реестра
                 
                 # Сбрасываем состояние
@@ -796,26 +796,26 @@ class TradingBot:
     def _calculate_position_size(self) -> Optional[float]:
         """Рассчитывает размер позиции"""
         try:
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Рассчитываем размер позиции...")
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: volume_mode={self.volume_mode}, volume_value={self.volume_value}")
+            self.logger.info(f" {self.symbol}: Рассчитываем размер позиции...")
+            self.logger.info(f" {self.symbol}: volume_mode={self.volume_mode}, volume_value={self.volume_value}")
             
             if self.volume_mode == VolumeMode.FIXED_QTY or self.volume_mode == 'qty':
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: Режим FIXED_QTY, возвращаем {self.volume_value}")
+                self.logger.info(f" {self.symbol}: Режим FIXED_QTY, возвращаем {self.volume_value}")
                 return self.volume_value
             
             elif self.volume_mode == VolumeMode.FIXED_USDT or self.volume_mode == 'usdt':
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: Режим FIXED_USDT, получаем цену...")
+                self.logger.info(f" {self.symbol}: Режим FIXED_USDT, получаем цену...")
                 current_price = self._get_current_price()
                 if current_price:
                     size = self.volume_value / current_price
-                    self.logger.info(f"[TRADING_BOT] {self.symbol}: Размер позиции: {self.volume_value} / {current_price} = {size}")
+                    self.logger.info(f" {self.symbol}: Размер позиции: {self.volume_value} / {current_price} = {size}")
                     return size
                 else:
-                    self.logger.warning(f"[TRADING_BOT] {self.symbol}: Не удалось получить цену")
+                    self.logger.warning(f" {self.symbol}: Не удалось получить цену")
                     return None
             
             elif self.volume_mode == VolumeMode.PERCENT_BALANCE or self.volume_mode == 'percent':
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: Режим PERCENT_BALANCE")
+                self.logger.info(f" {self.symbol}: Режим PERCENT_BALANCE")
                 balance = self._get_available_balance()
                 if balance:
                     usdt_amount = balance * (self.volume_value / 100)
@@ -823,7 +823,7 @@ class TradingBot:
                     if current_price:
                         return usdt_amount / current_price
             
-            self.logger.warning(f"[TRADING_BOT] {self.symbol}: Неизвестный режим volume_mode: {self.volume_mode}")
+            self.logger.warning(f" {self.symbol}: Неизвестный режим volume_mode: {self.volume_mode}")
             return None
             
         except Exception as e:
@@ -867,19 +867,19 @@ class TradingBot:
             
             if result['success']:
                 self.scaling_levels = result['levels']
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: ✅ Лесенка рассчитана: {len(result['levels'])} уровней")
+                self.logger.info(f" {self.symbol}: ✅ Лесенка рассчитана: {len(result['levels'])} уровней")
                 for i, level in enumerate(result['levels']):
-                    self.logger.info(f"[TRADING_BOT] {self.symbol}: Уровень {i+1}: {level['percent']}% = {level['usdt']:.2f} USDT")
+                    self.logger.info(f" {self.symbol}: Уровень {i+1}: {level['percent']}% = {level['usdt']:.2f} USDT")
             else:
-                self.logger.warning(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка расчета лесенки: {result['error']}")
+                self.logger.warning(f" {self.symbol}: ❌ Ошибка расчета лесенки: {result['error']}")
                 if result.get('recommendation'):
                     rec = result['recommendation']
-                    self.logger.info(f"[TRADING_BOT] {self.symbol}: 💡 Рекомендация: минимум {rec['min_base_usdt']:.2f} USDT для {rec['min_levels']} уровней")
+                    self.logger.info(f" {self.symbol}: 💡 Рекомендация: минимум {rec['min_base_usdt']:.2f} USDT для {rec['min_levels']} уровней")
             
             return result
             
         except Exception as e:
-            self.logger.error(f"[TRADING_BOT] {self.symbol}: Ошибка расчета лесенки: {e}")
+            self.logger.error(f" {self.symbol}: Ошибка расчета лесенки: {e}")
             return {
                 'success': False,
                 'error': str(e),
@@ -889,15 +889,15 @@ class TradingBot:
     def _get_current_price(self) -> Optional[float]:
         """Получает текущую цену"""
         try:
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Получаем цену...")
+            self.logger.info(f" {self.symbol}: Получаем цену...")
             ticker = self.exchange.get_ticker(self.symbol)
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Ticker response: {ticker}")
+            self.logger.info(f" {self.symbol}: Ticker response: {ticker}")
             if ticker:
                 price = float(ticker.get('last', 0))
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: Цена получена: {price}")
+                self.logger.info(f" {self.symbol}: Цена получена: {price}")
                 return price
             else:
-                self.logger.warning(f"[TRADING_BOT] {self.symbol}: Ticker пустой")
+                self.logger.warning(f" {self.symbol}: Ticker пустой")
                 return None
         except Exception as e:
             self.logger.error(f"Error getting current price: {str(e)}")
@@ -1031,7 +1031,7 @@ class TradingBot:
         """Устанавливает стоп-лосс для позиции"""
         try:
             if not entry_price or entry_price <= 0:
-                self.logger.error(f"[TRADING_BOT] {self.symbol}: Некорректная цена входа для стоп-лосса: {entry_price}")
+                self.logger.error(f" {self.symbol}: Некорректная цена входа для стоп-лосса: {entry_price}")
                 return {'success': False, 'error': 'invalid_entry_price'}
             
             # Рассчитываем цену стоп-лосса
@@ -1042,7 +1042,7 @@ class TradingBot:
                 # Для шорта: стоп-лосс выше цены входа
                 stop_price = entry_price * (1 + loss_percent / 100)
             
-            self.logger.info(f"[TRADING_BOT] {self.symbol}: Устанавливаем стоп-лосс: {side} @ {stop_price:.6f} (потеря: {loss_percent}%)")
+            self.logger.info(f" {self.symbol}: Устанавливаем стоп-лосс: {side} @ {stop_price:.6f} (потеря: {loss_percent}%)")
             
             # Размещаем стоп-лосс ордер
             stop_result = self.exchange.place_stop_loss(
@@ -1054,12 +1054,12 @@ class TradingBot:
             )
             
             if stop_result and stop_result.get('success'):
-                self.logger.info(f"[TRADING_BOT] {self.symbol}: ✅ Стоп-лосс установлен успешно")
+                self.logger.info(f" {self.symbol}: ✅ Стоп-лосс установлен успешно")
                 return {'success': True, 'stop_price': stop_price, 'order_id': stop_result.get('order_id')}
             else:
-                self.logger.warning(f"[TRADING_BOT] {self.symbol}: ⚠️ Не удалось установить стоп-лосс: {stop_result}")
+                self.logger.warning(f" {self.symbol}: ⚠️ Не удалось установить стоп-лосс: {stop_result}")
                 return {'success': False, 'error': stop_result.get('error', 'stop_loss_failed')}
                 
         except Exception as e:
-            self.logger.error(f"[TRADING_BOT] {self.symbol}: ❌ Ошибка установки стоп-лосса: {e}")
+            self.logger.error(f" {self.symbol}: ❌ Ошибка установки стоп-лосса: {e}")
             return {'success': False, 'error': str(e)}

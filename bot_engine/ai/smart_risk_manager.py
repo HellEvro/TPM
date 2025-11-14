@@ -62,7 +62,7 @@ class SmartRiskManager:
         # Подключаем ML модель для предсказания SL/TP
         self._init_ml_model()
         
-        logger.info("[SmartRiskManager] ✅ Премиум-модуль загружен и готов к работе")
+        logger.info(" ✅ Премиум-модуль загружен и готов к работе")
     
     def _init_ai_modules(self):
         """Инициализирует ИИ модули для анализа"""
@@ -76,20 +76,20 @@ class SmartRiskManager:
             self.pattern_detector = self.ai_manager.pattern_detector
             self.risk_manager = self.ai_manager.risk_manager
             
-            logger.info("[SmartRiskManager] 🤖 ИИ модули подключены")
+            logger.info(" 🤖 ИИ модули подключены")
         except Exception as e:
             self.ai_manager = None
-            logger.warning(f"[SmartRiskManager] ⚠️ ИИ модули недоступны: {e}")
+            logger.warning(f" ⚠️ ИИ модули недоступны: {e}")
     
     def _init_ml_model(self):
         """Инициализирует ML модель"""
         try:
             from bot_engine.ai.ml_risk_predictor import MLRiskPredictor
             self.ml_predictor = MLRiskPredictor()
-            logger.info("[SmartRiskManager] 🤖 ML модель подключена")
+            logger.info(" 🤖 ML модель подключена")
         except Exception as e:
             self.ml_predictor = None
-            logger.warning(f"[SmartRiskManager] ⚠️ ML модель недоступна: {e}")
+            logger.warning(f" ⚠️ ML модель недоступна: {e}")
     
     def analyze_stopped_trades(self, limit: int = 100) -> Dict[str, Any]:
         """
@@ -139,7 +139,7 @@ class SmartRiskManager:
             }
             
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка анализа стопов: {e}")
+            logger.error(f" Ошибка анализа стопов: {e}")
             return {
                 'total_stops': 0,
                 'error': str(e)
@@ -171,7 +171,7 @@ class SmartRiskManager:
             # Используем кэш если есть
             cache_key = f"{symbol}_{direction}_{len(candles)}"
             if cache_key in self.backtest_cache:
-                logger.debug(f"[SmartRiskManager] Используем кэш для {symbol}")
+                logger.debug(f" Используем кэш для {symbol}")
                 return self.backtest_cache[cache_key]
             
             # Быстрый бэктест на последних свечах
@@ -183,7 +183,7 @@ class SmartRiskManager:
             return result
             
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка бэктеста {symbol}: {e}")
+            logger.error(f" Ошибка бэктеста {symbol}: {e}")
             return self._default_backtest_result()
     
     def _quick_backtest(
@@ -207,7 +207,7 @@ class SmartRiskManager:
             try:
                 lstm_prediction = self.lstm_predictor.predict(candles, current_price)
             except Exception as e:
-                logger.debug(f"[SmartRiskManager] LSTM недоступен: {e}")
+                logger.debug(f" LSTM недоступен: {e}")
         
         # 📊 Проверяем на аномалии
         anomaly_score = None
@@ -215,9 +215,9 @@ class SmartRiskManager:
             try:
                 anomaly_score = self.anomaly_detector.detect(candles)
                 if anomaly_score.get('is_anomaly') and anomaly_score.get('severity', 0) > 0.7:
-                    logger.warning(f"[SmartRiskManager] ⚠️ {symbol}: Обнаружена аномалия в бэктесте!")
+                    logger.warning(f" ⚠️ {symbol}: Обнаружена аномалия в бэктесте!")
             except Exception as e:
-                logger.debug(f"[SmartRiskManager] Anomaly Detector недоступен: {e}")
+                logger.debug(f" Anomaly Detector недоступен: {e}")
         
         # 🎯 Используем Risk Manager для оптимизации SL/TP
         optimal_sl_from_risk = 15.0
@@ -231,7 +231,7 @@ class SmartRiskManager:
                 risk_tp_analysis = self.risk_manager.calculate_dynamic_tp(symbol, candles, direction)
                 optimal_tp_from_risk = risk_tp_analysis.get('tp_percent', 100.0)
             except Exception as e:
-                logger.debug(f"[SmartRiskManager] Risk Manager недоступен: {e}")
+                logger.debug(f" Risk Manager недоступен: {e}")
         
         # Рассчитываем оптимальные SL/TP на основе истории стопов для этой монеты
         coin_stops = self._get_coin_stops(symbol)
@@ -248,7 +248,7 @@ class SmartRiskManager:
             # Если были частые стопы - дополнительно увеличиваем SL
             if should_increase_sl:
                 optimal_sl_from_history = max(optimal_sl_from_history, 18.0)  # Минимум 18%
-                logger.warning(f"[SmartRiskManager] ⚠️ {symbol}: Частые стопы, используем увеличенный SL: {optimal_sl_from_history}%")
+                logger.warning(f" ⚠️ {symbol}: Частые стопы, используем увеличенный SL: {optimal_sl_from_history}%")
         else:
             # Используем общие рекомендации
             optimal_sl_from_history = 12.0 if volatility < 1.0 else 18.0
@@ -269,14 +269,14 @@ class SmartRiskManager:
                 }
                 ml_prediction = self.ml_predictor.predict(ml_features)
             except Exception as e:
-                logger.debug(f"[SmartRiskManager] ML модель недоступна: {e}")
+                logger.debug(f" ML модель недоступна: {e}")
         
         # Объединяем результаты: ML (если есть) > ИИ > история
         if ml_prediction:
             # Используем ML предсказание
             optimal_sl = ml_prediction['optimal_sl']
             optimal_tp = ml_prediction['optimal_tp']
-            logger.info(f"[SmartRiskManager] 🤖 ML предсказание: SL={optimal_sl}%, TP={optimal_tp}%")
+            logger.info(f" 🤖 ML предсказание: SL={optimal_sl}%, TP={optimal_tp}%")
         else:
             # Взвешенное среднее: 60% ИИ, 40% история
             optimal_sl = (optimal_sl_from_risk * 0.6) + (optimal_sl_from_history * 0.4)
@@ -433,7 +433,7 @@ class SmartRiskManager:
             
             return coin_stops
         except Exception as e:
-            logger.debug(f"[SmartRiskManager] Ошибка получения стопов для {symbol}: {e}")
+            logger.debug(f" Ошибка получения стопов для {symbol}: {e}")
             return self.stop_patterns.get(symbol, [])
     
     def _optimal_sl_for_coin(self, stops: List[Dict], volatility: float) -> float:
@@ -476,7 +476,7 @@ class SmartRiskManager:
             # Нужно увеличить SL, чтобы не выбивало сразу
             adjustment = min(rapid_ratio * 10, 8.0)  # До +8%
             optimal_sl = base_sl + adjustment
-            logger.info(f"[SmartRiskManager] {recent_stops[0].get('symbol', '?')}: Много быстрых стопов ({rapid_ratio:.0%}), увеличиваем SL: {base_sl}% → {optimal_sl:.1f}%")
+            logger.info(f" {recent_stops[0].get('symbol', '?')}: Много быстрых стопов ({rapid_ratio:.0%}), увеличиваем SL: {base_sl}% → {optimal_sl:.1f}%")
         elif rapid_ratio > 0.3:  # 30-60% быстрых стопов
             # Умеренное увеличение
             adjustment = (rapid_ratio - 0.3) * 5  # До +2.5%
@@ -543,9 +543,9 @@ class SmartRiskManager:
                 with open(self.training_data_path, 'r') as f:
                     data = json.load(f)
                     self.stop_patterns = data.get('patterns', {})
-                    logger.debug(f"[SmartRiskManager] Загружено {len(self.stop_patterns)} паттернов")
+                    logger.debug(f" Загружено {len(self.stop_patterns)} паттернов")
         except Exception as e:
-            logger.warning(f"[SmartRiskManager] Не удалось загрузить паттерны: {e}")
+            logger.warning(f" Не удалось загрузить паттерны: {e}")
     
     def _save_for_training(self, patterns: Dict):
         """Сохраняет данные для обучения"""
@@ -558,7 +558,7 @@ class SmartRiskManager:
             with open(self.training_data_path, 'w') as f:
                 json.dump(data, f, indent=2)
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Не удалось сохранить данные: {e}")
+            logger.error(f" Не удалось сохранить данные: {e}")
     
     def _generate_recommendations(self, stopped_trades: List[Dict]) -> List[str]:
         """Генерирует рекомендации на основе анализа стопов"""
@@ -623,7 +623,7 @@ class SmartRiskManager:
                 'avg_prediction_accuracy': 0.65  # TODO: Реальная статистика
             }
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка LSTM анализа: {e}")
+            logger.error(f" Ошибка LSTM анализа: {e}")
             return {'available': False, 'error': str(e)}
     
     def _analyze_stops_for_anomalies(self, stopped_trades: List[Dict]) -> Dict:
@@ -650,7 +650,7 @@ class SmartRiskManager:
                 'anomaly_rate': len(anomalous_stops) / len(stopped_trades[:20]) if stopped_trades[:20] else 0
             }
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка Anomaly анализа: {e}")
+            logger.error(f" Ошибка Anomaly анализа: {e}")
             return {'available': False, 'error': str(e)}
     
     def _optimize_stop_loss_with_ai(self, stopped_trades: List[Dict], patterns: Dict) -> float:
@@ -670,7 +670,7 @@ class SmartRiskManager:
             
             return optimal_sl
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка AI оптимизации SL: {e}")
+            logger.error(f" Ошибка AI оптимизации SL: {e}")
             return 15.0
     
     def _optimize_take_profit_with_ai(self, stopped_trades: List[Dict], patterns: Dict) -> float:
@@ -688,7 +688,7 @@ class SmartRiskManager:
             
             return optimal_tp
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка AI оптимизации TP: {e}")
+            logger.error(f" Ошибка AI оптимизации TP: {e}")
             return 100.0
     
     def evaluate_prediction(self, symbol: str, backtest_result: Dict, actual_outcome: Dict) -> Dict:
@@ -724,12 +724,12 @@ class SmartRiskManager:
             # Сохраняем обратную связь
             self._save_feedback(symbol, feedback)
             
-            logger.info(f"[SmartRiskManager] 📊 Оценка для {symbol}: score={score:.2f} (SL={predicted_sl}%, TP={predicted_tp}%, реально={actual_result}%)")
+            logger.info(f" 📊 Оценка для {symbol}: score={score:.2f} (SL={predicted_sl}%, TP={predicted_tp}%, реально={actual_result}%)")
             
             return feedback
             
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка оценки: {e}")
+            logger.error(f" Ошибка оценки: {e}")
             return {'score': 0.5, 'error': str(e)}
     
     def _calculate_score(self, predicted_sl: float, predicted_tp: float, actual_result: float) -> float:
@@ -778,7 +778,7 @@ class SmartRiskManager:
                 json.dump(feedbacks, f, indent=2)
                 
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка сохранения feedback: {e}")
+            logger.error(f" Ошибка сохранения feedback: {e}")
     
     def _load_optimized_params(self):
         """Загружает оптимизированные параметры"""
@@ -786,9 +786,9 @@ class SmartRiskManager:
             if self.optimized_params_path.exists():
                 with open(self.optimized_params_path, 'r') as f:
                     self.optimized_params = json.load(f)
-                    logger.debug(f"[SmartRiskManager] Загружено {len(self.optimized_params)} оптимизированных параметров")
+                    logger.debug(f" Загружено {len(self.optimized_params)} оптимизированных параметров")
         except Exception as e:
-            logger.warning(f"[SmartRiskManager] Не удалось загрузить оптимизированные параметры: {e}")
+            logger.warning(f" Не удалось загрузить оптимизированные параметры: {e}")
     
     def learn_from_feedback(self):
         """
@@ -832,17 +832,17 @@ class SmartRiskManager:
             
             # Обучаем ML модель
             if self.ml_predictor and len(training_data) >= 20:
-                logger.info(f"[SmartRiskManager] 🎓 Обучаем ML модель на {len(training_data)} примерах...")
+                logger.info(f" 🎓 Обучаем ML модель на {len(training_data)} примерах...")
                 success = self.ml_predictor.train(training_data)
                 
                 if success:
-                    logger.info("[SmartRiskManager] ✅ ML модель успешно обучена!")
+                    logger.info(" ✅ ML модель успешно обучена!")
             
             # Также корректируем параметры по старой логике
             self._adjust_parameters_from_feedback()
                     
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка обучения: {e}")
+            logger.error(f" Ошибка обучения: {e}")
     
     def _adjust_parameters_from_feedback(self):
         """Корректирует параметры на основе обратной связи"""
@@ -866,14 +866,14 @@ class SmartRiskManager:
                         'sl_multiplier': 1.2,  # +20% к SL
                         'tp_multiplier': 0.9   # -10% к TP
                     })
-                    logger.info(f"[SmartRiskManager] 🎓 Корректировка параметров для {symbol}: SL↑20%, TP↓10%")
+                    logger.info(f" 🎓 Корректировка параметров для {symbol}: SL↑20%, TP↓10%")
                 
                 # Если score высокий → всё ок
                 elif avg_score > 0.7:
-                    logger.debug(f"[SmartRiskManager] ✅ {symbol}: Хорошие предсказания (score={avg_score:.2f})")
+                    logger.debug(f" ✅ {symbol}: Хорошие предсказания (score={avg_score:.2f})")
                     
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка корректировки параметров: {e}")
+            logger.error(f" Ошибка корректировки параметров: {e}")
     
     def _adjust_parameters(self, symbol: str, adjustments: Dict):
         """Корректирует параметры для монеты"""
@@ -894,7 +894,7 @@ class SmartRiskManager:
             with open(self.optimized_params_path, 'w') as f:
                 json.dump(self.optimized_params, f, indent=2)
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка сохранения параметров: {e}")
+            logger.error(f" Ошибка сохранения параметров: {e}")
     
     def collect_entry_data(self, symbol: str, current_price: float, side: str, 
                           rsi: float, candles: List[Dict], **kwargs) -> None:
@@ -938,10 +938,10 @@ class SmartRiskManager:
             with open(training_file, 'w') as f:
                 json.dump(data, f, indent=2)
             
-            logger.debug(f"[SmartRiskManager] 📊 Собраны данные для {symbol}")
+            logger.debug(f" 📊 Собраны данные для {symbol}")
             
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка сбора данных входа: {e}")
+            logger.error(f" Ошибка сбора данных входа: {e}")
     
     def should_enter_now(self, symbol: str, current_price: float, side: str, 
                         rsi: float, candles: List[Dict], **kwargs) -> Dict[str, Any]:
@@ -1034,7 +1034,7 @@ class SmartRiskManager:
             }
             
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка определения оптимального входа для {symbol}: {e}")
+            logger.error(f" Ошибка определения оптимального входа для {symbol}: {e}")
             # Fallback к простому решению
             return self._simple_entry_decision(symbol, current_price, side, rsi, candles)
     
@@ -1144,10 +1144,10 @@ class SmartRiskManager:
                 
                 # Если последний стоп был менее 6 часов назад И было 2+ стопа
                 if hours_since_last_stop < 6 and len(recent_stops) >= 2:
-                    logger.warning(f"[SmartRiskManager] ⚠️ {symbol}: Частые стопы! Последний {hours_since_last_stop:.1f}ч назад, всего {len(recent_stops)} стопов")
+                    logger.warning(f" ⚠️ {symbol}: Частые стопы! Последний {hours_since_last_stop:.1f}ч назад, всего {len(recent_stops)} стопов")
                     return True
         except Exception as e:
-            logger.debug(f"[SmartRiskManager] Ошибка проверки времени стопа: {e}")
+            logger.debug(f" Ошибка проверки времени стопа: {e}")
         
         return False
     
@@ -1247,7 +1247,7 @@ class SmartRiskManager:
             }
             
         except Exception as e:
-            logger.error(f"[SmartRiskManager] Ошибка проверки избежания входа для {symbol}: {e}")
+            logger.error(f" Ошибка проверки избежания входа для {symbol}: {e}")
             return {
                 'should_avoid': False,
                 'reason': f'Ошибка анализа: {e}',
@@ -1258,5 +1258,5 @@ class SmartRiskManager:
 
 # Проверка лицензии при импорте
 if not PREMIUM_AVAILABLE:
-    logger.warning("[SmartRiskManager] ⚠️ Премиум-лицензия не найдена, модуль недоступен")
+    logger.warning(" ⚠️ Премиум-лицензия не найдена, модуль недоступен")
 

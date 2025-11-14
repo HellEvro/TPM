@@ -342,7 +342,7 @@ def get_account_info():
         return response
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка получения информации о счете: {str(e)}")
+        logger.error(f" Ошибка получения информации о счете: {str(e)}")
         response = jsonify({
             "success": False,
             "error": str(e)
@@ -514,7 +514,7 @@ def get_coins_with_rsi():
                 else:
                     cleaned_coin['candles_count'] = None
             except Exception as e:
-                logger.debug(f"[API] Ошибка получения candles_count для {symbol}: {e}")
+                logger.debug(f" Ошибка получения candles_count для {symbol}: {e}")
                 cleaned_coin['candles_count'] = None
             
             cleaned_coins[symbol] = cleaned_coin
@@ -577,7 +577,7 @@ def get_coins_with_rsi():
                 # ✅ Детальное логирование для отладки
                 logger.debug(f"[MANUAL_POSITIONS] Найдено {len(manual_positions)} ручных позиций: {manual_positions}")
         except Exception as e:
-            logger.error(f"[ERROR] Ошибка получения ручных позиций: {str(e)}")
+            logger.error(f" Ошибка получения ручных позиций: {str(e)}")
         
         result = {
             'success': True,
@@ -601,11 +601,11 @@ def get_coins_with_rsi():
         
         # Убираем спам-лог, только в debug режиме
         if SystemConfig.DEBUG_MODE:
-            logger.debug(f"[API] Возврат RSI данных для {len(result['coins'])} монет")
+            logger.debug(f" Возврат RSI данных для {len(result['coins'])} монет")
         return jsonify(result)
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка получения монет с RSI: {str(e)}")
+        logger.error(f" Ошибка получения монет с RSI: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 def clean_data_for_json(data):
@@ -893,7 +893,7 @@ def create_bot_endpoint():
         })
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка создания бота: {str(e)}")
+        logger.error(f" Ошибка создания бота: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/start', methods=['POST'])
@@ -923,7 +923,7 @@ def start_bot_endpoint():
         })
             
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка запуска бота: {str(e)}")
+        logger.error(f" Ошибка запуска бота: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/stop', methods=['POST'])
@@ -1018,7 +1018,7 @@ def stop_bot_endpoint():
         })
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка остановки бота: {str(e)}")
+        logger.error(f" Ошибка остановки бота: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/pause', methods=['POST'])
@@ -1058,7 +1058,7 @@ def pause_bot_endpoint():
         })
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка приостановки бота: {str(e)}")
+        logger.error(f" Ошибка приостановки бота: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/delete', methods=['POST'])
@@ -1113,7 +1113,7 @@ def delete_bot_endpoint():
         })
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка удаления бота: {str(e)}")
+        logger.error(f" Ошибка удаления бота: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/close-position', methods=['POST'])
@@ -1144,7 +1144,7 @@ def close_position_endpoint():
         
         current_exchange = get_exchange()
         if not current_exchange:
-            logger.error(f"[API] ❌ Биржа не инициализирована")
+            logger.error(f" ❌ Биржа не инициализирована")
             return jsonify({'success': False, 'error': 'Exchange not initialized'}), 500
         
         # ⚡ ИСПРАВЛЕНИЕ: Получаем актуальные позиции с биржи вместо кэша
@@ -1155,7 +1155,7 @@ def close_position_endpoint():
             else:
                 positions = positions_response if positions_response else []
         except Exception as e:
-            logger.error(f"[API] ❌ Ошибка получения позиций с биржи: {e}")
+            logger.error(f" ❌ Ошибка получения позиций с биржи: {e}")
             positions = []
         
         # Ищем позиции для данного символа
@@ -1165,7 +1165,7 @@ def close_position_endpoint():
                 symbol_positions.append(pos)
         
         if not symbol_positions:
-            logger.warning(f"[API] ⚠️ Позиции для {symbol} не найдены на бирже")
+            logger.warning(f" ⚠️ Позиции для {symbol} не найдены на бирже")
             return jsonify({
                 'success': False, 
                 'message': f'Позиции для {symbol} не найдены на бирже'
@@ -1180,7 +1180,7 @@ def close_position_endpoint():
                 position_side = 'LONG' if pos['side'] == 'Buy' else 'SHORT'
                 position_size = float(pos['size'])
                 
-                logger.info(f"[API] 🔄 Закрываем позицию {position_side} размером {position_size} для {symbol}")
+                logger.info(f" 🔄 Закрываем позицию {position_side} размером {position_size} для {symbol}")
                 
                 close_result = current_exchange.close_position(
                     symbol=symbol,
@@ -1195,16 +1195,16 @@ def close_position_endpoint():
                         'size': position_size,
                         'order_id': close_result.get('order_id')
                     })
-                    logger.info(f"[API] ✅ Позиция {position_side} для {symbol} успешно закрыта")
+                    logger.info(f" ✅ Позиция {position_side} для {symbol} успешно закрыта")
                 else:
                     error_msg = close_result.get('message', 'Unknown error') if close_result else 'No response'
                     errors.append(f"Позиция {position_side}: {error_msg}")
-                    logger.error(f"[API] ❌ Ошибка закрытия позиции {position_side} для {symbol}: {error_msg}")
+                    logger.error(f" ❌ Ошибка закрытия позиции {position_side} для {symbol}: {error_msg}")
                     
             except Exception as e:
                 error_msg = f"Позиция {pos['side']}: {str(e)}"
                 errors.append(error_msg)
-                logger.error(f"[API] ❌ Исключение при закрытии позиции {pos['side']} для {symbol}: {str(e)}")
+                logger.error(f" ❌ Исключение при закрытии позиции {pos['side']} для {symbol}: {str(e)}")
         
         # Обновляем данные бота, если он существует
         with bots_data_lock:
@@ -1214,7 +1214,7 @@ def close_position_endpoint():
                     bot_data['position_side'] = None
                     bot_data['unrealized_pnl'] = 0.0
                     bot_data['status'] = BOT_STATUS['IDLE']
-                    logger.info(f"[API] 🔄 Обновлены данные бота {symbol} после закрытия позиций")
+                    logger.info(f" 🔄 Обновлены данные бота {symbol} после закрытия позиций")
                 
                 # Обновляем глобальную статистику
                 bots_data['global_stats']['bots_in_position'] = len([bot for bot in bots_data['bots'].values() if bot.get('position_side')])
@@ -1238,7 +1238,7 @@ def close_position_endpoint():
             }), 500
             
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка закрытия позиций: {str(e)}")
+        logger.error(f" Ошибка закрытия позиций: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # Словарь человекочитаемых названий параметров конфигурации
@@ -1569,7 +1569,7 @@ def system_config():
         })
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка настройки системы: {str(e)}")
+        logger.error(f" Ошибка настройки системы: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/sync-positions', methods=['GET', 'POST'])
@@ -1727,7 +1727,7 @@ def get_smart_rsi_status():
         }), 500
         
     except Exception as e:
-        logger.error(f"[API] ❌ Ошибка получения статуса Smart RSI Manager: {e}")
+        logger.error(f" ❌ Ошибка получения статуса Smart RSI Manager: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -1737,16 +1737,16 @@ def get_smart_rsi_status():
 def force_rsi_update():
     """Принудительно обновить RSI данные"""
     try:
-        logger.info("[API] 🔄 Принудительное обновление RSI данных...")
+        logger.info(" 🔄 Принудительное обновление RSI данных...")
         
         # Запускаем обновление RSI данных в отдельном потоке
         import threading
         def update_rsi():
             try:
                 load_all_coins_rsi()
-                logger.info("[API] ✅ RSI данные обновлены принудительно")
+                logger.info(" ✅ RSI данные обновлены принудительно")
             except Exception as e:
-                logger.error(f"[API] ❌ Ошибка принудительного обновления RSI: {e}")
+                logger.error(f" ❌ Ошибка принудительного обновления RSI: {e}")
         
         thread = threading.Thread(target=update_rsi)
         thread.daemon = True
@@ -1758,7 +1758,7 @@ def force_rsi_update():
         })
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка принудительного обновления RSI: {e}")
+        logger.error(f" Ошибка принудительного обновления RSI: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/test-exit-scam/<symbol>', methods=['GET'])
@@ -1768,7 +1768,7 @@ def test_exit_scam_endpoint(symbol):
         test_exit_scam_filter(symbol)
         return jsonify({'success': True, 'message': f'Тест ExitScam фильтра для {symbol} выполнен'})
     except Exception as e:
-        logger.error(f"[API] Ошибка тестирования ExitScam фильтра для {symbol}: {e}")
+        logger.error(f" Ошибка тестирования ExitScam фильтра для {symbol}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # Алиас для обратной совместимости
@@ -1784,7 +1784,7 @@ def test_rsi_time_filter_endpoint(symbol):
         test_rsi_time_filter(symbol)
         return jsonify({'success': True, 'message': f'Тест RSI временного фильтра для {symbol} выполнен'})
     except Exception as e:
-        logger.error(f"[API] Ошибка тестирования RSI временного фильтра для {symbol}: {e}")
+        logger.error(f" Ошибка тестирования RSI временного фильтра для {symbol}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/reload-modules', methods=['POST'])
@@ -1839,7 +1839,7 @@ def reload_modules_endpoint():
         })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка перезагрузки модулей: {e}")
+        logger.error(f" Ошибка перезагрузки модулей: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/refresh-rsi/<symbol>', methods=['POST'])
@@ -1876,7 +1876,7 @@ def refresh_rsi_for_coin(symbol):
             }), 500
             
     except Exception as e:
-        logger.error(f"[API] Ошибка обновления RSI для {symbol}: {e}")
+        logger.error(f" Ошибка обновления RSI для {symbol}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/refresh-rsi-all', methods=['POST'])
@@ -1922,7 +1922,7 @@ def refresh_rsi_for_all_coins():
         })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка обновления всех RSI данных: {e}")
+        logger.error(f" Ошибка обновления всех RSI данных: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/restart-service', methods=['POST'])
@@ -1964,14 +1964,14 @@ def restart_service_endpoint():
         })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка перезапуска сервиса: {e}")
+        logger.error(f" Ошибка перезапуска сервиса: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/process-trading-signals', methods=['POST'])
 def process_trading_signals_endpoint():
     """Принудительно обработать торговые сигналы для всех ботов"""
     try:
-        logger.info("[API] 🔄 Принудительная обработка торговых сигналов...")
+        logger.info(" 🔄 Принудительная обработка торговых сигналов...")
         
         # Вызываем process_trading_signals_for_all_bots в основном процессе
         process_trading_signals_for_all_bots(exchange_obj=get_exchange())
@@ -1981,7 +1981,7 @@ def process_trading_signals_endpoint():
             active_bots = {symbol: bot for symbol, bot in bots_data['bots'].items() 
                           if bot['status'] not in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']]}
         
-        logger.info(f"[API] ✅ Обработка торговых сигналов завершена для {len(active_bots)} ботов")
+        logger.info(f" ✅ Обработка торговых сигналов завершена для {len(active_bots)} ботов")
         
         return jsonify({
             'success': True,
@@ -1990,7 +1990,7 @@ def process_trading_signals_endpoint():
         })
         
     except Exception as e:
-        logger.error(f"[API] ❌ Ошибка обработки торговых сигналов: {e}")
+        logger.error(f" ❌ Ошибка обработки торговых сигналов: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/reset-update-flag', methods=['POST'])
@@ -2001,7 +2001,7 @@ def reset_update_flag():
             was_in_progress = coins_rsi_data['update_in_progress']
             coins_rsi_data['update_in_progress'] = False
             
-        logger.info(f"[API] 🔄 Флаг update_in_progress сброшен (был: {was_in_progress})")
+        logger.info(f" 🔄 Флаг update_in_progress сброшен (был: {was_in_progress})")
         return jsonify({
             'success': True,
             'message': 'Флаг update_in_progress сброшен',
@@ -2009,7 +2009,7 @@ def reset_update_flag():
         })
         
     except Exception as e:
-        logger.error(f"[API] ❌ Ошибка сброса флага update_in_progress: {e}")
+        logger.error(f" ❌ Ошибка сброса флага update_in_progress: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -2019,9 +2019,9 @@ def reset_update_flag():
 def test_stop_bot():
     """Тестовый endpoint для остановки бота"""
     try:
-        logger.info(f"[API] 🧪 Тестовый запрос остановки бота")
-        logger.info(f"[API] 📥 Raw data: {request.get_data()}")
-        logger.info(f"[API] 📥 Headers: {dict(request.headers)}")
+        logger.info(f" 🧪 Тестовый запрос остановки бота")
+        logger.info(f" 📥 Raw data: {request.get_data()}")
+        logger.info(f" 📥 Headers: {dict(request.headers)}")
         
         # Пробуем получить данные разными способами
         json_data = None
@@ -2030,21 +2030,21 @@ def test_stop_bot():
         
         try:
             json_data = request.get_json()
-            logger.info(f"[API] 📊 JSON data: {json_data}")
+            logger.info(f" 📊 JSON data: {json_data}")
         except Exception as e:
-            logger.error(f"[API] ❌ JSON error: {e}")
+            logger.error(f" ❌ JSON error: {e}")
         
         try:
             form_data = request.form.to_dict()
-            logger.info(f"[API] 📊 Form data: {form_data}")
+            logger.info(f" 📊 Form data: {form_data}")
         except Exception as e:
-            logger.error(f"[API] ❌ Form error: {e}")
+            logger.error(f" ❌ Form error: {e}")
         
         try:
             args_data = request.args.to_dict()
-            logger.info(f"[API] 📊 Args data: {args_data}")
+            logger.info(f" 📊 Args data: {args_data}")
         except Exception as e:
-            logger.error(f"[API] ❌ Args error: {e}")
+            logger.error(f" ❌ Args error: {e}")
         
         return jsonify({
             'success': True,
@@ -2055,7 +2055,7 @@ def test_stop_bot():
         })
         
     except Exception as e:
-        logger.error(f"[API] ❌ Ошибка тестового запроса: {e}")
+        logger.error(f" ❌ Ошибка тестового запроса: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -2384,14 +2384,14 @@ def auto_bot_config():
         })
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка конфигурации Auto Bot: {str(e)}")
+        logger.error(f" Ошибка конфигурации Auto Bot: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/auto-bot/restore-defaults', methods=['POST'])
 def restore_auto_bot_defaults():
     """Восстанавливает дефолтную конфигурацию Auto Bot"""
     try:
-        logger.info("[API] 🔄 Запрос на восстановление дефолтной конфигурации Auto Bot")
+        logger.info(" 🔄 Запрос на восстановление дефолтной конфигурации Auto Bot")
         
         # Восстанавливаем дефолтные настройки
         result = restore_default_config()
@@ -2413,7 +2413,7 @@ def restore_auto_bot_defaults():
             }), 500
             
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка восстановления дефолтной конфигурации: {str(e)}")
+        logger.error(f" Ошибка восстановления дефолтной конфигурации: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/debug-init', methods=['GET'])
@@ -2459,7 +2459,7 @@ def get_process_state():
                 })
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка получения состояния процессов: {str(e)}")
+        logger.error(f" Ошибка получения состояния процессов: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/mature-coins', methods=['GET'])
@@ -2475,7 +2475,7 @@ def get_mature_coins():
             }
         })
     except Exception as e:
-        logger.error(f"[API] Ошибка получения зрелых монет: {e}")
+        logger.error(f" Ошибка получения зрелых монет: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/mature-coins/reload', methods=['POST'])
@@ -2493,7 +2493,7 @@ def reload_mature_coins():
             }
         })
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка перезагрузки зрелых монет: {str(e)}")
+        logger.error(f" Ошибка перезагрузки зрелых монет: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/mature-coins/<symbol>', methods=['DELETE'])
@@ -2512,7 +2512,7 @@ def remove_mature_coin(symbol):
                 'error': f'Монета {symbol} не найдена в постоянном хранилище зрелых монет'
             }), 404
     except Exception as e:
-        logger.error(f"[API] Ошибка удаления монеты {symbol} из хранилища: {e}")
+        logger.error(f" Ошибка удаления монеты {symbol} из хранилища: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/mature-coins/clear', methods=['POST'])
@@ -2522,13 +2522,13 @@ def clear_mature_coins_storage():
         global mature_coins_storage
         mature_coins_storage = {}
         save_mature_coins_storage()
-        logger.info("[API] Постоянное хранилище зрелых монет очищено")
+        logger.info(" Постоянное хранилище зрелых монет очищено")
         return jsonify({
             'success': True,
             'message': 'Постоянное хранилище зрелых монет очищено'
         })
     except Exception as e:
-        logger.error(f"[API] Ошибка очистки хранилища зрелых монет: {e}")
+        logger.error(f" Ошибка очистки хранилища зрелых монет: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # ❌ ОТКЛЮЧЕНО: Все Optimal EMA endpoints удалены (EMA фильтр убран из системы)
@@ -2581,7 +2581,7 @@ def clear_mature_coins_storage():
 #                 'error': 'Воркер оптимальных EMA не инициализирован'
 #             }), 404
 #     except Exception as e:
-#         logger.error(f"[API] Ошибка получения статуса воркера: {e}")
+#         logger.error(f" Ошибка получения статуса воркера: {e}")
 #         return jsonify({'success': False, 'error': str(e)}), 500
 # 
 # @bots_app.route('/api/bots/optimal-ema-worker/force-update', methods=['POST'])
@@ -2609,7 +2609,7 @@ def clear_mature_coins_storage():
 #                 'error': 'Воркер оптимальных EMA не инициализирован'
 #             }), 404
 #     except Exception as e:
-#         logger.error(f"[API] Ошибка принудительного обновления: {e}")
+#         logger.error(f" Ошибка принудительного обновления: {e}")
 #         return jsonify({'success': False, 'error': str(e)}), 500
 # 
 # @bots_app.route('/api/bots/optimal-ema-worker/set-interval', methods=['POST'])
@@ -2651,7 +2651,7 @@ def clear_mature_coins_storage():
 #                 'error': 'Воркер оптимальных EMA не инициализирован'
 #             }), 404
 #     except Exception as e:
-#         logger.error(f"[API] Ошибка изменения интервала: {e}")
+#         logger.error(f" Ошибка изменения интервала: {e}")
 #         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/default-config', methods=['GET'])
@@ -2667,7 +2667,7 @@ def get_default_config():
         })
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка загрузки дефолтной конфигурации: {str(e)}")
+        logger.error(f" Ошибка загрузки дефолтной конфигурации: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/auto-bot/test-signals', methods=['POST'])
@@ -2703,7 +2703,7 @@ def test_auto_bot_signals():
         })
         
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка тестирования Auto Bot: {str(e)}")
+        logger.error(f" Ошибка тестирования Auto Bot: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.errorhandler(404)
@@ -2712,7 +2712,7 @@ def not_found(error):
 
 @bots_app.errorhandler(500)
 def internal_error(error):
-    logger.error(f"[ERROR] Внутренняя ошибка сервера: {str(error)}")
+    logger.error(f" Внутренняя ошибка сервера: {str(error)}")
     return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 
@@ -3151,7 +3151,7 @@ def run_bots_service():
         cleanup_bot_service()
         os._exit(0)
     except Exception as e:
-        logger.error(f"[ERROR] Ошибка запуска сервиса ботов: {str(e)}")
+        logger.error(f" Ошибка запуска сервиса ботов: {str(e)}")
         cleanup_bot_service()
         os._exit(1)
     finally:
@@ -3219,7 +3219,7 @@ def get_active_bots_detailed():
             })
             
     except Exception as e:
-        logger.error(f"[API] ❌ Ошибка получения детальной информации о ботах: {e}")
+        logger.error(f" ❌ Ошибка получения детальной информации о ботах: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -3231,7 +3231,7 @@ def get_bot_history():
     try:
         # Проверяем, что bot_history_manager доступен
         if bot_history_manager is None:
-            logger.error("[API] bot_history_manager is None!")
+            logger.error(" bot_history_manager is None!")
             return jsonify({
                 'success': False,
                 'error': 'Bot history manager not initialized'
@@ -3263,7 +3263,7 @@ def get_bot_history():
         })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка получения истории ботов: {e}")
+        logger.error(f" Ошибка получения истории ботов: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/trades', methods=['GET'])
@@ -3296,7 +3296,7 @@ def get_bot_trades():
         })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка получения сделок ботов: {e}")
+        logger.error(f" Ошибка получения сделок ботов: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # ==================== AI MODULE ENDPOINTS ====================
@@ -3331,7 +3331,7 @@ def get_ai_decisions():
             })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка получения решений AI: {e}")
+        logger.error(f" Ошибка получения решений AI: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/ai/performance', methods=['GET'])
@@ -3371,7 +3371,7 @@ def get_ai_performance():
             })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка получения метрик AI: {e}")
+        logger.error(f" Ошибка получения метрик AI: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/ai/training-history', methods=['GET'])
@@ -3399,7 +3399,7 @@ def get_ai_training_history():
             })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка получения истории обучения AI: {e}")
+        logger.error(f" Ошибка получения истории обучения AI: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/ai/stats', methods=['GET'])
@@ -3453,7 +3453,7 @@ def get_ai_stats():
         })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка получения статистики AI: {e}")
+        logger.error(f" Ошибка получения статистики AI: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/ai/models', methods=['GET'])
@@ -3512,7 +3512,7 @@ def get_ai_models():
             })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка получения информации о моделях AI: {e}")
+        logger.error(f" Ошибка получения информации о моделях AI: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/stops', methods=['GET'])
@@ -3524,7 +3524,7 @@ def get_stopped_trades():
             from bot_engine.ai import check_premium_license
             is_premium = check_premium_license()
         except Exception as e:
-            logger.warning(f"[API] Не удалось проверить лицензию: {e}")
+            logger.warning(f" Не удалось проверить лицензию: {e}")
             is_premium = False
         
         if not is_premium:
@@ -3558,7 +3558,7 @@ def get_stopped_trades():
         })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка получения стопов: {e}")
+        logger.error(f" Ошибка получения стопов: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/statistics', methods=['GET'])
@@ -3582,7 +3582,7 @@ def get_bot_statistics():
         })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка получения статистики ботов: {e}")
+        logger.error(f" Ошибка получения статистики ботов: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/history/clear', methods=['POST'])
@@ -3602,7 +3602,7 @@ def clear_bot_history():
         })
         
     except Exception as e:
-        logger.error(f"[API] Ошибка очистки истории ботов: {e}")
+        logger.error(f" Ошибка очистки истории ботов: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/history/demo', methods=['POST'])
@@ -3625,7 +3625,7 @@ def create_demo_history():
             }), 500
         
     except Exception as e:
-        logger.error(f"[API] Ошибка создания демо-данных: {e}")
+        logger.error(f" Ошибка создания демо-данных: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':

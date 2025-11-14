@@ -56,17 +56,17 @@ def save_json_file(filepath, data, description="данные", max_retries=3):
                 else:  # Unix/Linux
                     os.rename(temp_file, filepath)
                 
-                logger.debug(f"[STORAGE] {description} сохранены в {filepath}")
+                logger.debug(f" {description} сохранены в {filepath}")
                 return True
                 
             except (OSError, PermissionError) as e:
                 if attempt < max_retries - 1:
                     wait_time = 0.1 * (2 ** attempt)  # Экспоненциальная задержка
-                    logger.warning(f"[MATURITY_STORAGE] Попытка {attempt + 1} неудачна, повторяем через {wait_time}с: {e}")
+                    logger.warning(f" Попытка {attempt + 1} неудачна, повторяем через {wait_time}с: {e}")
                     time.sleep(wait_time)
                     continue
                 else:
-                    logger.error(f"[STORAGE] Ошибка сохранения {description} после {max_retries} попыток: {e}")
+                    logger.error(f" Ошибка сохранения {description} после {max_retries} попыток: {e}")
                     # Удаляем временный файл
                     if 'temp_file' in locals() and os.path.exists(temp_file):
                         try:
@@ -75,7 +75,7 @@ def save_json_file(filepath, data, description="данные", max_retries=3):
                             pass
                     return False
             except Exception as e:
-                logger.error(f"[STORAGE] Неожиданная ошибка сохранения {description}: {e}")
+                logger.error(f" Неожиданная ошибка сохранения {description}: {e}")
                 # Удаляем временный файл
                 if 'temp_file' in locals() and os.path.exists(temp_file):
                     try:
@@ -92,17 +92,17 @@ def load_json_file(filepath, default=None, description="данные"):
     with file_lock:  # Блокируем файл для чтения
         try:
             if not os.path.exists(filepath):
-                logger.info(f"[STORAGE] Файл {filepath} не найден")
+                logger.info(f" Файл {filepath} не найден")
                 return default
             
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
-            logger.debug(f"[STORAGE] {description} загружены из {filepath}")
+            logger.debug(f" {description} загружены из {filepath}")
             return data
             
         except Exception as e:
-            logger.error(f"[STORAGE] Ошибка загрузки {description}: {e}")
+            logger.error(f" Ошибка загрузки {description}: {e}")
             return default
 
 
@@ -130,14 +130,14 @@ def load_rsi_cache():
         age_hours = (datetime.now() - cache_timestamp).total_seconds() / 3600
         
         if age_hours > 6:
-            logger.warning(f"[STORAGE] RSI кэш устарел ({age_hours:.1f} часов)")
+            logger.warning(f" RSI кэш устарел ({age_hours:.1f} часов)")
             return None
         
-        logger.info(f"[STORAGE] RSI кэш загружен (возраст: {age_hours:.1f}ч)")
+        logger.info(f" RSI кэш загружен (возраст: {age_hours:.1f}ч)")
         return cache_data
         
     except Exception as e:
-        logger.error(f"[STORAGE] Ошибка проверки возраста кэша: {e}")
+        logger.error(f" Ошибка проверки возраста кэша: {e}")
         return None
 
 
@@ -146,11 +146,11 @@ def clear_rsi_cache():
     try:
         if os.path.exists(RSI_CACHE_FILE):
             os.remove(RSI_CACHE_FILE)
-            logger.info("[STORAGE] RSI кэш очищен")
+            logger.info(" RSI кэш очищен")
             return True
         return False
     except Exception as e:
-        logger.error(f"[STORAGE] Ошибка очистки RSI кэша: {e}")
+        logger.error(f" Ошибка очистки RSI кэша: {e}")
         return False
 
 
@@ -165,7 +165,7 @@ def save_bots_state(bots_data, auto_bot_config):
     }
     success = save_json_file(BOTS_STATE_FILE, state_data, "состояние ботов")
     if success:
-        logger.info(f"[STORAGE] Состояние {len(bots_data)} ботов сохранено")
+        logger.info(f" Состояние {len(bots_data)} ботов сохранено")
     return success
 
 
@@ -180,7 +180,7 @@ def save_auto_bot_config(config):
     
     Настройки хранятся только в bot_engine/bot_config.py
     """
-    logger.debug("[STORAGE] Пропуск сохранения конфигурации автобота (используется bot_config.py)")
+    logger.debug(" Пропуск сохранения конфигурации автобота (используется bot_config.py)")
     return True
 
 
@@ -189,7 +189,7 @@ def load_auto_bot_config():
     
     Настройки читаются напрямую из bot_engine/bot_config.py
     """
-    logger.debug("[STORAGE] Пропуск загрузки конфигурации автобота из JSON (используется bot_config.py)")
+    logger.debug(" Пропуск загрузки конфигурации автобота из JSON (используется bot_config.py)")
     return {}
 
 
@@ -203,12 +203,12 @@ def save_individual_coin_settings(settings):
         if os.path.exists(INDIVIDUAL_COIN_SETTINGS_FILE):
             try:
                 os.remove(INDIVIDUAL_COIN_SETTINGS_FILE)
-                logger.info("[STORAGE] Индивидуальные настройки монет очищены")
+                logger.info(" Индивидуальные настройки монет очищены")
             except OSError as error:
-                logger.warning(f"[STORAGE] Не удалось удалить файл индивидуальных настроек: {error}")
+                logger.warning(f" Не удалось удалить файл индивидуальных настроек: {error}")
                 return False
         else:
-            logger.debug("[STORAGE] Индивидуальных настроек монет нет — файл не создаем")
+            logger.debug(" Индивидуальных настроек монет нет — файл не создаем")
         return True
 
     success = save_json_file(
@@ -218,7 +218,7 @@ def save_individual_coin_settings(settings):
     )
     if success:
         logger.info(
-            "[STORAGE] Индивидуальные настройки монет сохранены (%d записей)",
+            " Индивидуальные настройки монет сохранены (%d записей)",
             len(settings_to_save)
         )
     return success
@@ -234,7 +234,7 @@ def load_individual_coin_settings():
     if not data:
         return {}
     logger.info(
-        "[STORAGE] Загружено индивидуальных настроек монет: %d",
+        " Загружено индивидуальных настроек монет: %d",
         len(data)
     )
     return data
@@ -245,7 +245,7 @@ def save_mature_coins(storage):
     """Сохраняет хранилище зрелых монет"""
     success = save_json_file(MATURE_COINS_FILE, storage, "зрелые монеты")
     if success:
-        logger.debug(f"[STORAGE] Сохранено {len(storage)} зрелых монет")
+        logger.debug(f" Сохранено {len(storage)} зрелых монет")
     return success
 
 
@@ -253,7 +253,7 @@ def load_mature_coins():
     """Загружает хранилище зрелых монет"""
     data = load_json_file(MATURE_COINS_FILE, default={}, description="зрелые монеты")
     if data:
-        logger.info(f"[STORAGE] Загружено {len(data)} зрелых монет")
+        logger.info(f" Загружено {len(data)} зрелых монет")
     return data
 
 
@@ -289,7 +289,7 @@ def save_system_config(config):
     """Сохраняет системную конфигурацию"""
     success = save_json_file(SYSTEM_CONFIG_FILE, config, "системная конфигурация")
     if success:
-        logger.info("[STORAGE] Системная конфигурация сохранена")
+        logger.info(" Системная конфигурация сохранена")
     return success
 
 
