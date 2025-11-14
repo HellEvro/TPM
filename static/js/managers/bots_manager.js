@@ -5514,7 +5514,8 @@ class BotsManager {
         // ✅ ВСЕГДА обновляем originalConfig при загрузке конфигурации из бэкенда
         // Это гарантирует, что после сохранения и перезагрузки конфигурации originalConfig синхронизирован
         this.originalConfig = {
-            autoBot: JSON.parse(JSON.stringify(autoBotConfig)) // Глубокое копирование
+            autoBot: JSON.parse(JSON.stringify(autoBotConfig)), // Глубокое копирование
+            system: JSON.parse(JSON.stringify(config.system || {}))
         };
         console.log(`[BotsManager] 💾 originalConfig обновлен из бэкенда для отслеживания изменений`);
         console.log(`[BotsManager] 🔍 originalConfig ключи:`, Object.keys(this.originalConfig.autoBot));
@@ -6587,14 +6588,18 @@ class BotsManager {
     }
     
     // ✅ ФИЛЬТРАЦИЯ ИЗМЕНЕННЫХ ПАРАМЕТРОВ
-    filterChangedParams(data) {
-        if (!this.originalConfig || !this.originalConfig.autoBot) {
+    filterChangedParams(data, configType = 'autoBot') {
+        const originalGroup = configType === 'system'
+            ? (this.originalConfig?.system)
+            : (this.originalConfig?.autoBot);
+
+        if (!originalGroup) {
             // Если нет исходной конфигурации, отправляем все данные
             console.log('[BotsManager] ⚠️ originalConfig не инициализирован, отправляем все параметры');
             return data;
         }
         
-        const original = this.originalConfig.autoBot;
+        const original = originalGroup;
         const filtered = {};
         let changedCount = 0;
         
@@ -6667,7 +6672,8 @@ class BotsManager {
         
         try {
             // ✅ ФИЛЬТРУЕМ ТОЛЬКО ИЗМЕНЕННЫЕ ПАРАМЕТРЫ
-            const filteredData = this.filterChangedParams(data);
+            const configType = endpoint === 'system-config' ? 'system' : 'autoBot';
+            const filteredData = this.filterChangedParams(data, configType);
             
             // Если нет изменений, не отправляем запрос
             if (Object.keys(filteredData).length === 0) {
@@ -6690,10 +6696,14 @@ class BotsManager {
                 console.log(`[BotsManager] ✅ ${sectionName} сохранены успешно`);
                 
                 // ✅ ОБНОВЛЯЕМ originalConfig после успешного сохранения
-                if (this.originalConfig && this.originalConfig.autoBot) {
+                if (this.originalConfig) {
                     // Обновляем только сохраненные параметры
                     for (const [key, value] of Object.entries(filteredData)) {
-                        this.originalConfig.autoBot[key] = value;
+                        if (configType === 'system') {
+                            this.originalConfig.system[key] = value;
+                        } else {
+                            this.originalConfig.autoBot[key] = value;
+                        }
                     }
                     console.log(`[BotsManager] 💾 originalConfig обновлен после сохранения ${sectionName}`);
                 }
