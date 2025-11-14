@@ -1,46 +1,46 @@
 {
   "symbol": "HANA",
-  "trained_at": "2025-11-13T17:01:18.134269",
-  "training_seed": 465417,
-  "coin_model_seed": 466170,
+  "trained_at": "2025-11-14T21:03:01.639702",
+  "training_seed": 362360,
+  "coin_model_seed": 362793,
   "rsi_params": {
-    "oversold": 32,
-    "overbought": 72,
-    "exit_long_with_trend": 66,
-    "exit_long_against_trend": 55,
-    "exit_short_with_trend": 38,
-    "exit_short_against_trend": 41
+    "oversold": 30,
+    "overbought": 68,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 43
   },
   "risk_params": {
-    "stop_loss": 14.876912289903586,
-    "take_profit": 28.927974452687813,
-    "trailing_stop_activation": 39.8772550014014,
-    "trailing_stop_distance": 14.864391716035517,
+    "stop_loss": 9.66955412553513,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 54.7984213272174,
+    "trailing_stop_distance": 5.0,
     "break_even_protection": false,
-    "break_even_trigger": 155.80352375943374,
-    "max_position_hours": 12
+    "break_even_trigger": 46.39419805372566,
+    "max_position_hours": 77.0
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 5,
-      "upper": 63,
-      "lower": 38
+      "candles": 8,
+      "upper": 68.0,
+      "lower": 31.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 7,
-      "single_candle_percent": 16.907025938161784,
-      "multi_candle_count": 5,
-      "multi_candle_percent": 60.166552464450035
+      "candles": 8,
+      "single_candle_percent": 23.753287831194086,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 45.20741182241812
     }
   },
-  "candles_count": 109,
-  "trades_count": 9,
-  "win_rate": 44.44444444444444,
+  "candles_count": 113,
+  "trades_count": 6,
+  "win_rate": 50.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 3.954382796785605e-06,
-  "total_pnl": -0.4808541910038098,
-  "previous_candles_count": 109,
+  "profit_mse": 1.1097154313054777e-05,
+  "total_pnl": -0.06592475026725195,
+  "previous_candles_count": 113,
   "candles_increased": false
 }

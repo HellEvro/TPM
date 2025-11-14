@@ -1,0 +1,46 @@
+{
+  "symbol": "1000X",
+  "trained_at": "2025-11-14T20:50:12.851656",
+  "training_seed": 608144,
+  "coin_model_seed": 608257,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 77,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 10.238786053494135,
+    "take_profit": 10.006829671510578,
+    "trailing_stop_activation": 46.94247191384686,
+    "trailing_stop_distance": 6.409116306392752,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 65.0,
+      "lower": 37.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 7.069639735369863,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 46.70998565124741
+    }
+  },
+  "candles_count": 1494,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.158945528706396e-06,
+  "total_pnl": -1.6427111555110792,
+  "previous_candles_count": 1381,
+  "candles_increased": true
+}

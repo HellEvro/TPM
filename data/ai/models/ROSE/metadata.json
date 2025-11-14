@@ -1,46 +1,46 @@
 {
   "symbol": "ROSE",
-  "trained_at": "2025-11-13T17:01:24.679420",
-  "training_seed": 465417,
-  "coin_model_seed": 465609,
+  "trained_at": "2025-11-14T21:03:17.330247",
+  "training_seed": 362360,
+  "coin_model_seed": 363138,
   "rsi_params": {
-    "oversold": 24,
+    "oversold": 29,
     "overbought": 66,
-    "exit_long_with_trend": 60,
-    "exit_long_against_trend": 57,
-    "exit_short_with_trend": 37,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 33,
     "exit_short_against_trend": 45
   },
   "risk_params": {
-    "stop_loss": 14.952177355319595,
+    "stop_loss": 14.583390080185143,
     "take_profit": 10.0,
-    "trailing_stop_activation": 40.50111453970074,
+    "trailing_stop_activation": 29.51382937352452,
     "trailing_stop_distance": 5.0,
-    "break_even_protection": true,
-    "break_even_trigger": 68.48227832271294,
+    "break_even_protection": false,
+    "break_even_trigger": 69.69180563728342,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 10,
-      "upper": 70,
-      "lower": 41
+      "candles": 8,
+      "upper": 57.0,
+      "lower": 31.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 4,
-      "single_candle_percent": 14.75168178627644,
-      "multi_candle_count": 2,
-      "multi_candle_percent": 33.20732946417472
+      "candles": 11,
+      "single_candle_percent": 19.246914453370156,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 65.85037362713459
     }
   },
-  "candles_count": 5000,
+  "candles_count": 4929,
   "trades_count": 5,
-  "win_rate": 80.0,
+  "win_rate": 100.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 6.605228623054056e-07,
-  "total_pnl": 0.09130822463305241,
-  "previous_candles_count": 4934,
-  "candles_increased": true
+  "profit_mse": 7.109474854906297e-08,
+  "total_pnl": 0.6364985959051708,
+  "previous_candles_count": 4998,
+  "candles_increased": false
 }

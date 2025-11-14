@@ -1,0 +1,46 @@
+{
+  "symbol": "POPCAT",
+  "trained_at": "2025-11-14T21:02:06.334466",
+  "training_seed": 294287,
+  "coin_model_seed": 294482,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 22.378255118648354,
+    "take_profit": 27.1806056091553,
+    "trailing_stop_activation": 30.59270339828955,
+    "trailing_stop_distance": 19.661013600991954,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 70.0,
+      "lower": 43.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 13.956540273676223,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 50.3391465239292
+    }
+  },
+  "candles_count": 2331,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.723706305216584e-05,
+  "total_pnl": 1.8660468661065568,
+  "previous_candles_count": 2283,
+  "candles_increased": true
+}

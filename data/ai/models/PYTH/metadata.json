@@ -1,46 +1,46 @@
 {
   "symbol": "PYTH",
-  "trained_at": "2025-11-13T17:01:54.996626",
-  "training_seed": 497197,
-  "coin_model_seed": 497509,
+  "trained_at": "2025-11-14T20:58:01.237089",
+  "training_seed": 46422,
+  "coin_model_seed": 46851,
   "rsi_params": {
-    "oversold": 33,
-    "overbought": 71,
+    "oversold": 32,
+    "overbought": 65,
     "exit_long_with_trend": 66,
     "exit_long_against_trend": 60,
-    "exit_short_with_trend": 39,
-    "exit_short_against_trend": 42
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 38
   },
   "risk_params": {
-    "stop_loss": 16.430908679987184,
-    "take_profit": 11.16189816110291,
-    "trailing_stop_activation": 38.93134602110696,
-    "trailing_stop_distance": 5.0,
+    "stop_loss": 16.29381643041458,
+    "take_profit": 21.711397053321473,
+    "trailing_stop_activation": 70.0,
+    "trailing_stop_distance": 27.522065951570358,
     "break_even_protection": true,
-    "break_even_trigger": 129.75839167779816,
+    "break_even_trigger": 30.0,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 10,
-      "upper": 71,
-      "lower": 30
+      "candles": 3,
+      "upper": 65.0,
+      "lower": 27.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 8,
-      "single_candle_percent": 22.67278550225662,
-      "multi_candle_count": 4,
-      "multi_candle_percent": 42.485128499928905
+      "candles": 9,
+      "single_candle_percent": 5.0,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 57.68736308862232
     }
   },
-  "candles_count": 2711,
+  "candles_count": 2727,
   "trades_count": 5,
-  "win_rate": 80.0,
+  "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 9.074215570007881e-07,
-  "total_pnl": 0.3840924354843989,
-  "previous_candles_count": 2893,
-  "candles_increased": false
+  "profit_mse": 7.051912996123597e-07,
+  "total_pnl": 0.4376889243498244,
+  "previous_candles_count": 2723,
+  "candles_increased": true
 }

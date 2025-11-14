@@ -1,0 +1,46 @@
+{
+  "symbol": "TAI",
+  "trained_at": "2025-11-14T20:57:00.611416",
+  "training_seed": 985209,
+  "coin_model_seed": 985646,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 68,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 14.40234455510758,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 33.062827833479595,
+    "trailing_stop_distance": 19.746311451350344,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 77.0,
+      "lower": 38.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 6.567905119374014,
+      "multi_candle_count": 7,
+      "multi_candle_percent": 38.43264512860961
+    }
+  },
+  "candles_count": 1441,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.47850479511929e-06,
+  "total_pnl": 1.8862974411980038,
+  "previous_candles_count": 1447,
+  "candles_increased": false
+}
