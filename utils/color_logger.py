@@ -125,6 +125,9 @@ class ColorFormatter(logging.Formatter):
         else:
             message = record.getMessage()
         
+        # Определяем имя логгера заранее (используется и ниже)
+        logger_name = record.name if hasattr(record, 'name') else 'ROOT'
+        
         # Извлекаем категорию из сообщения (например, [INIT], [AUTO], etc.)
         category = 'DEFAULT'
         emoji = '📝'
@@ -183,7 +186,6 @@ class ColorFormatter(logging.Formatter):
                     return ''  # Пропускаем пустые сообщения
         
         # Определяем префикс на основе имени логгера (как в ai.py)
-        logger_name = record.name if hasattr(record, 'name') else 'ROOT'
         if logger_name.startswith('AI.') or logger_name == 'AI.Main':
             prefix = '[AI]'
         elif logger_name == 'werkzeug' or 'werkzeug' in logger_name.lower():
