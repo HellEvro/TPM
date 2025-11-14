@@ -20,7 +20,8 @@
 
 ## 4. Поддержка флагов и фильтров
 - В симуляции применять чекбоксы `avoid_down_trend`, `enable_maturity_check`, `trading_enabled`, `use_test_server` и т.д. через подготовку датасета/блокировку сделок.
-- Для временных фильтров/порогов (`RSI time filter`, `exit_scam`) использовать функции из `bots_modules.filters`, чтобы не дублировать логику.
+- ✅ RSI Time Filter и ExitScam подключены к `ai_trainer`/`ai_backtester_new` через `bot_engine/ai/filter_utils.py` (используется общий код `bot_engine.filters`).
+- TODO: добить остальные чекбоксы (`avoid_*`, maturity) и учёт scope/whitelist в AI датасете.
 
 ## 5. Расширение оптимизатора
 - Добавить параметризуемые «геномы» для всех новых ключей (границы, шаги) в оптимизаторе.
