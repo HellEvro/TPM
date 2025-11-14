@@ -102,13 +102,17 @@ def save_auto_bot_config_to_py(config: Dict[str, Any]) -> bool:
                     else:
                         new_value_str = str(new_value)
                     
-                    # Собираем обновленную строку
-                    updated_line = f"{indent}'{key}': {new_value_str}{comma}{comment}\n"
-                    # ✅ Логируем ключевые изменения
-                    if key in ('trailing_stop_activation', 'trailing_stop_distance', 'break_even_trigger', 'avoid_down_trend', 'avoid_up_trend'):
-                        logger.info(f"[CONFIG_WRITER] ✏️ {key}: {old_value} → {new_value_str}")
+                    if old_value == new_value_str:
+                        # Значение не изменилось — оставляем строку как есть и не шумим в логах
+                        logger.debug(f"[CONFIG_WRITER] ↩️ {key}: без изменений ({old_value})")
                     else:
-                        logger.debug(f"[CONFIG_WRITER] ✏️ {key}: {old_value} → {new_value_str}")
+                        # Собираем обновленную строку
+                        updated_line = f"{indent}'{key}': {new_value_str}{comma}{comment}\n"
+                        # ✅ Логируем ключевые изменения
+                        if key in ('trailing_stop_activation', 'trailing_stop_distance', 'break_even_trigger', 'avoid_down_trend', 'avoid_up_trend'):
+                            logger.info(f"[CONFIG_WRITER] ✏️ {key}: {old_value} → {new_value_str}")
+                        else:
+                            logger.debug(f"[CONFIG_WRITER] ✏️ {key}: {old_value} → {new_value_str}")
             
             updated_lines.append(updated_line)
         
