@@ -173,12 +173,16 @@ class ColorFormatter(logging.Formatter):
         logger_name = record.name if hasattr(record, 'name') else 'ROOT'
         if logger_name.startswith('AI.') or logger_name == 'AI.Main':
             prefix = '[AI]'
+        elif logger_name == 'werkzeug' or 'werkzeug' in logger_name.lower():
+            prefix = '[APP]'
         elif logger_name.startswith('BotsService') or logger_name == 'BotsService' or 'bot' in logger_name.lower():
             prefix = '[BOTS]'
         else:
             # Для остальных логгеров определяем префикс по имени
             if 'ai' in logger_name.lower():
                 prefix = '[AI]'
+            elif 'app' in logger_name.lower() or 'flask' in logger_name.lower():
+                prefix = '[APP]'
             else:
                 prefix = '[BOTS]'  # По умолчанию для bots.py
         
