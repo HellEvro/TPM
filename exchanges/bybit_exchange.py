@@ -1728,6 +1728,30 @@ class BybitExchange(BaseExchange):
                 'message': f"Ошибка обновления TP: {str(e)}"
             }
     
+    def place_stop_loss(self, symbol, side, entry_price, loss_percent):
+        """
+        Совместимость со старым API: рассчитывает цену SL и делегирует на update_stop_loss
+        """
+        try:
+            if not entry_price or entry_price <= 0 or not loss_percent:
+                return {'success': False, 'message': 'Некорректные параметры SL'}
+            
+            side = (side or '').upper()
+            loss_percent = float(loss_percent)
+            
+            if side == 'LONG':
+                stop_price = entry_price * (1 - loss_percent / 100.0)
+            elif side == 'SHORT':
+                stop_price = entry_price * (1 + loss_percent / 100.0)
+            else:
+                return {'success': False, 'message': f'Неизвестная сторона позиции: {side}'}
+            
+            stop_price = round(float(stop_price), 6)
+            return self.update_stop_loss(symbol, stop_price, side)
+        except Exception as exc:
+            logger.error(f"[BYBIT_BOT] Ошибка place_stop_loss: {exc}")
+            return {'success': False, 'message': str(exc)}
+
     @with_timeout(15)  # 15 секунд таймаут для обновления SL
     def update_stop_loss(self, symbol, stop_loss_price, position_side=None):
         """
