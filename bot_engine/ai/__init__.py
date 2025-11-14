@@ -85,6 +85,40 @@ except ImportError:
 _license_logger = logging.getLogger('AI.License')
 _LICENSE_STATUS = None
 _LICENSE_INFO = None
+_PROJECT_ROOT = None
+
+
+def _detect_project_root() -> Path:
+    """
+    Определяет корень проекта (директория, где лежит ai.py и .lic файлы).
+    Работает корректно как для .py, так и для .pyc файлов внутри __pycache__.
+    """
+    current = Path(__file__).resolve()
+    search_paths = [current.parent] + list(current.parents)
+
+    def is_root(candidate: Path) -> bool:
+        return (candidate / 'ai.py').exists() and (candidate / 'bot_engine').exists()
+
+    for candidate in search_paths:
+        if candidate and is_root(candidate):
+            return candidate
+
+    cwd = Path.cwd()
+    if is_root(cwd):
+        return cwd
+
+    # Фолбек: поднимаемся на три уровня (ai -> bot_engine -> project)
+    try:
+        return current.parents[3]
+    except IndexError:
+        return current.parent
+
+
+def _get_project_root() -> Path:
+    global _PROJECT_ROOT
+    if _PROJECT_ROOT is None:
+        _PROJECT_ROOT = _detect_project_root()
+    return _PROJECT_ROOT
 
 
 def check_premium_license(force_refresh: bool = False) -> bool:
@@ -107,9 +141,8 @@ def check_premium_license(force_refresh: bool = False) -> bool:
         _LICENSE_INFO = None
         return False
 
-    project_root = Path(__file__).resolve().parents[2]
-
     try:
+        project_root = _get_project_root()
         license_checker = get_license_checker(project_root=project_root)
         _LICENSE_STATUS = license_checker.is_valid()
         _LICENSE_INFO = license_checker.get_info() if _LICENSE_STATUS else None
