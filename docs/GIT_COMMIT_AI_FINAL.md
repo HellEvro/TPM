@@ -62,8 +62,8 @@
 - bot_engine/ai/risk_manager.py
 - static/js/managers/ai_config_manager.js
 - docs/AI_UI_CONFIGURATION.md
-- docs/AI_COMPLETE_WORK_SUMMARY.md
-- docs/📖_START_HERE.md
+- docs/READY_FOR_YOU.md
+- docs/START_HERE.md
 + 41 другой файл
 
 **Изменённые файлы:**
@@ -77,7 +77,7 @@
 - templates/index.html
 - static/js/config.js
 - README.md
-- docs/AI_IMPLEMENTATION_CHECKLIST.md
+- docs/AI_README.md
 + 4 data файла
 
 **Удалённые файлы:**

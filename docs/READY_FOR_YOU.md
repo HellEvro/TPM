@@ -160,17 +160,17 @@ python scripts/test_full_ai_system.py
 
 ### Главные документы:
 
-1. **AI_QUICK_START.md** - Быстрый старт (НАЧНИТЕ С ЭТОГО!)
-2. **AI_IMPLEMENTATION_COMPLETE_SUMMARY.md** - Полная сводка всего
-3. **docs/AI_RISK_MANAGER.md** - Детали Risk Manager
-4. **docs/AI_CURRENT_VS_PLANNED.md** - Что работает vs планы
+1. **docs/START_HERE.md** - Навигатор по документации и следующим шагам.
+2. **docs/QUICKSTART.md** - Полный сценарий запуска (лаунчер + ручной).
+3. **docs/AI_README.md** - Всё про активные AI модули, лаунчер и лицензии.
+4. **docs/READY_FOR_YOU.md** - (этот файл) расширенная сводка статуса.
 
 ### Технические документы:
 
-5. **docs/AI_INITIALIZATION.md** - Как работает инициализация
-6. **docs/AI_DATA_COLLECTION_LOGIC.md** - Логика сбора данных
-7. **docs/AI_AUTO_TRAINING_CONFIG.md** - Настройка автообучения
-8. **docs/AUTO_TRAINER_FIXES_SUMMARY.md** - Исправления Auto Trainer
+5. **docs/AI_UI_CONFIGURATION.md** - Настройки UI/Smart Risk.
+6. **docs/ARCHITECTURE.md** - Как устроены сервисы app/bots/ai.
+7. **docs/BOT_SIGNAL_PROCESSING_FLOW.md** - Цепочка сигналов и фильтров.
+8. **docs/MODULES.md** - Подробное разбиение `bot_engine/*` и `bots_modules/*`.
 
 ---
 
@@ -191,7 +191,7 @@ python scripts/test_full_ai_system.py
 - ✅ `bot_engine/bot_config.py` - AI_RISK_MANAGEMENT_ENABLED = True
 - ✅ `scripts/ai/collect_historical_data.py` - инкрементальное обновление
 - ✅ `bots_modules/filters.py` - быстрая проверка AI
-- ✅ `docs/AI_IMPLEMENTATION_CHECKLIST.md` - обновлён прогресс
+- ✅ `docs/AI_README.md` - обновлена структура и прогресс модулей
 
 ---
 
@@ -287,8 +287,8 @@ python scripts/test_full_ai_system.py
 ```
 
 ### Документация:
-- Начните с `AI_QUICK_START.md`
-- Детали в `AI_IMPLEMENTATION_COMPLETE_SUMMARY.md`
+- Начните с `docs/START_HERE.md`
+- Детали по AI — в `docs/AI_README.md`
 
 ### Логи:
 ```bash

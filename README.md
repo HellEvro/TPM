@@ -95,7 +95,7 @@ python ai.py --mode all  # либо data-service/train по отдельност
 python scripts/verify_ai_ready.py   # итоговая проверка AI
 ```
 
-Подробности и скриншоты: [docs/QUICKSTART.md](docs/QUICKSTART.md), [docs/AI_QUICK_START.md](docs/AI_QUICK_START.md), [docs/START_HERE.md](docs/START_HERE.md).
+Подробности и скриншоты: [docs/QUICKSTART.md](docs/QUICKSTART.md), [docs/START_HERE.md](docs/START_HERE.md).
 
 ---
 
@@ -125,12 +125,11 @@ python scripts/verify_ai_ready.py          # Финальная проверка
 ---
 
 ## 📚 Документация
-- 🚀 Быстрый старт: `docs/INSTALL.md`, `docs/QUICKSTART.md`, `docs/AI_QUICK_START.md`, `docs/START_HERE.md`.
-- 📖 Обзор и архитектура: `docs/SYSTEM_OVERVIEW.md`, `docs/ARCHITECTURE.md`, `docs/MODULES.md`.
-- 📊 История и сигналы: `docs/BOT_HISTORY.md`, `docs/BOT_SIGNAL_PROCESSING_FLOW.md`.
-- 🤖 AI: `docs/AI_README.md`, `docs/ai_technical/*.md`, `docs/AI_RISK_MANAGER.md`, `docs/ai_development/PHASE_3_LSTM_COMPLETE.md`, `docs/AI_DOCS_STRUCTURE.md`.
-- 🔐 Лицензии и защита: `docs/HWID_FIX_REPORT.md`, `docs/PREMIUM_STOP_ANALYSIS_ARCHITECTURE.md`, `docs/ML_MODELS_DISTRIBUTION.md`.
-- 🛠️ Разработка и чеклисты: `docs/AI_IMPLEMENTATION_CHECKLIST.md`, `docs/READY_FOR_YOU.md`, `docs/DOCUMENTATION_COMPLETE.md`.
+- 🚀 Быстрый старт: `docs/START_HERE.md`, `docs/QUICKSTART.md`, `docs/INSTALL.md`.
+- 📖 Архитектура и процессы: `docs/ARCHITECTURE.md`, `docs/MODULES.md`, `docs/BOT_SIGNAL_PROCESSING_FLOW.md`, `docs/BOT_HISTORY.md`.
+- 🤖 AI и премиум: `docs/AI_README.md`, `docs/AI_UI_CONFIGURATION.md`.
+- 🔐 Лицензии/риск: `docs/PREMIUM_STOP_ANALYSIS_ARCHITECTURE.md`, `docs/ML_MODELS_DISTRIBUTION.md`, `docs/READY_FOR_YOU.md`.
+- 🛠️ Поддержка и история: `docs/CHANGELOG.md`, `docs/DOCUMENTATION_COMPLETE.md`, `docs/CONFIG_DATA_FLOW.md`.
 
 Полный список — каталог `docs/` (4000+ строк, 12+ актуальных AI-гидов и отчётов).
 
@@ -154,7 +153,7 @@ python scripts/verify_ai_ready.py          # Финальная проверка
 ---
 
 ## 📞 Поддержка и мониторинг
-- Документация: `docs/AI_README.md`, `docs/SYSTEM_OVERVIEW.md`.
+- Документация: `docs/AI_README.md`, `docs/START_HERE.md`.
 - Логи: `logs/bots.log`, `logs/ai.log`.
 - Web UI: http://localhost:5000 (вкладка «Боты» → «Конфигурация» → «AI»).
 - API статус: http://localhost:5001/api/status, http://localhost:5001/api/ai/status.
