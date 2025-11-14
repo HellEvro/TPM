@@ -1570,23 +1570,10 @@ if __name__ == '__main__':
     cache_cleanup_thread.daemon = True
     cache_cleanup_thread.start()
     
-    # Настраиваем компактный формат логов для werkzeug
-    from utils.color_logger import ColorFormatter
-    import sys
-    
+    # Отключаем логи werkzeug - они не нужны и засоряют консоль
     werkzeug_logger = logging.getLogger('werkzeug')
-    werkzeug_logger.setLevel(logging.INFO)
-    
-    # Удаляем существующие обработчики
-    for handler in werkzeug_logger.handlers[:]:
-        werkzeug_logger.removeHandler(handler)
-    
-    # Создаем консольный обработчик с компактным форматом
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(ColorFormatter())
-    werkzeug_logger.addHandler(console_handler)
-    werkzeug_logger.propagate = False
+    werkzeug_logger.setLevel(logging.WARNING)  # Показываем только ошибки
+    werkzeug_logger.disabled = True  # Полностью отключаем
     
     # Запускаем Flask-сервер (отключаем reloader для стабильности Telegram уведомлений)
     app.run(debug=False, host=APP_HOST, port=APP_PORT, use_reloader=False) 

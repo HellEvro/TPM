@@ -168,6 +168,19 @@ class ColorFormatter(logging.Formatter):
             message = re.sub(r'^\[([A-Z_]+)\]\s*', '', message, count=1)
             # Также удаляем префиксы после ANSI-кодов
             message = re.sub(r'(\033\[[0-9;]*m)*\[([A-Z_]+)\]\s*', r'\1', message, count=1)
+            
+            # Специальная обработка для werkzeug логов - упрощаем формат
+            if logger_name == 'werkzeug' or 'werkzeug' in logger_name.lower():
+                # Убираем дублирование даты/времени и упрощаем формат
+                # Было: 192.168.1.2 - - [14/Nov/2025 05:37:36] "%s" %s %s
+                # Станет: GET /api/positions 200
+                message = re.sub(r'^[\d\.\s-]+\[.*?\]\s*', '', message)  # Убираем IP и дату
+                message = re.sub(r'["%s"]+\s*%s\s*%s', '', message)  # Убираем плейсхолдеры
+                message = message.strip()
+                
+                # Если сообщение пустое или содержит только плейсхолдеры, пропускаем
+                if not message or message == '%s' or len(message) < 3:
+                    return ''  # Пропускаем пустые сообщения
         
         # Определяем префикс на основе имени логгера (как в ai.py)
         logger_name = record.name if hasattr(record, 'name') else 'ROOT'
