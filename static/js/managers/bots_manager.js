@@ -2734,6 +2734,89 @@ class BotsManager {
             settings.break_even_trigger = triggerValue;
             settings.break_even_trigger_percent = triggerValue;
         }
+
+        const avoidDownTrendEl = document.getElementById('avoidDownTrendDup');
+        if (avoidDownTrendEl) settings.avoid_down_trend = avoidDownTrendEl.checked;
+
+        const avoidUpTrendEl = document.getElementById('avoidUpTrendDup');
+        if (avoidUpTrendEl) settings.avoid_up_trend = avoidUpTrendEl.checked;
+
+        const maturityCheckEl = document.getElementById('enableMaturityCheckDup');
+        if (maturityCheckEl) settings.enable_maturity_check = maturityCheckEl.checked;
+
+        const minCandlesMaturityEl = document.getElementById('minCandlesForMaturityDup');
+        if (minCandlesMaturityEl && minCandlesMaturityEl.value) {
+            settings.min_candles_for_maturity = parseInt(minCandlesMaturityEl.value);
+        }
+
+        const minRsiLowEl = document.getElementById('minRsiLowDup');
+        if (minRsiLowEl && minRsiLowEl.value) {
+            settings.min_rsi_low = parseFloat(minRsiLowEl.value);
+        }
+
+        const maxRsiHighEl = document.getElementById('maxRsiHighDup');
+        if (maxRsiHighEl && maxRsiHighEl.value) {
+            settings.max_rsi_high = parseFloat(maxRsiHighEl.value);
+        }
+
+        const rsiTimeFilterEnabledEl = document.getElementById('rsiTimeFilterEnabledDup');
+        if (rsiTimeFilterEnabledEl) settings.rsi_time_filter_enabled = rsiTimeFilterEnabledEl.checked;
+
+        const rsiTimeFilterCandlesEl = document.getElementById('rsiTimeFilterCandlesDup');
+        if (rsiTimeFilterCandlesEl && rsiTimeFilterCandlesEl.value) {
+            settings.rsi_time_filter_candles = parseInt(rsiTimeFilterCandlesEl.value);
+        }
+
+        const rsiTimeFilterUpperEl = document.getElementById('rsiTimeFilterUpperDup');
+        if (rsiTimeFilterUpperEl && rsiTimeFilterUpperEl.value) {
+            settings.rsi_time_filter_upper = parseFloat(rsiTimeFilterUpperEl.value);
+        }
+
+        const rsiTimeFilterLowerEl = document.getElementById('rsiTimeFilterLowerDup');
+        if (rsiTimeFilterLowerEl && rsiTimeFilterLowerEl.value) {
+            settings.rsi_time_filter_lower = parseFloat(rsiTimeFilterLowerEl.value);
+        }
+
+        const exitScamEnabledEl = document.getElementById('exitScamEnabledDup');
+        if (exitScamEnabledEl) settings.exit_scam_enabled = exitScamEnabledEl.checked;
+
+        const exitScamCandlesEl = document.getElementById('exitScamCandlesDup');
+        if (exitScamCandlesEl && exitScamCandlesEl.value) {
+            settings.exit_scam_candles = parseInt(exitScamCandlesEl.value);
+        }
+
+        const exitScamSingleEl = document.getElementById('exitScamSingleCandleDup');
+        if (exitScamSingleEl && exitScamSingleEl.value) {
+            settings.exit_scam_single_candle_percent = parseFloat(exitScamSingleEl.value);
+        }
+
+        const exitScamMultiCountEl = document.getElementById('exitScamMultiCountDup');
+        if (exitScamMultiCountEl && exitScamMultiCountEl.value) {
+            settings.exit_scam_multi_candle_count = parseInt(exitScamMultiCountEl.value);
+        }
+
+        const exitScamMultiPercentEl = document.getElementById('exitScamMultiPercentDup');
+        if (exitScamMultiPercentEl && exitScamMultiPercentEl.value) {
+            settings.exit_scam_multi_candle_percent = parseFloat(exitScamMultiPercentEl.value);
+        }
+
+        const trendDetectionEnabledEl = document.getElementById('trendDetectionEnabledDup');
+        if (trendDetectionEnabledEl) settings.trend_detection_enabled = trendDetectionEnabledEl.checked;
+
+        const trendAnalysisPeriodEl = document.getElementById('trendAnalysisPeriodDup');
+        if (trendAnalysisPeriodEl && trendAnalysisPeriodEl.value) {
+            settings.trend_analysis_period = parseInt(trendAnalysisPeriodEl.value);
+        }
+
+        const trendPriceChangeEl = document.getElementById('trendPriceChangeThresholdDup');
+        if (trendPriceChangeEl && trendPriceChangeEl.value) {
+            settings.trend_price_change_threshold = parseFloat(trendPriceChangeEl.value);
+        }
+
+        const trendCandlesThresholdEl = document.getElementById('trendCandlesThresholdDup');
+        if (trendCandlesThresholdEl && trendCandlesThresholdEl.value) {
+            settings.trend_candles_threshold = parseInt(trendCandlesThresholdEl.value);
+        }
         
         console.log('[BotsManager] 📋 Собранные настройки:', settings);
         return settings;
@@ -2851,6 +2934,11 @@ class BotsManager {
         if (!settings) return;
         
         console.log('[BotsManager] 🎨 Применение индивидуальных настроек к UI:', settings);
+        const fallbackConfig = this.cachedAutoBotConfig || {};
+        const getSettingValue = (key) => {
+            if (settings[key] !== undefined) return settings[key];
+            return fallbackConfig[key];
+        };
         
         // RSI настройки
         const rsiLongEl = document.getElementById('rsiLongThresholdDup');
@@ -2919,18 +3007,155 @@ class BotsManager {
         
         // Трендовые настройки
         const avoidDownTrendEl = document.getElementById('avoidDownTrendDup');
-        if (avoidDownTrendEl && settings.avoid_down_trend !== undefined) {
-            avoidDownTrendEl.checked = settings.avoid_down_trend;
+        if (avoidDownTrendEl) {
+            const value = getSettingValue('avoid_down_trend');
+            if (value !== undefined) {
+                avoidDownTrendEl.checked = Boolean(value);
+            }
         }
         
         const avoidUpTrendEl = document.getElementById('avoidUpTrendDup');
-        if (avoidUpTrendEl && settings.avoid_up_trend !== undefined) {
-            avoidUpTrendEl.checked = settings.avoid_up_trend;
+        if (avoidUpTrendEl) {
+            const value = getSettingValue('avoid_up_trend');
+            if (value !== undefined) {
+                avoidUpTrendEl.checked = Boolean(value);
+            }
         }
         
         const enableMaturityEl = document.getElementById('enableMaturityCheckDup');
-        if (enableMaturityEl && settings.enable_maturity_check !== undefined) {
-            enableMaturityEl.checked = settings.enable_maturity_check;
+        if (enableMaturityEl) {
+            const value = getSettingValue('enable_maturity_check');
+            if (value !== undefined) {
+                enableMaturityEl.checked = Boolean(value);
+            }
+        }
+
+        const minCandlesMaturityEl = document.getElementById('minCandlesForMaturityDup');
+        if (minCandlesMaturityEl) {
+            const value = getSettingValue('min_candles_for_maturity');
+            if (value !== undefined) {
+                minCandlesMaturityEl.value = value;
+            }
+        }
+
+        const minRsiLowEl = document.getElementById('minRsiLowDup');
+        if (minRsiLowEl) {
+            const value = getSettingValue('min_rsi_low');
+            if (value !== undefined) {
+                minRsiLowEl.value = value;
+            }
+        }
+
+        const maxRsiHighEl = document.getElementById('maxRsiHighDup');
+        if (maxRsiHighEl) {
+            const value = getSettingValue('max_rsi_high');
+            if (value !== undefined) {
+                maxRsiHighEl.value = value;
+            }
+        }
+
+        const rsiTimeFilterEnabledEl = document.getElementById('rsiTimeFilterEnabledDup');
+        if (rsiTimeFilterEnabledEl) {
+            const value = getSettingValue('rsi_time_filter_enabled');
+            if (value !== undefined) {
+                rsiTimeFilterEnabledEl.checked = Boolean(value);
+            }
+        }
+
+        const rsiTimeFilterCandlesEl = document.getElementById('rsiTimeFilterCandlesDup');
+        if (rsiTimeFilterCandlesEl) {
+            const value = getSettingValue('rsi_time_filter_candles');
+            if (value !== undefined) {
+                rsiTimeFilterCandlesEl.value = value;
+            }
+        }
+
+        const rsiTimeFilterUpperEl = document.getElementById('rsiTimeFilterUpperDup');
+        if (rsiTimeFilterUpperEl) {
+            const value = getSettingValue('rsi_time_filter_upper');
+            if (value !== undefined) {
+                rsiTimeFilterUpperEl.value = value;
+            }
+        }
+
+        const rsiTimeFilterLowerEl = document.getElementById('rsiTimeFilterLowerDup');
+        if (rsiTimeFilterLowerEl) {
+            const value = getSettingValue('rsi_time_filter_lower');
+            if (value !== undefined) {
+                rsiTimeFilterLowerEl.value = value;
+            }
+        }
+
+        const exitScamEnabledEl = document.getElementById('exitScamEnabledDup');
+        if (exitScamEnabledEl) {
+            const value = getSettingValue('exit_scam_enabled');
+            if (value !== undefined) {
+                exitScamEnabledEl.checked = Boolean(value);
+            }
+        }
+
+        const exitScamCandlesEl = document.getElementById('exitScamCandlesDup');
+        if (exitScamCandlesEl) {
+            const value = getSettingValue('exit_scam_candles');
+            if (value !== undefined) {
+                exitScamCandlesEl.value = value;
+            }
+        }
+
+        const exitScamSingleEl = document.getElementById('exitScamSingleCandleDup');
+        if (exitScamSingleEl) {
+            const value = getSettingValue('exit_scam_single_candle_percent');
+            if (value !== undefined) {
+                exitScamSingleEl.value = value;
+            }
+        }
+
+        const exitScamMultiCountEl = document.getElementById('exitScamMultiCountDup');
+        if (exitScamMultiCountEl) {
+            const value = getSettingValue('exit_scam_multi_candle_count');
+            if (value !== undefined) {
+                exitScamMultiCountEl.value = value;
+            }
+        }
+
+        const exitScamMultiPercentEl = document.getElementById('exitScamMultiPercentDup');
+        if (exitScamMultiPercentEl) {
+            const value = getSettingValue('exit_scam_multi_candle_percent');
+            if (value !== undefined) {
+                exitScamMultiPercentEl.value = value;
+            }
+        }
+
+        const trendDetectionEnabledEl = document.getElementById('trendDetectionEnabledDup');
+        if (trendDetectionEnabledEl) {
+            const value = getSettingValue('trend_detection_enabled');
+            if (value !== undefined) {
+                trendDetectionEnabledEl.checked = Boolean(value);
+            }
+        }
+
+        const trendAnalysisPeriodEl = document.getElementById('trendAnalysisPeriodDup');
+        if (trendAnalysisPeriodEl) {
+            const value = getSettingValue('trend_analysis_period');
+            if (value !== undefined) {
+                trendAnalysisPeriodEl.value = value;
+            }
+        }
+
+        const trendPriceChangeEl = document.getElementById('trendPriceChangeThresholdDup');
+        if (trendPriceChangeEl) {
+            const value = getSettingValue('trend_price_change_threshold');
+            if (value !== undefined) {
+                trendPriceChangeEl.value = value;
+            }
+        }
+
+        const trendCandlesThresholdEl = document.getElementById('trendCandlesThresholdDup');
+        if (trendCandlesThresholdEl) {
+            const value = getSettingValue('trend_candles_threshold');
+            if (value !== undefined) {
+                trendCandlesThresholdEl.value = value;
+            }
         }
         
         // Объем торговли
@@ -3008,7 +3233,23 @@ class BotsManager {
             break_even_trigger: 20.0,
             avoid_down_trend: config.avoid_down_trend !== false,
             avoid_up_trend: config.avoid_up_trend !== false,
-            enable_maturity_check: config.enable_maturity_check !== false
+            enable_maturity_check: config.enable_maturity_check !== false,
+            min_candles_for_maturity: (config.min_candles_for_maturity !== undefined ? config.min_candles_for_maturity : 400),
+            min_rsi_low: (config.min_rsi_low !== undefined ? config.min_rsi_low : 35),
+            max_rsi_high: (config.max_rsi_high !== undefined ? config.max_rsi_high : 65),
+            rsi_time_filter_enabled: (config.rsi_time_filter_enabled !== undefined ? config.rsi_time_filter_enabled : true),
+            rsi_time_filter_candles: (config.rsi_time_filter_candles !== undefined ? config.rsi_time_filter_candles : 6),
+            rsi_time_filter_upper: (config.rsi_time_filter_upper !== undefined ? config.rsi_time_filter_upper : 65),
+            rsi_time_filter_lower: (config.rsi_time_filter_lower !== undefined ? config.rsi_time_filter_lower : 35),
+            exit_scam_enabled: (config.exit_scam_enabled !== undefined ? config.exit_scam_enabled : true),
+            exit_scam_candles: (config.exit_scam_candles !== undefined ? config.exit_scam_candles : 8),
+            exit_scam_single_candle_percent: (config.exit_scam_single_candle_percent !== undefined ? config.exit_scam_single_candle_percent : 15),
+            exit_scam_multi_candle_count: (config.exit_scam_multi_candle_count !== undefined ? config.exit_scam_multi_candle_count : 4),
+            exit_scam_multi_candle_percent: (config.exit_scam_multi_candle_percent !== undefined ? config.exit_scam_multi_candle_percent : 50),
+            trend_detection_enabled: (config.trend_detection_enabled !== undefined ? config.trend_detection_enabled : false),
+            trend_analysis_period: (config.trend_analysis_period !== undefined ? config.trend_analysis_period : 30),
+            trend_price_change_threshold: (config.trend_price_change_threshold !== undefined ? config.trend_price_change_threshold : 7),
+            trend_candles_threshold: (config.trend_candles_threshold !== undefined ? config.trend_candles_threshold : 70)
         };
 
         const get = (key, defaultValue) => {
@@ -3065,6 +3306,86 @@ class BotsManager {
         const maturityEl = document.getElementById('enableMaturityCheckDup');
         if (maturityEl) {
             maturityEl.checked = get('enable_maturity_check', fallback.enable_maturity_check);
+        }
+
+        const minCandlesMaturityEl = document.getElementById('minCandlesForMaturityDup');
+        if (minCandlesMaturityEl) {
+            minCandlesMaturityEl.value = get('min_candles_for_maturity', fallback.min_candles_for_maturity);
+        }
+
+        const minRsiLowEl = document.getElementById('minRsiLowDup');
+        if (minRsiLowEl) {
+            minRsiLowEl.value = get('min_rsi_low', fallback.min_rsi_low);
+        }
+
+        const maxRsiHighEl = document.getElementById('maxRsiHighDup');
+        if (maxRsiHighEl) {
+            maxRsiHighEl.value = get('max_rsi_high', fallback.max_rsi_high);
+        }
+
+        const rsiTimeFilterEnabledEl = document.getElementById('rsiTimeFilterEnabledDup');
+        if (rsiTimeFilterEnabledEl) {
+            rsiTimeFilterEnabledEl.checked = get('rsi_time_filter_enabled', fallback.rsi_time_filter_enabled);
+        }
+
+        const rsiTimeFilterCandlesEl = document.getElementById('rsiTimeFilterCandlesDup');
+        if (rsiTimeFilterCandlesEl) {
+            rsiTimeFilterCandlesEl.value = get('rsi_time_filter_candles', fallback.rsi_time_filter_candles);
+        }
+
+        const rsiTimeFilterUpperEl = document.getElementById('rsiTimeFilterUpperDup');
+        if (rsiTimeFilterUpperEl) {
+            rsiTimeFilterUpperEl.value = get('rsi_time_filter_upper', fallback.rsi_time_filter_upper);
+        }
+
+        const rsiTimeFilterLowerEl = document.getElementById('rsiTimeFilterLowerDup');
+        if (rsiTimeFilterLowerEl) {
+            rsiTimeFilterLowerEl.value = get('rsi_time_filter_lower', fallback.rsi_time_filter_lower);
+        }
+
+        const exitScamEnabledEl = document.getElementById('exitScamEnabledDup');
+        if (exitScamEnabledEl) {
+            exitScamEnabledEl.checked = get('exit_scam_enabled', fallback.exit_scam_enabled);
+        }
+
+        const exitScamCandlesEl = document.getElementById('exitScamCandlesDup');
+        if (exitScamCandlesEl) {
+            exitScamCandlesEl.value = get('exit_scam_candles', fallback.exit_scam_candles);
+        }
+
+        const exitScamSingleEl = document.getElementById('exitScamSingleCandleDup');
+        if (exitScamSingleEl) {
+            exitScamSingleEl.value = get('exit_scam_single_candle_percent', fallback.exit_scam_single_candle_percent);
+        }
+
+        const exitScamMultiCountEl = document.getElementById('exitScamMultiCountDup');
+        if (exitScamMultiCountEl) {
+            exitScamMultiCountEl.value = get('exit_scam_multi_candle_count', fallback.exit_scam_multi_candle_count);
+        }
+
+        const exitScamMultiPercentEl = document.getElementById('exitScamMultiPercentDup');
+        if (exitScamMultiPercentEl) {
+            exitScamMultiPercentEl.value = get('exit_scam_multi_candle_percent', fallback.exit_scam_multi_candle_percent);
+        }
+
+        const trendDetectionEnabledEl = document.getElementById('trendDetectionEnabledDup');
+        if (trendDetectionEnabledEl) {
+            trendDetectionEnabledEl.checked = get('trend_detection_enabled', fallback.trend_detection_enabled);
+        }
+
+        const trendAnalysisPeriodEl = document.getElementById('trendAnalysisPeriodDup');
+        if (trendAnalysisPeriodEl) {
+            trendAnalysisPeriodEl.value = get('trend_analysis_period', fallback.trend_analysis_period);
+        }
+
+        const trendPriceChangeEl = document.getElementById('trendPriceChangeThresholdDup');
+        if (trendPriceChangeEl) {
+            trendPriceChangeEl.value = get('trend_price_change_threshold', fallback.trend_price_change_threshold);
+        }
+
+        const trendCandlesThresholdEl = document.getElementById('trendCandlesThresholdDup');
+        if (trendCandlesThresholdEl) {
+            trendCandlesThresholdEl.value = get('trend_candles_threshold', fallback.trend_candles_threshold);
         }
      }
 

@@ -659,6 +659,80 @@
                                 <label data-translate="break_even_trigger_label">Триггер безубыточности (%):</label>
                                 <input type="number" id="breakEvenTriggerDup" value="100.0" min="25" max="300" step="25" />
                             </div>
+                            <div class="settings-divider"></div>
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="rsiTimeFilterEnabledDup" />
+                                    <span data-translate="rsi_time_filter_enabled_label">Включить RSI временной фильтр</span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label data-translate="rsi_time_filter_candles_label">⏱️ Минимум свечей (6H):</label>
+                                <input type="number" id="rsiTimeFilterCandlesDup" value="6" min="0" max="48" step="1" />
+                            </div>
+                            <div class="setting-item">
+                                <label data-translate="rsi_time_filter_upper_label">🔺 Верхняя граница:</label>
+                                <input type="number" id="rsiTimeFilterUpperDup" value="65" min="50" max="90" step="1" />
+                            </div>
+                            <div class="setting-item">
+                                <label data-translate="rsi_time_filter_lower_label">🔻 Нижняя граница:</label>
+                                <input type="number" id="rsiTimeFilterLowerDup" value="35" min="10" max="50" step="1" />
+                            </div>
+                            <div class="settings-divider"></div>
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="exitScamEnabledDup" />
+                                    <span data-translate="exit_scam_enabled_label">Включить ExitScam фильтр</span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label data-translate="exit_scam_candles_label">🕯️ Свечей для анализа:</label>
+                                <input type="number" id="exitScamCandlesDup" value="8" min="4" max="30" step="1" />
+                            </div>
+                            <div class="setting-item">
+                                <label data-translate="exit_scam_single_candle_label">📉 Лимит одной свечи (%):</label>
+                                <input type="number" id="exitScamSingleCandleDup" value="15" min="2" max="80" step="0.5" />
+                            </div>
+                            <div class="setting-item">
+                                <label data-translate="exit_scam_multi_count_label">📊 Свечей для суммарного анализа:</label>
+                                <input type="number" id="exitScamMultiCountDup" value="4" min="2" max="12" step="1" />
+                            </div>
+                            <div class="setting-item">
+                                <label data-translate="exit_scam_multi_percent_label">📈 Лимит суммарного изменения (%):</label>
+                                <input type="number" id="exitScamMultiPercentDup" value="50" min="10" max="200" step="1" />
+                            </div>
+                            <div class="settings-divider"></div>
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="trendDetectionEnabledDup" />
+                                    <span data-translate="trend_detection_enabled_label">Включить анализ трендов</span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label data-translate="trend_analysis_period_label">📆 Период анализа тренда (дней):</label>
+                                <input type="number" id="trendAnalysisPeriodDup" value="30" min="5" max="120" step="1" />
+                            </div>
+                            <div class="setting-item">
+                                <label data-translate="trend_price_change_threshold_label">📉 Порог изменения цены (%):</label>
+                                <input type="number" id="trendPriceChangeThresholdDup" value="7" min="1" max="50" step="0.5" />
+                            </div>
+                            <div class="setting-item">
+                                <label data-translate="trend_candles_threshold_label">🕯️ Порог свечей (%):</label>
+                                <input type="number" id="trendCandlesThresholdDup" value="70" min="40" max="100" step="1" />
+                            </div>
+                            <div class="settings-divider"></div>
+                            <div class="setting-item">
+                                <label data-translate="min_candles_maturity_label">🧪 Мин. свечей для зрелости:</label>
+                                <input type="number" id="minCandlesForMaturityDup" value="400" min="50" max="1000" step="10" />
+                            </div>
+                            <div class="setting-item">
+                                <label data-translate="min_rsi_low_label">📉 Мин. достигнутый RSI:</label>
+                                <input type="number" id="minRsiLowDup" value="35" min="10" max="50" step="1" />
+                            </div>
+                            <div class="setting-item">
+                                <label data-translate="max_rsi_high_label">📈 Макс. достигнутый RSI:</label>
+                                <input type="number" id="maxRsiHighDup" value="65" min="55" max="90" step="1" />
+                            </div>
                         </div>
                         
                         <!-- Кнопки сохранения индивидуальных настроек -->
