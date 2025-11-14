@@ -1,0 +1,46 @@
+{
+  "symbol": "TOWNS",
+  "trained_at": "2025-11-14T21:01:13.617619",
+  "training_seed": 232680,
+  "coin_model_seed": 233509,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 67,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 12.276692289614221,
+    "take_profit": 11.420889954769216,
+    "trailing_stop_activation": 20.348199965250892,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 65.20957559527082,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 61.0,
+      "lower": 29.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 21.418565540729908,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 31.254682103675098
+    }
+  },
+  "candles_count": 405,
+  "trades_count": 6,
+  "win_rate": 33.33333333333333,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.111414080134814e-06,
+  "total_pnl": -0.6610895319840515,
+  "previous_candles_count": 405,
+  "candles_increased": false
+}

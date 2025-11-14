@@ -1,0 +1,46 @@
+{
+  "symbol": "BEL",
+  "trained_at": "2025-11-14T21:02:51.774527",
+  "training_seed": 362360,
+  "coin_model_seed": 362561,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 69,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 12.789385808638094,
+    "take_profit": 34.739708592039534,
+    "trailing_stop_activation": 42.28123748817693,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 39.07909418997288,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 68.0,
+      "lower": 33.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 10.030637021963019,
+      "multi_candle_count": 7,
+      "multi_candle_percent": 71.83065005794958
+    }
+  },
+  "candles_count": 4891,
+  "trades_count": 7,
+  "win_rate": 42.857142857142854,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.5205401583619986e-07,
+  "total_pnl": -0.12515153161695242,
+  "previous_candles_count": 4824,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "ARB",
+  "trained_at": "2025-11-14T20:59:33.748082",
+  "training_seed": 165295,
+  "coin_model_seed": 165734,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 77,
+    "exit_long_with_trend": 60,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 11.645696599350217,
+    "take_profit": 24.396610501333328,
+    "trailing_stop_activation": 42.99719079804959,
+    "trailing_stop_distance": 27.48731122633624,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 62.0,
+      "lower": 38.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 5.0,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 45.93833518989398
+    }
+  },
+  "candles_count": 3828,
+  "trades_count": 7,
+  "win_rate": 28.57142857142857,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.2189671188999837e-06,
+  "total_pnl": -0.272077776757897,
+  "previous_candles_count": 3767,
+  "candles_increased": true
+}

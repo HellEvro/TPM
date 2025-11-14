@@ -1,0 +1,46 @@
+{
+  "symbol": "MANA",
+  "trained_at": "2025-11-14T21:03:06.911491",
+  "training_seed": 362360,
+  "coin_model_seed": 362940,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 67,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 19.88529899603896,
+    "take_profit": 22.643861451527478,
+    "trailing_stop_activation": 48.03260408774982,
+    "trailing_stop_distance": 37.83972553752026,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 74.0,
+      "lower": 37.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 29.636862038198732,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 22.744563000178246
+    }
+  },
+  "candles_count": 4838,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.0796046803406982e-06,
+  "total_pnl": -0.07595847814291551,
+  "previous_candles_count": 4850,
+  "candles_increased": false
+}

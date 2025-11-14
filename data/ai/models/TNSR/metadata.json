@@ -1,0 +1,46 @@
+{
+  "symbol": "TNSR",
+  "trained_at": "2025-11-14T21:03:24.223924",
+  "training_seed": 362360,
+  "coin_model_seed": 363201,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 73,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 13.227296622408355,
+    "take_profit": 20.208939865049306,
+    "trailing_stop_activation": 62.77038168995711,
+    "trailing_stop_distance": 26.944558270483824,
+    "break_even_protection": true,
+    "break_even_trigger": 36.894340876600054,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 68.0,
+      "lower": 45.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 17.880203081940046,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 51.052984518445385
+    }
+  },
+  "candles_count": 2216,
+  "trades_count": 8,
+  "win_rate": 62.5,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.138111690162602e-06,
+  "total_pnl": 0.8779878685921411,
+  "previous_candles_count": 2233,
+  "candles_increased": false
+}

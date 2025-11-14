@@ -1,0 +1,46 @@
+{
+  "symbol": "SKL",
+  "trained_at": "2025-11-14T21:03:18.701595",
+  "training_seed": 362360,
+  "coin_model_seed": 362475,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 76,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 16.037119769131422,
+    "take_profit": 41.7577491783218,
+    "trailing_stop_activation": 52.47820507571966,
+    "trailing_stop_distance": 11.120297791699844,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 72.0,
+      "lower": 27.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 8.702297881035994,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 70.17326801469697
+    }
+  },
+  "candles_count": 4812,
+  "trades_count": 7,
+  "win_rate": 71.42857142857143,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.3367384815730343e-07,
+  "total_pnl": 0.42396896267410966,
+  "previous_candles_count": 4830,
+  "candles_increased": false
+}

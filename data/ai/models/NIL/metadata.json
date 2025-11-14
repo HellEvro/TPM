@@ -1,0 +1,46 @@
+{
+  "symbol": "NIL",
+  "trained_at": "2025-11-14T21:01:00.346527",
+  "training_seed": 232680,
+  "coin_model_seed": 233613,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 14.519838983513024,
+    "take_profit": 21.343847789539367,
+    "trailing_stop_activation": 26.7173895313541,
+    "trailing_stop_distance": 20.320662801925195,
+    "break_even_protection": false,
+    "break_even_trigger": 40.95497536133202,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 63.0,
+      "lower": 33.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 13,
+      "single_candle_percent": 17.642201437743275,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 46.030482294118876
+    }
+  },
+  "candles_count": 789,
+  "trades_count": 9,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.1789298338957243e-06,
+  "total_pnl": 1.3786838810298727,
+  "previous_candles_count": 813,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "GAS",
+  "trained_at": "2025-11-14T20:48:26.214769",
+  "training_seed": 485719,
+  "coin_model_seed": 485734,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 68,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 24.836590901612762,
+    "take_profit": 18.397389757323836,
+    "trailing_stop_activation": 66.24808017095994,
+    "trailing_stop_distance": 20.254783280939044,
+    "break_even_protection": true,
+    "break_even_trigger": 68.14619527471598,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 11,
+      "upper": 69.0,
+      "lower": 36.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 25.76800075256268,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 39.38016601197171
+    }
+  },
+  "candles_count": 2969,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.5518553816321977e-05,
+  "total_pnl": 3.355404242235947,
+  "previous_candles_count": 2986,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "ROSE",
+  "trained_at": "2025-11-14T21:03:17.330247",
+  "training_seed": 362360,
+  "coin_model_seed": 363138,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 66,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 14.583390080185143,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 29.51382937352452,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 69.69180563728342,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 57.0,
+      "lower": 31.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 19.246914453370156,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 65.85037362713459
+    }
+  },
+  "candles_count": 4929,
+  "trades_count": 5,
+  "win_rate": 100.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.109474854906297e-08,
+  "total_pnl": 0.6364985959051708,
+  "previous_candles_count": 4998,
+  "candles_increased": false
+}

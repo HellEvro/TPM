@@ -1,0 +1,46 @@
+{
+  "symbol": "ORBS",
+  "trained_at": "2025-11-14T20:57:57.065597",
+  "training_seed": 46422,
+  "coin_model_seed": 46776,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 65,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 23.272316969108353,
+    "take_profit": 24.05171203697204,
+    "trailing_stop_activation": 41.22680273308477,
+    "trailing_stop_distance": 20.330295184376354,
+    "break_even_protection": false,
+    "break_even_trigger": 106.92155275209399,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 68.0,
+      "lower": 41.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 31.80763716111171,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 50.091492276349754
+    }
+  },
+  "candles_count": 2926,
+  "trades_count": 6,
+  "win_rate": 50.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.8891256061579e-07,
+  "total_pnl": 0.0365208172209725,
+  "previous_candles_count": 3005,
+  "candles_increased": false
+}

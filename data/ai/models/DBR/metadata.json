@@ -1,0 +1,46 @@
+{
+  "symbol": "DBR",
+  "trained_at": "2025-11-14T20:49:21.828924",
+  "training_seed": 547560,
+  "coin_model_seed": 548417,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 71,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 11.24657567267746,
+    "take_profit": 31.114014922632446,
+    "trailing_stop_activation": 31.37946241281728,
+    "trailing_stop_distance": 31.149525633455546,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 66.0,
+      "lower": 26.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 13,
+      "single_candle_percent": 13.910887705219189,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 53.63020482129363
+    }
+  },
+  "candles_count": 1547,
+  "trades_count": 9,
+  "win_rate": 55.55555555555556,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.2618173222825166e-06,
+  "total_pnl": 0.6506393688244417,
+  "previous_candles_count": 1419,
+  "candles_increased": true
+}

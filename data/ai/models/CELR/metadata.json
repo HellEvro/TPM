@@ -1,0 +1,46 @@
+{
+  "symbol": "CELR",
+  "trained_at": "2025-11-14T20:38:59.496638",
+  "training_seed": 924878,
+  "coin_model_seed": 925752,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 16.51126427652659,
+    "take_profit": 10.660627701281221,
+    "trailing_stop_activation": 49.79429928435518,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 48.77619672331977,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 60.0,
+      "lower": 37.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 5.192792059494051,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 78.55426936830995
+    }
+  },
+  "candles_count": 4879,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 9.711225317162305e-07,
+  "total_pnl": -0.981492364825433,
+  "previous_candles_count": 4836,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "BIGTIME",
+  "trained_at": "2025-11-14T21:01:44.991932",
+  "training_seed": 294287,
+  "coin_model_seed": 295162,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 78,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 27.43692264137817,
+    "take_profit": 27.865669188318094,
+    "trailing_stop_activation": 22.46341374392965,
+    "trailing_stop_distance": 15.353072104774483,
+    "break_even_protection": true,
+    "break_even_trigger": 73.77644851716077,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 68.0,
+      "lower": 35.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 30.14355078436102,
+      "multi_candle_count": 7,
+      "multi_candle_percent": 43.563065385032665
+    }
+  },
+  "candles_count": 2964,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 8.135505100793062e-06,
+  "total_pnl": 0.23863461782574732,
+  "previous_candles_count": 2857,
+  "candles_increased": true
+}

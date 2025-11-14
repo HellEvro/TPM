@@ -1,0 +1,46 @@
+{
+  "symbol": "PARTI",
+  "trained_at": "2025-11-14T21:03:12.120853",
+  "training_seed": 362360,
+  "coin_model_seed": 363340,
+  "rsi_params": {
+    "oversold": 26,
+    "overbought": 65,
+    "exit_long_with_trend": 69,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 24.750935185569244,
+    "take_profit": 21.071225987917337,
+    "trailing_stop_activation": 18.87063683296949,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 51.527616391154524,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 58.0,
+      "lower": 41.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 22.57762851511643,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 20.0
+    }
+  },
+  "candles_count": 874,
+  "trades_count": 7,
+  "win_rate": 14.285714285714285,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.877091730307719e-07,
+  "total_pnl": -0.7893382972168956,
+  "previous_candles_count": 805,
+  "candles_increased": true
+}

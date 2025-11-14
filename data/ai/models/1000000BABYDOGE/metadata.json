@@ -1,0 +1,46 @@
+{
+  "symbol": "1000000BABYDOGE",
+  "trained_at": "2025-11-14T21:02:46.261028",
+  "training_seed": 362360,
+  "coin_model_seed": 363184,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 71,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 33,
+    "exit_short_against_trend": 36
+  },
+  "risk_params": {
+    "stop_loss": 11.42922998753064,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 45.498254826296474,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 80.72913683549228,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 13,
+      "upper": 64.0,
+      "lower": 33.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 4,
+      "single_candle_percent": 9.870408136096607,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 61.11167640240821
+    }
+  },
+  "candles_count": 1931,
+  "trades_count": 8,
+  "win_rate": 37.5,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.5051668634199436e-07,
+  "total_pnl": -0.5222952519005792,
+  "previous_candles_count": 1905,
+  "candles_increased": true
+}

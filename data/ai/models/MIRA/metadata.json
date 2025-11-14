@@ -1,0 +1,46 @@
+{
+  "symbol": "MIRA",
+  "trained_at": "2025-11-14T20:57:53.275655",
+  "training_seed": 46422,
+  "coin_model_seed": 47254,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 74,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 9.56854253591425,
+    "take_profit": 16.30469592184877,
+    "trailing_stop_activation": 46.609885729897385,
+    "trailing_stop_distance": 17.49878633081076,
+    "break_even_protection": false,
+    "break_even_trigger": 88.02606582654795,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 56.0,
+      "lower": 39.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 13,
+      "single_candle_percent": 27.907432331766174,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 48.61142267965957
+    }
+  },
+  "candles_count": 197,
+  "trades_count": 8,
+  "win_rate": 37.5,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.2759496979480237e-06,
+  "total_pnl": -0.8050262765690821,
+  "previous_candles_count": 197,
+  "candles_increased": false
+}

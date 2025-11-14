@@ -1,0 +1,46 @@
+{
+  "symbol": "SSV",
+  "trained_at": "2025-11-14T21:00:07.458119",
+  "training_seed": 165295,
+  "coin_model_seed": 165719,
+  "rsi_params": {
+    "oversold": 33,
+    "overbought": 77,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 15.129170406347807,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 43.773226632891394,
+    "trailing_stop_distance": 26.339214232932335,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 60.0,
+      "lower": 32.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 12.802453117314048,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 51.571480780399895
+    }
+  },
+  "candles_count": 3813,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.257673336264662e-06,
+  "total_pnl": -0.09946299140843975,
+  "previous_candles_count": 3783,
+  "candles_increased": true
+}

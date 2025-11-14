@@ -1,0 +1,46 @@
+{
+  "symbol": "SPK",
+  "trained_at": "2025-11-14T20:45:32.365478",
+  "training_seed": 292219,
+  "coin_model_seed": 292561,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 74,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 16.42271892224101,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 8.0,
+    "trailing_stop_distance": 42.76808864813286,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 257.0
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 62.0,
+      "lower": 35.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 8.524328106653545,
+      "multi_candle_count": 8,
+      "multi_candle_percent": 68.64187561129137
+    }
+  },
+  "candles_count": 485,
+  "trades_count": 5,
+  "win_rate": 100.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.7800315427017583e-05,
+  "total_pnl": 6.587661018861058,
+  "previous_candles_count": 484,
+  "candles_increased": true
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "BMT",
+  "trained_at": "2025-11-14T20:53:20.325795",
+  "training_seed": 789914,
+  "coin_model_seed": 789921,
+  "rsi_params": {
+    "oversold": 29,
+    "overbought": 70,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 7.799464677530202,
+    "take_profit": 20.332057053824922,
+    "trailing_stop_activation": 28.21889492715948,
+    "trailing_stop_distance": 18.356742942951783,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 13,
+      "upper": 65.0,
+      "lower": 24.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 20.236474163832902,
+      "multi_candle_count": 8,
+      "multi_candle_percent": 68.89558819491239
+    }
+  },
+  "candles_count": 897,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.3341485087546262e-06,
+  "total_pnl": 0.6121665882001357,
+  "previous_candles_count": 801,
+  "candles_increased": true
+}

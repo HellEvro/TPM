@@ -1,0 +1,46 @@
+{
+  "symbol": "SHIB1000",
+  "trained_at": "2025-11-14T19:12:24.405018",
+  "training_seed": 656317,
+  "coin_model_seed": 656765,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 13.759042984991765,
+    "take_profit": 11.768160534687592,
+    "trailing_stop_activation": 26.542675275023644,
+    "trailing_stop_distance": 5.283978367390505,
+    "break_even_protection": true,
+    "break_even_trigger": 32.72621472295624,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 71,
+      "lower": 36
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 5,
+      "single_candle_percent": 18.50704782319758,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 45.041998094030276
+    }
+  },
+  "candles_count": 4995,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 4.072462475933054e-06,
+  "total_pnl": 0.9529640046404826,
+  "previous_candles_count": 0,
+  "candles_increased": true
+}

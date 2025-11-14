@@ -1,0 +1,46 @@
+{
+  "symbol": "USTC",
+  "trained_at": "2025-11-14T20:40:21.376629",
+  "training_seed": 984956,
+  "coin_model_seed": 985533,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 76,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 12.599917095840798,
+    "take_profit": 46.51391806714405,
+    "trailing_stop_activation": 54.09962313975409,
+    "trailing_stop_distance": 14.377454919146345,
+    "break_even_protection": false,
+    "break_even_trigger": 63.869823419976015,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 6,
+      "upper": 62.0,
+      "lower": 39.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 23.484191682081565,
+      "multi_candle_count": 7,
+      "multi_candle_percent": 26.00772459277467
+    }
+  },
+  "candles_count": 2714,
+  "trades_count": 8,
+  "win_rate": 37.5,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.1373814027873883e-07,
+  "total_pnl": -0.17628706324528393,
+  "previous_candles_count": 2793,
+  "candles_increased": false
+}

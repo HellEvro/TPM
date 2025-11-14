@@ -1,0 +1,46 @@
+{
+  "symbol": "HUMA",
+  "trained_at": "2025-11-14T21:03:02.720343",
+  "training_seed": 362360,
+  "coin_model_seed": 362404,
+  "rsi_params": {
+    "oversold": 28,
+    "overbought": 65,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 20.858310134766626,
+    "take_profit": 21.629707187374258,
+    "trailing_stop_activation": 36.80138643880076,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 68.0,
+      "lower": 31.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 13,
+      "single_candle_percent": 7.2981171656695665,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 37.631254694642934
+    }
+  },
+  "candles_count": 604,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.653738129987965e-07,
+  "total_pnl": 0.4633375444363298,
+  "previous_candles_count": 569,
+  "candles_increased": true
+}

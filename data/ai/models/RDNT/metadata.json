@@ -1,0 +1,46 @@
+{
+  "symbol": "RDNT",
+  "trained_at": "2025-11-14T20:33:03.870404",
+  "training_seed": 547196,
+  "coin_model_seed": 547739,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 68,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 41
+  },
+  "risk_params": {
+    "stop_loss": 10.557052772106678,
+    "take_profit": 28.68899651442658,
+    "trailing_stop_activation": 23.192428481742304,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 50.459132618986686,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 10,
+      "upper": 66.0,
+      "lower": 29.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 20.33840564330029,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 34.8139137788897
+    }
+  },
+  "candles_count": 3579,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.955276260006909e-06,
+  "total_pnl": -0.7563833731977211,
+  "previous_candles_count": 3667,
+  "candles_increased": false
+}

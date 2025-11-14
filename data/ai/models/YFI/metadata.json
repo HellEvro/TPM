@@ -1,0 +1,46 @@
+{
+  "symbol": "YFI",
+  "trained_at": "2025-11-14T18:32:31.073835",
+  "training_seed": 232746,
+  "coin_model_seed": 232757,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 65,
+    "exit_long_with_trend": 64,
+    "exit_long_against_trend": 55,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 11.509894040383251,
+    "take_profit": 21.87813907353444,
+    "trailing_stop_activation": 42.08871294786732,
+    "trailing_stop_distance": 5.0,
+    "break_even_protection": true,
+    "break_even_trigger": 153.72101836400105,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 3,
+      "upper": 66,
+      "lower": 37
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 15.180949742767101,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 36.010915761553434
+    }
+  },
+  "candles_count": 4852,
+  "trades_count": 5,
+  "win_rate": 0.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.255192802965078e-06,
+  "total_pnl": -1.6140486492916313,
+  "previous_candles_count": 4852,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "ARC",
+  "trained_at": "2025-11-14T21:02:49.917504",
+  "training_seed": 362360,
+  "coin_model_seed": 363146,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 70,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 59,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 30.0,
+    "take_profit": 43.958973638820055,
+    "trailing_stop_activation": 25.744757064778465,
+    "trailing_stop_distance": 42.09389963119322,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 7,
+      "upper": 61.0,
+      "lower": 50
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 15,
+      "single_candle_percent": 12.791330438356269,
+      "multi_candle_count": 7,
+      "multi_candle_percent": 44.492127986749104
+    }
+  },
+  "candles_count": 1170,
+  "trades_count": 6,
+  "win_rate": 83.33333333333334,
+  "signal_accuracy": 1.0,
+  "profit_mse": 6.713438544905869e-06,
+  "total_pnl": 3.2576227421909216,
+  "previous_candles_count": 1235,
+  "candles_increased": false
+}

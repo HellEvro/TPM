@@ -1,0 +1,46 @@
+{
+  "symbol": "LDO",
+  "trained_at": "2025-11-14T20:45:20.332259",
+  "training_seed": 292219,
+  "coin_model_seed": 293070,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 66,
+    "exit_long_with_trend": 65,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 22.062999504449138,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 32.91019228195589,
+    "trailing_stop_distance": 19.88572995228447,
+    "break_even_protection": false,
+    "break_even_trigger": 39.652972615561,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 59.0,
+      "lower": 25.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 16.574766261669147,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 68.29335982493114
+    }
+  },
+  "candles_count": 4720,
+  "trades_count": 6,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.4654405597635245e-06,
+  "total_pnl": 1.4354520039614183,
+  "previous_candles_count": 4750,
+  "candles_increased": false
+}

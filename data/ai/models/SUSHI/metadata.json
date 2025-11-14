@@ -1,0 +1,46 @@
+{
+  "symbol": "SUSHI",
+  "trained_at": "2025-11-14T21:02:13.742356",
+  "training_seed": 294287,
+  "coin_model_seed": 294764,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 65,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 64,
+    "exit_short_with_trend": 35,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 8.527888771927147,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 54.44250815203443,
+    "trailing_stop_distance": 27.6579795242705,
+    "break_even_protection": false,
+    "break_even_trigger": 77.29168846678515,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 68.0,
+      "lower": 48.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 10,
+      "single_candle_percent": 6.422715881154826,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 28.62739623224856
+    }
+  },
+  "candles_count": 4998,
+  "trades_count": 5,
+  "win_rate": 100.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.2962823072384827e-07,
+  "total_pnl": 1.7702747328398538,
+  "previous_candles_count": 4865,
+  "candles_increased": true
+}

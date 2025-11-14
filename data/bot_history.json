@@ -257,6 +257,186 @@
       "exit_volatility": null,
       "exit_trend": null,
       "price_movement": 1.553457203777044
+    },
+    {
+      "id": "close_ALCH_1763124426.795435",
+      "timestamp": "2025-11-14T15:47:06.795442",
+      "action_type": "POSITION_CLOSED",
+      "action_name": "Закрытие позиции",
+      "bot_id": "ALCH",
+      "symbol": "ALCH",
+      "direction": "SHORT",
+      "exit_price": 0.12956,
+      "pnl": 0.014429999999999277,
+      "roi": 2.8476872161931928,
+      "reason": "MANUAL_CLOSE",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "is_successful": true,
+      "details": "Закрыта позиция SHORT для ALCH: цена выхода 0.1296, PnL: 0.01 USDT (2.85%) [SCRIPT, ✅]",
+      "entry_data": {
+        "entry_price": 0.12993,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 47.514322712777776,
+        "max_profit_achieved": 0.0
+      },
+      "entry_price": 0.12993,
+      "entry_rsi": null,
+      "entry_volatility": null,
+      "entry_trend": null,
+      "market_data": {
+        "exit_price": 0.12956,
+        "price_movement": -0.28476872161931926
+      },
+      "exit_volatility": null,
+      "exit_trend": null,
+      "price_movement": -0.28476872161931926
+    },
+    {
+      "id": "close_ALCH_1763126402.042384",
+      "timestamp": "2025-11-14T16:20:02.042393",
+      "action_type": "POSITION_CLOSED",
+      "action_name": "Закрытие позиции",
+      "bot_id": "ALCH",
+      "symbol": "ALCH",
+      "direction": "SHORT",
+      "exit_price": 0.11043,
+      "pnl": 6.64766,
+      "roi": 137.06337422833477,
+      "reason": "MANUAL_CLOSE",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "is_successful": true,
+      "details": "Закрыта позиция SHORT для ALCH: цена выхода 0.1104, PnL: 6.65 USDT (137.06%) [SCRIPT, ✅]",
+      "entry_data": {
+        "entry_price": 0.12797,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 0.0,
+        "max_profit_achieved": 0.0
+      },
+      "entry_price": 0.12797,
+      "entry_rsi": null,
+      "entry_volatility": null,
+      "entry_trend": null,
+      "market_data": {
+        "exit_price": 0.11043,
+        "price_movement": -13.706337422833476
+      },
+      "exit_volatility": null,
+      "exit_trend": null,
+      "price_movement": -13.706337422833476
+    },
+    {
+      "id": "close_XAUT_1763127422.766851",
+      "timestamp": "2025-11-14T16:37:02.766857",
+      "action_type": "POSITION_CLOSED",
+      "action_name": "Закрытие позиции",
+      "bot_id": "XAUT",
+      "symbol": "XAUT",
+      "direction": "SHORT",
+      "exit_price": 4125.21,
+      "pnl": 0.19524,
+      "roi": 0,
+      "reason": "RSI_EXIT",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "is_successful": true,
+      "details": "Закрыта позиция SHORT для XAUT: цена выхода 4125.2100, PnL: 0.20 USDT (0.00%) [SCRIPT, ✅]"
+    },
+    {
+      "id": "close_PAXG_1763128330.756807",
+      "timestamp": "2025-11-14T16:52:10.756814",
+      "action_type": "POSITION_CLOSED",
+      "action_name": "Закрытие позиции",
+      "bot_id": "PAXG",
+      "symbol": "PAXG",
+      "direction": "SHORT",
+      "exit_price": 4126.63,
+      "pnl": 0.19508,
+      "roi": 0,
+      "reason": "RSI_EXIT",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "is_successful": true,
+      "details": "Закрыта позиция SHORT для PAXG: цена выхода 4126.6300, PnL: 0.20 USDT (0.00%) [SCRIPT, ✅]"
+    },
+    {
+      "id": "close_PAXG_1763128330_1763128333.41979",
+      "timestamp": "2025-11-14T16:52:13.419798",
+      "action_type": "POSITION_CLOSED",
+      "action_name": "Закрытие позиции",
+      "bot_id": "PAXG_1763128330",
+      "symbol": "PAXG",
+      "direction": "SHORT",
+      "exit_price": 4028.09,
+      "pnl": 0.19707999999999992,
+      "roi": 23.8790490060897,
+      "reason": "MANUAL_CLOSE",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "is_successful": true,
+      "details": "Закрыта позиция SHORT для PAXG: цена выхода 4028.0900, PnL: 0.20 USDT (23.88%) [SCRIPT, ✅]",
+      "entry_data": {
+        "entry_price": 4126.63,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 0.0,
+        "max_profit_achieved": 0.0
+      },
+      "entry_price": 4126.63,
+      "entry_rsi": null,
+      "entry_volatility": null,
+      "entry_trend": null,
+      "market_data": {
+        "exit_price": 4028.09,
+        "price_movement": -2.3879049006089703
+      },
+      "exit_volatility": null,
+      "exit_trend": null,
+      "price_movement": -2.3879049006089703
+    },
+    {
+      "id": "close_OG_1763132340.49213",
+      "timestamp": "2025-11-14T17:59:00.492136",
+      "action_type": "POSITION_CLOSED",
+      "action_name": "Закрытие позиции",
+      "bot_id": "OG",
+      "symbol": "OG",
+      "direction": "SHORT",
+      "exit_price": 15.1288,
+      "pnl": 0.1975200000000001,
+      "roi": 39.51006874655949,
+      "reason": "MANUAL_CLOSE",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "is_successful": true,
+      "details": "Закрыта позиция SHORT для OG: цена выхода 15.1288, PnL: 0.20 USDT (39.51%) [SCRIPT, ✅]",
+      "entry_data": {
+        "entry_price": 15.6226,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 0.0,
+        "max_profit_achieved": 0.0
+      },
+      "entry_price": 15.6226,
+      "entry_rsi": null,
+      "entry_volatility": null,
+      "entry_trend": null,
+      "market_data": {
+        "exit_price": 15.1288,
+        "price_movement": -3.160805499724759
+      },
+      "exit_volatility": null,
+      "exit_trend": null,
+      "price_movement": -3.160805499724759
     }
   ],
   "trades": [
@@ -268,14 +448,29 @@
       "direction": "SHORT",
       "size": 5.06727,
       "entry_price": 0.12993,
-      "exit_price": null,
-      "pnl": null,
-      "status": "OPEN",
+      "exit_price": 0.12956,
+      "pnl": 0.014429999999999277,
+      "status": "CLOSED",
       "decision_source": "SCRIPT",
       "ai_decision_id": null,
       "ai_confidence": null,
       "rsi": null,
-      "trend": "UP"
+      "trend": "UP",
+      "roi": 2.8476872161931928,
+      "close_timestamp": "2025-11-14T15:47:06.797064",
+      "close_reason": "MANUAL_CLOSE",
+      "is_successful": true,
+      "entry_data": {
+        "entry_price": 0.12993,
+        "trend": null,
+        "volatility": null,
+        "duration_hours": 47.514322712777776,
+        "max_profit_achieved": 0.0
+      },
+      "exit_market_data": {
+        "exit_price": 0.12956,
+        "price_movement": -0.28476872161931926
+      }
     },
     {
       "id": "trade_VELODROME_1762942577.639622",
@@ -406,5 +601,5 @@
       }
     }
   ],
-  "last_update": "2025-11-13T22:00:26.757238"
+  "last_update": "2025-11-14T17:59:00.495545"
 }

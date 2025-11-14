@@ -1,0 +1,46 @@
+{
+  "symbol": "GOAT",
+  "trained_at": "2025-11-14T20:53:29.615929",
+  "training_seed": 789914,
+  "coin_model_seed": 790546,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 70,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 65,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 16.4548134898644,
+    "take_profit": 18.101173091953548,
+    "trailing_stop_activation": 46.829798012074335,
+    "trailing_stop_distance": 10.356581269299198,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 59.0,
+      "lower": 27.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 22.37294364716471,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 47.52216122814808
+    }
+  },
+  "candles_count": 1506,
+  "trades_count": 5,
+  "win_rate": 40.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 2.292707390418846e-06,
+  "total_pnl": 0.027366693129920027,
+  "previous_candles_count": 1528,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "ONG",
+  "trained_at": "2025-11-14T21:03:11.701116",
+  "training_seed": 362360,
+  "coin_model_seed": 362799,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 65,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 31,
+    "exit_short_against_trend": 35
+  },
+  "risk_params": {
+    "stop_loss": 11.294082349527688,
+    "take_profit": 15.618604666322181,
+    "trailing_stop_activation": 40.80193278169696,
+    "trailing_stop_distance": 7.819264659514685,
+    "break_even_protection": true,
+    "break_even_trigger": 70.99737795682309,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 11,
+      "upper": 73.0,
+      "lower": 39.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 9.750299630272865,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 55.64004980084538
+    }
+  },
+  "candles_count": 2796,
+  "trades_count": 6,
+  "win_rate": 83.33333333333334,
+  "signal_accuracy": 1.0,
+  "profit_mse": 7.411291771887988e-08,
+  "total_pnl": 0.2700209525279361,
+  "previous_candles_count": 2829,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "MET",
+  "trained_at": "2025-11-14T21:00:58.485067",
+  "training_seed": 232680,
+  "coin_model_seed": 233170,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 73,
+    "exit_long_with_trend": 62,
+    "exit_long_against_trend": 62,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 45
+  },
+  "risk_params": {
+    "stop_loss": 15.844567600154232,
+    "take_profit": 34.696367599104164,
+    "trailing_stop_activation": 19.77694420675739,
+    "trailing_stop_distance": 5.83172661602152,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 5,
+      "upper": 59.0,
+      "lower": 40.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 7,
+      "single_candle_percent": 15.401959865512937,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 54.813773448771045
+    }
+  },
+  "candles_count": 142,
+  "trades_count": 10,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.9763305647688623e-06,
+  "total_pnl": -1.237860240654757,
+  "previous_candles_count": 142,
+  "candles_increased": false
+}

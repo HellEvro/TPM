@@ -1,0 +1,46 @@
+{
+  "symbol": "IMX",
+  "trained_at": "2025-11-14T21:03:03.884547",
+  "training_seed": 362360,
+  "coin_model_seed": 363318,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 67,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 34,
+    "exit_short_against_trend": 42
+  },
+  "risk_params": {
+    "stop_loss": 14.19669695794312,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 19.902514070299816,
+    "trailing_stop_distance": 33.30935089437065,
+    "break_even_protection": false,
+    "break_even_trigger": 54.57074310954232,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 70.0,
+      "lower": 39.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 12,
+      "single_candle_percent": 5.666614750845693,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 56.28204296947137
+    }
+  },
+  "candles_count": 4858,
+  "trades_count": 7,
+  "win_rate": 28.57142857142857,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.2919553203268303e-06,
+  "total_pnl": -0.16714548161678983,
+  "previous_candles_count": 4824,
+  "candles_increased": true
+}

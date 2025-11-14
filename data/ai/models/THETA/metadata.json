@@ -1,0 +1,46 @@
+{
+  "symbol": "THETA",
+  "trained_at": "2025-11-14T21:02:15.914481",
+  "training_seed": 294287,
+  "coin_model_seed": 294351,
+  "rsi_params": {
+    "oversold": 32,
+    "overbought": 68,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 38
+  },
+  "risk_params": {
+    "stop_loss": 20.144952605480846,
+    "take_profit": 15.478904236722126,
+    "trailing_stop_activation": 67.87861347865788,
+    "trailing_stop_distance": 34.63864826741573,
+    "break_even_protection": true,
+    "break_even_trigger": 58.57229728184893,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 19,
+      "upper": 67.0,
+      "lower": 36.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 23,
+      "single_candle_percent": 28.448591399458614,
+      "multi_candle_count": 9,
+      "multi_candle_percent": 30.306910751488
+    }
+  },
+  "candles_count": 4882,
+  "trades_count": 6,
+  "win_rate": 100.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 5.057681508595935e-07,
+  "total_pnl": 1.1233676240540866,
+  "previous_candles_count": 4813,
+  "candles_increased": true
+}

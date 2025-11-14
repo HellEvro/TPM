@@ -1,0 +1,46 @@
+{
+  "symbol": "DUSK",
+  "trained_at": "2025-11-14T21:01:49.518687",
+  "training_seed": 294287,
+  "coin_model_seed": 294790,
+  "rsi_params": {
+    "oversold": 30,
+    "overbought": 65,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 56,
+    "exit_short_with_trend": 36,
+    "exit_short_against_trend": 37
+  },
+  "risk_params": {
+    "stop_loss": 17.597148659099098,
+    "take_profit": 54.722979022811856,
+    "trailing_stop_activation": 45.39275759862021,
+    "trailing_stop_distance": 9.195244040020814,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 67.0,
+      "lower": 42.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 22.179417375752365,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 40.29396157046524
+    }
+  },
+  "candles_count": 4820,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 9.193813716260307e-07,
+  "total_pnl": -0.8000628968371464,
+  "previous_candles_count": 4979,
+  "candles_increased": false
+}

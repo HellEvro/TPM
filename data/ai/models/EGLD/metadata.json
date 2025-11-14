@@ -1,0 +1,46 @@
+{
+  "symbol": "EGLD",
+  "trained_at": "2025-11-14T21:02:57.857817",
+  "training_seed": 362360,
+  "coin_model_seed": 363064,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 71,
+    "exit_long_with_trend": 67,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 40,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 15.10616137794207,
+    "take_profit": 37.110689100241636,
+    "trailing_stop_activation": 45.264033924651486,
+    "trailing_stop_distance": 20.561353914577044,
+    "break_even_protection": false,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 11,
+      "upper": 55.0,
+      "lower": 36.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 11,
+      "single_candle_percent": 16.472830450544972,
+      "multi_candle_count": 4,
+      "multi_candle_percent": 43.24600645654099
+    }
+  },
+  "candles_count": 4982,
+  "trades_count": 5,
+  "win_rate": 80.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.060008669072016e-07,
+  "total_pnl": 0.3209827654209309,
+  "previous_candles_count": 4924,
+  "candles_increased": true
+}

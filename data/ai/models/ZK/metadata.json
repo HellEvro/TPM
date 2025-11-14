@@ -1,0 +1,46 @@
+{
+  "symbol": "ZK",
+  "trained_at": "2025-11-14T21:03:30.477846",
+  "training_seed": 362360,
+  "coin_model_seed": 363324,
+  "rsi_params": {
+    "oversold": 28,
+    "overbought": 65,
+    "exit_long_with_trend": 70,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 38,
+    "exit_short_against_trend": 43
+  },
+  "risk_params": {
+    "stop_loss": 13.290141681089654,
+    "take_profit": 33.283873424131734,
+    "trailing_stop_activation": 42.75191034898882,
+    "trailing_stop_distance": 15.181069939857068,
+    "break_even_protection": false,
+    "break_even_trigger": 36.16115924841456,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 66.0,
+      "lower": 27.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 9,
+      "single_candle_percent": 19.201689002058053,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 61.68560005035407
+    }
+  },
+  "candles_count": 1899,
+  "trades_count": 6,
+  "win_rate": 100.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.8718462648908929e-06,
+  "total_pnl": 2.292985365775391,
+  "previous_candles_count": 1944,
+  "candles_increased": false
+}

@@ -1,0 +1,46 @@
+{
+  "symbol": "SUI",
+  "trained_at": "2025-11-14T21:03:21.601820",
+  "training_seed": 362360,
+  "coin_model_seed": 363130,
+  "rsi_params": {
+    "oversold": 34,
+    "overbought": 65,
+    "exit_long_with_trend": 61,
+    "exit_long_against_trend": 61,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 39
+  },
+  "risk_params": {
+    "stop_loss": 22.81809274366247,
+    "take_profit": 41.79171263347385,
+    "trailing_stop_activation": 60.44901458653703,
+    "trailing_stop_distance": 10.19532947660215,
+    "break_even_protection": true,
+    "break_even_trigger": 80.4357278029598,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 9,
+      "upper": 70.0,
+      "lower": 38.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 8,
+      "single_candle_percent": 5.0,
+      "multi_candle_count": 5,
+      "multi_candle_percent": 54.37924699982776
+    }
+  },
+  "candles_count": 3690,
+  "trades_count": 9,
+  "win_rate": 66.66666666666666,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.8606004035725376e-07,
+  "total_pnl": 0.4754295895959895,
+  "previous_candles_count": 3692,
+  "candles_increased": false
+}

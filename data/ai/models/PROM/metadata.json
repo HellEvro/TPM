@@ -1,0 +1,46 @@
+{
+  "symbol": "PROM",
+  "trained_at": "2025-11-13T17:01:53.854450",
+  "training_seed": 497197,
+  "coin_model_seed": 497562,
+  "rsi_params": {
+    "oversold": 28,
+    "overbought": 69,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 30,
+    "exit_short_against_trend": 44
+  },
+  "risk_params": {
+    "stop_loss": 18.8148938258162,
+    "take_profit": 26.06584450835624,
+    "trailing_stop_activation": 27.295535933383004,
+    "trailing_stop_distance": 18.735778473057366,
+    "break_even_protection": true,
+    "break_even_trigger": 110.94274808036825,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 4,
+      "upper": 71,
+      "lower": 30
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 12.175795867569212,
+      "multi_candle_count": 3,
+      "multi_candle_percent": 53.938287635415655
+    }
+  },
+  "candles_count": 3045,
+  "trades_count": 5,
+  "win_rate": 60.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 3.786119421445201e-08,
+  "total_pnl": 0.051040403970188455,
+  "previous_candles_count": 3103,
+  "candles_increased": false
+}
