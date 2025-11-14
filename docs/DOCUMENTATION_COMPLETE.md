@@ -8,8 +8,9 @@
 
 - Обновлён `docs/AI_README.md` — теперь это единый источник про активные AI модули, лаунчер, данные и лицензии.
 - Обновлены `docs/QUICKSTART.md` и `docs/START_HERE.md`, чтобы описывать актуальный лаунчер, ручной сценарий и карту документации.
+- Добавлен `docs/SYSTEM_OVERVIEW.md`, который объединяет информацию из старых `CONFIG_DATA_FLOW.md`, `HOW_IT_WORKS.md` и схожих описаний потоков данных.
 - Удалены папки `docs/ai_guides`, `docs/ai_technical`, `docs/ai_development`, а также `docs/examples` и `docs/tests` — информация из них перенесена в основные файлы или более не нужна.
-- Удалены отчёты `docs/FINAL_TEST_REPORT.md`, `docs/TEST_REPORT.md` и прочие устаревшие summary.
+- Удалены отчёты `docs/FINAL_TEST_REPORT.md`, `docs/TEST_REPORT.md`, `docs/CONFIG_DATA_FLOW.md`, `docs/HOW_IT_WORKS.md`, `docs/HOW_AI_LEARNING_WORKS.md`, `docs/HOW_AI_WORKS_IN_SMART_RISK_MANAGER.md`, `docs/SYNC_REPORT_AI.md` и прочие устаревшие summary.
 - README в корне ссылается только на существующие документы.
 
 ---

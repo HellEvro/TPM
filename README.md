@@ -126,10 +126,10 @@ python scripts/verify_ai_ready.py          # Финальная проверка
 
 ## 📚 Документация
 - 🚀 Быстрый старт: `docs/START_HERE.md`, `docs/QUICKSTART.md`, `docs/INSTALL.md`.
-- 📖 Архитектура и процессы: `docs/ARCHITECTURE.md`, `docs/MODULES.md`, `docs/BOT_SIGNAL_PROCESSING_FLOW.md`, `docs/BOT_HISTORY.md`.
+- 📖 Архитектура и процессы: `docs/SYSTEM_OVERVIEW.md`, `docs/ARCHITECTURE.md`, `docs/MODULES.md`, `docs/BOT_SIGNAL_PROCESSING_FLOW.md`, `docs/BOT_HISTORY.md`.
 - 🤖 AI и премиум: `docs/AI_README.md`, `docs/AI_UI_CONFIGURATION.md`.
 - 🔐 Лицензии/риск: `docs/PREMIUM_STOP_ANALYSIS_ARCHITECTURE.md`, `docs/ML_MODELS_DISTRIBUTION.md`, `docs/READY_FOR_YOU.md`.
-- 🛠️ Поддержка и история: `docs/CHANGELOG.md`, `docs/DOCUMENTATION_COMPLETE.md`, `docs/CONFIG_DATA_FLOW.md`.
+- 🛠️ Поддержка и история: `docs/CHANGELOG.md`, `docs/DOCUMENTATION_COMPLETE.md`.
 
 Полный список — каталог `docs/` (4000+ строк, 12+ актуальных AI-гидов и отчётов).
 
