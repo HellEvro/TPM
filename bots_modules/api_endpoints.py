@@ -143,7 +143,7 @@ except:
 def health_check():
     """Проверка состояния сервиса"""
     try:
-        logger.info(f"[HEALTH_CHECK] ✅ Flask работает, запрос обработан")
+        logger.info(f"✅ Flask работает, запрос обработан")
         return jsonify({
             'status': 'ok',
             'service': 'bots',
@@ -388,12 +388,12 @@ def refresh_manual_positions():
                             if 'bots' in saved_data:
                                 saved_bot_symbols = set(saved_data['bots'].keys())
                         else:
-                            logger.debug("[MANUAL_POSITIONS] Файл состояния пустой, пропускаем")
+                            logger.debug(" Файл состояния пустой, пропускаем")
             except json.JSONDecodeError as e:
-                logger.warning(f"[MANUAL_POSITIONS] ⚠️ Ошибка парсинга JSON (строка {e.lineno}, колонка {e.colno}): {e.msg}")
-                logger.debug(f"[MANUAL_POSITIONS] Проблемный участок около символа {e.pos}")
+                logger.warning(f"⚠️ Ошибка парсинга JSON (строка {e.lineno}, колонка {e.colno}): {e.msg}")
+                logger.debug(f"Проблемный участок около символа {e.pos}")
             except Exception as e:
-                logger.warning(f"[MANUAL_POSITIONS] ⚠️ Не удалось загрузить сохраненных ботов: {e}")
+                logger.warning(f" ⚠️ Не удалось загрузить сохраненных ботов: {e}")
             
             # Объединяем активных и сохраненных ботов
             system_bot_symbols = active_bot_symbols.union(saved_bot_symbols)
@@ -418,9 +418,9 @@ def refresh_manual_positions():
         })
         
     except Exception as e:
-        logger.error(f"[MANUAL_POSITIONS] ❌ Ошибка обновления ручных позиций: {str(e)}")
+        logger.error(f" ❌ Ошибка обновления ручных позиций: {str(e)}")
         import traceback
-        logger.error(f"[MANUAL_POSITIONS] ❌ Traceback: {traceback.format_exc()}")
+        logger.error(f" ❌ Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/coins-with-rsi', methods=['GET'])
@@ -552,12 +552,12 @@ def get_coins_with_rsi():
                                 if 'bots' in saved_data:
                                     saved_bot_symbols = set(saved_data['bots'].keys())
                             else:
-                                logger.debug("[MANUAL_POSITIONS] Файл состояния пустой, пропускаем")
+                                logger.debug(" Файл состояния пустой, пропускаем")
                 except json.JSONDecodeError as e:
-                    logger.warning(f"[MANUAL_POSITIONS] ⚠️ Ошибка парсинга JSON (строка {e.lineno}, колонка {e.colno}): {e.msg}")
-                    logger.debug(f"[MANUAL_POSITIONS] Проблемный участок около символа {e.pos}")
+                    logger.warning(f" ⚠️ Ошибка парсинга JSON (строка {e.lineno}, колонка {e.colno}): {e.msg}")
+                    logger.debug(f" Проблемный участок около символа {e.pos}")
                 except Exception as e:
-                    logger.warning(f"[MANUAL_POSITIONS] ⚠️ Не удалось загрузить сохраненных ботов: {e}")
+                    logger.warning(f" ⚠️ Не удалось загрузить сохраненных ботов: {e}")
                 
                 # Объединяем активных и сохраненных ботов
                 system_bot_symbols = active_bot_symbols.union(saved_bot_symbols)
@@ -575,7 +575,7 @@ def get_coins_with_rsi():
                                 manual_positions.append(clean_symbol)
                 
                 # ✅ Детальное логирование для отладки
-                logger.debug(f"[MANUAL_POSITIONS] Найдено {len(manual_positions)} ручных позиций: {manual_positions}")
+                logger.debug(f" Найдено {len(manual_positions)} ручных позиций: {manual_positions}")
         except Exception as e:
             logger.error(f" Ошибка получения ручных позиций: {str(e)}")
         
@@ -747,8 +747,8 @@ def create_bot_endpoint():
         symbol = data['symbol']
         config = data.get('config', {})
         
-        logger.info(f"[BOT_CREATE] Запрос на создание бота для {symbol}")
-        logger.info(f"[BOT_CREATE] Конфигурация: {config}")
+        logger.info(f" Запрос на создание бота для {symbol}")
+        logger.info(f" Конфигурация: {config}")
         
         # ✅ Проверяем, есть ли ручная позиция для этой монеты
         has_manual_position = False
@@ -768,10 +768,10 @@ def create_bot_endpoint():
                         # Проверяем, нет ли уже бота для этой монеты
                         if symbol not in bots_data.get('bots', {}):
                             has_manual_position = True
-                            logger.info(f"[BOT_CREATE] ✋ {symbol}: Обнаружена ручная позиция - пропускаем проверку зрелости")
+                            logger.info(f" ✋ {symbol}: Обнаружена ручная позиция - пропускаем проверку зрелости")
                             break
         except Exception as e:
-            logger.debug(f"[BOT_CREATE] Не удалось проверить ручную позицию: {e}")
+            logger.debug(f" Не удалось проверить ручную позицию: {e}")
         
         # Проверяем зрелость монеты (если включена проверка для этой монеты И нет ручной позиции)
         enable_maturity_check_coin = config.get('enable_maturity_check', True)
@@ -789,26 +789,26 @@ def create_bot_endpoint():
                 if candles and len(candles) >= 15:
                     maturity_check = check_coin_maturity_with_storage(symbol, candles)
                     if not maturity_check['is_mature']:
-                        logger.warning(f"[BOT_CREATE] {symbol}: Монета не прошла проверку зрелости - {maturity_check['reason']}")
+                        logger.warning(f" {symbol}: Монета не прошла проверку зрелости - {maturity_check['reason']}")
                         return jsonify({
                             'success': False, 
                             'error': f'Монета {symbol} не прошла проверку зрелости: {maturity_check["reason"]}',
                             'maturity_details': maturity_check['details']
                         }), 400
                 else:
-                    logger.warning(f"[BOT_CREATE] {symbol}: Недостаточно данных для проверки зрелости")
+                    logger.warning(f" {symbol}: Недостаточно данных для проверки зрелости")
                     return jsonify({
                         'success': False, 
                         'error': f'Недостаточно данных для проверки зрелости монеты {symbol}'
                     }), 400
             else:
-                logger.warning(f"[BOT_CREATE] {symbol}: Не удалось получить данные для проверки зрелости")
+                logger.warning(f" {symbol}: Не удалось получить данные для проверки зрелости")
                 return jsonify({
                     'success': False, 
                     'error': f'Не удалось получить данные для проверки зрелости монеты {symbol}'
                 }), 400
         elif has_manual_position:
-            logger.info(f"[BOT_CREATE] ✋ {symbol}: Ручная позиция обнаружена - проверка зрелости пропущена")
+            logger.info(f" ✋ {symbol}: Ручная позиция обнаружена - проверка зрелости пропущена")
         
         # Создаем бота
         bot_config = create_bot(symbol, config, exchange_obj=get_exchange())
@@ -830,13 +830,13 @@ def create_bot_endpoint():
                     pos_symbol = pos.get('symbol', '').replace('USDT', '')
                     if pos_symbol == symbol and abs(float(pos.get('size', 0))) > 0:
                         has_existing_position = True
-                        logger.info(f"[BOT_CREATE] 🔍 {symbol}: Обнаружена существующая позиция на бирже (размер: {pos.get('size')})")
+                        logger.info(f" 🔍 {symbol}: Обнаружена существующая позиция на бирже (размер: {pos.get('size')})")
                         break
         except Exception as e:
-            logger.debug(f"[BOT_CREATE] Не удалось проверить существующую позицию: {e}")
+            logger.debug(f" Не удалось проверить существующую позицию: {e}")
         
         # ✅ Возвращаем ответ БЫСТРО
-        logger.info(f"[BOT_CREATE] ✅ Бот для {symbol} создан")
+        logger.info(f" ✅ Бот для {symbol} создан")
         
         # ✅ Запускаем вход в позицию АСИНХРОННО (только если НЕТ существующей позиции!)
         if not has_existing_position:
@@ -848,22 +848,22 @@ def create_bot_endpoint():
                             signal = coin_data.get('signal')
                             direction = 'LONG' if signal == 'ENTER_LONG' else 'SHORT'
                             
-                            logger.info(f"[BOT_CREATE_ASYNC] 🚀 Входим в {direction} позицию для {symbol}")
+                            logger.info(f" 🚀 Входим в {direction} позицию для {symbol}")
                             
                             from bots_modules.bot_class import NewTradingBot
                             bot_instance = NewTradingBot(symbol, bot_config, get_exchange())
                             
                             result = bot_instance.enter_position(direction)
                             if result:
-                                logger.info(f"[BOT_CREATE_ASYNC] ✅ Успешно вошли в {direction} позицию для {symbol}")
+                                logger.info(f" ✅ Успешно вошли в {direction} позицию для {symbol}")
                                 with bots_data_lock:
                                     bots_data['bots'][symbol] = bot_instance.to_dict()
                             else:
-                                logger.error(f"[BOT_CREATE_ASYNC] ❌ НЕ УДАЛОСЬ войти в {direction} позицию для {symbol}")
+                                logger.error(f" ❌ НЕ УДАЛОСЬ войти в {direction} позицию для {symbol}")
                         else:
-                            logger.info(f"[BOT_CREATE_ASYNC] ℹ️ Нет активного сигнала для {symbol}, бот будет ждать")
+                            logger.info(f" ℹ️ Нет активного сигнала для {symbol}, бот будет ждать")
                 except Exception as e:
-                    logger.error(f"[BOT_CREATE_ASYNC] ❌ Ошибка входа в позицию: {e}")
+                    logger.error(f" ❌ Ошибка входа в позицию: {e}")
             
             # Запускаем асинхронно
             thread = threading.Thread(target=enter_position_async)
@@ -871,15 +871,15 @@ def create_bot_endpoint():
             thread.start()
         else:
             # ✅ Для существующей позиции - просто запускаем синхронизацию
-            logger.info(f"[BOT_CREATE] 🔄 {symbol}: Запускаем синхронизацию существующей позиции...")
+            logger.info(f" 🔄 {symbol}: Запускаем синхронизацию существующей позиции...")
             
             def sync_existing_position():
                 try:
                     from bots_modules.sync_and_cache import sync_bots_with_exchange
                     sync_bots_with_exchange()
-                    logger.info(f"[BOT_CREATE_ASYNC] ✅ Синхронизация позиции {symbol} завершена")
+                    logger.info(f" ✅ Синхронизация позиции {symbol} завершена")
                 except Exception as e:
-                    logger.error(f"[BOT_CREATE_ASYNC] ❌ Ошибка синхронизации: {e}")
+                    logger.error(f" ❌ Ошибка синхронизации: {e}")
             
             thread = threading.Thread(target=sync_existing_position)
             thread.daemon = True
@@ -913,9 +913,9 @@ def start_bot_endpoint():
             bot_data = bots_data['bots'][symbol]
             if bot_data['status'] in [BOT_STATUS['PAUSED'], BOT_STATUS['IDLE']]:
                 bot_data['status'] = BOT_STATUS['RUNNING']
-                logger.info(f"[BOT] {symbol}: Бот запущен (снята пауза)")
+                logger.info(f" {symbol}: Бот запущен (снята пауза)")
             else:
-                logger.info(f"[BOT] {symbol}: Бот уже активен")
+                logger.info(f" {symbol}: Бот уже активен")
         
         return jsonify({
             'success': True,
@@ -972,14 +972,14 @@ def stop_bot_endpoint():
             # Проверяем, есть ли открытая позиция
             if bot_data.get('position_side') in ['LONG', 'SHORT']:
                 position_to_close = bot_data['position_side']
-                logger.info(f"[BOT] {symbol}: Найдена открытая позиция {position_to_close}, будет закрыта при остановке")
+                logger.info(f" {symbol}: Найдена открытая позиция {position_to_close}, будет закрыта при остановке")
             
             bot_data['status'] = BOT_STATUS['PAUSED']
             # НЕ сбрасываем entry_price для возможности возобновления
             # НЕ сбрасываем position_side - оставляем для отображения в UI
             # bot_data['position_side'] = None
             # bot_data['unrealized_pnl'] = 0.0
-            logger.info(f"[BOT] {symbol}: Бот остановлен, новый статус: {bot_data['status']}")
+            logger.info(f" {symbol}: Бот остановлен, новый статус: {bot_data['status']}")
             
             # Обновляем глобальную статистику
             bots_data['global_stats']['active_bots'] = len([bot for bot in bots_data['bots'].values() if bot.get('status') in ['running', 'idle']])
@@ -988,7 +988,7 @@ def stop_bot_endpoint():
         # ⚠️ НЕ ЗАКРЫВАЕМ ПОЗИЦИЮ АВТОМАТИЧЕСКИ - это вызывает зависание!
         # Позиция останется на бирже и закроется при следующей проверке
         if position_to_close:
-            logger.info(f"[BOT] {symbol}: ⚠️ Позиция {position_to_close} осталась открытой на бирже (закроется автоматически)")
+            logger.info(f" {symbol}: ⚠️ Позиция {position_to_close} осталась открытой на бирже (закроется автоматически)")
         
         # Логируем остановку бота в историю
         # log_bot_stop(symbol, reason)  # TODO: Функция не определена
@@ -1003,14 +1003,14 @@ def stop_bot_endpoint():
         with bots_data_lock:
             final_status = bots_data['bots'][symbol]['status']
             if final_status != BOT_STATUS['PAUSED']:
-                logger.error(f"[BOT] {symbol}: ❌ КРИТИЧНАЯ ОШИБКА! Статус НЕ изменен: {final_status}")
+                logger.error(f" {symbol}: ❌ КРИТИЧНАЯ ОШИБКА! Статус НЕ изменен: {final_status}")
                 bots_data['bots'][symbol]['status'] = BOT_STATUS['PAUSED']
                 save_bots_state()
-                logger.error(f"[BOT] {symbol}: ✅ Статус принудительно исправлен на PAUSED")
+                logger.error(f" {symbol}: ✅ Статус принудительно исправлен на PAUSED")
             else:
-                logger.info(f"[BOT] {symbol}: ✅ Статус корректно установлен: {final_status}")
+                logger.info(f" {symbol}: ✅ Статус корректно установлен: {final_status}")
         
-        logger.info(f"[BOT] {symbol}: ✅ Кэш НЕ обновлен (статус PAUSED сохранен)")
+        logger.info(f" {symbol}: ✅ Кэш НЕ обновлен (статус PAUSED сохранен)")
         
         return jsonify({
             'success': True, 
@@ -1043,14 +1043,14 @@ def pause_bot_endpoint():
             # Проверяем, есть ли открытая позиция
             if bot_data.get('position_side') in ['LONG', 'SHORT']:
                 position_to_close = bot_data['position_side']
-                logger.info(f"[BOT] {symbol}: Найдена открытая позиция {position_to_close}, будет закрыта при приостановке")
+                logger.info(f" {symbol}: Найдена открытая позиция {position_to_close}, будет закрыта при приостановке")
             
             bot_data['status'] = BOT_STATUS['PAUSED']
-            logger.info(f"[BOT] {symbol}: Бот приостановлен (был: {old_status})")
+            logger.info(f" {symbol}: Бот приостановлен (был: {old_status})")
         
         # ⚠️ НЕ ЗАКРЫВАЕМ ПОЗИЦИЮ АВТОМАТИЧЕСКИ - это вызывает зависание!
         if position_to_close:
-            logger.info(f"[BOT] {symbol}: ⚠️ Позиция {position_to_close} осталась открытой на бирже (закроется автоматически)")
+            logger.info(f" {symbol}: ⚠️ Позиция {position_to_close} осталась открытой на бирже (закроется автоматически)")
         
         return jsonify({
             'success': True,
@@ -1095,7 +1095,7 @@ def delete_bot_endpoint():
         
         # ✅ ТУПО УДАЛЯЕМ БОТА ИЗ ФАЙЛА!
         del bots_data['bots'][symbol]
-        logger.info(f"[BOT] {symbol}: Бот удален из файла")
+        logger.info(f" {symbol}: Бот удален из файла")
         
         # Обновляем глобальную статистику
         bots_data['global_stats']['active_bots'] = len([bot for bot in bots_data['bots'].values() if bot.get('status') in ['running', 'idle']])
@@ -1510,7 +1510,7 @@ def system_config():
                     with open(SYSTEM_CONFIG_FILE, 'r', encoding='utf-8') as f:
                         existing_config = json.load(f)
                 except Exception as e:
-                    logger.warning(f"[CONFIG] ⚠️ Не удалось загрузить существующую конфигурацию: {e}")
+                    logger.warning(f" ⚠️ Не удалось загрузить существующую конфигурацию: {e}")
             
             # Обновляем только измененные поля
             system_config_data = existing_config.copy()
@@ -1593,7 +1593,7 @@ def sync_positions_manual():
             })
             
     except Exception as e:
-        logger.error(f"[MANUAL_SYNC] ❌ Ошибка принудительной синхронизации: {e}")
+        logger.error(f" ❌ Ошибка принудительной синхронизации: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -1603,7 +1603,7 @@ def sync_positions_manual():
 def cleanup_inactive_manual():
     """Принудительная очистка неактивных ботов"""
     try:
-        logger.info("[MANUAL_CLEANUP] 🧹 Запуск принудительной очистки неактивных ботов")
+        logger.info(" 🧹 Запуск принудительной очистки неактивных ботов")
         result = cleanup_inactive_bots()
         
         if result:
@@ -1620,7 +1620,7 @@ def cleanup_inactive_manual():
             })
             
     except Exception as e:
-        logger.error(f"[MANUAL_CLEANUP] ❌ Ошибка принудительной очистки: {e}")
+        logger.error(f" ❌ Ошибка принудительной очистки: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -1652,7 +1652,7 @@ def get_mature_coins_list():
         })
         
     except Exception as e:
-        logger.error(f"[API_MATURE_LIST] ❌ Ошибка получения списка зрелых монет: {e}")
+        logger.error(f" ❌ Ошибка получения списка зрелых монет: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -1693,7 +1693,7 @@ def remove_mature_coins_api():
             }), 500
             
     except Exception as e:
-        logger.error(f"[API_REMOVE_MATURE] ❌ Ошибка API удаления монет: {e}")
+        logger.error(f" ❌ Ошибка API удаления монет: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -1797,7 +1797,7 @@ def reload_modules_endpoint():
         # Объявляем глобальные переменные в начале функции
         global exchange, system_initialized
         
-        logger.info("[HOT_RELOAD] 🔄 Начинаем перезагрузку модулей...")
+        logger.info(" 🔄 Начинаем перезагрузку модулей...")
         
         # Сохраняем важные глобальные переменные
         saved_exchange = exchange
@@ -1817,20 +1817,20 @@ def reload_modules_endpoint():
                 if module_name in sys.modules:
                     importlib.reload(sys.modules[module_name])
                     reloaded_count += 1
-                    logger.info(f"[HOT_RELOAD] Перезагружен модуль: {module_name}")
+                    logger.info(f" Перезагружен модуль: {module_name}")
             except Exception as e:
-                logger.warning(f"[HOT_RELOAD] Не удалось перезагрузить {module_name}: {e}")
+                logger.warning(f" Не удалось перезагрузить {module_name}: {e}")
         
         # Восстанавливаем важные переменные
         if saved_exchange:
             exchange = saved_exchange
-            logger.info("[HOT_RELOAD] ✅ Восстановлена переменная exchange")
+            logger.info(" ✅ Восстановлена переменная exchange")
         
         if saved_system_initialized:
             system_initialized = saved_system_initialized
-            logger.info("[HOT_RELOAD] ✅ Восстановлен флаг system_initialized")
+            logger.info(" ✅ Восстановлен флаг system_initialized")
         
-        logger.info(f"[HOT_RELOAD] ✅ Перезагружено {reloaded_count} модулей")
+        logger.info(f" ✅ Перезагружено {reloaded_count} модулей")
         
         return jsonify({
             'success': True, 
@@ -1848,7 +1848,7 @@ def refresh_rsi_for_coin(symbol):
     try:
         global coins_rsi_data
         
-        logger.info(f"[HOT_RELOAD] 🔄 Обновление RSI данных для {symbol}...")
+        logger.info(f" 🔄 Обновление RSI данных для {symbol}...")
         
         # Проверяем биржу
         if not ensure_exchange_initialized():
@@ -1862,7 +1862,7 @@ def refresh_rsi_for_coin(symbol):
             with rsi_data_lock:
                 coins_rsi_data['coins'][symbol] = coin_data
             
-            logger.info(f"[HOT_RELOAD] ✅ RSI данные для {symbol} обновлены")
+            logger.info(f" ✅ RSI данные для {symbol} обновлены")
             
             return jsonify({
                 'success': True,
@@ -1885,7 +1885,7 @@ def refresh_rsi_for_all_coins():
     try:
         global coins_rsi_data
         
-        logger.info("[HOT_RELOAD] 🔄 Обновление RSI данных для всех монет...")
+        logger.info(" 🔄 Обновление RSI данных для всех монет...")
         
         # Проверяем биржу
         if not ensure_exchange_initialized():
@@ -1909,10 +1909,10 @@ def refresh_rsi_for_all_coins():
                 else:
                     failed_count += 1
             except Exception as e:
-                logger.warning(f"[HOT_RELOAD] Ошибка обновления {symbol}: {e}")
+                logger.warning(f" Ошибка обновления {symbol}: {e}")
                 failed_count += 1
         
-        logger.info(f"[HOT_RELOAD] ✅ Обновлено {updated_count} монет, ошибок: {failed_count}")
+        logger.info(f" ✅ Обновлено {updated_count} монет, ошибок: {failed_count}")
         
         return jsonify({
             'success': True,
@@ -1929,7 +1929,7 @@ def refresh_rsi_for_all_coins():
 def restart_service_endpoint():
     """Перезапускает сервис ботов (только основные компоненты)"""
     try:
-        logger.info("[HOT_RELOAD] 🔄 Перезапуск сервиса ботов...")
+        logger.info(" 🔄 Перезапуск сервиса ботов...")
         
         # Перезагружаем глобальные переменные
         global exchange, coins_rsi_data, bots_data
@@ -1937,26 +1937,26 @@ def restart_service_endpoint():
         
         # Сбрасываем флаг инициализации
         system_initialized = False
-        logger.info("[HOT_RELOAD] 🔄 Сброшен флаг инициализации")
+        logger.info(" 🔄 Сброшен флаг инициализации")
         
         # Перезагружаем конфигурацию (БЕЗ принудительного выключения автобота)
         load_auto_bot_config(force_disable=False)
         load_system_config()
-        logger.info("[HOT_RELOAD] 🔄 Перезагружена конфигурация")
+        logger.info(" 🔄 Перезагружена конфигурация")
         
         # Перезагружаем состояние ботов
         load_bots_state()
-        logger.info("[HOT_RELOAD] 🔄 Перезагружено состояние ботов")
+        logger.info(" 🔄 Перезагружено состояние ботов")
         
         # НЕ сбрасываем RSI данные! Используем существующий кэш
         # RSI данные обновятся автоматически по расписанию
-        logger.info("[HOT_RELOAD] ⏭️  RSI данные сохранены (используется кэш)")
+        logger.info(" ⏭️  RSI данные сохранены (используется кэш)")
         
         # Восстанавливаем флаг инициализации
         system_initialized = True
-        logger.info("[HOT_RELOAD] ✅ Флаг инициализации восстановлен")
+        logger.info(" ✅ Флаг инициализации восстановлен")
         
-        logger.info("[HOT_RELOAD] ✅ Сервис ботов перезапущен (RSI кэш сохранен)")
+        logger.info(" ✅ Сервис ботов перезапущен (RSI кэш сохранен)")
         
         return jsonify({
             'success': True, 
@@ -2065,7 +2065,7 @@ def test_stop_bot():
 def activate_trading_rules_manual():
     """Активация правил торговли для зрелых монет"""
     try:
-        logger.info("[MANUAL_CLEANUP] 🎯 Запуск активации правил торговли")
+        logger.info(" 🎯 Запуск активации правил торговли")
         result = check_trading_rules_activation()
         
         if result:
@@ -2082,7 +2082,7 @@ def activate_trading_rules_manual():
             })
             
     except Exception as e:
-        logger.error(f"[MANUAL_CLEANUP] ❌ Ошибка активации правил торговли: {e}")
+        logger.error(f" ❌ Ошибка активации правил торговли: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -2121,7 +2121,7 @@ def individual_coin_settings(symbol):
             filtered_payload['updated_at'] = datetime.now().isoformat()
 
             stored = set_individual_coin_settings(normalized_symbol, filtered_payload, persist=True)
-            logger.info(f"[COIN_SETTINGS] 💾 Настройки для {normalized_symbol} сохранены")
+            logger.info(f" 💾 Настройки для {normalized_symbol} сохранены")
 
             return jsonify({
                 'success': True,
@@ -2133,7 +2133,7 @@ def individual_coin_settings(symbol):
             removed = remove_individual_coin_settings(normalized_symbol, persist=True)
             if not removed:
                 return jsonify({'success': False, 'error': 'Individual settings not found'}), 404
-            logger.info(f"[COIN_SETTINGS] 🗑️ Настройки для {normalized_symbol} удалены")
+            logger.info(f" 🗑️ Настройки для {normalized_symbol} удалены")
             return jsonify({
                 'success': True,
                 'symbol': normalized_symbol,
@@ -2143,10 +2143,10 @@ def individual_coin_settings(symbol):
         return jsonify({'success': False, 'error': 'Unsupported method'}), 405
 
     except (ValueError, KeyError) as validation_error:
-        logger.error(f"[COIN_SETTINGS] ❌ Ошибка валидации настроек {symbol}: {validation_error}")
+        logger.error(f" ❌ Ошибка валидации настроек {symbol}: {validation_error}")
         return jsonify({'success': False, 'error': str(validation_error)}), 400
     except Exception as e:
-        logger.error(f"[COIN_SETTINGS] ❌ Ошибка обработки настроек {symbol}: {e}")
+        logger.error(f" ❌ Ошибка обработки настроек {symbol}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2176,10 +2176,10 @@ def copy_individual_settings(symbol):
         })
 
     except KeyError as missing_error:
-        logger.error(f"[COIN_SETTINGS] ❌ Настройки {symbol} не найдены для копирования: {missing_error}")
+        logger.error(f" ❌ Настройки {symbol} не найдены для копирования: {missing_error}")
         return jsonify({'success': False, 'error': 'Individual settings not found'}), 404
     except Exception as e:
-        logger.error(f"[COIN_SETTINGS] ❌ Ошибка копирования настроек {symbol}: {e}")
+        logger.error(f" ❌ Ошибка копирования настроек {symbol}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2189,7 +2189,7 @@ def auto_bot_config():
     try:
         # ✅ Логируем только POST (изменения), GET не логируем (слишком часто)
         if request.method == 'POST':
-            logger.info(f"[CONFIG_API] 📝 Изменение конфигурации Auto Bot")
+            logger.info(f" 📝 Изменение конфигурации Auto Bot")
         
         if request.method == 'GET':
             # ✅ КРИТИЧЕСКИ ВАЖНО: Принудительно перезагружаем модуль и конфигурацию
@@ -2200,7 +2200,7 @@ def auto_bot_config():
             # Это заставит load_auto_bot_config() перезагрузить модуль внутри себя
             if hasattr(load_auto_bot_config, '_last_mtime'):
                 load_auto_bot_config._last_mtime = 0
-                logger.debug(f"[CONFIG_API] 🔄 Сброшен кэш времени модификации для принудительной перезагрузки")
+                logger.debug(f" 🔄 Сброшен кэш времени модификации для принудительной перезагрузки")
             
             # ✅ Принудительно перезагружаем конфигурацию из файла
             # load_auto_bot_config() сама перезагрузит модуль, т.к. _last_mtime == 0
@@ -2222,7 +2222,7 @@ def auto_bot_config():
                 # Вместо этого проверяем тип и преобразуем правильно
                 if 'avoid_down_trend' in config and not isinstance(config['avoid_down_trend'], bool):
                     val = config['avoid_down_trend']
-                    logger.warning(f"[CONFIG_API] ⚠️ avoid_down_trend не булево: {type(val).__name__} = {val}, преобразуем правильно")
+                    logger.warning(f" ⚠️ avoid_down_trend не булево: {type(val).__name__} = {val}, преобразуем правильно")
                     if isinstance(val, str):
                         # Строка "False", "false", "0" -> False, иначе True
                         config['avoid_down_trend'] = val.lower() in ('true', '1', 'yes', 'on')
@@ -2232,11 +2232,11 @@ def auto_bot_config():
                     else:
                         # Другие типы -> False по умолчанию
                         config['avoid_down_trend'] = False
-                    logger.warning(f"[CONFIG_API] ✅ avoid_down_trend преобразовано в: {config['avoid_down_trend']} (тип: {type(config['avoid_down_trend']).__name__})")
+                    logger.warning(f" ✅ avoid_down_trend преобразовано в: {config['avoid_down_trend']} (тип: {type(config['avoid_down_trend']).__name__})")
                 
                 if 'avoid_up_trend' in config and not isinstance(config['avoid_up_trend'], bool):
                     val = config['avoid_up_trend']
-                    logger.warning(f"[CONFIG_API] ⚠️ avoid_up_trend не булево: {type(val).__name__} = {val}, преобразуем правильно")
+                    logger.warning(f" ⚠️ avoid_up_trend не булево: {type(val).__name__} = {val}, преобразуем правильно")
                     if isinstance(val, str):
                         # Строка "False", "false", "0" -> False, иначе True
                         config['avoid_up_trend'] = val.lower() in ('true', '1', 'yes', 'on')
@@ -2246,7 +2246,7 @@ def auto_bot_config():
                     else:
                         # Другие типы -> False по умолчанию
                         config['avoid_up_trend'] = False
-                    logger.warning(f"[CONFIG_API] ✅ avoid_up_trend преобразовано в: {config['avoid_up_trend']} (тип: {type(config['avoid_up_trend']).__name__})")
+                    logger.warning(f" ✅ avoid_up_trend преобразовано в: {config['avoid_up_trend']} (тип: {type(config['avoid_up_trend']).__name__})")
                 
                 # ✅ Финальная проверка перед возвратом (логирование убрано для уменьшения спама)
                 
@@ -2259,13 +2259,13 @@ def auto_bot_config():
             # Добавляем логирование для отладки
             try:
                 data = request.get_json()
-                logger.debug(f"[CONFIG_API] 📦 Получены данные: {data}")
+                logger.debug(f" 📦 Получены данные: {data}")
             except Exception as json_error:
-                logger.error(f"[CONFIG_API] ❌ Ошибка парсинга JSON: {json_error}")
+                logger.error(f" ❌ Ошибка парсинга JSON: {json_error}")
                 return jsonify({'success': False, 'error': f'Invalid JSON: {str(json_error)}'}), 400
             
             if not data:
-                logger.error("[CONFIG_API] ❌ Пустые данные!")
+                logger.error(" ❌ Пустые данные!")
                 return jsonify({'success': False, 'error': 'No data provided'}), 400
             
             # Проверяем изменение критериев зрелости
@@ -2281,7 +2281,7 @@ def auto_bot_config():
             for key in maturity_keys:
                 if key in data and data[key] != old_config.get(key):
                     maturity_params_changed = True
-                    logger.warning(f"[MATURITY] ⚠️ Изменен критерий зрелости: {key} ({old_config.get(key)} → {data[key]})")
+                    logger.warning(f" ⚠️ Изменен критерий зрелости: {key} ({old_config.get(key)} → {data[key]})")
             
             for key, value in data.items():
                 if key in old_config:
@@ -2312,17 +2312,17 @@ def auto_bot_config():
             # ✅ АВТОМАТИЧЕСКАЯ ОЧИСТКА при изменении критериев зрелости
             if maturity_params_changed:
                 logger.warning("=" * 80)
-                logger.warning("[MATURITY] 🔄 КРИТЕРИИ ЗРЕЛОСТИ ИЗМЕНЕНЫ!")
-                logger.warning("[MATURITY] 🗑️ Очистка файла зрелых монет...")
+                logger.warning(" 🔄 КРИТЕРИИ ЗРЕЛОСТИ ИЗМЕНЕНЫ!")
+                logger.warning(" 🗑️ Очистка файла зрелых монет...")
                 logger.warning("=" * 80)
                 
                 try:
                     # Очищаем хранилище зрелых монет
                     clear_mature_coins_storage()
-                    logger.info("[MATURITY] ✅ Файл зрелых монет очищен")
-                    logger.info("[MATURITY] 🔄 Монеты будут перепроверены при следующей загрузке RSI")
+                    logger.info(" ✅ Файл зрелых монет очищен")
+                    logger.info(" 🔄 Монеты будут перепроверены при следующей загрузке RSI")
                 except Exception as e:
-                    logger.error(f"[MATURITY] ❌ Ошибка очистки файла зрелых монет: {e}")
+                    logger.error(f" ❌ Ошибка очистки файла зрелых монет: {e}")
             
             # КРИТИЧЕСКИ ВАЖНО: При включении Auto Bot запускаем немедленную проверку
             # Показываем блок только если enabled реально изменился с False на True
@@ -2339,9 +2339,9 @@ def auto_bot_config():
                 
                 try:
                     # process_auto_bot_signals(exchange_obj=exchange)  # ОТКЛЮЧЕНО!
-                    logger.info("[CONFIG] ✅ Немедленная проверка Auto Bot завершена")
+                    logger.info(" ✅ Немедленная проверка Auto Bot завершена")
                 except Exception as e:
-                    logger.error(f"[CONFIG] ❌ Ошибка немедленной проверки Auto Bot: {e}")
+                    logger.error(f" ❌ Ошибка немедленной проверки Auto Bot: {e}")
             
             # КРИТИЧЕСКИ ВАЖНО: При отключении Auto Bot НЕ удаляем ботов!
             # Показываем блок только если enabled реально изменился с True на False
@@ -2483,7 +2483,7 @@ def reload_mature_coins():
     """Перезагрузить список зрелых монет из файла"""
     try:
         load_mature_coins_storage()
-        logger.info(f"[MATURITY_STORAGE] Перезагружено {len(mature_coins_storage)} зрелых монет")
+        logger.info(f" Перезагружено {len(mature_coins_storage)} зрелых монет")
         return jsonify({
             'success': True,
             'message': f'Перезагружено {len(mature_coins_storage)} зрелых монет',
@@ -2675,7 +2675,7 @@ def test_auto_bot_signals():
     """Тестовый эндпоинт для принудительной обработки Auto Bot сигналов - УДАЛЕНО!"""
     return jsonify({'success': False, 'message': 'Auto Bot отключен!'})
     try:
-        logger.info("[TEST] 🧪 Принудительная обработка Auto Bot сигналов...")
+        logger.info(" 🧪 Принудительная обработка Auto Bot сигналов...")
         
         # Принудительно вызываем обработку сигналов
         # process_auto_bot_signals(exchange_obj=exchange)  # ОТКЛЮЧЕНО!
@@ -2719,43 +2719,43 @@ def internal_error(error):
 def _soft_restart_bots_service():
     """Перезапускает основные компоненты сервиса без остановки Flask."""
     try:
-        logger.info("[HOT_RELOAD] ♻️ Мягкий перезапуск сервисных компонентов...")
+        logger.info(" ♻️ Мягкий перезапуск сервисных компонентов...")
 
         try:
             cleanup_bot_service()
         except Exception as cleanup_error:
-            logger.warning(f"[HOT_RELOAD] ⚠️ Ошибка при очистке перед перезапуском: {cleanup_error}")
+            logger.warning(f" ⚠️ Ошибка при очистке перед перезапуском: {cleanup_error}")
 
         init_success = init_bot_service()
         if not init_success:
-            logger.error("[HOT_RELOAD] ❌ init_bot_service вернул False при мягком перезапуске")
+            logger.error(" ❌ init_bot_service вернул False при мягком перезапуске")
             return False, "init_bot_service() вернул False"
 
         try:
             start_async_processor()
         except Exception as start_error:
-            logger.warning(f"[HOT_RELOAD] ⚠️ Не удалось запустить асинхронный процессор после перезапуска: {start_error}")
+            logger.warning(f" ⚠️ Не удалось запустить асинхронный процессор после перезапуска: {start_error}")
 
-        logger.info("[HOT_RELOAD] ✅ Мягкий перезапуск выполнен без остановки Flask")
+        logger.info(" ✅ Мягкий перезапуск выполнен без остановки Flask")
         return True, None
 
     except Exception as exc:
-        logger.error(f"[HOT_RELOAD] ❌ Ошибка мягкого перезапуска: {exc}")
+        logger.error(f" ❌ Ошибка мягкого перезапуска: {exc}")
         return False, str(exc)
 
 def signal_handler(signum, frame):
     """Обработчик сигналов завершения с принудительным завершением"""
     global graceful_shutdown
-    print(f"\n[SHUTDOWN] 🛑 Получен сигнал {signum}, начинаем graceful shutdown...")
-    logger.info(f"[SHUTDOWN] 🛑 Получен сигнал {signum}, начинаем graceful shutdown...")
+    print(f"\n 🛑 Получен сигнал {signum}, начинаем graceful shutdown...")
+    logger.info(f" 🛑 Получен сигнал {signum}, начинаем graceful shutdown...")
     graceful_shutdown = True
     shutdown_flag.set()
     
     # Запускаем принудительное завершение через таймер
     def force_exit():
         time.sleep(2.0)  # Даём 2 секунды на graceful shutdown
-        print("[SHUTDOWN] ⏱️ Таймаут graceful shutdown, принудительное завершение...")
-        logger.info("[SHUTDOWN] ⏱️ Таймаут graceful shutdown, принудительное завершение...")
+        print(" ⏱️ Таймаут graceful shutdown, принудительное завершение...")
+        logger.info(" ⏱️ Таймаут graceful shutdown, принудительное завершение...")
         os._exit(0)
     
     force_exit_thread = threading.Thread(target=force_exit, daemon=True)
@@ -2764,12 +2764,12 @@ def signal_handler(signum, frame):
     # Пытаемся выполнить graceful shutdown
     try:
         cleanup_bot_service()
-        print("[SHUTDOWN] ✅ Graceful shutdown завершен")
-        logger.info("[SHUTDOWN] ✅ Graceful shutdown завершен")
+        print(" ✅ Graceful shutdown завершен")
+        logger.info(" ✅ Graceful shutdown завершен")
         sys.exit(0)
     except Exception as e:
-        print(f"[SHUTDOWN] ⚠️ Ошибка при graceful shutdown: {e}")
-        logger.error(f"[SHUTDOWN] ⚠️ Ошибка при graceful shutdown: {e}")
+        print(f" ⚠️ Ошибка при graceful shutdown: {e}")
+        logger.error(f" ⚠️ Ошибка при graceful shutdown: {e}")
         os._exit(1)
 
 @bots_app.route('/api/system/reload-modules', methods=['POST'])
@@ -2797,41 +2797,41 @@ def reload_modules():
         reloaded = []
         failed = []
         
-        logger.info("[HOT_RELOAD] 🔄 Начинаем умную горячую перезагрузку...")
+        logger.info(" 🔄 Начинаем умную горячую перезагрузку...")
         
         # Этап 1: Перезагружаем безопасные модули
         for module_name in modules_to_reload:
             try:
                 if module_name in sys.modules:
-                    logger.info(f"[HOT_RELOAD] 🔄 Перезагрузка модуля {module_name}...")
+                    logger.info(f" 🔄 Перезагрузка модуля {module_name}...")
                     module = sys.modules[module_name]
                     importlib.reload(module)
                     reloaded.append(module_name)
-                    logger.info(f"[HOT_RELOAD] ✅ Модуль {module_name} перезагружен")
+                    logger.info(f" ✅ Модуль {module_name} перезагружен")
                 else:
-                    logger.warning(f"[HOT_RELOAD] ⚠️ Модуль {module_name} не был загружен")
+                    logger.warning(f" ⚠️ Модуль {module_name} не был загружен")
             except Exception as e:
-                logger.error(f"[HOT_RELOAD] ❌ Ошибка перезагрузки {module_name}: {e}")
+                logger.error(f" ❌ Ошибка перезагрузки {module_name}: {e}")
                 failed.append({'module': module_name, 'error': str(e)})
         
         # Этап 1.5: Проверяем состояние Flask после перезагрузки
         try:
-            logger.info("[HOT_RELOAD] 🔍 Проверка состояния Flask после перезагрузки...")
+            logger.info(" 🔍 Проверка состояния Flask после перезагрузки...")
             # Простая проверка что Flask все еще работает
             if hasattr(request, 'method') and hasattr(request, 'get_json'):
-                logger.info("[HOT_RELOAD] ✅ Flask состояние корректно")
+                logger.info(" ✅ Flask состояние корректно")
             else:
-                logger.warning("[HOT_RELOAD] ⚠️ Flask состояние может быть нарушено")
+                logger.warning(" ⚠️ Flask состояние может быть нарушено")
         except Exception as e:
-            logger.error(f"[HOT_RELOAD] ❌ Ошибка проверки Flask: {e}")
+            logger.error(f" ❌ Ошибка проверки Flask: {e}")
         
         # Этап 2: Проверяем нужен ли перезапуск Flask сервера
         try:
             request_data = request.get_json(silent=True) or {}
             force_flask_restart = request_data.get('force_flask_restart', False)
-            logger.info(f"[HOT_RELOAD] 📋 Данные запроса: {request_data}")
+            logger.info(f" 📋 Данные запроса: {request_data}")
         except Exception as e:
-            logger.error(f"[HOT_RELOAD] ❌ Ошибка парсинга JSON запроса: {e}")
+            logger.error(f" ❌ Ошибка парсинга JSON запроса: {e}")
             request_data = {}
             force_flask_restart = False
         
@@ -2840,24 +2840,24 @@ def reload_modules():
         soft_restart_error = None
 
         if restart_requested:
-            logger.info("[HOT_RELOAD] 🔄 Требуется мягкий перезапуск сервисных компонентов (Flask останется активным)...")
+            logger.info(" 🔄 Требуется мягкий перезапуск сервисных компонентов (Flask останется активным)...")
         else:
-            logger.info("[HOT_RELOAD] ✅ Перезапуск Flask компонентов не требуется")
+            logger.info(" ✅ Перезапуск Flask компонентов не требуется")
         
         # Этап 3: Перезагружаем конфигурацию
         try:
             from bots_modules.imports_and_globals import load_auto_bot_config
             load_auto_bot_config()
-            logger.info("[HOT_RELOAD] ✅ Конфигурация Auto Bot перезагружена")
+            logger.info(" ✅ Конфигурация Auto Bot перезагружена")
         except Exception as e:
-            logger.error(f"[HOT_RELOAD] ❌ Ошибка перезагрузки конфигурации: {e}")
+            logger.error(f" ❌ Ошибка перезагрузки конфигурации: {e}")
 
         if restart_requested:
             soft_restart_performed, soft_restart_error = _soft_restart_bots_service()
             if soft_restart_performed:
-                logger.info("[HOT_RELOAD] ✅ Мягкий перезапуск сервисных компонентов выполнен")
+                logger.info(" ✅ Мягкий перезапуск сервисных компонентов выполнен")
             else:
-                logger.error(f"[HOT_RELOAD] ❌ Ошибка мягкого перезапуска: {soft_restart_error}")
+                logger.error(f" ❌ Ошибка мягкого перезапуска: {soft_restart_error}")
         
         # Формируем ответ
         response_data = {
@@ -2877,11 +2877,11 @@ def reload_modules():
             if soft_restart_error:
                 response_data['soft_restart_error'] = soft_restart_error
         
-        logger.info(f"[HOT_RELOAD] ✅ Горячая перезагрузка завершена: {len(reloaded)} модулей")
+        logger.info(f" ✅ Горячая перезагрузка завершена: {len(reloaded)} модулей")
         return jsonify(response_data)
         
     except Exception as e:
-        logger.error(f"[HOT_RELOAD] ❌ Общая ошибка горячей перезагрузки: {e}")
+        logger.error(f" ❌ Общая ошибка горячей перезагрузки: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -2904,7 +2904,7 @@ def get_delisted_coins_api():
         })
         
     except Exception as e:
-        logger.error(f"[API_DELISTED_COINS] ❌ Ошибка получения делистинговых монет: {e}")
+        logger.error(f" ❌ Ошибка получения делистинговых монет: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -2916,7 +2916,7 @@ def force_delisting_scan_api():
     try:
         from bots_modules.sync_and_cache import scan_all_coins_for_delisting
         
-        logger.info("[API_DELISTING_SCAN] 🔍 Принудительное сканирование делистинговых монет...")
+        logger.info(" 🔍 Принудительное сканирование делистинговых монет...")
         scan_all_coins_for_delisting()
         
         # Получаем обновленные данные
@@ -2932,7 +2932,7 @@ def force_delisting_scan_api():
         })
         
     except Exception as e:
-        logger.error(f"[API_DELISTING_SCAN] ❌ Ошибка принудительного сканирования: {e}")
+        logger.error(f" ❌ Ошибка принудительного сканирования: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -2944,10 +2944,10 @@ def cleanup_bot_service():
     
     # КРИТИЧЕСКИ ВАЖНО: Сбрасываем флаг, чтобы остановить торговлю
     system_initialized = False
-    logger.info("[CLEANUP] 🛑 Флаг system_initialized сброшен - торговля остановлена")
+    logger.info(" 🛑 Флаг system_initialized сброшен - торговля остановлена")
     
     try:
-        logger.info("[CLEANUP] 🧹 Очистка ресурсов сервиса ботов...")
+        logger.info(" 🧹 Очистка ресурсов сервиса ботов...")
         
         # Останавливаем асинхронный процессор
         stop_async_processor()
@@ -2955,32 +2955,32 @@ def cleanup_bot_service():
         # Останавливаем Continuous Data Loader
         try:
             from bots_modules.continuous_data_loader import stop_continuous_loader
-            logger.info("[CLEANUP] 🛑 Остановка Continuous Data Loader...")
+            logger.info(" 🛑 Остановка Continuous Data Loader...")
             stop_continuous_loader()
         except Exception as e:
-            logger.warning(f"[CLEANUP] ⚠️ Ошибка остановки Continuous Data Loader: {e}")
+            logger.warning(f" ⚠️ Ошибка остановки Continuous Data Loader: {e}")
         
         # ❌ ОТКЛЮЧЕНО: Воркер оптимальных EMA больше не используется
         # try:
         #     from bot_engine.optimal_ema_worker import stop_optimal_ema_worker
         #     stop_optimal_ema_worker()
-        #     logger.info("[CLEANUP] 🛑 Остановка воркера оптимальных EMA...")
+        #     logger.info(" 🛑 Остановка воркера оптимальных EMA...")
         # except Exception as e:
-        #     logger.error(f"[CLEANUP] Ошибка остановки воркера оптимальных EMA: {e}")
+        #     logger.error(f" Ошибка остановки воркера оптимальных EMA: {e}")
         
         # Сохраняем все важные данные
-        logger.info("[CLEANUP] 💾 Финальное сохранение всех данных...")
+        logger.info(" 💾 Финальное сохранение всех данных...")
         
         # 1. Сохраняем состояние ботов
-        logger.info("[CLEANUP] 📊 Сохранение состояния ботов...")
+        logger.info(" 📊 Сохранение состояния ботов...")
         save_bots_state()
         
         # 2. Сохраняем конфигурацию автобота
-        logger.info("[CLEANUP] ⚙️ Сохранение конфигурации автобота...")
+        logger.info(" ⚙️ Сохранение конфигурации автобота...")
         save_auto_bot_config()
         
         # 3. Сохраняем системную конфигурацию
-        logger.info("[CLEANUP] 🔧 Сохранение системной конфигурации...")
+        logger.info(" 🔧 Сохранение системной конфигурации...")
         system_config_data = {
             'bot_status_update_interval': SystemConfig.BOT_STATUS_UPDATE_INTERVAL,
             'position_sync_interval': SystemConfig.POSITION_SYNC_INTERVAL,
@@ -2991,23 +2991,23 @@ def cleanup_bot_service():
         save_system_config(system_config_data)
         
         # 4. Сохраняем кэш RSI данных
-        logger.info("[CLEANUP] 📈 Сохранение кэша RSI данных...")
+        logger.info(" 📈 Сохранение кэша RSI данных...")
         save_rsi_cache()
         
         # 5. Сохраняем состояние процессов
-        logger.info("[CLEANUP] 🔄 Сохранение состояния процессов...")
+        logger.info(" 🔄 Сохранение состояния процессов...")
         save_process_state()
         
         # 6. Сохраняем данные о зрелости монет
-        logger.info("[CLEANUP] 🪙 Сохранение данных о зрелости монет...")
+        logger.info(" 🪙 Сохранение данных о зрелости монет...")
         save_mature_coins_storage()
         
-        logger.info("[CLEANUP] ✅ Все данные сохранены, очистка завершена")
+        logger.info(" ✅ Все данные сохранены, очистка завершена")
         
     except Exception as e:
-        logger.error(f"[CLEANUP] ❌ Ошибка при очистке: {e}")
+        logger.error(f" ❌ Ошибка при очистке: {e}")
         import traceback
-        logger.error(f"[CLEANUP] Traceback: {traceback.format_exc()}")
+        logger.error(f" Traceback: {traceback.format_exc()}")
 
 def run_bots_service():
     """Запуск сервиса ботов"""

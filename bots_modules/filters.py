@@ -2271,12 +2271,12 @@ def test_exit_scam_filter(symbol):
         result = check_exit_scam_filter(symbol, {})
         
         if result:
-            logger.info(f"[TEST_EXIT_SCAM] {symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН")
+            logger.info(f"{symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН")
         else:
-            logger.warning(f"[TEST_EXIT_SCAM] {symbol}: ❌ РЕЗУЛЬТАТ: ЗАБЛОКИРОВАН")
+            logger.warning(f"{symbol}: ❌ РЕЗУЛЬТАТ: ЗАБЛОКИРОВАН")
         
         # Дополнительный анализ
-        logger.info(f"[TEST_EXIT_SCAM] {symbol}: 📊 Дополнительный анализ:")
+        logger.info(f"{symbol}: 📊 Дополнительный анализ:")
         
         # 1. Проверка отдельных свечей
         extreme_single_count = 0
@@ -2288,7 +2288,7 @@ def test_exit_scam_filter(symbol):
             
             if price_change > single_candle_percent:
                 extreme_single_count += 1
-                logger.warning(f"[TEST_EXIT_SCAM] {symbol}: ❌ Превышение лимита одной свечи #{i+1}: {price_change:.1f}% > {single_candle_percent}%")
+                logger.warning(f"{symbol}: ❌ Превышение лимита одной свечи #{i+1}: {price_change:.1f}% > {single_candle_percent}%")
         
         # 2. Проверка суммарного изменения за N свечей
         if len(recent_candles) >= multi_candle_count:
@@ -2298,13 +2298,13 @@ def test_exit_scam_filter(symbol):
             
             total_change = abs((last_close - first_open) / first_open) * 100
             
-            logger.info(f"[TEST_EXIT_SCAM] {symbol}: 📈 {multi_candle_count}-свечечный анализ: {total_change:.1f}% (порог: {multi_candle_percent}%)")
+            logger.info(f"{symbol}: 📈 {multi_candle_count}-свечечный анализ: {total_change:.1f}% (порог: {multi_candle_percent}%)")
             
             if total_change > multi_candle_percent:
-                logger.warning(f"[TEST_EXIT_SCAM] {symbol}: ❌ Превышение суммарного лимита: {total_change:.1f}% > {multi_candle_percent}%")
+                logger.warning(f"{symbol}: ❌ Превышение суммарного лимита: {total_change:.1f}% > {multi_candle_percent}%")
         
     except Exception as e:
-        logger.error(f"[TEST_EXIT_SCAM] {symbol}: Ошибка тестирования: {e}")
+        logger.error(f"{symbol}: Ошибка тестирования: {e}")
 
 # Алиас для обратной совместимости
 test_anti_pump_filter = test_exit_scam_filter
@@ -2312,29 +2312,29 @@ test_anti_pump_filter = test_exit_scam_filter
 def test_rsi_time_filter(symbol):
     """Тестирует RSI временной фильтр для конкретной монеты"""
     try:
-        logger.info(f"[TEST_RSI_TIME] 🔍 Тестируем RSI временной фильтр для {symbol}")
+        logger.info(f"🔍 Тестируем RSI временной фильтр для {symbol}")
         
         # Получаем свечи
         exch = get_exchange()
         if not exch:
-            logger.error(f"[TEST_RSI_TIME] {symbol}: Биржа не инициализирована")
+            logger.error(f"{symbol}: Биржа не инициализирована")
             return
                 
         chart_response = exch.get_chart_data(symbol, '6h', '30d')
         if not chart_response or not chart_response.get('success'):
-            logger.error(f"[TEST_RSI_TIME] {symbol}: Не удалось получить свечи")
+            logger.error(f"{symbol}: Не удалось получить свечи")
             return
         
         candles = chart_response.get('data', {}).get('candles', [])
         if len(candles) < 50:
-            logger.error(f"[TEST_RSI_TIME] {symbol}: Недостаточно свечей ({len(candles)})")
+            logger.error(f"{symbol}: Недостаточно свечей ({len(candles)})")
             return
         
         # Получаем текущий RSI
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
         coin_data = coins_rsi_data['coins'].get(symbol)
         if not coin_data:
-            logger.error(f"[TEST_RSI_TIME] {symbol}: Нет RSI данных")
+            logger.error(f"{symbol}: Нет RSI данных")
             return
         
         current_rsi = coin_data.get('rsi6h', 0)
@@ -2351,25 +2351,25 @@ def test_rsi_time_filter(symbol):
         elif current_rsi >= rsi_short_threshold:
             original_signal = 'ENTER_SHORT'
         
-        logger.info(f"[TEST_RSI_TIME] {symbol}: Текущий RSI={current_rsi:.1f}, Оригинальный сигнал={original_signal}, Финальный сигнал={signal}")
+        logger.info(f"{symbol}: Текущий RSI={current_rsi:.1f}, Оригинальный сигнал={original_signal}, Финальный сигнал={signal}")
         
         # Тестируем временной фильтр с ОРИГИНАЛЬНЫМ сигналом
         time_filter_result = check_rsi_time_filter(candles, current_rsi, original_signal)
         
-        logger.info(f"[TEST_RSI_TIME] {symbol}: Результат временного фильтра:")
-        logger.info(f"[TEST_RSI_TIME] {symbol}: Разрешено: {time_filter_result['allowed']}")
-        logger.info(f"[TEST_RSI_TIME] {symbol}: Причина: {time_filter_result['reason']}")
+        logger.info(f"{symbol}: Результат временного фильтра:")
+        logger.info(f"{symbol}: Разрешено: {time_filter_result['allowed']}")
+        logger.info(f"{symbol}: Причина: {time_filter_result['reason']}")
         if 'calm_candles' in time_filter_result and time_filter_result['calm_candles'] is not None:
-            logger.info(f"[TEST_RSI_TIME] {symbol}: Спокойных свечей: {time_filter_result['calm_candles']}")
+            logger.info(f"{symbol}: Спокойных свечей: {time_filter_result['calm_candles']}")
         if 'last_extreme_candles_ago' in time_filter_result and time_filter_result['last_extreme_candles_ago'] is not None:
-            logger.info(f"[TEST_RSI_TIME] {symbol}: Последний экстремум: {time_filter_result['last_extreme_candles_ago']} свечей назад")
+            logger.info(f"{symbol}: Последний экстремум: {time_filter_result['last_extreme_candles_ago']} свечей назад")
         
         # Показываем историю RSI для анализа
         closes = [candle['close'] for candle in candles]
         rsi_history = calculate_rsi_history(closes, 14)
         
         if rsi_history:
-            logger.info(f"[TEST_RSI_TIME] {symbol}: Последние 20 значений RSI:")
+            logger.info(f"{symbol}: Последние 20 значений RSI:")
             last_20_rsi = rsi_history[-20:] if len(rsi_history) >= 20 else rsi_history
             
             # Получаем пороги для подсветки
@@ -2396,8 +2396,8 @@ def test_rsi_time_filter(symbol):
                     markers.append(f"✅<={rsi_time_filter_lower}")
                 
                 marker_str = " ".join(markers) if markers else ""
-                logger.info(f"[TEST_RSI_TIME] {symbol}: Свеча -{index_from_end}: RSI={rsi_val:.1f} {marker_str}")
+                logger.info(f"{symbol}: Свеча -{index_from_end}: RSI={rsi_val:.1f} {marker_str}")
         
     except Exception as e:
-        logger.error(f"[TEST_RSI_TIME] {symbol}: Ошибка тестирования: {e}")
+        logger.error(f"{symbol}: Ошибка тестирования: {e}")
 
