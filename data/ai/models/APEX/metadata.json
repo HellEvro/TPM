@@ -1,46 +1,46 @@
 {
   "symbol": "APEX",
-  "trained_at": "2025-11-13T16:56:32.637612",
-  "training_seed": 189067,
-  "coin_model_seed": 189129,
+  "trained_at": "2025-11-14T20:49:13.758715",
+  "training_seed": 547560,
+  "coin_model_seed": 548310,
   "rsi_params": {
     "oversold": 35,
-    "overbought": 66,
-    "exit_long_with_trend": 69,
-    "exit_long_against_trend": 57,
-    "exit_short_with_trend": 33,
-    "exit_short_against_trend": 45
+    "overbought": 74,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 63,
+    "exit_short_with_trend": 32,
+    "exit_short_against_trend": 38
   },
   "risk_params": {
-    "stop_loss": 12.75819613273868,
-    "take_profit": 29.06920060962532,
-    "trailing_stop_activation": 29.11494235940683,
-    "trailing_stop_distance": 5.0,
+    "stop_loss": 16.370235036418528,
+    "take_profit": 12.5083187276756,
+    "trailing_stop_activation": 54.52576703603219,
+    "trailing_stop_distance": 11.851389999515575,
     "break_even_protection": false,
-    "break_even_trigger": 176.4710786191789,
+    "break_even_trigger": 30.0,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 4,
-      "upper": 66,
-      "lower": 30
+      "candles": 3,
+      "upper": 68.0,
+      "lower": 35.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 10,
-      "single_candle_percent": 24.889600145528394,
+      "candles": 7,
+      "single_candle_percent": 8.215060005278207,
       "multi_candle_count": 4,
-      "multi_candle_percent": 57.02428572269679
+      "multi_candle_percent": 31.82327706769824
     }
   },
-  "candles_count": 186,
+  "candles_count": 190,
   "trades_count": 5,
-  "win_rate": 40.0,
+  "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 4.280072761433616e-06,
-  "total_pnl": 0.1751560374841968,
-  "previous_candles_count": 186,
+  "profit_mse": 4.828731762758197e-06,
+  "total_pnl": 0.6363575101692994,
+  "previous_candles_count": 190,
   "candles_increased": false
 }

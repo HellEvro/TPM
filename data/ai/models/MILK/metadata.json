@@ -1,0 +1,46 @@
+{
+  "symbol": "MILK",
+  "trained_at": "2025-11-14T20:56:49.258258",
+  "training_seed": 985209,
+  "coin_model_seed": 985852,
+  "rsi_params": {
+    "oversold": 35,
+    "overbought": 75,
+    "exit_long_with_trend": 66,
+    "exit_long_against_trend": 57,
+    "exit_short_with_trend": 39,
+    "exit_short_against_trend": 40
+  },
+  "risk_params": {
+    "stop_loss": 9.198012908227657,
+    "take_profit": 22.900748815306997,
+    "trailing_stop_activation": 19.6481690457893,
+    "trailing_stop_distance": 5.87772952688465,
+    "break_even_protection": true,
+    "break_even_trigger": 30.0,
+    "max_position_hours": 12
+  },
+  "filter_params": {
+    "rsi_time_filter": {
+      "enabled": true,
+      "candles": 8,
+      "upper": 69.0,
+      "lower": 32.0
+    },
+    "exit_scam_filter": {
+      "enabled": true,
+      "candles": 6,
+      "single_candle_percent": 9.641359290633645,
+      "multi_candle_count": 6,
+      "multi_candle_percent": 63.348443893377905
+    }
+  },
+  "candles_count": 702,
+  "trades_count": 5,
+  "win_rate": 20.0,
+  "signal_accuracy": 1.0,
+  "profit_mse": 1.5416724522666808e-07,
+  "total_pnl": -0.3218004714183037,
+  "previous_candles_count": 746,
+  "candles_increased": false
+}

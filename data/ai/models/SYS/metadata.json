@@ -1,46 +1,46 @@
 {
   "symbol": "SYS",
-  "trained_at": "2025-11-13T17:01:27.863082",
-  "training_seed": 465417,
-  "coin_model_seed": 466265,
+  "trained_at": "2025-11-14T21:03:22.422427",
+  "training_seed": 362360,
+  "coin_model_seed": 362498,
   "rsi_params": {
     "oversold": 34,
-    "overbought": 76,
-    "exit_long_with_trend": 65,
-    "exit_long_against_trend": 61,
-    "exit_short_with_trend": 31,
-    "exit_short_against_trend": 42
+    "overbought": 73,
+    "exit_long_with_trend": 63,
+    "exit_long_against_trend": 60,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 35
   },
   "risk_params": {
-    "stop_loss": 10.422050346743939,
-    "take_profit": 17.991668704379904,
-    "trailing_stop_activation": 31.002567559437647,
-    "trailing_stop_distance": 7.4901653550659955,
+    "stop_loss": 9.348173972194875,
+    "take_profit": 10.0,
+    "trailing_stop_activation": 34.364091315315896,
+    "trailing_stop_distance": 5.0,
     "break_even_protection": false,
-    "break_even_trigger": 58.26094920240561,
+    "break_even_trigger": 37.423324249430976,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 10,
-      "upper": 69,
-      "lower": 32
+      "candles": 3,
+      "upper": 73.0,
+      "lower": 25.0
     },
     "exit_scam_filter": {
       "enabled": true,
       "candles": 12,
-      "single_candle_percent": 9.02069243639886,
+      "single_candle_percent": 23.849392423789336,
       "multi_candle_count": 4,
-      "multi_candle_percent": 39.05587392619961
+      "multi_candle_percent": 77.35472887402696
     }
   },
-  "candles_count": 1728,
+  "candles_count": 1758,
   "trades_count": 5,
-  "win_rate": 40.0,
+  "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.1877647079082671e-06,
-  "total_pnl": 0.27028088893944524,
-  "previous_candles_count": 1712,
+  "profit_mse": 3.348580629675458e-07,
+  "total_pnl": 0.0014990788401732166,
+  "previous_candles_count": 1615,
   "candles_increased": true
 }

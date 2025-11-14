@@ -1,46 +1,46 @@
 {
   "symbol": "ANKR",
-  "trained_at": "2025-11-13T16:57:59.540515",
-  "training_seed": 275132,
-  "coin_model_seed": 275960,
+  "trained_at": "2025-11-14T21:02:49.133130",
+  "training_seed": 362360,
+  "coin_model_seed": 363258,
   "rsi_params": {
-    "oversold": 35,
-    "overbought": 65,
-    "exit_long_with_trend": 64,
-    "exit_long_against_trend": 64,
-    "exit_short_with_trend": 30,
-    "exit_short_against_trend": 43
+    "oversold": 34,
+    "overbought": 68,
+    "exit_long_with_trend": 68,
+    "exit_long_against_trend": 58,
+    "exit_short_with_trend": 37,
+    "exit_short_against_trend": 36
   },
   "risk_params": {
-    "stop_loss": 11.99759027490427,
-    "take_profit": 27.038150135746946,
-    "trailing_stop_activation": 15.791141648104787,
-    "trailing_stop_distance": 14.084110406661868,
+    "stop_loss": 24.9342878977897,
+    "take_profit": 36.12933507987231,
+    "trailing_stop_activation": 50.98416176913486,
+    "trailing_stop_distance": 11.403340798623741,
     "break_even_protection": true,
-    "break_even_trigger": 164.5987465057613,
+    "break_even_trigger": 30.0,
     "max_position_hours": 12
   },
   "filter_params": {
     "rsi_time_filter": {
       "enabled": true,
-      "candles": 4,
-      "upper": 69,
-      "lower": 34
+      "candles": 8,
+      "upper": 62.0,
+      "lower": 39.0
     },
     "exit_scam_filter": {
       "enabled": true,
-      "candles": 9,
-      "single_candle_percent": 14.77417600134524,
-      "multi_candle_count": 3,
-      "multi_candle_percent": 43.961737385960646
+      "candles": 10,
+      "single_candle_percent": 39.375064003871906,
+      "multi_candle_count": 2,
+      "multi_candle_percent": 20.537803553026368
     }
   },
-  "candles_count": 4902,
+  "candles_count": 4950,
   "trades_count": 5,
-  "win_rate": 80.0,
+  "win_rate": 60.0,
   "signal_accuracy": 1.0,
-  "profit_mse": 1.5930174989568127e-07,
-  "total_pnl": 0.3059140428802856,
-  "previous_candles_count": 4999,
-  "candles_increased": false
+  "profit_mse": 2.93049222115517e-07,
+  "total_pnl": 0.2631789190332956,
+  "previous_candles_count": 4845,
+  "candles_increased": true
 }
