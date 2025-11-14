@@ -25,6 +25,7 @@ import time
 import logging
 import threading
 import argparse
+import importlib.util
 from multiprocessing import Process
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
@@ -69,6 +70,65 @@ root_logger = logging.getLogger()
 root_logger.addHandler(file_handler)
 
 logger = logging.getLogger('AI.Main')
+
+SUPPORT_EMAIL = "gci.company.ou@gmail.com"
+SUPPORT_TELEGRAM = "h3113vr0"
+SUPPORT_TELEGRAM_URL = "https://t.me/H3113vr0"
+
+
+def _load_module_from_path(path: Path, unique_suffix: int):
+    spec = importlib.util.spec_from_file_location(f"_hwid_module_{unique_suffix}", path)
+    if not spec or not spec.loader:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def get_current_hwid() -> Optional[str]:
+    """
+    Возвращает текущий HWID (первые 16 символов), если удалось определить.
+    """
+    project_root = Path(__file__).resolve().parent
+    candidates = []
+    scripts_dir = project_root / 'scripts'
+    candidates.extend([
+        scripts_dir / 'hardware_id.py',
+        scripts_dir / 'hardware_id.pyc',
+    ])
+    ai_dir = project_root / 'bot_engine' / 'ai'
+    candidates.extend([
+        ai_dir / 'hardware_id_source.py',
+        ai_dir / 'hardware_id_source.pyc',
+    ])
+    lg_dir = project_root / 'license_generator'
+    candidates.extend([
+        lg_dir / 'hardware_id.py',
+        lg_dir / 'source' / 'hardware_id_source.py',
+    ])
+
+    for idx, path in enumerate(candidates, start=1):
+        if not path.exists():
+            continue
+        try:
+            module = _load_module_from_path(path, idx)
+            if not module:
+                continue
+            getter = getattr(module, 'get_short_hardware_id', None)
+            if getter is None and hasattr(module, 'get_hardware_id'):
+                full_getter = getattr(module, 'get_hardware_id')
+
+                def getter(full_getter=full_getter):
+                    return full_getter()[:16]
+            if not getter:
+                continue
+            hwid = getter()
+            if hwid:
+                return str(hwid).strip().upper()
+        except Exception as hw_error:
+            logger.debug(f"⚠️ Не удалось получить HWID через {path}: {hw_error}")
+            continue
+    return None
 
 # Добавляем текущую директорию в путь
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -175,6 +235,7 @@ class AISystem:
                 logger.error("💡 Получите HWID: python scripts/activate_premium.py")
                 logger.error("=" * 80)
                 logger.error("")
+                self._shutdown_due_to_missing_license()
             else:
                 license_type = self.license_info.get('type', 'premium')
                 expires_at = self.license_info.get('expires_at', 'N/A')
@@ -492,6 +553,25 @@ class AISystem:
         
         logger.info("✅ AI система остановлена")
     
+    def _shutdown_due_to_missing_license(self):
+        """Логирует инструкции и завершает работу при отсутствии лицензии."""
+        contacts = (
+            f"Email: {SUPPORT_EMAIL}, "
+            f"Telegram: {SUPPORT_TELEGRAM} ({SUPPORT_TELEGRAM_URL})"
+        )
+        logger.error(
+            "Для работы модуля необходима лицензия. "
+            "Для получения лицензии обратитесь: %s",
+            contacts,
+        )
+        current_hwid = get_current_hwid()
+        if current_hwid:
+            logger.error(f"Текущий HWID: {current_hwid}")
+        else:
+            logger.error("Текущий HWID: не удалось определить (проверьте scripts/hardware_id.pyc)")
+        logger.info("AI система будет мягко остановлена из-за отсутствия лицензии")
+        raise SystemExit(2)
+
     # ------------------------------------------------------------------
     # ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ РЕЖИМОВ
     # ------------------------------------------------------------------
