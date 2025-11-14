@@ -57,6 +57,9 @@ recommendation = ai_manager.get_final_recommendation(
 __version__ = '0.1.0'
 __author__ = 'InfoBot Team'
 
+import logging
+from pathlib import Path
+
 # Экспорты будут добавлены по мере создания модулей
 try:
     from .ai_manager import AIManager, get_ai_manager
@@ -79,17 +82,40 @@ try:
 except ImportError:
     pass
 
+_license_logger = logging.getLogger('AI.License')
+_LICENSE_STATUS = None
+_LICENSE_INFO = None
 
-def check_premium_license() -> bool:
+
+def check_premium_license(force_refresh: bool = False) -> bool:
     """
     Проверяет наличие валидной премиум лицензии
     
     Returns:
         True если лицензия валидна и премиум функции доступны
     """
+    global _LICENSE_STATUS, _LICENSE_INFO
+
+    if _LICENSE_STATUS is not None and not force_refresh:
+        return _LICENSE_STATUS
+
     try:
-        from .ai_manager import get_ai_manager
-        ai_manager = get_ai_manager()
-        return ai_manager.is_available() and ai_manager._license_valid
-    except Exception as e:
+        from .license_checker import get_license_checker
+    except Exception as exc:
+        _license_logger.debug("License checker module unavailable: %s", exc)
+        _LICENSE_STATUS = False
+        _LICENSE_INFO = None
+        return False
+
+    project_root = Path(__file__).resolve().parents[2]
+
+    try:
+        license_checker = get_license_checker(project_root=project_root)
+        _LICENSE_STATUS = license_checker.is_valid()
+        _LICENSE_INFO = license_checker.get_info() if _LICENSE_STATUS else None
+        return _LICENSE_STATUS
+    except Exception as exc:
+        _license_logger.debug("License validation failed: %s", exc, exc_info=True)
+        _LICENSE_STATUS = False
+        _LICENSE_INFO = None
         return False
