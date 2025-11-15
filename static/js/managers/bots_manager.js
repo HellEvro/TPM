@@ -6480,18 +6480,18 @@ class BotsManager {
         try {
             const config = this.collectConfigurationData();
             const enhancedRsi = {
-                enhanced_rsi_enabled: config.autoBot.enhanced_rsi_enabled,
-                enhanced_rsi_require_volume_confirmation: config.autoBot.enhanced_rsi_require_volume_confirmation,
-                enhanced_rsi_require_divergence_confirmation: config.autoBot.enhanced_rsi_require_divergence_confirmation,
-                enhanced_rsi_use_stoch_rsi: config.autoBot.enhanced_rsi_use_stoch_rsi,
-                rsi_extreme_zone_timeout: config.autoBot.rsi_extreme_zone_timeout,
-                rsi_extreme_oversold: config.autoBot.rsi_extreme_oversold,
-                rsi_extreme_overbought: config.autoBot.rsi_extreme_overbought,
-                rsi_volume_confirmation_multiplier: config.autoBot.rsi_volume_confirmation_multiplier,
-                rsi_divergence_lookback: config.autoBot.rsi_divergence_lookback
+                enhanced_rsi_enabled: config.system.enhanced_rsi_enabled,
+                enhanced_rsi_require_volume_confirmation: config.system.enhanced_rsi_require_volume_confirmation,
+                enhanced_rsi_require_divergence_confirmation: config.system.enhanced_rsi_require_divergence_confirmation,
+                enhanced_rsi_use_stoch_rsi: config.system.enhanced_rsi_use_stoch_rsi,
+                rsi_extreme_zone_timeout: config.system.rsi_extreme_zone_timeout,
+                rsi_extreme_oversold: config.system.rsi_extreme_oversold,
+                rsi_extreme_overbought: config.system.rsi_extreme_overbought,
+                rsi_volume_confirmation_multiplier: config.system.rsi_volume_confirmation_multiplier,
+                rsi_divergence_lookback: config.system.rsi_divergence_lookback
             };
             
-            await this.sendConfigUpdate('auto-bot', enhancedRsi, 'Enhanced RSI');
+            await this.sendConfigUpdate('system-config', enhancedRsi, 'Enhanced RSI');
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка сохранения Enhanced RSI:', error);
             this.showNotification('❌ Ошибка сохранения Enhanced RSI', 'error');
