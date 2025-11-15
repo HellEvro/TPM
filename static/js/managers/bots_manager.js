@@ -8635,7 +8635,9 @@ class BotsManager {
             await Promise.all([
                 this.loadAIStats(),
                 this.loadAIDecisions(),
-                this.loadAIOptimizerSummary()
+                this.loadAIOptimizerSummary(),
+                this.loadAITrainingHistory(),
+                this.loadAIPerformanceMetrics()
             ]);
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка загрузки AI истории:', error);
@@ -8828,6 +8830,158 @@ class BotsManager {
                     </div>
                 `;
             }
+        }
+    }
+
+    /**
+     * Загружает историю обучения AI
+     */
+    async loadAITrainingHistory() {
+        const container = document.getElementById('aiTrainingHistoryList');
+        if (!container) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/ai/training-history?limit=10`);
+            const data = await response.json();
+            if (data.success) {
+                this.displayAITrainingHistory(data.history || []);
+            } else {
+                this.displayAITrainingHistory([]);
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка загрузки истории обучения AI:', error);
+            this.displayAITrainingHistory([]);
+        }
+    }
+
+    /**
+     * Отображает историю обучения AI
+     */
+    displayAITrainingHistory(history) {
+        const container = document.getElementById('aiTrainingHistoryList');
+        if (!container) return;
+
+        if (!history || history.length === 0) {
+            container.innerHTML = `
+                <div class="empty-history-state">
+                    <div class="empty-icon">🧠</div>
+                    <p>История обучения не найдена</p>
+                    <small>Запуски обучения AI появятся здесь</small>
+                </div>
+            `;
+            this.updateAITrainingSummary(null);
+            return;
+        }
+
+        const sorted = [...history].sort((a, b) => {
+            return new Date(b.timestamp || b.started_at || 0) - new Date(a.timestamp || a.started_at || 0);
+        });
+
+        this.updateAITrainingSummary(sorted[0]);
+
+        const html = sorted.map(record => {
+            const startedAt = record.timestamp || record.started_at;
+            const duration = record.duration || record.duration_seconds;
+            const samples = record.samples || record.processed_samples || record.dataset_size;
+            const accuracy = record.accuracy !== undefined ? (record.accuracy * 100).toFixed(1) : record.metrics?.accuracy;
+            const status = (record.status || 'done').toUpperCase();
+            const statusIcon = status === 'FAILED' ? '❌' : '✅';
+
+            return `
+                <div class="history-item ai-training-item">
+                    <div class="history-item-header">
+                        <span>${statusIcon} ${status}</span>
+                        <span class="history-timestamp">${this.formatTimestamp(startedAt)}</span>
+                    </div>
+                    <div class="history-item-content">
+                        <div>Длительность: <strong>${duration ? this.formatDuration(duration) : '—'}</strong></div>
+                        <div>Выборка: <strong>${samples ?? '—'}</strong></div>
+                        ${accuracy ? `<div>Accuracy: <strong>${accuracy}%</strong></div>` : ''}
+                        ${record.notes ? `<div class="history-details">${record.notes}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * Обновляет карточку последнего обучения
+     */
+    updateAITrainingSummary(record) {
+        const timeEl = document.getElementById('aiLastTrainingTime');
+        const durationEl = document.getElementById('aiLastTrainingDuration');
+        const samplesEl = document.getElementById('aiLastTrainingSamples');
+
+        if (!record) {
+            if (timeEl) timeEl.textContent = '—';
+            if (durationEl) durationEl.textContent = 'Длительность: —';
+            if (samplesEl) samplesEl.textContent = 'Выборка: —';
+            return;
+        }
+
+        if (timeEl) {
+            timeEl.textContent = this.formatTimestamp(record.timestamp || record.started_at) || '—';
+        }
+        if (durationEl) {
+            const durationValue = record.duration || record.duration_seconds;
+            durationEl.textContent = `Длительность: ${durationValue ? this.formatDuration(durationValue) : '—'}`;
+        }
+        if (samplesEl) {
+            const samples = record.samples || record.processed_samples || record.dataset_size;
+            samplesEl.textContent = `Выборка: ${samples ?? '—'}`;
+        }
+    }
+
+    /**
+     * Загружает метрики производительности AI
+     */
+    async loadAIPerformanceMetrics() {
+        try {
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/ai/performance`);
+            const data = await response.json();
+            if (data.success) {
+                this.displayAIPerformanceMetrics(data.metrics || {});
+            } else {
+                this.displayAIPerformanceMetrics({});
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка загрузки метрик AI:', error);
+            this.displayAIPerformanceMetrics({});
+        }
+    }
+
+    /**
+     * Отображает метрики производительности AI
+     */
+    displayAIPerformanceMetrics(metrics) {
+        const winRateEl = document.getElementById('aiOverallWinRate');
+        const pnlEl = document.getElementById('aiOverallPnL');
+        const decisionsEl = document.getElementById('aiOverallDecisions');
+
+        const overall = metrics?.overall || {};
+        const winRate = overall.win_rate_percent !== undefined
+            ? overall.win_rate_percent
+            : (overall.win_rate ?? 0) * (overall.win_rate <= 1 ? 100 : 1);
+        const formattedWinRate = winRate ? `${Number(winRate).toFixed(1)}%` : '—';
+
+        if (winRateEl) {
+            winRateEl.textContent = formattedWinRate;
+        }
+        if (decisionsEl) {
+            const totalDecisions = overall.total_ai_decisions ?? overall.total_decisions ?? overall.successful_decisions && overall.failed_decisions
+                ? (overall.successful_decisions + overall.failed_decisions)
+                : null;
+            decisionsEl.textContent = `Решений: ${totalDecisions ?? '—'}`;
+        }
+        if (pnlEl) {
+            const totalPnL = overall.total_pnl ?? overall.avg_pnl;
+            pnlEl.textContent = totalPnL !== undefined && totalPnL !== null
+                ? `Total PnL: ${(totalPnL >= 0 ? '+' : '')}${Number(totalPnL).toFixed(2)} USDT`
+                : 'Total PnL: —';
         }
     }
     
@@ -9290,6 +9444,22 @@ class BotsManager {
             minute: '2-digit',
             second: '2-digit'
         });
+    }
+
+    formatDuration(seconds) {
+        if (seconds === undefined || seconds === null) {
+            return '—';
+        }
+        const totalSeconds = Math.max(0, Number(seconds));
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const secs = Math.floor(totalSeconds % 60);
+        const parts = [];
+        if (hours) parts.push(`${hours}ч`);
+        if (minutes) parts.push(`${minutes}м`);
+        if (!hours && !minutes) parts.push(`${secs}с`);
+        else if (secs) parts.push(`${secs}с`);
+        return parts.join(' ');
     }
     
     saveCollapseState(symbol, isCollapsed) {
