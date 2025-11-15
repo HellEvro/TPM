@@ -6341,7 +6341,16 @@ class BotsManager {
             position_sync_interval: parseInt(document.getElementById('positionSyncInterval')?.value) || 600,
             inactive_bot_cleanup_interval: parseInt(document.getElementById('inactiveBotCleanupInterval')?.value) || 600,
             inactive_bot_timeout: parseInt(document.getElementById('inactiveBotTimeout')?.value) || 600,
-            stop_loss_setup_interval: parseInt(document.getElementById('stopLossSetupInterval')?.value) || 300
+            stop_loss_setup_interval: parseInt(document.getElementById('stopLossSetupInterval')?.value) || 300,
+            enhanced_rsi_enabled: document.getElementById('enhancedRsiEnabled')?.checked || false,
+            enhanced_rsi_require_volume_confirmation: document.getElementById('enhancedRsiVolumeConfirm')?.checked || false,
+            enhanced_rsi_require_divergence_confirmation: document.getElementById('enhancedRsiDivergenceConfirm')?.checked || false,
+            enhanced_rsi_use_stoch_rsi: document.getElementById('enhancedRsiUseStochRsi')?.checked || false,
+            rsi_extreme_zone_timeout: parseInt(document.getElementById('rsiExtremeZoneTimeout')?.value) || 3,
+            rsi_extreme_oversold: parseInt(document.getElementById('rsiExtremeOversold')?.value) || 20,
+            rsi_extreme_overbought: parseInt(document.getElementById('rsiExtremeOverbought')?.value) || 80,
+            rsi_volume_confirmation_multiplier: parseFloat(document.getElementById('rsiVolumeMultiplier')?.value) || 1.2,
+            rsi_divergence_lookback: parseInt(document.getElementById('rsiDivergenceLookback')?.value) || 10
         };
         
         const result = {
@@ -6377,17 +6386,7 @@ class BotsManager {
         console.log('[BotsManager] 💾 Сохранение системных настроек...');
         try {
             const config = this.collectConfigurationData();
-            const systemSettings = {
-                rsi_update_interval: config.system.rsi_update_interval,
-                auto_save_interval: config.system.auto_save_interval,
-                debug_mode: config.system.debug_mode,
-                auto_refresh_ui: config.system.auto_refresh_ui,
-                refresh_interval: config.system.refresh_interval,
-                position_sync_interval: config.system.position_sync_interval,
-                inactive_bot_cleanup_interval: config.system.inactive_bot_cleanup_interval,
-                inactive_bot_timeout: config.system.inactive_bot_timeout,
-                stop_loss_setup_interval: config.system.stop_loss_setup_interval
-            };
+            const systemSettings = { ...config.system };
             
             await this.sendConfigUpdate('system-config', systemSettings, 'Системные настройки');
         } catch (error) {

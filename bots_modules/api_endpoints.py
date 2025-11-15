@@ -1331,6 +1331,10 @@ def system_config():
     # Константы теперь в SystemConfig
     try:
         if request.method == 'GET':
+            try:
+                load_system_config()
+            except Exception as load_err:
+                logger.warning(f" ⚠️ Не удалось перезагрузить системную конфигурацию перед GET: {load_err}")
             return jsonify({
                 'success': True,
                 'config': get_system_config_snapshot()
