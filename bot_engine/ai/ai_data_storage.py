@@ -136,6 +136,8 @@ class AIDataStorage:
                             raise
                     
                     # Успешно сохранено
+                    if filepath == getattr(self, 'training_history_file', None):
+                        logger.info(f"💾 История обучения обновлена ({filepath}) — записей: {len(data.get('trainings', []))}")
                     return
                     
             except (PermissionError, OSError) as file_error:
@@ -218,6 +220,7 @@ class AIDataStorage:
                     trainings = trainings[-100:]
                 
                 history['trainings'] = trainings
+                logger.info(f"🧠 Добавлена запись обучения AI (всего: {len(trainings)}) — id={training_record['id']}")
                 self._save_data(self.training_history_file, history)
         except Exception as e:
             logger.error(f"❌ Ошибка добавления записи об обучении: {e}")
