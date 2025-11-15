@@ -1,6 +1,6 @@
 {
   "model_type": "GradientBoostingRegressor",
-  "saved_at": "2025-11-14T23:59:44.247590",
+  "saved_at": "2025-11-15T17:25:12.771744",
   "n_estimators": 100,
   "max_depth": 5
 }
