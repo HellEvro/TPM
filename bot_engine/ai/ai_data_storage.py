@@ -15,9 +15,10 @@ import json
 import logging
 import time
 import uuid
+import traceback
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
-from threading import Lock
+from threading import RLock
 
 logger = logging.getLogger('AI.DataStorage')
 
@@ -27,7 +28,7 @@ class AIDataStorage:
     
     def __init__(self, data_dir: str = 'data/ai'):
         self.data_dir = data_dir
-        self.lock = Lock()
+        self.lock = RLock()
         
         # Создаем директорию если её нет
         os.makedirs(self.data_dir, exist_ok=True)
@@ -89,11 +90,13 @@ class AIDataStorage:
         for attempt in range(max_retries):
             try:
                 with self.lock:
+                    logger.warning(f"🧪 DIAG: _save_data start filepath={filepath} attempt={attempt + 1}")
                     # Создаем уникальное имя временного файла
                     temp_file = f"{filepath}.tmp.{uuid.uuid4().hex[:8]}"
                     
                     # Сохраняем во временный файл сначала
                     try:
+                        logger.warning(f"🧪 DIAG: writing temp file {temp_file}")
                         with open(temp_file, 'w', encoding='utf-8') as f:
                             json.dump(data, f, ensure_ascii=False, indent=2)
                     except Exception as write_error:
@@ -106,6 +109,7 @@ class AIDataStorage:
                     
                     # Заменяем оригинальный файл атомарно
                     if os.path.exists(filepath):
+                        logger.warning(f"🧪 DIAG: removing original file {filepath}")
                         try:
                             os.remove(filepath)
                         except PermissionError:
@@ -122,6 +126,7 @@ class AIDataStorage:
                     
                     # Переименовываем временный файл
                     try:
+                        logger.warning(f"🧪 DIAG: renaming {temp_file} -> {filepath}")
                         os.rename(temp_file, filepath)
                     except PermissionError:
                         if attempt < max_retries - 1:
@@ -136,8 +141,19 @@ class AIDataStorage:
                             raise
                     
                     # Успешно сохранено
-                    if filepath == getattr(self, 'training_history_file', None):
-                        logger.info(f"💾 История обучения обновлена ({filepath}) — записей: {len(data.get('trainings', []))}")
+                    basename = os.path.basename(os.path.normpath(filepath))
+                    if basename == 'ai_training_history.json':
+                        trainings_len = len(data.get('trainings', []))
+                        abs_path = os.path.abspath(filepath)
+                        logger.warning(f"💾 История обучения обновлена ({abs_path}) — записей: {trainings_len}")
+                        if trainings_len == 0:
+                            stack = ''.join(traceback.format_stack(limit=12))
+                            logger.warning(
+                                "🩺 DIAG: training_history.json записывается пустым списком!\n"
+                                f"   Путь: {abs_path}\n"
+                                f"   Вызов:\n{stack}"
+                            )
+                    logger.warning("🧪 DIAG: _save_data completed successfully")
                     return
                     
             except (PermissionError, OSError) as file_error:
@@ -207,6 +223,11 @@ class AIDataStorage:
                 history = self._load_data(self.training_history_file)
                 trainings = history.get('trainings', [])
                 
+                logger.warning(
+                    f"🧪 DIAG: add_training_record event={training_data.get('event_type')} "
+                    f"status={training_data.get('status')} (до добавления={len(trainings)})"
+                )
+                
                 training_record = {
                     'id': f"training_{int(datetime.now().timestamp())}",
                     'timestamp': datetime.now().isoformat(),
@@ -220,8 +241,11 @@ class AIDataStorage:
                     trainings = trainings[-100:]
                 
                 history['trainings'] = trainings
-                logger.info(f"🧠 Добавлена запись обучения AI (всего: {len(trainings)}) — id={training_record['id']}")
-                self._save_data(self.training_history_file, history)
+            
+            logger.info(f"🧠 Добавлена запись обучения AI (всего: {len(trainings)}) — id={training_record['id']}")
+            logger.warning("🧪 DIAG: вызываем _save_data для истории обучения…")
+            self._save_data(self.training_history_file, history)
+            logger.warning("🧪 DIAG: _save_data завершился без исключения")
         except Exception as e:
             logger.error(f"❌ Ошибка добавления записи об обучении: {e}")
     
