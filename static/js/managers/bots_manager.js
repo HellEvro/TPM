@@ -6382,7 +6382,11 @@ class BotsManager {
                 auto_save_interval: config.system.auto_save_interval,
                 debug_mode: config.system.debug_mode,
                 auto_refresh_ui: config.system.auto_refresh_ui,
-                refresh_interval: config.system.refresh_interval
+                refresh_interval: config.system.refresh_interval,
+                position_sync_interval: config.system.position_sync_interval,
+                inactive_bot_cleanup_interval: config.system.inactive_bot_cleanup_interval,
+                inactive_bot_timeout: config.system.inactive_bot_timeout,
+                stop_loss_setup_interval: config.system.stop_loss_setup_interval
             };
             
             await this.sendConfigUpdate('system-config', systemSettings, 'Системные настройки');
