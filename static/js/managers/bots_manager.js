@@ -8972,9 +8972,15 @@ class BotsManager {
             winRateEl.textContent = formattedWinRate;
         }
         if (decisionsEl) {
-            const totalDecisions = overall.total_ai_decisions ?? overall.total_decisions ?? overall.successful_decisions && overall.failed_decisions
-                ? (overall.successful_decisions + overall.failed_decisions)
-                : null;
+            let totalDecisions = overall.total_ai_decisions ?? overall.total_decisions ?? null;
+            if (totalDecisions === null) {
+                const successful = overall.successful_decisions;
+                const failed = overall.failed_decisions;
+                if (successful !== undefined && successful !== null &&
+                    failed !== undefined && failed !== null) {
+                    totalDecisions = successful + failed;
+                }
+            }
             decisionsEl.textContent = `Решений: ${totalDecisions ?? '—'}`;
         }
         if (pnlEl) {
