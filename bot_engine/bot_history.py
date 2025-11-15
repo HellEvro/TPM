@@ -602,11 +602,27 @@ def log_bot_signal(symbol: str, signal_type: str, rsi: float, price: float, deta
     bot_history_manager.log_bot_signal(symbol, signal_type, rsi, price, details)
 
 
-def log_position_opened(bot_id: str, symbol: str, direction: str, size: float, 
-                       entry_price: float, stop_loss: float = None, take_profit: float = None):
+def log_position_opened(bot_id: str, symbol: str, direction: str, size: float,
+                       entry_price: float, stop_loss: float = None, take_profit: float = None,
+                       decision_source: str = 'SCRIPT', ai_decision_id: str = None,
+                       ai_confidence: float = None, ai_signal: str = None,
+                       rsi: float = None, trend: str = None):
     """Логирование открытия позиции"""
-    bot_history_manager.log_position_opened(bot_id, symbol, direction, size, entry_price, 
-                                           stop_loss, take_profit)
+    bot_history_manager.log_position_opened(
+        bot_id,
+        symbol,
+        direction,
+        size,
+        entry_price,
+        stop_loss,
+        take_profit,
+        decision_source=decision_source,
+        ai_decision_id=ai_decision_id,
+        ai_confidence=ai_confidence,
+        ai_signal=ai_signal,
+        rsi=rsi,
+        trend=trend
+    )
 
 
 def log_position_closed(bot_id: str, symbol: str, direction: str, exit_price: float, 
