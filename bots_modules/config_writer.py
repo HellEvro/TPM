@@ -103,7 +103,7 @@ def save_auto_bot_config_to_py(config: Dict[str, Any]) -> bool:
                     new_value = config[key]
                     
                     # Форматируем новое значение в Python-синтаксис
-                new_value_str = _format_python_value(new_value)
+                    new_value_str = _format_python_value(new_value)
                     
                     if old_value == new_value_str:
                         # Значение не изменилось — оставляем строку как есть и не шумим в логах
