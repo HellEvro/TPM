@@ -15,29 +15,67 @@ from datetime import datetime
 from types import FrameType
 from typing import Iterable, Optional
 
+class _DefaultTraceConfig:
+    """Запасная конфигурация на случай недоступности основных настроек."""
+
+    ENABLE_CODE_TRACING = False
+    TRACE_INCLUDE_KEYWORDS: Iterable[str] = []
+    TRACE_SKIP_KEYWORDS: Iterable[str] = []
+    TRACE_WRITE_TO_FILE = False
+    TRACE_LOG_FILE = 'logs/trace.log'
+    TRACE_MAX_LINE_LENGTH = 200
+
+
 try:
-    from bot_engine.bot_config import SystemConfig
+    from bot_engine.bot_config import SystemConfig as _InitialTraceConfig
 except Exception:  # pragma: no cover
     # Фолбэк, если конфиг нельзя импортировать (например, при раннем старте)
-    class SystemConfig:  # type: ignore
-        ENABLE_CODE_TRACING = False
-        TRACE_INCLUDE_KEYWORDS: Iterable[str] = []
-        TRACE_SKIP_KEYWORDS: Iterable[str] = []
-        TRACE_WRITE_TO_FILE = False
-        TRACE_LOG_FILE = 'logs/trace.log'
-        TRACE_MAX_LINE_LENGTH = 200
+    _InitialTraceConfig = _DefaultTraceConfig  # type: ignore
 
 
-TRACE_ENABLED = bool(getattr(SystemConfig, 'ENABLE_CODE_TRACING', False))
-TRACE_INCLUDE_KEYWORDS = list(getattr(SystemConfig, 'TRACE_INCLUDE_KEYWORDS', []))
-TRACE_SKIP_KEYWORDS = list(getattr(SystemConfig, 'TRACE_SKIP_KEYWORDS', []))
-TRACE_WRITE_TO_FILE = bool(getattr(SystemConfig, 'TRACE_WRITE_TO_FILE', False))
-TRACE_LOG_FILE = getattr(SystemConfig, 'TRACE_LOG_FILE', 'logs/trace.log')
-TRACE_MAX_LINE_LENGTH = int(getattr(SystemConfig, 'TRACE_MAX_LINE_LENGTH', 200) or 200)
+TRACE_ENABLED = False
+TRACE_INCLUDE_KEYWORDS: Iterable[str] = []
+TRACE_SKIP_KEYWORDS: Iterable[str] = []
+TRACE_WRITE_TO_FILE = False
+TRACE_LOG_FILE = 'logs/trace.log'
+TRACE_MAX_LINE_LENGTH = 200
 
 _trace_logger: Optional[logging.Logger] = None
-_last_logged = {}
+_last_logged: dict[str, float] = {}
 _global_last_time: Optional[float] = None
+
+
+def _apply_trace_config(config_cls) -> None:
+    """Применяет значения из переданного конфига к модулю трейсинга."""
+    global TRACE_ENABLED, TRACE_INCLUDE_KEYWORDS, TRACE_SKIP_KEYWORDS
+    global TRACE_WRITE_TO_FILE, TRACE_LOG_FILE, TRACE_MAX_LINE_LENGTH
+    global _trace_logger, _last_logged, _global_last_time
+
+    TRACE_ENABLED = bool(getattr(config_cls, 'ENABLE_CODE_TRACING', False))
+    TRACE_INCLUDE_KEYWORDS = list(getattr(config_cls, 'TRACE_INCLUDE_KEYWORDS', []))
+    TRACE_SKIP_KEYWORDS = list(getattr(config_cls, 'TRACE_SKIP_KEYWORDS', []))
+    TRACE_WRITE_TO_FILE = bool(getattr(config_cls, 'TRACE_WRITE_TO_FILE', False))
+    TRACE_LOG_FILE = getattr(config_cls, 'TRACE_LOG_FILE', 'logs/trace.log')
+    TRACE_MAX_LINE_LENGTH = int(getattr(config_cls, 'TRACE_MAX_LINE_LENGTH', 200) or 200)
+
+    # Сбрасываем состояние логгера/кеша строк при смене конфигурации
+    _trace_logger = None
+    _last_logged = {}
+    _global_last_time = None
+
+
+def set_trace_config(config_cls) -> None:
+    """
+    Позволяет переопределить конфигурацию трейсинга.
+
+    Используется, например, ai.py, чтобы задать собственные настройки,
+    отличные от SystemConfig.
+    """
+    _apply_trace_config(config_cls)
+
+
+# Применяем конфиг по умолчанию сразу после инициализации модуля
+_apply_trace_config(_InitialTraceConfig)
 
 
 def _should_trace_file(filename: Optional[str]) -> bool:
