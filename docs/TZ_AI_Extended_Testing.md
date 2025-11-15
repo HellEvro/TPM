@@ -16,7 +16,8 @@
 - `ai_trainer` использует `ProtectionState` + `evaluate_protections()`; симуляция полностью повторяет реальные защиты.
 - `ai_backtester_new` переведён на тот же движок (history run + candle run), теперь учитывает все ограничения автобота.
 - `NewTradingBot.check_protection_mechanisms()` подключён к ядру, идёт адаптация обновления биржевых стопов.
-- TODO: вынести exit-scam/time filters и использовать единый движок для автофильтров.
+- ✅ Боевое ядро фильтров также указывает на `bot_engine.filters`: `bots_modules/filters.py` теперь вызывает те же RSI/ExitScam расчёты, что и AI, без легаси-отклонений.
+- TODO: синхронизировать worker `check_missing_stop_losses()` с новым состоянием `ProtectionState`, чтобы биржевые стопы/тейки точно отражали решения ядра.
 
 ## 4. Поддержка флагов и фильтров
 - ✅ RSI Time Filter и ExitScam подключены к `ai_trainer`/`ai_backtester_new` через `bot_engine/ai/filter_utils.py` (используется общий код `bot_engine.filters`).
@@ -32,8 +33,9 @@
 
 ## 6. Тестовый контур
 - ✅ Smoke-паритет: `tests/test_ai_simulator_parity.py` проверяет, что `NewTradingBot` и AI-симуляция формируют идентичный `ProtectionState` (основа для одинаковых решений `evaluate_protections`).
-- Smoke‑тест: обучение пары монет и проверка, что индивидуальные настройки содержат полный набор полей.
+- ✅ Smoke‑тест индивидуальных настроек: `tests/test_ai_individual_settings.py` обучает mock-настройки и проверяет наличие всех ключей (RSI, фильтры, риск, AI телеметрия).
 - ✅ Добавлен unit-тест `tests/test_ai_optimizer_genomes.py`, который контролирует чтение/применение геномов (`optimizer_genomes.json`) и max_tests.
+- TODO: большой интеграционный тест «симуляция vs NewTradingBot» на фиксированных свечах, чтобы подтвердить полное равенство решений.
 
 ## 7. Статус тестирования
 - Пока не выполнялось (логические правки). Тесты будут добавлены после реализации шагов выше.

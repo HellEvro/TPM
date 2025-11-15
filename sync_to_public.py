@@ -35,10 +35,15 @@ INCLUDE = [
 ALWAYS_INCLUDE = [
     "bot_engine/ai/ai_trainer.py",
     "bot_engine/ai/ai_backtester_new.py",
+    "bot_engine/ai/ai_strategy_optimizer.py",
     "bot_engine/ai/filter_utils.py",
     "bot_engine/protections.py",
     "bots_modules/bot_class.py",
     "bots_modules/imports_and_globals.py",
+    "data/ai/optimizer_genomes.json",
+    "tests/test_ai_optimizer_genomes.py",
+    "tests/test_ai_simulator_parity.py",
+    "tests/test_ai_individual_settings.py",
 ]
 
 # Обязательные элементы: гарантируем, что они присутствуют в списке на копирование.
