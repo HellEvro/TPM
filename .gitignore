@@ -241,6 +241,11 @@ data/individual_coin_settings.json
 data/mature_coins.json
 data/system_config.json
 data/telegram_states.json
+data/bot_positions_registry.json
+data/ai/models/profit_predictor.pkl
+data/ai/models/profit_predictor_metadata.json
+data/ai/models/signal_predictor.pkl
+data/ai/models/signal_predictor_metadata.json
 app/config.py
 app/keys.py
 # Эти файлы пересоздаются автоматически при работе системы
