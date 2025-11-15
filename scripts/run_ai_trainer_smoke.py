@@ -15,6 +15,10 @@ import sys
 from datetime import datetime
 from unittest import mock
 
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
 from bot_engine.ai.ai_trainer import AITrainer
 
 # Минимальный набор свечей/RSI — одинаков для обеих монет.
@@ -78,9 +82,6 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-    if ROOT not in sys.path:
-        sys.path.insert(0, ROOT)
     os.environ.setdefault('PYTHONUTF8', '1')
     main()
 
