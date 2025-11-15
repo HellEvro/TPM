@@ -110,7 +110,10 @@ def save_auto_bot_config_to_py(config: Dict[str, Any]) -> bool:
                         logger.debug(f"[CONFIG_WRITER] ↩️ {key}: без изменений ({old_value})")
                     else:
                         # Собираем обновленную строку
-                        updated_line = f"{indent}'{key}': {new_value_str}{comma}{comment}\n"
+                        comment_fragment = comment or ''
+                        if comment_fragment and not comment_fragment.startswith(' '):
+                            comment_fragment = f' {comment_fragment}'
+                        updated_line = f"{indent}'{key}': {new_value_str}{comma}{comment_fragment}\n"
                         # ✅ Логируем ключевые изменения
                         if key in ('trailing_stop_activation', 'trailing_stop_distance', 'break_even_trigger', 'avoid_down_trend', 'avoid_up_trend'):
                             logger.info(f"[CONFIG_WRITER] ✏️ {key}: {old_value} → {new_value_str}")
@@ -198,7 +201,10 @@ def save_system_config_to_py(config: Dict[str, Any]) -> bool:
                 if attr_name in config:
                     new_value = _format_python_value(config[attr_name])
                     if old_value.strip() != new_value:
-                        line = f"{indent}{attr_name} = {new_value}{comment}\n"
+                        comment_fragment = comment or ''
+                        if comment_fragment and not comment_fragment.startswith(' '):
+                            comment_fragment = f' {comment_fragment}'
+                        line = f"{indent}{attr_name} = {new_value}{comment_fragment}\n"
                         logger.debug(f"[CONFIG_WRITER] ✏️ {attr_name}: {old_value.strip()} → {new_value}")
             updated_lines.append(line)
 
