@@ -11,6 +11,7 @@ Smoke-тест AITrainer: прогоняет обучение на 2 монет�
 from __future__ import annotations
 
 import os
+import sys
 from datetime import datetime
 from unittest import mock
 
@@ -77,6 +78,9 @@ def main() -> None:
 
 
 if __name__ == '__main__':
+    ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+    if ROOT not in sys.path:
+        sys.path.insert(0, ROOT)
     os.environ.setdefault('PYTHONUTF8', '1')
     main()
 
