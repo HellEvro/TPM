@@ -1,6 +1,6 @@
 {
   "model_type": "RandomForestClassifier",
-  "saved_at": "2025-11-14T23:59:44.241465",
+  "saved_at": "2025-11-15T17:25:12.765835",
   "n_estimators": 200,
   "max_depth": 15
 }
