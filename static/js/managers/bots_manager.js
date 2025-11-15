@@ -8633,11 +8633,11 @@ class BotsManager {
      */
     async loadAIHistory() {
         try {
-            // Загружаем статистику AI vs скриптовые
-            await this.loadAIStats();
-            
-            // Загружаем решения AI
-            await this.loadAIDecisions();
+            await Promise.all([
+                this.loadAIStats(),
+                this.loadAIDecisions(),
+                this.loadAIOptimizerSummary()
+            ]);
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка загрузки AI истории:', error);
         }
@@ -8697,6 +8697,138 @@ class BotsManager {
             }
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка загрузки решений AI:', error);
+        }
+    }
+
+    /**
+     * Загружает результаты оптимизатора
+     */
+    async loadAIOptimizerSummary() {
+        const paramsContainer = document.getElementById('optimizerParamsList');
+        if (!paramsContainer) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/ai/optimizer/results`);
+            const data = await response.json();
+            if (data.success) {
+                this.displayAIOptimizerSummary(data);
+            } else {
+                this.displayAIOptimizerSummary(null);
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка загрузки результатов оптимизатора:', error);
+            this.displayAIOptimizerSummary(null);
+        }
+    }
+
+    /**
+     * Отображает результаты оптимизатора
+     */
+    displayAIOptimizerSummary(data) {
+        const paramsList = document.getElementById('optimizerParamsList');
+        const topList = document.getElementById('optimizerTopSymbols');
+        const patternsContainer = document.getElementById('optimizerPatternsSummary');
+        const genomeVersionEl = document.getElementById('optimizerGenomeVersion');
+        const updatedAtEl = document.getElementById('optimizerUpdatedAt');
+        const maxTestsEl = document.getElementById('optimizerMaxTests');
+        const symbolsCountEl = document.getElementById('optimizerSymbolsCount');
+
+        const metadata = data?.metadata || {};
+        if (genomeVersionEl) {
+            genomeVersionEl.textContent = metadata.genome_version || '—';
+        }
+        if (updatedAtEl) {
+            if (metadata.optimized_params_updated_at) {
+                updatedAtEl.textContent = `Обновлено: ${this.formatTimestamp(metadata.optimized_params_updated_at)}`;
+            } else {
+                updatedAtEl.textContent = 'Обновлено: —';
+            }
+        }
+        if (maxTestsEl) {
+            maxTestsEl.textContent = metadata.max_tests || '—';
+        }
+        if (symbolsCountEl) {
+            symbolsCountEl.textContent = `Оптимизировано монет: ${metadata.total_symbols_optimized || 0}`;
+        }
+
+        if (paramsList) {
+            const optimizedParams = data?.optimized_params;
+            if (optimizedParams && Object.keys(optimizedParams).length > 0) {
+                const formatValue = (value) => {
+                    if (typeof value === 'number') {
+                        return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+                    }
+                    return value ?? '—';
+                };
+                paramsList.innerHTML = Object.entries(optimizedParams).map(([key, value]) => `
+                    <div class="optimizer-param" style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding:4px 0;">
+                        <span>${key}</span>
+                        <strong>${formatValue(value)}</strong>
+                    </div>
+                `).join('');
+            } else {
+                paramsList.innerHTML = `
+                    <div class="empty-history-state">
+                        <div class="empty-icon">🧮</div>
+                        <p>Параметры оптимизатора недоступны</p>
+                    </div>
+                `;
+            }
+        }
+
+        if (topList) {
+            const topSymbols = Array.isArray(data?.top_symbols) ? data.top_symbols : [];
+            if (topSymbols.length > 0) {
+                const html = topSymbols.map(item => `
+                    <div class="optimizer-symbol-item" style="border-bottom:1px solid var(--border-color); padding:6px 0;">
+                        <div class="symbol-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong>${item.symbol}</strong>
+                            <span class="symbol-rating">⭐ ${item.rating?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        <div class="symbol-details" style="display:flex; gap:12px; font-size:12px; color:var(--text-muted,#888);">
+                            <span>Win Rate: ${item.win_rate?.toFixed(1) || '0.0'}%</span>
+                            <span>Total PnL: ${item.total_pnl >= 0 ? '+' : ''}${(item.total_pnl || 0).toFixed(2)} USDT</span>
+                        </div>
+                        ${item.updated_at ? `<small style="color:var(--text-muted,#888);">Обновлено: ${this.formatTimestamp(item.updated_at)}</small>` : ''}
+                    </div>
+                `).join('');
+                topList.innerHTML = html;
+            } else {
+                topList.innerHTML = `
+                    <div class="empty-history-state">
+                        <div class="empty-icon">📉</div>
+                        <p>Нет оптимизированных монет</p>
+                        <small>Запустите оптимизацию, чтобы увидеть результаты</small>
+                    </div>
+                `;
+            }
+        }
+
+        if (patternsContainer) {
+            const patterns = data?.trade_patterns;
+            if (patterns) {
+                const total = patterns.total_trades || 0;
+                const winRate = patterns.win_rate || patterns.profitable_trades && total
+                    ? (patterns.profitable_trades / total * 100)
+                    : 0;
+                patternsContainer.innerHTML = `
+                    <div class="optimizer-patterns-card" style="background:var(--section-bg); border:1px solid var(--border-color); border-radius:12px; padding:12px;">
+                        <div>Всего сделок: <strong>${total}</strong></div>
+                        <div>Прибыльных: <strong>${patterns.profitable_trades || 0}</strong></div>
+                        <div>Убыточных: <strong>${patterns.losing_trades || 0}</strong></div>
+                        <div>Win Rate: <strong>${winRate?.toFixed(1) || '0.0'}%</strong></div>
+                    </div>
+                `;
+            } else {
+                patternsContainer.innerHTML = `
+                    <div class="empty-history-state">
+                        <div class="empty-icon">📊</div>
+                        <p>Нет данных по паттернам</p>
+                    </div>
+                `;
+            }
         }
     }
     
