@@ -159,6 +159,24 @@ class AITrainer:
         
         logger.info("✅ AITrainer инициализирован")
 
+    def _record_training_event(self, event_type: str, status: str, **payload) -> None:
+        """
+        Неблокирующая запись события обучения в AIDataStorage.
+        """
+        if not self.data_storage:
+            return
+        try:
+            record = {
+                'event_type': event_type,
+                'status': status,
+                'timestamp': datetime.now().isoformat(),
+            }
+            if payload:
+                record.update({k: v for k, v in payload.items() if v is not None})
+            self.data_storage.add_training_record(record)
+        except Exception as storage_error:
+            logger.debug(f"⚠️ Не удалось записать событие обучения {event_type}: {storage_error}")
+
     def _build_individual_settings(
         self,
         coin_rsi_params: Dict[str, float],
@@ -2521,6 +2539,15 @@ class AITrainer:
             logger.info(f"   ✅ Моделей сохранено: {total_models_saved}")
             logger.info(f"   ⚠️ Ошибок: {total_failed_coins}")
             logger.info("=" * 80)
+
+            self._record_training_event(
+                'historical_data_training',
+                status='SUCCESS',
+                coins=total_trained_coins,
+                candles=total_candles_processed,
+                models_saved=total_models_saved,
+                errors=total_failed_coins
+            )
             
         except Exception as e:
             logger.error(f"❌ Ошибка обучения на исторических данных: {e}")
