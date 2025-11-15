@@ -17,7 +17,7 @@
 - `ai_backtester_new` переведён на тот же движок (history run + candle run), теперь учитывает все ограничения автобота.
 - `NewTradingBot.check_protection_mechanisms()` подключён к ядру, идёт адаптация обновления биржевых стопов.
 - ✅ Боевое ядро фильтров также указывает на `bot_engine.filters`: `bots_modules/filters.py` теперь вызывает те же RSI/ExitScam расчёты, что и AI, без легаси-отклонений.
-- ✅ `check_missing_stop_losses()` теперь разворачивает `NewTradingBot`/`ProtectionState` и применяет `evaluate_protections()` для расчёта биржевых SL/TP, так что воркер ставит ордера по тем же правилам, что и симуляция.
+- ✅ `check_missing_stop_losses()` снова использует `ProtectionState`: воркер берёт снапшот ботов без длительной блокировки, считает `evaluate_protections()` в отдельном цикле и лишь кратко обновляет `bots_data`, так что сервер не виснет даже при большом числе позиций.
 
 ## 4. Поддержка флагов и фильтров
 - ✅ RSI Time Filter и ExitScam подключены к `ai_trainer`/`ai_backtester_new` через `bot_engine/ai/filter_utils.py` (используется общий код `bot_engine.filters`).
