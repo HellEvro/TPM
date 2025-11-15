@@ -1589,6 +1589,52 @@ def system_config():
             if saved_to_file and (changes_count > 0 or system_changes_count > 0):
                 # Перезагружаем конфигурацию, чтобы применить изменения
                 load_system_config()
+
+        # ⚠️ Если поле trend_require_candles не приходило из UI, блок выше не выполнится.
+        # Поэтому дублируем сохранение, чтобы любые системные изменения попадали в файл.
+        if 'trend_require_candles' not in data and system_changes_count > 0 and not saved_to_file:
+            existing_config = {}
+            if os.path.exists(SYSTEM_CONFIG_FILE):
+                try:
+                    with open(SYSTEM_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                        existing_config = json.load(f)
+                except Exception as e:
+                    logger.warning(f" ⚠️ Не удалось загрузить существующую конфигурацию: {e}")
+
+            system_config_data = existing_config.copy()
+            system_config_data.update({
+                'rsi_update_interval': SystemConfig.RSI_UPDATE_INTERVAL,
+                'auto_save_interval': SystemConfig.AUTO_SAVE_INTERVAL,
+                'debug_mode': SystemConfig.DEBUG_MODE,
+                'auto_refresh_ui': SystemConfig.AUTO_REFRESH_UI,
+                'refresh_interval': SystemConfig.UI_REFRESH_INTERVAL,
+                'position_sync_interval': SystemConfig.POSITION_SYNC_INTERVAL,
+                'inactive_bot_cleanup_interval': SystemConfig.INACTIVE_BOT_CLEANUP_INTERVAL,
+                'inactive_bot_timeout': SystemConfig.INACTIVE_BOT_TIMEOUT,
+                'stop_loss_setup_interval': SystemConfig.STOP_LOSS_SETUP_INTERVAL,
+                'enhanced_rsi_enabled': SystemConfig.ENHANCED_RSI_ENABLED,
+                'enhanced_rsi_require_volume_confirmation': SystemConfig.ENHANCED_RSI_REQUIRE_VOLUME_CONFIRMATION,
+                'enhanced_rsi_require_divergence_confirmation': SystemConfig.ENHANCED_RSI_REQUIRE_DIVERGENЦЕ_CONFIRMATION,
+                'enhanced_rsi_use_stoch_rsi': SystemConfig.ENHANCED_RSI_USE_STOCH_RSI,
+                'rsi_extreme_zone_timeout': SystemConfig.RSI_EXTREME_ZONE_TIMEOUT,
+                'rsi_extreme_oversold': SystemConfig.RSI_EXTРЕМЕ_OVERSOLD,
+                'rsi_extreme_overbought': SystemConfig.RSI_EXTРЕМЕ_OVERBOUGHT,
+                'rsi_volume_confirmation_multiplier': SystemConfig.RSI_VOLUME_CONFIRMATION_MULTIPLIER,
+                'rsi_divergence_lookback': SystemConfig.RSI_DIVERGENЦЕ_LOOKBACK,
+                'trend_confirmation_bars': SystemConfig.TREND_CONFIRMATION_BARS,
+                'trend_min_confirmations': SystemConfig.TREND_MIN_CONFIRMATIONS,
+                'trend_require_slope': SystemConfig.TREND_REQUIRE_SLOPE,
+                'trend_require_price': SystemConfig.TREND_REQUIRE_PRICE,
+                'trend_require_candles': SystemConfig.TREND_REQUIRE_CANDLES
+            })
+
+            saved_to_file = save_system_config(system_config_data)
+
+            if system_changes_count > 0:
+                logger.info(f"✅ System config: изменено параметров: {system_changes_count}, конфигурация сохранена")
+
+            if saved_to_file:
+                load_system_config()
         
         return jsonify({
             'success': True,
