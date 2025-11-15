@@ -33,7 +33,7 @@
 
 ## 6. Тестовый контур
 - ✅ Smoke-паритет: `tests/test_ai_simulator_parity.py` проверяет, что `NewTradingBot` и AI-симуляция формируют идентичный `ProtectionState` (основа для одинаковых решений `evaluate_protections`).
-- ✅ Smoke‑тест индивидуальных настроек: `tests/test_ai_individual_settings.py` обучает mock-настройки и проверяет наличие всех ключей (RSI, фильтры, риск, AI телеметрия).
+- ✅ Smoke‑тест индивидуальных настроек: `tests/test_ai_individual_settings.py` формирует настройки для двух монет и убеждается, что полный набор ключей (RSI, фильтры, риск, AI телеметрия) присутствует и независим.
 - ✅ Добавлен unit-тест `tests/test_ai_optimizer_genomes.py`, который контролирует чтение/применение геномов (`optimizer_genomes.json`) и max_tests.
 - ✅ Интеграционный тест: `tests/test_ai_simulator_parity.py::test_full_sequence_parity_long_and_short` прогоняет цепочки LONG/SHORT цен и доказывает, что решения о закрытии позиций полностью совпадают между симуляцией и боевым ботом.
 - TODO: smoke-тест обучения пары монет (полный прогон `AITrainer`) с валидацией, что индивидуальные настройки записываются целиком.
