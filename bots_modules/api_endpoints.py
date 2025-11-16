@@ -3312,6 +3312,11 @@ def get_ai_performance():
         try:
             from bot_engine.ai.ai_data_storage import AIDataStorage
             storage = AIDataStorage()
+            period = request.args.get('period')
+            if period and period.lower() == 'all':
+                period = 'all'
+            if not period:
+                period = 'all'
             
             # Вычисляем актуальные метрики
             metrics = storage.calculate_performance_metrics()
@@ -3321,7 +3326,7 @@ def get_ai_performance():
                 if bot_history_manager is None:
                     return {}
                 trades = bot_history_manager.get_bot_trades(
-                    symbol=None, trade_type=None, limit=500000, period='all'
+                    symbol=None, trade_type=None, limit=500000, period=period
                 )
                 ai_trades = [t for t in trades if (t.get('decision_source') or 'SCRIPT').upper() == 'AI' and t.get('pnl') is not None]
                 if not ai_trades:
@@ -3428,6 +3433,11 @@ def get_ai_stats():
     """Получает статистику AI vs скриптовые правила"""
     try:
         symbol = request.args.get('symbol')  # Опциональный фильтр по символу
+        period = request.args.get('period')  # Опциональный период: 24h|7d|30d|all
+        if period and period.lower() == 'all':
+            period = 'all'
+        if not period:
+            period = 'all'
         
         # Получаем все сделки из истории
         if bot_history_manager is None:
@@ -3442,7 +3452,7 @@ def get_ai_stats():
             symbol=symbol,
             trade_type=None,
             limit=500000,
-            period='all'
+            period=period
         )
 
         # Fallback: добираем сделки из action-истории (POSITION_CLOSED), если по каким-то причинам
@@ -3452,7 +3462,7 @@ def get_ai_stats():
                 symbol=symbol,
                 action_type=None,
                 limit=500000,
-                period='all'
+                period=period
             )
             closed_actions = [
                 h for h in history_actions
