@@ -5569,6 +5569,23 @@ class BotsManager {
             console.error('[BotsManager] ❌ Элемент autoBotScope не найден!');
         }
         
+        const aiToggleEl = document.getElementById('autoBotAIEnabled');
+        if (aiToggleEl) {
+            aiToggleEl.checked = Boolean(autoBotConfig.ai_enabled);
+        }
+        
+        const aiConfidenceEl = document.getElementById('aiMinConfidence');
+        if (aiConfidenceEl) {
+            const value = Number.parseFloat(autoBotConfig.ai_min_confidence);
+            aiConfidenceEl.value = Number.isFinite(value) ? value : 0.7;
+        }
+        
+        const aiOverrideEl = document.getElementById('aiOverrideOriginal');
+        if (aiOverrideEl) {
+            const overrideValue = autoBotConfig.ai_override_original;
+            aiOverrideEl.checked = overrideValue !== false;
+        }
+        
         // Торговые параметры
         const rsiLongEl = document.getElementById('rsiLongThreshold');
         if (rsiLongEl) {
@@ -6249,6 +6266,7 @@ class BotsManager {
             const numberFields = [
                 { key: 'max_concurrent', el: 'autoBotMaxConcurrent' },
                 { key: 'risk_cap_percent', el: 'autoBotRiskCap' },
+                { key: 'ai_min_confidence', el: 'aiMinConfidence' },
                 { key: 'rsi_long_threshold', el: 'rsiLongThreshold' },
                 { key: 'rsi_short_threshold', el: 'rsiShortThreshold' },
                 { key: 'rsi_exit_long_with_trend', el: 'rsiExitLongWithTrendGlobal' },
@@ -6297,6 +6315,8 @@ class BotsManager {
             // Все булевые поля (avoidDownTrend, avoidUpTrend и trendDetectionEnabled уже обработаны выше)
             const boolFields = [
                 { key: 'enabled', el: 'globalAutoBotToggle' },
+                { key: 'ai_enabled', el: 'autoBotAIEnabled' },
+                { key: 'ai_override_original', el: 'aiOverrideOriginal' },
                 { key: 'break_even_protection', el: 'breakEvenProtection' },
                 { key: 'enable_maturity_check', el: 'enableMaturityCheck' },
                 { key: 'rsi_time_filter_enabled', el: 'rsiTimeFilterEnabled' },
@@ -6372,7 +6392,10 @@ class BotsManager {
                 enabled: config.autoBot.enabled,
                 max_concurrent: config.autoBot.max_concurrent,
                 risk_cap_percent: config.autoBot.risk_cap_percent,
-                scope: config.autoBot.scope
+                scope: config.autoBot.scope,
+                ai_enabled: config.autoBot.ai_enabled,
+                ai_min_confidence: config.autoBot.ai_min_confidence,
+                ai_override_original: config.autoBot.ai_override_original
             };
             
             await this.sendConfigUpdate('auto-bot', basicSettings, 'Основные настройки');
@@ -8652,7 +8675,9 @@ class BotsManager {
             const data = await response.json();
             
             if (data.success) {
-                const { ai, script, comparison } = data;
+                const aiStats = data.ai || {};
+                const scriptStats = data.script || {};
+                const comparisonStats = data.comparison || {};
                 
                 // Обновляем UI
                 const aiTotalEl = document.getElementById('aiTotalDecisions');
@@ -8661,15 +8686,21 @@ class BotsManager {
                 const scriptWinRateEl = document.getElementById('scriptWinRate');
                 const comparisonWinRateEl = document.getElementById('comparisonWinRate');
                 const comparisonAvgPnlEl = document.getElementById('comparisonAvgPnl');
+                const comparisonSummaryEl = document.getElementById('aiComparisonSummary');
                 
-                if (aiTotalEl) aiTotalEl.textContent = ai.total || 0;
-                if (aiWinRateEl) aiWinRateEl.textContent = `Win Rate: ${ai.win_rate?.toFixed(1) || 0}%`;
+                const aiTotal = Number(aiStats.total) || 0;
+                const aiWinRate = typeof aiStats.win_rate === 'number' ? aiStats.win_rate : 0;
+                const scriptTotal = Number(scriptStats.total) || 0;
+                const scriptWinRate = typeof scriptStats.win_rate === 'number' ? scriptStats.win_rate : 0;
                 
-                if (scriptTotalEl) scriptTotalEl.textContent = script.total || 0;
-                if (scriptWinRateEl) scriptWinRateEl.textContent = `Win Rate: ${script.win_rate?.toFixed(1) || 0}%`;
+                if (aiTotalEl) aiTotalEl.textContent = aiTotal;
+                if (aiWinRateEl) aiWinRateEl.textContent = `Win Rate: ${aiWinRate.toFixed(1)}%`;
                 
-                const winRateDiff = comparison.win_rate_diff || 0;
-                const avgPnlDiff = comparison.avg_pnl_diff || 0;
+                if (scriptTotalEl) scriptTotalEl.textContent = scriptTotal;
+                if (scriptWinRateEl) scriptWinRateEl.textContent = `Win Rate: ${scriptWinRate.toFixed(1)}%`;
+                
+                const winRateDiff = Number(comparisonStats.win_rate_diff) || 0;
+                const avgPnlDiff = Number(comparisonStats.avg_pnl_diff) || 0;
                 
                 if (comparisonWinRateEl) {
                     comparisonWinRateEl.textContent = `${winRateDiff >= 0 ? '+' : ''}${winRateDiff.toFixed(1)}%`;
@@ -8679,9 +8710,20 @@ class BotsManager {
                 if (comparisonAvgPnlEl) {
                     comparisonAvgPnlEl.textContent = `Avg PnL: ${avgPnlDiff >= 0 ? '+' : ''}${avgPnlDiff.toFixed(2)} USDT`;
                 }
+
+                if (comparisonSummaryEl) {
+                    comparisonSummaryEl.textContent = this.buildAIComparisonSummary(aiStats, scriptStats, comparisonStats);
+                    comparisonSummaryEl.classList.toggle('profit', winRateDiff > 0);
+                    comparisonSummaryEl.classList.toggle('loss', winRateDiff < 0);
+                }
             }
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка загрузки статистики AI:', error);
+            const summaryEl = document.getElementById('aiComparisonSummary');
+            if (summaryEl) {
+                summaryEl.textContent = 'Недостаточно данных для сравнения';
+                summaryEl.classList.remove('profit', 'loss');
+            }
         }
     }
     
@@ -8883,29 +8925,99 @@ class BotsManager {
 
         const html = sorted.map(record => {
             const startedAt = record.timestamp || record.started_at;
-            const duration = record.duration || record.duration_seconds;
+            const duration = record.duration_seconds ?? record.duration;
             const samples = record.samples || record.processed_samples || record.dataset_size;
             const accuracy = record.accuracy !== undefined ? (record.accuracy * 100).toFixed(1) : record.metrics?.accuracy;
             const status = (record.status || 'done').toUpperCase();
-            const statusIcon = status === 'FAILED' ? '❌' : '✅';
+            const { icon: statusIcon, className: statusClass } = this.getAITrainingStatusMeta(status);
+            const eventLabel = this.getAITrainingEventLabel(record.event_type);
+
+            const metrics = [];
+            const trades = record.trades ?? record.processed_trades;
+            if (typeof samples === 'number') {
+                metrics.push(`Выборка: <strong>${samples}</strong>`);
+            }
+            if (typeof trades === 'number') {
+                metrics.push(`Сделок: <strong>${trades}</strong>`);
+            }
+            if (typeof record.coins === 'number') {
+                metrics.push(`Монет: <strong>${record.coins}</strong>`);
+            }
+            if (typeof record.candles === 'number') {
+                metrics.push(`Свечей: <strong>${record.candles}</strong>`);
+            }
+            if (typeof record.models_saved === 'number') {
+                metrics.push(`Моделей: <strong>${record.models_saved}</strong>`);
+            }
+            if (typeof record.errors === 'number') {
+                metrics.push(`Ошибок: <strong>${record.errors}</strong>`);
+            }
+            if (record.accuracy !== undefined) {
+                const accNumber = Number(record.accuracy);
+                if (Number.isFinite(accNumber)) {
+                    const accValue = accNumber <= 1 ? accNumber * 100 : accNumber;
+                    metrics.push(`Точность: <strong>${accValue.toFixed(1)}%</strong>`);
+                }
+            } else if (accuracy) {
+                metrics.push(`Точность: <strong>${accuracy}%</strong>`);
+            }
+            if (record.mse !== undefined) {
+                metrics.push(`MSE: <strong>${Number(record.mse).toFixed(4)}</strong>`);
+            }
+            if (duration) {
+                metrics.push(`Длительность: <strong>${this.formatDuration(duration)}</strong>`);
+            }
+
+            const metricsHtml = metrics.length
+                ? `<div class="ai-training-metrics">${metrics.join(' • ')}</div>`
+                : '';
+            const reasonHtml = record.reason
+                ? `<div class="history-details">Причина: ${record.reason}</div>`
+                : '';
+            const notesHtml = record.notes
+                ? `<div class="history-details">${record.notes}</div>`
+                : '';
 
             return `
-                <div class="history-item ai-training-item">
+                <div class="history-item ai-training-item ${statusClass}">
                     <div class="history-item-header">
                         <span>${statusIcon} ${status}</span>
                         <span class="history-timestamp">${this.formatTimestamp(startedAt)}</span>
                     </div>
+                    <div class="history-item-subtitle">${eventLabel}</div>
                     <div class="history-item-content">
-                        <div>Длительность: <strong>${duration ? this.formatDuration(duration) : '—'}</strong></div>
-                        <div>Выборка: <strong>${samples ?? '—'}</strong></div>
-                        ${accuracy ? `<div>Accuracy: <strong>${accuracy}%</strong></div>` : ''}
-                        ${record.notes ? `<div class="history-details">${record.notes}</div>` : ''}
+                        ${metricsHtml}
+                        ${reasonHtml}
+                        ${notesHtml}
                     </div>
                 </div>
             `;
         }).join('');
 
         container.innerHTML = html;
+    }
+
+    getAITrainingStatusMeta(status) {
+        const normalized = (status || 'SUCCESS').toUpperCase();
+        const meta = {
+            'SUCCESS': { icon: '✅', className: 'success' },
+            'FAILED': { icon: '❌', className: 'failed' },
+            'SKIPPED': { icon: '⏸️', className: 'skipped' }
+        };
+        return meta[normalized] || meta.SUCCESS;
+    }
+
+    getAITrainingEventLabel(eventType) {
+        if (!eventType) {
+            return 'Обучение AI';
+        }
+        const normalized = eventType.toLowerCase();
+        const labels = {
+            'historical_data_training': '🗂️ Симуляция на истории',
+            'history_trades_training': '📚 Обучение на истории сделок',
+            'real_trades_training': '🤖 Реальные сделки с PnL'
+        };
+        return labels[normalized] || eventType;
     }
 
     /**
@@ -8989,6 +9101,36 @@ class BotsManager {
                 ? `Total PnL: ${(totalPnL >= 0 ? '+' : '')}${Number(totalPnL).toFixed(2)} USDT`
                 : 'Total PnL: —';
         }
+    }
+
+    buildAIComparisonSummary(aiStats = {}, scriptStats = {}, comparison = {}) {
+        const aiTotal = aiStats.total || 0;
+        const scriptTotal = scriptStats.total || 0;
+        if (!aiTotal && !scriptTotal) {
+            return 'Недостаточно данных для сравнения';
+        }
+        if (!aiTotal) {
+            return 'Скриптовые правила пока лидируют (AI ещё не открыл сделок)';
+        }
+        if (!scriptTotal) {
+            return 'AI уже торгует, для скриптовых правил нет сделок';
+        }
+
+        const winDiff = Number(comparison.win_rate_diff || 0);
+        const pnlDiff = Number(comparison.avg_pnl_diff || 0);
+
+        let leaderText = 'AI и скрипты показывают одинаковый результат';
+        if (winDiff > 0) {
+            leaderText = `🤖 AI опережает скрипты на ${winDiff.toFixed(1)}% по win rate`;
+        } else if (winDiff < 0) {
+            leaderText = `📜 Скриптовые правила пока впереди на ${Math.abs(winDiff).toFixed(1)}% по win rate`;
+        }
+
+        const pnlText = pnlDiff !== 0
+            ? `, средний PnL ${pnlDiff >= 0 ? '+' : ''}${pnlDiff.toFixed(2)} USDT`
+            : '';
+
+        return `${leaderText}${pnlText}.`;
     }
     
     /**

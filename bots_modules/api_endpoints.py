@@ -3388,29 +3388,36 @@ def get_ai_stats():
         
         trades = bot_history_manager.get_bot_trades(symbol=symbol, limit=10000)
         
-        # Разделяем на AI и скриптовые
-        ai_trades = [t for t in trades if t.get('decision_source') == 'AI']
-        script_trades = [t for t in trades if t.get('decision_source') == 'SCRIPT']
+        ai_trades = []
+        script_trades = []
         
-        # Вычисляем статистику для AI
-        ai_stats = {
-            'total': len(ai_trades),
-            'successful': sum(1 for t in ai_trades if t.get('is_successful', t.get('pnl', 0) > 0)),
-            'failed': sum(1 for t in ai_trades if not t.get('is_successful', t.get('pnl', 0) > 0)),
-            'total_pnl': sum(t.get('pnl', 0) for t in ai_trades),
-            'avg_pnl': sum(t.get('pnl', 0) for t in ai_trades) / len(ai_trades) if ai_trades else 0
-        }
-        ai_stats['win_rate'] = (ai_stats['successful'] / ai_stats['total'] * 100) if ai_stats['total'] > 0 else 0
+        for trade in trades:
+            source_raw = trade.get('decision_source')
+            source = source_raw.upper() if isinstance(source_raw, str) else 'SCRIPT'
+            if source == 'AI':
+                ai_trades.append(trade)
+            else:
+                # Все нерегистрированные или отсутствующие источники считаем скриптовыми
+                script_trades.append(trade)
         
-        # Вычисляем статистику для скриптовых
-        script_stats = {
-            'total': len(script_trades),
-            'successful': sum(1 for t in script_trades if t.get('is_successful', t.get('pnl', 0) > 0)),
-            'failed': sum(1 for t in script_trades if not t.get('is_successful', t.get('pnl', 0) > 0)),
-            'total_pnl': sum(t.get('pnl', 0) for t in script_trades),
-            'avg_pnl': sum(t.get('pnl', 0) for t in script_trades) / len(script_trades) if script_trades else 0
-        }
-        script_stats['win_rate'] = (script_stats['successful'] / script_stats['total'] * 100) if script_stats['total'] > 0 else 0
+        def _compute_stats(items):
+            total = len(items)
+            successful = sum(1 for t in items if t.get('is_successful', t.get('pnl', 0) > 0))
+            failed = total - successful
+            total_pnl = sum(t.get('pnl', 0) for t in items)
+            avg_pnl = total_pnl / total if total else 0
+            win_rate = (successful / total * 100) if total else 0
+            return {
+                'total': total,
+                'successful': successful,
+                'failed': failed,
+                'total_pnl': total_pnl,
+                'avg_pnl': avg_pnl,
+                'win_rate': win_rate
+            }
+        
+        ai_stats = _compute_stats(ai_trades)
+        script_stats = _compute_stats(script_trades)
         
         return jsonify({
             'success': True,
