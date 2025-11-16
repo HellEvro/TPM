@@ -8677,7 +8677,9 @@ class BotsManager {
         try {
             // Период из селектора
             const periodSelect = document.getElementById('aiPeriodSelect');
-            const period = periodSelect ? (periodSelect.value || '7d') : '7d';
+            const rawPeriod = periodSelect ? (periodSelect.value || '7d') : '7d';
+            const periodMap = { '24h': 'today', '7d': 'week', '30d': 'month', 'all': 'all' };
+            const period = periodMap[rawPeriod] || 'all';
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/ai/stats?period=${encodeURIComponent(period)}`);
             const data = await response.json();
             
@@ -9184,7 +9186,9 @@ class BotsManager {
     async loadAIPerformanceMetrics() {
         try {
             const periodSelect = document.getElementById('aiPeriodSelect');
-            const period = periodSelect ? (periodSelect.value || '7d') : '7d';
+            const rawPeriod = periodSelect ? (periodSelect.value || '7d') : '7d';
+            const periodMap = { '24h': 'today', '7d': 'week', '30d': 'month', 'all': 'all' };
+            const period = periodMap[rawPeriod] || 'all';
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/ai/performance?period=${encodeURIComponent(period)}`);
             const data = await response.json();
             if (data.success) {
