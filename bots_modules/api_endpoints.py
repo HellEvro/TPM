@@ -3386,7 +3386,14 @@ def get_ai_stats():
                 'error': 'Bot history manager not initialized'
             }), 500
         
-        trades = bot_history_manager.get_bot_trades(symbol=symbol, limit=10000)
+        # Берем максимально возможный срез и отключаем период, чтобы не потерять сделки
+        # В памяти BotHistoryManager хранит до 5000 последних сделок; поднимем лимит и уберем период
+        trades = bot_history_manager.get_bot_trades(
+            symbol=symbol,
+            trade_type=None,
+            limit=500000,
+            period='all'
+        )
         
         ai_trades = []
         script_trades = []
@@ -3423,6 +3430,11 @@ def get_ai_stats():
             'success': True,
             'ai': ai_stats,
             'script': script_stats,
+            'counts': {
+                'ai_total': ai_stats['total'],
+                'script_total': script_stats['total'],
+                'all_total': len(trades)
+            },
             'comparison': {
                 'win_rate_diff': ai_stats['win_rate'] - script_stats['win_rate'],
                 'avg_pnl_diff': ai_stats['avg_pnl'] - script_stats['avg_pnl'],
