@@ -8690,25 +8690,77 @@ class BotsManager {
                 
                 const aiTotal = Number(aiStats.total) || 0;
                 const aiWinRate = typeof aiStats.win_rate === 'number' ? aiStats.win_rate : 0;
+                const aiTotalPnL = Number(aiStats.total_pnl) || 0;
+                const aiAvgPnL = Number(aiStats.avg_pnl) || 0;
                 const scriptTotal = Number(scriptStats.total) || 0;
                 const scriptWinRate = typeof scriptStats.win_rate === 'number' ? scriptStats.win_rate : 0;
+                const scriptTotalPnL = Number(scriptStats.total_pnl) || 0;
+                const scriptAvgPnL = Number(scriptStats.avg_pnl) || 0;
                 
-                if (aiTotalEl) aiTotalEl.textContent = aiTotal;
-                if (aiWinRateEl) aiWinRateEl.textContent = `Win Rate: ${aiWinRate.toFixed(1)}%`;
+                // Обновляем карточку AI
+                if (aiTotalEl) {
+                    aiTotalEl.textContent = aiTotal;
+                    const aiCard = aiTotalEl.closest('.stat-card');
+                    if (aiCard) {
+                        aiCard.classList.remove('profit', 'loss', 'neutral');
+                        if (aiTotal > 0) {
+                            aiCard.classList.add(aiWinRate >= 50 ? 'profit' : 'loss');
+                        }
+                    }
+                }
+                if (aiWinRateEl) {
+                    aiWinRateEl.innerHTML = `Win Rate: <strong>${aiWinRate.toFixed(1)}%</strong>`;
+                    if (aiTotalPnL !== 0) {
+                        aiWinRateEl.innerHTML += `<br>Total PnL: <strong class="${aiTotalPnL >= 0 ? 'profit' : 'loss'}">${aiTotalPnL >= 0 ? '+' : ''}${aiTotalPnL.toFixed(2)} USDT</strong>`;
+                    }
+                }
                 
-                if (scriptTotalEl) scriptTotalEl.textContent = scriptTotal;
-                if (scriptWinRateEl) scriptWinRateEl.textContent = `Win Rate: ${scriptWinRate.toFixed(1)}%`;
+                // Обновляем карточку Скриптовые
+                if (scriptTotalEl) {
+                    scriptTotalEl.textContent = scriptTotal;
+                    const scriptCard = scriptTotalEl.closest('.stat-card');
+                    if (scriptCard) {
+                        scriptCard.classList.remove('profit', 'loss', 'neutral');
+                        if (scriptTotal > 0) {
+                            scriptCard.classList.add(scriptWinRate >= 50 ? 'profit' : 'loss');
+                        }
+                    }
+                }
+                if (scriptWinRateEl) {
+                    scriptWinRateEl.innerHTML = `Win Rate: <strong>${scriptWinRate.toFixed(1)}%</strong>`;
+                    if (scriptTotalPnL !== 0) {
+                        scriptWinRateEl.innerHTML += `<br>Total PnL: <strong class="${scriptTotalPnL >= 0 ? 'profit' : 'loss'}">${scriptTotalPnL >= 0 ? '+' : ''}${scriptTotalPnL.toFixed(2)} USDT</strong>`;
+                    }
+                }
                 
                 const winRateDiff = Number(comparisonStats.win_rate_diff) || 0;
                 const avgPnlDiff = Number(comparisonStats.avg_pnl_diff) || 0;
+                const totalPnlDiff = Number(comparisonStats.total_pnl_diff) || 0;
                 
+                // Обновляем карточку Сравнение
                 if (comparisonWinRateEl) {
-                    comparisonWinRateEl.textContent = `${winRateDiff >= 0 ? '+' : ''}${winRateDiff.toFixed(1)}%`;
-                    comparisonWinRateEl.className = `stat-value ${winRateDiff >= 0 ? 'profit' : 'loss'}`;
+                    const diffIcon = winRateDiff > 0 ? '📈' : winRateDiff < 0 ? '📉' : '➖';
+                    comparisonWinRateEl.innerHTML = `${diffIcon} ${winRateDiff >= 0 ? '+' : ''}${winRateDiff.toFixed(1)}%`;
+                    comparisonWinRateEl.className = `stat-value ${winRateDiff >= 0 ? 'profit' : winRateDiff < 0 ? 'loss' : 'neutral'}`;
+                    
+                    const comparisonCard = comparisonWinRateEl.closest('.stat-card');
+                    if (comparisonCard) {
+                        comparisonCard.classList.remove('profit', 'loss', 'neutral');
+                        if (winRateDiff > 0) {
+                            comparisonCard.classList.add('profit');
+                        } else if (winRateDiff < 0) {
+                            comparisonCard.classList.add('loss');
+                        } else {
+                            comparisonCard.classList.add('neutral');
+                        }
+                    }
                 }
                 
                 if (comparisonAvgPnlEl) {
-                    comparisonAvgPnlEl.textContent = `Avg PnL: ${avgPnlDiff >= 0 ? '+' : ''}${avgPnlDiff.toFixed(2)} USDT`;
+                    comparisonAvgPnlEl.innerHTML = `Avg PnL: <strong class="${avgPnlDiff >= 0 ? 'profit' : 'loss'}">${avgPnlDiff >= 0 ? '+' : ''}${avgPnlDiff.toFixed(2)} USDT</strong>`;
+                    if (totalPnlDiff !== 0) {
+                        comparisonAvgPnlEl.innerHTML += `<br>Total PnL: <strong class="${totalPnlDiff >= 0 ? 'profit' : 'loss'}">${totalPnlDiff >= 0 ? '+' : ''}${totalPnlDiff.toFixed(2)} USDT</strong>`;
+                    }
                 }
 
                 if (comparisonSummaryEl) {
@@ -9117,7 +9169,8 @@ class BotsManager {
         }
 
         const winDiff = Number(comparison.win_rate_diff || 0);
-        const pnlDiff = Number(comparison.avg_pnl_diff || 0);
+        const avgPnlDiff = Number(comparison.avg_pnl_diff || 0);
+        const totalPnlDiff = Number(comparison.total_pnl_diff || 0);
 
         let leaderText = 'AI и скрипты показывают одинаковый результат';
         if (winDiff > 0) {
@@ -9126,9 +9179,15 @@ class BotsManager {
             leaderText = `📜 Скриптовые правила пока впереди на ${Math.abs(winDiff).toFixed(1)}% по win rate`;
         }
 
-        const pnlText = pnlDiff !== 0
-            ? `, средний PnL ${pnlDiff >= 0 ? '+' : ''}${pnlDiff.toFixed(2)} USDT`
-            : '';
+        const parts = [];
+        if (avgPnlDiff !== 0) {
+            parts.push(`средний PnL ${avgPnlDiff >= 0 ? '+' : ''}${avgPnlDiff.toFixed(2)} USDT`);
+        }
+        if (totalPnlDiff !== 0) {
+            parts.push(`общий PnL ${totalPnlDiff >= 0 ? '+' : ''}${totalPnlDiff.toFixed(2)} USDT`);
+        }
+        
+        const pnlText = parts.length > 0 ? `, ${parts.join(', ')}` : '';
 
         return `${leaderText}${pnlText}.`;
     }
