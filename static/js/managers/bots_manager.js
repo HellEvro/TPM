@@ -83,6 +83,8 @@ class BotsManager {
         try {
             // Инициализируем интерфейс
             this.initializeInterface();
+            // Инициализируем селектор периода для AI
+            this.initAIPeriodSelector();
             
             // КРИТИЧЕСКИ ВАЖНО: Инициализируем обработчик Auto Bot переключателя
             console.log('[BotsManager] 🤖 Инициализация обработчика Auto Bot переключателя...');
@@ -8673,7 +8675,10 @@ class BotsManager {
      */
     async loadAIStats() {
         try {
-            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/ai/stats`);
+            // Период из селектора
+            const periodSelect = document.getElementById('aiPeriodSelect');
+            const period = periodSelect ? (periodSelect.value || '7d') : '7d';
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/ai/stats?period=${encodeURIComponent(period)}`);
             const data = await response.json();
             
             if (data.success) {
@@ -8782,6 +8787,18 @@ class BotsManager {
                 summaryEl.classList.remove('profit', 'loss');
             }
         }
+    }
+
+    /**
+     * Навешивает обработчик на селектор периода
+     */
+    initAIPeriodSelector() {
+        const select = document.getElementById('aiPeriodSelect');
+        if (!select || select._aiBound) return;
+        select._aiBound = true;
+        select.addEventListener('change', () => {
+            this.loadAIHistory();
+        });
     }
     
     /**
@@ -9166,7 +9183,9 @@ class BotsManager {
      */
     async loadAIPerformanceMetrics() {
         try {
-            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/ai/performance`);
+            const periodSelect = document.getElementById('aiPeriodSelect');
+            const period = periodSelect ? (periodSelect.value || '7d') : '7d';
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/ai/performance?period=${encodeURIComponent(period)}`);
             const data = await response.json();
             if (data.success) {
                 this.displayAIPerformanceMetrics(data.metrics || {});
@@ -9186,6 +9205,7 @@ class BotsManager {
         const winRateEl = document.getElementById('aiOverallWinRate');
         const pnlEl = document.getElementById('aiOverallPnL');
         const decisionsEl = document.getElementById('aiOverallDecisions');
+        const topSymbolsEl = document.getElementById('aiTopSymbols');
 
         let overall = metrics?.overall || {};
         
@@ -9259,6 +9279,31 @@ class BotsManager {
             pnlEl.textContent = (totalPnL !== undefined && totalPnL !== null)
                 ? `Total PnL: ${(totalPnL >= 0 ? '+' : '')}${Number(totalPnL).toFixed(2)} USDT`
                 : 'Total PnL: —';
+        }
+
+        // Топ монет по win rate / pnl
+        if (topSymbolsEl) {
+            const bySymbol = metrics.by_symbol || {};
+            const entries = Object.entries(bySymbol);
+            if (entries.length === 0) {
+                topSymbolsEl.innerHTML = '';
+            } else {
+                const sorted = entries
+                    .map(([symbol, m]) => ({ symbol, ...m }))
+                    .sort((a, b) => (b.win_rate ?? 0) - (a.win_rate ?? 0))
+                    .slice(0, 5);
+                topSymbolsEl.innerHTML = `
+                    <div style="border-top:1px dashed var(--border-color); margin-top:8px; padding-top:8px;">
+                        <div style="font-weight:500; margin-bottom:6px;">Топ монет (AI):</div>
+                        ${sorted.map(item => `
+                            <div style="display:flex; justify-content:space-between; font-size:12px; margin:2px 0;">
+                                <span>${item.symbol}</span>
+                                <span>${(item.win_rate*100 || 0).toFixed(1)}% · ${(item.total_pnl >= 0 ? '+' : '')}${Number(item.total_pnl||0).toFixed(2)} USDT</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
         }
     }
 
