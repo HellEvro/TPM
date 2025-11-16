@@ -2457,16 +2457,25 @@
                                 <div class="stat-label">AI Решения</div>
                                 <div class="stat-value" id="aiTotalDecisions">-</div>
                                 <div class="stat-detail" id="aiWinRate">Win Rate: -</div>
+                                <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                                    💡 Количество реальных сделок, открытых AI (не обучение!)
+                                </small>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Скриптовые</div>
                                 <div class="stat-value" id="scriptTotalDecisions">-</div>
                                 <div class="stat-detail" id="scriptWinRate">Win Rate: -</div>
+                                <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                                    💡 Количество сделок, открытых скриптовыми правилами
+                                </small>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Сравнение</div>
                                 <div class="stat-value" id="comparisonWinRate">-</div>
                                 <div class="stat-detail" id="comparisonAvgPnl">Avg PnL: -</div>
+                                <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                                    💡 Разница между AI и скриптовыми правилами
+                                </small>
                             </div>
                         </div>
                         <div class="ai-comparison-summary" id="aiComparisonSummary" style="margin-top: 12px; font-size: 14px; color: var(--text-muted);">
@@ -2482,12 +2491,18 @@
                                 <div class="stat-value" id="aiLastTrainingTime">—</div>
                                 <div class="stat-detail" id="aiLastTrainingDuration">Длительность: —</div>
                                 <div class="stat-detail" id="aiLastTrainingSamples">Выборка: —</div>
+                                <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                                    💡 Последний запуск обучения модели AI
+                                </small>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Производительность AI</div>
                                 <div class="stat-value" id="aiOverallWinRate">—</div>
                                 <div class="stat-detail" id="aiOverallDecisions">Решений: —</div>
                                 <div class="stat-detail" id="aiOverallPnL">Total PnL: —</div>
+                                <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                                    💡 Метрики реальных сделок, открытых AI
+                                </small>
                             </div>
                         </div>
                         <div class="history-list" id="aiTrainingHistoryList" style="margin-top: 16px;">
@@ -2506,6 +2521,9 @@
                                 <div class="stat-label">Версия генома</div>
                                 <div class="stat-value" id="optimizerGenomeVersion">-</div>
                                 <div class="stat-detail" id="optimizerUpdatedAt">Обновлено: -</div>
+                                <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                                    💡 Версия оптимизированных параметров стратегии
+                                </small>
                             </div>
                             <div class="stat-card" style="min-height: 120px;">
                                 <div class="stat-label">Max tests</div>
@@ -2536,13 +2554,16 @@
                         <div class="optimizer-patterns" id="optimizerPatternsSummary" style="margin-top: 16px;"></div>
                     </div>
                     
-                    <div class="ai-decisions-section">
+                    <div class="ai-decisions-section" style="margin-top: 24px;">
                         <h3>🤖 Решения AI</h3>
+                        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
+                            💡 Список всех решений AI о входе/выходе из позиций. Показывает, какие решения AI принял и их результаты.
+                        </p>
                         <div class="history-list" id="aiDecisionsList">
                             <div class="empty-history-state">
                                 <div class="empty-icon">🤖</div>
                                 <p>Решения AI не найдены</p>
-                                <small>Решения AI будут отображаться здесь</small>
+                                <small>Решения AI будут отображаться здесь после того, как AI начнет принимать решения</small>
                             </div>
                         </div>
                     </div>

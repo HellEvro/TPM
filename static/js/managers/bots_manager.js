@@ -8655,8 +8655,10 @@ class BotsManager {
      */
     async loadAIHistory() {
         try {
+            // Сначала загружаем статистику, чтобы использовать её как fallback для метрик
+            await this.loadAIStats();
+            // Затем загружаем остальные данные параллельно
             await Promise.all([
-                this.loadAIStats(),
                 this.loadAIDecisions(),
                 this.loadAIOptimizerSummary(),
                 this.loadAITrainingHistory(),
@@ -8678,6 +8680,9 @@ class BotsManager {
                 const aiStats = data.ai || {};
                 const scriptStats = data.script || {};
                 const comparisonStats = data.comparison || {};
+                
+                // Сохраняем данные AI для использования в метриках производительности
+                this._lastAIStats = aiStats;
                 
                 // Обновляем UI
                 const aiTotalEl = document.getElementById('aiTotalDecisions');
@@ -8835,8 +8840,9 @@ class BotsManager {
             genomeVersionEl.textContent = metadata.genome_version || '—';
         }
         if (updatedAtEl) {
-            if (metadata.optimized_params_updated_at) {
-                updatedAtEl.textContent = `Обновлено: ${this.formatTimestamp(metadata.optimized_params_updated_at)}`;
+            const updatedAt = metadata.optimized_params_updated_at || metadata.genome_updated_at;
+            if (updatedAt) {
+                updatedAtEl.textContent = `Обновлено: ${this.formatTimestamp(updatedAt)}`;
             } else {
                 updatedAtEl.textContent = 'Обновлено: —';
             }
@@ -8851,23 +8857,47 @@ class BotsManager {
         if (paramsList) {
             const optimizedParams = data?.optimized_params;
             if (optimizedParams && Object.keys(optimizedParams).length > 0) {
+                // Словарь переводов и описаний параметров
+                const paramLabels = {
+                    'rsi_long_entry': { label: 'RSI вход LONG', desc: 'RSI для входа в длинную позицию' },
+                    'rsi_long_exit': { label: 'RSI выход LONG', desc: 'RSI для выхода из длинной позиции' },
+                    'rsi_short_entry': { label: 'RSI вход SHORT', desc: 'RSI для входа в короткую позицию' },
+                    'rsi_short_exit': { label: 'RSI выход SHORT', desc: 'RSI для выхода из короткой позиции' },
+                    'stop_loss_pct': { label: 'Стоп-лосс', desc: 'Процент стоп-лосса' },
+                    'take_profit_pct': { label: 'Тейк-профит', desc: 'Процент тейк-профита' },
+                    'position_size_pct': { label: 'Размер позиции', desc: 'Процент размера позиции от баланса' },
+                    'best_trend': { label: 'Лучший тренд', desc: 'Наиболее прибыльный тренд' },
+                    'trend_win_rate': { label: 'Win Rate тренда', desc: 'Процент прибыльных сделок по тренду' }
+                };
+                
                 const formatValue = (value) => {
+                    if (value === null || value === undefined) return '—';
                     if (typeof value === 'number') {
                         return Number.isInteger(value) ? value.toString() : value.toFixed(2);
                     }
-                    return value ?? '—';
+                    return String(value);
                 };
-                paramsList.innerHTML = Object.entries(optimizedParams).map(([key, value]) => `
-                    <div class="optimizer-param" style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding:4px 0;">
-                        <span>${key}</span>
-                        <strong>${formatValue(value)}</strong>
-                    </div>
-                `).join('');
+                
+                paramsList.innerHTML = Object.entries(optimizedParams)
+                    .filter(([key]) => key !== 'name') // Исключаем 'name' если есть
+                    .map(([key, value]) => {
+                        const paramInfo = paramLabels[key] || { label: key, desc: '' };
+                        return `
+                            <div class="optimizer-param" style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding:6px 0;">
+                                <div style="flex:1;">
+                                    <div style="font-weight:500;">${paramInfo.label}</div>
+                                    ${paramInfo.desc ? `<small style="color:var(--text-muted,#888); font-size:11px;">${paramInfo.desc}</small>` : ''}
+                                </div>
+                                <strong style="margin-left:12px; font-size:14px;">${formatValue(value)}${typeof value === 'number' && (key.includes('pct') || key.includes('rate')) ? '%' : ''}</strong>
+                            </div>
+                        `;
+                    }).join('');
             } else {
                 paramsList.innerHTML = `
                     <div class="empty-history-state">
                         <div class="empty-icon">🧮</div>
                         <p>Параметры оптимизатора недоступны</p>
+                        <small>Запустите оптимизацию стратегии для получения параметров</small>
                     </div>
                 `;
             }
@@ -8978,7 +9008,16 @@ class BotsManager {
         const html = sorted.map(record => {
             const startedAt = record.timestamp || record.started_at;
             const duration = record.duration_seconds ?? record.duration;
-            const samples = record.samples || record.processed_samples || record.dataset_size;
+            
+            // Извлекаем samples с учетом типа обучения
+            let samples = record.samples || record.processed_samples || record.dataset_size;
+            if (!samples && record.event_type === 'historical_data_training') {
+                samples = record.candles || record.coins;
+            }
+            if (!samples && record.event_type === 'real_trades_training') {
+                samples = record.trades;
+            }
+            
             const accuracy = record.accuracy !== undefined ? (record.accuracy * 100).toFixed(1) : record.metrics?.accuracy;
             const status = (record.status || 'done').toUpperCase();
             const { icon: statusIcon, className: statusClass } = this.getAITrainingStatusMeta(status);
@@ -9095,8 +9134,30 @@ class BotsManager {
             durationEl.textContent = `Длительность: ${durationValue ? this.formatDuration(durationValue) : '—'}`;
         }
         if (samplesEl) {
-            const samples = record.samples || record.processed_samples || record.dataset_size;
-            samplesEl.textContent = `Выборка: ${samples ?? '—'}`;
+            // Пробуем разные поля в зависимости от типа обучения
+            let samples = record.samples || record.processed_samples || record.dataset_size;
+            
+            // Для historical_data_training может быть candles или coins
+            if (!samples && record.event_type === 'historical_data_training') {
+                // Приоритет: candles (более точный показатель), затем coins
+                samples = record.candles || record.coins;
+                if (samples && record.coins) {
+                    // Показываем оба значения если есть
+                    samplesEl.textContent = `Выборка: ${record.coins} монет, ${record.candles || 0} свечей`;
+                    return;
+                }
+            }
+            
+            // Для real_trades_training может быть trades
+            if (!samples && record.event_type === 'real_trades_training') {
+                samples = record.trades;
+            }
+            
+            if (samples !== undefined && samples !== null) {
+                samplesEl.textContent = `Выборка: ${samples}`;
+            } else {
+                samplesEl.textContent = 'Выборка: —';
+            }
         }
     }
 
@@ -9126,15 +9187,51 @@ class BotsManager {
         const pnlEl = document.getElementById('aiOverallPnL');
         const decisionsEl = document.getElementById('aiOverallDecisions');
 
-        const overall = metrics?.overall || {};
-        const winRate = overall.win_rate_percent !== undefined
-            ? overall.win_rate_percent
-            : (overall.win_rate ?? 0) * (overall.win_rate <= 1 ? 100 : 1);
-        const formattedWinRate = winRate ? `${Number(winRate).toFixed(1)}%` : '—';
+        let overall = metrics?.overall || {};
+        
+        // Если метрики пустые, используем данные из статистики как fallback
+        if ((!overall.total_ai_decisions || overall.total_ai_decisions === 0) && this._lastAIStats) {
+            const stats = this._lastAIStats;
+            if (stats.total && stats.total > 0) {
+                overall = {
+                    total_ai_decisions: stats.total,
+                    successful_decisions: stats.successful || 0,
+                    failed_decisions: stats.failed || 0,
+                    win_rate: stats.win_rate ? (stats.win_rate / 100) : 0,
+                    win_rate_percent: stats.win_rate || 0,
+                    total_pnl: stats.total_pnl,
+                    avg_pnl: stats.avg_pnl
+                };
+            }
+        }
+        
+        // Вычисляем Win Rate
+        let winRate = overall.win_rate_percent;
+        if (winRate === undefined || winRate === null) {
+            const rawWinRate = overall.win_rate;
+            if (rawWinRate !== undefined && rawWinRate !== null) {
+                winRate = rawWinRate <= 1 ? rawWinRate * 100 : rawWinRate;
+            } else {
+                // Пробуем вычислить из successful/failed
+                const successful = overall.successful_decisions;
+                const failed = overall.failed_decisions;
+                const total = overall.total_ai_decisions ?? overall.total_decisions;
+                if (total && total > 0 && successful !== undefined && failed !== undefined) {
+                    winRate = (successful / total) * 100;
+                } else if (successful !== undefined && failed !== undefined && (successful + failed) > 0) {
+                    winRate = (successful / (successful + failed)) * 100;
+                }
+            }
+        }
+        
+        const formattedWinRate = (winRate !== undefined && winRate !== null && winRate > 0)
+            ? `${Number(winRate).toFixed(1)}%`
+            : '—';
 
         if (winRateEl) {
             winRateEl.textContent = formattedWinRate;
         }
+        
         if (decisionsEl) {
             let totalDecisions = overall.total_ai_decisions ?? overall.total_decisions ?? null;
             if (totalDecisions === null) {
@@ -9147,9 +9244,19 @@ class BotsManager {
             }
             decisionsEl.textContent = `Решений: ${totalDecisions ?? '—'}`;
         }
+        
         if (pnlEl) {
-            const totalPnL = overall.total_pnl ?? overall.avg_pnl;
-            pnlEl.textContent = totalPnL !== undefined && totalPnL !== null
+            // Приоритет: total_pnl, затем avg_pnl * total_decisions
+            let totalPnL = overall.total_pnl;
+            if (totalPnL === undefined || totalPnL === null) {
+                const avgPnL = overall.avg_pnl;
+                const totalDecisions = overall.total_ai_decisions ?? overall.total_decisions;
+                if (avgPnL !== undefined && avgPnL !== null && totalDecisions && totalDecisions > 0) {
+                    totalPnL = avgPnL * totalDecisions;
+                }
+            }
+            
+            pnlEl.textContent = (totalPnL !== undefined && totalPnL !== null)
                 ? `Total PnL: ${(totalPnL >= 0 ? '+' : '')}${Number(totalPnL).toFixed(2)} USDT`
                 : 'Total PnL: —';
         }
