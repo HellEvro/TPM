@@ -1039,6 +1039,43 @@
                             </div>
                             <input type="hidden" id="autoBotScope" value="all">
                         </div>
+
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">🤖</span>
+                                <span class="label-text">AI подтверждение сигналов:</span>
+                            </label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoBotAIEnabled" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <small class="config-help">Включите, чтобы AI подтверждал входы и фиксировал решения в истории</small>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">🎯</span>
+                                <span class="label-text">Мин. уверенность AI:</span>
+                            </label>
+                            <div class="config-input-with-unit">
+                                <input type="number" id="aiMinConfidence" class="config-input"
+                                       min="0.1" max="0.99" step="0.05" value="0.7" placeholder="0.7">
+                                <span class="input-unit">0‒1</span>
+                            </div>
+                            <small class="config-help">0.7 = 70% уверенности для подтверждения сигнала</small>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">🛑</span>
+                                <span class="label-text">AI блокирует скрипт:</span>
+                            </label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="aiOverrideOriginal" checked />
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <small class="config-help">Отключите, чтобы AI был рекомендательным (скрипты будут открывать сделки даже при предупреждениях AI)</small>
+                        </div>
                     </div>
                     
                     <div class="config-section-actions">
@@ -2431,6 +2468,9 @@
                                 <div class="stat-value" id="comparisonWinRate">-</div>
                                 <div class="stat-detail" id="comparisonAvgPnl">Avg PnL: -</div>
                             </div>
+                        </div>
+                        <div class="ai-comparison-summary" id="aiComparisonSummary" style="margin-top: 12px; font-size: 14px; color: var(--text-muted);">
+                            Недостаточно данных для сравнения
                         </div>
                     </div>
 
