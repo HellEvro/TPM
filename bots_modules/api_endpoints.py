@@ -3394,6 +3394,49 @@ def get_ai_stats():
             limit=500000,
             period='all'
         )
+
+        # Fallback: добираем сделки из action-истории (POSITION_CLOSED), если по каким-то причинам
+        # массив trades содержит меньше записей (например, старые записи только в history)
+        try:
+            history_actions = bot_history_manager.get_bot_history(
+                symbol=symbol,
+                action_type=None,
+                limit=500000,
+                period='all'
+            )
+            closed_actions = [
+                h for h in history_actions
+                if (h.get('action_type') or '').upper() == 'POSITION_CLOSED'
+            ]
+            # Преобразуем закрытия в формат trade-подобных словарей (если их нет в trades)
+            def _to_trade_from_close(entry):
+                return {
+                    'id': entry.get('id'),
+                    'timestamp': entry.get('timestamp'),
+                    'bot_id': entry.get('bot_id'),
+                    'symbol': entry.get('symbol'),
+                    'direction': entry.get('direction'),
+                    'size': entry.get('size'),
+                    'entry_price': entry.get('entry_price'),
+                    'exit_price': entry.get('exit_price'),
+                    'pnl': entry.get('pnl'),
+                    'roi': entry.get('roi'),
+                    'status': 'CLOSED',
+                    'close_timestamp': entry.get('timestamp'),
+                    'decision_source': entry.get('decision_source', 'SCRIPT'),
+                    'ai_decision_id': entry.get('ai_decision_id'),
+                    'ai_confidence': entry.get('ai_confidence'),
+                    'is_successful': entry.get('is_successful', (entry.get('pnl', 0) or 0) > 0),
+                }
+            if closed_actions:
+                # Создаем множество существующих id, чтобы не дублировать
+                existing_ids = {t.get('id') for t in trades if t.get('id')}
+                converted = [_to_trade_from_close(a) for a in closed_actions if a.get('id') not in existing_ids]
+                if converted:
+                    trades.extend(converted)
+        except Exception:
+            # Безопасно игнорируем любые проблемы с fallback
+            pass
         
         ai_trades = []
         script_trades = []
