@@ -169,6 +169,12 @@ class NewTradingBot:
         
         # ✅ Тренд при входе в позицию (для определения уровня RSI выхода)
         self.entry_trend = self.config.get('entry_trend', None)
+
+        # AI метаданные
+        self.ai_decision_id = self.config.get('ai_decision_id')
+        self._last_decision_source = 'SCRIPT'
+        self._last_ai_decision_meta = None
+        self._last_entry_context = {}
         
         
     def update_status(self, new_status, entry_price=None, position_side=None):
@@ -201,6 +207,64 @@ class NewTradingBot:
             self.trailing_take_profit_price = None
             self.trailing_last_update_ts = 0.0
             self.trailing_take_profit_price = None
+    
+    def _remember_entry_context(self, rsi: Optional[float], trend: Optional[str]):
+        """Сохраняет рыночный контекст последнего входа."""
+        self._last_entry_context = {
+            'rsi': rsi,
+            'trend': trend
+        }
+    
+    def _set_decision_source(self, source: str = 'SCRIPT', ai_meta: Optional[Dict] = None):
+        """Устанавливает источник решения для последующего логирования."""
+        normalized = 'AI' if source == 'AI' else 'SCRIPT'
+        self._last_decision_source = normalized
+        if normalized == 'AI' and ai_meta:
+            # Храним только необходимые поля
+            self._last_ai_decision_meta = {
+                'ai_confidence': ai_meta.get('ai_confidence'),
+                'ai_signal': ai_meta.get('ai_signal') or ai_meta.get('signal')
+            }
+        else:
+            self._last_ai_decision_meta = None
+            self.ai_decision_id = None
+    
+    def _on_position_opened(self, direction: str, entry_price: Optional[float], position_size: Optional[float]):
+        """Логирует открытие позиции в историю ботов."""
+        try:
+            from bot_engine.bot_history import log_position_opened
+        except ImportError:
+            return
+        
+        try:
+            size = position_size or self._get_position_quantity() or 0.0
+            price = entry_price or self.entry_price or 0.0
+            decision_source = getattr(self, '_last_decision_source', 'SCRIPT')
+            ai_meta = getattr(self, '_last_ai_decision_meta', None) or {}
+            ctx = getattr(self, '_last_entry_context', {}) or {}
+            
+            log_position_opened(
+                bot_id=self.symbol,
+                symbol=self.symbol,
+                direction=direction,
+                size=size,
+                entry_price=price,
+                stop_loss=self.stop_loss,
+                take_profit=self.take_profit,
+                decision_source=decision_source,
+                ai_decision_id=self.ai_decision_id if decision_source == 'AI' else None,
+                ai_confidence=ai_meta.get('ai_confidence'),
+                ai_signal=ai_meta.get('ai_signal') or direction,
+                rsi=ctx.get('rsi'),
+                trend=ctx.get('trend')
+            )
+        except Exception as log_error:
+            logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось записать историю открытия позиции: {log_error}")
+        finally:
+            # Сбрасываем контекст, но ID оставляем до закрытия
+            self._last_entry_context = {}
+            if self._last_decision_source != 'AI':
+                self._last_ai_decision_meta = None
             
     def _get_effective_protection_config(self) -> Dict:
         try:
@@ -303,8 +367,10 @@ class NewTradingBot:
                 rsi_time_filter_candles = self.config.get('rsi_time_filter_candles') or auto_config.get('rsi_time_filter_candles', 8)
                 rsi_time_filter_lower = self.config.get('rsi_time_filter_lower') or auto_config.get('rsi_time_filter_lower', 35)
                 ai_enabled = auto_config.get('ai_enabled', False)  # Включение AI
+                ai_override = auto_config.get('ai_override_original', True)
             
             # 🤖 ПРОВЕРКА AI ПРЕДСКАЗАНИЯ (если включено)
+            self._set_decision_source('SCRIPT')
             if ai_enabled:
                 try:
                     from bot_engine.ai.ai_integration import should_open_position_with_ai
@@ -324,13 +390,18 @@ class NewTradingBot:
                             config=auto_config
                         )
                         
-                        if ai_result.get('ai_used') and not ai_result.get('should_open', True):
-                            logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI блокирует LONG: {ai_result.get('reason', 'AI prediction')}")
-                            return False
-                        elif ai_result.get('ai_used') and ai_result.get('should_open'):
-                            logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI подтверждает LONG (уверенность: {ai_result.get('ai_confidence', 0):.2%})")
-                            # Сохраняем ID решения AI для последующего отслеживания результатов
-                            self.ai_decision_id = ai_result.get('ai_decision_id')
+                        if ai_result.get('ai_used'):
+                            if ai_result.get('should_open'):
+                                logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI подтверждает LONG (уверенность: {ai_result.get('ai_confidence', 0):.2%})")
+                                # Сохраняем ID решения AI для последующего отслеживания результатов
+                                self.ai_decision_id = ai_result.get('ai_decision_id')
+                                self._set_decision_source('AI', ai_result)
+                            else:
+                                logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI блокирует LONG: {ai_result.get('reason', 'AI prediction')}")
+                                if ai_override:
+                                    return False
+                                logger.info(f"[NEW_BOT_{self.symbol}] ⚖️ Используем скриптовые правила (AI только рекомендателен)")
+                                self._set_decision_source('SCRIPT')
                 except ImportError:
                     # AI модуль недоступен - продолжаем без него
                     pass
@@ -355,6 +426,7 @@ class NewTradingBot:
                     return False
             
             logger.info(f"[NEW_BOT_{self.symbol}] ✅ Открываем LONG (RSI: {rsi:.1f})")
+            self._remember_entry_context(rsi, trend)
             return True
             
         except Exception as e:
@@ -385,8 +457,10 @@ class NewTradingBot:
                 rsi_time_filter_candles = self.config.get('rsi_time_filter_candles') or auto_config.get('rsi_time_filter_candles', 8)
                 rsi_time_filter_upper = auto_config.get('rsi_time_filter_upper', 65)
                 ai_enabled = auto_config.get('ai_enabled', False)  # Включение AI
+                ai_override = auto_config.get('ai_override_original', True)
             
             # 🤖 ПРОВЕРКА AI ПРЕДСКАЗАНИЯ (если включено)
+            self._set_decision_source('SCRIPT')
             if ai_enabled:
                 try:
                     from bot_engine.ai.ai_integration import should_open_position_with_ai
@@ -406,13 +480,18 @@ class NewTradingBot:
                             config=auto_config
                         )
                         
-                        if ai_result.get('ai_used') and not ai_result.get('should_open', True):
-                            logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI блокирует SHORT: {ai_result.get('reason', 'AI prediction')}")
-                            return False
-                        elif ai_result.get('ai_used') and ai_result.get('should_open'):
-                            logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI подтверждает SHORT (уверенность: {ai_result.get('ai_confidence', 0):.2%})")
-                            # Сохраняем ID решения AI для последующего отслеживания результатов
-                            self.ai_decision_id = ai_result.get('ai_decision_id')
+                        if ai_result.get('ai_used'):
+                            if ai_result.get('should_open'):
+                                logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI подтверждает SHORT (уверенность: {ai_result.get('ai_confidence', 0):.2%})")
+                                # Сохраняем ID решения AI для последующего отслеживания результатов
+                                self.ai_decision_id = ai_result.get('ai_decision_id')
+                                self._set_decision_source('AI', ai_result)
+                            else:
+                                logger.info(f"[NEW_BOT_{self.symbol}] 🤖 AI блокирует SHORT: {ai_result.get('reason', 'AI prediction')}")
+                                if ai_override:
+                                    return False
+                                logger.info(f"[NEW_BOT_{self.symbol}] ⚖️ AI советует WAIT, но используем базовую стратегию")
+                                self._set_decision_source('SCRIPT')
                 except ImportError:
                     # AI модуль недоступен - продолжаем без него
                     pass
@@ -437,6 +516,7 @@ class NewTradingBot:
                     return False
             
             logger.info(f"[NEW_BOT_{self.symbol}] ✅ Открываем SHORT (RSI: {rsi:.1f})")
+            self._remember_entry_context(rsi, trend)
             return True
             
         except Exception as e:
@@ -663,6 +743,15 @@ class NewTradingBot:
         except Exception as e:
             logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось получить цену с биржи: {e}")
         return fallback_price
+
+    def _open_position_on_exchange(self, direction: str, price: Optional[float] = None) -> bool:
+        """Открывает позицию через TradingBot и логирует результат."""
+        try:
+            result = self.enter_position(direction)
+            return bool(result and result.get('success'))
+        except Exception as e:
+            logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка открытия позиции {direction}: {e}")
+            return False
 
     def _handle_idle_state(self, rsi, trend, candles, price):
         """Обрабатывает состояние IDLE (ожидание сигнала)"""
@@ -1386,6 +1475,7 @@ class NewTradingBot:
                     is_successful = pnl > 0
                     update_ai_decision_result(self.ai_decision_id, pnl, pnl_pct, is_successful)
                     logger.debug(f"[NEW_BOT_{self.symbol}] 📝 Обновлен результат решения AI: {'SUCCESS' if is_successful else 'FAILED'}")
+                    self.ai_decision_id = None
                 except Exception as ai_track_error:
                     logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка обновления решения AI: {ai_track_error}")
             
@@ -1477,7 +1567,8 @@ class NewTradingBot:
             # Добавляем стопы и тейки если они есть
             'stop_loss': getattr(self, 'stop_loss', None) or self.config.get('stop_loss'),
             'take_profit': getattr(self, 'take_profit', None) or self.config.get('take_profit'),
-            'current_price': getattr(self, 'current_price', None) or self.config.get('current_price')
+            'current_price': getattr(self, 'current_price', None) or self.config.get('current_price'),
+            'ai_decision_id': getattr(self, 'ai_decision_id', None)
         }
 
     def _build_trading_bot_bridge_config(self):
@@ -1562,5 +1653,11 @@ class NewTradingBot:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка сохранения состояния после входа: {save_error}")
 
         logger.info(f"[NEW_BOT_{self.symbol}] ✅ Позиция {side} открыта: qty={self.position_size} price={self.entry_price}")
+        if result.get('success'):
+            self._on_position_opened(
+                direction=side,
+                entry_price=self.entry_price,
+                position_size=self._get_position_quantity()
+            )
         return result
 

@@ -830,6 +830,10 @@ class AITrainer:
         logger.info("=" * 80)
         logger.info("🎓 ОБУЧЕНИЕ НА ИСТОРИИ ТРЕЙДОВ")
         logger.info("=" * 80)
+        start_time = datetime.now()
+        processed_samples = 0
+        final_accuracy = None
+        final_mse = None
         
         try:
             # Загружаем данные
@@ -838,6 +842,12 @@ class AITrainer:
             if len(trades) < 10:
                 logger.warning(f"⚠️ Недостаточно данных для обучения (нужно минимум 10, есть {len(trades)})")
                 logger.info("💡 Накопите больше сделок для качественного обучения")
+                self._record_training_event(
+                    'history_trades_training',
+                    status='SKIPPED',
+                    reason='not_enough_trades',
+                    samples=len(trades)
+                )
                 return
             
             logger.info(f"📊 Загружено {len(trades)} сделок для обучения")
@@ -876,6 +886,12 @@ class AITrainer:
             
             if len(X) < 10:
                 logger.warning(f"⚠️ Недостаточно валидных данных для обучения ({len(X)} записей)")
+                self._record_training_event(
+                    'history_trades_training',
+                    status='SKIPPED',
+                    reason='not_enough_valid_samples',
+                    samples=len(X)
+                )
                 return
             
             logger.info(f"✅ Подготовлено {len(X)} валидных записей для обучения")
@@ -883,6 +899,7 @@ class AITrainer:
             X = np.array(X)
             y_signal = np.array(y_signal)
             y_profit = np.array(y_profit)
+            processed_samples = len(X)
             
             # Нормализация признаков
             X_scaled = self.scaler.fit_transform(X)
@@ -910,6 +927,7 @@ class AITrainer:
             # Оценка модели сигналов
             y_signal_pred = self.signal_predictor.predict(X_test)
             accuracy = accuracy_score(y_signal_test, y_signal_pred)
+            final_accuracy = float(accuracy)
             
             # Дополнительная статистика
             profitable_pred = sum(y_signal_pred)
@@ -935,6 +953,7 @@ class AITrainer:
             # Оценка модели прибыли
             y_profit_pred = self.profit_predictor.predict(X_test)
             mse = mean_squared_error(y_profit_test, y_profit_pred)
+            final_mse = float(mse)
             
             avg_profit_actual = np.mean(y_profit_test)
             avg_profit_pred = np.mean(y_profit_pred)
@@ -948,11 +967,26 @@ class AITrainer:
             self._save_models()
             
             logger.info("✅ Обучение на истории завершено")
+            self._record_training_event(
+                'history_trades_training',
+                status='SUCCESS',
+                duration_seconds=(datetime.now() - start_time).total_seconds(),
+                samples=processed_samples,
+                accuracy=final_accuracy,
+                mse=final_mse
+            )
             
         except Exception as e:
             logger.error(f"❌ Ошибка обучения на истории: {e}")
             import traceback
             traceback.print_exc()
+            self._record_training_event(
+                'history_trades_training',
+                status='FAILED',
+                duration_seconds=(datetime.now() - start_time).total_seconds(),
+                samples=processed_samples,
+                reason=str(e)
+            )
     
     def train_on_strategy_params(self):
         """
@@ -1025,6 +1059,11 @@ class AITrainer:
         logger.info("=" * 80)
         logger.info("🤖 ОБУЧЕНИЕ НА РЕАЛЬНЫХ СДЕЛКАХ С ОБРАТНОЙ СВЯЗЬЮ")
         logger.info("=" * 80)
+        start_time = datetime.now()
+        processed_trades = 0
+        samples_count = 0
+        train_score = None
+        profit_mse = None
         
         try:
             # 1. Загружаем реальные сделки с PnL
@@ -1033,6 +1072,13 @@ class AITrainer:
             if len(trades) < 10:
                 logger.warning(f"⚠️ Недостаточно реальных сделок для обучения (есть {len(trades)})")
                 logger.info("💡 Накопите больше сделок - AI будет обучаться на вашем опыте!")
+                self._record_training_event(
+                    'real_trades_training',
+                    status='SKIPPED',
+                    reason='not_enough_trades',
+                    trades=len(trades),
+                    samples=0
+                )
                 return
             
             logger.info(f"📊 Загружено {len(trades)} реальных сделок с PnL")
@@ -1044,6 +1090,13 @@ class AITrainer:
             
             if not candles_data:
                 logger.warning("⚠️ Нет свечей для анализа")
+                self._record_training_event(
+                    'real_trades_training',
+                    status='SKIPPED',
+                    reason='no_candles_data',
+                    trades=len(trades),
+                    samples=0
+                )
                 return
             
             logger.info(f"📈 Загружено свечей для {len(candles_data)} монет")
@@ -1101,7 +1154,6 @@ class AITrainer:
                     if entry_time:
                         try:
                             if isinstance(entry_time, str):
-                                from datetime import datetime
                                 entry_dt = datetime.fromisoformat(entry_time.replace('Z', ''))
                                 entry_timestamp = int(entry_dt.timestamp() * 1000)
                             else:
@@ -1119,7 +1171,6 @@ class AITrainer:
                     if exit_time:
                         try:
                             if isinstance(exit_time, str):
-                                from datetime import datetime
                                 exit_dt = datetime.fromisoformat(exit_time.replace('Z', ''))
                                 exit_timestamp = int(exit_dt.timestamp() * 1000)
                             else:
@@ -1231,6 +1282,7 @@ class AITrainer:
             
             # 4. ОБУЧАЕМСЯ НА РЕАЛЬНОМ ОПЫТЕ
             all_samples = successful_samples + failed_samples
+            samples_count = len(all_samples)
             
             if len(all_samples) >= 20:  # Минимум 20 сделок
                 logger.info("=" * 80)
@@ -1346,13 +1398,38 @@ class AITrainer:
                     logger.info(f"   📊 Направления успешных сделок: {dict(direction_dist)}")
                     
                     logger.info("=" * 80)
+                
+                self._record_training_event(
+                    'real_trades_training',
+                    status='SUCCESS',
+                    duration_seconds=(datetime.now() - start_time).total_seconds(),
+                    trades=processed_trades,
+                    samples=samples_count,
+                    accuracy=float(train_score) if train_score is not None else None,
+                    mse=float(profit_mse) if profit_mse is not None else None
+                )
             else:
                 logger.warning(f"⚠️ Недостаточно сделок для обучения (нужно минимум 20, есть {len(all_samples)})")
+                self._record_training_event(
+                    'real_trades_training',
+                    status='SKIPPED',
+                    reason='not_enough_samples',
+                    trades=processed_trades,
+                    samples=samples_count
+                )
             
         except Exception as e:
             logger.error(f"❌ Ошибка обучения на реальных сделках: {e}")
             import traceback
             logger.error(traceback.format_exc())
+            self._record_training_event(
+                'real_trades_training',
+                status='FAILED',
+                duration_seconds=(datetime.now() - start_time).total_seconds(),
+                trades=processed_trades,
+                samples=samples_count,
+                reason=str(e)
+            )
     
     def train_on_historical_data(self):
         """
@@ -1366,6 +1443,11 @@ class AITrainer:
         
         ВАЖНО: Каждое обучение использует РАЗНЫЕ параметры и РАЗНЫЕ данные для разнообразия!
         """
+        start_time = datetime.now()
+        total_trained_coins = 0
+        total_models_saved = 0
+        total_failed_coins = 0
+        total_candles_processed = 0
         import random
         import time as time_module
         
@@ -1564,6 +1646,11 @@ class AITrainer:
             
             if not market_data:
                 logger.warning("⚠️ Нет рыночных данных для обучения")
+                self._record_training_event(
+                    'historical_data_training',
+                    status='SKIPPED',
+                    reason='no_market_data'
+                )
                 return
             
             latest = market_data.get('latest', {})
@@ -1574,6 +1661,11 @@ class AITrainer:
                 logger.info("💡 Файл data/ai/candles_full_history.json не найден или пуст")
                 logger.info("💡 Запустите загрузку полной истории свечей через ai.py")
                 logger.info("   💡 Это загрузит ВСЕ доступные свечи для всех монет через пагинацию")
+                self._record_training_event(
+                    'historical_data_training',
+                    status='SKIPPED',
+                    reason='no_candles_data'
+                )
                 return
             
             # Сокращенный лог начала обучения
@@ -2543,6 +2635,7 @@ class AITrainer:
             self._record_training_event(
                 'historical_data_training',
                 status='SUCCESS',
+                duration_seconds=(datetime.now() - start_time).total_seconds(),
                 coins=total_trained_coins,
                 candles=total_candles_processed,
                 models_saved=total_models_saved,
@@ -2558,6 +2651,16 @@ class AITrainer:
                     self._save_win_rate_targets()
                 except Exception as save_error:
                     logger.debug(f"⚠️ Не удалось сохранить цели Win Rate после ошибки: {save_error}")
+            self._record_training_event(
+                'historical_data_training',
+                status='FAILED',
+                duration_seconds=(datetime.now() - start_time).total_seconds(),
+                coins=total_trained_coins,
+                candles=total_candles_processed,
+                models_saved=total_models_saved,
+                errors=total_failed_coins,
+                reason=str(e)
+            )
     
     def _calculate_ema(self, prices: List[float], period: int) -> Optional[float]:
         """Вычисляет EMA (Exponential Moving Average)"""
