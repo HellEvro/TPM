@@ -2095,7 +2095,10 @@ def check_missing_stop_losses():
                 )
                 existing_stop_value = _safe_float(existing_stop_loss)
 
-                if desired_stop and _needs_price_update(position_side, desired_stop, existing_stop_value):
+                # Проверяем, есть ли уже стоп-лосс на бирже
+                if existing_stop_loss and existing_stop_loss.strip():
+                    logger.debug(f" ⏭️ {symbol}: Стоп-лосс уже установлен на бирже: {existing_stop_loss}, пропускаем установку")
+                elif desired_stop and _needs_price_update(position_side, desired_stop, existing_stop_value):
                     try:
                         sl_response = current_exchange.update_stop_loss(
                             symbol=symbol,
@@ -2121,7 +2124,10 @@ def check_missing_stop_losses():
                 )
                 existing_take_value = _safe_float(existing_take_profit)
 
-                if desired_take and _needs_price_update(position_side, desired_take, existing_take_value):
+                # Проверяем, есть ли уже тейк-профит на бирже
+                if existing_take_profit and existing_take_profit.strip():
+                    logger.debug(f" ⏭️ {symbol}: Тейк-профит уже установлен на бирже: {existing_take_profit}, пропускаем установку")
+                elif desired_take and _needs_price_update(position_side, desired_take, existing_take_value):
                     try:
                         tp_response = current_exchange.update_take_profit(
                             symbol=symbol,
