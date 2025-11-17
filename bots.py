@@ -163,7 +163,14 @@ from bots_modules.init_functions import *
 
 # Импорт системы истории ботов (ПЕРЕД импортом API endpoints!)
 # Настройка логирования (раньше, чтобы использовать logger)
-setup_color_logging()
+# Применяем фильтр уровней логирования из конфига
+try:
+    from bot_engine.bot_config import SystemConfig
+    console_levels = getattr(SystemConfig, 'CONSOLE_LOG_LEVELS', [])
+    setup_color_logging(console_log_levels=console_levels if console_levels else None)
+except Exception as e:
+    # Если не удалось загрузить конфиг, используем стандартную настройку
+    setup_color_logging()
 logger = logging.getLogger('BotsService')
 
 try:
