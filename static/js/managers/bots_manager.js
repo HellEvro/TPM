@@ -6034,6 +6034,34 @@ class BotsManager {
         }
         
         // ==========================================
+        // НАБОР ПОЗИЦИЙ ЛИМИТНЫМИ ОРДЕРАМИ
+        // ==========================================
+        
+        const limitOrdersEnabledEl = document.getElementById('limitOrdersEntryEnabled');
+        if (limitOrdersEnabledEl) {
+            limitOrdersEnabledEl.checked = autoBotConfig.limit_orders_entry_enabled || false;
+            const configDiv = document.getElementById('limitOrdersConfig');
+            if (configDiv) {
+                configDiv.style.display = limitOrdersEnabledEl.checked ? 'block' : 'none';
+            }
+            console.log('[BotsManager] 📊 Набор позиций лимитными ордерами:', limitOrdersEnabledEl.checked);
+        }
+        
+        // Загружаем настройки лимитных ордеров
+        const percentSteps = autoBotConfig.limit_orders_percent_steps || [1, 2, 3, 4, 5];
+        const marginAmounts = autoBotConfig.limit_orders_margin_amounts || [0.2, 0.3, 0.5, 1, 2];
+        const listEl = document.getElementById('limitOrdersList');
+        if (listEl) {
+            listEl.innerHTML = ''; // Очищаем список
+            for (let i = 0; i < Math.max(percentSteps.length, marginAmounts.length); i++) {
+                this.addLimitOrderRow(
+                    percentSteps[i] || 0,
+                    marginAmounts[i] || 0
+                );
+            }
+        }
+        
+        // ==========================================
         // ПАРАМЕТРЫ ОПРЕДЕЛЕНИЯ ТРЕНДА
         // ==========================================
         
@@ -7532,6 +7560,17 @@ class BotsManager {
             saveTrendBtn.addEventListener('click', () => this.saveTrendParameters());
             console.log('[BotsManager] ✅ Кнопка "Сохранить параметры тренда" инициализирована');
         }
+        
+        // Набор позиций лимитными ордерами
+        const saveLimitOrdersBtn = document.querySelector('.config-section-save-btn[data-section="limit-orders"]');
+        if (saveLimitOrdersBtn && !saveLimitOrdersBtn.hasAttribute('data-initialized')) {
+            saveLimitOrdersBtn.setAttribute('data-initialized', 'true');
+            saveLimitOrdersBtn.addEventListener('click', () => this.saveLimitOrdersSettings());
+            console.log('[BotsManager] ✅ Кнопка "Сохранить настройки набора позиций" инициализирована');
+        }
+        
+        // Инициализация UI для лимитных ордеров
+        this.initializeLimitOrdersUI();
         
         // Hot Reload кнопка
         const reloadModulesBtn = document.getElementById('reloadModulesBtn');
@@ -10002,6 +10041,105 @@ class BotsManager {
                 console.log(`[DEBUG] ${symbol}: НЕ ВОССТАНАВЛИВАЕМ - отсутствуют элементы или состояние`);
             }
         });
+    }
+    
+    // ==========================================
+    // МЕТОДЫ ДЛЯ РАБОТЫ С ЛИМИТНЫМИ ОРДЕРАМИ
+    // ==========================================
+    
+    initializeLimitOrdersUI() {
+        const toggleEl = document.getElementById('limitOrdersEntryEnabled');
+        const configDiv = document.getElementById('limitOrdersConfig');
+        const addBtn = document.getElementById('addLimitOrderBtn');
+        
+        if (!toggleEl || !configDiv) return;
+        
+        // Обработчик переключателя
+        toggleEl.addEventListener('change', () => {
+            configDiv.style.display = toggleEl.checked ? 'block' : 'none';
+            if (toggleEl.checked && document.getElementById('limitOrdersList').children.length === 0) {
+                // Добавляем первую пару полей
+                this.addLimitOrderRow();
+            }
+        });
+        
+        // Обработчик кнопки добавления
+        if (addBtn) {
+            addBtn.addEventListener('click', () => this.addLimitOrderRow());
+        }
+    }
+    
+    addLimitOrderRow(percent = 0, margin = 0) {
+        const listEl = document.getElementById('limitOrdersList');
+        if (!listEl) return;
+        
+        const row = document.createElement('div');
+        row.className = 'limit-order-row';
+        row.style.cssText = 'display: flex; gap: 10px; align-items: center; padding: 10px; background: #2a2a2a; border-radius: 5px;';
+        
+        row.innerHTML = `
+            <div style="flex: 1;">
+                <label style="display: block; margin-bottom: 5px; color: #fff;">% от входа:</label>
+                <input type="number" class="limit-order-percent" value="${percent}" step="0.1" min="0" max="100" 
+                       style="width: 100%; padding: 5px; background: #1a1a1a; color: #fff; border: 1px solid #404040; border-radius: 3px;">
+            </div>
+            <div style="flex: 1;">
+                <label style="display: block; margin-bottom: 5px; color: #fff;">Сумма (USDT):</label>
+                <input type="number" class="limit-order-margin" value="${margin}" step="0.1" min="0.1" 
+                       style="width: 100%; padding: 5px; background: #1a1a1a; color: #fff; border: 1px solid #404040; border-radius: 3px;">
+            </div>
+            <button type="button" class="remove-limit-order-btn" style="padding: 10px 15px; background: #dc3545; color: #fff; border: none; border-radius: 3px; cursor: pointer; margin-top: 20px;">
+                ➖
+            </button>
+        `;
+        
+        // Обработчик удаления
+        row.querySelector('.remove-limit-order-btn').addEventListener('click', () => {
+            row.remove();
+        });
+        
+        listEl.appendChild(row);
+    }
+    
+    async saveLimitOrdersSettings() {
+        try {
+            const enabled = document.getElementById('limitOrdersEntryEnabled').checked;
+            const rows = document.querySelectorAll('.limit-order-row');
+            
+            const percentSteps = [];
+            const marginAmounts = [];
+            
+            rows.forEach(row => {
+                const percent = parseFloat(row.querySelector('.limit-order-percent').value) || 0;
+                const margin = parseFloat(row.querySelector('.limit-order-margin').value) || 0;
+                if (margin > 0) {
+                    percentSteps.push(percent);
+                    marginAmounts.push(margin);
+                }
+            });
+            
+            const config = {
+                limit_orders_entry_enabled: enabled,
+                limit_orders_percent_steps: percentSteps,
+                limit_orders_margin_amounts: marginAmounts
+            };
+            
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/auto-bot`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            });
+            
+            if (response.ok) {
+                this.showNotification('✅ Настройки набора позиций сохранены', 'success');
+                await this.loadConfigurationData();
+            } else {
+                throw new Error('Ошибка сохранения');
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка сохранения настроек лимитных ордеров:', error);
+            this.showNotification('❌ Ошибка сохранения настроек', 'error');
+        }
     }
 }
 
