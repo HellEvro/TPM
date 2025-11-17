@@ -1125,14 +1125,31 @@ class TradingBot:
                         order_type='market'
                     )
                     if order_result.get('success'):
+                        order_id = order_result.get('order_id')
+                        order_price = order_result.get('price', current_price)
                         placed_orders.append({
-                            'order_id': order_result.get('order_id'),
+                            'order_id': order_id,
                             'type': 'market',
-                            'price': order_result.get('price', current_price),
+                            'price': order_price,
                             'quantity': margin_amount,
                             'percent_step': 0
                         })
                         self.logger.info(f" {self.symbol}: ✅ Рыночный ордер размещен: {margin_amount} USDT")
+                        # Логируем в историю
+                        try:
+                            from bot_engine.bot_history import log_limit_order_placed
+                            log_limit_order_placed(
+                                bot_id=self.symbol,
+                                symbol=self.symbol,
+                                order_type='market',
+                                order_id=str(order_id) if order_id else 'unknown',
+                                price=order_price,
+                                quantity=margin_amount,
+                                side=side,
+                                percent_step=0
+                            )
+                        except Exception as log_err:
+                            self.logger.debug(f" {self.symbol}: ⚠️ Ошибка логирования ордера: {log_err}")
                     continue
                 
                 # Рассчитываем цену лимитного ордера
@@ -1153,8 +1170,9 @@ class TradingBot:
                 )
                 
                 if order_result.get('success'):
+                    order_id = order_result.get('order_id')
                     order_info = {
-                        'order_id': order_result.get('order_id'),
+                        'order_id': order_id,
                         'type': 'limit',
                         'price': limit_price,
                         'quantity': margin_amount,
@@ -1163,6 +1181,21 @@ class TradingBot:
                     placed_orders.append(order_info)
                     self.limit_orders.append(order_info)
                     self.logger.info(f" {self.symbol}: ✅ Лимитный ордер #{i+1} размещен: {margin_amount} USDT @ {limit_price:.6f} ({percent_step}%)")
+                    # Логируем в историю
+                    try:
+                        from bot_engine.bot_history import log_limit_order_placed
+                        log_limit_order_placed(
+                            bot_id=self.symbol,
+                            symbol=self.symbol,
+                            order_type='limit',
+                            order_id=str(order_id) if order_id else 'unknown',
+                            price=limit_price,
+                            quantity=margin_amount,
+                            side=side,
+                            percent_step=percent_step
+                        )
+                    except Exception as log_err:
+                        self.logger.debug(f" {self.symbol}: ⚠️ Ошибка логирования ордера: {log_err}")
                 else:
                     self.logger.warning(f" {self.symbol}: ⚠️ Не удалось разместить лимитный ордер #{i+1}: {order_result.get('message', 'unknown error')}")
             

@@ -548,7 +548,21 @@ def create_bot(symbol, config=None, exchange_obj=None):
         logger.info(f"[BOT_ACTIVE] Статус {symbol}: {trading_bot.status}")
     
     # Логируем создание бота в историю
-    # log_bot_start(symbol, config)  # TODO: Функция не определена
+    try:
+        from bot_engine.bot_history import log_bot_start
+        # Определяем направление на основе текущей позиции или конфига
+        direction = trading_bot.position_side or config.get('position_side') or 'LONG'
+        log_bot_start(
+            bot_id=symbol,
+            symbol=symbol,
+            direction=direction,
+            config=config
+        )
+        logger.info(f"[BOT_HISTORY] ✅ Записано открытие бота {symbol} в историю")
+    except ImportError as e:
+        logger.debug(f"[BOT_HISTORY] ⚠️ Модуль bot_history недоступен: {e}")
+    except Exception as e:
+        logger.error(f"[BOT_HISTORY] ❌ Ошибка логирования запуска бота {symbol}: {e}")
     
     # Автоматически сохраняем состояние после создания бота
     save_bots_state()

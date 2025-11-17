@@ -29,6 +29,11 @@ ACTION_TYPES = {
     'SIGNAL': 'Торговый сигнал',
     'POSITION_OPENED': 'Открытие позиции',
     'POSITION_CLOSED': 'Закрытие позиции',
+    'LIMIT_ORDER_PLACED': 'Размещение лимитного ордера',
+    'STOP_LOSS_SET': 'Установка Stop Loss',
+    'STOP_LOSS_UPDATED': 'Обновление Stop Loss',
+    'TAKE_PROFIT_SET': 'Установка Take Profit',
+    'TAKE_PROFIT_UPDATED': 'Обновление Take Profit',
     'STOP_LOSS': 'Срабатывание Stop Loss',
     'TAKE_PROFIT': 'Срабатывание Take Profit',
     'TRAILING_STOP': 'Срабатывание Trailing Stop',
@@ -289,6 +294,71 @@ class BotHistoryManager:
         self._add_trade_entry(trade)
         
         logger.info(f"📈 {entry['details']}")
+    
+    def log_limit_order_placed(self, bot_id: str, symbol: str, order_type: str, order_id: str,
+                               price: float, quantity: float, side: str, percent_step: float = None):
+        """Логирование размещения лимитного ордера"""
+        entry = {
+            'id': f"limit_order_{bot_id}_{datetime.now().timestamp()}",
+            'timestamp': datetime.now().isoformat(),
+            'action_type': 'LIMIT_ORDER_PLACED',
+            'action_name': ACTION_TYPES['LIMIT_ORDER_PLACED'],
+            'bot_id': bot_id,
+            'symbol': symbol,
+            'order_type': order_type,  # 'limit' или 'market'
+            'order_id': order_id,
+            'price': price,
+            'quantity': quantity,
+            'side': side,  # 'LONG' или 'SHORT'
+            'percent_step': percent_step,
+            'details': f"Размещен {order_type} ордер для {symbol}: {quantity} @ {price:.6f}"
+        }
+        if percent_step is not None:
+            entry['details'] += f" ({percent_step}%)"
+        self._add_history_entry(entry)
+        logger.info(f"📋 {entry['details']}")
+    
+    def log_stop_loss_set(self, bot_id: str, symbol: str, stop_price: float, position_side: str, 
+                         is_update: bool = False, previous_price: float = None):
+        """Логирование установки/обновления Stop Loss"""
+        action_type = 'STOP_LOSS_UPDATED' if is_update else 'STOP_LOSS_SET'
+        entry = {
+            'id': f"stop_loss_{bot_id}_{datetime.now().timestamp()}",
+            'timestamp': datetime.now().isoformat(),
+            'action_type': action_type,
+            'action_name': ACTION_TYPES[action_type],
+            'bot_id': bot_id,
+            'symbol': symbol,
+            'stop_price': stop_price,
+            'position_side': position_side,
+            'previous_price': previous_price,
+            'details': f"{'Обновлен' if is_update else 'Установлен'} Stop Loss для {symbol}: {stop_price:.6f}"
+        }
+        if is_update and previous_price:
+            entry['details'] += f" (было: {previous_price:.6f})"
+        self._add_history_entry(entry)
+        logger.info(f"🛡️ {entry['details']}")
+    
+    def log_take_profit_set(self, bot_id: str, symbol: str, take_profit_price: float, position_side: str,
+                           is_update: bool = False, previous_price: float = None):
+        """Логирование установки/обновления Take Profit"""
+        action_type = 'TAKE_PROFIT_UPDATED' if is_update else 'TAKE_PROFIT_SET'
+        entry = {
+            'id': f"take_profit_{bot_id}_{datetime.now().timestamp()}",
+            'timestamp': datetime.now().isoformat(),
+            'action_type': action_type,
+            'action_name': ACTION_TYPES[action_type],
+            'bot_id': bot_id,
+            'symbol': symbol,
+            'take_profit_price': take_profit_price,
+            'position_side': position_side,
+            'previous_price': previous_price,
+            'details': f"{'Обновлен' if is_update else 'Установлен'} Take Profit для {symbol}: {take_profit_price:.6f}"
+        }
+        if is_update and previous_price:
+            entry['details'] += f" (было: {previous_price:.6f})"
+        self._add_history_entry(entry)
+        logger.info(f"🎯 {entry['details']}")
     
     def log_position_closed(self, bot_id: str, symbol: str, direction: str, exit_price: float, 
                            pnl: float, roi: float, reason: str = None, entry_data: Dict = None,
@@ -645,6 +715,24 @@ def log_position_closed(bot_id: str, symbol: str, direction: str, exit_price: fl
         market_data=market_data,
         ai_decision_id=ai_decision_id,
     )
+
+
+def log_limit_order_placed(bot_id: str, symbol: str, order_type: str, order_id: str,
+                           price: float, quantity: float, side: str, percent_step: float = None):
+    """Логирование размещения лимитного ордера"""
+    bot_history_manager.log_limit_order_placed(bot_id, symbol, order_type, order_id, price, quantity, side, percent_step)
+
+
+def log_stop_loss_set(bot_id: str, symbol: str, stop_price: float, position_side: str, 
+                     is_update: bool = False, previous_price: float = None):
+    """Логирование установки/обновления Stop Loss"""
+    bot_history_manager.log_stop_loss_set(bot_id, symbol, stop_price, position_side, is_update, previous_price)
+
+
+def log_take_profit_set(bot_id: str, symbol: str, take_profit_price: float, position_side: str,
+                       is_update: bool = False, previous_price: float = None):
+    """Логирование установки/обновления Take Profit"""
+    bot_history_manager.log_take_profit_set(bot_id, symbol, take_profit_price, position_side, is_update, previous_price)
 
 
 # ==================== Демо-данные ====================
