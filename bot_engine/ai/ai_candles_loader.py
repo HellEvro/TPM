@@ -163,7 +163,7 @@ class AICandlesLoader:
                         sorted_existing = sorted(existing_candles_list, key=lambda x: x.get('time', 0))
                         if sorted_existing:
                             last_candle_time = sorted_existing[-1].get('time', 0)
-                            logger.debug(f"   📊 {symbol}: найдено {len(existing_candles_list)} существующих свечей, последняя: {datetime.fromtimestamp(last_candle_time/1000).strftime('%Y-%m-%d %H:%M')}")
+                            logger.info(f"   📊 {symbol}: найдено {len(existing_candles_list)} существующих свечей, последняя: {datetime.fromtimestamp(last_candle_time/1000).strftime('%Y-%m-%d %H:%M')}")
                     
                     # Используем тот же метод что и bots.py, но с максимальным limit
                     # Для Bybit: используем прямой вызов API с limit=1000
@@ -183,7 +183,7 @@ class AICandlesLoader:
                                 # Загружаем только новые свечи (после последней загруженной)
                                 end_time = int(time.time() * 1000)  # Текущее время
                                 start_from_time = last_candle_time  # Начинаем с последней загруженной
-                                logger.debug(f"   🔄 {symbol}: инкрементальное обновление (после {datetime.fromtimestamp(start_from_time/1000).strftime('%Y-%m-%d %H:%M')})")
+                                logger.info(f"   🔄 {symbol}: инкрементальное обновление (после {datetime.fromtimestamp(start_from_time/1000).strftime('%Y-%m-%d %H:%M')})")
                                 incremental_mode = True
                             else:
                                 # Полная загрузка: начинаем с текущего времени и идем в прошлое
@@ -250,7 +250,7 @@ class AICandlesLoader:
                                         
                                         # Если в инкрементальном режиме не получили новых свечей - прекращаем
                                         if incremental_mode and new_candles_in_batch == 0:
-                                            logger.debug(f"   ✅ {symbol}: новых свечей нет, данные актуальны")
+                                            logger.info(f"   ✅ {symbol}: новых свечей нет, данные актуальны")
                                             break
                                         
                                         # ВАЖНО: Получаем timestamp самой старой свечи для следующего запроса
@@ -456,7 +456,7 @@ class AICandlesLoader:
                 logger.error(f"❌ Нет валидных данных: {len(candles_data)} записей, но нет свечей")
                 return False
             
-            logger.debug(f"💾 Сохранение: {len(candles_data)} монет, {total_candles} свечей")
+            logger.info(f"💾 Сохранение: {len(candles_data)} монет, {total_candles} свечей")
             
             # Сохраняем в файл
             try:
@@ -539,7 +539,7 @@ class AICandlesLoader:
             raise ValueError("candles_data пустой - нечего сохранять")
         
         total_candles_count = sum(info.get('count', 0) if isinstance(info, dict) else 0 for info in candles_data.values())
-        logger.debug(f"💾 Сохранение {len(candles_data)} монет, {total_candles_count} свечей...")
+        logger.info(f"💾 Сохранение {len(candles_data)} монет, {total_candles_count} свечей...")
         
         for attempt in range(max_retries):
             try:
@@ -561,7 +561,7 @@ class AICandlesLoader:
                 # Создаем уникальное имя временного файла
                 temp_file = self.candles_file.with_suffix(f'.json.tmp.{uuid.uuid4().hex[:8]}')
                 
-                logger.debug(f"💾 Сохранение во временный файл...")
+                logger.info(f"💾 Сохранение во временный файл...")
                 
                 # Сохраняем во временный файл сначала
                 try:

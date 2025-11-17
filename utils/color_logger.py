@@ -148,8 +148,17 @@ class LogLevelFilter(logging.Filter):
         level_name = record.levelname
         logger_name = record.name if hasattr(record, 'name') else ''
         
-        # НЕ скрываем сообщения с неформатированными плейсхолдерами - они должны быть исправлены в коде
-        # Вместо этого они будут показываться, и их нужно исправить в исходном коде
+        # Скрываем неформатированные сообщения из внешних библиотек (urllib3, pybit)
+        # Это проблема библиотек, а не нашего кода - они используют старый стиль форматирования
+        try:
+            message = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
+            if isinstance(message, str):
+                # Скрываем типичные неформатированные сообщения из urllib3/pybit
+                if '%s://%s:%s' in message or 'Starting new HTTPS connection' in message or 'Creating converter from' in message:
+                    # Это неформатированное сообщение из внешней библиотеки - скрываем его
+                    return False
+        except:
+            pass  # Если не удалось проверить, пропускаем
         
         # Скрываем несущественные SSL ошибки при получении сетевого времени (DEBUG уровень)
         # Это не критичные ошибки, которые не должны засорять логи
