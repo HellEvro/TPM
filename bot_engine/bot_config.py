@@ -112,7 +112,7 @@ DEFAULT_AUTO_BOT_CONFIG = {
     'min_rsi_low': 35,                  # Минимальный достигнутый RSI (должен быть <= 35)
     'max_rsi_high': 65,                 # Максимальный достигнутый RSI (должен быть >= 65)
     # RSI временной фильтр
-    'rsi_time_filter_enabled': True,    # Включить временной фильтр для RSI сигналов
+    'rsi_time_filter_enabled': True, # Включить временной фильтр для RSI сигналов
     'rsi_time_filter_candles': 7,       # Минимум свечей с последнего экстремума (4 = 1 день на 6H)
     'rsi_time_filter_upper': 65,        # Верхняя граница спокойной зоны для SHORT
     'rsi_time_filter_lower': 35,        # Нижняя граница спокойной зоны для LONG

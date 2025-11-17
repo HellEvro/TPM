@@ -5600,6 +5600,13 @@ class BotsManager {
             aiOverrideEl.checked = overrideValue !== false;
         }
         
+        // ✅ AI оптимальный вход (может быть в AI секции, но сохраняется в auto-bot конфиге)
+        const optimalEntryEl = document.getElementById('optimalEntryEnabled');
+        if (optimalEntryEl) {
+            optimalEntryEl.checked = Boolean(autoBotConfig.ai_optimal_entry_enabled);
+            console.log('[BotsManager] 🎯 AI оптимальный вход:', optimalEntryEl.checked);
+        }
+        
         // Торговые параметры
         const rsiLongEl = document.getElementById('rsiLongThreshold');
         if (rsiLongEl) {
@@ -6215,8 +6222,99 @@ class BotsManager {
             throw error;
         }
     }
+    /**
+     * Конвертирует camelCase в snake_case для маппинга ID элементов на ключи конфигурации
+     */
+    camelToSnake(str) {
+        return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    }
+    
+    /**
+     * Автоматически маппит ID элемента на ключ конфигурации
+     */
+    mapElementIdToConfigKey(elementId) {
+        // Прямые маппинги для элементов с нестандартными ID
+        const directMappings = {
+            'globalAutoBotToggle': 'enabled',
+            'autoBotMaxConcurrent': 'max_concurrent',
+            'autoBotRiskCap': 'risk_cap_percent',
+            'autoBotAIEnabled': 'ai_enabled',
+            'aiMinConfidence': 'ai_min_confidence',
+            'aiOverrideOriginal': 'ai_override_original',
+            'rsiLongThreshold': 'rsi_long_threshold',
+            'rsiShortThreshold': 'rsi_short_threshold',
+            'rsiExitLongWithTrendGlobal': 'rsi_exit_long_with_trend',
+            'rsiExitLongAgainstTrendGlobal': 'rsi_exit_long_against_trend',
+            'rsiExitShortWithTrendGlobal': 'rsi_exit_short_with_trend',
+            'rsiExitShortAgainstTrendGlobal': 'rsi_exit_short_against_trend',
+            'defaultPositionSize': 'default_position_size',
+            'defaultPositionMode': 'default_position_mode',
+            'checkInterval': 'check_interval',
+            'maxLossPercent': 'max_loss_percent',
+            'takeProfitPercent': 'take_profit_percent',
+            'trailingStopActivation': 'trailing_stop_activation',
+            'trailingStopDistance': 'trailing_stop_distance',
+            'trailingTakeDistance': 'trailing_take_distance',
+            'trailingUpdateInterval': 'trailing_update_interval',
+            'maxPositionHours': 'max_position_hours',
+            'breakEvenProtection': 'break_even_protection',
+            'breakEvenTrigger': 'break_even_trigger_percent',
+            'avoidDownTrend': 'avoid_down_trend',
+            'avoidUpTrend': 'avoid_up_trend',
+            'trendDetectionEnabled': 'trend_detection_enabled',
+            'trendAnalysisPeriod': 'trend_analysis_period',
+            'trendPriceChangeThreshold': 'trend_price_change_threshold',
+            'trendCandlesThreshold': 'trend_candles_threshold',
+            'enableMaturityCheck': 'enable_maturity_check',
+            'minCandlesForMaturity': 'min_candles_for_maturity',
+            'minRsiLow': 'min_rsi_low',
+            'maxRsiHigh': 'max_rsi_high',
+            'minVolatilityThreshold': 'min_volatility_threshold',
+            'rsiTimeFilterEnabled': 'rsi_time_filter_enabled',
+            'rsiTimeFilterCandles': 'rsi_time_filter_candles',
+            'rsiTimeFilterUpper': 'rsi_time_filter_upper',
+            'rsiTimeFilterLower': 'rsi_time_filter_lower',
+            'exitScamEnabled': 'exit_scam_enabled',
+            'exitScamCandles': 'exit_scam_candles',
+            'exitScamSingleCandlePercent': 'exit_scam_single_candle_percent',
+            'exitScamMultiCandleCount': 'exit_scam_multi_candle_count',
+            'exitScamMultiCandlePercent': 'exit_scam_multi_candle_percent',
+            'tradingEnabled': 'trading_enabled',
+            'useTestServer': 'use_test_server',
+            'maxRiskPerTrade': 'max_risk_per_trade',
+            'enhancedRsiEnabled': 'enhanced_rsi_enabled',
+            'enhancedRsiVolumeConfirm': 'enhanced_rsi_require_volume_confirmation',
+            'enhancedRsiDivergenceConfirm': 'enhanced_rsi_require_divergence_confirmation',
+            'enhancedRsiUseStochRsi': 'enhanced_rsi_use_stoch_rsi',
+            'rsiExtremeZoneTimeout': 'rsi_extreme_zone_timeout',
+            'rsiExtremeOversold': 'rsi_extreme_oversold',
+            'rsiExtremeOverbought': 'rsi_extreme_overbought',
+            'rsiVolumeMultiplier': 'rsi_volume_confirmation_multiplier',
+            'rsiDivergenceLookback': 'rsi_divergence_lookback',
+            'limitOrdersEntryEnabled': 'limit_orders_entry_enabled',
+            'optimalEntryEnabled': 'ai_optimal_entry_enabled',
+            'rsiUpdateInterval': 'rsi_update_interval',
+            'autoSaveInterval': 'auto_save_interval',
+            'debugMode': 'debug_mode',
+            'autoRefreshUI': 'auto_refresh_ui',
+            'refreshInterval': 'refresh_interval',
+            'positionSyncInterval': 'position_sync_interval',
+            'inactiveBotCleanupInterval': 'inactive_bot_cleanup_interval',
+            'inactiveBotTimeout': 'inactive_bot_timeout',
+            'stopLossSetupInterval': 'stop_loss_setup_interval'
+        };
+        
+        // Используем прямое маппинг если есть
+        if (directMappings[elementId]) {
+            return directMappings[elementId];
+        }
+        
+        // Иначе конвертируем camelCase в snake_case
+        return this.camelToSnake(elementId);
+    }
+    
     collectConfigurationData() {
-        console.log('[BotsManager] 📋 Сбор данных конфигурации...');
+        console.log('[BotsManager] 📋 Сбор данных конфигурации (автоматический режим)...');
         
         // ✅ РАБОТАЕМ НАПРЯМУЮ С КЭШИРОВАННОЙ КОНФИГУРАЦИЕЙ ИЗ БЭКЕНДА
         // Это гарантирует, что мы используем реальные значения из файла конфига, а не дефолтные из HTML
@@ -6234,228 +6332,172 @@ class BotsManager {
             autoBotConfig.default_position_mode = 'usdt';
         }
         
-        // ✅ ПРИМЕНЯЕМ ИЗМЕНЕНИЯ ИЗ DOM ТОЛЬКО ДЛЯ ПОЛЕЙ, КОТОРЫЕ ПОЛЬЗОВАТЕЛЬ РЕАЛЬНО ИЗМЕНИЛ
-        // Сравниваем значения из DOM с originalConfig, и если они отличаются - применяем
+        // ✅ АВТОМАТИЧЕСКИЙ СБОР ВСЕХ ПОЛЕЙ КОНФИГУРАЦИИ
+        const configTab = document.getElementById('configTab');
+        if (!configTab) {
+            console.warn('[BotsManager] ⚠️ configTab не найден');
+            return { autoBot: autoBotConfig, system: {} };
+        }
         
-        const applyDomChange = (key, getDomValue, defaultValue) => {
-            const domValue = getDomValue();
-            const originalValue = this.originalConfig?.autoBot?.[key];
+        // Находим ВСЕ поля конфигурации: input, select, checkbox
+        const allInputs = configTab.querySelectorAll('input[type="number"], input[type="text"], input[type="checkbox"], select');
+        
+        // Также добавляем поля из секции AI, если она существует
+        const aiConfigSection = document.getElementById('aiConfigSection');
+        if (aiConfigSection) {
+            const aiInputs = aiConfigSection.querySelectorAll('input[type="number"], input[type="text"], input[type="checkbox"], select');
+            const uniqueInputs = new Set([...allInputs, ...aiInputs]);
+            this.collectFieldsFromElements(Array.from(uniqueInputs), autoBotConfig);
+        } else {
+            this.collectFieldsFromElements(Array.from(allInputs), autoBotConfig);
+        }
+        
+        // ✅ ОБРАБОТКА ДИНАМИЧЕСКИХ ПОЛЕЙ ЛИМИТНЫХ ОРДЕРОВ
+        const limitOrderRows = document.querySelectorAll('.limit-order-row');
+        if (limitOrderRows.length > 0) {
+            const percentSteps = [];
+            const marginAmounts = [];
             
-            // Если значение из DOM отличается от originalConfig - значит пользователь его изменил
-            if (domValue !== undefined && domValue !== null) {
-                // Для булевых значений: нормализуем undefined/null к false для сравнения
-                if (typeof domValue === 'boolean') {
+            limitOrderRows.forEach(row => {
+                const percentEl = row.querySelector('.limit-order-percent');
+                const marginEl = row.querySelector('.limit-order-margin');
+                
+                if (percentEl) {
+                    const percent = parseFloat(percentEl.value);
+                    if (!isNaN(percent)) {
+                        percentSteps.push(percent);
+                    }
+                }
+                
+                if (marginEl) {
+                    const margin = parseFloat(marginEl.value);
+                    if (!isNaN(margin)) {
+                        marginAmounts.push(margin);
+                    }
+                }
+            });
+            
+            // Применяем только если есть изменения
+            const originalPercentSteps = this.originalConfig?.autoBot?.limit_orders_percent_steps || [];
+            const originalMarginAmounts = this.originalConfig?.autoBot?.limit_orders_margin_amounts || [];
+            
+            if (JSON.stringify(percentSteps) !== JSON.stringify(originalPercentSteps) ||
+                JSON.stringify(marginAmounts) !== JSON.stringify(originalMarginAmounts)) {
+                autoBotConfig.limit_orders_percent_steps = percentSteps;
+                autoBotConfig.limit_orders_margin_amounts = marginAmounts;
+                console.log('[BotsManager] 🔄 Обновлены настройки лимитных ордеров:', { percentSteps, marginAmounts });
+            }
+        }
+        
+    
+    /**
+     * Собирает значения из элементов формы и обновляет конфигурацию
+     */
+    collectFieldsFromElements(elements, config) {
+        elements.forEach(element => {
+            // Пропускаем кнопки и элементы управления
+            if (element.type === 'button' || element.type === 'submit' || element.closest('button')) {
+                return;
+            }
+            
+            // Пропускаем элементы без ID (динамические поля лимитных ордеров обрабатываются отдельно)
+            if (!element.id || element.classList.contains('limit-order-percent') || element.classList.contains('limit-order-margin')) {
+                return;
+            }
+            
+            const configKey = this.mapElementIdToConfigKey(element.id);
+            if (!configKey) {
+                return;
+            }
+            
+            // Определяем значение в зависимости от типа элемента
+            let value;
+            if (element.type === 'checkbox') {
+                value = element.checked;
+            } else if (element.type === 'number') {
+                const numValue = parseFloat(element.value);
+                value = isNaN(numValue) ? undefined : numValue;
+            } else if (element.tagName === 'SELECT') {
+                value = element.value;
+            } else {
+                value = element.value;
+            }
+            
+            // Применяем значение только если оно изменилось
+            const originalValue = this.originalConfig?.autoBot?.[configKey];
+            
+            if (value !== undefined && value !== null) {
+                // Для булевых значений
+                if (typeof value === 'boolean') {
                     const normalizedOriginal = originalValue === true ? true : false;
-                    if (domValue !== normalizedOriginal) {
-                        autoBotConfig[key] = domValue;
-                        console.log(`[BotsManager] 🔄 Применено изменение из DOM: ${key} = ${domValue} (было ${normalizedOriginal})`);
+                    if (value !== normalizedOriginal) {
+                        config[configKey] = value;
+                        console.log(`[BotsManager] 🔄 Авто-применено: ${configKey} = ${value} (было ${normalizedOriginal})`);
                     }
                 }
                 // Для чисел: сравниваем с точностью 0.01
-                else if (typeof domValue === 'number' && typeof originalValue === 'number') {
-                    if (Math.abs(domValue - originalValue) > 0.01) {
-                        autoBotConfig[key] = domValue;
-                        console.log(`[BotsManager] 🔄 Применено изменение из DOM: ${key} = ${domValue} (было ${originalValue})`);
+                else if (typeof value === 'number' && typeof originalValue === 'number') {
+                    if (Math.abs(value - originalValue) > 0.01) {
+                        config[configKey] = value;
+                        console.log(`[BotsManager] 🔄 Авто-применено: ${configKey} = ${value} (было ${originalValue})`);
                     }
                 }
                 // Для остальных типов: точное сравнение
-                else if (domValue !== originalValue) {
-                    autoBotConfig[key] = domValue;
-                    console.log(`[BotsManager] 🔄 Применено изменение из DOM: ${key} = ${domValue} (было ${originalValue})`);
+                else if (value !== originalValue) {
+                    config[configKey] = value;
+                    console.log(`[BotsManager] 🔄 Авто-применено: ${configKey} = ${value} (было ${originalValue})`);
                 }
             }
-        };
+        });
+    }
+    
+        // ✅ СБОР СИСТЕМНЫХ НАСТРОЕК (автоматически из системных полей)
+        // Находим все системные поля в configTab
+        const systemInputs = configTab.querySelectorAll('input[id*="Update"], input[id*="Interval"], input[id*="Mode"], input[id*="Timeout"], input[id*="Refresh"], input[id*="Debug"], input[id*="Enhanced"], input[id*="Rsi"][id*="Extreme"], input[id*="Rsi"][id*="Volume"], input[id*="Rsi"][id*="Divergence"]');
+        const systemConfig = {};
         
-        // Применяем изменения из DOM для критичных полей
-        const trailingStopActivationEl = document.getElementById('trailingStopActivation');
-        if (trailingStopActivationEl) {
-            applyDomChange('trailing_stop_activation', () => {
-                const val = parseFloat(trailingStopActivationEl.value);
-                return Number.isFinite(val) ? val : undefined;
-            });
-        }
-        
-        const trailingStopDistanceEl = document.getElementById('trailingStopDistance');
-        if (trailingStopDistanceEl) {
-            applyDomChange('trailing_stop_distance', () => {
-                const val = parseFloat(trailingStopDistanceEl.value);
-                return Number.isFinite(val) ? val : undefined;
-            });
-        }
-        
-        const breakEvenTriggerEl = document.getElementById('breakEvenTrigger');
-        if (breakEvenTriggerEl) {
-            const domValue = parseFloat(breakEvenTriggerEl.value);
-            const originalValue = this.originalConfig?.autoBot?.break_even_trigger_percent ?? this.originalConfig?.autoBot?.break_even_trigger;
-            const cachedValue = autoBotConfig.break_even_trigger_percent ?? autoBotConfig.break_even_trigger;
-            
-            console.log(`[BotsManager] 🔍 breakEvenTrigger: DOM=${domValue}, original=${originalValue}, cached=${cachedValue}`);
-            
-            // ✅ ЕСЛИ значение в DOM равно дефолтному из HTML (100.0), а в originalConfig другое - это НЕ изменение пользователя
-            // Используем значение из кэша (которое уже скопировано из cachedAutoBotConfig)
-            if (Number.isFinite(domValue) && domValue === 100.0 && Number.isFinite(originalValue) && originalValue !== 100.0) {
-                console.log(`[BotsManager] ⚠️ breakEvenTrigger: DOM содержит дефолтное значение 100.0, но в originalConfig ${originalValue}. Это НЕ изменение пользователя, используем значение из конфига.`);
-                // НЕ применяем изменение из DOM, значение уже в autoBotConfig из кэша
-            } else if (Number.isFinite(domValue) && Number.isFinite(originalValue)) {
-                // Применяем изменение только если оно действительно отличается от originalConfig
-                applyDomChange('break_even_trigger_percent', () => {
-                    return Number.isFinite(domValue) ? domValue : undefined;
-                });
-                autoBotConfig.break_even_trigger = autoBotConfig.break_even_trigger_percent;
-            } else {
-                // Если originalValue undefined, используем значение из кэша
-                console.log(`[BotsManager] ℹ️ breakEvenTrigger: originalValue undefined, используем значение из кэша: ${cachedValue}`);
+        // Собираем системные настройки из всех найденных полей
+        systemInputs.forEach(element => {
+            if (!element.id || element.closest('#limitOrdersList') || element.closest('.limit-order-row')) {
+                return; // Пропускаем динамические поля лимитных ордеров
             }
-        }
-        
-        const avoidDownTrendEl = document.getElementById('avoidDownTrend');
-        if (avoidDownTrendEl) {
-            applyDomChange('avoid_down_trend', () => {
-                const checked = avoidDownTrendEl.checked;
-                console.log(`[BotsManager] 🔍 avoidDownTrend: DOM=${checked}, original=${this.originalConfig?.autoBot?.avoid_down_trend}, cached=${autoBotConfig.avoid_down_trend}`);
-                return checked;
-            });
-        }
-        
-        const avoidUpTrendEl = document.getElementById('avoidUpTrend');
-        if (avoidUpTrendEl) {
-            applyDomChange('avoid_up_trend', () => {
-                const checked = avoidUpTrendEl.checked;
-                console.log(`[BotsManager] 🔍 avoidUpTrend: DOM=${checked}, original=${this.originalConfig?.autoBot?.avoid_up_trend}, cached=${autoBotConfig.avoid_up_trend}`);
-                return checked;
-            });
-        }
-        
-        // ✅ ПЕРЕКЛЮЧАТЕЛЬ "ВКЛЮЧИТЬ АНАЛИЗ ТРЕНДОВ"
-        const trendDetectionEnabledEl = document.getElementById('trendDetectionEnabled');
-        if (trendDetectionEnabledEl) {
-            applyDomChange('trend_detection_enabled', () => {
-                const checked = trendDetectionEnabledEl.checked;
-                console.log(`[BotsManager] 🔍 trendDetectionEnabled: DOM=${checked}, original=${this.originalConfig?.autoBot?.trend_detection_enabled}, cached=${autoBotConfig.trend_detection_enabled}`);
-                return checked;
-            });
-        }
-        
-        // ✅ ПРИМЕНЯЕМ ИЗМЕНЕНИЯ ДЛЯ ВСЕХ ОСТАЛЬНЫХ ПОЛЕЙ
-        // Используем универсальную функцию для всех полей формы
-        const applyAllDomChanges = () => {
-            // Все числовые поля
-            const numberFields = [
-                { key: 'max_concurrent', el: 'autoBotMaxConcurrent' },
-                { key: 'risk_cap_percent', el: 'autoBotRiskCap' },
-                { key: 'ai_min_confidence', el: 'aiMinConfidence' },
-                { key: 'rsi_long_threshold', el: 'rsiLongThreshold' },
-                { key: 'rsi_short_threshold', el: 'rsiShortThreshold' },
-                { key: 'rsi_exit_long_with_trend', el: 'rsiExitLongWithTrendGlobal' },
-                { key: 'rsi_exit_long_against_trend', el: 'rsiExitLongAgainstTrendGlobal' },
-                { key: 'rsi_exit_short_with_trend', el: 'rsiExitShortWithTrendGlobal' },
-                { key: 'rsi_exit_short_against_trend', el: 'rsiExitShortAgainstTrendGlobal' },
-                { key: 'default_position_size', el: 'defaultPositionSize' },
-                { key: 'check_interval', el: 'checkInterval' },
-                { key: 'max_loss_percent', el: 'maxLossPercent' },
-                { key: 'take_profit_percent', el: 'takeProfitPercent' },
-                { key: 'trailing_take_distance', el: 'trailingTakeDistance' },
-                { key: 'trailing_update_interval', el: 'trailingUpdateInterval' },
-                { key: 'max_position_hours', el: 'maxPositionHours' },
-                { key: 'trend_analysis_period', el: 'trendAnalysisPeriod' },
-                { key: 'trend_price_change_threshold', el: 'trendPriceChangeThreshold' },
-                { key: 'trend_candles_threshold', el: 'trendCandlesThreshold' },
-                { key: 'min_candles_for_maturity', el: 'minCandlesForMaturity' },
-                { key: 'min_rsi_low', el: 'minRsiLow' },
-                { key: 'max_rsi_high', el: 'maxRsiHigh' },
-                { key: 'min_volatility_threshold', el: 'minVolatilityThreshold' },
-                { key: 'rsi_time_filter_candles', el: 'rsiTimeFilterCandles' },
-                { key: 'rsi_time_filter_upper', el: 'rsiTimeFilterUpper' },
-                { key: 'rsi_time_filter_lower', el: 'rsiTimeFilterLower' },
-                { key: 'exit_scam_candles', el: 'exitScamCandles' },
-                { key: 'exit_scam_single_candle_percent', el: 'exitScamSingleCandlePercent' },
-                { key: 'exit_scam_multi_candle_count', el: 'exitScamMultiCandleCount' },
-                { key: 'exit_scam_multi_candle_percent', el: 'exitScamMultiCandlePercent' },
-                { key: 'max_risk_per_trade', el: 'maxRiskPerTrade' },
-                { key: 'rsi_extreme_zone_timeout', el: 'rsiExtremeZoneTimeout' },
-                { key: 'rsi_extreme_oversold', el: 'rsiExtremeOversold' },
-                { key: 'rsi_extreme_overbought', el: 'rsiExtremeOverbought' },
-                { key: 'rsi_volume_confirmation_multiplier', el: 'rsiVolumeMultiplier' },
-                { key: 'rsi_divergence_lookback', el: 'rsiDivergenceLookback' }
-            ];
             
-            numberFields.forEach(({ key, el }) => {
-                const element = document.getElementById(el);
-                if (element) {
-                    applyDomChange(key, () => {
-                        const val = parseFloat(element.value);
-                        return Number.isFinite(val) ? val : undefined;
-                    });
+            const configKey = this.mapElementIdToConfigKey(element.id);
+            if (!configKey) {
+                return;
+            }
+            
+            // Проверяем, что это системная настройка (не autoBot)
+            const systemKeys = ['rsi_update_interval', 'auto_save_interval', 'debug_mode', 'auto_refresh_ui',
+                               'refresh_interval', 'position_sync_interval', 'inactive_bot_cleanup_interval',
+                               'inactive_bot_timeout', 'stop_loss_setup_interval', 'enhanced_rsi_enabled',
+                               'enhanced_rsi_require_volume_confirmation', 'enhanced_rsi_require_divergence_confirmation',
+                               'enhanced_rsi_use_stoch_rsi', 'rsi_extreme_zone_timeout', 'rsi_extreme_oversold',
+                               'rsi_extreme_overbought', 'rsi_volume_confirmation_multiplier', 'rsi_divergence_lookback'];
+            
+            if (systemKeys.includes(configKey)) {
+                let value;
+                if (element.type === 'checkbox') {
+                    value = element.checked;
+                } else if (element.type === 'number') {
+                    const numValue = parseFloat(element.value);
+                    value = isNaN(numValue) ? (this.originalConfig?.system?.[configKey]) : numValue;
+                } else {
+                    value = element.value || (this.originalConfig?.system?.[configKey]);
                 }
-            });
-            
-            // Все булевые поля (avoidDownTrend, avoidUpTrend и trendDetectionEnabled уже обработаны выше)
-            const boolFields = [
-                { key: 'enabled', el: 'globalAutoBotToggle' },
-                { key: 'ai_enabled', el: 'autoBotAIEnabled' },
-                { key: 'ai_override_original', el: 'aiOverrideOriginal' },
-                { key: 'break_even_protection', el: 'breakEvenProtection' },
-                { key: 'enable_maturity_check', el: 'enableMaturityCheck' },
-                { key: 'rsi_time_filter_enabled', el: 'rsiTimeFilterEnabled' },
-                { key: 'exit_scam_enabled', el: 'exitScamEnabled' },
-                { key: 'trading_enabled', el: 'tradingEnabled' },
-                { key: 'use_test_server', el: 'useTestServer' },
-                { key: 'enhanced_rsi_enabled', el: 'enhancedRsiEnabled' },
-                { key: 'enhanced_rsi_require_volume_confirmation', el: 'enhancedRsiVolumeConfirm' },
-                { key: 'enhanced_rsi_require_divergence_confirmation', el: 'enhancedRsiDivergenceConfirm' },
-                { key: 'enhanced_rsi_use_stoch_rsi', el: 'enhancedRsiUseStochRsi' }
-                // ✅ avoid_down_trend, avoid_up_trend и trend_detection_enabled уже обработаны выше отдельно
-            ];
-            
-            boolFields.forEach(({ key, el }) => {
-                const element = document.getElementById(el);
-                if (element) {
-                    applyDomChange(key, () => element.checked);
+                
+                if (value !== undefined && value !== null) {
+                    systemConfig[configKey] = value;
                 }
-            });
-            
-            const positionModeEl = document.getElementById('defaultPositionMode');
-            if (positionModeEl) {
-                applyDomChange('default_position_mode', () => positionModeEl.value || 'usdt');
             }
-            
-            // Строковые поля
-            const scopeEl = document.getElementById('autoBotScope');
-            if (scopeEl) {
-                applyDomChange('scope', () => scopeEl.value);
-            }
-        };
-        
-        applyAllDomChanges();
-        
-        // Собираем системные настройки (они обычно не меняются часто, можно оставить как есть)
-        const systemConfig = {
-            rsi_update_interval: parseInt(document.getElementById('rsiUpdateInterval')?.value) || 1800,
-            auto_save_interval: parseInt(document.getElementById('autoSaveInterval')?.value) || 30,
-            debug_mode: document.getElementById('debugMode')?.checked || false,
-            auto_refresh_ui: document.getElementById('autoRefreshUI')?.checked !== false,
-            refresh_interval: parseInt(document.getElementById('refreshInterval')?.value) || 3,
-            position_sync_interval: parseInt(document.getElementById('positionSyncInterval')?.value) || 600,
-            inactive_bot_cleanup_interval: parseInt(document.getElementById('inactiveBotCleanupInterval')?.value) || 600,
-            inactive_bot_timeout: parseInt(document.getElementById('inactiveBotTimeout')?.value) || 600,
-            stop_loss_setup_interval: parseInt(document.getElementById('stopLossSetupInterval')?.value) || 300,
-            enhanced_rsi_enabled: document.getElementById('enhancedRsiEnabled')?.checked || false,
-            enhanced_rsi_require_volume_confirmation: document.getElementById('enhancedRsiVolumeConfirm')?.checked || false,
-            enhanced_rsi_require_divergence_confirmation: document.getElementById('enhancedRsiDivergenceConfirm')?.checked || false,
-            enhanced_rsi_use_stoch_rsi: document.getElementById('enhancedRsiUseStochRsi')?.checked || false,
-            rsi_extreme_zone_timeout: parseInt(document.getElementById('rsiExtremeZoneTimeout')?.value) || 3,
-            rsi_extreme_oversold: parseInt(document.getElementById('rsiExtremeOversold')?.value) || 20,
-            rsi_extreme_overbought: parseInt(document.getElementById('rsiExtremeOverbought')?.value) || 80,
-            rsi_volume_confirmation_multiplier: parseFloat(document.getElementById('rsiVolumeMultiplier')?.value) || 1.2,
-            rsi_divergence_lookback: parseInt(document.getElementById('rsiDivergenceLookback')?.value) || 10
-        };
+        });
         
         const result = {
             autoBot: autoBotConfig,
             system: systemConfig
         };
         
-        console.log('[BotsManager] ✅ Конфигурация собрана из cachedAutoBotConfig');
+        console.log('[BotsManager] ✅ Конфигурация собрана автоматически из всех полей формы');
         return result;
     }
 
@@ -7624,12 +7666,32 @@ class BotsManager {
         }
         
         // Находим все поля конфигурации: input, select, checkbox
+        // Включая поля в секции AI (aiConfigSection), которая может быть скрыта
         const configInputs = configTab.querySelectorAll('input[type="number"], input[type="text"], input[type="checkbox"], select');
         
-        console.log(`[BotsManager] 🔍 Найдено полей конфигурации: ${configInputs.length}`);
+        // Также добавляем поля из секции AI, если она существует
+        const aiConfigSection = document.getElementById('aiConfigSection');
+        let allInputs = Array.from(configInputs);
         
+        if (aiConfigSection) {
+            const aiInputs = aiConfigSection.querySelectorAll('input[type="number"], input[type="text"], input[type="checkbox"], select');
+            console.log(`[BotsManager] 🔍 Найдено полей в секции AI: ${aiInputs.length}`);
+            // Добавляем поля из AI секции
+            allInputs = Array.from(new Set([...allInputs, ...Array.from(aiInputs)]));
+        }
+        
+        console.log(`[BotsManager] 🔍 Всего полей конфигурации: ${allInputs.length}`);
+        
+        // Добавляем обработчики для всех полей
+        this.addAutoSaveHandlers(allInputs);
+    }
+    
+    /**
+     * Добавляет обработчики автосохранения для списка полей
+     */
+    addAutoSaveHandlers(inputs) {
         // Добавляем обработчики для каждого поля
-        configInputs.forEach((input, index) => {
+        inputs.forEach((input, index) => {
             // Пропускаем кнопки и элементы управления
             if (input.type === 'button' || input.type === 'submit' || input.closest('button')) {
                 return;
@@ -7670,7 +7732,7 @@ class BotsManager {
             }
         });
         
-        console.log('[BotsManager] ✅ Автосохранение конфигурации инициализировано');
+        console.log(`[BotsManager] ✅ Обработчики автосохранения добавлены для ${inputs.length} полей`);
     }
     
     /**
@@ -10172,6 +10234,39 @@ class BotsManager {
         });
         
         listEl.appendChild(row);
+        
+        // ✅ ДОБАВЛЯЕМ АВТОСОХРАНЕНИЕ ДЛЯ ДИНАМИЧЕСКИХ ПОЛЕЙ
+        // Находим новые поля и добавляем обработчики автосохранения
+        const percentInput = row.querySelector('.limit-order-percent');
+        const marginInput = row.querySelector('.limit-order-margin');
+        
+        if (percentInput && !percentInput.hasAttribute('data-autosave-initialized')) {
+            percentInput.setAttribute('data-autosave-initialized', 'true');
+            percentInput.addEventListener('input', () => {
+                if (!this.isProgrammaticChange) {
+                    this.scheduleAutoSave();
+                }
+            });
+            percentInput.addEventListener('blur', () => {
+                if (!this.isProgrammaticChange) {
+                    this.scheduleAutoSave();
+                }
+            });
+        }
+        
+        if (marginInput && !marginInput.hasAttribute('data-autosave-initialized')) {
+            marginInput.setAttribute('data-autosave-initialized', 'true');
+            marginInput.addEventListener('input', () => {
+                if (!this.isProgrammaticChange) {
+                    this.scheduleAutoSave();
+                }
+            });
+            marginInput.addEventListener('blur', () => {
+                if (!this.isProgrammaticChange) {
+                    this.scheduleAutoSave();
+                }
+            });
+        }
     }
     
     async saveLimitOrdersSettings() {
