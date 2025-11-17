@@ -1289,6 +1289,53 @@
                     </div>
                 </div>
 
+                <!-- Набор позиций лимитными ордерами -->
+                <div class="config-section">
+                    <div class="section-header">
+                        <h3>📊 Набор позиций лимитными ордерами</h3>
+                        <div class="section-description">
+                            Настройка входа в позицию через набор лимитных ордеров вместо рыночного входа
+                        </div>
+                    </div>
+                    
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">🎯</span>
+                                <span class="label-text">Режим входа:</span>
+                            </label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="limitOrdersEntryEnabled" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <small class="config-help">Включить набор позиций лимитными ордерами (выключено = рыночный вход)</small>
+                        </div>
+                    </div>
+                    
+                    <div id="limitOrdersConfig" style="display: none; margin-top: 20px;">
+                        <div class="config-grid">
+                            <div class="config-item" style="grid-column: 1 / -1;">
+                                <label class="config-label">
+                                    <span class="label-icon">📋</span>
+                                    <span class="label-text">Настройки лимитных ордеров:</span>
+                                </label>
+                                <div id="limitOrdersList" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                                    <!-- Динамически добавляемые поля -->
+                                </div>
+                                <button type="button" id="addLimitOrderBtn" class="btn btn-primary" style="margin-top: 10px;">
+                                    <span>➕ Добавить ордер</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="config-section-actions">
+                        <button class="btn btn-success config-section-save-btn" data-section="limit-orders">
+                            <span>💾 Сохранить настройки набора позиций</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- RSI выходы из позиций -->
                 <div class="config-section">
                     <div class="section-header">

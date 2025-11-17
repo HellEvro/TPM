@@ -116,6 +116,10 @@ DEFAULT_AUTO_BOT_CONFIG = {
     'rsi_time_filter_candles': 7,       # Минимум свечей с последнего экстремума (4 = 1 день на 6H)
     'rsi_time_filter_upper': 65,        # Верхняя граница спокойной зоны для SHORT
     'rsi_time_filter_lower': 35,        # Нижняя граница спокойной зоны для LONG
+    # Набор позиций лимитными ордерами
+    'limit_orders_entry_enabled': False,  # Включить набор позиций лимитными ордерами (False = рыночный вход)
+    'limit_orders_percent_steps': [1, 2, 3, 4, 5],  # Шаги в % от цены входа для лимитных ордеров
+    'limit_orders_margin_amounts': [0.2, 0.3, 0.5, 1, 2],  # Объем маржи в USDT для каждого лимитного ордера
     # ExitScam фильтр (защита от резких движений цены)
     'exit_scam_enabled': True,          # Включить проверку на ExitScam
     'exit_scam_candles': 8,            # Количество свечей для проверки (10 = 60 часов на 6H)
