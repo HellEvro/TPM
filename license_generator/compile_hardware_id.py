@@ -58,6 +58,13 @@ def compile_hardware_id():
             shutil.copy2(compiled_file, target_pyc)
             print(f"[OK] Compiled: {target_pyc}")
             
+            # Также копируем в scripts/hardware_id.pyc для activate_premium.py
+            scripts_dir = Path('scripts')
+            scripts_dir.mkdir(parents=True, exist_ok=True)
+            scripts_pyc = scripts_dir / 'hardware_id.pyc'
+            shutil.copy2(compiled_file, scripts_pyc)
+            print(f"[OK] Also compiled: {scripts_pyc} (for activate_premium.py)")
+            
             # Удаляем временный .py файл (оставляем только .pyc)
             if temp_file.exists():
                 temp_file.unlink()
@@ -76,6 +83,7 @@ def compile_hardware_id():
             print()
             print(f"Source: {source_file}")
             print(f"Compiled: {target_pyc}")
+            print(f"Also: {scripts_pyc} (for activate_premium.py)")
             print()
             
             return True
