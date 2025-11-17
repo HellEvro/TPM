@@ -6038,13 +6038,30 @@ class BotsManager {
         // ==========================================
         
         const limitOrdersEnabledEl = document.getElementById('limitOrdersEntryEnabled');
+        const positionSizeEl = document.getElementById('defaultPositionSize');
+        const positionModeEl = document.getElementById('defaultPositionMode');
+        
         if (limitOrdersEnabledEl) {
-            limitOrdersEnabledEl.checked = autoBotConfig.limit_orders_entry_enabled || false;
+            const isEnabled = autoBotConfig.limit_orders_entry_enabled || false;
+            limitOrdersEnabledEl.checked = isEnabled;
             const configDiv = document.getElementById('limitOrdersConfig');
             if (configDiv) {
-                configDiv.style.display = limitOrdersEnabledEl.checked ? 'block' : 'none';
+                configDiv.style.display = isEnabled ? 'block' : 'none';
             }
-            console.log('[BotsManager] 📊 Набор позиций лимитными ордерами:', limitOrdersEnabledEl.checked);
+            
+            // Деактивируем настройку "Размер позиции" при включении лимитных ордеров
+            if (positionSizeEl) {
+                positionSizeEl.disabled = isEnabled;
+                positionSizeEl.style.opacity = isEnabled ? '0.5' : '1';
+                positionSizeEl.style.cursor = isEnabled ? 'not-allowed' : 'text';
+            }
+            if (positionModeEl) {
+                positionModeEl.disabled = isEnabled;
+                positionModeEl.style.opacity = isEnabled ? '0.5' : '1';
+                positionModeEl.style.cursor = isEnabled ? 'not-allowed' : 'pointer';
+            }
+            
+            console.log('[BotsManager] 📊 Набор позиций лимитными ордерами:', isEnabled);
         }
         
         // Загружаем настройки лимитных ордеров
@@ -10051,13 +10068,29 @@ class BotsManager {
         const toggleEl = document.getElementById('limitOrdersEntryEnabled');
         const configDiv = document.getElementById('limitOrdersConfig');
         const addBtn = document.getElementById('addLimitOrderBtn');
+        const positionSizeEl = document.getElementById('defaultPositionSize');
+        const positionModeEl = document.getElementById('defaultPositionMode');
         
         if (!toggleEl || !configDiv) return;
         
         // Обработчик переключателя
         toggleEl.addEventListener('change', () => {
-            configDiv.style.display = toggleEl.checked ? 'block' : 'none';
-            if (toggleEl.checked && document.getElementById('limitOrdersList').children.length === 0) {
+            const isEnabled = toggleEl.checked;
+            configDiv.style.display = isEnabled ? 'block' : 'none';
+            
+            // Деактивируем настройку "Размер позиции" при включении лимитных ордеров
+            if (positionSizeEl) {
+                positionSizeEl.disabled = isEnabled;
+                positionSizeEl.style.opacity = isEnabled ? '0.5' : '1';
+                positionSizeEl.style.cursor = isEnabled ? 'not-allowed' : 'text';
+            }
+            if (positionModeEl) {
+                positionModeEl.disabled = isEnabled;
+                positionModeEl.style.opacity = isEnabled ? '0.5' : '1';
+                positionModeEl.style.cursor = isEnabled ? 'not-allowed' : 'pointer';
+            }
+            
+            if (isEnabled && document.getElementById('limitOrdersList').children.length === 0) {
                 // Добавляем первую пару полей
                 this.addLimitOrderRow();
             }
@@ -10095,7 +10128,15 @@ class BotsManager {
         
         // Обработчик удаления
         row.querySelector('.remove-limit-order-btn').addEventListener('click', () => {
-            row.remove();
+            const listEl = document.getElementById('limitOrdersList');
+            // Не удаляем, если это последняя строка - оставляем хотя бы одну
+            if (listEl && listEl.children.length > 1) {
+                row.remove();
+            } else {
+                // Если это последняя строка, просто очищаем значения
+                row.querySelector('.limit-order-percent').value = 0;
+                row.querySelector('.limit-order-margin').value = 0;
+            }
         });
         
         listEl.appendChild(row);
@@ -10112,14 +10153,16 @@ class BotsManager {
             rows.forEach(row => {
                 const percent = parseFloat(row.querySelector('.limit-order-percent').value) || 0;
                 const margin = parseFloat(row.querySelector('.limit-order-margin').value) || 0;
-                if (margin > 0) {
-                    percentSteps.push(percent);
-                    marginAmounts.push(margin);
-                }
+                // Сохраняем все значения, даже если margin = 0 (для первого рыночного ордера)
+                percentSteps.push(percent);
+                marginAmounts.push(margin);
             });
             
+            // Если включен режим, но нет ордеров - выключаем режим
+            const finalEnabled = enabled && percentSteps.length > 0 && marginAmounts.some(m => m > 0);
+            
             const config = {
-                limit_orders_entry_enabled: enabled,
+                limit_orders_entry_enabled: finalEnabled,
                 limit_orders_percent_steps: percentSteps,
                 limit_orders_margin_amounts: marginAmounts
             };
