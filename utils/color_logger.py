@@ -408,21 +408,36 @@ def setup_color_logging(console_log_levels=None):
     # Устанавливаем минимальный уровень, чтобы все сообщения доходили до фильтра
     logger.setLevel(logging.DEBUG)
     
-    # КРИТИЧНО: Удаляем ВСЕ StreamHandler'ы из ВСЕХ существующих логгеров
-    # Это нужно, чтобы избежать дублирования сообщений
+    # Проверяем, есть ли уже консольный обработчик с нашим фильтром
+    # Если есть, не пересоздаём его (чтобы не удалять работающий)
+    has_our_handler = False
+    for handler in logger.handlers:
+        if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
+            # Проверяем, есть ли наш фильтр
+            for filter_obj in handler.filters:
+                if isinstance(filter_obj, LogLevelFilter):
+                    has_our_handler = True
+                    # Обновляем настройки фильтра, если они изменились
+                    filter_obj.__init__(console_log_levels)
+                    break
+    
+    # Если обработчик уже есть и настроен правильно, не трогаем его
+    if has_our_handler:
+        return logger
+    
+    # Удаляем только старые консольные обработчики БЕЗ нашего фильтра
+    for handler in logger.handlers[:]:
+        if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
+            # Проверяем, есть ли наш фильтр
+            has_our_filter = any(isinstance(f, LogLevelFilter) for f in handler.filters)
+            if not has_our_filter:
+                logger.removeHandler(handler)
+    
+    # Убеждаемся, что все логгеры пропагируют в корневой
     for existing_logger_name in logging.Logger.manager.loggerDict:
         existing_logger = logging.getLogger(existing_logger_name)
-        # Удаляем все StreamHandler'ы (консольные), но оставляем файловые
-        for handler in existing_logger.handlers[:]:
-            if isinstance(handler, logging.StreamHandler):
-                existing_logger.removeHandler(handler)
-        # Убеждаемся, что propagate=True, чтобы сообщения шли в корневой логгер
         existing_logger.propagate = True
-    
-    # Удаляем существующие консольные обработчики из корневого логгера (но оставляем файловые)
-    for handler in logger.handlers[:]:
-        if isinstance(handler, logging.StreamHandler):
-            logger.removeHandler(handler)
+        existing_logger.setLevel(logging.DEBUG)
     
     # Создаем консольный обработчик
     # На Windows используем errors='replace' для обработки эмодзи
@@ -505,14 +520,12 @@ def setup_color_logging(console_log_levels=None):
     
     for logger_name in our_loggers:
         our_logger = logging.getLogger(logger_name)
-        # Удаляем все StreamHandler'ы из наших логгеров
-        for handler in our_logger.handlers[:]:
-            if isinstance(handler, logging.StreamHandler):
-                our_logger.removeHandler(handler)
+        # НЕ удаляем обработчики - пусть они остаются, если есть
         # НЕ устанавливаем уровень здесь - оставляем DEBUG, чтобы сообщения доходили до фильтра
         # Фильтрация происходит через LogLevelFilter в обработчике
         # КРИТИЧНО: propagate=True, чтобы сообщения шли в корневой логгер с фильтром
         our_logger.propagate = True
+        our_logger.setLevel(logging.DEBUG)
     
     # НЕ устанавливаем уровень корневого логгера на min_level,
     # так как это предотвратит создание сообщений ниже этого уровня,
