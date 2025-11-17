@@ -6038,8 +6038,9 @@ class BotsManager {
         // ==========================================
         
         const limitOrdersEnabledEl = document.getElementById('limitOrdersEntryEnabled');
-        const positionSizeEl = document.getElementById('defaultPositionSize');
-        const positionModeEl = document.getElementById('defaultPositionMode');
+        // Используем уже объявленные переменные positionSizeEl и positionModeEl из блока торговых параметров
+        const limitPositionSizeEl = document.getElementById('defaultPositionSize');
+        const limitPositionModeEl = document.getElementById('defaultPositionMode');
         
         if (limitOrdersEnabledEl) {
             const isEnabled = autoBotConfig.limit_orders_entry_enabled || false;
@@ -6050,15 +6051,15 @@ class BotsManager {
             }
             
             // Деактивируем настройку "Размер позиции" при включении лимитных ордеров
-            if (positionSizeEl) {
-                positionSizeEl.disabled = isEnabled;
-                positionSizeEl.style.opacity = isEnabled ? '0.5' : '1';
-                positionSizeEl.style.cursor = isEnabled ? 'not-allowed' : 'text';
+            if (limitPositionSizeEl) {
+                limitPositionSizeEl.disabled = isEnabled;
+                limitPositionSizeEl.style.opacity = isEnabled ? '0.5' : '1';
+                limitPositionSizeEl.style.cursor = isEnabled ? 'not-allowed' : 'text';
             }
-            if (positionModeEl) {
-                positionModeEl.disabled = isEnabled;
-                positionModeEl.style.opacity = isEnabled ? '0.5' : '1';
-                positionModeEl.style.cursor = isEnabled ? 'not-allowed' : 'pointer';
+            if (limitPositionModeEl) {
+                limitPositionModeEl.disabled = isEnabled;
+                limitPositionModeEl.style.opacity = isEnabled ? '0.5' : '1';
+                limitPositionModeEl.style.cursor = isEnabled ? 'not-allowed' : 'pointer';
             }
             
             console.log('[BotsManager] 📊 Набор позиций лимитными ордерами:', isEnabled);
