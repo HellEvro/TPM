@@ -441,7 +441,6 @@ def setup_color_logging(console_log_levels=None):
     logger.addHandler(console_handler)
     
     # ОТЛАДКА: Проверяем, что обработчик добавлен
-    import sys
     sys.stderr.write(f"[COLOR_LOGGER] Обработчик добавлен, всего handlers: {len(logger.handlers)}\n")
     sys.stderr.write(f"[COLOR_LOGGER] enabled_levels: {level_filter.enabled_levels}\n")
     sys.stderr.write(f"[COLOR_LOGGER] debug_enabled: {level_filter.debug_enabled}\n")
