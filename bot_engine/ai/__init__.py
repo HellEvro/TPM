@@ -136,7 +136,7 @@ def check_premium_license(force_refresh: bool = False) -> bool:
     try:
         from .license_checker import get_license_checker
     except Exception as exc:
-        _license_logger.debug("License checker module unavailable: %s", exc)
+        _license_logger.debug(f"License checker module unavailable: {exc}")
         _LICENSE_STATUS = False
         _LICENSE_INFO = None
         return False
@@ -148,7 +148,7 @@ def check_premium_license(force_refresh: bool = False) -> bool:
         _LICENSE_INFO = license_checker.get_info() if _LICENSE_STATUS else None
         return _LICENSE_STATUS
     except Exception as exc:
-        _license_logger.debug("License validation failed: %s", exc, exc_info=True)
+        _license_logger.debug(f"License validation failed: {exc}", exc_info=True)
         _LICENSE_STATUS = False
         _LICENSE_INFO = None
         return False

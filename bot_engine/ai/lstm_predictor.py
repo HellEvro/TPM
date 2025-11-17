@@ -153,7 +153,7 @@ class LSTMPredictor:
             Массив признаков для модели
         """
         if len(candles) < self.config['sequence_length']:
-            logger.debug("Недостаточно свечей: %s < %s", len(candles), self.config['sequence_length'])
+            logger.debug(f"Недостаточно свечей: {len(candles)} < {self.config['sequence_length']}")
             return None
         
         df = pd.DataFrame(candles)
