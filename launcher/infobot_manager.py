@@ -880,7 +880,7 @@ class InfoBotManager(tk.Tk):
         self._safe_put_log((channel, message))
 
     def log(self, message: str, channel: str = "system", broadcast: bool = False) -> None:
-        timestamp = time.strftime("%H:%M:%S")
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         formatted = f"[{timestamp}] {message}"
         self._enqueue_log(channel, formatted, broadcast=broadcast)
 
@@ -1462,7 +1462,7 @@ class InfoBotManager(tk.Tk):
                 return
             # Показываем новый и предыдущий коммит(c) c датами
             result = subprocess.run(
-                ["git", "log", "-2", "--pretty=format:%h %cd %an%n    %s", "--graph", "--date=short"],
+                ["git", "log", "-2", "--pretty=format:%h | %cd | %s%n    Автор: %an", "--graph", "--date=format:%Y-%m-%d %H:%M:%S"],
                 cwd=str(PROJECT_ROOT),
                 capture_output=True,
                 text=True,
