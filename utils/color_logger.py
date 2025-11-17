@@ -425,7 +425,14 @@ def setup_color_logging(console_log_levels=None):
             logger.removeHandler(handler)
     
     # Создаем консольный обработчик
+    # На Windows используем errors='replace' для обработки эмодзи
     console_handler = logging.StreamHandler(sys.stdout)
+    # Устанавливаем кодировку для Windows консоли
+    if sys.platform == 'win32' and hasattr(console_handler.stream, 'reconfigure'):
+        try:
+            console_handler.stream.reconfigure(encoding='utf-8', errors='replace')
+        except:
+            pass  # Если не удалось, используем стандартную кодировку
     console_handler.setLevel(logging.DEBUG)  # Устанавливаем минимальный уровень для обработчика
     
     # Применяем фильтр уровней
@@ -440,18 +447,10 @@ def setup_color_logging(console_log_levels=None):
     # Добавляем обработчик к логгеру
     logger.addHandler(console_handler)
     
-    # ОТЛАДКА: Проверяем, что обработчик добавлен
-    sys.stderr.write(f"[COLOR_LOGGER] Обработчик добавлен, всего handlers: {len(logger.handlers)}\n")
-    sys.stderr.write(f"[COLOR_LOGGER] enabled_levels: {level_filter.enabled_levels}\n")
-    sys.stderr.write(f"[COLOR_LOGGER] debug_enabled: {level_filter.debug_enabled}\n")
-    
-    # Тестовое логирование для проверки
-    test_logger = logging.getLogger('color_logger.test')
-    test_logger.info("🧪 Тестовое сообщение из setup_color_logging")
-    test_logger.debug("🧪 Тестовое DEBUG сообщение из setup_color_logging")
-    test_logger.warning("🧪 Тестовое WARNING сообщение из setup_color_logging")
-    test_logger.error("🧪 Тестовое ERROR сообщение из setup_color_logging")
-    sys.stderr.write(f"[COLOR_LOGGER] Тестовые сообщения отправлены, handlers после: {len(logger.handlers)}\n")
+    # ОТЛАДКА: Проверяем, что обработчик добавлен (только для отладки, можно убрать)
+    # sys.stderr.write(f"[COLOR_LOGGER] Обработчик добавлен, всего handlers: {len(logger.handlers)}\n")
+    # sys.stderr.write(f"[COLOR_LOGGER] enabled_levels: {level_filter.enabled_levels}\n")
+    # sys.stderr.write(f"[COLOR_LOGGER] debug_enabled: {level_filter.debug_enabled}\n")
     
     # Настраиваем уровни для внешних логгеров, чтобы они не шумели
     # Определяем, какие уровни разрешены
