@@ -6353,6 +6353,15 @@ class BotsManager {
         }
         
         // ✅ ОБРАБОТКА ДИНАМИЧЕСКИХ ПОЛЕЙ ЛИМИТНЫХ ОРДЕРОВ
+        // Сначала обрабатываем toggle для limit_orders_entry_enabled
+        const limitOrdersEntryEnabledEl = document.getElementById('limitOrdersEntryEnabled');
+        if (limitOrdersEntryEnabledEl) {
+            const enabled = limitOrdersEntryEnabledEl.checked;
+            // Всегда обновляем значение, чтобы оно сохранялось при обычном сохранении конфигурации
+            autoBotConfig.limit_orders_entry_enabled = enabled;
+            console.log('[BotsManager] 🔄 Обновлен limit_orders_entry_enabled:', enabled);
+        }
+        
         const limitOrderRows = document.querySelectorAll('.limit-order-row');
         if (limitOrderRows.length > 0) {
             const percentSteps = [];
@@ -6389,6 +6398,46 @@ class BotsManager {
             }
         }
         
+        // ✅ СБОР СИСТЕМНЫХ НАСТРОЕК (автоматически из системных полей)
+        // Находим все системные поля в configTab
+        const systemInputs = configTab.querySelectorAll('input[id*="Update"], input[id*="Interval"], input[id*="Mode"], input[id*="Timeout"], input[id*="Refresh"], input[id*="Debug"], input[id*="Enhanced"], input[id*="Rsi"][id*="Extreme"], input[id*="Rsi"][id*="Volume"], input[id*="Rsi"][id*="Divergence"]');
+        const systemConfig = {};
+        
+        // Собираем системные настройки из всех найденных полей
+        systemInputs.forEach(element => {
+            if (!element.id || element.closest('#limitOrdersList') || element.closest('.limit-order-row')) {
+                return; // Пропускаем динамические поля лимитных ордеров
+            }
+            
+            const configKey = this.mapElementIdToConfigKey(element.id);
+            if (!configKey) {
+                return;
+            }
+            
+            // Проверяем, что это системная настройка (не autoBot)
+            if (configKey.startsWith('system_')) {
+                const systemKey = configKey.replace('system_', '');
+                let value;
+                if (element.type === 'checkbox') {
+                    value = element.checked;
+                } else if (element.type === 'number') {
+                    const numValue = parseFloat(element.value);
+                    value = isNaN(numValue) ? undefined : numValue;
+                } else {
+                    value = element.value;
+                }
+                
+                if (value !== undefined && value !== null) {
+                    systemConfig[systemKey] = value;
+                }
+            }
+        });
+        
+        return {
+            autoBot: autoBotConfig,
+            system: systemConfig
+        };
+    }
     
     /**
      * Собирает значения из элементов формы и обновляет конфигурацию
@@ -6449,56 +6498,6 @@ class BotsManager {
                 }
             }
         });
-    }
-    
-        // ✅ СБОР СИСТЕМНЫХ НАСТРОЕК (автоматически из системных полей)
-        // Находим все системные поля в configTab
-        const systemInputs = configTab.querySelectorAll('input[id*="Update"], input[id*="Interval"], input[id*="Mode"], input[id*="Timeout"], input[id*="Refresh"], input[id*="Debug"], input[id*="Enhanced"], input[id*="Rsi"][id*="Extreme"], input[id*="Rsi"][id*="Volume"], input[id*="Rsi"][id*="Divergence"]');
-        const systemConfig = {};
-        
-        // Собираем системные настройки из всех найденных полей
-        systemInputs.forEach(element => {
-            if (!element.id || element.closest('#limitOrdersList') || element.closest('.limit-order-row')) {
-                return; // Пропускаем динамические поля лимитных ордеров
-            }
-            
-            const configKey = this.mapElementIdToConfigKey(element.id);
-            if (!configKey) {
-                return;
-            }
-            
-            // Проверяем, что это системная настройка (не autoBot)
-            const systemKeys = ['rsi_update_interval', 'auto_save_interval', 'debug_mode', 'auto_refresh_ui',
-                               'refresh_interval', 'position_sync_interval', 'inactive_bot_cleanup_interval',
-                               'inactive_bot_timeout', 'stop_loss_setup_interval', 'enhanced_rsi_enabled',
-                               'enhanced_rsi_require_volume_confirmation', 'enhanced_rsi_require_divergence_confirmation',
-                               'enhanced_rsi_use_stoch_rsi', 'rsi_extreme_zone_timeout', 'rsi_extreme_oversold',
-                               'rsi_extreme_overbought', 'rsi_volume_confirmation_multiplier', 'rsi_divergence_lookback'];
-            
-            if (systemKeys.includes(configKey)) {
-                let value;
-                if (element.type === 'checkbox') {
-                    value = element.checked;
-                } else if (element.type === 'number') {
-                    const numValue = parseFloat(element.value);
-                    value = isNaN(numValue) ? (this.originalConfig?.system?.[configKey]) : numValue;
-                } else {
-                    value = element.value || (this.originalConfig?.system?.[configKey]);
-                }
-                
-                if (value !== undefined && value !== null) {
-                    systemConfig[configKey] = value;
-                }
-            }
-        });
-        
-        const result = {
-            autoBot: autoBotConfig,
-            system: systemConfig
-        };
-        
-        console.log('[BotsManager] ✅ Конфигурация собрана автоматически из всех полей формы');
-        return result;
     }
 
     // ✅ НОВЫЕ ФУНКЦИИ ДЛЯ СОХРАНЕНИЯ ОТДЕЛЬНЫХ БЛОКОВ
