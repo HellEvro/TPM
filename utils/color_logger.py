@@ -149,20 +149,28 @@ class LogLevelFilter(logging.Filter):
         logger_name = record.name if hasattr(record, 'name') else ''
         
         # Скрываем сообщения с неформатированными плейсхолдерами %s (обычно это ошибки форматирования)
+        # ВАЖНО: Эта проверка должна быть ПЕРВОЙ, чтобы скрывать такие сообщения независимо от уровня
         try:
             message = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
-            # Скрываем сообщения с неформатированными плейсхолдерами %s (обычно это ошибки форматирования)
-            if isinstance(message, str) and '%s' in message:
+            if isinstance(message, str):
+                message_lower = message.lower()
                 # Скрываем типичные сообщения библиотек с неформатированными %s
                 # (например, "Creating converter from %s to %s" без подстановки значений)
-                if 'Creating converter from %s to %s' in message:
+                if 'creating converter' in message_lower and '%s' in message:
                     return False
                 # Проверяем наличие неформатированных %s плейсхолдеров
-                import re
-                # Проверяем, есть ли неформатированные %s (не в конце строки и не как часть нормального сообщения)
-                if re.search(r'%s(?!\s*$)', message) and not re.search(r'%[0-9]*[diouxXeEfFgGcrs]', message):
-                    # Это неформатированное сообщение - скрываем его
-                    return False
+                if '%s' in message:
+                    import re
+                    # Скрываем все сообщения с неформатированными %s (кроме случаев, где %s в конце строки как часть нормального сообщения)
+                    # Проверяем, есть ли неформатированные %s (не в конце строки и не как часть нормального сообщения)
+                    if re.search(r'%s(?!\s*$)', message) and not re.search(r'%[0-9]*[diouxXeEfFgGcrs]', message):
+                        # Это неформатированное сообщение - скрываем его
+                        return False
+                    # Дополнительная проверка: если сообщение содержит 2+ %s без других символов форматирования
+                    # и это не выглядит как намеренное сообщение, скрываем его
+                    if message.count('%s') >= 2 and not re.search(r'%[0-9]*[diouxXeEfFgGcrs]', message):
+                        # Вероятно, это неформатированное сообщение - скрываем его
+                        return False
         except:
             pass  # Если не удалось проверить, пропускаем
         
@@ -552,6 +560,11 @@ def setup_color_logging(console_log_levels=None):
         'tensorflow.python',
         'tensorflow.core',
         'tensorflow._api',
+        'pandas',
+        'pandas.io',
+        'pandas.core',
+        'pandas.core.dtypes',
+        'pandas.core.dtypes.cast',
     ]
     
     # Определяем минимальный разрешенный уровень
