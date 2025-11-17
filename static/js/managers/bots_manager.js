@@ -6069,12 +6069,23 @@ class BotsManager {
         const marginAmounts = autoBotConfig.limit_orders_margin_amounts || [0.2, 0.3, 0.5, 1, 2];
         const listEl = document.getElementById('limitOrdersList');
         if (listEl) {
+            // Инициализируем UI перед загрузкой данных
+            try {
+                this.initializeLimitOrdersUI();
+            } catch (e) {
+                console.warn('[BotsManager] ⚠️ Ошибка инициализации UI лимитных ордеров:', e);
+            }
+            
             listEl.innerHTML = ''; // Очищаем список
             for (let i = 0; i < Math.max(percentSteps.length, marginAmounts.length); i++) {
-                this.addLimitOrderRow(
-                    percentSteps[i] || 0,
-                    marginAmounts[i] || 0
-                );
+                try {
+                    this.addLimitOrderRow(
+                        percentSteps[i] || 0,
+                        marginAmounts[i] || 0
+                    );
+                } catch (e) {
+                    console.warn('[BotsManager] ⚠️ Ошибка добавления строки лимитного ордера:', e);
+                }
             }
         }
         
@@ -7585,9 +7596,6 @@ class BotsManager {
             saveLimitOrdersBtn.addEventListener('click', () => this.saveLimitOrdersSettings());
             console.log('[BotsManager] ✅ Кнопка "Сохранить настройки набора позиций" инициализирована');
         }
-        
-        // Инициализация UI для лимитных ордеров
-        this.initializeLimitOrdersUI();
         
         // Hot Reload кнопка
         const reloadModulesBtn = document.getElementById('reloadModulesBtn');
@@ -10065,40 +10073,63 @@ class BotsManager {
     // ==========================================
     
     initializeLimitOrdersUI() {
-        const toggleEl = document.getElementById('limitOrdersEntryEnabled');
-        const configDiv = document.getElementById('limitOrdersConfig');
-        const addBtn = document.getElementById('addLimitOrderBtn');
-        const positionSizeEl = document.getElementById('defaultPositionSize');
-        const positionModeEl = document.getElementById('defaultPositionMode');
-        
-        if (!toggleEl || !configDiv) return;
-        
-        // Обработчик переключателя
-        toggleEl.addEventListener('change', () => {
-            const isEnabled = toggleEl.checked;
-            configDiv.style.display = isEnabled ? 'block' : 'none';
+        try {
+            const toggleEl = document.getElementById('limitOrdersEntryEnabled');
+            const configDiv = document.getElementById('limitOrdersConfig');
+            const addBtn = document.getElementById('addLimitOrderBtn');
+            const positionSizeEl = document.getElementById('defaultPositionSize');
+            const positionModeEl = document.getElementById('defaultPositionMode');
             
-            // Деактивируем настройку "Размер позиции" при включении лимитных ордеров
-            if (positionSizeEl) {
-                positionSizeEl.disabled = isEnabled;
-                positionSizeEl.style.opacity = isEnabled ? '0.5' : '1';
-                positionSizeEl.style.cursor = isEnabled ? 'not-allowed' : 'text';
-            }
-            if (positionModeEl) {
-                positionModeEl.disabled = isEnabled;
-                positionModeEl.style.opacity = isEnabled ? '0.5' : '1';
-                positionModeEl.style.cursor = isEnabled ? 'not-allowed' : 'pointer';
+            // Безопасная проверка - если элементов нет, просто выходим
+            if (!toggleEl || !configDiv) {
+                return;
             }
             
-            if (isEnabled && document.getElementById('limitOrdersList').children.length === 0) {
-                // Добавляем первую пару полей
-                this.addLimitOrderRow();
+            // Проверяем, не инициализирован ли уже
+            if (toggleEl.hasAttribute('data-limit-orders-ui-initialized')) {
+                return;
             }
-        });
-        
-        // Обработчик кнопки добавления
-        if (addBtn) {
-            addBtn.addEventListener('click', () => this.addLimitOrderRow());
+            toggleEl.setAttribute('data-limit-orders-ui-initialized', 'true');
+            
+            // Обработчик переключателя
+            toggleEl.addEventListener('change', () => {
+                const isEnabled = toggleEl.checked;
+                configDiv.style.display = isEnabled ? 'block' : 'none';
+                
+                // Деактивируем настройку "Размер позиции" при включении лимитных ордеров
+                if (positionSizeEl) {
+                    positionSizeEl.disabled = isEnabled;
+                    positionSizeEl.style.opacity = isEnabled ? '0.5' : '1';
+                    positionSizeEl.style.cursor = isEnabled ? 'not-allowed' : 'text';
+                }
+                if (positionModeEl) {
+                    positionModeEl.disabled = isEnabled;
+                    positionModeEl.style.opacity = isEnabled ? '0.5' : '1';
+                    positionModeEl.style.cursor = isEnabled ? 'not-allowed' : 'pointer';
+                }
+                
+                if (isEnabled && document.getElementById('limitOrdersList').children.length === 0) {
+                    // Добавляем первую пару полей
+                    try {
+                        this.addLimitOrderRow();
+                    } catch (e) {
+                        console.error('[BotsManager] ❌ Ошибка добавления строки:', e);
+                    }
+                }
+            });
+            
+            // Обработчик кнопки добавления
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    try {
+                        this.addLimitOrderRow();
+                    } catch (e) {
+                        console.error('[BotsManager] ❌ Ошибка добавления строки лимитного ордера:', e);
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка инициализации UI лимитных ордеров:', error);
         }
     }
     

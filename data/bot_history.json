@@ -437,6 +437,46 @@
       "exit_volatility": null,
       "exit_trend": null,
       "price_movement": -3.160805499724759
+    },
+    {
+      "id": "open_IDEX_1763402475.591848",
+      "timestamp": "2025-11-17T21:01:15.591850",
+      "action_type": "POSITION_OPENED",
+      "action_name": "Открытие позиции",
+      "bot_id": "IDEX",
+      "symbol": "IDEX",
+      "direction": "LONG",
+      "size": 5.0,
+      "entry_price": 0.01362,
+      "stop_loss": null,
+      "take_profit": null,
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "ai_signal": "LONG",
+      "rsi": null,
+      "trend": null,
+      "details": "Открыта позиция LONG для IDEX: размер 5.0, цена входа 0.0136 [SCRIPT]"
+    },
+    {
+      "id": "open_YFI_1763402682.446799",
+      "timestamp": "2025-11-17T21:04:42.446801",
+      "action_type": "POSITION_OPENED",
+      "action_name": "Открытие позиции",
+      "bot_id": "YFI",
+      "symbol": "YFI",
+      "direction": "LONG",
+      "size": 5.0,
+      "entry_price": 4209.0,
+      "stop_loss": null,
+      "take_profit": null,
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "ai_signal": "LONG",
+      "rsi": null,
+      "trend": null,
+      "details": "Открыта позиция LONG для YFI: размер 5.0, цена входа 4209.0000 [SCRIPT]"
     }
   ],
   "trades": [
@@ -599,7 +639,41 @@
         "exit_price": 1.3437,
         "price_movement": -17.81148694109732
       }
+    },
+    {
+      "id": "trade_IDEX_1763402475.592578",
+      "timestamp": "2025-11-17T21:01:15.592581",
+      "bot_id": "IDEX",
+      "symbol": "IDEX",
+      "direction": "LONG",
+      "size": 5.0,
+      "entry_price": 0.01362,
+      "exit_price": null,
+      "pnl": null,
+      "status": "OPEN",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "rsi": null,
+      "trend": null
+    },
+    {
+      "id": "trade_YFI_1763402682.447654",
+      "timestamp": "2025-11-17T21:04:42.447662",
+      "bot_id": "YFI",
+      "symbol": "YFI",
+      "direction": "LONG",
+      "size": 5.0,
+      "entry_price": 4209.0,
+      "exit_price": null,
+      "pnl": null,
+      "status": "OPEN",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "rsi": null,
+      "trend": null
     }
   ],
-  "last_update": "2025-11-14T17:59:00.495545"
+  "last_update": "2025-11-17T21:04:42.447675"
 }
