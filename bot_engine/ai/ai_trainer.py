@@ -532,6 +532,7 @@ class AITrainer:
                 
                 if history_trades_count > 0:
                     # Убрано: logger.debug(f"   ✅ Загружено {history_trades_count} сделок из 'history'") - слишком шумно
+                    pass
                 
                 source_counts['history_data.json'] = len(latest_trades) + history_trades_count
             else:
