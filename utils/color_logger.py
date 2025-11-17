@@ -11,6 +11,9 @@ class LogLevelFilter(logging.Filter):
     Фильтр для управления уровнями логирования в консоли.
     Поддерживает синтаксис: +INFO, -WARNING, +ERROR, -DEBUG и т.д.
     Также поддерживает строку с запятыми: "+INFO, -WARNING, +ERROR, -DEBUG"
+    
+    Автоматически скрывает DEBUG логи от внешних библиотек (urllib3, pybit и т.д.)
+    если DEBUG уровень не включен явно.
     """
     
     # Маппинг строковых уровней на числовые
@@ -20,6 +23,18 @@ class LogLevelFilter(logging.Filter):
         'WARNING': logging.WARNING,
         'ERROR': logging.ERROR,
         'CRITICAL': logging.CRITICAL,
+    }
+    
+    # Логгеры внешних библиотек, которые обычно шумят в DEBUG
+    EXTERNAL_LOGGERS = {
+        'urllib3',
+        'urllib3.connectionpool',
+        'pybit',
+        'pybit._http_manager',
+        'requests',
+        'requests.packages.urllib3',
+        'httpcore',
+        'httpx',
     }
     
     def __init__(self, level_settings=None):
@@ -34,9 +49,15 @@ class LogLevelFilter(logging.Filter):
         """
         super().__init__()
         self.enabled_levels = set()
+        # По умолчанию DEBUG не включен (скрываем шумные логи от библиотек)
+        self.debug_enabled = False
         
         if level_settings:
             self._parse_settings(level_settings)
+        else:
+            # Если настройки не указаны, включаем все уровни кроме DEBUG от внешних библиотек
+            all_levels = set(self.LEVEL_MAP.keys())
+            self.enabled_levels = all_levels
     
     def _parse_settings(self, settings):
         """Парсит настройки уровней логирования"""
@@ -65,10 +86,15 @@ class LogLevelFilter(logging.Filter):
                 level_name = setting[1:]
                 if level_name in self.LEVEL_MAP:
                     enabled.add(level_name)
+                    if level_name == 'DEBUG':
+                        # Если явно включен DEBUG, разрешаем его для всех (включая внешние библиотеки)
+                        self.debug_enabled = True
             elif setting.startswith('-'):
                 level_name = setting[1:]
                 if level_name in self.LEVEL_MAP:
                     disabled.add(level_name)
+                    if level_name == 'DEBUG':
+                        self.debug_enabled = False
         
         # Если есть явно включенные уровни, используем только их
         # Иначе используем все уровни кроме явно выключенных
@@ -86,12 +112,21 @@ class LogLevelFilter(logging.Filter):
         Returns:
             True если запись должна быть показана, False если нужно скрыть
         """
-        # Если уровни не настроены, разрешаем все
+        level_name = record.levelname
+        logger_name = record.name if hasattr(record, 'name') else ''
+        
+        # Всегда скрываем DEBUG от внешних библиотек, если DEBUG не включен явно
+        if level_name == 'DEBUG' and not self.debug_enabled:
+            for external_logger in self.EXTERNAL_LOGGERS:
+                if logger_name.startswith(external_logger):
+                    return False
+        
+        # Если уровни не настроены, разрешаем все (кроме уже отфильтрованных выше)
         if not self.enabled_levels:
             return True
         
         # Проверяем уровень записи
-        level_name = record.levelname
+        # Если уровень не включен, скрываем
         return level_name in self.enabled_levels
 
 class Colors:
@@ -361,8 +396,13 @@ def setup_color_logging(console_log_levels=None):
     console_handler.setLevel(logging.DEBUG)  # Устанавливаем минимальный уровень для обработчика
     
     # Применяем фильтр уровней, если указан
+    level_filter = None
     if console_log_levels:
         level_filter = LogLevelFilter(console_log_levels)
+        console_handler.addFilter(level_filter)
+    else:
+        # Даже если фильтр не настроен, создаем его для скрытия DEBUG от внешних библиотек
+        level_filter = LogLevelFilter([])
         console_handler.addFilter(level_filter)
     
     # Устанавливаем цветной форматтер
@@ -371,6 +411,40 @@ def setup_color_logging(console_log_levels=None):
     
     # Добавляем обработчик к логгеру
     logger.addHandler(console_handler)
+    
+    # Настраиваем уровни для внешних логгеров, чтобы они не шумели
+    # Определяем, нужно ли скрывать DEBUG
+    hide_debug = True
+    if level_filter and not level_filter.debug_enabled:
+        hide_debug = True
+    elif level_filter and level_filter.enabled_levels and 'DEBUG' not in level_filter.enabled_levels:
+        hide_debug = True
+    elif level_filter and level_filter.enabled_levels and 'DEBUG' in level_filter.enabled_levels:
+        hide_debug = False
+    
+    # Настраиваем уровни для внешних библиотек
+    external_loggers = [
+        'urllib3',
+        'urllib3.connectionpool',
+        'urllib3.util',
+        'urllib3.poolmanager',
+        'pybit',
+        'pybit._http_manager',
+        'requests',
+        'requests.packages.urllib3',
+        'httpcore',
+        'httpx',
+    ]
+    
+    for logger_name in external_loggers:
+        external_logger = logging.getLogger(logger_name)
+        # Если нужно скрыть DEBUG, устанавливаем уровень WARNING или выше
+        if hide_debug:
+            external_logger.setLevel(logging.WARNING)
+        else:
+            external_logger.setLevel(logging.DEBUG)
+        # Убеждаемся, что они используют корневой логгер (propagate=True)
+        external_logger.propagate = True
     
     return logger
 
