@@ -796,10 +796,38 @@ class InfoBotManager(tk.Tk):
             def worker() -> None:
                 os.environ.pop("INFOBOT_LICENSE_STATUS", None)
                 try:
-                    ai_module = importlib.import_module("ai")
-                    ai_module.ensure_license_available(force_refresh=True, silent=True)
+                    # Используем прямой импорт license_checker вместо модуля ai
+                    # Это более надежно и не зависит от наличия модуля ai.py
+                    from bot_engine.ai.license_checker import get_license_checker
+                    
+                    license_checker = get_license_checker(project_root=PROJECT_ROOT)
+                    is_valid, info = license_checker.check_license()
+                    
+                    # Устанавливаем статус в переменную окружения для совместимости
+                    if is_valid:
+                        status_payload = {
+                            'state': 'valid',
+                            'license_type': info.get('type', 'premium'),
+                            'expires_at': info.get('expires_at', 'N/A')
+                        }
+                    else:
+                        status_payload = {
+                            'state': 'invalid',
+                            'reason': 'Лицензия не валидна'
+                        }
+                    
+                    os.environ['INFOBOT_LICENSE_STATUS'] = json.dumps(status_payload, ensure_ascii=False)
                 except SystemExit:
                     pass
+                except ImportError as exc:
+                    # Если license_checker недоступен, пробуем через модуль ai (fallback)
+                    try:
+                        ai_module = importlib.import_module("ai")
+                        ai_module.ensure_license_available(force_refresh=True, silent=True)
+                    except Exception as ai_exc:
+                        message = f"Ошибка проверки лицензии: {ai_exc}"
+                        self.after(0, lambda: self.license_status_var.set(message))
+                        return
                 except Exception as exc:  # pylint: disable=broad-except
                     message = f"Ошибка проверки лицензии: {exc}"
                     self.after(0, lambda: self.license_status_var.set(message))
