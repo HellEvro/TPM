@@ -11,6 +11,7 @@ import threading
 import sys
 import importlib
 from datetime import datetime
+from typing import Dict
 from flask import Flask, request, jsonify
 
 logger = logging.getLogger('BotsService')
@@ -3334,7 +3335,7 @@ def get_ai_performance():
                 total = len(ai_trades)
                 successful = sum(1 for t in ai_trades if (t.get('pnl') or 0) > 0)
                 failed = total - successful
-                total_pnl = sum(t.get('pnl', 0) for t in ai_trades)
+                total_pnl = sum((t.get('pnl') or 0) for t in ai_trades)
                 avg_pnl = total_pnl / total if total else 0
                 win_rate = successful / total if total else 0
                 by_symbol = {}
@@ -3349,7 +3350,7 @@ def get_ai_performance():
                         by_symbol[sym]['successful'] += 1
                     else:
                         by_symbol[sym]['failed'] += 1
-                    by_symbol[sym]['total_pnl'] += t.get('pnl', 0)
+                    by_symbol[sym]['total_pnl'] += (t.get('pnl') or 0)
                 for sym, m in by_symbol.items():
                     m['win_rate'] = m['successful'] / m['decisions'] if m['decisions'] else 0
                     m['avg_pnl'] = m['total_pnl'] / m['decisions'] if m['decisions'] else 0
@@ -3512,9 +3513,9 @@ def get_ai_stats():
         
         def _compute_stats(items):
             total = len(items)
-            successful = sum(1 for t in items if t.get('is_successful', t.get('pnl', 0) > 0))
+            successful = sum(1 for t in items if t.get('is_successful', (t.get('pnl') or 0) > 0))
             failed = total - successful
-            total_pnl = sum(t.get('pnl', 0) for t in items)
+            total_pnl = sum((t.get('pnl') or 0) for t in items)
             avg_pnl = total_pnl / total if total else 0
             win_rate = (successful / total * 100) if total else 0
             return {
