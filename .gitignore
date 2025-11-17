@@ -422,3 +422,4 @@ scripts/hardware_id.build/
 # Source files should not be in public (keep only compiled .pyc)
 license_generator/source/
 license_generator/source/
+app/telegram_states.json
