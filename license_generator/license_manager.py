@@ -61,7 +61,8 @@ class LicenseManager:
                         user_email: str,
                         license_type: str,
                         hardware_id: str = None,
-                        custom_duration_days: int = None) -> Dict[str, Any]:
+                        custom_duration_days: int = None,
+                        start_date: datetime = None) -> Dict[str, Any]:
         """
         Генерирует новую лицензию
         
@@ -70,6 +71,7 @@ class LicenseManager:
             license_type: Тип лицензии (trial/monthly/yearly/lifetime/developer)
             hardware_id: ID оборудования (None = можно активировать на любом ПК)
             custom_duration_days: Кастомная длительность (если None, берется из типа)
+            start_date: Дата начала лицензии (если None, используется текущая дата + 1 день)
         
         Returns:
             Словарь с данными лицензии и ключом активации
@@ -80,13 +82,26 @@ class LicenseManager:
         # Определяем длительность
         duration_days = custom_duration_days if custom_duration_days else features['duration_days']
         
+        # Определяем дату начала
+        if start_date is None:
+            # Если дата начала не указана, используем текущую дату + 1 день
+            start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        else:
+            # Убеждаемся, что время установлено на 00:00:00
+            start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Дата окончания: до 00:00:00 (N+1)-го дня
+        # Если лицензия на N дней, то она действует до начала (N+1)-го дня
+        expires_at = start_date + timedelta(days=duration_days + 1)
+        expires_at = expires_at.replace(hour=0, minute=0, second=0, microsecond=0)
+        
         # Создаем данные лицензии
         license_data = {
             'email': user_email,
             'type': license_type,
             'features': features,
             'issued_at': datetime.now().isoformat(),
-            'expires_at': (datetime.now() + timedelta(days=duration_days)).isoformat(),
+            'expires_at': expires_at.isoformat(),
             'hardware_id': hardware_id,  # None = без привязки к железу
             'version': '1.0',
             'license_id': self._generate_license_id(user_email, license_type)
