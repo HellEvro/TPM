@@ -35,6 +35,9 @@ class LogLevelFilter(logging.Filter):
         'requests.packages.urllib3',
         'httpcore',
         'httpx',
+        'tensorflow',
+        'tensorflow.python',
+        'tensorflow.core',
     }
     
     def __init__(self, level_settings=None):
@@ -448,6 +451,10 @@ def setup_color_logging(console_log_levels=None):
         'requests.packages.urllib3',
         'httpcore',
         'httpx',
+        'tensorflow',
+        'tensorflow.python',
+        'tensorflow.core',
+        'tensorflow._api',
     ]
     
     # Определяем минимальный разрешенный уровень
