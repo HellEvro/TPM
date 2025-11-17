@@ -56,6 +56,8 @@ import sys
 from app.telegram_notifier import TelegramNotifier
 from exchanges.exchange_factory import ExchangeFactory
 import json
+import logging
+from utils.color_logger import setup_color_logging
 
 # Проверка валидности API ключей
 def check_api_keys():
@@ -196,6 +198,14 @@ telegram = TelegramNotifier()
 # Создаем директорию для логов, если её нет
 if not os.path.exists('logs'):
     os.makedirs('logs')
+
+# Настройка цветного логирования с фильтром уровней из конфига
+try:
+    console_levels = CONSOLE_LOG_LEVELS if 'CONSOLE_LOG_LEVELS' in globals() else []
+    setup_color_logging(console_log_levels=console_levels if console_levels else None)
+except Exception as e:
+    # Если не удалось настроить, используем стандартное логирование
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Импортируем систему ротации логов
 from utils.log_rotation import RotatingFileHandlerWithSizeLimit

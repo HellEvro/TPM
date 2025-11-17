@@ -6,6 +6,94 @@ import logging
 import sys
 from datetime import datetime
 
+class LogLevelFilter(logging.Filter):
+    """
+    Фильтр для управления уровнями логирования в консоли.
+    Поддерживает синтаксис: +INFO, -WARNING, +ERROR, -DEBUG и т.д.
+    Также поддерживает строку с запятыми: "+INFO, -WARNING, +ERROR, -DEBUG"
+    """
+    
+    # Маппинг строковых уровней на числовые
+    LEVEL_MAP = {
+        'DEBUG': logging.DEBUG,
+        'INFO': logging.INFO,
+        'WARNING': logging.WARNING,
+        'ERROR': logging.ERROR,
+        'CRITICAL': logging.CRITICAL,
+    }
+    
+    def __init__(self, level_settings=None):
+        """
+        Инициализация фильтра
+        
+        Args:
+            level_settings: Может быть:
+                - Список строк: ['+INFO', '-WARNING', '+ERROR', '-DEBUG']
+                - Одна строка с запятыми: "+INFO, -WARNING, +ERROR, -DEBUG"
+                - None или пустой список - все уровни разрешены
+        """
+        super().__init__()
+        self.enabled_levels = set()
+        
+        if level_settings:
+            self._parse_settings(level_settings)
+    
+    def _parse_settings(self, settings):
+        """Парсит настройки уровней логирования"""
+        # Если список пустой, разрешаем все уровни
+        if not settings:
+            return
+        
+        # Если переданная строка (не список), разбиваем по запятым
+        if isinstance(settings, str):
+            settings = [s.strip() for s in settings.split(',') if s.strip()]
+        
+        # Сначала собираем все включенные и выключенные уровни
+        enabled = set()
+        disabled = set()
+        
+        for setting in settings:
+            # Если это уже строка, используем как есть, иначе преобразуем
+            if not isinstance(setting, str):
+                setting = str(setting)
+            setting = setting.strip().upper()
+            if not setting:
+                continue
+            
+            # Парсим формат: +LEVEL или -LEVEL
+            if setting.startswith('+'):
+                level_name = setting[1:]
+                if level_name in self.LEVEL_MAP:
+                    enabled.add(level_name)
+            elif setting.startswith('-'):
+                level_name = setting[1:]
+                if level_name in self.LEVEL_MAP:
+                    disabled.add(level_name)
+        
+        # Если есть явно включенные уровни, используем только их
+        # Иначе используем все уровни кроме явно выключенных
+        if enabled:
+            self.enabled_levels = enabled
+        else:
+            # Разрешаем все уровни кроме выключенных
+            all_levels = set(self.LEVEL_MAP.keys())
+            self.enabled_levels = all_levels - disabled
+    
+    def filter(self, record):
+        """
+        Фильтрует записи логов на основе настроек уровней
+        
+        Returns:
+            True если запись должна быть показана, False если нужно скрыть
+        """
+        # Если уровни не настроены, разрешаем все
+        if not self.enabled_levels:
+            return True
+        
+        # Проверяем уровень записи
+        level_name = record.levelname
+        return level_name in self.enabled_levels
+
 class Colors:
     """ANSI цветовые коды"""
     RESET = '\033[0m'
@@ -250,19 +338,32 @@ class ColorFormatter(logging.Formatter):
         
         return message
 
-def setup_color_logging():
-    """Настройка цветного логирования"""
+def setup_color_logging(console_log_levels=None):
+    """
+    Настройка цветного логирования
+    
+    Args:
+        console_log_levels: Список настроек уровней логирования для консоли, например:
+            ['+INFO', '-WARNING', '+ERROR', '-DEBUG']
+            Если None - все уровни разрешены
+    """
     # Создаем логгер
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)  # Устанавливаем минимальный уровень для логгера
     
-    # Удаляем существующие обработчики
+    # Удаляем существующие консольные обработчики (но оставляем файловые)
     for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
+        if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
+            logger.removeHandler(handler)
     
     # Создаем консольный обработчик
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(logging.DEBUG)  # Устанавливаем минимальный уровень для обработчика
+    
+    # Применяем фильтр уровней, если указан
+    if console_log_levels:
+        level_filter = LogLevelFilter(console_log_levels)
+        console_handler.addFilter(level_filter)
     
     # Устанавливаем цветной форматтер
     formatter = ColorFormatter()

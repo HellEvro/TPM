@@ -5,6 +5,21 @@
 Вся рабочая логика находится в bot_engine/ai/_ai_launcher.pyc
 """
 
+# Настройка логирования ПЕРЕД импортом защищенного модуля
+import logging
+try:
+    from bot_engine.ai.ai_launcher_config import AILauncherConfig
+    from utils.color_logger import setup_color_logging
+    console_levels = getattr(AILauncherConfig, 'CONSOLE_LOG_LEVELS', [])
+    setup_color_logging(console_log_levels=console_levels if console_levels else None)
+except Exception as e:
+    # Если не удалось загрузить конфиг, используем стандартную настройку
+    try:
+        from utils.color_logger import setup_color_logging
+        setup_color_logging()
+    except:
+        pass
+
 from typing import TYPE_CHECKING, Any
 from bot_engine.ai import _infobot_ai_protected as _protected_module
 
