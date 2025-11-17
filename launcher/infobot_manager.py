@@ -860,7 +860,24 @@ class InfoBotManager(tk.Tk):
 
     def _format_license_status(self, status_payload: Dict[str, Any], filename: str) -> str:
         state = status_payload.get("state")
-        expires_at = status_payload.get("expires_at", "N/A")
+        expires_at_raw = status_payload.get("expires_at", "N/A")
+        
+        # Форматируем дату в читаемый формат
+        expires_at = expires_at_raw
+        if expires_at_raw != "N/A" and expires_at_raw:
+            try:
+                from datetime import datetime
+                # Пробуем распарсить ISO формат
+                if 'T' in expires_at_raw:
+                    dt = datetime.fromisoformat(expires_at_raw.replace('Z', '+00:00'))
+                    expires_at = dt.strftime("%d.%m.%Y %H:%M:%S")
+                else:
+                    # Если уже в другом формате, оставляем как есть
+                    expires_at = expires_at_raw
+            except (ValueError, AttributeError):
+                # Если не удалось распарсить, оставляем как есть
+                expires_at = expires_at_raw
+        
         if state == "valid":
             source = status_payload.get("time_source", "unknown")
             source_text = "онлайн" if source == "internet" else "локально"
