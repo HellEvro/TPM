@@ -126,3 +126,19 @@ class BaseExchange(ABC):
             dict: Результат размещения ордера
         """
         pass
+    
+    def cancel_order(self, symbol, order_id):
+        """
+        Отменяет ордер (опциональный метод, может быть переопределен в конкретных биржах)
+        
+        Args:
+            symbol (str): Символ торговой пары
+            order_id (str): ID ордера для отмены
+            
+        Returns:
+            dict: Результат отмены ордера с полями:
+                - success (bool): Успешность операции
+                - message (str): Сообщение о результате
+        """
+        # По умолчанию возвращаем ошибку - каждая биржа должна переопределить
+        return {'success': False, 'message': 'cancel_order not implemented for this exchange'}

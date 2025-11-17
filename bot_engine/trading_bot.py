@@ -92,6 +92,11 @@ class TradingBot:
         self.scaling_current_level = self.config.get('scaling_current_level', 0)
         self.scaling_group_id = self.config.get('scaling_group_id', None)
         
+        # Лимитные ордера для набора позиций
+        self.limit_orders = self.config.get('limit_orders', [])  # Список активных лимитных ордеров
+        self.limit_orders_entry_price = self.config.get('limit_orders_entry_price')  # Цена входа для расчета лимитных ордеров
+        self.last_limit_orders_count = len(self.limit_orders)  # Количество активных лимитных ордеров на последней проверке
+        
         # Логирование
         self.logger = logging.getLogger(f'TradingBot.{symbol}')
         
@@ -157,7 +162,9 @@ class TradingBot:
             'scaling_enabled': self.scaling_enabled,
             'scaling_levels': self.scaling_levels,
             'scaling_current_level': self.scaling_current_level,
-            'scaling_group_id': self.scaling_group_id
+            'scaling_group_id': self.scaling_group_id,
+            'limit_orders': self.limit_orders,
+            'limit_orders_entry_price': self.limit_orders_entry_price
         }
     
     def update(self, force_analysis: bool = False, external_signal: str = None, external_trend: str = None) -> Dict:
@@ -348,6 +355,12 @@ class TradingBot:
         # Проверяем изменение тренда для принудительного выхода
         if self._should_force_exit(trend):
             return self._force_exit_position()
+        
+        # Проверяем лимитные ордера и отменяем их при выходе за зону набора позиций
+        if self.limit_orders:
+            self._check_and_cancel_limit_orders_if_needed(analysis)
+            # Проверяем сработавшие лимитные ордера и обновляем стоп-лосс
+            self._check_and_update_limit_orders_fills()
         
         # Выполняем действия в зависимости от текущего статуса
         if self.status in [BotStatus.IDLE, 'running']:
@@ -624,6 +637,29 @@ class TradingBot:
             except Exception as ai_error:
                 self.logger.debug(f" {self.symbol}: AI адаптация размера недоступна: {ai_error}")
             
+            # Получаем конфигурацию для набора позиций
+            try:
+                import sys
+                import os
+                sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                from bots import bots_data, bots_data_lock
+                
+                with bots_data_lock:
+                    auto_config = bots_data.get('auto_bot_config', {})
+                    limit_orders_enabled = auto_config.get('limit_orders_entry_enabled', False)
+                    percent_steps = auto_config.get('limit_orders_percent_steps', [1, 2, 3, 4, 5])
+                    margin_amounts = auto_config.get('limit_orders_margin_amounts', [0.2, 0.3, 0.5, 1, 2])
+            except Exception as e:
+                self.logger.warning(f" {self.symbol}: Не удалось получить конфигурацию лимитных ордеров: {e}")
+                limit_orders_enabled = False
+                percent_steps = []
+                margin_amounts = []
+            
+            # Если включен набор позиций лимитными ордерами
+            if limit_orders_enabled and percent_steps and margin_amounts:
+                return self._enter_position_with_limit_orders(side, percent_steps, margin_amounts)
+            
+            # Стандартный рыночный вход
             # Рассчитываем размер позиции
             quantity = self._calculate_position_size()
             self.logger.info(f" {self.symbol}: Рассчитанный размер позиции: {quantity}")
@@ -1046,6 +1082,385 @@ class TradingBot:
             self.entry_time = datetime.fromisoformat(entry_time_str)
         
         self.logger.info(f"Bot state restored: {self.status}")
+    
+    def _enter_position_with_limit_orders(self, side: str, percent_steps: List[float], margin_amounts: List[float]) -> Dict:
+        """
+        Входит в позицию через набор лимитных ордеров
+        
+        Args:
+            side: 'LONG' или 'SHORT'
+            percent_steps: Список процентов от цены входа [1, 2, 3, 4, 5]
+            margin_amounts: Список объемов маржи в USDT [0.2, 0.3, 0.5, 1, 2]
+        """
+        try:
+            # Получаем текущую цену
+            current_price = self._get_current_price()
+            if not current_price or current_price <= 0:
+                self.logger.error(f" {self.symbol}: Не удалось получить текущую цену")
+                return {'success': False, 'error': 'failed_to_get_price'}
+            
+            # Сохраняем цену входа для расчета лимитных ордеров
+            self.limit_orders_entry_price = current_price
+            self.limit_orders = []
+            self.last_limit_orders_count = 0  # Сбрасываем счетчик при размещении новых ордеров
+            
+            # Проверяем, что массивы одинаковой длины
+            if len(percent_steps) != len(margin_amounts):
+                self.logger.error(f" {self.symbol}: Несоответствие длины массивов: percent_steps={len(percent_steps)}, margin_amounts={len(margin_amounts)}")
+                return {'success': False, 'error': 'arrays_length_mismatch'}
+            
+            placed_orders = []
+            first_order_market = False
+            
+            # Размещаем лимитные ордера
+            for i, (percent_step, margin_amount) in enumerate(zip(percent_steps, margin_amounts)):
+                # Если первый шаг = 0, то первая сделка по рынку
+                if i == 0 and percent_step == 0:
+                    first_order_market = True
+                    # Размещаем рыночный ордер
+                    order_result = self.exchange.place_order(
+                        symbol=self.symbol,
+                        side=side,
+                        quantity=margin_amount,
+                        order_type='market'
+                    )
+                    if order_result.get('success'):
+                        placed_orders.append({
+                            'order_id': order_result.get('order_id'),
+                            'type': 'market',
+                            'price': order_result.get('price', current_price),
+                            'quantity': margin_amount,
+                            'percent_step': 0
+                        })
+                        self.logger.info(f" {self.symbol}: ✅ Рыночный ордер размещен: {margin_amount} USDT")
+                    continue
+                
+                # Рассчитываем цену лимитного ордера
+                if side == 'LONG':
+                    # Для лонга: цена ниже текущей на percent_step%
+                    limit_price = current_price * (1 - percent_step / 100)
+                else:  # SHORT
+                    # Для шорта: цена выше текущей на percent_step%
+                    limit_price = current_price * (1 + percent_step / 100)
+                
+                # Размещаем лимитный ордер
+                order_result = self.exchange.place_order(
+                    symbol=self.symbol,
+                    side=side,
+                    quantity=margin_amount,
+                    order_type='limit',
+                    price=limit_price
+                )
+                
+                if order_result.get('success'):
+                    order_info = {
+                        'order_id': order_result.get('order_id'),
+                        'type': 'limit',
+                        'price': limit_price,
+                        'quantity': margin_amount,
+                        'percent_step': percent_step
+                    }
+                    placed_orders.append(order_info)
+                    self.limit_orders.append(order_info)
+                    self.logger.info(f" {self.symbol}: ✅ Лимитный ордер #{i+1} размещен: {margin_amount} USDT @ {limit_price:.6f} ({percent_step}%)")
+                else:
+                    self.logger.warning(f" {self.symbol}: ⚠️ Не удалось разместить лимитный ордер #{i+1}: {order_result.get('message', 'unknown error')}")
+            
+            if not placed_orders:
+                self.logger.error(f" {self.symbol}: Не удалось разместить ни одного ордера")
+                return {'success': False, 'error': 'no_orders_placed'}
+            
+            # Обновляем счетчик активных лимитных ордеров
+            self.last_limit_orders_count = len(self.limit_orders)
+            
+            # Если был рыночный ордер, обновляем позицию
+            if first_order_market and placed_orders:
+                market_order = placed_orders[0]
+                self.position = {
+                    'side': side,
+                    'quantity': market_order['quantity'],
+                    'entry_price': market_order['price'],
+                    'order_id': market_order['order_id']
+                }
+                self.entry_price = market_order['price']
+                self.entry_time = datetime.now()
+                self.status = (BotStatus.IN_POSITION_LONG if side == 'LONG' 
+                              else BotStatus.IN_POSITION_SHORT)
+            
+            self.logger.info(f" {self.symbol}: ✅ Набор позиций начат: {len(placed_orders)} ордеров размещено")
+            return {
+                'success': True,
+                'action': 'limit_orders_placed',
+                'side': side,
+                'orders_count': len(placed_orders),
+                'orders': placed_orders,
+                'entry_price': current_price
+            }
+            
+        except Exception as e:
+            self.logger.error(f" {self.symbol}: ❌ Ошибка размещения лимитных ордеров: {e}")
+            import traceback
+            traceback.print_exc()
+            return {'success': False, 'error': str(e)}
+    
+    def _check_and_cancel_limit_orders_if_needed(self, analysis: Dict) -> None:
+        """
+        Проверяет RSI и отменяет лимитные ордера при выходе за зону набора позиций
+        
+        Для LONG: отменяем если RSI > rsi_time_filter_lower (35)
+        Для SHORT: отменяем если RSI < rsi_time_filter_upper (65)
+        """
+        if not self.limit_orders:
+            return
+        
+        try:
+            # Получаем текущий RSI
+            current_rsi = analysis.get('rsi')
+            if current_rsi is None:
+                return
+            
+            # Получаем границы из конфига
+            try:
+                import sys
+                import os
+                sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                from bots import bots_data, bots_data_lock
+                
+                with bots_data_lock:
+                    auto_config = bots_data.get('auto_bot_config', {})
+                    rsi_time_filter_lower = auto_config.get('rsi_time_filter_lower', 35)
+                    rsi_time_filter_upper = auto_config.get('rsi_time_filter_upper', 65)
+            except Exception as e:
+                self.logger.warning(f" {self.symbol}: Не удалось получить границы RSI: {e}")
+                rsi_time_filter_lower = 35
+                rsi_time_filter_upper = 65
+            
+            # Определяем направление по первому ордеру или позиции
+            side = None
+            if self.position:
+                side = self.position.get('side')
+            elif self.limit_orders:
+                # Определяем по цене лимитного ордера относительно текущей цены
+                current_price = self._get_current_price()
+                if current_price and self.limit_orders_entry_price:
+                    if self.limit_orders[0].get('price', 0) < current_price:
+                        side = 'LONG'  # Лимитный ордер ниже цены = покупка
+                    else:
+                        side = 'SHORT'  # Лимитный ордер выше цены = продажа
+            
+            if not side:
+                return
+            
+            should_cancel = False
+            reason = ""
+            
+            if side == 'LONG':
+                # Для лонга: отменяем если RSI выше нижней границы
+                if current_rsi > rsi_time_filter_lower:
+                    should_cancel = True
+                    reason = f"RSI {current_rsi:.2f} > {rsi_time_filter_lower} (выход из зоны набора LONG)"
+            else:  # SHORT
+                # Для шорта: отменяем если RSI ниже верхней границы
+                if current_rsi < rsi_time_filter_upper:
+                    should_cancel = True
+                    reason = f"RSI {current_rsi:.2f} < {rsi_time_filter_upper} (выход из зоны набора SHORT)"
+            
+            if should_cancel:
+                self.logger.info(f" {self.symbol}: 🚫 Отменяем лимитные ордера: {reason}")
+                self._cancel_all_limit_orders()
+        
+        except Exception as e:
+            self.logger.error(f" {self.symbol}: ❌ Ошибка проверки лимитных ордеров: {e}")
+    
+    def _cancel_all_limit_orders(self) -> None:
+        """Отменяет все активные лимитные ордера"""
+        if not self.limit_orders:
+            return
+        
+        cancelled_count = 0
+        for order_info in self.limit_orders[:]:  # Копируем список для безопасной итерации
+            try:
+                order_id = order_info.get('order_id')
+                if not order_id:
+                    continue
+                
+                # Используем метод биржи для отмены ордера
+                # Проверяем, есть ли метод cancel_order
+                if hasattr(self.exchange, 'cancel_order'):
+                    cancel_result = self.exchange.cancel_order(
+                        symbol=self.symbol,
+                        order_id=order_id
+                    )
+                    if cancel_result and cancel_result.get('success'):
+                        cancelled_count += 1
+                        self.logger.info(f" {self.symbol}: ✅ Лимитный ордер {order_id} отменен")
+                    else:
+                        self.logger.warning(f" {self.symbol}: ⚠️ Не удалось отменить ордер {order_id}")
+                else:
+                    # Если метода нет, пытаемся через универсальный API
+                    # Для Bybit можно использовать client.cancel_order
+                    self.logger.warning(f" {self.symbol}: ⚠️ Метод cancel_order не найден, пропускаем ордер {order_id}")
+                
+            except Exception as e:
+                self.logger.error(f" {self.symbol}: ❌ Ошибка отмены ордера {order_info.get('order_id')}: {e}")
+        
+        # Очищаем список лимитных ордеров
+        total_orders = len(self.limit_orders)
+        self.limit_orders = []
+        self.limit_orders_entry_price = None
+        self.last_limit_orders_count = 0  # Сбрасываем счетчик при отмене всех ордеров
+        self.logger.info(f" {self.symbol}: ✅ Отменено лимитных ордеров: {cancelled_count}/{total_orders}")
+    
+    def _check_and_update_limit_orders_fills(self) -> None:
+        """
+        Проверяет сработавшие лимитные ордера, пересчитывает среднюю цену входа
+        и обновляет стоп-лосс ТОЛЬКО при срабатывании нового ордера
+        """
+        if not self.limit_orders:
+            # Если нет активных ордеров, обновляем счетчик
+            self.last_limit_orders_count = 0
+            return
+        
+        try:
+            # Сохраняем текущее количество ордеров ДО проверки
+            current_orders_count = len(self.limit_orders)
+            # Получаем реальную позицию с биржи
+            exchange_positions = self.exchange.get_positions()
+            if isinstance(exchange_positions, tuple):
+                positions_list = exchange_positions[0] if exchange_positions else []
+            else:
+                positions_list = exchange_positions if exchange_positions else []
+            
+            # Ищем позицию по нашему символу
+            real_position = None
+            for pos in positions_list:
+                if pos.get('symbol') == self.symbol and abs(float(pos.get('size', 0))) > 0:
+                    real_position = pos
+                    break
+            
+            if not real_position:
+                # Если позиции нет, но есть лимитные ордера - это нормально (еще не сработали)
+                return
+            
+            # Получаем данные реальной позиции
+            real_size = abs(float(real_position.get('size', 0)))
+            real_avg_price = float(real_position.get('avg_price', 0))
+            real_side = real_position.get('side', '')
+            
+            # Определяем сторону позиции
+            if real_side.upper() in ['LONG', 'BUY']:
+                side = 'LONG'
+            elif real_side.upper() in ['SHORT', 'SELL']:
+                side = 'SHORT'
+            else:
+                return
+            
+            # Получаем текущий размер позиции в боте
+            current_bot_size = self.position.get('quantity', 0) if self.position else 0
+            current_bot_price = self.position.get('entry_price', 0) if self.position else 0
+            
+            # Проверяем, изменилась ли позиция на бирже
+            # Если размер увеличился или средняя цена изменилась, значит сработали ордера
+            size_changed = abs(real_size - current_bot_size) > 0.001
+            price_changed = current_bot_price > 0 and abs(real_avg_price - current_bot_price) / current_bot_price > 0.001
+            
+            if size_changed or price_changed:
+                # Позиция изменилась - пересчитываем среднюю цену входа
+                # Используем реальную среднюю цену с биржи (она уже рассчитана с учетом всех сработавших ордеров)
+                
+                # Определяем, какие лимитные ордера могли сработать
+                # Удаляем ордера, которые могли сработать (проверяем по цене)
+                orders_to_remove = []
+                for order_info in self.limit_orders:
+                    order_price = order_info.get('price', 0)
+                    order_quantity = order_info.get('quantity', 0)
+                    
+                    # Если цена ордера близка к реальной средней цене или ниже/выше в зависимости от стороны
+                    # и размер позиции увеличился, значит ордер мог сработать
+                    if side == 'LONG':
+                        # Для лонга: ордер сработал, если его цена ниже или равна текущей средней
+                        # (мы покупали по более низкой цене)
+                        if order_price <= real_avg_price * 1.01:  # 1% допуск
+                            orders_to_remove.append(order_info)
+                    else:  # SHORT
+                        # Для шорта: ордер сработал, если его цена выше или равна текущей средней
+                        # (мы продавали по более высокой цене)
+                        if order_price >= real_avg_price * 0.99:  # 1% допуск
+                            orders_to_remove.append(order_info)
+                
+                # Удаляем сработавшие ордера из списка активных
+                orders_removed_count = 0
+                for order_info in orders_to_remove:
+                    if order_info in self.limit_orders:
+                        self.limit_orders.remove(order_info)
+                        orders_removed_count += 1
+                        self.logger.info(f" {self.symbol}: ✅ Лимитный ордер сработал: {order_info.get('quantity', 0)} USDT @ {order_info.get('price', 0):.6f}")
+                
+                # КРИТИЧНО: Пересчитываем стоп-лосс ТОЛЬКО если действительно сработал новый ордер
+                # Проверяем, изменилось ли количество активных ордеров
+                new_orders_count = len(self.limit_orders)
+                order_filled = (new_orders_count < self.last_limit_orders_count) or (orders_removed_count > 0)
+                
+                if order_filled:
+                    # Обновляем позицию с реальными данными с биржи
+                    self.position = {
+                        'side': side,
+                        'quantity': real_size,  # Реальный размер с биржи
+                        'entry_price': real_avg_price,  # Реальная средняя цена входа с биржи
+                        'order_id': 'limit_orders_filled'
+                    }
+                    self.entry_price = real_avg_price
+                    
+                    # Если позиция еще не была установлена, обновляем статус
+                    if self.status not in [BotStatus.IN_POSITION_LONG, BotStatus.IN_POSITION_SHORT]:
+                        self.status = (BotStatus.IN_POSITION_LONG if side == 'LONG' 
+                                      else BotStatus.IN_POSITION_SHORT)
+                        if not self.entry_time:
+                            self.entry_time = datetime.now()
+                    
+                    self.logger.info(f" {self.symbol}: 📊 Обновлена позиция: {side} {real_size:.6f} @ {real_avg_price:.6f} (средняя цена с биржи)")
+                    
+                    # Пересчитываем и обновляем стоп-лосс от новой средней цены ТОЛЬКО при срабатывании ордера
+                    try:
+                        # Получаем процент стоп-лосса из конфига
+                        import sys
+                        import os
+                        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                        from bots import bots_data, bots_data_lock
+                        
+                        with bots_data_lock:
+                            auto_config = bots_data.get('auto_bot_config', {})
+                            loss_percent = auto_config.get('max_loss_percent', 15.0)
+                        
+                        # Обновляем стоп-лосс от новой средней цены
+                        stop_result = self._place_stop_loss(side, real_avg_price, loss_percent)
+                        if stop_result.get('success'):
+                            self.logger.info(f" {self.symbol}: ✅ Стоп-лосс обновлен: {stop_result.get('stop_price'):.6f} (от средней цены {real_avg_price:.6f})")
+                        else:
+                            self.logger.warning(f" {self.symbol}: ⚠️ Не удалось обновить стоп-лосс: {stop_result.get('error')}")
+                    except Exception as e:
+                        self.logger.error(f" {self.symbol}: ❌ Ошибка обновления стоп-лосса: {e}")
+                    
+                    # Обновляем счетчик активных ордеров
+                    self.last_limit_orders_count = new_orders_count
+                else:
+                    # Ордера не сработали, просто обновляем позицию без пересчета стоп-лосса
+                    if size_changed:
+                        self.position = {
+                            'side': side,
+                            'quantity': real_size,
+                            'entry_price': real_avg_price,
+                            'order_id': self.position.get('order_id', 'limit_orders_filled') if self.position else 'limit_orders_filled'
+                        }
+                        self.entry_price = real_avg_price
+            else:
+                # Позиция не изменилась - обновляем только счетчик
+                self.last_limit_orders_count = current_orders_count
+        
+        except Exception as e:
+            self.logger.error(f" {self.symbol}: ❌ Ошибка проверки лимитных ордеров: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _place_stop_loss(self, side: str, entry_price: float, loss_percent: float) -> Dict:
         """Устанавливает стоп-лосс для позиции"""
