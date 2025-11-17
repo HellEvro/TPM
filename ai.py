@@ -12,13 +12,19 @@ try:
     from utils.color_logger import setup_color_logging
     console_levels = getattr(AILauncherConfig, 'CONSOLE_LOG_LEVELS', [])
     setup_color_logging(console_log_levels=console_levels if console_levels else None)
+    # Тестовое логирование для проверки, что логирование работает
+    test_logger = logging.getLogger('ai.wrapper')
+    test_logger.info("✅ Логирование настроено в обёртке ai.py")
 except Exception as e:
     # Если не удалось загрузить конфиг, используем стандартную настройку
     try:
         from utils.color_logger import setup_color_logging
         setup_color_logging()
-    except:
-        pass
+        test_logger = logging.getLogger('ai.wrapper')
+        test_logger.info("✅ Логирование настроено в обёртке ai.py (стандартная настройка)")
+    except Exception as setup_error:
+        import sys
+        sys.stderr.write(f"❌ Ошибка настройки логирования: {setup_error}\n")
 
 from typing import TYPE_CHECKING, Any
 from bot_engine.ai import _infobot_ai_protected as _protected_module
