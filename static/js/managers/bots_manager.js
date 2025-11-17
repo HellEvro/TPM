@@ -37,6 +37,12 @@ class BotsManager {
         // Исходные значения всех параметров при загрузке страницы (для отслеживания изменений)
         this.originalConfig = null;
         
+        // Автосохранение конфигурации - таймер для debounce
+        this.autoSaveTimer = null;
+        this.autoSaveDelay = 2000; // 2 секунды
+        // Флаг для предотвращения автосохранения при программном изменении полей
+        this.isProgrammaticChange = false;
+        
         // URL сервиса ботов - используем тот же хост что и у приложения
         this.BOTS_SERVICE_URL = `${window.location.protocol}//${window.location.hostname}:5001`;
         this.apiUrl = `${window.location.protocol}//${window.location.hostname}:5001/api/bots`; // Для совместимости
@@ -175,6 +181,9 @@ class BotsManager {
         
         // Инициализируем кнопки конфигурации (должны работать всегда!)
         this.initializeConfigurationButtons();
+        
+        // Инициализируем автосохранение конфигурации
+        this.initializeAutoSave();
         
         // Загружаем счётчик зрелых монет
         this.loadMatureCoinsCount();
@@ -5498,6 +5507,9 @@ class BotsManager {
     }
     
     populateConfigurationForm(config) {
+        // Устанавливаем флаг, чтобы предотвратить автосохранение при программном изменении
+        this.isProgrammaticChange = true;
+        
         this.logDebug('[BotsManager] 🔧 Заполнение формы конфигурации:', config);
         this.logDebug('[BotsManager] 🔍 DOM готовность:', document.readyState);
         this.logDebug('[BotsManager] 🔍 Элемент positionSyncInterval существует:', !!document.getElementById('positionSyncInterval'));
@@ -6027,6 +6039,12 @@ class BotsManager {
         
         // ❌ УСТАРЕВШИЕ НАСТРОЙКИ EMA - УБРАНЫ (больше не используются)
         // Тренд теперь определяется простым анализом цены (% изменения и растущие/падающие свечи)
+        
+        // Сбрасываем флаг программного изменения после заполнения формы
+        // Используем setTimeout чтобы гарантировать, что все события завершились
+        setTimeout(() => {
+            this.isProgrammaticChange = false;
+        }, 100);
         
         console.log('[BotsManager] ✅ Форма заполнена данными из API');
     }
@@ -6746,6 +6764,13 @@ class BotsManager {
     }
 
     async saveConfiguration() {
+        // Отменяем запланированное автосохранение при ручном сохранении
+        if (this.autoSaveTimer) {
+            clearTimeout(this.autoSaveTimer);
+            this.autoSaveTimer = null;
+            console.log('[BotsManager] ⏸️ Автосохранение отменено - выполняется ручное сохранение');
+        }
+        
         console.log('[BotsManager] 💾 Сохранение конфигурации...');
         
         try {
@@ -6793,6 +6818,9 @@ class BotsManager {
                 setTimeout(() => {
                     console.log('[BotsManager] 🔄 Перезагрузка конфигурации для обновления UI...');
                     this.loadConfigurationData();
+                    
+                    // Переинициализируем автосохранение на случай новых полей
+                    this.initializeAutoSave();
                 }, 500);
                 
                 // ✅ ПЕРЕЗАГРУЖАЕМ ДАННЫЕ RSI (чтобы применить новые фильтры)
@@ -7514,6 +7542,97 @@ class BotsManager {
         }
         
         console.log('[BotsManager] ✅ Все кнопки конфигурации инициализированы');
+    }
+    
+    /**
+     * Инициализация автосохранения конфигурации
+     * Автоматически сохраняет изменения через 2 секунды после внесения в поле
+     */
+    initializeAutoSave() {
+        console.log('[BotsManager] ⚙️ Инициализация автосохранения конфигурации...');
+        
+        // Находим контейнер конфигурации
+        const configTab = document.getElementById('configTab');
+        if (!configTab) {
+            console.warn('[BotsManager] ⚠️ Вкладка конфигурации не найдена, автосохранение не инициализировано');
+            return;
+        }
+        
+        // Находим все поля конфигурации: input, select, checkbox
+        const configInputs = configTab.querySelectorAll('input[type="number"], input[type="text"], input[type="checkbox"], select');
+        
+        console.log(`[BotsManager] 🔍 Найдено полей конфигурации: ${configInputs.length}`);
+        
+        // Добавляем обработчики для каждого поля
+        configInputs.forEach((input, index) => {
+            // Пропускаем кнопки и элементы управления
+            if (input.type === 'button' || input.type === 'submit' || input.closest('button')) {
+                return;
+            }
+            
+            // Проверяем, не добавлен ли уже обработчик
+            if (input.hasAttribute('data-autosave-initialized')) {
+                return;
+            }
+            
+            input.setAttribute('data-autosave-initialized', 'true');
+            
+            // Обработчик для полей ввода (input) - срабатывает при каждом изменении
+            if (input.type === 'number' || input.type === 'text') {
+                input.addEventListener('input', () => {
+                    if (!this.isProgrammaticChange) {
+                        this.scheduleAutoSave();
+                    }
+                });
+            }
+            
+            // Обработчик для checkbox и select - срабатывает при изменении
+            if (input.type === 'checkbox' || input.tagName === 'SELECT') {
+                input.addEventListener('change', () => {
+                    if (!this.isProgrammaticChange) {
+                        this.scheduleAutoSave();
+                    }
+                });
+            }
+            
+            // Также обрабатываем blur для полей ввода (когда пользователь покидает поле)
+            if (input.type === 'number' || input.type === 'text') {
+                input.addEventListener('blur', () => {
+                    if (!this.isProgrammaticChange) {
+                        this.scheduleAutoSave();
+                    }
+                });
+            }
+        });
+        
+        console.log('[BotsManager] ✅ Автосохранение конфигурации инициализировано');
+    }
+    
+    /**
+     * Планирует автоматическое сохранение конфигурации с задержкой
+     */
+    scheduleAutoSave() {
+        // Очищаем предыдущий таймер
+        if (this.autoSaveTimer) {
+            clearTimeout(this.autoSaveTimer);
+            this.autoSaveTimer = null;
+        }
+        
+        // Устанавливаем новый таймер на 2 секунды
+        this.autoSaveTimer = setTimeout(async () => {
+            console.log('[BotsManager] ⏱️ Автосохранение конфигурации...');
+            
+            try {
+                // Сохраняем конфигурацию
+                await this.saveConfiguration();
+                console.log('[BotsManager] ✅ Конфигурация автосохранена');
+            } catch (error) {
+                console.error('[BotsManager] ❌ Ошибка автосохранения конфигурации:', error);
+                // Не показываем ошибку пользователю при автосохранении, чтобы не отвлекать
+            } finally {
+                this.autoSaveTimer = null;
+            }
+        }, this.autoSaveDelay);
     }
     
     async reloadModules() {
