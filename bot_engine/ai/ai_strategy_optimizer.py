@@ -177,7 +177,7 @@ class AIStrategyOptimizer:
                         if trade_id not in existing_ids:
                             trades.append(trade)
                     
-                    logger.debug(f"📊 Добавлено {len(bot_trades)} сделок из bot_history.json")
+                    # Убрано: logger.debug(f"📊 Добавлено {len(bot_trades)} сделок из bot_history.json") - слишком шумно
         except json.JSONDecodeError as json_error:
             logger.warning(f"⚠️ Файл bot_history.json поврежден (JSON ошибка на позиции {json_error.pos})")
             logger.info("🗑️ Удаляем поврежденный файл, bots.py пересоздаст его автоматически")
