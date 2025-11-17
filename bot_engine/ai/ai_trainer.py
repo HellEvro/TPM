@@ -2003,9 +2003,9 @@ class AITrainer:
                         )
                     else:
                         position_size_usdt = position_size_value
-                        logger.info(f"   💵 {symbol}: размер сделки {position_size_usdt:.4f} USDT (режим fixed_usdt)")
+                        logger.debug(f"   💵 {symbol}: размер сделки {position_size_usdt:.4f} USDT (режим fixed_usdt)")
                     
-                    # Логируем начало симуляции для ВСЕХ монет (INFO для первых 10 и каждых 50)
+                    # Логируем начало симуляции (INFO только для важных монет)
                     candles_to_process = len(candles) - RSI_PERIOD
                     if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
                         logger.info(f"   🔄 {symbol}: симуляция {candles_to_process:,} свечей...")
@@ -2016,13 +2016,10 @@ class AITrainer:
                     progress_step = 1000
                     
                     for i in range(RSI_PERIOD, len(candles)):
-                        # Логируем прогресс каждые 1000 свечей (INFO для важных монет)
+                        # Логируем прогресс каждые 1000 свечей (DEBUG - техническая деталь)
                         if candles_to_process > 1000 and (i - RSI_PERIOD) % progress_step == 0:
                             progress_pct = ((i - RSI_PERIOD) / candles_to_process) * 100
-                            if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
-                                logger.info(f"   📊 {symbol}: обработано {i - RSI_PERIOD:,}/{candles_to_process:,} свечей ({progress_pct:.1f}%)")
-                            else:
-                                logger.debug(f"   📊 {symbol}: обработано {i - RSI_PERIOD:,}/{candles_to_process:,} свечей ({progress_pct:.1f}%)")
+                            logger.debug(f"   📊 {symbol}: обработано {i - RSI_PERIOD:,}/{candles_to_process:,} свечей ({progress_pct:.1f}%)")
                         try:
                             # RSI на текущей позиции
                             rsi_idx = i - RSI_PERIOD
@@ -2176,10 +2173,10 @@ class AITrainer:
                     
                     total_candles_processed += len(candles)
                     
-                    # Логируем завершение симуляции (INFO для важных монет)
+                    # Логируем завершение симуляции (INFO только для важных монет)
                     if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
                         logger.info(f"   ✅ {symbol}: симуляция завершена ({candles_to_process:,} свечей обработано, {trades_for_symbol} сделок)")
-                    elif candles_to_process > 1000:
+                    else:
                         logger.debug(f"   ✅ {symbol}: симуляция завершена ({candles_to_process:,} свечей обработано, {trades_for_symbol} сделок)")
                     
                     # ВАЖНО: Логируем сразу после симуляции для отладки
@@ -2188,12 +2185,9 @@ class AITrainer:
                     if symbol_idx <= 10:
                         logger.info(f"   🔍 {symbol}: проверка результатов симуляции... (сделок: {trades_for_symbol})")
                     
-                    # Логируем результаты симуляции (даже если сделок нет)
+                    # Логируем результаты симуляции (DEBUG - техническая деталь)
                     if trades_for_symbol == 0:
-                        if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
-                            logger.info(f"   ⏭️ {symbol}: сделок не найдено (симуляция завершена)")
-                        else:
-                            logger.debug(f"   ⏭️ {symbol}: сделок не найдено")
+                        logger.debug(f"   ⏭️ {symbol}: сделок не найдено")
                     else:
                         symbol_successful = sum(1 for t in simulated_trades_symbol if t['is_successful'])
                         symbol_win_rate = symbol_successful / trades_for_symbol * 100
@@ -2210,7 +2204,7 @@ class AITrainer:
                                 f"(цель: {win_rate_target:.1f}%), PnL: {symbol_pnl:.2f} USDT"
                             )
                         else:
-                            logger.debug(
+                            logger.info(
                                 f"   ✅ {symbol}: {trades_for_symbol} сделок, Win Rate: {symbol_win_rate:.1f}% "
                                 f"(цель: {win_rate_target:.1f}%), PnL: {symbol_pnl:.2f} USDT"
                             )
@@ -2221,11 +2215,11 @@ class AITrainer:
                         model_trained = False
                         
                         if trades_for_symbol >= 5:  # Минимум 5 сделок для обучения
-                            # Показываем начало обучения модели для важных случаев
-                            if symbol_win_rate >= win_rate_target or symbol_idx % progress_interval == 0 or symbol_idx <= 10:
+                            # Показываем начало обучения модели (INFO только для важных монет)
+                            if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
                                 logger.info(f"   🎓 Обучаем модель для {symbol}... ({trades_for_symbol} сделок, Win Rate: {symbol_win_rate:.1f}%)")
                             else:
-                                logger.debug(f"   🎓 Обучаем модель для {symbol}... ({trades_for_symbol} сделок)")
+                                logger.debug(f"   🎓 Обучаем модель для {symbol}... ({trades_for_symbol} сделок, Win Rate: {symbol_win_rate:.1f}%)")
                             
                             # ВАЖНО: Логируем подготовку данных
                             if symbol_idx <= 10:
