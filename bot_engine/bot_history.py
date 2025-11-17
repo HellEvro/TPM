@@ -18,6 +18,10 @@ logger = logging.getLogger(__name__)
 # Файл для хранения истории
 HISTORY_FILE = 'data/bot_history.json'
 
+# Ограничения на количество записей (None = без ограничений, для обучения ботов)
+MAX_HISTORY_ENTRIES = None  # Ранее было 10000
+MAX_TRADE_ENTRIES = None    # Ранее было 5000
+
 # Типы действий
 ACTION_TYPES = {
     'BOT_START': 'Запуск бота',
@@ -83,18 +87,18 @@ class BotHistoryManager:
         """Добавляет запись в историю"""
         with self.lock:
             self.history.append(entry)
-            # Ограничиваем размер истории (последние 10000 записей)
-            if len(self.history) > 10000:
-                self.history = self.history[-10000:]
+            # Ограничиваем размер истории (если установлен лимит)
+            if MAX_HISTORY_ENTRIES is not None and len(self.history) > MAX_HISTORY_ENTRIES:
+                self.history = self.history[-MAX_HISTORY_ENTRIES:]
         self._save_history()
     
     def _add_trade_entry(self, trade: Dict[str, Any]):
         """Добавляет запись о сделке"""
         with self.lock:
             self.trades.append(trade)
-            # Ограничиваем размер (последние 5000 сделок)
-            if len(self.trades) > 5000:
-                self.trades = self.trades[-5000:]
+            # Ограничиваем размер (если установлен лимит)
+            if MAX_TRADE_ENTRIES is not None and len(self.trades) > MAX_TRADE_ENTRIES:
+                self.trades = self.trades[-MAX_TRADE_ENTRIES:]
         self._save_history()
     
     def _parse_timestamp(self, value: Any) -> Optional[datetime]:
