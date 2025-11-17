@@ -217,7 +217,7 @@ class AIDataCollector:
         - Свечи
         - Сигналы блокировок
         """
-        logger.debug("📊 Сбор данных из bots.py...")
+        # Убрано: logger.debug("📊 Сбор данных из bots.py...") - слишком шумно
         
         collected_data = {
             'timestamp': datetime.now().isoformat(),
@@ -274,7 +274,7 @@ class AIDataCollector:
         - Статистику торговли
         - Закрытые позиции с PnL
         """
-        logger.debug("📊 Сбор данных из bot_history...")
+        # Убрано: logger.debug("📊 Сбор данных из bot_history...") - слишком шумно
         
         collected_data = {
             'timestamp': datetime.now().isoformat(),
@@ -293,7 +293,7 @@ class AIDataCollector:
                 bot_trades = bot_history_data.get('trades', [])
                 if bot_trades:
                     collected_data['trades'].extend(bot_trades)
-                    logger.debug(f"📊 Загружено {len(bot_trades)} сделок напрямую из bot_history.json")
+                    # Убрано: logger.debug(f"📊 Загружено {len(bot_trades)} сделок напрямую из bot_history.json") - слишком шумно
         except json.JSONDecodeError as json_error:
             logger.warning(f"⚠️ Файл bot_history.json поврежден (JSON ошибка на позиции {json_error.pos})")
             logger.info("🗑️ Удаляем поврежденный файл, bots.py пересоздаст его автоматически")
@@ -344,7 +344,7 @@ class AIDataCollector:
             self._save_data(self.history_data_file, existing_data)
             
             trades_count = len(collected_data.get('trades', []))
-            logger.debug(f"✅ Собрано данных: {trades_count} сделок")
+            # Убрано: logger.debug(f"✅ Собрано данных: {trades_count} сделок") - слишком шумно
             
         except Exception as e:
             logger.error(f"❌ Ошибка сбора данных из bot_history: {e}")
@@ -380,10 +380,10 @@ class AIDataCollector:
                     
                     # Если файл обновлен менее часа назад - используем его без перезагрузки
                     if file_age_hours < 1.0:
-                        logger.debug(f"✅ Файл свечей актуален ({file_age_hours:.1f}ч назад)")
+                        # Убрано: logger.debug(f"✅ Файл свечей актуален ({file_age_hours:.1f}ч назад)") - слишком шумно
                         return True
                     else:
-                        logger.debug(f"🔄 Инкрементальное обновление ({file_age_hours:.1f}ч назад)")
+                        # Убрано: logger.debug(f"🔄 Инкрементальное обновление ({file_age_hours:.1f}ч назад)") - слишком шумно
                 except Exception as check_error:
                     logger.debug(f"⚠️ Ошибка проверки файла: {check_error}")
                     # Продолжаем загрузку если не удалось проверить файл
@@ -483,7 +483,7 @@ class AIDataCollector:
             
             # Читаем ТОЛЬКО из полной истории свечей
             try:
-                logger.debug(f"📖 Чтение {full_history_file}...")
+                # Убрано: logger.debug(f"📖 Чтение {full_history_file}...") - слишком шумно
                 
                 with open(full_history_file, 'r', encoding='utf-8') as f:
                     full_data = json.load(f)
@@ -537,9 +537,8 @@ class AIDataCollector:
                             
                             # Логируем если свечей больше 1000 (полная история) или меньше (кэш)
                             if len(candles_list) > 1000:
-                                logger.debug(f"📊 {symbol}: {len(candles_list)} свечей (полная история)")
-                            elif len(candles_list) <= 1000:
-                                logger.debug(f"📊 {symbol}: {len(candles_list)} свечей (возможно кэш, не полная история)")
+                                # Убрано: logger.debug(f"📊 {symbol}: {len(candles_list)} свечей (полная история)") - слишком шумно
+                            # Убрано: elif len(candles_list) <= 1000: logger.debug(...) - слишком шумно
                             
                             # Логируем каждые 100 монет (DEBUG - техническая деталь)
                             if candles_count % 100 == 0:
@@ -584,10 +583,10 @@ class AIDataCollector:
                         logger.debug(f"⚠️ Ошибка обработки индикаторов для {symbol}: {e}")
                         continue
                 
-                logger.debug(f"✅ Индикаторы: {indicators_count} монет")
+                # Убрано: logger.debug(f"✅ Индикаторы: {indicators_count} монет") - слишком шумно
             
             # Итоговая статистика (кратко)
-            logger.debug(f"📊 Данные собраны: {len(collected_data['candles'])} монет со свечами, {len(collected_data['indicators'])} с индикаторами")
+            # Убрано: logger.debug(f"📊 Данные собраны: {len(collected_data['candles'])} монет со свечами, {len(collected_data['indicators'])} с индикаторами") - слишком шумно
             
             # ВАЖНО: НЕ сохраняем свечи в market_data.json - они уже в candles_full_history.json!
             # Сохраняем только индикаторы для быстрого доступа (опционально)

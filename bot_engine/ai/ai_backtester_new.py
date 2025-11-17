@@ -299,7 +299,7 @@ class AIBacktester:
                     seen_ids.add(trade_id)
                     unique_trades.append(trade)
             
-            logger.debug(f"📊 Загружено {len(unique_trades)} уникальных сделок из истории")
+            # Убрано: logger.debug(f"📊 Загружено {len(unique_trades)} уникальных сделок из истории") - слишком шумно
             return unique_trades
             
         except Exception as e:

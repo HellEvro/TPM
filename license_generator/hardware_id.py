@@ -91,7 +91,7 @@ def get_hardware_id() -> str:
         try:
             platform_info = f"{platform.system()}-{platform.machine()}"
             components.append(f"PLATFORM:{platform_info}")
-            logger.debug(f"Платформа: {platform_info}")
+            # Убрано: logger.debug(f"Платформа: {platform_info}") - слишком шумно
         except Exception as e:
             logger.warning(f"Не удалось получить платформу: {e}")
         
@@ -108,7 +108,7 @@ def get_hardware_id() -> str:
                 cpu_id = result.split('\n')[1].strip() if '\n' in result else result.strip()
                 if cpu_id and cpu_id != 'ProcessorId':
                     components.append(f"CPU:{cpu_id}")
-                    logger.debug(f"CPU ID получен: {cpu_id[:16]}...")
+                    # Убрано: logger.debug(f"CPU ID получен: {cpu_id[:16]}...") - слишком шумно
                 else:
                     logger.warning("CPU ID не найден")
             except Exception as e:
@@ -125,7 +125,7 @@ def get_hardware_id() -> str:
                 disk_serial = result.split('\n')[1].strip() if '\n' in result else result.strip()
                 if disk_serial and disk_serial != 'SerialNumber' and disk_serial.strip():
                     components.append(f"DISK:{disk_serial}")
-                    logger.debug(f"Disk serial получен: {disk_serial[:20]}...")
+                    # Убрано: logger.debug(f"Disk serial получен: {disk_serial[:20]}...") - слишком шумно
                 else:
                     logger.warning("Disk serial не найден")
             except Exception as e:
@@ -143,7 +143,7 @@ def get_hardware_id() -> str:
                 if board_serial and board_serial != 'SerialNumber' and board_serial.strip():
                     # Даже если это "Default string", используем его - он уникален для устройства
                     components.append(f"BOARD:{board_serial}")
-                    logger.debug(f"Motherboard serial получен: {board_serial[:20]}...")
+                    # Убрано: logger.debug(f"Motherboard serial получен: {board_serial[:20]}...") - слишком шумно
             except Exception as e:
                 logger.warning(f"Не удалось получить Motherboard serial: {e}")
             
@@ -156,11 +156,11 @@ def get_hardware_id() -> str:
                     
                     if not _is_random_mac(mac):
                         components.append(f"MAC:{mac}")
-                        logger.debug(f"Физический MAC адрес получен: {mac}")
-                    else:
-                        logger.debug(f"Игнорирован случайный MAC адрес: {mac}")
+                        # Убрано: logger.debug(f"Физический MAC адрес получен: {mac}") - слишком шумно
+                    # Убрано: else: logger.debug(f"Игнорирован случайный MAC адрес: {mac}") - слишком шумно
             except Exception as e:
-                logger.debug(f"MAC адрес не используется: {e}")
+                # Убрано: logger.debug(f"MAC адрес не используется: {e}") - слишком шумно
+                pass
         
         # 3. Специфичные для Linux данные
         elif platform.system() == 'Linux':
@@ -244,7 +244,7 @@ def get_hardware_id() -> str:
         hardware_id = hashlib.sha256(combined.encode()).hexdigest()
         
         logger.info(f"Hardware ID сгенерирован из {len(components)} стабильных компонентов: {hardware_id[:16]}...")
-        logger.debug(f"Компоненты: {combined}")
+        # Убрано: logger.debug(f"Компоненты: {combined}") - слишком шумно
         return hardware_id
     
     except Exception as e:

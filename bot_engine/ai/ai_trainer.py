@@ -498,7 +498,7 @@ class AITrainer:
         """
         # Сокращенные логи (детали только для DEBUG)
         logger.debug("📊 Загрузка реальных сделок для обучения AI")
-        logger.debug("   Источники: history_data.json, bot_history.json, API /api/bots/trades")
+        # Убрано: logger.debug("   Источники: history_data.json, bot_history.json, API /api/bots/trades") - слишком шумно
         logger.debug("   Используются только закрытые сделки с PnL")
         
         trades = []
@@ -508,7 +508,7 @@ class AITrainer:
         try:
             history_file = os.path.normpath(os.path.join(self.data_dir, 'history_data.json'))
             if os.path.exists(history_file):
-                logger.debug(f"📖 Источник 1: {history_file}")
+                # Убрано: logger.debug(f"📖 Источник 1: {history_file}") - слишком шумно
                 with open(history_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 
@@ -520,7 +520,7 @@ class AITrainer:
                 latest_trades = latest.get('trades', []) if latest else []
                 if latest_trades:
                     trades.extend(latest_trades)
-                    logger.debug(f"   ✅ Загружено {len(latest_trades)} сделок из 'latest'")
+                    # Убрано: logger.debug(f"   ✅ Загружено {len(latest_trades)} сделок из 'latest'") - слишком шумно
                 
                 # Добавляем сделки из истории
                 history_trades_count = 0
@@ -531,7 +531,7 @@ class AITrainer:
                         history_trades_count += len(entry_trades)
                 
                 if history_trades_count > 0:
-                    logger.debug(f"   ✅ Загружено {history_trades_count} сделок из 'history'")
+                    # Убрано: logger.debug(f"   ✅ Загружено {history_trades_count} сделок из 'history'") - слишком шумно
                 
                 source_counts['history_data.json'] = len(latest_trades) + history_trades_count
             else:
@@ -543,7 +543,7 @@ class AITrainer:
         try:
             bot_history_file = os.path.normpath(os.path.join('data', 'bot_history.json'))
             if os.path.exists(bot_history_file):
-                logger.debug(f"📖 Источник 2: {bot_history_file}")
+                # Убрано: logger.debug(f"📖 Источник 2: {bot_history_file}") - слишком шумно
                 with open(bot_history_file, 'r', encoding='utf-8') as f:
                     bot_history_data = json.load(f)
                 
@@ -577,7 +577,7 @@ class AITrainer:
             logger.warning(f"   ⚠️ Ошибка загрузки bot_history.json: {e}")
         
         # 3. Анализируем загруженные сделки (сокращенные логи)
-        logger.debug(f"📊 Всего загружено сделок: {len(trades)}")
+        # Убрано: logger.debug(f"📊 Всего загружено сделок: {len(trades)}") - слишком шумно
         
         if trades:
             # Анализируем статусы сделок (только для DEBUG)
@@ -595,7 +595,7 @@ class AITrainer:
                 if status == 'CLOSED':
                     closed_count += 1
             
-            logger.debug(f"   По статусам: {dict(statuses)}, С PnL: {pnl_count}, Закрытых: {closed_count}")
+            # Убрано: logger.debug(f"   По статусам: {dict(statuses)}, С PnL: {pnl_count}, Закрытых: {closed_count}") - слишком шумно
 
             closed_trades = [
                 t for t in trades
