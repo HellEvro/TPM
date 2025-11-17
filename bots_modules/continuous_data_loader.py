@@ -61,11 +61,11 @@ class ContinuousDataLoader:
         if not self.is_running:
             return
             
-        logger.info("🛑 Останавливаем воркер...")
+        logger.warning("🛑 Останавливаем воркер...")
         self.is_running = False
         if self.thread:
             self.thread.join(timeout=5)
-        logger.info("✅ Воркер остановлен")
+        logger.warning("✅ Воркер остановлен")
         
     def _continuous_loop(self):
         """🔄 Основной цикл обновления данных"""

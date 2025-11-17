@@ -1016,7 +1016,7 @@ def stop_bot_endpoint():
             # НЕ сбрасываем position_side - оставляем для отображения в UI
             # bot_data['position_side'] = None
             # bot_data['unrealized_pnl'] = 0.0
-            logger.info(f" {symbol}: Бот остановлен, новый статус: {bot_data['status']}")
+            logger.warning(f" {symbol}: Бот остановлен, новый статус: {bot_data['status']}")
             
             # Обновляем глобальную статистику
             bots_data['global_stats']['active_bots'] = len([bot for bot in bots_data['bots'].values() if bot.get('status') in ['running', 'idle']])
@@ -2345,7 +2345,7 @@ def auto_bot_config():
                     logger.info("ℹ️  Нет активных ботов")
                 
                 logger.info("=" * 80)
-                logger.info("✅ АВТОБОТ ОСТАНОВЛЕН (боты сохранены)")
+                logger.warning("✅ АВТОБОТ ОСТАНОВЛЕН (боты сохранены)")
                 logger.info("=" * 80)
         
         return jsonify({
@@ -2719,7 +2719,7 @@ def signal_handler(signum, frame):
     """Обработчик сигналов завершения с принудительным завершением"""
     global graceful_shutdown
     print(f"\n 🛑 Получен сигнал {signum}, начинаем graceful shutdown...")
-    logger.info(f" 🛑 Получен сигнал {signum}, начинаем graceful shutdown...")
+    logger.warning(f" 🛑 Получен сигнал {signum}, начинаем graceful shutdown...")
     graceful_shutdown = True
     shutdown_flag.set()
     
@@ -2727,7 +2727,7 @@ def signal_handler(signum, frame):
     def force_exit():
         time.sleep(2.0)  # Даём 2 секунды на graceful shutdown
         print(" ⏱️ Таймаут graceful shutdown, принудительное завершение...")
-        logger.info(" ⏱️ Таймаут graceful shutdown, принудительное завершение...")
+        logger.warning(" ⏱️ Таймаут graceful shutdown, принудительное завершение...")
         os._exit(0)
     
     force_exit_thread = threading.Thread(target=force_exit, daemon=True)
@@ -2737,7 +2737,7 @@ def signal_handler(signum, frame):
     try:
         cleanup_bot_service()
         print(" ✅ Graceful shutdown завершен")
-        logger.info(" ✅ Graceful shutdown завершен")
+        logger.warning(" ✅ Graceful shutdown завершен")
         sys.exit(0)
     except Exception as e:
         print(f" ⚠️ Ошибка при graceful shutdown: {e}")
@@ -2916,7 +2916,7 @@ def cleanup_bot_service():
     
     # КРИТИЧЕСКИ ВАЖНО: Сбрасываем флаг, чтобы остановить торговлю
     system_initialized = False
-    logger.info(" 🛑 Флаг system_initialized сброшен - торговля остановлена")
+    logger.warning(" 🛑 Флаг system_initialized сброшен - торговля остановлена")
     
     try:
         logger.info(" 🧹 Очистка ресурсов сервиса ботов...")
@@ -2927,7 +2927,7 @@ def cleanup_bot_service():
         # Останавливаем Continuous Data Loader
         try:
             from bots_modules.continuous_data_loader import stop_continuous_loader
-            logger.info(" 🛑 Остановка Continuous Data Loader...")
+            logger.warning(" 🛑 Остановка Continuous Data Loader...")
             stop_continuous_loader()
         except Exception as e:
             logger.warning(f" ⚠️ Ошибка остановки Continuous Data Loader: {e}")
@@ -3119,7 +3119,7 @@ def run_bots_service():
                 time.sleep(5)  # Ждем 5 секунд при ошибке
         
     except KeyboardInterrupt:
-        logger.info("[STOP] Получен сигнал прерывания...")
+        logger.warning("[STOP] Получен сигнал прерывания...")
         cleanup_bot_service()
         os._exit(0)
     except Exception as e:

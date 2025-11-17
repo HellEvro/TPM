@@ -131,7 +131,7 @@ class AIBotManager:
             response = self._call_bots_api('/api/bots/control', method='POST', data=data)
             
             if response and response.get('success'):
-                logger.info(f"✅ Бот {symbol} остановлен")
+                logger.warning(f"✅ Бот {symbol} остановлен")
                 return True
             else:
                 logger.warning(f"⚠️ Не удалось остановить бота {symbol}")
@@ -216,7 +216,7 @@ class AIBotManager:
                     if bot_status and bot_status.get('status') != 'IDLE':
                         # Останавливаем бота
                         self.stop_bot(symbol)
-                        logger.info(f"🤖 AI остановил бота {symbol} (сигнал: WAIT)")
+                        logger.warning(f"🤖 AI остановил бота {symbol} (сигнал: WAIT)")
                 
         except Exception as e:
             logger.error(f"❌ Ошибка управления ботами через AI: {e}")

@@ -1036,7 +1036,7 @@ def load_all_coins_candles_fast():
             return False
         
         if shutdown_flag.is_set():
-            logger.info("⏹️ Загрузка свечей отменена: система завершает работу")
+            logger.warning("⏹️ Загрузка свечей отменена: система завершает работу")
             return False
 
         # Получаем список всех пар
@@ -1145,7 +1145,7 @@ def load_all_coins_candles_fast():
                 break
         
         if shutdown_requested:
-            logger.info("⏹️ Загрузка свечей прервана из-за остановки системы")
+            logger.warning("⏹️ Загрузка свечей прервана из-за остановки системы")
             return False
         
         logger.info(f"✅ Загрузка завершена: {len(candles_cache)} монет")
@@ -1282,7 +1282,7 @@ def load_all_coins_rsi():
         # ✅ UI блокировка уже установлена в continuous_data_loader
         
         if shutdown_flag.is_set():
-            logger.info("⏹️ Обновление RSI отменено: система завершает работу")
+            logger.warning("⏹️ Обновление RSI отменено: система завершает работу")
             coins_rsi_data['update_in_progress'] = False
             return False
 
@@ -1409,7 +1409,7 @@ def load_all_coins_rsi():
                 break
 
         if shutdown_requested:
-            logger.info("⏹️ Обновление RSI прервано из-за остановки системы")
+            logger.warning("⏹️ Обновление RSI прервано из-за остановки системы")
             coins_rsi_data['update_in_progress'] = False
             return False
         

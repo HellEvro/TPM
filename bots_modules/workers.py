@@ -146,7 +146,7 @@ def auto_save_worker():
         except Exception as e:
             logger.error(f" ❌ Ошибка автосохранения: {e}")
     
-    logger.info(" 💾 Auto Save Worker остановлен")
+    logger.warning(" 💾 Auto Save Worker остановлен")
 
 def auto_bot_worker():
     """Воркер для регулярной проверки Auto Bot сигналов"""
@@ -270,7 +270,7 @@ def auto_bot_worker():
                 'last_check': datetime.now().isoformat()
             })
     
-    logger.info(" 🛑 Auto Bot Worker остановлен")
+    logger.warning(" 🛑 Auto Bot Worker остановлен")
 
 
 def positions_monitor_worker():
@@ -431,7 +431,7 @@ def positions_monitor_worker():
             logger.error(f" ❌ Критическая ошибка: {e}")
             time.sleep(10)
     
-    logger.info(" 🛑 Мониторинг позиций остановлен")
+    logger.warning(" 🛑 Мониторинг позиций остановлен")
 
 
 # Глобальный кэш позиций

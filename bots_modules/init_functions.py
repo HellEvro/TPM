@@ -450,11 +450,11 @@ def stop_async_processor():
     
     if async_processor:
         try:
-            logger.info("[ASYNC] 🛑 Остановка асинхронного процессора...")
+            logger.warning("[ASYNC] 🛑 Остановка асинхронного процессора...")
             async_processor.stop()
             async_processor = None
             async_processor_task = None
-            logger.info("[ASYNC] ✅ Асинхронный процессор остановлен")
+            logger.warning("[ASYNC] ✅ Асинхронный процессор остановлен")
         except Exception as e:
             logger.error(f"[ASYNC] ❌ Ошибка остановки асинхронного процессора: {e}")
 

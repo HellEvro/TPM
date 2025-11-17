@@ -54,13 +54,13 @@ class AutoTrainer:
         if not self.running:
             return
         
-        logger.info("[AutoTrainer] Остановка...")
+        logger.warning("[AutoTrainer] Остановка...")
         self.running = False
         
         if self.thread:
             self.thread.join(timeout=5)
         
-        logger.info("[AutoTrainer] ✅ Остановлен")
+        logger.warning("[AutoTrainer] ✅ Остановлен")
     
     def _run(self):
         """Основной цикл автоматического тренера"""
@@ -90,14 +90,14 @@ class AutoTrainer:
                 time.sleep(600)
                 
             except KeyboardInterrupt:
-                logger.info("[AutoTrainer] ⚠️ Получен сигнал остановки (Ctrl+C)")
+                logger.warning("[AutoTrainer] ⚠️ Получен сигнал остановки (Ctrl+C)")
                 self.running = False
                 break
             except Exception as e:
                 logger.error(f"[AutoTrainer] Ошибка в цикле: {e}")
                 time.sleep(60)
         
-        logger.info("[AutoTrainer] 🛑 Auto Trainer остановлен")
+        logger.warning("[AutoTrainer] 🛑 Auto Trainer остановлен")
     
     def _check_initial_training(self):
         """Проверяет нужно ли обучение при старте"""
