@@ -4942,7 +4942,6 @@ class BotsManager {
                     const positionInfo = this.getBotPositionInfo(bot);
                     const timeInfo = this.getBotTimeInfo(bot);
                     
-                    console.log(`[DEBUG] positionInfo для ${bot.symbol}:`, positionInfo);
                     console.log(`[DEBUG] timeInfo для ${bot.symbol}:`, timeInfo);
                     
                     const htmlResult = `
@@ -5086,7 +5085,6 @@ class BotsManager {
                     const positionInfo = this.getBotPositionInfo(bot);
                     const timeInfo = this.getBotTimeInfo(bot);
                     
-                    console.log(`[DEBUG] positionInfo для ${bot.symbol}:`, positionInfo);
                     console.log(`[DEBUG] timeInfo для ${bot.symbol}:`, timeInfo);
                     
                     const htmlResult = `
@@ -7647,6 +7645,14 @@ class BotsManager {
             console.log('[BotsManager] ✅ Кнопка "Сохранить настройки набора позиций" инициализирована');
         }
         
+        // Кнопка "По умолчанию" для лимитных ордеров
+        const resetLimitOrdersBtn = document.getElementById('resetLimitOrdersBtn');
+        if (resetLimitOrdersBtn && !resetLimitOrdersBtn.hasAttribute('data-initialized')) {
+            resetLimitOrdersBtn.setAttribute('data-initialized', 'true');
+            resetLimitOrdersBtn.addEventListener('click', () => this.resetLimitOrdersToDefault());
+            console.log('[BotsManager] ✅ Кнопка "По умолчанию" для лимитных ордеров инициализирована');
+        }
+        
         // Hot Reload кнопка
         const reloadModulesBtn = document.getElementById('reloadModulesBtn');
         if (reloadModulesBtn && !reloadModulesBtn.hasAttribute('data-initialized')) {
@@ -8129,16 +8135,6 @@ class BotsManager {
     }
     
     getBotPositionInfo(bot) {
-        // ОТЛАДКА: Проверяем данные бота
-        console.log(`[DEBUG] getBotPositionInfo для ${bot.symbol}:`, {
-            position_side: bot.position_side,
-            entry_price: bot.entry_price,
-            status: bot.status,
-            current_price: bot.current_price,
-            stop_loss_price: bot.stop_loss_price,
-            exchange_position: bot.exchange_position
-        });
-        
         // Проверяем, есть ли активная позиция
         if (!bot.position_side || !bot.entry_price) {
             // Если нет активной позиции, показываем информацию о статусе бота
@@ -10319,6 +10315,40 @@ class BotsManager {
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка сохранения настроек лимитных ордеров:', error);
             this.showNotification('❌ Ошибка сохранения настроек', 'error');
+        }
+    }
+    
+    resetLimitOrdersToDefault() {
+        try {
+            // Дефолтные значения из bot_config.py
+            const defaultPercentSteps = [0, 0.5, 1, 1.5, 2];
+            const defaultMarginAmounts = [0.5, 0.75, 1, 1.25, 1.5];
+            const defaultEnabled = false;
+            
+            // Устанавливаем toggle
+            const toggleEl = document.getElementById('limitOrdersEntryEnabled');
+            if (toggleEl) {
+                toggleEl.checked = defaultEnabled;
+                // Триггерим событие для обновления UI
+                toggleEl.dispatchEvent(new Event('change'));
+            }
+            
+            // Очищаем список ордеров
+            const limitOrdersList = document.getElementById('limitOrdersList');
+            if (limitOrdersList) {
+                limitOrdersList.innerHTML = '';
+                
+                // Добавляем дефолтные ордера
+                defaultPercentSteps.forEach((percent, index) => {
+                    this.addLimitOrderRow(percent, defaultMarginAmounts[index]);
+                });
+            }
+            
+            this.showNotification('✅ Настройки сброшены к значениям по умолчанию', 'success');
+            console.log('[BotsManager] ✅ Лимитные ордера сброшены к значениям по умолчанию');
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка сброса лимитных ордеров:', error);
+            this.showNotification('❌ Ошибка сброса: ' + error.message, 'error');
         }
     }
 }
