@@ -56,10 +56,10 @@ def setup_global_connection_pool():
         # Устанавливаем глобальную сессию для requests
         requests.Session = lambda: session
         
-        logging.info("✅ Глобальный пул соединений настроен: 100 пулов, 200 соединений на пул")
+        logger.debug("✅ Глобальный пул соединений настроен: 100 пулов, 200 соединений на пул")
         
     except Exception as e:
-        logging.warning(f"⚠️ Не удалось настроить глобальный пул соединений: {e}")
+        logger.warning(f"⚠️ Не удалось настроить глобальный пул соединений: {e}")
 
 # Настраиваем пул соединений при импорте модуля
 setup_global_connection_pool()
