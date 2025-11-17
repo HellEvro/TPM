@@ -38,6 +38,14 @@ class LogLevelFilter(logging.Filter):
         'tensorflow',
         'tensorflow.python',
         'tensorflow.core',
+        'matplotlib',
+        'matplotlib.font_manager',
+        'matplotlib.backends',
+        'PIL',
+        'PIL.PngImagePlugin',
+        'pandas',
+        'pandas.io',
+        'pandas.core',
     }
     
     def __init__(self, level_settings=None):
@@ -122,6 +130,13 @@ class LogLevelFilter(logging.Filter):
             # Разрешаем все уровни кроме выключенных
             all_levels = set(self.LEVEL_MAP.keys())
             self.enabled_levels = all_levels - disabled
+        
+        # КРИТИЧНО: Если enabled_levels пустой после парсинга, значит все уровни выключены
+        # В этом случае включаем все уровни (это не должно происходить, но на всякий случай)
+        if not self.enabled_levels:
+            all_levels = set(self.LEVEL_MAP.keys())
+            self.enabled_levels = all_levels
+            self.debug_enabled = True
     
     def filter(self, record):
         """
@@ -132,6 +147,36 @@ class LogLevelFilter(logging.Filter):
         """
         level_name = record.levelname
         logger_name = record.name if hasattr(record, 'name') else ''
+        
+        # Скрываем сообщения с неформатированными плейсхолдерами %s (обычно это ошибки форматирования)
+        try:
+            message = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
+            # Проверяем наличие неформатированных %s плейсхолдеров (но не %s в конце строки как часть формата)
+            if isinstance(message, str) and '%s' in message:
+                # Игнорируем случаи, где %s является частью нормального форматирования
+                # (например, "Creating converter from %s to %s" без подстановки значений)
+                # Это типичная проблема библиотек, которые логируют до форматирования
+                import re
+                # Проверяем, есть ли неформатированные %s (не в конце строки и не как часть нормального сообщения)
+                if re.search(r'%s(?!\s*$)', message) and not re.search(r'%[0-9]*[diouxXeEfFgGcrs]', message):
+                    # Это неформатированное сообщение - скрываем его
+                    return False
+        except:
+            pass  # Если не удалось проверить, пропускаем
+        
+        # Скрываем несущественные SSL ошибки при получении сетевого времени (DEBUG уровень)
+        # Это не критичные ошибки, которые не должны засорять логи
+        try:
+            message = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
+            if isinstance(message, str) and level_name == 'DEBUG':
+                message_lower = message.lower()
+                # Проверяем, является ли это SSL ошибкой при получении сетевого времени
+                if ('worldtimeapi' in message_lower or 'сетевое время' in message_lower or 'network time' in message_lower) and \
+                   ('ssl' in message_lower or 'sslerror' in message_lower or 'unexpected_eof' in message_lower or 'ssl: unexpected_eof' in message_lower):
+                    # Это несущественная SSL ошибка - скрываем её
+                    return False
+        except:
+            pass  # Если не удалось проверить, пропускаем
         
         # Всегда скрываем DEBUG от внешних библиотек, если DEBUG не включен явно
         if level_name == 'DEBUG' and not self.debug_enabled:
@@ -409,7 +454,7 @@ def setup_color_logging(console_log_levels=None):
     logger.setLevel(logging.DEBUG)
     
     # Проверяем, есть ли уже консольный обработчик с нашим фильтром
-    # Если есть, не пересоздаём его (чтобы не удалять работающий)
+    # Если есть, обновляем фильтр, но не пересоздаём обработчик
     has_our_handler = False
     for handler in logger.handlers:
         if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
@@ -418,10 +463,14 @@ def setup_color_logging(console_log_levels=None):
                 if isinstance(filter_obj, LogLevelFilter):
                     has_our_handler = True
                     # Обновляем настройки фильтра, если они изменились
-                    filter_obj.__init__(console_log_levels)
+                    # Создаём новый фильтр с новыми настройками
+                    new_filter = LogLevelFilter(console_log_levels)
+                    # Заменяем старый фильтр на новый
+                    handler.removeFilter(filter_obj)
+                    handler.addFilter(new_filter)
                     break
     
-    # Если обработчик уже есть и настроен правильно, не трогаем его
+    # Если обработчик уже есть и фильтр обновлён, не пересоздаём обработчик
     if has_our_handler:
         return logger
     

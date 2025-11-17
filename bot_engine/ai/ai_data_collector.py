@@ -258,7 +258,7 @@ class AIDataCollector:
             
             self._save_data(self.bots_data_file, existing_data)
             
-            logger.debug(f"✅ Собрано данных: {len(collected_data.get('bots', []))} ботов, {len(collected_data.get('rsi_data', {}))} монет с RSI")
+            logger.info(f"✅ Собрано данных: {len(collected_data.get('bots', []))} ботов, {len(collected_data.get('rsi_data', {}))} монет с RSI")
             
         except Exception as e:
             logger.error(f"❌ Ошибка сбора данных из bots.py: {e}")
@@ -541,7 +541,7 @@ class AIDataCollector:
                             elif len(candles_list) <= 1000:
                                 logger.debug(f"📊 {symbol}: {len(candles_list)} свечей (возможно кэш, не полная история)")
                             
-                            # Логируем каждые 100 монет
+                            # Логируем каждые 100 монет (DEBUG - техническая деталь)
                             if candles_count % 100 == 0:
                                 logger.debug(f"📊 Обработано свечей: {candles_count} монет...")
                     except Exception as e:
