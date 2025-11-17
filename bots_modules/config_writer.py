@@ -33,7 +33,7 @@ def save_auto_bot_config_to_py(config: Dict[str, Any]) -> bool:
     Безопасно обновляет DEFAULT_AUTO_BOT_CONFIG в bot_config.py
     
     Алгоритм:
-    1. Читает файл bot_config.py
+    1. Читает файл bot_config.py 
     2. Находит блок DEFAULT_AUTO_BOT_CONFIG = {...}
     3. Обновляет только значения, сохраняя комментарии
     4. Записывает обратно в файл
