@@ -10161,8 +10161,7 @@ class BotsManager {
             toggleEl.setAttribute('data-limit-orders-ui-initialized', 'true');
             
             // Обработчик переключателя
-            toggleEl.addEventListener('change', () => {
-                const isEnabled = toggleEl.checked;
+            const updateUIState = (isEnabled) => {
                 configDiv.style.display = isEnabled ? 'block' : 'none';
                 
                 // Деактивируем настройку "Размер позиции" при включении лимитных ордеров
@@ -10177,6 +10176,19 @@ class BotsManager {
                     positionModeEl.style.cursor = isEnabled ? 'not-allowed' : 'pointer';
                 }
                 
+                // Деактивируем кнопку "По умолчанию" когда toggle выключен
+                const resetBtn = document.getElementById('resetLimitOrdersBtn');
+                if (resetBtn) {
+                    resetBtn.disabled = !isEnabled;
+                    resetBtn.style.opacity = isEnabled ? '1' : '0.5';
+                    resetBtn.style.cursor = isEnabled ? 'pointer' : 'not-allowed';
+                }
+            };
+            
+            toggleEl.addEventListener('change', () => {
+                const isEnabled = toggleEl.checked;
+                updateUIState(isEnabled);
+                
                 if (isEnabled && document.getElementById('limitOrdersList').children.length === 0) {
                     // Добавляем первую пару полей
                     try {
@@ -10186,6 +10198,9 @@ class BotsManager {
                     }
                 }
             });
+            
+            // Инициализируем состояние при загрузке
+            updateUIState(toggleEl.checked);
             
             // Обработчик кнопки добавления
             if (addBtn) {
@@ -10320,18 +10335,18 @@ class BotsManager {
     
     resetLimitOrdersToDefault() {
         try {
+            // Проверяем, включен ли режим лимитных ордеров
+            const toggleEl = document.getElementById('limitOrdersEntryEnabled');
+            if (!toggleEl || !toggleEl.checked) {
+                this.showNotification('⚠️ Сначала включите режим набора позиций лимитными ордерами', 'warning');
+                return;
+            }
+            
             // Дефолтные значения из bot_config.py
             const defaultPercentSteps = [0, 0.5, 1, 1.5, 2];
             const defaultMarginAmounts = [0.5, 0.75, 1, 1.25, 1.5];
-            const defaultEnabled = false;
             
-            // Устанавливаем toggle
-            const toggleEl = document.getElementById('limitOrdersEntryEnabled');
-            if (toggleEl) {
-                toggleEl.checked = defaultEnabled;
-                // Триггерим событие для обновления UI
-                toggleEl.dispatchEvent(new Event('change'));
-            }
+            // НЕ меняем состояние toggle - он должен оставаться включенным!
             
             // Очищаем список ордеров
             const limitOrdersList = document.getElementById('limitOrdersList');
