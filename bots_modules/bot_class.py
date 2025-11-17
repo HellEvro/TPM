@@ -102,6 +102,22 @@ class NewTradingBot:
         self.config = config or {}
         self.exchange = exchange
         
+        # Логируем запуск бота (если это новый бот, а не восстановление)
+        is_restored = self.config.get('restored_from_registry', False) or self.config.get('restored', False)
+        if not is_restored:
+            try:
+                from bot_engine.bot_history import log_bot_start
+                direction = self.config.get('position_side') or 'LONG'
+                log_bot_start(
+                    bot_id=self.symbol,
+                    symbol=self.symbol,
+                    direction=direction,
+                    config=self.config
+                )
+            except ImportError:
+                pass
+            except Exception as e:
+                logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось записать запуск бота в историю: {e}")
         
         # Параметры сделки из конфига
         self.volume_mode = self.config.get('volume_mode', 'usdt')
@@ -189,6 +205,30 @@ class NewTradingBot:
             
         # Инициализируем защитные механизмы при входе в позицию
         if new_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
+            # Логируем открытие позиции, если это переход из не-позиционного статуса
+            # и позиция действительно открыта (есть entry_price и position_size)
+            was_in_position = old_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]
+            has_entry_price = self.entry_price and self.entry_price > 0
+            has_position_size = (self.position_size and self.position_size > 0) or (self.position_size_coins and self.position_size_coins > 0)
+            
+            # Логируем только если:
+            # 1. Это переход в позицию (не был в позиции)
+            # 2. Есть данные о позиции (цена входа и размер)
+            # 3. Это не повторный вызов (проверяем через флаг _position_logged)
+            if not was_in_position and has_entry_price and has_position_size:
+                # Проверяем, не логировали ли мы уже эту позицию
+                position_logged = getattr(self, '_position_logged', False)
+                if not position_logged:
+                    try:
+                        self._on_position_opened(
+                            direction=self.position_side or (new_status.split('_')[-1] if '_' in new_status else 'LONG'),
+                            entry_price=self.entry_price,
+                            position_size=self.position_size or self.position_size_coins
+                        )
+                        self._position_logged = True  # Помечаем, что логирование выполнено
+                    except Exception as log_error:
+                        logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось записать историю при update_status: {log_error}")
+            
             self.position_start_time = datetime.now()
             self.max_profit_achieved = 0.0
             self.trailing_stop_price = None
@@ -207,6 +247,10 @@ class NewTradingBot:
             self.trailing_take_profit_price = None
             self.trailing_last_update_ts = 0.0
             self.trailing_take_profit_price = None
+        else:
+            # При выходе из позиции сбрасываем флаг логирования
+            if old_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
+                self._position_logged = False
     
     def _remember_entry_context(self, rsi: Optional[float], trend: Optional[str]):
         """Сохраняет рыночный контекст последнего входа."""
@@ -243,6 +287,37 @@ class NewTradingBot:
             ai_meta = getattr(self, '_last_ai_decision_meta', None) or {}
             ctx = getattr(self, '_last_entry_context', {}) or {}
             
+            # КРИТИЧНО ДЛЯ ОБУЧЕНИЯ AI: Получаем RSI и тренд из контекста или из глобальных данных
+            rsi_value = ctx.get('rsi')
+            trend_value = ctx.get('trend')
+            
+            # Если контекст пустой, пытаемся получить из глобальных данных RSI
+            if rsi_value is None or trend_value is None:
+                try:
+                    with rsi_data_lock:
+                        rsi_info = coins_rsi_data.get(self.symbol, {})
+                        if rsi_value is None:
+                            rsi_value = rsi_info.get('rsi6h') or rsi_info.get('rsi')
+                        if trend_value is None:
+                            trend_value = rsi_info.get('trend6h') or rsi_info.get('trend')
+                except Exception as e:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось получить RSI/тренд из глобальных данных: {e}")
+            
+            # Если все еще нет данных, пытаемся из rsi_data бота
+            if rsi_value is None or trend_value is None:
+                try:
+                    with bots_data_lock:
+                        bot_data = bots_data.get('bots', {}).get(self.symbol, {})
+                        rsi_data = bot_data.get('rsi_data', {})
+                        if rsi_value is None:
+                            rsi_value = rsi_data.get('rsi6h') or rsi_data.get('rsi')
+                        if trend_value is None:
+                            trend_value = rsi_data.get('trend6h') or rsi_data.get('trend')
+                except Exception as e:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось получить RSI/тренд из данных бота: {e}")
+            
+            logger.info(f"[NEW_BOT_{self.symbol}] 📊 Логируем открытие позиции: RSI={rsi_value}, Trend={trend_value}, Price={price}")
+            
             log_position_opened(
                 bot_id=self.symbol,
                 symbol=self.symbol,
@@ -255,11 +330,15 @@ class NewTradingBot:
                 ai_decision_id=self.ai_decision_id if decision_source == 'AI' else None,
                 ai_confidence=ai_meta.get('ai_confidence'),
                 ai_signal=ai_meta.get('ai_signal') or direction,
-                rsi=ctx.get('rsi'),
-                trend=ctx.get('trend')
+                rsi=rsi_value,
+                trend=trend_value
             )
+            # Помечаем, что логирование выполнено (для предотвращения дублирования)
+            self._position_logged = True
         except Exception as log_error:
-            logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось записать историю открытия позиции: {log_error}")
+            logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА логирования открытия позиции: {log_error}")
+            import traceback
+            logger.error(traceback.format_exc())
         finally:
             # Сбрасываем контекст, но ID оставляем до закрытия
             self._last_entry_context = {}
@@ -964,10 +1043,25 @@ class NewTradingBot:
                     return
 
         try:
+            previous_stop = self.break_even_stop_price
             result = self.exchange.update_stop_loss(self.symbol, stop_price, self.position_side)
             if result and result.get('success'):
+                is_update = previous_stop is not None
                 self.break_even_stop_price = stop_price
-                logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Break-even стоп обновлён: {stop_price:.6f}")
+                logger.info(f"[NEW_BOT_{self.symbol}] 🛡️ Break-even стоп {'обновлён' if is_update else 'установлен'}: {stop_price:.6f}")
+                # Логируем в историю
+                try:
+                    from bot_engine.bot_history import log_stop_loss_set
+                    log_stop_loss_set(
+                        bot_id=self.symbol,
+                        symbol=self.symbol,
+                        stop_price=stop_price,
+                        position_side=self.position_side or 'LONG',
+                        is_update=is_update,
+                        previous_price=previous_stop
+                    )
+                except Exception as log_err:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка логирования стоп-лосса: {log_err}")
             else:
                 logger.warning(
                     f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось установить break-even стоп: "
@@ -1088,11 +1182,25 @@ class NewTradingBot:
             try:
                 response = self.exchange.update_stop_loss(self.symbol, stop_price, self.position_side)
                 if response and response.get('success'):
+                    is_update = previous_stop is not None
                     self.trailing_stop_price = stop_price
                     self.trailing_last_update_ts = now_ts
                     logger.info(
-                        f"[NEW_BOT_{self.symbol}] 🔁 Trailing стоп обновлён: ref={reference_price:.6f}, stop={stop_price:.6f}"
+                        f"[NEW_BOT_{self.symbol}] 🔁 Trailing стоп {'обновлён' if is_update else 'установлен'}: ref={reference_price:.6f}, stop={stop_price:.6f}"
                     )
+                    # Логируем в историю
+                    try:
+                        from bot_engine.bot_history import log_stop_loss_set
+                        log_stop_loss_set(
+                            bot_id=self.symbol,
+                            symbol=self.symbol,
+                            stop_price=stop_price,
+                            position_side=self.position_side or 'LONG',
+                            is_update=is_update,
+                            previous_price=previous_stop
+                        )
+                    except Exception as log_err:
+                        logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка логирования trailing stop: {log_err}")
                 else:
                     logger.warning(
                         f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось обновить trailing stop: "
@@ -1131,11 +1239,25 @@ class NewTradingBot:
                 try:
                     response = self.exchange.update_take_profit(self.symbol, tp_price, self.position_side)
                     if response and response.get('success'):
+                        is_update = previous_tp is not None
                         self.trailing_take_profit_price = tp_price
                         self.trailing_last_update_ts = now_ts
                         logger.info(
-                            f"[NEW_BOT_{self.symbol}] 🎯 Trailing тейк обновлён: ref={reference_price:.6f}, take={tp_price:.6f}"
+                            f"[NEW_BOT_{self.symbol}] 🎯 Trailing тейк {'обновлён' if is_update else 'установлен'}: ref={reference_price:.6f}, take={tp_price:.6f}"
                         )
+                        # Логируем в историю
+                        try:
+                            from bot_engine.bot_history import log_take_profit_set
+                            log_take_profit_set(
+                                bot_id=self.symbol,
+                                symbol=self.symbol,
+                                take_profit_price=tp_price,
+                                position_side=self.position_side or 'LONG',
+                                is_update=is_update,
+                                previous_price=previous_tp
+                            )
+                        except Exception as log_err:
+                            logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка логирования trailing take profit: {log_err}")
                     else:
                         logger.warning(
                             f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось обновить trailing тейк: "
@@ -1336,6 +1458,13 @@ class NewTradingBot:
             
             if emergency_result and emergency_result.get('success'):
                 logger.warning(f"[NEW_BOT_{self.symbol}] ✅ ЭКСТРЕННОЕ ЗАКРЫТИЕ УСПЕШНО: Позиция закрыта рыночным ордером")
+                
+                # Логируем закрытие позиции
+                try:
+                    self._log_position_closed('DELISTING_EMERGENCY', emergency_result)
+                except Exception as log_error:
+                    logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка логирования экстренного закрытия: {log_error}")
+                
                 self.update_status(BOT_STATUS['IDLE'])
                 
                 # Дополнительно обнуляем все данные позиции
@@ -1417,43 +1546,71 @@ class NewTradingBot:
         """Сохраняет детальные данные о закрытии позиции (для обучения ИИ)"""
         try:
             from bot_engine.bot_history import bot_history_manager
-            from bot_engine.ai import check_premium_license
             
             # Получаем данные о закрытии
             exit_price = close_result.get('price', self.entry_price) if close_result else self.entry_price
             pnl = close_result.get('realized_pnl', self.unrealized_pnl) if close_result else self.unrealized_pnl
             pnl_pct = close_result.get('roi', 0) if close_result else 0
             
-            # Подготавливаем данные для обучения ИИ (только если стоп И есть лицензия)
-            entry_data = None
-            market_data = None
+            # КРИТИЧНО ДЛЯ ОБУЧЕНИЯ AI: Сохраняем данные ВСЕГДА, не только для стопов!
+            # Получаем RSI и тренд на момент входа из истории или из сохраненного контекста
+            entry_rsi = None
+            entry_trend = None
             
-            if 'STOP' in reason.upper():
+            # Пытаемся получить из сохраненного контекста или из истории
+            try:
+                # Ищем в истории открытия позиции для этого бота
+                from bot_engine.bot_history import bot_history_manager
+                history = bot_history_manager.get_bot_history(symbol=self.symbol, action_type='POSITION_OPENED', limit=1)
+                if history:
+                    entry_rsi = history[0].get('rsi')
+                    entry_trend = history[0].get('trend')
+            except Exception as e:
+                logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось получить RSI/тренд из истории: {e}")
+            
+            # Если не нашли в истории, пытаемся из глобальных данных
+            if entry_rsi is None or entry_trend is None:
                 try:
-                    is_premium = check_premium_license()
-                    
-                    if is_premium:
-                        # Получаем входные данные для обучения ИИ
-                        entry_data = {
-                            'entry_price': self.entry_price,
-                            'volatility': getattr(self, 'entry_volatility', None),
-                            'trend': getattr(self, 'entry_trend', None),
-                            'duration_hours': (self.position_start_time and 
-                                             (datetime.now() - self.position_start_time).total_seconds() / 3600) if self.position_start_time else 0,
-                            'max_profit_achieved': self.max_profit_achieved
-                        }
-                        
-                        # Получаем рыночные данные при выходе
-                        market_data = {
-                            'exit_price': exit_price,
-                            'volatility': None,  # TODO: Получить текущую волатильность
-                            'trend': None,  # TODO: Получить текущий тренд
-                            'price_movement': ((exit_price - self.entry_price) / self.entry_price * 100) if self.entry_price else 0
-                        }
-                except Exception as e:
-                    logger.debug(f"[NEW_BOT_{self.symbol}] Лицензия проверка не удалась: {e}")
-                    entry_data = None
-                    market_data = None
+                    with rsi_data_lock:
+                        rsi_info = coins_rsi_data.get(self.symbol, {})
+                        if entry_rsi is None:
+                            entry_rsi = rsi_info.get('rsi6h') or rsi_info.get('rsi')
+                        if entry_trend is None:
+                            entry_trend = rsi_info.get('trend6h') or rsi_info.get('trend')
+                except Exception:
+                    pass
+            
+            # Получаем входные данные для обучения ИИ (ВСЕГДА, не только для стопов!)
+            entry_data = {
+                'entry_price': self.entry_price,
+                'rsi': entry_rsi,  # КРИТИЧНО: RSI на момент входа
+                'volatility': getattr(self, 'entry_volatility', None),
+                'trend': entry_trend or getattr(self, 'entry_trend', None),  # Тренд на момент входа
+                'duration_hours': (self.position_start_time and 
+                                 (datetime.now() - self.position_start_time).total_seconds() / 3600) if self.position_start_time else 0,
+                'max_profit_achieved': self.max_profit_achieved
+            }
+            
+            # Получаем текущие рыночные данные при выходе
+            exit_rsi = None
+            exit_trend = None
+            try:
+                with rsi_data_lock:
+                    rsi_info = coins_rsi_data.get(self.symbol, {})
+                    exit_rsi = rsi_info.get('rsi6h') or rsi_info.get('rsi')
+                    exit_trend = rsi_info.get('trend6h') or rsi_info.get('trend')
+            except Exception:
+                pass
+            
+            market_data = {
+                'exit_price': exit_price,
+                'rsi': exit_rsi,  # RSI на момент выхода
+                'volatility': None,  # TODO: Получить текущую волатильность
+                'trend': exit_trend,  # Тренд на момент выхода
+                'price_movement': ((exit_price - self.entry_price) / self.entry_price * 100) if self.entry_price and self.entry_price > 0 else 0
+            }
+            
+            logger.info(f"[NEW_BOT_{self.symbol}] 📊 Логируем закрытие: Entry RSI={entry_rsi}, Entry Trend={entry_trend}, Exit RSI={exit_rsi}, Exit Trend={exit_trend}")
             
             # Сохраняем в историю
             bot_history_manager.log_position_closed(
