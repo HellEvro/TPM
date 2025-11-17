@@ -156,7 +156,7 @@ class AIStrategyOptimizer:
                 for entry in history:
                     trades.extend(entry.get('trades', []))
                 
-                logger.debug(f"📊 Загружено {len(trades)} сделок из history_data.json")
+                # Убрано: logger.debug(f"📊 Загружено {len(trades)} сделок из history_data.json") - слишком шумно
         except Exception as e:
             logger.debug(f"⚠️ Ошибка загрузки history_data.json: {e}")
         
