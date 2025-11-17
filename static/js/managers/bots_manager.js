@@ -6862,9 +6862,9 @@ class BotsManager {
         }
     }
 
-    async saveConfiguration() {
+    async saveConfiguration(isAutoSave = false) {
         // Отменяем запланированное автосохранение при ручном сохранении
-        if (this.autoSaveTimer) {
+        if (!isAutoSave && this.autoSaveTimer) {
             clearTimeout(this.autoSaveTimer);
             this.autoSaveTimer = null;
             console.log('[BotsManager] ⏸️ Автосохранение отменено - выполняется ручное сохранение');
@@ -6902,7 +6902,10 @@ class BotsManager {
             const systemData = await systemResponse.json();
             
             if (autoBotData.success && systemData.success) {
-                this.showNotification('✅ Конфигурация сохранена в bot_config.py! Изменения применены автоматически.', 'success');
+                // Показываем уведомление только при ручном сохранении (при автосохранении уведомление показывается в scheduleAutoSave)
+                if (!isAutoSave) {
+                    this.showNotification('✅ Настройки сохранены', 'success');
+                }
                 console.log('[BotsManager] ✅ Конфигурация сохранена в bot_config.py и перезагружена');
                 console.log('[BotsManager] 📊 Auto Bot сохранен:', autoBotData.saved_to_file);
                 console.log('[BotsManager] 🔧 System config сохранен:', systemData.saved_to_file);
@@ -6934,7 +6937,12 @@ class BotsManager {
             
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка сохранения конфигурации:', error);
-            this.showNotification('❌ Ошибка сохранения конфигурации: ' + error.message, 'error');
+            // Показываем уведомление об ошибке только если это не автосохранение (при автосохранении уведомление показывается в scheduleAutoSave)
+            if (!isAutoSave) {
+                this.showNotification('❌ Ошибка сохранения конфигурации: ' + error.message, 'error');
+            }
+            // Пробрасываем ошибку дальше для обработки в scheduleAutoSave
+            throw error;
         }
     }
     async resetConfiguration() {
@@ -7750,12 +7758,15 @@ class BotsManager {
             console.log('[BotsManager] ⏱️ Автосохранение конфигурации...');
             
             try {
-                // Сохраняем конфигурацию
-                await this.saveConfiguration();
+                // Сохраняем конфигурацию с флагом автосохранения
+                await this.saveConfiguration(true);
                 console.log('[BotsManager] ✅ Конфигурация автосохранена');
+                // Показываем уведомление о успешном автосохранении
+                this.showNotification('✅ Настройки автоматически сохранены', 'success');
             } catch (error) {
                 console.error('[BotsManager] ❌ Ошибка автосохранения конфигурации:', error);
-                // Не показываем ошибку пользователю при автосохранении, чтобы не отвлекать
+                // Показываем ошибку при автосохранении, чтобы пользователь знал
+                this.showNotification('❌ Ошибка автосохранения: ' + error.message, 'error');
             } finally {
                 this.autoSaveTimer = null;
             }
