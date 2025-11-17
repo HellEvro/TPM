@@ -10416,6 +10416,9 @@ class BotsManager {
             
             // НЕ меняем состояние toggle - он должен оставаться включенным!
             
+            // ✅ Устанавливаем флаг программного изменения, чтобы не триггерить автосохранение при добавлении строк
+            this.isProgrammaticChange = true;
+            
             // Очищаем список ордеров
             const limitOrdersList = document.getElementById('limitOrdersList');
             if (limitOrdersList) {
@@ -10427,11 +10430,17 @@ class BotsManager {
                 });
             }
             
+            // ✅ Сбрасываем флаг и триггерим автосохранение после завершения сброса
+            this.isProgrammaticChange = false;
+            this.scheduleAutoSave();
+            
             this.showNotification('✅ Настройки сброшены к значениям по умолчанию', 'success');
             console.log('[BotsManager] ✅ Лимитные ордера сброшены к значениям по умолчанию');
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка сброса лимитных ордеров:', error);
             this.showNotification('❌ Ошибка сброса: ' + error.message, 'error');
+            // ✅ Сбрасываем флаг в случае ошибки
+            this.isProgrammaticChange = false;
         }
     }
 }
