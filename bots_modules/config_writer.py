@@ -17,6 +17,14 @@ def _format_python_value(value: Any) -> str:
         return repr(value)
     if value is None:
         return 'None'
+    if isinstance(value, (list, tuple)):
+        # Правильно форматируем списки и кортежи
+        items = ', '.join(_format_python_value(item) for item in value)
+        return f'[{items}]' if isinstance(value, list) else f'({items})'
+    if isinstance(value, dict):
+        # Форматируем словари
+        items = ', '.join(f"{repr(k)}: {_format_python_value(v)}" for k, v in value.items())
+        return f'{{{items}}}'
     return str(value)
 
 
@@ -25,7 +33,7 @@ def save_auto_bot_config_to_py(config: Dict[str, Any]) -> bool:
     Безопасно обновляет DEFAULT_AUTO_BOT_CONFIG в bot_config.py
     
     Алгоритм:
-    1. Читает файл bot_config.py
+    1. Читает файл bot_config.py 
     2. Находит блок DEFAULT_AUTO_BOT_CONFIG = {...}
     3. Обновляет только значения, сохраняя комментарии
     4. Записывает обратно в файл
@@ -89,36 +97,64 @@ def save_auto_bot_config_to_py(config: Dict[str, Any]) -> bool:
             
             # Ищем строки с ключами конфигурации
             # Формат: '    'key': value,  # комментарий' или '    'key': value,'
-            match = re.match(r"^(\s*)'([^']+)':\s*([^,#]+)(,?)(.*)$", line)
+            # Улучшенный парсинг для обработки массивов и сложных значений
             
-            if match:
-                indent = match.group(1)
-                key = match.group(2)
-                old_value = match.group(3).strip()
-                comma = match.group(4)
-                comment = match.group(5)
+            # Сначала извлекаем комментарий
+            comment_match = re.search(r'\s*#.*$', line)
+            comment = comment_match.group(0) if comment_match else ''
+            
+            # Убираем комментарий из строки для парсинга
+            line_without_comment = re.sub(r'\s*#.*$', '', line).rstrip()
+            
+            # Парсим ключ
+            key_match = re.match(r"^(\s*)'([^']+)':\s*", line_without_comment)
+            if not key_match:
+                updated_lines.append(updated_line)
+                continue
                 
-                # Если этот ключ есть в новой конфигурации, обновляем значение
-                if key in config:
-                    new_value = config[key]
-                    
-                    # Форматируем новое значение в Python-синтаксис
-                    new_value_str = _format_python_value(new_value)
-                    
-                    if old_value == new_value_str:
-                        # Значение не изменилось — оставляем строку как есть и не шумим в логах
-                        logger.debug(f"[CONFIG_WRITER] ↩️ {key}: без изменений ({old_value})")
+            indent = key_match.group(1)
+            key = key_match.group(2)
+            
+            # Извлекаем значение (все что после ': ' до запятой или конца строки)
+            # Но нужно учесть, что значение может быть массивом со скобками
+            value_part = line_without_comment[len(key_match.group(0)):].rstrip()
+            
+            # Убираем запятую в конце, если есть
+            has_comma = value_part.endswith(',')
+            if has_comma:
+                value_part = value_part[:-1].rstrip()
+            
+            old_value = value_part
+            
+            # Если этот ключ есть в новой конфигурации, обновляем значение
+            if key in config:
+                new_value = config[key]
+                
+                # Форматируем новое значение в Python-синтаксис
+                new_value_str = _format_python_value(new_value)
+                
+                # Для массивов и сложных значений сравниваем нормализованные версии
+                old_normalized = old_value.rstrip(',').strip()
+                new_normalized = new_value_str.strip()
+                
+                if old_normalized == new_normalized:
+                    # Значение не изменилось — оставляем строку как есть
+                    logger.debug(f"[CONFIG_WRITER] ↩️ {key}: без изменений")
+                else:
+                    # Собираем обновленную строку
+                    # Сохраняем комментарий, если он был
+                    if comment:
+                        comment_str = f' {comment.strip()}' if comment.strip().startswith('#') else f'  {comment.strip()}'
                     else:
-                        # Собираем обновленную строку
-                        comment_fragment = comment or ''
-                        if comment_fragment and not comment_fragment.startswith(' '):
-                            comment_fragment = f' {comment_fragment}'
-                        updated_line = f"{indent}'{key}': {new_value_str}{comma}{comment_fragment}\n"
-                        # ✅ Логируем ключевые изменения
-                        if key in ('trailing_stop_activation', 'trailing_stop_distance', 'break_even_trigger', 'avoid_down_trend', 'avoid_up_trend'):
-                            logger.info(f"[CONFIG_WRITER] ✏️ {key}: {old_value} → {new_value_str}")
-                        else:
-                            logger.debug(f"[CONFIG_WRITER] ✏️ {key}: {old_value} → {new_value_str}")
+                        comment_str = ''
+                    
+                    # Всегда добавляем запятую перед комментарием
+                    updated_line = f"{indent}'{key}': {new_value_str},{comment_str}\n"
+                    # ✅ Логируем ключевые изменения
+                    if key in ('trailing_stop_activation', 'trailing_stop_distance', 'break_even_trigger', 'avoid_down_trend', 'avoid_up_trend', 'limit_orders_entry_enabled', 'limit_orders_percent_steps', 'limit_orders_margin_amounts'):
+                        logger.info(f"[CONFIG_WRITER] ✏️ {key}: {old_normalized[:50]}... → {new_normalized[:50]}...")
+                    else:
+                        logger.debug(f"[CONFIG_WRITER] ✏️ {key}: {old_normalized[:50]}... → {new_normalized[:50]}...")
             
             updated_lines.append(updated_line)
         
