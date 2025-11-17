@@ -358,6 +358,8 @@ class TradingBot:
         # Проверяем лимитные ордера и отменяем их при выходе за зону набора позиций
         if self.limit_orders:
             self._check_and_cancel_limit_orders_if_needed(analysis)
+            # Проверяем сработавшие лимитные ордера и обновляем стоп-лосс
+            self._check_and_update_limit_orders_fills()
         
         # Выполняем действия в зависимости от текущего статуса
         if self.status in [BotStatus.IDLE, 'running']:
