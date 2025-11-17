@@ -8,9 +8,10 @@
 - `license_checker_source.py` - проверка лицензии
 - `hardware_id_source.py` - генерация hardware ID
 
-### Скомпилированные файлы (в `bot_engine/ai/`):
-- `license_checker.pyc` - скомпилированный модуль проверки лицензии
-- `hardware_id_source.pyc` - скомпилированный модуль hardware ID
+### Скомпилированные файлы:
+- `bot_engine/ai/license_checker.pyc` - скомпилированный модуль проверки лицензии
+- `bot_engine/ai/hardware_id_source.pyc` - скомпилированный модуль hardware ID (fallback для license_checker)
+- `scripts/hardware_id.pyc` - скомпилированный модуль hardware ID (используется activate_premium.py и license_checker)
 
 ## Компиляция
 
@@ -31,9 +32,12 @@ python license_generator/compile_hardware_id.py
 ## Важно
 
 1. **Исходники должны оставаться в `license_generator/source/`** - они не попадают в продакшн
-2. **Скомпилированные `.pyc` файлы** должны быть в `bot_engine/ai/` для использования
+2. **Скомпилированные `.pyc` файлы** должны быть:
+   - `bot_engine/ai/` - для использования в коде (license_checker, hardware_id_source как fallback)
+   - `scripts/` - для activate_premium.py (hardware_id.pyc)
 3. **После изменения исходников** нужно перекомпилировать модули
 4. **`.pyc` файлы добавлены в `.gitignore`** с исключениями - они должны быть в репозитории
+5. **hardware_id.pyc компилируется в два места**: `bot_engine/ai/` и `scripts/` для совместимости
 
 ## Проверка
 
