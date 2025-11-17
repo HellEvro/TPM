@@ -91,7 +91,6 @@ def get_hardware_id() -> str:
         try:
             platform_info = f"{platform.system()}-{platform.machine()}"
             components.append(f"PLATFORM:{platform_info}")
-            logger.debug(f"Платформа: {platform_info}")
         except Exception as e:
             logger.warning(f"Не удалось получить платформу: {e}")
         
@@ -108,7 +107,6 @@ def get_hardware_id() -> str:
                 cpu_id = result.split('\n')[1].strip() if '\n' in result else result.strip()
                 if cpu_id and cpu_id != 'ProcessorId':
                     components.append(f"CPU:{cpu_id}")
-                    logger.debug(f"CPU ID получен: {cpu_id[:16]}...")
                 else:
                     logger.warning("CPU ID не найден")
             except Exception as e:
@@ -125,7 +123,6 @@ def get_hardware_id() -> str:
                 disk_serial = result.split('\n')[1].strip() if '\n' in result else result.strip()
                 if disk_serial and disk_serial != 'SerialNumber' and disk_serial.strip():
                     components.append(f"DISK:{disk_serial}")
-                    logger.debug(f"Disk serial получен: {disk_serial[:20]}...")
                 else:
                     logger.warning("Disk serial не найден")
             except Exception as e:
@@ -143,7 +140,6 @@ def get_hardware_id() -> str:
                 if board_serial and board_serial != 'SerialNumber' and board_serial.strip():
                     # Даже если это "Default string", используем его - он уникален для устройства
                     components.append(f"BOARD:{board_serial}")
-                    logger.debug(f"Motherboard serial получен: {board_serial[:20]}...")
             except Exception as e:
                 logger.warning(f"Не удалось получить Motherboard serial: {e}")
             
@@ -156,11 +152,8 @@ def get_hardware_id() -> str:
                     
                     if not _is_random_mac(mac):
                         components.append(f"MAC:{mac}")
-                        logger.debug(f"Физический MAC адрес получен: {mac}")
-                    else:
-                        logger.debug(f"Игнорирован случайный MAC адрес: {mac}")
             except Exception as e:
-                logger.debug(f"MAC адрес не используется: {e}")
+                pass
         
         # 3. Специфичные для Linux данные
         elif platform.system() == 'Linux':
@@ -170,7 +163,6 @@ def get_hardware_id() -> str:
                     machine_id = f.read().strip()
                     if machine_id:
                         components.append(f"MACHINE_ID:{machine_id}")
-                        logger.debug(f"Machine ID получен: {machine_id[:16]}...")
             except Exception as e:
                 logger.warning(f"Не удалось получить Machine ID: {e}")
             
@@ -183,10 +175,9 @@ def get_hardware_id() -> str:
                             cpu_serial = line.split(':')[1].strip()
                             if cpu_serial and cpu_serial != '0000000000000000':
                                 components.append(f"CPU_SERIAL:{cpu_serial}")
-                                logger.debug(f"CPU Serial получен: {cpu_serial[:16]}...")
                                 break
             except Exception as e:
-                logger.debug(f"CPU Serial недоступен: {e}")
+                pass
             
             # DMI Product Serial (СТАБИЛЬНЫЙ, если доступен)
             try:
@@ -196,7 +187,6 @@ def get_hardware_id() -> str:
                 ).decode().strip()
                 if result and result != 'Not Specified' and result.strip():
                     components.append(f"DMI_SERIAL:{result}")
-                    logger.debug(f"DMI Serial получен: {result[:20]}...")
             except:
                 pass
         
@@ -244,7 +234,6 @@ def get_hardware_id() -> str:
         hardware_id = hashlib.sha256(combined.encode()).hexdigest()
         
         logger.info(f"Hardware ID сгенерирован из {len(components)} стабильных компонентов: {hardware_id[:16]}...")
-        logger.debug(f"Компоненты: {combined}")
         return hardware_id
     
     except Exception as e:
