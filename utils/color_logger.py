@@ -48,19 +48,34 @@ class LogLevelFilter(logging.Filter):
             level_settings: Может быть:
                 - Список строк: ['+INFO', '-WARNING', '+ERROR', '-DEBUG']
                 - Одна строка с запятыми: "+INFO, -WARNING, +ERROR, -DEBUG"
-                - None или пустой список - все уровни разрешены
+                - None или пустой список [] - все уровни разрешены
         """
         super().__init__()
         self.enabled_levels = set()
         # По умолчанию DEBUG не включен (скрываем шумные логи от библиотек)
         self.debug_enabled = False
         
-        if level_settings:
-            self._parse_settings(level_settings)
+        # Проверяем, что настройки не None и не пустые
+        if level_settings is not None and level_settings != []:
+            # Если это пустая строка после обработки, тоже считаем как "все разрешено"
+            if isinstance(level_settings, str) and not level_settings.strip():
+                # Пустая строка - разрешаем все
+                all_levels = set(self.LEVEL_MAP.keys())
+                self.enabled_levels = all_levels
+                self.debug_enabled = True
+            else:
+                self._parse_settings(level_settings)
+                # Если после парсинга enabled_levels пустой, значит нужно разрешить все
+                if not self.enabled_levels:
+                    all_levels = set(self.LEVEL_MAP.keys())
+                    self.enabled_levels = all_levels
+                    self.debug_enabled = True
         else:
-            # Если настройки не указаны, включаем все уровни кроме DEBUG от внешних библиотек
+            # Если настройки не указаны (None) или пустой список [], включаем все уровни
             all_levels = set(self.LEVEL_MAP.keys())
             self.enabled_levels = all_levels
+            # Когда все уровни разрешены, включаем DEBUG для всех (включая внешние библиотеки)
+            self.debug_enabled = True
     
     def _parse_settings(self, settings):
         """Парсит настройки уровней логирования"""
@@ -413,15 +428,10 @@ def setup_color_logging(console_log_levels=None):
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.DEBUG)  # Устанавливаем минимальный уровень для обработчика
     
-    # Применяем фильтр уровней, если указан
-    level_filter = None
-    if console_log_levels:
-        level_filter = LogLevelFilter(console_log_levels)
-        console_handler.addFilter(level_filter)
-    else:
-        # Даже если фильтр не настроен, создаем его для скрытия DEBUG от внешних библиотек
-        level_filter = LogLevelFilter([])
-        console_handler.addFilter(level_filter)
+    # Применяем фильтр уровней
+    # Создаем фильтр всегда (даже для пустого списка или None - это означает "все уровни разрешены")
+    level_filter = LogLevelFilter(console_log_levels)
+    console_handler.addFilter(level_filter)
     
     # Устанавливаем цветной форматтер
     formatter = ColorFormatter()
