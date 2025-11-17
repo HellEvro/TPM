@@ -56,7 +56,7 @@ def setup_global_connection_pool():
         # Устанавливаем глобальную сессию для requests
         requests.Session = lambda: session
         
-        logger.debug("✅ Глобальный пул соединений настроен: 100 пулов, 200 соединений на пул")
+        # Убрано: logger.debug("✅ Глобальный пул соединений настроен: 100 пулов, 200 соединений на пул") - слишком шумно
         
     except Exception as e:
         logger.warning(f"⚠️ Не удалось настроить глобальный пул соединений: {e}")
