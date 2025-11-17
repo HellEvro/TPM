@@ -673,12 +673,16 @@ current_exchange = None
 
 def init_exchange():
     """Инициализация биржи"""
+    app_logger = logging.getLogger('app')
     try:
-        print(f"[INIT] Получение конфигурации для {ACTIVE_EXCHANGE}...")
+        app_logger.info(f"[INIT] Получение конфигурации для {ACTIVE_EXCHANGE}...")
         exchange_config = EXCHANGES[ACTIVE_EXCHANGE]
-        print(f"[INIT] Конфигурация получена: {exchange_config}")
+        # БЕЗОПАСНОСТЬ: НЕ выводим конфигурацию с ключами!
+        safe_config = {k: ('***HIDDEN***' if k in ['api_key', 'api_secret', 'passphrase'] else v) 
+                       for k, v in exchange_config.items()}
+        app_logger.info(f"[INIT] Конфигурация получена: {safe_config}")
         
-        print(f"[INIT] Создание экземпляра биржи {ACTIVE_EXCHANGE}...")
+        app_logger.info(f"[INIT] Создание экземпляра биржи {ACTIVE_EXCHANGE}...")
         exchange = ExchangeFactory.create_exchange(
             ACTIVE_EXCHANGE,
             exchange_config['api_key'],
@@ -686,10 +690,10 @@ def init_exchange():
             exchange_config.get('passphrase')  # Добавляем passphrase для OKX
         )
         
-        print(f"[INIT] ✅ Биржа {ACTIVE_EXCHANGE} успешно создана")
+        app_logger.info(f"[INIT] ✅ Биржа {ACTIVE_EXCHANGE} успешно создана")
         return exchange
     except Exception as e:
-        print(f"[INIT] ❌ Ошибка создания биржи {ACTIVE_EXCHANGE}: {str(e)}")
+        app_logger.error(f"[INIT] ❌ Ошибка создания биржи {ACTIVE_EXCHANGE}: {str(e)}")
         import traceback
         traceback.print_exc()
         return None
@@ -763,13 +767,15 @@ def switch_exchange():
         return jsonify({'error': str(e)}), 500
 
 # Инициализируем биржу при запуске
-print(f"[INIT] Инициализация биржи {ACTIVE_EXCHANGE}...")
+# Используем logger вместо print для правильной фильтрации
+app_logger = logging.getLogger('app')
+app_logger.info(f"[INIT] Инициализация биржи {ACTIVE_EXCHANGE}...")
 current_exchange = init_exchange()
 if not current_exchange:
-    print("[INIT] ❌ Не удалось инициализировать биржу")
+    app_logger.error("[INIT] ❌ Не удалось инициализировать биржу")
     sys.exit(1)
 else:
-    print(f"[INIT] ✅ Биржа {ACTIVE_EXCHANGE} успешно инициализирована")
+    app_logger.info(f"[INIT] ✅ Биржа {ACTIVE_EXCHANGE} успешно инициализирована")
 
 # Убираем инициализацию менеджера ботов - теперь он в отдельном сервисе
 # bot_manager = BotManager(exchange)
