@@ -17,14 +17,20 @@ try:
     if ENABLE_TRACE:
         from trace_debug import enable_trace
         enable_trace()
-        print("=" * 80)
-        print("TRACE: ENABLED - all code execution will be logged with timing")
-        print("WARNING: This will slow down the system significantly!")
-        print("=" * 80, flush=True)
+        # Логгер еще не настроен, используем stderr
+        import sys
+        sys.stderr.write("=" * 80 + "\n")
+        sys.stderr.write("TRACE: ENABLED - all code execution will be logged with timing\n")
+        sys.stderr.write("WARNING: This will slow down the system significantly!\n")
+        sys.stderr.write("=" * 80 + "\n")
     else:
-        print("[INFO] Code tracing DISABLED (set SystemConfig.ENABLE_CODE_TRACING = True to enable)")
+        # Логгер еще не настроен, используем stderr
+        import sys
+        sys.stderr.write("[INFO] Code tracing DISABLED (set SystemConfig.ENABLE_CODE_TRACING = True to enable)\n")
 except Exception as e:
-    print(f"[WARNING] Could not initialize tracing: {e}")
+    # Логгер еще не настроен, используем stderr
+    import sys
+    sys.stderr.write(f"[WARNING] Could not initialize tracing: {e}\n")
     ENABLE_TRACE = False
 
 # Настройка кодировки для Windows консоли
@@ -43,29 +49,31 @@ if os.name == 'nt':
 
 # Проверка наличия конфигурации ПЕРЕД всеми импортами
 if not os.path.exists('app/config.py'):
-    print("\n" + "="*80)
-    print("❌ ОШИБКА: Файл конфигурации не найден!")
-    print("="*80)
-    print()
-    print("📝 Для первого запуска выполните:")
-    print()
-    print("   1. Скопируйте файл конфигурации:")
+    # Логгер еще не настроен, используем stderr для критических ошибок
+    import sys
+    sys.stderr.write("\n" + "="*80 + "\n")
+    sys.stderr.write("❌ ОШИБКА: Файл конфигурации не найден!\n")
+    sys.stderr.write("="*80 + "\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("📝 Для первого запуска выполните:\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("   1. Скопируйте файл конфигурации:\n")
     if os.name == 'nt':  # Windows
-        print("      copy app\\config.example.py app\\config.py")
+        sys.stderr.write("      copy app\\config.example.py app\\config.py\n")
     else:  # Linux/Mac
-        print("      cp app/config.example.py app/config.py")
-    print()
-    print("   2. Отредактируйте app/config.py:")
-    print("      - Добавьте свои API ключи бирж")
-    print("      - Настройте Telegram (опционально)")
-    print()
-    print("   3. Запустите снова:")
-    print("      python bots.py")
-    print()
-    print("   📖 Подробная инструкция: docs/INSTALL.md")
-    print()
-    print("="*80)
-    print()
+        sys.stderr.write("      cp app/config.example.py app/config.py\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("   2. Отредактируйте app/config.py:\n")
+    sys.stderr.write("      - Добавьте свои API ключи бирж\n")
+    sys.stderr.write("      - Настройте Telegram (опционально)\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("   3. Запустите снова:\n")
+    sys.stderr.write("      python bots.py\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("   📖 Подробная инструкция: docs/INSTALL.md\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("="*80 + "\n")
+    sys.stderr.write("\n")
     sys.exit(1)
 
 import signal
@@ -113,43 +121,49 @@ if __name__ == '__main__':
     # Эта проверка должна быть ПЕРВОЙ при запуске
     can_continue = check_and_stop_existing_bots_processes()
     if not can_continue:
-        print("Не удалось освободить порт 5001, завершаем работу")
+        # Логгер еще не настроен, используем stderr
+        import sys
+        sys.stderr.write("Не удалось освободить порт 5001, завершаем работу\n")
         sys.exit(1)
     
     # Проверяем API ключи
     if not check_api_keys():
-        print("\n" + "="*80)
-        print("⚠️  ВНИМАНИЕ: API ключи не настроены!")
-        print("="*80)
-        print()
-        print("📌 Текущий статус:")
+        # Логгер еще не настроен, используем stderr для предупреждений
+        import sys
+        sys.stderr.write("\n" + "="*80 + "\n")
+        sys.stderr.write("⚠️  ВНИМАНИЕ: API ключи не настроены!\n")
+        sys.stderr.write("="*80 + "\n")
+        sys.stderr.write("\n")
+        sys.stderr.write("📌 Текущий статус:\n")
         try:
             from app.config import ACTIVE_EXCHANGE
-            print(f"   Биржа: {ACTIVE_EXCHANGE}")
+            sys.stderr.write(f"   Биржа: {ACTIVE_EXCHANGE}\n")
         except:
-            print("   Биржа: НЕ ОПРЕДЕЛЕНА")
+            sys.stderr.write("   Биржа: НЕ ОПРЕДЕЛЕНА\n")
         
         if not os.path.exists('app/keys.py'):
-            print("   Файл с ключами: app/keys.py НЕ НАЙДЕН")
+            sys.stderr.write("   Файл с ключами: app/keys.py НЕ НАЙДЕН\n")
         else:
-            print("   API ключи: НЕ НАСТРОЕНЫ или СОДЕРЖАТ ПРИМЕРЫ")
-        print()
-        print("💡 Что нужно сделать:")
-        print("   1. Создайте app/keys.py с реальными ключами от биржи")
-        print("   2. Или добавьте ключи в app/config.py (EXCHANGES)")
-        print("   3. Перезапустите bots.py")
-        print()
-        print("⚠️  Сервис запущен, но торговля НЕВОЗМОЖНА без ключей!")
-        print("   Будут ошибки: 'Http status code is not 200. (ErrCode: 401)'")
-        print()
-        print("="*80)
-        print()
+            sys.stderr.write("   API ключи: НЕ НАСТРОЕНЫ или СОДЕРЖАТ ПРИМЕРЫ\n")
+        sys.stderr.write("\n")
+        sys.stderr.write("💡 Что нужно сделать:\n")
+        sys.stderr.write("   1. Создайте app/keys.py с реальными ключами от биржи\n")
+        sys.stderr.write("   2. Или добавьте ключи в app/config.py (EXCHANGES)\n")
+        sys.stderr.write("   3. Перезапустите bots.py\n")
+        sys.stderr.write("\n")
+        sys.stderr.write("⚠️  Сервис запущен, но торговля НЕВОЗМОЖНА без ключей!\n")
+        sys.stderr.write("   Будут ошибки: 'Http status code is not 200. (ErrCode: 401)'\n")
+        sys.stderr.write("\n")
+        sys.stderr.write("="*80 + "\n")
+        sys.stderr.write("\n")
 
 # Импорт цветного логирования
 from utils.color_logger import setup_color_logging
 
 # Импортируем все модули
-print("Загрузка модулей...")
+# Логгер еще не настроен, используем stderr для важных сообщений
+import sys
+sys.stderr.write("Загрузка модулей...\n")
 from bots_modules.imports_and_globals import *
 from bots_modules.calculations import *
 from bots_modules.maturity import *
@@ -244,9 +258,9 @@ def signal_handler(signum, frame):
     shutdown_flag.set()
     
     # Принудительно останавливаем Flask
-    print("\n🛑 Остановка сервиса...")
+    logger.info("\n🛑 Остановка сервиса...")
     cleanup_bot_service()
-    print("✅ Сервис остановлен")
+    logger.info("✅ Сервис остановлен")
     
     # Убиваем все потоки принудительно
     os._exit(0)
@@ -352,15 +366,15 @@ def run_bots_service():
         logger.info("ЗАПУСК BOTS SERVICE API (Порт 5001)")
         logger.info("=" * 80)
         
-        print("\n" + "=" * 80)
-        print("✅ BOTS SERVICE ЗАПУЩЕН И РАБОТАЕТ!")
-        print("=" * 80)
-        print("🌐 API доступен на: http://localhost:5001")
-        print("📊 Статус: http://localhost:5001/api/status")
-        print("🤖 Боты: http://localhost:5001/api/bots")
-        print("=" * 80)
-        print("💡 Нажмите Ctrl+C для остановки")
-        print("=" * 80 + "\n")
+        logger.info("\n" + "=" * 80)
+        logger.info("✅ BOTS SERVICE ЗАПУЩЕН И РАБОТАЕТ!")
+        logger.info("=" * 80)
+        logger.info("🌐 API доступен на: http://localhost:5001")
+        logger.info("📊 Статус: http://localhost:5001/api/status")
+        logger.info("🤖 Боты: http://localhost:5001/api/bots")
+        logger.info("=" * 80)
+        logger.info("💡 Нажмите Ctrl+C для остановки")
+        logger.info("=" * 80 + "\n")
         
         bots_app.run(
             host='0.0.0.0',
@@ -375,7 +389,6 @@ def run_bots_service():
         if e.code == 42:
             # Специальный код для горячей перезагрузки
             logger.info("🔄 Горячая перезагрузка: перезапуск сервера...")
-            print("🔄 Горячая перезагрузка: перезапуск сервера...")
             # Запускаем новый процесс
             import subprocess
             subprocess.Popen([sys.executable] + sys.argv)
@@ -472,7 +485,7 @@ if __name__ == '__main__':
         
     except KeyboardInterrupt:
         logger.info("Получен сигнал прерывания...")
-        print("\n🛑 Остановка сервиса...")
+        logger.info("\n🛑 Остановка сервиса...")
     except Exception as e:
         logger.error(f"Критическая ошибка: {e}")
         import traceback
@@ -482,7 +495,7 @@ if __name__ == '__main__':
             # ✅ Auto Trainer останавливается в ai.py, здесь не требуется
             
             cleanup_bot_service()
-            print("✅ Сервис остановлен\n")
+            logger.info("✅ Сервис остановлен\n")
         except:
             pass
         os._exit(0)
