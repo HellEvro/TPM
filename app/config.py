@@ -181,7 +181,7 @@ LOG_LEVEL = 'INFO'
 #   - Регистр не важен: '+error' = '+ERROR' = '+Error'
 #   - Пробелы вокруг запятых игнорируются
 # ============================================================================
-CONSOLE_LOG_LEVELS = []  # По умолчанию все уровни разрешены
+CONSOLE_LOG_LEVELS = ['+ERROR', '+CRITICAL']  # По умолчанию все уровни разрешены
 
 # Telegram settings
 TELEGRAM_NOTIFICATIONS_ENABLED = True
