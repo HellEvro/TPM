@@ -59,10 +59,11 @@ try:
     #     optimal_ema_data
     # )
     MODULES_AVAILABLE = True
-    print("[OK] New bot_engine modules loaded successfully")
+    # Используем root logger, так как BotsService logger ещё не создан
+    logging.getLogger().info("[OK] New bot_engine modules loaded successfully")
 except ImportError as e:
-    print(f"[WARNING] Failed to load new bot_engine modules: {e}")
-    print("[WARNING] Using legacy functions from bots.py")
+    logging.getLogger().warning(f"[WARNING] Failed to load new bot_engine modules: {e}")
+    logging.getLogger().warning("[WARNING] Using legacy functions from bots.py")
     MODULES_AVAILABLE = False
 
 # Добавляем текущую директорию в путь
