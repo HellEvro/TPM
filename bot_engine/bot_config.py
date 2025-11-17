@@ -160,7 +160,7 @@ class SystemConfig:
     RSI_CANDLE_CHECK_INTERVAL = 300  # 5 минут для проверки изменений текущей свечи
     
     # Улучшенная система RSI
-    ENHANCED_RSI_ENABLED = False  # Включить улучшенную систему RSI для сильных трендов (ОТКЛЮЧЕНО для тестирования)
+    ENHANCED_RSI_ENABLED = True # Включить улучшенную систему RSI для сильных трендов (ОТКЛЮЧЕНО для тестирования)
     ENHANCED_RSI_REQUIRE_VOLUME_CONFIRMATION = True  # Требовать подтверждение объемом
     ENHANCED_RSI_REQUIRE_DIVERGENCE_CONFIRMATION = True  # Требовать подтверждение дивергенцией (строгий режим)
     ENHANCED_RSI_USE_STOCH_RSI = True  # Использовать Stochastic RSI для дополнительного подтверждения
