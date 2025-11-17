@@ -795,6 +795,11 @@ class InfoBotManager(tk.Tk):
 
             def worker() -> None:
                 os.environ.pop("INFOBOT_LICENSE_STATUS", None)
+                
+                # Убеждаемся, что корень проекта в sys.path
+                if str(PROJECT_ROOT) not in sys.path:
+                    sys.path.insert(0, str(PROJECT_ROOT))
+                
                 try:
                     # Используем прямой импорт license_checker вместо модуля ai
                     # Это более надежно и не зависит от наличия модуля ai.py
@@ -813,26 +818,33 @@ class InfoBotManager(tk.Tk):
                     else:
                         status_payload = {
                             'state': 'invalid',
-                            'reason': 'Лицензия не валидна'
+                            'reason': info if isinstance(info, str) else 'Лицензия не валидна'
                         }
                     
                     os.environ['INFOBOT_LICENSE_STATUS'] = json.dumps(status_payload, ensure_ascii=False)
-                except SystemExit:
-                    pass
-                except ImportError as exc:
-                    # Если license_checker недоступен, пробуем через модуль ai (fallback)
-                    try:
-                        ai_module = importlib.import_module("ai")
-                        ai_module.ensure_license_available(force_refresh=True, silent=True)
-                    except Exception as ai_exc:
-                        message = f"Ошибка проверки лицензии: {ai_exc}"
-                        self.after(0, lambda: self.license_status_var.set(message))
-                        return
-                except Exception as exc:  # pylint: disable=broad-except
-                    message = f"Ошибка проверки лицензии: {exc}"
+                    
+                except ImportError as import_exc:
+                    error_msg = str(import_exc)
+                    # Проверяем, что именно не импортировалось
+                    if "license_checker" in error_msg or "bot_engine" in error_msg:
+                        message = f"Модуль лицензирования не найден: {error_msg}. Проверьте наличие bot_engine/ai/license_checker.pyc"
+                    else:
+                        message = f"Ошибка импорта: {error_msg}"
                     self.after(0, lambda: self.license_status_var.set(message))
                     return
-
+                except SystemExit:
+                    pass
+                except Exception as exc:  # pylint: disable=broad-except
+                    error_msg = str(exc)
+                    # Показываем более понятное сообщение об ошибке
+                    if "No module named" in error_msg:
+                        message = f"Ошибка импорта модулей: {error_msg}. Проверьте установку."
+                    else:
+                        message = f"Ошибка проверки лицензии: {error_msg}"
+                    self.after(0, lambda: self.license_status_var.set(message))
+                    return
+                
+                # Читаем результат из переменной окружения
                 raw_status = os.environ.get("INFOBOT_LICENSE_STATUS")
                 try:
                     status_payload = json.loads(raw_status) if raw_status else {}
