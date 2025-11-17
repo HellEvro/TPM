@@ -125,9 +125,12 @@ class LogLevelFilter(logging.Filter):
         if not self.enabled_levels:
             return True
         
-        # Проверяем уровень записи
+        # КРИТИЧНО: Проверяем уровень записи
         # Если уровень не включен, скрываем
-        return level_name in self.enabled_levels
+        if level_name not in self.enabled_levels:
+            return False
+        
+        return True
 
 class Colors:
     """ANSI цветовые коды"""
@@ -413,14 +416,13 @@ def setup_color_logging(console_log_levels=None):
     logger.addHandler(console_handler)
     
     # Настраиваем уровни для внешних логгеров, чтобы они не шумели
-    # Определяем, нужно ли скрывать DEBUG
-    hide_debug = True
-    if level_filter and not level_filter.debug_enabled:
-        hide_debug = True
-    elif level_filter and level_filter.enabled_levels and 'DEBUG' not in level_filter.enabled_levels:
-        hide_debug = True
-    elif level_filter and level_filter.enabled_levels and 'DEBUG' in level_filter.enabled_levels:
-        hide_debug = False
+    # Определяем, какие уровни разрешены
+    allowed_levels = set()
+    if level_filter and level_filter.enabled_levels:
+        allowed_levels = level_filter.enabled_levels
+    else:
+        # Если фильтр не настроен, разрешаем все уровни
+        allowed_levels = {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}
     
     # Настраиваем уровни для внешних библиотек
     external_loggers = [
@@ -436,15 +438,31 @@ def setup_color_logging(console_log_levels=None):
         'httpx',
     ]
     
+    # Определяем минимальный разрешенный уровень
+    level_priority = {'DEBUG': 10, 'INFO': 20, 'WARNING': 30, 'ERROR': 40, 'CRITICAL': 50}
+    min_level = min([level_priority.get(level, 50) for level in allowed_levels], default=50)
+    
+    # Устанавливаем уровень для внешних логгеров
     for logger_name in external_loggers:
         external_logger = logging.getLogger(logger_name)
-        # Если нужно скрыть DEBUG, устанавливаем уровень WARNING или выше
-        if hide_debug:
-            external_logger.setLevel(logging.WARNING)
-        else:
-            external_logger.setLevel(logging.DEBUG)
+        # Устанавливаем минимальный разрешенный уровень
+        external_logger.setLevel(min_level)
         # Убеждаемся, что они используют корневой логгер (propagate=True)
         external_logger.propagate = True
+    
+    # Также настраиваем уровни для наших логгеров
+    our_loggers = [
+        'exchanges.exchange_factory',
+        'exchanges',
+        'root',
+        'app',
+    ]
+    
+    for logger_name in our_loggers:
+        our_logger = logging.getLogger(logger_name)
+        # Устанавливаем минимальный разрешенный уровень
+        our_logger.setLevel(min_level)
+        our_logger.propagate = True
     
     return logger
 
