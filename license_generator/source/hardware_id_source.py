@@ -286,17 +286,17 @@ def get_short_hardware_id() -> str:
 
 if __name__ == '__main__':
     # Тест
-    print("=" * 60)
-    print("HARDWARE ID TEST")
-    print("=" * 60)
-    print()
+    logger.info("=" * 60)
+    logger.info("HARDWARE ID TEST")
+    logger.info("=" * 60)
+    logger.info("")
     
     full_id = get_hardware_id()
     short_id = get_short_hardware_id()
     
-    print(f"Full Hardware ID: {full_id}")
-    print(f"Short Hardware ID: {short_id}")
-    print()
+    logger.info(f"Full Hardware ID: {full_id}")
+    logger.info(f"Short Hardware ID: {short_id}")
+    logger.info("")
     
-    print("This ID will be used for license binding")
-    print()
+    logger.info("This ID will be used for license binding")
+    logger.info("")

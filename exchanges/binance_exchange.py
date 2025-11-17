@@ -5,6 +5,9 @@ import time
 import traceback
 import pandas as pd
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 def clean_symbol(symbol):
     return symbol.replace('USDT', '')
@@ -26,7 +29,7 @@ class BinanceExchange(BaseExchange):
                 self.client.futures_change_position_mode(dualSidePosition=False)
         except Exception as e:
             if "No need to change position side" not in str(e):
-                print(f"[BINANCE] Error setting position mode: {str(e)}")
+                logger.error(f"[BINANCE] Error setting position mode: {str(e)}")
 
     def get_positions(self):
         try:
@@ -177,7 +180,7 @@ class BinanceExchange(BaseExchange):
             valid_symbols = [s['symbol'] for s in exchange_info['symbols']]
             
             if binance_symbol not in valid_symbols:
-                print(f"Symbol {binance_symbol} not found in Binance")
+                logger.warning(f"Symbol {binance_symbol} not found in Binance")
                 return []
             
             klines = self.client.futures_klines(
@@ -187,7 +190,7 @@ class BinanceExchange(BaseExchange):
             )
             return [float(k[4]) for k in klines]  # Берем цены закрытия
         except Exception as e:
-            print(f"Error getting Binance chart data for {symbol}: {e}")
+            logger.error(f"Error getting Binance chart data for {symbol}: {e}")
             return []
 
     def get_sma200_position(self, symbol):
@@ -200,7 +203,7 @@ class BinanceExchange(BaseExchange):
             valid_symbols = [s['symbol'] for s in exchange_info['symbols']]
             
             if binance_symbol not in valid_symbols:
-                print(f"Symbol {binance_symbol} not found in Binance")
+                logger.warning(f"Symbol {binance_symbol} not found in Binance")
                 return None
             
             klines = self.client.futures_klines(
@@ -218,7 +221,7 @@ class BinanceExchange(BaseExchange):
             return None
             
         except Exception as e:
-            print(f"Error getting Binance SMA200 for {symbol}: {e}")
+            logger.error(f"Error getting Binance SMA200 for {symbol}: {e}")
             return None
 
     def get_ticker(self, symbol):
@@ -235,7 +238,7 @@ class BinanceExchange(BaseExchange):
                 'timestamp': int(time.time() * 1000)
             }
         except Exception as e:
-            print(f"Ошибка получения тикера для {symbol}: {e}")
+            logger.error(f"Ошибка получения тикера для {symbol}: {e}")
             return None
 
     def get_instrument_status(self, symbol):
@@ -360,7 +363,7 @@ class BinanceExchange(BaseExchange):
                 }
                 
         except Exception as e:
-            print(f"[BINANCE] Error closing position: {str(e)}")
+            logger.error(f"[BINANCE] Error closing position: {str(e)}")
             return {
                 'success': False,
                 'message': f'Error closing position: {str(e)}'
@@ -381,7 +384,7 @@ class BinanceExchange(BaseExchange):
             ]
             return sorted(pairs)
         except Exception as e:
-            print(f"Error getting Binance pairs: {str(e)}")
+            logger.error(f"Error getting Binance pairs: {str(e)}")
             return []
 
     def close_positions(self, positions_to_close):
@@ -418,7 +421,7 @@ class BinanceExchange(BaseExchange):
                         })
                         continue
                     
-                    print(f"[BINANCE] Found active position: {active_position}")
+                    logger.debug(f"[BINANCE] Found active position: {active_position}")
                     
                     # Получаем текущую цену
                     ticker = self.get_ticker(symbol)
@@ -451,11 +454,11 @@ class BinanceExchange(BaseExchange):
                         limit_price = ticker['ask'] * price_multiplier if close_side == "BUY" else ticker['bid'] * price_multiplier
                         order_params['price'] = str(round(limit_price, 4))
                         order_params['timeInForce'] = 'GTC'  # Обязательный параметр для лимитных ордеров
-                        print(f"[BINANCE] Calculated limit price: {limit_price}")
+                        logger.debug(f"[BINANCE] Calculated limit price: {limit_price}")
                     
-                    print(f"[BINANCE] Sending order with params: {order_params}")
+                    logger.debug(f"[BINANCE] Sending order with params: {order_params}")
                     response = self.client.futures_create_order(**order_params)
-                    print(f"[BINANCE] Order response: {response}")
+                    logger.debug(f"[BINANCE] Order response: {response}")
                     
                     if response and response.get('orderId'):
                         close_price = float(order_params.get('price', ticker['last']))
@@ -475,7 +478,7 @@ class BinanceExchange(BaseExchange):
                         })
                     
                 except Exception as e:
-                    print(f"[BINANCE] Error closing position for {symbol}: {str(e)}")
+                    logger.error(f"[BINANCE] Error closing position for {symbol}: {str(e)}")
                     results.append({
                         'symbol': symbol,
                         'success': False,
@@ -485,8 +488,8 @@ class BinanceExchange(BaseExchange):
             return results
             
         except Exception as e:
-            print(f"[BINANCE] Error in close_positions: {str(e)}")
-            print(f"[BINANCE] Traceback: {traceback.format_exc()}")
+            logger.error(f"[BINANCE] Error in close_positions: {str(e)}")
+            logger.error(f"[BINANCE] Traceback: {traceback.format_exc()}")
             return [{
                 'symbol': position['symbol'],
                 'success': False,
@@ -495,7 +498,7 @@ class BinanceExchange(BaseExchange):
 
     def get_chart_data(self, symbol, timeframe='1h', period='1w'):
         try:
-            print(f"[BINANCE] Запрос данных для {symbol}, таймфрейм: {timeframe}, период: {period}")
+            logger.debug(f"[BINANCE] Запрос данных для {symbol}, таймфрейм: {timeframe}, период: {period}")
             
             # Специальная обработка для таймфрейма "all"
             if timeframe == 'all':
@@ -517,7 +520,7 @@ class BinanceExchange(BaseExchange):
                 
                 for interval, interval_name in intervals:
                     try:
-                        print(f"[BINANCE] Пробуем интервал {interval_name}")
+                        logger.debug(f"[BINANCE] Пробуем интервал {interval_name}")
                         klines = self.client.futures_klines(
                             symbol=f"{symbol}USDT",
                             interval=interval,
@@ -527,16 +530,16 @@ class BinanceExchange(BaseExchange):
                         if len(klines) <= 500:
                             selected_interval = interval
                             selected_klines = klines
-                            print(f"[BINANCE] Выбран интервал {interval_name} ({len(klines)} свечей)")
+                            logger.debug(f"[BINANCE] Выбран интервал {interval_name} ({len(klines)} свечей)")
                             break
                         
                         # Если это последний интервал, используем его независимо от количества свечей
                         if interval == Client.KLINE_INTERVAL_1MONTH:
                             selected_interval = interval
                             selected_klines = klines
-                            print(f"[BINANCE] Использован последний интервал {interval_name} ({len(klines)} свечей)")
+                            logger.debug(f"[BINANCE] Использован последний интервал {interval_name} ({len(klines)} свечей)")
                     except Exception as e:
-                        print(f"[BINANCE] Ошибка при получении данных для интервала {interval_name}: {e}")
+                        logger.error(f"[BINANCE] Ошибка при получении данных для интервала {interval_name}: {e}")
                         continue
                 
                 if selected_interval and selected_klines:
@@ -558,7 +561,7 @@ class BinanceExchange(BaseExchange):
                 
                 interval = timeframe_map.get(timeframe)
                 if not interval:
-                    print(f"[BINANCE] Неподдерживаемый таймфрейм: {timeframe}")
+                    logger.warning(f"[BINANCE] Неподдерживаемый таймфрейм: {timeframe}")
                     return {
                         'success': False,
                         'error': f'Неподдерживаемый таймфрейм: {timeframe}'
@@ -570,9 +573,9 @@ class BinanceExchange(BaseExchange):
                     limit=1000
                 )
 
-            print(f"[BINANCE] Получено {len(klines)} свечей")
+            logger.debug(f"[BINANCE] Получено {len(klines)} свечей")
             if klines:
-                print(f"[BINANCE] Пример первой свечи: {klines[0]}")
+                logger.debug(f"[BINANCE] Пример первой свечи: {klines[0]}")
             
             # Преобразуем данные в формат свечей
             candles = []
@@ -597,12 +600,12 @@ class BinanceExchange(BaseExchange):
                 }
             }
             
-            print(f"[BINANCE] Подготовлен ответ с {len(candles)} свечами")
+            logger.debug(f"[BINANCE] Подготовлен ответ с {len(candles)} свечами")
             return result
             
         except Exception as e:
-            print(f"[BINANCE] Ошибка получения данных графика: {e}")
-            print(f"[BINANCE] Полный traceback: {traceback.format_exc()}")
+            logger.error(f"[BINANCE] Ошибка получения данных графика: {e}")
+            logger.error(f"[BINANCE] Полный traceback: {traceback.format_exc()}")
             return {
                 'success': False,
                 'error': str(e)
@@ -619,7 +622,7 @@ class BinanceExchange(BaseExchange):
             dict: Значения индикаторов
         """
         try:
-            print(f"[BINANCE] Запрос индикаторов для {symbol}, таймфрейм: {timeframe}")
+            logger.debug(f"[BINANCE] Запрос индикаторов для {symbol}, таймфрейм: {timeframe}")
             
             # Конвертируем таймфрейм в формат Binance
             timeframe_map = {
@@ -635,7 +638,7 @@ class BinanceExchange(BaseExchange):
             
             interval = timeframe_map.get(timeframe)
             if not interval:
-                print(f"[BINANCE] Неподдерживаемый таймфрейм: {timeframe}")
+                logger.warning(f"[BINANCE] Неподдерживаемый таймфрейм: {timeframe}")
                 return {
                     'success': False,
                     'error': f'Неподдерживаемый таймфрейм: {timeframe}'
@@ -745,7 +748,7 @@ class BinanceExchange(BaseExchange):
             }
 
         except Exception as e:
-            print(f"[BINANCE] Ошибка при расчете индикаторов: {str(e)}")
+            logger.error(f"[BINANCE] Ошибка при расчете индикаторов: {str(e)}")
             return {
                 'success': False,
                 'error': str(e)
@@ -978,7 +981,7 @@ class BinanceExchange(BaseExchange):
             }
             
         except Exception as e:
-            print(f"[BINANCE] Error getting wallet balance: {str(e)}")
+            logger.error(f"[BINANCE] Error getting wallet balance: {str(e)}")
             return {
                 'total_balance': 0.0,
                 'available_balance': 0.0,
