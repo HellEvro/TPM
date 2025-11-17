@@ -6049,7 +6049,11 @@ class BotsManager {
         
         if (limitOrdersEnabledEl) {
             const isEnabled = autoBotConfig.limit_orders_entry_enabled || false;
+            // ✅ Устанавливаем значение БЕЗ триггера события change (чтобы не сработало автосохранение)
+            // Используем прямую установку свойства, а не событие
             limitOrdersEnabledEl.checked = isEnabled;
+            
+            // ✅ Вручную обновляем UI без триггера события change
             const configDiv = document.getElementById('limitOrdersConfig');
             if (configDiv) {
                 configDiv.style.display = isEnabled ? 'block' : 'none';
@@ -6067,6 +6071,14 @@ class BotsManager {
                 limitPositionModeEl.style.cursor = isEnabled ? 'not-allowed' : 'pointer';
             }
             
+            // ✅ Обновляем состояние кнопки "По умолчанию"
+            const resetBtn = document.getElementById('resetLimitOrdersBtn');
+            if (resetBtn) {
+                resetBtn.disabled = !isEnabled;
+                resetBtn.style.opacity = isEnabled ? '1' : '0.5';
+                resetBtn.style.cursor = isEnabled ? 'pointer' : 'not-allowed';
+            }
+            
             console.log('[BotsManager] 📊 Набор позиций лимитными ордерами:', isEnabled);
         }
         
@@ -6075,11 +6087,26 @@ class BotsManager {
         const marginAmounts = autoBotConfig.limit_orders_margin_amounts || [0.2, 0.3, 0.5, 1, 2];
         const listEl = document.getElementById('limitOrdersList');
         if (listEl) {
-            // Инициализируем UI перед загрузкой данных
+            // ✅ Инициализируем UI ПЕРЕД загрузкой данных, но ПОСЛЕ установки значения toggle
+            // Это гарантирует, что обработчики установлены, но не перезаписывают значение
             try {
                 this.initializeLimitOrdersUI();
             } catch (e) {
                 console.warn('[BotsManager] ⚠️ Ошибка инициализации UI лимитных ордеров:', e);
+            }
+            
+            // ✅ Убеждаемся, что значение toggle не изменилось после инициализации UI
+            if (limitOrdersEnabledEl) {
+                const currentEnabled = limitOrdersEnabledEl.checked;
+                const shouldBeEnabled = autoBotConfig.limit_orders_entry_enabled || false;
+                if (currentEnabled !== shouldBeEnabled) {
+                    // Если значение изменилось, восстанавливаем его
+                    limitOrdersEnabledEl.checked = shouldBeEnabled;
+                    const configDiv = document.getElementById('limitOrdersConfig');
+                    if (configDiv) {
+                        configDiv.style.display = shouldBeEnabled ? 'block' : 'none';
+                    }
+                }
             }
             
             listEl.innerHTML = ''; // Очищаем список
@@ -6373,6 +6400,8 @@ class BotsManager {
                     const percent = parseFloat(percentEl.value);
                     if (!isNaN(percent)) {
                         percentSteps.push(percent);
+                    } else {
+                        percentSteps.push(0); // Добавляем 0 если значение невалидно
                     }
                 }
                 
@@ -6380,16 +6409,15 @@ class BotsManager {
                     const margin = parseFloat(marginEl.value);
                     if (!isNaN(margin)) {
                         marginAmounts.push(margin);
+                    } else {
+                        marginAmounts.push(0); // Добавляем 0 если значение невалидно
                     }
                 }
             });
             
-            // Применяем только если есть изменения
-            const originalPercentSteps = this.originalConfig?.autoBot?.limit_orders_percent_steps || [];
-            const originalMarginAmounts = this.originalConfig?.autoBot?.limit_orders_margin_amounts || [];
-            
-            if (JSON.stringify(percentSteps) !== JSON.stringify(originalPercentSteps) ||
-                JSON.stringify(marginAmounts) !== JSON.stringify(originalMarginAmounts)) {
+            // ✅ ВСЕГДА обновляем значения лимитных ордеров (для автосохранения)
+            // Это гарантирует, что изменения сохраняются даже если originalConfig не обновлен
+            if (percentSteps.length > 0 || marginAmounts.length > 0) {
                 autoBotConfig.limit_orders_percent_steps = percentSteps;
                 autoBotConfig.limit_orders_margin_amounts = marginAmounts;
                 console.log('[BotsManager] 🔄 Обновлены настройки лимитных ордеров:', { percentSteps, marginAmounts });
@@ -7697,6 +7725,18 @@ class BotsManager {
         
         // Добавляем обработчики для всех полей
         this.addAutoSaveHandlers(allInputs);
+        
+        // ✅ Явно добавляем обработчик для toggle лимитных ордеров (может не попасть в querySelectorAll)
+        const limitOrdersToggle = document.getElementById('limitOrdersEntryEnabled');
+        if (limitOrdersToggle && !limitOrdersToggle.hasAttribute('data-autosave-initialized')) {
+            limitOrdersToggle.setAttribute('data-autosave-initialized', 'true');
+            limitOrdersToggle.addEventListener('change', () => {
+                if (!this.isProgrammaticChange) {
+                    this.scheduleAutoSave();
+                }
+            });
+            console.log('[BotsManager] ✅ Обработчик автосохранения добавлен для toggle лимитных ордеров');
+        }
     }
     
     /**
@@ -10143,7 +10183,16 @@ class BotsManager {
     
     initializeLimitOrdersUI() {
         try {
+            // ✅ Защита от повторной инициализации
             const toggleEl = document.getElementById('limitOrdersEntryEnabled');
+            if (!toggleEl) return;
+            
+            // Проверяем, не инициализирован ли уже обработчик
+            if (toggleEl.hasAttribute('data-limit-orders-ui-initialized')) {
+                return; // Уже инициализирован
+            }
+            toggleEl.setAttribute('data-limit-orders-ui-initialized', 'true');
+            
             const configDiv = document.getElementById('limitOrdersConfig');
             const addBtn = document.getElementById('addLimitOrderBtn');
             const positionSizeEl = document.getElementById('defaultPositionSize');
@@ -10186,6 +10235,11 @@ class BotsManager {
             };
             
             toggleEl.addEventListener('change', () => {
+                // ✅ Пропускаем обработку, если это программное изменение (при загрузке конфигурации)
+                if (this.isProgrammaticChange) {
+                    return;
+                }
+                
                 const isEnabled = toggleEl.checked;
                 updateUIState(isEnabled);
                 
@@ -10199,14 +10253,20 @@ class BotsManager {
                 }
             });
             
-            // Инициализируем состояние при загрузке
-            updateUIState(toggleEl.checked);
+            // ✅ Инициализируем состояние при загрузке БЕЗ триггера события change
+            // Просто обновляем UI визуально, не меняя значение toggle
+            const currentChecked = toggleEl.checked;
+            updateUIState(currentChecked);
             
             // Обработчик кнопки добавления
             if (addBtn) {
                 addBtn.addEventListener('click', () => {
                     try {
                         this.addLimitOrderRow();
+                        // ✅ Триггерим автосохранение при добавлении строки
+                        if (!this.isProgrammaticChange) {
+                            this.scheduleAutoSave();
+                        }
                     } catch (e) {
                         console.error('[BotsManager] ❌ Ошибка добавления строки лимитного ордера:', e);
                     }
@@ -10247,10 +10307,18 @@ class BotsManager {
             // Не удаляем, если это последняя строка - оставляем хотя бы одну
             if (listEl && listEl.children.length > 1) {
                 row.remove();
+                // ✅ Триггерим автосохранение при удалении строки
+                if (!this.isProgrammaticChange) {
+                    this.scheduleAutoSave();
+                }
             } else {
                 // Если это последняя строка, просто очищаем значения
                 row.querySelector('.limit-order-percent').value = 0;
                 row.querySelector('.limit-order-margin').value = 0;
+                // ✅ Триггерим автосохранение при очистке значений последней строки
+                if (!this.isProgrammaticChange) {
+                    this.scheduleAutoSave();
+                }
             }
         });
         
