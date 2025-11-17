@@ -476,7 +476,8 @@ def setup_color_logging(console_log_levels=None):
     if has_our_handler:
         return logger
     
-    # Удаляем только старые консольные обработчики БЕЗ нашего фильтра
+    # КРИТИЧНО: Удаляем ВСЕ консольные обработчики БЕЗ нашего фильтра из ВСЕХ логгеров
+    # Это нужно, чтобы гарантировать, что все логи проходят через наш фильтр
     for handler in logger.handlers[:]:
         if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
             # Проверяем, есть ли наш фильтр
@@ -484,9 +485,17 @@ def setup_color_logging(console_log_levels=None):
             if not has_our_filter:
                 logger.removeHandler(handler)
     
-    # Убеждаемся, что все логгеры пропагируют в корневой
+    # КРИТИЧНО: Удаляем консольные обработчики из ВСЕХ существующих логгеров
+    # Это гарантирует, что все логи идут через корневой логгер с нашим фильтром
     for existing_logger_name in logging.Logger.manager.loggerDict:
         existing_logger = logging.getLogger(existing_logger_name)
+        # Удаляем все StreamHandler'ы без нашего фильтра
+        for handler in existing_logger.handlers[:]:
+            if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
+                has_our_filter = any(isinstance(f, LogLevelFilter) for f in handler.filters)
+                if not has_our_filter:
+                    existing_logger.removeHandler(handler)
+        # Убеждаемся, что все логгеры пропагируют в корневой
         existing_logger.propagate = True
         existing_logger.setLevel(logging.DEBUG)
     

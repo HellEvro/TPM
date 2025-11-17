@@ -37,7 +37,7 @@ class AIParameterTracker:
         # Вычисляем общее количество возможных комбинаций
         self.total_combinations = self._calculate_total_combinations()
         
-        logger.debug(f"📊 Загружено {len(self.used_params)} использованных комбинаций из {self.total_combinations} возможных")
+        # Убрано: logger.debug(f"📊 Загружено {len(self.used_params)} использованных комбинаций из {self.total_combinations} возможных") - слишком шумно
     
     def _load_used_params(self) -> Dict:
         """Загрузить использованные параметры из файла"""

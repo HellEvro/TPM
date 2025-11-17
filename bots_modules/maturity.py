@@ -140,7 +140,7 @@ def load_mature_coins_storage(expected_coins_count=None):
                     with ig_module.mature_coins_lock:
                         ig_module.mature_coins_storage.clear()
                         ig_module.mature_coins_storage.update(loaded_data)
-                    logger.debug(f" ✅ Обновлена глобальная копия в imports_and_globals")
+                    # Убрано: logger.debug(f" ✅ Обновлена глобальная копия в imports_and_globals") - слишком шумно
             except Exception as sync_error:
                 logger.warning(f" ⚠️ Не удалось синхронизировать с imports_and_globals: {sync_error}")
             
