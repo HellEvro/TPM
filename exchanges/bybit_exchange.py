@@ -199,7 +199,7 @@ class BybitExchange(BaseExchange):
                                 break
                                 
                         except (ConnectionError, IncompleteRead, RemoteDisconnected, requests.exceptions.ConnectionError) as e:
-                            print("Connection error on attempt {}: {}".format(attempt + 1, str(e)))
+                            logger.error("Connection error on attempt {}: {}".format(attempt + 1, str(e)))
                             if attempt < retries - 1:
                                 time.sleep(retry_delay)
                                 continue
@@ -269,7 +269,7 @@ class BybitExchange(BaseExchange):
                     
                 except Exception as e:
                     if attempt < retries - 1:
-                        print("Attempt {} failed: {}, retrying in {} seconds...".format(attempt + 1, str(e), retry_delay))
+                        logger.warning("Attempt {} failed: {}, retrying in {} seconds...".format(attempt + 1, str(e), retry_delay))
                         time.sleep(retry_delay)
                         continue
                     raise
@@ -359,7 +359,7 @@ class BybitExchange(BaseExchange):
                 return [float(k[4]) for k in response['result']['list']]  # Берем цены закрытия
             return []
         except Exception as e:
-            print(f"Error getting chart data for {symbol}: {e}")
+            logger.error(f"Error getting chart data for {symbol}: {e}")
             return []
 
     def get_sma200_position(self, symbol):
@@ -386,14 +386,14 @@ class BybitExchange(BaseExchange):
                 return None
                 
             except (ConnectionError, IncompleteRead, RemoteDisconnected, requests.exceptions.ConnectionError) as e:
-                print(f"Error getting SMA200 for {symbol}: {e}")
+                logger.error(f"Error getting SMA200 for {symbol}: {e}")
                 if attempt < retries - 1:
                     time.sleep(retry_delay)
                     continue
                 return None
                 
             except Exception as e:
-                print(f"Error getting SMA200 for {symbol}: {e}")
+                logger.error(f"Error getting SMA200 for {symbol}: {e}")
                 return None
 
     @with_timeout(10)  # 10 секунд таймаут для получения тикера
@@ -446,11 +446,11 @@ class BybitExchange(BaseExchange):
                     result['minNotionalValue'] = float(instrument['lotSizeFilter']['minNotionalValue'])
                 return result
             else:
-                print(f"[BYBIT] ❌ Не удалось получить информацию об инструменте {symbol}")
+                logger.warning(f"[BYBIT] ❌ Не удалось получить информацию об инструменте {symbol}")
                 return {}
                 
         except Exception as e:
-            print(f"[BYBIT] ❌ Ошибка получения информации об инструменте {symbol}: {e}")
+            logger.error(f"[BYBIT] ❌ Ошибка получения информации об инструменте {symbol}: {e}")
             return {}
     
     def get_instrument_status(self, symbol):
@@ -506,7 +506,7 @@ class BybitExchange(BaseExchange):
 
     def close_position(self, symbol, size, side, order_type="Limit"):
         try:
-            print(f"[BYBIT] Закрытие позиции {symbol}, объём: {size}, сторона: {side}, тип: {order_type}")
+            logger.info(f"[BYBIT] Закрытие позиции {symbol}, объём: {size}, сторона: {side}, тип: {order_type}")
             
             # Проверяем существование активной позиции
             try:
@@ -525,9 +525,9 @@ class BybitExchange(BaseExchange):
                 active_position = None
                 
                 # ✅ КРИТИЧНО: Логируем все позиции для отладки
-                print(f"[BYBIT] DEBUG: Получено позиций: {len(positions)}")
+                logger.debug(f"[BYBIT] DEBUG: Получено позиций: {len(positions)}")
                 for pos in positions:
-                    print(f"[BYBIT] DEBUG: Позиция: symbol={pos.get('symbol')}, side={pos.get('side')}, size={pos.get('size')}")
+                    logger.debug(f"[BYBIT] DEBUG: Позиция: symbol={pos.get('symbol')}, side={pos.get('side')}, size={pos.get('size')}")
                 
                 # Ищем позицию с нужной стороной
                 # ✅ Нормализуем side (принимаем и 'Long', и 'LONG')
@@ -536,16 +536,16 @@ class BybitExchange(BaseExchange):
                 for pos in positions:
                     pos_side = 'Long' if pos['side'] == 'Buy' else 'Short'
                     pos_size = abs(float(pos['size']))
-                    print(f"[BYBIT] DEBUG: Проверка: pos_side={pos_side}, normalized_side={normalized_side}, pos_size={pos_size}")
+                    logger.debug(f"[BYBIT] DEBUG: Проверка: pos_side={pos_side}, normalized_side={normalized_side}, pos_size={pos_size}")
                     
                     if pos_size > 0 and pos_side == normalized_side:
                         active_position = pos
-                        print(f"[BYBIT] DEBUG: ✅ Найдена позиция: {active_position.get('symbol')}, size={active_position.get('size')}")
+                        logger.debug(f"[BYBIT] DEBUG: ✅ Найдена позиция: {active_position.get('symbol')}, size={active_position.get('size')}")
                         break
                 
                 if not active_position:
                     # ✅ Детальное логирование для отладки
-                    print(f"[BYBIT] DEBUG: ❌ Позиция не найдена! Искали: side={normalized_side} (было {side}), symbol={symbol}USDT")
+                    logger.debug(f"[BYBIT] DEBUG: ❌ Позиция не найдена! Искали: side={normalized_side} (было {side}), symbol={symbol}USDT")
                     return {
                         'success': False,
                         'message': f'Нет активной {side} позиции для {symbol}'
@@ -555,7 +555,7 @@ class BybitExchange(BaseExchange):
                 # print(f"[BYBIT] Found active position: {active_position}")
                 
             except Exception as e:
-                print(f"[BYBIT] Ошибка при проверке позиций: {str(e)}")
+                logger.error(f"[BYBIT] Ошибка при проверке позиций: {str(e)}")
                 return {
                     'success': False,
                     'message': f'Ошибка при проверке позиций: {str(e)}'
@@ -592,11 +592,11 @@ class BybitExchange(BaseExchange):
                 # round(0.005, 2) = 0.00 ❌ → round(0.005, 6) = 0.005 ✅
                 order_params["price"] = str(round(limit_price, 6))
                 order_params["timeInForce"] = "GTC"
-                print(f"[BYBIT] Calculated limit price: {limit_price} → rounded: {round(limit_price, 6)}")
+                logger.debug(f"[BYBIT] Calculated limit price: {limit_price} → rounded: {round(limit_price, 6)}")
             
-            print(f"[BYBIT] Sending order with params: {order_params}")
+            logger.debug(f"[BYBIT] Sending order with params: {order_params}")
             response = self.client.place_order(**order_params)
-            print(f"[BYBIT] Order response: {response}")
+            logger.debug(f"[BYBIT] Order response: {response}")
             
             if response['retCode'] == 0:
                 close_price = float(order_params.get('price', ticker['last']))
@@ -613,9 +613,9 @@ class BybitExchange(BaseExchange):
                 }
                 
         except Exception as e:
-            print(f"[BYBIT] Ошибка при закрытии позиции: {str(e)}")
+            logger.error(f"[BYBIT] Ошибка при закрытии позиции: {str(e)}")
             import traceback
-            print(f"[BYBIT] Трейсбек: {traceback.format_exc()}")
+            logger.error(f"[BYBIT] Трейсбек: {traceback.format_exc()}")
             return {
                 'success': False,
                 'message': f"Ошибка при закрытии позиции: {str(e)}"
@@ -704,7 +704,7 @@ class BybitExchange(BaseExchange):
                 
                 for interval, interval_name in intervals:
                     try:
-                        print(f"[BYBIT] Пробуем интервал {interval_name}")
+                        logger.debug(f"[BYBIT] Пробуем интервал {interval_name}")
                         # Убираем USDT если он уже есть в символе
                         clean_sym = symbol.replace('USDT', '') if symbol.endswith('USDT') else symbol
                         
@@ -777,16 +777,16 @@ class BybitExchange(BaseExchange):
                             if len(klines) <= 500:
                                 selected_interval = interval
                                 selected_klines = klines
-                                print(f"[BYBIT] Выбран интервал {interval_name} ({len(klines)} свечей)")
+                                logger.debug(f"[BYBIT] Выбран интервал {interval_name} ({len(klines)} свечей)")
                                 break
                             
                             # Если это последний интервал, используем его независимо от количества свечей
                             if interval == 'W':
                                 selected_interval = interval
                                 selected_klines = klines
-                                print(f"[BYBIT] Использован последний интервал {interval_name} ({len(klines)} свечей)")
+                                logger.debug(f"[BYBIT] Использован последний интервал {interval_name} ({len(klines)} свечей)")
                     except Exception as e:
-                        print(f"[BYBIT] Ошибка при получении данных для интервала {interval_name}: {e}")
+                        logger.error(f"[BYBIT] Ошибка при получении данных для интервала {interval_name}: {e}")
                         continue
                 
                 if selected_interval and selected_klines:
@@ -833,7 +833,7 @@ class BybitExchange(BaseExchange):
                 
                 interval = timeframe_map.get(timeframe)
                 if not interval:
-                    print(f"[BYBIT] Неподдерживаемый таймфрейм: {timeframe}")
+                    logger.warning(f"[BYBIT] Неподдерживаемый таймфрейм: {timeframe}")
                     return {
                         'success': False,
                         'error': f'Неподдерживаемый таймфрейм: {timeframe}'
@@ -947,7 +947,7 @@ class BybitExchange(BaseExchange):
                 }
             
         except Exception as e:
-            print(f"[BYBIT] Ошибка получения данных графика: {e}")
+            logger.error(f"[BYBIT] Ошибка получения данных графика: {e}")
             return {
                 'success': False,
                 'error': str(e)
@@ -964,7 +964,7 @@ class BybitExchange(BaseExchange):
             dict: Значения индикаторов
         """
         try:
-            print(f"[BYBIT] Запрос индикаторов для {symbol}, таймфрейм: {timeframe}")
+            logger.debug(f"[BYBIT] Запрос индикаторов для {symbol}, таймфрейм: {timeframe}")
             
             # Конвертируем таймфрейм в формат Bybit
             timeframe_map = {
@@ -980,7 +980,7 @@ class BybitExchange(BaseExchange):
             
             interval = timeframe_map.get(timeframe)
             if not interval:
-                print(f"[BYBIT] Неподдерживаемый таймфрейм: {timeframe}")
+                logger.warning(f"[BYBIT] Неподдерживаемый таймфрейм: {timeframe}")
                 return {
                     'success': False,
                     'error': f'Неподдерживаемый таймфрейм: {timeframe}'
@@ -1100,7 +1100,7 @@ class BybitExchange(BaseExchange):
             }
 
         except Exception as e:
-            print(f"[BYBIT] Ошибка при расчете индикаторов: {str(e)}")
+            logger.error(f"[BYBIT] Ошибка при расчете индикаторов: {str(e)}")
             return {
                 'success': False,
                 'error': str(e)
@@ -1314,7 +1314,7 @@ class BybitExchange(BaseExchange):
             }
             
         except Exception as e:
-            print(f"Error getting wallet balance: {str(e)}")
+            logger.error(f"Error getting wallet balance: {str(e)}")
             return {
                 'total_balance': 0.0,
                 'available_balance': 0.0,
@@ -1413,7 +1413,7 @@ class BybitExchange(BaseExchange):
         """
         try:
             unit_label = "USDT" if quantity_is_usdt else "coins"
-            print(f"[BYBIT_BOT] Размещение ордера: {symbol} {side} {quantity} {unit_label} ({order_type})")
+            logger.info(f"[BYBIT_BOT] Размещение ордера: {symbol} {side} {quantity} {unit_label} ({order_type})")
             
             # ✅ КРИТИЧНО: Получаем АКТУАЛЬНУЮ цену с биржи ПЕРЕД расчетом ордера!
             # Цена нужна всегда, чтобы правильно рассчитать количество монет и округление
@@ -1423,14 +1423,14 @@ class BybitExchange(BaseExchange):
                 if ticker.get('retCode') == 0 and ticker.get('result', {}).get('list'):
                     current_price = float(ticker['result']['list'][0].get('lastPrice', 0))
                     if current_price and current_price > 0:
-                        print(f"[BYBIT_BOT] 📊 Текущая цена {symbol}: {current_price}")
+                        logger.debug(f"[BYBIT_BOT] 📊 Текущая цена {symbol}: {current_price}")
                     else:
                         raise ValueError("Получена некорректная цена (0 или отрицательная)")
                 else:
                     raise ValueError(f"Ошибка API: {ticker.get('retMsg', 'Unknown error')}")
             except Exception as e:
                 error_msg = f"❌ Не удалось получить актуальную цену с биржи для {symbol}: {e}"
-                print(f"[BYBIT_BOT] {error_msg}")
+                logger.error(f"[BYBIT_BOT] {error_msg}")
                 return {
                     'success': False,
                     'message': error_msg
@@ -1439,7 +1439,7 @@ class BybitExchange(BaseExchange):
             # Проверяем что цена получена и валидна
             if not current_price or current_price <= 0:
                 error_msg = f"❌ Некорректная цена {symbol}: {current_price}"
-                print(f"[BYBIT_BOT] {error_msg}")
+                logger.error(f"[BYBIT_BOT] {error_msg}")
                 return {
                     'success': False,
                     'message': error_msg
@@ -1490,9 +1490,9 @@ class BybitExchange(BaseExchange):
                     if min_order_qty:
                         min_order_qty = float(min_order_qty)
                         
-                    print(f"[BYBIT_BOT] 📊 {symbol}: minNotionalValue={min_notional_value} USDT, minOrderQty={min_order_qty}, qtyStep={qty_step}")
+                    logger.debug(f"[BYBIT_BOT] 📊 {symbol}: minNotionalValue={min_notional_value} USDT, minOrderQty={min_order_qty}, qtyStep={qty_step}")
             except Exception as e:
-                print(f"[BYBIT_BOT] ⚠️ Не удалось получить информацию об инструменте: {e}")
+                logger.warning(f"[BYBIT_BOT] ⚠️ Не удалось получить информацию об инструменте: {e}")
             
             # ✅ Получаем ТЕКУЩЕЕ плечо для монеты из настроек биржи
             current_leverage = None
@@ -1504,41 +1504,41 @@ class BybitExchange(BaseExchange):
                     pos_list = pos_response['result']['list']
                     if pos_list:
                         current_leverage = float(pos_list[0].get('leverage', 10))
-                        print(f"[BYBIT_BOT] 📊 {symbol}: Плечо с биржи: {current_leverage}x")
+                        logger.debug(f"[BYBIT_BOT] 📊 {symbol}: Плечо с биржи: {current_leverage}x")
             except Exception as e:
-                print(f"[BYBIT_BOT] ⚠️ Не удалось получить текущее плечо: {e}")
+                logger.warning(f"[BYBIT_BOT] ⚠️ Не удалось получить текущее плечо: {e}")
             
             # Если не удалось - используем дефолтное 10x (НО ЭТО НЕ ДОЛЖНО БЫТЬ!)
             if not current_leverage:
                 current_leverage = 10.0
-                print(f"[BYBIT_BOT] ⚠️ {symbol}: FALLBACK - используем дефолтное плечо: {current_leverage}x")
+                logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: FALLBACK - используем дефолтное плечо: {current_leverage}x")
             
             qty_in_coins = None
             requested_qty_usdt = None
             if quantity_is_usdt:
                 requested_qty_usdt = float(quantity)
-                print(f"[BYBIT_BOT] 🎯 {symbol}: Запрошенная сумма из конфига: {requested_qty_usdt} USDT")
+                logger.debug(f"[BYBIT_BOT] 🎯 {symbol}: Запрошенная сумма из конфига: {requested_qty_usdt} USDT")
             else:
                 qty_in_coins = float(quantity)
                 requested_qty_usdt = qty_in_coins * current_price
-                print(f"[BYBIT_BOT] 🎯 {symbol}: Запрошено {qty_in_coins} монет (~{requested_qty_usdt:.4f} USDT)")
+                logger.debug(f"[BYBIT_BOT] 🎯 {symbol}: Запрошено {qty_in_coins} монет (~{requested_qty_usdt:.4f} USDT)")
             
             # Рассчитываем количество МОНЕТ с учетом кратности qtyStep и minOrderQty
             # Затем передаем монеты в Bybit - он САМ применит плечо!
             if qty_step and current_price and min_order_qty:
                 # ✅ ШАГ 1: Считаем сколько МОНЕТ нужно
                 requested_coins = requested_qty_usdt / current_price if quantity_is_usdt else qty_in_coins
-                print(f"[BYBIT_BOT] 🔍 {symbol}: Исходное количество монет: {requested_coins:.2f}")
+                logger.debug(f"[BYBIT_BOT] 🔍 {symbol}: Исходное количество монет: {requested_coins:.2f}")
                 
                 # ✅ ШАГ 2: Округляем монеты вверх до qtyStep
                 rounded_coins = math.ceil(requested_coins / qty_step) * qty_step
-                print(f"[BYBIT_BOT] 🔍 {symbol}: Округлили {requested_coins:.2f} до {rounded_coins} монет (кратно {qty_step})")
+                logger.debug(f"[BYBIT_BOT] 🔍 {symbol}: Округлили {requested_coins:.2f} до {rounded_coins} монет (кратно {qty_step})")
                 
                 # ✅ ШАГ 3: Проверяем minOrderQty - если меньше, берем minOrderQty
                 min_coins_for_qty = math.ceil(min_order_qty / qty_step) * qty_step
                 if rounded_coins < min_coins_for_qty:
                     rounded_coins = min_coins_for_qty
-                    print(f"[BYBIT_BOT] ⚠️ {symbol}: Меньше minOrderQty={min_order_qty}, увеличили до {rounded_coins} монет")
+                    logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: Меньше minOrderQty={min_order_qty}, увеличили до {rounded_coins} монет")
                 
                 # ✅ ШАГ 4: Проверяем minNotionalValue (по номинальной стоимости!)
                 nominal_usdt = rounded_coins * current_price
@@ -1547,15 +1547,15 @@ class BybitExchange(BaseExchange):
                     # Если получилось меньше minNotional - увеличиваем монеты
                     min_coins_for_notional = math.ceil(min_usdt_from_notional / current_price / qty_step) * qty_step
                     rounded_coins = min_coins_for_notional
-                    print(f"[BYBIT_BOT] ⚠️ {symbol}: Меньше minNotionalValue={min_usdt_from_notional}, увеличили до {rounded_coins} монет")
+                    logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: Меньше minNotionalValue={min_usdt_from_notional}, увеличили до {rounded_coins} монет")
                 
                 qty_in_coins = rounded_coins
-                print(f"[BYBIT_BOT] 💰 {symbol}: ФИНАЛЬНО: {qty_in_coins} монет @ {current_price:.8f} (кратно {qty_step})")
+                logger.debug(f"[BYBIT_BOT] 💰 {symbol}: ФИНАЛЬНО: {qty_in_coins} монет @ {current_price:.8f} (кратно {qty_step})")
             else:
                 # Fallback если нет данных об инструменте
                 # Просто пересчитываем USDT в монеты
                 qty_in_coins = requested_qty_usdt / current_price if current_price else 0
-                print(f"[BYBIT_BOT] 💰 {symbol}: Fallback: {qty_in_coins:.2f} монет")
+                logger.debug(f"[BYBIT_BOT] 💰 {symbol}: Fallback: {qty_in_coins:.2f} монет")
             
             # ✅ Передаем количество МОНЕТ без marketUnit='quoteCoin'!
             # Bybit САМ применит плечо при размещении ордера!
@@ -1571,8 +1571,8 @@ class BybitExchange(BaseExchange):
                 "positionIdx": position_idx
             }
             
-            print(f"[BYBIT_BOT] 🎯 {symbol}: order_params={order_params}")
-            print(f"[BYBIT_BOT] 🔍 {symbol}: ДЕТАЛИ: qty='{qty_coins_str}' монет, orderType='{order_type.title()}'")
+            logger.debug(f"[BYBIT_BOT] 🎯 {symbol}: order_params={order_params}")
+            logger.debug(f"[BYBIT_BOT] 🔍 {symbol}: ДЕТАЛИ: qty='{qty_coins_str}' монет, orderType='{order_type.title()}'")
             
             # ⚠️ НЕ добавляем leverage в order_params - Bybit не поддерживает это при размещении ордера!
             # Плечо должно быть установлено ВРУЧНУЮ в настройках аккаунта на бирже
@@ -1594,37 +1594,37 @@ class BybitExchange(BaseExchange):
             if take_profit is not None and take_profit > 0:
                 # Bybit API: takeProfit принимает абсолютную цену (НЕ процент!)
                 order_params["takeProfit"] = str(round(take_profit, 6))
-                print(f"[BYBIT_BOT] 🎯 Take Profit установлен: {take_profit:.6f} (цена)")
+                logger.debug(f"[BYBIT_BOT] 🎯 Take Profit установлен: {take_profit:.6f} (цена)")
             
             # 🛑 Добавляем Stop Loss если указан
             if stop_loss is not None and stop_loss > 0:
                 # Bybit API: stopLoss принимает абсолютную цену (НЕ процент!)
                 order_params["stopLoss"] = str(round(stop_loss, 6))
-                print(f"[BYBIT_BOT] 🛑 Stop Loss установлен: {stop_loss:.6f} (цена)")
+                logger.debug(f"[BYBIT_BOT] 🛑 Stop Loss установлен: {stop_loss:.6f} (цена)")
             
-            print(f"[BYBIT_BOT] Параметры ордера: {order_params}")
+            logger.debug(f"[BYBIT_BOT] Параметры ордера: {order_params}")
             
             # Размещаем ордер
-            print(f"[BYBIT_BOT] 🔍 {symbol}: ОТПРАВЛЯЕМ ЗАПРОС в Bybit API...")
+            logger.debug(f"[BYBIT_BOT] 🔍 {symbol}: ОТПРАВЛЯЕМ ЗАПРОС в Bybit API...")
             try:
                 response = self.client.place_order(**order_params)
-                print(f"[BYBIT_BOT] ✅ {symbol}: ПОЛУЧЕН ОТВЕТ от Bybit API: retCode={response.get('retCode')}, retMsg={response.get('retMsg')}")
-                print(f"[BYBIT_BOT] 📊 {symbol}: Полный ответ: {response}")
+                logger.debug(f"[BYBIT_BOT] ✅ {symbol}: ПОЛУЧЕН ОТВЕТ от Bybit API: retCode={response.get('retCode')}, retMsg={response.get('retMsg')}")
+                logger.debug(f"[BYBIT_BOT] 📊 {symbol}: Полный ответ: {response}")
             except Exception as api_error:
                 # Pybit бросает исключение при retCode != 0, но ответ может быть в ошибке!
-                print(f"[BYBIT_BOT] ❌ {symbol}: Pybit exception: {api_error}")
+                logger.error(f"[BYBIT_BOT] ❌ {symbol}: Pybit exception: {api_error}")
                 # Пытаемся извлечь ответ из исключения
                 error_str = str(api_error)
                 import re
                 # Извлекаем retCode и retMsg из строки ошибки
                 if "retCode" in error_str and "retMsg" in error_str:
-                    print(f"[BYBIT_BOT] 📊 {symbol}: Ошибка содержит информацию об ответе: {error_str}")
+                    logger.debug(f"[BYBIT_BOT] 📊 {symbol}: Ошибка содержит информацию об ответе: {error_str}")
                 raise api_error  # Пробрасываем дальше
             
             if response['retCode'] == 0:
                 # Вычисляем количество в USDT для возврата
                 qty_usdt_actual = (qty_in_coins * current_price) if (qty_in_coins and current_price and current_price > 0) else requested_qty_usdt
-                print(f"[BYBIT_BOT] ✅ Ордер успешно размещён: {qty_in_coins} монет = {qty_usdt_actual:.4f} USDT @ {current_price}")
+                logger.info(f"[BYBIT_BOT] ✅ Ордер успешно размещён: {qty_in_coins} монет = {qty_usdt_actual:.4f} USDT @ {current_price}")
                 
                 return {
                     'success': True,
@@ -1641,9 +1641,9 @@ class BybitExchange(BaseExchange):
                 }
                 
         except Exception as e:
-            print(f"[BYBIT_BOT] Ошибка размещения ордера: {str(e)}")
+            logger.error(f"[BYBIT_BOT] Ошибка размещения ордера: {str(e)}")
             import traceback
-            print(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
+            logger.error(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
             return {
                 'success': False,
                 'message': f"Ошибка размещения ордера: {str(e)}"
@@ -1663,7 +1663,7 @@ class BybitExchange(BaseExchange):
             dict: Результат обновления TP
         """
         try:
-            print(f"[BYBIT_BOT] Обновление Take Profit: {symbol} → {take_profit_price:.6f} (side: {position_side})")
+            logger.info(f"[BYBIT_BOT] Обновление Take Profit: {symbol} → {take_profit_price:.6f} (side: {position_side})")
             
             # Определяем positionIdx в зависимости от режима и направления позиции
             # В Hedge Mode: 1 = LONG (Buy), 2 = SHORT (Sell)
@@ -1686,7 +1686,7 @@ class BybitExchange(BaseExchange):
             # Обновляем TP через API - используем метод set_trading_stop
             try:
                 response = self.client.set_trading_stop(**tp_params)
-                print(f"[BYBIT_BOT] Ответ API TP: {response}")
+                logger.debug(f"[BYBIT_BOT] Ответ API TP: {response}")
                 
                 if response['retCode'] == 0:
                     return {
@@ -1703,7 +1703,7 @@ class BybitExchange(BaseExchange):
                 # Проверяем код ошибки 34040 (not modified) - это нормально, TP уже установлен
                 error_str = str(e)
                 if "34040" in error_str or "not modified" in error_str:
-                    print(f"[BYBIT_BOT] ✅ TP уже установлен на {take_profit_price:.6f}")
+                    logger.info(f"[BYBIT_BOT] ✅ TP уже установлен на {take_profit_price:.6f}")
                     return {
                         'success': True,
                         'message': f'Take Profit уже установлен: {take_profit_price:.6f}',
@@ -1711,16 +1711,16 @@ class BybitExchange(BaseExchange):
                     }
                 
                 # Для других ошибок - логируем и возвращаем ошибку
-                print(f"[BYBIT_BOT] Ошибка обновления Take Profit: {e}")
+                logger.error(f"[BYBIT_BOT] Ошибка обновления Take Profit: {e}")
                 import traceback
-                print(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
+                logger.error(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
                 return {
                     'success': False,
                     'message': f"Ошибка обновления TP: {error_str}"
                 }
             except AttributeError:
                 # Если метод set_trading_stop не существует, пробуем альтернативный способ
-                print(f"[BYBIT_BOT] ⚠️ Метод set_trading_stop не найден, используем альтернативный способ")
+                logger.warning(f"[BYBIT_BOT] ⚠️ Метод set_trading_stop не найден, используем альтернативный способ")
                 # Пока просто логируем - TP будет установлен при открытии позиции
                 return {
                     'success': False,
@@ -1728,9 +1728,9 @@ class BybitExchange(BaseExchange):
                 }
                 
         except Exception as e:
-            print(f"[BYBIT_BOT] Ошибка обновления Take Profit: {str(e)}")
+            logger.error(f"[BYBIT_BOT] Ошибка обновления Take Profit: {str(e)}")
             import traceback
-            print(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
+            logger.error(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
             return {
                 'success': False,
                 'message': f"Ошибка обновления TP: {str(e)}"
@@ -1774,7 +1774,7 @@ class BybitExchange(BaseExchange):
             dict: Результат обновления SL
         """
         try:
-            print(f"[BYBIT_BOT] Обновление Stop Loss: {symbol} → {stop_loss_price:.6f} (side: {position_side})")
+            logger.info(f"[BYBIT_BOT] Обновление Stop Loss: {symbol} → {stop_loss_price:.6f} (side: {position_side})")
             
             # Определяем positionIdx в зависимости от режима и направления позиции
             if position_side:
@@ -1795,7 +1795,7 @@ class BybitExchange(BaseExchange):
             # Обновляем SL через API - используем метод set_trading_stop
             try:
                 response = self.client.set_trading_stop(**sl_params)
-                print(f"[BYBIT_BOT] Ответ API SL: {response}")
+                logger.debug(f"[BYBIT_BOT] Ответ API SL: {response}")
                 
                 if response['retCode'] == 0:
                     return {
@@ -1812,7 +1812,7 @@ class BybitExchange(BaseExchange):
                 # Проверяем код ошибки 34040 (not modified) - это нормально, SL уже установлен
                 error_str = str(e)
                 if "34040" in error_str or "not modified" in error_str:
-                    print(f"[BYBIT_BOT] ✅ SL уже установлен на {stop_loss_price:.6f}")
+                    logger.info(f"[BYBIT_BOT] ✅ SL уже установлен на {stop_loss_price:.6f}")
                     return {
                         'success': True,
                         'message': f'Stop Loss уже установлен: {stop_loss_price:.6f}',
@@ -1820,25 +1820,25 @@ class BybitExchange(BaseExchange):
                     }
                 
                 # Для других ошибок - логируем и возвращаем ошибку
-                print(f"[BYBIT_BOT] Ошибка обновления Stop Loss: {e}")
+                logger.error(f"[BYBIT_BOT] Ошибка обновления Stop Loss: {e}")
                 import traceback
-                print(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
+                logger.error(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
                 return {
                     'success': False,
                     'message': f"Ошибка обновления SL: {error_str}"
                 }
             except AttributeError:
                 # Если метод set_trading_stop не существует
-                print(f"[BYBIT_BOT] ⚠️ Метод set_trading_stop не найден")
+                logger.warning(f"[BYBIT_BOT] ⚠️ Метод set_trading_stop не найден")
                 return {
                     'success': False,
                     'message': f"Метод set_trading_stop не поддерживается"
                 }
                 
         except Exception as e:
-            print(f"[BYBIT_BOT] Ошибка обновления Stop Loss: {str(e)}")
+            logger.error(f"[BYBIT_BOT] Ошибка обновления Stop Loss: {str(e)}")
             import traceback
-            print(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
+            logger.error(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
             return {
                 'success': False,
                 'message': f"Ошибка обновления SL: {str(e)}"
@@ -1858,7 +1858,7 @@ class BybitExchange(BaseExchange):
             dict: Результат установки SL
         """
         try:
-            print(f"[BYBIT_BOT] Установка Stop Loss по ROI: {symbol} → {roi_percent}% (side: {position_side})")
+            logger.info(f"[BYBIT_BOT] Установка Stop Loss по ROI: {symbol} → {roi_percent}% (side: {position_side})")
             
             # Определяем positionIdx в зависимости от режима и направления позиции
             if position_side:
@@ -1881,7 +1881,7 @@ class BybitExchange(BaseExchange):
             # Устанавливаем SL через API - используем метод set_trading_stop
             try:
                 response = self.client.set_trading_stop(**sl_params)
-                print(f"[BYBIT_BOT] Ответ API SL по ROI: {response}")
+                logger.debug(f"[BYBIT_BOT] Ответ API SL по ROI: {response}")
                 
                 if response['retCode'] == 0:
                     return {
@@ -1898,7 +1898,7 @@ class BybitExchange(BaseExchange):
                 # Проверяем код ошибки 34040 (not modified) - это нормально, SL уже установлен
                 error_str = str(e)
                 if "34040" in error_str or "not modified" in error_str:
-                    print(f"[BYBIT_BOT] ✅ SL уже установлен на {roi_percent}%")
+                    logger.info(f"[BYBIT_BOT] ✅ SL уже установлен на {roi_percent}%")
                     return {
                         'success': True,
                         'message': f'Stop Loss уже установлен по ROI: {roi_percent}%',
@@ -1906,25 +1906,25 @@ class BybitExchange(BaseExchange):
                     }
                 
                 # Для других ошибок - логируем и возвращаем ошибку
-                print(f"[BYBIT_BOT] Ошибка установки Stop Loss по ROI: {e}")
+                logger.error(f"[BYBIT_BOT] Ошибка установки Stop Loss по ROI: {e}")
                 import traceback
-                print(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
+                logger.error(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
                 return {
                     'success': False,
                     'message': f"Ошибка установки SL: {error_str}"
                 }
             except AttributeError:
                 # Если метод set_trading_stop не существует
-                print(f"[BYBIT_BOT] ⚠️ Метод set_trading_stop не найден")
+                logger.warning(f"[BYBIT_BOT] ⚠️ Метод set_trading_stop не найден")
                 return {
                     'success': False,
                     'message': f"Метод set_trading_stop не поддерживается"
                 }
                 
         except Exception as e:
-            print(f"[BYBIT_BOT] Ошибка установки Stop Loss по ROI: {str(e)}")
+            logger.error(f"[BYBIT_BOT] Ошибка установки Stop Loss по ROI: {str(e)}")
             import traceback
-            print(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
+            logger.error(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
             return {
                 'success': False,
                 'message': f"Ошибка установки SL: {str(e)}"

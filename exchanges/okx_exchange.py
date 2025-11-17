@@ -6,6 +6,9 @@ import traceback
 import pandas as pd
 import math
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 def clean_symbol(symbol):
     """Очищает символ от USDT и форматирования OKX"""
@@ -50,7 +53,7 @@ class OkxExchange(BaseExchange):
             try:
                 self.markets = self.client.load_markets()
             except Exception as market_error:
-                print(f"Error loading markets: {str(market_error)}")
+                logger.error(f"Error loading markets: {str(market_error)}")
                 raise Exception("Failed to load markets")
             
             # Определяем текущий режим позиций
@@ -62,15 +65,15 @@ class OkxExchange(BaseExchange):
                     
                     # Проверяем, что режим позиций соответствует запрошенному
                     if self.position_mode != position_mode:
-                        print(f"[OKX] Warning: Current position mode ({self.position_mode}) differs from requested ({position_mode})")
+                        logger.warning(f"[OKX] Warning: Current position mode ({self.position_mode}) differs from requested ({position_mode})")
                 else:
                     self.position_mode = position_mode
             except Exception as e:
-                print(f"[OKX] Error determining position mode: {str(e)}")
+                logger.error(f"[OKX] Error determining position mode: {str(e)}")
                 self.position_mode = position_mode
                 
         except Exception as e:
-            print(f"Error initializing OKX exchange: {str(e)}")
+            logger.error(f"Error initializing OKX exchange: {str(e)}")
             raise Exception(f"Failed to initialize OKX exchange: {str(e)}")
 
     def get_positions(self):
@@ -128,13 +131,13 @@ class OkxExchange(BaseExchange):
                         self.daily_pnl[symbol] = current_pnl
                         
                 except Exception as pos_error:
-                    print(f"[OKX] Error processing position: {str(pos_error)}")
+                    logger.error(f"[OKX] Error processing position: {str(pos_error)}")
                     continue
 
             return processed_positions, rapid_growth_positions
             
         except Exception as e:
-            print(f"[OKX] Error getting positions: {str(e)}")
+            logger.error(f"[OKX] Error getting positions: {str(e)}")
             return [], []
 
     def get_closed_pnl(self, sort_by='time'):
@@ -244,7 +247,7 @@ class OkxExchange(BaseExchange):
         try:
             # Используем тот же формат, что в позициях: XRP-USDT-SWAP
             market_symbol = f"{symbol}-USDT-SWAP"
-            print(f"\nGetting chart data for {market_symbol}")
+            logger.debug(f"Getting chart data for {market_symbol}")
             
             try:
                 # Используем параметры OKX API
@@ -256,18 +259,18 @@ class OkxExchange(BaseExchange):
                 candles = self.client.publicGetMarketCandles(params)
                 
                 if candles and candles.get('data'):
-                    print(f"Got {len(candles['data'])} candles")
+                    logger.debug(f"Got {len(candles['data'])} candles")
                     return [float(candle[4]) for candle in reversed(candles['data'])]
                     
-                print(f"No candles data")
+                logger.warning(f"No candles data")
                 return []
                 
             except Exception as e:
-                print(f"Error fetching OHLCV: {str(e)}")
+                logger.error(f"Error fetching OHLCV: {str(e)}")
                 return []
                 
         except Exception as e:
-            print(f"Error getting OKX chart data: {str(e)}")
+            logger.error(f"Error getting OKX chart data: {str(e)}")
             return []
 
     def get_sma200_position(self, symbol):
@@ -291,7 +294,7 @@ class OkxExchange(BaseExchange):
             return None
             
         except Exception as e:
-            print(f"Error getting OKX SMA200 for {symbol}: {e}")
+            logger.error(f"Error getting OKX SMA200 for {symbol}: {e}")
             return None
 
     def get_ticker(self, symbol):
@@ -307,7 +310,7 @@ class OkxExchange(BaseExchange):
                 'timestamp': int(ticker['timestamp'])
             }
         except Exception as e:
-            print(f"Ошибка получения тикера для {symbol}: {e}")
+            logger.error(f"Ошибка получения тикера для {symbol}: {e}")
             return None
 
     def get_instrument_status(self, symbol):
@@ -367,7 +370,7 @@ class OkxExchange(BaseExchange):
             order_type (str): Order type ("Market" or "Limit")
         """
         try:
-            print(f"[OKX] Closing position {symbol}, size: {size}, side: {side}, type: {order_type}")
+            logger.info(f"[OKX] Closing position {symbol}, size: {size}, side: {side}, type: {order_type}")
             
             # Формируем символ в формате OKX
             market_symbol = f"{symbol}-USDT-SWAP"
@@ -388,20 +391,20 @@ class OkxExchange(BaseExchange):
                         'message': f'No active {side} position found for {symbol}'
                     }
                 
-                print(f"[OKX] Found active position: {active_position}")
+                logger.debug(f"[OKX] Found active position: {active_position}")
                 
                 # Получаем режим маржи из позиции
                 margin_mode = active_position.get('marginMode', '').lower()
                 if not margin_mode:
                     margin_mode = 'isolated'  # По умолчанию используем isolated
-                print(f"[OKX] Using margin mode: {margin_mode}")
+                logger.debug(f"[OKX] Using margin mode: {margin_mode}")
                 
                 # Определяем тип позиции (хедж или нет)
                 is_hedged = active_position.get('hedged', False)
-                print(f"[OKX] Position is {'hedged' if is_hedged else 'one-way'}")
+                logger.debug(f"[OKX] Position is {'hedged' if is_hedged else 'one-way'}")
                 
             except Exception as e:
-                print(f"[OKX] Error checking position: {str(e)}")
+                logger.error(f"[OKX] Error checking position: {str(e)}")
                 return {
                     'success': False,
                     'message': f'Error checking position: {str(e)}'
@@ -442,11 +445,11 @@ class OkxExchange(BaseExchange):
                         'message': 'Invalid limit price calculated'
                     }
                 order_params['px'] = str(round(limit_price, 6))
-                print(f"[OKX] Calculated limit price: {limit_price}")
+                logger.debug(f"[OKX] Calculated limit price: {limit_price}")
             
-            print(f"[OKX] Sending order with params: {order_params}")
+            logger.debug(f"[OKX] Sending order with params: {order_params}")
             response = self.client.private_post_trade_order(order_params)
-            print(f"[OKX] Order response: {response}")
+            logger.debug(f"[OKX] Order response: {response}")
             
             if response and response.get('code') == '0':
                 order_id = response['data'][0]['ordId']
@@ -465,8 +468,8 @@ class OkxExchange(BaseExchange):
                 }
                 
         except Exception as e:
-            print(f"[OKX] Error closing position: {str(e)}")
-            print(f"[OKX] Traceback: {traceback.format_exc()}")
+            logger.error(f"[OKX] Error closing position: {str(e)}")
+            logger.error(f"[OKX] Traceback: {traceback.format_exc()}")
             return {
                 'success': False,
                 'message': f'Error closing position: {str(e)}'
@@ -487,7 +490,7 @@ class OkxExchange(BaseExchange):
             ]
             return sorted(pairs)
         except Exception as e:
-            print(f"Error getting OKX pairs: {str(e)}")
+            logger.error(f"Error getting OKX pairs: {str(e)}")
             return []
 
     def get_chart_data(self, symbol, timeframe='1h', period='1w'):
@@ -529,11 +532,11 @@ class OkxExchange(BaseExchange):
                                 selected_interval = interval
                                 selected_klines = klines
                     except Exception as e:
-                        print(f"[OKX] Ошибка при получении данных для интервала {interval}: {str(e)}")
+                        logger.error(f"[OKX] Ошибка при получении данных для интервала {interval}: {str(e)}")
                         continue
 
                 if selected_interval and selected_klines:
-                    print(f"[OKX] Выбран интервал {selected_interval} с {len(selected_klines)} свечами")
+                    logger.debug(f"[OKX] Выбран интервал {selected_interval} с {len(selected_klines)} свечами")
                     candles = []
                     for k in reversed(selected_klines):
                         try:
@@ -547,7 +550,7 @@ class OkxExchange(BaseExchange):
                             }
                             candles.append(candle)
                         except (ValueError, IndexError) as e:
-                            print(f"[OKX] Ошибка при обработке свечи: {e}, данные: {k}")
+                            logger.error(f"[OKX] Ошибка при обработке свечи: {e}, данные: {k}")
                             continue
                     
                     candles.sort(key=lambda x: x['time'])
@@ -566,14 +569,14 @@ class OkxExchange(BaseExchange):
             # Стандартная обработка для конкретного таймфрейма
             interval = timeframe_map.get(timeframe)
             if not interval:
-                print(f"[OKX] Неподдерживаемый таймфрейм: {timeframe}")
+                logger.warning(f"[OKX] Неподдерживаемый таймфрейм: {timeframe}")
                 return {
                     'success': False,
                     'error': f'Неподдерживаемый таймфрейм: {timeframe}'
                 }
             
             market_symbol = f"{symbol}-USDT-SWAP"
-            print(f"[OKX] Getting chart data for {market_symbol} with interval {interval}")
+            logger.debug(f"[OKX] Getting chart data for {market_symbol} with interval {interval}")
             
             try:
                 params = {
@@ -584,7 +587,7 @@ class OkxExchange(BaseExchange):
                 response = self.client.publicGetMarketCandles(params)
                 
                 if not response or not response.get('data'):
-                    print(f"[OKX] Нет данных свечей")
+                    logger.warning(f"[OKX] Нет данных свечей")
                     return {
                         'success': False,
                         'error': 'Нет данных свечей'
@@ -603,12 +606,12 @@ class OkxExchange(BaseExchange):
                         }
                         candles.append(candle)
                     except (ValueError, IndexError) as e:
-                        print(f"[OKX] Ошибка при обработке свечи: {e}, данные: {k}")
+                        logger.error(f"[OKX] Ошибка при обработке свечи: {e}, данные: {k}")
                         continue
                 
                 candles.sort(key=lambda x: x['time'])
                 
-                print(f"[OKX] Подготовлен ответ с {len(candles)} свечами")
+                logger.debug(f"[OKX] Подготовлен ответ с {len(candles)} свечами")
                 return {
                     'success': True,
                     'data': {
@@ -617,14 +620,14 @@ class OkxExchange(BaseExchange):
                 }
                 
             except Exception as e:
-                print(f"[OKX] Ошибка получения OHLCV: {str(e)}")
+                logger.error(f"[OKX] Ошибка получения OHLCV: {str(e)}")
                 return {
                     'success': False,
                     'error': str(e)
                 }
                 
         except Exception as e:
-            print(f"[OKX] Ошибка получения данных графика: {str(e)}")
+            logger.error(f"[OKX] Ошибка получения данных графика: {str(e)}")
             return {
                 'success': False,
                 'error': str(e)
@@ -641,7 +644,7 @@ class OkxExchange(BaseExchange):
             dict: Значения индикаторов
         """
         try:
-            print(f"[OKX] Запрос индикаторов для {symbol}, таймфрейм: {timeframe}")
+            logger.debug(f"[OKX] Запрос индикаторов для {symbol}, таймфрейм: {timeframe}")
             
             # Конвертируем таймфрейм в формат OKX
             timeframe_map = {
@@ -657,7 +660,7 @@ class OkxExchange(BaseExchange):
             
             interval = timeframe_map.get(timeframe)
             if not interval:
-                print(f"[OKX] Неподдерживаемый таймфрейм: {timeframe}")
+                logger.warning(f"[OKX] Неподдерживаемый таймфрейм: {timeframe}")
                 return {
                     'success': False,
                     'error': f'Неподдерживаемый таймфрейм: {timeframe}'
@@ -774,7 +777,7 @@ class OkxExchange(BaseExchange):
             }
 
         except Exception as e:
-            print(f"[OKX] Ошибка при расчете индикаторов: {str(e)}")
+            logger.error(f"[OKX] Ошибка при расчете индикаторов: {str(e)}")
             return {
                 'success': False,
                 'error': str(e)
@@ -1001,7 +1004,7 @@ class OkxExchange(BaseExchange):
                             realized_pnl += pnl
                 
             except Exception as e:
-                print(f"[OKX] Error fetching PNL history: {str(e)}")
+                logger.error(f"[OKX] Error fetching PNL history: {str(e)}")
             
             # Общий PNL = реализованный + нереализованный
             total_pnl = realized_pnl + unrealized_pnl
@@ -1013,7 +1016,7 @@ class OkxExchange(BaseExchange):
             }
             
         except Exception as e:
-            print(f"[OKX] Error in get_wallet_balance: {str(e)}")
+            logger.error(f"[OKX] Error in get_wallet_balance: {str(e)}")
             return {
                 'total_balance': 0.0,
                 'available_balance': 0.0,
