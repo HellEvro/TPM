@@ -477,6 +477,26 @@
       "rsi": null,
       "trend": null,
       "details": "Открыта позиция LONG для YFI: размер 5.0, цена входа 4209.0000 [SCRIPT]"
+    },
+    {
+      "id": "open_FLOCK_1763403456.946583",
+      "timestamp": "2025-11-17T21:17:36.946584",
+      "action_type": "POSITION_OPENED",
+      "action_name": "Открытие позиции",
+      "bot_id": "FLOCK",
+      "symbol": "FLOCK",
+      "direction": "LONG",
+      "size": 5.0,
+      "entry_price": 0.15193,
+      "stop_loss": null,
+      "take_profit": null,
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "ai_signal": "LONG",
+      "rsi": null,
+      "trend": null,
+      "details": "Открыта позиция LONG для FLOCK: размер 5.0, цена входа 0.1519 [SCRIPT]"
     }
   ],
   "trades": [
@@ -673,7 +693,24 @@
       "ai_confidence": null,
       "rsi": null,
       "trend": null
+    },
+    {
+      "id": "trade_FLOCK_1763403456.947423",
+      "timestamp": "2025-11-17T21:17:36.947427",
+      "bot_id": "FLOCK",
+      "symbol": "FLOCK",
+      "direction": "LONG",
+      "size": 5.0,
+      "entry_price": 0.15193,
+      "exit_price": null,
+      "pnl": null,
+      "status": "OPEN",
+      "decision_source": "SCRIPT",
+      "ai_decision_id": null,
+      "ai_confidence": null,
+      "rsi": null,
+      "trend": null
     }
   ],
-  "last_update": "2025-11-17T21:04:42.447675"
+  "last_update": "2025-11-17T21:17:36.947436"
 }
