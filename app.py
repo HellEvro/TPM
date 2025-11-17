@@ -25,29 +25,31 @@ if os.name == 'nt':
 
 # Проверка наличия конфигурации
 if not os.path.exists('app/config.py'):
-    print("\n" + "="*80)
-    print("❌ ОШИБКА: Файл конфигурации не найден!")
-    print("="*80)
-    print()
-    print("📝 Для первого запуска выполните:")
-    print()
-    print("   1. Скопируйте файл конфигурации:")
+    # Используем stderr для критических ошибок, так как logger еще не настроен
+    import sys
+    sys.stderr.write("\n" + "="*80 + "\n")
+    sys.stderr.write("❌ ОШИБКА: Файл конфигурации не найден!\n")
+    sys.stderr.write("="*80 + "\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("📝 Для первого запуска выполните:\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("   1. Скопируйте файл конфигурации:\n")
     if os.name == 'nt':  # Windows
-        print("      copy app\\config.example.py app\\config.py")
+        sys.stderr.write("      copy app\\config.example.py app\\config.py\n")
     else:  # Linux/Mac
-        print("      cp app/config.example.py app/config.py")
-    print()
-    print("   2. Отредактируйте app/config.py:")
-    print("      - Добавьте свои API ключи бирж")
-    print("      - Настройте Telegram (опционально)")
-    print()
-    print("   3. Запустите снова:")
-    print("      python app.py")
-    print()
-    print("   📖 Подробная инструкция: docs/INSTALL.md")
-    print()
-    print("="*80)
-    print()
+        sys.stderr.write("      cp app/config.example.py app/config.py\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("   2. Отредактируйте app/config.py:\n")
+    sys.stderr.write("      - Добавьте свои API ключи бирж\n")
+    sys.stderr.write("      - Настройте Telegram (опционально)\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("   3. Запустите снова:\n")
+    sys.stderr.write("      python app.py\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("   📖 Подробная инструкция: docs/INSTALL.md\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("="*80 + "\n")
+    sys.stderr.write("\n")
     sys.exit(1)
 
 from app.config import *
@@ -85,27 +87,29 @@ def check_api_keys():
 
 # Предупреждение если ключи не настроены
 if not check_api_keys():
-    print("\n" + "="*80)
-    print("⚠️  ВНИМАНИЕ: API ключи не настроены!")
-    print("="*80)
-    print()
-    print("📌 Текущий статус:")
-    print(f"   Биржа: {ACTIVE_EXCHANGE}")
+    # Логгер еще не настроен, используем stderr для критических предупреждений
+    import sys
+    sys.stderr.write("\n" + "="*80 + "\n")
+    sys.stderr.write("⚠️  ВНИМАНИЕ: API ключи не настроены!\n")
+    sys.stderr.write("="*80 + "\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("📌 Текущий статус:\n")
+    sys.stderr.write(f"   Биржа: {ACTIVE_EXCHANGE}\n")
     if not os.path.exists('app/keys.py'):
-        print("   Файл с ключами: app/keys.py НЕ НАЙДЕН")
+        sys.stderr.write("   Файл с ключами: app/keys.py НЕ НАЙДЕН\n")
     else:
-        print("   API ключи: НЕ НАСТРОЕНЫ или СОДЕРЖАТ ПРИМЕРЫ")
-    print()
-    print("💡 Что нужно сделать:")
-    print("   1. Скопируйте app/config.example.py -> app/config.py (если еще не сделали)")
-    print("   2. Создайте app/keys.py с реальными ключами")
-    print("   3. Или добавьте ключи прямо в app/config.py")
-    print("   4. Перезапустите приложение")
-    print()
-    print("⚠️  Приложение запущено в DEMO режиме (только UI, без торговли)")
-    print()
-    print("="*80)
-    print()
+        sys.stderr.write("   API ключи: НЕ НАСТРОЕНЫ или СОДЕРЖАТ ПРИМЕРЫ\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("💡 Что нужно сделать:\n")
+    sys.stderr.write("   1. Скопируйте app/config.example.py -> app/config.py (если еще не сделали)\n")
+    sys.stderr.write("   2. Создайте app/keys.py с реальными ключами\n")
+    sys.stderr.write("   3. Или добавьте ключи прямо в app/config.py\n")
+    sys.stderr.write("   4. Перезапустите приложение\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("⚠️  Приложение запущено в DEMO режиме (только UI, без торговли)\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("="*80 + "\n")
+    sys.stderr.write("\n")
 import requests
 from threading import Lock
 from app.language import get_current_language, save_language
@@ -182,7 +186,8 @@ def add_no_cache_headers(response):
         
         # DEBUG: Логируем в dev режиме
         if app.config.get('DEBUG'):
-            print(f"[CACHE] ✅ JS файл: {request.path} - кэш отключен")
+            cache_logger = logging.getLogger('app')
+            cache_logger.debug(f"[CACHE] ✅ JS файл: {request.path} - кэш отключен")
     
     # ✅ Для остальных статических файлов также отключаем кэш
     elif is_static:
@@ -361,32 +366,36 @@ def background_update():
                 try:
                     with stats_lock:
                         # Логирование для диагностики (только при реальной отправке)
+                        thread_logger = logging.getLogger('app')
                         if last_stats_time is None:
-                            print(f"[Thread {thread_id}] Первый запуск - отправляем статистику")
+                            thread_logger.info(f"[Thread {thread_id}] Первый запуск - отправляем статистику")
                         else:
                             minutes_passed = time_since_last / 60
-                            print(f"[Thread {thread_id}] Прошло {minutes_passed:.1f} минут - отправляем статистику")
+                            thread_logger.info(f"[Thread {thread_id}] Прошло {minutes_passed:.1f} минут - отправляем статистику")
                         
-                        print(f"[Thread {thread_id}] Acquired stats_lock for sending")
-                        print(f"[Thread {thread_id}] Sending statistics...")
+                        thread_logger.info(f"[Thread {thread_id}] Acquired stats_lock for sending")
+                        thread_logger.info(f"[Thread {thread_id}] Sending statistics...")
                         telegram.send_statistics(positions_data['stats'])
                         last_stats_time = current_time
-                        print(f"[Thread {thread_id}] Stats sent at {datetime.fromtimestamp(current_time).strftime('%H:%M:%S.%f')}")
-                        print(f"[Thread {thread_id}] Released stats_lock after sending")
+                        thread_logger.info(f"[Thread {thread_id}] Stats sent at {datetime.fromtimestamp(current_time).strftime('%H:%M:%S.%f')}")
+                        thread_logger.info(f"[Thread {thread_id}] Released stats_lock after sending")
                 except Exception as e:
-                    print(f"[Thread {thread_id}] Error sending statistics: {e}")
+                    thread_logger = logging.getLogger('app')
+                    thread_logger.error(f"[Thread {thread_id}] Error sending statistics: {e}")
 
             # Логируем только при изменении количества позиций или отправке статистики
             current_positions_count = positions_data['total_trades']
             if should_send_stats or current_positions_count != getattr(background_update, 'last_positions_count', -1):
                 profitable_count = len([p for p in positions if p['pnl'] > 0])
                 losing_count = len([p for p in positions if p['pnl'] < 0])
-                print(f"[Thread {thread_id}] Updated positions: {current_positions_count} (прибыльные: {profitable_count}, убыточные: {losing_count})")
+                thread_logger = logging.getLogger('app')
+                thread_logger.info(f"[Thread {thread_id}] Updated positions: {current_positions_count} (прибыльные: {profitable_count}, убыточные: {losing_count})")
                 background_update.last_positions_count = current_positions_count
             time.sleep(2)
             
         except Exception as e:
-            print(f"Error in background_update: {str(e)}")
+            thread_logger = logging.getLogger('app')
+            thread_logger.error(f"Error in background_update: {str(e)}")
             telegram.send_error(str(e))
             time.sleep(5)
 
@@ -456,7 +465,8 @@ def get_positions():
         try:
             wallet_data = current_exchange.get_wallet_balance()
         except Exception as e:
-            print(f"[API] Error getting wallet data: {str(e)}")
+            api_logger = logging.getLogger('app')
+            api_logger.error(f"[API] Error getting wallet data: {str(e)}")
             wallet_data = {
                 'total_balance': 0,
                 'available_balance': 0,
@@ -547,7 +557,8 @@ def get_positions():
     try:
         wallet_data = current_exchange.get_wallet_balance()
     except Exception as e:
-        print(f"[API] Error getting wallet data: {str(e)}")
+        api_logger = logging.getLogger('app')
+        api_logger.error(f"[API] Error getting wallet data: {str(e)}")
         wallet_data = {
             'total_balance': 0,
             'available_balance': 0,
@@ -597,14 +608,15 @@ def get_closed_pnl():
     """Получение закрытых позиций"""
     try:
         sort_by = request.args.get('sort', 'time')
-        print(f"[API] Getting closed PNL, sort by: {sort_by}")
+        api_logger = logging.getLogger('app')
+        api_logger.info(f"[API] Getting closed PNL, sort by: {sort_by}")
         
         # Получаем баланс и PNL
         wallet_data = current_exchange.get_wallet_balance()
         
         # Получаем закрытые позиции
         closed_pnl = current_exchange.get_closed_pnl(sort_by)
-        print(f"[API] Found {len(closed_pnl)} closed positions")
+        api_logger.info(f"[API] Found {len(closed_pnl)} closed positions")
         
         return jsonify({
             'success': True,
@@ -616,7 +628,8 @@ def get_closed_pnl():
             }
         })
     except Exception as e:
-        print(f"[API] Error getting closed PNL: {str(e)}")
+        api_logger = logging.getLogger('app')
+        api_logger.error(f"[API] Error getting closed PNL: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -757,13 +770,15 @@ def switch_exchange():
             })
             
         except Exception as e:
-            print(f"Error testing new exchange connection: {str(e)}")
+            app_logger = logging.getLogger('app')
+            app_logger.error(f"Error testing new exchange connection: {str(e)}")
             return jsonify({
                 'error': f'Failed to connect to {exchange_name}: {str(e)}'
             }), 500
             
     except Exception as e:
-        print(f"Error in switch_exchange: {str(e)}")
+        app_logger = logging.getLogger('app')
+        app_logger.error(f"Error in switch_exchange: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # Инициализируем биржу при запуске
@@ -789,34 +804,36 @@ def clean_symbol(symbol):
 def set_language():
     data = request.get_json()
     language = data.get('language', 'en')
-    print(f"Setting language to: {language}")
+    app_logger = logging.getLogger('app')
+    app_logger.info(f"Setting language to: {language}")
     save_language(language)
     telegram.set_language(language)
     return jsonify({'status': 'success', 'language': language})
 
 @app.route('/api/ticker/<symbol>')
 def get_ticker(symbol):
+    ticker_logger = logging.getLogger('app')
     try:
-        print(f"[TICKER] Getting ticker for {symbol}...")
+        ticker_logger.info(f"[TICKER] Getting ticker for {symbol}...")
         
         # Проверяем инициализацию биржи
         if not current_exchange:
-            print("[TICKER] Exchange not initialized")
+            ticker_logger.error("[TICKER] Exchange not initialized")
             return jsonify({'error': 'Exchange not initialized'}), 500
             
         # Получаем данные тикера
         ticker_data = current_exchange.get_ticker(symbol)
-        print(f"[TICKER] Raw ticker data: {ticker_data}")
+        ticker_logger.debug(f"[TICKER] Raw ticker data: {ticker_data}")
         
         if ticker_data:
-            print(f"[TICKER] Successfully got ticker for {symbol}: {ticker_data}")
+            ticker_logger.info(f"[TICKER] Successfully got ticker for {symbol}")
             return jsonify(ticker_data)
             
-        print(f"[TICKER] No ticker data available for {symbol}")
+        ticker_logger.warning(f"[TICKER] No ticker data available for {symbol}")
         return jsonify({'error': 'No ticker data available'}), 404
         
     except Exception as e:
-        print(f"[TICKER] Error getting ticker for {symbol}: {str(e)}")
+        ticker_logger.error(f"[TICKER] Error getting ticker for {symbol}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/close_position', methods=['POST'])
@@ -830,7 +847,8 @@ def close_position():
                 'message': 'Не указаны обязательные параметры (symbol, size, side)'
             }), 400
 
-        print(f"[API] Closing position: {data}")
+        api_logger = logging.getLogger('app')
+        api_logger.info(f"[API] Closing position: {data}")
         result = current_exchange.close_position(
             symbol=data['symbol'],
             size=float(data['size']),
@@ -838,11 +856,12 @@ def close_position():
             order_type=data.get('order_type', 'Limit')  # По умолчанию используем Limit для обратной совместимости
         )
         
-        print(f"[API] Close position result: {result}")
+        api_logger.info(f"[API] Close position result: {result}")
         return jsonify(result)
         
     except Exception as e:
-        print(f"[API] Error closing position: {str(e)}")
+        api_logger = logging.getLogger('app')
+        api_logger.error(f"[API] Error closing position: {str(e)}")
         return jsonify({
             'success': False,
             'message': f'Ошибка при закрытии позиции: {str(e)}'
@@ -858,7 +877,8 @@ def get_language():
             'language': current_lang
         })
     except Exception as e:
-        print(f"Error getting language: {str(e)}")
+        app_logger = logging.getLogger('app')
+        app_logger.error(f"Error getting language: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -1045,7 +1065,8 @@ def background_cache_cleanup():
         try:
             clear_old_cache()
         except Exception as e:
-            print(f"Error in cache cleanup: {str(e)}")
+            app_logger = logging.getLogger('app')
+            app_logger.error(f"Error in cache cleanup: {str(e)}")
         time.sleep(60)  # Проверяем каждую минуту
 
 # Кэш для хранения данных свечей
@@ -1296,24 +1317,25 @@ def start_bot():
 @app.route('/get_symbol_chart/<symbol>')
 def get_symbol_chart(symbol):
     """Получение миниграфика для символа"""
+    chart_logger = logging.getLogger('app')
     try:
         theme = request.args.get('theme', 'dark')
-        print(f"[CHART] Getting chart for {symbol} with theme {theme}")
+        chart_logger.info(f"[CHART] Getting chart for {symbol} with theme {theme}")
         
         # Проверяем инициализацию биржи
         if not current_exchange:
-            print("[CHART] Exchange not initialized")
+            chart_logger.error("[CHART] Exchange not initialized")
             return jsonify({'error': 'Exchange not initialized'}), 500
             
         # Получаем данные свечей для миниграфика
         data = current_exchange.get_chart_data(symbol, '1h', '24h')  # 1 час свечи за 24 часа
         if not data.get('success'):
-            print(f"[CHART] Failed to get chart data for {symbol}")
+            chart_logger.error(f"[CHART] Failed to get chart data for {symbol}")
             return jsonify({'error': 'Failed to get chart data'}), 500
             
         candles = data.get('data', {}).get('candles', [])
         if not candles:
-            print(f"[CHART] No candles data for {symbol}")
+            chart_logger.warning(f"[CHART] No candles data for {symbol}")
             return jsonify({'error': 'No chart data available'}), 404
             
         # Создаем простой миниграфик
@@ -1358,12 +1380,12 @@ def get_symbol_chart(symbol):
                     if close_price:
                         prices.append(float(close_price))
             except (ValueError, TypeError, KeyError) as e:
-                print(f"[CHART] Error processing candle for {symbol}: {e}")
+                chart_logger.warning(f"[CHART] Error processing candle for {symbol}: {e}")
                 continue
         
         # Проверяем, что есть данные для графика
         if not times or not prices:
-            print(f"[CHART] No valid data after processing candles for {symbol}")
+            chart_logger.error(f"[CHART] No valid data after processing candles for {symbol}")
             return jsonify({'success': False, 'error': 'No valid chart data after processing'}), 500
         
         # Создаем график
@@ -1392,36 +1414,37 @@ def get_symbol_chart(symbol):
         chart_data = base64.b64encode(buffer.getvalue()).decode()
         plt.close(fig)
         
-        print(f"[CHART] Successfully generated chart for {symbol}")
+        chart_logger.info(f"[CHART] Successfully generated chart for {symbol}")
         return jsonify({
             'success': True,
             'chart': chart_data
         })
         
     except Exception as e:
-        print(f"[CHART] Error generating chart for {symbol}: {str(e)}")
+        chart_logger.error(f"[CHART] Error generating chart for {symbol}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/get_sma200_position/<symbol>')
 def get_sma200_position(symbol):
     """Получение позиции цены относительно SMA200"""
+    sma_logger = logging.getLogger('app')
     try:
-        print(f"[SMA200] Getting SMA200 position for {symbol}")
+        sma_logger.info(f"[SMA200] Getting SMA200 position for {symbol}")
         
         # Проверяем инициализацию биржи
         if not current_exchange:
-            print("[SMA200] Exchange not initialized")
+            sma_logger.error("[SMA200] Exchange not initialized")
             return jsonify({'error': 'Exchange not initialized'}), 500
             
         # Получаем исторические данные для расчета SMA200
         data = current_exchange.get_chart_data(symbol, '1d', '200d')  # Дневные свечи за 200 дней
         if not data.get('success'):
-            print(f"[SMA200] Failed to get chart data for {symbol}")
+            sma_logger.error(f"[SMA200] Failed to get chart data for {symbol}")
             return jsonify({'error': 'Failed to get chart data'}), 500
             
         candles = data.get('data', {}).get('candles', [])
         if len(candles) < 200:
-            print(f"[SMA200] Not enough data for SMA200 calculation for {symbol}")
+            sma_logger.warning(f"[SMA200] Not enough data for SMA200 calculation for {symbol}")
             return jsonify({'error': 'Not enough data for SMA200'}), 400
             
         # Рассчитываем SMA200
@@ -1434,7 +1457,7 @@ def get_sma200_position(symbol):
         # Определяем позицию относительно SMA200
         above_sma200 = current_price > sma200
         
-        print(f"[SMA200] {symbol}: Current={current_price:.4f}, SMA200={sma200:.4f}, Above={above_sma200}")
+        sma_logger.info(f"[SMA200] {symbol}: Current={current_price:.4f}, SMA200={sma200:.4f}, Above={above_sma200}")
         
         return jsonify({
             'success': True,
@@ -1445,17 +1468,18 @@ def get_sma200_position(symbol):
         })
         
     except Exception as e:
-        print(f"[SMA200] Error calculating SMA200 for {symbol}: {str(e)}")
+        sma_logger.error(f"[SMA200] Error calculating SMA200 for {symbol}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
 def open_firewall_ports():
     """Открывает порты в брандмауэре при запуске (Windows/macOS/Linux)"""
+    app_logger = logging.getLogger('app')
     try:
         import subprocess
         import platform
         
-        print("[APP] 🔥 Проверка открытия портов в брандмауэре...")
+        app_logger.info("[APP] 🔥 Проверка открытия портов в брандмауэре...")
         
         system = platform.system()
         
@@ -1472,7 +1496,7 @@ def open_firewall_ports():
                 )
                 
                 if service_name not in result.stdout:
-                    print(f"[APP] 🔥 Открываем порт {port}...")
+                    app_logger.info(f"[APP] 🔥 Открываем порт {port}...")
                     subprocess.run([
                         'netsh', 'advfirewall', 'firewall', 'add', 'rule',
                         f'name={service_name}',
@@ -1481,47 +1505,47 @@ def open_firewall_ports():
                         'protocol=TCP',
                         f'localport={port}'
                     ], check=True)
-                    print(f"[APP] ✅ Порт {port} открыт")
+                    app_logger.info(f"[APP] ✅ Порт {port} открыт")
                 else:
-                    print(f"[APP] ✅ Порт {port} уже открыт")
+                    app_logger.info(f"[APP] ✅ Порт {port} уже открыт")
         
         elif system == 'Darwin':  # macOS
             # macOS Application Firewall через pfctl
-            print("[APP] 💡 На macOS откройте порты вручную через System Preferences → Security & Privacy → Firewall")
-            print("[APP] 💡 Или используйте: sudo pfctl -a pflog -f /etc/pf.conf")
+            app_logger.info("[APP] 💡 На macOS откройте порты вручную через System Preferences → Security & Privacy → Firewall")
+            app_logger.info("[APP] 💡 Или используйте: sudo pfctl -a pflog -f /etc/pf.conf")
         
         elif system == 'Linux':
             # Linux через iptables или ufw
-            print("[APP] 🔥 Открываем порты в Linux...")
+            app_logger.info("[APP] 🔥 Открываем порты в Linux...")
             try:
                 # Проверяем наличие ufw (Ubuntu/Debian)
                 subprocess.run(['which', 'ufw'], check=True)
-                print("[APP] Найден ufw, открываем порты...")
+                app_logger.info("[APP] Найден ufw, открываем порты...")
                 
                 for port in [5000, 5001]:
                     # Проверяем, не открыт ли уже порт
                     result = subprocess.run(['ufw', 'status'], capture_output=True, text=True)
                     if f'{port}/tcp' not in result.stdout:
                         subprocess.run(['sudo', 'ufw', 'allow', str(port), '/tcp'], check=True)
-                        print(f"[APP] ✅ Порт {port} открыт")
+                        app_logger.info(f"[APP] ✅ Порт {port} открыт")
                     else:
-                        print(f"[APP] ✅ Порт {port} уже открыт")
+                        app_logger.info(f"[APP] ✅ Порт {port} уже открыт")
                         
             except (subprocess.CalledProcessError, FileNotFoundError):
                 try:
                     # Пробуем iptables
                     for port in [5000, 5001]:
-                        print(f"[APP] ⚠️ Настройте порт {port} вручную через iptables или ufw")
+                        app_logger.warning(f"[APP] ⚠️ Настройте порт {port} вручную через iptables или ufw")
                 except:
-                    print("[APP] 💡 Настройте порты вручную см. docs/INSTALL.md")
+                    app_logger.info("[APP] 💡 Настройте порты вручную см. docs/INSTALL.md")
         
         else:
-            print(f"[APP] ⚠️ Неизвестная система: {system}")
-            print("[APP] 💡 Настройте порты вручную см. docs/INSTALL.md")
+            app_logger.warning(f"[APP] ⚠️ Неизвестная система: {system}")
+            app_logger.info("[APP] 💡 Настройте порты вручную см. docs/INSTALL.md")
             
     except Exception as e:
-        print(f"[APP] ⚠️ Не удалось открыть порты автоматически: {e}")
-        print("[APP] 💡 Откройте порты вручную см. docs/INSTALL.md")
+        app_logger.warning(f"[APP] ⚠️ Не удалось открыть порты автоматически: {e}")
+        app_logger.warning("[APP] 💡 Откройте порты вручную см. docs/INSTALL.md")
 
 if __name__ == '__main__':
     # Открываем порты в брандмауэре
@@ -1532,22 +1556,23 @@ if __name__ == '__main__':
         os.makedirs('logs')
     
     # Очищаем старые логи при запуске
+    app_logger = logging.getLogger('app')
     log_files = ['logs/bots.log', 'logs/app.log', 'logs/error.log']
     for log_file in log_files:
         if os.path.exists(log_file):
             file_size = os.path.getsize(log_file)
             if file_size > 2 * 1024 * 1024:  # 2MB
-                print(f"[APP] 🗑️ Очищаем большой лог файл: {log_file} ({file_size / 1024 / 1024:.1f}MB)")
+                app_logger.info(f"[APP] 🗑️ Очищаем большой лог файл: {log_file} ({file_size / 1024 / 1024:.1f}MB)")
                 with open(log_file, 'w', encoding='utf-8') as f:
                     f.write(f"# Лог файл очищен при запуске - {datetime.now().isoformat()}\n")
             else:
-                print(f"[APP] 📝 Лог файл в порядке: {log_file} ({file_size / 1024:.1f}KB)")
+                app_logger.info(f"[APP] 📝 Лог файл в порядке: {log_file} ({file_size / 1024:.1f}KB)")
     
     # Открываем браузер с задержкой
     Timer(1.5, open_browser).start()
     
     # ✅ ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ positions_data при запуске
-    print("[APP] 🔄 Принудительное обновление positions_data при запуске...")
+    app_logger.info("[APP] 🔄 Принудительное обновление positions_data при запуске...")
     try:
         positions, rapid_growth = current_exchange.get_positions()
         if positions:
@@ -1580,7 +1605,7 @@ if __name__ == '__main__':
                     'losing_count': len(losing)
                 }
             })
-            print(f"[APP] ✅ positions_data обновлен: {len(positions)} позиций")
+            app_logger.info(f"[APP] ✅ positions_data обновлен: {len(positions)} позиций")
         else:
             # Очищаем positions_data если позиций нет
             positions_data.update({
@@ -1596,9 +1621,9 @@ if __name__ == '__main__':
                     'losing_count': 0
                 }
             })
-            print("[APP] ✅ positions_data очищен (нет позиций)")
+            app_logger.info("[APP] ✅ positions_data очищен (нет позиций)")
     except Exception as e:
-        print(f"[APP] ❌ Ошибка принудительного обновления positions_data: {e}")
+        app_logger.error(f"[APP] ❌ Ошибка принудительного обновления positions_data: {e}")
     
     # Запускаем фоновые процессы (теперь всегда, так как reloader отключен)
     update_thread = threading.Thread(target=background_update)
