@@ -440,6 +440,20 @@ def setup_color_logging(console_log_levels=None):
     # Добавляем обработчик к логгеру
     logger.addHandler(console_handler)
     
+    # ОТЛАДКА: Проверяем, что обработчик добавлен
+    import sys
+    sys.stderr.write(f"[COLOR_LOGGER] Обработчик добавлен, всего handlers: {len(logger.handlers)}\n")
+    sys.stderr.write(f"[COLOR_LOGGER] enabled_levels: {level_filter.enabled_levels}\n")
+    sys.stderr.write(f"[COLOR_LOGGER] debug_enabled: {level_filter.debug_enabled}\n")
+    
+    # Тестовое логирование для проверки
+    test_logger = logging.getLogger('color_logger.test')
+    test_logger.info("🧪 Тестовое сообщение из setup_color_logging")
+    test_logger.debug("🧪 Тестовое DEBUG сообщение из setup_color_logging")
+    test_logger.warning("🧪 Тестовое WARNING сообщение из setup_color_logging")
+    test_logger.error("🧪 Тестовое ERROR сообщение из setup_color_logging")
+    sys.stderr.write(f"[COLOR_LOGGER] Тестовые сообщения отправлены, handlers после: {len(logger.handlers)}\n")
+    
     # Настраиваем уровни для внешних логгеров, чтобы они не шумели
     # Определяем, какие уровни разрешены
     allowed_levels = set()
