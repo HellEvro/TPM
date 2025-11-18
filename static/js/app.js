@@ -418,8 +418,26 @@ class App {
 
             const sortSelect = document.getElementById('sortSelect');
             const sortBy = sortSelect ? sortSelect.value : 'time';
+            
+            const periodSelect = document.getElementById('periodSelect');
+            const period = periodSelect ? periodSelect.value : 'all';
+            
+            // Формируем URL с параметрами
+            let url = `/api/closed_pnl?sort=${sortBy}&period=${period}`;
+            
+            // Если выбран произвольный период, добавляем даты
+            if (period === 'custom') {
+                const startDate = document.getElementById('startDate')?.value;
+                const endDate = document.getElementById('endDate')?.value;
+                if (startDate && endDate) {
+                    url += `&start_date=${startDate}&end_date=${endDate}`;
+                } else {
+                    // Если даты не выбраны, используем период "всё время"
+                    url = `/api/closed_pnl?sort=${sortBy}&period=all`;
+                }
+            }
 
-            const response = await fetch(`/api/closed_pnl?sort=${sortBy}`);
+            const response = await fetch(url);
             const data = await response.json();
 
             if (data.success) {
@@ -444,6 +462,40 @@ class App {
             console.error('Error updating closed PNL:', error);
             this.showErrorNotification('Ошибка при обновлении данных');
         }
+    }
+
+    onPeriodChange() {
+        const periodSelect = document.getElementById('periodSelect');
+        const customDateRange = document.getElementById('customDateRange');
+        
+        if (periodSelect && customDateRange) {
+            if (periodSelect.value === 'custom') {
+                customDateRange.style.display = 'flex';
+                customDateRange.style.alignItems = 'center';
+            } else {
+                customDateRange.style.display = 'none';
+                // Автоматически обновляем данные при выборе предустановленного периода
+                this.updateClosedPnl(true);
+            }
+        }
+    }
+
+    applyCustomDateRange() {
+        const startDate = document.getElementById('startDate')?.value;
+        const endDate = document.getElementById('endDate')?.value;
+        
+        if (!startDate || !endDate) {
+            this.showErrorNotification('Выберите начальную и конечную даты');
+            return;
+        }
+        
+        if (new Date(startDate) > new Date(endDate)) {
+            this.showErrorNotification('Начальная дата не может быть больше конечной');
+            return;
+        }
+        
+        // Обновляем данные с выбранным диапазоном дат
+        this.updateClosedPnl(true);
     }
 
     updateClosedPnlTable(data = null, resetPage = false) {
