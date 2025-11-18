@@ -2125,8 +2125,8 @@ class AITrainer:
                     # Логируем начало симуляции (INFO только для важных монет)
                     # Вычисляем количество свечей для обработки с учетом пропуска начальных свечей
                     simulation_start_idx = RSI_PERIOD
-                    if base_enable_maturity_check:
-                        simulation_start_idx = max(RSI_PERIOD, base_min_candles_for_maturity)
+                    if coin_enable_maturity_check:
+                        simulation_start_idx = max(RSI_PERIOD, coin_min_candles_for_maturity)
                     candles_to_process = len(candles) - simulation_start_idx
                     if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
                         logger.info(f"   🔄 {symbol}: симуляция {candles_to_process:,} свечей...")
@@ -2139,13 +2139,13 @@ class AITrainer:
                     # ВАЖНО: Начинаем симуляцию с момента, когда уже накопилось достаточно свечей для зрелости
                     # Это нужно чтобы фильтр зрелости не блокировал все входы в начале истории
                     simulation_start_idx = RSI_PERIOD
-                    if base_enable_maturity_check:
-                        # Начинаем симуляцию с момента, когда уже есть 400+ свечей (или индивидуальный порог для монеты)
-                        # Но используем базовый порог для определения начала симуляции
-                        simulation_start_idx = max(RSI_PERIOD, base_min_candles_for_maturity)
+                    if coin_enable_maturity_check:
+                        # Начинаем симуляцию с момента, когда уже есть достаточно свечей (или индивидуальный порог для монеты)
+                        # Используем мутированный порог для определения начала симуляции
+                        simulation_start_idx = max(RSI_PERIOD, coin_min_candles_for_maturity)
                         if simulation_start_idx > RSI_PERIOD:
                             skipped_candles = simulation_start_idx - RSI_PERIOD
-                            logger.debug(f"   ⏭️ {symbol}: пропущено {skipped_candles} начальных свечей (до накопления {base_min_candles_for_maturity} для зрелости)")
+                            logger.debug(f"   ⏭️ {symbol}: пропущено {skipped_candles} начальных свечей (до накопления {coin_min_candles_for_maturity} для зрелости)")
                     
                     # Счетчики для диагностики фильтров
                     rsi_entered_long_zone = 0
