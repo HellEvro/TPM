@@ -13,6 +13,7 @@ import os
 import json
 import logging
 import pickle
+import shutil
 from copy import deepcopy
 import numpy as np
 import pandas as pd
@@ -25,6 +26,10 @@ from sklearn.metrics import accuracy_score, classification_report, mean_squared_
 import joblib
 from bot_engine.protections import ProtectionState, evaluate_protections
 from bot_engine.ai.filter_utils import apply_entry_filters
+try:
+    from bot_engine.ai.ai_launcher_config import AITrainingStrategyConfig
+except ImportError:  # pragma: no cover
+    AITrainingStrategyConfig = None
 
 logger = logging.getLogger('AI.Trainer')
 
@@ -156,6 +161,14 @@ class AITrainer:
         except Exception as e:
             logger.debug(f"⚠️ Не удалось инициализировать ParameterQualityPredictor: {e}")
             self.param_quality_predictor = None
+
+        # Настройки тренировочного режима (не влияют на боевые боты)
+        self.training_param_overrides: Dict[str, Any] = {}
+        self.training_mutable_flags: Dict[str, bool] = {}
+        self._training_overrides_logged = False
+        if AITrainingStrategyConfig and getattr(AITrainingStrategyConfig, 'ENABLED', False):
+            self.training_param_overrides = deepcopy(getattr(AITrainingStrategyConfig, 'PARAM_OVERRIDES', {}) or {})
+            self.training_mutable_flags = getattr(AITrainingStrategyConfig, 'MUTABLE_FILTERS', {}) or {}
         
         # Целевые значения Win Rate для монет с динамическим повышением порога
         self.win_rate_targets_path = os.path.normpath(os.path.join(self.data_dir, 'win_rate_targets.json'))
@@ -241,6 +254,19 @@ class AITrainer:
             'ai_total_pnl': ai_meta.get('total_pnl', 0.0),
         }
     
+    def _mutate_flag(self, key: str, base_value: bool, rng) -> bool:
+        """
+        Переключает флаг в обучении, если это разрешено тренировочным конфигом.
+        """
+        allow_mutation = self.training_mutable_flags.get(key, False)
+        if not allow_mutation or rng is None:
+            return bool(base_value)
+        base_bool = bool(base_value)
+        # 50% шанс оставить как есть, иначе переключаем
+        if rng.random() < 0.5:
+            return base_bool
+        return not base_bool
+
     def _load_models(self):
         """Загрузить сохраненные модели"""
         try:
@@ -573,12 +599,14 @@ class AITrainer:
                 logger.debug(f"   ⏳ Файл {bot_history_file} не найден")
         except json.JSONDecodeError as json_error:
             logger.warning(f"   ⚠️ Файл bot_history.json поврежден (JSON ошибка на позиции {json_error.pos})")
-            logger.info("   🗑️ Удаляем поврежденный файл, bots.py пересоздаст его автоматически")
+            logger.info("   🧯 Сохраняем проблемный файл для диагностики (оригинал не трогаем)")
             try:
-                os.remove(bot_history_file)
-                logger.info("   ✅ Поврежденный файл удален")
-            except Exception as del_error:
-                logger.debug(f"   ⚠️ Не удалось удалить файл: {del_error}")
+                corrupted_file = f"{bot_history_file}.corrupted"
+                if os.path.exists(bot_history_file):
+                    shutil.copy2(bot_history_file, corrupted_file)
+                    logger.info(f"   📁 Копия bot_history.json: {corrupted_file}")
+            except Exception as copy_error:
+                logger.debug(f"   ⚠️ Не удалось сохранить копию: {copy_error}")
         except Exception as e:
             logger.warning(f"   ⚠️ Ошибка загрузки bot_history.json: {e}")
         
@@ -1547,6 +1575,12 @@ class AITrainer:
 
             base_config_snapshot = _get_config_snapshot()
             base_config = base_config_snapshot.get('global', {})
+            if self.training_param_overrides:
+                base_config = deepcopy(base_config)
+                base_config.update(self.training_param_overrides)
+                if not self._training_overrides_logged:
+                    logger.info("🎯 Используем тренировочные AI оверрайды (ai_launcher_config)")
+                    self._training_overrides_logged = True
 
             base_stop_loss = base_config.get('max_loss_percent', 15.0)
             base_take_profit = base_config.get('take_profit_percent', 20.0)
@@ -1834,7 +1868,10 @@ class AITrainer:
                     if existing_coin_settings:
                         logger.debug(f"   🧩 {symbol}: обнаружены индивидуальные настройки, используем их как базу")
                     coin_base_config = base_config.copy() if isinstance(base_config, dict) else {}
-                    coin_base_config.update(existing_coin_settings)
+                    if existing_coin_settings:
+                        coin_base_config.update(existing_coin_settings)
+                    if self.training_param_overrides:
+                        coin_base_config.update(self.training_param_overrides)
 
                     def _get_float_value(key, default_value):
                         value = coin_base_config.get(key, default_value)
@@ -1985,6 +2022,8 @@ class AITrainer:
 
                     # Фильтры: RSI временной и ExitScam (индивидуализация на уровне монеты)
                     coin_rsi_time_filter_enabled = bool(coin_base_rsi_time_filter_enabled)
+                    coin_rsi_time_filter_enabled = self._mutate_flag('rsi_time_filter_enabled', coin_rsi_time_filter_enabled, coin_rng)
+                    coin_base_config['rsi_time_filter_enabled'] = coin_rsi_time_filter_enabled
                     coin_rsi_time_filter_candles = max(3, min(30, coin_base_rsi_time_filter_candles + coin_rng.randint(-4, 4)))
                     coin_rsi_time_filter_upper = max(50, min(85, coin_base_rsi_time_filter_upper + coin_rng.randint(-6, 6)))
                     coin_rsi_time_filter_lower = max(15, min(50, coin_base_rsi_time_filter_lower + coin_rng.randint(-6, 6)))
@@ -1992,6 +2031,8 @@ class AITrainer:
                         # Гарантируем корректный диапазон
                         coin_rsi_time_filter_lower = max(15, coin_rsi_time_filter_upper - 1)
                     coin_exit_scam_enabled = bool(coin_base_exit_scam_enabled)
+                    coin_exit_scam_enabled = self._mutate_flag('exit_scam_enabled', coin_exit_scam_enabled, coin_rng)
+                    coin_base_config['exit_scam_enabled'] = coin_exit_scam_enabled
                     coin_exit_scam_candles = max(4, min(30, coin_base_exit_scam_candles + coin_rng.randint(-4, 4)))
                     coin_exit_scam_single_candle_percent = max(
                         5.0, min(60.0, coin_base_exit_scam_single + coin_rng.uniform(-10.0, 10.0))
@@ -2004,21 +2045,23 @@ class AITrainer:
                     )
 
                     coin_trend_detection_enabled = bool(coin_base_trend_detection_enabled)
-                    if coin_rng.random() > 0.7:
-                        coin_trend_detection_enabled = not coin_trend_detection_enabled
+                    coin_trend_detection_enabled = self._mutate_flag('trend_detection_enabled', coin_trend_detection_enabled, coin_rng)
+                    coin_base_config['trend_detection_enabled'] = coin_trend_detection_enabled
+
                     coin_avoid_down_trend = bool(coin_base_avoid_down_trend)
-                    if coin_rng.random() > 0.8:
-                        coin_avoid_down_trend = not coin_avoid_down_trend
+                    coin_avoid_down_trend = self._mutate_flag('avoid_down_trend', coin_avoid_down_trend, coin_rng)
+                    coin_base_config['avoid_down_trend'] = coin_avoid_down_trend
+
                     coin_avoid_up_trend = bool(coin_base_avoid_up_trend)
-                    if coin_rng.random() > 0.8:
-                        coin_avoid_up_trend = not coin_avoid_up_trend
+                    coin_avoid_up_trend = self._mutate_flag('avoid_up_trend', coin_avoid_up_trend, coin_rng)
+                    coin_base_config['avoid_up_trend'] = coin_avoid_up_trend
                     coin_trend_analysis_period = max(5, min(120, coin_base_trend_analysis_period + coin_rng.randint(-10, 10)))
                     coin_trend_price_change_threshold = max(1.0, min(25.0, coin_base_trend_price_change_threshold + coin_rng.uniform(-3.0, 3.0)))
                     coin_trend_candles_threshold = max(40, min(100, coin_base_trend_candles_threshold + coin_rng.randint(-15, 15)))
 
                     coin_enable_maturity_check = bool(coin_base_enable_maturity_check)
-                    if coin_rng.random() > 0.85:
-                        coin_enable_maturity_check = not coin_enable_maturity_check
+                    coin_enable_maturity_check = self._mutate_flag('enable_maturity_check', coin_enable_maturity_check, coin_rng)
+                    coin_base_config['enable_maturity_check'] = coin_enable_maturity_check
                     coin_min_candles_for_maturity = max(100, min(900, coin_base_min_candles_for_maturity + coin_rng.randint(-120, 150)))
                     coin_min_rsi_low = max(15, min(45, coin_base_min_rsi_low + coin_rng.randint(-5, 5)))
                     coin_max_rsi_high = max(55, min(85, coin_base_max_rsi_high + coin_rng.randint(-5, 5)))

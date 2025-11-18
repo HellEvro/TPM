@@ -9,6 +9,7 @@
 import os
 import json
 import logging
+import shutil
 from copy import deepcopy
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
@@ -180,13 +181,15 @@ class AIStrategyOptimizer:
                     # Убрано: logger.debug(f"📊 Добавлено {len(bot_trades)} сделок из bot_history.json") - слишком шумно
         except json.JSONDecodeError as json_error:
             logger.warning(f"⚠️ Файл bot_history.json поврежден (JSON ошибка на позиции {json_error.pos})")
-            logger.info("🗑️ Удаляем поврежденный файл, bots.py пересоздаст его автоматически")
+            logger.info("🧯 Сохраняем копию повреждённого файла (оригинал остаётся нетронутым)")
             try:
                 bot_history_file = os.path.join('data', 'bot_history.json')
-                os.remove(bot_history_file)
-                logger.info("✅ Поврежденный файл удален")
-            except Exception as del_error:
-                logger.debug(f"⚠️ Не удалось удалить файл: {del_error}")
+                corrupted_file = f"{bot_history_file}.corrupted"
+                if os.path.exists(bot_history_file):
+                    shutil.copy2(bot_history_file, corrupted_file)
+                    logger.info(f"📁 Копия bot_history.json: {corrupted_file}")
+            except Exception as copy_error:
+                logger.debug(f"⚠️ Не удалось сохранить копию: {copy_error}")
         except Exception as e:
             logger.debug(f"⚠️ Ошибка загрузки bot_history.json: {e}")
         

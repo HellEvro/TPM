@@ -15,6 +15,7 @@ import json
 import logging
 import time
 import uuid
+import shutil
 import traceback
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
@@ -72,12 +73,14 @@ class AIDataStorage:
                     return json.load(f)
         except json.JSONDecodeError as json_error:
             logger.warning(f"⚠️ Файл {filepath} поврежден (JSON ошибка на позиции {json_error.pos})")
-            logger.info("🗑️ Удаляем поврежденный файл")
+            logger.info("🧯 Сохраняем копию повреждённого файла (оригинал оставляем)")
             try:
-                os.remove(filepath)
-                logger.info("✅ Поврежденный файл удален")
-            except Exception as del_error:
-                logger.debug(f"⚠️ Не удалось удалить файл: {del_error}")
+                corrupted_file = f"{filepath}.corrupted"
+                if os.path.exists(filepath):
+                    shutil.copy2(filepath, corrupted_file)
+                    logger.info(f"📁 Копия сохранена: {corrupted_file}")
+            except Exception as copy_error:
+                logger.debug(f"⚠️ Не удалось сохранить копию: {copy_error}")
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки данных из {filepath}: {e}")
         return {}
