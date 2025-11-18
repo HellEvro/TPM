@@ -656,13 +656,10 @@ class NewTradingBot:
                         # Вход по тренду - можем ждать большего движения
                         config_key = 'rsi_exit_long_with_trend'
                         threshold = bot_data.get(config_key) or auto_config.get(config_key, 65)
-                        logger.debug(f"[RSI_CHECK_{symbol}] 📈 LONG по тренду → выход на RSI >= {threshold}")
                     else:
                         # Вход против тренда или тренд неизвестен - выходим раньше
                         config_key = 'rsi_exit_long_against_trend'
                         threshold = bot_data.get(config_key) or auto_config.get(config_key, 60)
-                        trend_display = entry_trend if entry_trend else 'неизвестен'
-                        logger.debug(f"[RSI_CHECK_{symbol}] 📉 LONG против тренда ({trend_display}) → выход на RSI >= {threshold}")
                     
                     condition_func = lambda r, t: r >= t  # RSI >= порог для LONG
                     condition_str = ">="
@@ -673,13 +670,10 @@ class NewTradingBot:
                         # Вход по тренду - можем ждать большего движения
                         config_key = 'rsi_exit_short_with_trend'
                         threshold = bot_data.get(config_key) or auto_config.get(config_key, 35)
-                        logger.debug(f"[RSI_CHECK_{symbol}] 📉 SHORT по тренду → выход на RSI <= {threshold}")
                     else:
                         # Вход против тренда или тренд неизвестен - выходим раньше
                         config_key = 'rsi_exit_short_against_trend'
                         threshold = bot_data.get(config_key) or auto_config.get(config_key, 40)
-                        trend_display = entry_trend if entry_trend else 'неизвестен'
-                        logger.debug(f"[RSI_CHECK_{symbol}] 📈 SHORT против тренда ({trend_display}) → выход на RSI <= {threshold}")
                     
                     condition_func = lambda r, t: r <= t  # RSI <= порог для SHORT
                     condition_str = "<="
