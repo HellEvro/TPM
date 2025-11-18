@@ -28,6 +28,24 @@
                 </select>
             </div>
         </div>
+        <div class="period-filter-container">
+            <label for="periodSelect" data-translate="periodFilter">Период:</label>
+            <select id="periodSelect" onchange="window.app.onPeriodChange()" class="sort-select">
+                <option value="all" data-translate="periodAll">За всё время</option>
+                <option value="day" data-translate="periodDay">За день</option>
+                <option value="week" data-translate="periodWeek">За неделю</option>
+                <option value="month" data-translate="periodMonth">За месяц</option>
+                <option value="half_year" data-translate="periodHalfYear">За полгода</option>
+                <option value="year" data-translate="periodYear">За год</option>
+                <option value="custom" data-translate="periodCustom">Произвольный период</option>
+            </select>
+            <div id="customDateRange" style="display: none; margin-left: 10px;">
+                <input type="date" id="startDate" class="date-input" />
+                <span style="margin: 0 5px;">-</span>
+                <input type="date" id="endDate" class="date-input" />
+                <button onclick="window.app.applyCustomDateRange()" class="apply-date-btn" data-translate="apply">Применить</button>
+            </div>
+        </div>
         <select id="sortSelect" onchange="window.app.updateClosedPnl()" class="sort-select">
             <option value="time" data-translate="sortNew">От нового к старому</option>
             <option value="pnl" data-translate="sortPnl">По размеру PNL</option>

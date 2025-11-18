@@ -145,21 +145,57 @@ class OkxExchange(BaseExchange):
             logger.error(f"[OKX] Error getting positions: {str(e)}")
             return [], []
 
-    def get_closed_pnl(self, sort_by='time'):
-        """Получает историю закрытых позиций с PNL"""
+    def get_closed_pnl(self, sort_by='time', period='all', start_date=None, end_date=None):
+        """Получает историю закрытых позиций с PNL
+        
+        Args:
+            sort_by: Способ сортировки ('time' или 'pnl')
+            period: Период фильтрации ('all', 'day', 'week', 'month', 'half_year', 'year', 'custom')
+            start_date: Начальная дата для custom периода (формат: 'YYYY-MM-DD' или timestamp в мс)
+            end_date: Конечная дата для custom периода (формат: 'YYYY-MM-DD' или timestamp в мс)
+        """
         try:
             all_closed_pnl = []
             
-            # Получаем историю за последние 7 дней
             end_time = int(time.time() * 1000)
-            start_time = end_time - (7 * 24 * 60 * 60 * 1000)  # 7 days
+            
+            # Определяем диапазон дат в зависимости от периода
+            if period == 'custom' and start_date and end_date:
+                try:
+                    if isinstance(start_date, str) and '-' in start_date:
+                        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+                        start_time = int(start_dt.timestamp() * 1000)
+                    else:
+                        start_time = int(start_date)
+                    
+                    if isinstance(end_date, str) and '-' in end_date:
+                        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+                        end_dt = end_dt.replace(hour=23, minute=59, second=59)
+                        end_time = int(end_dt.timestamp() * 1000)
+                    else:
+                        end_time = int(end_date)
+                except Exception as e:
+                    logger.error(f"Error parsing custom dates: {e}")
+                    start_time = end_time - (7 * 24 * 60 * 60 * 1000)
+            elif period == 'day':
+                start_time = end_time - (24 * 60 * 60 * 1000)
+            elif period == 'week':
+                start_time = end_time - (7 * 24 * 60 * 60 * 1000)
+            elif period == 'month':
+                start_time = end_time - (30 * 24 * 60 * 60 * 1000)
+            elif period == 'half_year':
+                start_time = end_time - (180 * 24 * 60 * 60 * 1000)
+            elif period == 'year':
+                start_time = end_time - (365 * 24 * 60 * 60 * 1000)
+            else:  # period == 'all'
+                start_time = end_time - (730 * 24 * 60 * 60 * 1000)  # 2 года
             
             try:
                 # Используем прямой запрос к API OKX для получения истории закрытых позиций
                 params = {
                     'instType': 'SWAP',
                     'state': 'closed',  # Получаем только закрытые позиции
-                    'limit': '50'  # Увеличиваем лимит
+                    'limit': '100'  # Увеличиваем лимит
                 }
                 
                 closed_positions = self.client.private_get_account_positions(params)
@@ -171,6 +207,11 @@ class OkxExchange(BaseExchange):
                         try:
                             # Проверяем наличие всех необходимых данных
                             if not all(k in position for k in ['instId', 'pos', 'avgPx', 'markPx', 'realizedPnl', 'upl', 'uTime']):
+                                continue
+                            
+                            # Проверяем время закрытия позиции
+                            close_timestamp = int(position.get('uTime', 0))
+                            if close_timestamp < start_time or close_timestamp > end_time:
                                 continue
                             
                             # Рассчитываем общий PNL (реализованный + нереализованный)
@@ -207,6 +248,10 @@ class OkxExchange(BaseExchange):
                                 
                                 # Находим все сделки с PnL (закрывающие сделки)
                                 for i, trade in enumerate(position_trades):
+                                    trade_timestamp = int(trade['info'].get('fillTime', trade['timestamp'] * 1000))
+                                    if trade_timestamp < start_time or trade_timestamp > end_time:
+                                        continue
+                                    
                                     if float(trade['info']['fillPnl']) != 0:
                                         # Ищем соответствующую сделку открытия
                                         entry_trade = None
@@ -223,28 +268,40 @@ class OkxExchange(BaseExchange):
                                                 'exit_price': float(trade['info']['fillPx']),
                                                 'closed_pnl': float(trade['info']['fillPnl']),
                                                 'close_time': datetime.fromtimestamp(
-                                                    int(trade['info']['fillTime']) / 1000
+                                                    trade_timestamp / 1000
                                                 ).strftime('%Y-%m-%d %H:%M:%S'),
-                                                'exchange': 'okx'
+                                                'exchange': 'okx',
+                                                'close_timestamp': trade_timestamp
                                             }
                                             all_closed_pnl.append(pnl_record)
                         except Exception:
                             continue
                     
+                    # Фильтруем по датам (дополнительная проверка)
+                    if period != 'all':
+                        filtered_pnl = []
+                        for pnl in all_closed_pnl:
+                            close_ts = pnl.get('close_timestamp', 0)
+                            if start_time <= close_ts <= end_time:
+                                filtered_pnl.append(pnl)
+                        all_closed_pnl = filtered_pnl
+                    
                     # Сортировка результатов
                     if sort_by == 'pnl':
                         all_closed_pnl.sort(key=lambda x: abs(float(x['closed_pnl'])), reverse=True)
                     else:  # sort by time
-                        all_closed_pnl.sort(key=lambda x: x['close_time'], reverse=True)
+                        all_closed_pnl.sort(key=lambda x: x.get('close_timestamp', 0), reverse=True)
                     
                     return all_closed_pnl
                 else:
                     return []
                 
-            except Exception:
+            except Exception as e:
+                logger.error(f"Error in get_closed_pnl: {e}")
                 return []
                 
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in get_closed_pnl: {e}")
             return []
 
     def get_symbol_chart_data(self, symbol):

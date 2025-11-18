@@ -106,13 +106,50 @@ class BinanceExchange(BaseExchange):
         except Exception as e:
             return [], []
 
-    def get_closed_pnl(self, sort_by='time'):
-        """Получает историю закрытых позиций с PNL"""
+    def get_closed_pnl(self, sort_by='time', period='all', start_date=None, end_date=None):
+        """Получает историю закрытых позиций с PNL
+        
+        Args:
+            sort_by: Способ сортировки ('time' или 'pnl')
+            period: Период фильтрации ('all', 'day', 'week', 'month', 'half_year', 'year', 'custom')
+            start_date: Начальная дата для custom периода (формат: 'YYYY-MM-DD' или timestamp в мс)
+            end_date: Конечная дата для custom периода (формат: 'YYYY-MM-DD' или timestamp в мс)
+        """
         try:
             all_closed_pnl = []
             
             end_time = int(time.time() * 1000)
-            start_time = end_time - (30 * 24 * 60 * 60 * 1000)  # 30 дней назад
+            
+            # Определяем диапазон дат в зависимости от периода
+            if period == 'custom' and start_date and end_date:
+                try:
+                    if isinstance(start_date, str) and '-' in start_date:
+                        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+                        start_time = int(start_dt.timestamp() * 1000)
+                    else:
+                        start_time = int(start_date)
+                    
+                    if isinstance(end_date, str) and '-' in end_date:
+                        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+                        end_dt = end_dt.replace(hour=23, minute=59, second=59)
+                        end_time = int(end_dt.timestamp() * 1000)
+                    else:
+                        end_time = int(end_date)
+                except Exception as e:
+                    logger.error(f"Error parsing custom dates: {e}")
+                    start_time = end_time - (30 * 24 * 60 * 60 * 1000)
+            elif period == 'day':
+                start_time = end_time - (24 * 60 * 60 * 1000)
+            elif period == 'week':
+                start_time = end_time - (7 * 24 * 60 * 60 * 1000)
+            elif period == 'month':
+                start_time = end_time - (30 * 24 * 60 * 60 * 1000)
+            elif period == 'half_year':
+                start_time = end_time - (180 * 24 * 60 * 60 * 1000)
+            elif period == 'year':
+                start_time = end_time - (365 * 24 * 60 * 60 * 1000)
+            else:  # period == 'all'
+                start_time = end_time - (730 * 24 * 60 * 60 * 1000)  # 2 года
             
             current_start = start_time
             while current_start < end_time:
@@ -160,6 +197,7 @@ class BinanceExchange(BaseExchange):
                                     break
                             
                             if entry_trade:
+                                close_timestamp = int(pnl_trade['time'])
                                 pnl_record = {
                                     'symbol': clean_symbol(pnl_trade['symbol']),
                                     'qty': abs(float(pnl_trade['qty'])),
@@ -167,9 +205,10 @@ class BinanceExchange(BaseExchange):
                                     'exit_price': float(pnl_trade['price']),
                                     'closed_pnl': float(pnl_trade['realizedPnl']),
                                     'close_time': datetime.fromtimestamp(
-                                        int(pnl_trade['time'])/1000
+                                        close_timestamp/1000
                                     ).strftime('%Y-%m-%d %H:%M:%S'),
-                                    'exchange': 'binance'
+                                    'exchange': 'binance',
+                                    'close_timestamp': close_timestamp
                                 }
                                 all_closed_pnl.append(pnl_record)
                     
@@ -178,14 +217,24 @@ class BinanceExchange(BaseExchange):
                 
                 current_start = current_end
             
+            # Фильтруем по датам
+            if period != 'all':
+                filtered_pnl = []
+                for pnl in all_closed_pnl:
+                    close_ts = pnl.get('close_timestamp', 0)
+                    if start_time <= close_ts <= end_time:
+                        filtered_pnl.append(pnl)
+                all_closed_pnl = filtered_pnl
+            
             if sort_by == 'pnl':
                 all_closed_pnl.sort(key=lambda x: abs(float(x['closed_pnl'])), reverse=True)
             else:  # sort by time
-                all_closed_pnl.sort(key=lambda x: x['close_time'], reverse=True)
+                all_closed_pnl.sort(key=lambda x: x.get('close_timestamp', 0), reverse=True)
             
             return all_closed_pnl
             
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in get_closed_pnl: {e}")
             return []
 
     def get_symbol_chart_data(self, symbol):

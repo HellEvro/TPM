@@ -49,8 +49,15 @@ class BaseExchange(ABC):
         pass
 
     @abstractmethod
-    def get_closed_pnl(self, sort_by='time'):
-        """Получение закрытых позиций"""
+    def get_closed_pnl(self, sort_by='time', period='all', start_date=None, end_date=None):
+        """Получение закрытых позиций
+        
+        Args:
+            sort_by: Способ сортировки ('time' или 'pnl')
+            period: Период фильтрации ('all', 'day', 'week', 'month', 'half_year', 'year', 'custom')
+            start_date: Начальная дата для custom периода (формат: 'YYYY-MM-DD' или timestamp в мс)
+            end_date: Конечная дата для custom периода (формат: 'YYYY-MM-DD' или timestamp в мс)
+        """
         pass
 
     @abstractmethod

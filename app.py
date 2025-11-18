@@ -642,14 +642,23 @@ def get_closed_pnl():
     """Получение закрытых позиций"""
     try:
         sort_by = request.args.get('sort', 'time')
+        period = request.args.get('period', 'all')  # all, day, week, month, half_year, year, custom
+        start_date = request.args.get('start_date', None)
+        end_date = request.args.get('end_date', None)
+        
         api_logger = logging.getLogger('app')
-        api_logger.info(f"[API] Getting closed PNL, sort by: {sort_by}")
+        api_logger.info(f"[API] Getting closed PNL, sort by: {sort_by}, period: {period}")
         
         # Получаем баланс и PNL
         wallet_data = current_exchange.get_wallet_balance()
         
-        # Получаем закрытые позиции
-        closed_pnl = current_exchange.get_closed_pnl(sort_by)
+        # Получаем закрытые позиции с фильтрацией по датам
+        closed_pnl = current_exchange.get_closed_pnl(
+            sort_by=sort_by,
+            period=period,
+            start_date=start_date,
+            end_date=end_date
+        )
         api_logger.info(f"[API] Found {len(closed_pnl)} closed positions")
         
         return jsonify({

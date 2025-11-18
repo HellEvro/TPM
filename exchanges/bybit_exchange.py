@@ -331,19 +331,124 @@ class BybitExchange(BaseExchange):
             # print("Error getting positions: {}".format(str(e)))
             return [], []
 
-    def get_closed_pnl(self, sort_by='time'):
-        """Получает историю закрытых позиций с PNL"""
+    def get_closed_pnl(self, sort_by='time', period='all', start_date=None, end_date=None):
+        """Получает историю закрытых позиций с PNL
+        
+        Args:
+            sort_by: Способ сортировки ('time' или 'pnl')
+            period: Период фильтрации ('all', 'day', 'week', 'month', 'half_year', 'year', 'custom')
+            start_date: Начальная дата для custom периода (формат: 'YYYY-MM-DD' или timestamp в мс)
+            end_date: Конечная дата для custom периода (формат: 'YYYY-MM-DD' или timestamp в мс)
+        """
         try:
             all_closed_pnl = []
             
             # Получаем текущее время
             end_time = int(time.time() * 1000)
             
-            # Разбиваем запрос на периоды по 7 дней
-            for i in range(4):  # Получаем данные за 28 дней (4 недели)
-                period_end = end_time - (i * 7 * 24 * 60 * 60 * 1000)
-                period_start = period_end - (7 * 24 * 60 * 60 * 1000)
-                
+            # Определяем диапазон дат в зависимости от периода
+            if period == 'custom' and start_date and end_date:
+                # Парсим даты для custom периода
+                try:
+                    if isinstance(start_date, str):
+                        if '-' in start_date:  # Формат 'YYYY-MM-DD'
+                            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+                            period_start = int(start_dt.timestamp() * 1000)
+                        else:  # Timestamp
+                            period_start = int(start_date)
+                    else:
+                        period_start = int(start_date)
+                    
+                    if isinstance(end_date, str):
+                        if '-' in end_date:  # Формат 'YYYY-MM-DD'
+                            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+                            # Добавляем 23:59:59 к конечной дате
+                            end_dt = end_dt.replace(hour=23, minute=59, second=59)
+                            period_end = int(end_dt.timestamp() * 1000)
+                        else:  # Timestamp
+                            period_end = int(end_date)
+                    else:
+                        period_end = int(end_date)
+                except Exception as e:
+                    logger.error(f"Error parsing custom dates: {e}")
+                    # Используем период "всё время" при ошибке парсинга
+                    period_start = end_time - (730 * 24 * 60 * 60 * 1000)
+                    period_end = end_time
+            elif period == 'day':
+                period_start = end_time - (24 * 60 * 60 * 1000)
+                period_end = end_time
+            elif period == 'week':
+                period_start = end_time - (7 * 24 * 60 * 60 * 1000)
+                period_end = end_time
+            elif period == 'month':
+                period_start = end_time - (30 * 24 * 60 * 60 * 1000)
+                period_end = end_time
+            elif period == 'half_year':
+                period_start = end_time - (180 * 24 * 60 * 60 * 1000)
+                period_end = end_time
+            elif period == 'year':
+                period_start = end_time - (365 * 24 * 60 * 60 * 1000)
+                period_end = end_time
+            else:  # period == 'all'
+                # Для 'all' получаем данные за последние 2 года (максимум)
+                period_start = end_time - (730 * 24 * 60 * 60 * 1000)
+                period_end = end_time
+            
+            # Разбиваем запрос на периоды по 7 дней для избежания лимитов API
+            if period == 'all' or (period_end - period_start) > (7 * 24 * 60 * 60 * 1000):
+                # Для больших периодов разбиваем на части
+                current_end = period_end
+                while current_end > period_start:
+                    current_start = max(current_end - (7 * 24 * 60 * 60 * 1000), period_start)
+                    
+                    try:
+                        cursor = None
+                        while True:
+                            params = {
+                                "category": "linear",
+                                "settleCoin": "USDT",
+                                "limit": 100,
+                                "startTime": str(int(current_start)),
+                                "endTime": str(int(current_end))
+                            }
+                            if cursor:
+                                params["cursor"] = cursor
+                            
+                            response = self.client.get_closed_pnl(**params)
+                            
+                            if not response or response.get('retCode') != 0:
+                                break
+                            
+                            positions = response['result'].get('list', [])
+                            if not positions:
+                                break
+                            
+                            for pos in positions:
+                                pnl_record = {
+                                    'symbol': clean_symbol(pos['symbol']),
+                                    'qty': abs(float(pos.get('qty', 0))),
+                                    'entry_price': float(pos.get('avgEntryPrice', 0)),
+                                    'exit_price': float(pos.get('avgExitPrice', 0)),
+                                    'closed_pnl': float(pos.get('closedPnl', 0)),
+                                    'close_time': datetime.fromtimestamp(
+                                        int(pos.get('updatedTime', time.time() * 1000)) / 1000
+                                    ).strftime('%Y-%m-%d %H:%M:%S'),
+                                    'exchange': 'bybit',
+                                    'close_timestamp': int(pos.get('updatedTime', time.time() * 1000))
+                                }
+                                all_closed_pnl.append(pnl_record)
+                            
+                            cursor = response['result'].get('nextPageCursor')
+                            if not cursor:
+                                break
+                                
+                    except Exception as e:
+                        logger.error(f"Error fetching closed PNL for period: {e}")
+                        break
+                    
+                    current_end = current_start
+            else:
+                # Для коротких периодов делаем один запрос
                 try:
                     cursor = None
                     while True:
@@ -351,8 +456,8 @@ class BybitExchange(BaseExchange):
                             "category": "linear",
                             "settleCoin": "USDT",
                             "limit": 100,
-                            "startTime": str(period_start),
-                            "endTime": str(period_end)
+                            "startTime": str(int(period_start)),
+                            "endTime": str(int(period_end))
                         }
                         if cursor:
                             params["cursor"] = cursor
@@ -376,7 +481,8 @@ class BybitExchange(BaseExchange):
                                 'close_time': datetime.fromtimestamp(
                                     int(pos.get('updatedTime', time.time() * 1000)) / 1000
                                 ).strftime('%Y-%m-%d %H:%M:%S'),
-                                'exchange': 'bybit'
+                                'exchange': 'bybit',
+                                'close_timestamp': int(pos.get('updatedTime', time.time() * 1000))
                             }
                             all_closed_pnl.append(pnl_record)
                         
@@ -384,18 +490,28 @@ class BybitExchange(BaseExchange):
                         if not cursor:
                             break
                             
-                except Exception:
-                    continue
+                except Exception as e:
+                    logger.error(f"Error fetching closed PNL: {e}")
+            
+            # Фильтруем по датам (на случай если API вернул данные вне диапазона)
+            if period != 'all':
+                filtered_pnl = []
+                for pnl in all_closed_pnl:
+                    close_ts = pnl.get('close_timestamp', 0)
+                    if period_start <= close_ts <= period_end:
+                        filtered_pnl.append(pnl)
+                all_closed_pnl = filtered_pnl
             
             # Сортировка
             if sort_by == 'pnl':
                 all_closed_pnl.sort(key=lambda x: abs(float(x['closed_pnl'])), reverse=True)
             else:  # По умолчанию сортируем по времени
-                all_closed_pnl.sort(key=lambda x: x['close_time'], reverse=True)
+                all_closed_pnl.sort(key=lambda x: x.get('close_timestamp', 0), reverse=True)
             
             return all_closed_pnl
             
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in get_closed_pnl: {e}")
             return []
 
     def get_symbol_chart_data(self, symbol):
