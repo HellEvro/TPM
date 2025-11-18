@@ -66,7 +66,7 @@ class VolumeMode:
 # Настройки Auto Bot по умолчанию
 DEFAULT_AUTO_BOT_CONFIG = {
     'enabled': True,
-    'max_concurrent': 20,
+    'max_concurrent': 50,
     'risk_cap_percent': 10,
     'scope': 'all',  # all | whitelist | blacklist
     'whitelist': [],
@@ -294,7 +294,7 @@ class SystemConfig:
     #   - Регистр не важен: '+error' = '+ERROR' = '+Error'
     #   - Пробелы вокруг запятых игнорируются
     # ========================================================================
-    CONSOLE_LOG_LEVELS = ['+ERROR', '+CRITICAL']  # По умолчанию все уровни разрешены
+    CONSOLE_LOG_LEVELS = ['-INFO']  # По умолчанию все уровни разрешены
     
     # ⚡ ТРЕЙСИНГ: Включить детальное логирование КАЖДОЙ строки кода (для отладки зависаний)
     ENABLE_CODE_TRACING = False  # ⚠️ ВНИМАНИЕ: Сильно замедляет работу! Включать только для отладки!
