@@ -156,11 +156,17 @@ class LogLevelFilter(logging.Filter):
             message = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
             if isinstance(message, str):
                 # Скрываем типичные неформатированные сообщения из urllib3/pybit/flask-cors
-                if ('%s://%s:%s' in message or 
+                # Проверяем наличие неформатированных плейсхолдеров
+                has_unformatted = (
+                    '%s://%s:%s' in message or 
+                    '%s %s %s' in message or
                     'Starting new HTTPS connection' in message or 
                     'Starting new HTTP connection' in message or
                     'Creating converter from' in message or
-                    'Configuring CORS' in message and '%s' in message):
+                    ('Configuring CORS' in message and '%s' in message) or
+                    (message.count('%s') >= 3 and logger_name.startswith(('urllib3', 'pybit', 'flask_cors', 'requests')))
+                )
+                if has_unformatted:
                     # Это неформатированное сообщение из внешней библиотеки - скрываем его
                     return False
         except:
@@ -630,11 +636,14 @@ def setup_color_logging(console_log_levels=None):
     def _patched_add_handler(self, handler):
         """Перехватывает добавление обработчиков и удаляет те, что без нашего фильтра"""
         # Если это StreamHandler для stdout без нашего фильтра - не добавляем его
-        if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
-            has_our_filter = any(isinstance(f, LogLevelFilter) for f in handler.filters)
-            if not has_our_filter:
-                # Не добавляем обработчик без нашего фильтра
-                return
+        if isinstance(handler, logging.StreamHandler):
+            # Проверяем, что это stdout или stderr (оба идут в консоль)
+            stream = getattr(handler, 'stream', None)
+            if stream in (sys.stdout, sys.stderr):
+                has_our_filter = any(isinstance(f, LogLevelFilter) for f in handler.filters)
+                if not has_our_filter:
+                    # Не добавляем обработчик без нашего фильтра
+                    return
         # Иначе добавляем как обычно
         return logging.Logger._original_add_handler(self, handler)
     
@@ -642,16 +651,65 @@ def setup_color_logging(console_log_levels=None):
     if logging.Logger.addHandler != _patched_add_handler:
         logging.Logger.addHandler = _patched_add_handler
     
+    # КРИТИЧНО: Также перехватываем callHandlers для дополнительной защиты
+    if not hasattr(logging.Logger, '_original_callHandlers'):
+        logging.Logger._original_callHandlers = logging.Logger.callHandlers
+    
+    def _patched_callHandlers(self, record):
+        """Перехватывает вызов обработчиков и фильтрует записи без нашего фильтра"""
+        # КРИТИЧНО: Создаем фильтр один раз для всех проверок
+        level_filter = LogLevelFilter(console_log_levels)
+        
+        # Проверяем, есть ли хотя бы один обработчик с нашим фильтром
+        has_our_handler = False
+        handlers_to_remove = []
+        
+        for handler in self.handlers:
+            if isinstance(handler, logging.StreamHandler):
+                stream = getattr(handler, 'stream', None)
+                if stream in (sys.stdout, sys.stderr):
+                    has_our_filter = any(isinstance(f, LogLevelFilter) for f in handler.filters)
+                    if has_our_filter:
+                        has_our_handler = True
+                    else:
+                        # Обработчик без нашего фильтра - помечаем для удаления
+                        handlers_to_remove.append(handler)
+        
+        # Удаляем обработчики без нашего фильтра
+        for handler in handlers_to_remove:
+            try:
+                self.removeHandler(handler)
+            except:
+                pass
+        
+        # КРИТИЧНО: Фильтруем запись ПЕРЕД вызовом обработчиков
+        if not level_filter.filter(record):
+            # Запись отфильтрована - не вызываем обработчики
+            return
+        
+        # Если есть наш обработчик, вызываем оригинальный метод (он применит фильтры)
+        if has_our_handler:
+            return logging.Logger._original_callHandlers(self, record)
+        else:
+            # Если нет нашего обработчика, но запись прошла фильтр, вызываем оригинальный метод
+            return logging.Logger._original_callHandlers(self, record)
+    
+    # Применяем monkey patch для callHandlers
+    if logging.Logger.callHandlers != _patched_callHandlers:
+        logging.Logger.callHandlers = _patched_callHandlers
+    
     # Финальная проверка: удаляем все обработчики без фильтра еще раз
     # (на случай если они были созданы между проверками)
     for existing_logger_name in list(logging.Logger.manager.loggerDict.keys()):
         try:
             existing_logger = logging.getLogger(existing_logger_name)
             for handler in existing_logger.handlers[:]:
-                if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
-                    has_our_filter = any(isinstance(f, LogLevelFilter) for f in handler.filters)
-                    if not has_our_filter:
-                        existing_logger.removeHandler(handler)
+                if isinstance(handler, logging.StreamHandler):
+                    stream = getattr(handler, 'stream', None)
+                    if stream in (sys.stdout, sys.stderr):
+                        has_our_filter = any(isinstance(f, LogLevelFilter) for f in handler.filters)
+                        if not has_our_filter:
+                            existing_logger.removeHandler(handler)
         except Exception:
             pass  # Игнорируем ошибки при удалении обработчиков
     
