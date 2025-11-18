@@ -423,3 +423,5 @@ scripts/hardware_id.build/
 license_generator/source/
 license_generator/source/
 app/telegram_states.json
+data/bot_history.json.corrupted
+data/ai/models/
