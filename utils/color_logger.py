@@ -466,8 +466,27 @@ def setup_color_logging(console_log_levels=None):
                     handler.addFilter(new_filter)
                     break
     
+    # КРИТИЧНО: Даже если есть наш обработчик, нужно удалить ВСЕ другие обработчики без фильтра
+    # Это гарантирует, что все логи идут только через наш фильтр
+    for handler in logger.handlers[:]:
+        if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
+            # Проверяем, есть ли наш фильтр
+            has_our_filter = any(isinstance(f, LogLevelFilter) for f in handler.filters)
+            if not has_our_filter:
+                logger.removeHandler(handler)
+    
     # Если обработчик уже есть и фильтр обновлён, не пересоздаём обработчик
     if has_our_handler:
+        # Но все равно нужно удалить обработчики без фильтра из других логгеров
+        for existing_logger_name in logging.Logger.manager.loggerDict:
+            existing_logger = logging.getLogger(existing_logger_name)
+            for handler in existing_logger.handlers[:]:
+                if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
+                    has_our_filter = any(isinstance(f, LogLevelFilter) for f in handler.filters)
+                    if not has_our_filter:
+                        existing_logger.removeHandler(handler)
+            existing_logger.propagate = True
+            existing_logger.setLevel(logging.DEBUG)
         return logger
     
     # КРИТИЧНО: Удаляем ВСЕ консольные обработчики БЕЗ нашего фильтра из ВСЕХ логгеров
