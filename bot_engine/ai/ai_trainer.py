@@ -149,6 +149,14 @@ class AITrainer:
             logger.debug(f"⚠️ Не удалось инициализировать AIParameterTracker: {e}")
             self.param_tracker = None
         
+        # Инициализируем ML модель для предсказания качества параметров
+        try:
+            from bot_engine.ai.parameter_quality_predictor import ParameterQualityPredictor
+            self.param_quality_predictor = ParameterQualityPredictor(self.data_dir)
+        except Exception as e:
+            logger.debug(f"⚠️ Не удалось инициализировать ParameterQualityPredictor: {e}")
+            self.param_quality_predictor = None
+        
         # Целевые значения Win Rate для монет с динамическим повышением порога
         self.win_rate_targets_path = os.path.normpath(os.path.join(self.data_dir, 'win_rate_targets.json'))
         self.win_rate_targets = self._load_win_rate_targets()
@@ -1903,11 +1911,40 @@ class AITrainer:
                         logger.debug(f"   ⭐ {symbol}: применяем сохранённые лучшие параметры")
                     else:
                         coin_rsi_params = None
-                        if self.param_tracker:
+                        
+                        # ВАЖНО: Используем ML модель для генерации оптимальных параметров
+                        # Вместо случайных - AI предсказывает какие параметры будут хорошими
+                        if self.param_quality_predictor and self.param_quality_predictor.is_trained:
+                            try:
+                                # Получаем предложения от ML модели
+                                risk_params = {
+                                    'stop_loss': MAX_LOSS_PERCENT,
+                                    'take_profit': TAKE_PROFIT_PERCENT,
+                                    'trailing_stop_activation': TRAILING_STOP_ACTIVATION,
+                                    'trailing_stop_distance': TRAILING_STOP_DISTANCE,
+                                }
+                                suggestions = self.param_quality_predictor.suggest_optimal_params(
+                                    base_params, risk_params, num_suggestions=5
+                                )
+                                
+                                # Пробуем использовать лучшие предложения
+                                for suggested_params, predicted_quality in suggestions:
+                                    # Проверяем, не использовались ли уже
+                                    if self.param_tracker and not self.param_tracker.is_params_used(suggested_params):
+                                        coin_rsi_params = suggested_params
+                                        logger.debug(f"   🤖 {symbol}: ML модель предложила оптимальные параметры (качество: {predicted_quality:.3f})")
+                                        break
+                            except Exception as e:
+                                logger.debug(f"   ⚠️ {symbol}: ошибка использования ML модели: {e}")
+                        
+                        # Fallback: используем трекер параметров
+                        if not coin_rsi_params and self.param_tracker:
                             suggested_params = self.param_tracker.get_unused_params_suggestion(base_params, variation_range)
                             if suggested_params:
                                 coin_rsi_params = suggested_params
                                 logger.debug(f"   🎯 {symbol}: получили новую комбинацию параметров из трекера")
+                        
+                        # Fallback: генерируем случайные (только если ML и трекер не помогли)
                         if not coin_rsi_params:
                             exit_variation = 8
                             coin_rsi_params = {
@@ -1918,7 +1955,7 @@ class AITrainer:
                                 'exit_short_with_trend': max(25, min(40, coin_base_exit_short_with + coin_rng.randint(-exit_variation, exit_variation))),
                                 'exit_short_against_trend': max(30, min(45, coin_base_exit_short_against + coin_rng.randint(-exit_variation, exit_variation)))
                             }
-                            logger.debug(f"   🎲 {symbol}: сгенерировали уникальные RSI параметры")
+                            logger.debug(f"   🎲 {symbol}: сгенерировали случайные RSI параметры (ML модель недоступна)")
 
                     if symbol_idx <= 5 or symbol_idx % progress_interval == 0:
                         logger.info(f"   ⚙️ {symbol}: RSI params {coin_rsi_params}, seed {coin_seed}")
@@ -2327,6 +2364,41 @@ class AITrainer:
                     if symbol_idx <= 10:
                         logger.info(f"   🔍 {symbol}: проверка результатов симуляции... (сделок: {trades_for_symbol})")
                     
+                    # ВАЖНО: Сохраняем информацию о результатах для обучения ML модели
+                    # AI должна учиться на успешных и неуспешных параметрах
+                    risk_params = {
+                        'stop_loss': MAX_LOSS_PERCENT,
+                        'take_profit': TAKE_PROFIT_PERCENT,
+                        'trailing_stop_activation': TRAILING_STOP_ACTIVATION,
+                        'trailing_stop_distance': TRAILING_STOP_DISTANCE,
+                    }
+                    
+                    # Вычисляем PnL для добавления в ML модель
+                    symbol_pnl_for_ml = 0.0
+                    if trades_for_symbol > 0:
+                        symbol_successful = sum(1 for t in simulated_trades_symbol if t['is_successful'])
+                        symbol_win_rate = symbol_successful / trades_for_symbol * 100
+                        symbol_pnl_for_ml = sum(t['pnl'] for t in simulated_trades_symbol)
+                    else:
+                        symbol_win_rate = 0.0
+                    
+                    # Добавляем образец в ML модель для обучения
+                    # AI учится на ВСЕХ результатах - успешных и неуспешных
+                    if self.param_quality_predictor:
+                        try:
+                            was_blocked = trades_for_symbol == 0 and (rsi_entered_long_zone > 0 or rsi_entered_short_zone > 0)
+                            self.param_quality_predictor.add_training_sample(
+                                coin_rsi_params,
+                                symbol_win_rate,
+                                symbol_pnl_for_ml,
+                                trades_for_symbol,
+                                risk_params,
+                                symbol,
+                                blocked=was_blocked
+                            )
+                        except Exception as e:
+                            logger.debug(f"   ⚠️ {symbol}: ошибка добавления образца в ML модель: {e}")
+                    
                     # ВАЖНО: Сохраняем информацию о блокировках для обучения AI
                     # AI должна учиться на том, какие параметры блокируются и почему
                     if trades_for_symbol == 0 and (rsi_entered_long_zone > 0 or rsi_entered_short_zone > 0):
@@ -2363,12 +2435,13 @@ class AITrainer:
                                 logger.debug(f"   ⚠️ {symbol}: ошибка сохранения информации о блокировках: {e}")
                     
                     # Логируем результаты симуляции (DEBUG - техническая деталь)
+                    # symbol_win_rate и symbol_pnl_for_ml уже вычислены выше для ML модели
                     if trades_for_symbol == 0:
                         logger.debug(f"   ⏭️ {symbol}: сделок не найдено")
+                        symbol_pnl = 0.0
                     else:
-                        symbol_successful = sum(1 for t in simulated_trades_symbol if t['is_successful'])
-                        symbol_win_rate = symbol_successful / trades_for_symbol * 100
-                        symbol_pnl = sum(t['pnl'] for t in simulated_trades_symbol)
+                        # Используем уже вычисленные значения
+                        symbol_pnl = symbol_pnl_for_ml
                         win_rate_target = self._get_win_rate_target(symbol)
                         
                         if symbol_idx <= 10:
@@ -2811,6 +2884,28 @@ class AITrainer:
             logger.info(f"   ✅ Моделей сохранено: {total_models_saved}")
             logger.info(f"   ⚠️ Ошибок: {total_failed_coins}")
             logger.info("=" * 80)
+            
+            # ВАЖНО: Обучаем ML модель на собранных данных
+            # Это позволит AI в будущем генерировать оптимальные параметры вместо случайных
+            if self.param_quality_predictor:
+                try:
+                    logger.info("=" * 80)
+                    logger.info("🤖 ОБУЧЕНИЕ ML МОДЕЛИ ПРЕДСКАЗАНИЯ КАЧЕСТВА ПАРАМЕТРОВ")
+                    logger.info("=" * 80)
+                    logger.info("   💡 AI учится на успешных/неуспешных параметрах")
+                    logger.info("   💡 В будущем будет генерировать оптимальные параметры вместо случайных")
+                    
+                    success = self.param_quality_predictor.train(min_samples=50)
+                    if success:
+                        logger.info("   ✅ ML модель обучена! Теперь AI будет генерировать оптимальные параметры")
+                    else:
+                        logger.info("   ⏳ Недостаточно данных для обучения ML модели (нужно минимум 50 образцов)")
+                        logger.info("   💡 Продолжаем сбор данных...")
+                    logger.info("=" * 80)
+                except Exception as e:
+                    logger.error(f"   ❌ Ошибка обучения ML модели: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
 
             self._record_training_event(
                 'historical_data_training',
