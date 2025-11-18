@@ -320,15 +320,9 @@ class AIDataCollector:
                     collected_data['trades'].extend(bot_trades)
                     # Убрано: logger.debug(f"📊 Загружено {len(bot_trades)} сделок напрямую из bot_history.json") - слишком шумно
         except json.JSONDecodeError as json_error:
-            logger.warning(f"⚠️ bot_history.json не прочитан (JSON ошибка на позиции {json_error.pos}). Файл НЕ удаляем.")
-            # Сохраняем копию для анализа
-            try:
-                import shutil
-                corrupted_file = f"{bot_history_file}.corrupted"
-                shutil.copy2(bot_history_file, corrupted_file)
-                logger.info(f"   📁 Скопирован проблемный файл: {corrupted_file}")
-            except Exception as copy_error:
-                logger.debug(f"   ⚠️ Не удалось сохранить копию bot_history.json: {copy_error}")
+            logger.debug(f"⚠️ bot_history.json содержит ошибку JSON на позиции {json_error.pos} (пропускаем, оригинал не трогаем)")
+            # Не сохраняем копию автоматически - это может быть временная проблема при записи
+            # Если проблема критична, пользователь может проверить файл вручную
         except Exception as e:
             logger.debug(f"⚠️ Ошибка загрузки bot_history.json: {e}")
         
