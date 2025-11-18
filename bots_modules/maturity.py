@@ -176,7 +176,6 @@ def save_mature_coins_storage():
         # Используем стандартную функцию сохранения из bot_engine.storage
         from bot_engine.storage import save_json_file
         save_json_file(MATURE_COINS_FILE, storage_copy)
-        logger.debug(f" Хранилище сохранено: {len(storage_copy)} монет")
         return True  # Успешно сохранили
     except Exception as e:
         logger.error(f" Ошибка сохранения хранилища: {e}")
