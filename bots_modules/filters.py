@@ -1719,6 +1719,10 @@ def process_auto_bot_signals(exchange_obj=None):
         
         logger.info(f" 🎯 Найдено {len(potential_coins)} потенциальных сигналов")
         
+        # ✅ Логируем найденные сигналы для диагностики
+        if potential_coins:
+            logger.info(f" 📋 Потенциальные сигналы: {[(c['symbol'], c['signal'], f'RSI={c['rsi']:.1f}') for c in potential_coins[:10]]}")
+        
         # Создаем ботов для найденных сигналов
         created_bots = 0
         for coin in potential_coins[:max_concurrent - current_active]:
@@ -1727,7 +1731,7 @@ def process_auto_bot_signals(exchange_obj=None):
             # Проверяем, нет ли уже бота для этого символа
             # ⚡ БЕЗ БЛОКИРОВКИ: чтение безопасно
             if symbol in bots_data['bots']:
-                logger.debug(f" ⚠️ Бот для {symbol} уже существует")
+                logger.info(f" ⚠️ {symbol}: Бот уже существует (статус: {bots_data['bots'][symbol].get('status')})")
                 continue
             
             # ✅ ПРОВЕРКА ПОЗИЦИЙ: Есть ли ручная позиция на бирже?
