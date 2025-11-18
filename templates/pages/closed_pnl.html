@@ -51,7 +51,11 @@
             <option value="pnl" data-translate="sortPnl">По размеру PNL</option>
         </select>
     </div>
-    <table class="pnl-table">
+    <div id="closedPnlLoading" class="loader-container" style="display: none; padding: 40px;">
+        <div class="loader"></div>
+        <div class="loader-text" data-translate="loadingData">Загрузка данных...</div>
+    </div>
+    <table class="pnl-table" id="closedPnlTableContainer">
         <thead>
             <tr>
                 <th data-translate="contracts">Контракты</th>
