@@ -217,7 +217,14 @@ class BybitExchange(BaseExchange):
                         symbol = clean_symbol(position['symbol'])
                         current_pnl = float(position['unrealisedPnl'])
                         position_size = abs(float(position['size']))
-                        roi = (current_pnl / (float(position['avgPrice']) * position_size) * 100)
+                        avg_price = float(position.get('avgPrice', 0) or 0)
+                        leverage = float(position.get('leverage', 1) or 1)
+                        
+                        # ROI рассчитывается от маржи (залога) в сделке
+                        # Маржа = стоимость позиции / плечо
+                        position_value = avg_price * position_size
+                        margin = position_value / leverage if leverage > 0 else position_value
+                        roi = (current_pnl / margin * 100) if margin > 0 else 0
                         
                         if current_pnl > 0:
                             if symbol not in self.max_profit_values or current_pnl > self.max_profit_values[symbol]:
@@ -226,7 +233,6 @@ class BybitExchange(BaseExchange):
                             if symbol not in self.max_loss_values or current_pnl < self.max_loss_values[symbol]:
                                 self.max_loss_values[symbol] = current_pnl
                         
-                        avg_price = float(position.get('avgPrice', 0) or 0)
                         mark_price = float(position.get('markPrice', 0) or 0)
 
                         position_info = {

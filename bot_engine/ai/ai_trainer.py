@@ -2407,6 +2407,11 @@ class AITrainer:
                                     import traceback
                                     logger.error(traceback.format_exc())
                             
+                            # ВАЖНО: Увеличиваем счетчик сохраненных моделей ВСЕГДА, так как модель уже сохранена на диск
+                            # Это не зависит от Win Rate - модель сохраняется всегда если обучена
+                            total_models_saved += 1
+                            model_trained = True
+                            
                             # ВАЖНО: Сохраняем параметры в индивидуальные настройки ТОЛЬКО если Win Rate достиг цели
                             if symbol_win_rate >= win_rate_target:
                                 try:
@@ -2554,8 +2559,6 @@ class AITrainer:
                                     f"   ✅ {symbol}: модель обучена! Win Rate: {symbol_win_rate:.1f}% "
                                     "(метрики не вычислены)"
                                 )
-                            total_models_saved += 1
-                            model_trained = True
 
                         if not model_trained:
                             if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
