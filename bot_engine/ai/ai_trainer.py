@@ -2388,7 +2388,11 @@ class AITrainer:
                     # AI учится на ВСЕХ результатах - успешных и неуспешных
                     if self.param_quality_predictor:
                         try:
-                            was_blocked = trades_for_symbol == 0 and (rsi_entered_long_zone > 0 or rsi_entered_short_zone > 0)
+                            # ВАЖНО: Если сделок нет (trades_for_symbol == 0), это всегда блокировка
+                            # Независимо от того, входил ли RSI в зону или нет
+                            # - Если RSI входил в зону, но сделок нет → фильтры заблокировали (blocked=True)
+                            # - Если RSI НЕ входил в зону → параметры не подходят (blocked=True)
+                            was_blocked = trades_for_symbol == 0
                             self.param_quality_predictor.add_training_sample(
                                 coin_rsi_params,
                                 symbol_win_rate,
