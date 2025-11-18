@@ -1448,29 +1448,29 @@ def get_symbol_chart(symbol):
         if theme == 'light':
             plt.style.use('default')
             bg_color = 'white'
-            rsi_color = '#1f77b4'
-            upper_color = '#ff0000'  # Красная граница 70
-            lower_color = '#00ff00'  # Зеленая граница 30
-            center_color = '#666666'  # Серая линия 50
+            rsi_color = '#000000'  # Черная линия RSI на светлом фоне
+            upper_color = '#ff9999'  # Светло-красная граница 70
+            lower_color = '#99ff99'  # Светло-зеленая граница 30
+            center_color = '#cccccc'  # Светло-серая линия 50
         else:
             plt.style.use('dark_background')
             bg_color = '#2d2d2d'
-            rsi_color = '#00ff00'
-            upper_color = '#ff0000'  # Красная граница 70
-            lower_color = '#00ff00'  # Зеленая граница 30
-            center_color = '#888888'  # Серая линия 50
+            rsi_color = '#ffffff'  # Белая линия RSI на темном фоне
+            upper_color = '#ff9999'  # Светло-красная граница 70
+            lower_color = '#99ff99'  # Светло-зеленая граница 30
+            center_color = '#cccccc'  # Светло-серая линия 50
         
-        # Создаем график (миниграфик - маленький размер)
-        fig, ax = plt.subplots(figsize=(4, 2), facecolor=bg_color)
+        # Создаем график с увеличенной высотой для лучшей видимости
+        fig, ax = plt.subplots(figsize=(4, 4), facecolor=bg_color)  # Увеличена высота с 2 до 4
         ax.set_facecolor(bg_color)
         
-        # Рисуем линии границ
-        ax.axhline(y=70, color=upper_color, linewidth=1.5, linestyle='-', alpha=0.7)  # Верхняя красная граница
-        ax.axhline(y=30, color=lower_color, linewidth=1.5, linestyle='-', alpha=0.7)  # Нижняя зеленая граница
-        ax.axhline(y=50, color=center_color, linewidth=1, linestyle='--', alpha=0.5, dashes=(5, 5))  # Центральная серая прерывистая
+        # Рисуем линии границ (более заметные)
+        ax.axhline(y=70, color=upper_color, linewidth=2, linestyle='-', alpha=0.8)  # Верхняя светло-красная граница
+        ax.axhline(y=30, color=lower_color, linewidth=2, linestyle='-', alpha=0.8)  # Нижняя светло-зеленая граница
+        ax.axhline(y=50, color=center_color, linewidth=2, linestyle='--', alpha=0.7, dashes=(5, 5))  # Центральная светло-серая прерывистая
         
-        # Рисуем линию RSI
-        ax.plot(times, rsi_values, color=rsi_color, linewidth=1.5)
+        # Рисуем линию RSI (белая, более толстая для видимости)
+        ax.plot(times, rsi_values, color=rsi_color, linewidth=2.5, alpha=0.95)
         
         # Настраиваем ось Y для RSI (0-100)
         ax.set_ylim(0, 100)
