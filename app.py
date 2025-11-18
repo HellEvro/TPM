@@ -1406,7 +1406,7 @@ def get_symbol_chart(symbol):
             center_color = '#cccccc'  # Светло-серая линия 50
         
         # Создаем график с увеличенным размером для лучшей видимости
-        fig, ax = plt.subplots(figsize=(6, 5), facecolor=bg_color)  # Увеличен размер: ширина 6, высота 5
+        fig, ax = plt.subplots(figsize=(8, 6), facecolor=bg_color)  # Увеличен размер: ширина 8, высота 6
         ax.set_facecolor(bg_color)
         
         # Рисуем линии границ (более заметные)
