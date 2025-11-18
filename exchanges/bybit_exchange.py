@@ -97,6 +97,14 @@ class BybitExchange(BaseExchange):
         self.base_request_delay = 0.2  # Базовая задержка между запросами (200ms)
         self.current_request_delay = 0.2  # Текущая задержка (может увеличиваться при rate limit)
         self.max_request_delay = 5.0  # Максимальная задержка для предотвращения таймаутов
+        
+        # Кэш для баланса кошелька (чтобы не спамить запросами при проблемах с сетью)
+        self._wallet_balance_cache = None
+        self._wallet_balance_cache_time = 0
+        self._wallet_balance_cache_ttl = 30  # Кэш на 30 секунд при успешных запросах
+        self._wallet_balance_cache_ttl_error = 300  # Кэш на 5 минут при сетевых ошибках
+        self._last_network_error_time = 0
+        self._network_error_count = 0
     
     def _setup_connection_pool(self):
         """Настраивает пул соединений для requests и pybit"""
@@ -1330,7 +1338,16 @@ class BybitExchange(BaseExchange):
             return "Нейтральная ситуация - рекомендуется наблюдение"
 
     def get_wallet_balance(self):
-        """Получает общий баланс кошелька и реализованный PNL"""
+        """Получает общий баланс кошелька и реализованный PNL (с кэшированием)"""
+        import time
+        current_time = time.time()
+        
+        # Проверяем кэш (используем более длинный TTL при сетевых ошибках)
+        cache_ttl = self._wallet_balance_cache_ttl_error if self._network_error_count > 3 else self._wallet_balance_cache_ttl
+        if (self._wallet_balance_cache is not None and 
+            current_time - self._wallet_balance_cache_time < cache_ttl):
+            return self._wallet_balance_cache
+        
         try:
             # Получаем баланс кошелька
             wallet_response = self.client.get_wallet_balance(
@@ -1351,14 +1368,39 @@ class BybitExchange(BaseExchange):
             coin_data = wallet_data['coin'][0]  # Берем данные для USDT
             realized_pnl = float(coin_data['cumRealisedPnl'])  # Используем накопленный реализованный PNL
             
-            return {
+            result = {
                 'total_balance': total_balance,
                 'available_balance': available_balance,
                 'realized_pnl': realized_pnl
             }
             
+            # Сохраняем в кэш при успешном запросе
+            self._wallet_balance_cache = result
+            self._wallet_balance_cache_time = current_time
+            self._network_error_count = 0  # Сбрасываем счетчик ошибок
+            
+            return result
+            
         except Exception as e:
-            logger.error(f"Error getting wallet balance: {str(e)}")
+            error_str = str(e)
+            is_network_error = any(keyword in error_str.lower() for keyword in [
+                'getaddrinfo failed', 'name resolution', 'connection', 
+                'dns', 'network', 'timeout', 'resolve'
+            ])
+            
+            # Логируем только раз в минуту при сетевых ошибках
+            if is_network_error:
+                self._network_error_count += 1
+                if current_time - self._last_network_error_time > 60:  # Логируем не чаще раза в минуту
+                    logger.warning(f"Network error getting wallet balance (count: {self._network_error_count}): {error_str[:100]}")
+                    self._last_network_error_time = current_time
+            else:
+                logger.error(f"Error getting wallet balance: {error_str}")
+            
+            # Возвращаем кэш, если есть, иначе нули
+            if self._wallet_balance_cache is not None:
+                return self._wallet_balance_cache
+            
             return {
                 'total_balance': 0.0,
                 'available_balance': 0.0,

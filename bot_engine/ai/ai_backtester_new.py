@@ -621,13 +621,21 @@ class AIBacktester:
                 entry_data = trade.get('entry_data', {})
                 exit_market_data = trade.get('exit_market_data', {})
                 
-                # Безопасное получение RSI с проверкой на None
-                entry_rsi = entry_data.get('rsi')
-                if entry_rsi is None:
-                    entry_rsi = 50  # Значение по умолчанию
+                # Безопасное получение RSI с проверкой на None и нечисловые значения
+                entry_rsi_raw = entry_data.get('rsi')
+                try:
+                    entry_rsi = float(entry_rsi_raw) if entry_rsi_raw is not None else 50.0
+                    if not isinstance(entry_rsi, (int, float)) or entry_rsi < 0 or entry_rsi > 100:
+                        entry_rsi = 50.0  # Значение по умолчанию если вне диапазона
+                except (TypeError, ValueError):
+                    entry_rsi = 50.0  # Значение по умолчанию при ошибке преобразования
                 
-                exit_rsi = exit_market_data.get('rsi') if exit_market_data else None
-                if exit_rsi is None:
+                exit_rsi_raw = exit_market_data.get('rsi') if exit_market_data else None
+                try:
+                    exit_rsi = float(exit_rsi_raw) if exit_rsi_raw is not None else entry_rsi
+                    if not isinstance(exit_rsi, (int, float)) or exit_rsi < 0 or exit_rsi > 100:
+                        exit_rsi = entry_rsi
+                except (TypeError, ValueError):
                     exit_rsi = entry_rsi
                 
                 direction = trade.get('direction', 'LONG')
