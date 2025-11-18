@@ -32,9 +32,26 @@ logger = logging.getLogger('LSTM')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 warnings.filterwarnings('ignore', category=UserWarning, module='keras')
 
+# Отключаем DEBUG логи TensorFlow через Python logging
+tensorflow_logger = logging.getLogger('tensorflow')
+tensorflow_logger.setLevel(logging.WARNING)
+tensorflow_python_logger = logging.getLogger('tensorflow.python')
+tensorflow_python_logger.setLevel(logging.WARNING)
+tensorflow_core_logger = logging.getLogger('tensorflow.core')
+tensorflow_core_logger.setLevel(logging.WARNING)
+# Удаляем все обработчики из TensorFlow логгеров
+for handler in tensorflow_logger.handlers[:]:
+    tensorflow_logger.removeHandler(handler)
+for handler in tensorflow_python_logger.handlers[:]:
+    tensorflow_python_logger.removeHandler(handler)
+for handler in tensorflow_core_logger.handlers[:]:
+    tensorflow_core_logger.removeHandler(handler)
+
 # Проверяем доступность TensorFlow
 try:
     import tensorflow as tf
+    # Дополнительно отключаем логирование после импорта
+    tf.get_logger().setLevel(logging.WARNING)
     from tensorflow import keras
     from tensorflow.keras import layers
     from tensorflow.keras.models import Sequential, load_model
