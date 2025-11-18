@@ -1531,25 +1531,53 @@ class TradingBot:
                 # Позиция изменилась - пересчитываем среднюю цену входа
                 # Используем реальную среднюю цену с биржи (она уже рассчитана с учетом всех сработавших ордеров)
                 
-                # Определяем, какие лимитные ордера могли сработать
-                # Удаляем ордера, которые могли сработать (проверяем по цене)
+                # ✅ УЛУЧШЕННАЯ ЛОГИКА: Проверяем статус ордеров на бирже напрямую
+                # Это позволяет точно определить, какие ордера сработали, даже если на бирже есть чужие ордера
                 orders_to_remove = []
+                
+                # Получаем открытые ордера с биржи для проверки статуса
+                open_orders_on_exchange = []
+                if hasattr(self.exchange, 'get_open_orders'):
+                    try:
+                        orders_result = self.exchange.get_open_orders(self.symbol)
+                        if orders_result and isinstance(orders_result, list):
+                            open_orders_on_exchange = orders_result
+                        elif orders_result and isinstance(orders_result, dict):
+                            open_orders_on_exchange = orders_result.get('orders', [])
+                    except Exception as e:
+                        self.logger.debug(f" {self.symbol}: ⚠️ Не удалось получить открытые ордера для проверки: {e}")
+                
+                # Создаем множество ID открытых ордеров на бирже
+                open_order_ids_on_exchange = set()
+                for order in open_orders_on_exchange:
+                    order_id = str(order.get('orderId') or order.get('order_id') or order.get('id', ''))
+                    if order_id:
+                        open_order_ids_on_exchange.add(order_id)
+                
+                # Проверяем каждый ордер из списка бота
                 for order_info in self.limit_orders:
+                    order_id = str(order_info.get('order_id', ''))
                     order_price = order_info.get('price', 0)
-                    order_quantity = order_info.get('quantity', 0)
                     
-                    # Если цена ордера близка к реальной средней цене или ниже/выше в зависимости от стороны
-                    # и размер позиции увеличился, значит ордер мог сработать
-                    if side == 'LONG':
-                        # Для лонга: ордер сработал, если его цена ниже или равна текущей средней
-                        # (мы покупали по более низкой цене)
-                        if order_price <= real_avg_price * 1.01:  # 1% допуск
+                    # ✅ МЕТОД 1: Проверяем по статусу на бирже (наиболее точный)
+                    if order_id and open_order_ids_on_exchange:
+                        # Если ордера нет в списке открытых на бирже - он сработал или был отменен
+                        if order_id not in open_order_ids_on_exchange:
                             orders_to_remove.append(order_info)
-                    else:  # SHORT
-                        # Для шорта: ордер сработал, если его цена выше или равна текущей средней
-                        # (мы продавали по более высокой цене)
-                        if order_price >= real_avg_price * 0.99:  # 1% допуск
-                            orders_to_remove.append(order_info)
+                            continue
+                    
+                    # ✅ МЕТОД 2: Если метод проверки недоступен, используем проверку по цене (fallback)
+                    # Но только если размер позиции увеличился (значит ордера сработали)
+                    if not open_order_ids_on_exchange and size_changed and real_size > current_bot_size:
+                        # Проверяем по цене только если позиция увеличилась
+                        if side == 'LONG':
+                            # Для лонга: ордер сработал, если его цена ниже или равна текущей средней
+                            if order_price <= real_avg_price * 1.01:  # 1% допуск
+                                orders_to_remove.append(order_info)
+                        else:  # SHORT
+                            # Для шорта: ордер сработал, если его цена выше или равна текущей средней
+                            if order_price >= real_avg_price * 0.99:  # 1% допуск
+                                orders_to_remove.append(order_info)
                 
                 # Удаляем сработавшие ордера из списка активных
                 orders_removed_count = 0
@@ -1557,7 +1585,8 @@ class TradingBot:
                     if order_info in self.limit_orders:
                         self.limit_orders.remove(order_info)
                         orders_removed_count += 1
-                        self.logger.info(f" {self.symbol}: ✅ Лимитный ордер сработал: {order_info.get('quantity', 0)} USDT @ {order_info.get('price', 0):.6f}")
+                        order_id = order_info.get('order_id', 'unknown')
+                        self.logger.info(f" {self.symbol}: ✅ Лимитный ордер сработал: {order_info.get('quantity', 0)} USDT @ {order_info.get('price', 0):.6f} (ID: {order_id})")
                 
                 # КРИТИЧНО: Пересчитываем стоп-лосс ТОЛЬКО если действительно сработал новый ордер
                 # Проверяем, изменилось ли количество активных ордеров
