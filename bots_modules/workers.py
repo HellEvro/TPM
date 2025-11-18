@@ -234,10 +234,6 @@ def auto_bot_worker():
                 update_bots_cache_data()
                 execution_time = time.time() - worker_t_start
                 
-                # Предупреждение только если ОЧЕНЬ медленно
-                if execution_time > 2.0:  # Если больше 2 секунд
-                    logger.warning(f"⚠️ Очень медленное обновление: {execution_time:.1f}с")
-                
                 last_position_update = current_time
             
             # Устанавливаем недостающие стоп-лоссы каждые SystemConfig.STOP_LOSS_SETUP_INTERVAL секунд

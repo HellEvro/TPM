@@ -57,7 +57,6 @@ def save_json_file(filepath, data, description="данные", max_retries=3):
                 else:  # Unix/Linux
                     os.rename(temp_file, filepath)
                 
-                logger.debug(f" {description} сохранены в {filepath}")
                 return True
                 
             except (OSError, PermissionError) as e:
@@ -239,8 +238,6 @@ def load_individual_coin_settings():
 def save_mature_coins(storage):
     """Сохраняет хранилище зрелых монет"""
     success = save_json_file(MATURE_COINS_FILE, storage, "зрелые монеты")
-    if success:
-        logger.debug(f" Сохранено {len(storage)} зрелых монет")
     return success
 
 
