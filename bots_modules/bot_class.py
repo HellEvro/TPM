@@ -1074,6 +1074,8 @@ class NewTradingBot:
         """Проверяет все защитные механизмы"""
         try:
             decision = self._evaluate_protection_decision(current_price)
+            # ✅ ИСПРАВЛЕНО: Обновляем трейлинг-стоплоссы на бирже
+            self._update_protection_mechanisms(current_price)
             return {
                 'should_close': bool(decision.should_close),
                 'reason': decision.reason
