@@ -102,7 +102,8 @@ class ParameterQualityPredictor:
     
     def add_training_sample(self, rsi_params: Dict, win_rate: float, total_pnl: float,
                            trades_count: int, risk_params: Optional[Dict] = None,
-                           symbol: Optional[str] = None, blocked: bool = False):
+                           symbol: Optional[str] = None, blocked: bool = False,
+                           rsi_entered_zones: int = 0):
         """
         Добавить образец для обучения
         
@@ -114,6 +115,7 @@ class ParameterQualityPredictor:
             risk_params: Параметры риск-менеджмента
             symbol: Символ монеты
             blocked: Были ли входы заблокированы
+            rsi_entered_zones: Сколько раз RSI входил в зоны входа (для градации качества)
         """
         try:
             # Загружаем существующие данные
@@ -128,14 +130,23 @@ class ParameterQualityPredictor:
             if blocked or trades_count == 0:
                 # ВАЖНО: Используем отрицательное качество вместо 0.0
                 # Это позволяет модели различать заблокированные параметры
-                # Градация: -0.1 (плохие параметры) до -0.01 (почти хорошие, но заблокированы)
-                # Базовое отрицательное качество для заблокированных
-                quality = -0.05
+                # Градация качества для заблокированных:
+                # -0.10: RSI не входил в зоны (параметры не подходят)
+                # -0.05: RSI входил в зоны, но все заблокированы фильтрами
+                # -0.02: Были попытки входа (win_rate > 0)
+                
+                if rsi_entered_zones > 0:
+                    # RSI входил в зоны, но входы заблокированы фильтрами
+                    # Это лучше чем параметры, которые вообще не дают сигналов
+                    quality = -0.03 - (0.01 * min(rsi_entered_zones / 10.0, 1.0))  # -0.03 до -0.04
+                else:
+                    # RSI не входил в зоны - параметры не подходят для этой монеты
+                    quality = -0.08
                 
                 # Если есть win_rate > 0, значит были попытки, но заблокированы
                 # Это лучше чем полное отсутствие сигналов
                 if win_rate > 0:
-                    quality = -0.02  # Немного лучше - были попытки входа
+                    quality = max(quality, -0.02)  # Не хуже -0.02 если были попытки
             else:
                 # Нормализуем метрики
                 win_rate_norm = win_rate / 100.0  # 0-1
@@ -161,6 +172,7 @@ class ParameterQualityPredictor:
                 'trades_count': trades_count,
                 'quality': quality,
                 'blocked': blocked,
+                'rsi_entered_zones': rsi_entered_zones,
                 'symbol': symbol,
                 'timestamp': datetime.now().isoformat()
             }
@@ -281,19 +293,22 @@ class ParameterQualityPredictor:
             risk_params: Параметры риск-менеджмента
         
         Returns:
-            Предсказанное качество (0-1, где 1 = отлично)
+            Предсказанное качество (может быть отрицательным для плохих параметров)
+            Положительное = хорошие параметры, отрицательное = заблокированные/плохие
         """
         if not self.is_trained or not self.model:
-            return 0.5  # Среднее значение если модель не обучена
+            return 0.0  # Нейтральное значение если модель не обучена
         
         try:
             features = self._extract_features(rsi_params, risk_params)
             features_scaled = self.scaler.transform(features)
             quality = self.model.predict(features_scaled)[0]
-            return max(0.0, min(1.0, quality))  # Ограничиваем 0-1
+            # НЕ ограничиваем - модель может предсказывать отрицательные значения
+            # Это важно для различения плохих и хороших параметров
+            return float(quality)
         except Exception as e:
             logger.debug(f"⚠️ Ошибка предсказания: {e}")
-            return 0.5
+            return 0.0
     
     def suggest_optimal_params(self, base_params: Dict, risk_params: Optional[Dict] = None,
                                num_suggestions: int = 10) -> List[Tuple[Dict, float]]:
@@ -307,6 +322,7 @@ class ParameterQualityPredictor:
         
         Returns:
             Список кортежей (параметры, предсказанное_качество)
+            Только параметры с положительным качеством (не заблокированные)
         """
         if not self.is_trained:
             return []
@@ -315,27 +331,37 @@ class ParameterQualityPredictor:
         
         suggestions = []
         
-        # Генерируем варианты и предсказываем их качество
-        for _ in range(num_suggestions * 5):  # Генерируем больше, чтобы выбрать лучшие
+        # Генерируем больше вариантов, чтобы найти хорошие
+        max_attempts = num_suggestions * 20  # Увеличиваем для лучшего поиска
+        
+        for _ in range(max_attempts):
             rsi_params = {
                 'oversold': max(20, min(35, 
-                    base_params.get('oversold', 29) + random.randint(-5, 5))),
+                    base_params.get('oversold', 29) + random.randint(-7, 7))),
                 'overbought': max(65, min(80,
-                    base_params.get('overbought', 71) + random.randint(-5, 5))),
+                    base_params.get('overbought', 71) + random.randint(-7, 7))),
                 'exit_long_with_trend': max(55, min(70,
-                    base_params.get('exit_long_with_trend', 65) + random.randint(-8, 8))),
+                    base_params.get('exit_long_with_trend', 65) + random.randint(-10, 10))),
                 'exit_long_against_trend': max(50, min(65,
-                    base_params.get('exit_long_against_trend', 60) + random.randint(-8, 8))),
+                    base_params.get('exit_long_against_trend', 60) + random.randint(-10, 10))),
                 'exit_short_with_trend': max(25, min(40,
-                    base_params.get('exit_short_with_trend', 35) + random.randint(-8, 8))),
+                    base_params.get('exit_short_with_trend', 35) + random.randint(-10, 10))),
                 'exit_short_against_trend': max(30, min(45,
-                    base_params.get('exit_short_against_trend', 40) + random.randint(-8, 8)))
+                    base_params.get('exit_short_against_trend', 40) + random.randint(-10, 10)))
             }
             
             quality = self.predict_quality(rsi_params, risk_params)
-            suggestions.append((rsi_params, quality))
+            
+            # ВАЖНО: Фильтруем только параметры с положительным качеством
+            # Отрицательное качество = заблокированные/плохие параметры
+            if quality > 0:
+                suggestions.append((rsi_params, quality))
+            
+            # Если нашли достаточно хороших параметров - останавливаемся
+            if len(suggestions) >= num_suggestions:
+                break
         
-        # Сортируем по качеству и возвращаем лучшие
+        # Сортируем по качеству (лучшие первыми) и возвращаем топ
         suggestions.sort(key=lambda x: x[1], reverse=True)
         return suggestions[:num_suggestions]
 

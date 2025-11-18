@@ -2393,6 +2393,7 @@ class AITrainer:
                             # - Если RSI входил в зону, но сделок нет → фильтры заблокировали (blocked=True)
                             # - Если RSI НЕ входил в зону → параметры не подходят (blocked=True)
                             was_blocked = trades_for_symbol == 0
+                            rsi_entered_zones = rsi_entered_long_zone + rsi_entered_short_zone
                             self.param_quality_predictor.add_training_sample(
                                 coin_rsi_params,
                                 symbol_win_rate,
@@ -2400,7 +2401,8 @@ class AITrainer:
                                 trades_for_symbol,
                                 risk_params,
                                 symbol,
-                                blocked=was_blocked
+                                blocked=was_blocked,
+                                rsi_entered_zones=rsi_entered_zones
                             )
                         except Exception as e:
                             logger.debug(f"   ⚠️ {symbol}: ошибка добавления образца в ML модель: {e}")
