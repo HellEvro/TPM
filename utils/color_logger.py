@@ -46,6 +46,8 @@ class LogLevelFilter(logging.Filter):
         'pandas',
         'pandas.io',
         'pandas.core',
+        'flask_cors',
+        'flask_cors.core',
     }
     
     def __init__(self, level_settings=None):
@@ -148,13 +150,17 @@ class LogLevelFilter(logging.Filter):
         level_name = record.levelname
         logger_name = record.name if hasattr(record, 'name') else ''
         
-        # Скрываем неформатированные сообщения из внешних библиотек (urllib3, pybit)
+        # Скрываем неформатированные сообщения из внешних библиотек (urllib3, pybit, flask-cors)
         # Это проблема библиотек, а не нашего кода - они используют старый стиль форматирования
         try:
             message = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
             if isinstance(message, str):
-                # Скрываем типичные неформатированные сообщения из urllib3/pybit
-                if '%s://%s:%s' in message or 'Starting new HTTPS connection' in message or 'Creating converter from' in message:
+                # Скрываем типичные неформатированные сообщения из urllib3/pybit/flask-cors
+                if ('%s://%s:%s' in message or 
+                    'Starting new HTTPS connection' in message or 
+                    'Starting new HTTP connection' in message or
+                    'Creating converter from' in message or
+                    'Configuring CORS' in message and '%s' in message):
                     # Это неформатированное сообщение из внешней библиотеки - скрываем его
                     return False
         except:
@@ -570,6 +576,8 @@ def setup_color_logging(console_log_levels=None):
         'pandas.core',
         'pandas.core.dtypes',
         'pandas.core.dtypes.cast',
+        'flask_cors',
+        'flask_cors.core',
     ]
     
     # Определяем минимальный разрешенный уровень
