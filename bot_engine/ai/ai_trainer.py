@@ -1166,8 +1166,19 @@ class AITrainer:
                     # Данные сделки
                     entry_price = trade.get('entry_price') or trade.get('entryPrice')
                     exit_price = trade.get('exit_price') or trade.get('exitPrice')
-                    pnl = trade.get('pnl', 0)
                     direction = trade.get('direction', 'LONG')
+                    pnl = trade.get('pnl', 0)
+                    # ВАЖНО: Если PnL не указан или равен 0, рассчитываем его из цен
+                    if (pnl == 0 or pnl is None) and entry_price and exit_price:
+                        # Пробуем рассчитать PnL из цен (если есть размер позиции)
+                        position_size = trade.get('position_size') or trade.get('size') or 1.0
+                        if direction == 'LONG':
+                            calculated_pnl = (exit_price - entry_price) / entry_price * position_size
+                        else:
+                            calculated_pnl = (entry_price - exit_price) / entry_price * position_size
+                        # Используем рассчитанный PnL только если исходный был 0 или None
+                        if pnl == 0 or pnl is None:
+                            pnl = calculated_pnl
                     entry_time = trade.get('timestamp') or trade.get('entry_time')
                     exit_time = trade.get('close_timestamp') or trade.get('exit_time')
                     
@@ -1308,6 +1319,27 @@ class AITrainer:
             logger.info(f"   ❌ Неуспешных: {len(failed_samples)} (PnL <= 0)")
             logger.info(f"   ⏭️ Пропущено: {skipped_trades}")
             
+            # Диагностика: проверяем распределение PnL
+            if processed_trades > 0:
+                all_pnl_values = [s['pnl'] for s in successful_samples] + [s['pnl'] for s in failed_samples]
+                if all_pnl_values:
+                    min_pnl = min(all_pnl_values)
+                    max_pnl = max(all_pnl_values)
+                    avg_pnl = np.mean(all_pnl_values)
+                    median_pnl = np.median(all_pnl_values)
+                    logger.info(f"   📊 Диагностика PnL: min={min_pnl:.2f}, max={max_pnl:.2f}, avg={avg_pnl:.2f}, median={median_pnl:.2f}")
+                    
+                    # Проверяем, есть ли отрицательные PnL
+                    negative_pnl_count = sum(1 for pnl in all_pnl_values if pnl < 0)
+                    zero_pnl_count = sum(1 for pnl in all_pnl_values if pnl == 0)
+                    positive_pnl_count = sum(1 for pnl in all_pnl_values if pnl > 0)
+                    logger.info(f"   📊 Распределение PnL: отрицательных={negative_pnl_count}, нулевых={zero_pnl_count}, положительных={positive_pnl_count}")
+                    
+                    if negative_pnl_count == 0 and zero_pnl_count == 0:
+                        logger.warning("   ⚠️ ВНИМАНИЕ: Все сделки имеют положительный PnL!")
+                        logger.warning("   ⚠️ Это может указывать на проблему в данных или расчете PnL")
+                        logger.warning("   ⚠️ Модель не сможет научиться различать успешные и неуспешные сделки")
+            
             # 4. ОБУЧАЕМСЯ НА РЕАЛЬНОМ ОПЫТЕ
             all_samples = successful_samples + failed_samples
             samples_count = len(all_samples)
@@ -1373,7 +1405,20 @@ class AITrainer:
                 # Статистика по классам
                 from collections import Counter
                 class_dist = Counter(y_signal)
-                logger.info(f"   📊 Распределение: Успешных={class_dist.get(1, 0)}, Неуспешных={class_dist.get(0, 0)}")
+                successful_count = class_dist.get(1, 0)
+                failed_count = class_dist.get(0, 0)
+                total_count = successful_count + failed_count
+                logger.info(f"   📊 Распределение: Успешных={successful_count}, Неуспешных={failed_count}")
+                
+                # Предупреждение если все сделки одного класса
+                if failed_count == 0 and successful_count > 0:
+                    logger.warning("   ⚠️ ВНИМАНИЕ: Все сделки успешные (PnL > 0)!")
+                    logger.warning("   ⚠️ Модель не может научиться различать успешные и неуспешные сделки")
+                    logger.warning("   ⚠️ Точность 100% и нулевая важность признаков - это признак проблемы!")
+                    logger.warning("   ⚠️ Проверьте данные: возможно, только успешные сделки сохраняются в bot_history.json")
+                elif successful_count == 0 and failed_count > 0:
+                    logger.warning("   ⚠️ ВНИМАНИЕ: Все сделки неуспешные (PnL <= 0)!")
+                    logger.warning("   ⚠️ Это также указывает на проблему в данных")
                 
                 # Анализ важности признаков
                 if hasattr(self.signal_predictor, 'feature_importances_'):
@@ -1382,6 +1427,12 @@ class AITrainer:
                     logger.info("   🔍 Важность признаков:")
                     for name, importance in zip(feature_names, importances):
                         logger.info(f"      {name}: {importance:.3f}")
+                    
+                    # Предупреждение если все важности нулевые
+                    if all(imp == 0.0 for imp in importances):
+                        logger.warning("   ⚠️ ВНИМАНИЕ: Все признаки имеют нулевую важность!")
+                        logger.warning("   ⚠️ Это означает, что модель не использует признаки для предсказания")
+                        logger.warning("   ⚠️ Возможные причины: все сделки одного класса или признаки не информативны")
                 
                 # Обучаем модель предсказания прибыли
                 if not self.profit_predictor:
@@ -2125,8 +2176,8 @@ class AITrainer:
                     # Логируем начало симуляции (INFO только для важных монет)
                     # Вычисляем количество свечей для обработки с учетом пропуска начальных свечей
                     simulation_start_idx = RSI_PERIOD
-                    if base_enable_maturity_check:
-                        simulation_start_idx = max(RSI_PERIOD, base_min_candles_for_maturity)
+                    if coin_enable_maturity_check:
+                        simulation_start_idx = max(RSI_PERIOD, coin_min_candles_for_maturity)
                     candles_to_process = len(candles) - simulation_start_idx
                     if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
                         logger.info(f"   🔄 {symbol}: симуляция {candles_to_process:,} свечей...")
@@ -2139,13 +2190,13 @@ class AITrainer:
                     # ВАЖНО: Начинаем симуляцию с момента, когда уже накопилось достаточно свечей для зрелости
                     # Это нужно чтобы фильтр зрелости не блокировал все входы в начале истории
                     simulation_start_idx = RSI_PERIOD
-                    if base_enable_maturity_check:
-                        # Начинаем симуляцию с момента, когда уже есть 400+ свечей (или индивидуальный порог для монеты)
-                        # Но используем базовый порог для определения начала симуляции
-                        simulation_start_idx = max(RSI_PERIOD, base_min_candles_for_maturity)
+                    if coin_enable_maturity_check:
+                        # Начинаем симуляцию с момента, когда уже есть достаточно свечей (или индивидуальный порог для монеты)
+                        # Используем мутированный порог для определения начала симуляции
+                        simulation_start_idx = max(RSI_PERIOD, coin_min_candles_for_maturity)
                         if simulation_start_idx > RSI_PERIOD:
                             skipped_candles = simulation_start_idx - RSI_PERIOD
-                            logger.debug(f"   ⏭️ {symbol}: пропущено {skipped_candles} начальных свечей (до накопления {base_min_candles_for_maturity} для зрелости)")
+                            logger.debug(f"   ⏭️ {symbol}: пропущено {skipped_candles} начальных свечей (до накопления {coin_min_candles_for_maturity} для зрелости)")
                     
                     # Счетчики для диагностики фильтров
                     rsi_entered_long_zone = 0
