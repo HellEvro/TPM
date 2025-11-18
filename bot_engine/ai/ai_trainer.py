@@ -598,15 +598,9 @@ class AITrainer:
             else:
                 logger.debug(f"   ⏳ Файл {bot_history_file} не найден")
         except json.JSONDecodeError as json_error:
-            logger.warning(f"   ⚠️ Файл bot_history.json поврежден (JSON ошибка на позиции {json_error.pos})")
-            logger.info("   🧯 Сохраняем проблемный файл для диагностики (оригинал не трогаем)")
-            try:
-                corrupted_file = f"{bot_history_file}.corrupted"
-                if os.path.exists(bot_history_file):
-                    shutil.copy2(bot_history_file, corrupted_file)
-                    logger.info(f"   📁 Копия bot_history.json: {corrupted_file}")
-            except Exception as copy_error:
-                logger.debug(f"   ⚠️ Не удалось сохранить копию: {copy_error}")
+            logger.debug(f"   ⚠️ Файл bot_history.json содержит ошибку JSON на позиции {json_error.pos} (пропускаем, оригинал не трогаем)")
+            # Не сохраняем копию автоматически - это может быть временная проблема при записи
+            # Если проблема критична, пользователь может проверить файл вручную
         except Exception as e:
             logger.warning(f"   ⚠️ Ошибка загрузки bot_history.json: {e}")
         
