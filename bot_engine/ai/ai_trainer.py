@@ -1178,12 +1178,24 @@ class AITrainer:
                     # Это нужно, потому что исходный PnL может быть неправильно рассчитан
                     calculated_pnl = None
                     if entry_price and exit_price and entry_price > 0:
-                        # Пробуем рассчитать PnL из цен (если есть размер позиции)
-                        position_size = trade.get('position_size') or trade.get('size') or trade.get('volume_value') or 1.0
+                        # Получаем размер позиции
+                        position_size = trade.get('position_size') or trade.get('size') or trade.get('volume_value')
+                        
+                        # Рассчитываем ROI (процент изменения цены)
                         if direction == 'LONG':
-                            calculated_pnl = (exit_price - entry_price) / entry_price * position_size
+                            roi_percent = (exit_price - entry_price) / entry_price
                         else:
-                            calculated_pnl = (entry_price - exit_price) / entry_price * position_size
+                            roi_percent = (entry_price - exit_price) / entry_price
+                        
+                        # Если есть размер позиции, рассчитываем PnL в USDT
+                        # Если position_size в USDT, то PnL = roi_percent * position_size
+                        # Если position_size в количестве монет, то PnL = (exit_price - entry_price) * position_size для LONG
+                        if position_size and position_size > 0:
+                            # Предполагаем, что position_size в USDT (размер позиции)
+                            calculated_pnl = roi_percent * position_size
+                        else:
+                            # Если нет размера позиции, используем ROI как относительный PnL
+                            calculated_pnl = roi_percent * 100  # В процентах
                     
                     # Сохраняем исходный PnL для анализа
                     if original_pnl != 0 and original_pnl is not None:
@@ -1339,12 +1351,22 @@ class AITrainer:
                     skipped_trades += 1
                     continue
             
-            # Проверяем, все ли исходные PnL положительные
+            # Диагностика исходных PnL значений
             if len(original_pnl_values) > 10:  # Минимум 10 сделок для анализа
+                min_original_pnl = min(original_pnl_values)
+                max_original_pnl = max(original_pnl_values)
+                avg_original_pnl = np.mean(original_pnl_values)
+                median_original_pnl = np.median(original_pnl_values)
                 negative_count = sum(1 for pnl_val in original_pnl_values if pnl_val < 0)
                 zero_count = sum(1 for pnl_val in original_pnl_values if pnl_val == 0)
+                positive_count = sum(1 for pnl_val in original_pnl_values if pnl_val > 0)
+                
+                logger.info(f"   📊 Диагностика ИСХОДНЫХ PnL: min={min_original_pnl:.2f}, max={max_original_pnl:.2f}, avg={avg_original_pnl:.2f}, median={median_original_pnl:.2f}")
+                logger.info(f"   📊 Распределение ИСХОДНЫХ PnL: отрицательных={negative_count}, нулевых={zero_count}, положительных={positive_count}")
+                
                 if negative_count == 0 and zero_count == 0:
                     logger.warning("   ⚠️ ОБНАРУЖЕНА ПРОБЛЕМА: Все исходные PnL положительные!")
+                    logger.warning("   ⚠️ Это может означать, что в bot_history.json сохраняются только успешные сделки")
                     logger.warning("   ⚠️ Пересчитываем PnL из цен входа/выхода для корректного обучения")
                     force_use_calculated_pnl = True
                     
@@ -1355,18 +1377,47 @@ class AITrainer:
                         exit_price = sample.get('exit_price')
                         direction = sample.get('direction', 'LONG')
                         if entry_price and exit_price and entry_price > 0:
-                            # Используем размер позиции из sample или 1.0
-                            position_size = sample.get('position_size', 1.0)
+                            # Рассчитываем ROI
                             if direction == 'LONG':
-                                recalculated_pnl = (exit_price - entry_price) / entry_price * position_size
+                                roi_percent = (exit_price - entry_price) / entry_price
                             else:
-                                recalculated_pnl = (entry_price - exit_price) / entry_price * position_size
+                                roi_percent = (entry_price - exit_price) / entry_price
+                            
+                            # Используем размер позиции из sample
+                            position_size = sample.get('position_size')
+                            if position_size and position_size > 0:
+                                # PnL в USDT
+                                recalculated_pnl = roi_percent * position_size
+                            else:
+                                # Если нет размера позиции, используем ROI в процентах
+                                recalculated_pnl = roi_percent * 100
+                            
                             sample['pnl'] = recalculated_pnl
                             sample['is_successful'] = recalculated_pnl > 0
                     
                     # Перераспределяем по категориям
                     successful_samples = [s for s in all_samples if s['pnl'] > 0]
                     failed_samples = [s for s in all_samples if s['pnl'] <= 0]
+                    
+                    # Диагностика после пересчета
+                    recalculated_pnl_values = [s['pnl'] for s in all_samples]
+                    if recalculated_pnl_values:
+                        min_recalc = min(recalculated_pnl_values)
+                        max_recalc = max(recalculated_pnl_values)
+                        avg_recalc = np.mean(recalculated_pnl_values)
+                        negative_recalc = sum(1 for pnl in recalculated_pnl_values if pnl < 0)
+                        zero_recalc = sum(1 for pnl in recalculated_pnl_values if pnl == 0)
+                        positive_recalc = sum(1 for pnl in recalculated_pnl_values if pnl > 0)
+                        
+                        logger.info(f"   📊 Диагностика ПЕРЕСЧИТАННЫХ PnL: min={min_recalc:.2f}, max={max_recalc:.2f}, avg={avg_recalc:.2f}")
+                        logger.info(f"   📊 Распределение ПЕРЕСЧИТАННЫХ PnL: отрицательных={negative_recalc}, нулевых={zero_recalc}, положительных={positive_recalc}")
+                        
+                        if negative_recalc == 0 and zero_recalc == 0:
+                            logger.error("   ❌ КРИТИЧЕСКАЯ ПРОБЛЕМА: После пересчета все PnL все еще положительные!")
+                            logger.error("   ❌ Это означает, что все сделки действительно были прибыльными")
+                            logger.error("   ❌ Или проблема в расчете PnL из цен входа/выхода")
+                        else:
+                            logger.info(f"   ✅ После пересчета: {negative_recalc} убыточных и {zero_recalc} нулевых сделок")
             
             logger.info(f"✅ Обработано {processed_trades} сделок")
             logger.info(f"   ✅ Успешных: {len(successful_samples)} (PnL > 0)")
