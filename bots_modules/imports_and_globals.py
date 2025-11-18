@@ -435,6 +435,14 @@ flask_cors_logger.setLevel(logging.WARNING)
 flask_cors_core_logger = logging.getLogger('flask_cors.core')
 flask_cors_core_logger.setLevel(logging.WARNING)
 
+# matplotlib - логирует неформатированные сообщения типа "matplotlib data path: %s", "CONFIGDIR=%s" и т.д.
+matplotlib_logger = logging.getLogger('matplotlib')
+matplotlib_logger.setLevel(logging.WARNING)
+matplotlib_font_manager_logger = logging.getLogger('matplotlib.font_manager')
+matplotlib_font_manager_logger.setLevel(logging.WARNING)
+matplotlib_backends_logger = logging.getLogger('matplotlib.backends')
+matplotlib_backends_logger.setLevel(logging.WARNING)
+
 # Создаем Flask приложение для API ботов
 # ВАЖНО: Создаем здесь чтобы было доступно при импорте api_endpoints
 bots_app = Flask(__name__)
