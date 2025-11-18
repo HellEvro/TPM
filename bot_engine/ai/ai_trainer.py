@@ -540,8 +540,12 @@ class AITrainer:
             history_file = os.path.normpath(os.path.join(self.data_dir, 'history_data.json'))
             if os.path.exists(history_file):
                 # Убрано: logger.debug(f"📖 Источник 1: {history_file}") - слишком шумно
-                with open(history_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                try:
+                    with open(history_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                except json.JSONDecodeError as json_error:
+                    logger.warning(f"   ⚠️ Файл истории поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}): {history_file}")
+                    raise  # Пробрасываем дальше для обработки в общем except
                 
                 # Извлекаем все сделки из истории
                 latest = data.get('latest', {})
@@ -576,8 +580,12 @@ class AITrainer:
             bot_history_file = os.path.normpath(os.path.join('data', 'bot_history.json'))
             if os.path.exists(bot_history_file):
                 # Убрано: logger.debug(f"📖 Источник 2: {bot_history_file}") - слишком шумно
-                with open(bot_history_file, 'r', encoding='utf-8') as f:
-                    bot_history_data = json.load(f)
+                try:
+                    with open(bot_history_file, 'r', encoding='utf-8') as f:
+                        bot_history_data = json.load(f)
+                except json.JSONDecodeError as json_error:
+                    logger.warning(f"   ⚠️ Файл истории ботов поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}): {bot_history_file}")
+                    raise  # Пробрасываем дальше для обработки в общем except
                 
                 # Извлекаем сделки из bot_history.json
                 bot_trades = bot_history_data.get('trades', [])
