@@ -1890,20 +1890,24 @@ class BybitExchange(BaseExchange):
                     logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: Меньше minOrderQty={min_order_qty}, увеличили до {rounded_coins} монет")
                 
                 # ✅ ШАГ 4: Проверяем minNotionalValue (по номинальной стоимости!)
-                # ⚠️ КРИТИЧНО: Для лимитных ордеров из набора позиций НЕ принуждаем к minNotionalValue
-                # Пользователь сам контролирует размер каждого ордера
+                # ⚠️ КРИТИЧНО: Биржа Bybit ОТКЛОНЯЕТ ордера меньше minNotionalValue!
+                # Даже для лимитных ордеров из набора позиций нужно соблюдать минимум, иначе ордер не разместится
                 nominal_usdt = rounded_coins * current_price
                 min_usdt_from_notional = min_notional_value if min_notional_value else 5.0
                 
-                if not skip_min_notional_enforcement and nominal_usdt < min_usdt_from_notional:
-                    # Если получилось меньше minNotional - увеличиваем монеты
-                    # НО только если не указан флаг skip_min_notional_enforcement
+                if nominal_usdt < min_usdt_from_notional:
+                    # Если получилось меньше minNotional - ВСЕГДА увеличиваем монеты
+                    # Иначе биржа отклонит ордер с ошибкой "Order does not meet minimum order value"
                     min_coins_for_notional = math.ceil(min_usdt_from_notional / current_price / qty_step) * qty_step
                     rounded_coins = min_coins_for_notional
-                    logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: Меньше minNotionalValue={min_usdt_from_notional}, увеличили до {rounded_coins} монет")
-                elif skip_min_notional_enforcement and nominal_usdt < min_usdt_from_notional:
-                    # Предупреждаем, но не увеличиваем принудительно
-                    logger.debug(f"[BYBIT_BOT] 🔍 {symbol}: Запрошенная сумма {nominal_usdt:.2f} USDT < minNotionalValue={min_usdt_from_notional}, но пропускаем принудительное увеличение (лимитный ордер из набора)")
+                    if skip_min_notional_enforcement:
+                        # Для лимитных ордеров из набора - предупреждаем, что увеличили до минимума
+                        logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: Запрошенная сумма {nominal_usdt:.2f} USDT < minNotionalValue={min_usdt_from_notional} USDT. "
+                                     f"Увеличиваем до минимума {rounded_coins} монет (~{rounded_coins * current_price:.2f} USDT), "
+                                     f"иначе биржа отклонит ордер (лимитный ордер из набора позиций)")
+                    else:
+                        # Для обычных ордеров - стандартное предупреждение
+                        logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: Меньше minNotionalValue={min_usdt_from_notional}, увеличили до {rounded_coins} монет")
                 
                 qty_in_coins = rounded_coins
                 logger.debug(f"[BYBIT_BOT] 💰 {symbol}: ФИНАЛЬНО: {qty_in_coins} монет @ {current_price:.8f} (кратно {qty_step})")
