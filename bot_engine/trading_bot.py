@@ -1138,19 +1138,29 @@ class TradingBot:
             
             # Размещаем лимитные ордера
             for i, (percent_step, margin_amount) in enumerate(zip(percent_steps, margin_amounts)):
+                # ✅ КРИТИЧНО: Проверяем, что margin_amount действительно из массива, а не дефолтное значение
+                if margin_amount <= 0:
+                    self.logger.warning(f" {self.symbol}: ⚠️ Ордер #{i+1}: margin_amount={margin_amount} <= 0, пропускаем")
+                    continue
+                
                 # ✅ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ: Показываем, какая сумма используется для каждого ордера
-                self.logger.info(f" {self.symbol}: 📋 Ордер #{i+1}: percent_step={percent_step}%, margin_amount={margin_amount} USDT (из конфига: {margin_amounts})")
+                self.logger.debug(f" {self.symbol}: 📋 Ордер #{i+1}: percent_step={percent_step}%, margin_amount={margin_amount} USDT (из массива margin_amounts[{i}]={margin_amounts[i]})")
+                
+                # ✅ КРИТИЧНО: Убеждаемся, что используем именно margin_amount из массива, а не self.volume_value
+                actual_quantity = margin_amount  # Используем значение из массива
+                self.logger.debug(f" {self.symbol}: ✅ Используем для ордера #{i+1}: {actual_quantity} USDT (self.volume_value={self.volume_value}, НЕ используется!)")
                 
                 # Если первый шаг = 0, то первая сделка по рынку
                 if i == 0 and percent_step == 0:
                     first_order_market = True
                     # Размещаем рыночный ордер
-                    # ✅ Передаем quantity_is_usdt=True, так как margin_amount в USDT
-                    self.logger.info(f" {self.symbol}: 🚀 Размещаем рыночный ордер: {margin_amount} USDT")
+                    # ✅ КРИТИЧНО: Используем margin_amount из массива, а НЕ self.volume_value!
+                    actual_quantity = margin_amount
+                    self.logger.debug(f" {self.symbol}: 🚀 Размещаем рыночный ордер: {actual_quantity} USDT (из массива, НЕ из self.volume_value={self.volume_value})")
                     order_result = self.exchange.place_order(
                         symbol=self.symbol,
                         side=side,
-                        quantity=margin_amount,
+                        quantity=actual_quantity,  # ✅ Используем значение из массива
                         order_type='market',
                         quantity_is_usdt=True
                     )
@@ -1191,12 +1201,14 @@ class TradingBot:
                     limit_price = current_price * (1 + percent_step / 100)
                 
                 # Размещаем лимитный ордер
-                # ✅ Передаем quantity_is_usdt=True, так как margin_amount в USDT
-                self.logger.info(f" {self.symbol}: 🚀 Размещаем лимитный ордер #{i+1}: {margin_amount} USDT @ {limit_price:.6f} ({percent_step}%)")
+                # ✅ КРИТИЧНО: Используем margin_amount из массива, а НЕ self.volume_value!
+                actual_quantity = margin_amount
+                self.logger.debug(f" {self.symbol}: 🚀 Размещаем лимитный ордер #{i+1}: {actual_quantity} USDT @ {limit_price:.6f} ({percent_step}%)")
+                self.logger.debug(f" {self.symbol}: ✅ Используем {actual_quantity} USDT из массива margin_amounts[{i}]={margin_amounts[i]}, НЕ self.volume_value={self.volume_value}")
                 order_result = self.exchange.place_order(
                     symbol=self.symbol,
                     side=side,
-                    quantity=margin_amount,
+                    quantity=actual_quantity,  # ✅ Используем значение из массива
                     order_type='limit',
                     price=limit_price,
                     quantity_is_usdt=True
