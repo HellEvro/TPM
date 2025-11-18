@@ -621,6 +621,40 @@ def setup_color_logging(console_log_levels=None):
     # и фильтр не сможет их обработать.
     # Фильтрация происходит через LogLevelFilter в обработчике.
     
+    # КРИТИЧНО: Перехватываем создание новых обработчиков через monkey patching
+    # Это гарантирует, что все новые обработчики будут проверяться на наличие нашего фильтра
+    # Сохраняем оригинальную функцию только один раз (если еще не сохранена)
+    if not hasattr(logging.Logger, '_original_add_handler'):
+        logging.Logger._original_add_handler = logging.Logger.addHandler
+    
+    def _patched_add_handler(self, handler):
+        """Перехватывает добавление обработчиков и удаляет те, что без нашего фильтра"""
+        # Если это StreamHandler для stdout без нашего фильтра - не добавляем его
+        if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
+            has_our_filter = any(isinstance(f, LogLevelFilter) for f in handler.filters)
+            if not has_our_filter:
+                # Не добавляем обработчик без нашего фильтра
+                return
+        # Иначе добавляем как обычно
+        return logging.Logger._original_add_handler(self, handler)
+    
+    # Применяем monkey patch только если еще не применен
+    if logging.Logger.addHandler != _patched_add_handler:
+        logging.Logger.addHandler = _patched_add_handler
+    
+    # Финальная проверка: удаляем все обработчики без фильтра еще раз
+    # (на случай если они были созданы между проверками)
+    for existing_logger_name in list(logging.Logger.manager.loggerDict.keys()):
+        try:
+            existing_logger = logging.getLogger(existing_logger_name)
+            for handler in existing_logger.handlers[:]:
+                if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
+                    has_our_filter = any(isinstance(f, LogLevelFilter) for f in handler.filters)
+                    if not has_our_filter:
+                        existing_logger.removeHandler(handler)
+        except Exception:
+            pass  # Игнорируем ошибки при удалении обработчиков
+    
     return logger
 
 if __name__ == "__main__":
