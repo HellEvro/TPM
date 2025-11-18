@@ -253,7 +253,6 @@ def check_exit_scam_filter(symbol, coin_data, config, exchange_obj, ensure_excha
             price_change = abs((close_price - open_price) / open_price) * 100
             
             if price_change > single_candle_percent:
-                logger.warning(f"{symbol}: ❌ БЛОКИРОВКА: Свеча #{i+1} превысила лимит {single_candle_percent}% (было {price_change:.1f}%)")
                 logger.info(f"{symbol}: Свеча: O={open_price:.4f} C={close_price:.4f} H={candle['high']:.4f} L={candle['low']:.4f}")
                 return False
         

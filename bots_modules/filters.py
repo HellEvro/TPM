@@ -514,11 +514,6 @@ def _run_exit_scam_ai_detection(symbol, candles):
             severity = anomaly_result.get('severity', 0)
             anomaly_type = anomaly_result.get('anomaly_type', 'UNKNOWN')
             if severity > AIConfig.AI_ANOMALY_BLOCK_THRESHOLD:
-                logger.warning(
-                    f"{symbol}: ❌ БЛОКИРОВКА (AI): "
-                    f"Обнаружена аномалия {anomaly_type} "
-                    f"(severity: {severity:.2%})"
-                )
                 return False
             logger.warning(
                 f"{symbol}: ⚠️ ПРЕДУПРЕЖДЕНИЕ (AI): "
@@ -702,7 +697,6 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                 logger.info(f"✅ {symbol}: Свечи загружены с биржи ({len(candles)} свечей)")
                 data_source = 'api'
         if not candles or len(candles) < 15:  # Базовая проверка для RSI(14)
-            logger.debug(f"Недостаточно свечей для {symbol}: {len(candles) if candles else 0}/15")
             return None
         
         # Рассчитываем RSI для 6H
@@ -1262,8 +1256,21 @@ def load_all_coins_candles_fast():
                 try:
                     with open(candles_cache_file, 'r', encoding='utf-8') as f:
                         file_cache = json.load(f)
+                except json.JSONDecodeError as json_error:
+                    # Файл поврежден - создаем резервную копию и начинаем с пустого кэша
+                    import shutil
+                    backup_file = candles_cache_file.parent / f"candles_cache_corrupted_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json.backup"
+                    try:
+                        shutil.copy2(candles_cache_file, backup_file)
+                        logger.warning(f"⚠️ Файл кэша поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}). "
+                                     f"Создана резервная копия: {backup_file}")
+                        logger.warning(f"⚠️ Начинаем с пустого кэша. Данные будут восстановлены при следующем обновлении.")
+                    except Exception as backup_error:
+                        logger.error(f"❌ Не удалось создать резервную копию поврежденного файла: {backup_error}")
+                    file_cache = {}  # Начинаем с пустого кэша
                 except Exception as load_error:
-                    logger.debug(f"Ошибка загрузки файла кэша: {load_error}")
+                    logger.warning(f"⚠️ Ошибка загрузки файла кэша: {load_error}. Начинаем с пустого кэша.")
+                    file_cache = {}
             
             # ✅ НАРАЩИВАЕМ данные: объединяем старые и новые свечи
             updated_count = 0
@@ -1319,11 +1326,24 @@ def load_all_coins_candles_fast():
                 updated_count += 1
                 total_candles_added += added_count
             
-            # Сохраняем обновленный кэш
-            with open(candles_cache_file, 'w', encoding='utf-8') as f:
-                json.dump(file_cache, f, indent=2, ensure_ascii=False)
-            
-            logger.info(f"💾 Кэш накоплен в файл: {updated_count} монет, +{total_candles_added} новых свечей -> {candles_cache_file}")
+            # Сохраняем обновленный кэш (атомарная запись через временный файл)
+            import tempfile
+            temp_file = candles_cache_file.with_suffix('.tmp')
+            try:
+                # Записываем во временный файл
+                with open(temp_file, 'w', encoding='utf-8') as f:
+                    json.dump(file_cache, f, indent=2, ensure_ascii=False)
+                # Атомарно заменяем старый файл новым
+                temp_file.replace(candles_cache_file)
+                logger.info(f"💾 Кэш накоплен в файл: {updated_count} монет, +{total_candles_added} новых свечей -> {candles_cache_file}")
+            except Exception as save_error:
+                # Удаляем временный файл в случае ошибки
+                if temp_file.exists():
+                    try:
+                        temp_file.unlink()
+                    except Exception:
+                        pass
+                raise save_error
             
         except Exception as file_error:
             logger.warning(f"⚠️ Ошибка сохранения в файл кэша: {file_error}")
@@ -1385,13 +1405,11 @@ def load_all_coins_rsi():
             return False
             
         pairs = current_exchange.get_all_pairs()
-        logger.debug(f"Получено {len(pairs) if pairs else 0} пар")
         
         if not pairs or not isinstance(pairs, list):
             logger.error("❌ Не удалось получить список пар с биржи")
             return False
         
-        logger.debug(f"Найдено {len(pairs)} пар для анализа")
         logger.info(f"📊 RSI: получено {len(pairs)} пар, готовим батчи по 100 монет")
         
         # ⚡ БЕЗ БЛОКИРОВКИ: обновляем счетчики напрямую
@@ -1851,7 +1869,6 @@ def check_new_autobot_filters(symbol, signal, coin_data):
         
         # Дубль-проверка зрелости монеты
         if not check_coin_maturity_stored_or_verify(symbol):
-            logger.debug(f" {symbol}: Монета незрелая")
             return False
         
         # Дубль-проверка ExitScam
@@ -2197,7 +2214,6 @@ def _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=None):
             price_change = abs((close_price - open_price) / open_price) * 100
             
             if price_change > single_candle_percent:
-                logger.warning(f"{symbol}: ❌ БЛОКИРОВКА: Свеча #{i+1} превысила лимит {single_candle_percent}% (было {price_change:.1f}%)")
                 logger.debug(f"{symbol}: Свеча: O={open_price:.4f} C={close_price:.4f} H={candle['high']:.4f} L={candle['low']:.4f}")
                 return False
         
@@ -2247,11 +2263,6 @@ def _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=None):
                                 
                                 # Блокируем если severity > threshold
                                 if severity > AIConfig.AI_ANOMALY_BLOCK_THRESHOLD:
-                                    logger.warning(
-                                        f"{symbol}: ❌ БЛОКИРОВКА (AI): "
-                                        f"Обнаружена аномалия {anomaly_type} "
-                                        f"(severity: {severity:.2%})"
-                                    )
                                     return False
                                 else:
                                     logger.warning(

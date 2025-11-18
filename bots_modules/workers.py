@@ -199,7 +199,6 @@ def auto_bot_worker():
             time_since_auto_bot_check = current_time - last_auto_bot_check
             
             if auto_bot_enabled and time_since_auto_bot_check >= check_interval_seconds:
-                logger.debug(f" Проверяем сигналы...")
                 from bots_modules.imports_and_globals import get_exchange
                 process_auto_bot_signals(exchange_obj=get_exchange())
                 
@@ -254,7 +253,6 @@ def auto_bot_worker():
             time_since_delisting_check = current_time - last_delisting_check
             
             if time_since_delisting_check >= 600:  # 10 минут = 600 секунд
-                logger.debug("[DELISTING] Проверка делистинга...")
                 check_delisting_emergency_close()
                 last_delisting_check = current_time
             
