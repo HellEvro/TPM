@@ -9,13 +9,15 @@ class StatisticsManager {
             throw new Error('StateManager is not initialized. Check that state_manager.js is included in index.html');
         }
         
+        this.stateManager = stateManager; // Сохраняем ссылку для использования в методах
+        
         // Подписываемся на изменения состояния
         this.unsubscribers = [
             stateManager.subscribe('app.theme', this.handleThemeChange.bind(this)),
             stateManager.subscribe('positions.data', this.handlePositionsUpdate.bind(this))
         ];
 
-        // Инициализируем состояние для RSI
+        // Инициализируем состояние для PnL графика
         const state = stateManager.getState('statistics');
         this.chartData = {
             labels: state?.chartData?.labels || [],
@@ -25,9 +27,7 @@ class StatisticsManager {
         this.chartId = `chart_${Math.random().toString(36).substr(2, 9)}`;
         this.chart = null;
         this.isFirstUpdate = true;
-        this.currentSymbol = null;
-        this.rsiUpdateInterval = null;
-        this.stateManager = stateManager; // Сохраняем ссылку для использования в методах
+        this.lastChartUpdate = 0;
 
         // Сохраняем начальное состояние
         stateManager.setState('statistics.chartData', this.chartData);
@@ -35,68 +35,19 @@ class StatisticsManager {
 
         // Инициализируем график только если мы на странице позиций
         if (document.querySelector('.positions-container')) {
-            // Сначала инициализируем график с правильными настройками RSI
-            requestAnimationFrame(() => {
-                this.initializeChart();
-                // Затем загружаем RSI данные после инициализации графика
-                setTimeout(() => this.loadRSIData(), 100);
-            });
-            // Устанавливаем периодическое обновление RSI (каждые 5 минут)
-            this.rsiUpdateInterval = setInterval(() => this.loadRSIData(), 5 * 60 * 1000);
+            requestAnimationFrame(() => this.initializeChart());
         }
     }
 
     handlePositionsUpdate(data) {
         if (data?.stats) {
             this.updateStats(data.stats);
-            // При обновлении позиций обновляем RSI для первого символа
-            this.loadRSIData();
         }
     }
 
     handleThemeChange(newTheme) {
         Logger.debug('STATS', `Theme changed to: ${newTheme}`);
         this.updateChartTheme(newTheme);
-    }
-
-    async loadRSIData() {
-        try {
-            // Получаем первую позицию для отображения RSI
-            const positionsData = this.stateManager.getState('positions.data');
-            let symbol = 'BTC'; // По умолчанию используем BTC
-            
-            if (positionsData) {
-                const allPositions = [
-                    ...(positionsData.high_profitable || []),
-                    ...(positionsData.profitable || []),
-                    ...(positionsData.losing || [])
-                ];
-                
-                if (allPositions.length > 0) {
-                    // Берем первую позицию
-                    const firstPosition = allPositions[0];
-                    symbol = firstPosition.symbol || 'BTC';
-                    // Убираем USDT если есть
-                    symbol = symbol.replace('USDT', '');
-                }
-            }
-            
-            this.currentSymbol = symbol;
-            
-            // Загружаем RSI данные
-            const response = await fetch(`/api/rsi_6h/${symbol}`);
-            if (!response.ok) {
-                Logger.warn('STATS', `Failed to load RSI data for ${symbol}`);
-                return;
-            }
-            
-            const data = await response.json();
-            if (data.success && data.rsi_values) {
-                this.updateRSIChart(data.rsi_values, data.timestamps || []);
-            }
-        } catch (error) {
-            Logger.error('STATS', 'Error loading RSI data:', error);
-        }
     }
 
     updateStats(stats) {
@@ -106,6 +57,23 @@ class StatisticsManager {
 
             // Обновляем значения статистики
             this.updateStatValues(stats);
+            
+            // Обновляем график PnL
+            if (this.isFirstUpdate) {
+                Logger.info('STATS', 'First update, initializing chart with PnL:', stats.total_pnl);
+                const timeLabel = formatUtils.formatTime(new Date());
+                this.updateChart(stats.total_pnl, timeLabel);
+                this.isFirstUpdate = false;
+                this.lastChartUpdate = Date.now();
+            } else {
+                const currentTime = Date.now();
+                if (currentTime - this.lastChartUpdate >= CHART_UPDATE_INTERVAL) {
+                    Logger.debug('STATS', 'Updating chart with PnL:', stats.total_pnl);
+                    const timeLabel = formatUtils.formatTime(new Date());
+                    this.updateChart(stats.total_pnl, timeLabel);
+                    this.lastChartUpdate = currentTime;
+                }
+            }
 
             this.stateManager.setState('statistics.lastUpdate', new Date().toISOString());
             this.stateManager.setState('statistics.data', stats);
@@ -132,6 +100,14 @@ class StatisticsManager {
         Object.entries(updates).forEach(([elementId, { value, useSign }]) => {
             this.updateStatValue(elementId, value, useSign);
         });
+        
+        // Обновляем TOP-3
+        if (stats.top_profitable) {
+            this.updateTopPositions('top-profitable', stats.top_profitable, true);
+        }
+        if (stats.top_losing) {
+            this.updateTopPositions('top-losing', stats.top_losing, false);
+        }
     }
 
     updateStatValue(elementId, value, useSign = false) {
@@ -154,47 +130,83 @@ class StatisticsManager {
         }
     }
 
-    updateRSIChart(rsiValues, timestamps) {
+    updateTopPositions(elementId, positions, isProfit = true) {
+        if (!positions || !Array.isArray(positions)) {
+            Logger.warn(`STATS', Invalid positions data for ${elementId}`);
+            return;
+        }
+
+        Logger.debug(`STATS', Updating ${elementId} with ${positions.length} positions`);
+        
+        const html = positions.map(pos => {
+            const pnlValue = isProfit ? pos.pnl : -Math.abs(pos.pnl);
+            return `
+                <div class="stats-value ${isProfit ? CSS_CLASSES.POSITIVE : CSS_CLASSES.NEGATIVE}">
+                    <a href="${createTickerLink(pos.symbol, window.app?.exchangeManager?.getSelectedExchange())}" 
+                       target="_blank" 
+                       class="ticker">
+                        ${pos.symbol}
+                    </a>
+                    <span style="margin-left: 10px;">
+                        ${formatUtils.formatNumber(pnlValue)} USDT
+                    </span>
+                </div>
+            `;
+        }).join('');
+        
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.innerHTML = html;
+            Logger.debug(`STATS', ${elementId} updated successfully`);
+        }
+    }
+
+    updateChart(totalPnl, timeLabel) {
         if (!this.chart) {
             Logger.warn('STATS', 'Chart not initialized');
             return;
         }
 
         try {
-            // Форматируем временные метки для отображения
-            const labels = timestamps.length > 0 
-                ? timestamps.map(ts => {
-                    const date = new Date(ts);
-                    return formatUtils.formatTime(date);
-                })
-                : rsiValues.map((_, i) => `Candle ${i + 1}`);
-            
-            // Обновляем данные графика
-            this.chartData.labels = labels.slice(-56); // Последние 56 свечей
-            this.chartData.values = rsiValues.slice(-56);
-            
-            // Обновляем данные графика RSI
+            this.chartData.labels.push(timeLabel);
+            this.chartData.values.push(totalPnl);
+
+            if (this.chartData.labels.length > CHART_CONFIG.MAX_DATA_POINTS) {
+                this.chartData.labels.shift();
+                this.chartData.values.shift();
+            }
+
             this.chart.data.labels = this.chartData.labels;
             this.chart.data.datasets[0].data = this.chartData.values;
-            
-            // Обновляем линии границ
-            const numPoints = this.chartData.labels.length;
-            if (this.chart.data.datasets.length > 1) {
-                // Верхняя красная граница (70)
-                this.chart.data.datasets[1].data = new Array(numPoints).fill(70);
-                // Нижняя зеленая граница (30)
-                this.chart.data.datasets[2].data = new Array(numPoints).fill(30);
-                // Центральная серая прерывистая (50)
-                this.chart.data.datasets[3].data = new Array(numPoints).fill(50);
-            }
-            
+            this.updateChartColors(totalPnl);
             this.updateChartTheme(this.stateManager.getState('app.theme'));
 
             this.stateManager.setState('statistics.chartData', this.chartData);
 
             requestAnimationFrame(() => this.chart.update());
+            
+            Logger.debug('STATS', 'Chart updated. Points:', this.chartData.values.length, 'Last value:', totalPnl);
         } catch (error) {
-            Logger.error('STATS', 'Error updating RSI chart:', error);
+            Logger.error('STATS', 'Error updating chart:', error);
+        }
+    }
+
+    updateChartColors(totalPnl) {
+        const theme = this.stateManager.getState('app.theme') || 'dark';
+        const themeKey = theme === 'light' ? 'LIGHT' : 'DARK';
+        const colors = totalPnl >= 0 ? 
+            {
+                BORDER: CHART_THEMES[themeKey].UPTREND,
+                BACKGROUND: this.hexToRgba(CHART_THEMES[themeKey].UPTREND, 0.2)
+            } : 
+            {
+                BORDER: CHART_THEMES[themeKey].DOWNTREND,
+                BACKGROUND: this.hexToRgba(CHART_THEMES[themeKey].DOWNTREND, 0.2)
+            };
+        
+        if (this.chart && this.chart.data.datasets[0]) {
+            this.chart.data.datasets[0].borderColor = colors.BORDER;
+            this.chart.data.datasets[0].backgroundColor = colors.BACKGROUND;
         }
     }
 
@@ -202,27 +214,19 @@ class StatisticsManager {
         if (!this.chart) return;
 
         try {
-            const isDark = theme !== 'light';
-            
-            // Цвет линии RSI
-            this.chart.data.datasets[0].borderColor = isDark ? '#00ff00' : '#1f77b4';
+            const themeKey = theme === 'light' ? 'LIGHT' : 'DARK';
+            const totalPnl = this.chartData.values[this.chartData.values.length - 1] || 0;
+
+            this.chart.data.datasets[0].borderColor = totalPnl >= 0 ? CHART_THEMES[themeKey].UPTREND : CHART_THEMES[themeKey].DOWNTREND;
             this.chart.data.datasets[0].backgroundColor = this.hexToRgba(
-                isDark ? '#00ff00' : '#1f77b4',
-                0.1
+                totalPnl >= 0 ? CHART_THEMES[themeKey].UPTREND : CHART_THEMES[themeKey].DOWNTREND,
+                0.2
             );
 
-            // Обновляем цвет сетки и осей
-            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-            this.chart.options.scales.y.grid.color = gridColor;
-            
-            // Обновляем цвет линий границ
-            if (this.chart.data.datasets.length > 1) {
-                // Верхняя красная граница (70)
-                this.chart.data.datasets[1].borderColor = '#ff0000';
-                // Нижняя зеленая граница (30)
-                this.chart.data.datasets[2].borderColor = '#00ff00';
-                // Центральная серая прерывистая (50)
-                this.chart.data.datasets[3].borderColor = isDark ? '#888888' : '#666666';
+            // Обновляем цвет сетки
+            const gridColor = theme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+            if (this.chart.options.scales && this.chart.options.scales.y) {
+                this.chart.options.scales.y.grid.color = gridColor;
             }
 
             this.chart.update();
@@ -234,12 +238,6 @@ class StatisticsManager {
     destroy() {
         // Отписываемся от всех подписок
         this.unsubscribers.forEach(unsubscribe => unsubscribe());
-        
-        // Останавливаем периодическое обновление RSI
-        if (this.rsiUpdateInterval) {
-            clearInterval(this.rsiUpdateInterval);
-            this.rsiUpdateInterval = null;
-        }
         
         // Уничтожаем график
         this.destroyChart();
@@ -269,7 +267,7 @@ class StatisticsManager {
 
     initializeChart() {
         try {
-            Logger.info('STATS', 'Initializing RSI 6h chart');
+            Logger.info('STATS', 'Initializing PnL chart');
             this.destroyChart();
 
             const ctx = document.getElementById('pnlChart');
@@ -279,70 +277,22 @@ class StatisticsManager {
             }
 
             const theme = this.stateManager.getState('app.theme') || 'dark';
-            const isDark = theme !== 'light';
-            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-
-            // Подготавливаем начальные данные для графика RSI (56 свечей)
-            const initialLabels = this.chartData.labels.length > 0 
-                ? this.chartData.labels 
-                : Array(56).fill('').map((_, i) => `Candle ${i + 1}`);
-            const initialValues = this.chartData.values.length > 0 
-                ? this.chartData.values 
-                : Array(56).fill(50); // Начальное значение 50 (центр)
-            
-            // Подготавливаем данные для линий границ (56 точек)
-            const numPoints = initialLabels.length;
-            const boundaryValues = Array(numPoints).fill(70); // Верхняя граница 70
-            const lowerBoundaryValues = Array(numPoints).fill(30); // Нижняя граница 30
-            const centerBoundaryValues = Array(numPoints).fill(50); // Центральная граница 50
+            const themeKey = theme === 'light' ? 'LIGHT' : 'DARK';
+            const gridColor = theme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
 
             this.chart = new Chart(ctx, {
                 id: this.chartId,
                 type: 'line',
                 data: {
-                    labels: initialLabels,
-                    datasets: [
-                        {
-                            label: 'RSI 6h',
-                            data: initialValues,
-                            borderColor: isDark ? '#00ff00' : '#1f77b4',
-                            backgroundColor: this.hexToRgba(isDark ? '#00ff00' : '#1f77b4', 0.1),
-                            fill: false,
-                            tension: 0.4,
-                            pointRadius: 0,
-                            pointHoverRadius: 3
-                        },
-                        {
-                            label: 'Верхняя граница (70)',
-                            data: boundaryValues,
-                            borderColor: '#ff0000',
-                            backgroundColor: 'transparent',
-                            fill: false,
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            borderDash: [] // Сплошная линия
-                        },
-                        {
-                            label: 'Нижняя граница (30)',
-                            data: lowerBoundaryValues,
-                            borderColor: '#00ff00',
-                            backgroundColor: 'transparent',
-                            fill: false,
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            borderDash: [] // Сплошная линия
-                        },
-                        {
-                            label: 'Центральная линия (50)',
-                            data: centerBoundaryValues,
-                            borderColor: isDark ? '#888888' : '#666666',
-                            backgroundColor: 'transparent',
-                            fill: false,
-                            borderWidth: 1,
-                            pointRadius: 0,
-                            borderDash: [5, 5] // Прерывистая линия
-                        }
-                    ]
+                    labels: this.chartData.labels,
+                    datasets: [{
+                        label: 'Total P&L',
+                        data: this.chartData.values,
+                        borderColor: CHART_THEMES[themeKey].UPTREND,
+                        backgroundColor: this.hexToRgba(CHART_THEMES[themeKey].UPTREND, 0.2),
+                        fill: true,
+                        tension: 0.4
+                    }]
                 },
                 options: {
                     responsive: true,
@@ -351,13 +301,8 @@ class StatisticsManager {
                     scales: {
                         y: {
                             beginAtZero: false,
-                            min: 0,
-                            max: 100,
                             grid: {
                                 color: gridColor
-                            },
-                            ticks: {
-                                stepSize: 20
                             }
                         },
                         x: {
@@ -369,26 +314,15 @@ class StatisticsManager {
                     plugins: {
                         legend: {
                             display: false
-                        },
-                        tooltip: {
-                            enabled: true,
-                            callbacks: {
-                                label: function(context) {
-                                    if (context.datasetIndex === 0) {
-                                        return `RSI: ${context.parsed.y.toFixed(2)}`;
-                                    }
-                                    return context.dataset.label + ': ' + context.parsed.y;
-                                }
-                            }
                         }
                     }
                 }
             });
 
-            Logger.info('STATS', 'RSI 6h chart initialized successfully');
+            Logger.info('STATS', 'PnL chart initialized successfully');
         } catch (error) {
-            Logger.error('STATS', 'Error initializing RSI chart:', error);
-            NotificationManager.error('Error initializing RSI chart');
+            Logger.error('STATS', 'Error initializing chart:', error);
+            NotificationManager.error('Error initializing statistics chart');
         }
     }
 
@@ -401,4 +335,4 @@ class StatisticsManager {
 }
 
 // Экспортируем класс
-window.StatisticsManager = StatisticsManager; 
+window.StatisticsManager = StatisticsManager;
