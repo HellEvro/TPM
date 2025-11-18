@@ -215,7 +215,6 @@ def auto_bot_worker():
                     'enabled': True
                 })
             else:
-                logger.debug(f" Выключен, пропускаем проверку")
                 update_process_state('auto_bot_worker', {
                     'last_check': datetime.now().isoformat(),
                     'enabled': False,

@@ -792,7 +792,6 @@ def ensure_exchange_initialized():
     else:
         # Обновляем локальную переменную
         exchange = current_exchange
-        logger.debug("[DEBUG] Exchange уже инициализирован в GlobalState")
         return True
 
 # API endpoints

@@ -222,7 +222,6 @@ def is_coin_mature_stored(symbol):
         del mature_coins_storage[symbol]
         return False
     
-    logger.debug(f" {symbol}: найдена в хранилище с актуальными настройками")
     return True
 
 def add_mature_coin_to_storage(symbol, maturity_data, auto_save=True):
