@@ -1133,6 +1133,11 @@ class AITrainer:
             successful_samples = []  # Успешные сделки (PnL > 0)
             failed_samples = []      # Неуспешные сделки (PnL <= 0)
             
+            # Флаг для принудительного использования рассчитанного PnL
+            # Будет установлен в True, если все исходные PnL положительные
+            force_use_calculated_pnl = False
+            original_pnl_values = []  # Собираем исходные PnL для анализа
+            
             # Импортируем функцию расчета RSI
             try:
                 from bot_engine.indicators import TechnicalIndicators
@@ -1167,18 +1172,34 @@ class AITrainer:
                     entry_price = trade.get('entry_price') or trade.get('entryPrice')
                     exit_price = trade.get('exit_price') or trade.get('exitPrice')
                     direction = trade.get('direction', 'LONG')
-                    pnl = trade.get('pnl', 0)
-                    # ВАЖНО: Если PnL не указан или равен 0, рассчитываем его из цен
-                    if (pnl == 0 or pnl is None) and entry_price and exit_price:
+                    original_pnl = trade.get('pnl', 0)
+                    
+                    # ВАЖНО: Всегда рассчитываем PnL из цен для корректности
+                    # Это нужно, потому что исходный PnL может быть неправильно рассчитан
+                    calculated_pnl = None
+                    if entry_price and exit_price and entry_price > 0:
                         # Пробуем рассчитать PnL из цен (если есть размер позиции)
-                        position_size = trade.get('position_size') or trade.get('size') or 1.0
+                        position_size = trade.get('position_size') or trade.get('size') or trade.get('volume_value') or 1.0
                         if direction == 'LONG':
                             calculated_pnl = (exit_price - entry_price) / entry_price * position_size
                         else:
                             calculated_pnl = (entry_price - exit_price) / entry_price * position_size
-                        # Используем рассчитанный PnL только если исходный был 0 или None
-                        if pnl == 0 or pnl is None:
+                    
+                    # Сохраняем исходный PnL для анализа
+                    if original_pnl != 0 and original_pnl is not None:
+                        original_pnl_values.append(original_pnl)
+                    
+                    # Используем рассчитанный PnL, если исходный отсутствует или равен 0
+                    # ИЛИ если принудительно используем рассчитанный (будет установлено позже)
+                    if calculated_pnl is not None:
+                        if original_pnl == 0 or original_pnl is None or force_use_calculated_pnl:
                             pnl = calculated_pnl
+                        else:
+                            # Используем исходный PnL
+                            pnl = original_pnl
+                    else:
+                        pnl = original_pnl
+                    
                     entry_time = trade.get('timestamp') or trade.get('entry_time')
                     exit_time = trade.get('close_timestamp') or trade.get('exit_time')
                     
@@ -1286,6 +1307,9 @@ class AITrainer:
                     else:
                         roi = ((entry_price - exit_price) / entry_price) * 100
                     
+                    # Получаем размер позиции для пересчета PnL (если понадобится)
+                    position_size = trade.get('position_size') or trade.get('size') or trade.get('volume_value') or 1.0
+                    
                     # Создаем обучающий пример
                     sample = {
                         'symbol': symbol,
@@ -1298,7 +1322,8 @@ class AITrainer:
                         'direction': direction,
                         'pnl': pnl,
                         'roi': roi,
-                        'is_successful': pnl > 0
+                        'is_successful': pnl > 0,
+                        'position_size': position_size  # Сохраняем для пересчета PnL
                     }
                     
                     # Разделяем на успешные и неуспешные
@@ -1313,6 +1338,35 @@ class AITrainer:
                     logger.debug(f"⚠️ Ошибка обработки сделки {trade.get('symbol', 'unknown')}: {e}")
                     skipped_trades += 1
                     continue
+            
+            # Проверяем, все ли исходные PnL положительные
+            if len(original_pnl_values) > 10:  # Минимум 10 сделок для анализа
+                negative_count = sum(1 for pnl_val in original_pnl_values if pnl_val < 0)
+                zero_count = sum(1 for pnl_val in original_pnl_values if pnl_val == 0)
+                if negative_count == 0 and zero_count == 0:
+                    logger.warning("   ⚠️ ОБНАРУЖЕНА ПРОБЛЕМА: Все исходные PnL положительные!")
+                    logger.warning("   ⚠️ Пересчитываем PnL из цен входа/выхода для корректного обучения")
+                    force_use_calculated_pnl = True
+                    
+                    # Пересчитываем PnL для всех уже обработанных сделок
+                    all_samples = successful_samples + failed_samples
+                    for sample in all_samples:
+                        entry_price = sample.get('entry_price')
+                        exit_price = sample.get('exit_price')
+                        direction = sample.get('direction', 'LONG')
+                        if entry_price and exit_price and entry_price > 0:
+                            # Используем размер позиции из sample или 1.0
+                            position_size = sample.get('position_size', 1.0)
+                            if direction == 'LONG':
+                                recalculated_pnl = (exit_price - entry_price) / entry_price * position_size
+                            else:
+                                recalculated_pnl = (entry_price - exit_price) / entry_price * position_size
+                            sample['pnl'] = recalculated_pnl
+                            sample['is_successful'] = recalculated_pnl > 0
+                    
+                    # Перераспределяем по категориям
+                    successful_samples = [s for s in all_samples if s['pnl'] > 0]
+                    failed_samples = [s for s in all_samples if s['pnl'] <= 0]
             
             logger.info(f"✅ Обработано {processed_trades} сделок")
             logger.info(f"   ✅ Успешных: {len(successful_samples)} (PnL > 0)")
