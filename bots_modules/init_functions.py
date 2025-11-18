@@ -497,9 +497,30 @@ def create_bot(symbol, config=None, exchange_obj=None):
             'break_even_trigger_percent',
             auto_bot_config.get('break_even_trigger', 100.0)
         ),
+        'take_profit_percent': auto_bot_config.get('take_profit_percent', 20.0),
         'avoid_down_trend': auto_bot_config.get('avoid_down_trend', True),
         'avoid_up_trend': auto_bot_config.get('avoid_up_trend', True),
-        'enable_maturity_check': auto_bot_config.get('enable_maturity_check', True)
+        'enable_maturity_check': auto_bot_config.get('enable_maturity_check', True),
+        # RSI временной фильтр
+        'rsi_time_filter_enabled': auto_bot_config.get('rsi_time_filter_enabled', True),
+        'rsi_time_filter_candles': auto_bot_config.get('rsi_time_filter_candles', 8),
+        'rsi_time_filter_lower': auto_bot_config.get('rsi_time_filter_lower', 35),
+        'rsi_time_filter_upper': auto_bot_config.get('rsi_time_filter_upper', 65),
+        # ExitScam фильтр
+        'exit_scam_enabled': auto_bot_config.get('exit_scam_enabled', True),
+        'exit_scam_candles': auto_bot_config.get('exit_scam_candles', 10),
+        'exit_scam_single_candle_percent': auto_bot_config.get('exit_scam_single_candle_percent', 15.0),
+        'exit_scam_multi_candle_count': auto_bot_config.get('exit_scam_multi_candle_count', 4),
+        'exit_scam_multi_candle_percent': auto_bot_config.get('exit_scam_multi_candle_percent', 50.0),
+        # Анализ тренда
+        'trend_detection_enabled': auto_bot_config.get('trend_detection_enabled', True),
+        'trend_analysis_period': auto_bot_config.get('trend_analysis_period', 30),
+        'trend_price_change_threshold': auto_bot_config.get('trend_price_change_threshold', 7),
+        'trend_candles_threshold': auto_bot_config.get('trend_candles_threshold', 70),
+        # Параметры зрелости
+        'min_candles_for_maturity': auto_bot_config.get('min_candles_for_maturity', 400),
+        'min_rsi_low': auto_bot_config.get('min_rsi_low', 35),
+        'max_rsi_high': auto_bot_config.get('max_rsi_high', 65)
     }
 
     if individual_settings:

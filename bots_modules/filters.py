@@ -199,7 +199,7 @@ except ImportError:
         RSI_EXIT_SHORT_WITH_TREND = 35
         RSI_EXIT_SHORT_AGAINST_TREND = 40
 
-def _legacy_check_rsi_time_filter(candles, rsi, signal):
+def _legacy_check_rsi_time_filter(candles, rsi, signal, symbol=None, individual_settings=None):
     """
     ГИБРИДНЫЙ ВРЕМЕННОЙ ФИЛЬТР RSI
     
@@ -216,19 +216,44 @@ def _legacy_check_rsi_time_filter(candles, rsi, signal):
         candles: Список свечей
         rsi: Текущее значение RSI
         signal: Торговый сигнал ('ENTER_LONG' или 'ENTER_SHORT')
+        symbol: Символ монеты (опционально, для получения индивидуальных настроек)
+        individual_settings: Индивидуальные настройки монеты (опционально)
     
     Returns:
         dict: {'allowed': bool, 'reason': str, 'last_extreme_candles_ago': int, 'calm_candles': int}
     """
     try:
-        # Получаем настройки из конфига
+        # ✅ Получаем настройки: сначала индивидуальные, затем глобальные
         # ⚡ БЕЗ БЛОКИРОВКИ: конфиг не меняется, GIL делает чтение атомарным
-        rsi_time_filter_enabled = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_enabled', True)
-        rsi_time_filter_candles = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_candles', 8)
-        rsi_time_filter_upper = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_upper', 65)  # Спокойная зона для SHORT
-        rsi_time_filter_lower = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_lower', 35)  # Спокойная зона для LONG
-        rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', 29)  # Экстремум для LONG
-        rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', 71)  # Экстремум для SHORT
+        if individual_settings is None and symbol:
+            individual_settings = get_individual_coin_settings(symbol)
+        
+        auto_config = bots_data.get('auto_bot_config', {})
+        
+        # Используем индивидуальные настройки, если они есть, иначе глобальные
+        rsi_time_filter_enabled = individual_settings.get('rsi_time_filter_enabled') if individual_settings else None
+        if rsi_time_filter_enabled is None:
+            rsi_time_filter_enabled = auto_config.get('rsi_time_filter_enabled', True)
+        
+        rsi_time_filter_candles = individual_settings.get('rsi_time_filter_candles') if individual_settings else None
+        if rsi_time_filter_candles is None:
+            rsi_time_filter_candles = auto_config.get('rsi_time_filter_candles', 8)
+        
+        rsi_time_filter_upper = individual_settings.get('rsi_time_filter_upper') if individual_settings else None
+        if rsi_time_filter_upper is None:
+            rsi_time_filter_upper = auto_config.get('rsi_time_filter_upper', 65)  # Спокойная зона для SHORT
+        
+        rsi_time_filter_lower = individual_settings.get('rsi_time_filter_lower') if individual_settings else None
+        if rsi_time_filter_lower is None:
+            rsi_time_filter_lower = auto_config.get('rsi_time_filter_lower', 35)  # Спокойная зона для LONG
+        
+        rsi_long_threshold = individual_settings.get('rsi_long_threshold') if individual_settings else None
+        if rsi_long_threshold is None:
+            rsi_long_threshold = auto_config.get('rsi_long_threshold', 29)  # Экстремум для LONG
+        
+        rsi_short_threshold = individual_settings.get('rsi_short_threshold') if individual_settings else None
+        if rsi_short_threshold is None:
+            rsi_short_threshold = auto_config.get('rsi_short_threshold', 71)  # Экстремум для SHORT
         
         # Если фильтр отключен - разрешаем сделку
         if not rsi_time_filter_enabled:
@@ -421,12 +446,36 @@ def get_coin_candles_only(symbol, exchange_obj=None):
         return None
 
 
-def check_rsi_time_filter(candles, rsi, signal):
-    """Обёртка над bot_engine.filters.check_rsi_time_filter с fallback на легаси-логику."""
+def check_rsi_time_filter(candles, rsi, signal, symbol=None, individual_settings=None):
+    """
+    Обёртка над bot_engine.filters.check_rsi_time_filter с fallback на легаси-логику.
+    
+    Args:
+        candles: Список свечей
+        rsi: Текущее значение RSI
+        signal: Торговый сигнал ('ENTER_LONG' или 'ENTER_SHORT')
+        symbol: Символ монеты (опционально, для получения индивидуальных настроек)
+        individual_settings: Индивидуальные настройки монеты (опционально)
+    """
     try:
         if engine_check_rsi_time_filter is None:
             raise RuntimeError('engine filters unavailable')
-        auto_config = bots_data.get('auto_bot_config', {})
+        
+        # ✅ Получаем конфиг с учетом индивидуальных настроек
+        auto_config = bots_data.get('auto_bot_config', {}).copy()
+        
+        # Если переданы индивидуальные настройки - используем их
+        if individual_settings is None and symbol:
+            individual_settings = get_individual_coin_settings(symbol)
+        
+        if individual_settings:
+            # Объединяем глобальные настройки с индивидуальными (индивидуальные имеют приоритет)
+            for key in ['rsi_time_filter_enabled', 'rsi_time_filter_candles', 
+                       'rsi_time_filter_lower', 'rsi_time_filter_upper',
+                       'rsi_long_threshold', 'rsi_short_threshold']:
+                if key in individual_settings:
+                    auto_config[key] = individual_settings[key]
+        
         result = engine_check_rsi_time_filter(
             candles,
             rsi,
@@ -442,7 +491,7 @@ def check_rsi_time_filter(candles, rsi, signal):
         }
     except Exception as exc:
         logger.error(f" Ошибка проверки временного фильтра: {exc}")
-        return _legacy_check_rsi_time_filter(candles, rsi, signal)
+        return _legacy_check_rsi_time_filter(candles, rsi, signal, symbol=symbol, individual_settings=individual_settings)
 
 
 def _run_exit_scam_ai_detection(symbol, candles):
@@ -488,7 +537,19 @@ def check_exit_scam_filter(symbol, coin_data):
     try:
         if engine_check_exit_scam_filter is None:
             raise RuntimeError('engine filters unavailable')
-        auto_config = bots_data.get('auto_bot_config', {})
+        
+        # ✅ Получаем конфиг с учетом индивидуальных настроек
+        auto_config = bots_data.get('auto_bot_config', {}).copy()
+        individual_settings = get_individual_coin_settings(symbol)
+        
+        if individual_settings:
+            # Объединяем глобальные настройки с индивидуальными (индивидуальные имеют приоритет)
+            for key in ['exit_scam_enabled', 'exit_scam_candles', 
+                       'exit_scam_single_candle_percent', 'exit_scam_multi_candle_count',
+                       'exit_scam_multi_candle_percent']:
+                if key in individual_settings:
+                    auto_config[key] = individual_settings[key]
+        
         exchange_obj = get_exchange()
         if not exchange_obj:
             return False
@@ -511,7 +572,7 @@ def check_exit_scam_filter(symbol, coin_data):
         return True
     except Exception as exc:
         logger.error(f"{symbol}: Ошибка проверки exit-scam (core): {exc}")
-        return _legacy_check_exit_scam_filter(symbol, coin_data)
+        return _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=individual_settings)
 
 def get_coin_rsi_data(symbol, exchange_obj=None):
     """Получает RSI данные для одной монеты (6H таймфрейм)"""
@@ -682,24 +743,42 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         #     logger.debug(f"[EMA] Ошибка получения оптимальных EMA для {symbol}: {e}")
         #     ema_periods = {'ema_short': 50, 'ema_long': 200, 'accuracy': 0, 'analysis_method': 'default'}
         
+        # ✅ КРИТИЧНО: Получаем индивидуальные настройки монеты ДО определения сигнала!
+        # Это позволяет использовать индивидуальные пороги RSI для определения сигнала
+        individual_settings = get_individual_coin_settings(symbol)
+        
+        # Определяем пороги RSI: сначала индивидуальные, затем глобальные
+        rsi_long_threshold = individual_settings.get('rsi_long_threshold') if individual_settings else None
+        if rsi_long_threshold is None:
+            rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', SystemConfig.RSI_OVERSOLD)
+        
+        rsi_short_threshold = individual_settings.get('rsi_short_threshold') if individual_settings else None
+        if rsi_short_threshold is None:
+            rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', SystemConfig.RSI_OVERBOUGHT)
+        
         # Определяем RSI зоны согласно техзаданию
         rsi_zone = 'NEUTRAL'
         signal = 'WAIT'
         
         # ✅ ФИЛЬТР 2: Базовый сигнал НА ОСНОВЕ OPTIMAL EMA ПЕРИОДОВ!
-        # Получаем настройки фильтров по тренду из конфига
+        # ✅ Получаем настройки фильтров по тренду: сначала индивидуальные, затем глобальные
         # ⚡ БЕЗ БЛОКИРОВКИ: конфиг не меняется во время выполнения, безопасно читать
-        # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
-        avoid_down_trend = bots_data.get('auto_bot_config', {}).get('avoid_down_trend', False)
-        avoid_up_trend = bots_data.get('auto_bot_config', {}).get('avoid_up_trend', False)
+        avoid_down_trend = individual_settings.get('avoid_down_trend') if individual_settings else None
+        if avoid_down_trend is None:
+            avoid_down_trend = bots_data.get('auto_bot_config', {}).get('avoid_down_trend', False)
+        
+        avoid_up_trend = individual_settings.get('avoid_up_trend') if individual_settings else None
+        if avoid_up_trend is None:
+            avoid_up_trend = bots_data.get('auto_bot_config', {}).get('avoid_up_trend', False)
         
         # ✅ КРИТИЧНО: Определяем сигнал на основе Optimal EMA периодов!
         # ✅ УПРОЩЕННАЯ ЛОГИКА: Убрали фильтр по EMA - используем только RSI
         # EMA слишком запаздывает и блокирует хорошие входы по RSI
         if True:  # Оставляем структуру для возможного возврата EMA в будущем
             try:
-                # Определяем сигнал только на основе RSI
-                if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 - потенциальный LONG
+                # ✅ ИСПОЛЬЗУЕМ ИНДИВИДУАЛЬНЫЕ ПОРОГИ RSI для определения сигнала!
+                # Определяем сигнал только на основе RSI с учетом индивидуальных настроек
+                if rsi <= rsi_long_threshold:  # RSI ≤ порог LONG (индивидуальный или глобальный)
                     # ✅ ЧИСТЫЙ СИГНАЛ RSI: Входим сразу, без проверки тренда
                     # Защита от "падающего ножа" уже есть:
                     # - Временной фильтр RSI (блокирует если oversold слишком долго)
@@ -709,38 +788,42 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     # - Стоп-лосс 15% (ограничивает убытки)
                     rsi_zone = 'BUY_ZONE'
                     signal = 'ENTER_LONG'  # ✅ Входим в лонг по сигналу RSI
+                    if individual_settings:
+                        logger.debug(f"{symbol}: ✅ Сигнал ENTER_LONG (RSI {rsi:.1f} <= индивидуальный порог {rsi_long_threshold})")
                 
-                elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71 - потенциальный SHORT
+                elif rsi >= rsi_short_threshold:  # RSI ≥ порог SHORT (индивидуальный или глобальный)
                     # ✅ ЧИСТЫЙ СИГНАЛ RSI: Входим сразу, без проверки тренда
                     rsi_zone = 'SELL_ZONE'
                     signal = 'ENTER_SHORT'  # ✅ Входим в шорт по сигналу RSI
+                    if individual_settings:
+                        logger.debug(f"{symbol}: ✅ Сигнал ENTER_SHORT (RSI {rsi:.1f} >= индивидуальный порог {rsi_short_threshold})")
                 else:
                     # RSI в нейтральной зоне
                     pass
             except Exception as e:
                 logger.debug(f"{symbol}: Ошибка определения RSI сигнала: {e}")
                 # Fallback к базовой логике при ошибке
-                if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
+                if rsi <= rsi_long_threshold:
                     rsi_zone = 'BUY_ZONE'
                     signal = 'ENTER_LONG'
-                elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71
+                elif rsi >= rsi_short_threshold:
                     rsi_zone = 'SELL_ZONE'
                     signal = 'ENTER_SHORT'
         else:
             # Fallback к старой логике если EMA периоды недоступны
-            if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
+            if rsi <= rsi_long_threshold:
                 rsi_zone = 'BUY_ZONE'
                 if avoid_down_trend and trend == 'DOWN':
                     signal = 'WAIT'
                 else:
                     signal = 'ENTER_LONG'
-            elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71
+            elif rsi >= rsi_short_threshold:
                 rsi_zone = 'SELL_ZONE'
                 if avoid_up_trend and trend == 'UP':
                     signal = 'WAIT'
                 else:
                     signal = 'ENTER_SHORT'
-        # RSI между 30 and 70 - нейтральная зона
+        # RSI между порогами - нейтральная зона
         
         # ✅ ФИЛЬТР 3: Существующие позиции (ОТКЛЮЧЕН для ускорения RSI расчета)
         # ⚡ ОПТИМИЗАЦИЯ: Проверка позиций слишком медленная (API запрос к бирже в каждом потоке!)
@@ -777,7 +860,10 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         
         # ✅ ФИЛЬТР 5: Зрелость монеты (проверяем ПОСЛЕ Enhanced RSI)
         # 🔧 ИСПРАВЛЕНИЕ: Проверяем зрелость для ВСЕХ монет (для UI фильтра "Зрелые монеты")
-        enable_maturity_check = bots_data.get('auto_bot_config', {}).get('enable_maturity_check', True)
+        # ✅ Используем индивидуальные настройки, если они есть, иначе глобальные
+        enable_maturity_check = individual_settings.get('enable_maturity_check') if individual_settings else None
+        if enable_maturity_check is None:
+            enable_maturity_check = bots_data.get('auto_bot_config', {}).get('enable_maturity_check', True)
         is_mature = True  # По умолчанию считаем зрелой (если проверка отключена)
         
         if enable_maturity_check:
@@ -808,11 +894,16 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         exit_scam_info = None
         time_filter_info = None
         
-        # Получаем пороги для фильтров
-        rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', 29)
-        rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', 71)
-        rsi_time_filter_lower = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_lower', 35)  # Нижняя граница для LONG
-        rsi_time_filter_upper = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_upper', 65)  # Верхняя граница для SHORT
+        # ✅ Получаем пороги для фильтров с учетом индивидуальных настроек
+        # Пороги RSI уже определены выше (с учетом индивидуальных настроек)
+        # Получаем пороги временного фильтра: сначала индивидуальные, затем глобальные
+        rsi_time_filter_lower = individual_settings.get('rsi_time_filter_lower') if individual_settings else None
+        if rsi_time_filter_lower is None:
+            rsi_time_filter_lower = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_lower', 35)  # Нижняя граница для LONG
+        
+        rsi_time_filter_upper = individual_settings.get('rsi_time_filter_upper') if individual_settings else None
+        if rsi_time_filter_upper is None:
+            rsi_time_filter_upper = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_upper', 65)  # Верхняя граница для SHORT
         
         # Определяем потенциальный сигнал для проверки фильтров
         # ВАЖНО: Проверяем фильтры если RSI в зоне фильтра:
@@ -869,11 +960,13 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                         if rsi is not None:
                             rsi_history[current_idx] = rsi
                         
-                        # Проверяем последние N свечей на наличие экстремума
-                        rsi_time_filter_candles = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_candles', 8)
-                        last_n_start = max(0, current_idx - rsi_time_filter_candles + 1)
+                        # ✅ Проверяем последние N свечей на наличие экстремума с учетом индивидуальных настроек
+                        rsi_time_filter_candles_value = individual_settings.get('rsi_time_filter_candles') if individual_settings else None
+                        if rsi_time_filter_candles_value is None:
+                            rsi_time_filter_candles_value = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_candles', 8)
+                        last_n_start = max(0, current_idx - rsi_time_filter_candles_value + 1)
                         
-                        # Для LONG: ищем лой в последних N свечах
+                        # Для LONG: ищем лой в последних N свечах (используем уже определенный rsi_long_threshold)
                         has_low_in_last_n = False
                         if potential_signal == 'ENTER_LONG':
                             for i in range(last_n_start, current_idx + 1):
@@ -881,7 +974,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                                     has_low_in_last_n = True
                                     break
                         
-                        # Для SHORT: ищем пик в последних N свечах
+                        # Для SHORT: ищем пик в последних N свечах (используем уже определенный rsi_short_threshold)
                         has_peak_in_last_n = False
                         if potential_signal == 'ENTER_SHORT':
                             for i in range(last_n_start, current_idx + 1):
@@ -889,10 +982,10 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                                     has_peak_in_last_n = True
                                     break
                         
-                        # Если найден экстремум - проверяем временной фильтр
+                        # Если найден экстремум - проверяем временной фильтр с индивидуальными настройками
                         if (potential_signal == 'ENTER_LONG' and has_low_in_last_n) or \
                            (potential_signal == 'ENTER_SHORT' and has_peak_in_last_n):
-                            time_filter_result = check_rsi_time_filter(candles, rsi, potential_signal)
+                            time_filter_result = check_rsi_time_filter(candles, rsi, potential_signal, symbol=symbol, individual_settings=individual_settings)
                             time_filter_info = {
                                 'blocked': not time_filter_result['allowed'],
                                 'reason': time_filter_result['reason'],
@@ -909,7 +1002,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                             # Экстремум не найден в последних N свечах - показываем что фильтр не активен
                             time_filter_info = {
                                 'blocked': False,
-                                'reason': f'RSI временной фильтр: экстремум не найден в последних {rsi_time_filter_candles} свечах',
+                                'reason': f'RSI временной фильтр: экстремум не найден в последних {rsi_time_filter_candles_value} свечах',
                                 'filter_type': 'time_filter',
                                 'last_extreme_candles_ago': None,
                                 'calm_candles': None
@@ -2058,7 +2151,7 @@ def update_is_mature_flags_in_rsi_data():
     except Exception as e:
         logger.error(f"❌ Ошибка обновления флагов: {e}")
 
-def _legacy_check_exit_scam_filter(symbol, coin_data):
+def _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=None):
     """
     EXIT SCAM ФИЛЬТР + AI ANOMALY DETECTION
     
@@ -2066,15 +2159,39 @@ def _legacy_check_exit_scam_filter(symbol, coin_data):
     1. Одна свеча превысила максимальный % изменения
     2. N свечей суммарно превысили максимальный % изменения
     3. ИИ обнаружил аномалию (если включен)
+    
+    Args:
+        symbol: Символ монеты
+        coin_data: Данные монеты
+        individual_settings: Индивидуальные настройки монеты (опционально)
     """
     try:
-        # Получаем настройки из конфига
+        # ✅ Получаем настройки: сначала индивидуальные, затем глобальные
         # ⚡ БЕЗ БЛОКИРОВКИ: конфиг не меняется, GIL делает чтение атомарным
-        exit_scam_enabled = bots_data.get('auto_bot_config', {}).get('exit_scam_enabled', True)
-        exit_scam_candles = bots_data.get('auto_bot_config', {}).get('exit_scam_candles', 10)
-        single_candle_percent = bots_data.get('auto_bot_config', {}).get('exit_scam_single_candle_percent', 15.0)
-        multi_candle_count = bots_data.get('auto_bot_config', {}).get('exit_scam_multi_candle_count', 4)
-        multi_candle_percent = bots_data.get('auto_bot_config', {}).get('exit_scam_multi_candle_percent', 50.0)
+        if individual_settings is None:
+            individual_settings = get_individual_coin_settings(symbol)
+        
+        auto_config = bots_data.get('auto_bot_config', {})
+        
+        exit_scam_enabled = individual_settings.get('exit_scam_enabled') if individual_settings else None
+        if exit_scam_enabled is None:
+            exit_scam_enabled = auto_config.get('exit_scam_enabled', True)
+        
+        exit_scam_candles = individual_settings.get('exit_scam_candles') if individual_settings else None
+        if exit_scam_candles is None:
+            exit_scam_candles = auto_config.get('exit_scam_candles', 10)
+        
+        single_candle_percent = individual_settings.get('exit_scam_single_candle_percent') if individual_settings else None
+        if single_candle_percent is None:
+            single_candle_percent = auto_config.get('exit_scam_single_candle_percent', 15.0)
+        
+        multi_candle_count = individual_settings.get('exit_scam_multi_candle_count') if individual_settings else None
+        if multi_candle_count is None:
+            multi_candle_count = auto_config.get('exit_scam_multi_candle_count', 4)
+        
+        multi_candle_percent = individual_settings.get('exit_scam_multi_candle_percent') if individual_settings else None
+        if multi_candle_percent is None:
+            multi_candle_percent = auto_config.get('exit_scam_multi_candle_percent', 50.0)
         
         # Если фильтр отключен - разрешаем
         if not exit_scam_enabled:
@@ -2584,10 +2701,17 @@ def test_rsi_time_filter(symbol):
         current_rsi = coin_data.get('rsi6h', 0)
         signal = coin_data.get('signal', 'WAIT')
         
-        # Определяем ОРИГИНАЛЬНЫЙ сигнал на основе только RSI (игнорируя другие фильтры)
+        # ✅ Определяем ОРИГИНАЛЬНЫЙ сигнал на основе только RSI с учетом индивидуальных настроек
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
-        rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', 29)
-        rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', 71)
+        individual_settings = get_individual_coin_settings(symbol)
+        
+        rsi_long_threshold = individual_settings.get('rsi_long_threshold') if individual_settings else None
+        if rsi_long_threshold is None:
+            rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', 29)
+        
+        rsi_short_threshold = individual_settings.get('rsi_short_threshold') if individual_settings else None
+        if rsi_short_threshold is None:
+            rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', 71)
         
         original_signal = 'WAIT'
         if current_rsi <= rsi_long_threshold:
@@ -2596,9 +2720,11 @@ def test_rsi_time_filter(symbol):
             original_signal = 'ENTER_SHORT'
         
         logger.info(f"{symbol}: Текущий RSI={current_rsi:.1f}, Оригинальный сигнал={original_signal}, Финальный сигнал={signal}")
+        if individual_settings:
+            logger.info(f"{symbol}: Используются индивидуальные настройки: rsi_long={rsi_long_threshold}, rsi_short={rsi_short_threshold}")
         
-        # Тестируем временной фильтр с ОРИГИНАЛЬНЫМ сигналом
-        time_filter_result = check_rsi_time_filter(candles, current_rsi, original_signal)
+        # Тестируем временной фильтр с ОРИГИНАЛЬНЫМ сигналом и индивидуальными настройками
+        time_filter_result = check_rsi_time_filter(candles, current_rsi, original_signal, symbol=symbol, individual_settings=individual_settings)
         
         logger.info(f"{symbol}: Результат временного фильтра:")
         logger.info(f"{symbol}: Разрешено: {time_filter_result['allowed']}")
