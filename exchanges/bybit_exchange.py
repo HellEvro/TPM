@@ -94,9 +94,11 @@ class BybitExchange(BaseExchange):
         self.max_loss_values = {}
         
         # Управление задержкой между запросами для предотвращения rate limit
-        self.base_request_delay = 0.2  # Базовая задержка между запросами (200ms)
-        self.current_request_delay = 0.2  # Текущая задержка (может увеличиваться при rate limit)
-        self.max_request_delay = 5.0  # Максимальная задержка для предотвращения таймаутов
+        self.base_request_delay = 0.5  # Базовая задержка между запросами (500ms) - увеличено для стабильности
+        self.current_request_delay = 0.5  # Текущая задержка (может увеличиваться при rate limit)
+        self.max_request_delay = 10.0  # Максимальная задержка для предотвращения таймаутов (увеличено)
+        self.rate_limit_error_count = 0  # Счетчик ошибок rate limit для агрессивного увеличения задержки
+        self.last_rate_limit_time = 0  # Время последней ошибки rate limit
         
         # Кэш для баланса кошелька (чтобы не спамить запросами при проблемах с сетью)
         self._wallet_balance_cache = None
@@ -153,17 +155,35 @@ class BybitExchange(BaseExchange):
         if self.current_request_delay != self.base_request_delay:
             logger.info(f"🔄 Сброс задержки запросов: {self.current_request_delay:.3f}с → {self.base_request_delay:.3f}с")
             self.current_request_delay = self.base_request_delay
+            # Сбрасываем счетчик ошибок только после успешных запросов
+            if time.time() - self.last_rate_limit_time > 30:
+                self.rate_limit_error_count = 0
 
     def increase_request_delay(self, multiplier=2.0, reason='Rate limit'):
         """Увеличивает задержку запросов с учетом максимального порога"""
+        current_time = time.time()
+        
+        # Если прошло больше 60 секунд с последней ошибки - сбрасываем счетчик
+        if current_time - self.last_rate_limit_time > 60:
+            self.rate_limit_error_count = 0
+        
+        self.rate_limit_error_count += 1
+        self.last_rate_limit_time = current_time
+        
+        # Более агрессивное увеличение при множественных ошибках
+        if self.rate_limit_error_count >= 3:
+            multiplier = 3.0  # Увеличиваем множитель при частых ошибках
+        elif self.rate_limit_error_count >= 5:
+            multiplier = 5.0  # Еще более агрессивное увеличение
+        
         old_delay = self.current_request_delay
         new_delay = min(self.current_request_delay * multiplier, self.max_request_delay)
         self.current_request_delay = new_delay
 
         if new_delay > old_delay:
-            logger.warning(f"⚠️ {reason}. Увеличиваем задержку: {old_delay:.3f}с → {new_delay:.3f}с")
+            logger.warning(f"⚠️ {reason}. Увеличиваем задержку: {old_delay:.3f}с → {new_delay:.3f}с (ошибок подряд: {self.rate_limit_error_count})")
         else:
-            logger.warning(f"⚠️ {reason}. Задержка уже максимальная: {new_delay:.3f}с")
+            logger.warning(f"⚠️ {reason}. Задержка уже максимальная: {new_delay:.3f}с (ошибок подряд: {self.rate_limit_error_count})")
 
         return new_delay
     
@@ -935,13 +955,33 @@ class BybitExchange(BaseExchange):
                                     delay = self.increase_request_delay(
                                         reason=f"Rate limit для {symbol} ({interval_name})"
                                     )
-
-                                    # Ждем с увеличенной задержкой
-                                    time.sleep(delay)
+                                    
+                                    # Добавляем дополнительную задержку при rate limit (минимум 2 секунды)
+                                    additional_delay = max(2.0, delay * 0.5)
+                                    total_delay = delay + additional_delay
+                                    
+                                    logger.error(f"❌ [BOTS] Too many visits. Exceeded the API Rate Limit. (ErrCode: 10006). Hit the API rate limit on https://api.bybit.com/v5/market/kline?category=linear&interval={interval}&limit=1000&symbol={clean_sym}USDT. Sleeping then trying again.")
+                                    time.sleep(total_delay)
                                     retry_count += 1
                                     
                                     if retry_count < max_retries:
-                                        logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name})...")
+                                        logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name}) после паузы {total_delay:.1f}с...")
+                                        continue
+                                    else:
+                                        logger.error(f"❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
+                                        break
+                                # Обработка ошибки timestamp (10002)
+                                elif response.get('retCode') == 10002:
+                                    # Увеличиваем recv_window и повторяем запрос
+                                    current_recv_window = getattr(self.client, 'recv_window', 20000)
+                                    new_recv_window = min(current_recv_window + 2500, 60000)
+                                    self.client.recv_window = new_recv_window
+                                    logger.error(f"❌ [BOTS] invalid request, please check your server timestamp or recv_window param. req_timestamp[{int(time.time() * 1000)}],server_timestamp[{response.get('time', int(time.time() * 1000))}],recv_window[{new_recv_window}] (ErrCode: 10002). Added 2.5 seconds to recv_window. Retrying...")
+                                    time.sleep(1.0)
+                                    retry_count += 1
+                                    
+                                    if retry_count < max_retries:
+                                        logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name}) с увеличенным recv_window...")
                                         continue
                                     else:
                                         logger.error(f"❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
@@ -957,13 +997,32 @@ class BybitExchange(BaseExchange):
                                     delay = self.increase_request_delay(
                                         reason=f"Rate limit (исключение) для {symbol} ({interval_name})"
                                     )
-
-                                    # Ждем с увеличенной задержкой
-                                    time.sleep(delay)
+                                    
+                                    # Добавляем дополнительную задержку при rate limit (минимум 2 секунды)
+                                    additional_delay = max(2.0, delay * 0.5)
+                                    total_delay = delay + additional_delay
+                                    
+                                    logger.error(f"❌ [BOTS] Too many visits. Exceeded the API Rate Limit. (ErrCode: 10006). Hit the API rate limit on https://api.bybit.com/v5/market/kline?category=linear&interval={interval}&limit=1000&symbol={clean_sym}USDT. Sleeping then trying again.")
+                                    time.sleep(total_delay)
                                     retry_count += 1
                                     
                                     if retry_count < max_retries:
-                                        logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name}) после исключения...")
+                                        logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name}) после исключения и паузы {total_delay:.1f}с...")
+                                        continue
+                                    else:
+                                        logger.error(f"❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
+                                        break
+                                elif '10002' in error_str or 'timestamp' in error_str or 'recv_window' in error_str:
+                                    # Обработка ошибки timestamp
+                                    current_recv_window = getattr(self.client, 'recv_window', 20000)
+                                    new_recv_window = min(current_recv_window + 2500, 60000)
+                                    self.client.recv_window = new_recv_window
+                                    logger.error(f"❌ [BOTS] invalid request, please check your server timestamp or recv_window param. (ErrCode: 10002). Added 2.5 seconds to recv_window. Retrying...")
+                                    time.sleep(1.0)
+                                    retry_count += 1
+                                    
+                                    if retry_count < max_retries:
+                                        logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name}) с увеличенным recv_window...")
                                         continue
                                     else:
                                         logger.error(f"❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
@@ -973,7 +1032,7 @@ class BybitExchange(BaseExchange):
                                     raise
                         
                         # Если все попытки исчерпаны - пропускаем этот интервал
-                        if response and response.get('retCode') == 10006:
+                        if response and (response.get('retCode') == 10006 or response.get('retCode') == 10002):
                             continue
                         if response is None:
                             # Если response None после всех попыток - пропускаем интервал
@@ -1069,19 +1128,42 @@ class BybitExchange(BaseExchange):
                             delay = self.increase_request_delay(
                                 reason=f"Rate limit для {symbol}"
                             )
-
-                            # Ждем с увеличенной задержкой
-                            time.sleep(delay)
+                            
+                            # Добавляем дополнительную задержку при rate limit (минимум 2 секунды)
+                            additional_delay = max(2.0, delay * 0.5)
+                            total_delay = delay + additional_delay
+                            
+                            logger.error(f"❌ [BOTS] Too many visits. Exceeded the API Rate Limit. (ErrCode: 10006). Hit the API rate limit on https://api.bybit.com/v5/market/kline?category=linear&interval={interval}&limit=1000&symbol={clean_sym}USDT. Sleeping then trying again.")
+                            time.sleep(total_delay)
                             retry_count += 1
                             
                             if retry_count < max_retries:
-                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol}...")
+                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} после паузы {total_delay:.1f}с...")
                                 continue
                             else:
                                 logger.error(f"❌ Превышено максимальное количество попыток для {symbol}")
                                 return {
                                     'success': False,
                                     'error': 'Rate limit exceeded, maximum retries reached'
+                                }
+                        # Обработка ошибки timestamp (10002)
+                        elif response.get('retCode') == 10002:
+                            # Увеличиваем recv_window и повторяем запрос
+                            current_recv_window = getattr(self.client, 'recv_window', 20000)
+                            new_recv_window = min(current_recv_window + 2500, 60000)  # Максимум 60 секунд
+                            self.client.recv_window = new_recv_window
+                            logger.error(f"❌ [BOTS] invalid request, please check your server timestamp or recv_window param. req_timestamp[{int(time.time() * 1000)}],server_timestamp[{response.get('time', int(time.time() * 1000))}],recv_window[{new_recv_window}] (ErrCode: 10002). Added 2.5 seconds to recv_window. Retrying...")
+                            time.sleep(1.0)  # Небольшая задержка перед повтором
+                            retry_count += 1
+                            
+                            if retry_count < max_retries:
+                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} с увеличенным recv_window...")
+                                continue
+                            else:
+                                logger.error(f"❌ Превышено максимальное количество попыток для {symbol}")
+                                return {
+                                    'success': False,
+                                    'error': 'Timestamp error, maximum retries reached'
                                 }
                         else:
                             # Успешный ответ или другая ошибка - выходим из цикла
@@ -1094,13 +1176,17 @@ class BybitExchange(BaseExchange):
                             delay = self.increase_request_delay(
                                 reason=f"Rate limit (исключение) для {symbol}"
                             )
-
-                            # Ждем с увеличенной задержкой
-                            time.sleep(delay)
+                            
+                            # Добавляем дополнительную задержку при rate limit (минимум 2 секунды)
+                            additional_delay = max(2.0, delay * 0.5)
+                            total_delay = delay + additional_delay
+                            
+                            logger.error(f"❌ [BOTS] Too many visits. Exceeded the API Rate Limit. (ErrCode: 10006). Hit the API rate limit on https://api.bybit.com/v5/market/kline?category=linear&interval={interval}&limit=1000&symbol={clean_sym}USDT. Sleeping then trying again.")
+                            time.sleep(total_delay)
                             retry_count += 1
                             
                             if retry_count < max_retries:
-                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} после исключения...")
+                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} после исключения и паузы {total_delay:.1f}с...")
                                 continue
                             else:
                                 logger.error(f"❌ Превышено максимальное количество попыток для {symbol}")
@@ -1108,15 +1194,34 @@ class BybitExchange(BaseExchange):
                                     'success': False,
                                     'error': 'Rate limit exceeded, maximum retries reached'
                                 }
+                        elif '10002' in error_str or 'timestamp' in error_str or 'recv_window' in error_str:
+                            # Обработка ошибки timestamp
+                            current_recv_window = getattr(self.client, 'recv_window', 20000)
+                            new_recv_window = min(current_recv_window + 2500, 60000)
+                            self.client.recv_window = new_recv_window
+                            logger.error(f"❌ [BOTS] invalid request, please check your server timestamp or recv_window param. (ErrCode: 10002). Added 2.5 seconds to recv_window. Retrying...")
+                            time.sleep(1.0)
+                            retry_count += 1
+                            
+                            if retry_count < max_retries:
+                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} с увеличенным recv_window...")
+                                continue
+                            else:
+                                logger.error(f"❌ Превышено максимальное количество попыток для {symbol}")
+                                return {
+                                    'success': False,
+                                    'error': 'Timestamp error, maximum retries reached'
+                                }
                         else:
                             # Другая ошибка - пробрасываем дальше
                             raise
                 
                 # Если все попытки исчерпаны
-                if response and response.get('retCode') == 10006:
+                if response and (response.get('retCode') == 10006 or response.get('retCode') == 10002):
+                    error_msg = 'Rate limit exceeded, please try again later' if response.get('retCode') == 10006 else 'Timestamp error, please try again later'
                     return {
                         'success': False,
-                        'error': 'Rate limit exceeded, please try again later'
+                        'error': error_msg
                     }
                 if response is None:
                     return {
