@@ -58,14 +58,29 @@ class AIDataCollector:
                     with open(filepath, 'r', encoding='utf-8') as f:
                         return json.load(f)
                 except json.JSONDecodeError as json_error:
-                    # Файл поврежден - удаляем его
-                    logger.warning(f"⚠️ Файл {filepath} поврежден (JSON ошибка на позиции {json_error.pos})")
-                    logger.info("🗑️ Удаляем поврежденный файл")
+                    # Больше не удаляем рабочие файлы — создаём резервную копию и пытаемся восстановить
+                    logger.warning(f"⚠️ Файл {filepath} не прочитан (JSON ошибка на позиции {json_error.pos}).")
+                    backup_file = f"{filepath}.backup"
+                    corrupted_file = f"{filepath}.corrupted"
+
+                    # Пытаемся прочитать резервную копию, если есть
+                    if os.path.exists(backup_file):
+                        try:
+                            with open(backup_file, 'r', encoding='utf-8') as backup:
+                                logger.info(f"   ✅ Используем резервную копию {backup_file}")
+                                return json.load(backup)
+                        except Exception as backup_error:
+                            logger.debug(f"   ⚠️ Резервная копия тоже не читается: {backup_error}")
+
+                    # Сохраняем текущую версию как .corrupted для ручного анализа
                     try:
-                        os.remove(filepath)
-                        logger.info("✅ Поврежденный файл удален")
-                    except Exception as del_error:
-                        logger.debug(f"⚠️ Не удалось удалить файл: {del_error}")
+                        import shutil
+                        shutil.copy2(filepath, corrupted_file)
+                        logger.info(f"   📁 Сохранен проблемный файл: {corrupted_file}")
+                    except Exception as copy_error:
+                        logger.debug(f"   ⚠️ Не удалось сохранить копию: {copy_error}")
+
+                    # Возвращаем пустой dict, но основной файл не трогаем
                     return {}
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки данных из {filepath}: {e}")
@@ -295,13 +310,15 @@ class AIDataCollector:
                     collected_data['trades'].extend(bot_trades)
                     # Убрано: logger.debug(f"📊 Загружено {len(bot_trades)} сделок напрямую из bot_history.json") - слишком шумно
         except json.JSONDecodeError as json_error:
-            logger.warning(f"⚠️ Файл bot_history.json поврежден (JSON ошибка на позиции {json_error.pos})")
-            logger.info("🗑️ Удаляем поврежденный файл, bots.py пересоздаст его автоматически")
+            logger.warning(f"⚠️ bot_history.json не прочитан (JSON ошибка на позиции {json_error.pos}). Файл НЕ удаляем.")
+            # Сохраняем копию для анализа
             try:
-                os.remove(bot_history_file)
-                logger.info("✅ Поврежденный файл удален")
-            except Exception as del_error:
-                logger.debug(f"⚠️ Не удалось удалить файл: {del_error}")
+                import shutil
+                corrupted_file = f"{bot_history_file}.corrupted"
+                shutil.copy2(bot_history_file, corrupted_file)
+                logger.info(f"   📁 Скопирован проблемный файл: {corrupted_file}")
+            except Exception as copy_error:
+                logger.debug(f"   ⚠️ Не удалось сохранить копию bot_history.json: {copy_error}")
         except Exception as e:
             logger.debug(f"⚠️ Ошибка загрузки bot_history.json: {e}")
         
