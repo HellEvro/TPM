@@ -149,3 +149,25 @@ class BaseExchange(ABC):
         """
         # По умолчанию возвращаем ошибку - каждая биржа должна переопределить
         return {'success': False, 'message': 'cancel_order not implemented for this exchange'}
+    
+    def get_open_orders(self, symbol):
+        """
+        Получает список открытых ордеров для символа (опциональный метод)
+        
+        Args:
+            symbol (str): Символ торговой пары
+            
+        Returns:
+            list: Список открытых ордеров, каждый ордер - dict с полями:
+                - order_id (str): ID ордера
+                - orderId (str): Альтернативное поле для ID
+                - id (str): Еще одно альтернативное поле
+                - symbol (str): Символ
+                - side (str): Сторона ('Buy', 'Sell', 'LONG', 'SHORT')
+                - price (float): Цена ордера
+                - quantity (float): Количество
+                - status (str): Статус ордера
+            Или пустой список, если метод не реализован
+        """
+        # По умолчанию возвращаем пустой список - каждая биржа может переопределить
+        return []
