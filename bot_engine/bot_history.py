@@ -60,11 +60,25 @@ class BotHistoryManager:
         """Загружает историю из файла"""
         try:
             if os.path.exists(self.history_file):
-                with open(self.history_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    self.history = data.get('history', [])
-                    self.trades = data.get('trades', [])
-                    logger.info(f"✅ Загружено записей: {len(self.history)} действий, {len(self.trades)} сделок")
+                try:
+                    with open(self.history_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        self.history = data.get('history', [])
+                        self.trades = data.get('trades', [])
+                        logger.info(f"✅ Загружено записей: {len(self.history)} действий, {len(self.trades)} сделок")
+                except json.JSONDecodeError as json_error:
+                    # Файл поврежден - создаем резервную копию и начинаем с пустой истории
+                    import shutil
+                    backup_file = f"{self.history_file}.corrupted_{datetime.now().strftime('%Y%m%d_%H%M%S')}.backup"
+                    try:
+                        shutil.copy2(self.history_file, backup_file)
+                        logger.warning(f"⚠️ Файл истории поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}). "
+                                     f"Создана резервная копия: {backup_file}")
+                        logger.warning(f"⚠️ Начинаем с пустой истории. Данные будут восстановлены при следующем сохранении.")
+                    except Exception as backup_error:
+                        logger.error(f"❌ Не удалось создать резервную копию поврежденного файла: {backup_error}")
+                    self.history = []
+                    self.trades = []
             else:
                 logger.info("📝 Файл истории не найден, создается новый")
                 self.history = []
@@ -75,7 +89,7 @@ class BotHistoryManager:
             self.trades = []
     
     def _save_history(self):
-        """Сохраняет историю в файл"""
+        """Сохраняет историю в файл (атомарная запись через временный файл)"""
         try:
             with self.lock:
                 data = {
@@ -83,8 +97,24 @@ class BotHistoryManager:
                     'trades': self.trades,
                     'last_update': datetime.now().isoformat()
                 }
-                with open(self.history_file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
+                # Атомарная запись через временный файл
+                import tempfile
+                from pathlib import Path
+                temp_file = Path(self.history_file).with_suffix('.tmp')
+                try:
+                    # Записываем во временный файл
+                    with open(temp_file, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, ensure_ascii=False, indent=2)
+                    # Атомарно заменяем старый файл новым
+                    temp_file.replace(self.history_file)
+                except Exception as save_error:
+                    # Удаляем временный файл в случае ошибки
+                    if temp_file.exists():
+                        try:
+                            temp_file.unlink()
+                        except Exception:
+                            pass
+                    raise save_error
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения истории: {e}")
     

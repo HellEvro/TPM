@@ -277,8 +277,22 @@ class AIBacktester:
                     pass
                 return []
             
-            with open(history_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+            try:
+                with open(history_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except json.JSONDecodeError as json_error:
+                logger.warning(f"⚠️ Файл истории поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}): {history_file}")
+                # Пробуем получить через API как резервный вариант
+                try:
+                    import requests
+                    response = requests.get('http://127.0.0.1:5001/api/bots/trades?limit=1000', timeout=5)
+                    if response.status_code == 200:
+                        api_data = response.json()
+                        if api_data.get('success'):
+                            return api_data.get('trades', [])
+                except:
+                    pass
+                return []
             
             trades = []
             latest = data.get('latest', {})
