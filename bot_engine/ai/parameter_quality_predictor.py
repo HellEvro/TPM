@@ -103,9 +103,10 @@ class ParameterQualityPredictor:
         return np.array(features).reshape(1, -1)
     
     def add_training_sample(self, rsi_params: Dict, win_rate: float, total_pnl: float,
-                           trades_count: int, risk_params: Optional[Dict] = None,
-                           symbol: Optional[str] = None, blocked: bool = False,
-                           rsi_entered_zones: int = 0):
+                            trades_count: int, risk_params: Optional[Dict] = None,
+                            symbol: Optional[str] = None, blocked: bool = False,
+                            rsi_entered_zones: int = 0, filters_blocked: int = 0,
+                            block_reasons: Optional[Dict[str, int]] = None):
         """
         Добавить образец для обучения
         
@@ -171,10 +172,30 @@ class ParameterQualityPredictor:
                     if rsi_entered_zones > 0:
                         # RSI входил в зоны, но входы заблокированы фильтрами
                         # Это лучше чем параметры, которые вообще не дают сигналов
-                        quality = -0.03 - (0.01 * min(rsi_entered_zones / 10.0, 1.0))  # -0.03 до -0.04
+                        # Базовое качество зависит от количества попыток
+                        base_quality = -0.05 + (0.01 * min(rsi_entered_zones / 20.0, 1.0))  # -0.05 до -0.04
+                        
+                        # Улучшаем качество если были заблокированные попытки (значит фильтры работают)
+                        if filters_blocked > 0:
+                            # Чем больше попыток было заблокировано, тем лучше параметры
+                            # (значит они хотя бы генерируют сигналы)
+                            blocked_ratio = min(filters_blocked / max(rsi_entered_zones, 1), 1.0)
+                            base_quality += 0.01 * blocked_ratio  # До -0.03
+                        
+                        # Учитываем типы блокировок
+                        if block_reasons:
+                            # Если блокируется только одним типом фильтра - это лучше
+                            # (значит можно оптимизировать параметры под этот фильтр)
+                            unique_reasons = len(block_reasons)
+                            if unique_reasons == 1:
+                                base_quality += 0.005  # Немного лучше
+                            elif unique_reasons >= 3:
+                                base_quality -= 0.005  # Хуже если много разных причин
+                        
+                        quality = base_quality
                     else:
                         # RSI не входил в зоны - параметры не подходят для этой монеты
-                        quality = -0.08
+                        quality = -0.10
                     
                     # Если есть win_rate > 0, значит были попытки, но заблокированы
                     # Это лучше чем полное отсутствие сигналов
@@ -206,6 +227,8 @@ class ParameterQualityPredictor:
                     'quality': quality,
                     'blocked': blocked,
                     'rsi_entered_zones': rsi_entered_zones,
+                    'filters_blocked': filters_blocked,
+                    'block_reasons': block_reasons or {},
                     'symbol': symbol,
                     'timestamp': datetime.now().isoformat()
                 }
