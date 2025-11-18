@@ -1471,6 +1471,103 @@ def get_sma200_position(symbol):
         sma_logger.error(f"[SMA200] Error calculating SMA200 for {symbol}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/rsi_6h/<symbol>')
+def get_rsi_6h(symbol):
+    """Получение RSI 6ч данных за 56 свечей (неделя)"""
+    rsi_logger = logging.getLogger('app')
+    try:
+        rsi_logger.info(f"[RSI 6h] Getting RSI 6h data for {symbol}")
+        
+        # Проверяем инициализацию биржи
+        if not current_exchange:
+            rsi_logger.error("[RSI 6h] Exchange not initialized")
+            return jsonify({'error': 'Exchange not initialized'}), 500
+        
+        # Импортируем функцию расчета RSI
+        from bot_engine.utils.rsi_utils import calculate_rsi_history
+        
+        # Получаем данные свечей 6ч за последнюю неделю (56 свечей)
+        # 56 свечей * 6 часов = 336 часов = 14 дней (но запрашиваем больше для надежности)
+        data = current_exchange.get_chart_data(symbol, '6h', '14d')
+        if not data.get('success'):
+            rsi_logger.error(f"[RSI 6h] Failed to get chart data for {symbol}")
+            return jsonify({'error': 'Failed to get chart data'}), 500
+            
+        candles = data.get('data', {}).get('candles', [])
+        if not candles:
+            rsi_logger.warning(f"[RSI 6h] No candles data for {symbol}")
+            return jsonify({'error': 'No chart data available'}), 404
+        
+        # Берем последние 56 свечей
+        candles = candles[-56:] if len(candles) >= 56 else candles
+        
+        if len(candles) < 15:  # Минимум для расчета RSI (период 14 + 1)
+            rsi_logger.warning(f"[RSI 6h] Not enough data for RSI calculation for {symbol}")
+            return jsonify({'error': 'Not enough data for RSI calculation'}), 400
+        
+        # Извлекаем цены закрытия
+        closes = [float(candle['close']) for candle in candles]
+        
+        # Рассчитываем историю RSI
+        rsi_history = calculate_rsi_history(closes, period=14)
+        
+        if not rsi_history:
+            rsi_logger.error(f"[RSI 6h] Failed to calculate RSI for {symbol}")
+            return jsonify({'error': 'Failed to calculate RSI'}), 500
+        
+        # Подготавливаем временные метки (берем только те, для которых есть RSI)
+        # RSI начинается с индекса period (14), поэтому берем свечи с 14-го индекса
+        timestamps = []
+        for i in range(14, len(candles)):
+            timestamp = candles[i].get('time') or candles[i].get('timestamp')
+            if timestamp:
+                # Преобразуем в миллисекунды если нужно
+                if isinstance(timestamp, (int, float)):
+                    if timestamp < 1e10:  # Если в секундах
+                        timestamp = int(timestamp * 1000)
+                    else:  # Уже в миллисекундах
+                        timestamp = int(timestamp)
+                    timestamps.append(timestamp)
+        
+        # Если временных меток меньше чем значений RSI, создаем их последовательно
+        if len(timestamps) < len(rsi_history):
+            last_timestamp = candles[-1].get('time') or candles[-1].get('timestamp')
+            if isinstance(last_timestamp, (int, float)):
+                if last_timestamp < 1e10:
+                    last_timestamp = int(last_timestamp * 1000)
+                else:
+                    last_timestamp = int(last_timestamp)
+            else:
+                last_timestamp = int(time.time() * 1000)
+            
+            # Создаем временные метки с шагом 6 часов (21600000 мс)
+            timestamps = []
+            for i in range(len(rsi_history)):
+                ts = last_timestamp - (len(rsi_history) - 1 - i) * 21600000
+                timestamps.append(ts)
+        
+        # Берем только последние 56 значений
+        if len(rsi_history) > 56:
+            rsi_history = rsi_history[-56:]
+            timestamps = timestamps[-56:]
+        
+        rsi_logger.info(f"[RSI 6h] Successfully calculated RSI for {symbol}: {len(rsi_history)} values")
+        
+        return jsonify({
+            'success': True,
+            'symbol': symbol,
+            'rsi_values': rsi_history,
+            'timestamps': timestamps,
+            'period': '6h',
+            'candles_count': len(rsi_history)
+        })
+        
+    except Exception as e:
+        rsi_logger.error(f"[RSI 6h] Error calculating RSI 6h for {symbol}: {str(e)}")
+        import traceback
+        rsi_logger.error(f"[RSI 6h] Traceback: {traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
+
 
 def open_firewall_ports():
     """Открывает порты в брандмауэре при запуске (Windows/macOS/Linux)"""
