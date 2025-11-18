@@ -8,6 +8,7 @@ import os
 import sys
 import webbrowser
 from threading import Timer
+from pathlib import Path
 
 # Настройка кодировки для Windows консоли
 if os.name == 'nt':
@@ -977,9 +978,9 @@ def determine_trend_and_position(symbol, force_update=False):
             return cached_data['data']
     
     try:
-        # Получаем исторические данные
-        data = current_exchange.get_chart_data(symbol, '1d', '1M')
-        if not data.get('success'):
+        # ✅ ЧИТАЕМ НАПРЯМУЮ ИЗ ФАЙЛА (не требует запущенного bots.py)
+        data = get_candles_from_file(symbol, timeframe='1d', period_days=30)
+        if not data or not data.get('success'):
             return None
             
         candles = data.get('data', {}).get('candles', [])
@@ -1116,10 +1117,10 @@ def get_candles(symbol):
             return jsonify(cached_data['data'])
     
     try:
-        # Получаем данные за последний месяц
-        data = current_exchange.get_chart_data(symbol, '1d', '1M')
-        if not data.get('success'):
-            return jsonify({'success': False, 'error': 'Не удалось получить данные'})
+        # ✅ ЧИТАЕМ НАПРЯМУЮ ИЗ ФАЙЛА (не требует запущенного bots.py)
+        data = get_candles_from_file(symbol, timeframe='1d', period_days=30)
+        if not data or not data.get('success'):
+            return jsonify({'success': False, 'error': 'Не удалось получить данные из файла кэша'})
         
         # Сохраняем в кэш
         candles_cache[symbol] = {
@@ -1152,6 +1153,115 @@ def background_cache_cleanup():
         time.sleep(60)  # Проверяем каждую минуту
 
 # Прокси для API endpoints ботов (перенаправляем на внешний сервис)
+def get_candles_from_file(symbol, timeframe='6h', period_days=None):
+    """Читает свечи напрямую из файла data/candles_cache.json (не требует запущенного bots.py)"""
+    try:
+        # Определяем путь к файлу кэша
+        project_root = Path(__file__).parent
+        candles_cache_file = project_root / 'data' / 'candles_cache.json'
+        
+        if not candles_cache_file.exists():
+            return {'success': False, 'error': f'Файл кэша не найден: {candles_cache_file}'}
+        
+        # Читаем файл
+        with open(candles_cache_file, 'r', encoding='utf-8') as f:
+            file_cache = json.load(f)
+        
+        if symbol not in file_cache:
+            return {'success': False, 'error': f'Свечи для {symbol} не найдены в файле кэша'}
+        
+        cached_data = file_cache[symbol]
+        candles_6h = cached_data.get('candles', [])
+        
+        if not candles_6h:
+            return {'success': False, 'error': f'Нет свечей в файле кэша для {symbol}'}
+        
+        # Конвертируем свечи в нужный таймфрейм
+        if timeframe == '1d':
+            # Конвертируем 6h свечи в дневные
+            daily_candles = []
+            current_day = None
+            current_candle = None
+            
+            for candle in candles_6h:
+                candle_time = datetime.fromtimestamp(int(candle['timestamp']) / 1000)
+                day_key = candle_time.date()
+                
+                if current_day != day_key:
+                    # Сохраняем предыдущую дневную свечу
+                    if current_candle:
+                        daily_candles.append(current_candle)
+                    
+                    # Начинаем новую дневную свечу
+                    current_day = day_key
+                    current_candle = {
+                        'timestamp': candle['timestamp'],
+                        'open': float(candle['open']),
+                        'high': float(candle['high']),
+                        'low': float(candle['low']),
+                        'close': float(candle['close']),
+                        'volume': float(candle.get('volume', 0))
+                    }
+                else:
+                    # Обновляем текущую дневную свечу
+                    if current_candle:
+                        current_candle['high'] = max(current_candle['high'], float(candle['high']))
+                        current_candle['low'] = min(current_candle['low'], float(candle['low']))
+                        current_candle['close'] = float(candle['close'])
+                        current_candle['volume'] += float(candle.get('volume', 0))
+            
+            # Добавляем последнюю свечу
+            if current_candle:
+                daily_candles.append(current_candle)
+            
+            candles = daily_candles
+        elif timeframe == '6h':
+            # Используем 6h свечи как есть
+            candles = candles_6h
+        else:
+            # Для других таймфреймов возвращаем 6h
+            candles = candles_6h
+        
+        # Ограничиваем количество свечей по периоду (если указан)
+        if period_days:
+            try:
+                period_days = int(period_days)
+                # Для дневных свечей: period_days свечей
+                # Для 6h свечей: period_days * 4 свечей (4 свечи в день)
+                if timeframe == '1d':
+                    candles = candles[-period_days:] if len(candles) > period_days else candles
+                else:
+                    candles = candles[-period_days * 4:] if len(candles) > period_days * 4 else candles
+            except:
+                pass
+        
+        # Форматируем ответ в том же формате, что и get_chart_data
+        formatted_candles = []
+        for candle in candles:
+            formatted_candles.append({
+                'timestamp': int(candle['timestamp']),
+                'open': str(candle['open']),
+                'high': str(candle['high']),
+                'low': str(candle['low']),
+                'close': str(candle['close']),
+                'volume': str(candle.get('volume', 0))
+            })
+        
+        return {
+            'success': True,
+            'data': {
+                'candles': formatted_candles,
+                'timeframe': timeframe,
+                'count': len(formatted_candles)
+            },
+            'source': 'file'  # Указываем, что данные из файла
+        }
+        
+    except Exception as e:
+        import traceback
+        logging.getLogger('app').error(f"❌ Ошибка чтения свечей из файла для {symbol}: {e}\n{traceback.format_exc()}")
+        return {'success': False, 'error': str(e)}
+
 def call_bots_service(endpoint, method='GET', data=None, timeout=10):
     """Универсальная функция для вызова API сервиса ботов"""
     # Определяем URL сервиса ботов динамически (доступен в обработчиках Flask)
@@ -1464,11 +1574,11 @@ def get_sma200_position(symbol):
             sma_logger.error("[SMA200] Exchange not initialized")
             return jsonify({'error': 'Exchange not initialized'}), 500
             
-        # Получаем исторические данные для расчета SMA200
-        data = current_exchange.get_chart_data(symbol, '1d', '200d')  # Дневные свечи за 200 дней
-        if not data.get('success'):
-            sma_logger.error(f"[SMA200] Failed to get chart data for {symbol}")
-            return jsonify({'error': 'Failed to get chart data'}), 500
+        # ✅ ЧИТАЕМ НАПРЯМУЮ ИЗ ФАЙЛА (не требует запущенного bots.py)
+        data = get_candles_from_file(symbol, timeframe='1d', period_days=200)
+        if not data or not data.get('success'):
+            sma_logger.error(f"[SMA200] Failed to get chart data from file for {symbol}")
+            return jsonify({'error': 'Failed to get chart data from file'}), 500
             
         candles = data.get('data', {}).get('candles', [])
         if len(candles) < 200:
@@ -1514,12 +1624,12 @@ def get_rsi_6h(symbol):
         # Импортируем функцию расчета RSI
         from bot_engine.utils.rsi_utils import calculate_rsi_history
         
-        # Получаем данные свечей 6ч за последнюю неделю (56 свечей)
-        # 56 свечей * 6 часов = 336 часов = 14 дней (но запрашиваем больше для надежности)
-        data = current_exchange.get_chart_data(symbol, '6h', '14d')
-        if not data.get('success'):
-            rsi_logger.error(f"[RSI 6h] Failed to get chart data for {symbol}")
-            return jsonify({'error': 'Failed to get chart data'}), 500
+        # ✅ ЧИТАЕМ НАПРЯМУЮ ИЗ ФАЙЛА (не требует запущенного bots.py)
+        # 56 свечей * 6 часов = 336 часов = 14 дней
+        data = get_candles_from_file(symbol, timeframe='6h', period_days=14)
+        if not data or not data.get('success'):
+            rsi_logger.error(f"[RSI 6h] Failed to get chart data from file for {symbol}")
+            return jsonify({'error': 'Failed to get chart data from file'}), 500
             
         candles = data.get('data', {}).get('candles', [])
         if not candles:
