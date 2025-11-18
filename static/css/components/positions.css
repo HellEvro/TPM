@@ -251,8 +251,8 @@
 }
 
 .mini-chart {
-    width: 120px;  /* Оптимальная ширина */
-    height: 50px;  /* Оптимальная высота */
+    width: 80px;  /* Ширина уменьшена в 1.5 раза (120/1.5=80) */
+    height: 50px;  /* Высота без изменений */
     object-fit: contain;
     margin-left: 10px;
     background-color: var(--section-bg);

@@ -257,7 +257,10 @@ class PositionsManager {
                                         valueSpan.textContent = chartData.current_rsi.toFixed(2);
                                     } else {
                                         // Если структура не найдена, обновляем весь элемент
-                                        elem.innerHTML = `<span style="font-size: 12px; font-weight: 400; opacity: 0.7; margin-right: 4px;">RSI</span><span style="font-weight: 400;">${chartData.current_rsi.toFixed(2)}</span>`;
+                                        elem.innerHTML = `<span style="font-size: 8px; font-weight: 400; opacity: 0.7;">RSI</span><span style="font-size: 8px; font-weight: 400;">${chartData.current_rsi.toFixed(2)}</span>`;
+                                        elem.style.display = 'flex';
+                                        elem.style.alignItems = 'center';
+                                        elem.style.gap = '4px';
                                     }
                                 }
                             });
@@ -549,9 +552,9 @@ class PositionsManager {
                             />
                             <span class="rsi-value" 
                                   data-symbol="${pos.symbol}"
-                                  style="font-size: 16px; font-weight: 400; color: ${currentTheme === 'dark' ? '#ffffff' : '#000000'}; min-width: 60px; text-align: right; font-family: 'Arial', sans-serif;">
-                                <span style="font-size: 12px; font-weight: 400; opacity: 0.7; margin-right: 4px;">RSI</span>
-                                <span style="font-weight: 400;">${this.rsiCache.has(pos.symbol) ? this.rsiCache.get(pos.symbol).toFixed(2) : '-'}</span>
+                                  style="display: flex; align-items: center; gap: 4px; font-weight: 400; color: ${currentTheme === 'dark' ? '#ffffff' : '#000000'}; font-family: 'Arial', sans-serif;">
+                                <span style="font-size: 8px; font-weight: 400; opacity: 0.7;">RSI</span>
+                                <span style="font-size: 8px; font-weight: 400;">${this.rsiCache.has(pos.symbol) ? this.rsiCache.get(pos.symbol).toFixed(2) : '-'}</span>
                             </span>
                         </div>
                         ` : ''}
