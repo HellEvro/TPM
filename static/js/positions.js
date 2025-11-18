@@ -12,8 +12,6 @@ class PositionsManager {
         this.chartCache = new Map();  // Кэш для миниграфиков
         this.rsiCache = new Map();  // Кэш для значений RSI
         this.chartUpdateInterval = 5 * 60 * 1000;  // 5 минут
-        this.sma200Cache = new Map();  // Кэш для SMA200
-        this.sma200UpdateInterval = 7 * 60 * 1000;  // 7 минут
         this.updateInterval = 7 * 60 * 1000;  // 7 минут для всех обновлений
         this.currentTheme = document.body.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
         this.initializeThemeListener();
@@ -101,7 +99,6 @@ class PositionsManager {
                 if (this.reduceLoad) {
                     this.chartCache.clear();
                     this.rsiCache.clear();
-                    this.sma200Cache.clear();
                 }
                 if (this.lastData) {
                     this.updatePositionsDisplay();
@@ -158,73 +155,15 @@ class PositionsManager {
         }
     }
 
-    async updateSma200(symbol) {
-        try {
-            console.log(`Fetching SMA200 for ${symbol}...`);
-            const response = await fetch(`/get_sma200_position/${symbol}`);
-            const data = await response.json();
-            
-            if (data.above_sma200 !== undefined) {
-                console.log(`SMA200 for ${symbol}: ${data.above_sma200 ? 'ABOVE' : 'BELOW'}`);
-                this.sma200Cache.set(symbol, {
-                    above_sma200: data.above_sma200,
-                    timestamp: Date.now()
-                });
-                
-                // Обновляем только индикатор SMA200, не трогаем ROI
-                document.querySelectorAll(`.position[data-symbol="${symbol}"]`).forEach(position => {
-                    const indicator = position.querySelector('.sma-indicator');
-                    
-                    // Удаляем класс загрузки и добавляем нужный класс только для индикатора
-                    indicator.classList.remove('sma-loading');
-                    indicator.classList.add(data.above_sma200 ? 'sma-above' : 'sma-below');
-                    
-                    // Убираем изменение цвета ROI
-                    // const roiSpan = position.querySelector('.position-footer span');
-                    // roiSpan.style.color = data.above_sma200 ? '#4CAF50' : '#f44336';
-                });
-            } else {
-                console.warn(`No SMA200 data received for ${symbol}`);
-            }
-        } catch (error) {
-            console.error(`Error updating SMA200 for ${symbol}:`, error);
-        }
-    }
-
-    async updateAllSma200() {
-        if (!this.lastData) return;
-
-        const symbols = new Set();
-        // Собираем все уникальные символы и добавляем проверку на undefined
-        Object.values(this.lastData).forEach(positions => {
-            if (Array.isArray(positions)) {
-                positions.forEach(pos => {
-                    if (pos && pos.symbol && pos.symbol !== 'undefined') {
-                        symbols.add(pos.symbol);
-                    }
-                });
-            }
-        });
-
-        console.log(`Starting SMA200 update for ${symbols.size} symbols:`, [...symbols]);
-        
-        // Обновляем SMA200 для каждого символа
-        for (const symbol of symbols) {
-            await this.updateSma200(symbol);
-        }
-        
-        console.log('SMA200 update completed');
-    }
 
     async updateTickerData(symbol) {
         if (this.reduceLoad) return; // Не обновляем данные если включено снижение нагрузки
         try {
             console.log(`Updating data for ${symbol}...`);
             
-            // Загружаем миниграфик и SMA200 параллельно
-            const [chartResponse, sma200Response] = await Promise.allSettled([
-                fetch(`/get_symbol_chart/${symbol}?theme=${this.currentTheme}`),
-                fetch(`/get_sma200_position/${symbol}`)
+            // Загружаем миниграфик
+            const [chartResponse] = await Promise.allSettled([
+                fetch(`/get_symbol_chart/${symbol}?theme=${this.currentTheme}`)
             ]);
 
             // Обрабатываем ответ графика
@@ -257,7 +196,7 @@ class PositionsManager {
                                         valueSpan.textContent = chartData.current_rsi.toFixed(2);
                                     } else {
                                         // Если структура не найдена, обновляем весь элемент
-                                        elem.innerHTML = `<span style="font-size: 8px; font-weight: 400; opacity: 0.7;">RSI</span><span style="font-size: 8px; font-weight: 400;">${chartData.current_rsi.toFixed(2)}</span>`;
+                                        elem.innerHTML = `<span style="font-size: 11px; font-weight: 400; opacity: 0.7;">RSI</span><span style="font-size: 11px; font-weight: 400;">${chartData.current_rsi.toFixed(2)}</span>`;
                                         elem.style.display = 'flex';
                                         elem.style.alignItems = 'center';
                                         elem.style.gap = '4px';
@@ -278,45 +217,6 @@ class PositionsManager {
                 console.warn(`Failed to fetch chart for ${symbol}: ${errorMsg}`);
             }
 
-            // Обрабатываем ответ SMA200
-            if (sma200Response.status === 'fulfilled' && sma200Response.value.ok) {
-                try {
-                    const sma200Data = await sma200Response.value.json();
-                    if (sma200Data.success && sma200Data.above_sma200 !== undefined) {
-                        console.log(`SMA200 for ${symbol}: ${sma200Data.above_sma200 ? 'ABOVE' : 'BELOW'}`);
-                        this.sma200Cache.set(symbol, {
-                            above_sma200: sma200Data.above_sma200,
-                            timestamp: Date.now()
-                        });
-                        
-                        // Обновляем индикатор и цвет ROI
-                        document.querySelectorAll(`.position[data-symbol="${symbol}"]`).forEach(position => {
-                            if (!position) return;
-                            
-                            const indicator = position.querySelector('.sma-indicator');
-                            const roiSpan = position.querySelector('.position-footer span');
-                            
-                            if (indicator) {
-                                indicator.classList.remove('sma-loading');
-                                indicator.classList.add(sma200Data.above_sma200 ? 'sma-above' : 'sma-below');
-                            }
-                            
-                            if (roiSpan) {
-                                roiSpan.style.color = sma200Data.above_sma200 ? '#4CAF50' : '#f44336';
-                            }
-                        });
-                    } else {
-                        console.warn(`SMA200 data not available for ${symbol}:`, sma200Data.error || 'Unknown error');
-                    }
-                } catch (e) {
-                    console.error(`Error parsing SMA200 JSON for ${symbol}:`, e);
-                }
-            } else {
-                const errorMsg = sma200Response.status === 'rejected' 
-                    ? sma200Response.reason?.message 
-                    : `HTTP ${sma200Response.value?.status || 'unknown'}`;
-                console.warn(`Failed to fetch SMA200 for ${symbol}: ${errorMsg}`);
-            }
 
             console.log(`Data update completed for ${symbol}`);
         } catch (error) {
@@ -485,7 +385,6 @@ class PositionsManager {
         return filteredPositions.map(pos => {
             // console.log('Generating HTML for position:', pos);
             const cacheKey = `${pos.symbol}_${currentTheme}`;
-            const sma200Data = this.reduceLoad ? null : this.sma200Cache.get(pos.symbol);
             
             // Определяем направление изменения ROI
             const prevRoi = this.previousRoi.get(pos.symbol) || 0;
@@ -531,14 +430,6 @@ class PositionsManager {
                         <div class="ticker">
                             <a href="${createTickerLink(pos.symbol, window.app?.exchangeManager?.getSelectedExchange())}" 
                                target="_blank">${pos.symbol}</a>
-                            ${!this.reduceLoad ? `
-                            <span class="sma-indicator ${sma200Data ? 
-                                (sma200Data.above_sma200 ? 'sma-above' : 'sma-below') : 
-                                'sma-loading'}" 
-                                  title="${sma200Data ? 
-                                    `SMA200: Цена ${sma200Data.above_sma200 ? 'выше' : 'ниже'}` : 
-                                    'Загрзка SMA200...'}"></span>
-                            ` : ''}
                         </div>
                         ${!this.reduceLoad ? `
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -553,8 +444,8 @@ class PositionsManager {
                             <span class="rsi-value" 
                                   data-symbol="${pos.symbol}"
                                   style="display: flex; align-items: center; gap: 4px; font-weight: 400; color: ${currentTheme === 'dark' ? '#ffffff' : '#000000'}; font-family: 'Arial', sans-serif;">
-                                <span style="font-size: 8px; font-weight: 400; opacity: 0.7;">RSI</span>
-                                <span style="font-size: 8px; font-weight: 400;">${this.rsiCache.has(pos.symbol) ? this.rsiCache.get(pos.symbol).toFixed(2) : '-'}</span>
+                                <span style="font-size: 11px; font-weight: 400; opacity: 0.7;">RSI</span>
+                                <span style="font-size: 11px; font-weight: 400;">${this.rsiCache.has(pos.symbol) ? this.rsiCache.get(pos.symbol).toFixed(2) : '-'}</span>
                             </span>
                         </div>
                         ` : ''}
@@ -680,7 +571,6 @@ class PositionsManager {
                 // Очищаем кэши
                 this.chartCache.clear();
                 this.rsiCache.clear();
-                this.sma200Cache.clear();
                 // Обновляем отображение
                 this.updatePositionsDisplay();
             }

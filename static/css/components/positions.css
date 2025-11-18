@@ -266,44 +266,6 @@
     gap: 5px;
 }
 
-.sma200 {
-    font-size: 0.9em;
-    font-weight: bold;
-}
-
-.sma-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    display: inline-block;
-    margin-left: 5px;
-    cursor: help;
-}
-
-.sma-indicator:hover::after {
-    content: attr(title);
-    position: absolute;
-    background: var(--section-bg);
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    white-space: nowrap;
-    z-index: 1000;
-    border: 1px solid var(--border-color);
-}
-
-.sma-loading {
-    background-color: #888;
-    animation: pulse 1.5s infinite;
-}
-
-.sma-above {
-    background-color: #4CAF50;
-}
-
-.sma-below {
-    background-color: #f44336;
-}
 
 @keyframes pulse {
     0% { opacity: 0.3; }
