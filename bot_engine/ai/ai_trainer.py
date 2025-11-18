@@ -2274,11 +2274,17 @@ class AITrainer:
                     # ДИАГНОСТИКА: Если нет сделок, логируем статистику RSI и фильтров
                     if trades_for_symbol == 0 and (symbol_idx <= 10 or symbol_idx % progress_interval == 0):
                         if rsi_history:
-                            min_rsi = min(rsi_history)
-                            max_rsi = max(rsi_history)
-                            avg_rsi = sum(rsi_history) / len(rsi_history)
-                            rsi_in_long_zone = sum(1 for r in rsi_history if r <= coin_RSI_OVERSOLD)
-                            rsi_in_short_zone = sum(1 for r in rsi_history if r >= coin_RSI_OVERBOUGHT)
+                            # Используем только RSI из симуляции (начиная с simulation_start_idx)
+                            simulation_rsi = rsi_history[simulation_start_idx - RSI_PERIOD:] if len(rsi_history) > (simulation_start_idx - RSI_PERIOD) else rsi_history
+                            if simulation_rsi:
+                                min_rsi = min(simulation_rsi)
+                                max_rsi = max(simulation_rsi)
+                                avg_rsi = sum(simulation_rsi) / len(simulation_rsi)
+                                rsi_in_long_zone = sum(1 for r in simulation_rsi if r <= coin_RSI_OVERSOLD)
+                                rsi_in_short_zone = sum(1 for r in simulation_rsi if r >= coin_RSI_OVERBOUGHT)
+                            else:
+                                min_rsi = max_rsi = avg_rsi = 0
+                                rsi_in_long_zone = rsi_in_short_zone = 0
                             
                             diagnostic_msg = (
                                 f"   🔍 {symbol}: диагностика отсутствия сделок - "
@@ -2287,20 +2293,25 @@ class AITrainer:
                                 f"в зоне SHORT (≥{coin_RSI_OVERBOUGHT}): {rsi_in_short_zone} раз"
                             )
                             
-                            # Добавляем статистику фильтров
-                            if rsi_entered_long_zone > 0 or rsi_entered_short_zone > 0:
-                                total_attempts = rsi_entered_long_zone + rsi_entered_short_zone
-                                total_blocked = filters_blocked_long + filters_blocked_short
+                            # ВАЖНО: Показываем реальные попытки входа из симуляции
+                            total_attempts = rsi_entered_long_zone + rsi_entered_short_zone
+                            total_blocked = filters_blocked_long + filters_blocked_short
+                            
+                            if total_attempts > 0:
                                 diagnostic_msg += (
-                                    f" | Попыток входа: {total_attempts} (LONG={rsi_entered_long_zone}, SHORT={rsi_entered_short_zone}) | "
-                                    f"Заблокировано: {total_blocked} (LONG={filters_blocked_long}, SHORT={filters_blocked_short})"
+                                    f" | ✅ Попыток входа: {total_attempts} (LONG={rsi_entered_long_zone}, SHORT={rsi_entered_short_zone}) | "
+                                    f"🚫 Заблокировано: {total_blocked} (LONG={filters_blocked_long}, SHORT={filters_blocked_short})"
                                 )
                                 if filter_block_reasons:
                                     top_reasons = sorted(filter_block_reasons.items(), key=lambda x: x[1], reverse=True)[:5]
                                     reasons_str = ", ".join([f"{reason}: {count}" for reason, count in top_reasons])
-                                    diagnostic_msg += f" | Топ-5 причин блокировки: {reasons_str}"
+                                    diagnostic_msg += f" | 🔍 Топ-5 причин блокировки: {reasons_str}"
                                 else:
                                     diagnostic_msg += " | ⚠️ Причины блокировки не зафиксированы (возможно, фильтры не вызывались)"
+                            else:
+                                # Если попыток входа не было, но RSI попадал в зоны - значит проблема в логике проверки
+                                if rsi_in_long_zone > 0 or rsi_in_short_zone > 0:
+                                    diagnostic_msg += f" | ⚠️ RSI попадал в зоны, но попыток входа не было (возможно, позиция уже открыта или ошибка в логике)"
                             
                             logger.info(diagnostic_msg)
                     
