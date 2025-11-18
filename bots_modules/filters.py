@@ -415,7 +415,6 @@ def get_coin_candles_only(symbol, exchange_obj=None):
     """⚡ БЫСТРАЯ загрузка ТОЛЬКО свечей БЕЗ расчетов"""
     try:
         if shutdown_flag.is_set():
-            logger.debug(f"{symbol}: Пропуск загрузки свечей (shutdown requested)")
             return None
 
         from bots_modules.imports_and_globals import get_exchange
