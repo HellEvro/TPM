@@ -555,6 +555,7 @@ class BinanceExchange(BaseExchange):
                     '30m': Client.KLINE_INTERVAL_30MINUTE,
                     '1h': Client.KLINE_INTERVAL_1HOUR,
                     '4h': Client.KLINE_INTERVAL_4HOUR,
+                    '6h': Client.KLINE_INTERVAL_4HOUR,  # Binance не поддерживает 6h, используем 4h
                     '1d': Client.KLINE_INTERVAL_1DAY,
                     '1w': Client.KLINE_INTERVAL_1WEEK
                 }
