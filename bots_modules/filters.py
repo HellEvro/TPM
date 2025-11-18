@@ -1322,9 +1322,6 @@ def load_all_coins_candles_fast():
                 
                 updated_count += 1
                 total_candles_added += added_count
-                
-                if added_count > 0:
-                    logger.debug(f"{symbol}: {old_count} -> {new_count} свечей (+{added_count})")
             
             # Сохраняем обновленный кэш
             with open(candles_cache_file, 'w', encoding='utf-8') as f:
@@ -1515,7 +1512,6 @@ def load_all_coins_rsi():
         # Обновляем флаги is_mature
         try:
             update_is_mature_flags_in_rsi_data()
-            logger.debug(f"Флаги is_mature обновлены")
         except Exception as update_error:
             logger.warning(f"⚠️ Не удалось обновить is_mature: {update_error}")
         
@@ -1552,28 +1548,18 @@ def _recalculate_signal_with_trend(rsi, trend, symbol):
         avoid_down_trend = auto_config.get('avoid_down_trend', False)
         avoid_up_trend = auto_config.get('avoid_up_trend', False)
         
-        logger.debug(f"🔍 {symbol}: RSI={rsi:.1f}, тренд={trend}, avoid_down={avoid_down_trend}, avoid_up={avoid_up_trend}")
-        
         # Определяем базовый сигнал по RSI
         if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
             # Проверяем нужно ли избегать DOWN тренда для LONG
             if avoid_down_trend and trend == 'DOWN':
-                logger.debug(f"🔍 {symbol}: RSI {rsi:.1f} ≤ 29, тренд DOWN, избегаем DOWN → WAIT")
                 return 'WAIT'  # Ждем улучшения тренда
             else:
-                # НЕ показываем дефолтные значения! Только рассчитанные данные!
-                trend_display = trend if trend is not None else None
-                logger.debug(f"🔍 {symbol}: RSI {rsi:.1f} ≤ 29, тренд {trend_display}, не избегаем → ENTER_LONG")
                 return 'ENTER_LONG'  # Входим независимо от тренда или при хорошем тренде
         elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71
             # Проверяем нужно ли избегать UP тренда для SHORT
             if avoid_up_trend and trend == 'UP':
-                logger.debug(f"🔍 {symbol}: RSI {rsi:.1f} ≥ 71, тренд UP, избегаем UP → WAIT")
                 return 'WAIT'  # Ждем ослабления тренда
             else:
-                # НЕ показываем дефолтные значения! Только рассчитанные данные!
-                trend_display = trend if trend is not None else None
-                logger.debug(f"🔍 {symbol}: RSI {rsi:.1f} ≥ 71, тренд {trend_display}, не избегаем → ENTER_SHORT")
                 return 'ENTER_SHORT'  # Входим независимо от тренда или при хорошем тренде
         else:
             # RSI между 30-70 - нейтральная зона

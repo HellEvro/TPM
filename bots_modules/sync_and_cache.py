@@ -1242,9 +1242,7 @@ def update_bots_cache_data():
         
         # ✅ СИНХРОНИЗАЦИЯ: Проверяем закрытые позиции на бирже
         try:
-            logger.debug(f" Синхронизация...")
             sync_bots_with_exchange()
-            logger.debug(f" Синхронизация завершена")
         except Exception as e:
             logger.error(f" ❌ Ошибка синхронизации с биржей: {e}")
         
