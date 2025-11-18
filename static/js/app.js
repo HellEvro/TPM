@@ -416,6 +416,9 @@ class App {
                 this.currentPage = 1;
             }
 
+            // Показываем индикатор загрузки
+            this.showClosedPnlLoading(true);
+
             const sortSelect = document.getElementById('sortSelect');
             const sortBy = sortSelect ? sortSelect.value : 'time';
             
@@ -441,19 +444,20 @@ class App {
             const data = await response.json();
 
             if (data.success) {
-                // Обновляем данные о балансе и PNL
+                // Обновляем данные о балансе (общий баланс и доступные средства всегда актуальные)
                 if (data.wallet_data) {
                     document.getElementById('totalBalance').textContent = 
                         `${data.wallet_data.total_balance.toFixed(2)} USDT`;
                     document.getElementById('availableBalance').textContent = 
                         `${data.wallet_data.available_balance.toFixed(2)} USDT`;
-                    document.getElementById('realizedPnL').textContent = 
-                        `${data.wallet_data.realized_pnl.toFixed(2)} USDT`;
                 }
 
                 // Обновляем таблицу закрытых позиций
                 this.allClosedPnlData = data.closed_pnl;
                 this.updateClosedPnlTable(this.allClosedPnlData, false);
+                
+                // Пересчитываем и обновляем общий P&L за выбранный период
+                this.updatePeriodPnL(data.closed_pnl);
             } else {
                 console.error('Failed to get closed PNL data:', data.error);
                 this.showErrorNotification('Ошибка при получении данных о закрытых позициях');
@@ -461,6 +465,56 @@ class App {
         } catch (error) {
             console.error('Error updating closed PNL:', error);
             this.showErrorNotification('Ошибка при обновлении данных');
+        } finally {
+            // Скрываем индикатор загрузки
+            this.showClosedPnlLoading(false);
+        }
+    }
+
+    showClosedPnlLoading(show) {
+        const loadingElement = document.getElementById('closedPnlLoading');
+        const tableContainer = document.getElementById('closedPnlTableContainer');
+        const pagination = document.querySelector('.pagination');
+        
+        if (loadingElement) {
+            loadingElement.style.display = show ? 'flex' : 'none';
+        }
+        
+        if (tableContainer) {
+            tableContainer.style.display = show ? 'none' : 'table';
+        }
+        
+        if (pagination) {
+            pagination.style.display = show ? 'none' : 'flex';
+        }
+    }
+
+    updatePeriodPnL(closedPnlData) {
+        // Рассчитываем общий P&L за выбранный период
+        const realizedPnLElement = document.getElementById('realizedPnL');
+        if (!realizedPnLElement) return;
+
+        if (!closedPnlData || closedPnlData.length === 0) {
+            realizedPnLElement.textContent = '0.00 USDT';
+            realizedPnLElement.style.color = ''; // Сбрасываем цвет
+            return;
+        }
+
+        // Суммируем все закрытые PNL за период
+        const totalPnL = closedPnlData.reduce((sum, pnl) => {
+            return sum + parseFloat(pnl.closed_pnl || 0);
+        }, 0);
+
+        // Обновляем отображение
+        const formattedPnL = totalPnL.toFixed(2);
+        const sign = totalPnL >= 0 ? '+' : '';
+        realizedPnLElement.textContent = `${sign}${formattedPnL} USDT`;
+        
+        // Добавляем цвет в зависимости от знака
+        if (totalPnL >= 0) {
+            realizedPnLElement.style.color = 'var(--profit-color, #4caf50)';
+        } else {
+            realizedPnLElement.style.color = 'var(--loss-color, #f44336)';
         }
     }
 
