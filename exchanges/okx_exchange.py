@@ -91,7 +91,12 @@ class OkxExchange(BaseExchange):
                     symbol = clean_symbol(position['symbol'])
                     current_pnl = float(position['unrealizedPnl'])
                     position_value = float(position['notional'])
-                    roi = (current_pnl / position_value * 100) if position_value != 0 else 0
+                    leverage = float(position.get('lever', 1) or 1)
+                    
+                    # ROI рассчитывается от маржи (залога) в сделке
+                    # Маржа = стоимость позиции / плечо
+                    margin = position_value / leverage if leverage > 0 else position_value
+                    roi = (current_pnl / margin * 100) if margin > 0 else 0
                     
                     if current_pnl > 0:
                         if symbol not in self.max_profit_values or current_pnl > self.max_profit_values[symbol]:

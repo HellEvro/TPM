@@ -386,11 +386,11 @@ class PositionsManager {
             // console.log('Generating HTML for position:', pos);
             const cacheKey = `${pos.symbol}_${currentTheme}`;
             
-            // Определяем направление изменения ROI
-            const prevRoi = this.previousRoi.get(pos.symbol) || 0;
-            const roiDirection = pos.roi > prevRoi ? 'roi-positive' : 'roi-negative';
+            // Определяем цвет ROI в зависимости от знака (выше/ниже нуля)
+            // Зеленый если ROI > 0 (прибыль), красный если ROI < 0 (убыток)
+            const roiDirection = pos.roi >= 0 ? 'roi-positive' : 'roi-negative';
             
-            // Сохраняем текущее значение ROI для следующего сравнения
+            // Сохраняем текущее значение ROI для следующего сравнения (если понадобится в будущем)
             this.previousRoi.set(pos.symbol, pos.roi);
 
             // Логируем размер позиции

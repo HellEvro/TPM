@@ -42,8 +42,15 @@ class BinanceExchange(BaseExchange):
             for position in active_positions:
                 symbol = clean_symbol(position['symbol'])
                 current_pnl = float(position['unRealizedProfit'])
-                position_value = float(position['positionAmt']) * float(position['entryPrice'])
-                roi = (current_pnl / position_value * 100) if position_value != 0 else 0
+                position_amt = abs(float(position['positionAmt']))
+                entry_price = float(position['entryPrice'])
+                leverage = float(position.get('leverage', 1) or 1)
+                
+                # ROI рассчитывается от маржи (залога) в сделке
+                # Маржа = стоимость позиции / плечо
+                position_value = position_amt * entry_price
+                margin = position_value / leverage if leverage > 0 else position_value
+                roi = (current_pnl / margin * 100) if margin > 0 else 0
                 
                 if current_pnl > 0:
                     if symbol not in self.max_profit_values or current_pnl > self.max_profit_values[symbol]:
