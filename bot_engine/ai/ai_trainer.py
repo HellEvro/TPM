@@ -1666,6 +1666,38 @@ class AITrainer:
                 )
                 return
             
+            # ВАЖНО: Загружаем список зрелых монет из bots.py (если доступен)
+            # Это экономит ресурсы - обучаем только зрелые монеты
+            mature_coins_set = set()
+            try:
+                # Пробуем загрузить из файла напрямую
+                mature_coins_file = os.path.join('data', 'mature_coins.json')
+                if os.path.exists(mature_coins_file):
+                    with open(mature_coins_file, 'r', encoding='utf-8') as f:
+                        mature_coins_data = json.load(f)
+                        mature_coins_set = set(mature_coins_data.keys())
+                        logger.info(f"✅ Загружен список зрелых монет из bots.py: {len(mature_coins_set)} монет")
+                else:
+                    # Пробуем импортировать из bots_modules если доступно
+                    try:
+                        from bots_modules.imports_and_globals import mature_coins_storage
+                        mature_coins_set = set(mature_coins_storage.keys())
+                        logger.info(f"✅ Загружен список зрелых монет из памяти: {len(mature_coins_set)} монет")
+                    except ImportError:
+                        logger.debug("   💡 Список зрелых монет недоступен - используем все монеты")
+            except Exception as e:
+                logger.debug(f"   ⚠️ Не удалось загрузить список зрелых монет: {e}")
+                logger.debug("   💡 Продолжаем обучение на всех монетах")
+            
+            # Фильтруем монеты: используем только зрелые (если список доступен)
+            if mature_coins_set and base_enable_maturity_check:
+                original_count = len(candles_data)
+                candles_data = {symbol: data for symbol, data in candles_data.items() if symbol in mature_coins_set}
+                filtered_count = len(candles_data)
+                skipped_count = original_count - filtered_count
+                if skipped_count > 0:
+                    logger.info(f"📊 Фильтрация по зрелости: {original_count} → {filtered_count} монет ({skipped_count} незрелых пропущено)")
+            
             # Сокращенный лог начала обучения
             total_coins = len(candles_data)
             logger.info(f"📊 Обучение для {total_coins} монет...")
@@ -1696,6 +1728,13 @@ class AITrainer:
                     if not candles or len(candles) < 100:  # Нужно больше свечей для симуляции
                         if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
                             logger.info(f"   ⏭️ {symbol}: пропущено (недостаточно свечей: {len(candles) if candles else 0})")
+                        continue
+                    
+                    # ВАЖНО: Дополнительная проверка зрелости (fallback если список зрелых монет недоступен)
+                    # Основная фильтрация уже выполнена выше по списку зрелых монет из bots.py
+                    if base_enable_maturity_check and not mature_coins_set and len(candles) < base_min_candles_for_maturity:
+                        if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
+                            logger.info(f"   ⏭️ {symbol}: пропущено (незрелая монета: {len(candles)}/{base_min_candles_for_maturity} свечей)")
                         continue
                     
                     # ВАЖНО: Проверяем есть ли лучшие параметры для этой монеты
@@ -2004,7 +2043,11 @@ class AITrainer:
                         logger.debug(f"   💵 {symbol}: размер сделки {position_size_usdt:.4f} USDT (режим fixed_usdt)")
                     
                     # Логируем начало симуляции (INFO только для важных монет)
-                    candles_to_process = len(candles) - RSI_PERIOD
+                    # Вычисляем количество свечей для обработки с учетом пропуска начальных свечей
+                    simulation_start_idx = RSI_PERIOD
+                    if base_enable_maturity_check:
+                        simulation_start_idx = max(RSI_PERIOD, base_min_candles_for_maturity)
+                    candles_to_process = len(candles) - simulation_start_idx
                     if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
                         logger.info(f"   🔄 {symbol}: симуляция {candles_to_process:,} свечей...")
                     else:
@@ -2013,7 +2056,25 @@ class AITrainer:
                     # Логируем прогресс каждые 1000 свечей (INFO для важных монет)
                     progress_step = 1000
                     
-                    for i in range(RSI_PERIOD, len(candles)):
+                    # ВАЖНО: Начинаем симуляцию с момента, когда уже накопилось достаточно свечей для зрелости
+                    # Это нужно чтобы фильтр зрелости не блокировал все входы в начале истории
+                    simulation_start_idx = RSI_PERIOD
+                    if base_enable_maturity_check:
+                        # Начинаем симуляцию с момента, когда уже есть 400+ свечей (или индивидуальный порог для монеты)
+                        # Но используем базовый порог для определения начала симуляции
+                        simulation_start_idx = max(RSI_PERIOD, base_min_candles_for_maturity)
+                        if simulation_start_idx > RSI_PERIOD:
+                            skipped_candles = simulation_start_idx - RSI_PERIOD
+                            logger.debug(f"   ⏭️ {symbol}: пропущено {skipped_candles} начальных свечей (до накопления {base_min_candles_for_maturity} для зрелости)")
+                    
+                    # Счетчики для диагностики фильтров
+                    rsi_entered_long_zone = 0
+                    rsi_entered_short_zone = 0
+                    filters_blocked_long = 0
+                    filters_blocked_short = 0
+                    filter_block_reasons = {}
+                    
+                    for i in range(simulation_start_idx, len(candles)):
                         # Логируем прогресс каждые 1000 свечей (DEBUG - техническая деталь)
                         if candles_to_process > 1000 and (i - RSI_PERIOD) % progress_step == 0:
                             progress_pct = ((i - RSI_PERIOD) / candles_to_process) * 100
@@ -2125,6 +2186,11 @@ class AITrainer:
                                 should_enter_long = current_rsi <= coin_RSI_OVERSOLD
                                 should_enter_short = current_rsi >= coin_RSI_OVERBOUGHT
                                 
+                                if should_enter_long:
+                                    rsi_entered_long_zone += 1
+                                if should_enter_short:
+                                    rsi_entered_short_zone += 1
+                                
                                 if should_enter_long or should_enter_short:
                                     signal = 'ENTER_LONG' if should_enter_long else 'ENTER_SHORT'
                                     filters_allowed, filters_reason = apply_entry_filters(
@@ -2136,6 +2202,16 @@ class AITrainer:
                                         trend=trend,
                                     )
                                     if not filters_allowed:
+                                        # Подсчитываем причины блокировки
+                                        if should_enter_long:
+                                            filters_blocked_long += 1
+                                        if should_enter_short:
+                                            filters_blocked_short += 1
+                                        
+                                        # Извлекаем основную причину блокировки
+                                        main_reason = filters_reason.split(':')[-1].strip() if ':' in filters_reason else filters_reason
+                                        filter_block_reasons[main_reason] = filter_block_reasons.get(main_reason, 0) + 1
+                                        
                                         logger.debug(f"   🚫 {symbol}: фильтры блокируют вход ({filters_reason})")
                                         should_enter_long = False
                                         should_enter_short = False
@@ -2171,7 +2247,7 @@ class AITrainer:
                     
                     total_candles_processed += len(candles)
                     
-                    # ДИАГНОСТИКА: Если нет сделок, логируем статистику RSI
+                    # ДИАГНОСТИКА: Если нет сделок, логируем статистику RSI и фильтров
                     if trades_for_symbol == 0 and (symbol_idx <= 10 or symbol_idx % progress_interval == 0):
                         if rsi_history:
                             min_rsi = min(rsi_history)
@@ -2179,12 +2255,26 @@ class AITrainer:
                             avg_rsi = sum(rsi_history) / len(rsi_history)
                             rsi_in_long_zone = sum(1 for r in rsi_history if r <= coin_RSI_OVERSOLD)
                             rsi_in_short_zone = sum(1 for r in rsi_history if r >= coin_RSI_OVERBOUGHT)
-                            logger.info(
+                            
+                            diagnostic_msg = (
                                 f"   🔍 {symbol}: диагностика отсутствия сделок - "
                                 f"RSI: min={min_rsi:.1f}, max={max_rsi:.1f}, avg={avg_rsi:.1f}, "
                                 f"в зоне LONG (≤{coin_RSI_OVERSOLD}): {rsi_in_long_zone} раз, "
                                 f"в зоне SHORT (≥{coin_RSI_OVERBOUGHT}): {rsi_in_short_zone} раз"
                             )
+                            
+                            # Добавляем статистику фильтров
+                            if rsi_entered_long_zone > 0 or rsi_entered_short_zone > 0:
+                                diagnostic_msg += (
+                                    f" | Попыток входа: LONG={rsi_entered_long_zone}, SHORT={rsi_entered_short_zone} | "
+                                    f"Заблокировано: LONG={filters_blocked_long}, SHORT={filters_blocked_short}"
+                                )
+                                if filter_block_reasons:
+                                    top_reasons = sorted(filter_block_reasons.items(), key=lambda x: x[1], reverse=True)[:3]
+                                    reasons_str = ", ".join([f"{reason}: {count}" for reason, count in top_reasons])
+                                    diagnostic_msg += f" | Причины блокировки: {reasons_str}"
+                            
+                            logger.info(diagnostic_msg)
                     
                     # Логируем завершение симуляции (INFO только для важных монет)
                     if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
