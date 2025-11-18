@@ -2215,7 +2215,25 @@ class AITrainer:
                                             filters_blocked_short += 1
                                         
                                         # Извлекаем основную причину блокировки
-                                        main_reason = filters_reason.split(':')[-1].strip() if ':' in filters_reason else filters_reason
+                                        # Формат: "SYMBOL: причина" или просто "причина"
+                                        if ':' in filters_reason:
+                                            # Убираем символ в начале, оставляем только причину
+                                            main_reason = filters_reason.split(':', 1)[-1].strip()
+                                        else:
+                                            main_reason = filters_reason.strip()
+                                        
+                                        # Нормализуем причину для группировки
+                                        if 'RSI time filter' in main_reason or 'RSI временной фильтр' in main_reason:
+                                            main_reason = 'RSI time filter'
+                                        elif 'ExitScam' in main_reason or 'exit scam' in main_reason.lower():
+                                            main_reason = 'ExitScam'
+                                        elif 'Молодая монета' in main_reason or 'maturity' in main_reason.lower():
+                                            main_reason = 'Maturity check'
+                                        elif 'trend' in main_reason.lower():
+                                            main_reason = 'Trend filter'
+                                        elif 'scope' in main_reason.lower():
+                                            main_reason = 'Scope filter'
+                                        
                                         filter_block_reasons[main_reason] = filter_block_reasons.get(main_reason, 0) + 1
                                         
                                         logger.debug(f"   🚫 {symbol}: фильтры блокируют вход ({filters_reason})")
@@ -2271,14 +2289,18 @@ class AITrainer:
                             
                             # Добавляем статистику фильтров
                             if rsi_entered_long_zone > 0 or rsi_entered_short_zone > 0:
+                                total_attempts = rsi_entered_long_zone + rsi_entered_short_zone
+                                total_blocked = filters_blocked_long + filters_blocked_short
                                 diagnostic_msg += (
-                                    f" | Попыток входа: LONG={rsi_entered_long_zone}, SHORT={rsi_entered_short_zone} | "
-                                    f"Заблокировано: LONG={filters_blocked_long}, SHORT={filters_blocked_short}"
+                                    f" | Попыток входа: {total_attempts} (LONG={rsi_entered_long_zone}, SHORT={rsi_entered_short_zone}) | "
+                                    f"Заблокировано: {total_blocked} (LONG={filters_blocked_long}, SHORT={filters_blocked_short})"
                                 )
                                 if filter_block_reasons:
-                                    top_reasons = sorted(filter_block_reasons.items(), key=lambda x: x[1], reverse=True)[:3]
+                                    top_reasons = sorted(filter_block_reasons.items(), key=lambda x: x[1], reverse=True)[:5]
                                     reasons_str = ", ".join([f"{reason}: {count}" for reason, count in top_reasons])
-                                    diagnostic_msg += f" | Причины блокировки: {reasons_str}"
+                                    diagnostic_msg += f" | Топ-5 причин блокировки: {reasons_str}"
+                                else:
+                                    diagnostic_msg += " | ⚠️ Причины блокировки не зафиксированы (возможно, фильтры не вызывались)"
                             
                             logger.info(diagnostic_msg)
                     
