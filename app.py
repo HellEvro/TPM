@@ -1460,6 +1460,8 @@ def start_bot():
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
+chart_render_lock = threading.Lock()
+
 @app.route('/get_symbol_chart/<symbol>')
 def get_symbol_chart(symbol):
     """Получение миниграфика RSI 6ч для символа (использует кэш из bots.py)"""
@@ -1497,59 +1499,60 @@ def get_symbol_chart(symbol):
             ts = current_timestamp - (num_rsi_values - 1 - i) * 21600000
             times.append(datetime.fromtimestamp(ts / 1000))
             
-        # Создаем график RSI
-        import matplotlib
-        matplotlib.use('Agg')  # Используем неинтерактивный бэкенд
-        import matplotlib.pyplot as plt
-        import io
-        import base64
-        
-        # Настраиваем стиль в зависимости от темы
-        if theme == 'light':
-            plt.style.use('default')
-            bg_color = 'white'
-            rsi_color = '#000000'  # Черная линия RSI на светлом фоне
-            upper_color = '#ff9999'  # Светло-красная граница 70
-            lower_color = '#99ff99'  # Светло-зеленая граница 30
-            center_color = '#cccccc'  # Светло-серая линия 50
-        else:
-            plt.style.use('dark_background')
-            bg_color = '#2d2d2d'
-            rsi_color = '#ffffff'  # Белая линия RSI на темном фоне
-            upper_color = '#ff9999'  # Светло-красная граница 70
-            lower_color = '#99ff99'  # Светло-зеленая граница 30
-            center_color = '#cccccc'  # Светло-серая линия 50
-        
-        # Создаем график с оптимальным размером для миниграфика
-        fig, ax = plt.subplots(figsize=(4, 3), facecolor=bg_color)  # Ширина уменьшена в 1.5 раза (6/1.5=4), высота без изменений
-        ax.set_facecolor(bg_color)
-        
-        # Рисуем линии границ (более заметные)
-        ax.axhline(y=70, color=upper_color, linewidth=2, linestyle='-', alpha=0.8)  # Верхняя светло-красная граница
-        ax.axhline(y=30, color=lower_color, linewidth=2, linestyle='-', alpha=0.8)  # Нижняя светло-зеленая граница
-        ax.axhline(y=50, color=center_color, linewidth=2, linestyle='--', alpha=0.7, dashes=(5, 5))  # Центральная светло-серая прерывистая
-        
-        # Рисуем линию RSI (белая, более толстая для видимости)
-        ax.plot(times, rsi_values, color=rsi_color, linewidth=2.5, alpha=0.95)
-        
-        # Настраиваем ось Y для RSI (0-100)
-        ax.set_ylim(0, 100)
-        
-        # Настраиваем внешний вид
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['bottom'].set_visible(False)
-        ax.spines['left'].set_visible(False)
-        
-        # Конвертируем в base64 с увеличенным DPI для четкости
-        buffer = io.BytesIO()
-        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight', 
-                   facecolor=bg_color, edgecolor='none', pad_inches=0.1)
-        buffer.seek(0)
-        chart_data = base64.b64encode(buffer.getvalue()).decode()
-        plt.close(fig)
+        with chart_render_lock:
+            # Создаем график RSI
+            import matplotlib
+            matplotlib.use('Agg')  # Используем неинтерактивный бэкенд
+            import matplotlib.pyplot as plt
+            import io
+            import base64
+            
+            # Настраиваем стиль в зависимости от темы
+            if theme == 'light':
+                plt.style.use('default')
+                bg_color = 'white'
+                rsi_color = '#000000'  # Черная линия RSI на светлом фоне
+                upper_color = '#ff9999'  # Светло-красная граница 70
+                lower_color = '#99ff99'  # Светло-зеленая граница 30
+                center_color = '#cccccc'  # Светло-серая линия 50
+            else:
+                plt.style.use('dark_background')
+                bg_color = '#2d2d2d'
+                rsi_color = '#ffffff'  # Белая линия RSI на темном фоне
+                upper_color = '#ff9999'  # Светло-красная граница 70
+                lower_color = '#99ff99'  # Светло-зеленая граница 30
+                center_color = '#cccccc'  # Светло-серая линия 50
+            
+            # Создаем график с оптимальным размером для миниграфика
+            fig, ax = plt.subplots(figsize=(4, 3), facecolor=bg_color)
+            ax.set_facecolor(bg_color)
+            
+            # Рисуем линии границ (более заметные)
+            ax.axhline(y=70, color=upper_color, linewidth=2, linestyle='-', alpha=0.8)
+            ax.axhline(y=30, color=lower_color, linewidth=2, linestyle='-', alpha=0.8)
+            ax.axhline(y=50, color=center_color, linewidth=2, linestyle='--', alpha=0.7, dashes=(5, 5))
+            
+            # Рисуем линию RSI
+            ax.plot(times, rsi_values, color=rsi_color, linewidth=2.5, alpha=0.95)
+            
+            # Настраиваем ось Y для RSI (0-100)
+            ax.set_ylim(0, 100)
+            
+            # Настраиваем внешний вид
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            
+            # Конвертируем в base64
+            buffer = io.BytesIO()
+            fig.savefig(buffer, format='png', dpi=150, bbox_inches='tight',
+                        facecolor=bg_color, edgecolor='none', pad_inches=0.1)
+            buffer.seek(0)
+            chart_data = base64.b64encode(buffer.getvalue()).decode()
+            plt.close(fig)
         
         # Получаем текущее значение RSI из ответа API (уже рассчитано в bots.py)
         current_rsi = rsi_response.get('current_rsi')
