@@ -1405,8 +1405,8 @@ def get_symbol_chart(symbol):
             lower_color = '#99ff99'  # Светло-зеленая граница 30
             center_color = '#cccccc'  # Светло-серая линия 50
         
-        # Создаем график с увеличенным размером для лучшей видимости
-        fig, ax = plt.subplots(figsize=(12, 8), facecolor=bg_color)  # Увеличен размер: ширина 12, высота 8
+        # Создаем график с оптимальным размером для миниграфика
+        fig, ax = plt.subplots(figsize=(6, 3), facecolor=bg_color)  # Оптимальный размер для миниграфика
         ax.set_facecolor(bg_color)
         
         # Рисуем линии границ (более заметные)
