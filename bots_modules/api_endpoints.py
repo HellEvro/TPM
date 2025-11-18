@@ -824,6 +824,8 @@ def create_bot_endpoint():
                         if symbol in file_cache:
                             cached_data = file_cache[symbol]
                             candles = cached_data.get('candles', [])
+                except json.JSONDecodeError as json_error:
+                    logger.warning(f"⚠️ Файл кэша поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}) для {symbol}")
                 except Exception as e:
                     logger.debug(f"Не удалось прочитать кэш из файла для {symbol}: {e}")
             
@@ -1881,11 +1883,14 @@ def get_rsi_history_for_chart(symbol):
                 project_root = Path(__file__).parent.parent
                 candles_cache_file = project_root / 'data' / 'candles_cache.json'
                 if candles_cache_file.exists():
+                    import json
                     with open(candles_cache_file, 'r', encoding='utf-8') as f:
                         file_cache = json.load(f)
                     if symbol in file_cache:
                         cached_data = file_cache[symbol]
                         candles = cached_data.get('candles', [])
+            except json.JSONDecodeError as json_error:
+                logger.warning(f"⚠️ Файл кэша поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}) для {symbol}")
             except Exception as e:
                 logger.debug(f"Не удалось прочитать кэш из файла для {symbol}: {e}")
         
@@ -1950,11 +1955,14 @@ def get_candles_from_cache(symbol):
                 project_root = Path(__file__).parent.parent
                 candles_cache_file = project_root / 'data' / 'candles_cache.json'
                 if candles_cache_file.exists():
+                    import json
                     with open(candles_cache_file, 'r', encoding='utf-8') as f:
                         file_cache = json.load(f)
                     if symbol in file_cache:
                         cached_data = file_cache[symbol]
                         candles_6h = cached_data.get('candles', [])
+            except json.JSONDecodeError as json_error:
+                logger.warning(f"⚠️ Файл кэша поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}) для {symbol}")
             except Exception as e:
                 logger.debug(f"Не удалось прочитать кэш из файла для {symbol}: {e}")
         
