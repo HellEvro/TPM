@@ -661,7 +661,8 @@ class NewTradingBot:
                         # Вход против тренда или тренд неизвестен - выходим раньше
                         config_key = 'rsi_exit_long_against_trend'
                         threshold = bot_data.get(config_key) or auto_config.get(config_key, 60)
-                        logger.debug(f"[RSI_CHECK_{symbol}] 📉 LONG против тренда ({entry_trend}) → выход на RSI >= {threshold}")
+                        trend_display = entry_trend if entry_trend else 'неизвестен'
+                        logger.debug(f"[RSI_CHECK_{symbol}] 📉 LONG против тренда ({trend_display}) → выход на RSI >= {threshold}")
                     
                     condition_func = lambda r, t: r >= t  # RSI >= порог для LONG
                     condition_str = ">="
@@ -677,7 +678,8 @@ class NewTradingBot:
                         # Вход против тренда или тренд неизвестен - выходим раньше
                         config_key = 'rsi_exit_short_against_trend'
                         threshold = bot_data.get(config_key) or auto_config.get(config_key, 40)
-                        logger.debug(f"[RSI_CHECK_{symbol}] 📈 SHORT против тренда ({entry_trend}) → выход на RSI <= {threshold}")
+                        trend_display = entry_trend if entry_trend else 'неизвестен'
+                        logger.debug(f"[RSI_CHECK_{symbol}] 📈 SHORT против тренда ({trend_display}) → выход на RSI <= {threshold}")
                     
                     condition_func = lambda r, t: r <= t  # RSI <= порог для SHORT
                     condition_str = "<="
@@ -1803,6 +1805,22 @@ class NewTradingBot:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось открыть позицию {side}: {error_msg}")
             raise RuntimeError(error_msg)
 
+        # ✅ КРИТИЧНО: Получаем тренд на момент входа для правильного определения порога выхода
+        # Получаем тренд из сохраненного контекста или из глобальных данных RSI
+        entry_trend_value = None
+        ctx = getattr(self, '_last_entry_context', {}) or {}
+        entry_trend_value = ctx.get('trend')
+        
+        # Если контекст пустой, пытаемся получить из глобальных данных RSI
+        if entry_trend_value is None:
+            try:
+                from bots_modules.imports_and_globals import coins_rsi_data, rsi_data_lock
+                with rsi_data_lock:
+                    rsi_info = coins_rsi_data.get('coins', {}).get(self.symbol, {})
+                    entry_trend_value = rsi_info.get('trend6h') or rsi_info.get('trend')
+            except Exception as e:
+                logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось получить тренд из глобальных данных: {e}")
+        
         # Обновляем состояние текущего бота
         self.entry_price = result.get('entry_price')
         self.position_side = side
@@ -1810,6 +1828,7 @@ class NewTradingBot:
         self.position_size_coins = result.get('quantity')
         self.position_start_time = datetime.now()
         self.entry_timestamp = datetime.now().timestamp()
+        self.entry_trend = entry_trend_value  # ✅ Сохраняем тренд при входе
         target_status = BOT_STATUS['IN_POSITION_LONG'] if side == 'LONG' else BOT_STATUS['IN_POSITION_SHORT']
         self.update_status(target_status, entry_price=self.entry_price, position_side=side)
 
