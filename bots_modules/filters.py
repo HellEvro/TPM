@@ -788,15 +788,11 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     # - Стоп-лосс 15% (ограничивает убытки)
                     rsi_zone = 'BUY_ZONE'
                     signal = 'ENTER_LONG'  # ✅ Входим в лонг по сигналу RSI
-                    if individual_settings:
-                        logger.debug(f"{symbol}: ✅ Сигнал ENTER_LONG (RSI {rsi:.1f} <= индивидуальный порог {rsi_long_threshold})")
                 
                 elif rsi >= rsi_short_threshold:  # RSI ≥ порог SHORT (индивидуальный или глобальный)
                     # ✅ ЧИСТЫЙ СИГНАЛ RSI: Входим сразу, без проверки тренда
                     rsi_zone = 'SELL_ZONE'
                     signal = 'ENTER_SHORT'  # ✅ Входим в шорт по сигналу RSI
-                    if individual_settings:
-                        logger.debug(f"{symbol}: ✅ Сигнал ENTER_SHORT (RSI {rsi:.1f} >= индивидуальный порог {rsi_short_threshold})")
                 else:
                     # RSI в нейтральной зоне
                     pass
@@ -1648,7 +1644,6 @@ def get_effective_signal(coin):
         return 'WAIT'
     
     # Все проверки пройдены
-    logger.debug(f"{symbol}: ✅ {signal} разрешен (RSI={rsi:.1f}, Trend={trend})")
     return signal
 
 def process_auto_bot_signals(exchange_obj=None):
@@ -1866,7 +1861,6 @@ def check_new_autobot_filters(symbol, signal, coin_data):
         else:
             logger.info(f" {symbol}: ✅ ExitScam фильтр пройден")
         
-        logger.debug(f" {symbol}: ✅ Все дубль-проверки пройдены")
         return True
         
     except Exception as e:
