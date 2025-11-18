@@ -290,15 +290,41 @@ def positions_monitor_worker():
     # Время последней проверки закрытия позиций по RSI
     last_rsi_close_check = time.time() - SystemConfig.UI_REFRESH_INTERVAL  # Сразу при первом запуске
     
+    # Время начала ожидания инициализации биржи
+    exchange_init_wait_start = time.time()
+    exchange_init_warning_shown = False
+    
     while not shutdown_flag.is_set():
         try:
             from bots_modules.imports_and_globals import get_exchange
             
             exchange_obj = get_exchange()
             if not exchange_obj:
-                logger.warning(" ⚠️ Exchange не инициализирован")
+                # Показываем предупреждение только если:
+                # 1. Система еще не инициализирована (normal wait) - не показываем
+                # 2. Система уже инициализирована, но биржа не инициализирована (error) - показываем
+                # 3. Прошло больше 30 секунд ожидания (timeout) - показываем
+                wait_time = time.time() - exchange_init_wait_start
+                
+                if system_initialized:
+                    # Система инициализирована, но биржа не инициализирована - это проблема
+                    if not exchange_init_warning_shown:
+                        logger.warning(" ⚠️ Exchange не инициализирован (система уже запущена)")
+                        exchange_init_warning_shown = True
+                elif wait_time > 30:
+                    # Прошло больше 30 секунд - показываем предупреждение о задержке
+                    if not exchange_init_warning_shown:
+                        logger.warning(f" ⚠️ Exchange все еще не инициализирован (ожидание: {int(wait_time)}с)")
+                        exchange_init_warning_shown = True
+                
                 time.sleep(5)
                 continue
+            
+            # Биржа инициализирована - сбрасываем флаги
+            if exchange_init_warning_shown:
+                logger.info(" ✅ Exchange инициализирован, мониторинг позиций возобновлен")
+                exchange_init_warning_shown = False
+            exchange_init_wait_start = time.time()  # Сбрасываем таймер
             
             # Загружаем позиции с биржи
             try:
