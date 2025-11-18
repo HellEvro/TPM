@@ -544,6 +544,7 @@ class TradingBot:
     
     def _enter_position(self, side: str) -> Dict:
         """Входит в позицию"""
+        self.logger.info(f" {self.symbol}: 🎯 _enter_position вызван для {side}")
         try:
             # КРИТИЧЕСКАЯ ПРОВЕРКА: не открываем новую позицию, если уже есть открытая
             if self.position is not None:

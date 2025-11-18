@@ -1788,7 +1788,15 @@ class NewTradingBot:
         bridge_config = self._build_trading_bot_bridge_config()
 
         trading_bot = TradingBot(self.symbol, self.exchange, bridge_config)
+        
+        # ✅ Логируем перед входом в позицию для диагностики
+        logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Вызываем _enter_position({side}) для входа в позицию")
+        
         result = trading_bot._enter_position(side)
+        
+        # ✅ Логируем результат
+        if result:
+            logger.info(f"[NEW_BOT_{self.symbol}] 📊 Результат входа: success={result.get('success')}, action={result.get('action')}, error={result.get('error')}")
 
         if not result.get('success'):
             error_msg = result.get('message') or result.get('error') or 'Unknown error'
