@@ -1391,11 +1391,15 @@ def get_symbol_chart(symbol):
         
         # Берем последние 56 значений RSI
         rsi_values = rsi_history[-56:] if len(rsi_history) > 56 else rsi_history
+        num_rsi_values = len(rsi_values)
         
         # Подготавливаем временные метки (берем только те, для которых есть RSI)
         # RSI начинается с индекса period (14), поэтому берем свечи с 14-го индекса
+        # Берем ровно столько временных меток, сколько есть значений RSI
         times = []
-        for i in range(14, len(candles)):
+        start_idx = len(candles) - num_rsi_values  # Начинаем с индекса, чтобы получить ровно num_rsi_values меток
+        
+        for i in range(start_idx, len(candles)):
             timestamp = candles[i].get('time') or candles[i].get('timestamp')
             if timestamp:
                 if isinstance(timestamp, (int, float)):
@@ -1406,27 +1410,32 @@ def get_symbol_chart(symbol):
                 else:
                     times.append(datetime.fromtimestamp(int(timestamp) / 1000))
         
-        # Если временных меток меньше чем значений RSI, создаем их последовательно
-        if len(times) < len(rsi_values):
-            last_timestamp = candles[-1].get('time') or candles[-1].get('timestamp')
-            if isinstance(last_timestamp, (int, float)):
-                if last_timestamp < 1e10:
-                    last_timestamp = int(last_timestamp * 1000)
-                else:
-                    last_timestamp = int(last_timestamp)
+        # Если временных меток все еще не хватает, создаем их последовательно
+        if len(times) < num_rsi_values:
+            # Берем последнюю временную метку или создаем новую
+            if times:
+                last_time = times[-1]
+                last_timestamp = int(last_time.timestamp() * 1000)
             else:
-                last_timestamp = int(time.time() * 1000)
+                last_timestamp = candles[-1].get('time') or candles[-1].get('timestamp')
+                if isinstance(last_timestamp, (int, float)):
+                    if last_timestamp < 1e10:
+                        last_timestamp = int(last_timestamp * 1000)
+                    else:
+                        last_timestamp = int(last_timestamp)
+                else:
+                    last_timestamp = int(time.time() * 1000)
             
             # Создаем временные метки с шагом 6 часов (21600000 мс)
             times = []
-            for i in range(len(rsi_values)):
-                ts = last_timestamp - (len(rsi_values) - 1 - i) * 21600000
+            for i in range(num_rsi_values):
+                ts = last_timestamp - (num_rsi_values - 1 - i) * 21600000
                 times.append(datetime.fromtimestamp(ts / 1000))
         
-        # Берем только последние 56 значений
-        if len(rsi_values) > 56:
-            rsi_values = rsi_values[-56:]
-            times = times[-56:]
+        # Убеждаемся, что длины совпадают (берем минимальную длину)
+        min_len = min(len(times), len(rsi_values))
+        times = times[-min_len:]
+        rsi_values = rsi_values[-min_len:]
             
         # Создаем график RSI
         import matplotlib
