@@ -1176,6 +1176,17 @@ class AITrainer:
             force_use_calculated_pnl = False
             original_pnl_values = []  # Собираем исходные PnL для анализа
             
+            # Инициализируем диагностику расчета PnL
+            self._pnl_calculation_debug = {
+                'negative_roi_count': 0,
+                'positive_roi_count': 0,
+                'zero_roi_count': 0,
+                'with_position_size': 0,
+                'without_position_size': 0,
+                'negative_calculated_pnl': 0,
+                'positive_calculated_pnl': 0
+            }
+            
             # Импортируем функцию расчета RSI
             try:
                 from bot_engine.indicators import TechnicalIndicators
@@ -1233,7 +1244,26 @@ class AITrainer:
                             calculated_pnl = roi_percent * position_size
                         else:
                             # Если нет размера позиции, используем ROI как относительный PnL
+                            # ВАЖНО: roi_percent может быть отрицательным для убыточных сделок!
                             calculated_pnl = roi_percent * 100  # В процентах
+                        
+                        # ДИАГНОСТИКА: Сохраняем информацию о расчете для анализа
+                        if roi_percent < 0:
+                            self._pnl_calculation_debug['negative_roi_count'] += 1
+                        elif roi_percent > 0:
+                            self._pnl_calculation_debug['positive_roi_count'] += 1
+                        else:
+                            self._pnl_calculation_debug['zero_roi_count'] += 1
+                        
+                        if position_size and position_size > 0:
+                            self._pnl_calculation_debug['with_position_size'] += 1
+                        else:
+                            self._pnl_calculation_debug['without_position_size'] += 1
+                        
+                        if calculated_pnl < 0:
+                            self._pnl_calculation_debug['negative_calculated_pnl'] += 1
+                        elif calculated_pnl > 0:
+                            self._pnl_calculation_debug['positive_calculated_pnl'] += 1
                     
                     # Сохраняем исходный PnL для анализа
                     if original_pnl != 0 and original_pnl is not None:
@@ -1388,6 +1418,35 @@ class AITrainer:
                     logger.debug(f"⚠️ Ошибка обработки сделки {trade.get('symbol', 'unknown')}: {e}")
                     skipped_trades += 1
                     continue
+            
+            # ДИАГНОСТИКА РАСЧЕТА PnL: Выводим статистику по расчету
+            if hasattr(self, '_pnl_calculation_debug') and self._pnl_calculation_debug:
+                debug = self._pnl_calculation_debug
+                logger.info("=" * 80)
+                logger.info("🔍 ДИАГНОСТИКА РАСЧЕТА PnL ИЗ ЦЕН")
+                logger.info("=" * 80)
+                logger.info(f"   📊 ROI (процент изменения цены):")
+                logger.info(f"      ✅ Положительных ROI: {debug['positive_roi_count']}")
+                logger.info(f"      ❌ Отрицательных ROI: {debug['negative_roi_count']}")
+                logger.info(f"      ⚪ Нулевых ROI: {debug['zero_roi_count']}")
+                logger.info(f"   📊 Размер позиции:")
+                logger.info(f"      ✅ С размером позиции: {debug['with_position_size']}")
+                logger.info(f"      ⚠️ Без размера позиции: {debug['without_position_size']}")
+                logger.info(f"   📊 Рассчитанный PnL:")
+                logger.info(f"      ✅ Положительных: {debug['positive_calculated_pnl']}")
+                logger.info(f"      ❌ Отрицательных: {debug['negative_calculated_pnl']}")
+                
+                if debug['negative_roi_count'] > 0 and debug['negative_calculated_pnl'] == 0:
+                    logger.error("=" * 80)
+                    logger.error("❌ КРИТИЧЕСКАЯ ПРОБЛЕМА: Есть отрицательные ROI, но нет отрицательных PnL!")
+                    logger.error("=" * 80)
+                    logger.error("   ⚠️ Это означает, что расчет PnL неправильный!")
+                    logger.error("   ⚠️ Возможно, position_size всегда положительный или расчет неверный")
+                    logger.error("=" * 80)
+                elif debug['negative_roi_count'] == 0:
+                    logger.warning("   ⚠️ ВНИМАНИЕ: Нет отрицательных ROI - все сделки были прибыльными по ценам!")
+                    logger.warning("   ⚠️ Это может означать, что в данных только успешные сделки")
+                logger.info("=" * 80)
             
             # Диагностика исходных PnL значений
             if len(original_pnl_values) > 10:  # Минимум 10 сделок для анализа

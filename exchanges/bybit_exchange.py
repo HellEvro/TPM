@@ -1741,7 +1741,8 @@ class BybitExchange(BaseExchange):
 
     @with_timeout(15)  # 15 секунд таймаут для размещения ордера
     def place_order(self, symbol, side, quantity, order_type='market', price=None,
-                    take_profit=None, stop_loss=None, max_loss_percent=None, quantity_is_usdt=True):
+                    take_profit=None, stop_loss=None, max_loss_percent=None, quantity_is_usdt=True,
+                    skip_min_notional_enforcement=False):
         """Размещение ордера для бота
         
         Args:
@@ -1753,6 +1754,8 @@ class BybitExchange(BaseExchange):
             take_profit (float, optional): Цена Take Profit
             stop_loss (float, optional): Цена Stop Loss
             max_loss_percent (float, optional): Максимальный убыток в % (если не указана цена стоп-лосса)
+            skip_min_notional_enforcement (bool): Если True, не принудительно увеличивать до minNotionalValue
+                                                  (используется для лимитных ордеров из набора позиций)
             
         Returns:
             dict: Результат размещения ордера
@@ -1887,13 +1890,20 @@ class BybitExchange(BaseExchange):
                     logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: Меньше minOrderQty={min_order_qty}, увеличили до {rounded_coins} монет")
                 
                 # ✅ ШАГ 4: Проверяем minNotionalValue (по номинальной стоимости!)
+                # ⚠️ КРИТИЧНО: Для лимитных ордеров из набора позиций НЕ принуждаем к minNotionalValue
+                # Пользователь сам контролирует размер каждого ордера
                 nominal_usdt = rounded_coins * current_price
                 min_usdt_from_notional = min_notional_value if min_notional_value else 5.0
-                if nominal_usdt < min_usdt_from_notional:
+                
+                if not skip_min_notional_enforcement and nominal_usdt < min_usdt_from_notional:
                     # Если получилось меньше minNotional - увеличиваем монеты
+                    # НО только если не указан флаг skip_min_notional_enforcement
                     min_coins_for_notional = math.ceil(min_usdt_from_notional / current_price / qty_step) * qty_step
                     rounded_coins = min_coins_for_notional
                     logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: Меньше minNotionalValue={min_usdt_from_notional}, увеличили до {rounded_coins} монет")
+                elif skip_min_notional_enforcement and nominal_usdt < min_usdt_from_notional:
+                    # Предупреждаем, но не увеличиваем принудительно
+                    logger.debug(f"[BYBIT_BOT] 🔍 {symbol}: Запрошенная сумма {nominal_usdt:.2f} USDT < minNotionalValue={min_usdt_from_notional}, но пропускаем принудительное увеличение (лимитный ордер из набора)")
                 
                 qty_in_coins = rounded_coins
                 logger.debug(f"[BYBIT_BOT] 💰 {symbol}: ФИНАЛЬНО: {qty_in_coins} монет @ {current_price:.8f} (кратно {qty_step})")
