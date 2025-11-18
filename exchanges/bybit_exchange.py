@@ -347,6 +347,9 @@ class BybitExchange(BaseExchange):
             end_time = int(time.time() * 1000)
             
             # Определяем диапазон дат в зависимости от периода
+            # Максимальный период для Bybit API - 2 года (730 дней)
+            MAX_PERIOD_MS = 730 * 24 * 60 * 60 * 1000
+            
             if period == 'custom' and start_date and end_date:
                 # Парсим даты для custom периода
                 try:
@@ -369,10 +372,23 @@ class BybitExchange(BaseExchange):
                             period_end = int(end_date)
                     else:
                         period_end = int(end_date)
+                    
+                    # Проверяем, что период не превышает 2 года
+                    if period_end - period_start > MAX_PERIOD_MS:
+                        logger.warning(f"Custom period exceeds 2 years limit. Limiting to last 2 years from end_date")
+                        period_start = period_end - MAX_PERIOD_MS
+                    
+                    # Проверяем, что начальная дата не старше 2 лет от текущего времени
+                    if end_time - period_start > MAX_PERIOD_MS:
+                        logger.warning(f"Start date is older than 2 years. Limiting to last 2 years from now")
+                        period_start = end_time - MAX_PERIOD_MS
+                        if period_end > end_time:
+                            period_end = end_time
+                            
                 except Exception as e:
                     logger.error(f"Error parsing custom dates: {e}")
-                    # Используем период "всё время" при ошибке парсинга
-                    period_start = end_time - (730 * 24 * 60 * 60 * 1000)
+                    # Используем период 1.5 года при ошибке парсинга
+                    period_start = end_time - (547 * 24 * 60 * 60 * 1000)
                     period_end = end_time
             elif period == 'day':
                 period_start = end_time - (24 * 60 * 60 * 1000)
@@ -390,8 +406,9 @@ class BybitExchange(BaseExchange):
                 period_start = end_time - (365 * 24 * 60 * 60 * 1000)
                 period_end = end_time
             else:  # period == 'all'
-                # Для 'all' получаем данные за последние 2 года (максимум)
-                period_start = end_time - (730 * 24 * 60 * 60 * 1000)
+                # Для 'all' получаем данные за последние 1.5 года (максимум для Bybit API - 2 года)
+                # Используем 1.5 года (547 дней) чтобы быть в безопасности
+                period_start = end_time - (547 * 24 * 60 * 60 * 1000)
                 period_end = end_time
             
             # Разбиваем запрос на периоды по 7 дней для избежания лимитов API
@@ -416,8 +433,19 @@ class BybitExchange(BaseExchange):
                             
                             response = self.client.get_closed_pnl(**params)
                             
-                            if not response or response.get('retCode') != 0:
+                            if not response:
                                 break
+                            
+                            # Обрабатываем ошибку API о лимите в 2 года
+                            if response.get('retCode') != 0:
+                                ret_msg = response.get('retMsg', '')
+                                # Если ошибка о лимите в 2 года, пропускаем этот период
+                                if '2 years' in ret_msg or 'ErrCode: 10001' in ret_msg:
+                                    logger.warning(f"Bybit API: Cannot query data older than 2 years. Skipping period {current_start}-{current_end}")
+                                    break
+                                else:
+                                    # Для других ошибок также прерываем
+                                    break
                             
                             positions = response['result'].get('list', [])
                             if not positions:
@@ -464,8 +492,19 @@ class BybitExchange(BaseExchange):
                         
                         response = self.client.get_closed_pnl(**params)
                         
-                        if not response or response.get('retCode') != 0:
+                        if not response:
                             break
+                        
+                        # Обрабатываем ошибку API о лимите в 2 года
+                        if response.get('retCode') != 0:
+                            ret_msg = response.get('retMsg', '')
+                            # Если ошибка о лимите в 2 года, пропускаем этот период
+                            if '2 years' in ret_msg or 'ErrCode: 10001' in ret_msg:
+                                logger.warning(f"Bybit API: Cannot query data older than 2 years. Period {period_start}-{period_end} is too old")
+                                break
+                            else:
+                                # Для других ошибок также прерываем
+                                break
                         
                         positions = response['result'].get('list', [])
                         if not positions:
