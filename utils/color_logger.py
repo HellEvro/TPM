@@ -48,6 +48,9 @@ class LogLevelFilter(logging.Filter):
         'pandas.core',
         'flask_cors',
         'flask_cors.core',
+        'werkzeug',
+        'flask',
+        'flask.app',
     }
     
     def __init__(self, level_settings=None):
@@ -153,18 +156,41 @@ class LogLevelFilter(logging.Filter):
         # Скрываем неформатированные сообщения из внешних библиотек (urllib3, pybit, flask-cors)
         # Это проблема библиотек, а не нашего кода - они используют старый стиль форматирования
         try:
-            message = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
-            if isinstance(message, str):
-                # Скрываем типичные неформатированные сообщения из urllib3/pybit/flask-cors
-                # Проверяем наличие неформатированных плейсхолдеров
+            # КРИТИЧНО: Проверяем как отформатированное сообщение, так и исходное
+            # Некоторые библиотеки передают неформатированные строки в record.msg
+            message = None
+            if hasattr(record, 'msg') and isinstance(record.msg, str):
+                message = record.msg
+            if not message or '%s' not in message:
+                # Если в исходном сообщении нет %s, проверяем отформатированное
+                try:
+                    message = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
+                except:
+                    message = str(record.msg) if hasattr(record, 'msg') else ''
+            
+            if isinstance(message, str) and message:
+                # Агрессивная проверка: скрываем ВСЕ сообщения с множественными неформатированными %s
+                # Это типичная проблема библиотек, которые логируют до форматирования
+                import re
+                
+                # Подсчитываем количество неформатированных %s (не %d, %f и т.д.)
+                unformatted_count = len(re.findall(r'%s(?!\w)', message))
+                
+                # Скрываем если:
+                # 1. Есть типичные паттерны неформатированных сообщений
+                # 2. Или 3+ неформатированных %s (явно неформатированное сообщение)
+                # 3. Или сообщение от внешних библиотек с 2+ неформатированными %s
+                # 4. Или сообщение содержит паттерн "%s %s %s" (типичный для urllib3)
                 has_unformatted = (
                     '%s://%s:%s' in message or 
+                    '"%s %s %s"' in message or  # urllib3 паттерн: "%s %s %s"
                     '%s %s %s' in message or
                     'Starting new HTTPS connection' in message or 
                     'Starting new HTTP connection' in message or
                     'Creating converter from' in message or
                     ('Configuring CORS' in message and '%s' in message) or
-                    (message.count('%s') >= 3 and logger_name.startswith(('urllib3', 'pybit', 'flask_cors', 'requests')))
+                    unformatted_count >= 3 or  # Любое сообщение с 3+ неформатированными %s
+                    (unformatted_count >= 2 and logger_name.startswith(('urllib3', 'pybit', 'flask_cors', 'requests', 'werkzeug', 'flask')))
                 )
                 if has_unformatted:
                     # Это неформатированное сообщение из внешней библиотеки - скрываем его
@@ -584,6 +610,9 @@ def setup_color_logging(console_log_levels=None):
         'pandas.core.dtypes.cast',
         'flask_cors',
         'flask_cors.core',
+        'werkzeug',
+        'flask',
+        'flask.app',
     ]
     
     # Определяем минимальный разрешенный уровень

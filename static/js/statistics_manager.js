@@ -2,6 +2,13 @@ class StatisticsManager {
     constructor() {
         Logger.info('STATS', 'Initializing StatisticsManager');
         
+        // Получаем stateManager (через window для надежности)
+        const stateManager = window.stateManager;
+        if (!stateManager) {
+            Logger.error('STATS', 'StateManager not found! Make sure state_manager.js is loaded before statistics_manager.js');
+            throw new Error('StateManager is not initialized. Check that state_manager.js is included in index.html');
+        }
+        
         // Подписываемся на изменения состояния
         this.unsubscribers = [
             stateManager.subscribe('app.theme', this.handleThemeChange.bind(this)),
@@ -20,6 +27,7 @@ class StatisticsManager {
         this.isFirstUpdate = true;
         this.currentSymbol = null;
         this.rsiUpdateInterval = null;
+        this.stateManager = stateManager; // Сохраняем ссылку для использования в методах
 
         // Сохраняем начальное состояние
         stateManager.setState('statistics.chartData', this.chartData);
@@ -54,7 +62,7 @@ class StatisticsManager {
     async loadRSIData() {
         try {
             // Получаем первую позицию для отображения RSI
-            const positionsData = stateManager.getState('positions.data');
+            const positionsData = this.stateManager.getState('positions.data');
             let symbol = 'BTC'; // По умолчанию используем BTC
             
             if (positionsData) {
@@ -94,19 +102,19 @@ class StatisticsManager {
     updateStats(stats) {
         try {
             Logger.debug('STATS', 'Updating statistics:', stats);
-            stateManager.setState('statistics.isUpdating', true);
+            this.stateManager.setState('statistics.isUpdating', true);
 
             // Обновляем значения статистики
             this.updateStatValues(stats);
 
-            stateManager.setState('statistics.lastUpdate', new Date().toISOString());
-            stateManager.setState('statistics.data', stats);
+            this.stateManager.setState('statistics.lastUpdate', new Date().toISOString());
+            this.stateManager.setState('statistics.data', stats);
 
         } catch (error) {
             Logger.error('STATS', 'Error updating statistics:', error);
-            stateManager.setState('statistics.error', error.message);
+            this.stateManager.setState('statistics.error', error.message);
         } finally {
-            stateManager.setState('statistics.isUpdating', false);
+            this.stateManager.setState('statistics.isUpdating', false);
         }
     }
 
@@ -180,9 +188,9 @@ class StatisticsManager {
                 this.chart.data.datasets[3].data = new Array(numPoints).fill(50);
             }
             
-            this.updateChartTheme(stateManager.getState('app.theme'));
+            this.updateChartTheme(this.stateManager.getState('app.theme'));
 
-            stateManager.setState('statistics.chartData', this.chartData);
+            this.stateManager.setState('statistics.chartData', this.chartData);
 
             requestAnimationFrame(() => this.chart.update());
         } catch (error) {
@@ -238,7 +246,9 @@ class StatisticsManager {
         
         // Очищаем данные
         this.chartData = { labels: [], values: [] };
-        stateManager.setState('statistics.chartData', this.chartData);
+        if (this.stateManager) {
+            this.stateManager.setState('statistics.chartData', this.chartData);
+        }
     }
 
     destroyChart() {
@@ -268,7 +278,7 @@ class StatisticsManager {
                 return;
             }
 
-            const theme = stateManager.getState('app.theme') || 'dark';
+            const theme = this.stateManager.getState('app.theme') || 'dark';
             const isDark = theme !== 'light';
             const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
