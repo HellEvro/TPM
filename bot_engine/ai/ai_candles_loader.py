@@ -224,7 +224,6 @@ class AICandlesLoader:
                                         
                                         if not klines or len(klines) == 0:
                                             # Больше нет свечей - это реальный конец истории
-                                            logger.debug(f"   ✅ {symbol}: достигнут конец истории (биржа вернула 0 свечей)")
                                             break
                                         
                                         # Добавляем свечи (они уже отсортированы от новых к старым)
@@ -318,11 +317,13 @@ class AICandlesLoader:
                                 total_candles_count = len(all_candles)
                                 days_history = total_candles_count * 6 / 24  # Примерно дней истории для 6H свечей
                                 
-                                if incremental_mode and new_candles_count > 0:
-                                    logger.debug(f"📊 {symbol}: Обновлено! Добавлено {new_candles_count} новых свечей (всего {total_candles_count}, ~{days_history:.0f} дней истории)")
-                                elif incremental_mode:
-                                    logger.debug(f"📊 {symbol}: Данные актуальны ({total_candles_count} свечей, ~{days_history:.0f} дней истории)")
-                                else:
+                                # Убраны DEBUG логи - они дублировали INFO логи
+                                # if incremental_mode and new_candles_count > 0:
+                                #     logger.debug(f"📊 {symbol}: Обновлено! Добавлено {new_candles_count} новых свечей...")
+                                # elif incremental_mode:
+                                #     logger.debug(f"📊 {symbol}: Данные актуальны...")
+                                
+                                if not incremental_mode:
                                     logger.info(f"📊 {symbol}: Загружено ВСЕ доступные свечи: {total_candles_count} свечей за {request_count} запросов (~{days_history:.0f} дней истории)")
                                     logger.info(f"   💡 Загружали по {max_candles_per_request} свечей за запрос через пагинацию")
                                     logger.info(f"   ✅ Загружены ВСЕ доступные свечи для {symbol}")
