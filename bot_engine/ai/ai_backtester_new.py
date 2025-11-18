@@ -392,7 +392,14 @@ class AIBacktester:
                     
                     current_price = closes[i]
                     current_time = times[i]
-                    current_rsi = rsi_history[rsi_index]
+                    # Безопасное получение RSI с проверкой на None и нечисловые значения
+                    current_rsi_raw = rsi_history[rsi_index]
+                    try:
+                        current_rsi = float(current_rsi_raw) if current_rsi_raw is not None else 50.0
+                        if not isinstance(current_rsi, (int, float)) or current_rsi < 0 or current_rsi > 100:
+                            current_rsi = 50.0  # Значение по умолчанию если вне диапазона
+                    except (TypeError, ValueError):
+                        current_rsi = 50.0  # Значение по умолчанию при ошибке преобразования
                     trend_window = int(symbol_config.get('trend_analysis_period', 30) or 30)
                     trend = _determine_trend(closes, i, trend_window)
                     
@@ -412,17 +419,29 @@ class AIBacktester:
                         if position:
                             if position['direction'] == 'LONG':
                                 if position['entry_trend'] == 'UP':
-                                    rsi_exit = symbol_config.get('rsi_exit_long_with_trend', base_config.get('rsi_exit_long_with_trend', 65))
+                                    rsi_exit_raw = symbol_config.get('rsi_exit_long_with_trend', base_config.get('rsi_exit_long_with_trend', 65))
                                 else:
-                                    rsi_exit = symbol_config.get('rsi_exit_long_against_trend', base_config.get('rsi_exit_long_against_trend', 60))
+                                    rsi_exit_raw = symbol_config.get('rsi_exit_long_against_trend', base_config.get('rsi_exit_long_against_trend', 60))
+                                try:
+                                    rsi_exit = float(rsi_exit_raw) if rsi_exit_raw is not None else 65.0
+                                    if not isinstance(rsi_exit, (int, float)) or rsi_exit < 0 or rsi_exit > 100:
+                                        rsi_exit = 65.0
+                                except (TypeError, ValueError):
+                                    rsi_exit = 65.0
                                 if current_rsi >= rsi_exit:
                                     position = close_position(position, current_price, current_time, 'RSI_EXIT')
                                     continue
                             else:
                                 if position['entry_trend'] == 'DOWN':
-                                    rsi_exit = symbol_config.get('rsi_exit_short_with_trend', base_config.get('rsi_exit_short_with_trend', 35))
+                                    rsi_exit_raw = symbol_config.get('rsi_exit_short_with_trend', base_config.get('rsi_exit_short_with_trend', 35))
                                 else:
-                                    rsi_exit = symbol_config.get('rsi_exit_short_against_trend', base_config.get('rsi_exit_short_against_trend', 40))
+                                    rsi_exit_raw = symbol_config.get('rsi_exit_short_against_trend', base_config.get('rsi_exit_short_against_trend', 40))
+                                try:
+                                    rsi_exit = float(rsi_exit_raw) if rsi_exit_raw is not None else 35.0
+                                    if not isinstance(rsi_exit, (int, float)) or rsi_exit < 0 or rsi_exit > 100:
+                                        rsi_exit = 35.0
+                                except (TypeError, ValueError):
+                                    rsi_exit = 35.0
                                 if current_rsi <= rsi_exit:
                                     position = close_position(position, current_price, current_time, 'RSI_EXIT')
                                     continue
@@ -430,8 +449,21 @@ class AIBacktester:
                     if position:
                         continue
                     
-                    rsi_long_entry = strategy_params.get('rsi_long_entry', symbol_config.get('rsi_long_threshold', 29))
-                    rsi_short_entry = strategy_params.get('rsi_short_entry', symbol_config.get('rsi_short_threshold', 71))
+                    # Безопасное получение пороговых значений RSI с проверкой на None
+                    rsi_long_entry_raw = strategy_params.get('rsi_long_entry', symbol_config.get('rsi_long_threshold', 29))
+                    rsi_short_entry_raw = strategy_params.get('rsi_short_entry', symbol_config.get('rsi_short_threshold', 71))
+                    try:
+                        rsi_long_entry = float(rsi_long_entry_raw) if rsi_long_entry_raw is not None else 29.0
+                        if not isinstance(rsi_long_entry, (int, float)) or rsi_long_entry < 0 or rsi_long_entry > 100:
+                            rsi_long_entry = 29.0
+                    except (TypeError, ValueError):
+                        rsi_long_entry = 29.0
+                    try:
+                        rsi_short_entry = float(rsi_short_entry_raw) if rsi_short_entry_raw is not None else 71.0
+                        if not isinstance(rsi_short_entry, (int, float)) or rsi_short_entry < 0 or rsi_short_entry > 100:
+                            rsi_short_entry = 71.0
+                    except (TypeError, ValueError):
+                        rsi_short_entry = 71.0
                     
                     should_enter_long = current_rsi <= rsi_long_entry
                     should_enter_short = current_rsi >= rsi_short_entry
@@ -589,23 +621,50 @@ class AIBacktester:
             positions = []
             closed_trades = []
             
-            # Параметры стратегии
-            rsi_long_entry = strategy_params.get(
+            # Параметры стратегии (с проверкой на None)
+            rsi_long_entry_raw = strategy_params.get(
                 'rsi_long_entry',
                 base_config.get('rsi_long_threshold', 29)
             )
-            rsi_long_exit = strategy_params.get(
+            try:
+                rsi_long_entry = float(rsi_long_entry_raw) if rsi_long_entry_raw is not None else 29.0
+                if not isinstance(rsi_long_entry, (int, float)) or rsi_long_entry < 0 or rsi_long_entry > 100:
+                    rsi_long_entry = 29.0
+            except (TypeError, ValueError):
+                rsi_long_entry = 29.0
+            
+            rsi_long_exit_raw = strategy_params.get(
                 'rsi_long_exit',
                 base_config.get('rsi_exit_long_with_trend', 65)
             )
-            rsi_short_entry = strategy_params.get(
+            try:
+                rsi_long_exit = float(rsi_long_exit_raw) if rsi_long_exit_raw is not None else 65.0
+                if not isinstance(rsi_long_exit, (int, float)) or rsi_long_exit < 0 or rsi_long_exit > 100:
+                    rsi_long_exit = 65.0
+            except (TypeError, ValueError):
+                rsi_long_exit = 65.0
+            
+            rsi_short_entry_raw = strategy_params.get(
                 'rsi_short_entry',
                 base_config.get('rsi_short_threshold', 71)
             )
-            rsi_short_exit = strategy_params.get(
+            try:
+                rsi_short_entry = float(rsi_short_entry_raw) if rsi_short_entry_raw is not None else 71.0
+                if not isinstance(rsi_short_entry, (int, float)) or rsi_short_entry < 0 or rsi_short_entry > 100:
+                    rsi_short_entry = 71.0
+            except (TypeError, ValueError):
+                rsi_short_entry = 71.0
+            
+            rsi_short_exit_raw = strategy_params.get(
                 'rsi_short_exit',
                 base_config.get('rsi_exit_short_with_trend', 35)
             )
+            try:
+                rsi_short_exit = float(rsi_short_exit_raw) if rsi_short_exit_raw is not None else 35.0
+                if not isinstance(rsi_short_exit, (int, float)) or rsi_short_exit < 0 or rsi_short_exit > 100:
+                    rsi_short_exit = 35.0
+            except (TypeError, ValueError):
+                rsi_short_exit = 35.0
             stop_loss_pct = strategy_params.get(
                 'stop_loss_pct',
                 base_config.get('max_loss_percent', 2.0)
