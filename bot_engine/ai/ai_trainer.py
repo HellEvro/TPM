@@ -2327,6 +2327,41 @@ class AITrainer:
                     if symbol_idx <= 10:
                         logger.info(f"   🔍 {symbol}: проверка результатов симуляции... (сделок: {trades_for_symbol})")
                     
+                    # ВАЖНО: Сохраняем информацию о блокировках для обучения AI
+                    # AI должна учиться на том, какие параметры блокируются и почему
+                    if trades_for_symbol == 0 and (rsi_entered_long_zone > 0 or rsi_entered_short_zone > 0):
+                        # Есть попытки входа, но все заблокированы - это важная информация для обучения
+                        total_blocked = filters_blocked_long + filters_blocked_short
+                        if total_blocked > 0 and self.param_tracker:
+                            # Сохраняем информацию о блокировках в трекер
+                            # Это поможет AI в будущем избегать параметров, которые блокируются
+                            try:
+                                # Создаем "негативный" результат для обучения
+                                blocked_info = {
+                                    'symbol': symbol,
+                                    'rsi_params': coin_rsi_params,
+                                    'blocked_attempts': total_blocked,
+                                    'blocked_long': filters_blocked_long,
+                                    'blocked_short': filters_blocked_short,
+                                    'block_reasons': filter_block_reasons,
+                                    'timestamp': datetime.now().isoformat()
+                                }
+                                # Сохраняем в отдельный файл для анализа блокировок
+                                blocked_params_file = os.path.join(self.param_tracker.data_dir, 'blocked_params.json')
+                                blocked_params = []
+                                if os.path.exists(blocked_params_file):
+                                    with open(blocked_params_file, 'r', encoding='utf-8') as f:
+                                        blocked_params = json.load(f)
+                                blocked_params.append(blocked_info)
+                                # Оставляем только последние 1000 записей
+                                if len(blocked_params) > 1000:
+                                    blocked_params = blocked_params[-1000:]
+                                with open(blocked_params_file, 'w', encoding='utf-8') as f:
+                                    json.dump(blocked_params, f, indent=2, ensure_ascii=False)
+                                logger.debug(f"   📝 {symbol}: сохранена информация о {total_blocked} блокировках для обучения AI")
+                            except Exception as e:
+                                logger.debug(f"   ⚠️ {symbol}: ошибка сохранения информации о блокировках: {e}")
+                    
                     # Логируем результаты симуляции (DEBUG - техническая деталь)
                     if trades_for_symbol == 0:
                         logger.debug(f"   ⏭️ {symbol}: сделок не найдено")

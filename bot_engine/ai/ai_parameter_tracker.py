@@ -11,7 +11,7 @@ import os
 import json
 import hashlib
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
 from threading import RLock
 
@@ -349,24 +349,131 @@ class AIParameterTracker:
         
         return {}
     
+    def _load_blocked_params(self) -> List[Dict]:
+        """Загрузить информацию о заблокированных параметрах"""
+        blocked_params_file = os.path.join(self.data_dir, 'blocked_params.json')
+        try:
+            if os.path.exists(blocked_params_file):
+                with open(blocked_params_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка загрузки заблокированных параметров: {e}")
+        return []
+    
+    def _analyze_blocking_patterns(self, blocked_params: List[Dict]) -> Dict[str, Any]:
+        """
+        Анализирует паттерны блокировок для понимания, какие параметры чаще блокируются
+        
+        Args:
+            blocked_params: Список заблокированных параметров
+        
+        Returns:
+            Словарь с анализом паттернов блокировок
+        """
+        if not blocked_params:
+            return {}
+        
+        # Анализируем причины блокировок
+        reason_counts = {}
+        param_ranges = {
+            'oversold': {'min': 100, 'max': 0, 'values': []},
+            'overbought': {'min': 100, 'max': 0, 'values': []},
+        }
+        
+        for blocked in blocked_params:
+            # Подсчитываем причины
+            reasons = blocked.get('block_reasons', {})
+            for reason, count in reasons.items():
+                reason_counts[reason] = reason_counts.get(reason, 0) + count
+            
+            # Анализируем диапазоны параметров
+            rsi_params = blocked.get('rsi_params', {})
+            for key in ['oversold', 'overbought']:
+                if key in rsi_params:
+                    value = rsi_params[key]
+                    param_ranges[key]['values'].append(value)
+                    param_ranges[key]['min'] = min(param_ranges[key]['min'], value)
+                    param_ranges[key]['max'] = max(param_ranges[key]['max'], value)
+        
+        # Вычисляем средние значения
+        for key in param_ranges:
+            if param_ranges[key]['values']:
+                param_ranges[key]['avg'] = sum(param_ranges[key]['values']) / len(param_ranges[key]['values'])
+            else:
+                param_ranges[key]['avg'] = 0
+        
+        return {
+            'total_blocked': len(blocked_params),
+            'reason_counts': reason_counts,
+            'param_ranges': param_ranges,
+            'top_blocking_reasons': sorted(reason_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        }
+    
+    def _is_params_similar_to_blocked(self, rsi_params: Dict, blocked_params: List[Dict], 
+                                      similarity_threshold: int = 2) -> bool:
+        """
+        Проверяет, похожи ли параметры на заблокированные
+        
+        Args:
+            rsi_params: Параметры для проверки
+            blocked_params: Список заблокированных параметров
+            similarity_threshold: Порог схожести (разница в значениях)
+        
+        Returns:
+            True если параметры похожи на заблокированные
+        """
+        for blocked in blocked_params:
+            blocked_rsi = blocked.get('rsi_params', {})
+            if not blocked_rsi:
+                continue
+            
+            # Проверяем схожесть по каждому параметру
+            differences = []
+            for key in ['oversold', 'overbought', 'exit_long_with_trend', 
+                       'exit_long_against_trend', 'exit_short_with_trend', 'exit_short_against_trend']:
+                if key in rsi_params and key in blocked_rsi:
+                    diff = abs(rsi_params[key] - blocked_rsi[key])
+                    differences.append(diff)
+            
+            # Если все параметры очень похожи - считаем что это похожие параметры
+            if differences and max(differences) <= similarity_threshold:
+                return True
+        
+        return False
+    
     def get_unused_params_suggestion(self, base_params: Dict, 
-                                     variation_range: int = 3) -> Optional[Dict]:
+                                     variation_range: int = 3,
+                                     avoid_blocked: bool = True) -> Optional[Dict]:
         """
         Предложить неиспользованные параметры на основе базовых
         
         Пробует найти комбинацию параметров которая еще не использовалась
+        и (опционально) избегает параметров, похожих на заблокированные
         
         Args:
             base_params: Базовые параметры
             variation_range: Диапазон вариации
+            avoid_blocked: Избегать параметров, похожих на заблокированные
         
         Returns:
             Словарь с неиспользованными параметрами или None если не найдено
         """
         import random
         
-        # Пробуем найти неиспользованную комбинацию (до 100 попыток)
-        max_attempts = 100
+        # Загружаем заблокированные параметры если нужно их избегать
+        blocked_params = []
+        blocking_patterns = {}
+        if avoid_blocked:
+            blocked_params = self._load_blocked_params()
+            if blocked_params:
+                blocking_patterns = self._analyze_blocking_patterns(blocked_params)
+                logger.debug(f"📊 Учитываем {len(blocked_params)} записей о блокировках при генерации параметров")
+                if blocking_patterns.get('top_blocking_reasons'):
+                    top_reasons = ", ".join([f"{r}: {c}" for r, c in blocking_patterns['top_blocking_reasons']])
+                    logger.debug(f"   🔍 Топ причин блокировок: {top_reasons}")
+        
+        # Пробуем найти неиспользованную комбинацию (до 200 попыток, больше чем раньше)
+        max_attempts = 200
         for attempt in range(max_attempts):
             # Генерируем случайные параметры
             rsi_params = {
@@ -385,11 +492,18 @@ class AIParameterTracker:
             }
             
             # Проверяем, использовались ли эти параметры
-            if not self.is_params_used(rsi_params):
-                return rsi_params
+            if self.is_params_used(rsi_params):
+                continue
+            
+            # Проверяем, похожи ли на заблокированные (если нужно избегать)
+            if avoid_blocked and blocked_params:
+                if self._is_params_similar_to_blocked(rsi_params, blocked_params):
+                    continue  # Пропускаем похожие на заблокированные
+            
+            return rsi_params
         
-        # Если не нашли за 100 попыток - возвращаем None
-        logger.warning("⚠️ Не удалось найти неиспользованные параметры за 100 попыток")
+        # Если не нашли за max_attempts попыток - возвращаем None
+        logger.warning(f"⚠️ Не удалось найти неиспользованные параметры за {max_attempts} попыток")
         return None
     
     def reset_used_params(self, confirm: bool = False):
