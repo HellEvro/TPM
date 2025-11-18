@@ -9366,6 +9366,28 @@ class BotsManager {
             if (record.mse !== undefined) {
                 metrics.push(`MSE: <strong>${Number(record.mse).toFixed(4)}</strong>`);
             }
+            // Метрики ML модели параметров
+            if (record.r2_score !== undefined) {
+                metrics.push(`R²: <strong>${Number(record.r2_score).toFixed(3)}</strong>`);
+            }
+            if (record.avg_quality !== undefined) {
+                metrics.push(`Качество: <strong>${Number(record.avg_quality).toFixed(3)}</strong>`);
+            }
+            if (typeof record.blocked_samples === 'number') {
+                metrics.push(`Заблокировано: <strong>${record.blocked_samples}</strong>`);
+            }
+            if (typeof record.successful_samples === 'number') {
+                metrics.push(`Успешных: <strong>${record.successful_samples}</strong>`);
+            }
+            // Использование ML модели для генерации параметров
+            if (typeof record.ml_params_generated === 'number') {
+                metrics.push(`🤖 ML параметров: <strong>${record.ml_params_generated}</strong>`);
+            }
+            if (record.ml_model_available === true) {
+                metrics.push(`🤖 ML модель: <strong>активна</strong>`);
+            } else if (record.ml_model_available === false) {
+                metrics.push(`🤖 ML модель: <strong>недоступна</strong>`);
+            }
             if (duration) {
                 metrics.push(`Длительность: <strong>${this.formatDuration(duration)}</strong>`);
             }
@@ -9417,7 +9439,8 @@ class BotsManager {
         const labels = {
             'historical_data_training': '🗂️ Симуляция на истории',
             'history_trades_training': '📚 Обучение на истории сделок',
-            'real_trades_training': '🤖 Реальные сделки с PnL'
+            'real_trades_training': '🤖 Реальные сделки с PnL',
+            'ml_parameter_quality_training': '🤖 ML модель параметров'
         };
         return labels[normalized] || eventType;
     }
