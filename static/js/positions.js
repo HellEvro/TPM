@@ -10,6 +10,7 @@ class PositionsManager {
         this.initializeFilters();
         this.initializeSorting();
         this.chartCache = new Map();  // Кэш для миниграфиков
+        this.rsiCache = new Map();  // Кэш для значений RSI
         this.chartUpdateInterval = 5 * 60 * 1000;  // 5 минут
         this.sma200Cache = new Map();  // Кэш для SMA200
         this.sma200UpdateInterval = 7 * 60 * 1000;  // 7 минут
@@ -99,6 +100,7 @@ class PositionsManager {
                 // Если включили снижение нагрузки - очищаем кэши
                 if (this.reduceLoad) {
                     this.chartCache.clear();
+                    this.rsiCache.clear();
                     this.sma200Cache.clear();
                 }
                 if (this.lastData) {
@@ -233,10 +235,23 @@ class PositionsManager {
                         const cacheKey = `${symbol}_${this.currentTheme}`;
                         this.chartCache.set(cacheKey, chartData.chart);
                         
+                        // Сохраняем значение RSI если оно есть
+                        if (chartData.current_rsi !== undefined && chartData.current_rsi !== null) {
+                            this.rsiCache.set(symbol, chartData.current_rsi);
+                        }
+                        
                         document.querySelectorAll(`.mini-chart[data-symbol="${symbol}"]`)
                             .forEach(elem => {
                                 if (elem) {
                                     elem.src = `data:image/png;base64,${chartData.chart}`;
+                                }
+                            });
+                        
+                        // Обновляем отображение значения RSI
+                        document.querySelectorAll(`.rsi-value[data-symbol="${symbol}"]`)
+                            .forEach(elem => {
+                                if (elem && chartData.current_rsi !== undefined && chartData.current_rsi !== null) {
+                                    elem.textContent = chartData.current_rsi.toFixed(2);
                                 }
                             });
                         console.log(`Chart updated for ${symbol}`);
@@ -516,14 +531,21 @@ class PositionsManager {
                             ` : ''}
                         </div>
                         ${!this.reduceLoad ? `
-                        <img class="mini-chart" 
-                             data-symbol="${pos.symbol}" 
-                             src="${this.chartCache.has(cacheKey) ? 
-                                 `data:image/png;base64,${this.chartCache.get(cacheKey)}` : 
-                                 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'}"
-                             alt="Chart ${pos.symbol}"
-                             style="background-color: ${currentTheme === 'dark' ? '#2d2d2d' : '#ffffff'}"
-                        />
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <img class="mini-chart" 
+                                 data-symbol="${pos.symbol}" 
+                                 src="${this.chartCache.has(cacheKey) ? 
+                                     `data:image/png;base64,${this.chartCache.get(cacheKey)}` : 
+                                     'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'}"
+                                 alt="Chart ${pos.symbol}"
+                                 style="background-color: ${currentTheme === 'dark' ? '#2d2d2d' : '#ffffff'}"
+                            />
+                            <span class="rsi-value" 
+                                  data-symbol="${pos.symbol}"
+                                  style="font-size: 14px; font-weight: 600; color: ${currentTheme === 'dark' ? '#ffffff' : '#000000'}; min-width: 45px; text-align: right;">
+                                ${this.rsiCache.has(pos.symbol) ? this.rsiCache.get(pos.symbol).toFixed(2) : '-'}
+                            </span>
+                        </div>
                         ` : ''}
                     </div>
                     <div class="${pos.pnl > 1000 ? CSS_CLASSES.HIGH_PNL : ''}">
@@ -646,6 +668,7 @@ class PositionsManager {
             } else {  // Если включили режим снижения нагрузки
                 // Очищаем кэши
                 this.chartCache.clear();
+                this.rsiCache.clear();
                 this.sma200Cache.clear();
                 // Обновляем отображение
                 this.updatePositionsDisplay();

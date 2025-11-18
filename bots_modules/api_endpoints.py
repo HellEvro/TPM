@@ -1851,6 +1851,62 @@ def refresh_rsi_for_coin(symbol):
         logger.error(f" Ошибка обновления RSI для {symbol}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@bots_app.route('/api/bots/rsi-history/<symbol>', methods=['GET'])
+def get_rsi_history_for_chart(symbol):
+    """Получить историю RSI для графика из кэша (без запроса к бирже)"""
+    try:
+        from bots_modules.calculations import calculate_rsi_history
+        
+        # Проверяем кэш свечей
+        candles_cache = coins_rsi_data.get('candles_cache', {})
+        if symbol not in candles_cache:
+            return jsonify({
+                'success': False,
+                'error': f'Свечи для {symbol} не найдены в кэше'
+            }), 404
+        
+        cached_data = candles_cache[symbol]
+        candles = cached_data.get('candles')
+        
+        if not candles or len(candles) < 15:
+            return jsonify({
+                'success': False,
+                'error': f'Недостаточно свечей для расчета RSI (требуется минимум 15)'
+            }), 400
+        
+        # Берем последние 56 свечей для графика
+        candles = candles[-56:] if len(candles) >= 56 else candles
+        
+        # Извлекаем цены закрытия
+        closes = [float(candle['close']) for candle in candles]
+        
+        # Рассчитываем историю RSI
+        rsi_history = calculate_rsi_history(closes, period=14)
+        
+        if not rsi_history:
+            return jsonify({
+                'success': False,
+                'error': 'Не удалось рассчитать историю RSI'
+            }), 500
+        
+        # Берем последние 56 значений RSI
+        rsi_values = rsi_history[-56:] if len(rsi_history) > 56 else rsi_history
+        
+        # Получаем текущее значение RSI (последнее)
+        current_rsi = rsi_values[-1] if rsi_values else None
+        
+        return jsonify({
+            'success': True,
+            'rsi_history': rsi_values,
+            'current_rsi': round(current_rsi, 2) if current_rsi is not None else None,
+            'candles_count': len(candles),
+            'source': 'cache'  # Указываем, что данные из кэша
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения истории RSI для {symbol}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @bots_app.route('/api/bots/refresh-rsi-all', methods=['POST'])
 def refresh_rsi_for_all_coins():
     """Обновляет RSI данные для всех монет (применяет новую логику)"""
