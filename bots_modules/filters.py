@@ -695,6 +695,24 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                 candles = chart_response['data']['candles']
                 logger.info(f"✅ {symbol}: Свечи загружены с биржи ({len(candles)} свечей)")
                 data_source = 'api'
+                
+                # ✅ КРИТИЧНО: Сохраняем свечи в кэш после загрузки с биржи!
+                # Это предотвращает повторные запросы к бирже для тех же монет
+                try:
+                    if candles and len(candles) >= 15:
+                        # Сохраняем в том же формате, что и get_coin_candles_only
+                        candles_cache[symbol] = {
+                            'symbol': symbol,
+                            'candles': candles,
+                            'timeframe': '6h',
+                            'last_update': datetime.now().isoformat()
+                        }
+                        # Обновляем глобальный кэш
+                        coins_rsi_data['candles_cache'] = candles_cache
+                        logger.debug(f"💾 {symbol}: Свечи сохранены в кэш ({len(candles)} свечей)")
+                except Exception as cache_save_error:
+                    logger.warning(f"⚠️ {symbol}: Ошибка сохранения свечей в кэш: {cache_save_error}")
+        
         if not candles or len(candles) < 15:  # Базовая проверка для RSI(14)
             return None
         
