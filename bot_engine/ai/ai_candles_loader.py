@@ -85,7 +85,7 @@ class AICandlesLoader:
             True если успешно загружено
         """
         # Сокращенные логи
-        logger.debug("📊 Загрузка свечей для AI...")
+        logger.info("📊 Загрузка свечей для AI...")
         
         try:
             exchange = self.get_exchange()
@@ -403,7 +403,7 @@ class AICandlesLoader:
                     return None
             
             # Загружаем параллельно (сокращенные логи)
-            logger.debug(f"🚀 Параллельная загрузка: {len(pairs)} пар, {max_workers} потоков")
+            logger.info(f"🚀 Параллельная загрузка: {len(pairs)} пар, {max_workers} потоков")
             
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                 futures = {executor.submit(load_symbol_candles, symbol): symbol for symbol in pairs}
