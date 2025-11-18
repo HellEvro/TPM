@@ -1668,26 +1668,30 @@ class AITrainer:
             
             # ВАЖНО: Загружаем список зрелых монет из bots.py (если доступен)
             # Это экономит ресурсы - обучаем только зрелые монеты
-            mature_coins_set = set()
+            # Используем helper модуль для единообразного доступа к данным bots.py
             try:
-                # Пробуем загрузить из файла напрямую
-                mature_coins_file = os.path.join('data', 'mature_coins.json')
-                if os.path.exists(mature_coins_file):
-                    with open(mature_coins_file, 'r', encoding='utf-8') as f:
-                        mature_coins_data = json.load(f)
-                        mature_coins_set = set(mature_coins_data.keys())
-                        logger.info(f"✅ Загружен список зрелых монет из bots.py: {len(mature_coins_set)} монет")
+                from bot_engine.ai.bots_data_helper import get_mature_coins
+                mature_coins_set = get_mature_coins()
+                if mature_coins_set:
+                    logger.info(f"✅ Загружен список зрелых монет из bots.py: {len(mature_coins_set)} монет")
                 else:
-                    # Пробуем импортировать из bots_modules если доступно
-                    try:
-                        from bots_modules.imports_and_globals import mature_coins_storage
-                        mature_coins_set = set(mature_coins_storage.keys())
-                        logger.info(f"✅ Загружен список зрелых монет из памяти: {len(mature_coins_set)} монет")
-                    except ImportError:
-                        logger.debug("   💡 Список зрелых монет недоступен - используем все монеты")
+                    logger.debug("   💡 Список зрелых монет недоступен - используем все монеты")
+            except ImportError:
+                # Fallback если helper недоступен
+                mature_coins_set = set()
+                try:
+                    mature_coins_file = os.path.join('data', 'mature_coins.json')
+                    if os.path.exists(mature_coins_file):
+                        with open(mature_coins_file, 'r', encoding='utf-8') as f:
+                            mature_coins_data = json.load(f)
+                            mature_coins_set = set(mature_coins_data.keys())
+                            logger.info(f"✅ Загружен список зрелых монет из файла: {len(mature_coins_set)} монет")
+                except Exception as e:
+                    logger.debug(f"   ⚠️ Не удалось загрузить список зрелых монет: {e}")
+                    logger.debug("   💡 Продолжаем обучение на всех монетах")
             except Exception as e:
-                logger.debug(f"   ⚠️ Не удалось загрузить список зрелых монет: {e}")
-                logger.debug("   💡 Продолжаем обучение на всех монетах")
+                logger.debug(f"   ⚠️ Ошибка загрузки списка зрелых монет: {e}")
+                mature_coins_set = set()
             
             # Фильтруем монеты: используем только зрелые (если список доступен)
             if mature_coins_set and base_enable_maturity_check:
@@ -2076,9 +2080,11 @@ class AITrainer:
                     
                     for i in range(simulation_start_idx, len(candles)):
                         # Логируем прогресс каждые 1000 свечей (DEBUG - техническая деталь)
-                        if candles_to_process > 1000 and (i - RSI_PERIOD) % progress_step == 0:
-                            progress_pct = ((i - RSI_PERIOD) / candles_to_process) * 100
-                            logger.debug(f"   📊 {symbol}: обработано {i - RSI_PERIOD:,}/{candles_to_process:,} свечей ({progress_pct:.1f}%)")
+                        # Учитываем что симуляция начинается не с RSI_PERIOD, а с simulation_start_idx
+                        processed_count = i - simulation_start_idx
+                        if candles_to_process > 1000 and processed_count % progress_step == 0:
+                            progress_pct = (processed_count / candles_to_process) * 100
+                            logger.debug(f"   📊 {symbol}: обработано {processed_count:,}/{candles_to_process:,} свечей ({progress_pct:.1f}%)")
                         try:
                             # RSI на текущей позиции
                             rsi_idx = i - RSI_PERIOD
