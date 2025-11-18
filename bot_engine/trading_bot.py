@@ -1163,7 +1163,7 @@ class TradingBot:
                         quantity=actual_quantity,  # ✅ Используем значение из массива
                         order_type='market',
                         quantity_is_usdt=True,
-                        skip_min_notional_enforcement=True  # ✅ Для лимитных ордеров из набора не принуждаем к minNotionalValue
+                        skip_min_notional_enforcement=True  # ✅ Для лимитных ордеров из набора - специальное предупреждение при увеличении до минимума
                     )
                     if order_result.get('success'):
                         order_id = order_result.get('order_id')
