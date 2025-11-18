@@ -629,6 +629,36 @@ class AITrainer:
                 t for t in trades
                 if t.get('status') == 'CLOSED' and t.get('pnl') is not None
             ]
+            
+            # КРИТИЧЕСКАЯ ДИАГНОСТИКА: Проверяем распределение PnL в исходных данных
+            if closed_trades:
+                pnl_values = [t.get('pnl', 0) for t in closed_trades if t.get('pnl') is not None]
+                if pnl_values:
+                    positive_pnl = sum(1 for pnl in pnl_values if pnl > 0)
+                    negative_pnl = sum(1 for pnl in pnl_values if pnl < 0)
+                    zero_pnl = sum(1 for pnl in pnl_values if pnl == 0)
+                    
+                    logger.info("=" * 80)
+                    logger.info("🔍 ДИАГНОСТИКА ИСХОДНЫХ ДАННЫХ (до обработки)")
+                    logger.info("=" * 80)
+                    logger.info(f"   📊 Распределение PnL в bot_history.json:")
+                    logger.info(f"      ✅ Прибыльных сделок (PnL > 0): {positive_pnl}")
+                    logger.info(f"      ❌ Убыточных сделок (PnL < 0): {negative_pnl}")
+                    logger.info(f"      ⚪ Нулевых сделок (PnL = 0): {zero_pnl}")
+                    
+                    if negative_pnl == 0 and zero_pnl == 0:
+                        logger.error("=" * 80)
+                        logger.error("❌ КРИТИЧЕСКАЯ ПРОБЛЕМА ОБНАРУЖЕНА!")
+                        logger.error("=" * 80)
+                        logger.error("   ⚠️ В bot_history.json ВСЕ сделки имеют положительный PnL!")
+                        logger.error("   ⚠️ Это означает, что либо:")
+                        logger.error("      1. Убыточные сделки не сохраняются в bot_history.json")
+                        logger.error("      2. PnL рассчитывается неправильно при сохранении")
+                        logger.error("      3. В системе действительно нет убыточных сделок (маловероятно)")
+                        logger.error("=" * 80)
+                        logger.error("   💡 РЕШЕНИЕ: Проверьте код сохранения сделок в bot_history.py")
+                        logger.error("   💡 Убедитесь, что убыточные сделки тоже сохраняются с отрицательным PnL")
+                        logger.error("=" * 80)
         else:
             logger.warning("⚠️ Сделки не найдены! Убедитесь что bots.py запущен и совершает сделки.")
             # 4. Фильтруем только закрытые сделки с PnL (пустой список)
