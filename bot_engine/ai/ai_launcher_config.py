@@ -131,3 +131,45 @@ class AILauncherConfig:
     TRAINING_LOOP_DELAY_SECONDS = 1      # Доп. пауза в training worker (если нужно)
     DATA_COLLECTION_INTERVAL_SECONDS = 60  # Уже используется, но можно перенастроить здесь
 
+
+class AITrainingStrategyConfig:
+    """
+    Параметры тренировочного режима AI.
+
+    Эти оверрайды применяются только в ai.py / симуляциях, чтобы не трогать боевые
+    настройки bots.py. По умолчанию почти все фильтры выключены, а AITrainer может
+    самостоятельно включать/выключать их в процессе поиска лучших стратегий.
+    """
+
+    ENABLED = True
+
+    # Значения, которыми перекрываем DEFAULT_AUTO_BOT_CONFIG при обучении
+    PARAM_OVERRIDES = {
+        # Фильтры
+        'trend_detection_enabled': False,
+        'avoid_down_trend': False,
+        'avoid_up_trend': False,
+        'exit_scam_enabled': False,
+        'enable_maturity_check': False,
+        'rsi_time_filter_enabled': False,
+        'enhanced_rsi_enabled': False,
+        'enhanced_rsi_require_volume_confirmation': False,
+        'enhanced_rsi_require_divergence_confirmation': False,
+        'enhanced_rsi_use_stoch_rsi': False,
+        'limit_orders_entry_enabled': False,
+        # Риск/позиции
+        'max_position_hours': 0,
+        'break_even_protection': False,
+        'ai_optimal_entry_enabled': False,
+    }
+
+    # Какие флаги можно мутировать/переключать в процессе обучения
+    MUTABLE_FILTERS = {
+        'trend_detection_enabled': True,
+        'avoid_down_trend': True,
+        'avoid_up_trend': True,
+        'exit_scam_enabled': True,
+        'enable_maturity_check': True,
+        'rsi_time_filter_enabled': True,
+        'enhanced_rsi_enabled': True,
+    }
