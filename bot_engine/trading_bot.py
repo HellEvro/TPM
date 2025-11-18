@@ -649,6 +649,9 @@ class TradingBot:
                     limit_orders_enabled = auto_config.get('limit_orders_entry_enabled', False)
                     percent_steps = auto_config.get('limit_orders_percent_steps', [1, 2, 3, 4, 5])
                     margin_amounts = auto_config.get('limit_orders_margin_amounts', [0.2, 0.3, 0.5, 1, 2])
+                
+                # ✅ Логируем конфигурацию для диагностики
+                self.logger.info(f" {self.symbol}: 🔍 Конфигурация лимитных ордеров: enabled={limit_orders_enabled}, steps={percent_steps}, amounts={margin_amounts}")
             except Exception as e:
                 self.logger.warning(f" {self.symbol}: Не удалось получить конфигурацию лимитных ордеров: {e}")
                 limit_orders_enabled = False
@@ -657,7 +660,10 @@ class TradingBot:
             
             # Если включен набор позиций лимитными ордерами
             if limit_orders_enabled and percent_steps and margin_amounts:
+                self.logger.info(f" {self.symbol}: ✅ Режим лимитных ордеров включен, размещаем ордера...")
                 return self._enter_position_with_limit_orders(side, percent_steps, margin_amounts)
+            else:
+                self.logger.info(f" {self.symbol}: ℹ️ Режим лимитных ордеров выключен или не настроен (enabled={limit_orders_enabled}, steps={bool(percent_steps)}, amounts={bool(margin_amounts)}), используем рыночный вход")
             
             # Стандартный рыночный вход
             # Рассчитываем размер позиции
@@ -1093,11 +1099,15 @@ class TradingBot:
             margin_amounts: Список объемов маржи в USDT [0.2, 0.3, 0.5, 1, 2]
         """
         try:
+            self.logger.info(f" {self.symbol}: 🚀 Начинаем размещение лимитных ордеров: side={side}, steps={percent_steps}, amounts={margin_amounts}")
+            
             # Получаем текущую цену
             current_price = self._get_current_price()
             if not current_price or current_price <= 0:
                 self.logger.error(f" {self.symbol}: Не удалось получить текущую цену")
                 return {'success': False, 'error': 'failed_to_get_price'}
+            
+            self.logger.info(f" {self.symbol}: 💰 Текущая цена: {current_price}")
             
             # Сохраняем цену входа для расчета лимитных ордеров
             self.limit_orders_entry_price = current_price
@@ -1118,11 +1128,13 @@ class TradingBot:
                 if i == 0 and percent_step == 0:
                     first_order_market = True
                     # Размещаем рыночный ордер
+                    # ✅ Передаем quantity_is_usdt=True, так как margin_amount в USDT
                     order_result = self.exchange.place_order(
                         symbol=self.symbol,
                         side=side,
                         quantity=margin_amount,
-                        order_type='market'
+                        order_type='market',
+                        quantity_is_usdt=True
                     )
                     if order_result.get('success'):
                         order_id = order_result.get('order_id')
@@ -1161,12 +1173,14 @@ class TradingBot:
                     limit_price = current_price * (1 + percent_step / 100)
                 
                 # Размещаем лимитный ордер
+                # ✅ Передаем quantity_is_usdt=True, так как margin_amount в USDT
                 order_result = self.exchange.place_order(
                     symbol=self.symbol,
                     side=side,
                     quantity=margin_amount,
                     order_type='limit',
-                    price=limit_price
+                    price=limit_price,
+                    quantity_is_usdt=True
                 )
                 
                 if order_result.get('success'):
