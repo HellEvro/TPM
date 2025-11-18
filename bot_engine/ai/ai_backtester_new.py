@@ -621,8 +621,14 @@ class AIBacktester:
                 entry_data = trade.get('entry_data', {})
                 exit_market_data = trade.get('exit_market_data', {})
                 
-                entry_rsi = entry_data.get('rsi', 50)
-                exit_rsi = exit_market_data.get('rsi', 50) if exit_market_data else entry_rsi
+                # Безопасное получение RSI с проверкой на None
+                entry_rsi = entry_data.get('rsi')
+                if entry_rsi is None:
+                    entry_rsi = 50  # Значение по умолчанию
+                
+                exit_rsi = exit_market_data.get('rsi') if exit_market_data else None
+                if exit_rsi is None:
+                    exit_rsi = entry_rsi
                 
                 direction = trade.get('direction', 'LONG')
                 entry_price = trade.get('entry_price', 0)
