@@ -1516,7 +1516,7 @@ def get_symbol_chart(symbol):
             center_color = '#cccccc'  # Светло-серая линия 50
         
         # Создаем график с оптимальным размером для миниграфика
-        fig, ax = plt.subplots(figsize=(6, 3), facecolor=bg_color)  # Оптимальный размер для миниграфика
+        fig, ax = plt.subplots(figsize=(4, 3), facecolor=bg_color)  # Ширина уменьшена в 1.5 раза (6/1.5=4), высота без изменений
         ax.set_facecolor(bg_color)
         
         # Рисуем линии границ (более заметные)
