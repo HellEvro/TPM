@@ -220,36 +220,49 @@ class BybitExchange(BaseExchange):
                         avg_price = float(position.get('avgPrice', 0) or 0)
                         leverage = float(position.get('leverage', 1) or 1)
                         
-                        # ROI рассчитывается от маржи (залога) в сделке
-                        # Пытаемся использовать различные поля из API для получения реальной маржи
-                        margin = 0
+                        # ROI рассчитывается от ИЗНАЧАЛЬНОЙ маржи (залога), которую вложили при входе
+                        # В Bybit API v5:
+                        # - positionValue = стоимость позиции в USDT (размер * текущая цена)
+                        # - positionIM = текущая изолированная маржа (может меняться из-за изменения цены)
+                        # - leverage = плечо
+                        # 
+                        # ИЗНАЧАЛЬНАЯ маржа = positionValue / leverage (стоимость позиции / плечо)
+                        # Это маржа, которую вложили при открытии позиции
                         
-                        # Вариант 1: positionIM (isolated margin) - изолированная маржа
-                        margin = float(position.get('positionIM', 0))
+                        # Рассчитываем изначальную маржу
+                        # В Bybit API positionValue может содержать либо стоимость позиции, либо маржу
+                        # Сначала рассчитываем маржу из размера и цены входа
                         
-                        # Вариант 2: positionBalance (баланс позиции) - может быть маржа
-                        if margin == 0:
-                            margin = float(position.get('positionBalance', 0))
+                        position_value_calc = avg_price * position_size  # Стоимость позиции из размера и цены
                         
-                        # Вариант 3: используем positionValue / leverage
-                        if margin == 0:
-                            position_value = float(position.get('positionValue', 0))
-                            if position_value > 0:
-                                # Маржа = стоимость позиции / плечо
-                                margin = position_value / leverage if leverage > 0 else position_value
+                        # ИЗНАЧАЛЬНАЯ маржа = стоимость позиции / плечо
+                        if leverage > 0:
+                            margin = position_value_calc / leverage
+                        else:
+                            margin = position_value_calc
                         
-                        # Вариант 4: рассчитываем из размера и цены
-                        if margin == 0:
-                            position_value = avg_price * position_size
-                            margin = position_value / leverage if leverage > 0 else position_value
+                        # Проверяем positionValue из API
+                        position_value = float(position.get('positionValue', 0))
+                        if position_value > 0:
+                            # Если positionValue в разумных пределах для маржи (1-1000 USDT),
+                            # используем его напрямую как маржу (в Bybit API positionValue часто уже содержит маржу)
+                            if 1.0 <= position_value <= 1000.0:
+                                margin = position_value
+                            # Если positionValue значительно больше (вероятно стоимость позиции), делим на leverage
+                            elif position_value > 1000.0 and leverage > 0:
+                                margin = position_value / leverage
                         
                         # Если маржа все еще 0 или очень маленькая, логируем для отладки
-                        if margin <= 0.01:
-                            logger.warning(f"[BYBIT ROI DEBUG] {symbol}: margin={margin}, positionValue={position.get('positionValue')}, positionIM={position.get('positionIM')}, positionBalance={position.get('positionBalance')}, leverage={leverage}, size={position_size}, avgPrice={avg_price}, pnl={current_pnl}, calculated_margin={avg_price * position_size / leverage if leverage > 0 else avg_price * position_size}")
-                            # Fallback: используем минимальную маржу 1 USDT для избежания деления на ноль
-                            margin = 1.0
+                        if margin == 0 or margin < 0.01:
+                            logger.warning(f"[BYBIT ROI DEBUG] {symbol}: margin={margin}, positionValue={position.get('positionValue')}, leverage={leverage}, size={position_size}, avgPrice={avg_price}, pnl={current_pnl}")
+                            logger.warning(f"[BYBIT ROI DEBUG] Все поля позиции: {list(position.keys())}")
+                            margin = 1.0  # Минимальная маржа для избежания деления на ноль
                         
                         roi = (current_pnl / margin * 100) if margin > 0 else 0
+                        
+                        # Временное логирование для отладки
+                        if current_pnl != 0:
+                            logger.info(f"[BYBIT ROI] {symbol}: PnL={current_pnl:.4f} USDT, margin={margin:.4f} USDT, ROI={roi:.2f}%, positionValue={position.get('positionValue')}, leverage={leverage}, calculated={position_value / leverage if position_value > 0 and leverage > 0 else 'N/A'}")
                         
                         if current_pnl > 0:
                             if symbol not in self.max_profit_values or current_pnl > self.max_profit_values[symbol]:
