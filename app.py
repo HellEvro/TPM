@@ -1163,9 +1163,14 @@ def get_candles_from_file(symbol, timeframe='6h', period_days=None):
         if not candles_cache_file.exists():
             return {'success': False, 'error': f'Файл кэша не найден: {candles_cache_file}'}
         
-        # Читаем файл
-        with open(candles_cache_file, 'r', encoding='utf-8') as f:
-            file_cache = json.load(f)
+        # Читаем файл с безопасной обработкой ошибок JSON
+        try:
+            with open(candles_cache_file, 'r', encoding='utf-8') as f:
+                file_cache = json.load(f)
+        except json.JSONDecodeError as e:
+            # Если JSON поврежден, возвращаем ошибку без падения приложения
+            logging.getLogger('app').warning(f"JSON файл поврежден при чтении для {symbol}: {e}")
+            return {'success': False, 'error': f'JSON файл кэша поврежден. Перезапустите bots.py для восстановления.'}
         
         if symbol not in file_cache:
             return {'success': False, 'error': f'Свечи для {symbol} не найдены в файле кэша'}
@@ -1560,53 +1565,6 @@ def get_symbol_chart(symbol):
         chart_logger.error(f"[CHART] Error generating RSI chart for {symbol}: {str(e)}")
         import traceback
         chart_logger.error(f"[CHART] Traceback: {traceback.format_exc()}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/get_sma200_position/<symbol>')
-def get_sma200_position(symbol):
-    """Получение позиции цены относительно SMA200"""
-    sma_logger = logging.getLogger('app')
-    try:
-        sma_logger.info(f"[SMA200] Getting SMA200 position for {symbol}")
-        
-        # Проверяем инициализацию биржи
-        if not current_exchange:
-            sma_logger.error("[SMA200] Exchange not initialized")
-            return jsonify({'error': 'Exchange not initialized'}), 500
-            
-        # ✅ ЧИТАЕМ НАПРЯМУЮ ИЗ ФАЙЛА (не требует запущенного bots.py)
-        data = get_candles_from_file(symbol, timeframe='1d', period_days=200)
-        if not data or not data.get('success'):
-            sma_logger.error(f"[SMA200] Failed to get chart data from file for {symbol}")
-            return jsonify({'error': 'Failed to get chart data from file'}), 500
-            
-        candles = data.get('data', {}).get('candles', [])
-        if len(candles) < 200:
-            sma_logger.warning(f"[SMA200] Not enough data for SMA200 calculation for {symbol}")
-            return jsonify({'error': 'Not enough data for SMA200'}), 400
-            
-        # Рассчитываем SMA200
-        closes = [float(candle['close']) for candle in candles[-200:]]
-        sma200 = sum(closes) / 200
-        
-        # Получаем текущую цену
-        current_price = closes[-1]
-        
-        # Определяем позицию относительно SMA200
-        above_sma200 = current_price > sma200
-        
-        sma_logger.info(f"[SMA200] {symbol}: Current={current_price:.4f}, SMA200={sma200:.4f}, Above={above_sma200}")
-        
-        return jsonify({
-            'success': True,
-            'above_sma200': above_sma200,
-            'current_price': current_price,
-            'sma200': sma200,
-            'difference_percent': ((current_price - sma200) / sma200) * 100
-        })
-        
-    except Exception as e:
-        sma_logger.error(f"[SMA200] Error calculating SMA200 for {symbol}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/rsi_6h/<symbol>')
