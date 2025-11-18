@@ -808,29 +808,42 @@ def create_bot_endpoint():
                     'success': False,
                     'error': 'Exchange not initialized'
                 }), 503
-            chart_response = current_exchange.get_chart_data(symbol, '6h', '30d')
-            if chart_response and chart_response.get('success'):
-                candles = chart_response['data']['candles']
-                if candles and len(candles) >= 15:
-                    maturity_check = check_coin_maturity_with_storage(symbol, candles)
-                    if not maturity_check['is_mature']:
-                        logger.warning(f" {symbol}: Монета не прошла проверку зрелости - {maturity_check['reason']}")
-                        return jsonify({
-                            'success': False, 
-                            'error': f'Монета {symbol} не прошла проверку зрелости: {maturity_check["reason"]}',
-                            'maturity_details': maturity_check['details']
-                        }), 400
-                else:
-                    logger.warning(f" {symbol}: Недостаточно данных для проверки зрелости")
+            # ✅ ИСПОЛЬЗУЕМ КЭШ ИЗ ПАМЯТИ ИЛИ ФАЙЛА (не требует запроса к бирже)
+            candles = []
+            candles_cache = coins_rsi_data.get('candles_cache', {})
+            if symbol in candles_cache:
+                cached_data = candles_cache[symbol]
+                candles = cached_data.get('candles', [])
+            else:
+                # Если нет в памяти, читаем из файла
+                try:
+                    from pathlib import Path
+                    project_root = Path(__file__).parent.parent
+                    candles_cache_file = project_root / 'data' / 'candles_cache.json'
+                    if candles_cache_file.exists():
+                        import json
+                        with open(candles_cache_file, 'r', encoding='utf-8') as f:
+                            file_cache = json.load(f)
+                        if symbol in file_cache:
+                            cached_data = file_cache[symbol]
+                            candles = cached_data.get('candles', [])
+                except Exception as e:
+                    logger.debug(f"Не удалось прочитать кэш из файла для {symbol}: {e}")
+            
+            if candles and len(candles) >= 15:
+                maturity_check = check_coin_maturity_with_storage(symbol, candles)
+                if not maturity_check['is_mature']:
+                    logger.warning(f" {symbol}: Монета не прошла проверку зрелости - {maturity_check['reason']}")
                     return jsonify({
                         'success': False, 
-                        'error': f'Недостаточно данных для проверки зрелости монеты {symbol}'
+                        'error': f'Монета {symbol} не прошла проверку зрелости: {maturity_check["reason"]}',
+                        'maturity_details': maturity_check['details']
                     }), 400
             else:
-                logger.warning(f" {symbol}: Не удалось получить данные для проверки зрелости")
+                logger.warning(f" {symbol}: Недостаточно данных для проверки зрелости")
                 return jsonify({
                     'success': False, 
-                    'error': f'Не удалось получить данные для проверки зрелости монеты {symbol}'
+                    'error': f'Недостаточно данных для проверки зрелости монеты {symbol}'
                 }), 400
         elif has_manual_position:
             logger.info(f" ✋ {symbol}: Ручная позиция обнаружена - проверка зрелости пропущена")
@@ -1857,16 +1870,27 @@ def get_rsi_history_for_chart(symbol):
     try:
         from bots_modules.calculations import calculate_rsi_history
         
-        # Проверяем кэш свечей
+        # ✅ СНАЧАЛА ПРОВЕРЯЕМ КЭШ В ПАМЯТИ, ПОТОМ ФАЙЛ
+        candles = None
         candles_cache = coins_rsi_data.get('candles_cache', {})
-        if symbol not in candles_cache:
-            return jsonify({
-                'success': False,
-                'error': f'Свечи для {symbol} не найдены в кэше'
-            }), 404
+        if symbol in candles_cache:
+            cached_data = candles_cache[symbol]
+            candles = cached_data.get('candles')
         
-        cached_data = candles_cache[symbol]
-        candles = cached_data.get('candles')
+        # Если нет в памяти, читаем из файла
+        if not candles:
+            try:
+                from pathlib import Path
+                project_root = Path(__file__).parent.parent
+                candles_cache_file = project_root / 'data' / 'candles_cache.json'
+                if candles_cache_file.exists():
+                    with open(candles_cache_file, 'r', encoding='utf-8') as f:
+                        file_cache = json.load(f)
+                    if symbol in file_cache:
+                        cached_data = file_cache[symbol]
+                        candles = cached_data.get('candles', [])
+            except Exception as e:
+                logger.debug(f"Не удалось прочитать кэш из файла для {symbol}: {e}")
         
         if not candles or len(candles) < 15:
             return jsonify({
@@ -1905,6 +1929,129 @@ def get_rsi_history_for_chart(symbol):
         
     except Exception as e:
         logger.error(f"❌ Ошибка получения истории RSI для {symbol}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bots_app.route('/api/bots/candles/<symbol>', methods=['GET'])
+def get_candles_from_cache(symbol):
+    """Получить свечи из кэша или файла (без запроса к бирже)"""
+    try:
+        # Получаем параметры запроса
+        timeframe = request.args.get('timeframe', '6h')  # По умолчанию 6h
+        period_days = request.args.get('period', None)  # Опционально, для совместимости
+        
+        # ✅ СНАЧАЛА ПРОВЕРЯЕМ КЭШ В ПАМЯТИ, ПОТОМ ФАЙЛ
+        candles_6h = None
+        candles_cache = coins_rsi_data.get('candles_cache', {})
+        if symbol in candles_cache:
+            cached_data = candles_cache[symbol]
+            candles_6h = cached_data.get('candles')
+        
+        # Если нет в памяти, читаем из файла
+        if not candles_6h:
+            try:
+                from pathlib import Path
+                project_root = Path(__file__).parent.parent
+                candles_cache_file = project_root / 'data' / 'candles_cache.json'
+                if candles_cache_file.exists():
+                    with open(candles_cache_file, 'r', encoding='utf-8') as f:
+                        file_cache = json.load(f)
+                    if symbol in file_cache:
+                        cached_data = file_cache[symbol]
+                        candles_6h = cached_data.get('candles', [])
+            except Exception as e:
+                logger.debug(f"Не удалось прочитать кэш из файла для {symbol}: {e}")
+        
+        if not candles_6h:
+            return jsonify({
+                'success': False,
+                'error': f'Свечи для {symbol} не найдены в кэше или файле'
+            }), 404
+        
+        # Конвертируем свечи в нужный таймфрейм
+        if timeframe == '1d':
+            # Конвертируем 6h свечи в дневные
+            daily_candles = []
+            current_day = None
+            current_candle = None
+            
+            for candle in candles_6h:
+                candle_time = datetime.fromtimestamp(int(candle['timestamp']) / 1000)
+                day_key = candle_time.date()
+                
+                if current_day != day_key:
+                    # Сохраняем предыдущую дневную свечу
+                    if current_candle:
+                        daily_candles.append(current_candle)
+                    
+                    # Начинаем новую дневную свечу
+                    current_day = day_key
+                    current_candle = {
+                        'timestamp': candle['timestamp'],
+                        'open': float(candle['open']),
+                        'high': float(candle['high']),
+                        'low': float(candle['low']),
+                        'close': float(candle['close']),
+                        'volume': float(candle.get('volume', 0))
+                    }
+                else:
+                    # Обновляем текущую дневную свечу
+                    if current_candle:
+                        current_candle['high'] = max(current_candle['high'], float(candle['high']))
+                        current_candle['low'] = min(current_candle['low'], float(candle['low']))
+                        current_candle['close'] = float(candle['close'])
+                        current_candle['volume'] += float(candle.get('volume', 0))
+            
+            # Добавляем последнюю свечу
+            if current_candle:
+                daily_candles.append(current_candle)
+            
+            candles = daily_candles
+        elif timeframe == '6h':
+            # Используем 6h свечи как есть
+            candles = candles_6h
+        else:
+            # Для других таймфреймов возвращаем 6h (можно расширить логику)
+            candles = candles_6h
+        
+        # Ограничиваем количество свечей по периоду (если указан)
+        if period_days:
+            try:
+                period_days = int(period_days)
+                # Для дневных свечей: period_days свечей
+                # Для 6h свечей: period_days * 4 свечей (4 свечи в день)
+                if timeframe == '1d':
+                    candles = candles[-period_days:] if len(candles) > period_days else candles
+                else:
+                    candles = candles[-period_days * 4:] if len(candles) > period_days * 4 else candles
+            except:
+                pass
+        
+        # Форматируем ответ в том же формате, что и get_chart_data
+        formatted_candles = []
+        for candle in candles:
+            formatted_candles.append({
+                'timestamp': int(candle['timestamp']),
+                'open': str(candle['open']),
+                'high': str(candle['high']),
+                'low': str(candle['low']),
+                'close': str(candle['close']),
+                'volume': str(candle.get('volume', 0))
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'candles': formatted_candles,
+                'timeframe': timeframe,
+                'count': len(formatted_candles)
+            },
+            'source': 'cache'  # Указываем, что данные из кэша
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения свечей из кэша для {symbol}: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bots_app.route('/api/bots/refresh-rsi-all', methods=['POST'])
