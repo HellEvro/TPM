@@ -2152,6 +2152,12 @@ def check_missing_stop_losses():
                 except Exception as save_error:
                     logger.error(f" ❌ Ошибка сохранения состояния ботов: {save_error}")
 
+        # ✅ Синхронизируем ботов с биржей - удаляем ботов без позиций
+        try:
+            sync_bots_with_exchange()
+        except Exception as sync_error:
+            logger.error(f" ❌ Ошибка синхронизации ботов с биржей: {sync_error}")
+
         return True
 
     except Exception as e:
