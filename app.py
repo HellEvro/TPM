@@ -1403,13 +1403,13 @@ def get_symbol_chart(symbol):
         ax.spines['bottom'].set_visible(False)
         ax.spines['left'].set_visible(False)
         
-        # Убираем отступы
-        plt.tight_layout(pad=0)
+        # Убираем отступы (используем bbox_inches='tight' вместо tight_layout)
+        # plt.tight_layout(pad=0)  # Отключаем, используем bbox_inches='tight' при сохранении
         
         # Конвертируем в base64
         buffer = io.BytesIO()
         plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight', 
-                   facecolor=bg_color, edgecolor='none')
+                   facecolor=bg_color, edgecolor='none', pad_inches=0)
         buffer.seek(0)
         chart_data = base64.b64encode(buffer.getvalue()).decode()
         plt.close(fig)
