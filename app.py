@@ -1325,19 +1325,22 @@ def start_bot():
 
 @app.route('/get_symbol_chart/<symbol>')
 def get_symbol_chart(symbol):
-    """Получение миниграфика для символа"""
+    """Получение миниграфика RSI 6ч для символа"""
     chart_logger = logging.getLogger('app')
     try:
         theme = request.args.get('theme', 'dark')
-        chart_logger.info(f"[CHART] Getting chart for {symbol} with theme {theme}")
+        chart_logger.info(f"[CHART] Getting RSI 6h chart for {symbol} with theme {theme}")
         
         # Проверяем инициализацию биржи
         if not current_exchange:
             chart_logger.error("[CHART] Exchange not initialized")
             return jsonify({'error': 'Exchange not initialized'}), 500
-            
-        # Получаем данные свечей для миниграфика
-        data = current_exchange.get_chart_data(symbol, '1h', '24h')  # 1 час свечи за 24 часа
+        
+        # Импортируем функцию расчета RSI
+        from bot_engine.utils.rsi_utils import calculate_rsi_history
+        
+        # Получаем данные свечей 6ч за 56 свечей (неделя)
+        data = current_exchange.get_chart_data(symbol, '6h', '14d')
         if not data.get('success'):
             chart_logger.error(f"[CHART] Failed to get chart data for {symbol}")
             return jsonify({'error': 'Failed to get chart data'}), 500
@@ -1346,12 +1349,67 @@ def get_symbol_chart(symbol):
         if not candles:
             chart_logger.warning(f"[CHART] No candles data for {symbol}")
             return jsonify({'error': 'No chart data available'}), 404
+        
+        # Берем последние 56 свечей
+        candles = candles[-56:] if len(candles) >= 56 else candles
+        
+        if len(candles) < 15:  # Минимум для расчета RSI (период 14 + 1)
+            chart_logger.warning(f"[CHART] Not enough data for RSI calculation for {symbol}")
+            return jsonify({'error': 'Not enough data for RSI calculation'}), 400
+        
+        # Извлекаем цены закрытия
+        closes = [float(candle['close']) for candle in candles]
+        
+        # Рассчитываем историю RSI
+        rsi_history = calculate_rsi_history(closes, period=14)
+        
+        if not rsi_history:
+            chart_logger.error(f"[CHART] Failed to calculate RSI for {symbol}")
+            return jsonify({'error': 'Failed to calculate RSI'}), 500
+        
+        # Берем последние 56 значений RSI
+        rsi_values = rsi_history[-56:] if len(rsi_history) > 56 else rsi_history
+        
+        # Подготавливаем временные метки (берем только те, для которых есть RSI)
+        # RSI начинается с индекса period (14), поэтому берем свечи с 14-го индекса
+        times = []
+        for i in range(14, len(candles)):
+            timestamp = candles[i].get('time') or candles[i].get('timestamp')
+            if timestamp:
+                if isinstance(timestamp, (int, float)):
+                    if timestamp > 1e10:  # Если в миллисекундах
+                        times.append(datetime.fromtimestamp(timestamp / 1000))
+                    else:  # Если в секундах
+                        times.append(datetime.fromtimestamp(timestamp))
+                else:
+                    times.append(datetime.fromtimestamp(int(timestamp) / 1000))
+        
+        # Если временных меток меньше чем значений RSI, создаем их последовательно
+        if len(times) < len(rsi_values):
+            last_timestamp = candles[-1].get('time') or candles[-1].get('timestamp')
+            if isinstance(last_timestamp, (int, float)):
+                if last_timestamp < 1e10:
+                    last_timestamp = int(last_timestamp * 1000)
+                else:
+                    last_timestamp = int(last_timestamp)
+            else:
+                last_timestamp = int(time.time() * 1000)
             
-        # Создаем простой миниграфик
+            # Создаем временные метки с шагом 6 часов (21600000 мс)
+            times = []
+            for i in range(len(rsi_values)):
+                ts = last_timestamp - (len(rsi_values) - 1 - i) * 21600000
+                times.append(datetime.fromtimestamp(ts / 1000))
+        
+        # Берем только последние 56 значений
+        if len(rsi_values) > 56:
+            rsi_values = rsi_values[-56:]
+            times = times[-56:]
+            
+        # Создаем график RSI
         import matplotlib
         matplotlib.use('Agg')  # Используем неинтерактивный бэкенд
         import matplotlib.pyplot as plt
-        import matplotlib.dates as mdates
         from datetime import datetime
         import io
         import base64
@@ -1360,49 +1418,32 @@ def get_symbol_chart(symbol):
         if theme == 'light':
             plt.style.use('default')
             bg_color = 'white'
-            line_color = '#1f77b4'
+            rsi_color = '#1f77b4'
+            upper_color = '#ff0000'  # Красная граница 70
+            lower_color = '#00ff00'  # Зеленая граница 30
+            center_color = '#666666'  # Серая линия 50
         else:
             plt.style.use('dark_background')
             bg_color = '#2d2d2d'
-            line_color = '#00ff00'
-            
-        # Подготавливаем данные
-        # Биржи возвращают 'time', а не 'timestamp'
-        times = []
-        prices = []
-        for candle in candles:
-            try:
-                # Проверяем оба варианта: 'time' и 'timestamp'
-                timestamp = candle.get('timestamp') or candle.get('time')
-                if timestamp:
-                    # Если timestamp уже в миллисекундах
-                    if isinstance(timestamp, (int, float)):
-                        if timestamp > 1e10:  # Если в миллисекундах
-                            times.append(datetime.fromtimestamp(timestamp / 1000))
-                        else:  # Если в секундах
-                            times.append(datetime.fromtimestamp(timestamp))
-                    else:
-                        times.append(datetime.fromtimestamp(int(timestamp) / 1000))
-                    
-                    # Получаем цену закрытия
-                    close_price = candle.get('close')
-                    if close_price:
-                        prices.append(float(close_price))
-            except (ValueError, TypeError, KeyError) as e:
-                chart_logger.warning(f"[CHART] Error processing candle for {symbol}: {e}")
-                continue
+            rsi_color = '#00ff00'
+            upper_color = '#ff0000'  # Красная граница 70
+            lower_color = '#00ff00'  # Зеленая граница 30
+            center_color = '#888888'  # Серая линия 50
         
-        # Проверяем, что есть данные для графика
-        if not times or not prices:
-            chart_logger.error(f"[CHART] No valid data after processing candles for {symbol}")
-            return jsonify({'success': False, 'error': 'No valid chart data after processing'}), 500
-        
-        # Создаем график
+        # Создаем график (миниграфик - маленький размер)
         fig, ax = plt.subplots(figsize=(4, 2), facecolor=bg_color)
         ax.set_facecolor(bg_color)
         
-        # Рисуем линию цены
-        ax.plot(times, prices, color=line_color, linewidth=1.5)
+        # Рисуем линии границ
+        ax.axhline(y=70, color=upper_color, linewidth=1.5, linestyle='-', alpha=0.7)  # Верхняя красная граница
+        ax.axhline(y=30, color=lower_color, linewidth=1.5, linestyle='-', alpha=0.7)  # Нижняя зеленая граница
+        ax.axhline(y=50, color=center_color, linewidth=1, linestyle='--', alpha=0.5, dashes=(5, 5))  # Центральная серая прерывистая
+        
+        # Рисуем линию RSI
+        ax.plot(times, rsi_values, color=rsi_color, linewidth=1.5)
+        
+        # Настраиваем ось Y для RSI (0-100)
+        ax.set_ylim(0, 100)
         
         # Настраиваем внешний вид
         ax.set_xticks([])
@@ -1412,9 +1453,6 @@ def get_symbol_chart(symbol):
         ax.spines['bottom'].set_visible(False)
         ax.spines['left'].set_visible(False)
         
-        # Убираем отступы (используем bbox_inches='tight' вместо tight_layout)
-        # plt.tight_layout(pad=0)  # Отключаем, используем bbox_inches='tight' при сохранении
-        
         # Конвертируем в base64
         buffer = io.BytesIO()
         plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight', 
@@ -1423,14 +1461,16 @@ def get_symbol_chart(symbol):
         chart_data = base64.b64encode(buffer.getvalue()).decode()
         plt.close(fig)
         
-        chart_logger.info(f"[CHART] Successfully generated chart for {symbol}")
+        chart_logger.info(f"[CHART] Successfully generated RSI 6h chart for {symbol}")
         return jsonify({
             'success': True,
             'chart': chart_data
         })
         
     except Exception as e:
-        chart_logger.error(f"[CHART] Error generating chart for {symbol}: {str(e)}")
+        chart_logger.error(f"[CHART] Error generating RSI chart for {symbol}: {str(e)}")
+        import traceback
+        chart_logger.error(f"[CHART] Traceback: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/get_sma200_position/<symbol>')
