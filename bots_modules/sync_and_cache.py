@@ -664,7 +664,6 @@ def save_bots_state():
             json.dump(state_data, f, indent=2, ensure_ascii=False)
         
         total_bots = len(state_data['bots'])
-        logger.debug(f"[SAVE_STATE] Состояние {total_bots} ботов сохранено")
         
         return True
         
@@ -750,7 +749,6 @@ def save_auto_bot_config():
                     # ✅ СБРАСЫВАЕМ кэш времени модификации файла, чтобы при следующем вызове модуль перезагрузился
                     if hasattr(load_auto_bot_config, '_last_mtime'):
                         load_auto_bot_config._last_mtime = 0
-                        logger.debug(f"[SAVE_CONFIG] 🔄 Сброшен кэш времени модификации файла")
                     
                     load_auto_bot_config()
                     logger.info(f"[SAVE_CONFIG] ✅ Конфигурация перезагружена из bot_config.py после сохранения")
@@ -1107,7 +1105,6 @@ def update_bots_cache_data():
         # ✅ КРИТИЧНО: Используем тот же способ что и positions_monitor_worker!
         try:
             # Получаем позиции тем же способом что и positions_monitor_worker
-            logger.debug(f" Получаем позиции с биржи...")
             exchange_obj = get_exchange()
             if exchange_obj:
                 exchange_positions = exchange_obj.get_positions()
@@ -1115,7 +1112,6 @@ def update_bots_cache_data():
                     positions_list = exchange_positions[0] if exchange_positions else []
                 else:
                     positions_list = exchange_positions if exchange_positions else []
-                logger.debug(f" Получено {len(positions_list)} позиций с биржи")
             else:
                 positions_list = []
                 logger.warning(f" Exchange не инициализирован")
@@ -1197,7 +1193,6 @@ def update_bots_cache_data():
                             bot_data['margin_usdt'] = position_value / exchange_leverage if exchange_leverage else position_value
                         
                         # Отладочный лог для проверки PnL
-                        logger.debug(f"[POSITION_SYNC] {symbol}: PnL с биржи = {exchange_unrealized_pnl}, обновлен в bot_data")
                         
                         # ✅ Обновляем ROI
                         if exchange_roi != 0:
@@ -1258,9 +1253,6 @@ def update_bots_cache_data():
         bots_data['last_update'] = current_time
         
         # Отладочный лог для проверки частоты обновлений
-        logger.debug(f" 🔄 Обновление завершено: {current_time}")
-        
-        logger.debug(f" Кэш обновлен: {len(bots_list)} ботов")
         return True
         
     except Exception as e:
@@ -2097,7 +2089,7 @@ def check_missing_stop_losses():
 
                 # Проверяем, есть ли уже стоп-лосс на бирже
                 if existing_stop_loss and existing_stop_loss.strip():
-                    logger.debug(f" ⏭️ {symbol}: Стоп-лосс уже установлен на бирже: {existing_stop_loss}, пропускаем установку")
+                    pass  # Стоп-лосс уже установлен, пропускаем
                 elif desired_stop and _needs_price_update(position_side, desired_stop, existing_stop_value):
                     try:
                         sl_response = current_exchange.update_stop_loss(
@@ -2126,7 +2118,7 @@ def check_missing_stop_losses():
 
                 # Проверяем, есть ли уже тейк-профит на бирже
                 if existing_take_profit and existing_take_profit.strip():
-                    logger.debug(f" ⏭️ {symbol}: Тейк-профит уже установлен на бирже: {existing_take_profit}, пропускаем установку")
+                    pass  # Тейк-профит уже установлен, пропускаем
                 elif desired_take and _needs_price_update(position_side, desired_take, existing_take_value):
                     try:
                         tp_response = current_exchange.update_take_profit(
@@ -2230,7 +2222,7 @@ def check_startup_position_conflicts():
                                 
                             elif bot_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
                                 # Корректное состояние - бот в позиции
-                                logger.debug(f" ✅ {symbol}: Статус корректный - бот в позиции")
+                                pass
                         else:
                             # Нет позиции на бирже
                             if bot_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
@@ -2247,9 +2239,6 @@ def check_startup_position_conflicts():
                                 conflicts_found += 1
                                 
                                 logger.warning(f" 🔄 {symbol}: Статус сброшен в IDLE")
-                            else:
-                                # Корректное состояние - нет позиций
-                                logger.debug(f" ✅ {symbol}: Статус корректный - нет позиций")
                     else:
                         logger.warning(f" ❌ {symbol}: Ошибка получения позиций: {positions_response.get('retMsg', 'Unknown error')}")
                         
@@ -2571,10 +2560,6 @@ def sync_bots_with_exchange():
                         
                     except Exception as e:
                         logger.error(f"[SYNC_EXCHANGE] ❌ Ошибка синхронизации бота {symbol}: {e}")
-            
-            if synchronized_bots > 0:
-                elapsed = time.time() - start_time
-                logger.debug(f"[SYNC_EXCHANGE] Синхронизировано {synchronized_bots} ботов за {elapsed:.1f}с")
             
             # Сохраняем обновленное состояние
             save_bots_state()

@@ -1106,10 +1106,6 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             'thread': threading.current_thread().name
         }
         result['debug_info'] = debug_payload
-        logger.debug(
-            f"{symbol}: RSI={result['rsi6h']:.2f}, signal={result['signal']}, "
-            f"trend={result.get('trend6h')}, src={data_source}, Δt={debug_payload['duration']:.3f}s"
-        )
         return result
         
     except Exception as e:
@@ -1119,8 +1115,6 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
 def load_all_coins_candles_fast():
     """⚡ БЫСТРАЯ загрузка ТОЛЬКО свечей для всех монет БЕЗ расчетов"""
     try:
-        logger.debug("Загрузка свечей...")
-        
         from bots_modules.imports_and_globals import get_exchange
         current_exchange = get_exchange()
         
@@ -1167,8 +1161,6 @@ def load_all_coins_candles_fast():
                 # Возвращаем к базовому значению после успешного батча
                 logger.info(f"✅ Возвращаем воркеры к базовому значению: {current_max_workers} → 20")
                 current_max_workers = 20
-            
-            logger.debug(f"Пакет {batch_num}/{total_batches}: загрузка {len(batch)} монет (воркеров: {current_max_workers})...")
             
             # ⚡ ОТСЛЕЖИВАНИЕ RATE LIMIT: проверяем задержку до и после батча
             delay_before_batch = current_exchange.current_request_delay if hasattr(current_exchange, 'current_request_delay') else None
@@ -1274,7 +1266,6 @@ def load_all_coins_candles_fast():
                 try:
                     with open(candles_cache_file, 'r', encoding='utf-8') as f:
                         file_cache = json.load(f)
-                    logger.debug(f"Загружен существующий кэш: {len(file_cache)} монет")
                 except Exception as load_error:
                     logger.debug(f"Ошибка загрузки файла кэша: {load_error}")
             
@@ -1383,11 +1374,8 @@ def load_all_coins_rsi():
         # Обновляем coins_rsi_data ТОЛЬКО после завершения всех проверок!
         temp_coins_data = {}
         
-        logger.debug("Загрузка RSI для всех монет...")
-        
         # Проверяем кэш свечей перед началом
         candles_cache_size = len(coins_rsi_data.get('candles_cache', {}))
-        logger.debug(f"Кэш свечей: {candles_cache_size} монет")
         
         # Получаем актуальную ссылку на биржу
         try:

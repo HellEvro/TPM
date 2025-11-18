@@ -586,9 +586,6 @@ def get_coins_with_rsi():
                         if clean_symbol and clean_symbol not in system_bot_symbols:
                             if clean_symbol not in manual_positions:
                                 manual_positions.append(clean_symbol)
-                
-                # ✅ Детальное логирование для отладки
-                logger.debug(f" Найдено {len(manual_positions)} ручных позиций: {manual_positions}")
         except Exception as e:
             logger.error(f" Ошибка получения ручных позиций: {str(e)}")
         
@@ -2375,7 +2372,6 @@ def auto_bot_config():
             # Это заставит load_auto_bot_config() перезагрузить модуль внутри себя
             if hasattr(load_auto_bot_config, '_last_mtime'):
                 load_auto_bot_config._last_mtime = 0
-                logger.debug(f" 🔄 Сброшен кэш времени модификации для принудительной перезагрузки")
             
             # ✅ Принудительно перезагружаем конфигурацию из файла
             # load_auto_bot_config() сама перезагрузит модуль, т.к. _last_mtime == 0
