@@ -1743,5 +1743,12 @@ if __name__ == '__main__':
     werkzeug_logger.setLevel(logging.WARNING)  # Показываем только ошибки
     werkzeug_logger.disabled = True  # Полностью отключаем
     
+    # Отключаем DEBUG логи от внешних библиотек, которые шумят неформатированными сообщениями
+    # urllib3 (используется requests) - логирует "%s://%s:%s "%s %s %s" %s %s"
+    urllib3_logger = logging.getLogger('urllib3')
+    urllib3_logger.setLevel(logging.WARNING)
+    urllib3_connectionpool_logger = logging.getLogger('urllib3.connectionpool')
+    urllib3_connectionpool_logger.setLevel(logging.WARNING)
+    
     # Запускаем Flask-сервер (отключаем reloader для стабильности Telegram уведомлений)
     app.run(debug=False, host=APP_HOST, port=APP_PORT, use_reloader=False) 
