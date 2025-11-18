@@ -185,6 +185,16 @@ try:
 except Exception as e:
     # Если не удалось загрузить конфиг, используем стандартную настройку
     setup_color_logging()
+
+# Отключаем DEBUG логи от внешних библиотек ДО их импорта
+# matplotlib - логирует неформатированные сообщения при импорте
+matplotlib_logger = logging.getLogger('matplotlib')
+matplotlib_logger.setLevel(logging.WARNING)
+matplotlib_font_manager_logger = logging.getLogger('matplotlib.font_manager')
+matplotlib_font_manager_logger.setLevel(logging.WARNING)
+matplotlib_backends_logger = logging.getLogger('matplotlib.backends')
+matplotlib_backends_logger.setLevel(logging.WARNING)
+
 logger = logging.getLogger('BotsService')
 
 try:
