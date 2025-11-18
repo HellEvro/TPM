@@ -422,6 +422,19 @@ logger = logging.getLogger('BotsService')
 werkzeug_logger = logging.getLogger('werkzeug')
 werkzeug_logger.setLevel(logging.WARNING)  # Показывать только warnings и errors
 
+# Отключаем DEBUG логи от внешних библиотек, которые шумят неформатированными сообщениями
+# urllib3 (используется requests) - логирует "%s://%s:%s "%s %s %s" %s %s"
+urllib3_logger = logging.getLogger('urllib3')
+urllib3_logger.setLevel(logging.WARNING)
+urllib3_connectionpool_logger = logging.getLogger('urllib3.connectionpool')
+urllib3_connectionpool_logger.setLevel(logging.WARNING)
+
+# flask-cors - логирует "Configuring CORS with resources: %s"
+flask_cors_logger = logging.getLogger('flask_cors')
+flask_cors_logger.setLevel(logging.WARNING)
+flask_cors_core_logger = logging.getLogger('flask_cors.core')
+flask_cors_core_logger.setLevel(logging.WARNING)
+
 # Создаем Flask приложение для API ботов
 # ВАЖНО: Создаем здесь чтобы было доступно при импорте api_endpoints
 bots_app = Flask(__name__)
