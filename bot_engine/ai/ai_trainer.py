@@ -1454,6 +1454,7 @@ class AITrainer:
         total_models_saved = 0
         total_failed_coins = 0
         total_candles_processed = 0
+        ml_params_generated_count = 0  # Счетчик использования ML модели для генерации параметров
         import random
         import time as time_module
         
@@ -1932,6 +1933,7 @@ class AITrainer:
                                     # Проверяем, не использовались ли уже
                                     if self.param_tracker and not self.param_tracker.is_params_used(suggested_params):
                                         coin_rsi_params = suggested_params
+                                        ml_params_generated_count += 1
                                         logger.debug(f"   🤖 {symbol}: ML модель предложила оптимальные параметры (качество: {predicted_quality:.3f})")
                                         break
                             except Exception as e:
@@ -2883,10 +2885,13 @@ class AITrainer:
             logger.info(f"   📈 Свечей обработано: {total_candles_processed}")
             logger.info(f"   ✅ Моделей сохранено: {total_models_saved}")
             logger.info(f"   ⚠️ Ошибок: {total_failed_coins}")
+            if ml_params_generated_count > 0:
+                logger.info(f"   🤖 ML модель использована для генерации параметров: {ml_params_generated_count} раз")
             logger.info("=" * 80)
             
             # ВАЖНО: Обучаем ML модель на собранных данных
             # Это позволит AI в будущем генерировать оптимальные параметры вместо случайных
+            ml_training_metrics = None
             if self.param_quality_predictor:
                 try:
                     logger.info("=" * 80)
@@ -2895,17 +2900,59 @@ class AITrainer:
                     logger.info("   💡 AI учится на успешных/неуспешных параметрах")
                     logger.info("   💡 В будущем будет генерировать оптимальные параметры вместо случайных")
                     
-                    success = self.param_quality_predictor.train(min_samples=50)
-                    if success:
+                    ml_training_metrics = self.param_quality_predictor.train(min_samples=50)
+                    if ml_training_metrics and ml_training_metrics.get('success'):
                         logger.info("   ✅ ML модель обучена! Теперь AI будет генерировать оптимальные параметры")
+                        logger.info(f"   📊 R² score: {ml_training_metrics.get('r2_score', 0):.3f}")
+                        logger.info(f"   📊 Образцов: {ml_training_metrics.get('samples_count', 0)}")
+                        logger.info(f"   📊 Успешных: {ml_training_metrics.get('successful_samples', 0)}")
+                        logger.info(f"   📊 Заблокированных: {ml_training_metrics.get('blocked_samples', 0)}")
+                        
+                        # Логируем в историю успешное обучение ML модели
+                        self._record_training_event(
+                            'ml_parameter_quality_training',
+                            status='SUCCESS',
+                            samples_count=ml_training_metrics.get('samples_count', 0),
+                            r2_score=ml_training_metrics.get('r2_score', 0),
+                            avg_quality=ml_training_metrics.get('avg_quality', 0),
+                            max_quality=ml_training_metrics.get('max_quality', 0),
+                            min_quality=ml_training_metrics.get('min_quality', 0),
+                            blocked_samples=ml_training_metrics.get('blocked_samples', 0),
+                            successful_samples=ml_training_metrics.get('successful_samples', 0),
+                            notes='ML модель обучена для генерации оптимальных параметров'
+                        )
                     else:
-                        logger.info("   ⏳ Недостаточно данных для обучения ML модели (нужно минимум 50 образцов)")
+                        reason = 'not_enough_samples'
+                        samples_count = 0
+                        if ml_training_metrics:
+                            reason = ml_training_metrics.get('reason', 'not_enough_samples')
+                            samples_count = ml_training_metrics.get('samples_count', 0)
+                        
+                        logger.info(f"   ⏳ Недостаточно данных для обучения ML модели (есть {samples_count}, нужно минимум 50 образцов)")
                         logger.info("   💡 Продолжаем сбор данных...")
+                        
+                        # Логируем в историю что данных недостаточно
+                        self._record_training_event(
+                            'ml_parameter_quality_training',
+                            status='SKIPPED',
+                            samples_count=samples_count,
+                            min_samples_required=50,
+                            reason=reason,
+                            notes='Недостаточно данных для обучения ML модели'
+                        )
                     logger.info("=" * 80)
                 except Exception as e:
                     logger.error(f"   ❌ Ошибка обучения ML модели: {e}")
                     import traceback
                     logger.error(traceback.format_exc())
+                    
+                    # Логируем ошибку в историю
+                    self._record_training_event(
+                        'ml_parameter_quality_training',
+                        status='FAILED',
+                        reason=str(e),
+                        notes='Ошибка при обучении ML модели'
+                    )
 
             self._record_training_event(
                 'historical_data_training',
@@ -2914,7 +2961,9 @@ class AITrainer:
                 coins=total_trained_coins,
                 candles=total_candles_processed,
                 models_saved=total_models_saved,
-                errors=total_failed_coins
+                errors=total_failed_coins,
+                ml_params_generated=ml_params_generated_count,
+                ml_model_available=self.param_quality_predictor.is_trained if self.param_quality_predictor else False
             )
             
         except Exception as e:

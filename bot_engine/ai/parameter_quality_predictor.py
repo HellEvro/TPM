@@ -168,7 +168,7 @@ class ParameterQualityPredictor:
         except Exception as e:
             logger.error(f"❌ Ошибка добавления образца: {e}")
     
-    def train(self, min_samples: int = 50) -> bool:
+    def train(self, min_samples: int = 50) -> Optional[Dict[str, Any]]:
         """
         Обучить модель на накопленных данных
         
@@ -176,19 +176,25 @@ class ParameterQualityPredictor:
             min_samples: Минимальное количество образцов для обучения
         
         Returns:
-            True если обучение успешно
+            Словарь с метриками обучения или None если обучение не удалось
         """
         try:
             if not os.path.exists(self.training_data_file):
                 logger.warning("⚠️ Нет данных для обучения")
-                return False
+                return None
             
             with open(self.training_data_file, 'r', encoding='utf-8') as f:
                 training_data = json.load(f)
             
-            if len(training_data) < min_samples:
-                logger.warning(f"⚠️ Недостаточно данных для обучения: {len(training_data)}/{min_samples}")
-                return False
+            samples_count = len(training_data)
+            if samples_count < min_samples:
+                logger.warning(f"⚠️ Недостаточно данных для обучения: {samples_count}/{min_samples}")
+                return {
+                    'success': False,
+                    'samples_count': samples_count,
+                    'min_samples_required': min_samples,
+                    'reason': 'not_enough_samples'
+                }
             
             # Подготавливаем данные
             X = []
@@ -225,16 +231,34 @@ class ParameterQualityPredictor:
             train_score = self.model.score(X_scaled, y)
             logger.info(f"✅ Модель обучена! R² score: {train_score:.3f}")
             
+            # Статистика по качеству образцов
+            avg_quality = float(np.mean(y))
+            max_quality = float(np.max(y))
+            min_quality = float(np.min(y))
+            blocked_count = sum(1 for s in training_data if s.get('blocked', False))
+            
             self.is_trained = True
             self._save_model()
             
-            return True
+            return {
+                'success': True,
+                'samples_count': samples_count,
+                'r2_score': float(train_score),
+                'avg_quality': avg_quality,
+                'max_quality': max_quality,
+                'min_quality': min_quality,
+                'blocked_samples': blocked_count,
+                'successful_samples': samples_count - blocked_count
+            }
             
         except Exception as e:
             logger.error(f"❌ Ошибка обучения модели: {e}")
             import traceback
             logger.error(traceback.format_exc())
-            return False
+            return {
+                'success': False,
+                'reason': str(e)
+            }
     
     def predict_quality(self, rsi_params: Dict, risk_params: Optional[Dict] = None) -> float:
         """
