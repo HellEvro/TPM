@@ -27,9 +27,12 @@ class StatisticsManager {
 
         // Инициализируем график только если мы на странице позиций
         if (document.querySelector('.positions-container')) {
-            requestAnimationFrame(() => this.initializeChart());
-            // Загружаем RSI при инициализации
-            this.loadRSIData();
+            // Сначала инициализируем график с правильными настройками RSI
+            requestAnimationFrame(() => {
+                this.initializeChart();
+                // Затем загружаем RSI данные после инициализации графика
+                setTimeout(() => this.loadRSIData(), 100);
+            });
             // Устанавливаем периодическое обновление RSI (каждые 5 минут)
             this.rsiUpdateInterval = setInterval(() => this.loadRSIData(), 5 * 60 * 1000);
         }
@@ -269,21 +272,29 @@ class StatisticsManager {
             const isDark = theme !== 'light';
             const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
-            // Подготавливаем данные для линий границ
-            const labels = this.chartData.labels.length > 0 ? this.chartData.labels : ['', '', ''];
-            const boundaryValues = labels.map(() => 70); // Верхняя граница 70
-            const lowerBoundaryValues = labels.map(() => 30); // Нижняя граница 30
-            const centerBoundaryValues = labels.map(() => 50); // Центральная граница 50
+            // Подготавливаем начальные данные для графика RSI (56 свечей)
+            const initialLabels = this.chartData.labels.length > 0 
+                ? this.chartData.labels 
+                : Array(56).fill('').map((_, i) => `Candle ${i + 1}`);
+            const initialValues = this.chartData.values.length > 0 
+                ? this.chartData.values 
+                : Array(56).fill(50); // Начальное значение 50 (центр)
+            
+            // Подготавливаем данные для линий границ (56 точек)
+            const numPoints = initialLabels.length;
+            const boundaryValues = Array(numPoints).fill(70); // Верхняя граница 70
+            const lowerBoundaryValues = Array(numPoints).fill(30); // Нижняя граница 30
+            const centerBoundaryValues = Array(numPoints).fill(50); // Центральная граница 50
 
             this.chart = new Chart(ctx, {
                 id: this.chartId,
                 type: 'line',
                 data: {
-                    labels: this.chartData.labels,
+                    labels: initialLabels,
                     datasets: [
                         {
                             label: 'RSI 6h',
-                            data: this.chartData.values,
+                            data: initialValues,
                             borderColor: isDark ? '#00ff00' : '#1f77b4',
                             backgroundColor: this.hexToRgba(isDark ? '#00ff00' : '#1f77b4', 0.1),
                             fill: false,
