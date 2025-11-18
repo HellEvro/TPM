@@ -436,12 +436,30 @@ flask_cors_core_logger = logging.getLogger('flask_cors.core')
 flask_cors_core_logger.setLevel(logging.WARNING)
 
 # matplotlib - логирует неформатированные сообщения типа "matplotlib data path: %s", "CONFIGDIR=%s" и т.д.
+# КРИТИЧНО: Отключаем ДО импорта matplotlib, чтобы перехватить логи при инициализации
 matplotlib_logger = logging.getLogger('matplotlib')
 matplotlib_logger.setLevel(logging.WARNING)
+matplotlib_logger.disabled = False  # Не отключаем полностью, только DEBUG
+for handler in matplotlib_logger.handlers[:]:
+    matplotlib_logger.removeHandler(handler)
+
 matplotlib_font_manager_logger = logging.getLogger('matplotlib.font_manager')
 matplotlib_font_manager_logger.setLevel(logging.WARNING)
+for handler in matplotlib_font_manager_logger.handlers[:]:
+    matplotlib_font_manager_logger.removeHandler(handler)
+
 matplotlib_backends_logger = logging.getLogger('matplotlib.backends')
 matplotlib_backends_logger.setLevel(logging.WARNING)
+for handler in matplotlib_backends_logger.handlers[:]:
+    matplotlib_backends_logger.removeHandler(handler)
+
+# TensorFlow - логирует "Falling back to TensorFlow client..."
+tensorflow_logger = logging.getLogger('tensorflow')
+tensorflow_logger.setLevel(logging.WARNING)
+tensorflow_python_logger = logging.getLogger('tensorflow.python')
+tensorflow_python_logger.setLevel(logging.WARNING)
+tensorflow_core_logger = logging.getLogger('tensorflow.core')
+tensorflow_core_logger.setLevel(logging.WARNING)
 
 # Создаем Flask приложение для API ботов
 # ВАЖНО: Создаем здесь чтобы было доступно при импорте api_endpoints

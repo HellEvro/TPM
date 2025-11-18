@@ -190,10 +190,32 @@ except Exception as e:
 # matplotlib - логирует неформатированные сообщения при импорте
 matplotlib_logger = logging.getLogger('matplotlib')
 matplotlib_logger.setLevel(logging.WARNING)
+for handler in matplotlib_logger.handlers[:]:
+    matplotlib_logger.removeHandler(handler)
+
 matplotlib_font_manager_logger = logging.getLogger('matplotlib.font_manager')
 matplotlib_font_manager_logger.setLevel(logging.WARNING)
+for handler in matplotlib_font_manager_logger.handlers[:]:
+    matplotlib_font_manager_logger.removeHandler(handler)
+
 matplotlib_backends_logger = logging.getLogger('matplotlib.backends')
 matplotlib_backends_logger.setLevel(logging.WARNING)
+for handler in matplotlib_backends_logger.handlers[:]:
+    matplotlib_backends_logger.removeHandler(handler)
+
+# TensorFlow - логирует "Falling back to TensorFlow client..."
+tensorflow_logger = logging.getLogger('tensorflow')
+tensorflow_logger.setLevel(logging.WARNING)
+tensorflow_python_logger = logging.getLogger('tensorflow.python')
+tensorflow_python_logger.setLevel(logging.WARNING)
+tensorflow_core_logger = logging.getLogger('tensorflow.core')
+tensorflow_core_logger.setLevel(logging.WARNING)
+for handler in tensorflow_logger.handlers[:]:
+    tensorflow_logger.removeHandler(handler)
+for handler in tensorflow_python_logger.handlers[:]:
+    tensorflow_python_logger.removeHandler(handler)
+for handler in tensorflow_core_logger.handlers[:]:
+    tensorflow_core_logger.removeHandler(handler)
 
 logger = logging.getLogger('BotsService')
 
