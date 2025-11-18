@@ -6084,7 +6084,7 @@ class BotsManager {
         
         // Загружаем настройки лимитных ордеров
         const percentSteps = autoBotConfig.limit_orders_percent_steps || [1, 2, 3, 4, 5];
-        const marginAmounts = autoBotConfig.limit_orders_margin_amounts || [0.2, 0.3, 0.5, 1, 2];
+        const marginAmounts = autoBotConfig.limit_orders_margin_amounts || [5, 5, 5, 5, 5];
         const listEl = document.getElementById('limitOrdersList');
         if (listEl) {
             // ✅ Инициализируем UI ПЕРЕД загрузкой данных, но ПОСЛЕ установки значения toggle
@@ -10315,9 +10315,11 @@ class BotsManager {
                        style="width: 100%; padding: 5px; background: #1a1a1a; color: #fff; border: 1px solid #404040; border-radius: 3px;">
             </div>
             <div style="flex: 1;">
-                <label style="display: block; margin-bottom: 5px; color: #fff;">Сумма (USDT):</label>
-                <input type="number" class="limit-order-margin" value="${margin}" step="0.1" min="0.1" 
+                <label style="display: block; margin-bottom: 5px; color: #fff;">Сумма (USDT): <small style="color: #ffc107; font-size: 11px;">⚠️ Минимум 5 USDT</small></label>
+                <input type="number" class="limit-order-margin" value="${margin}" step="0.1" min="5" 
+                       placeholder="Минимум 5 USDT"
                        style="width: 100%; padding: 5px; background: #1a1a1a; color: #fff; border: 1px solid #404040; border-radius: 3px;">
+                <small class="limit-order-margin-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 3px;">⚠️ Минимум 5 USDT (требование биржи Bybit)</small>
             </div>
             <button type="button" class="remove-limit-order-btn" style="padding: 10px 15px; background: #dc3545; color: #fff; border: none; border-radius: 3px; cursor: pointer; margin-top: 20px;">
                 ➖
@@ -10368,12 +10370,37 @@ class BotsManager {
         
         if (marginInput && !marginInput.hasAttribute('data-autosave-initialized')) {
             marginInput.setAttribute('data-autosave-initialized', 'true');
+            const errorMsg = row.querySelector('.limit-order-margin-error');
+            
+            // Валидация при вводе
             marginInput.addEventListener('input', () => {
+                const value = parseFloat(marginInput.value) || 0;
+                
+                // Показываем ошибку если значение меньше 5 (и не пустое)
+                if (value > 0 && value < 5) {
+                    marginInput.style.borderColor = '#dc3545';
+                    if (errorMsg) errorMsg.style.display = 'block';
+                } else {
+                    marginInput.style.borderColor = '#404040';
+                    if (errorMsg) errorMsg.style.display = 'none';
+                }
+                
                 if (!this.isProgrammaticChange) {
                     this.scheduleAutoSave();
                 }
             });
+            
             marginInput.addEventListener('blur', () => {
+                const value = parseFloat(marginInput.value) || 0;
+                
+                // При потере фокуса - если значение меньше 5, устанавливаем минимум
+                if (value > 0 && value < 5) {
+                    marginInput.value = 5;
+                    marginInput.style.borderColor = '#404040';
+                    if (errorMsg) errorMsg.style.display = 'none';
+                    this.showNotification('⚠️ Сумма лимитного ордера увеличена до минимума 5 USDT (требование биржи Bybit)', 'warning');
+                }
+                
                 if (!this.isProgrammaticChange) {
                     this.scheduleAutoSave();
                 }
@@ -10389,13 +10416,35 @@ class BotsManager {
             const percentSteps = [];
             const marginAmounts = [];
             
-            rows.forEach(row => {
+            // ✅ ВАЛИДАЦИЯ: Проверяем что все суммы >= 5 USDT (кроме рыночного ордера с percent_step = 0)
+            const validationErrors = [];
+            rows.forEach((row, index) => {
                 const percent = parseFloat(row.querySelector('.limit-order-percent').value) || 0;
                 const margin = parseFloat(row.querySelector('.limit-order-margin').value) || 0;
-                // Сохраняем все значения, даже если margin = 0 (для первого рыночного ордера)
+                
+                // Для лимитных ордеров (percent > 0) проверяем минимум 5 USDT
+                if (percent > 0 && margin > 0 && margin < 5) {
+                    validationErrors.push(`Ордер #${index + 1} (${percent}%): сумма ${margin} USDT меньше минимума 5 USDT`);
+                    // Подсвечиваем поле с ошибкой
+                    const marginInput = row.querySelector('.limit-order-margin');
+                    if (marginInput) {
+                        marginInput.style.borderColor = '#dc3545';
+                        const errorMsg = row.querySelector('.limit-order-margin-error');
+                        if (errorMsg) errorMsg.style.display = 'block';
+                    }
+                }
+                
                 percentSteps.push(percent);
                 marginAmounts.push(margin);
             });
+            
+            // Если есть ошибки валидации - показываем их и не сохраняем
+            if (validationErrors.length > 0) {
+                const errorText = `❌ Ошибка валидации:\n${validationErrors.join('\n')}\n\n⚠️ Минимум 5 USDT на ордер (требование биржи Bybit)`;
+                this.showNotification(errorText, 'error');
+                console.error('[BotsManager] ❌ Ошибки валидации лимитных ордеров:', validationErrors);
+                return; // Не сохраняем, если есть ошибки
+            }
             
             // Если включен режим, но нет ордеров - выключаем режим
             const finalEnabled = enabled && percentSteps.length > 0 && marginAmounts.some(m => m > 0);
@@ -10433,9 +10482,9 @@ class BotsManager {
                 return;
             }
             
-            // Дефолтные значения из bot_config.py
+            // Дефолтные значения из bot_config.py (минимум 5 USDT на ордер - требование биржи Bybit)
             const defaultPercentSteps = [0, 0.5, 1, 1.5, 2];
-            const defaultMarginAmounts = [0.5, 0.75, 1, 1.25, 1.5];
+            const defaultMarginAmounts = [5, 5, 5, 5, 5];
             
             // НЕ меняем состояние toggle - он должен оставаться включенным!
             
