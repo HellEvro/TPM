@@ -169,10 +169,10 @@ class StatisticsManager {
             // Обновляем линии границ
             const numPoints = this.chartData.labels.length;
             if (this.chart.data.datasets.length > 1) {
-                // Верхняя красная граница (80)
-                this.chart.data.datasets[1].data = new Array(numPoints).fill(80);
-                // Нижняя зеленая граница (20)
-                this.chart.data.datasets[2].data = new Array(numPoints).fill(20);
+                // Верхняя красная граница (70)
+                this.chart.data.datasets[1].data = new Array(numPoints).fill(70);
+                // Нижняя зеленая граница (30)
+                this.chart.data.datasets[2].data = new Array(numPoints).fill(30);
                 // Центральная серая прерывистая (50)
                 this.chart.data.datasets[3].data = new Array(numPoints).fill(50);
             }
@@ -206,9 +206,9 @@ class StatisticsManager {
             
             // Обновляем цвет линий границ
             if (this.chart.data.datasets.length > 1) {
-                // Верхняя красная граница (80)
+                // Верхняя красная граница (70)
                 this.chart.data.datasets[1].borderColor = '#ff0000';
-                // Нижняя зеленая граница (20)
+                // Нижняя зеленая граница (30)
                 this.chart.data.datasets[2].borderColor = '#00ff00';
                 // Центральная серая прерывистая (50)
                 this.chart.data.datasets[3].borderColor = isDark ? '#888888' : '#666666';
@@ -271,8 +271,8 @@ class StatisticsManager {
 
             // Подготавливаем данные для линий границ
             const labels = this.chartData.labels.length > 0 ? this.chartData.labels : ['', '', ''];
-            const boundaryValues = labels.map(() => 80); // Верхняя граница 80
-            const lowerBoundaryValues = labels.map(() => 20); // Нижняя граница 20
+            const boundaryValues = labels.map(() => 70); // Верхняя граница 70
+            const lowerBoundaryValues = labels.map(() => 30); // Нижняя граница 30
             const centerBoundaryValues = labels.map(() => 50); // Центральная граница 50
 
             this.chart = new Chart(ctx, {
@@ -292,7 +292,7 @@ class StatisticsManager {
                             pointHoverRadius: 3
                         },
                         {
-                            label: 'Верхняя граница (80)',
+                            label: 'Верхняя граница (70)',
                             data: boundaryValues,
                             borderColor: '#ff0000',
                             backgroundColor: 'transparent',
@@ -302,7 +302,7 @@ class StatisticsManager {
                             borderDash: [] // Сплошная линия
                         },
                         {
-                            label: 'Нижняя граница (20)',
+                            label: 'Нижняя граница (30)',
                             data: lowerBoundaryValues,
                             borderColor: '#00ff00',
                             backgroundColor: 'transparent',
