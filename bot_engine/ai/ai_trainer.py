@@ -2171,6 +2171,21 @@ class AITrainer:
                     
                     total_candles_processed += len(candles)
                     
+                    # ДИАГНОСТИКА: Если нет сделок, логируем статистику RSI
+                    if trades_for_symbol == 0 and (symbol_idx <= 10 or symbol_idx % progress_interval == 0):
+                        if rsi_history:
+                            min_rsi = min(rsi_history)
+                            max_rsi = max(rsi_history)
+                            avg_rsi = sum(rsi_history) / len(rsi_history)
+                            rsi_in_long_zone = sum(1 for r in rsi_history if r <= coin_RSI_OVERSOLD)
+                            rsi_in_short_zone = sum(1 for r in rsi_history if r >= coin_RSI_OVERBOUGHT)
+                            logger.info(
+                                f"   🔍 {symbol}: диагностика отсутствия сделок - "
+                                f"RSI: min={min_rsi:.1f}, max={max_rsi:.1f}, avg={avg_rsi:.1f}, "
+                                f"в зоне LONG (≤{coin_RSI_OVERSOLD}): {rsi_in_long_zone} раз, "
+                                f"в зоне SHORT (≥{coin_RSI_OVERBOUGHT}): {rsi_in_short_zone} раз"
+                            )
+                    
                     # Логируем завершение симуляции (INFO только для важных монет)
                     if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
                         logger.info(f"   ✅ {symbol}: симуляция завершена ({candles_to_process:,} свечей обработано, {trades_for_symbol} сделок)")
@@ -2389,21 +2404,27 @@ class AITrainer:
                                     
                                     # Сохраняем только RSI параметры в трекер (так как он рассчитан на RSI)
                                     # Но полные параметры сохраняются в metadata.json модели
-                                    self.param_tracker.mark_params_used(
-                                        coin_rsi_params,  # Используем параметры которые реально использовались для монеты
-                                        training_seed,
-                                        symbol_win_rate,
-                                        symbol,
-                                        total_pnl=symbol_pnl,
-                                        signal_accuracy=signal_score,
-                                        trades_count=trades_for_symbol
-                                    )
-                                    
-                                    if symbol_idx <= 10:
-                                        logger.info(f"   ✅ {symbol}: параметры сохранены в трекер")
-                                        logger.debug(f"   🧾 {symbol}: параметры отмечены в трекере")
-                                except Exception as tracker_error:
-                                    logger.error(f"   ❌ {symbol}: ошибка сохранения параметров в трекер: {tracker_error}")
+                                    try:
+                                        self.param_tracker.mark_params_used(
+                                            coin_rsi_params,  # Используем параметры которые реально использовались для монеты
+                                            training_seed,
+                                            symbol_win_rate,
+                                            symbol,
+                                            total_pnl=symbol_pnl,
+                                            signal_accuracy=signal_score,
+                                            trades_count=trades_for_symbol
+                                        )
+                                        
+                                        if symbol_idx <= 10:
+                                            logger.info(f"   ✅ {symbol}: параметры сохранены в трекер (Win Rate: {symbol_win_rate:.1f}%, PnL: {symbol_pnl:.2f} USDT)")
+                                        else:
+                                            logger.debug(f"   🧾 {symbol}: параметры отмечены в трекере")
+                                    except Exception as tracker_error:
+                                        logger.error(f"   ❌ {symbol}: ошибка сохранения параметров в трекер: {tracker_error}")
+                                        import traceback
+                                        logger.error(traceback.format_exc())
+                                except Exception as outer_tracker_error:
+                                    logger.error(f"   ❌ {symbol}: ошибка подготовки параметров для трекера: {outer_tracker_error}")
                                     import traceback
                                     logger.error(traceback.format_exc())
                             
