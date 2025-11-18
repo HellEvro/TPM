@@ -47,9 +47,20 @@ class BinanceExchange(BaseExchange):
                 leverage = float(position.get('leverage', 1) or 1)
                 
                 # ROI рассчитывается от маржи (залога) в сделке
-                # Маржа = стоимость позиции / плечо
-                position_value = position_amt * entry_price
-                margin = position_value / leverage if leverage > 0 else position_value
+                # Пытаемся использовать isolatedMargin из API, если есть
+                margin = float(position.get('isolatedMargin', 0))  # Изолированная маржа из API
+                
+                if margin == 0:
+                    # Если isolatedMargin нет, используем notional / leverage или рассчитываем
+                    notional = float(position.get('notional', 0))
+                    if notional > 0:
+                        # Маржа = стоимость позиции / плечо
+                        margin = notional / leverage if leverage > 0 else notional
+                    else:
+                        # Fallback: рассчитываем
+                        position_value = position_amt * entry_price
+                        margin = position_value / leverage if leverage > 0 else position_value
+                
                 roi = (current_pnl / margin * 100) if margin > 0 else 0
                 
                 if current_pnl > 0:

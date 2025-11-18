@@ -221,9 +221,34 @@ class BybitExchange(BaseExchange):
                         leverage = float(position.get('leverage', 1) or 1)
                         
                         # ROI рассчитывается от маржи (залога) в сделке
-                        # Маржа = стоимость позиции / плечо
-                        position_value = avg_price * position_size
-                        margin = position_value / leverage if leverage > 0 else position_value
+                        # Пытаемся использовать различные поля из API для получения реальной маржи
+                        margin = 0
+                        
+                        # Вариант 1: positionIM (isolated margin) - изолированная маржа
+                        margin = float(position.get('positionIM', 0))
+                        
+                        # Вариант 2: positionBalance (баланс позиции) - может быть маржа
+                        if margin == 0:
+                            margin = float(position.get('positionBalance', 0))
+                        
+                        # Вариант 3: используем positionValue / leverage
+                        if margin == 0:
+                            position_value = float(position.get('positionValue', 0))
+                            if position_value > 0:
+                                # Маржа = стоимость позиции / плечо
+                                margin = position_value / leverage if leverage > 0 else position_value
+                        
+                        # Вариант 4: рассчитываем из размера и цены
+                        if margin == 0:
+                            position_value = avg_price * position_size
+                            margin = position_value / leverage if leverage > 0 else position_value
+                        
+                        # Если маржа все еще 0 или очень маленькая, логируем для отладки
+                        if margin <= 0.01:
+                            logger.warning(f"[BYBIT ROI DEBUG] {symbol}: margin={margin}, positionValue={position.get('positionValue')}, positionIM={position.get('positionIM')}, positionBalance={position.get('positionBalance')}, leverage={leverage}, size={position_size}, avgPrice={avg_price}, pnl={current_pnl}, calculated_margin={avg_price * position_size / leverage if leverage > 0 else avg_price * position_size}")
+                            # Fallback: используем минимальную маржу 1 USDT для избежания деления на ноль
+                            margin = 1.0
+                        
                         roi = (current_pnl / margin * 100) if margin > 0 else 0
                         
                         if current_pnl > 0:
