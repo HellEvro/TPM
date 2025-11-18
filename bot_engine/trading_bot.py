@@ -638,7 +638,7 @@ class TradingBot:
             except Exception as ai_error:
                 self.logger.debug(f" {self.symbol}: AI адаптация размера недоступна: {ai_error}")
             
-            # Получаем конфигурацию для набора позиций
+            # Получаем конфигурацию для набора позиций (только глобальные настройки)
             try:
                 import sys
                 import os
@@ -652,7 +652,7 @@ class TradingBot:
                     margin_amounts = auto_config.get('limit_orders_margin_amounts', [0.2, 0.3, 0.5, 1, 2])
                 
                 # ✅ Логируем конфигурацию для диагностики
-                self.logger.info(f" {self.symbol}: 🔍 Конфигурация лимитных ордеров: enabled={limit_orders_enabled}, steps={percent_steps}, amounts={margin_amounts}")
+                self.logger.info(f" {self.symbol}: 🔍 Конфигурация лимитных ордеров (глобальные): enabled={limit_orders_enabled}, steps={percent_steps}, amounts={margin_amounts}")
             except Exception as e:
                 self.logger.warning(f" {self.symbol}: Не удалось получить конфигурацию лимитных ордеров: {e}")
                 limit_orders_enabled = False
@@ -1112,6 +1112,19 @@ class TradingBot:
             
             # Сохраняем цену входа для расчета лимитных ордеров
             self.limit_orders_entry_price = current_price
+            
+            # ✅ ПРОВЕРКА: Есть ли уже открытые лимитные ордера на бирже (добавленные вручную)?
+            existing_orders = []
+            if hasattr(self.exchange, 'get_open_orders'):
+                try:
+                    existing_orders = self.exchange.get_open_orders(self.symbol)
+                    if existing_orders:
+                        self.logger.warning(f" {self.symbol}: ⚠️ Обнаружены существующие открытые ордера на бирже: {len(existing_orders)} шт.")
+                        for order in existing_orders:
+                            self.logger.warning(f" {self.symbol}:   - Ордер {order.get('order_id', 'unknown')}: {order.get('side', 'unknown')} {order.get('quantity', 0)} @ {order.get('price', 0):.6f}")
+                except Exception as e:
+                    self.logger.debug(f" {self.symbol}: ⚠️ Не удалось проверить существующие ордера: {e}")
+            
             self.limit_orders = []
             self.last_limit_orders_count = 0  # Сбрасываем счетчик при размещении новых ордеров
             
@@ -1125,11 +1138,15 @@ class TradingBot:
             
             # Размещаем лимитные ордера
             for i, (percent_step, margin_amount) in enumerate(zip(percent_steps, margin_amounts)):
+                # ✅ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ: Показываем, какая сумма используется для каждого ордера
+                self.logger.info(f" {self.symbol}: 📋 Ордер #{i+1}: percent_step={percent_step}%, margin_amount={margin_amount} USDT (из конфига: {margin_amounts})")
+                
                 # Если первый шаг = 0, то первая сделка по рынку
                 if i == 0 and percent_step == 0:
                     first_order_market = True
                     # Размещаем рыночный ордер
                     # ✅ Передаем quantity_is_usdt=True, так как margin_amount в USDT
+                    self.logger.info(f" {self.symbol}: 🚀 Размещаем рыночный ордер: {margin_amount} USDT")
                     order_result = self.exchange.place_order(
                         symbol=self.symbol,
                         side=side,
@@ -1175,6 +1192,7 @@ class TradingBot:
                 
                 # Размещаем лимитный ордер
                 # ✅ Передаем quantity_is_usdt=True, так как margin_amount в USDT
+                self.logger.info(f" {self.symbol}: 🚀 Размещаем лимитный ордер #{i+1}: {margin_amount} USDT @ {limit_price:.6f} ({percent_step}%)")
                 order_result = self.exchange.place_order(
                     symbol=self.symbol,
                     side=side,
@@ -1320,6 +1338,77 @@ class TradingBot:
         except Exception as e:
             self.logger.error(f" {self.symbol}: ❌ Ошибка проверки лимитных ордеров: {e}")
     
+    def _remove_cancelled_orders_from_list(self) -> None:
+        """
+        Проверяет статус ордеров на бирже и удаляет из списка те, которые были отменены вручную
+        """
+        if not self.limit_orders:
+            return
+        
+        try:
+            # Получаем открытые ордера с биржи (если метод доступен)
+            open_orders = []
+            if hasattr(self.exchange, 'get_open_orders'):
+                try:
+                    orders_result = self.exchange.get_open_orders(self.symbol)
+                    if orders_result and isinstance(orders_result, list):
+                        open_orders = orders_result
+                    elif orders_result and isinstance(orders_result, dict):
+                        open_orders = orders_result.get('orders', [])
+                except Exception as e:
+                    self.logger.debug(f" {self.symbol}: ⚠️ Не удалось получить открытые ордера: {e}")
+            
+            # Если метод недоступен, пытаемся проверить через попытку отмены
+            # (если ордер не существует, отмена вернет ошибку)
+            if not hasattr(self.exchange, 'get_open_orders'):
+                orders_to_remove = []
+                for order_info in self.limit_orders[:]:
+                    order_id = order_info.get('order_id')
+                    if not order_id:
+                        continue
+                    
+                    # Пытаемся проверить статус через попытку отмены
+                    # Если ордер не существует, метод вернет ошибку
+                    try:
+                        if hasattr(self.exchange, 'cancel_order'):
+                            # Проверяем, существует ли ордер, пытаясь его отменить
+                            # Если ордер уже отменен/не существует, получим ошибку
+                            # Но это не идеальный способ, так как мы не хотим отменять существующие ордера
+                            # Поэтому просто пропускаем проверку, если метод get_open_orders недоступен
+                            pass
+                    except Exception:
+                        # Если ошибка при проверке - оставляем ордер в списке (безопаснее)
+                        pass
+                
+                # Если метод проверки недоступен, просто логируем предупреждение
+                self.logger.debug(f" {self.symbol}: ⚠️ Метод проверки статуса ордеров недоступен, пропускаем проверку удаленных ордеров")
+                return
+            
+            # Создаем множество ID открытых ордеров на бирже
+            open_order_ids = set()
+            for order in open_orders:
+                order_id = str(order.get('orderId') or order.get('order_id') or order.get('id', ''))
+                if order_id:
+                    open_order_ids.add(order_id)
+            
+            # Удаляем из списка ордера, которых нет на бирже
+            removed_count = 0
+            for order_info in self.limit_orders[:]:
+                order_id = str(order_info.get('order_id', ''))
+                if order_id and order_id not in open_order_ids:
+                    # Ордер был удален вручную на бирже
+                    self.limit_orders.remove(order_info)
+                    removed_count += 1
+                    self.logger.warning(f" {self.symbol}: ⚠️ Лимитный ордер {order_id} был удален вручную на бирже, удаляем из списка")
+            
+            if removed_count > 0:
+                self.logger.info(f" {self.symbol}: 🗑️ Удалено {removed_count} несуществующих ордеров из списка")
+                # Обновляем счетчик
+                self.last_limit_orders_count = len(self.limit_orders)
+        
+        except Exception as e:
+            self.logger.error(f" {self.symbol}: ❌ Ошибка проверки статуса ордеров: {e}")
+    
     def _cancel_all_limit_orders(self) -> None:
         """Отменяет все активные лимитные ордера"""
         if not self.limit_orders:
@@ -1363,6 +1452,8 @@ class TradingBot:
         """
         Проверяет сработавшие лимитные ордера, пересчитывает среднюю цену входа
         и обновляет стоп-лосс ТОЛЬКО при срабатывании нового ордера
+        
+        Также проверяет, не были ли ордера удалены вручную на бирже
         """
         if not self.limit_orders:
             # Если нет активных ордеров, обновляем счетчик
@@ -1370,8 +1461,18 @@ class TradingBot:
             return
         
         try:
+            # ✅ ПРОВЕРКА 1: Проверяем, существуют ли ордера на бирже
+            # Если ордер был удален вручную, удаляем его из списка
+            self._remove_cancelled_orders_from_list()
+            
             # Сохраняем текущее количество ордеров ДО проверки
             current_orders_count = len(self.limit_orders)
+            
+            # Если после проверки ордеров список пуст, выходим
+            if not self.limit_orders:
+                self.last_limit_orders_count = 0
+                return
+            
             # Получаем реальную позицию с биржи
             exchange_positions = self.exchange.get_positions()
             if isinstance(exchange_positions, tuple):
@@ -1406,6 +1507,20 @@ class TradingBot:
             # Получаем текущий размер позиции в боте
             current_bot_size = self.position.get('quantity', 0) if self.position else 0
             current_bot_price = self.position.get('entry_price', 0) if self.position else 0
+            
+            # ✅ ПРОВЕРКА: Рассчитываем ожидаемый размер позиции от всех наших лимитных ордеров
+            # Это поможет обнаружить "чужие" ордера, добавленные вручную
+            expected_size_from_orders = sum(order.get('quantity', 0) for order in self.limit_orders)
+            if self.position:
+                expected_total_size = current_bot_size + expected_size_from_orders
+            else:
+                expected_total_size = expected_size_from_orders
+            
+            # Проверяем, не превышает ли реальный размер ожидаемый (значит есть "чужие" ордера)
+            if real_size > expected_total_size * 1.01:  # 1% допуск
+                extra_size = real_size - expected_total_size
+                self.logger.warning(f" {self.symbol}: ⚠️ Обнаружено несоответствие размера позиции! Реальный: {real_size:.6f}, ожидаемый от наших ордеров: {expected_total_size:.6f}, разница: {extra_size:.6f}")
+                self.logger.warning(f" {self.symbol}: ⚠️ Возможно, на бирже есть лимитные ордера, добавленные вручную, или сработали ордера, которых нет в нашем списке")
             
             # Проверяем, изменилась ли позиция на бирже
             # Если размер увеличился или средняя цена изменилась, значит сработали ордера
