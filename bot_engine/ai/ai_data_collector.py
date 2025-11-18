@@ -301,8 +301,18 @@ class AIDataCollector:
         try:
             bot_history_file = os.path.join('data', 'bot_history.json')
             if os.path.exists(bot_history_file):
-                with open(bot_history_file, 'r', encoding='utf-8') as f:
-                    bot_history_data = json.load(f)
+                import shutil
+                snapshot_file = f"{bot_history_file}.snapshot"
+                try:
+                    shutil.copy2(bot_history_file, snapshot_file)
+                    with open(snapshot_file, 'r', encoding='utf-8') as f:
+                        bot_history_data = json.load(f)
+                finally:
+                    try:
+                        if os.path.exists(snapshot_file):
+                            os.remove(snapshot_file)
+                    except Exception:
+                        pass
                 
                 # Извлекаем сделки из bot_history.json
                 bot_trades = bot_history_data.get('trades', [])
