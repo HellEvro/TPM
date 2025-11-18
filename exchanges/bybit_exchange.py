@@ -1754,8 +1754,9 @@ class BybitExchange(BaseExchange):
             take_profit (float, optional): Цена Take Profit
             stop_loss (float, optional): Цена Stop Loss
             max_loss_percent (float, optional): Максимальный убыток в % (если не указана цена стоп-лосса)
-            skip_min_notional_enforcement (bool): Если True, не принудительно увеличивать до minNotionalValue
+            skip_min_notional_enforcement (bool): Если True, выводить специальное предупреждение при увеличении до minNotionalValue
                                                   (используется для лимитных ордеров из набора позиций)
+                                                  ВАЖНО: ордер все равно будет увеличен до минимума, иначе биржа отклонит его!
             
         Returns:
             dict: Результат размещения ордера
