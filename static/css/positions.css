@@ -141,10 +141,10 @@
 .mini-chart {
     background-color: var(--section-bg);
     border-radius: 2px;
-    height: 24px;
+    height: 120px;  /* Увеличена высота с 24px до 120px */
     margin-left: 10px;
     object-fit: contain;
-    width: 60px;
+    width: 200px;  /* Увеличена ширина с 60px до 200px */
 }
 
 /* === Position ROI === */
