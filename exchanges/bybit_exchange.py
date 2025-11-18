@@ -2275,3 +2275,45 @@ class BybitExchange(BaseExchange):
                 'success': False,
                 'message': f"Ошибка установки SL: {str(e)}"
             }
+    
+    def get_open_orders(self, symbol):
+        """
+        Получает список открытых ордеров для символа
+        
+        Args:
+            symbol (str): Символ торговой пары (без USDT)
+            
+        Returns:
+            list: Список открытых ордеров
+        """
+        try:
+            # Используем API Bybit для получения открытых ордеров
+            response = self.client.get_open_orders(
+                category="linear",
+                symbol=f"{symbol}USDT",
+                limit=50
+            )
+            
+            if response.get('retCode') == 0:
+                orders = response.get('result', {}).get('list', [])
+                # Преобразуем формат для единообразия
+                formatted_orders = []
+                for order in orders:
+                    formatted_orders.append({
+                        'order_id': order.get('orderId', ''),
+                        'orderId': order.get('orderId', ''),
+                        'id': order.get('orderId', ''),
+                        'symbol': order.get('symbol', '').replace('USDT', ''),
+                        'side': order.get('side', ''),
+                        'price': float(order.get('price', 0)),
+                        'quantity': float(order.get('qty', 0)),
+                        'status': order.get('orderStatus', '')
+                    })
+                return formatted_orders
+            else:
+                logger.warning(f"[BYBIT_BOT] ⚠️ Не удалось получить открытые ордера для {symbol}: {response.get('retMsg', 'unknown error')}")
+                return []
+        
+        except Exception as e:
+            logger.error(f"[BYBIT_BOT] ❌ Ошибка получения открытых ордеров для {symbol}: {e}")
+            return []

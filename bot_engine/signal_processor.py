@@ -55,7 +55,8 @@ def get_effective_signal(coin, config):
         logger.debug(f"[SIGNAL] {symbol}: ❌ LONG заблокирован (RSI={rsi:.1f} <= {rsi_long_threshold} + DOWN тренд)")
         return 'WAIT'
     
-    logger.debug(f"[SIGNAL] {symbol}: ✅ {signal} разрешен (RSI={rsi:.1f}, Trend={trend})")
+    # ✅ УБРАНО избыточное логирование - оно дублируется в других местах
+    # logger.debug(f"[SIGNAL] {symbol}: ✅ {signal} разрешен (RSI={rsi:.1f}, Trend={trend})")
     return signal
 
 
