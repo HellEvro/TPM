@@ -476,7 +476,7 @@ class ColorFormatter(logging.Formatter):
         
         return message
 
-def setup_color_logging(console_log_levels=None):
+def setup_color_logging(console_log_levels=None, enable_file_logging=True, log_file=None):
     """
     Настройка цветного логирования
     
@@ -484,11 +484,57 @@ def setup_color_logging(console_log_levels=None):
         console_log_levels: Список настроек уровней логирования для консоли, например:
             ['+INFO', '-WARNING', '+ERROR', '-DEBUG']
             Если None - все уровни разрешены
+        enable_file_logging: Включить ли файловое логирование с ротацией (по умолчанию True)
+        log_file: Путь к файлу лога (по умолчанию определяется автоматически)
     """
     # Создаем логгер
     logger = logging.getLogger()
     # Устанавливаем минимальный уровень, чтобы все сообщения доходили до фильтра
     logger.setLevel(logging.DEBUG)
+    
+    # КРИТИЧНО: Добавляем файловый обработчик с ротацией (10MB)
+    if enable_file_logging:
+        # Определяем файл лога автоматически на основе имени скрипта
+        if log_file is None:
+            import sys
+            script_name = sys.argv[0] if sys.argv else 'app'
+            if 'ai.py' in script_name or 'ai' in script_name.lower():
+                log_file = 'logs/ai.log'
+            elif 'bots.py' in script_name or 'bots' in script_name.lower():
+                log_file = 'logs/bots.log'
+            else:
+                log_file = 'logs/app.log'
+        
+        # Проверяем, нет ли уже файлового обработчика для этого файла
+        has_file_handler = False
+        for handler in logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                handler_file = getattr(handler, 'baseFilename', '')
+                if handler_file and (handler_file.endswith(log_file) or log_file in handler_file):
+                    has_file_handler = True
+                    break
+        
+        if not has_file_handler:
+            try:
+                from utils.log_rotation import RotatingFileHandlerWithSizeLimit
+                import os
+                # Создаем директорию logs если её нет
+                os.makedirs(os.path.dirname(log_file), exist_ok=True)
+                file_handler = RotatingFileHandlerWithSizeLimit(
+                    filename=log_file,
+                    max_bytes=10 * 1024 * 1024,  # 10MB
+                    backup_count=0,  # Перезаписываем файл
+                    encoding='utf-8'
+                )
+                file_handler.setLevel(logging.DEBUG)
+                # Форматтер для файла (без цветов)
+                file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                file_handler.setFormatter(file_formatter)
+                logger.addHandler(file_handler)
+            except Exception as e:
+                # Если не удалось добавить файловый обработчик, продолжаем без него
+                import sys
+                sys.stderr.write(f"[COLOR_LOGGER] ⚠️ Не удалось добавить файловый обработчик: {e}\n")
     
     # Проверяем, есть ли уже консольный обработчик с нашим фильтром
     # Если есть, обновляем фильтр, но не пересоздаём обработчик
