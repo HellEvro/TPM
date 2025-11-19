@@ -388,8 +388,9 @@ class App {
                 this.updateLastUpdateTime();
                 return data;
             } else if (this.currentTab === 'closedPnl') {
-                // Обновляем закрытые позиции с учетом выбранного периода
-                await this.updateClosedPnl(false);
+                // Закрытые позиции не обновляются автоматически через updateData()
+                // Они обновляются только при явном запросе (кнопка "Обновить") или смене периода
+                // Это предотвращает излишнюю нагрузку на сервер
                 this.updateLastUpdateTime();
                 return null;
             } else {
