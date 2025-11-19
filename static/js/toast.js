@@ -69,10 +69,8 @@ class ToastManager {
                     console.log('[ToastManager] ✅ Контейнер добавлен в DOM');
                 }
             } else {
-                console.error('[ToastManager] ❌ document.body не доступен!');
-                // Fallback на alert
-                alert(`${type.toUpperCase()}: ${message}`);
-                return null;
+                console.error('[ToastManager] ❌ document.body не доступен! Пропускаем уведомление.');
+                return null; // ❌ НЕ используем alert - просто возвращаем null
             }
         }
         

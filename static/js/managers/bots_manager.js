@@ -4396,9 +4396,8 @@ class BotsManager {
                 window.toastManager = new ToastManager();
                 console.log('[BotsManager] ✅ toastManager создан');
             } else {
-                console.error('[BotsManager] ❌ ToastManager не доступен, используем alert');
-                alert(`${type.toUpperCase()}: ${message}`);
-                return;
+                console.error('[BotsManager] ❌ ToastManager не доступен! Пропускаем уведомление.');
+                return; // ❌ НЕ используем alert - просто пропускаем
             }
         }
         
@@ -4421,9 +4420,8 @@ class BotsManager {
                         console.log('[BotsManager] ✅ Контейнер добавлен в DOM');
                     }
                 } else {
-                    console.error('[BotsManager] ❌ document.body не доступен!');
-                    alert(`${type.toUpperCase()}: ${message}`);
-                    return;
+                    console.error('[BotsManager] ❌ document.body не доступен! Пропускаем уведомление.');
+                    return; // ❌ НЕ используем alert - просто пропускаем
                 }
             }
             
@@ -4441,61 +4439,32 @@ class BotsManager {
                 container.style.pointerEvents = 'none';
                 container.style.visibility = 'visible';
                 container.style.opacity = '1';
-                
-                // ✅ Проверяем видимость контейнера
-                const containerRect = container.getBoundingClientRect();
-                const containerVisible = containerRect.width > 0 && containerRect.height > 0;
-                console.log('[BotsManager] 📊 Контейнер toast:', {
-                    exists: !!container,
-                    inDOM: document.body.contains(container),
-                    visible: containerVisible,
-                    zIndex: window.getComputedStyle(container).zIndex,
-                    position: window.getComputedStyle(container).position
-                });
             }
             
-            // ✅ Показываем уведомление
-            let toastId = null;
+            // ✅ Показываем уведомление (автоматически скрывается через 3-5 секунд)
             switch(type) {
                 case 'success':
-                    toastId = window.toastManager.success(message);
-                    console.log('[BotsManager] ✅ Вызван toastManager.success(), toastId:', toastId);
+                    window.toastManager.success(message, 3000); // 3 секунды
+                    console.log('[BotsManager] ✅ Вызван toastManager.success()');
                     break;
                 case 'error':
-                    toastId = window.toastManager.error(message);
-                    console.log('[BotsManager] ❌ Вызван toastManager.error(), toastId:', toastId);
+                    window.toastManager.error(message, 5000); // 5 секунд для ошибок
+                    console.log('[BotsManager] ❌ Вызван toastManager.error()');
                     break;
                 case 'warning':
-                    toastId = window.toastManager.warning(message);
-                    console.log('[BotsManager] ⚠️ Вызван toastManager.warning(), toastId:', toastId);
+                    window.toastManager.warning(message, 4000); // 4 секунды
+                    console.log('[BotsManager] ⚠️ Вызван toastManager.warning()');
                     break;
                 case 'info':
                 default:
-                    toastId = window.toastManager.info(message);
-                    console.log('[BotsManager] ℹ️ Вызван toastManager.info(), toastId:', toastId);
+                    window.toastManager.info(message, 3000); // 3 секунды
+                    console.log('[BotsManager] ℹ️ Вызван toastManager.info()');
                     break;
             }
-            
-            // ✅ Проверяем, что toast действительно создан
-            setTimeout(() => {
-                const toastContainer = document.getElementById('toast-container');
-                if (toastContainer) {
-                    const toasts = toastContainer.querySelectorAll('.toast');
-                    console.log(`[BotsManager] 📊 Проверка toast: контейнер найден, toast элементов: ${toasts.length}`);
-                    if (toasts.length === 0 && toastId === null) {
-                        console.warn('[BotsManager] ⚠️ Toast не был создан! Используем alert как fallback');
-                        alert(`${type.toUpperCase()}: ${message}`);
-                    }
-                } else {
-                    console.error('[BotsManager] ❌ Контейнер toast не найден в DOM!');
-                    alert(`${type.toUpperCase()}: ${message}`);
-                }
-            }, 100);
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка при показе уведомления:', error);
             console.error('[BotsManager] Stack trace:', error.stack);
-            // Fallback на alert
-            alert(`${type.toUpperCase()}: ${message}`);
+            // ❌ НЕ используем alert - просто логируем ошибку
         }
     }
 
@@ -8098,19 +8067,9 @@ class BotsManager {
                 await this.saveConfiguration(true);
                 console.log('[BotsManager] ✅ Конфигурация автосохранена');
                 
-                // ✅ ПРИНУДИТЕЛЬНО показываем уведомление о успешном автосохранении
+                // ✅ Показываем уведомление о успешном автосохранении (toast, не блокирующее)
                 console.log('[BotsManager] 🔔 Вызываем showNotification для автосохранения...');
                 this.showNotification('✅ Настройки автоматически сохранены', 'success');
-                
-                // ✅ Дополнительная проверка - если toast не показался, используем alert
-                setTimeout(() => {
-                    const toastContainer = document.getElementById('toast-container');
-                    const toasts = toastContainer ? toastContainer.querySelectorAll('.toast') : [];
-                    if (toasts.length === 0) {
-                        console.warn('[BotsManager] ⚠️ Toast не показался, используем alert');
-                        alert('✅ Настройки автоматически сохранены');
-                    }
-                }, 500);
             } catch (error) {
                 console.error('[BotsManager] ❌ Ошибка автосохранения конфигурации:', error);
                 // Показываем ошибку при автосохранении, чтобы пользователь знал
