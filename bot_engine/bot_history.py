@@ -76,6 +76,46 @@ class BotHistoryManager:
                         data = json.load(f)
                         self.history = data.get('history', [])
                         self.trades = data.get('trades', [])
+                        
+                        # КРИТИЧНО: Исправляем старые записи без флага is_simulated
+                        fixed_history = 0
+                        fixed_trades = 0
+                        
+                        for entry in self.history:
+                            if 'is_simulated' not in entry:
+                                decision_source = entry.get('decision_source', '')
+                                if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT', 'AI'):
+                                    entry['is_simulated'] = False
+                                    fixed_history += 1
+                                else:
+                                    # Определяем по другим признакам
+                                    entry['is_simulated'] = self._is_simulated_entry(
+                                        False, entry.get('entry_data'), entry.get('market_data'),
+                                        decision_source, entry.get('reason')
+                                    )
+                                    if not entry['is_simulated']:
+                                        fixed_history += 1
+                        
+                        for trade in self.trades:
+                            if 'is_simulated' not in trade:
+                                decision_source = trade.get('decision_source', '')
+                                if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT', 'AI'):
+                                    trade['is_simulated'] = False
+                                    fixed_trades += 1
+                                else:
+                                    # Определяем по другим признакам
+                                    trade['is_simulated'] = self._is_simulated_entry(
+                                        False, trade.get('entry_data'), trade.get('exit_market_data'),
+                                        decision_source, trade.get('close_reason') or trade.get('reason')
+                                    )
+                                    if not trade['is_simulated']:
+                                        fixed_trades += 1
+                        
+                        if fixed_history > 0 or fixed_trades > 0:
+                            logger.info(f"🔧 Исправлено записей: {fixed_history} в истории, {fixed_trades} в сделках (добавлен флаг is_simulated)")
+                            # Сохраняем исправленные данные
+                            self._save_history()
+                        
                         logger.info(f"✅ Загружено записей: {len(self.history)} действий, {len(self.trades)} сделок")
                 except json.JSONDecodeError as json_error:
                     # Файл поврежден - создаем резервную копию и начинаем с пустой истории
@@ -173,6 +213,22 @@ class BotHistoryManager:
     
     def _add_history_entry(self, entry: Dict[str, Any]):
         """Добавляет запись в историю"""
+        # КРИТИЧНО: Если нет флага is_simulated, определяем его автоматически
+        if 'is_simulated' not in entry:
+            # Проверяем по decision_source и другим признакам
+            decision_source = entry.get('decision_source', '')
+            if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT', 'AI'):
+                entry['is_simulated'] = False  # Реальные сделки
+            else:
+                # Проверяем другие признаки симуляции
+                entry['is_simulated'] = self._is_simulated_entry(
+                    False,  # is_simulated_flag
+                    entry.get('entry_data'),
+                    entry.get('market_data'),
+                    decision_source,
+                    entry.get('reason')
+                )
+        
         with self.lock:
             self.history.append(entry)
             # Ограничиваем размер истории (если установлен лимит)
@@ -182,11 +238,74 @@ class BotHistoryManager:
     
     def _add_trade_entry(self, trade: Dict[str, Any]):
         """Добавляет запись о сделке"""
+        # КРИТИЧНО: Если нет флага is_simulated, определяем его автоматически
+        if 'is_simulated' not in trade:
+            # Проверяем по decision_source и другим признакам
+            decision_source = trade.get('decision_source', '')
+            if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT', 'AI'):
+                trade['is_simulated'] = False  # Реальные сделки
+            else:
+                # Проверяем другие признаки симуляции
+                trade['is_simulated'] = self._is_simulated_entry(
+                    False,  # is_simulated_flag
+                    trade.get('entry_data'),
+                    trade.get('exit_market_data'),
+                    decision_source,
+                    trade.get('close_reason') or trade.get('reason')
+                )
+        
         with self.lock:
+            # КРИТИЧНО: Проверяем на дубликаты перед добавлением
+            trade_id = trade.get('id')
+            bot_id = trade.get('bot_id')
+            symbol = trade.get('symbol')
+            entry_price = trade.get('entry_price')
+            timestamp = trade.get('timestamp')
+            
+            # Проверяем, нет ли уже такой сделки (по ID или по комбинации параметров)
+            is_duplicate = False
+            if trade_id:
+                # Проверяем по ID
+                for existing_trade in self.trades:
+                    if existing_trade.get('id') == trade_id:
+                        is_duplicate = True
+                        logger.debug(f"[BOT_HISTORY] ⏭️ Пропущен дубликат сделки по ID: {trade_id}")
+                        break
+            
+            if not is_duplicate and bot_id and symbol and entry_price and timestamp:
+                # Проверяем по комбинации параметров (для открытых позиций)
+                try:
+                    for existing_trade in self.trades:
+                        if (existing_trade.get('bot_id') == bot_id and
+                            existing_trade.get('symbol') == symbol and
+                            existing_trade.get('entry_price') == entry_price and
+                            existing_trade.get('status') == 'OPEN' and
+                            trade.get('status') == 'OPEN'):
+                            # Проверяем разницу во времени
+                            try:
+                                existing_ts = existing_trade.get('timestamp', '').replace('Z', '+00:00')
+                                new_ts = timestamp.replace('Z', '+00:00')
+                                time_diff = abs((datetime.fromisoformat(existing_ts) - 
+                                                datetime.fromisoformat(new_ts)).total_seconds())
+                                if time_diff < 5:
+                                    is_duplicate = True
+                                    logger.debug(f"[BOT_HISTORY] ⏭️ Пропущен дубликат сделки: {symbol} @ {entry_price} (разница < 5 сек)")
+                                    break
+                            except Exception:
+                                pass
+                except Exception as e:
+                    logger.debug(f"[BOT_HISTORY] ⚠️ Ошибка проверки дубликатов: {e}")
+            
+            if is_duplicate:
+                # Дубликат не сохраняем
+                return
+            
+            # Добавляем сделку
             self.trades.append(trade)
             # Ограничиваем размер (если установлен лимит)
             if MAX_TRADE_ENTRIES is not None and len(self.trades) > MAX_TRADE_ENTRIES:
                 self.trades = self.trades[-MAX_TRADE_ENTRIES:]
+        
         self._save_history()
     
     def _parse_timestamp(self, value: Any) -> Optional[datetime]:
