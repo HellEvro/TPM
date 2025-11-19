@@ -1553,17 +1553,16 @@ class NewTradingBot:
             if self.entry_price and exit_price and self.entry_price > 0:
                 # Получаем размер позиции (в USDT)
                 # volume_value - размер позиции в USDT
-                # position_size - размер позиции в монетах (если есть)
+                # position_size_coins - размер позиции в монетах (если есть)
                 position_size = getattr(self, 'volume_value', None)
-                if not position_size or position_size <= 0:
-                    # Если volume_value нет, пробуем рассчитать из position_size_coins
-                    position_size_coins = getattr(self, 'position_size_coins', None) or getattr(self, 'position_size', None)
-                    if position_size_coins and self.entry_price:
-                        position_size = position_size_coins * self.entry_price  # Конвертируем в USDT
+                position_size_coins = getattr(self, 'position_size_coins', None) or getattr(self, 'position_size', None)
+                if (not position_size or position_size <= 0) and position_size_coins and self.entry_price:
+                    position_size = position_size_coins * self.entry_price  # Конвертируем в USDT
                 
                 # Если все еще нет размера, используем значение по умолчанию
                 if not position_size or position_size <= 0:
                     position_size = 10.0  # Значение по умолчанию
+                    position_size_coins = position_size / self.entry_price if self.entry_price else None
                 
                 # Рассчитываем ROI (процент изменения цены)
                 if self.position_side == 'LONG':
@@ -1625,7 +1624,10 @@ class NewTradingBot:
                 'trend': entry_trend or getattr(self, 'entry_trend', None),  # Тренд на момент входа
                 'duration_hours': (self.position_start_time and 
                                  (datetime.now() - self.position_start_time).total_seconds() / 3600) if self.position_start_time else 0,
-                'max_profit_achieved': self.max_profit_achieved
+                'max_profit_achieved': self.max_profit_achieved,
+                'position_size_usdt': position_size,
+                'position_size_coins': position_size_coins,
+                'position_leverage': getattr(self, 'leverage', None)
             }
             
             # Получаем текущие рыночные данные при выходе
