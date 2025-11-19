@@ -784,8 +784,103 @@ def load_bots_state():
         
         logger.info(f" 📂 Загрузка состояния ботов из {BOTS_STATE_FILE}...")
         
+        # ✅ Проверяем, что файл не пустой
         with open(BOTS_STATE_FILE, 'r', encoding='utf-8') as f:
-            state_data = json.load(f)
+            file_content = f.read().strip()
+        
+        if not file_content:
+            logger.warning(f" ⚠️ Файл состояния {BOTS_STATE_FILE} пустой! Инициализируем базовую структуру...")
+            # Инициализируем файл с базовой структурой
+            from datetime import datetime
+            default_state = {
+                'version': '1.0',
+                'last_saved': datetime.now().isoformat(),
+                'bots': {},
+                'global_stats': {
+                    'total_trades': 0,
+                    'total_profit': 0.0,
+                    'win_rate': 0.0
+                }
+            }
+            with open(BOTS_STATE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(default_state, f, ensure_ascii=False, indent=2)
+            logger.info(f" ✅ Файл состояния инициализирован с базовой структурой")
+            return False
+        
+        # ✅ Парсим JSON с обработкой ошибок
+        try:
+            state_data = json.loads(file_content)
+        except json.JSONDecodeError as e:
+            logger.warning(f" ⚠️ Ошибка парсинга JSON (строка {e.lineno}, колонка {e.colno}): {e.msg}")
+            logger.debug(f" Проблемный участок около символа {e.pos}")
+            
+            # ✅ Пытаемся восстановить из резервной копии
+            backup_file = f"{BOTS_STATE_FILE}.backup"
+            corrupted_file = f"{BOTS_STATE_FILE}.corrupted"
+            
+            if os.path.exists(backup_file):
+                try:
+                    logger.info(f" 🔄 Пытаемся восстановить из резервной копии: {backup_file}")
+                    with open(backup_file, 'r', encoding='utf-8') as backup_f:
+                        backup_content = backup_f.read().strip()
+                        if backup_content:
+                            state_data = json.loads(backup_content)
+                            # Восстанавливаем основной файл из резервной копии
+                            import shutil
+                            shutil.copy2(backup_file, BOTS_STATE_FILE)
+                            logger.info(f" ✅ Основной файл восстановлен из резервной копии")
+                        else:
+                            raise ValueError("Резервная копия пустая")
+                except Exception as backup_error:
+                    logger.error(f" ❌ Ошибка восстановления из резервной копии: {backup_error}")
+                    # Сохраняем поврежденный файл для анализа
+                    try:
+                        import shutil
+                        shutil.copy2(BOTS_STATE_FILE, corrupted_file)
+                        logger.info(f" 📁 Поврежденный файл сохранен: {corrupted_file}")
+                    except Exception:
+                        pass
+                    # Инициализируем файл с базовой структурой
+                    from datetime import datetime
+                    default_state = {
+                        'version': '1.0',
+                        'last_saved': datetime.now().isoformat(),
+                        'bots': {},
+                        'global_stats': {
+                            'total_trades': 0,
+                            'total_profit': 0.0,
+                            'win_rate': 0.0
+                        }
+                    }
+                    with open(BOTS_STATE_FILE, 'w', encoding='utf-8') as f:
+                        json.dump(default_state, f, ensure_ascii=False, indent=2)
+                    logger.info(f" ✅ Файл состояния инициализирован с базовой структурой")
+                    return False
+            else:
+                # Резервной копии нет - инициализируем файл с базовой структурой
+                logger.warning(f" ⚠️ Резервной копии нет, инициализируем файл с базовой структурой...")
+                from datetime import datetime
+                default_state = {
+                    'version': '1.0',
+                    'last_saved': datetime.now().isoformat(),
+                    'bots': {},
+                    'global_stats': {
+                        'total_trades': 0,
+                        'total_profit': 0.0,
+                        'win_rate': 0.0
+                    }
+                }
+                # Сохраняем поврежденный файл для анализа
+                try:
+                    import shutil
+                    shutil.copy2(BOTS_STATE_FILE, corrupted_file)
+                    logger.info(f" 📁 Поврежденный файл сохранен: {corrupted_file}")
+                except Exception:
+                    pass
+                with open(BOTS_STATE_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(default_state, f, ensure_ascii=False, indent=2)
+                logger.info(f" ✅ Файл состояния инициализирован с базовой структурой")
+                return False
         
         version = state_data.get('version', '1.0')
         last_saved = state_data.get('last_saved', 'неизвестно')
