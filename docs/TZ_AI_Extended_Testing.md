@@ -23,6 +23,7 @@
 - ✅ RSI Time Filter и ExitScam подключены к `ai_trainer`/`ai_backtester_new` через `bot_engine/ai/filter_utils.py` (используется общий код `bot_engine.filters`).
 - ✅ Обработаны чекбоксы `avoid_down_trend`/`avoid_up_trend`, `enable_maturity_check`, а также scope/whitelist/blacklist — AI не входит в монеты, которые заблокированы реальным ботом.
 - ✅ Добавлены проверки `trading_enabled` и `use_test_server`: при выключенной торговле или тестовом режиме симуляции/бэктесты не создают сделок по монете.
+- **⚠️ ВАЖНО:** В реальной работе бота все блокирующие фильтры (RSI Time Filter, ExitScam, Maturity) проверяются ТОЛЬКО при входе в позицию в `_enter_position()` через `apply_entry_filters()`, а не для всех монет постоянно. Это оптимизация производительности.
 - TODO: расширить аналитику по временным фильтрам (лог причин блокировки, телеметрия для оптимизатора).
 
 ## 5. Расширение оптимизатора
