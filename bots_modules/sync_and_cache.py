@@ -1984,12 +1984,60 @@ def check_missing_stop_losses():
             try:
                 pos = exchange_positions.get(symbol)
                 if not pos:
-                    logger.warning(f" ⚠️ Позиция {symbol} не найдена на бирже")
+                    logger.warning(f" ⚠️ Позиция {symbol} не найдена на бирже - удаляем бота и позицию из реестра")
+                    # ✅ УДАЛЯЕМ БОТА И ПОЗИЦИЮ ИЗ РЕЕСТРА, если позиция не найдена на бирже
+                    try:
+                        from bots_modules.imports_and_globals import unregister_bot_position
+                        # Получаем order_id из бота
+                        order_id = None
+                        position = bot_snapshot.get('position')
+                        if position and position.get('order_id'):
+                            order_id = position['order_id']
+                        elif bot_snapshot.get('restoration_order_id'):
+                            order_id = bot_snapshot.get('restoration_order_id')
+                        
+                        # Удаляем позицию из реестра
+                        if order_id:
+                            unregister_bot_position(order_id)
+                            logger.info(f" ✅ Позиция {symbol} (order_id={order_id}) удалена из реестра")
+                        
+                        # Удаляем бота из системы
+                        with bots_data_lock:
+                            if symbol in bots_data['bots']:
+                                del bots_data['bots'][symbol]
+                                logger.info(f" ✅ Бот {symbol} удален из системы")
+                                save_bots_state()
+                    except Exception as cleanup_error:
+                        logger.error(f" ❌ Ошибка удаления бота {symbol}: {cleanup_error}")
                     continue
 
                 position_size = _safe_float(pos.get('size'), 0.0) or 0.0
                 if position_size <= 0:
-                    logger.warning(f" ⚠️ Позиция {symbol} закрыта на бирже")
+                    logger.warning(f" ⚠️ Позиция {symbol} закрыта на бирже - удаляем бота и позицию из реестра")
+                    # ✅ УДАЛЯЕМ БОТА И ПОЗИЦИЮ ИЗ РЕЕСТРА, если позиция закрыта на бирже
+                    try:
+                        from bots_modules.imports_and_globals import unregister_bot_position
+                        # Получаем order_id из бота
+                        order_id = None
+                        position = bot_snapshot.get('position')
+                        if position and position.get('order_id'):
+                            order_id = position['order_id']
+                        elif bot_snapshot.get('restoration_order_id'):
+                            order_id = bot_snapshot.get('restoration_order_id')
+                        
+                        # Удаляем позицию из реестра
+                        if order_id:
+                            unregister_bot_position(order_id)
+                            logger.info(f" ✅ Позиция {symbol} (order_id={order_id}) удалена из реестра")
+                        
+                        # Удаляем бота из системы
+                        with bots_data_lock:
+                            if symbol in bots_data['bots']:
+                                del bots_data['bots'][symbol]
+                                logger.info(f" ✅ Бот {symbol} удален из системы")
+                                save_bots_state()
+                    except Exception as cleanup_error:
+                        logger.error(f" ❌ Ошибка удаления бота {symbol}: {cleanup_error}")
                     continue
 
                 entry_price = _safe_float(pos.get('avgPrice'), 0.0)
