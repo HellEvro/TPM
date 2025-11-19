@@ -8869,40 +8869,67 @@ class BotsManager {
         
         // Кнопка обновления ручных позиций
         const refreshBtn = document.getElementById('refreshManualPositionsBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', async () => {
-                console.log('[BotsManager] 🔄 Обновление ручных позиций...');
-                
-                try {
-                    const response = await fetch(`http://localhost:5001/api/bots/manual-positions/refresh`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    if (response.ok) {
-                        const result = await response.json();
-                        console.log('[BotsManager] ✅ Ручные позиции обновлены:', result);
-                        
-                        // Обновляем данные и интерфейс
-                        await this.loadCoinsRsiData();
-                        
-                        // Показываем уведомление
-                        if (window.showToast) {
-                            window.showToast(`${window.languageUtils.translate('updated')} ${result.count} ${window.languageUtils.translate('manual_positions')}`, 'success');
-                        }
-                    } else {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                } catch (error) {
-                    console.error('[BotsManager] ❌ Ошибка обновления ручных позиций:', error);
-                    if (window.showToast) {
-                        window.showToast(`Ошибка обновления: ${error.message}`, 'error');
-                    }
-                }
-            });
+        if (!refreshBtn) {
+            console.warn('[BotsManager] ⚠️ Кнопка refreshManualPositionsBtn не найдена в DOM. Попытка повторной инициализации через 1 секунду...');
+            // Повторная попытка через 1 секунду (на случай, если DOM еще не загружен)
+            setTimeout(() => {
+                this.initializeManualPositionsControls();
+            }, 1000);
+            return;
         }
+        
+        console.log('[BotsManager] ✅ Кнопка refreshManualPositionsBtn найдена, добавляем обработчик...');
+        
+        // Удаляем старый обработчик, если он есть (для предотвращения дублирования)
+        const newRefreshBtn = refreshBtn.cloneNode(true);
+        refreshBtn.parentNode.replaceChild(newRefreshBtn, refreshBtn);
+        
+        newRefreshBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[BotsManager] 🔄 Обновление ручных позиций...');
+            
+            // Блокируем кнопку на время запроса
+            newRefreshBtn.disabled = true;
+            const originalContent = newRefreshBtn.innerHTML;
+            newRefreshBtn.innerHTML = '<span>⏳</span>';
+            
+            try {
+                const response = await fetch(`${this.apiUrl}/manual-positions/refresh`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('[BotsManager] ✅ Ручные позиции обновлены:', result);
+                    
+                    // Обновляем данные и интерфейс
+                    await this.loadCoinsRsiData();
+                    
+                    // Показываем уведомление
+                    if (window.showToast) {
+                        window.showToast(`${window.languageUtils.translate('updated')} ${result.count || 0} ${window.languageUtils.translate('manual_positions')}`, 'success');
+                    }
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
+            } catch (error) {
+                console.error('[BotsManager] ❌ Ошибка обновления ручных позиций:', error);
+                if (window.showToast) {
+                    window.showToast(`Ошибка обновления: ${error.message}`, 'error');
+                }
+            } finally {
+                // Разблокируем кнопку
+                newRefreshBtn.disabled = false;
+                newRefreshBtn.innerHTML = originalContent;
+            }
+        });
+        
+        console.log('[BotsManager] ✅ Обработчик для кнопки обновления ручных позиций успешно добавлен');
     }
     
     /**
