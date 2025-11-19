@@ -211,11 +211,31 @@ class NewTradingBot:
             has_entry_price = self.entry_price and self.entry_price > 0
             has_position_size = (self.position_size and self.position_size > 0) or (self.position_size_coins and self.position_size_coins > 0)
             
+            # КРИТИЧНО: Проверяем, не логировали ли мы уже эту позицию в истории
+            # Это предотвращает дублирование при синхронизации с биржей
+            position_already_in_history = False
+            if has_entry_price:
+                try:
+                    from bot_engine.bot_history import bot_history_manager
+                    with bot_history_manager.lock:
+                        for existing_trade in bot_history_manager.trades:
+                            if (existing_trade.get('symbol') == self.symbol and
+                                existing_trade.get('status') == 'OPEN' and
+                                existing_trade.get('direction') == (self.position_side or 'LONG')):
+                                existing_entry_price = existing_trade.get('entry_price')
+                                if existing_entry_price and abs(float(existing_entry_price) - float(self.entry_price)) < 0.0001:
+                                    position_already_in_history = True
+                                    logger.debug(f"[NEW_BOT_{self.symbol}] ⏭️ Позиция уже есть в истории, пропускаем логирование")
+                                    break
+                except Exception as check_error:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка проверки истории: {check_error}")
+            
             # Логируем только если:
             # 1. Это переход в позицию (не был в позиции)
             # 2. Есть данные о позиции (цена входа и размер)
             # 3. Это не повторный вызов (проверяем через флаг _position_logged)
-            if not was_in_position and has_entry_price and has_position_size:
+            # 4. Позиция еще не залогирована в истории
+            if not was_in_position and has_entry_price and has_position_size and not position_already_in_history:
                 # Проверяем, не логировали ли мы уже эту позицию
                 position_logged = getattr(self, '_position_logged', False)
                 if not position_logged:
@@ -236,7 +256,14 @@ class NewTradingBot:
                     logger.debug(f"[NEW_BOT_{self.symbol}] ⏭️ Позиция уже была залогирована, пропускаем")
             else:
                 if not was_in_position:
-                    logger.debug(f"[NEW_BOT_{self.symbol}] ⏭️ Пропуск логирования: was_in_position={was_in_position}, has_entry_price={has_entry_price}, has_position_size={has_position_size}")
+                    reason = []
+                    if position_already_in_history:
+                        reason.append("уже в истории")
+                    if not has_entry_price:
+                        reason.append("нет entry_price")
+                    if not has_position_size:
+                        reason.append("нет position_size")
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⏭️ Пропуск логирования: {', '.join(reason) if reason else 'was_in_position=True'}")
             
             self.position_start_time = datetime.now()
             self.max_profit_achieved = 0.0
