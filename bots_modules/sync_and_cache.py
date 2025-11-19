@@ -2533,7 +2533,6 @@ def check_missing_stop_losses():
             if updated_count > 0:
                 try:
                     save_bots_state()
-                    logger.info(" 💾 Сохранено состояние ботов в файл")
                 except Exception as save_error:
                     logger.error(f" ❌ Ошибка сохранения состояния ботов: {save_error}")
 

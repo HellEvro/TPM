@@ -135,7 +135,6 @@ class ContinuousDataLoader:
                 logger.info(f"✅ РАУНД #{self.update_count} ЗАВЕРШЕН")
                 logger.info(f"⏱️ Длительность: {cycle_duration:.1f}с")
                 logger.info(f"📊 Статистика: обновлений={self.update_count}, ошибок={self.error_count}")
-                logger.info(f"🎯 Отфильтровано монет: {len(filtered_coins)}")
                 logger.info("=" * 80)
                 
                 # ✅ ЗАВЕРШАЕМ ОБРАБОТКУ - увеличиваем версию данных
@@ -385,14 +384,13 @@ class ContinuousDataLoader:
     def _process_filters(self):
         """🔍 Обрабатывает лонг/шорт монеты фильтрами"""
         try:
-            logger.info("🔍 Этап 5/6: Обрабатываем фильтрами...")
             start = time.time()
             
             from bots_modules.filters import process_long_short_coins_with_filters
             filtered_coins = process_long_short_coins_with_filters()
             
             duration = time.time() - start
-            logger.info(f"✅ Фильтры обработаны за {duration:.1f}с ({len(filtered_coins)} монет)")
+            logger.debug(f"✅ Фильтры обработаны за {duration:.1f}с ({len(filtered_coins)} монет)")
             return filtered_coins
             
         except Exception as e:

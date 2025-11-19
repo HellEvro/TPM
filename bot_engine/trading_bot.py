@@ -464,14 +464,12 @@ class TradingBot:
                 time_filter_result = check_rsi_time_filter(candles, current_rsi, signal)
                 
                 if not time_filter_result['allowed']:
-                    self.logger.info(f" {self.symbol}: ⏰ Временной фильтр блокирует вход: {time_filter_result['reason']}")
+                    self.logger.debug(f" {self.symbol}: ⏰ Временной фильтр блокирует вход: {time_filter_result['reason']}")
                     return {
                         'action': 'blocked_time_filter',
                         'reason': time_filter_result['reason'],
                         'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago')
                     }
-                else:
-                    self.logger.info(f" {self.symbol}: ✅ Временной фильтр разрешает вход: {time_filter_result['reason']}")
             else:
                 self.logger.warning(f" {self.symbol}: ⚠️ Не удалось получить свечи для проверки временного фильтра")
         except Exception as e:
@@ -698,8 +696,6 @@ class TradingBot:
                         'error': 'filters_blocked',
                         'message': f'Вход заблокирован фильтрами: {filters_reason}'
                     }
-                else:
-                    self.logger.info(f" {self.symbol}: ✅ Все фильтры пройдены: {filters_reason}")
                     
             except Exception as filter_error:
                 self.logger.error(f" {self.symbol}: ❌ Ошибка проверки фильтров: {filter_error}")

@@ -242,9 +242,6 @@ def check_exit_scam_filter(symbol, coin_data, config, exchange_obj, ensure_excha
         # Проверяем последние N свечей
         recent_candles = candles[-exit_scam_candles:]
         
-        logger.info(f"{symbol}: Анализ последних {exit_scam_candles} свечей")
-        logger.info(f"{symbol}: Настройки - одна свеча: {single_candle_percent}%, {multi_candle_count} свечей: {multi_candle_percent}%")
-        
         # 1. Проверка отдельных свечей
         for i, candle in enumerate(recent_candles):
             open_price = candle['open']
@@ -271,7 +268,6 @@ def check_exit_scam_filter(symbol, coin_data, config, exchange_obj, ensure_excha
                 logger.info(f"{symbol}: Первая свеча: {first_open:.4f}, Последняя свеча: {last_close:.4f}")
                 return False
         
-        logger.info(f"{symbol}: ✅ ExitScam фильтр: ПРОЙДЕН")
         return True
         
     except Exception as e:

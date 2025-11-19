@@ -2717,9 +2717,7 @@ def auto_bot_config():
                     )
                 
                 if bots_count > 0:
-                    logger.info(f"💾 Сохранено {bots_count} ботов:")
-                    logger.info(f"   📊 В позиции: {bots_in_position}")
-                    logger.info(f"   🔄 Остальные: {bots_count - bots_in_position}")
+                    logger.debug(f"💾 Сохранено {bots_count} ботов (в позиции: {bots_in_position})")
                     logger.info("")
                     logger.info("✅ ЧТО БУДЕТ ДАЛЬШЕ:")
                     logger.info("   🔄 Существующие боты продолжат работать")

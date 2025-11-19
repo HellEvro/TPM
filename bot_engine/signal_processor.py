@@ -83,8 +83,6 @@ def check_autobot_filters(symbol, signal, coin_data, config, maturity_check_func
         if not exit_scam_check_func(symbol, coin_data):
             logger.warning(f"[AUTOBOT_FILTER] {symbol}: ❌ БЛОКИРОВКА: ExitScam фильтр")
             return False
-        else:
-            logger.info(f"[AUTOBOT_FILTER] {symbol}: ✅ ExitScam фильтр пройден")
         
         # 3. Проверка тренда
         trend = coin_data.get('trend6h', 'NEUTRAL')

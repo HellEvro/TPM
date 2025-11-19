@@ -1759,8 +1759,7 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
             logger.info("⏳ Нет активных ботов для обработки")
             return
         
-        logger.info(f"🔍 Обрабатываем {len(active_bots)} активных ботов: {list(active_bots.keys())}")
-        logger.info(f"📊 Проверяем условия закрытия позиций по RSI для ботов в позиции...")
+        logger.debug(f"🔍 Обрабатываем {len(active_bots)} активных ботов: {list(active_bots.keys())}")
         
         for symbol, bot_data in active_bots.items():
             try:
@@ -1838,8 +1837,6 @@ def check_new_autobot_filters(symbol, signal, coin_data):
         if not check_exit_scam_filter(symbol, coin_data):
             logger.warning(f" {symbol}: ❌ БЛОКИРОВКА: Обнаружены резкие движения цены (ExitScam)")
             return False
-        else:
-            logger.info(f" {symbol}: ✅ ExitScam фильтр пройден")
         
         return True
         
@@ -1978,8 +1975,6 @@ def process_long_short_coins_with_filters():
         
         for i, symbol in enumerate(long_short_coins, 1):
             try:
-                logger.info(f" 🔍 {i}/{len(long_short_coins)} Обрабатываем фильтрами {symbol}...")
-                
                 # Получаем данные монеты
                 # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
                 coin_data = coins_rsi_data['coins'].get(symbol, {})
@@ -1995,10 +1990,8 @@ def process_long_short_coins_with_filters():
                 
                 if passes_filters:
                     filtered_coins.append(symbol)
-                    logger.info(f" ✅ {symbol}: Прошел все фильтры")
                 else:
                     blocked_count += 1
-                    logger.info(f" ❌ {symbol}: Заблокирован фильтрами")
                 
             except Exception as e:
                 logger.error(f" ❌ {symbol}: Ошибка обработки фильтрами: {e}")
@@ -2558,8 +2551,6 @@ def test_exit_scam_filter(symbol):
         
         # Анализируем последние N свечей (из конфига)
         recent_candles = candles[-exit_scam_candles:]
-        
-        logger.info(f"{symbol}: Анализ последних {exit_scam_candles} свечей (6H каждая)")
         
         # Показываем детали каждой свечи
         for i, candle in enumerate(recent_candles):
