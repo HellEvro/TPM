@@ -750,11 +750,12 @@ class AITrainer:
         logger.info("=" * 80)
         logger.info("✅ РЕЗУЛЬТАТ ФИЛЬТРАЦИИ")
         logger.info("=" * 80)
-        logger.info(f"   📊 Всего сделок загружено: {len(trades)}")
-        logger.info(f"   ✅ Закрытых сделок с PnL: {len(closed_trades)}")
+        logger.info(f"   📊 Всего сделок загружено из bot_history.json: {len(trades)}")
+        logger.info(f"   ✅ Закрытых сделок ботов с PnL: {len(closed_trades)}")
         if simulated_count > 0:
             logger.info(f"   ⚠️ Отфильтровано симулированных/бэктест: {simulated_count}")
-        logger.info(f"   💡 AI будет обучаться на {len(closed_trades)} РЕАЛЬНЫХ сделках с биржи")
+        logger.info(f"   💡 AI будет обучаться на {len(closed_trades)} сделках БОТОВ (из bot_history.json)")
+        logger.info(f"   📦 История биржи загружается отдельно в exchange_trades_history.json")
         
         if len(closed_trades) < 10:
             logger.warning("=" * 80)
@@ -1051,16 +1052,36 @@ class AITrainer:
         - Избегает дубликатов по ключевым полям
         """
         try:
-            logger.info("📥 Загрузка истории сделок с биржи...")
+            logger.info("📥 Загрузка истории сделок с биржи через API...")
+            
+            # Проверяем текущее количество сделок в файле
+            existing_count = 0
+            if os.path.exists(self.exchange_trades_history_file):
+                try:
+                    saved_trades = self._load_saved_exchange_trades()
+                    existing_count = len(saved_trades)
+                    if existing_count > 0:
+                        logger.info(f"   💾 В файле уже есть {existing_count} сделок из истории биржи")
+                except:
+                    pass
+            
             new_trades = self._load_exchange_trades_history()
             
             if new_trades:
                 self._save_exchange_trades_history(new_trades)
+                # Проверяем итоговое количество
+                final_count = len(self._load_saved_exchange_trades())
                 logger.info(f"✅ История сделок биржи обновлена: добавлено {len(new_trades)} новых сделок")
+                logger.info(f"   📊 Всего в файле exchange_trades_history.json: {final_count} сделок")
             else:
-                logger.debug("💡 Новых сделок в истории биржи не найдено")
+                if existing_count > 0:
+                    logger.info(f"💡 Новых сделок в истории биржи не найдено (в файле уже {existing_count} сделок)")
+                else:
+                    logger.info(f"💡 История биржи пуста - возможно, на бирже нет закрытых позиций")
         except Exception as e:
-            logger.debug(f"⚠️ Ошибка обновления истории сделок биржи: {e}")
+            logger.warning(f"⚠️ Ошибка обновления истории сделок биржи: {e}")
+            import traceback
+            logger.debug(f"Traceback: {traceback.format_exc()}")
     
     def _load_simulated_trades(self) -> List[Dict]:
         """
@@ -1730,7 +1751,9 @@ class AITrainer:
                     logger.info(f"📊 Добавлено {added_from_exchange} сделок из истории биржи")
             
             if len(trades) < 10:
-                logger.warning(f"⚠️ Недостаточно реальных сделок для обучения (есть {len(trades)})")
+                logger.warning(f"⚠️ Недостаточно сделок для обучения (есть {len(trades)})")
+                logger.warning(f"   🤖 Сделки ботов (bot_history.json): {len(bot_trades)}")
+                logger.warning(f"   📈 Сделки биржи (exchange_trades_history.json): {len(exchange_trades)}")
                 logger.info("💡 Накопите больше сделок - AI будет обучаться на вашем опыте!")
                 self._record_training_event(
                     'real_trades_training',
@@ -1741,10 +1764,13 @@ class AITrainer:
                 )
                 return
             
-            logger.info(f"📊 Загружено {len(trades)} реальных сделок с PnL ДЛЯ ОБУЧЕНИЯ ИИ")
-            logger.info(f"   📦 Из bot_history.json (сделки ботов): {len(bot_trades)}")
-            logger.info(f"   📦 Из истории биржи (exchange_trades_history.json): {len(exchange_trades)}")
-            logger.info(f"   ✅ ИСТОРИЯ БИРЖИ ИСПОЛЬЗУЕТСЯ ДЛЯ ОБУЧЕНИЯ ИИ!")
+            logger.info(f"📊 Загружено {len(trades)} сделок ДЛЯ ОБУЧЕНИЯ ИИ (объединенные данные)")
+            logger.info(f"   🤖 Из bot_history.json (сделки БОТОВ): {len(bot_trades)}")
+            logger.info(f"   📈 Из exchange_trades_history.json (сделки БИРЖИ): {len(exchange_trades)}")
+            if len(exchange_trades) > 0:
+                logger.info(f"   ✅ ИСТОРИЯ БИРЖИ ИСПОЛЬЗУЕТСЯ ДЛЯ ОБУЧЕНИЯ ИИ!")
+            else:
+                logger.info(f"   ⚠️ История биржи пуста - загружаем через API...")
             
             # 4. Загружаем свечи для анализа
             market_data = self._load_market_data()
