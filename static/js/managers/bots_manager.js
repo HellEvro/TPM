@@ -4386,28 +4386,50 @@ class BotsManager {
     }
 
     showNotification(message, type = 'info') {
-        console.log(`[BotsManager] 📢 ${message}`);
-        
         // Используем новую toast систему
         if (window.toastManager) {
-            switch(type) {
-                case 'success':
-                    window.toastManager.success(message);
-                    break;
-                case 'error':
-                    window.toastManager.error(message);
-                    break;
-                case 'warning':
-                    window.toastManager.warning(message);
-                    break;
-                case 'info':
-                default:
-                    window.toastManager.info(message);
-                    break;
+            try {
+                // Проверяем, что контейнер существует
+                if (!window.toastManager.container) {
+                    window.toastManager.init();
+                }
+                
+                // Проверяем, что контейнер в DOM
+                if (!document.body.contains(window.toastManager.container)) {
+                    if (document.body) {
+                        document.body.appendChild(window.toastManager.container);
+                    }
+                }
+                
+                // Принудительно устанавливаем стили контейнера
+                if (window.toastManager.container) {
+                    window.toastManager.container.style.cssText = 
+                        'position: fixed !important; top: 20px !important; right: 20px !important; ' +
+                        'z-index: 999999 !important; display: flex !important; flex-direction: column; ' +
+                        'gap: 10px; max-width: 400px; pointer-events: none; visibility: visible !important;';
+                }
+                
+                switch(type) {
+                    case 'success':
+                        window.toastManager.success(message);
+                        break;
+                    case 'error':
+                        window.toastManager.error(message);
+                        break;
+                    case 'warning':
+                        window.toastManager.warning(message);
+                        break;
+                    case 'info':
+                    default:
+                        window.toastManager.info(message);
+                        break;
+                }
+            } catch (error) {
+                console.error('[BotsManager] ❌ Ошибка при показе уведомления:', error);
+                alert(`${type.toUpperCase()}: ${message}`);
             }
         } else {
-            // Fallback для совместимости
-            console.log(`[NOTIFICATION] ${type.toUpperCase()}: ${message}`);
+            alert(`${type.toUpperCase()}: ${message}`);
         }
     }
 
