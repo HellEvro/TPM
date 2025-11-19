@@ -2904,6 +2904,8 @@ def sync_bots_with_exchange():
                                 }
 
                                 bot_id = bot_data.get('id') or symbol
+                                # КРИТИЧНО: Логируем только если это была позиция бота (бот был в позиции)
+                                # Это НЕ ручные сделки трейдера, а закрытие позиций ботов вручную на бирже
                                 history_log_position_closed(
                                     bot_id=bot_id,
                                     symbol=symbol,
@@ -2914,7 +2916,7 @@ def sync_bots_with_exchange():
                                     reason='MANUAL_CLOSE',
                                     entry_data=entry_data,
                                     market_data=market_data,
-                                    is_simulated=False  # КРИТИЧНО: реальные сделки с биржи - это НЕ симуляция!
+                                    is_simulated=False  # КРИТИЧНО: это сделки ботов, закрытые вручную на бирже
                                 )
                                 logger.info(
                                     f"[SYNC_EXCHANGE] ✋ {symbol}: позиция закрыта вручную на бирже "
