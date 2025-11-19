@@ -66,6 +66,15 @@ class BotHistoryManager:
         # Создаем директорию data если её нет
         os.makedirs('data', exist_ok=True)
         
+        # Инициализируем реляционную БД для всех данных AI
+        self.ai_db = None
+        try:
+            from bot_engine.ai.ai_database import get_ai_database
+            self.ai_db = get_ai_database()
+            logger.info("✅ AI Database подключена в BotHistoryManager")
+        except Exception as e:
+            logger.debug(f"⚠️ Не удалось инициализировать AI Database в BotHistoryManager: {e}")
+        
         # Загружаем историю из файла
         self._load_history()
     
@@ -878,6 +887,49 @@ class BotHistoryManager:
                         trade['exit_market_data'] = market_data
                     break
         self._save_history()
+        
+        # Сохраняем в БД для обучения AI (только реальные сделки, не симуляции)
+        if not is_simulated and self.ai_db:
+            try:
+                # Формируем данные для БД
+                db_trade = {
+                    'bot_id': bot_id,
+                    'symbol': symbol,
+                    'direction': direction,
+                    'entry_price': entry_data.get('entry_price') if entry_data else matching_trade_snapshot.get('entry_price') if matching_trade_snapshot else None,
+                    'exit_price': exit_price,
+                    'entry_time': matching_trade_snapshot.get('timestamp') if matching_trade_snapshot else None,
+                    'exit_time': datetime.now().isoformat(),
+                    'entry_rsi': entry_data.get('rsi') if entry_data else matching_trade_snapshot.get('rsi'),
+                    'exit_rsi': market_data.get('rsi') if market_data else None,
+                    'entry_trend': entry_data.get('trend') if entry_data else matching_trade_snapshot.get('trend'),
+                    'exit_trend': market_data.get('trend') if market_data else None,
+                    'entry_volatility': entry_data.get('volatility') if entry_data else None,
+                    'entry_volume_ratio': entry_data.get('volume_ratio') if entry_data else None,
+                    'pnl': pnl,
+                    'pnl_pct': roi,
+                    'roi': roi,
+                    'exit_reason': reason or 'Ручное закрытие',
+                    'is_successful': pnl > 0,
+                    'duration_candles': None,  # Можно вычислить из entry_time и exit_time
+                    'decision_source': decision_source,
+                    'ai_decision_id': ai_decision_id,
+                    'ai_confidence': ai_confidence,
+                    'position_size_usdt': position_size_usdt,
+                    'position_size_coins': position_size_coins,
+                    'config_params': entry_data.get('config_params') if entry_data else None,
+                    'filters_params': entry_data.get('filters_params') if entry_data else None,
+                    'entry_conditions': entry_data.get('entry_conditions') if entry_data else None,
+                    'exit_conditions': entry_data.get('exit_conditions') if entry_data else None,
+                    'restrictions': entry_data.get('restrictions') if entry_data else None,
+                }
+                
+                # Сохраняем в БД
+                trade_id = self.ai_db.save_bot_trade(db_trade)
+                if trade_id:
+                    logger.debug(f"💾 Сделка {symbol} сохранена в БД (ID: {trade_id})")
+            except Exception as e:
+                logger.warning(f"⚠️ Ошибка сохранения сделки в БД: {e}")
         
         logger.info(f"💰 {entry['details']}")
     
