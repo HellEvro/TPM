@@ -621,6 +621,98 @@ class TradingBot:
             except Exception as e:
                 self.logger.warning(f" {self.symbol}: Не удалось проверить позиции на бирже: {e}")
             
+            # ✅ КРИТИЧЕСКАЯ ПРОВЕРКА: ВСЕ ФИЛЬТРЫ ПЕРЕД открытием позиции!
+            try:
+                from bot_engine.ai.filter_utils import apply_entry_filters
+                from bots_modules.imports_and_globals import get_config_snapshot
+                
+                # Получаем правильный конфиг (глобальный + индивидуальные настройки)
+                config_snapshot = get_config_snapshot(self.symbol)
+                filter_config = config_snapshot.get('merged', {})
+                
+                # Получаем свечи для проверки фильтров
+                candles = self._get_candles_data()
+                if not candles or len(candles) < 10:
+                    self.logger.error(f" {self.symbol}: ❌ Недостаточно свечей для проверки фильтров ({len(candles) if candles else 0})")
+                    return {
+                        'success': False,
+                        'error': 'insufficient_candles',
+                        'message': 'Недостаточно свечей для проверки фильтров'
+                    }
+                
+                # Получаем текущий RSI и тренд
+                current_rsi = self.last_rsi
+                current_trend = self.last_trend
+                
+                # Если RSI/тренд не сохранены в боте, пытаемся получить из глобальных данных
+                if current_rsi is None or current_trend is None:
+                    try:
+                        from bots_modules.imports_and_globals import coins_rsi_data, rsi_data_lock
+                        with rsi_data_lock:
+                            coin_data = coins_rsi_data.get('coins', {}).get(self.symbol)
+                            if coin_data:
+                                if current_rsi is None:
+                                    current_rsi = coin_data.get('rsi6h')
+                                if current_trend is None:
+                                    current_trend = coin_data.get('trend6h', 'NEUTRAL')
+                    except Exception:
+                        pass
+                
+                # Если RSI все еще None, рассчитываем из свечей
+                if current_rsi is None:
+                    try:
+                        from bots_modules.calculations import calculate_rsi
+                        closes = [candle.get('close', 0) for candle in candles[-50:]]
+                        if closes:
+                            current_rsi = calculate_rsi(closes, 14)
+                    except Exception:
+                        pass
+                
+                # Если RSI все еще None, используем значение по умолчанию (но это плохо)
+                if current_rsi is None:
+                    self.logger.warning(f" {self.symbol}: ⚠️ Не удалось получить RSI, используем 50.0")
+                    current_rsi = 50.0
+                
+                # Если тренд все еще None, используем NEUTRAL
+                if current_trend is None:
+                    current_trend = 'NEUTRAL'
+                
+                # Определяем сигнал на основе стороны
+                signal = 'ENTER_LONG' if side == 'LONG' else 'ENTER_SHORT'
+                
+                # ✅ ПРОВЕРЯЕМ ВСЕ ФИЛЬТРЫ через apply_entry_filters
+                filters_allowed, filters_reason = apply_entry_filters(
+                    self.symbol,
+                    candles,
+                    current_rsi,
+                    signal,
+                    filter_config,
+                    trend=current_trend
+                )
+                
+                if not filters_allowed:
+                    self.logger.error(f" {self.symbol}: 🚫 БЛОКИРОВКА: Фильтры заблокировали вход в {side} позицию!")
+                    self.logger.error(f" {self.symbol}: Причина блокировки: {filters_reason}")
+                    return {
+                        'success': False,
+                        'error': 'filters_blocked',
+                        'message': f'Вход заблокирован фильтрами: {filters_reason}'
+                    }
+                else:
+                    self.logger.info(f" {self.symbol}: ✅ Все фильтры пройдены: {filters_reason}")
+                    
+            except Exception as filter_error:
+                self.logger.error(f" {self.symbol}: ❌ Ошибка проверки фильтров: {filter_error}")
+                import traceback
+                self.logger.error(traceback.format_exc())
+                # ⚠️ ВАЖНО: Если фильтр не работает, БЛОКИРУЕМ вход для безопасности!
+                self.logger.error(f" {self.symbol}: 🚫 БЛОКИРУЕМ ОТКРЫТИЕ ПОЗИЦИИ ИЗ-ЗА ОШИБКИ ПРОВЕРКИ ФИЛЬТРОВ!")
+                return {
+                    'success': False,
+                    'error': 'filter_check_failed',
+                    'message': f'Ошибка проверки фильтров: {filter_error}'
+                }
+            
             self.logger.info(f" {self.symbol}: Начинаем открытие {side} позиции...")
             
             # Адаптируем размер позиции с помощью AI (если доступно)

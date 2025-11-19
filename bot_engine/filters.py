@@ -253,6 +253,7 @@ def check_exit_scam_filter(symbol, coin_data, config, exchange_obj, ensure_excha
             price_change = abs((close_price - open_price) / open_price) * 100
             
             if price_change > single_candle_percent:
+                logger.warning(f"{symbol}: ❌ БЛОКИРОВКА ExitScam: Одна свеча превысила лимит {single_candle_percent}% (было {price_change:.1f}%)")
                 logger.info(f"{symbol}: Свеча: O={open_price:.4f} C={close_price:.4f} H={candle['high']:.4f} L={candle['low']:.4f}")
                 return False
         
@@ -270,11 +271,13 @@ def check_exit_scam_filter(symbol, coin_data, config, exchange_obj, ensure_excha
                 logger.info(f"{symbol}: Первая свеча: {first_open:.4f}, Последняя свеча: {last_close:.4f}")
                 return False
         
-        logger.info(f"{symbol}: ✅ РЕЗУЛЬТАТ: ПРОЙДЕН")
+        logger.info(f"{symbol}: ✅ ExitScam фильтр: ПРОЙДЕН")
         return True
         
     except Exception as e:
-        logger.error(f"{symbol}: Ошибка проверки: {e}")
+        logger.error(f"{symbol}: ❌ Ошибка проверки ExitScam фильтра: {e}")
+        import traceback
+        logger.debug(traceback.format_exc())
         return False
 
 
