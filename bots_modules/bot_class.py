@@ -102,22 +102,8 @@ class NewTradingBot:
         self.config = config or {}
         self.exchange = exchange
         
-        # Логируем запуск бота (если это новый бот, а не восстановление)
-        is_restored = self.config.get('restored_from_registry', False) or self.config.get('restored', False)
-        if not is_restored:
-            try:
-                from bot_engine.bot_history import log_bot_start
-                direction = self.config.get('position_side') or 'LONG'
-                log_bot_start(
-                    bot_id=self.symbol,
-                    symbol=self.symbol,
-                    direction=direction,
-                    config=self.config
-                )
-            except ImportError:
-                pass
-            except Exception as e:
-                logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось записать запуск бота в историю: {e}")
+        # КРИТИЧНО: НЕ логируем BOT_START здесь - это будет сделано в create_bot() после сохранения в bots_data
+        # Это предотвращает логирование временных ботов, которые не сохраняются в bots_state.json
         
         # Параметры сделки из конфига
         self.volume_mode = self.config.get('volume_mode', 'usdt')

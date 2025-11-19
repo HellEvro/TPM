@@ -567,23 +567,28 @@ def create_bot(symbol, config=None, exchange_obj=None):
         logger.info(f"[BOT_ACTIVE] ✅ Бот {symbol} добавлен в список активных")
         logger.info(f"[BOT_ACTIVE] Всего активных ботов: {total_bots}")
         logger.info(f"[BOT_ACTIVE] Статус {symbol}: {trading_bot.status}")
-    
-    # Логируем создание бота в историю
-    try:
-        from bot_engine.bot_history import log_bot_start
-        # Определяем направление на основе текущей позиции или конфига
-        direction = trading_bot.position_side or config.get('position_side') or 'LONG'
-        log_bot_start(
-            bot_id=symbol,
-            symbol=symbol,
-            direction=direction,
-            config=config
-        )
-        logger.info(f"[BOT_HISTORY] ✅ Записано открытие бота {symbol} в историю")
-    except ImportError as e:
-        logger.debug(f"[BOT_HISTORY] ⚠️ Модуль bot_history недоступен: {e}")
-    except Exception as e:
-        logger.error(f"[BOT_HISTORY] ❌ Ошибка логирования запуска бота {symbol}: {e}")
+        
+        # КРИТИЧНО: Логируем BOT_START только после успешного сохранения в bots_data
+        # Это гарантирует, что логируются только реальные активные боты
+        try:
+            from bot_engine.bot_history import log_bot_start
+            # Проверяем, что бот действительно сохранен в bots_data
+            if symbol in bots_data['bots']:
+                # Определяем направление на основе текущей позиции или конфига
+                direction = trading_bot.position_side or config.get('position_side') or 'LONG'
+                log_bot_start(
+                    bot_id=symbol,
+                    symbol=symbol,
+                    direction=direction,
+                    config=config
+                )
+                logger.info(f"[BOT_HISTORY] ✅ Записано открытие бота {symbol} в историю")
+            else:
+                logger.debug(f"[BOT_HISTORY] ⏭️ Бот {symbol} не сохранен в bots_data - пропускаем логирование")
+        except ImportError as e:
+            logger.debug(f"[BOT_HISTORY] ⚠️ Модуль bot_history недоступен: {e}")
+        except Exception as e:
+            logger.error(f"[BOT_HISTORY] ❌ Ошибка логирования запуска бота {symbol}: {e}")
     
     # Автоматически сохраняем состояние после создания бота
     save_bots_state()
