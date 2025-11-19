@@ -101,33 +101,75 @@ class BotHistoryManager:
     
     def _save_history(self):
         """Сохраняет историю в файл (атомарная запись через временный файл)"""
-        try:
-            with self.lock:
-                data = {
-                    'history': self.history,
-                    'trades': self.trades,
-                    'last_update': datetime.now().isoformat()
-                }
-                # Атомарная запись через временный файл
-                import tempfile
-                from pathlib import Path
-                temp_file = Path(self.history_file).with_suffix('.tmp')
-                try:
-                    # Записываем во временный файл
-                    with open(temp_file, 'w', encoding='utf-8') as f:
-                        json.dump(data, f, ensure_ascii=False, indent=2)
-                    # Атомарно заменяем старый файл новым
-                    temp_file.replace(self.history_file)
-                except Exception as save_error:
-                    # Удаляем временный файл в случае ошибки
-                    if temp_file.exists():
-                        try:
-                            temp_file.unlink()
-                        except Exception:
-                            pass
-                    raise save_error
-        except Exception as e:
-            logger.error(f"❌ Ошибка сохранения истории: {e}")
+        import time
+        max_retries = 3
+        retry_delay = 0.1
+        
+        for attempt in range(max_retries):
+            try:
+                with self.lock:
+                    data = {
+                        'history': self.history,
+                        'trades': self.trades,
+                        'last_update': datetime.now().isoformat()
+                    }
+                    # Атомарная запись через временный файл
+                    from pathlib import Path
+                    temp_file = Path(self.history_file).with_suffix('.tmp')
+                    target_file = Path(self.history_file)
+                    
+                    try:
+                        # Записываем во временный файл
+                        with open(temp_file, 'w', encoding='utf-8') as f:
+                            json.dump(data, f, ensure_ascii=False, indent=2)
+                        
+                        # На Windows: сначала удаляем старый файл, если он существует
+                        # Это помогает избежать ошибки "Отказано в доступе"
+                        if target_file.exists():
+                            try:
+                                target_file.unlink()
+                            except PermissionError:
+                                # Если файл заблокирован, ждем и пробуем снова
+                                if attempt < max_retries - 1:
+                                    time.sleep(retry_delay * (attempt + 1))
+                                    continue
+                                raise
+                        
+                        # Атомарно заменяем старый файл новым
+                        temp_file.replace(target_file)
+                        return  # Успешно сохранено
+                        
+                    except (PermissionError, OSError) as save_error:
+                        # Удаляем временный файл в случае ошибки
+                        if temp_file.exists():
+                            try:
+                                temp_file.unlink()
+                            except Exception:
+                                pass
+                        
+                        # Если это последняя попытка - пробуем записать напрямую
+                        if attempt == max_retries - 1:
+                            # Fallback: записываем напрямую (не атомарно, но лучше чем потеря данных)
+                            try:
+                                with open(target_file, 'w', encoding='utf-8') as f:
+                                    json.dump(data, f, ensure_ascii=False, indent=2)
+                                logger.warning(f"⚠️ История сохранена напрямую (не атомарно) из-за ошибки доступа: {save_error}")
+                                return
+                            except Exception as direct_error:
+                                logger.error(f"❌ Критическая ошибка сохранения истории (прямая запись тоже не удалась): {direct_error}")
+                                raise save_error
+                        
+                        # Ждем перед следующей попыткой
+                        time.sleep(retry_delay * (attempt + 1))
+                        continue
+                        
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    logger.error(f"❌ Ошибка сохранения истории после {max_retries} попыток: {e}")
+                    import traceback
+                    logger.debug(traceback.format_exc())
+                else:
+                    time.sleep(retry_delay * (attempt + 1))
     
     def _add_history_entry(self, entry: Dict[str, Any]):
         """Добавляет запись в историю"""

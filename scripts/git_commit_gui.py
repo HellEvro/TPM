@@ -45,6 +45,7 @@ class GitCommitGUI(tk.Tk):
         # Переменные
         self.commit_message = tk.StringVar()
         self.is_running = False
+        self.commit_to_public = tk.BooleanVar(value=True)  # По умолчанию включено
         
         self._build_ui()
         
@@ -73,6 +74,64 @@ class GitCommitGUI(tk.Tk):
         )
         message_text.pack(fill=tk.BOTH, expand=True)
         self.message_text = message_text
+        
+        # Включаем стандартные горячие клавиши для вставки/копирования/вырезания
+        def paste_text(event=None):
+            try:
+                message_text.event_generate('<<Paste>>')
+                return 'break'
+            except:
+                return 'break'
+        
+        def copy_text(event=None):
+            try:
+                message_text.event_generate('<<Copy>>')
+                return 'break'
+            except:
+                return 'break'
+        
+        def cut_text(event=None):
+            try:
+                message_text.event_generate('<<Cut>>')
+                return 'break'
+            except:
+                return 'break'
+        
+        # Горячие клавиши
+        message_text.bind('<Control-v>', paste_text)
+        message_text.bind('<Control-V>', paste_text)
+        message_text.bind('<Control-c>', copy_text)
+        message_text.bind('<Control-C>', copy_text)
+        message_text.bind('<Control-x>', cut_text)
+        message_text.bind('<Control-X>', cut_text)
+        
+        # Контекстное меню
+        context_menu = tk.Menu(message_text, tearoff=0)
+        context_menu.add_command(label="Вставить", command=lambda: paste_text())
+        context_menu.add_separator()
+        context_menu.add_command(label="Копировать", command=lambda: copy_text())
+        context_menu.add_command(label="Вырезать", command=lambda: cut_text())
+        
+        def show_context_menu(event):
+            try:
+                context_menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                context_menu.grab_release()
+        
+        message_text.bind('<Button-3>', show_context_menu)  # Правая кнопка мыши
+        if sys.platform == 'darwin':  # Mac
+            message_text.bind('<Button-2>', show_context_menu)  # Средняя кнопка мыши
+        
+        # Галочка для выбора коммита в Public
+        options_frame = ttk.Frame(main_frame)
+        options_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        public_checkbox = ttk.Checkbutton(
+            options_frame,
+            text="Записать в Public",
+            variable=self.commit_to_public
+        )
+        public_checkbox.pack(side=tk.LEFT)
         
         # Кнопка
         button_frame = ttk.Frame(main_frame)
@@ -192,33 +251,42 @@ class GitCommitGUI(tk.Tk):
             self._log(result.get('stdout', ''))
             self._log("[OK] Коммит в основном репозитории выполнен успешно\n")
             
-            # Шаг 3: Коммит в Public репозитории
-            self._log("=" * 80)
-            self._log("ШАГ 3: Коммит в InfoBot_Public репозитории")
-            self._log("=" * 80)
-            
-            if not PUBLIC.exists():
-                self._log(f"[ОШИБКА] Папка InfoBot_Public не найдена: {PUBLIC}")
-                self._show_error("Ошибка", f"Папка InfoBot_Public не найдена: {PUBLIC}")
-                self._reset_ui()
-                return
+            # Шаг 3: Коммит в Public репозитории (только если галочка установлена)
+            if self.commit_to_public.get():
+                self._log("=" * 80)
+                self._log("ШАГ 3: Коммит в InfoBot_Public репозитории")
+                self._log("=" * 80)
                 
-            result = self._run_script(GIT_COMMIT_SCRIPT, [message], cwd=PUBLIC)
-            if result['returncode'] != 0:
-                self._log(f"[ОШИБКА] Коммит в Public репозитории завершился с ошибкой")
-                self._show_error("Ошибка коммита", result.get('stderr', 'Неизвестная ошибка'))
-                self._reset_ui()
-                return
-                
-            self._log(result.get('stdout', ''))
-            self._log("[OK] Коммит в Public репозитории выполнен успешно\n")
+                if not PUBLIC.exists():
+                    self._log(f"[ОШИБКА] Папка InfoBot_Public не найдена: {PUBLIC}")
+                    self._show_error("Ошибка", f"Папка InfoBot_Public не найдена: {PUBLIC}")
+                    self._reset_ui()
+                    return
+                    
+                result = self._run_script(GIT_COMMIT_SCRIPT, [message], cwd=PUBLIC)
+                if result['returncode'] != 0:
+                    self._log(f"[ОШИБКА] Коммит в Public репозитории завершился с ошибкой")
+                    self._show_error("Ошибка коммита", result.get('stderr', 'Неизвестная ошибка'))
+                    self._reset_ui()
+                    return
+                    
+                self._log(result.get('stdout', ''))
+                self._log("[OK] Коммит в Public репозитории выполнен успешно\n")
+            else:
+                self._log("[ПРОПУЩЕНО] Коммит в Public репозитории пропущен (галочка не установлена)\n")
             
             # Успешное завершение
             self._log("=" * 80)
             self._log("[УСПЕХ] Все операции выполнены успешно!")
             self._log("=" * 80)
             
-            messagebox.showinfo("Успех", "Все операции выполнены успешно!\n\n- Синхронизация в InfoBot_Public\n- Коммит в основном репозитории\n- Коммит в InfoBot_Public репозитории")
+            success_msg = "Все операции выполнены успешно!\n\n- Синхронизация в InfoBot_Public\n- Коммит в основном репозитории"
+            if self.commit_to_public.get():
+                success_msg += "\n- Коммит в InfoBot_Public репозитории"
+            else:
+                success_msg += "\n- Коммит в InfoBot_Public репозитории (пропущен)"
+            
+            messagebox.showinfo("Успех", success_msg)
             
         except Exception as e:
             self._log(f"[КРИТИЧЕСКАЯ ОШИБКА] {str(e)}")
