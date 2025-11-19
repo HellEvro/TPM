@@ -680,43 +680,93 @@ class TradingBot:
                     except Exception as e:
                         self.logger.debug(f" {self.symbol}: Не удалось проверить открытые ордера на бирже: {e}")
                 
-                # Если в памяти нет ордеров, но на бирже есть - это старые ордера от предыдущего запуска
-                # Загружаем их в память для восстановления состояния бота
+                # Если в памяти нет ордеров, но на бирже есть - проверяем, что это ордера бота
                 if not has_limit_orders_in_memory and limit_orders_on_exchange:
-                    self.logger.info(f" {self.symbol}: 🔄 Обнаружены {len(limit_orders_on_exchange)} лимитных ордеров на бирже (восстановление после перезапуска)")
-                    # Получаем текущую цену для восстановления цены входа
+                    # Получаем текущую цену для проверки соответствия ордеров конфигурации
                     current_price = self._get_current_price()
+                    if not current_price:
+                        self.logger.warning(f" {self.symbol}: ⚠️ Не удалось получить текущую цену для проверки ордеров на бирже")
+                        # Если не можем проверить - не восстанавливаем, размещаем новые
+                        self.logger.info(f" {self.symbol}: ✅ Размещаем новые ордера (не удалось проверить существующие)")
+                        return self._enter_position_with_limit_orders(side, percent_steps, margin_amounts)
+                    
+                    # ✅ ПРОВЕРКА: Соответствуют ли ордера на бирже конфигурации бота?
+                    # Проверяем, что цены ордеров находятся в разумном диапазоне от текущей цены
+                    # (в пределах максимального percent_step из конфигурации + небольшой запас)
+                    max_percent_step = max(percent_steps) if percent_steps else 10
+                    max_price_deviation = max_percent_step / 100.0 + 0.05  # +5% запас на случай изменения цены
+                    
+                    valid_orders = []
+                    for order in limit_orders_on_exchange:
+                        order_price = float(order.get('price', 0))
+                        if not order_price:
+                            continue
+                        
+                        # Проверяем, что цена ордера находится в разумном диапазоне
+                        if side == 'LONG':
+                            # Для лонга: лимитная цена должна быть ниже текущей (покупка по более низкой цене)
+                            # Проверяем, что цена не слишком далеко (не более max_percent_step% ниже)
+                            if order_price < current_price and (current_price - order_price) / current_price <= max_price_deviation:
+                                valid_orders.append(order)
+                            else:
+                                self.logger.warning(f" {self.symbol}: ⚠️ Ордер {order.get('order_id', 'unknown')} @ {order_price:.6f} не соответствует конфигурации LONG (текущая: {current_price:.6f}, отклонение: {abs(current_price - order_price) / current_price * 100:.2f}%)")
+                        else:  # SHORT
+                            # Для шорта: лимитная цена должна быть выше текущей (продажа по более высокой цене)
+                            # Проверяем, что цена не слишком далеко (не более max_percent_step% выше)
+                            if order_price > current_price and (order_price - current_price) / current_price <= max_price_deviation:
+                                valid_orders.append(order)
+                            else:
+                                self.logger.warning(f" {self.symbol}: ⚠️ Ордер {order.get('order_id', 'unknown')} @ {order_price:.6f} не соответствует конфигурации SHORT (текущая: {current_price:.6f}, отклонение: {abs(order_price - current_price) / current_price * 100:.2f}%)")
+                    
+                    if not valid_orders:
+                        # На бирже есть ордера, но они не соответствуют конфигурации бота
+                        # Это не ордера бота - размещаем новые
+                        self.logger.warning(f" {self.symbol}: ⚠️ На бирже есть {len(limit_orders_on_exchange)} лимитных ордеров, но они НЕ соответствуют конфигурации бота (max_step={max_percent_step}%)")
+                        self.logger.info(f" {self.symbol}: ✅ Размещаем новые ордера (существующие на бирже - не от этого бота)")
+                        return self._enter_position_with_limit_orders(side, percent_steps, margin_amounts)
+                    
+                    # Ордера соответствуют конфигурации - восстанавливаем их в память
+                    self.logger.info(f" {self.symbol}: 🔄 Обнаружены {len(valid_orders)} лимитных ордеров на бирже, соответствующих конфигурации (из {len(limit_orders_on_exchange)} всего) - восстановление после перезапуска")
                     # Восстанавливаем список ордеров из биржи
                     self.limit_orders = []
-                    for order in limit_orders_on_exchange:
+                    for order in valid_orders:
+                        order_price = float(order.get('price', 0))
+                        # Вычисляем приблизительный percent_step на основе цены
+                        if side == 'LONG':
+                            percent_step = (current_price - order_price) / current_price * 100
+                        else:  # SHORT
+                            percent_step = (order_price - current_price) / current_price * 100
+                        
                         order_info = {
                             'order_id': order.get('order_id') or order.get('orderId') or order.get('id', ''),
                             'type': 'limit',
-                            'price': float(order.get('price', 0)),
+                            'price': order_price,
                             'quantity': float(order.get('quantity', 0)),
-                            'percent_step': 0  # Не знаем точный процент, но это не критично
+                            'percent_step': round(percent_step, 2)
                         }
                         self.limit_orders.append(order_info)
                     self.last_limit_orders_count = len(self.limit_orders)
                     self.logger.info(f" {self.symbol}: ✅ Восстановлено {len(self.limit_orders)} лимитных ордеров в памяти")
-                    # Сохраняем цену входа (используем текущую цену как приблизительную)
-                    if current_price:
-                        self.limit_orders_entry_price = current_price
-                    elif self.limit_orders:
-                        # Если не удалось получить текущую цену, используем цену первого ордера
-                        first_order_price = self.limit_orders[0].get('price', 0)
-                        # Для лонга: лимитная цена ниже, восстанавливаем примерно на 1% выше
-                        # Для шорта: лимитная цена выше, восстанавливаем примерно на 1% ниже
-                        if side == 'LONG':
-                            self.limit_orders_entry_price = first_order_price * 1.01
-                        else:  # SHORT
-                            self.limit_orders_entry_price = first_order_price * 0.99
+                    # Сохраняем цену входа (используем текущую цену)
+                    self.limit_orders_entry_price = current_price
                     return {'success': True, 'message': 'limit_orders_restored', 'orders_count': len(self.limit_orders)}
                 
-                # Если в памяти есть ордера - не размещаем повторно
+                # Если в памяти есть ордера - проверяем, существуют ли они на бирже
                 if has_limit_orders_in_memory:
-                    self.logger.warning(f" {self.symbol}: ⚠️ Лимитные ордера уже размещены (в памяти: {len(self.limit_orders)} шт.), пропускаем повторное размещение")
-                    return {'success': False, 'error': 'limit_orders_already_placed'}
+                    # ✅ КРИТИЧНО: Проверяем, не были ли ордера удалены с биржи между перезагрузками
+                    if limit_orders_on_exchange:
+                        # Ордера есть и в памяти, и на бирже - все в порядке
+                        self.logger.warning(f" {self.symbol}: ⚠️ Лимитные ордера уже размещены (в памяти: {len(self.limit_orders)} шт., на бирже: {len(limit_orders_on_exchange)} шт.), пропускаем повторное размещение")
+                        return {'success': False, 'error': 'limit_orders_already_placed'}
+                    else:
+                        # Ордера есть в памяти, но НЕТ на бирже - они были удалены!
+                        # Очищаем память и разрешаем размещение новых ордеров
+                        self.logger.warning(f" {self.symbol}: ⚠️ Лимитные ордера есть в памяти ({len(self.limit_orders)} шт.), но НЕТ на бирже - они были удалены!")
+                        self.logger.info(f" {self.symbol}: 🗑️ Очищаем память от несуществующих ордеров и размещаем новые")
+                        self.limit_orders = []
+                        self.limit_orders_entry_price = None
+                        self.last_limit_orders_count = 0
+                        # Продолжаем размещение новых ордеров
                 
                 self.logger.info(f" {self.symbol}: ✅ Режим лимитных ордеров включен, размещаем ордера...")
                 return self._enter_position_with_limit_orders(side, percent_steps, margin_amounts)

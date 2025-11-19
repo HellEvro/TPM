@@ -1027,8 +1027,12 @@ def restore_lost_bots():
                 exchange_side = exchange_position.get('side', 'UNKNOWN')
                 registry_side = position_info.get('side', 'UNKNOWN')
                 
+                # ✅ Нормализуем стороны для сравнения (LONG/Long -> LONG, SHORT/Short -> SHORT)
+                exchange_side_normalized = exchange_side.upper() if exchange_side else 'UNKNOWN'
+                registry_side_normalized = registry_side.upper() if registry_side else 'UNKNOWN'
+                
                 # Проверяем совпадение стороны
-                if exchange_side != registry_side:
+                if exchange_side_normalized != registry_side_normalized:
                     logger.warning(f" ⚠️ Несовпадение стороны для {symbol}: реестр={registry_side}, биржа={exchange_side}")
                     continue
                 
