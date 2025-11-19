@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "max_concurrent": 20,
+  "max_concurrent": 50,
   "risk_cap_percent": 10,
   "scope": "all",
   "whitelist": [],
@@ -19,7 +19,7 @@
   "use_test_server": false,
   "max_risk_per_trade": 2,
   "max_loss_percent": 15,
-  "take_profit_percent": 20,
+  "take_profit_percent": 50,
   "trailing_stop_activation": 30,
   "trailing_stop_distance": 5,
   "trailing_take_distance": 0.5,
@@ -42,20 +42,20 @@
   "rsi_time_filter_candles": 7,
   "rsi_time_filter_upper": 65,
   "rsi_time_filter_lower": 35,
-  "limit_orders_entry_enabled": true,
+  "limit_orders_entry_enabled": false,
   "limit_orders_percent_steps": [
-    0,
-    0.5,
     1,
-    1.5,
-    2
+    3,
+    5,
+    7,
+    10
   ],
   "limit_orders_margin_amounts": [
-    0.5,
-    0.75,
-    1,
-    1.25,
-    1.5
+    5,
+    5,
+    5,
+    5,
+    5
   ],
   "exit_scam_enabled": true,
   "exit_scam_candles": 8,
