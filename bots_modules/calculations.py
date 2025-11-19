@@ -361,8 +361,21 @@ def analyze_trend_6h(symbol, exchange_obj=None, candles_data=None):
 def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
     """Выполняет улучшенный анализ RSI для монеты"""
     try:
+        # ✅ Проверяем индивидуальные настройки монеты (имеют приоритет над глобальными)
+        enhanced_rsi_enabled = SystemConfig.ENHANCED_RSI_ENABLED
+        
+        # Получаем индивидуальные настройки монеты, если есть
+        try:
+            from bots_modules.imports_and_globals import get_individual_coin_settings
+            individual_settings = get_individual_coin_settings(symbol)
+            if individual_settings is not None and 'enhanced_rsi_enabled' in individual_settings:
+                # Индивидуальная настройка переопределяет глобальную
+                enhanced_rsi_enabled = bool(individual_settings['enhanced_rsi_enabled'])
+        except Exception:
+            pass  # Если не удалось получить настройки, используем глобальные
+        
         # Проверяем, включена ли улучшенная система
-        if not SystemConfig.ENHANCED_RSI_ENABLED:
+        if not enhanced_rsi_enabled:
             return {
                 'enabled': False,
                 'warning_type': None,
