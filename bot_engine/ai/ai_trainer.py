@@ -954,58 +954,92 @@ class AITrainer:
                         skipped_count = 0
                         for trade_data in closed_pnl_data:
                             # Преобразуем данные биржи в формат для обучения
+                            # ВАЖНО: get_closed_pnl возвращает данные с полями:
+                            # - closed_pnl (не closedPnl)
+                            # - entry_price (не avgEntryPrice)
+                            # - exit_price (не avgExitPrice)
+                            # - close_timestamp (не updatedTime)
+                            
                             symbol = trade_data.get('symbol', '')
-                            if symbol:
-                                # Убираем USDT из символа
-                                if symbol.endswith('USDT'):
-                                    symbol = symbol[:-4]
-                                
-                                # Определяем направление
-                                side = trade_data.get('side', '')
-                                direction = 'LONG' if side.upper() == 'BUY' else 'SHORT'
-                                
-                                # Получаем цены и PnL
-                                entry_price = float(trade_data.get('avgEntryPrice', 0) or 0)
-                                exit_price = float(trade_data.get('avgExitPrice', 0) or 0)
-                                pnl = float(trade_data.get('closedPnl', 0) or 0)
-                                roi = float(trade_data.get('roi', 0) or 0)
-                                
-                                # Получаем временные метки
-                                created_time = trade_data.get('createdTime') or trade_data.get('created_time')
-                                updated_time = trade_data.get('updatedTime') or trade_data.get('updated_time') or trade_data.get('closeTime')
-                                
-                                # Создаем запись сделки
-                                trade = {
-                                    'id': trade_data.get('orderId') or trade_data.get('id') or trade_data.get('orderLinkId'),
-                                    'symbol': symbol,
-                                    'direction': direction,
-                                    'entry_price': entry_price,
-                                    'exit_price': exit_price,
-                                    'pnl': pnl,
-                                    'roi': roi,
-                                    'timestamp': created_time,
-                                    'close_timestamp': updated_time,
-                                    'status': 'CLOSED',
-                                    'is_real': True,
-                                    'is_simulated': False,
-                                    'source': 'exchange_api'
-                                }
-                                
-                                # Добавляем только если есть PnL и цены
-                                if pnl is not None and entry_price > 0:
-                                    trades.append(trade)
-                                    processed_count += 1
+                            if not symbol:
+                                skipped_count += 1
+                                continue
+                            
+                            # Символ уже очищен от USDT в get_closed_pnl через clean_symbol
+                            # Но на всякий случай проверяем
+                            if symbol.endswith('USDT'):
+                                symbol = symbol[:-4]
+                            
+                            # Получаем цены и PnL (используем правильные имена полей)
+                            entry_price = float(trade_data.get('entry_price', 0) or trade_data.get('avgEntryPrice', 0) or 0)
+                            exit_price = float(trade_data.get('exit_price', 0) or trade_data.get('avgExitPrice', 0) or 0)
+                            pnl = float(trade_data.get('closed_pnl', 0) or trade_data.get('closedPnl', 0) or 0)
+                            
+                            # Получаем временные метки
+                            close_timestamp = trade_data.get('close_timestamp') or trade_data.get('updatedTime') or trade_data.get('updated_time')
+                            
+                            # Определяем направление (если нет в данных, пробуем определить по qty или другим полям)
+                            side = trade_data.get('side', '')
+                            if not side:
+                                # Пробуем определить по qty (положительное = LONG, отрицательное = SHORT)
+                                qty = trade_data.get('qty', 0)
+                                if qty:
+                                    side = 'Buy' if qty > 0 else 'Sell'
                                 else:
-                                    skipped_count += 1
-                                    if skipped_count <= 3:  # Показываем первые 3 причины пропуска
-                                        reason = []
-                                        if pnl is None:
-                                            reason.append("нет PnL")
-                                        if entry_price <= 0:
-                                            reason.append(f"entry_price={entry_price}")
-                                        logger.debug(f"   ⏭️ Пропущена сделка {symbol}: {', '.join(reason)}")
+                                    side = 'Buy'  # По умолчанию LONG
+                            
+                            direction = 'LONG' if side.upper() in ['BUY', 'LONG'] else 'SHORT'
+                            
+                            # Рассчитываем ROI если нет
+                            roi = 0
+                            if entry_price > 0 and exit_price > 0:
+                                if direction == 'LONG':
+                                    roi = ((exit_price - entry_price) / entry_price) * 100
+                                else:
+                                    roi = ((entry_price - exit_price) / entry_price) * 100
+                            
+                            # Создаем запись сделки
+                            trade = {
+                                'id': trade_data.get('orderId') or trade_data.get('id') or trade_data.get('orderLinkId') or f"exchange_{symbol}_{close_timestamp}",
+                                'symbol': symbol,
+                                'direction': direction,
+                                'entry_price': entry_price,
+                                'exit_price': exit_price,
+                                'pnl': pnl,
+                                'roi': roi,
+                                'timestamp': close_timestamp,  # Используем close_timestamp как timestamp
+                                'close_timestamp': close_timestamp,
+                                'status': 'CLOSED',
+                                'is_real': True,
+                                'is_simulated': False,
+                                'source': 'exchange_api'
+                            }
+                            
+                            # Добавляем только если есть валидные цены
+                            # PnL может быть 0 или отрицательным - это нормально!
+                            if entry_price > 0 and exit_price > 0:
+                                # Если PnL не указан, рассчитываем из цен
+                                if pnl == 0 and entry_price > 0 and exit_price > 0:
+                                    # Рассчитываем PnL из цен (примерный расчет)
+                                    qty = trade_data.get('qty', 1.0)
+                                    if direction == 'LONG':
+                                        calculated_pnl = (exit_price - entry_price) * qty
+                                    else:
+                                        calculated_pnl = (entry_price - exit_price) * qty
+                                    trade['pnl'] = calculated_pnl
+                                    pnl = calculated_pnl
+                                
+                                trades.append(trade)
+                                processed_count += 1
                             else:
                                 skipped_count += 1
+                                if skipped_count <= 5:  # Показываем первые 5 причин пропуска
+                                    reason = []
+                                    if entry_price <= 0:
+                                        reason.append(f"entry_price={entry_price}")
+                                    if exit_price <= 0:
+                                        reason.append(f"exit_price={exit_price}")
+                                    logger.debug(f"   ⏭️ Пропущена сделка {symbol}: {', '.join(reason) if reason else 'нет данных'}")
                         
                         logger.info(f"   ✅ Обработано: {processed_count} сделок")
                         if skipped_count > 0:
@@ -1019,8 +1053,14 @@ class AITrainer:
                             if len(closed_pnl_data) > 0:
                                 # Показываем пример первой записи для диагностики
                                 sample = closed_pnl_data[0]
-                                logger.debug(f"   📋 Пример записи: symbol={sample.get('symbol')}, "
-                                           f"pnl={sample.get('closedPnl')}, entryPrice={sample.get('avgEntryPrice')}")
+                                logger.warning(f"   📋 Пример записи (первые 3):")
+                                for i, s in enumerate(closed_pnl_data[:3]):
+                                    logger.warning(f"      [{i+1}] Ключи: {list(s.keys())}")
+                                    logger.warning(f"      [{i+1}] symbol={s.get('symbol')}, "
+                                                 f"closed_pnl={s.get('closed_pnl')}, closedPnl={s.get('closedPnl')}, "
+                                                 f"entry_price={s.get('entry_price')}, avgEntryPrice={s.get('avgEntryPrice')}, "
+                                                 f"exit_price={s.get('exit_price')}, avgExitPrice={s.get('avgExitPrice')}, "
+                                                 f"close_timestamp={s.get('close_timestamp')}, updatedTime={s.get('updatedTime')}")
                 except Exception as e:
                     logger.warning(f"⚠️ Ошибка загрузки истории сделок с биржи: {e}")
                     import traceback
