@@ -243,7 +243,7 @@ def get_hardware_id() -> str:
         combined = '|'.join(components)
         hardware_id = hashlib.sha256(combined.encode()).hexdigest()
         
-        logger.info(f"Hardware ID сгенерирован из {len(components)} стабильных компонентов: {hardware_id[:16]}...")
+        # Убрано: logger.info - не должно попадать в логи ai.py
         # Убрано: logger.debug(f"Компоненты: {combined}") - слишком шумно
         return hardware_id
     
