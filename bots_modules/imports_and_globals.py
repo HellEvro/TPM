@@ -342,24 +342,9 @@ process_state = {
 }
 
 # Настройка цветного логирования
-setup_color_logging()
-
-# Добавляем файловый логгер с ротацией для сохранения в файл
-from utils.log_rotation import RotatingFileHandlerWithSizeLimit
-
-file_handler = RotatingFileHandlerWithSizeLimit(
-    filename='logs/bots.log',
-    max_bytes=10 * 1024 * 1024,  # 10MB
-    backup_count=0,  # Перезаписываем файл
-    encoding='utf-8'
-)
-file_handler.setLevel(logging.INFO)
-file_formatter = logging.Formatter('[BOTS] %(asctime)s - %(name)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(file_formatter)
-
-# Получаем корневой логгер и добавляем файловый обработчик
-root_logger = logging.getLogger()
-root_logger.addHandler(file_handler)
+# ВАЖНО: Логирование уже настроено в bots.py, здесь только убеждаемся что оно работает
+# Не создаем дублирующие handlers, чтобы избежать записи в неправильные файлы
+setup_color_logging(enable_file_logging=False)  # Отключаем файловое логирование здесь, т.к. оно уже настроено в bots.py
 
 # Настройка кодировки для stdout
 if hasattr(sys.stdout, 'reconfigure'):

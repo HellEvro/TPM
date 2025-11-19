@@ -181,10 +181,10 @@ from bots_modules.init_functions import *
 try:
     from bot_engine.bot_config import SystemConfig
     console_levels = getattr(SystemConfig, 'CONSOLE_LOG_LEVELS', [])
-    setup_color_logging(console_log_levels=console_levels if console_levels else None)
+    setup_color_logging(console_log_levels=console_levels if console_levels else None, log_file='logs/bots.log')
 except Exception as e:
     # Если не удалось загрузить конфиг, используем стандартную настройку
-    setup_color_logging()
+    setup_color_logging(log_file='logs/bots.log')
 
 # Отключаем DEBUG логи от внешних библиотек ДО их импорта
 # matplotlib - логирует неформатированные сообщения при импорте
@@ -263,13 +263,7 @@ from bots_modules.api_endpoints import *
 
 logger.info("✅ Все модули загружены")
 
-# Добавляем файловый логгер
-file_handler = logging.FileHandler('logs/bots.log', encoding='utf-8')
-file_handler.setLevel(logging.INFO)
-file_formatter = logging.Formatter('[BOTS] %(asctime)s - %(name)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(file_formatter)
-root_logger = logging.getLogger()
-root_logger.addHandler(file_handler)
+# Файловый логгер уже настроен в setup_color_logging() выше, не нужно дублировать
 
 # Настройка кодировки для stdout
 if hasattr(sys.stdout, 'reconfigure'):
