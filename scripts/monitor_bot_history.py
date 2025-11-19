@@ -11,9 +11,9 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 
-# Исправляем кодировку для Windows
+# Исправляем кодировку для Windows и отключаем буферизацию
 if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
 
 def parse_args():
     """Парсит аргументы командной строки"""
@@ -78,21 +78,22 @@ def get_new_entries(data, prev_data):
 
 def print_stats(stats, prev_stats=None, data=None, prev_data=None):
     """Выводит статистику"""
-    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] СТАТИСТИКА bot_history.json:")
-    print("="*70)
-    print(f"История (history): {stats['history_count']} записей")
-    print(f"  - Реальных: {stats['real_history']} (is_simulated=False)")
-    print(f"  - Симулированных: {stats['simulated_history']} (is_simulated=True)")
-    print(f"  - decision_source=AI: {stats['ai_history']}")
-    print(f"  - decision_source=SCRIPT: {stats['script_history']}")
-    print(f"  - decision_source=EXCHANGE_IMPORT: {stats['exchange_history']}")
-    print(f"")
-    print(f"Сделки (trades): {stats['trades_count']} сделок")
-    print(f"  - Реальных: {stats['real_trades']} (is_simulated=False)")
-    print(f"  - Симулированных: {stats['simulated_trades']} (is_simulated=True)")
-    print(f"  - decision_source=AI: {stats['ai_trades']}")
-    print(f"  - decision_source=SCRIPT: {stats['script_trades']}")
-    print(f"  - decision_source=EXCHANGE_IMPORT: {stats['exchange_trades']}")
+    import sys
+    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] СТАТИСТИКА bot_history.json:", flush=True)
+    print("="*70, flush=True)
+    print(f"История (history): {stats['history_count']} записей", flush=True)
+    print(f"  - Реальных: {stats['real_history']} (is_simulated=False)", flush=True)
+    print(f"  - Симулированных: {stats['simulated_history']} (is_simulated=True)", flush=True)
+    print(f"  - decision_source=AI: {stats['ai_history']}", flush=True)
+    print(f"  - decision_source=SCRIPT: {stats['script_history']}", flush=True)
+    print(f"  - decision_source=EXCHANGE_IMPORT: {stats['exchange_history']}", flush=True)
+    print(f"", flush=True)
+    print(f"Сделки (trades): {stats['trades_count']} сделок", flush=True)
+    print(f"  - Реальных: {stats['real_trades']} (is_simulated=False)", flush=True)
+    print(f"  - Симулированных: {stats['simulated_trades']} (is_simulated=True)", flush=True)
+    print(f"  - decision_source=AI: {stats['ai_trades']}", flush=True)
+    print(f"  - decision_source=SCRIPT: {stats['script_trades']}", flush=True)
+    print(f"  - decision_source=EXCHANGE_IMPORT: {stats['exchange_trades']}", flush=True)
     
     if prev_stats and data and prev_data:
         history_diff = stats['history_count'] - prev_stats['history_count']
@@ -100,22 +101,22 @@ def print_stats(stats, prev_stats=None, data=None, prev_data=None):
         simulated_diff = stats['simulated_trades'] - prev_stats['simulated_trades']
         
         if history_diff != 0 or trades_diff != 0:
-            print(f"\nИЗМЕНЕНИЯ:")
+            print(f"\nИЗМЕНЕНИЯ:", flush=True)
             if history_diff != 0:
-                print(f"  История: {history_diff:+d} записей")
+                print(f"  История: {history_diff:+d} записей", flush=True)
             if trades_diff != 0:
-                print(f"  Сделки: {trades_diff:+d} сделок")
+                print(f"  Сделки: {trades_diff:+d} сделок", flush=True)
             if simulated_diff != 0:
-                print(f"  ⚠️ Симулированных сделок: {simulated_diff:+d}")
+                print(f"  ⚠️ Симулированных сделок: {simulated_diff:+d}", flush=True)
                 if simulated_diff > 0:
-                    print(f"  ❌ ВНИМАНИЕ: Добавлены симулированные сделки!")
+                    print(f"  ❌ ВНИМАНИЕ: Добавлены симулированные сделки!", flush=True)
             
             # Показываем новые записи
             new_history, new_trades = get_new_entries(data, prev_data)
             if new_history or new_trades:
-                print(f"\n🔔 НОВЫЕ ЗАПИСИ:")
+                print(f"\n🔔 НОВЫЕ ЗАПИСИ:", flush=True)
                 if new_history:
-                    print(f"  📝 История ({len(new_history)} новых записей):")
+                    print(f"  📝 История ({len(new_history)} новых записей):", flush=True)
                     for entry in new_history[:10]:  # Показываем первые 10
                         bot_id = entry.get('bot_id', 'N/A')
                         decision_source = entry.get('decision_source', 'N/A')
@@ -129,12 +130,12 @@ def print_stats(stats, prev_stats=None, data=None, prev_data=None):
                             warning = " ⚠️ СИМУЛЯЦИЯ!"
                         elif decision_source == 'AI' and bot_id and len(str(bot_id)) > 15:
                             warning = " ⚠️ ПОДОЗРИТЕЛЬНЫЙ AI bot_id!"
-                        print(f"    [{action_type}] {symbol} | bot_id={bot_id[:30]} | source={decision_source} | simulated={is_simulated}{warning}")
+                        print(f"    [{action_type}] {symbol} | bot_id={bot_id[:30]} | source={decision_source} | simulated={is_simulated}{warning}", flush=True)
                     if len(new_history) > 10:
-                        print(f"    ... и еще {len(new_history) - 10} записей истории")
+                        print(f"    ... и еще {len(new_history) - 10} записей истории", flush=True)
                 
                 if new_trades:
-                    print(f"  💰 Сделки ({len(new_trades)} новых сделок):")
+                    print(f"  💰 Сделки ({len(new_trades)} новых сделок):", flush=True)
                     for trade in new_trades[:10]:  # Показываем первые 10
                         bot_id = trade.get('bot_id', 'N/A')
                         decision_source = trade.get('decision_source', 'N/A')
@@ -148,11 +149,11 @@ def print_stats(stats, prev_stats=None, data=None, prev_data=None):
                             warning = " ⚠️ СИМУЛЯЦИЯ!"
                         elif decision_source == 'AI' and bot_id and len(str(bot_id)) > 15:
                             warning = " ⚠️ ПОДОЗРИТЕЛЬНЫЙ AI bot_id!"
-                        print(f"    [{status}] {symbol} | bot_id={bot_id[:30]} | source={decision_source} | simulated={is_simulated} | PnL={pnl}{warning}")
+                        print(f"    [{status}] {symbol} | bot_id={bot_id[:30]} | source={decision_source} | simulated={is_simulated} | PnL={pnl}{warning}", flush=True)
                     if len(new_trades) > 10:
-                        print(f"    ... и еще {len(new_trades) - 10} сделок")
+                        print(f"    ... и еще {len(new_trades) - 10} сделок", flush=True)
     
-    print("="*70)
+    print("="*70, flush=True)
 
 def main():
     """Основная функция мониторинга"""
@@ -174,9 +175,9 @@ def main():
         root_dir = Path(__file__).parent.parent
         history_file = root_dir / 'data' / 'bot_history.json'
     
-    print(f"МОНИТОРИНГ: {history_file}")
-    print("Нажмите Ctrl+C для остановки")
-    print("="*70)
+    print(f"МОНИТОРИНГ: {history_file}", flush=True)
+    print("Нажмите Ctrl+C для остановки", flush=True)
+    print("="*70, flush=True)
     
     prev_stats = None
     prev_data = None
