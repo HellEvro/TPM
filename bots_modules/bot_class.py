@@ -331,7 +331,8 @@ class NewTradingBot:
                 ai_confidence=ai_meta.get('ai_confidence'),
                 ai_signal=ai_meta.get('ai_signal') or direction,
                 rsi=rsi_value,
-                trend=trend_value
+                trend=trend_value,
+                is_simulated=False  # КРИТИЧНО: реальные боты - это НЕ симуляция!
             )
             # Помечаем, что логирование выполнено (для предотвращения дублирования)
             self._position_logged = True
@@ -1661,7 +1662,8 @@ class NewTradingBot:
                 roi=pnl_pct,
                 reason=reason,
                 entry_data=entry_data,
-                market_data=market_data
+                market_data=market_data,
+                is_simulated=False  # КРИТИЧНО: реальные боты - это НЕ симуляция!
             )
             
             # ВАЖНО: Обновляем результат решения AI для переобучения
