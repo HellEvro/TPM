@@ -115,21 +115,16 @@ class GitCommitGUI(tk.Tk):
             return None
         
         # Горячие клавиши - обработка по коду клавиши (работает в любой раскладке)
+        # Это перехватывает Ctrl+V/C/X независимо от раскладки
         message_text.bind('<KeyPress>', handle_ctrl_key, add='+')
         
-        # Также оставляем стандартные биндинги для совместимости
+        # Также оставляем стандартные биндинги для совместимости (английская раскладка)
         message_text.bind('<Control-v>', paste_text)
         message_text.bind('<Control-V>', paste_text)
-        message_text.bind('<Control-м>', paste_text)  # Русская раскладка: Ctrl+М (где М = V)
-        message_text.bind('<Control-М>', paste_text)
         message_text.bind('<Control-c>', copy_text)
         message_text.bind('<Control-C>', copy_text)
-        message_text.bind('<Control-с>', copy_text)  # Русская раскладка: Ctrl+С (где С = C)
-        message_text.bind('<Control-С>', copy_text)
         message_text.bind('<Control-x>', cut_text)
         message_text.bind('<Control-X>', cut_text)
-        message_text.bind('<Control-ч>', cut_text)  # Русская раскладка: Ctrl+Ч (где Ч = X)
-        message_text.bind('<Control-Ч>', cut_text)
         
         # Контекстное меню
         context_menu = tk.Menu(message_text, tearoff=0)
