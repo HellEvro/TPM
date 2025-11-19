@@ -1414,29 +1414,67 @@ def get_exchange_positions():
                     continue
                 return None
 
-            # Получаем СЫРЫЕ данные напрямую от API Bybit
-            response = current_exchange.client.get_positions(
-                category="linear",
-                settleCoin="USDT",
-                limit=100
-            )
-
-            if response['retCode'] != 0:
-                error_msg = response['retMsg']
-                logger.warning(f"[EXCHANGE_POSITIONS] ⚠️ Ошибка API (попытка {attempt + 1}/{max_retries}): {error_msg}")
-                
-                # Если это Rate Limit, увеличиваем задержку
-                if "rate limit" in error_msg.lower() or "too many" in error_msg.lower():
-                    retry_delay = min(retry_delay * 2, 10)  # Увеличиваем задержку до максимум 10 сек
-                
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delay)
-                    continue
+            # ✅ ИСПРАВЛЕНИЕ: Используем exchange.get_positions() для получения ВСЕХ позиций с пагинацией
+            # Это гарантирует, что мы получим все позиции, а не только первую страницу
+            try:
+                positions_result = current_exchange.get_positions()
+                if isinstance(positions_result, tuple):
+                    processed_positions_list, rapid_growth = positions_result
                 else:
-                    logger.error(f"[EXCHANGE_POSITIONS] ❌ Не удалось получить позиции после {max_retries} попыток")
-                    return None
-            
-            raw_positions = response['result']['list']
+                    processed_positions_list = positions_result if positions_result else []
+                
+                # Конвертируем обработанные позиции в формат, ожидаемый функцией
+                raw_positions = []
+                for pos in processed_positions_list:
+                    # Создаем формат сырых данных из обработанных
+                    raw_pos = {
+                        'symbol': pos.get('symbol', '') + 'USDT',
+                        'size': pos.get('size', 0),
+                        'side': 'Buy' if pos.get('side', '').upper() in ['LONG'] or pos.get('side', '') == 'Long' else 'Sell',
+                        'avgPrice': pos.get('avg_price', 0) or pos.get('entry_price', 0),
+                        'unrealisedPnl': pos.get('pnl', 0),
+                        'markPrice': pos.get('mark_price', 0) or pos.get('current_price', 0)
+                    }
+                    raw_positions.append(raw_pos)
+                
+            except Exception as get_pos_error:
+                # Fallback: используем прямой вызов API с пагинацией
+                logger.warning(f"[EXCHANGE_POSITIONS] ⚠️ Ошибка получения через get_positions(), используем прямой API: {get_pos_error}")
+                
+                raw_positions = []
+                cursor = None
+                while True:
+                    params = {
+                        "category": "linear",
+                        "settleCoin": "USDT",
+                        "limit": 100
+                    }
+                    if cursor:
+                        params["cursor"] = cursor
+                    
+                    response = current_exchange.client.get_positions(**params)
+                    
+                    if response.get('retCode') != 0:
+                        error_msg = response.get('retMsg', 'Unknown error')
+                        logger.warning(f"[EXCHANGE_POSITIONS] ⚠️ Ошибка API (попытка {attempt + 1}/{max_retries}): {error_msg}")
+                        
+                        # Если это Rate Limit, увеличиваем задержку
+                        if "rate limit" in error_msg.lower() or "too many" in error_msg.lower():
+                            retry_delay = min(retry_delay * 2, 10)
+                        
+                        if attempt < max_retries - 1:
+                            time.sleep(retry_delay)
+                            break  # Выходим из цикла пагинации для retry
+                        else:
+                            logger.error(f"[EXCHANGE_POSITIONS] ❌ Не удалось получить позиции после {max_retries} попыток")
+                            return None
+                    
+                    page_positions = response.get('result', {}).get('list', [])
+                    raw_positions.extend(page_positions)
+                    
+                    cursor = response.get('result', {}).get('nextPageCursor')
+                    if not cursor:
+                        break
             # ✅ Не логируем частые запросы позиций (только при изменениях)
             
             # Обрабатываем сырые позиции
@@ -2028,41 +2066,131 @@ def check_missing_stop_losses():
         exchange_positions = {}
         
         try:
-            positions_response = current_exchange.client.get_positions(
-                category="linear",
-                settleCoin="USDT"
-            )
-            if positions_response.get('retCode') != 0:
-                logger.error(
-                    f" ❌ КРИТИЧЕСКАЯ ОШИБКА получения позиций: "
-                    f"{positions_response.get('retMsg')} (retCode={positions_response.get('retCode')})"
-                )
-                return False
+            # ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем exchange.get_positions() вместо client.get_positions()
+            # exchange.get_positions() обрабатывает пагинацию и возвращает ВСЕ позиции (как в app.py)
+            positions_result = current_exchange.get_positions()
+            if isinstance(positions_result, tuple):
+                processed_positions, rapid_growth = positions_result
+            else:
+                processed_positions = positions_result if positions_result else []
             
-            raw_positions = positions_response.get('result', {}).get('list', [])
+            # ✅ Получаем СЫРЫЕ позиции напрямую через API для детальной проверки
+            # Но используем обработанные позиции из exchange.get_positions() как основной источник
+            try:
+                positions_response = current_exchange.client.get_positions(
+                    category="linear",
+                    settleCoin="USDT",
+                    limit=100
+                )
+                if positions_response.get('retCode') == 0:
+                    # Получаем все страницы для сырых данных
+                    raw_positions = []
+                    cursor = None
+                    while True:
+                        params = {
+                            "category": "linear",
+                            "settleCoin": "USDT",
+                            "limit": 100
+                        }
+                        if cursor:
+                            params["cursor"] = cursor
+                        
+                        response = current_exchange.client.get_positions(**params)
+                        if response.get('retCode') != 0:
+                            break
+                        
+                        page_positions = response.get('result', {}).get('list', [])
+                        raw_positions.extend(page_positions)
+                        
+                        cursor = response.get('result', {}).get('nextPageCursor')
+                        if not cursor:
+                            break
+                else:
+                    # Если не удалось получить сырые данные, используем обработанные
+                    logger.warning(f" ⚠️ Не удалось получить сырые позиции, используем обработанные")
+                    raw_positions = []
+                    for pos in processed_positions:
+                        # Создаем сырой формат из обработанного
+                        raw_pos = {
+                            'symbol': pos.get('symbol', '') + 'USDT' if not pos.get('symbol', '').endswith('USDT') else pos.get('symbol', ''),
+                            'size': pos.get('size', 0),
+                            'avgPrice': pos.get('avg_price', 0),
+                            'markPrice': pos.get('mark_price', 0),
+                            'unrealisedPnl': pos.get('pnl', 0),
+                            'side': 'Buy' if pos.get('side') == 'LONG' else 'Sell'
+                        }
+                        raw_positions.append(raw_pos)
+            except Exception as raw_error:
+                logger.warning(f" ⚠️ Ошибка получения сырых позиций: {raw_error}, используем обработанные")
+                raw_positions = []
+            
             _raw_positions_for_check = raw_positions  # Сохраняем для дополнительной проверки
             
-            # Очищаем словарь позиций перед заполнением
+            # ✅ ИСПРАВЛЕНИЕ: Используем обработанные позиции из exchange.get_positions()
+            # Они уже нормализованы и содержат все позиции (с пагинацией)
             exchange_positions = {}
+            all_positions_dict = {}
             
+            # Сначала заполняем из обработанных позиций (основной источник)
+            # В processed_positions символы уже нормализованы (без USDT) через clean_symbol()
+            for position in processed_positions:
+                symbol = position.get('symbol', '')
+                position_size = abs(float(position.get('size', 0) or 0))
+                
+                if symbol:
+                    # Создаем формат для совместимости с сырыми данными
+                    # В processed_positions side может быть 'Long'/'Short', конвертируем в 'Buy'/'Sell'
+                    side_str = position.get('side', '')
+                    if side_str.upper() == 'LONG':
+                        side_api = 'Buy'
+                    elif side_str.upper() == 'SHORT':
+                        side_api = 'Sell'
+                    else:
+                        side_api = 'Buy'  # По умолчанию
+                    
+                    raw_format_position = {
+                        'symbol': symbol + 'USDT',  # Добавляем USDT для совместимости
+                        'size': position.get('size', 0),
+                        'avgPrice': position.get('avg_price', 0) or position.get('entry_price', 0),
+                        'markPrice': position.get('mark_price', 0) or position.get('current_price', 0),
+                        'unrealisedPnl': position.get('pnl', 0),
+                        'side': side_api,
+                        'positionIdx': position.get('position_idx', 0),
+                        'stopLoss': position.get('stop_loss', ''),
+                        'takeProfit': position.get('take_profit', ''),
+                        'trailingStop': position.get('trailing_stop', '')
+                    }
+                    
+                    all_positions_dict[symbol] = raw_format_position
+                    
+                    # ✅ ТОЛЬКО активные позиции (size > 0)
+                    if position_size > 0:
+                        exchange_positions[symbol] = raw_format_position
+                        logger.debug(f" 📍 Позиция с биржи (processed): symbol='{symbol}', size={position_size}, side={side_str}")
+                    else:
+                        logger.debug(f" 📍 Позиция с биржи (ЗАКРЫТА, processed): symbol='{symbol}', size={position_size}")
+            
+            # Дополнительно добавляем из сырых позиций (на случай, если что-то пропущено)
             for position in raw_positions:
                 raw_symbol = position.get('symbol', '')
                 position_size = abs(float(position.get('size', 0) or 0))
+                normalized_symbol = normalize_symbol(raw_symbol)
                 
-                # ✅ ТОЛЬКО активные позиции (size > 0)
-                if position_size > 0:
-                    normalized_symbol = normalize_symbol(raw_symbol)
-                    if normalized_symbol:
+                if normalized_symbol and normalized_symbol not in exchange_positions:
+                    # Добавляем только если еще нет в словаре
+                    if position_size > 0:
                         exchange_positions[normalized_symbol] = position
-                        # Детальное логирование для отладки
-                        logger.debug(f" 📍 Позиция с биржи: raw='{raw_symbol}' -> normalized='{normalized_symbol}', size={position_size}")
+                        logger.debug(f" 📍 Позиция с биржи (raw): raw='{raw_symbol}' -> normalized='{normalized_symbol}', size={position_size}")
+                    all_positions_dict[normalized_symbol] = position
             
             # Логируем для отладки
             logger.debug(f" 🔍 Получено {len(exchange_positions)} активных позиций с биржи: {sorted(exchange_positions.keys())}")
             
-            # Логируем все сырые символы с биржи для отладки
-            all_raw_symbols = [p.get('symbol', '') for p in raw_positions if abs(float(p.get('size', 0) or 0)) > 0]
-            logger.debug(f" 🔍 Все сырые символы с биржи (с USDT): {sorted(all_raw_symbols)}")
+            # Логируем все сырые символы с биржи (включая нулевые) для отладки
+            all_raw_symbols = [p.get('symbol', '') for p in raw_positions]
+            all_raw_symbols_active = [p.get('symbol', '') for p in raw_positions if abs(float(p.get('size', 0) or 0)) > 0]
+            logger.debug(f" 🔍 Все сырые символы с биржи (ВСЕ, включая закрытые): {sorted(all_raw_symbols)}")
+            logger.debug(f" 🔍 Все сырые символы с биржи (ТОЛЬКО АКТИВНЫЕ): {sorted(all_raw_symbols_active)}")
             
         except Exception as e:
             logger.error(f" ❌ Ошибка получения позиций с биржи: {e}")
