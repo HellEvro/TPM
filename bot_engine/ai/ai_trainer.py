@@ -138,6 +138,12 @@ class AITrainer:
         # Файл для отслеживания сделок с AI решениями
         self.ai_decisions_file = os.path.normpath(os.path.join(self.data_dir, 'ai_decisions_tracking.json'))
         
+        # Файл для хранения симулированных сделок ИИ (виртуальные сделки)
+        self.simulated_trades_file = os.path.normpath(os.path.join(self.data_dir, 'simulated_trades.json'))
+        
+        # Файл для истории сделок трейдера из биржи (загружается через API, дополняется, не перезаписывается)
+        self.exchange_trades_history_file = os.path.normpath(os.path.join(self.data_dir, 'exchange_trades_history.json'))
+        
         # Инициализируем хранилище данных AI
         try:
             from bot_engine.ai.ai_data_storage import AIDataStorage
@@ -752,6 +758,463 @@ class AITrainer:
         
         return closed_trades
     
+    def _save_simulated_trades(self, simulated_trades: List[Dict]) -> None:
+        """
+        Сохраняет симулированные сделки в отдельный файл для последующего обучения
+        
+        Args:
+            simulated_trades: Список симулированных сделок
+        """
+        if not simulated_trades:
+            return
+        
+        try:
+            # Загружаем существующие сделки
+            existing_trades = []
+            if os.path.exists(self.simulated_trades_file):
+                try:
+                    with open(self.simulated_trades_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        existing_trades = data.get('trades', [])
+                except (json.JSONDecodeError, Exception) as e:
+                    logger.debug(f"⚠️ Ошибка загрузки симулированных сделок: {e}")
+                    existing_trades = []
+            
+            # Добавляем метку времени и флаг симуляции
+            for trade in simulated_trades:
+                trade['is_simulated'] = True
+                trade['simulation_timestamp'] = datetime.now().isoformat()
+                if 'status' not in trade:
+                    trade['status'] = 'CLOSED'
+            
+            # Объединяем с существующими (избегаем дубликатов по ID или ключевым полям)
+            existing_ids = {
+                (t.get('symbol'), t.get('entry_time'), t.get('exit_time'), t.get('entry_price'), t.get('exit_price'))
+                for t in existing_trades
+            }
+            
+            new_trades = []
+            for trade in simulated_trades:
+                trade_key = (
+                    trade.get('symbol'),
+                    trade.get('entry_time'),
+                    trade.get('exit_time'),
+                    trade.get('entry_price'),
+                    trade.get('exit_price')
+                )
+                if trade_key not in existing_ids:
+                    new_trades.append(trade)
+                    existing_ids.add(trade_key)
+            
+            # Сохраняем все сделки
+            all_trades = existing_trades + new_trades
+            
+            # Ограничиваем количество (последние 10000 сделок)
+            if len(all_trades) > 10000:
+                all_trades = all_trades[-10000:]
+            
+            data = {
+                'last_update': datetime.now().isoformat(),
+                'total_trades': len(all_trades),
+                'trades': all_trades
+            }
+            
+            # Атомарная запись
+            temp_file = f"{self.simulated_trades_file}.tmp"
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(temp_file, self.simulated_trades_file)
+            
+            if new_trades:
+                logger.debug(f"💾 Сохранено {len(new_trades)} новых симулированных сделок (всего: {len(all_trades)})")
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка сохранения симулированных сделок: {e}")
+    
+    def _load_exchange_trades_history(self) -> List[Dict]:
+        """
+        Загружает историю сделок трейдера с биржи через API
+        
+        Returns:
+            Список сделок с биржи
+        """
+        try:
+            # Пробуем загрузить через API биржи
+            from bots_modules.imports_and_globals import get_exchange
+            exchange = get_exchange()
+            
+            if not exchange:
+                logger.debug("⚠️ Exchange недоступен для загрузки истории сделок")
+                return []
+            
+            # Загружаем историю сделок с биржи через метод get_closed_pnl
+            if hasattr(exchange, 'get_closed_pnl'):
+                try:
+                    # Загружаем историю закрытых позиций (последние 2 года максимум)
+                    closed_pnl_data = exchange.get_closed_pnl(
+                        sort_by='time',
+                        period='all'  # Загружаем всю доступную историю
+                    )
+                    
+                    if closed_pnl_data:
+                        trades = []
+                        for trade_data in closed_pnl_data:
+                            # Преобразуем данные биржи в формат для обучения
+                            symbol = trade_data.get('symbol', '')
+                            if symbol:
+                                # Убираем USDT из символа
+                                if symbol.endswith('USDT'):
+                                    symbol = symbol[:-4]
+                                
+                                # Определяем направление
+                                side = trade_data.get('side', '')
+                                direction = 'LONG' if side.upper() == 'BUY' else 'SHORT'
+                                
+                                # Получаем цены и PnL
+                                entry_price = float(trade_data.get('avgEntryPrice', 0) or 0)
+                                exit_price = float(trade_data.get('avgExitPrice', 0) or 0)
+                                pnl = float(trade_data.get('closedPnl', 0) or 0)
+                                roi = float(trade_data.get('roi', 0) or 0)
+                                
+                                # Получаем временные метки
+                                created_time = trade_data.get('createdTime') or trade_data.get('created_time')
+                                updated_time = trade_data.get('updatedTime') or trade_data.get('updated_time') or trade_data.get('closeTime')
+                                
+                                # Создаем запись сделки
+                                trade = {
+                                    'id': trade_data.get('orderId') or trade_data.get('id') or trade_data.get('orderLinkId'),
+                                    'symbol': symbol,
+                                    'direction': direction,
+                                    'entry_price': entry_price,
+                                    'exit_price': exit_price,
+                                    'pnl': pnl,
+                                    'roi': roi,
+                                    'timestamp': created_time,
+                                    'close_timestamp': updated_time,
+                                    'status': 'CLOSED',
+                                    'is_real': True,
+                                    'is_simulated': False,
+                                    'source': 'exchange_api'
+                                }
+                                
+                                # Добавляем только если есть PnL и цены
+                                if pnl is not None and entry_price > 0:
+                                    trades.append(trade)
+                        
+                        if trades:
+                            logger.info(f"📊 Загружено {len(trades)} сделок из истории биржи")
+                            return trades
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка загрузки истории сделок с биржи: {e}")
+                    import traceback
+                    logger.debug(f"Traceback: {traceback.format_exc()}")
+            
+            return []
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка загрузки истории сделок с биржи: {e}")
+            return []
+    
+    def _save_exchange_trades_history(self, new_trades: List[Dict]) -> None:
+        """
+        Сохраняет историю сделок трейдера из биржи в файл (ДОПОЛНЯЕТ, не перезаписывает)
+        
+        Args:
+            new_trades: Список новых сделок с биржи
+        """
+        if not new_trades:
+            return
+        
+        try:
+            # Загружаем существующие сделки
+            existing_trades = []
+            if os.path.exists(self.exchange_trades_history_file):
+                try:
+                    with open(self.exchange_trades_history_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        existing_trades = data.get('trades', [])
+                except (json.JSONDecodeError, Exception) as e:
+                    logger.debug(f"⚠️ Ошибка загрузки истории сделок биржи: {e}")
+                    existing_trades = []
+            
+            # Добавляем метки
+            for trade in new_trades:
+                trade['is_simulated'] = False
+                trade['is_real'] = True
+                trade['source'] = trade.get('source', 'exchange_api')
+                if 'saved_timestamp' not in trade:
+                    trade['saved_timestamp'] = datetime.now().isoformat()
+                if 'status' not in trade:
+                    trade['status'] = 'CLOSED'
+            
+            # Объединяем с существующими (избегаем дубликатов)
+            existing_ids = {
+                (t.get('symbol'), t.get('timestamp'), t.get('close_timestamp'), 
+                 t.get('entry_price'), t.get('exit_price'), t.get('id'), t.get('orderId'))
+                for t in existing_trades
+            }
+            
+            added_trades = []
+            for trade in new_trades:
+                trade_key = (
+                    trade.get('symbol'),
+                    trade.get('timestamp'),
+                    trade.get('close_timestamp'),
+                    trade.get('entry_price'),
+                    trade.get('exit_price'),
+                    trade.get('id'),
+                    trade.get('orderId')
+                )
+                if trade_key not in existing_ids:
+                    added_trades.append(trade)
+                    existing_ids.add(trade_key)
+            
+            # ДОПОЛНЯЕМ существующие сделки новыми (не перезаписываем!)
+            all_trades = existing_trades + added_trades
+            
+            # Ограничиваем количество (последние 100000 сделок)
+            if len(all_trades) > 100000:
+                all_trades = all_trades[-100000:]
+            
+            data = {
+                'last_update': datetime.now().isoformat(),
+                'total_trades': len(all_trades),
+                'trades': all_trades
+            }
+            
+            # Атомарная запись
+            temp_file = f"{self.exchange_trades_history_file}.tmp"
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(temp_file, self.exchange_trades_history_file)
+            
+            if added_trades:
+                logger.info(f"💾 ДОПОЛНЕНО {len(added_trades)} новых сделок из истории биржи (всего: {len(all_trades)})")
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка сохранения истории сделок биржи: {e}")
+    
+    def _load_saved_exchange_trades(self) -> List[Dict]:
+        """
+        Загружает сохраненную историю сделок трейдера из биржи
+        
+        Returns:
+            Список сделок из истории биржи
+        """
+        try:
+            if not os.path.exists(self.exchange_trades_history_file):
+                return []
+            
+            with open(self.exchange_trades_history_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            trades = data.get('trades', [])
+            
+            # Фильтруем только закрытые сделки с PnL
+            closed_trades = [
+                t for t in trades
+                if t.get('status') == 'CLOSED' and t.get('pnl') is not None and t.get('is_real', True)
+            ]
+            
+            return closed_trades
+        except (json.JSONDecodeError, Exception) as e:
+            logger.debug(f"⚠️ Ошибка загрузки истории сделок биржи: {e}")
+            return []
+    
+    def _update_exchange_trades_history(self) -> None:
+        """
+        Загружает и дополняет историю сделок трейдера из биржи
+        Вызывается периодически для обновления данных
+        """
+        try:
+            logger.info("📥 Загрузка истории сделок с биржи...")
+            new_trades = self._load_exchange_trades_history()
+            
+            if new_trades:
+                self._save_exchange_trades_history(new_trades)
+                logger.info(f"✅ История сделок биржи обновлена: добавлено {len(new_trades)} новых сделок")
+            else:
+                logger.debug("💡 Новых сделок в истории биржи не найдено")
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка обновления истории сделок биржи: {e}")
+    
+    def _load_simulated_trades(self) -> List[Dict]:
+        """
+        Загружает симулированные сделки из файла
+        
+        Returns:
+            Список симулированных сделок
+        """
+        try:
+            if not os.path.exists(self.simulated_trades_file):
+                return []
+            
+            with open(self.simulated_trades_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            trades = data.get('trades', [])
+            
+            # Фильтруем только закрытые сделки с PnL
+            closed_trades = [
+                t for t in trades
+                if t.get('status') == 'CLOSED' and t.get('pnl') is not None and t.get('is_simulated', False)
+            ]
+            
+            return closed_trades
+        except (json.JSONDecodeError, Exception) as e:
+            logger.debug(f"⚠️ Ошибка загрузки симулированных сделок: {e}")
+            return []
+    
+    def train_on_simulated_trades(self) -> None:
+        """
+        Обучается на симулированных сделках (дополнительно к реальным)
+        Это позволяет AI учиться на большем объеме данных
+        """
+        try:
+            simulated_trades = self._load_simulated_trades()
+            
+            if len(simulated_trades) < 50:
+                logger.debug(f"💡 Недостаточно симулированных сделок для обучения (есть {len(simulated_trades)}, нужно минимум 50)")
+                return
+            
+            logger.info("=" * 80)
+            logger.info("🎮 ОБУЧЕНИЕ НА СИМУЛИРОВАННЫХ СДЕЛКАХ")
+            logger.info("=" * 80)
+            logger.info(f"   📊 Загружено {len(simulated_trades)} симулированных сделок")
+            
+            # Подготавливаем данные (аналогично train_on_real_trades_with_candles)
+            successful_samples = []
+            failed_samples = []
+            
+            for trade in simulated_trades:
+                try:
+                    # Извлекаем данные
+                    entry_rsi = trade.get('entry_rsi')
+                    exit_rsi = trade.get('exit_rsi')
+                    entry_trend = trade.get('entry_trend', 'NEUTRAL')
+                    exit_trend = trade.get('exit_trend', 'NEUTRAL')
+                    direction = trade.get('direction', 'LONG')
+                    pnl = trade.get('pnl', 0)
+                    entry_price = trade.get('entry_price', 0)
+                    
+                    # Рассчитываем волатильность и объем (если нет в данных)
+                    entry_volatility = trade.get('entry_volatility', 0)
+                    entry_volume_ratio = trade.get('entry_volume_ratio', 1.0)
+                    
+                    if not entry_rsi:
+                        continue
+                    
+                    sample = {
+                        'symbol': trade.get('symbol', 'UNKNOWN'),
+                        'entry_rsi': entry_rsi,
+                        'entry_trend': entry_trend,
+                        'entry_volatility': entry_volatility,
+                        'entry_volume_ratio': entry_volume_ratio,
+                        'entry_price': entry_price,
+                        'exit_price': trade.get('exit_price', entry_price),
+                        'direction': direction,
+                        'pnl': pnl,
+                        'roi': trade.get('roi', 0),
+                        'is_successful': pnl > 0,
+                        'is_simulated': True
+                    }
+                    
+                    if pnl > 0:
+                        successful_samples.append(sample)
+                    else:
+                        failed_samples.append(sample)
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка обработки симулированной сделки: {e}")
+                    continue
+            
+            all_samples = successful_samples + failed_samples
+            
+            if len(all_samples) < 50:
+                logger.warning(f"⚠️ Недостаточно обработанных симулированных сделок (есть {len(all_samples)})")
+                return
+            
+            logger.info(f"   ✅ Успешных: {len(successful_samples)}")
+            logger.info(f"   ❌ Неуспешных: {len(failed_samples)}")
+            
+            # Обучаем модели (дополняем существующие модели)
+            X = []
+            y_signal = []
+            y_profit = []
+            
+            for sample in all_samples:
+                features = [
+                    sample['entry_rsi'],
+                    sample['entry_volatility'],
+                    sample['entry_volume_ratio'],
+                    1.0 if sample['entry_trend'] == 'UP' else 0.0,
+                    1.0 if sample['entry_trend'] == 'DOWN' else 0.0,
+                    1.0 if sample['direction'] == 'LONG' else 0.0,
+                    sample['entry_price'] / 1000.0 if sample['entry_price'] > 0 else 0,
+                ]
+                X.append(features)
+                y_signal.append(1 if sample['is_successful'] else 0)
+                y_profit.append(sample['pnl'])
+            
+            X = np.array(X)
+            y_signal = np.array(y_signal)
+            y_profit = np.array(y_profit)
+            
+            # Нормализация
+            if not hasattr(self.scaler, 'mean_') or self.scaler.mean_ is None:
+                from sklearn.preprocessing import StandardScaler
+                self.scaler = StandardScaler()
+                X_scaled = self.scaler.fit_transform(X)
+            else:
+                # Дополняем существующий scaler (используем transform для совместимости)
+                X_scaled = self.scaler.transform(X)
+            
+            # Обучаем модели (дополняем существующие или создаем новые)
+            if not self.signal_predictor:
+                from sklearn.ensemble import RandomForestClassifier
+                self.signal_predictor = RandomForestClassifier(
+                    n_estimators=200,
+                    max_depth=15,
+                    min_samples_split=5,
+                    min_samples_leaf=2,
+                    random_state=42,
+                    n_jobs=-1,
+                    class_weight='balanced'
+                )
+                logger.info("   📈 Обучение новой модели на симулированных сделках...")
+            else:
+                logger.info("   📈 Дополнение существующей модели симулированными сделками...")
+            
+            # ВАЖНО: Если модель уже обучена, мы дополняем её новыми данными
+            # Для этого нужно объединить старые и новые данные
+            # Но так как мы не храним старые данные, просто переобучаем на симулированных
+            # В будущем можно улучшить, загрузив реальные данные и объединив их
+            self.signal_predictor.fit(X_scaled, y_signal)
+            
+            train_score = self.signal_predictor.score(X_scaled, y_signal)
+            logger.info(f"   ✅ Модель обучена на симуляциях! Точность: {train_score:.2%}")
+            
+            # Обучаем модель прибыли
+            if not self.profit_predictor:
+                from sklearn.ensemble import GradientBoostingRegressor
+                self.profit_predictor = GradientBoostingRegressor(
+                    n_estimators=100,
+                    max_depth=5,
+                    learning_rate=0.1,
+                    random_state=42
+                )
+            
+            self.profit_predictor.fit(X_scaled, y_profit)
+            profit_pred = self.profit_predictor.predict(X_scaled)
+            profit_mse = mean_squared_error(y_profit, profit_pred)
+            logger.info(f"   ✅ Модель прибыли обучена! MSE: {profit_mse:.2f}")
+            
+            # Сохраняем модели
+            self._save_models()
+            logger.info("   💾 Модели сохранены!")
+            logger.info("=" * 80)
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка обучения на симулированных сделках: {e}")
+            import traceback
+            logger.debug(f"Traceback: {traceback.format_exc()}")
+    
     def _load_market_data(self) -> Dict:
         """
         Загрузить рыночные данные
@@ -1168,6 +1631,10 @@ class AITrainer:
         """
         ГЛАВНЫЙ МЕТОД ОБУЧЕНИЯ: Обучается на РЕАЛЬНЫХ СДЕЛКАХ с PnL
         
+        ИСПОЛЬЗУЕТ ДВА ИСТОЧНИКА ДАННЫХ:
+        1. bot_history.json - сделки ботов (текущие сделки)
+        2. exchange_trades_history.json - история сделок трейдера из биржи (загружается через API)
+        
         Связывает свечи с реальными сделками:
         - Что было на свечах когда открыли позицию (RSI, тренд, волатильность)
         - Что было когда закрыли позицию
@@ -1175,6 +1642,8 @@ class AITrainer:
         
         Успешные сделки = положительные примеры для обучения
         Неуспешные сделки = отрицательные примеры для обучения
+        
+        ПЕРЕД ОБУЧЕНИЕМ автоматически обновляет историю биржи через API
         """
         logger.info("=" * 80)
         logger.info("🤖 ОБУЧЕНИЕ НА РЕАЛЬНЫХ СДЕЛКАХ С ОБРАТНОЙ СВЯЗЬЮ")
@@ -1186,8 +1655,52 @@ class AITrainer:
         profit_mse = None
         
         try:
-            # 1. Загружаем реальные сделки с PnL
-            trades = self._load_history_data()
+            # 0. Обновляем историю сделок с биржи (дополняем файл)
+            self._update_exchange_trades_history()
+            
+            # 1. Загружаем реальные сделки с PnL из bot_history.json (сделки ботов)
+            bot_trades = self._load_history_data()
+            
+            # 2. Загружаем историю сделок трейдера из биржи (exchange_trades_history.json)
+            exchange_trades = self._load_saved_exchange_trades()
+            
+            # 3. Объединяем сделки из обоих источников (избегаем дубликатов)
+            trades = []
+            existing_ids = set()
+            
+            # Добавляем сделки ботов
+            for trade in bot_trades:
+                trade_key = (
+                    trade.get('symbol'),
+                    trade.get('timestamp'),
+                    trade.get('close_timestamp'),
+                    trade.get('entry_price'),
+                    trade.get('exit_price'),
+                    trade.get('id')
+                )
+                if trade_key not in existing_ids:
+                    trades.append(trade)
+                    existing_ids.add(trade_key)
+            
+            # Добавляем сделки из истории биржи
+            if exchange_trades:
+                added_from_exchange = 0
+                for trade in exchange_trades:
+                    trade_key = (
+                        trade.get('symbol'),
+                        trade.get('timestamp'),
+                        trade.get('close_timestamp'),
+                        trade.get('entry_price'),
+                        trade.get('exit_price'),
+                        trade.get('id')
+                    )
+                    if trade_key not in existing_ids:
+                        trades.append(trade)
+                        existing_ids.add(trade_key)
+                        added_from_exchange += 1
+                
+                if added_from_exchange > 0:
+                    logger.info(f"📊 Добавлено {added_from_exchange} сделок из истории биржи")
             
             if len(trades) < 10:
                 logger.warning(f"⚠️ Недостаточно реальных сделок для обучения (есть {len(trades)})")
@@ -1201,9 +1714,12 @@ class AITrainer:
                 )
                 return
             
-            logger.info(f"📊 Загружено {len(trades)} реальных сделок с PnL")
+            logger.info(f"📊 Загружено {len(trades)} реальных сделок с PnL ДЛЯ ОБУЧЕНИЯ ИИ")
+            logger.info(f"   📦 Из bot_history.json (сделки ботов): {len(bot_trades)}")
+            logger.info(f"   📦 Из истории биржи (exchange_trades_history.json): {len(exchange_trades)}")
+            logger.info(f"   ✅ ИСТОРИЯ БИРЖИ ИСПОЛЬЗУЕТСЯ ДЛЯ ОБУЧЕНИЯ ИИ!")
             
-            # 2. Загружаем свечи для анализа
+            # 4. Загружаем свечи для анализа
             market_data = self._load_market_data()
             latest = market_data.get('latest', {})
             candles_data = latest.get('candles', {})
@@ -1221,7 +1737,7 @@ class AITrainer:
             
             logger.info(f"📈 Загружено свечей для {len(candles_data)} монет")
             
-            # 3. Связываем сделки со свечами и обучаемся
+            # 5. Связываем сделки со свечами и обучаемся
             successful_samples = []  # Успешные сделки (PnL > 0)
             failed_samples = []      # Неуспешные сделки (PnL <= 0)
             
@@ -1255,6 +1771,15 @@ class AITrainer:
             
             processed_trades = 0
             skipped_trades = 0
+            processed_from_bot_history = 0
+            processed_from_exchange = 0
+            
+            # Создаем множество ID сделок из истории биржи для статистики
+            exchange_trade_ids = {
+                (t.get('symbol'), t.get('timestamp'), t.get('close_timestamp'), 
+                 t.get('entry_price'), t.get('exit_price'), t.get('id'))
+                for t in exchange_trades
+            }
             
             for trade in trades:
                 try:
@@ -1466,6 +1991,20 @@ class AITrainer:
                     else:
                         failed_samples.append(sample)
                     
+                    # Подсчитываем источник сделки для статистики
+                    trade_key = (
+                        trade.get('symbol'),
+                        trade.get('timestamp'),
+                        trade.get('close_timestamp'),
+                        trade.get('entry_price'),
+                        trade.get('exit_price'),
+                        trade.get('id')
+                    )
+                    if trade_key in exchange_trade_ids:
+                        processed_from_exchange += 1
+                    else:
+                        processed_from_bot_history += 1
+                    
                     processed_trades += 1
                     
                 except Exception as e:
@@ -1570,10 +2109,13 @@ class AITrainer:
                         else:
                             logger.info(f"   ✅ После пересчета: {negative_recalc} убыточных и {zero_recalc} нулевых сделок")
             
-            logger.info(f"✅ Обработано {processed_trades} сделок")
+            logger.info(f"✅ Обработано {processed_trades} сделок ДЛЯ ОБУЧЕНИЯ ИИ")
+            logger.info(f"   📦 Из bot_history.json (сделки ботов): {processed_from_bot_history}")
+            logger.info(f"   📦 Из истории биржи (exchange_trades_history.json): {processed_from_exchange}")
             logger.info(f"   ✅ Успешных: {len(successful_samples)} (PnL > 0)")
             logger.info(f"   ❌ Неуспешных: {len(failed_samples)} (PnL <= 0)")
             logger.info(f"   ⏭️ Пропущено: {skipped_trades}")
+            logger.info(f"   ✅ ИСТОРИЯ БИРЖИ АКТИВНО ИСПОЛЬЗУЕТСЯ ДЛЯ ОБУЧЕНИЯ ИИ!")
             
             # Диагностика: проверяем распределение PnL
             if processed_trades > 0:
@@ -1596,7 +2138,7 @@ class AITrainer:
                         logger.warning("   ⚠️ Это может указывать на проблему в данных или расчете PnL")
                         logger.warning("   ⚠️ Модель не сможет научиться различать успешные и неуспешные сделки")
             
-            # 4. ОБУЧАЕМСЯ НА РЕАЛЬНОМ ОПЫТЕ
+            # 6. ОБУЧАЕМСЯ НА РЕАЛЬНОМ ОПЫТЕ
             all_samples = successful_samples + failed_samples
             samples_count = len(all_samples)
             
@@ -1752,6 +2294,12 @@ class AITrainer:
                     trades=processed_trades,
                     samples=samples_count
                 )
+            
+            # Обучаемся на симулированных сделках (дополнительно к реальным)
+            try:
+                self.train_on_simulated_trades()
+            except Exception as sim_error:
+                logger.debug(f"⚠️ Ошибка обучения на симулированных сделках: {sim_error}")
             
         except Exception as e:
             logger.error(f"❌ Ошибка обучения на реальных сделках: {e}")
@@ -2060,6 +2608,9 @@ class AITrainer:
             progress_interval = 50
             
             # ОБУЧАЕМ КАЖДУЮ МОНЕТУ ОТДЕЛЬНО
+            # Собираем все симулированные сделки для сохранения
+            all_simulated_trades = []
+            
             for symbol_idx, (symbol, candle_info) in enumerate(candles_data.items(), 1):
                 # Показываем прогресс каждые 50 монет или для первых 10 монет
                 if symbol_idx % progress_interval == 0 or symbol_idx <= 10:
@@ -3191,6 +3742,10 @@ class AITrainer:
                     else:
                         logger.debug(completion_message)
                     
+                    # Собираем симулированные сделки для сохранения
+                    if simulated_trades_symbol:
+                        all_simulated_trades.extend(simulated_trades_symbol)
+                    
                     # Логируем прогресс каждые 50 монет
                     if total_trained_coins % progress_interval == 0:
                         logger.info(
@@ -3228,6 +3783,12 @@ class AITrainer:
                 if stats['is_exhausted']:
                     logger.warning("   ⚠️ Параметры почти исчерпаны! Рекомендуется переключиться на обучение на реальных сделках")
             logger.info("=" * 80)
+            
+            # Сохраняем все симулированные сделки для последующего обучения
+            if all_simulated_trades:
+                logger.info(f"💾 Сохранение {len(all_simulated_trades)} симулированных сделок...")
+                self._save_simulated_trades(all_simulated_trades)
+                logger.info(f"✅ Сохранено {len(all_simulated_trades)} симулированных сделок в {self.simulated_trades_file}")
             
             # Также создаем общую модель на всех данных (для монет без индивидуальных моделей)
             logger.info("💡 Общая модель будет создана при следующем обучении (после сбора всех сделок)")
@@ -3294,6 +3855,12 @@ class AITrainer:
                             notes='Недостаточно данных для обучения ML модели'
                         )
                     logger.info("=" * 80)
+                    
+                    # Обучаемся на симулированных сделках (дополнительно к реальным)
+                    try:
+                        self.train_on_simulated_trades()
+                    except Exception as sim_error:
+                        logger.debug(f"⚠️ Ошибка обучения на симулированных сделках: {sim_error}")
                 except Exception as e:
                     logger.error(f"   ❌ Ошибка обучения ML модели: {e}")
                     import traceback

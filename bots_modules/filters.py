@@ -16,7 +16,7 @@ import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-from bots_modules.imports_and_globals import shutdown_flag
+from bots_modules.imports_and_globals import shutdown_flag, should_log_message
 
 try:
     from bot_engine.filters import (
@@ -884,7 +884,12 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             
             # Если есть сигнал входа И монета незрелая - блокируем сигнал
             if signal in ['ENTER_LONG', 'ENTER_SHORT'] and not is_mature:
-                logger.debug(f"{symbol}: Монета незрелая - сигнал {signal} заблокирован")
+                # Ограничиваем частоту логирования - не более раза в 2 минуты для каждой монеты
+                log_message = f"{symbol}: Монета незрелая - сигнал {signal} заблокирован"
+                category = f'maturity_check_{symbol}'
+                should_log, message = should_log_message(category, log_message, interval_seconds=120)
+                if should_log:
+                    logger.debug(message)
                 # Меняем сигнал на WAIT, но не исключаем монету из списка
                 signal = 'WAIT'
                 rsi_zone = 'NEUTRAL'
@@ -1671,7 +1676,12 @@ def get_effective_signal(coin):
     
     # Проверяем зрелость монеты
     if not coin.get('is_mature', True):
-        logger.debug(f"{symbol}: ❌ {signal} заблокирован - монета незрелая")
+        # Ограничиваем частоту логирования - не более раза в 2 минуты для каждой монеты
+        log_message = f"{symbol}: ❌ {signal} заблокирован - монета незрелая"
+        category = f'maturity_check_{symbol}'
+        should_log, message = should_log_message(category, log_message, interval_seconds=120)
+        if should_log:
+            logger.debug(message)
         return 'WAIT'
     
     # УПРОЩЕННАЯ ПРОВЕРКА ТРЕНДОВ - только экстремальные случаи
