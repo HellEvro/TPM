@@ -112,12 +112,25 @@ def update_history_with_rsi():
     # Обновляем сделки
     for trade in trades:
         symbol = trade.get('symbol')
-        # КРИТИЧНО: Добавляем is_simulated=False если отсутствует
+        # КРИТИЧНО: Добавляем is_simulated если отсутствует
         if 'is_simulated' not in trade:
             decision_source = trade.get('decision_source', '')
-            if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT', 'AI'):
+            # EXCHANGE_IMPORT и SCRIPT - это реальные сделки
+            # AI может быть как реальным (боты из bots.py), так и симуляцией (ai.py)
+            if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT'):
                 trade['is_simulated'] = False
                 updated_trades += 1
+            elif decision_source == 'AI':
+                # Для AI проверяем признаки симуляции по bot_id
+                bot_id = trade.get('bot_id', '')
+                # Реальные боты имеют короткий bot_id (символ монеты)
+                # AI симуляции имеют длинный bot_id с маркерами
+                if bot_id and len(bot_id) > 10 and ('_' in bot_id or 'SIMULATION' in bot_id.upper() or 'BACKTEST' in bot_id.upper()):
+                    trade['is_simulated'] = True
+                    updated_trades += 1
+                else:
+                    trade['is_simulated'] = False
+                    updated_trades += 1
         
         if symbol and (trade.get('rsi') is None or trade.get('trend') is None):
             rsi_data = bots_rsi_data.get(symbol, {})
