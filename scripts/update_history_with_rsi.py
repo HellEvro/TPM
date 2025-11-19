@@ -79,12 +79,25 @@ def update_history_with_rsi():
     for entry in history_entries:
         if entry.get('action_type') == 'POSITION_OPENED':
             symbol = entry.get('symbol')
-            # КРИТИЧНО: Добавляем is_simulated=False если отсутствует
+            # КРИТИЧНО: Добавляем is_simulated если отсутствует
             if 'is_simulated' not in entry:
                 decision_source = entry.get('decision_source', '')
-                if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT', 'AI'):
+                # EXCHANGE_IMPORT и SCRIPT - это реальные сделки
+                # AI может быть как реальным (боты из bots.py), так и симуляцией (ai.py)
+                if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT'):
                     entry['is_simulated'] = False
                     updated_history += 1
+                elif decision_source == 'AI':
+                    # Для AI проверяем признаки симуляции по bot_id
+                    bot_id = entry.get('bot_id', '')
+                    # Реальные боты имеют короткий bot_id (символ монеты)
+                    # AI симуляции имеют длинный bot_id с маркерами
+                    if bot_id and len(bot_id) > 10 and ('_' in bot_id or 'SIMULATION' in bot_id.upper() or 'BACKTEST' in bot_id.upper()):
+                        entry['is_simulated'] = True
+                        updated_history += 1
+                    else:
+                        entry['is_simulated'] = False
+                        updated_history += 1
             
             if symbol and (entry.get('rsi') is None or entry.get('trend') is None):
                 # Пытаемся получить из bots_state
