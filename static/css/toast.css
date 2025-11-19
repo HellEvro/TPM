@@ -1,24 +1,26 @@
 /* Toast уведомления - стильные всплывающие сообщения справа вверху */
 
 .toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 10000;
-    display: flex;
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    z-index: 999999 !important;
+    display: flex !important;
     flex-direction: column;
     gap: 10px;
     max-width: 400px;
     pointer-events: none;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .toast {
-    background: #2c2c2c;
-    color: #ffffff;
-    padding: 16px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    display: flex;
+    background: #2c2c2c !important;
+    color: #ffffff !important;
+    padding: 16px 20px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    display: flex !important;
     align-items: center;
     gap: 12px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -27,17 +29,20 @@
     min-width: 280px;
     max-width: 400px;
     word-wrap: break-word;
-    pointer-events: auto;
-    position: relative;
+    pointer-events: auto !important;
+    position: relative !important;
     border-left: 4px solid;
     transform: translateX(100%);
     opacity: 0;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    visibility: visible !important;
+    z-index: 999999 !important;
 }
 
 .toast.show {
-    transform: translateX(0);
-    opacity: 1;
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .toast.hide {
