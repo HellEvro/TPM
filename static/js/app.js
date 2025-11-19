@@ -387,6 +387,11 @@ class App {
                 const data = await this.positionsManager.updateData();
                 this.updateLastUpdateTime();
                 return data;
+            } else if (this.currentTab === 'closedPnl') {
+                // Обновляем закрытые позиции с учетом выбранного периода
+                await this.updateClosedPnl(false);
+                this.updateLastUpdateTime();
+                return null;
             } else {
                 // console.log('[UPDATE] Skipping data update - not on positions tab');
                 this._logState();

@@ -2985,7 +2985,15 @@ class BotsManager {
             const data = await response.json();
             if (data.success) {
                 console.log(`[BotsManager] ✅ Сброшены индивидуальные настройки для ${data.removed_count} монет`);
-                this.showNotification(`✅ Сброшены индивидуальные настройки для ${data.removed_count} монет`, 'success');
+                
+                // Формируем красивое сообщение
+                const coinWord = data.removed_count === 1 ? 'монеты' : 
+                                data.removed_count >= 2 && data.removed_count <= 4 ? 'монет' : 'монет';
+                const message = data.removed_count > 0 
+                    ? `✅ Сброшены индивидуальные настройки для ${data.removed_count} ${coinWord}. Все монеты теперь используют глобальные настройки.`
+                    : '✅ Индивидуальные настройки отсутствуют. Все монеты используют глобальные настройки.';
+                
+                this.showNotification(message, 'success');
                 
                 // Обновляем статус индивидуальных настроек, если выбрана монета
                 if (this.selectedCoin) {
