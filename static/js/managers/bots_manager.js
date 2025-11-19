@@ -2970,6 +2970,41 @@ class BotsManager {
         }
     }
 
+    async resetAllCoinsToGlobalSettings() {
+        try {
+            const confirmed = confirm('⚠️ Вы уверены, что хотите сбросить индивидуальные настройки ВСЕХ монет к глобальным настройкам?\n\nЭто действие нельзя отменить!');
+            if (!confirmed) {
+                return false;
+            }
+            
+            console.log('[BotsManager] 🔄 Сброс всех индивидуальных настроек к глобальным');
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/individual-settings/reset-all`, {
+                method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                console.log(`[BotsManager] ✅ Сброшены индивидуальные настройки для ${data.removed_count} монет`);
+                this.showNotification(`✅ Сброшены индивидуальные настройки для ${data.removed_count} монет`, 'success');
+                
+                // Обновляем статус индивидуальных настроек, если выбрана монета
+                if (this.selectedCoin) {
+                    this.updateIndividualSettingsStatus(false);
+                }
+                
+                return true;
+            } else {
+                console.error(`[BotsManager] ❌ Ошибка сброса настроек: ${data.error}`);
+                this.showNotification(`❌ Ошибка сброса: ${data.error}`, 'error');
+                return false;
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка сброса всех индивидуальных настроек:', error);
+            this.showNotification('❌ Ошибка соединения при сбросе настроек', 'error');
+            return false;
+        }
+    }
+
     applyIndividualSettingsToUI(settings) {
         if (!settings) return;
         
@@ -7727,6 +7762,14 @@ class BotsManager {
             saveBasicBtn.setAttribute('data-initialized', 'true');
             saveBasicBtn.addEventListener('click', () => this.saveBasicSettings());
             console.log('[BotsManager] ✅ Кнопка "Сохранить основные настройки" инициализирована');
+        }
+        
+        // Кнопка сброса всех монет к глобальным настройкам
+        const resetAllCoinsBtn = document.getElementById('resetAllCoinsToGlobalBtn');
+        if (resetAllCoinsBtn && !resetAllCoinsBtn.hasAttribute('data-initialized')) {
+            resetAllCoinsBtn.setAttribute('data-initialized', 'true');
+            resetAllCoinsBtn.addEventListener('click', () => this.resetAllCoinsToGlobalSettings());
+            console.log('[BotsManager] ✅ Кнопка "Сбросить все монеты к глобальным настройкам" инициализирована');
         }
         
         // Системные настройки
