@@ -99,11 +99,47 @@ def infer_direction(side: Optional[str], entry_price: float, exit_price: float, 
     return 'LONG' if pnl >= 0 else 'SHORT'
 
 
-def fetch_and_filter_trades(exchange, period: str, target_usdt: Optional[float], tolerance: float) -> List[Dict[str, Any]]:
+def load_active_bots() -> Dict[str, Dict[str, Any]]:
+    """Загружает список активных ботов из bots_state.json"""
+    bots_state_path = PROJECT_ROOT / 'data' / 'bots_state.json'
+    if not bots_state_path.exists():
+        return {}
+    
+    try:
+        with open(bots_state_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            bots = data.get('bots', {})
+            # Возвращаем словарь: symbol -> bot_data
+            return {symbol: bot_data for symbol, bot_data in bots.items() if bot_data}
+    except Exception as e:
+        print(f"⚠️ Не удалось загрузить bots_state.json: {e}")
+        return {}
+
+
+def fetch_and_filter_trades(exchange, period: str, target_usdt: Optional[float], tolerance: float, exclude_active_bots: bool = True) -> List[Dict[str, Any]]:
+    """
+    Загружает и фильтрует сделки с биржи.
+    
+    Args:
+        exclude_active_bots: Если True, исключает сделки для символов, которые есть в bots_state.json
+    """
     raw_trades = exchange.get_closed_pnl(period=period) or []
     filtered: List[Dict[str, Any]] = []
     
+    # Загружаем активных ботов для исключения
+    active_bots = {}
+    if exclude_active_bots:
+        active_bots = load_active_bots()
+        if active_bots:
+            print(f"📋 Найдено {len(active_bots)} активных ботов в bots_state.json - их сделки будут исключены")
+    
     for trade in raw_trades:
+        symbol = trade.get('symbol')
+        
+        # КРИТИЧНО: Исключаем сделки для символов, которые есть в активных ботах
+        # Эти сделки будут добавлены самим bots.py при запуске
+        if exclude_active_bots and symbol and symbol in active_bots:
+            continue
         entry_price = safe_float(trade.get('entry_price'), 0.0) or 0.0
         exit_price = safe_float(trade.get('exit_price'), 0.0) or 0.0
         qty = safe_float(trade.get('qty'), 0.0) or 0.0
@@ -282,7 +318,7 @@ def main():
     args = parser.parse_args()
     
     exchange, exchange_name = load_exchange()
-    trades = fetch_and_filter_trades(exchange, args.period, args.target_usdt, args.tolerance)
+    trades = fetch_and_filter_trades(exchange, args.period, args.target_usdt, args.tolerance, exclude_active_bots=True)
     
     if not trades:
         print("⚠️ Не найдено ни одной сделки, подходящей под фильтр.")
