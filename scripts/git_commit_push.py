@@ -19,6 +19,8 @@ def run_git_command(args: Sequence[str]) -> subprocess.CompletedProcess[str]:
         check=False,
         text=True,
         capture_output=True,
+        encoding='utf-8',
+        errors='replace',
     )
     return result
 
@@ -27,10 +29,10 @@ def ensure_changes_present() -> None:
     """Exit early if there are no changes to commit."""
     status = run_git_command(["git", "status", "--porcelain"])
     if status.returncode != 0:
-        print(status.stderr.strip() or "Не удалось получить статус репозитория.")
+        print((status.stderr or "").strip() or "Не удалось получить статус репозитория.")
         sys.exit(status.returncode)
 
-    if not status.stdout.strip():
+    if not (status.stdout and status.stdout.strip()):
         print("Изменения отсутствуют — коммит не требуется.")
         sys.exit(0)
 
@@ -38,25 +40,25 @@ def ensure_changes_present() -> None:
 def git_add_all() -> None:
     result = run_git_command(["git", "add", "-A"])
     if result.returncode != 0:
-        print(result.stderr.strip() or "Не удалось подготовить файлы к коммиту.")
+        print((result.stderr or "").strip() or "Не удалось подготовить файлы к коммиту.")
         sys.exit(result.returncode)
 
 
 def git_commit(message: str) -> None:
     result = run_git_command(["git", "commit", "-m", message])
     if result.returncode != 0:
-        print(result.stderr.strip() or "Коммит не выполнен.")
+        print((result.stderr or "").strip() or "Коммит не выполнен.")
         sys.exit(result.returncode)
-    if result.stdout.strip():
+    if result.stdout and result.stdout.strip():
         print(result.stdout.strip())
 
 
 def git_push() -> None:
     result = run_git_command(["git", "push"])
     if result.returncode != 0:
-        print(result.stderr.strip() or "Push завершился с ошибкой.")
+        print((result.stderr or "").strip() or "Push завершился с ошибкой.")
         sys.exit(result.returncode)
-    if result.stdout.strip():
+    if result.stdout and result.stdout.strip():
         print(result.stdout.strip())
 
 
