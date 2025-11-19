@@ -1892,19 +1892,23 @@ class BybitExchange(BaseExchange):
                 
                 # ✅ ШАГ 4: Проверяем minNotionalValue (по номинальной стоимости!)
                 # ⚠️ КРИТИЧНО: Биржа Bybit ОТКЛОНЯЕТ ордера меньше minNotionalValue!
-                # Даже для лимитных ордеров из набора позиций нужно соблюдать минимум, иначе ордер не разместится
-                nominal_usdt = rounded_coins * current_price
+                # ⚠️ КРИТИЧНО: Для лимитных ордеров биржа проверяет по цене ЛИМИТНОГО ордера, а не текущей!
+                # Для рыночных ордеров - по текущей цене
+                price_for_notional_check = price if (order_type.lower() == 'limit' and price) else current_price
+                nominal_usdt = rounded_coins * price_for_notional_check
                 min_usdt_from_notional = min_notional_value if min_notional_value else 5.0
                 
                 if nominal_usdt < min_usdt_from_notional:
                     # Если получилось меньше minNotional - ВСЕГДА увеличиваем монеты
                     # Иначе биржа отклонит ордер с ошибкой "Order does not meet minimum order value"
-                    min_coins_for_notional = math.ceil(min_usdt_from_notional / current_price / qty_step) * qty_step
+                    # Используем цену для проверки (лимитная цена для лимитных ордеров, текущая для рыночных)
+                    min_coins_for_notional = math.ceil(min_usdt_from_notional / price_for_notional_check / qty_step) * qty_step
                     rounded_coins = min_coins_for_notional
                     if skip_min_notional_enforcement:
                         # Для лимитных ордеров из набора - предупреждаем, что увеличили до минимума
-                        logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: Запрошенная сумма {nominal_usdt:.2f} USDT < minNotionalValue={min_usdt_from_notional} USDT. "
-                                     f"Увеличиваем до минимума {rounded_coins} монет (~{rounded_coins * current_price:.2f} USDT), "
+                        logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: Запрошенная сумма {nominal_usdt:.2f} USDT < minNotionalValue={min_usdt_from_notional} USDT "
+                                     f"(по цене {price_for_notional_check:.6f}). "
+                                     f"Увеличиваем до минимума {rounded_coins} монет (~{rounded_coins * price_for_notional_check:.2f} USDT), "
                                      f"иначе биржа отклонит ордер (лимитный ордер из набора позиций)")
                     else:
                         # Для обычных ордеров - стандартное предупреждение
@@ -2314,12 +2318,14 @@ class BybitExchange(BaseExchange):
                 # Преобразуем формат для единообразия
                 formatted_orders = []
                 for order in orders:
+                    order_type = order.get('orderType', '').lower()  # 'Limit' или 'Market'
                     formatted_orders.append({
                         'order_id': order.get('orderId', ''),
                         'orderId': order.get('orderId', ''),
                         'id': order.get('orderId', ''),
                         'symbol': order.get('symbol', '').replace('USDT', ''),
                         'side': order.get('side', ''),
+                        'order_type': order_type,  # Добавляем тип ордера
                         'price': float(order.get('price', 0)),
                         'quantity': float(order.get('qty', 0)),
                         'status': order.get('orderStatus', '')
