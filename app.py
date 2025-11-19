@@ -214,6 +214,16 @@ except Exception as e:
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Отключаем DEBUG логи от внешних библиотек ДО их импорта
+# flask-cors - логирует неформатированные сообщения типа "Settings CORS headers: %s"
+flask_cors_logger = logging.getLogger('flask_cors')
+flask_cors_logger.setLevel(logging.WARNING)
+flask_cors_core_logger = logging.getLogger('flask_cors.core')
+flask_cors_core_logger.setLevel(logging.WARNING)
+for handler in flask_cors_logger.handlers[:]:
+    flask_cors_logger.removeHandler(handler)
+for handler in flask_cors_core_logger.handlers[:]:
+    flask_cors_core_logger.removeHandler(handler)
+
 # matplotlib - логирует неформатированные сообщения при импорте
 matplotlib_logger = logging.getLogger('matplotlib')
 matplotlib_logger.setLevel(logging.WARNING)
@@ -1861,6 +1871,12 @@ if __name__ == '__main__':
     urllib3_logger.setLevel(logging.WARNING)
     urllib3_connectionpool_logger = logging.getLogger('urllib3.connectionpool')
     urllib3_connectionpool_logger.setLevel(logging.WARNING)
+    
+    # flask-cors - логирует неформатированные сообщения типа "Settings CORS headers: %s"
+    flask_cors_logger = logging.getLogger('flask_cors')
+    flask_cors_logger.setLevel(logging.WARNING)
+    flask_cors_core_logger = logging.getLogger('flask_cors.core')
+    flask_cors_core_logger.setLevel(logging.WARNING)
     
     # matplotlib - логирует неформатированные сообщения типа "matplotlib data path: %s", "CONFIGDIR=%s" и т.д.
     matplotlib_logger = logging.getLogger('matplotlib')

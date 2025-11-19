@@ -189,8 +189,11 @@ class LogLevelFilter(logging.Filter):
                     'Starting new HTTP connection' in message or
                     'Creating converter from' in message or
                     ('Configuring CORS' in message and '%s' in message) or
+                    'Settings CORS headers' in message or  # CORS логи с неформатированными %s
+                    'CORS request received' in message or  # CORS логи с неформатированными %s
+                    'Origin header matches' in message or  # CORS логи с неформатированными %s
                     unformatted_count >= 3 or  # Любое сообщение с 3+ неформатированными %s
-                    (unformatted_count >= 2 and logger_name.startswith(('urllib3', 'pybit', 'flask_cors', 'requests', 'werkzeug', 'flask')))
+                    (unformatted_count >= 2 and logger_name.startswith(('urllib3', 'pybit', 'flask_cors', 'requests', 'werkzeug', 'flask', 'app')))
                 )
                 if has_unformatted:
                     # Это неформатированное сообщение из внешней библиотеки - скрываем его

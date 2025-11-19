@@ -294,9 +294,9 @@ class BybitExchange(BaseExchange):
                         
                         roi = (current_pnl / margin * 100) if margin > 0 else 0
                         
-                        # Временное логирование для отладки
-                        if current_pnl != 0:
-                            logger.info(f"[BYBIT ROI] {symbol}: PnL={current_pnl:.4f} USDT, margin={margin:.4f} USDT, ROI={roi:.2f}%, positionValue={position.get('positionValue')}, leverage={leverage}, calculated={position_value / leverage if position_value > 0 and leverage > 0 else 'N/A'}")
+                        # Логирование ROI убрано (слишком много логов)
+                        # if current_pnl != 0:
+                        #     logger.info(f"[BYBIT ROI] {symbol}: PnL={current_pnl:.4f} USDT, margin={margin:.4f} USDT, ROI={roi:.2f}%, positionValue={position.get('positionValue')}, leverage={leverage}, calculated={position_value / leverage if position_value > 0 and leverage > 0 else 'N/A'}")
                         
                         if current_pnl > 0:
                             if symbol not in self.max_profit_values or current_pnl > self.max_profit_values[symbol]:
