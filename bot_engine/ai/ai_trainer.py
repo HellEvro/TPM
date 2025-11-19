@@ -848,6 +848,71 @@ class AITrainer:
         except Exception as e:
             logger.warning(f"⚠️ Ошибка сохранения симулированных сделок: {e}")
     
+    def _create_exchange_for_history(self):
+        """
+        Создает exchange для загрузки истории биржи (независимо от bots.py)
+        
+        Returns:
+            Exchange объект или None
+        """
+        try:
+            # Сначала пробуем получить существующий exchange
+            from bots_modules.imports_and_globals import get_exchange
+            exchange = get_exchange()
+            
+            if exchange:
+                logger.debug(f"   ✅ Используем существующий exchange: {type(exchange).__name__}")
+                return exchange
+            
+            # Если exchange недоступен, создаем свой
+            logger.info("   🔧 Exchange недоступен, создаем собственный для загрузки истории...")
+            
+            # Получаем API ключи из конфига
+            try:
+                from app.config import EXCHANGES, ACTIVE_EXCHANGE
+                exchange_name = ACTIVE_EXCHANGE if ACTIVE_EXCHANGE else 'BYBIT'
+                exchange_config = EXCHANGES.get(exchange_name, {})
+                
+                api_key = exchange_config.get('api_key')
+                api_secret = exchange_config.get('api_secret')
+                test_server = exchange_config.get('test_server', False)
+                position_mode = exchange_config.get('position_mode', 'Hedge')
+                limit_order_offset = exchange_config.get('limit_order_offset', 0.1)
+                
+                if not api_key or not api_secret:
+                    logger.warning("   ⚠️ API ключи не настроены в конфиге")
+                    return None
+                
+                # Создаем exchange через фабрику
+                from exchanges.exchange_factory import ExchangeFactory
+                exchange = ExchangeFactory.create_exchange(
+                    exchange_name,
+                    api_key,
+                    api_secret
+                )
+                
+                if exchange:
+                    logger.info(f"   ✅ Создан собственный exchange: {type(exchange).__name__}")
+                    return exchange
+                else:
+                    logger.warning("   ⚠️ ExchangeFactory не смог создать exchange")
+                    return None
+                
+            except ImportError as e:
+                logger.warning(f"   ⚠️ Не удалось импортировать конфиг: {e}")
+                return None
+            except Exception as e:
+                logger.warning(f"   ⚠️ Ошибка создания exchange: {e}")
+                import traceback
+                logger.debug(f"Traceback: {traceback.format_exc()}")
+                return None
+            
+        except Exception as e:
+            logger.warning(f"   ⚠️ Ошибка создания exchange: {e}")
+            import traceback
+            logger.debug(f"Traceback: {traceback.format_exc()}")
+            return None
+    
     def _load_exchange_trades_history(self) -> List[Dict]:
         """
         Загружает историю сделок трейдера с биржи через API
@@ -856,13 +921,12 @@ class AITrainer:
             Список сделок с биржи
         """
         try:
-            # Пробуем загрузить через API биржи
-            from bots_modules.imports_and_globals import get_exchange
-            exchange = get_exchange()
+            # Создаем или получаем exchange
+            exchange = self._create_exchange_for_history()
             
             if not exchange:
                 logger.warning("⚠️ Exchange недоступен для загрузки истории сделок")
-                logger.warning("   💡 Убедитесь, что bots.py запущен и exchange инициализирован")
+                logger.warning("   💡 Проверьте настройки API ключей в конфиге")
                 return []
             
             logger.info(f"   ✅ Exchange доступен: {type(exchange).__name__}")
