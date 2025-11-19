@@ -199,23 +199,41 @@ def save_system_config_to_py(config: Dict[str, Any]) -> bool:
     config — словарь { 'ATTRIBUTE_NAME': value }.
     """
     try:
-        config_file = 'bot_engine/bot_config.py'
+        # ✅ Определяем путь к файлу относительно корня проекта
+        # Получаем директорию текущего модуля (bots_modules)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Поднимаемся на уровень выше (в корень проекта)
+        project_root = os.path.dirname(current_dir)
+        # Формируем путь к bot_config.py
+        config_file = os.path.join(project_root, 'bot_engine', 'bot_config.py')
+        
         if not os.path.exists(config_file):
-            logger.error(f"[CONFIG_WRITER] ❌ Файл {config_file} не найден")
-            return False
+            # ✅ Попробуем альтернативный путь (относительный)
+            alt_config_file = 'bot_engine/bot_config.py'
+            if os.path.exists(alt_config_file):
+                config_file = alt_config_file
+            else:
+                logger.error(f"[CONFIG_WRITER] ❌ Файл {config_file} не найден (проверяли также {alt_config_file})")
+                return False
 
+        logger.debug(f"[CONFIG_WRITER] 📝 Открываем файл: {config_file}")
         with open(config_file, 'r', encoding='utf-8') as f:
             lines = f.readlines()
 
         start_idx = None
         end_idx = None
         for i, line in enumerate(lines):
-            if line.strip().startswith('class SystemConfig'):
+            # ✅ Ищем класс SystemConfig (может быть с комментарием или наследованием)
+            if 'class SystemConfig' in line or line.strip().startswith('class SystemConfig'):
                 start_idx = i
+                logger.debug(f"[CONFIG_WRITER] ✅ Найден класс SystemConfig на строке {i+1}: {line.strip()}")
                 break
 
         if start_idx is None:
-            logger.error("[CONFIG_WRITER] ❌ Не найден класс SystemConfig")
+            logger.error(f"[CONFIG_WRITER] ❌ Не найден класс SystemConfig в файле {config_file}")
+            logger.debug(f"[CONFIG_WRITER] 🔍 Первые 20 строк файла:")
+            for i, line in enumerate(lines[:20]):
+                logger.debug(f"  {i+1}: {line.rstrip()}")
             return False
 
         for j in range(start_idx + 1, len(lines)):
