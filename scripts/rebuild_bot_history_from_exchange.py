@@ -28,13 +28,18 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+# Гарантируем, что можно запускать из любого каталога/сервера
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from bot_engine.bot_history import BotHistoryManager, ACTION_TYPES, HISTORY_FILE
 from exchanges.exchange_factory import ExchangeFactory
 
 
 def load_exchange():
     try:
-        from app.config import EXCHANGES, ACTIVE_EXCHANGE
+        from app.config import EXCHANGES, ACTIVE_EXCHANGE  # type: ignore
     except ImportError as exc:  # pragma: no cover - защитный импорт
         raise RuntimeError(
             "Не удалось импортировать app.config. Убедитесь, что config.py существует."
