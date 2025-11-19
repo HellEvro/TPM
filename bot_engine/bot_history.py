@@ -41,6 +41,17 @@ ACTION_TYPES = {
 }
 
 
+SIMULATION_MARKERS = {
+    'SIMULATION',
+    'SIMULATED',
+    'BACKTEST',
+    'VIRTUAL',
+    'AI_SIMULATION',
+    'AI_BACKTEST',
+    'TEST_RUN',
+}
+
+
 class BotHistoryManager:
     """Менеджер истории торговых ботов"""
     
@@ -251,11 +262,46 @@ class BotHistoryManager:
         self._add_history_entry(entry)
         logger.info(f"📊 {entry['details']}")
     
+    def _is_simulated_entry(self, is_simulated_flag: bool,
+                            entry_data: Optional[Dict[str, Any]] = None,
+                            market_data: Optional[Dict[str, Any]] = None,
+                            decision_source: Optional[str] = None,
+                            reason: Optional[str] = None) -> bool:
+        """Определяет, является ли запись симулированной"""
+        if is_simulated_flag:
+            return True
+        
+        def check_dict(data: Optional[Dict[str, Any]]) -> bool:
+            if not data:
+                return False
+            if data.get('is_simulated') or data.get('simulation') or data.get('is_backtest'):
+                return True
+            source = str(data.get('source', '')).upper()
+            if source and any(marker in source for marker in SIMULATION_MARKERS):
+                return True
+            tag = str(data.get('tag', '')).upper()
+            if tag and any(marker in tag for marker in SIMULATION_MARKERS):
+                return True
+            return False
+        
+        if check_dict(entry_data) or check_dict(market_data):
+            return True
+        
+        if decision_source and decision_source.upper() in SIMULATION_MARKERS:
+            return True
+        
+        if reason:
+            reason_upper = str(reason).upper()
+            if any(marker in reason_upper for marker in SIMULATION_MARKERS):
+                return True
+        
+        return False
+    
     def log_position_opened(self, bot_id: str, symbol: str, direction: str, size: float, 
                            entry_price: float, stop_loss: float = None, take_profit: float = None,
                            decision_source: str = 'SCRIPT', ai_decision_id: str = None, 
                            ai_confidence: float = None, ai_signal: str = None, rsi: float = None,
-                           trend: str = None):
+                           trend: str = None, is_simulated: bool = False):
         """
         Логирование открытия позиции с информацией об источнике решения
         
@@ -274,6 +320,10 @@ class BotHistoryManager:
             rsi: RSI на момент открытия
             trend: Тренд на момент открытия
         """
+        if self._is_simulated_entry(is_simulated, None, None, decision_source):
+            logger.debug(f"[BOT_HISTORY] ⏭️ Пропускаем запись симуляции (open) для {symbol}")
+            return
+        
         entry = {
             'id': f"open_{bot_id}_{datetime.now().timestamp()}",
             'timestamp': datetime.now().isoformat(),
@@ -319,7 +369,8 @@ class BotHistoryManager:
             'ai_decision_id': ai_decision_id,
             'ai_confidence': ai_confidence,
             'rsi': rsi,
-            'trend': trend
+            'trend': trend,
+            'is_simulated': False
         }
         self._add_trade_entry(trade)
         
@@ -392,7 +443,8 @@ class BotHistoryManager:
     
     def log_position_closed(self, bot_id: str, symbol: str, direction: str, exit_price: float, 
                            pnl: float, roi: float, reason: str = None, entry_data: Dict = None,
-                           market_data: Dict = None, ai_decision_id: str = None):
+                           market_data: Dict = None, ai_decision_id: str = None,
+                           is_simulated: bool = False):
         """
         Логирование закрытия позиции с дополнительными данными для обучения ИИ
         
@@ -425,6 +477,10 @@ class BotHistoryManager:
         
         original_pnl_input = pnl
         original_roi_input = roi
+        
+        if self._is_simulated_entry(is_simulated, entry_data, market_data, decision_source, reason):
+            logger.debug(f"[BOT_HISTORY] ⏭️ Пропускаем запись симуляции (close) для {symbol}")
+            return
         
         def _to_float(value: Any) -> Optional[float]:
             try:
@@ -787,7 +843,7 @@ def log_position_opened(bot_id: str, symbol: str, direction: str, size: float,
                        entry_price: float, stop_loss: float = None, take_profit: float = None,
                        decision_source: str = 'SCRIPT', ai_decision_id: str = None,
                        ai_confidence: float = None, ai_signal: str = None,
-                       rsi: float = None, trend: str = None):
+                       rsi: float = None, trend: str = None, is_simulated: bool = False):
     """Логирование открытия позиции"""
     bot_history_manager.log_position_opened(
         bot_id,
@@ -802,13 +858,15 @@ def log_position_opened(bot_id: str, symbol: str, direction: str, size: float,
         ai_confidence=ai_confidence,
         ai_signal=ai_signal,
         rsi=rsi,
-        trend=trend
+        trend=trend,
+        is_simulated=is_simulated
     )
 
 
 def log_position_closed(bot_id: str, symbol: str, direction: str, exit_price: float, 
                        pnl: float, roi: float, reason: str = None, entry_data: Dict = None,
-                       market_data: Optional[Dict] = None, ai_decision_id: Optional[str] = None):
+                       market_data: Optional[Dict] = None, ai_decision_id: Optional[str] = None,
+                       is_simulated: bool = False):
     """Логирование закрытия позиции"""
     bot_history_manager.log_position_closed(
         bot_id,
@@ -821,6 +879,7 @@ def log_position_closed(bot_id: str, symbol: str, direction: str, exit_price: fl
         entry_data=entry_data,
         market_data=market_data,
         ai_decision_id=ai_decision_id,
+        is_simulated=is_simulated
     )
 
 
@@ -917,7 +976,8 @@ def create_demo_data() -> bool:
                 ai_confidence=ai_confidence,
                 ai_signal=ai_signal,
                 rsi=rsi,
-                trend=trend
+                trend=trend,
+                is_simulated=True
             )
             
             # Закрытие позиции (80% сделок)
@@ -926,9 +986,17 @@ def create_demo_data() -> bool:
                 pnl = (exit_price - entry_price) * size if direction == 'LONG' else (entry_price - exit_price) * size
                 roi = ((exit_price - entry_price) / entry_price * 100) if direction == 'LONG' else ((entry_price - exit_price) / entry_price * 100)
                 
-                log_position_closed(bot_id, symbol, direction, exit_price, pnl, roi, 
-                                  random.choice(['Stop Loss', 'Take Profit', 'Ручное закрытие']),
-                                  ai_decision_id=ai_decision_id)
+                log_position_closed(
+                    bot_id,
+                    symbol,
+                    direction,
+                    exit_price,
+                    pnl,
+                    roi,
+                    random.choice(['Stop Loss', 'Take Profit', 'Ручное закрытие']),
+                    ai_decision_id=ai_decision_id,
+                    is_simulated=True
+                )
                 
                 log_bot_stop(bot_id, symbol, 'Позиция закрыта', pnl)
                 
