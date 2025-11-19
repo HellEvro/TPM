@@ -199,7 +199,8 @@ class NewTradingBot:
             
             # КРИТИЧНО: Проверяем, не логировали ли мы уже эту позицию в истории
             # Это предотвращает дублирование при синхронизации с биржей
-            position_already_in_history = False
+            # НО: если позиция есть с EXCHANGE_IMPORT, а бот реально активен - логируем с SCRIPT
+            position_already_logged_by_bot = False
             if has_entry_price:
                 try:
                     from bot_engine.bot_history import bot_history_manager
@@ -210,9 +211,16 @@ class NewTradingBot:
                                 existing_trade.get('direction') == (self.position_side or 'LONG')):
                                 existing_entry_price = existing_trade.get('entry_price')
                                 if existing_entry_price and abs(float(existing_entry_price) - float(self.entry_price)) < 0.0001:
-                                    position_already_in_history = True
-                                    logger.debug(f"[NEW_BOT_{self.symbol}] ⏭️ Позиция уже есть в истории, пропускаем логирование")
-                                    break
+                                    # Проверяем decision_source - если это SCRIPT или AI, то бот уже залогировал
+                                    existing_source = existing_trade.get('decision_source', '')
+                                    if existing_source in ('SCRIPT', 'AI'):
+                                        position_already_logged_by_bot = True
+                                        logger.debug(f"[NEW_BOT_{self.symbol}] ⏭️ Позиция уже залогирована ботом ({existing_source}), пропускаем")
+                                        break
+                                    # Если это EXCHANGE_IMPORT - это нормально, бот должен залогировать свою версию
+                                    elif existing_source == 'EXCHANGE_IMPORT':
+                                        logger.debug(f"[NEW_BOT_{self.symbol}] ℹ️ Позиция есть с EXCHANGE_IMPORT, бот залогирует свою версию с SCRIPT")
+                                        break
                 except Exception as check_error:
                     logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка проверки истории: {check_error}")
             
@@ -220,8 +228,8 @@ class NewTradingBot:
             # 1. Это переход в позицию (не был в позиции)
             # 2. Есть данные о позиции (цена входа и размер)
             # 3. Это не повторный вызов (проверяем через флаг _position_logged)
-            # 4. Позиция еще не залогирована в истории
-            if not was_in_position and has_entry_price and has_position_size and not position_already_in_history:
+            # 4. Позиция еще не залогирована ботом (SCRIPT/AI) - EXCHANGE_IMPORT не считается
+            if not was_in_position and has_entry_price and has_position_size and not position_already_logged_by_bot:
                 # Проверяем, не логировали ли мы уже эту позицию
                 position_logged = getattr(self, '_position_logged', False)
                 if not position_logged:
@@ -243,8 +251,8 @@ class NewTradingBot:
             else:
                 if not was_in_position:
                     reason = []
-                    if position_already_in_history:
-                        reason.append("уже в истории")
+                    if position_already_logged_by_bot:
+                        reason.append("уже залогирована ботом")
                     if not has_entry_price:
                         reason.append("нет entry_price")
                     if not has_position_size:
