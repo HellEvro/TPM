@@ -208,10 +208,10 @@ if not os.path.exists('logs'):
 # Настройка цветного логирования с фильтром уровней из конфига
 try:
     console_levels = CONSOLE_LOG_LEVELS if 'CONSOLE_LOG_LEVELS' in globals() else []
-    setup_color_logging(console_log_levels=console_levels if console_levels else None)
+    setup_color_logging(console_log_levels=console_levels if console_levels else None, log_file='logs/app.log')
 except Exception as e:
     # Если не удалось настроить, используем стандартное логирование
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    setup_color_logging(log_file='logs/app.log')
 
 # Отключаем DEBUG логи от внешних библиотек ДО их импорта
 # flask-cors - логирует неформатированные сообщения типа "Settings CORS headers: %s"

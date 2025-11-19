@@ -46,13 +46,21 @@ class AIDatabase:
             db_path: Путь к файлу базы данных (если None, используется data/ai/ai_data.db)
         """
         if db_path is None:
-            db_path = os.path.normpath('data/ai/ai_data.db')
+            # Поддержка UNC путей: используем абсолютный путь относительно текущей рабочей директории
+            base_dir = os.getcwd()
+            db_path = os.path.join(base_dir, 'data', 'ai', 'ai_data.db')
+            # Нормализуем путь (работает и с UNC путями)
+            db_path = os.path.normpath(db_path)
         
         self.db_path = db_path
         self.lock = threading.RLock()
         
-        # Создаем директорию если её нет
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        # Создаем директорию если её нет (работает и с UNC путями)
+        try:
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        except OSError as e:
+            logger.error(f"❌ Ошибка создания директории для БД: {e}")
+            raise
         
         # Инициализируем базу данных
         self._init_database()
@@ -75,8 +83,18 @@ class AIDatabase:
     
     def _init_database(self):
         """Создает все таблицы и индексы"""
+        # SQLite автоматически создает файл БД при первом подключении
+        # Но убедимся, что файл будет создан явно
+        if not os.path.exists(self.db_path):
+            # Создаем пустой файл БД
+            Path(self.db_path).touch()
+            logger.debug(f"📁 Создан файл БД: {self.db_path}")
+        
         with self._get_connection() as conn:
             cursor = conn.cursor()
+            
+            # Миграция: добавляем новые поля если их нет
+            self._migrate_schema(cursor, conn)
             
             # ==================== ТАБЛИЦА: AI СИМУЛЯЦИИ ====================
             cursor.execute("""
@@ -92,6 +110,8 @@ class AIDatabase:
                     exit_rsi REAL,
                     entry_trend TEXT,
                     exit_trend TEXT,
+                    entry_volatility REAL,
+                    entry_volume_ratio REAL,
                     pnl REAL NOT NULL,
                     pnl_pct REAL NOT NULL,
                     roi REAL,
@@ -104,6 +124,11 @@ class AIDatabase:
                     training_session_id INTEGER,
                     rsi_params_json TEXT,
                     risk_params_json TEXT,
+                    config_params_json TEXT,
+                    filters_params_json TEXT,
+                    entry_conditions_json TEXT,
+                    exit_conditions_json TEXT,
+                    restrictions_json TEXT,
                     created_at TEXT NOT NULL,
                     FOREIGN KEY (training_session_id) REFERENCES training_sessions(id)
                 )
@@ -139,11 +164,18 @@ class AIDatabase:
                     exit_rsi REAL,
                     entry_trend TEXT,
                     exit_trend TEXT,
+                    entry_volatility REAL,
+                    entry_volume_ratio REAL,
                     close_reason TEXT,
                     position_size_usdt REAL,
                     position_size_coins REAL,
                     entry_data_json TEXT,
                     exit_market_data_json TEXT,
+                    config_params_json TEXT,
+                    filters_params_json TEXT,
+                    entry_conditions_json TEXT,
+                    exit_conditions_json TEXT,
+                    restrictions_json TEXT,
                     is_simulated INTEGER NOT NULL DEFAULT 0,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
@@ -295,6 +327,59 @@ class AIDatabase:
             
             logger.debug("✅ Все таблицы и индексы созданы")
     
+    def _migrate_schema(self, cursor, conn):
+        """Миграция схемы БД: добавляет новые поля если их нет"""
+        try:
+            # Проверяем и добавляем entry_volatility и entry_volume_ratio в simulated_trades
+            try:
+                cursor.execute("SELECT entry_volatility FROM simulated_trades LIMIT 1")
+            except sqlite3.OperationalError:
+                logger.info("📦 Миграция: добавляем entry_volatility и entry_volume_ratio в simulated_trades")
+                cursor.execute("ALTER TABLE simulated_trades ADD COLUMN entry_volatility REAL")
+                cursor.execute("ALTER TABLE simulated_trades ADD COLUMN entry_volume_ratio REAL")
+            
+            # Проверяем и добавляем entry_volatility и entry_volume_ratio в bot_trades
+            try:
+                cursor.execute("SELECT entry_volatility FROM bot_trades LIMIT 1")
+            except sqlite3.OperationalError:
+                logger.info("📦 Миграция: добавляем entry_volatility и entry_volume_ratio в bot_trades")
+                cursor.execute("ALTER TABLE bot_trades ADD COLUMN entry_volatility REAL")
+                cursor.execute("ALTER TABLE bot_trades ADD COLUMN entry_volume_ratio REAL")
+            
+            # Проверяем и добавляем параметры конфига в simulated_trades
+            new_fields_sim = [
+                ('config_params_json', 'TEXT'),
+                ('filters_params_json', 'TEXT'),
+                ('entry_conditions_json', 'TEXT'),
+                ('exit_conditions_json', 'TEXT'),
+                ('restrictions_json', 'TEXT')
+            ]
+            for field_name, field_type in new_fields_sim:
+                try:
+                    cursor.execute(f"SELECT {field_name} FROM simulated_trades LIMIT 1")
+                except sqlite3.OperationalError:
+                    logger.info(f"📦 Миграция: добавляем {field_name} в simulated_trades")
+                    cursor.execute(f"ALTER TABLE simulated_trades ADD COLUMN {field_name} {field_type}")
+            
+            # Проверяем и добавляем параметры конфига в bot_trades
+            new_fields_bot = [
+                ('config_params_json', 'TEXT'),
+                ('filters_params_json', 'TEXT'),
+                ('entry_conditions_json', 'TEXT'),
+                ('exit_conditions_json', 'TEXT'),
+                ('restrictions_json', 'TEXT')
+            ]
+            for field_name, field_type in new_fields_bot:
+                try:
+                    cursor.execute(f"SELECT {field_name} FROM bot_trades LIMIT 1")
+                except sqlite3.OperationalError:
+                    logger.info(f"📦 Миграция: добавляем {field_name} в bot_trades")
+                    cursor.execute(f"ALTER TABLE bot_trades ADD COLUMN {field_name} {field_type}")
+            
+            conn.commit()
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка миграции схемы: {e}")
+    
     # ==================== МЕТОДЫ ДЛЯ СИМУЛЯЦИЙ ====================
     
     def save_simulated_trades(self, trades: List[Dict[str, Any]], training_session_id: Optional[int] = None) -> int:
@@ -323,12 +408,15 @@ class AIDatabase:
                             INSERT OR IGNORE INTO simulated_trades (
                                 symbol, direction, entry_price, exit_price,
                                 entry_time, exit_time, entry_rsi, exit_rsi,
-                                entry_trend, exit_trend, pnl, pnl_pct, roi,
+                                entry_trend, exit_trend, entry_volatility, entry_volume_ratio,
+                                pnl, pnl_pct, roi,
                                 exit_reason, is_successful, duration_candles,
                                 entry_idx, exit_idx, simulation_timestamp,
                                 training_session_id, rsi_params_json, risk_params_json,
+                                config_params_json, filters_params_json, entry_conditions_json,
+                                exit_conditions_json, restrictions_json,
                                 created_at
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, (
                             trade.get('symbol'),
                             trade.get('direction'),
@@ -340,6 +428,8 @@ class AIDatabase:
                             trade.get('exit_rsi'),
                             trade.get('entry_trend'),
                             trade.get('exit_trend'),
+                            trade.get('entry_volatility'),
+                            trade.get('entry_volume_ratio'),
                             trade.get('pnl'),
                             trade.get('pnl_pct'),
                             trade.get('roi'),
@@ -352,6 +442,11 @@ class AIDatabase:
                             training_session_id,
                             json.dumps(trade.get('rsi_params')) if trade.get('rsi_params') else None,
                             json.dumps(trade.get('risk_params')) if trade.get('risk_params') else None,
+                            json.dumps(trade.get('config_params')) if trade.get('config_params') else None,
+                            json.dumps(trade.get('filters_params')) if trade.get('filters_params') else None,
+                            json.dumps(trade.get('entry_conditions')) if trade.get('entry_conditions') else None,
+                            json.dumps(trade.get('exit_conditions')) if trade.get('exit_conditions') else None,
+                            json.dumps(trade.get('restrictions')) if trade.get('restrictions') else None,
                             now
                         ))
                         if cursor.rowcount > 0:
@@ -453,11 +548,25 @@ class AIDatabase:
                     existing = cursor.fetchone()
                     
                     if existing:
+                        # Извлекаем volatility и volume_ratio из entry_data если есть
+                        entry_data = trade.get('entry_data', {})
+                        if isinstance(entry_data, str):
+                            try:
+                                entry_data = json.loads(entry_data)
+                            except:
+                                entry_data = {}
+                        elif not isinstance(entry_data, dict):
+                            entry_data = {}
+                        
+                        entry_volatility = trade.get('entry_volatility') or entry_data.get('volatility')
+                        entry_volume_ratio = trade.get('entry_volume_ratio') or entry_data.get('volume_ratio')
+                        
                         # Обновляем существующую
                         cursor.execute("""
                             UPDATE bot_trades SET
                                 symbol = ?, direction = ?, entry_price = ?, exit_price = ?,
                                 pnl = ?, roi = ?, status = ?, exit_rsi = ?, exit_trend = ?,
+                                entry_volatility = ?, entry_volume_ratio = ?,
                                 close_reason = ?, exit_market_data_json = ?, updated_at = ?
                             WHERE trade_id = ?
                         """, (
@@ -470,6 +579,8 @@ class AIDatabase:
                             trade.get('status'),
                             trade.get('exit_rsi'),
                             trade.get('exit_trend'),
+                            entry_volatility,
+                            entry_volume_ratio,
                             trade.get('close_reason'),
                             json.dumps(trade.get('exit_market_data')) if trade.get('exit_market_data') else None,
                             now,
@@ -478,16 +589,48 @@ class AIDatabase:
                         return existing[0]
                 
                 # Создаем новую
+                # Извлекаем volatility и volume_ratio из entry_data если есть
+                entry_data = trade.get('entry_data', {})
+                if isinstance(entry_data, str):
+                    try:
+                        entry_data = json.loads(entry_data)
+                    except:
+                        entry_data = {}
+                elif not isinstance(entry_data, dict):
+                    entry_data = {}
+                
+                entry_volatility = trade.get('entry_volatility') or entry_data.get('volatility')
+                entry_volume_ratio = trade.get('entry_volume_ratio') or entry_data.get('volume_ratio')
+                
+                # Извлекаем все параметры конфига из trade или entry_data
+                config_params = trade.get('config_params') or trade.get('config') or entry_data.get('config')
+                filters_params = trade.get('filters_params') or trade.get('filters') or entry_data.get('filters')
+                entry_conditions = trade.get('entry_conditions') or entry_data.get('entry_conditions')
+                exit_market_data = trade.get('exit_market_data') or trade.get('market_data', {})
+                if isinstance(exit_market_data, str):
+                    try:
+                        exit_market_data = json.loads(exit_market_data)
+                    except:
+                        exit_market_data = {}
+                elif not isinstance(exit_market_data, dict):
+                    exit_market_data = {}
+                exit_conditions = trade.get('exit_conditions') or exit_market_data.get('exit_conditions')
+                restrictions = trade.get('restrictions') or entry_data.get('restrictions')
+                
                 cursor.execute("""
                     INSERT OR IGNORE INTO bot_trades (
                         trade_id, bot_id, symbol, direction, entry_price, exit_price,
                         entry_time, exit_time, pnl, roi, status, decision_source,
                         ai_decision_id, ai_confidence, entry_rsi, exit_rsi,
-                        entry_trend, exit_trend, close_reason,
+                        entry_trend, exit_trend, entry_volatility, entry_volume_ratio,
+                        close_reason,
                         position_size_usdt, position_size_coins,
-                        entry_data_json, exit_market_data_json, is_simulated,
+                        entry_data_json, exit_market_data_json,
+                        config_params_json, filters_params_json, entry_conditions_json,
+                        exit_conditions_json, restrictions_json,
+                        is_simulated,
                         created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     trade_id,
                     trade.get('bot_id'),
@@ -503,15 +646,22 @@ class AIDatabase:
                     trade.get('decision_source', 'SCRIPT'),
                     trade.get('ai_decision_id'),
                     trade.get('ai_confidence'),
-                    trade.get('entry_rsi') or (trade.get('entry_data', {}).get('rsi') if isinstance(trade.get('entry_data'), dict) else None),
-                    trade.get('exit_rsi') or (trade.get('market_data', {}).get('rsi') if isinstance(trade.get('market_data'), dict) else None),
-                    trade.get('entry_trend') or (trade.get('entry_data', {}).get('trend') if isinstance(trade.get('entry_data'), dict) else None),
-                    trade.get('exit_trend') or (trade.get('market_data', {}).get('trend') if isinstance(trade.get('market_data'), dict) else None),
+                    trade.get('entry_rsi') or entry_data.get('rsi'),
+                    trade.get('exit_rsi') or exit_market_data.get('rsi'),
+                    trade.get('entry_trend') or entry_data.get('trend'),
+                    trade.get('exit_trend') or exit_market_data.get('trend'),
+                    entry_volatility,
+                    entry_volume_ratio,
                     trade.get('close_reason'),
                     trade.get('position_size_usdt'),
                     trade.get('position_size_coins'),
                     json.dumps(trade.get('entry_data')) if trade.get('entry_data') else None,
                     json.dumps(trade.get('exit_market_data') or trade.get('market_data')) if (trade.get('exit_market_data') or trade.get('market_data')) else None,
+                    json.dumps(config_params) if config_params else None,
+                    json.dumps(filters_params) if filters_params else None,
+                    json.dumps(entry_conditions) if entry_conditions else None,
+                    json.dumps(exit_conditions) if exit_conditions else None,
+                    json.dumps(restrictions) if restrictions else None,
                     1 if trade.get('is_simulated', False) else 0,
                     now,
                     now
@@ -810,6 +960,7 @@ class AIDatabase:
                         'SIMULATED' as source,
                         symbol, direction, entry_price, exit_price,
                         entry_rsi as rsi, entry_trend as trend,
+                        entry_volatility, entry_volume_ratio,
                         pnl, pnl_pct as roi, is_successful,
                         entry_time as timestamp, exit_time as close_timestamp,
                         exit_reason as close_reason,
@@ -824,6 +975,7 @@ class AIDatabase:
                         'BOT' as source,
                         symbol, direction, entry_price, exit_price,
                         entry_rsi as rsi, entry_trend as trend,
+                        entry_volatility, entry_volume_ratio,
                         pnl, roi, CASE WHEN pnl > 0 THEN 1 ELSE 0 END as is_successful,
                         entry_time as timestamp, exit_time as close_timestamp,
                         close_reason, ai_decision_id, ai_confidence
@@ -837,6 +989,7 @@ class AIDatabase:
                         'EXCHANGE' as source,
                         symbol, direction, entry_price, exit_price,
                         NULL as rsi, NULL as trend,
+                        NULL as entry_volatility, NULL as entry_volume_ratio,
                         pnl, roi, CASE WHEN pnl > 0 THEN 1 ELSE 0 END as is_successful,
                         entry_time as timestamp, exit_time as close_timestamp,
                         NULL as close_reason, NULL as ai_decision_id, NULL as ai_confidence
