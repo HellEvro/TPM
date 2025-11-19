@@ -623,34 +623,41 @@ class BybitExchange(BaseExchange):
                 logger.error(f"Error getting SMA200 for {symbol}: {e}")
                 return None
 
-    @with_timeout(10)  # 10 секунд таймаут для получения тикера
+    @with_timeout(15)  # 15 секунд таймаут для получения тикера
     def get_ticker(self, symbol):
         """Получение текущих данных тикера"""
-        try:
-            # Добавляем задержку для предотвращения rate limiting
-            time.sleep(0.1)  # 100ms задержка для тикеров
-            
-            # Получаем данные тикера
-            response = self.client.get_tickers(
-                category="linear",
-                symbol=f"{symbol}USDT"
-            )
-            
-            if response['retCode'] == 0 and response['result']['list']:
-                ticker = response['result']['list'][0]
-                result = {
-                    'symbol': symbol,
-                    'last': float(ticker['lastPrice']),
-                    'bid': float(ticker['bid1Price']),
-                    'ask': float(ticker['ask1Price']),
-                    'timestamp': response['time']
-                }
-                return result
+        retries = 3
+        base_delay = 0.1
+        last_error = None
+        
+        for attempt in range(1, retries + 1):
+            try:
+                # Добавляем задержку для предотвращения rate limiting + экспоненциальную паузу между ретраями
+                time.sleep(base_delay * attempt)
                 
-            return None
-            
-        except Exception as e:
-            return None
+                response = self.client.get_tickers(
+                    category="linear",
+                    symbol=f"{symbol}USDT"
+                )
+                
+                if response['retCode'] == 0 and response['result']['list']:
+                    ticker = response['result']['list'][0]
+                    return {
+                        'symbol': symbol,
+                        'last': float(ticker['lastPrice']),
+                        'bid': float(ticker['bid1Price']),
+                        'ask': float(ticker['ask1Price']),
+                        'timestamp': response['time']
+                    }
+                
+                logger.debug(f"[BYBIT] ⚠️ Пустой ответ тикера для {symbol}: {response}")
+            except Exception as e:
+                last_error = e
+                logger.warning(f"[BYBIT] ⚠️ Попытка {attempt}/{retries} получить тикер {symbol} не удалась: {e}")
+        
+        if last_error:
+            logger.error(f"[BYBIT] ❌ Не удалось получить тикер {symbol}: {last_error}")
+        return None
 
     def get_instruments_info(self, symbol):
         """Получает информацию об торговых правилах для символа"""

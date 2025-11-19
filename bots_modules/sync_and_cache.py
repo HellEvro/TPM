@@ -18,12 +18,14 @@ from datetime import datetime
 from pathlib import Path
 import copy
 import math
+import shutil
 
 logger = logging.getLogger('BotsService')
 
 # Импорт SystemConfig
 from bot_engine.bot_config import SystemConfig
 from bot_engine.bot_history import log_position_closed as history_log_position_closed
+from bot_engine.storage import save_json_file
 
 # Константы теперь в SystemConfig
 
@@ -659,21 +661,21 @@ def save_bots_state():
         finally:
             bots_data_lock.release()
         
-        # ✅ Создаем резервную копию перед сохранением
-        import shutil
         backup_file = f"{BOTS_STATE_FILE}.backup"
         if os.path.exists(BOTS_STATE_FILE):
             try:
+                # ⚠️ Windows может удерживать файловые дескрипторы — если копия не создается, просто логируем
                 shutil.copy2(BOTS_STATE_FILE, backup_file)
+            except PermissionError as backup_error:
+                logger.warning(f"[SAVE_STATE] ⚠️ Файл занят, резервная копия пропущена: {backup_error}")
             except Exception as backup_error:
                 logger.debug(f"[SAVE_STATE] ⚠️ Не удалось создать резервную копию: {backup_error}")
         
-        # Записываем в файл
-        with open(BOTS_STATE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(state_data, f, indent=2, ensure_ascii=False)
+        success = save_json_file(BOTS_STATE_FILE, state_data, "состояние ботов")
+        if not success:
+            return False
         
-        total_bots = len(state_data['bots'])
-        
+        logger.debug(f"[SAVE_STATE] ✅ Сохранено {len(state_data['bots'])} ботов")
         return True
         
     except Exception as e:
