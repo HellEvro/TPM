@@ -630,7 +630,7 @@ class AIDatabase:
                         exit_conditions_json, restrictions_json,
                         is_simulated,
                         created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     trade_id,
                     trade.get('bot_id'),
@@ -642,7 +642,7 @@ class AIDatabase:
                     trade.get('close_timestamp') or trade.get('exit_time'),
                     trade.get('pnl'),
                     trade.get('roi'),
-                    trade.get('status'),
+                    trade.get('status', 'CLOSED'),
                     trade.get('decision_source', 'SCRIPT'),
                     trade.get('ai_decision_id'),
                     trade.get('ai_confidence'),

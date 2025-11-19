@@ -353,14 +353,45 @@ class AIDataCollector:
             if 'history' not in existing_data:
                 existing_data['history'] = []
             
-            existing_data['history'].append(collected_data)
+            # КРИТИЧНО: Сохраняем только новые сделки, а не все каждый раз!
+            # Это предотвращает экспоненциальный рост размера файла
+            existing_trade_ids = set()
+            for entry in existing_data['history']:
+                for trade in entry.get('trades', []):
+                    trade_id = trade.get('id') or trade.get('timestamp')
+                    if trade_id:
+                        existing_trade_ids.add(trade_id)
             
-            # Ограничиваем историю
-            if len(existing_data['history']) > 1000:
-                existing_data['history'] = existing_data['history'][-1000:]
+            # Фильтруем только новые сделки
+            new_trades = []
+            for trade in collected_data.get('trades', []):
+                trade_id = trade.get('id') or trade.get('timestamp')
+                if trade_id and trade_id not in existing_trade_ids:
+                    new_trades.append(trade)
+                    existing_trade_ids.add(trade_id)
+            
+            # Добавляем только если есть новые сделки
+            if new_trades:
+                new_entry = {
+                    'timestamp': collected_data['timestamp'],
+                    'trades': new_trades,  # Только новые сделки!
+                    'statistics': collected_data.get('statistics', {}),
+                    'actions': collected_data.get('actions', [])
+                }
+                existing_data['history'].append(new_entry)
+            
+            # Ограничиваем историю (максимум 100 записей вместо 1000)
+            if len(existing_data['history']) > 100:
+                existing_data['history'] = existing_data['history'][-100:]
             
             existing_data['last_update'] = datetime.now().isoformat()
-            existing_data['latest'] = collected_data
+            # В latest сохраняем только последние 100 сделок для быстрого доступа
+            latest_trades = collected_data.get('trades', [])[-100:]
+            existing_data['latest'] = {
+                'timestamp': collected_data['timestamp'],
+                'trades': latest_trades,
+                'statistics': collected_data.get('statistics', {})
+            }
             
             self._save_data(self.history_data_file, existing_data)
             
