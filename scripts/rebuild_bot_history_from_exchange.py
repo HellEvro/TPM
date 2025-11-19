@@ -406,21 +406,21 @@ def main():
                     time.sleep(retry_delay * (attempt + 1))
                     continue
                 else:
-                    # Последняя попытка - пробуем через менеджер
-                    print(f"⚠️ Не удалось сохранить напрямую, пробуем через менеджер...")
-                    manager._save_history()
-                    print(f"✅ Файл сохранен через менеджер")
-                    break
+                    # Последняя попытка - пробуем записать напрямую еще раз
+                    print(f"⚠️ Не удалось сохранить атомарно, пробуем прямую запись...")
+                    try:
+                        with open(output_path, 'w', encoding='utf-8') as f:
+                            json.dump(data, f, ensure_ascii=False, indent=2)
+                        print(f"✅ Файл сохранен (прямая запись)")
+                        break
+                    except Exception as direct_error:
+                        print(f"❌ Не удалось сохранить даже напрямую: {direct_error}")
+                        raise
                     
         except Exception as e:
             if attempt == max_retries - 1:
                 print(f"❌ Ошибка сохранения файла после {max_retries} попыток: {e}")
-                # Последняя попытка - пробуем через менеджер
-                try:
-                    manager._save_history()
-                    print(f"✅ Файл сохранен через менеджер (fallback)")
-                except Exception as manager_error:
-                    print(f"❌ Критическая ошибка: не удалось сохранить ни напрямую, ни через менеджер: {manager_error}")
+                raise
             else:
                 time.sleep(retry_delay * (attempt + 1))
     
