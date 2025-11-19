@@ -664,7 +664,7 @@ class TradingBot:
                 # ✅ КРИТИЧНО: Проверяем, не размещены ли уже лимитные ордера
                 # Проверяем как в памяти бота, так и на бирже
                 has_limit_orders_in_memory = self.limit_orders and len(self.limit_orders) > 0
-                has_limit_orders_on_exchange = False
+                limit_orders_on_exchange = []
                 
                 # Проверяем открытые ордера на бирже
                 if hasattr(self.exchange, 'get_open_orders'):
@@ -677,14 +677,45 @@ class TradingBot:
                             if o.get('order_type', '').lower() == 'limit' 
                             and o.get('side', '') == limit_side
                         ]
-                        if limit_orders_on_exchange:
-                            has_limit_orders_on_exchange = True
-                            self.logger.warning(f" {self.symbol}: ⚠️ На бирже уже есть {len(limit_orders_on_exchange)} лимитных ордеров на {side}")
                     except Exception as e:
                         self.logger.debug(f" {self.symbol}: Не удалось проверить открытые ордера на бирже: {e}")
                 
-                if has_limit_orders_in_memory or has_limit_orders_on_exchange:
-                    self.logger.warning(f" {self.symbol}: ⚠️ Лимитные ордера уже размещены (в памяти: {len(self.limit_orders) if self.limit_orders else 0} шт.), пропускаем повторное размещение")
+                # Если в памяти нет ордеров, но на бирже есть - это старые ордера от предыдущего запуска
+                # Загружаем их в память для восстановления состояния бота
+                if not has_limit_orders_in_memory and limit_orders_on_exchange:
+                    self.logger.info(f" {self.symbol}: 🔄 Обнаружены {len(limit_orders_on_exchange)} лимитных ордеров на бирже (восстановление после перезапуска)")
+                    # Получаем текущую цену для восстановления цены входа
+                    current_price = self._get_current_price()
+                    # Восстанавливаем список ордеров из биржи
+                    self.limit_orders = []
+                    for order in limit_orders_on_exchange:
+                        order_info = {
+                            'order_id': order.get('order_id') or order.get('orderId') or order.get('id', ''),
+                            'type': 'limit',
+                            'price': float(order.get('price', 0)),
+                            'quantity': float(order.get('quantity', 0)),
+                            'percent_step': 0  # Не знаем точный процент, но это не критично
+                        }
+                        self.limit_orders.append(order_info)
+                    self.last_limit_orders_count = len(self.limit_orders)
+                    self.logger.info(f" {self.symbol}: ✅ Восстановлено {len(self.limit_orders)} лимитных ордеров в памяти")
+                    # Сохраняем цену входа (используем текущую цену как приблизительную)
+                    if current_price:
+                        self.limit_orders_entry_price = current_price
+                    elif self.limit_orders:
+                        # Если не удалось получить текущую цену, используем цену первого ордера
+                        first_order_price = self.limit_orders[0].get('price', 0)
+                        # Для лонга: лимитная цена ниже, восстанавливаем примерно на 1% выше
+                        # Для шорта: лимитная цена выше, восстанавливаем примерно на 1% ниже
+                        if side == 'LONG':
+                            self.limit_orders_entry_price = first_order_price * 1.01
+                        else:  # SHORT
+                            self.limit_orders_entry_price = first_order_price * 0.99
+                    return {'success': True, 'message': 'limit_orders_restored', 'orders_count': len(self.limit_orders)}
+                
+                # Если в памяти есть ордера - не размещаем повторно
+                if has_limit_orders_in_memory:
+                    self.logger.warning(f" {self.symbol}: ⚠️ Лимитные ордера уже размещены (в памяти: {len(self.limit_orders)} шт.), пропускаем повторное размещение")
                     return {'success': False, 'error': 'limit_orders_already_placed'}
                 
                 self.logger.info(f" {self.symbol}: ✅ Режим лимитных ордеров включен, размещаем ордера...")

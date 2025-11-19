@@ -676,7 +676,12 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         
         # Если нет в кэше - загружаем с биржи (с семафором!)
         if not candles:
-            logger.warning(f"⚠️ {symbol}: НЕТ в кэше свечей! Загружаем с биржи...")
+            # Проверяем, есть ли кэш в памяти вообще (может быть еще не загружен при старте)
+            cache_loaded = bool(coins_rsi_data.get('candles_cache', {}))
+            if not cache_loaded:
+                logger.debug(f"ℹ️ {symbol}: Кэш свечей еще не загружен, загружаем с биржи...")
+            else:
+                logger.info(f"ℹ️ {symbol}: Нет в кэше свечей, загружаем с биржи...")
             # ⚡ СЕМАФОР: Ограничиваем одновременные запросы к API биржи
             with _exchange_api_semaphore:
                 import time as time_module
