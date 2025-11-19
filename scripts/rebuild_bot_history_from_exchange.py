@@ -195,6 +195,7 @@ def build_history_payload(trades: List[Dict[str, Any]], batch_label: str) -> Tup
             'ai_signal': None,
             'rsi': None,
             'trend': None,
+            'is_simulated': False,  # КРИТИЧНО: это реальные сделки с биржи!
             'details': f"Импортирована позиция {direction} для {symbol}: размер {qty:.6f}, вход {entry_price:.6f} [EXCHANGE_IMPORT]",
             'source': 'exchange_api_import',
             'batch': batch_label
@@ -216,6 +217,7 @@ def build_history_payload(trades: List[Dict[str, Any]], batch_label: str) -> Tup
             'ai_decision_id': None,
             'ai_confidence': None,
             'is_successful': pnl > 0,
+            'is_simulated': False,  # КРИТИЧНО: это реальные сделки с биржи!
             'details': f"Закрыта позиция {direction} для {symbol}: выход {exit_price:.6f}, PnL {pnl:.4f} USDT ({roi:.2f}%) [EXCHANGE_IMPORT]",
             'entry_data': entry_data,
             'market_data': market_data,
@@ -299,10 +301,43 @@ def main():
     if backup_path:
         print(f"💾 Создан бэкап: {backup_path}")
     
+    # Создаем менеджер и полностью очищаем историю
     manager = BotHistoryManager(history_file=str(output_path))
-    manager.history = history_entries
-    manager.trades = trade_entries
-    manager._save_history()
+    manager.clear_history()  # КРИТИЧНО: полностью очищаем перед заполнением
+    
+    # Присваиваем новые данные
+    with manager.lock:
+        manager.history = history_entries
+        manager.trades = trade_entries
+    
+    # Сохраняем напрямую в файл (обходим возможные проблемы с блокировкой)
+    try:
+        data = {
+            'history': history_entries,
+            'trades': trade_entries,
+            'last_update': datetime.now().isoformat()
+        }
+        # Атомарная запись через временный файл
+        temp_file = output_path.with_suffix('.tmp')
+        try:
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            # Атомарно заменяем старый файл новым
+            if output_path.exists():
+                output_path.unlink()
+            temp_file.replace(output_path)
+            print(f"✅ Файл {output_path} успешно перезаписан")
+        except Exception as save_error:
+            if temp_file.exists():
+                try:
+                    temp_file.unlink()
+                except Exception:
+                    pass
+            raise save_error
+    except Exception as e:
+        print(f"❌ Ошибка сохранения файла: {e}")
+        # Пробуем через менеджер
+        manager._save_history()
     
     print(f"🎉 bot_history.json обновлён: {len(trade_entries)} сделок, {len(history_entries)} записей истории.")
 
