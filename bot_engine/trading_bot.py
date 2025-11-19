@@ -661,6 +661,32 @@ class TradingBot:
             
             # Если включен набор позиций лимитными ордерами
             if limit_orders_enabled and percent_steps and margin_amounts:
+                # ✅ КРИТИЧНО: Проверяем, не размещены ли уже лимитные ордера
+                # Проверяем как в памяти бота, так и на бирже
+                has_limit_orders_in_memory = self.limit_orders and len(self.limit_orders) > 0
+                has_limit_orders_on_exchange = False
+                
+                # Проверяем открытые ордера на бирже
+                if hasattr(self.exchange, 'get_open_orders'):
+                    try:
+                        open_orders = self.exchange.get_open_orders(self.symbol)
+                        # Фильтруем только лимитные ордера нужного направления
+                        limit_side = 'Buy' if side == 'LONG' else 'Sell'
+                        limit_orders_on_exchange = [
+                            o for o in open_orders 
+                            if o.get('order_type', '').lower() == 'limit' 
+                            and o.get('side', '') == limit_side
+                        ]
+                        if limit_orders_on_exchange:
+                            has_limit_orders_on_exchange = True
+                            self.logger.warning(f" {self.symbol}: ⚠️ На бирже уже есть {len(limit_orders_on_exchange)} лимитных ордеров на {side}")
+                    except Exception as e:
+                        self.logger.debug(f" {self.symbol}: Не удалось проверить открытые ордера на бирже: {e}")
+                
+                if has_limit_orders_in_memory or has_limit_orders_on_exchange:
+                    self.logger.warning(f" {self.symbol}: ⚠️ Лимитные ордера уже размещены (в памяти: {len(self.limit_orders) if self.limit_orders else 0} шт.), пропускаем повторное размещение")
+                    return {'success': False, 'error': 'limit_orders_already_placed'}
+                
                 self.logger.info(f" {self.symbol}: ✅ Режим лимитных ордеров включен, размещаем ордера...")
                 return self._enter_position_with_limit_orders(side, percent_steps, margin_amounts)
             else:
