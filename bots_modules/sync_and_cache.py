@@ -2054,9 +2054,15 @@ def check_missing_stop_losses():
                     normalized_symbol = normalize_symbol(raw_symbol)
                     if normalized_symbol:
                         exchange_positions[normalized_symbol] = position
+                        # Детальное логирование для отладки
+                        logger.debug(f" 📍 Позиция с биржи: raw='{raw_symbol}' -> normalized='{normalized_symbol}', size={position_size}")
             
             # Логируем для отладки
             logger.debug(f" 🔍 Получено {len(exchange_positions)} активных позиций с биржи: {sorted(exchange_positions.keys())}")
+            
+            # Логируем все сырые символы с биржи для отладки
+            all_raw_symbols = [p.get('symbol', '') for p in raw_positions if abs(float(p.get('size', 0) or 0)) > 0]
+            logger.debug(f" 🔍 Все сырые символы с биржи (с USDT): {sorted(all_raw_symbols)}")
             
         except Exception as e:
             logger.error(f" ❌ Ошибка получения позиций с биржи: {e}")
@@ -2067,6 +2073,9 @@ def check_missing_stop_losses():
         updated_count = 0
         failed_count = 0
 
+        # Логируем символы ботов для отладки
+        logger.debug(f" 🔍 Символы ботов в snapshot: {sorted(bots_snapshot.keys())}")
+        
         for symbol, bot_snapshot in bots_snapshot.items():
             try:
                 pos = exchange_positions.get(symbol)
@@ -2077,22 +2086,43 @@ def check_missing_stop_losses():
                     # Дополнительная проверка - запрашиваем позицию напрямую
                     try:
                         direct_check = False
+                        matching_raw_symbol = None
                         for raw_pos in _raw_positions_for_check:
                             raw_symbol = raw_pos.get('symbol', '')
                             position_size = abs(float(raw_pos.get('size', 0) or 0))
                             normalized = normalize_symbol(raw_symbol)
                             
+                            # Детальное логирование для отладки
+                            logger.debug(f" 🔍 Проверка: bot_symbol='{symbol}' vs raw='{raw_symbol}' -> normalized='{normalized}', size={position_size}")
+                            
                             if normalized == symbol and position_size > 0:
                                 direct_check = True
-                                logger.info(f" ✅ Позиция {symbol} найдена при прямой проверке! Размер: {position_size}")
+                                matching_raw_symbol = raw_symbol
+                                logger.info(f" ✅ Позиция {symbol} найдена при прямой проверке! raw='{raw_symbol}', normalized='{normalized}', размер: {position_size}")
                                 # Обновляем словарь позиций
                                 exchange_positions[symbol] = raw_pos
                                 pos = raw_pos
                                 break
                         
                         if not direct_check:
-                            logger.error(f" ❌ Позиция {symbol} действительно не найдена на бирже после прямой проверки")
-                            logger.error(f" ❌ Доступные позиции на бирже: {sorted([normalize_symbol(p.get('symbol', '')) for p in _raw_positions_for_check if abs(float(p.get('size', 0) or 0)) > 0])}")
+                            # Пробуем найти с учетом возможных вариантов символа
+                            logger.error(f" ❌ Позиция {symbol} не найдена на бирже после прямой проверки")
+                            
+                            # Пробуем найти варианты: symbol, symbolUSDT, USDTsymbol
+                            possible_symbols = [symbol, f"{symbol}USDT", f"USDT{symbol}"]
+                            found_variants = []
+                            for raw_pos in _raw_positions_for_check:
+                                raw_symbol = raw_pos.get('symbol', '')
+                                position_size = abs(float(raw_pos.get('size', 0) or 0))
+                                if position_size > 0 and raw_symbol in possible_symbols:
+                                    found_variants.append(f"raw='{raw_symbol}' (size={position_size})")
+                            
+                            if found_variants:
+                                logger.warning(f" ⚠️ Найдены варианты символа {symbol} на бирже: {found_variants}")
+                                logger.warning(f" ⚠️ Возможно, проблема в нормализации символов!")
+                            
+                            logger.error(f" ❌ Доступные позиции на бирже (normalized): {sorted([normalize_symbol(p.get('symbol', '')) for p in _raw_positions_for_check if abs(float(p.get('size', 0) or 0)) > 0])}")
+                            logger.error(f" ❌ Доступные позиции на бирже (raw): {sorted([p.get('symbol', '') for p in _raw_positions_for_check if abs(float(p.get('size', 0) or 0)) > 0])}")
                             # НЕ УДАЛЯЕМ бота, если не уверены - просто пропускаем
                             logger.warning(f" ⚠️ Пропускаем бота {symbol} - позиция не найдена, но не удаляем для безопасности")
                             continue
