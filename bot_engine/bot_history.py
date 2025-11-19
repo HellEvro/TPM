@@ -555,6 +555,25 @@ class BotHistoryManager:
             logger.debug(f"[BOT_HISTORY] ⏭️ Пропускаем запись симуляции (open) для {symbol}")
             return
         
+        # КРИТИЧНО: Проверяем, нет ли уже такой позиции в истории (особенно из EXCHANGE_IMPORT)
+        # Это предотвращает дублирование при перезапуске bots.py
+        with self.lock:
+            for existing_trade in self.trades:
+                if (existing_trade.get('symbol') == symbol and
+                    existing_trade.get('status') == 'OPEN' and
+                    existing_trade.get('direction') == direction):
+                    # Проверяем, совпадает ли цена входа (с небольшой погрешностью)
+                    existing_entry_price = existing_trade.get('entry_price')
+                    if existing_entry_price and abs(float(existing_entry_price) - float(entry_price)) < 0.0001:
+                        # Если это позиция из биржи (EXCHANGE_IMPORT), не логируем повторно
+                        if existing_trade.get('decision_source') == 'EXCHANGE_IMPORT':
+                            logger.info(f"[BOT_HISTORY] ⏭️ Позиция {symbol} {direction} @ {entry_price} уже есть в истории (EXCHANGE_IMPORT), пропускаем дубликат")
+                            return
+                        # Если это позиция бота (SCRIPT/AI), но мы пытаемся логировать снова - тоже пропускаем
+                        if existing_trade.get('decision_source') in ('SCRIPT', 'AI') and decision_source in ('SCRIPT', 'AI'):
+                            logger.info(f"[BOT_HISTORY] ⏭️ Позиция {symbol} {direction} @ {entry_price} уже залогирована ботом, пропускаем дубликат")
+                            return
+        
         entry = {
             'id': f"open_{bot_id}_{datetime.now().timestamp()}",
             'timestamp': datetime.now().isoformat(),

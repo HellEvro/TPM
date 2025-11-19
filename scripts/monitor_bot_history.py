@@ -111,24 +111,44 @@ def print_stats(stats, prev_stats=None, data=None, prev_data=None):
             # Показываем новые записи
             new_history, new_trades = get_new_entries(data, prev_data)
             if new_history or new_trades:
-                print(f"\nНОВЫЕ ЗАПИСИ:")
-                for entry in new_history[:5]:  # Показываем первые 5
-                    bot_id = entry.get('bot_id', 'N/A')
-                    decision_source = entry.get('decision_source', 'N/A')
-                    is_simulated = entry.get('is_simulated', 'N/A')
-                    action_type = entry.get('action_type', 'N/A')
-                    print(f"  [HISTORY] bot_id={bot_id}, source={decision_source}, simulated={is_simulated}, type={action_type}")
-                if len(new_history) > 5:
-                    print(f"  ... и еще {len(new_history) - 5} записей истории")
+                print(f"\n🔔 НОВЫЕ ЗАПИСИ:")
+                if new_history:
+                    print(f"  📝 История ({len(new_history)} новых записей):")
+                    for entry in new_history[:10]:  # Показываем первые 10
+                        bot_id = entry.get('bot_id', 'N/A')
+                        decision_source = entry.get('decision_source', 'N/A')
+                        is_simulated = entry.get('is_simulated', 'N/A')
+                        action_type = entry.get('action_type', 'N/A')
+                        symbol = entry.get('symbol', 'N/A')
+                        timestamp = entry.get('timestamp', 'N/A')
+                        # Проверяем, не симуляция ли это
+                        warning = ""
+                        if is_simulated == True:
+                            warning = " ⚠️ СИМУЛЯЦИЯ!"
+                        elif decision_source == 'AI' and bot_id and len(str(bot_id)) > 15:
+                            warning = " ⚠️ ПОДОЗРИТЕЛЬНЫЙ AI bot_id!"
+                        print(f"    [{action_type}] {symbol} | bot_id={bot_id[:30]} | source={decision_source} | simulated={is_simulated}{warning}")
+                    if len(new_history) > 10:
+                        print(f"    ... и еще {len(new_history) - 10} записей истории")
                 
-                for trade in new_trades[:5]:  # Показываем первые 5
-                    bot_id = trade.get('bot_id', 'N/A')
-                    decision_source = trade.get('decision_source', 'N/A')
-                    is_simulated = trade.get('is_simulated', 'N/A')
-                    symbol = trade.get('symbol', 'N/A')
-                    print(f"  [TRADE] bot_id={bot_id}, symbol={symbol}, source={decision_source}, simulated={is_simulated}")
-                if len(new_trades) > 5:
-                    print(f"  ... и еще {len(new_trades) - 5} сделок")
+                if new_trades:
+                    print(f"  💰 Сделки ({len(new_trades)} новых сделок):")
+                    for trade in new_trades[:10]:  # Показываем первые 10
+                        bot_id = trade.get('bot_id', 'N/A')
+                        decision_source = trade.get('decision_source', 'N/A')
+                        is_simulated = trade.get('is_simulated', 'N/A')
+                        symbol = trade.get('symbol', 'N/A')
+                        status = trade.get('status', 'N/A')
+                        pnl = trade.get('pnl', 'N/A')
+                        # Проверяем, не симуляция ли это
+                        warning = ""
+                        if is_simulated == True:
+                            warning = " ⚠️ СИМУЛЯЦИЯ!"
+                        elif decision_source == 'AI' and bot_id and len(str(bot_id)) > 15:
+                            warning = " ⚠️ ПОДОЗРИТЕЛЬНЫЙ AI bot_id!"
+                        print(f"    [{status}] {symbol} | bot_id={bot_id[:30]} | source={decision_source} | simulated={is_simulated} | PnL={pnl}{warning}")
+                    if len(new_trades) > 10:
+                        print(f"    ... и еще {len(new_trades) - 10} сделок")
     
     print("="*70)
 
@@ -159,18 +179,42 @@ def main():
     prev_stats = None
     prev_data = None
     prev_mtime = 0
+    prev_size = 0
+    
+    # Загружаем начальную статистику
+    try:
+        data = load_history(history_file)
+        if data:
+            stats = get_stats(data)
+            if stats:
+                print_stats(stats, None, data, None)
+                prev_stats = stats
+                prev_data = data
+                try:
+                    prev_mtime = history_file.stat().st_mtime
+                    prev_size = history_file.stat().st_size
+                except:
+                    pass
+        else:
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] ⚠️ Не удалось загрузить начальные данные")
+    except FileNotFoundError:
+        print(f"Файл {history_file} не найден, ожидание...")
+    except Exception as e:
+        print(f"Ошибка при загрузке начальных данных: {e}")
     
     try:
         while True:
-            # Проверяем, изменился ли файл
+            # Проверяем, изменился ли файл (по времени и размеру)
             try:
                 current_mtime = history_file.stat().st_mtime
+                current_size = history_file.stat().st_size
             except FileNotFoundError:
                 print(f"Файл {history_file} не найден, ожидание...")
                 time.sleep(2)
                 continue
             
-            if current_mtime != prev_mtime:
+            # Файл изменился если изменилось время ИЛИ размер
+            if current_mtime != prev_mtime or current_size != prev_size:
                 # Файл изменился, загружаем данные
                 data = load_history(history_file)
                 if data:
@@ -180,10 +224,11 @@ def main():
                         prev_stats = stats
                         prev_data = data
                     prev_mtime = current_mtime
+                    prev_size = current_size
                 else:
-                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Ошибка загрузки данных")
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Ошибка загрузки данных")
             
-            time.sleep(1)  # Проверяем каждую секунду
+            time.sleep(0.5)  # Проверяем каждые 0.5 секунды для более быстрой реакции
             
     except KeyboardInterrupt:
         print("\n\nМониторинг остановлен")
