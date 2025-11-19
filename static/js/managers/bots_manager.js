@@ -6419,16 +6419,16 @@ class BotsManager {
         }
         
         // Находим ВСЕ поля конфигурации: input, select, checkbox
-        const allInputs = configTab.querySelectorAll('input[type="number"], input[type="text"], input[type="checkbox"], select');
+        const autoBotInputs = configTab.querySelectorAll('input[type="number"], input[type="text"], input[type="checkbox"], select');
         
         // Также добавляем поля из секции AI, если она существует
         const aiConfigSection = document.getElementById('aiConfigSection');
         if (aiConfigSection) {
             const aiInputs = aiConfigSection.querySelectorAll('input[type="number"], input[type="text"], input[type="checkbox"], select');
-            const uniqueInputs = new Set([...allInputs, ...aiInputs]);
+            const uniqueInputs = new Set([...autoBotInputs, ...aiInputs]);
             this.collectFieldsFromElements(Array.from(uniqueInputs), autoBotConfig);
         } else {
-            this.collectFieldsFromElements(Array.from(allInputs), autoBotConfig);
+            this.collectFieldsFromElements(Array.from(autoBotInputs), autoBotConfig);
         }
         
         // ✅ ОБРАБОТКА ДИНАМИЧЕСКИХ ПОЛЕЙ ЛИМИТНЫХ ОРДЕРОВ
