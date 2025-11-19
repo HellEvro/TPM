@@ -4386,49 +4386,87 @@ class BotsManager {
     }
 
     showNotification(message, type = 'info') {
-        // Используем новую toast систему
-        if (window.toastManager) {
-            try {
-                // Проверяем, что контейнер существует
-                if (!window.toastManager.container) {
-                    window.toastManager.init();
-                }
-                
-                // Проверяем, что контейнер в DOM
-                if (!document.body.contains(window.toastManager.container)) {
-                    if (document.body) {
+        console.log(`[BotsManager] 🔔 Показ уведомления [${type}]:`, message);
+        
+        // ✅ Принудительно инициализируем toastManager, если его нет
+        if (!window.toastManager) {
+            console.warn('[BotsManager] ⚠️ toastManager не найден, пытаемся создать...');
+            // Пытаемся загрузить toast.js, если он еще не загружен
+            if (typeof ToastManager !== 'undefined') {
+                window.toastManager = new ToastManager();
+            } else {
+                console.error('[BotsManager] ❌ ToastManager не доступен, используем alert');
+                alert(`${type.toUpperCase()}: ${message}`);
+                return;
+            }
+        }
+        
+        try {
+            // ✅ Принудительно инициализируем контейнер
+            if (!window.toastManager.container) {
+                console.log('[BotsManager] 🔧 Инициализация контейнера toast...');
+                window.toastManager.init();
+            }
+            
+            // ✅ Проверяем, что контейнер в DOM
+            if (!window.toastManager.container || !document.body.contains(window.toastManager.container)) {
+                console.log('[BotsManager] 🔧 Добавление контейнера toast в DOM...');
+                if (document.body) {
+                    if (!window.toastManager.container) {
+                        window.toastManager.init();
+                    }
+                    if (window.toastManager.container && !document.body.contains(window.toastManager.container)) {
                         document.body.appendChild(window.toastManager.container);
                     }
+                } else {
+                    console.error('[BotsManager] ❌ document.body не доступен!');
+                    alert(`${type.toUpperCase()}: ${message}`);
+                    return;
                 }
-                
-                // Принудительно устанавливаем стили контейнера
-                if (window.toastManager.container) {
-                    window.toastManager.container.style.cssText = 
-                        'position: fixed !important; top: 20px !important; right: 20px !important; ' +
-                        'z-index: 999999 !important; display: flex !important; flex-direction: column; ' +
-                        'gap: 10px; max-width: 400px; pointer-events: none; visibility: visible !important;';
-                }
-                
-                switch(type) {
-                    case 'success':
-                        window.toastManager.success(message);
-                        break;
-                    case 'error':
-                        window.toastManager.error(message);
-                        break;
-                    case 'warning':
-                        window.toastManager.warning(message);
-                        break;
-                    case 'info':
-                    default:
-                        window.toastManager.info(message);
-                        break;
-                }
-            } catch (error) {
-                console.error('[BotsManager] ❌ Ошибка при показе уведомления:', error);
-                alert(`${type.toUpperCase()}: ${message}`);
             }
-        } else {
+            
+            // ✅ Принудительно устанавливаем стили контейнера
+            if (window.toastManager.container) {
+                const container = window.toastManager.container;
+                container.style.position = 'fixed';
+                container.style.top = '20px';
+                container.style.right = '20px';
+                container.style.zIndex = '999999';
+                container.style.display = 'flex';
+                container.style.flexDirection = 'column';
+                container.style.gap = '10px';
+                container.style.maxWidth = '400px';
+                container.style.pointerEvents = 'none';
+                container.style.visibility = 'visible';
+                container.style.opacity = '1';
+                
+                console.log('[BotsManager] ✅ Контейнер toast готов, показываем уведомление');
+            }
+            
+            // ✅ Показываем уведомление
+            switch(type) {
+                case 'success':
+                    window.toastManager.success(message);
+                    console.log('[BotsManager] ✅ Вызван toastManager.success()');
+                    break;
+                case 'error':
+                    window.toastManager.error(message);
+                    console.log('[BotsManager] ❌ Вызван toastManager.error()');
+                    break;
+                case 'warning':
+                    window.toastManager.warning(message);
+                    console.log('[BotsManager] ⚠️ Вызван toastManager.warning()');
+                    break;
+                case 'info':
+                default:
+                    window.toastManager.info(message);
+                    console.log('[BotsManager] ℹ️ Вызван toastManager.info()');
+                    break;
+            }
+        } catch (error) {
+            console.error('[BotsManager] ❌ Ошибка при показе уведомления:', error);
+            console.error('[BotsManager] Stack trace:', error.stack);
+            // Fallback на alert
             alert(`${type.toUpperCase()}: ${message}`);
         }
     }

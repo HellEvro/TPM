@@ -49,22 +49,34 @@ class ToastManager {
     }
 
     show(message, type = 'info', duration = 5000) {
-        // Проверяем и инициализируем контейнер, если нужно
+        console.log(`[ToastManager] 🔔 Показ уведомления [${type}]:`, message);
+        
+        // ✅ Проверяем и инициализируем контейнер, если нужно
         if (!this.container) {
             console.warn('[ToastManager] ⚠️ Контейнер не инициализирован, инициализируем...');
             this.init();
         }
         
-        // Проверяем, что контейнер в DOM
-        if (!document.body.contains(this.container)) {
+        // ✅ Проверяем, что контейнер в DOM
+        if (!this.container || !document.body.contains(this.container)) {
             console.warn('[ToastManager] ⚠️ Контейнер не в DOM, добавляем...');
             if (document.body) {
-                document.body.appendChild(this.container);
+                if (!this.container) {
+                    this.init();
+                }
+                if (this.container && !document.body.contains(this.container)) {
+                    document.body.appendChild(this.container);
+                    console.log('[ToastManager] ✅ Контейнер добавлен в DOM');
+                }
             } else {
                 console.error('[ToastManager] ❌ document.body не доступен!');
+                // Fallback на alert
+                alert(`${type.toUpperCase()}: ${message}`);
                 return null;
             }
         }
+        
+        console.log('[ToastManager] ✅ Контейнер готов, создаем toast');
         
         const toastId = ++this.toastCounter;
         
@@ -81,22 +93,56 @@ class ToastManager {
         this.container.appendChild(toast);
         this.toasts.set(toastId, toast);
         
-        // Принудительно устанавливаем стили контейнера
+        // ✅ Принудительно устанавливаем стили контейнера
         this.container.style.position = 'fixed';
         this.container.style.top = '20px';
         this.container.style.right = '20px';
         this.container.style.zIndex = '999999';
         this.container.style.display = 'flex';
+        this.container.style.flexDirection = 'column';
+        this.container.style.gap = '10px';
+        this.container.style.maxWidth = '400px';
         this.container.style.visibility = 'visible';
+        this.container.style.opacity = '1';
+        this.container.style.pointerEvents = 'none';
+
+        // ✅ Принудительно устанавливаем стили для toast
+        toast.style.display = 'block';
+        toast.style.visibility = 'visible';
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(0)';
+        toast.style.zIndex = '999999';
+        toast.style.position = 'relative';
 
         // Анимация появления - сразу показываем
         requestAnimationFrame(() => {
             toast.classList.add('show');
-            // Принудительно устанавливаем стили для видимости
+            // ✅ Дополнительно принудительно устанавливаем стили для видимости
             toast.style.opacity = '1';
             toast.style.transform = 'translateX(0)';
             toast.style.visibility = 'visible';
             toast.style.zIndex = '999999';
+            toast.style.display = 'block';
+            toast.style.position = 'relative';
+            toast.style.pointerEvents = 'auto';
+            
+            // ✅ Проверяем, что toast действительно виден
+            const rect = toast.getBoundingClientRect();
+            const isVisible = rect.width > 0 && rect.height > 0 && 
+                            window.getComputedStyle(toast).visibility !== 'hidden' &&
+                            window.getComputedStyle(toast).display !== 'none';
+            
+            if (isVisible) {
+                console.log('[ToastManager] ✅ Toast показан и виден:', message.substring(0, 50));
+            } else {
+                console.warn('[ToastManager] ⚠️ Toast создан, но не виден!', {
+                    width: rect.width,
+                    height: rect.height,
+                    visibility: window.getComputedStyle(toast).visibility,
+                    display: window.getComputedStyle(toast).display,
+                    opacity: window.getComputedStyle(toast).opacity
+                });
+            }
         });
 
         // Запускаем прогресс-бар
@@ -171,7 +217,37 @@ class ToastManager {
 // Создаем глобальный экземпляр
 window.toastManager = new ToastManager();
 
+// ✅ Автоматическая инициализация при загрузке DOM
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('[ToastManager] 🔧 Автоматическая инициализация при DOMContentLoaded');
+        if (window.toastManager) {
+            window.toastManager.init();
+        }
+    });
+} else {
+    // DOM уже загружен
+    console.log('[ToastManager] 🔧 Автоматическая инициализация (DOM уже загружен)');
+    if (window.toastManager) {
+        window.toastManager.init();
+    }
+}
+
 // Совместимость с старым API
 window.notifications = {
     show: (message, type) => window.toastManager.show(message, type)
+};
+
+// ✅ Тестовая функция для проверки работы toast (можно вызвать из консоли: testToast())
+window.testToast = function() {
+    console.log('[ToastManager] 🧪 Тестирование toast уведомлений...');
+    if (window.toastManager) {
+        window.toastManager.init();
+        window.toastManager.success('✅ Тест успешного уведомления');
+        setTimeout(() => window.toastManager.info('ℹ️ Тест информационного уведомления'), 500);
+        setTimeout(() => window.toastManager.warning('⚠️ Тест предупреждения'), 1000);
+        setTimeout(() => window.toastManager.error('❌ Тест ошибки'), 1500);
+    } else {
+        console.error('[ToastManager] ❌ toastManager не найден!');
+    }
 };
