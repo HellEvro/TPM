@@ -647,13 +647,17 @@ def get_coins_with_rsi():
                                         try:
                                             logger.info(f"🔄 Пытаемся восстановить из резервной копии: {backup_file}")
                                             with open(backup_file, 'r', encoding='utf-8') as backup_f:
-                                                saved_data = json.load(backup_f)
-                                                if 'bots' in saved_data:
-                                                    saved_bot_symbols = set(saved_data['bots'].keys())
-                                                    logger.info(f"✅ Восстановлено из резервной копии: {len(saved_bot_symbols)} ботов")
-                                                    # Восстанавливаем основной файл из резервной копии
-                                                    shutil.copy2(backup_file, bots_state_file)
-                                                    logger.info(f"✅ Основной файл восстановлен из резервной копии")
+                                                backup_content = backup_f.read().strip()
+                                                if backup_content:
+                                                    saved_data = json.loads(backup_content)
+                                                    if 'bots' in saved_data:
+                                                        saved_bot_symbols = set(saved_data['bots'].keys())
+                                                        logger.info(f"✅ Восстановлено из резервной копии: {len(saved_bot_symbols)} ботов")
+                                                        # Восстанавливаем основной файл из резервной копии
+                                                        shutil.copy2(backup_file, bots_state_file)
+                                                        logger.info(f"✅ Основной файл восстановлен из резервной копии")
+                                                else:
+                                                    raise ValueError("Резервная копия пустая")
                                         except Exception as backup_error:
                                             logger.error(f"❌ Ошибка восстановления из резервной копии: {backup_error}")
                                     
@@ -663,6 +667,26 @@ def get_coins_with_rsi():
                                         logger.info(f"📁 Поврежденный файл сохранен: {corrupted_file}")
                                     except Exception as copy_error:
                                         logger.debug(f"⚠️ Не удалось сохранить копию поврежденного файла: {copy_error}")
+                                    
+                                    # ✅ Если не удалось восстановить - инициализируем файл
+                                    if not saved_bot_symbols:
+                                        try:
+                                            from datetime import datetime
+                                            default_state = {
+                                                'version': '1.0',
+                                                'last_saved': datetime.now().isoformat(),
+                                                'bots': {},
+                                                'global_stats': {
+                                                    'total_trades': 0,
+                                                    'total_profit': 0.0,
+                                                    'win_rate': 0.0
+                                                }
+                                            }
+                                            with open(bots_state_file, 'w', encoding='utf-8') as f:
+                                                json.dump(default_state, f, ensure_ascii=False, indent=2)
+                                            logger.info("✅ Файл состояния инициализирован с базовой структурой")
+                                        except Exception as init_error:
+                                            logger.error(f"❌ Ошибка инициализации файла состояния: {init_error}")
                             else:
                                 logger.warning(" ⚠️ Файл состояния пустой! Пытаемся восстановить или инициализировать...")
                                 # ✅ Пытаемся восстановить из резервной копии

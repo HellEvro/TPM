@@ -4394,6 +4394,7 @@ class BotsManager {
             // Пытаемся загрузить toast.js, если он еще не загружен
             if (typeof ToastManager !== 'undefined') {
                 window.toastManager = new ToastManager();
+                console.log('[BotsManager] ✅ toastManager создан');
             } else {
                 console.error('[BotsManager] ❌ ToastManager не доступен, используем alert');
                 alert(`${type.toUpperCase()}: ${message}`);
@@ -4417,6 +4418,7 @@ class BotsManager {
                     }
                     if (window.toastManager.container && !document.body.contains(window.toastManager.container)) {
                         document.body.appendChild(window.toastManager.container);
+                        console.log('[BotsManager] ✅ Контейнер добавлен в DOM');
                     }
                 } else {
                     console.error('[BotsManager] ❌ document.body не доступен!');
@@ -4440,29 +4442,55 @@ class BotsManager {
                 container.style.visibility = 'visible';
                 container.style.opacity = '1';
                 
-                console.log('[BotsManager] ✅ Контейнер toast готов, показываем уведомление');
+                // ✅ Проверяем видимость контейнера
+                const containerRect = container.getBoundingClientRect();
+                const containerVisible = containerRect.width > 0 && containerRect.height > 0;
+                console.log('[BotsManager] 📊 Контейнер toast:', {
+                    exists: !!container,
+                    inDOM: document.body.contains(container),
+                    visible: containerVisible,
+                    zIndex: window.getComputedStyle(container).zIndex,
+                    position: window.getComputedStyle(container).position
+                });
             }
             
             // ✅ Показываем уведомление
+            let toastId = null;
             switch(type) {
                 case 'success':
-                    window.toastManager.success(message);
-                    console.log('[BotsManager] ✅ Вызван toastManager.success()');
+                    toastId = window.toastManager.success(message);
+                    console.log('[BotsManager] ✅ Вызван toastManager.success(), toastId:', toastId);
                     break;
                 case 'error':
-                    window.toastManager.error(message);
-                    console.log('[BotsManager] ❌ Вызван toastManager.error()');
+                    toastId = window.toastManager.error(message);
+                    console.log('[BotsManager] ❌ Вызван toastManager.error(), toastId:', toastId);
                     break;
                 case 'warning':
-                    window.toastManager.warning(message);
-                    console.log('[BotsManager] ⚠️ Вызван toastManager.warning()');
+                    toastId = window.toastManager.warning(message);
+                    console.log('[BotsManager] ⚠️ Вызван toastManager.warning(), toastId:', toastId);
                     break;
                 case 'info':
                 default:
-                    window.toastManager.info(message);
-                    console.log('[BotsManager] ℹ️ Вызван toastManager.info()');
+                    toastId = window.toastManager.info(message);
+                    console.log('[BotsManager] ℹ️ Вызван toastManager.info(), toastId:', toastId);
                     break;
             }
+            
+            // ✅ Проверяем, что toast действительно создан
+            setTimeout(() => {
+                const toastContainer = document.getElementById('toast-container');
+                if (toastContainer) {
+                    const toasts = toastContainer.querySelectorAll('.toast');
+                    console.log(`[BotsManager] 📊 Проверка toast: контейнер найден, toast элементов: ${toasts.length}`);
+                    if (toasts.length === 0 && toastId === null) {
+                        console.warn('[BotsManager] ⚠️ Toast не был создан! Используем alert как fallback');
+                        alert(`${type.toUpperCase()}: ${message}`);
+                    }
+                } else {
+                    console.error('[BotsManager] ❌ Контейнер toast не найден в DOM!');
+                    alert(`${type.toUpperCase()}: ${message}`);
+                }
+            }, 100);
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка при показе уведомления:', error);
             console.error('[BotsManager] Stack trace:', error.stack);
@@ -8069,8 +8097,20 @@ class BotsManager {
                 // Сохраняем конфигурацию с флагом автосохранения
                 await this.saveConfiguration(true);
                 console.log('[BotsManager] ✅ Конфигурация автосохранена');
-                // Показываем уведомление о успешном автосохранении
+                
+                // ✅ ПРИНУДИТЕЛЬНО показываем уведомление о успешном автосохранении
+                console.log('[BotsManager] 🔔 Вызываем showNotification для автосохранения...');
                 this.showNotification('✅ Настройки автоматически сохранены', 'success');
+                
+                // ✅ Дополнительная проверка - если toast не показался, используем alert
+                setTimeout(() => {
+                    const toastContainer = document.getElementById('toast-container');
+                    const toasts = toastContainer ? toastContainer.querySelectorAll('.toast') : [];
+                    if (toasts.length === 0) {
+                        console.warn('[BotsManager] ⚠️ Toast не показался, используем alert');
+                        alert('✅ Настройки автоматически сохранены');
+                    }
+                }, 500);
             } catch (error) {
                 console.error('[BotsManager] ❌ Ошибка автосохранения конфигурации:', error);
                 // Показываем ошибку при автосохранении, чтобы пользователь знал
