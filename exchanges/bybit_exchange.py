@@ -1877,8 +1877,11 @@ class BybitExchange(BaseExchange):
             # Затем передаем монеты в Bybit - он САМ применит плечо!
             if qty_step and current_price and min_order_qty:
                 # ✅ ШАГ 1: Считаем сколько МОНЕТ нужно
-                requested_coins = requested_qty_usdt / current_price if quantity_is_usdt else qty_in_coins
-                logger.debug(f"[BYBIT_BOT] 🔍 {symbol}: Исходное количество монет: {requested_coins:.2f}")
+                # ⚠️ КРИТИЧНО: Для лимитных ордеров используем цену ЛИМИТНОГО ордера для расчета количества монет!
+                # Для рыночных ордеров - текущую цену
+                price_for_calculation = price if (order_type.lower() == 'limit' and price) else current_price
+                requested_coins = requested_qty_usdt / price_for_calculation if quantity_is_usdt else qty_in_coins
+                logger.debug(f"[BYBIT_BOT] 🔍 {symbol}: Исходное количество монет: {requested_coins:.2f} (рассчитано по цене {price_for_calculation:.6f})")
                 
                 # ✅ ШАГ 2: Округляем монеты вверх до qtyStep
                 rounded_coins = math.ceil(requested_coins / qty_step) * qty_step

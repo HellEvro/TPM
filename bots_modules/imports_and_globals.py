@@ -1014,7 +1014,13 @@ def restore_lost_bots():
                 
                 # Проверяем, есть ли позиция на бирже
                 if symbol not in exchange_positions_dict:
-                    logger.debug(f" 🔍 Позиция {symbol} (order_id={order_id}) не найдена на бирже - возможно закрыта")
+                    logger.info(f" 🗑️ Позиция {symbol} (order_id={order_id}) не найдена на бирже - удаляем из реестра")
+                    # ✅ УДАЛЯЕМ ПОЗИЦИЮ ИЗ РЕЕСТРА, если она не найдена на бирже
+                    try:
+                        unregister_bot_position(order_id)
+                        logger.info(f" ✅ Позиция {symbol} (order_id={order_id}) удалена из реестра")
+                    except Exception as unreg_error:
+                        logger.error(f" ❌ Ошибка удаления позиции {symbol} из реестра: {unreg_error}")
                     continue
                 
                 exchange_position = exchange_positions_dict[symbol]
