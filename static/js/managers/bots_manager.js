@@ -4386,7 +4386,9 @@ class BotsManager {
     }
 
     showNotification(message, type = 'info') {
-        console.log(`[BotsManager] 🔔 Показ уведомления [${type}]:`, message);
+        console.log(`[BotsManager] 🔔 showNotification ВЫЗВАН [${type}]:`, message);
+        console.log(`[BotsManager] 🔍 this:`, this);
+        console.log(`[BotsManager] 🔍 window.toastManager:`, window.toastManager);
         
         // ✅ Принудительно инициализируем toastManager, если его нет
         if (!window.toastManager) {
@@ -8069,7 +8071,26 @@ class BotsManager {
                 
                 // ✅ Показываем уведомление о успешном автосохранении (toast, не блокирующее)
                 console.log('[BotsManager] 🔔 Вызываем showNotification для автосохранения...');
-                this.showNotification('✅ Настройки автоматически сохранены', 'success');
+                console.log('[BotsManager] 🔍 Проверка toastManager:', {
+                    exists: !!window.toastManager,
+                    hasContainer: !!(window.toastManager && window.toastManager.container),
+                    containerInDOM: !!(window.toastManager && window.toastManager.container && document.body.contains(window.toastManager.container))
+                });
+                
+                // ✅ Принудительно вызываем showNotification
+                try {
+                    this.showNotification('✅ Настройки автоматически сохранены', 'success');
+                    console.log('[BotsManager] ✅ showNotification вызван');
+                } catch (e) {
+                    console.error('[BotsManager] ❌ Ошибка вызова showNotification:', e);
+                    // ✅ Прямой вызов toastManager если showNotification не работает
+                    if (window.toastManager) {
+                        console.log('[BotsManager] 🔧 Прямой вызов toastManager.success()...');
+                        window.toastManager.init();
+                        window.toastManager.success('✅ Настройки автоматически сохранены', 3000);
+                        console.log('[BotsManager] ✅ toastManager.success() вызван напрямую');
+                    }
+                }
             } catch (error) {
                 console.error('[BotsManager] ❌ Ошибка автосохранения конфигурации:', error);
                 // Показываем ошибку при автосохранении, чтобы пользователь знал
