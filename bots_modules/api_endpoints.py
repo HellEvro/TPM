@@ -391,20 +391,47 @@ def refresh_manual_positions():
             saved_bot_symbols = set()
             try:
                 import json
+                import shutil
                 bots_state_file = 'data/bots_state.json'
                 if os.path.exists(bots_state_file):
                     with open(bots_state_file, 'r', encoding='utf-8') as f:
                         file_content = f.read()
                         # Проверяем, что файл не пустой
                         if file_content.strip():
-                            saved_data = json.loads(file_content)
-                            if 'bots' in saved_data:
-                                saved_bot_symbols = set(saved_data['bots'].keys())
+                            try:
+                                saved_data = json.loads(file_content)
+                                if 'bots' in saved_data:
+                                    saved_bot_symbols = set(saved_data['bots'].keys())
+                            except json.JSONDecodeError as e:
+                                logger.warning(f"⚠️ Ошибка парсинга JSON (строка {e.lineno}, колонка {e.colno}): {e.msg}")
+                                logger.debug(f"Проблемный участок около символа {e.pos}")
+                                
+                                # ✅ Пытаемся восстановить из резервной копии
+                                backup_file = f"{bots_state_file}.backup"
+                                corrupted_file = f"{bots_state_file}.corrupted"
+                                
+                                if os.path.exists(backup_file):
+                                    try:
+                                        logger.info(f"🔄 Пытаемся восстановить из резервной копии: {backup_file}")
+                                        with open(backup_file, 'r', encoding='utf-8') as backup_f:
+                                            saved_data = json.load(backup_f)
+                                            if 'bots' in saved_data:
+                                                saved_bot_symbols = set(saved_data['bots'].keys())
+                                                logger.info(f"✅ Восстановлено из резервной копии: {len(saved_bot_symbols)} ботов")
+                                                # Восстанавливаем основной файл из резервной копии
+                                                shutil.copy2(backup_file, bots_state_file)
+                                                logger.info(f"✅ Основной файл восстановлен из резервной копии")
+                                    except Exception as backup_error:
+                                        logger.error(f"❌ Ошибка восстановления из резервной копии: {backup_error}")
+                                
+                                # Сохраняем поврежденный файл для анализа
+                                try:
+                                    shutil.copy2(bots_state_file, corrupted_file)
+                                    logger.info(f"📁 Поврежденный файл сохранен: {corrupted_file}")
+                                except Exception as copy_error:
+                                    logger.debug(f"⚠️ Не удалось сохранить копию поврежденного файла: {copy_error}")
                         else:
                             logger.debug(" Файл состояния пустой, пропускаем")
-            except json.JSONDecodeError as e:
-                logger.warning(f"⚠️ Ошибка парсинга JSON (строка {e.lineno}, колонка {e.colno}): {e.msg}")
-                logger.debug(f"Проблемный участок около символа {e.pos}")
             except Exception as e:
                 logger.warning(f" ⚠️ Не удалось загрузить сохраненных ботов: {e}")
             

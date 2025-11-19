@@ -1528,7 +1528,11 @@ def compare_bot_and_exchange_positions():
                 })
             else:
                 bot_pos = bot_dict[symbol]
-                if bot_pos['position_side'] != exchange_pos['position_side']:
+                # ✅ Нормализуем стороны для сравнения (LONG/Long -> LONG, SHORT/Short -> SHORT)
+                bot_side_normalized = bot_pos['position_side'].upper() if bot_pos['position_side'] else None
+                exchange_side_normalized = exchange_pos['position_side'].upper() if exchange_pos['position_side'] else None
+                
+                if bot_side_normalized != exchange_side_normalized:
                     discrepancies['side_mismatch'].append({
                         'symbol': symbol,
                         'bot_side': bot_pos['position_side'],
@@ -1656,7 +1660,11 @@ def sync_positions_with_exchange():
                 exchange_side = exchange_pos['position_side']
                 bot_side = bot_data['position_side']
                 
-                if exchange_side != bot_side:
+                # ✅ Нормализуем стороны для сравнения (LONG/Long -> LONG, SHORT/Short -> SHORT)
+                exchange_side_normalized = exchange_side.upper() if exchange_side else None
+                bot_side_normalized = bot_side.upper() if bot_side else None
+                
+                if exchange_side_normalized != bot_side_normalized:
                     logger.warning(f"[POSITION_SYNC] 🔄 Исправление стороны позиции: {symbol} {bot_side} -> {exchange_side}")
                     
                     try:
