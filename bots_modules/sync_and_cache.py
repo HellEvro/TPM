@@ -675,7 +675,6 @@ def save_bots_state():
         if not success:
             return False
         
-        logger.debug(f"[SAVE_STATE] ✅ Сохранено {len(state_data['bots'])} ботов")
         return True
         
     except Exception as e:
