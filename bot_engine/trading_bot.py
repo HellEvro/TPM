@@ -1033,21 +1033,66 @@ class TradingBot:
             }
     
     def _get_current_price(self) -> Optional[float]:
-        """Получает текущую цену"""
-        try:
-            self.logger.info(f" {self.symbol}: Получаем цену...")
-            ticker = self.exchange.get_ticker(self.symbol)
-            self.logger.info(f" {self.symbol}: Ticker response: {ticker}")
-            if ticker:
-                price = float(ticker.get('last', 0))
-                self.logger.info(f" {self.symbol}: Цена получена: {price}")
-                return price
-            else:
-                self.logger.warning(f" {self.symbol}: Ticker пустой")
-                return None
-        except Exception as e:
-            self.logger.error(f"Error getting current price: {str(e)}")
-            return None
+        """Получает текущую цену с retry логикой для обработки таймаутов"""
+        max_retries = 3
+        retry_delay = 2  # секунды
+        
+        for attempt in range(max_retries):
+            try:
+                self.logger.info(f" {self.symbol}: Получаем цену... (попытка {attempt + 1}/{max_retries})")
+                ticker = self.exchange.get_ticker(self.symbol)
+                self.logger.info(f" {self.symbol}: Ticker response: {ticker}")
+                if ticker:
+                    price = float(ticker.get('last', 0))
+                    if price > 0:
+                        self.logger.info(f" {self.symbol}: Цена получена: {price}")
+                        return price
+                    else:
+                        self.logger.warning(f" {self.symbol}: Некорректная цена: {price}")
+                else:
+                    self.logger.warning(f" {self.symbol}: Ticker пустой")
+                
+                # Если это не последняя попытка, повторяем
+                if attempt < max_retries - 1:
+                    self.logger.debug(f" {self.symbol}: Повторная попытка через {retry_delay} сек...")
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    return None
+                    
+            except TimeoutError as timeout_error:
+                error_msg = str(timeout_error)
+                self.logger.warning(f" {self.symbol}: ⏱️ Таймаут получения цены (попытка {attempt + 1}/{max_retries}): {error_msg}")
+                
+                # Если это не последняя попытка, повторяем
+                if attempt < max_retries - 1:
+                    self.logger.debug(f" {self.symbol}: Повторная попытка через {retry_delay} сек...")
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    self.logger.error(f" {self.symbol}: ❌ Не удалось получить цену после {max_retries} попыток (таймаут)")
+                    return None
+                    
+            except Exception as e:
+                error_msg = str(e)
+                # Проверяем, является ли это ошибкой таймаута (может быть в тексте ошибки)
+                if 'timeout' in error_msg.lower() or 'exceeded timeout' in error_msg.lower():
+                    self.logger.warning(f" {self.symbol}: ⏱️ Таймаут получения цены (попытка {attempt + 1}/{max_retries}): {error_msg}")
+                    
+                    # Если это не последняя попытка, повторяем
+                    if attempt < max_retries - 1:
+                        self.logger.debug(f" {self.symbol}: Повторная попытка через {retry_delay} сек...")
+                        time.sleep(retry_delay)
+                        continue
+                    else:
+                        self.logger.error(f" {self.symbol}: ❌ Не удалось получить цену после {max_retries} попыток (таймаут)")
+                        return None
+                else:
+                    # Другая ошибка - логируем и возвращаем None
+                    self.logger.error(f" {self.symbol}: ❌ Ошибка получения цены: {error_msg}")
+                    return None
+        
+        return None
     
     def _get_wallet_balance_data(self) -> Optional[Dict]:
         """Получает словарь с данными кошелька"""

@@ -659,6 +659,15 @@ def save_bots_state():
         finally:
             bots_data_lock.release()
         
+        # ✅ Создаем резервную копию перед сохранением
+        import shutil
+        backup_file = f"{BOTS_STATE_FILE}.backup"
+        if os.path.exists(BOTS_STATE_FILE):
+            try:
+                shutil.copy2(BOTS_STATE_FILE, backup_file)
+            except Exception as backup_error:
+                logger.debug(f"[SAVE_STATE] ⚠️ Не удалось создать резервную копию: {backup_error}")
+        
         # Записываем в файл
         with open(BOTS_STATE_FILE, 'w', encoding='utf-8') as f:
             json.dump(state_data, f, indent=2, ensure_ascii=False)
