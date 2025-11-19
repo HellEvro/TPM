@@ -861,20 +861,33 @@ class AITrainer:
             exchange = get_exchange()
             
             if not exchange:
-                logger.debug("⚠️ Exchange недоступен для загрузки истории сделок")
+                logger.warning("⚠️ Exchange недоступен для загрузки истории сделок")
+                logger.warning("   💡 Убедитесь, что bots.py запущен и exchange инициализирован")
                 return []
+            
+            logger.info(f"   ✅ Exchange доступен: {type(exchange).__name__}")
             
             # Загружаем историю сделок с биржи через метод get_closed_pnl
             if hasattr(exchange, 'get_closed_pnl'):
                 try:
+                    logger.info("   📥 Вызов exchange.get_closed_pnl(period='all')...")
                     # Загружаем историю закрытых позиций (последние 2 года максимум)
                     closed_pnl_data = exchange.get_closed_pnl(
                         sort_by='time',
                         period='all'  # Загружаем всю доступную историю
                     )
                     
+                    if not closed_pnl_data:
+                        logger.info(f"   📊 Получено данных от биржи: 0 записей (пустой результат)")
+                        logger.info(f"   💡 Возможно, на бирже нет закрытых позиций с PnL")
+                        return []
+                    
+                    logger.info(f"   📊 Получено данных от биржи: {len(closed_pnl_data)} записей")
+                    
                     if closed_pnl_data:
                         trades = []
+                        processed_count = 0
+                        skipped_count = 0
                         for trade_data in closed_pnl_data:
                             # Преобразуем данные биржи в формат для обучения
                             symbol = trade_data.get('symbol', '')
@@ -917,18 +930,49 @@ class AITrainer:
                                 # Добавляем только если есть PnL и цены
                                 if pnl is not None and entry_price > 0:
                                     trades.append(trade)
+                                    processed_count += 1
+                                else:
+                                    skipped_count += 1
+                                    if skipped_count <= 3:  # Показываем первые 3 причины пропуска
+                                        reason = []
+                                        if pnl is None:
+                                            reason.append("нет PnL")
+                                        if entry_price <= 0:
+                                            reason.append(f"entry_price={entry_price}")
+                                        logger.debug(f"   ⏭️ Пропущена сделка {symbol}: {', '.join(reason)}")
+                            else:
+                                skipped_count += 1
+                        
+                        logger.info(f"   ✅ Обработано: {processed_count} сделок")
+                        if skipped_count > 0:
+                            logger.info(f"   ⏭️ Пропущено: {skipped_count} сделок (нет PnL или цены)")
                         
                         if trades:
                             logger.info(f"📊 Загружено {len(trades)} сделок из истории биржи")
                             return trades
+                        else:
+                            logger.warning(f"   ⚠️ Не удалось обработать ни одной сделки из {len(closed_pnl_data)} записей")
+                            if len(closed_pnl_data) > 0:
+                                # Показываем пример первой записи для диагностики
+                                sample = closed_pnl_data[0]
+                                logger.debug(f"   📋 Пример записи: symbol={sample.get('symbol')}, "
+                                           f"pnl={sample.get('closedPnl')}, entryPrice={sample.get('avgEntryPrice')}")
                 except Exception as e:
-                    logger.debug(f"⚠️ Ошибка загрузки истории сделок с биржи: {e}")
+                    logger.warning(f"⚠️ Ошибка загрузки истории сделок с биржи: {e}")
                     import traceback
                     logger.debug(f"Traceback: {traceback.format_exc()}")
+            else:
+                logger.warning(f"   ⚠️ Exchange не имеет метода get_closed_pnl")
+                logger.warning(f"   💡 Доступные методы: {[m for m in dir(exchange) if not m.startswith('_')][:10]}")
+                return []
             
+            # Если дошли сюда, значит метод есть, но вернул пустой результат
+            logger.info("   💡 Метод get_closed_pnl вернул пустой результат или None")
             return []
         except Exception as e:
-            logger.debug(f"⚠️ Ошибка загрузки истории сделок с биржи: {e}")
+            logger.warning(f"⚠️ Ошибка загрузки истории сделок с биржи: {e}")
+            import traceback
+            logger.debug(f"Traceback: {traceback.format_exc()}")
             return []
     
     def _save_exchange_trades_history(self, new_trades: List[Dict]) -> None:
