@@ -219,6 +219,7 @@ class NewTradingBot:
                 # Проверяем, не логировали ли мы уже эту позицию
                 position_logged = getattr(self, '_position_logged', False)
                 if not position_logged:
+                    logger.info(f"[NEW_BOT_{self.symbol}] 📝 Логируем открытие позиции в bot_history.json")
                     try:
                         self._on_position_opened(
                             direction=self.position_side or (new_status.split('_')[-1] if '_' in new_status else 'LONG'),
@@ -226,8 +227,16 @@ class NewTradingBot:
                             position_size=self.position_size or self.position_size_coins
                         )
                         self._position_logged = True  # Помечаем, что логирование выполнено
+                        logger.info(f"[NEW_BOT_{self.symbol}] ✅ Позиция успешно записана в bot_history.json")
                     except Exception as log_error:
-                        logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось записать историю при update_status: {log_error}")
+                        logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось записать историю при update_status: {log_error}")
+                        import traceback
+                        logger.debug(traceback.format_exc())
+                else:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⏭️ Позиция уже была залогирована, пропускаем")
+            else:
+                if not was_in_position:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] ⏭️ Пропуск логирования: was_in_position={was_in_position}, has_entry_price={has_entry_price}, has_position_size={has_position_size}")
             
             self.position_start_time = datetime.now()
             self.max_profit_achieved = 0.0

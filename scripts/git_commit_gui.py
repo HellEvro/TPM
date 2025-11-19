@@ -97,13 +97,39 @@ class GitCommitGUI(tk.Tk):
             except:
                 return 'break'
         
-        # Горячие клавиши
+        # Универсальная обработка Ctrl+клавиша (работает в любой раскладке)
+        def handle_ctrl_key(event):
+            # Проверяем код клавиши, а не символ (работает в любой раскладке)
+            # V = 86, C = 67, X = 88 (коды клавиш не зависят от раскладки)
+            if event.state & 0x4:  # Ctrl нажат (0x4 = Control modifier)
+                keycode = event.keycode
+                if keycode == 86:  # V (или М в русской раскладке)
+                    paste_text(event)
+                    return 'break'
+                elif keycode == 67:  # C (или С в русской раскладке)
+                    copy_text(event)
+                    return 'break'
+                elif keycode == 88:  # X (или Ч в русской раскладке)
+                    cut_text(event)
+                    return 'break'
+            return None
+        
+        # Горячие клавиши - обработка по коду клавиши (работает в любой раскладке)
+        message_text.bind('<KeyPress>', handle_ctrl_key, add='+')
+        
+        # Также оставляем стандартные биндинги для совместимости
         message_text.bind('<Control-v>', paste_text)
         message_text.bind('<Control-V>', paste_text)
+        message_text.bind('<Control-м>', paste_text)  # Русская раскладка: Ctrl+М (где М = V)
+        message_text.bind('<Control-М>', paste_text)
         message_text.bind('<Control-c>', copy_text)
         message_text.bind('<Control-C>', copy_text)
+        message_text.bind('<Control-с>', copy_text)  # Русская раскладка: Ctrl+С (где С = C)
+        message_text.bind('<Control-С>', copy_text)
         message_text.bind('<Control-x>', cut_text)
         message_text.bind('<Control-X>', cut_text)
+        message_text.bind('<Control-ч>', cut_text)  # Русская раскладка: Ctrl+Ч (где Ч = X)
+        message_text.bind('<Control-Ч>', cut_text)
         
         # Контекстное меню
         context_menu = tk.Menu(message_text, tearoff=0)
