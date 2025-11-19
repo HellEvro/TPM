@@ -2166,9 +2166,6 @@ def check_missing_stop_losses():
                     # ✅ ТОЛЬКО активные позиции (size > 0)
                     if position_size > 0:
                         exchange_positions[symbol] = raw_format_position
-                        logger.debug(f" 📍 Позиция с биржи (processed): symbol='{symbol}', size={position_size}, side={side_str}")
-                    else:
-                        logger.debug(f" 📍 Позиция с биржи (ЗАКРЫТА, processed): symbol='{symbol}', size={position_size}")
             
             # Дополнительно добавляем из сырых позиций (на случай, если что-то пропущено)
             for position in raw_positions:
@@ -2180,17 +2177,7 @@ def check_missing_stop_losses():
                     # Добавляем только если еще нет в словаре
                     if position_size > 0:
                         exchange_positions[normalized_symbol] = position
-                        logger.debug(f" 📍 Позиция с биржи (raw): raw='{raw_symbol}' -> normalized='{normalized_symbol}', size={position_size}")
                     all_positions_dict[normalized_symbol] = position
-            
-            # Логируем для отладки
-            logger.debug(f" 🔍 Получено {len(exchange_positions)} активных позиций с биржи: {sorted(exchange_positions.keys())}")
-            
-            # Логируем все сырые символы с биржи (включая нулевые) для отладки
-            all_raw_symbols = [p.get('symbol', '') for p in raw_positions]
-            all_raw_symbols_active = [p.get('symbol', '') for p in raw_positions if abs(float(p.get('size', 0) or 0)) > 0]
-            logger.debug(f" 🔍 Все сырые символы с биржи (ВСЕ, включая закрытые): {sorted(all_raw_symbols)}")
-            logger.debug(f" 🔍 Все сырые символы с биржи (ТОЛЬКО АКТИВНЫЕ): {sorted(all_raw_symbols_active)}")
             
         except Exception as e:
             logger.error(f" ❌ Ошибка получения позиций с биржи: {e}")
@@ -2201,9 +2188,6 @@ def check_missing_stop_losses():
         updated_count = 0
         failed_count = 0
 
-        # Логируем символы ботов для отладки
-        logger.debug(f" 🔍 Символы ботов в snapshot: {sorted(bots_snapshot.keys())}")
-        
         for symbol, bot_snapshot in bots_snapshot.items():
             try:
                 pos = exchange_positions.get(symbol)
@@ -2219,9 +2203,6 @@ def check_missing_stop_losses():
                             raw_symbol = raw_pos.get('symbol', '')
                             position_size = abs(float(raw_pos.get('size', 0) or 0))
                             normalized = normalize_symbol(raw_symbol)
-                            
-                            # Детальное логирование для отладки
-                            logger.debug(f" 🔍 Проверка: bot_symbol='{symbol}' vs raw='{raw_symbol}' -> normalized='{normalized}', size={position_size}")
                             
                             if normalized == symbol and position_size > 0:
                                 direct_check = True
