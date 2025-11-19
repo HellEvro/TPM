@@ -947,87 +947,17 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         
         # Проверяем фильтры если монета в зоне фильтра (LONG/SHORT)
         if potential_signal in ['ENTER_LONG', 'ENTER_SHORT']:
-            # 6. Проверка ExitScam фильтра
-            exit_scam_passed = check_exit_scam_filter(symbol, {})
-            if not exit_scam_passed:
-                exit_scam_info = {
-                    'blocked': True,
-                    'reason': 'Обнаружены резкие движения цены (ExitScam фильтр)',
-                    'filter_type': 'exit_scam'
-                }
-                if signal in ['ENTER_LONG', 'ENTER_SHORT']:
-                    signal = 'WAIT'
-                    rsi_zone = 'NEUTRAL'
-            else:
-                exit_scam_info = {
-                    'blocked': False,
-                    'reason': 'ExitScam фильтр пройден',
-                    'filter_type': 'exit_scam'
-                }
+            # ✅ ExitScam и RSI Time Filter НЕ проверяются здесь!
+            # ✅ Они проверяются только при реальном входе в позицию в _enter_position()
+            # Это оптимизация: не проверяем эти фильтры для всех монет при каждом обновлении RSI
+            # ExitScam и RSI Time Filter будут проверены в trading_bot.py:_enter_position() через apply_entry_filters()
+            exit_scam_info = None
+            time_filter_info = None
             
-            # 7. Проверка RSI временного фильтра (проверяем только если RSI в зоне фильтра)
-            # Проверяем последние N свечей на наличие экстремума
+            # Для UI можно показать, что фильтры будут проверены при входе
             if len(candles) >= 50:
-                try:
-                    closes = [candle['close'] for candle in candles]
-                    rsi_history = calculate_rsi_history(closes, 14)
-                    if rsi_history and len(rsi_history) > 0:
-                        current_idx = len(rsi_history) - 1
-                        # Обновляем последний элемент переданным RSI
-                        if rsi is not None:
-                            rsi_history[current_idx] = rsi
-                        
-                        # ✅ Проверяем последние N свечей на наличие экстремума с учетом индивидуальных настроек
-                        rsi_time_filter_candles_value = individual_settings.get('rsi_time_filter_candles') if individual_settings else None
-                        if rsi_time_filter_candles_value is None:
-                            rsi_time_filter_candles_value = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_candles', 8)
-                        last_n_start = max(0, current_idx - rsi_time_filter_candles_value + 1)
-                        
-                        # Для LONG: ищем лой в последних N свечах (используем уже определенный rsi_long_threshold)
-                        has_low_in_last_n = False
-                        if potential_signal == 'ENTER_LONG':
-                            for i in range(last_n_start, current_idx + 1):
-                                if rsi_history[i] <= rsi_long_threshold:
-                                    has_low_in_last_n = True
-                                    break
-                        
-                        # Для SHORT: ищем пик в последних N свечах (используем уже определенный rsi_short_threshold)
-                        has_peak_in_last_n = False
-                        if potential_signal == 'ENTER_SHORT':
-                            for i in range(last_n_start, current_idx + 1):
-                                if rsi_history[i] >= rsi_short_threshold:
-                                    has_peak_in_last_n = True
-                                    break
-                        
-                        # Если найден экстремум - проверяем временной фильтр с индивидуальными настройками
-                        if (potential_signal == 'ENTER_LONG' and has_low_in_last_n) or \
-                           (potential_signal == 'ENTER_SHORT' and has_peak_in_last_n):
-                            time_filter_result = check_rsi_time_filter(candles, rsi, potential_signal, symbol=symbol, individual_settings=individual_settings)
-                            time_filter_info = {
-                                'blocked': not time_filter_result['allowed'],
-                                'reason': time_filter_result['reason'],
-                                'filter_type': 'time_filter',
-                                'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago'),
-                                'calm_candles': time_filter_result.get('calm_candles')
-                            }
-                            
-                            # Если временной фильтр блокирует и сигнал был ENTER_LONG/SHORT - меняем на WAIT
-                            if not time_filter_result['allowed'] and signal in ['ENTER_LONG', 'ENTER_SHORT']:
-                                signal = 'WAIT'
-                                rsi_zone = 'NEUTRAL'
-                        else:
-                            # Экстремум не найден в последних N свечах - показываем что фильтр не активен
-                            time_filter_info = {
-                                'blocked': False,
-                                'reason': f'RSI временной фильтр: экстремум не найден в последних {rsi_time_filter_candles_value} свечах',
-                                'filter_type': 'time_filter',
-                                'last_extreme_candles_ago': None,
-                                'calm_candles': None
-                            }
-                except Exception as e:
-                    logger.error(f" {symbol}: Ошибка проверки временного фильтра: {e}")
-                    import traceback
-                    logger.debug(traceback.format_exc())
+                # RSI Time Filter будет проверен в _enter_position() через apply_entry_filters()
+                pass
         
         # ✅ ПРИМЕНЯЕМ БЛОКИРОВКУ ПО SCOPE
         # Scope фильтр (если монета в черном списке или не в белом)
@@ -1085,13 +1015,14 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             # ⚡ ОПТИМИЗАЦИЯ: Enhanced RSI, фильтры и флаги ТОЛЬКО если проверялись
             'enhanced_rsi': enhanced_analysis if enhanced_analysis else {'enabled': False},
             'time_filter_info': time_filter_info,
-            'exit_scam_info': exit_scam_info,
+            'exit_scam_info': exit_scam_info,  # None - проверка только при входе в позицию
             'blocked_by_scope': is_blocked_by_scope,
             'has_existing_position': has_existing_position,
             'is_mature': is_mature if enable_maturity_check else True,
             # ✅ КРИТИЧНО: Флаги блокировки для get_effective_signal
-            'blocked_by_exit_scam': exit_scam_info.get('blocked', False) if exit_scam_info else False,
-            'blocked_by_rsi_time': time_filter_info.get('blocked', False) if time_filter_info else False,
+            # ExitScam и RSI Time Filter проверяются только при реальном входе в позицию, не здесь
+            'blocked_by_exit_scam': False,  # Всегда False здесь, проверка в _enter_position()
+            'blocked_by_rsi_time': False,  # Всегда False здесь, проверка в _enter_position()
             # ✅ ИНФОРМАЦИЯ О СТАТУСЕ ТОРГОВЛИ: Для визуальных эффектов делистинга
             'trading_status': trading_status,
             'is_delisting': is_delisting
