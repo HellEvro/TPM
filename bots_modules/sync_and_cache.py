@@ -640,12 +640,12 @@ def save_bots_state():
         import threading
         
         requester = threading.current_thread().name
-        # Пытаемся захватить блокировку с таймаутом
-        acquired = bots_data_lock.acquire(timeout=2.0)
+        # Пытаемся захватить блокировку с таймаутом (увеличено до 5 секунд)
+        acquired = bots_data_lock.acquire(timeout=5.0)
         if not acquired:
             active_threads = [t.name for t in threading.enumerate()[:10]]
             logger.warning(
-                "[SAVE_STATE] ⚠️ Не удалось получить блокировку за 2 секунды - пропускаем сохранение "
+                "[SAVE_STATE] ⚠️ Не удалось получить блокировку за 5 секунд - пропускаем сохранение "
                 f"(thread={requester}, active_threads={active_threads})"
             )
             return False
@@ -2002,11 +2002,15 @@ def check_missing_stop_losses():
                             logger.info(f" ✅ Позиция {symbol} (order_id={order_id}) удалена из реестра")
                         
                         # Удаляем бота из системы
+                        bot_removed = False
                         with bots_data_lock:
                             if symbol in bots_data['bots']:
                                 del bots_data['bots'][symbol]
                                 logger.info(f" ✅ Бот {symbol} удален из системы")
-                                save_bots_state()
+                                bot_removed = True
+                        # Сохраняем состояние после освобождения блокировки
+                        if bot_removed:
+                            save_bots_state()
                     except Exception as cleanup_error:
                         logger.error(f" ❌ Ошибка удаления бота {symbol}: {cleanup_error}")
                     continue
@@ -2031,11 +2035,15 @@ def check_missing_stop_losses():
                             logger.info(f" ✅ Позиция {symbol} (order_id={order_id}) удалена из реестра")
                         
                         # Удаляем бота из системы
+                        bot_removed = False
                         with bots_data_lock:
                             if symbol in bots_data['bots']:
                                 del bots_data['bots'][symbol]
                                 logger.info(f" ✅ Бот {symbol} удален из системы")
-                                save_bots_state()
+                                bot_removed = True
+                        # Сохраняем состояние после освобождения блокировки
+                        if bot_removed:
+                            save_bots_state()
                     except Exception as cleanup_error:
                         logger.error(f" ❌ Ошибка удаления бота {symbol}: {cleanup_error}")
                     continue
