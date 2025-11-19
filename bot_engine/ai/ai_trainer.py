@@ -615,6 +615,10 @@ class AITrainer:
         # 3. Анализируем загруженные сделки (сокращенные логи)
         # Убрано: logger.debug(f"📊 Всего загружено сделок: {len(trades)}") - слишком шумно
         
+        # Инициализируем счетчики
+        simulated_count = 0
+        backtest_count = 0
+        
         if trades:
             # Анализируем статусы сделок (только для DEBUG)
             statuses = {}
@@ -633,10 +637,58 @@ class AITrainer:
             
             # Убрано: logger.debug(f"   По статусам: {dict(statuses)}, С PnL: {pnl_count}, Закрытых: {closed_count}") - слишком шумно
 
-            closed_trades = [
-                t for t in trades
-                if t.get('status') == 'CLOSED' and t.get('pnl') is not None
-            ]
+            # КРИТИЧНО: Фильтруем только РЕАЛЬНЫЕ сделки (не симулированные, не бэктест)
+            # Признаки реальной сделки:
+            # 1. status == 'CLOSED' - закрыта
+            # 2. pnl is not None - есть PnL
+            # 3. НЕ симулированная (нет флагов is_simulated, is_backtest, simulation)
+            # 4. Имеет реальные данные (entry_price, exit_price)
+            closed_trades = []
+            
+            for t in trades:
+                if t.get('status') == 'CLOSED' and t.get('pnl') is not None:
+                    # Проверяем, не является ли сделка симулированной
+                    is_simulated = (
+                        t.get('is_simulated', False) or
+                        t.get('is_backtest', False) or
+                        t.get('simulation', False) or
+                        t.get('backtest', False) or
+                        'simulation' in str(t.get('id', '')).lower() or
+                        'backtest' in str(t.get('id', '')).lower() or
+                        'simulated' in str(t.get('reason', '')).lower() or
+                        t.get('exit_reason', '').startswith('SIMULATION') or
+                        t.get('close_reason', '').startswith('SIMULATION')
+                    )
+                    
+                    if is_simulated:
+                        simulated_count += 1
+                        continue
+                    
+                    # Проверяем, что есть реальные данные
+                    if not t.get('entry_price') or not t.get('exit_price'):
+                        continue
+                    
+                    closed_trades.append(t)
+            
+            if simulated_count > 0 or backtest_count > 0:
+                logger.warning(f"   ⚠️ Пропущено симулированных/бэктест сделок: {simulated_count + backtest_count}")
+                logger.warning(f"   💡 AI обучается ТОЛЬКО на реальных сделках с биржи!")
+            
+            # Дополнительная диагностика: проверяем признаки реальных сделок
+            real_trade_indicators = {
+                'has_decision_source': sum(1 for t in closed_trades if t.get('decision_source')),
+                'has_ai_decision_id': sum(1 for t in closed_trades if t.get('ai_decision_id')),
+                'has_close_reason': sum(1 for t in closed_trades if t.get('close_reason')),
+                'has_timestamp': sum(1 for t in closed_trades if t.get('timestamp')),
+                'has_entry_data': sum(1 for t in closed_trades if t.get('entry_data')),
+            }
+            
+            logger.info(f"   📊 Признаки реальных сделок:")
+            logger.info(f"      ✅ С decision_source: {real_trade_indicators['has_decision_source']}")
+            logger.info(f"      ✅ С ai_decision_id: {real_trade_indicators['has_ai_decision_id']}")
+            logger.info(f"      ✅ С close_reason: {real_trade_indicators['has_close_reason']}")
+            logger.info(f"      ✅ С timestamp: {real_trade_indicators['has_timestamp']}")
+            logger.info(f"      ✅ С entry_data: {real_trade_indicators['has_entry_data']}")
             
             # КРИТИЧЕСКАЯ ДИАГНОСТИКА: Проверяем распределение PnL в исходных данных
             if closed_trades:
@@ -677,7 +729,9 @@ class AITrainer:
         logger.info("=" * 80)
         logger.info(f"   📊 Всего сделок загружено: {len(trades)}")
         logger.info(f"   ✅ Закрытых сделок с PnL: {len(closed_trades)}")
-        logger.info(f"   💡 AI будет обучаться на {len(closed_trades)} реальных сделках")
+        if simulated_count > 0:
+            logger.info(f"   ⚠️ Отфильтровано симулированных/бэктест: {simulated_count}")
+        logger.info(f"   💡 AI будет обучаться на {len(closed_trades)} РЕАЛЬНЫХ сделках с биржи")
         
         if len(closed_trades) < 10:
             logger.warning("=" * 80)
