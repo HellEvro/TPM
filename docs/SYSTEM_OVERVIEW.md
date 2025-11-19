@@ -22,10 +22,17 @@
 ## 2. Жизненный цикл сигналов (кратко)
 
 1. `SmartRSIManager` в `bots_modules/workers.py` обновляет RSI и кеширует монеты.  
-2. `bots_modules/filters.py` применяет фильтры зрелости, whitelist/blacklist (`docs/WHITELIST_BLACKLIST.md`), тренды и анти-скам.  
+2. `bots_modules/filters.py` в `get_coin_rsi_data()` проверяет зрелость монет (для UI, НЕ блокирует).  
 3. Auto Bot (если включён) вызывает `process_auto_bot_signals()` и создаёт ботов через `bots_modules/bot_class.py`.  
-4. Статусы и действия пишутся в `bots_data` (в памяти) и `data/bots_state.json`.  
-5. История сделок/действий уходит в `bot_engine/bot_history.py` → REST `/api/bots/history|trades|statistics`. Подробности — `docs/BOT_SIGNAL_PROCESSING_FLOW.md` и `docs/BOT_HISTORY.md`.
+4. **При входе в позицию** (`bot_engine/trading_bot.py::_enter_position()`): все блокирующие фильтры проверяются через `apply_entry_filters()`:
+   - Global switches, Scope (whitelist/blacklist), Trend, Maturity, RSI Time Filter, ExitScam
+   - 🤖 AI Anomaly Detection (внутри ExitScam)
+   - 🤖 AI Optimal Entry Detection
+   - 🤖 AI Risk Management (размер позиции и стоп-лосс)
+5. Статусы и действия пишутся в `bots_data` (в памяти) и `data/bots_state.json`.  
+6. История сделок/действий уходит в `bot_engine/bot_history.py` → REST `/api/bots/history|trades|statistics`. Подробности — `docs/BOT_SIGNAL_PROCESSING_FLOW.md` и `docs/BOT_HISTORY.md`.
+
+**⚠️ ВАЖНО:** ExitScam и RSI Time Filter НЕ проверяются в `get_coin_rsi_data()` для всех монет. Они проверяются только при входе в позицию для оптимизации производительности.
 
 ---
 
