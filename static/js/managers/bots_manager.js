@@ -6483,6 +6483,28 @@ class BotsManager {
         const systemInputs = configTab.querySelectorAll('input[id*="Update"], input[id*="Interval"], input[id*="Mode"], input[id*="Timeout"], input[id*="Refresh"], input[id*="Debug"], input[id*="Enhanced"], input[id*="Rsi"][id*="Extreme"], input[id*="Rsi"][id*="Volume"], input[id*="Rsi"][id*="Divergence"]');
         const systemConfig = {};
         
+        // ✅ Список системных настроек Enhanced RSI и других системных настроек
+        const systemConfigKeys = [
+            'enhanced_rsi_enabled',
+            'enhanced_rsi_require_volume_confirmation',
+            'enhanced_rsi_require_divergence_confirmation',
+            'enhanced_rsi_use_stoch_rsi',
+            'rsi_extreme_zone_timeout',
+            'rsi_extreme_oversold',
+            'rsi_extreme_overbought',
+            'rsi_volume_confirmation_multiplier',
+            'rsi_divergence_lookback',
+            'rsi_update_interval',
+            'auto_save_interval',
+            'debug_mode',
+            'auto_refresh_ui',
+            'refresh_interval',
+            'position_sync_interval',
+            'inactive_bot_cleanup_interval',
+            'inactive_bot_timeout',
+            'stop_loss_setup_interval'
+        ];
+        
         // Собираем системные настройки из всех найденных полей
         systemInputs.forEach(element => {
             if (!element.id || element.closest('#limitOrdersList') || element.closest('.limit-order-row')) {
@@ -6494,9 +6516,11 @@ class BotsManager {
                 return;
             }
             
-            // Проверяем, что это системная настройка (не autoBot)
-            if (configKey.startsWith('system_')) {
-                const systemKey = configKey.replace('system_', '');
+            // ✅ Проверяем, что это системная настройка (либо начинается с system_, либо в списке системных настроек)
+            const isSystemConfig = configKey.startsWith('system_') || systemConfigKeys.includes(configKey);
+            
+            if (isSystemConfig) {
+                const systemKey = configKey.startsWith('system_') ? configKey.replace('system_', '') : configKey;
                 let value;
                 if (element.type === 'checkbox') {
                     value = element.checked;
@@ -6509,6 +6533,7 @@ class BotsManager {
                 
                 if (value !== undefined && value !== null) {
                     systemConfig[systemKey] = value;
+                    console.log(`[BotsManager] ✅ Собрана системная настройка ${systemKey}:`, value);
                 }
             }
         });
@@ -6699,7 +6724,22 @@ class BotsManager {
     async saveEnhancedRsi() {
         console.log('[BotsManager] 💾 Сохранение Enhanced RSI...');
         try {
+            // ✅ Сначала проверяем значения из UI напрямую
+            const enhancedRsiEnabledEl = document.getElementById('enhancedRsiEnabled');
+            const enhancedRsiVolumeConfirmEl = document.getElementById('enhancedRsiVolumeConfirm');
+            const enhancedRsiDivergenceConfirmEl = document.getElementById('enhancedRsiDivergenceConfirm');
+            const enhancedRsiUseStochRsiEl = document.getElementById('enhancedRsiUseStochRsi');
+            
+            console.log('[BotsManager] 🔍 Значения из UI напрямую:');
+            console.log('  enhancedRsiEnabled:', enhancedRsiEnabledEl?.checked);
+            console.log('  enhancedRsiVolumeConfirm:', enhancedRsiVolumeConfirmEl?.checked);
+            console.log('  enhancedRsiDivergenceConfirm:', enhancedRsiDivergenceConfirmEl?.checked);
+            console.log('  enhancedRsiUseStochRsi:', enhancedRsiUseStochRsiEl?.checked);
+            
             const config = this.collectConfigurationData();
+            console.log('[BotsManager] 🔍 Значения из collectConfigurationData():');
+            console.log('  config.system:', config.system);
+            
             const enhancedRsi = {
                 enhanced_rsi_enabled: config.system.enhanced_rsi_enabled,
                 enhanced_rsi_require_volume_confirmation: config.system.enhanced_rsi_require_volume_confirmation,
@@ -6711,6 +6751,8 @@ class BotsManager {
                 rsi_volume_confirmation_multiplier: config.system.rsi_volume_confirmation_multiplier,
                 rsi_divergence_lookback: config.system.rsi_divergence_lookback
             };
+            
+            console.log('[BotsManager] 📤 Отправляемые Enhanced RSI настройки:', enhancedRsi);
             
             await this.sendConfigUpdate('system-config', enhancedRsi, 'Enhanced RSI');
         } catch (error) {
@@ -6931,6 +6973,20 @@ class BotsManager {
                     }
                     console.log(`[BotsManager] 💾 originalConfig обновлен после сохранения ${sectionName}`);
                 }
+                
+                // ✅ ПЕРЕЗАГРУЖАЕМ КОНФИГУРАЦИЮ ДЛЯ ОБНОВЛЕНИЯ UI (особенно важно для Enhanced RSI)
+                setTimeout(() => {
+                    console.log(`[BotsManager] 🔄 Перезагрузка конфигурации после сохранения ${sectionName}...`);
+                    this.loadConfigurationData();
+                    
+                    // Если сохраняли Enhanced RSI - перезагружаем данные монет для применения новых фильтров
+                    if (sectionName === 'Enhanced RSI' || (configType === 'system' && filteredData.enhanced_rsi_enabled !== undefined)) {
+                        console.log('[BotsManager] 🔄 Перезагрузка RSI данных для применения Enhanced RSI настроек...');
+                        setTimeout(() => {
+                            this.loadCoinsRsiData();
+                        }, 500);
+                    }
+                }, 300);
             } else {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }

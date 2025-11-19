@@ -916,56 +916,59 @@ def scan_all_coins_for_delisting():
             logger.error("❌ Exchange не инициализирован")
             return
         
-        # Получаем все пары
-        all_pairs = exchange_obj.get_all_pairs()
-        if not all_pairs:
-            logger.warning("⚠️ Не удалось получить список пар")
-            return
-        
-        # Фильтруем только USDT пары
-        usdt_pairs = [pair for pair in all_pairs if pair.endswith('USDT')]
-        
-        logger.info(f"📊 Проверяем {len(usdt_pairs)} USDT пар")
-        
         # Инициализируем структуру если её нет
         if 'delisted_coins' not in delisted_data:
             delisted_data['delisted_coins'] = {}
         
         new_delisted_count = 0
-        checked_count = 0
         
-        # Проверяем каждый символ
-        for symbol in usdt_pairs:
+        # ✅ МЕТОД: Получаем ВСЕ инструменты сразу через API (без фильтра по статусу)
+        # Это намного быстрее, чем проверять каждую монету отдельно!
+        # ⚠️ ВАЖНО: Не указываем параметр status, чтобы получить ВСЕ инструменты, включая Closed/Delivering
+        if hasattr(exchange_obj, 'client') and hasattr(exchange_obj.client, 'get_instruments_info'):
             try:
-                checked_count += 1
-                coin_symbol = symbol.replace('USDT', '')
+                logger.info("📊 Запрашиваем все инструменты с биржи (включая делистинговые)...")
+                # Запрашиваем ВСЕ инструменты без фильтра по статусу (не указываем status)
+                # Это соответствует API Bybit v5 - можно запросить все инструменты без symbol
+                response = exchange_obj.client.get_instruments_info(
+                    category="linear",
+                    limit=1000  # Максимум инструментов за один запрос (Bybit API поддерживает до 1000)
+                )
                 
-                # Пропускаем если уже в списке делистинговых
-                if coin_symbol in delisted_data['delisted_coins']:
-                    continue
-                
-                # Проверяем статус делистинга через API
-                if hasattr(exchange_obj, 'get_instrument_status'):
-                    status_info = exchange_obj.get_instrument_status(symbol)
+                if response and response.get('retCode') == 0 and response['result']['list']:
+                    all_instruments = response['result']['list']
+                    logger.info(f"📊 Получено {len(all_instruments)} инструментов с биржи")
                     
-                    if status_info and status_info.get('is_delisting'):
-                        delisted_data['delisted_coins'][coin_symbol] = {
-                            'status': status_info.get('status'),
-                            'reason': f"Delisting detected via API scan",
-                            'delisting_date': datetime.now().strftime('%Y-%m-%d'),
-                            'detected_at': datetime.now().isoformat(),
-                            'source': 'api_scan'
-                        }
+                    # Фильтруем только USDT пары с статусом делистинга
+                    for instrument in all_instruments:
+                        symbol = instrument.get('symbol', '')
+                        if not symbol.endswith('USDT'):
+                            continue
                         
-                        new_delisted_count += 1
-                        logger.warning(f"🚨 НОВЫЙ ДЕЛИСТИНГ: {coin_symbol} - {status_info.get('status')}")
-                
-                # Небольшая задержка чтобы не перегружать API
-                time.sleep(0.05)
-                
-            except Exception as e:
-                logger.debug(f"Ошибка проверки {symbol}: {e}")
-                continue
+                        coin_symbol = symbol.replace('USDT', '')
+                        status = instrument.get('status', 'Unknown')
+                        
+                        # Пропускаем если уже в списке делистинговых
+                        if coin_symbol in delisted_data['delisted_coins']:
+                            continue
+                        
+                        # Проверяем статус делистинга (Closed или Delivering)
+                        if status in ['Closed', 'Delivering']:
+                            delisted_data['delisted_coins'][coin_symbol] = {
+                                'status': status,
+                                'reason': f"Delisting detected via API scan (status: {status})",
+                                'delisting_date': datetime.now().strftime('%Y-%m-%d'),
+                                'detected_at': datetime.now().isoformat(),
+                                'source': 'api_bulk_scan'
+                            }
+                            
+                            new_delisted_count += 1
+                            logger.warning(f"🚨 НОВЫЙ ДЕЛИСТИНГ: {coin_symbol} - {status}")
+                else:
+                    logger.warning("⚠️ Не удалось получить список инструментов с биржи")
+            except Exception as bulk_scan_error:
+                logger.error(f"❌ Ошибка массового сканирования делистинга: {bulk_scan_error}")
+                logger.warning("⚠️ Массовое сканирование не удалось, делистинг будет обнаружен при попытке размещения ордеров")
         
         # Обновляем время последнего сканирования
         delisted_data['last_scan'] = datetime.now().isoformat()
@@ -973,7 +976,6 @@ def scan_all_coins_for_delisting():
         # Сохраняем обновленные данные
         if save_delisted_coins(delisted_data):
             logger.info(f"✅ Сканирование завершено:")
-            logger.info(f"   - Проверено символов: {checked_count}")
             logger.info(f"   - Новых делистинговых: {new_delisted_count}")
             logger.info(f"   - Всего делистинговых: {len(delisted_data['delisted_coins'])}")
         
@@ -981,14 +983,38 @@ def scan_all_coins_for_delisting():
         logger.error(f"❌ Ошибка сканирования делистинга: {e}")
 
 def check_delisting_emergency_close():
-    """Проверяет делистинг и выполняет экстренное закрытие позиций (раз в 10 минут)"""
+    """
+    Проверяет делистинг и выполняет экстренное закрытие позиций (раз в 10 минут)
+    ⚠️ ВАЖНО: scan_all_coins_for_delisting() вызывается не чаще раза в час,
+    чтобы не перегружать API массовыми запросами
+    """
     try:
         # Импорты для экстренного закрытия позиций
         from bots_modules.bot_class import NewTradingBot
         from bots_modules.imports_and_globals import get_exchange
         
-        # ✅ СНАЧАЛА: Сканируем все монеты на делистинг
-        scan_all_coins_for_delisting()
+        # ✅ СНАЧАЛА: Сканируем все монеты на делистинг (только если прошло достаточно времени)
+        # Проверяем время последнего сканирования
+        delisted_data = load_delisted_coins()
+        last_scan_str = delisted_data.get('last_scan')
+        
+        should_scan = True
+        if last_scan_str:
+            try:
+                from datetime import datetime
+                last_scan_time = datetime.fromisoformat(last_scan_str)
+                time_since_scan = (datetime.now() - last_scan_time).total_seconds()
+                # Сканируем не чаще чем раз в час (3600 секунд), чтобы не перегружать API
+                if time_since_scan < 3600:
+                    should_scan = False
+                    logger.debug(f"⏭️ Пропускаем сканирование делистинга (прошло {time_since_scan:.0f} сек, минимум 3600 сек)")
+            except Exception as time_check_error:
+                logger.debug(f"Ошибка проверки времени последнего сканирования: {time_check_error}")
+        
+        if should_scan:
+            scan_all_coins_for_delisting()
+        else:
+            logger.debug("ℹ️ Используем кэш делистинговых монет (сканирование недавно выполнялось)")
         
         logger.info(f"🔍 Проверка делистинга для активных ботов...")
         
@@ -1013,13 +1039,30 @@ def check_delisting_emergency_close():
         
         for symbol, bot_data in bots_in_position:
             try:
-                # Проверяем делистинг через RSI данные
-                rsi_cache = get_rsi_cache()
-                if symbol in rsi_cache:
-                    rsi_data = rsi_cache[symbol]
-                    is_delisting = rsi_data.get('is_delisting', False) or rsi_data.get('trading_status') in ['Closed', 'Delivering']
-                    
-                    if is_delisting:
+                # ✅ ПРОВЕРКА 1: Проверяем делистинг напрямую из delisted.json (самый быстрый способ)
+                is_delisting = False
+                delisting_reason = ""
+                
+                delisted_data = load_delisted_coins()
+                delisted_coins = delisted_data.get('delisted_coins', {})
+                if symbol in delisted_coins:
+                    is_delisting = True
+                    delisting_info = delisted_coins[symbol]
+                    delisting_reason = delisting_info.get('reason', 'Delisting detected')
+                    logger.warning(f"🚨 ДЕЛИСТИНГ ОБНАРУЖЕН для {symbol} в delisted.json: {delisting_reason}")
+                
+                # ✅ ПРОВЕРКА 2: Проверяем делистинг через RSI данные (fallback)
+                if not is_delisting:
+                    rsi_cache = get_rsi_cache()
+                    if symbol in rsi_cache:
+                        rsi_data = rsi_cache[symbol]
+                        is_delisting = rsi_data.get('is_delisting', False) or rsi_data.get('trading_status') in ['Closed', 'Delivering']
+                        if is_delisting:
+                            delisting_reason = f"Delisting detected via RSI data (status: {rsi_data.get('trading_status', 'Unknown')})"
+                            logger.warning(f"🚨 ДЕЛИСТИНГ ОБНАРУЖЕН для {symbol} через RSI данные")
+                
+                # Если делистинг обнаружен - закрываем позицию немедленно
+                if is_delisting:
                         logger.warning(f"🚨 ДЕЛИСТИНГ ОБНАРУЖЕН для {symbol}! Инициируем экстренное закрытие")
                         
                         bot_instance = NewTradingBot(symbol, bot_data, exchange_obj)

@@ -2007,18 +2007,31 @@ class BybitExchange(BaseExchange):
                     'quantity_usdt': qty_usdt_actual  # Возвращаем фактическую сумму в USDT
                 }
             else:
+                # Извлекаем код ошибки из ответа
+                error_code = response.get('retCode', '')
+                error_msg = response.get('retMsg', 'unknown error')
                 return {
                     'success': False,
-                    'message': f"Ошибка размещения ордера: {response['retMsg']}"
+                    'message': f"Ошибка размещения ордера: {error_msg}",
+                    'error_code': str(error_code)  # Добавляем код ошибки для проверки делистинга
                 }
                 
         except Exception as e:
-            logger.error(f"[BYBIT_BOT] Ошибка размещения ордера: {str(e)}")
+            error_str = str(e)
+            logger.error(f"[BYBIT_BOT] Ошибка размещения ордера: {error_str}")
             import traceback
             logger.error(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
+            # Извлекаем код ошибки из строки исключения (если есть)
+            error_code = ''
+            if 'ErrCode:' in error_str:
+                import re
+                match = re.search(r'ErrCode:\s*(\d+)', error_str)
+                if match:
+                    error_code = match.group(1)
             return {
                 'success': False,
-                'message': f"Ошибка размещения ордера: {str(e)}"
+                'message': f"Ошибка размещения ордера: {error_str}",
+                'error_code': error_code  # Добавляем код ошибки для проверки делистинга
             }
     
     @with_timeout(15)  # 15 секунд таймаут для обновления TP

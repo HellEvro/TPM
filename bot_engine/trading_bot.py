@@ -546,6 +546,20 @@ class TradingBot:
         """Входит в позицию"""
         self.logger.info(f" {self.symbol}: 🎯 _enter_position вызван для {side}")
         try:
+            # ✅ ПРОВЕРКА ДЕЛИСТИНГА: Проверяем ДО всех остальных проверок!
+            try:
+                from bots_modules.sync_and_cache import load_delisted_coins
+                delisted_data = load_delisted_coins()
+                delisted_coins = delisted_data.get('delisted_coins', {})
+                
+                if self.symbol in delisted_coins:
+                    delisting_info = delisted_coins[self.symbol]
+                    self.logger.error(f" {self.symbol}: 🚫 ДЕЛИСТИНГ! Не открываем {side} - {delisting_info.get('reason', 'Delisting detected')}")
+                    return {'success': False, 'error': 'coin_delisted', 'message': f'Монета в делистинге: {delisting_info.get("reason", "Delisting detected")}'}
+            except Exception as delisting_check_error:
+                self.logger.debug(f" {self.symbol}: ⚠️ Ошибка проверки делистинга: {delisting_check_error}")
+                # Продолжаем работу, если не удалось проверить делистинг
+            
             # КРИТИЧЕСКАЯ ПРОВЕРКА: не открываем новую позицию, если уже есть открытая
             if self.position is not None:
                 self.logger.warning(f" {self.symbol}: ⚠️ Позиция уже открыта! Текущая позиция: {self.position}")
@@ -1287,9 +1301,14 @@ class TradingBot:
             
             placed_orders = []
             first_order_market = False
+            delisting_detected = False  # Флаг для обнаружения делистинга
             
             # Размещаем лимитные ордера
             for i, (percent_step, margin_amount) in enumerate(zip(percent_steps, margin_amounts)):
+                # ✅ ПРОВЕРКА: Если обнаружен делистинг - прекращаем размещение остальных ордеров
+                if delisting_detected:
+                    self.logger.warning(f" {self.symbol}: ⚠️ Делистинг обнаружен, пропускаем размещение остальных ордеров")
+                    break
                 # ✅ КРИТИЧНО: Проверяем, что margin_amount действительно из массива, а не дефолтное значение
                 if margin_amount <= 0:
                     self.logger.warning(f" {self.symbol}: ⚠️ Ордер #{i+1}: margin_amount={margin_amount} <= 0, пропускаем")
@@ -1343,6 +1362,67 @@ class TradingBot:
                             )
                         except Exception as log_err:
                             self.logger.debug(f" {self.symbol}: ⚠️ Ошибка логирования ордера: {log_err}")
+                    else:
+                        # Обработка ошибки для рыночного ордера
+                        error_message = order_result.get('message', 'unknown error')
+                        error_code = order_result.get('error_code', '')
+                        
+                        # ✅ ПРОВЕРКА: Обнаружен делистинг (ErrCode: 30228)
+                        if '30228' in str(error_code) or '30228' in error_message or 'delisting' in error_message.lower() or 'No new positions during delisting' in error_message:
+                            delisting_detected = True
+                            self.logger.error(f" {self.symbol}: 🚫 ДЕЛИСТИНГ! Монета находится в процессе удаления с биржи (ErrCode: 30228)")
+                            self.logger.error(f" {self.symbol}: ❌ Невозможно разместить ордера - биржа блокирует новые позиции для {self.symbol}")
+                            
+                            # ✅ КРИТИЧНО: Автоматически добавляем монету в delisted.json
+                            try:
+                                from bots_modules.sync_and_cache import load_delisted_coins, save_delisted_coins
+                                delisted_data = load_delisted_coins()
+                                if 'delisted_coins' not in delisted_data:
+                                    delisted_data['delisted_coins'] = {}
+                                
+                                # Добавляем монету в список делистинговых, если её там еще нет
+                                if self.symbol not in delisted_data['delisted_coins']:
+                                    from datetime import datetime
+                                    delisted_data['delisted_coins'][self.symbol] = {
+                                        'status': 'Delisting',
+                                        'reason': f'Delisting detected via order placement error (ErrCode: 30228)',
+                                        'delisting_date': datetime.now().strftime('%Y-%m-%d'),
+                                        'detected_at': datetime.now().isoformat(),
+                                        'source': 'order_placement_error_30228'
+                                    }
+                                    save_delisted_coins(delisted_data)
+                                    self.logger.warning(f" {self.symbol}: ✅ Монета автоматически добавлена в delisted.json")
+                                else:
+                                    self.logger.debug(f" {self.symbol}: Монета уже в списке делистинговых")
+                            except Exception as delisting_error:
+                                self.logger.error(f" {self.symbol}: ❌ Ошибка добавления монеты в delisted.json: {delisting_error}")
+                            
+                            # ✅ КРИТИЧНО: Если у бота уже есть открытая позиция - закрываем её НЕМЕДЛЕННО!
+                            if self.position is not None or self.status in [BotStatus.IN_POSITION_LONG, BotStatus.IN_POSITION_SHORT]:
+                                self.logger.warning(f" {self.symbol}: 🚨 ОТКРЫТАЯ ПОЗИЦИЯ ОБНАРУЖЕНА ПРИ ДЕЛИСТИНГЕ! Закрываем немедленно!")
+                                try:
+                                    from bots_modules.bot_class import NewTradingBot
+                                    from bots_modules.imports_and_globals import get_exchange
+                                    from bots_modules.sync_and_cache import bots_data, bots_data_lock
+                                    
+                                    with bots_data_lock:
+                                        if self.symbol in bots_data.get('bots', {}):
+                                            bot_data = bots_data['bots'][self.symbol]
+                                            exchange_obj = get_exchange()
+                                            if exchange_obj:
+                                                bot_instance = NewTradingBot(self.symbol, bot_data, exchange_obj)
+                                                emergency_result = bot_instance.emergency_close_delisting()
+                                                if emergency_result:
+                                                    self.logger.warning(f" {self.symbol}: ✅ ЭКСТРЕННОЕ ЗАКРЫТИЕ УСПЕШНО")
+                                                else:
+                                                    self.logger.error(f" {self.symbol}: ❌ ЭКСТРЕННОЕ ЗАКРЫТИЕ НЕУДАЧНО")
+                                except Exception as emergency_close_error:
+                                    self.logger.error(f" {self.symbol}: ❌ Ошибка экстренного закрытия позиции: {emergency_close_error}")
+                            
+                            # Прекращаем размещение остальных ордеров
+                            break
+                        
+                        self.logger.warning(f" {self.symbol}: ⚠️ Не удалось разместить рыночный ордер: {error_message}")
                     continue
                 
                 # Рассчитываем цену лимитного ордера
@@ -1396,7 +1476,43 @@ class TradingBot:
                     except Exception as log_err:
                         self.logger.debug(f" {self.symbol}: ⚠️ Ошибка логирования ордера: {log_err}")
                 else:
-                    self.logger.warning(f" {self.symbol}: ⚠️ Не удалось разместить лимитный ордер #{i+1}: {order_result.get('message', 'unknown error')}")
+                    error_message = order_result.get('message', 'unknown error')
+                    error_code = order_result.get('error_code', '')
+                    
+                    # ✅ ПРОВЕРКА: Обнаружен делистинг (ErrCode: 30228)
+                    if '30228' in str(error_code) or 'delisting' in error_message.lower() or 'No new positions during delisting' in error_message:
+                        delisting_detected = True
+                        self.logger.error(f" {self.symbol}: 🚫 ДЕЛИСТИНГ! Монета находится в процессе удаления с биржи (ErrCode: 30228)")
+                        self.logger.error(f" {self.symbol}: ❌ Невозможно разместить ордера - биржа блокирует новые позиции для {self.symbol}")
+                        
+                        # ✅ КРИТИЧНО: Автоматически добавляем монету в delisted.json
+                        try:
+                            from bots_modules.sync_and_cache import load_delisted_coins, save_delisted_coins
+                            delisted_data = load_delisted_coins()
+                            if 'delisted_coins' not in delisted_data:
+                                delisted_data['delisted_coins'] = {}
+                            
+                            # Добавляем монету в список делистинговых, если её там еще нет
+                            if self.symbol not in delisted_data['delisted_coins']:
+                                from datetime import datetime
+                                delisted_data['delisted_coins'][self.symbol] = {
+                                    'status': 'Delisting',
+                                    'reason': f'Delisting detected via order placement error (ErrCode: 30228)',
+                                    'delisting_date': datetime.now().strftime('%Y-%m-%d'),
+                                    'detected_at': datetime.now().isoformat(),
+                                    'source': 'order_placement_error_30228'
+                                }
+                                save_delisted_coins(delisted_data)
+                                self.logger.warning(f" {self.symbol}: ✅ Монета автоматически добавлена в delisted.json")
+                            else:
+                                self.logger.debug(f" {self.symbol}: Монета уже в списке делистинговых")
+                        except Exception as delisting_error:
+                            self.logger.error(f" {self.symbol}: ❌ Ошибка добавления монеты в delisted.json: {delisting_error}")
+                        
+                        # Прекращаем размещение остальных ордеров
+                        break
+                    
+                    self.logger.warning(f" {self.symbol}: ⚠️ Не удалось разместить лимитный ордер #{i+1}: {error_message}")
             
             if not placed_orders:
                 self.logger.error(f" {self.symbol}: Не удалось разместить ни одного ордера")
