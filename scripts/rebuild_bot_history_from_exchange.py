@@ -311,33 +311,90 @@ def main():
         manager.trades = trade_entries
     
     # Сохраняем напрямую в файл (обходим возможные проблемы с блокировкой)
-    try:
-        data = {
-            'history': history_entries,
-            'trades': trade_entries,
-            'last_update': datetime.now().isoformat()
-        }
-        # Атомарная запись через временный файл
-        temp_file = output_path.with_suffix('.tmp')
+    import time
+    max_retries = 3
+    retry_delay = 0.2
+    
+    for attempt in range(max_retries):
         try:
-            with open(temp_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            # Атомарно заменяем старый файл новым
-            if output_path.exists():
-                output_path.unlink()
-            temp_file.replace(output_path)
-            print(f"✅ Файл {output_path} успешно перезаписан")
-        except Exception as save_error:
-            if temp_file.exists():
+            data = {
+                'history': history_entries,
+                'trades': trade_entries,
+                'last_update': datetime.now().isoformat()
+            }
+            # Атомарная запись через временный файл
+            temp_file = output_path.with_suffix('.tmp')
+            try:
+                with open(temp_file, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                
+                # На Windows: сначала удаляем старый файл, если он существует
+                # Это помогает избежать ошибки "Отказано в доступе"
+                if output_path.exists():
+                    try:
+                        output_path.unlink()
+                    except PermissionError as perm_error:
+                        # Если файл заблокирован, ждем и пробуем снова
+                        if attempt < max_retries - 1:
+                            print(f"⚠️ Файл заблокирован, повторная попытка {attempt + 2}/{max_retries}...")
+                            time.sleep(retry_delay * (attempt + 1))
+                            if temp_file.exists():
+                                try:
+                                    temp_file.unlink()
+                                except Exception:
+                                    pass
+                            continue
+                        else:
+                            # Последняя попытка - пробуем записать напрямую
+                            print(f"⚠️ Не удалось удалить старый файл, пробуем прямую запись...")
+                            try:
+                                with open(output_path, 'w', encoding='utf-8') as f:
+                                    json.dump(data, f, ensure_ascii=False, indent=2)
+                                print(f"✅ Файл {output_path} успешно перезаписан (прямая запись)")
+                                if temp_file.exists():
+                                    try:
+                                        temp_file.unlink()
+                                    except Exception:
+                                        pass
+                                break
+                            except Exception as direct_error:
+                                raise perm_error
+                
+                # Атомарно заменяем старый файл новым
+                temp_file.replace(output_path)
+                print(f"✅ Файл {output_path} успешно перезаписан")
+                break  # Успешно сохранено
+                
+            except (PermissionError, OSError) as save_error:
+                # Удаляем временный файл в случае ошибки
+                if temp_file.exists():
+                    try:
+                        temp_file.unlink()
+                    except Exception:
+                        pass
+                
+                if attempt < max_retries - 1:
+                    print(f"⚠️ Ошибка доступа к файлу, повторная попытка {attempt + 2}/{max_retries}...")
+                    time.sleep(retry_delay * (attempt + 1))
+                    continue
+                else:
+                    # Последняя попытка - пробуем через менеджер
+                    print(f"⚠️ Не удалось сохранить напрямую, пробуем через менеджер...")
+                    manager._save_history()
+                    print(f"✅ Файл сохранен через менеджер")
+                    break
+                    
+        except Exception as e:
+            if attempt == max_retries - 1:
+                print(f"❌ Ошибка сохранения файла после {max_retries} попыток: {e}")
+                # Последняя попытка - пробуем через менеджер
                 try:
-                    temp_file.unlink()
-                except Exception:
-                    pass
-            raise save_error
-    except Exception as e:
-        print(f"❌ Ошибка сохранения файла: {e}")
-        # Пробуем через менеджер
-        manager._save_history()
+                    manager._save_history()
+                    print(f"✅ Файл сохранен через менеджер (fallback)")
+                except Exception as manager_error:
+                    print(f"❌ Критическая ошибка: не удалось сохранить ни напрямую, ни через менеджер: {manager_error}")
+            else:
+                time.sleep(retry_delay * (attempt + 1))
     
     print(f"🎉 bot_history.json обновлён: {len(trade_entries)} сделок, {len(history_entries)} записей истории.")
 
