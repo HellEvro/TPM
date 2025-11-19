@@ -2913,7 +2913,8 @@ def sync_bots_with_exchange():
                                     roi=roi_percent,
                                     reason='MANUAL_CLOSE',
                                     entry_data=entry_data,
-                                    market_data=market_data
+                                    market_data=market_data,
+                                    is_simulated=False  # КРИТИЧНО: реальные сделки с биржи - это НЕ симуляция!
                                 )
                                 logger.info(
                                     f"[SYNC_EXCHANGE] ✋ {symbol}: позиция закрыта вручную на бирже "

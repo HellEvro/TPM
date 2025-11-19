@@ -342,6 +342,7 @@ class BotHistoryManager:
             'ai_signal': ai_signal,
             'rsi': rsi,
             'trend': trend,
+            'is_simulated': is_simulated,  # КРИТИЧНО: используем параметр функции
             'details': f"Открыта позиция {direction} для {symbol}: размер {size}, цена входа {entry_price:.4f}"
         }
         
@@ -370,7 +371,7 @@ class BotHistoryManager:
             'ai_confidence': ai_confidence,
             'rsi': rsi,
             'trend': trend,
-            'is_simulated': False
+            'is_simulated': is_simulated  # КРИТИЧНО: используем параметр функции, а не хардкод
         }
         self._add_trade_entry(trade)
         
@@ -561,6 +562,7 @@ class BotHistoryManager:
             'ai_decision_id': ai_decision_id,
             'ai_confidence': ai_confidence,
             'is_successful': pnl > 0,
+            'is_simulated': is_simulated,  # КРИТИЧНО: используем параметр функции
             'details': f"Закрыта позиция {direction} для {symbol}: цена выхода {exit_price:.4f}, PnL: {pnl:.2f} USDT ({roi:.2f}%)"
         }
         
@@ -612,6 +614,7 @@ class BotHistoryManager:
                     trade['close_timestamp'] = datetime.now().isoformat()
                     trade['close_reason'] = reason
                     trade['is_successful'] = pnl > 0
+                    trade['is_simulated'] = is_simulated  # КРИТИЧНО: обновляем флаг симуляции
                     if position_size_usdt:
                         trade['position_size_usdt'] = position_size_usdt
                     if position_size_coins:
