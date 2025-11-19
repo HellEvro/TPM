@@ -431,7 +431,49 @@ def refresh_manual_positions():
                                 except Exception as copy_error:
                                     logger.debug(f"⚠️ Не удалось сохранить копию поврежденного файла: {copy_error}")
                         else:
-                            logger.debug(" Файл состояния пустой, пропускаем")
+                            logger.warning(" ⚠️ Файл состояния пустой! Пытаемся восстановить или инициализировать...")
+                            # ✅ Пытаемся восстановить из резервной копии
+                            backup_file = f"{bots_state_file}.backup"
+                            if os.path.exists(backup_file):
+                                try:
+                                    logger.info(f"🔄 Пытаемся восстановить из резервной копии: {backup_file}")
+                                    with open(backup_file, 'r', encoding='utf-8') as backup_f:
+                                        backup_content = backup_f.read()
+                                        if backup_content.strip():
+                                            saved_data = json.loads(backup_content)
+                                            if 'bots' in saved_data:
+                                                saved_bot_symbols = set(saved_data['bots'].keys())
+                                                logger.info(f"✅ Восстановлено из резервной копии: {len(saved_bot_symbols)} ботов")
+                                                # Восстанавливаем основной файл из резервной копии
+                                                shutil.copy2(backup_file, bots_state_file)
+                                                logger.info(f"✅ Основной файл восстановлен из резервной копии")
+                                except Exception as backup_error:
+                                    logger.error(f"❌ Ошибка восстановления из резервной копии: {backup_error}")
+                            
+                            # ✅ Если резервной копии нет или она тоже пустая - инициализируем файл
+                            if not saved_bot_symbols:
+                                try:
+                                    from bots_modules.sync_and_cache import load_bots_state, save_bots_state
+                                    # Пытаемся загрузить состояние через стандартную функцию (она может синхронизировать с биржей)
+                                    if not load_bots_state():
+                                        # Если загрузка не удалась - создаем базовую структуру
+                                        logger.info("📝 Инициализируем файл состояния с базовой структурой...")
+                                        from datetime import datetime
+                                        default_state = {
+                                            'version': '1.0',
+                                            'last_saved': datetime.now().isoformat(),
+                                            'bots': {},
+                                            'global_stats': {
+                                                'total_trades': 0,
+                                                'total_profit': 0.0,
+                                                'win_rate': 0.0
+                                            }
+                                        }
+                                        with open(bots_state_file, 'w', encoding='utf-8') as f:
+                                            json.dump(default_state, f, ensure_ascii=False, indent=2)
+                                        logger.info("✅ Файл состояния инициализирован с базовой структурой")
+                                except Exception as init_error:
+                                    logger.error(f"❌ Ошибка инициализации файла состояния: {init_error}")
             except Exception as e:
                 logger.warning(f" ⚠️ Не удалось загрузить сохраненных ботов: {e}")
             
@@ -622,7 +664,49 @@ def get_coins_with_rsi():
                                     except Exception as copy_error:
                                         logger.debug(f"⚠️ Не удалось сохранить копию поврежденного файла: {copy_error}")
                             else:
-                                logger.debug(" Файл состояния пустой, пропускаем")
+                                logger.warning(" ⚠️ Файл состояния пустой! Пытаемся восстановить или инициализировать...")
+                                # ✅ Пытаемся восстановить из резервной копии
+                                backup_file = f"{bots_state_file}.backup"
+                                if os.path.exists(backup_file):
+                                    try:
+                                        logger.info(f"🔄 Пытаемся восстановить из резервной копии: {backup_file}")
+                                        with open(backup_file, 'r', encoding='utf-8') as backup_f:
+                                            backup_content = backup_f.read()
+                                            if backup_content.strip():
+                                                saved_data = json.loads(backup_content)
+                                                if 'bots' in saved_data:
+                                                    saved_bot_symbols = set(saved_data['bots'].keys())
+                                                    logger.info(f"✅ Восстановлено из резервной копии: {len(saved_bot_symbols)} ботов")
+                                                    # Восстанавливаем основной файл из резервной копии
+                                                    shutil.copy2(backup_file, bots_state_file)
+                                                    logger.info(f"✅ Основной файл восстановлен из резервной копии")
+                                    except Exception as backup_error:
+                                        logger.error(f"❌ Ошибка восстановления из резервной копии: {backup_error}")
+                                
+                                # ✅ Если резервной копии нет или она тоже пустая - инициализируем файл
+                                if not saved_bot_symbols:
+                                    try:
+                                        from bots_modules.sync_and_cache import load_bots_state
+                                        # Пытаемся загрузить состояние через стандартную функцию (она может синхронизировать с биржей)
+                                        if not load_bots_state():
+                                            # Если загрузка не удалась - создаем базовую структуру
+                                            logger.info("📝 Инициализируем файл состояния с базовой структурой...")
+                                            from datetime import datetime
+                                            default_state = {
+                                                'version': '1.0',
+                                                'last_saved': datetime.now().isoformat(),
+                                                'bots': {},
+                                                'global_stats': {
+                                                    'total_trades': 0,
+                                                    'total_profit': 0.0,
+                                                    'win_rate': 0.0
+                                                }
+                                            }
+                                            with open(bots_state_file, 'w', encoding='utf-8') as f:
+                                                json.dump(default_state, f, ensure_ascii=False, indent=2)
+                                            logger.info("✅ Файл состояния инициализирован с базовой структурой")
+                                    except Exception as init_error:
+                                        logger.error(f"❌ Ошибка инициализации файла состояния: {init_error}")
                 except Exception as e:
                     logger.warning(f" ⚠️ Не удалось загрузить сохраненных ботов: {e}")
                 
