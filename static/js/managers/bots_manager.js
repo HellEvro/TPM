@@ -1183,18 +1183,71 @@ class BotsManager {
             return 'UNAVAILABLE';
         }
         
-        // Если API уже предоставил эффективный сигнал, используем его
-        if (coin.effective_signal) {
+        // ✅ КРИТИЧНО: Получаем базовый сигнал для проверки блокировок
+        let signal = coin.signal || 'WAIT';
+        
+        // ✅ ПРОВЕРКА БЛОКИРОВОК ФИЛЬТРОВ: Если монета заблокирована - возвращаем WAIT
+        // Это ВАЖНО: монеты с заблокированными фильтрами НЕ должны отображаться в списке LONG/SHORT!
+        
+        // 1. Проверяем ExitScam фильтр
+        if (coin.blocked_by_exit_scam === true) {
+            return 'WAIT';
+        }
+        
+        // 2. Проверяем RSI Time фильтр
+        if (coin.blocked_by_rsi_time === true) {
+            return 'WAIT';
+        }
+        
+        // 3. Проверяем зрелость монеты
+        if (coin.is_mature === false) {
+            return 'WAIT';
+        }
+        
+        // 4. Проверяем Whitelist/Blacklist (Scope)
+        if (coin.blocked_by_scope === true) {
+            return 'WAIT';
+        }
+        
+        // Если базовый сигнал WAIT - возвращаем сразу
+        if (signal === 'WAIT') {
+            return 'WAIT';
+        }
+        
+        // ✅ ПРОВЕРКА Enhanced RSI: Если включен и дает другой сигнал - используем его
+        if (coin.enhanced_rsi && coin.enhanced_rsi.enabled && coin.enhanced_rsi.enhanced_signal) {
+            const enhancedSignal = coin.enhanced_rsi.enhanced_signal;
+            // Если Enhanced RSI говорит WAIT - блокируем
+            if (enhancedSignal === 'WAIT') {
+                return 'WAIT';
+            }
+            signal = enhancedSignal;
+        }
+        
+        // ✅ ПРОВЕРКА ФИЛЬТРОВ ТРЕНДОВ (если Enhanced RSI не заблокировал)
+        const autoConfig = this.cachedAutoBotConfig || {};
+        const avoidDownTrend = autoConfig.avoid_down_trend === true;
+        const avoidUpTrend = autoConfig.avoid_up_trend === true;
+        const rsi = coin.rsi6h || 50;
+        const trend = coin.trend6h || 'NEUTRAL';
+        const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
+        const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
+        
+        if (signal === 'ENTER_LONG' && avoidDownTrend && rsi <= rsiLongThreshold && trend === 'DOWN') {
+            return 'WAIT';
+        }
+        
+        if (signal === 'ENTER_SHORT' && avoidUpTrend && rsi >= rsiShortThreshold && trend === 'UP') {
+            return 'WAIT';
+        }
+        
+        // Если API уже предоставил эффективный сигнал, используем его (но только если не заблокирован)
+        if (coin.effective_signal && coin.effective_signal !== 'WAIT') {
             return coin.effective_signal;
         }
         
-        // Иначе вычисляем самостоятельно (fallback для совместимости)
-        if (coin.enhanced_rsi && coin.enhanced_rsi.enabled && coin.enhanced_rsi.enhanced_signal) {
-            return coin.enhanced_rsi.enhanced_signal;
-        }
-        
-        // Иначе используем стандартный сигнал
-        return coin.signal || 'WAIT';
+        // Возвращаем проверенный сигнал
+        return signal;
     }
 
     updateSignalCounters() {
@@ -1619,12 +1672,25 @@ class BotsManager {
         }
         
         // ExitScam защита (ExitScam Protection) - проверяем разные поля
-        if (coin.exit_scam_status && coin.exit_scam_status !== 'NONE' && coin.exit_scam_status !== null) {
+        // ✅ ИСПРАВЛЕНИЕ: Используем exit_scam_info если доступно
+        if (coin.exit_scam_info) {
+            const exitScamInfo = coin.exit_scam_info;
+            const isBlocked = exitScamInfo.blocked;
+            const reason = exitScamInfo.reason || '';
+            
+            if (isBlocked) {
+                activeStatusData.exit_scam = `Блокирует: ${reason}`;
+            } else {
+                activeStatusData.exit_scam = `Пройден: ${reason}`;
+            }
+        } else if (coin.exit_scam_status && coin.exit_scam_status !== 'NONE' && coin.exit_scam_status !== null) {
             activeStatusData.exit_scam = coin.exit_scam_status;
         } else if (coin.exit_scam && coin.exit_scam !== 'NONE') {
             activeStatusData.exit_scam = coin.exit_scam;
         } else if (coin.scam_status && coin.scam_status !== 'NONE') {
             activeStatusData.exit_scam = coin.scam_status;
+        } else if (coin.blocked_by_exit_scam === true) {
+            activeStatusData.exit_scam = 'Блокирует: обнаружены резкие движения цены';
         }
         
         // RSI Time Filter - преобразуем time_filter_info в строковый статус
@@ -1809,12 +1875,24 @@ class BotsManager {
             
             // 1. Проверяем ExitScam фильтр
             if (coin.blocked_by_exit_scam === true) {
-                blockReasons.push('ExitScam фильтр');
+                // Используем детальную информацию из exit_scam_info, если доступна
+                const exitScamInfo = coin.exit_scam_info;
+                if (exitScamInfo && exitScamInfo.reason) {
+                    blockReasons.push(`ExitScam фильтр: ${exitScamInfo.reason}`);
+                } else {
+                    blockReasons.push('ExitScam фильтр');
+                }
             }
             
             // 2. Проверяем RSI Time фильтр
             if (coin.blocked_by_rsi_time === true) {
-                blockReasons.push('RSI Time фильтр');
+                // Используем детальную информацию из time_filter_info, если доступна
+                const timeFilterInfo = coin.time_filter_info;
+                if (timeFilterInfo && timeFilterInfo.reason) {
+                    blockReasons.push(`RSI Time фильтр: ${timeFilterInfo.reason}`);
+                } else {
+                    blockReasons.push('RSI Time фильтр');
+                }
             }
             
             // 3. Проверяем зрелость монеты
