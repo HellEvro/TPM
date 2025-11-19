@@ -138,6 +138,7 @@ def restore_missing_history():
             'ai_signal': None,
             'rsi': None,
             'trend': None,
+            'is_simulated': False,  # КРИТИЧНО: восстановленные позиции - это реальные сделки!
             'details': f"Открыта позиция {pos_data['direction']} для {symbol}: размер {pos_data['size']}, цена входа {pos_data['entry_price']:.4f} [RESTORED]"
         }
         
@@ -156,7 +157,8 @@ def restore_missing_history():
             'ai_decision_id': None,
             'ai_confidence': None,
             'rsi': None,
-            'trend': None
+            'trend': None,
+            'is_simulated': False  # КРИТИЧНО: восстановленные позиции - это реальные сделки!
         }
         
         history_entries.append(history_entry)

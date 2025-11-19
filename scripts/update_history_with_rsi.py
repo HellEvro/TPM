@@ -79,6 +79,13 @@ def update_history_with_rsi():
     for entry in history_entries:
         if entry.get('action_type') == 'POSITION_OPENED':
             symbol = entry.get('symbol')
+            # КРИТИЧНО: Добавляем is_simulated=False если отсутствует
+            if 'is_simulated' not in entry:
+                decision_source = entry.get('decision_source', '')
+                if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT', 'AI'):
+                    entry['is_simulated'] = False
+                    updated_history += 1
+            
             if symbol and (entry.get('rsi') is None or entry.get('trend') is None):
                 # Пытаемся получить из bots_state
                 rsi_data = bots_rsi_data.get(symbol, {})
@@ -92,6 +99,13 @@ def update_history_with_rsi():
     # Обновляем сделки
     for trade in trades:
         symbol = trade.get('symbol')
+        # КРИТИЧНО: Добавляем is_simulated=False если отсутствует
+        if 'is_simulated' not in trade:
+            decision_source = trade.get('decision_source', '')
+            if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT', 'AI'):
+                trade['is_simulated'] = False
+                updated_trades += 1
+        
         if symbol and (trade.get('rsi') is None or trade.get('trend') is None):
             rsi_data = bots_rsi_data.get(symbol, {})
             if trade.get('rsi') is None and rsi_data.get('rsi'):
