@@ -868,6 +868,24 @@ def copy_individual_coin_settings_to_all(source_symbol, target_symbols=None, per
     return copied
 
 
+def remove_all_individual_coin_settings(persist=True):
+    """Удаляет все индивидуальные настройки всех монет"""
+    removed_count = 0
+    with bots_data_lock:
+        coin_settings = bots_data.get('individual_coin_settings', {})
+        if coin_settings:
+            removed_count = len(coin_settings)
+            coin_settings.clear()
+    
+    if removed_count > 0 and persist:
+        save_individual_coin_settings()
+        logger.info(f" 🗑️ Удалены индивидуальные настройки для всех {removed_count} монет")
+    else:
+        logger.info(f" ℹ️ Индивидуальные настройки отсутствуют")
+    
+    return removed_count
+
+
 # ВАЖНО: load_auto_bot_config() теперь вызывается в if __name__ == '__main__'
 # чтобы check_and_stop_existing_bots_processes() мог вывести свои сообщения первым
 

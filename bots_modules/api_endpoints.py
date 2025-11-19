@@ -44,7 +44,7 @@ from bots_modules.imports_and_globals import (
     get_exchange, load_individual_coin_settings,
     get_individual_coin_settings, set_individual_coin_settings,
     remove_individual_coin_settings, copy_individual_coin_settings_to_all,
-    RealTradingBot
+    remove_all_individual_coin_settings, RealTradingBot
 )
 import bots_modules.imports_and_globals as globals_module
 
@@ -2498,6 +2498,22 @@ def copy_individual_settings(symbol):
         return jsonify({'success': False, 'error': 'Individual settings not found'}), 404
     except Exception as e:
         logger.error(f" ❌ Ошибка копирования настроек {symbol}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bots_app.route('/api/bots/individual-settings/reset-all', methods=['DELETE'])
+def reset_all_individual_settings():
+    """API для сброса всех индивидуальных настроек к глобальным настройкам"""
+    try:
+        removed_count = remove_all_individual_coin_settings(persist=True)
+        logger.info(f" 🗑️ Сброшены индивидуальные настройки для всех монет ({removed_count} монет)")
+        return jsonify({
+            'success': True,
+            'removed_count': removed_count,
+            'message': f'Сброшены индивидуальные настройки для {removed_count} монет'
+        })
+    except Exception as e:
+        logger.error(f" ❌ Ошибка сброса всех индивидуальных настроек: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
