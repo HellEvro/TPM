@@ -1547,8 +1547,47 @@ class NewTradingBot:
             
             # Получаем данные о закрытии
             exit_price = close_result.get('price', self.entry_price) if close_result else self.entry_price
-            pnl = close_result.get('realized_pnl', self.unrealized_pnl) if close_result else self.unrealized_pnl
-            pnl_pct = close_result.get('roi', 0) if close_result else 0
+            
+            # КРИТИЧНО: Рассчитываем PnL из цен входа и выхода, а не из накопленного realized_pnl
+            # Накопленный realized_pnl из кошелька - это сумма всех сделок, а не конкретной сделки!
+            if self.entry_price and exit_price and self.entry_price > 0:
+                # Получаем размер позиции (в USDT)
+                # volume_value - размер позиции в USDT
+                # position_size - размер позиции в монетах (если есть)
+                position_size = getattr(self, 'volume_value', None)
+                if not position_size or position_size <= 0:
+                    # Если volume_value нет, пробуем рассчитать из position_size_coins
+                    position_size_coins = getattr(self, 'position_size_coins', None) or getattr(self, 'position_size', None)
+                    if position_size_coins and self.entry_price:
+                        position_size = position_size_coins * self.entry_price  # Конвертируем в USDT
+                
+                # Если все еще нет размера, используем значение по умолчанию
+                if not position_size or position_size <= 0:
+                    position_size = 10.0  # Значение по умолчанию
+                
+                # Рассчитываем ROI (процент изменения цены)
+                if self.position_side == 'LONG':
+                    roi_percent = (exit_price - self.entry_price) / self.entry_price
+                else:  # SHORT
+                    roi_percent = (self.entry_price - exit_price) / self.entry_price
+                
+                # Рассчитываем PnL в USDT
+                # Если position_size в USDT (размер позиции), то PnL = roi_percent * position_size
+                if position_size and position_size > 0:
+                    pnl = roi_percent * position_size
+                else:
+                    # Если нет размера позиции, используем ROI в процентах
+                    pnl = roi_percent * 100
+                
+                # ROI в процентах
+                pnl_pct = roi_percent * 100
+                
+                logger.debug(f"[NEW_BOT_{self.symbol}] 📊 PnL рассчитан из цен: entry={self.entry_price}, exit={exit_price}, side={self.position_side}, size={position_size}, roi={roi_percent:.4f}, pnl={pnl:.2f}")
+            else:
+                # Fallback: используем значения из close_result или unrealized_pnl
+                pnl = close_result.get('realized_pnl', self.unrealized_pnl) if close_result else self.unrealized_pnl
+                pnl_pct = close_result.get('roi', 0) if close_result else 0
+                logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось рассчитать PnL из цен, используем fallback: pnl={pnl}")
             
             # КРИТИЧНО ДЛЯ ОБУЧЕНИЯ AI: Сохраняем данные ВСЕГДА, не только для стопов!
             # Получаем RSI и тренд на момент входа из истории или из сохраненного контекста
