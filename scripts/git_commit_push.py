@@ -25,6 +25,36 @@ def run_git_command(args: Sequence[str]) -> subprocess.CompletedProcess[str]:
     return result
 
 
+def git_pull_with_merge() -> None:
+    """Выполняет git pull с merge для получения удаленных изменений."""
+    # Сначала получаем удаленные изменения
+    fetch_result = run_git_command(["git", "fetch"])
+    if fetch_result.returncode != 0:
+        print((fetch_result.stderr or "").strip() or "Не удалось получить удаленные изменения.")
+        sys.exit(fetch_result.returncode)
+    
+    # Проверяем, есть ли удаленные коммиты
+    check_result = run_git_command(["git", "rev-list", "--count", "HEAD..@{upstream}"])
+    has_remote_commits = False
+    if check_result.returncode == 0 and check_result.stdout:
+        try:
+            count = int(check_result.stdout.strip())
+            has_remote_commits = count > 0
+        except ValueError:
+            pass
+    
+    if has_remote_commits:
+        print("Обнаружены удаленные коммиты. Выполняю merge...")
+        # Выполняем merge с стратегией --no-edit для автоматического merge commit
+        merge_result = run_git_command(["git", "pull", "--no-rebase", "--no-edit"])
+        if merge_result.returncode != 0:
+            print((merge_result.stderr or "").strip() or "Ошибка при merge удаленных изменений.")
+            print("Возможно, требуется разрешить конфликты вручную.")
+            sys.exit(merge_result.returncode)
+        if merge_result.stdout and merge_result.stdout.strip():
+            print(merge_result.stdout.strip())
+
+
 def ensure_changes_present() -> None:
     """Exit early if there are no changes to commit."""
     status = run_git_command(["git", "status", "--porcelain"])
@@ -75,6 +105,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    # Сначала получаем удаленные изменения и делаем merge
+    git_pull_with_merge()
+    # Проверяем наличие локальных изменений
     ensure_changes_present()
     git_add_all()
     git_commit(args.message)
