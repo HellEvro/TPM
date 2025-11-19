@@ -411,6 +411,7 @@ class BotHistoryManager:
         # Определяем источник решения из entry_data или из сделки
         decision_source = 'SCRIPT'
         ai_confidence = None
+        matching_trade_snapshot: Optional[Dict[str, Any]] = None
         
         # Пробуем найти соответствующую сделку для получения информации об источнике решения
         with self.lock:
@@ -419,7 +420,74 @@ class BotHistoryManager:
                     decision_source = trade.get('decision_source', 'SCRIPT')
                     ai_decision_id = trade.get('ai_decision_id') or ai_decision_id
                     ai_confidence = trade.get('ai_confidence')
+                    matching_trade_snapshot = trade.copy()
                     break
+        
+        original_pnl_input = pnl
+        original_roi_input = roi
+        
+        def _to_float(value: Any) -> Optional[float]:
+            try:
+                if value is None:
+                    return None
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+        
+        # Пытаемся пересчитать PnL из цен (на случай, если передан некорректный PnL)
+        calc_direction = direction or (matching_trade_snapshot or {}).get('direction')
+        entry_price_for_calc = (
+            _to_float(entry_data.get('entry_price')) if entry_data and entry_data.get('entry_price') is not None else None
+        )
+        if entry_price_for_calc is None and matching_trade_snapshot:
+            entry_price_for_calc = _to_float(matching_trade_snapshot.get('entry_price'))
+        
+        exit_price_for_calc = _to_float(exit_price)
+        if exit_price_for_calc is None and market_data:
+            exit_price_for_calc = _to_float(market_data.get('exit_price'))
+        if exit_price_for_calc is None and matching_trade_snapshot:
+            exit_price_for_calc = _to_float(matching_trade_snapshot.get('exit_price'))
+        if exit_price_for_calc is not None:
+            exit_price = exit_price_for_calc
+        
+        position_size_usdt = None
+        position_size_coins = None
+        if entry_data:
+            position_size_usdt = _to_float(entry_data.get('position_size_usdt'))
+            position_size_coins = _to_float(entry_data.get('position_size_coins'))
+        if position_size_usdt is None and matching_trade_snapshot:
+            position_size_usdt = _to_float(matching_trade_snapshot.get('position_size_usdt'))
+        if (position_size_coins is None or position_size_coins == 0) and matching_trade_snapshot:
+            position_size_coins = _to_float(matching_trade_snapshot.get('size'))
+        
+        recalculated_pnl = pnl
+        recalculated_roi = roi
+        recalculated = False
+        if entry_price_for_calc and exit_price_for_calc and entry_price_for_calc > 0 and calc_direction in ('LONG', 'SHORT'):
+            if calc_direction == 'LONG':
+                roi_fraction = (exit_price_for_calc - entry_price_for_calc) / entry_price_for_calc
+            else:
+                roi_fraction = (entry_price_for_calc - exit_price_for_calc) / entry_price_for_calc
+            
+            recalculated_roi = roi_fraction * 100
+            position_value = position_size_usdt
+            if (position_value is None or position_value == 0) and position_size_coins and position_size_coins > 0:
+                position_value = position_size_coins * entry_price_for_calc
+            
+            if position_value is not None and position_value != 0:
+                recalculated_pnl = roi_fraction * position_value
+            else:
+                recalculated_pnl = roi_fraction * 100  # fallback в процентах
+            
+            if (pnl is None) or (abs(recalculated_pnl - pnl) > 1e-9):
+                logger.debug(
+                    f"[BOT_HISTORY] 🔄 PnL пересчитан из цен для {symbol}: "
+                    f"entry={entry_price_for_calc}, exit={exit_price_for_calc}, side={calc_direction}, "
+                    f"old_pnl={pnl}, new_pnl={recalculated_pnl:.6f}"
+                )
+                recalculated = True
+            pnl = recalculated_pnl
+            roi = recalculated_roi
         
         entry = {
             'id': f"close_{bot_id}_{datetime.now().timestamp()}",
@@ -445,6 +513,11 @@ class BotHistoryManager:
             entry['details'] += f" [AI: {ai_confidence:.1%}, {'✅' if pnl > 0 else '❌'}]"
         elif decision_source == 'SCRIPT':
             entry['details'] += f" [SCRIPT, {'✅' if pnl > 0 else '❌'}]"
+        entry['pnl_source'] = 'recalculated' if recalculated else 'input'
+        if recalculated and original_pnl_input is not None:
+            entry['pnl_original'] = original_pnl_input
+        if recalculated and original_roi_input is not None:
+            entry['roi_original'] = original_roi_input
         
         # Добавляем данные для обучения ИИ
         if entry_data:
@@ -483,6 +556,10 @@ class BotHistoryManager:
                     trade['close_timestamp'] = datetime.now().isoformat()
                     trade['close_reason'] = reason
                     trade['is_successful'] = pnl > 0
+                    if position_size_usdt:
+                        trade['position_size_usdt'] = position_size_usdt
+                    if position_size_coins:
+                        trade['position_size_coins'] = position_size_coins
                     if entry_data:
                         trade['entry_data'] = entry_data
                     if market_data:

@@ -7,14 +7,20 @@ import time
 import math
 from datetime import datetime
 import sys
-from app.config import (
-    GROWTH_MULTIPLIER,
-    HIGH_ROI_THRESHOLD,
-    HIGH_LOSS_THRESHOLD
-)
+try:
+    from app.config import (  # type: ignore
+        GROWTH_MULTIPLIER,
+        HIGH_ROI_THRESHOLD,
+        HIGH_LOSS_THRESHOLD
+    )
+except ImportError:  # pragma: no cover - fallback для статического анализа
+    GROWTH_MULTIPLIER = 3.0
+    HIGH_ROI_THRESHOLD = 100.0
+    HIGH_LOSS_THRESHOLD = -40.0
 import numpy as np
 import pandas as pd
 import logging
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -363,6 +369,68 @@ class BybitExchange(BaseExchange):
         try:
             all_closed_pnl = []
             
+            def safe_float(value, default=None):
+                try:
+                    if value in (None, ''):
+                        return default
+                    return float(value)
+                except (TypeError, ValueError):
+                    return default
+            
+            def timestamp_to_iso(ts_ms):
+                try:
+                    if ts_ms is None:
+                        return None
+                    ts_ms = int(ts_ms)
+                    return datetime.fromtimestamp(ts_ms / 1000).strftime('%Y-%m-%d %H:%M:%S')
+                except Exception:
+                    return None
+            
+            def build_pnl_record(pos: Dict[str, Any]) -> Dict[str, Any]:
+                close_ts = int(pos.get('updatedTime', time.time() * 1000))
+                created_ts = pos.get('createdTime')
+                created_ts = int(created_ts) if created_ts else None
+                
+                entry_price = safe_float(pos.get('avgEntryPrice'), 0.0) or 0.0
+                exit_price = safe_float(pos.get('avgExitPrice'), 0.0) or 0.0
+                qty = safe_float(pos.get('qty'))
+                if qty is None or qty == 0:
+                    qty = safe_float(pos.get('closedSize'))
+                if qty is None or qty == 0:
+                    qty = safe_float(pos.get('size'), 0.0)
+                qty = abs(qty or 0.0)
+                
+                position_value = safe_float(pos.get('cumEntryValue'))
+                if position_value is None and entry_price and qty:
+                    position_value = abs(entry_price * qty)
+                
+                leverage = safe_float(pos.get('leverage'))
+                
+                return {
+                    'symbol': clean_symbol(pos['symbol']),
+                    'symbol_raw': pos.get('symbol'),
+                    'qty': qty,
+                    'entry_price': entry_price,
+                    'exit_price': exit_price,
+                    'closed_pnl': safe_float(pos.get('closedPnl'), 0.0) or 0.0,
+                    'close_time': timestamp_to_iso(close_ts),
+                    'close_timestamp': close_ts,
+                    'created_time': timestamp_to_iso(created_ts),
+                    'created_timestamp': created_ts,
+                    'exchange': 'bybit',
+                    'side': pos.get('side'),
+                    'order_type': pos.get('orderType'),
+                    'position_value': position_value,
+                    'position_value_entry': safe_float(pos.get('cumEntryValue')),
+                    'position_value_exit': safe_float(pos.get('cumExitValue')),
+                    'leverage': leverage,
+                    'raw_record': {
+                        'qty': pos.get('qty'),
+                        'closedSize': pos.get('closedSize'),
+                        'positionSize': pos.get('size')
+                    }
+                }
+            
             # Получаем текущее время
             end_time = int(time.time() * 1000)
             
@@ -472,19 +540,7 @@ class BybitExchange(BaseExchange):
                                 break
                             
                             for pos in positions:
-                                pnl_record = {
-                                    'symbol': clean_symbol(pos['symbol']),
-                                    'qty': abs(float(pos.get('qty', 0))),
-                                    'entry_price': float(pos.get('avgEntryPrice', 0)),
-                                    'exit_price': float(pos.get('avgExitPrice', 0)),
-                                    'closed_pnl': float(pos.get('closedPnl', 0)),
-                                    'close_time': datetime.fromtimestamp(
-                                        int(pos.get('updatedTime', time.time() * 1000)) / 1000
-                                    ).strftime('%Y-%m-%d %H:%M:%S'),
-                                    'exchange': 'bybit',
-                                    'close_timestamp': int(pos.get('updatedTime', time.time() * 1000))
-                                }
-                                all_closed_pnl.append(pnl_record)
+                                all_closed_pnl.append(build_pnl_record(pos))
                             
                             cursor = response['result'].get('nextPageCursor')
                             if not cursor:
@@ -531,19 +587,7 @@ class BybitExchange(BaseExchange):
                             break
                         
                         for pos in positions:
-                            pnl_record = {
-                                'symbol': clean_symbol(pos['symbol']),
-                                'qty': abs(float(pos.get('qty', 0))),
-                                'entry_price': float(pos.get('avgEntryPrice', 0)),
-                                'exit_price': float(pos.get('avgExitPrice', 0)),
-                                'closed_pnl': float(pos.get('closedPnl', 0)),
-                                'close_time': datetime.fromtimestamp(
-                                    int(pos.get('updatedTime', time.time() * 1000)) / 1000
-                                ).strftime('%Y-%m-%d %H:%M:%S'),
-                                'exchange': 'bybit',
-                                'close_timestamp': int(pos.get('updatedTime', time.time() * 1000))
-                            }
-                            all_closed_pnl.append(pnl_record)
+                            all_closed_pnl.append(build_pnl_record(pos))
                         
                         cursor = response['result'].get('nextPageCursor')
                         if not cursor:
