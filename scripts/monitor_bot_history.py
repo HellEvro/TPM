@@ -66,11 +66,13 @@ def get_new_entries(data, prev_data):
     if not prev_data:
         return [], []
     
-    prev_history_ids = {e.get('id') for e in prev_data.get('history', [])}
-    prev_trade_ids = {t.get('id') for t in prev_data.get('trades', [])}
+    # Создаем множества ID для быстрого поиска
+    prev_history_ids = {e.get('id') for e in prev_data.get('history', []) if e.get('id')}
+    prev_trade_ids = {t.get('id') for t in prev_data.get('trades', []) if t.get('id')}
     
-    new_history = [e for e in data.get('history', []) if e.get('id') not in prev_history_ids]
-    new_trades = [t for t in data.get('trades', []) if t.get('id') not in prev_trade_ids]
+    # Находим новые записи
+    new_history = [e for e in data.get('history', []) if e.get('id') and e.get('id') not in prev_history_ids]
+    new_trades = [t for t in data.get('trades', []) if t.get('id') and t.get('id') not in prev_trade_ids]
     
     return new_history, new_trades
 
@@ -215,6 +217,9 @@ def main():
             
             # Файл изменился если изменилось время ИЛИ размер
             if current_mtime != prev_mtime or current_size != prev_size:
+                # Небольшая задержка для завершения записи файла (особенно на Windows)
+                time.sleep(0.1)
+                
                 # Файл изменился, загружаем данные
                 data = load_history(history_file)
                 if data:
@@ -228,7 +233,7 @@ def main():
                 else:
                     print(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Ошибка загрузки данных")
             
-            time.sleep(0.5)  # Проверяем каждые 0.5 секунды для более быстрой реакции
+            time.sleep(0.3)  # Проверяем каждые 0.3 секунды для более быстрой реакции
             
     except KeyboardInterrupt:
         print("\n\nМониторинг остановлен")
