@@ -487,6 +487,10 @@ def setup_color_logging(console_log_levels=None, enable_file_logging=True, log_f
         enable_file_logging: Включить ли файловое логирование с ротацией (по умолчанию True)
         log_file: Путь к файлу лога (по умолчанию определяется автоматически)
     """
+    # Явно используем глобальный sys
+    import sys as _sys
+    sys = _sys
+    
     # Создаем логгер
     logger = logging.getLogger()
     # Устанавливаем минимальный уровень, чтобы все сообщения доходили до фильтра
@@ -496,7 +500,6 @@ def setup_color_logging(console_log_levels=None, enable_file_logging=True, log_f
     if enable_file_logging:
         # Определяем файл лога автоматически на основе имени скрипта
         if log_file is None:
-            import sys
             script_name = sys.argv[0] if sys.argv else 'app'
             if 'ai.py' in script_name or 'ai' in script_name.lower():
                 log_file = 'logs/ai.log'
@@ -533,7 +536,6 @@ def setup_color_logging(console_log_levels=None, enable_file_logging=True, log_f
                 logger.addHandler(file_handler)
             except Exception as e:
                 # Если не удалось добавить файловый обработчик, продолжаем без него
-                import sys
                 sys.stderr.write(f"[COLOR_LOGGER] ⚠️ Не удалось добавить файловый обработчик: {e}\n")
     
     # Проверяем, есть ли уже консольный обработчик с нашим фильтром
