@@ -1879,9 +1879,13 @@ class BybitExchange(BaseExchange):
                 # ✅ ШАГ 1: Считаем сколько МОНЕТ нужно
                 # ⚠️ КРИТИЧНО: Для лимитных ордеров используем цену ЛИМИТНОГО ордера для расчета количества монет!
                 # Для рыночных ордеров - текущую цену
+                # Это важно: чем ниже лимитная цена, тем БОЛЬШЕ монет нужно купить на те же 5 USDT!
                 price_for_calculation = price if (order_type.lower() == 'limit' and price) else current_price
+                if order_type.lower() == 'limit' and price:
+                    logger.debug(f"[BYBIT_BOT] 💡 {symbol}: ЛИМИТНЫЙ ордер - расчет по ЛИМИТНОЙ цене {price_for_calculation:.6f} (текущая: {current_price:.6f})")
+                    logger.debug(f"[BYBIT_BOT] 💡 {symbol}: На {requested_qty_usdt} USDT по цене {price_for_calculation:.6f} нужно БОЛЬШЕ монет, чем по текущей {current_price:.6f}")
                 requested_coins = requested_qty_usdt / price_for_calculation if quantity_is_usdt else qty_in_coins
-                logger.debug(f"[BYBIT_BOT] 🔍 {symbol}: Исходное количество монет: {requested_coins:.2f} (рассчитано по цене {price_for_calculation:.6f})")
+                logger.debug(f"[BYBIT_BOT] 🔍 {symbol}: Исходное количество монет: {requested_coins:.2f} (рассчитано по цене {price_for_calculation:.6f}, запрошено {requested_qty_usdt} USDT)")
                 
                 # ✅ ШАГ 2: Округляем монеты вверх до qtyStep
                 rounded_coins = math.ceil(requested_coins / qty_step) * qty_step
