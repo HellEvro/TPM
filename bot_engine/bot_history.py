@@ -47,6 +47,8 @@ SIMULATION_MARKERS = {
     'BACKTEST',
     'VIRTUAL',
     'AI_SIMULATION',
+    'DEMO',
+    'DEMO_BOT',
     'AI_BACKTEST',
     'TEST_RUN',
 }
