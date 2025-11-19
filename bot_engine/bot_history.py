@@ -84,14 +84,26 @@ class BotHistoryManager:
                         for entry in self.history:
                             if 'is_simulated' not in entry:
                                 decision_source = entry.get('decision_source', '')
-                                if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT', 'AI'):
+                                # КРИТИЧНО: EXCHANGE_IMPORT и SCRIPT - это реальные сделки
+                                # НО AI может быть как реальным (боты из bots.py), так и симуляцией (ai.py)
+                                # Поэтому для AI проверяем другие признаки
+                                if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT'):
                                     entry['is_simulated'] = False
                                     fixed_history += 1
+                                elif decision_source == 'AI':
+                                    # Для AI проверяем признаки симуляции
+                                    entry['is_simulated'] = self._is_simulated_entry(
+                                        False, entry.get('entry_data'), entry.get('market_data'),
+                                        decision_source, entry.get('reason'), entry.get('bot_id')
+                                    )
+                                    # Если не симуляция, значит реальная сделка бота
+                                    if not entry['is_simulated']:
+                                        fixed_history += 1
                                 else:
                                     # Определяем по другим признакам
                                     entry['is_simulated'] = self._is_simulated_entry(
                                         False, entry.get('entry_data'), entry.get('market_data'),
-                                        decision_source, entry.get('reason')
+                                        decision_source, entry.get('reason'), entry.get('bot_id')
                                     )
                                     if not entry['is_simulated']:
                                         fixed_history += 1
@@ -99,14 +111,26 @@ class BotHistoryManager:
                         for trade in self.trades:
                             if 'is_simulated' not in trade:
                                 decision_source = trade.get('decision_source', '')
-                                if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT', 'AI'):
+                                # КРИТИЧНО: EXCHANGE_IMPORT и SCRIPT - это реальные сделки
+                                # НО AI может быть как реальным (боты из bots.py), так и симуляцией (ai.py)
+                                # Поэтому для AI проверяем другие признаки
+                                if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT'):
                                     trade['is_simulated'] = False
                                     fixed_trades += 1
+                                elif decision_source == 'AI':
+                                    # Для AI проверяем признаки симуляции
+                                    trade['is_simulated'] = self._is_simulated_entry(
+                                        False, trade.get('entry_data'), trade.get('exit_market_data'),
+                                        decision_source, trade.get('close_reason') or trade.get('reason'), trade.get('bot_id')
+                                    )
+                                    # Если не симуляция, значит реальная сделка бота
+                                    if not trade['is_simulated']:
+                                        fixed_trades += 1
                                 else:
                                     # Определяем по другим признакам
                                     trade['is_simulated'] = self._is_simulated_entry(
                                         False, trade.get('entry_data'), trade.get('exit_market_data'),
-                                        decision_source, trade.get('close_reason') or trade.get('reason')
+                                        decision_source, trade.get('close_reason') or trade.get('reason'), trade.get('bot_id')
                                     )
                                     if not trade['is_simulated']:
                                         fixed_trades += 1
@@ -217,8 +241,21 @@ class BotHistoryManager:
         if 'is_simulated' not in entry:
             # Проверяем по decision_source и другим признакам
             decision_source = entry.get('decision_source', '')
-            if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT', 'AI'):
+            # КРИТИЧНО: EXCHANGE_IMPORT и SCRIPT - это реальные сделки
+            # НО AI может быть как реальным (боты из bots.py), так и симуляцией (ai.py)
+            # Поэтому для AI проверяем другие признаки
+            if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT'):
                 entry['is_simulated'] = False  # Реальные сделки
+            elif decision_source == 'AI':
+                # Для AI проверяем признаки симуляции
+                entry['is_simulated'] = self._is_simulated_entry(
+                    False,  # is_simulated_flag
+                    entry.get('entry_data'),
+                    entry.get('market_data'),
+                    decision_source,
+                    entry.get('reason'),
+                    entry.get('bot_id')
+                )
             else:
                 # Проверяем другие признаки симуляции
                 entry['is_simulated'] = self._is_simulated_entry(
@@ -242,8 +279,21 @@ class BotHistoryManager:
         if 'is_simulated' not in trade:
             # Проверяем по decision_source и другим признакам
             decision_source = trade.get('decision_source', '')
-            if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT', 'AI'):
+            # КРИТИЧНО: EXCHANGE_IMPORT и SCRIPT - это реальные сделки
+            # НО AI может быть как реальным (боты из bots.py), так и симуляцией (ai.py)
+            # Поэтому для AI проверяем другие признаки
+            if decision_source in ('EXCHANGE_IMPORT', 'SCRIPT'):
                 trade['is_simulated'] = False  # Реальные сделки
+            elif decision_source == 'AI':
+                # Для AI проверяем признаки симуляции
+                trade['is_simulated'] = self._is_simulated_entry(
+                    False,  # is_simulated_flag
+                    trade.get('entry_data'),
+                    trade.get('exit_market_data'),
+                    decision_source,
+                    trade.get('close_reason') or trade.get('reason'),
+                    trade.get('bot_id')
+                )
             else:
                 # Проверяем другие признаки симуляции
                 trade['is_simulated'] = self._is_simulated_entry(
@@ -427,10 +477,28 @@ class BotHistoryManager:
                             entry_data: Optional[Dict[str, Any]] = None,
                             market_data: Optional[Dict[str, Any]] = None,
                             decision_source: Optional[str] = None,
-                            reason: Optional[str] = None) -> bool:
+                            reason: Optional[str] = None,
+                            bot_id: Optional[str] = None) -> bool:
         """Определяет, является ли запись симулированной"""
         if is_simulated_flag:
             return True
+        
+        # КРИТИЧНО: Проверяем bot_id на признаки AI симуляции
+        # Реальные боты из bots.py имеют bot_id = symbol (например, "BTC", "ETH")
+        # AI симуляции могут иметь bot_id начинающийся с "ai_", "simulation_", "backtest_" и т.д.
+        if bot_id:
+            bot_id_upper = str(bot_id).upper()
+            # Если bot_id содержит маркеры симуляции - это симуляция
+            if any(marker in bot_id_upper for marker in SIMULATION_MARKERS):
+                return True
+            # Если bot_id начинается с "AI_" или "AI_" - это может быть AI симуляция
+            # НО реальные боты тоже могут использовать AI решения, поэтому проверяем дополнительно
+            if bot_id_upper.startswith('AI_') or bot_id_upper.startswith('AI'):
+                # Проверяем, не является ли это реальным ботом (символ монеты)
+                # Реальные боты имеют короткие bot_id (обычно 2-10 символов, без подчеркиваний)
+                # AI симуляции обычно имеют более длинные bot_id с подчеркиваниями
+                if '_' in bot_id and len(bot_id) > 10:
+                    return True
         
         def check_dict(data: Optional[Dict[str, Any]]) -> bool:
             if not data:
@@ -481,7 +549,7 @@ class BotHistoryManager:
             rsi: RSI на момент открытия
             trend: Тренд на момент открытия
         """
-        if self._is_simulated_entry(is_simulated, None, None, decision_source):
+        if self._is_simulated_entry(is_simulated, None, None, decision_source, None, bot_id):
             logger.debug(f"[BOT_HISTORY] ⏭️ Пропускаем запись симуляции (open) для {symbol}")
             return
         
@@ -640,7 +708,7 @@ class BotHistoryManager:
         original_pnl_input = pnl
         original_roi_input = roi
         
-        if self._is_simulated_entry(is_simulated, entry_data, market_data, decision_source, reason):
+        if self._is_simulated_entry(is_simulated, entry_data, market_data, decision_source, reason, bot_id):
             logger.debug(f"[BOT_HISTORY] ⏭️ Пропускаем запись симуляции (close) для {symbol}")
             return
         
