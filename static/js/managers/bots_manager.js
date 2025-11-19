@@ -2837,6 +2837,27 @@ class BotsManager {
             settings.trend_candles_threshold = parseInt(trendCandlesThresholdEl.value);
         }
         
+        // ✅ Enhanced RSI настройки для индивидуальных настроек монеты
+        const enhancedRsiEnabledDupEl = document.getElementById('enhancedRsiEnabledDup');
+        if (enhancedRsiEnabledDupEl) {
+            settings.enhanced_rsi_enabled = enhancedRsiEnabledDupEl.checked;
+        }
+        
+        const enhancedRsiVolumeConfirmDupEl = document.getElementById('enhancedRsiVolumeConfirmDup');
+        if (enhancedRsiVolumeConfirmDupEl) {
+            settings.enhanced_rsi_require_volume_confirmation = enhancedRsiVolumeConfirmDupEl.checked;
+        }
+        
+        const enhancedRsiDivergenceConfirmDupEl = document.getElementById('enhancedRsiDivergenceConfirmDup');
+        if (enhancedRsiDivergenceConfirmDupEl) {
+            settings.enhanced_rsi_require_divergence_confirmation = enhancedRsiDivergenceConfirmDupEl.checked;
+        }
+        
+        const enhancedRsiUseStochRsiDupEl = document.getElementById('enhancedRsiUseStochRsiDup');
+        if (enhancedRsiUseStochRsiDupEl) {
+            settings.enhanced_rsi_use_stoch_rsi = enhancedRsiUseStochRsiDupEl.checked;
+        }
+        
         console.log('[BotsManager] 📋 Собранные настройки:', settings);
         return settings;
     }
@@ -3186,6 +3207,39 @@ class BotsManager {
         const volumeValueEl = document.getElementById('volumeValueInput');
         if (volumeValueEl && settings.volume_value !== undefined) {
             volumeValueEl.value = settings.volume_value;
+        }
+        
+        // ✅ Enhanced RSI настройки для индивидуальных настроек монеты
+        const enhancedRsiEnabledDupEl = document.getElementById('enhancedRsiEnabledDup');
+        if (enhancedRsiEnabledDupEl) {
+            const value = getSettingValue('enhanced_rsi_enabled');
+            if (value !== undefined) {
+                enhancedRsiEnabledDupEl.checked = Boolean(value);
+            }
+        }
+        
+        const enhancedRsiVolumeConfirmDupEl = document.getElementById('enhancedRsiVolumeConfirmDup');
+        if (enhancedRsiVolumeConfirmDupEl) {
+            const value = getSettingValue('enhanced_rsi_require_volume_confirmation');
+            if (value !== undefined) {
+                enhancedRsiVolumeConfirmDupEl.checked = Boolean(value);
+            }
+        }
+        
+        const enhancedRsiDivergenceConfirmDupEl = document.getElementById('enhancedRsiDivergenceConfirmDup');
+        if (enhancedRsiDivergenceConfirmDupEl) {
+            const value = getSettingValue('enhanced_rsi_require_divergence_confirmation');
+            if (value !== undefined) {
+                enhancedRsiDivergenceConfirmDupEl.checked = Boolean(value);
+            }
+        }
+        
+        const enhancedRsiUseStochRsiDupEl = document.getElementById('enhancedRsiUseStochRsiDup');
+        if (enhancedRsiUseStochRsiDupEl) {
+            const value = getSettingValue('enhanced_rsi_use_stoch_rsi');
+            if (value !== undefined) {
+                enhancedRsiUseStochRsiDupEl.checked = Boolean(value);
+            }
         }
         
         console.log('[BotsManager] ✅ Индивидуальные настройки применены к UI');
