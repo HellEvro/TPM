@@ -143,17 +143,9 @@ def get_hardware_id() -> str:
             except Exception as e:
                 logger.warning(f"Не удалось получить Motherboard serial: {e}")
             
-            # MAC адрес ТОЛЬКО если он не случайный (опционально, для дополнительной уникальности)
-            try:
-                mac_raw = uuid.getnode()
-                if mac_raw != 0:
-                    mac = ':'.join(['{:02x}'.format((mac_raw >> elements) & 0xff)
-                                   for elements in range(0, 2*6, 2)][::-1])
-                    
-                    if not _is_random_mac(mac):
-                        components.append(f"MAC:{mac}")
-            except Exception as e:
-                pass
+            # MAC адреса на Windows слишком нестабильные (Windows может менять их после перезагрузки)
+            # Чтобы HWID оставался постоянным, полностью игнорируем MAC адрес
+            logger.debug("MAC адрес (Windows) пропускаем для стабильности HWID")
         
         # 3. Специфичные для Linux данные
         elif platform.system() == 'Linux':
