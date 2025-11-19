@@ -456,6 +456,8 @@ class App {
                         `${data.wallet_data.total_balance.toFixed(2)} USDT`;
                     document.getElementById('availableBalance').textContent = 
                         `${data.wallet_data.available_balance.toFixed(2)} USDT`;
+                    // ВАЖНО: НЕ используем data.wallet_data.realized_pnl для обновления realizedPnL
+                    // так как это общий P&L за всё время, а не за выбранный период
                 }
 
                 // Обновляем таблицу закрытых позиций
@@ -463,6 +465,7 @@ class App {
                 this.updateClosedPnlTable(this.allClosedPnlData, false);
                 
                 // Пересчитываем и обновляем общий P&L за выбранный период
+                // ВАЖНО: всегда используем отфильтрованные данные closed_pnl, а не wallet_data.realized_pnl
                 this.updatePeriodPnL(data.closed_pnl);
             } else {
                 console.error('Failed to get closed PNL data:', data.error);
@@ -497,8 +500,14 @@ class App {
 
     updatePeriodPnL(closedPnlData) {
         // Рассчитываем общий P&L за выбранный период
+        // ВАЖНО: Эта функция должна вызываться только с данными, отфильтрованными по выбранному периоду
         const realizedPnLElement = document.getElementById('realizedPnL');
         if (!realizedPnLElement) return;
+
+        // Проверяем, что мы на странице закрытых позиций
+        if (this.currentTab !== 'closedPnl') {
+            return;
+        }
 
         if (!closedPnlData || closedPnlData.length === 0) {
             realizedPnLElement.textContent = '0.00 USDT';
