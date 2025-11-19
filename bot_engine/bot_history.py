@@ -555,8 +555,9 @@ class BotHistoryManager:
             logger.debug(f"[BOT_HISTORY] ⏭️ Пропускаем запись симуляции (open) для {symbol}")
             return
         
-        # КРИТИЧНО: Проверяем, нет ли уже такой позиции в истории (особенно из EXCHANGE_IMPORT)
+        # КРИТИЧНО: Проверяем, нет ли уже такой позиции в истории
         # Это предотвращает дублирование при перезапуске bots.py
+        # НО: если позиция есть с EXCHANGE_IMPORT, а бот логирует с SCRIPT/AI - это нормально, логируем
         with self.lock:
             for existing_trade in self.trades:
                 if (existing_trade.get('symbol') == symbol and
@@ -565,14 +566,16 @@ class BotHistoryManager:
                     # Проверяем, совпадает ли цена входа (с небольшой погрешностью)
                     existing_entry_price = existing_trade.get('entry_price')
                     if existing_entry_price and abs(float(existing_entry_price) - float(entry_price)) < 0.0001:
-                        # Если это позиция из биржи (EXCHANGE_IMPORT), не логируем повторно
-                        if existing_trade.get('decision_source') == 'EXCHANGE_IMPORT':
-                            logger.info(f"[BOT_HISTORY] ⏭️ Позиция {symbol} {direction} @ {entry_price} уже есть в истории (EXCHANGE_IMPORT), пропускаем дубликат")
+                        existing_source = existing_trade.get('decision_source', '')
+                        # Если это позиция бота (SCRIPT/AI), но мы пытаемся логировать снова - пропускаем
+                        if existing_source in ('SCRIPT', 'AI') and decision_source in ('SCRIPT', 'AI'):
+                            logger.info(f"[BOT_HISTORY] ⏭️ Позиция {symbol} {direction} @ {entry_price} уже залогирована ботом ({existing_source}), пропускаем дубликат")
                             return
-                        # Если это позиция бота (SCRIPT/AI), но мы пытаемся логировать снова - тоже пропускаем
-                        if existing_trade.get('decision_source') in ('SCRIPT', 'AI') and decision_source in ('SCRIPT', 'AI'):
-                            logger.info(f"[BOT_HISTORY] ⏭️ Позиция {symbol} {direction} @ {entry_price} уже залогирована ботом, пропускаем дубликат")
-                            return
+                        # Если это позиция из биржи (EXCHANGE_IMPORT), а бот логирует с SCRIPT/AI - это нормально, продолжаем
+                        if existing_source == 'EXCHANGE_IMPORT' and decision_source in ('SCRIPT', 'AI'):
+                            logger.info(f"[BOT_HISTORY] ℹ️ Позиция {symbol} {direction} @ {entry_price} есть с EXCHANGE_IMPORT, бот залогирует свою версию с {decision_source}")
+                            # Продолжаем логирование - не return!
+                            break
         
         entry = {
             'id': f"open_{bot_id}_{datetime.now().timestamp()}",
