@@ -301,14 +301,42 @@ def main():
     if backup_path:
         print(f"💾 Создан бэкап: {backup_path}")
     
-    # Создаем менеджер и полностью очищаем историю
-    manager = BotHistoryManager(history_file=str(output_path))
-    manager.clear_history()  # КРИТИЧНО: полностью очищаем перед заполнением
+    # КРИТИЧНО: Загружаем существующий файл и сохраняем сделки ботов
+    existing_bot_history = []
+    existing_bot_trades = []
     
-    # Присваиваем новые данные
-    with manager.lock:
-        manager.history = history_entries
-        manager.trades = trade_entries
+    if output_path.exists():
+        try:
+            with open(output_path, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+                existing_history = existing_data.get('history', [])
+                existing_trades = existing_data.get('trades', [])
+                
+                # Сохраняем ТОЛЬКО сделки ботов (decision_source='SCRIPT' или 'AI')
+                # НЕ сохраняем сделки с биржи (EXCHANGE_IMPORT) - они будут добавлены заново
+                for entry in existing_history:
+                    decision_source = entry.get('decision_source', '')
+                    if decision_source in ('SCRIPT', 'AI'):
+                        existing_bot_history.append(entry)
+                
+                for trade in existing_trades:
+                    decision_source = trade.get('decision_source', '')
+                    if decision_source in ('SCRIPT', 'AI'):
+                        existing_bot_trades.append(trade)
+                
+                print(f"📦 Сохранено {len(existing_bot_history)} записей истории ботов")
+                print(f"📦 Сохранено {len(existing_bot_trades)} сделок ботов")
+        except Exception as e:
+            print(f"⚠️ Ошибка загрузки существующего файла: {e}")
+            print("   Продолжаем с пустым файлом...")
+    
+    # Объединяем: сначала сделки ботов, потом сделки с биржи
+    final_history = existing_bot_history + history_entries
+    final_trades = existing_bot_trades + trade_entries
+    
+    print(f"📊 Итого будет записано:")
+    print(f"   История: {len(final_history)} записей ({len(existing_bot_history)} ботов + {len(history_entries)} с биржи)")
+    print(f"   Сделки: {len(final_trades)} сделок ({len(existing_bot_trades)} ботов + {len(trade_entries)} с биржи)")
     
     # Сохраняем напрямую в файл (обходим возможные проблемы с блокировкой)
     import time
@@ -318,8 +346,8 @@ def main():
     for attempt in range(max_retries):
         try:
             data = {
-                'history': history_entries,
-                'trades': trade_entries,
+                'history': final_history,
+                'trades': final_trades,
                 'last_update': datetime.now().isoformat()
             }
             # Атомарная запись через временный файл
@@ -396,7 +424,10 @@ def main():
             else:
                 time.sleep(retry_delay * (attempt + 1))
     
-    print(f"🎉 bot_history.json обновлён: {len(trade_entries)} сделок, {len(history_entries)} записей истории.")
+    print(f"🎉 bot_history.json обновлён:")
+    print(f"   📦 Сделки ботов: {len(existing_bot_trades)} (сохранены)")
+    print(f"   📥 Сделки с биржи: {len(trade_entries)} (добавлены)")
+    print(f"   📊 Всего: {len(final_trades)} сделок, {len(final_history)} записей истории")
 
 
 if __name__ == '__main__':
