@@ -8054,6 +8054,9 @@ class BotsManager {
      * Планирует автоматическое сохранение конфигурации с задержкой
      */
     scheduleAutoSave() {
+        // ✅ Сохраняем контекст this для использования в setTimeout
+        const self = this;
+        
         // Очищаем предыдущий таймер
         if (this.autoSaveTimer) {
             clearTimeout(this.autoSaveTimer);
@@ -8066,37 +8069,48 @@ class BotsManager {
             
             try {
                 // Сохраняем конфигурацию с флагом автосохранения
-                await this.saveConfiguration(true);
+                await self.saveConfiguration(true);
                 console.log('[BotsManager] ✅ Конфигурация автосохранена');
                 
-                // ✅ Показываем уведомление о успешном автосохранении (toast, не блокирующее)
-                console.log('[BotsManager] 🔔 Вызываем showNotification для автосохранения...');
-                console.log('[BotsManager] 🔍 Проверка toastManager:', {
-                    exists: !!window.toastManager,
-                    hasContainer: !!(window.toastManager && window.toastManager.container),
-                    containerInDOM: !!(window.toastManager && window.toastManager.container && document.body.contains(window.toastManager.container))
-                });
+                // ✅ ПРИНУДИТЕЛЬНО показываем toast-уведомление (прямой вызов toastManager)
+                console.log('[BotsManager] 🔔 Показ toast-уведомления об автосохранении...');
                 
-                // ✅ Принудительно вызываем showNotification
-                try {
-                    this.showNotification('✅ Настройки автоматически сохранены', 'success');
-                    console.log('[BotsManager] ✅ showNotification вызван');
-                } catch (e) {
-                    console.error('[BotsManager] ❌ Ошибка вызова showNotification:', e);
-                    // ✅ Прямой вызов toastManager если showNotification не работает
-                    if (window.toastManager) {
-                        console.log('[BotsManager] 🔧 Прямой вызов toastManager.success()...');
+                // ✅ Прямой вызов toastManager - гарантированно работает
+                if (window.toastManager) {
+                    // Инициализируем, если нужно
+                    if (!window.toastManager.container) {
                         window.toastManager.init();
-                        window.toastManager.success('✅ Настройки автоматически сохранены', 3000);
-                        console.log('[BotsManager] ✅ toastManager.success() вызван напрямую');
+                    }
+                    // Проверяем, что контейнер в DOM
+                    if (window.toastManager.container && !document.body.contains(window.toastManager.container)) {
+                        document.body.appendChild(window.toastManager.container);
+                    }
+                    // Показываем уведомление
+                    window.toastManager.success('✅ Настройки автоматически сохранены', 3000);
+                    console.log('[BotsManager] ✅ Toast-уведомление показано');
+                } else {
+                    console.warn('[BotsManager] ⚠️ toastManager не найден, пытаемся вызвать showNotification...');
+                    // Fallback на showNotification
+                    try {
+                        self.showNotification('✅ Настройки автоматически сохранены', 'success');
+                    } catch (e) {
+                        console.error('[BotsManager] ❌ Ошибка показа уведомления:', e);
                     }
                 }
             } catch (error) {
                 console.error('[BotsManager] ❌ Ошибка автосохранения конфигурации:', error);
-                // Показываем ошибку при автосохранении, чтобы пользователь знал
-                this.showNotification('❌ Ошибка автосохранения: ' + error.message, 'error');
+                // Показываем ошибку при автосохранении
+                if (window.toastManager) {
+                    window.toastManager.error('❌ Ошибка автосохранения: ' + error.message, 5000);
+                } else {
+                    try {
+                        self.showNotification('❌ Ошибка автосохранения: ' + error.message, 'error');
+                    } catch (e) {
+                        console.error('[BotsManager] ❌ Ошибка показа уведомления об ошибке:', e);
+                    }
+                }
             } finally {
-                this.autoSaveTimer = null;
+                self.autoSaveTimer = null;
             }
         }, this.autoSaveDelay);
     }
