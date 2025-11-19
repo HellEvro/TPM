@@ -632,7 +632,10 @@ class TradingBot:
                     
                     if ai_manager and ai_manager.risk_manager and self.volume_mode == VolumeMode.FIXED_USDT:
                         # Получаем свечи и баланс
-                        candles = self.exchange.get_chart_data(self.symbol, '6h', limit=50)
+                        # ✅ ИСПРАВЛЕНО: get_chart_data принимает period, а не limit
+                        # Для 6h таймфрейма: 50 свечей × 6ч = 300ч ≈ 12.5 дней, используем '14d'
+                        chart_response = self.exchange.get_chart_data(self.symbol, '6h', '14d')
+                        candles = chart_response.get('data', {}).get('candles', []) if chart_response and chart_response.get('success') else None
                         balance = self._get_available_balance() or 1000  # Fallback
                         
                         if candles and len(candles) >= 20:
@@ -673,6 +676,7 @@ class TradingBot:
                 percent_steps = []
                 margin_amounts = []
             
+            # ✅ КРИТИЧНО: Если режим лимитных ордеров ВЫКЛЮЧЕН - пропускаем ВСЮ логику лимитных ордеров!
             # Если включен набор позиций лимитными ордерами
             if limit_orders_enabled and percent_steps and margin_amounts:
                 # ✅ КРИТИЧНО: Проверяем, не размещены ли уже лимитные ордера
@@ -771,7 +775,7 @@ class TradingBot:
                     if limit_orders_on_exchange:
                         # Ордера есть и в памяти, и на бирже - все в порядке
                         self.logger.warning(f" {self.symbol}: ⚠️ Лимитные ордера уже размещены (в памяти: {len(self.limit_orders)} шт., на бирже: {len(limit_orders_on_exchange)} шт.), пропускаем повторное размещение")
-                        return {'success': False, 'error': 'limit_orders_already_placed'}
+                        return {'success': False, 'error': 'limit_orders_already_placed', 'message': 'Лимитные ордера уже размещены'}
                     else:
                         # Ордера есть в памяти, но НЕТ на бирже - они были удалены!
                         # Очищаем память и разрешаем размещение новых ордеров
@@ -782,6 +786,7 @@ class TradingBot:
                         self.last_limit_orders_count = 0
                         # Продолжаем размещение новых ордеров
                 
+                # ✅ КРИТИЧНО: Если режим лимитных ордеров включен - ВСЕГДА используем его, НЕ рыночный вход!
                 self.logger.info(f" {self.symbol}: ✅ Режим лимитных ордеров включен, размещаем ордера...")
                 return self._enter_position_with_limit_orders(side, percent_steps, margin_amounts)
             else:
@@ -851,7 +856,10 @@ class TradingBot:
                             
                             if ai_manager and ai_manager.risk_manager:
                                 # Получаем свечи для анализа
-                                candles = self.exchange.get_chart_data(self.symbol, '6h', limit=50)
+                                # ✅ ИСПРАВЛЕНО: get_chart_data принимает period, а не limit
+                                # Для 6h таймфрейма: 50 свечей × 6ч = 300ч ≈ 12.5 дней, используем '14d'
+                                chart_response = self.exchange.get_chart_data(self.symbol, '6h', '14d')
+                                candles = chart_response.get('data', {}).get('candles', []) if chart_response and chart_response.get('success') else None
                                 
                                 if candles and len(candles) >= 20:
                                     dynamic_sl = ai_manager.risk_manager.calculate_dynamic_sl(
@@ -877,6 +885,44 @@ class TradingBot:
                         self.logger.warning(f" {self.symbol}: ⚠️ Не удалось установить стоп-лосс")
                 except Exception as stop_error:
                     self.logger.error(f" {self.symbol}: ❌ Ошибка установки стоп-лосса: {stop_error}")
+                
+                # ✅ Устанавливаем тейк-профит
+                try:
+                    from bots import bots_data, bots_data_lock
+                    with bots_data_lock:
+                        auto_config = bots_data.get('auto_bot_config', {})
+                        take_profit_percent = auto_config.get('take_profit_percent', 20.0)
+                    
+                    # Рассчитываем цену тейк-профита
+                    if side == 'LONG':
+                        take_profit_price = self.entry_price * (1 + take_profit_percent / 100.0)
+                    else:  # SHORT
+                        take_profit_price = self.entry_price * (1 - take_profit_percent / 100.0)
+                    
+                    # Устанавливаем тейк-профит через биржу
+                    # Используем метод update_take_profit если доступен, иначе через place_order с take_profit параметром
+                    if hasattr(self.exchange, 'update_take_profit'):
+                        tp_result = self.exchange.update_take_profit(
+                            symbol=self.symbol,
+                            take_profit_price=take_profit_price,
+                            position_side=side
+                        )
+                    else:
+                        # Fallback: используем place_order с параметром take_profit
+                        tp_result = self.exchange.place_order(
+                            symbol=self.symbol,
+                            side=side,
+                            quantity=quantity,
+                            order_type='market',
+                            take_profit=take_profit_price
+                        )
+                    
+                    if tp_result and tp_result.get('success'):
+                        self.logger.info(f" {self.symbol}: ✅ Тейк-профит установлен на {take_profit_percent}% (цена: {take_profit_price:.6f})")
+                    else:
+                        self.logger.warning(f" {self.symbol}: ⚠️ Не удалось установить тейк-профит: {tp_result.get('error', 'unknown error') if tp_result else 'no response'}")
+                except Exception as tp_error:
+                    self.logger.error(f" {self.symbol}: ❌ Ошибка установки тейк-профита: {tp_error}")
                 
                 self.logger.info(f"Entered {side} position: {quantity} at {self.entry_price}")
                 return {

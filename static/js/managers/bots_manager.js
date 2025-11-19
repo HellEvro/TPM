@@ -6479,8 +6479,6 @@ class BotsManager {
         }
         
         // ✅ СБОР СИСТЕМНЫХ НАСТРОЕК (автоматически из системных полей)
-        // Находим все системные поля в configTab
-        const systemInputs = configTab.querySelectorAll('input[id*="Update"], input[id*="Interval"], input[id*="Mode"], input[id*="Timeout"], input[id*="Refresh"], input[id*="Debug"], input[id*="Enhanced"], input[id*="Rsi"][id*="Extreme"], input[id*="Rsi"][id*="Volume"], input[id*="Rsi"][id*="Divergence"]');
         const systemConfig = {};
         
         // ✅ Список системных настроек Enhanced RSI и других системных настроек
@@ -6505,10 +6503,54 @@ class BotsManager {
             'stop_loss_setup_interval'
         ];
         
-        // Собираем системные настройки из всех найденных полей
-        systemInputs.forEach(element => {
+        // ✅ Находим все системные поля в configTab (используем более надежный подход)
+        // Сначала собираем все поля Enhanced RSI по конкретным ID
+        const enhancedRsiFields = [
+            'enhancedRsiEnabled',
+            'enhancedRsiVolumeConfirm',
+            'enhancedRsiDivergenceConfirm',
+            'enhancedRsiUseStochRsi',
+            'rsiExtremeZoneTimeout',
+            'rsiExtremeOversold',
+            'rsiExtremeOverbought',
+            'rsiVolumeMultiplier',
+            'rsiDivergenceLookback'
+        ];
+        
+        enhancedRsiFields.forEach(fieldId => {
+            const element = document.getElementById(fieldId);
+            if (element && !element.closest('#limitOrdersList') && !element.closest('.limit-order-row')) {
+                const configKey = this.mapElementIdToConfigKey(fieldId);
+                if (configKey && systemConfigKeys.includes(configKey)) {
+                    let value;
+                    if (element.type === 'checkbox') {
+                        value = element.checked;
+                    } else if (element.type === 'number') {
+                        const numValue = parseFloat(element.value);
+                        value = isNaN(numValue) ? undefined : numValue;
+                    } else {
+                        value = element.value;
+                    }
+                    
+                    if (value !== undefined && value !== null) {
+                        systemConfig[configKey] = value;
+                        console.log(`[BotsManager] ✅ Собрана Enhanced RSI настройка ${configKey}:`, value);
+                    }
+                }
+            }
+        });
+        
+        // ✅ Находим остальные системные поля (интервалы, режимы и т.д.)
+        // Используем селектор, который ищет по ID (нечувствительный к регистру через проверку)
+        const allInputs = configTab.querySelectorAll('input, select');
+        allInputs.forEach(element => {
             if (!element.id || element.closest('#limitOrdersList') || element.closest('.limit-order-row')) {
                 return; // Пропускаем динамические поля лимитных ордеров
+            }
+            
+            // Пропускаем поля Enhanced RSI, которые уже обработаны выше
+            if (enhancedRsiFields.includes(element.id)) {
+                return;
             }
             
             const configKey = this.mapElementIdToConfigKey(element.id);
