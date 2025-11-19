@@ -944,20 +944,141 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     'last_extreme_candles_ago': None,
                     'calm_candles': None
                 }
+                # Для монет вне зоны входа ExitScam фильтр не проверяется (оптимизация)
+                exit_scam_info = {
+                    'blocked': False,
+                    'reason': 'ExitScam фильтр: RSI вне зоны входа в сделку',
+                    'filter_type': 'exit_scam'
+                }
         
         # Проверяем фильтры если монета в зоне фильтра (LONG/SHORT)
+        # ✅ ИСПРАВЛЕНИЕ: Проверяем фильтры для UI, чтобы показывать блокировки
+        # ⚡ ОПТИМИЗАЦИЯ: Проверяем фильтры ТОЛЬКО для монет в зоне входа (RSI <= 35 для LONG или RSI >= 65 для SHORT)
+        # Это не влияет на производительность бэкенда, так как проверки выполняются только для монет, которые уже должны пойти в лонг/шорт
+        # Используем уже загруженные свечи из переменной candles, не делаем новых запросов к бирже!
         if potential_signal in ['ENTER_LONG', 'ENTER_SHORT']:
-            # ✅ ExitScam и RSI Time Filter НЕ проверяются здесь!
-            # ✅ Они проверяются только при реальном входе в позицию в _enter_position()
-            # Это оптимизация: не проверяем эти фильтры для всех монет при каждом обновлении RSI
-            # ExitScam и RSI Time Filter будут проверены в trading_bot.py:_enter_position() через apply_entry_filters()
-            exit_scam_info = None
-            time_filter_info = None
-            
-            # Для UI можно показать, что фильтры будут проверены при входе
+            # ✅ Проверяем RSI Time Filter для UI
             if len(candles) >= 50:
-                # RSI Time Filter будет проверен в _enter_position() через apply_entry_filters()
-                pass
+                try:
+                    time_filter_result = check_rsi_time_filter(
+                        candles, 
+                        rsi, 
+                        potential_signal, 
+                        symbol=symbol, 
+                        individual_settings=individual_settings
+                    )
+                    if time_filter_result:
+                        time_filter_info = {
+                            'blocked': not time_filter_result.get('allowed', True),
+                            'reason': time_filter_result.get('reason', ''),
+                            'filter_type': 'time_filter',
+                            'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago'),
+                            'calm_candles': time_filter_result.get('calm_candles')
+                        }
+                    else:
+                        time_filter_info = {
+                            'blocked': False,
+                            'reason': 'RSI временной фильтр: проверка не выполнена',
+                            'filter_type': 'time_filter',
+                            'last_extreme_candles_ago': None,
+                            'calm_candles': None
+                        }
+                except Exception as e:
+                    logger.debug(f"{symbol}: Ошибка проверки RSI Time Filter для UI: {e}")
+                    time_filter_info = {
+                        'blocked': False,
+                        'reason': f'Ошибка проверки: {str(e)}',
+                        'filter_type': 'time_filter',
+                        'last_extreme_candles_ago': None,
+                        'calm_candles': None
+                    }
+            else:
+                time_filter_info = {
+                    'blocked': False,
+                    'reason': 'Недостаточно свечей для проверки (требуется минимум 50)',
+                    'filter_type': 'time_filter',
+                    'last_extreme_candles_ago': None,
+                    'calm_candles': None
+                }
+            
+            # ✅ Проверяем ExitScam Filter для UI (используем уже загруженные свечи из candles)
+            # ⚡ ОПТИМИЗАЦИЯ: Используем свечи, которые уже загружены выше, не делаем новый запрос к бирже!
+            try:
+                if len(candles) >= 10:  # Минимум свечей для проверки ExitScam
+                    # Получаем конфиг с учетом индивидуальных настроек
+                    auto_config = bots_data.get('auto_bot_config', {}).copy()
+                    if individual_settings:
+                        for key in ['exit_scam_enabled', 'exit_scam_candles', 
+                                   'exit_scam_single_candle_percent', 'exit_scam_multi_candle_count',
+                                   'exit_scam_multi_candle_percent']:
+                            if key in individual_settings:
+                                auto_config[key] = individual_settings[key]
+                    
+                    exit_scam_enabled = auto_config.get('exit_scam_enabled', True)
+                    exit_scam_candles = auto_config.get('exit_scam_candles', 10)
+                    single_candle_percent = auto_config.get('exit_scam_single_candle_percent', 15.0)
+                    multi_candle_count = auto_config.get('exit_scam_multi_candle_count', 4)
+                    multi_candle_percent = auto_config.get('exit_scam_multi_candle_percent', 50.0)
+                    
+                    exit_scam_allowed = True
+                    exit_scam_reason = 'ExitScam фильтр пройден'
+                    
+                    if exit_scam_enabled and len(candles) >= exit_scam_candles:
+                        # Проверяем последние N свечей (используем уже загруженные свечи!)
+                        recent_candles = candles[-exit_scam_candles:]
+                        
+                        # 1. Проверка отдельных свечей
+                        for candle in recent_candles:
+                            open_price = candle['open']
+                            close_price = candle['close']
+                            price_change = abs((close_price - open_price) / open_price) * 100
+                            
+                            if price_change > single_candle_percent:
+                                exit_scam_allowed = False
+                                exit_scam_reason = f'ExitScam фильтр: одна свеча превысила лимит {single_candle_percent}% (было {price_change:.1f}%)'
+                                break
+                        
+                        # 2. Проверка суммарного изменения (если первая проверка прошла)
+                        if exit_scam_allowed and len(recent_candles) >= multi_candle_count:
+                            multi_candles = recent_candles[-multi_candle_count:]
+                            first_open = multi_candles[0]['open']
+                            last_close = multi_candles[-1]['close']
+                            total_change = abs((last_close - first_open) / first_open) * 100
+                            
+                            if total_change > multi_candle_percent:
+                                exit_scam_allowed = False
+                                exit_scam_reason = f'ExitScam фильтр: {multi_candle_count} свечей превысили суммарный лимит {multi_candle_percent}% (было {total_change:.1f}%)'
+                        
+                        # 3. AI детекция аномалий (если включена и базовые проверки прошли)
+                        if exit_scam_allowed:
+                            try:
+                                from bot_engine.bot_config import AIConfig
+                                if AIConfig.AI_ENABLED and AIConfig.AI_ANOMALY_DETECTION_ENABLED:
+                                    exit_scam_allowed = _run_exit_scam_ai_detection(symbol, candles)
+                                    if not exit_scam_allowed:
+                                        exit_scam_reason = 'ExitScam фильтр: AI обнаружил аномалию'
+                            except ImportError:
+                                pass  # AI модуль не доступен
+                    
+                    exit_scam_info = {
+                        'blocked': not exit_scam_allowed,
+                        'reason': exit_scam_reason,
+                        'filter_type': 'exit_scam'
+                    }
+                else:
+                    # Недостаточно свечей для проверки
+                    exit_scam_info = {
+                        'blocked': False,
+                        'reason': 'Недостаточно свечей для проверки (требуется минимум 10)',
+                        'filter_type': 'exit_scam'
+                    }
+            except Exception as e:
+                logger.debug(f"{symbol}: Ошибка проверки ExitScam Filter для UI: {e}")
+                exit_scam_info = {
+                    'blocked': False,
+                    'reason': f'Ошибка проверки: {str(e)}',
+                    'filter_type': 'exit_scam'
+                }
         
         # ✅ ПРИМЕНЯЕМ БЛОКИРОВКУ ПО SCOPE
         # Scope фильтр (если монета в черном списке или не в белом)
@@ -1019,10 +1140,10 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             'blocked_by_scope': is_blocked_by_scope,
             'has_existing_position': has_existing_position,
             'is_mature': is_mature if enable_maturity_check else True,
-            # ✅ КРИТИЧНО: Флаги блокировки для get_effective_signal
-            # ExitScam и RSI Time Filter проверяются только при реальном входе в позицию, не здесь
-            'blocked_by_exit_scam': False,  # Всегда False здесь, проверка в _enter_position()
-            'blocked_by_rsi_time': False,  # Всегда False здесь, проверка в _enter_position()
+            # ✅ КРИТИЧНО: Флаги блокировки для get_effective_signal и UI
+            # Устанавливаем флаги на основе результатов проверки фильтров для UI
+            'blocked_by_exit_scam': exit_scam_info.get('blocked', False) if exit_scam_info else False,
+            'blocked_by_rsi_time': time_filter_info.get('blocked', False) if time_filter_info else False,
             # ✅ ИНФОРМАЦИЯ О СТАТУСЕ ТОРГОВЛИ: Для визуальных эффектов делистинга
             'trading_status': trading_status,
             'is_delisting': is_delisting
