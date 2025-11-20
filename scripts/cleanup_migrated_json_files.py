@@ -283,6 +283,7 @@ def cleanup_json_files(dry_run=True):
 def main():
     """Главная функция"""
     import sys
+    import traceback
     
     # Настройка кодировки для Windows консоли
     if sys.platform == 'win32':
@@ -296,26 +297,49 @@ def main():
     # Проверяем аргументы
     execute = '--execute' in sys.argv or '-e' in sys.argv
     
-    if execute:
-        print("\n" + "=" * 80)
-        print("[!]  ВНИМАНИЕ: Вы собираетесь удалить JSON файлы!")
-        print("=" * 80)
-        print("Это действие:")
-        print("  - Удалит JSON файлы после миграции в БД")
-        print("  - Создаст резервные копии в data/backup_json_before_migration/")
-        print("  - Необратимо (но резервные копии можно восстановить)")
-        print("=" * 80)
+    try:
+        if execute:
+            print("\n" + "=" * 80)
+            print("[!]  ВНИМАНИЕ: Вы собираетесь удалить JSON файлы!")
+            print("=" * 80)
+            print("Это действие:")
+            print("  - Удалит JSON файлы после миграции в БД")
+            print("  - Создаст резервные копии в data/backup_json_before_migration/")
+            print("  - Необратимо (но резервные копии можно восстановить)")
+            print("=" * 80)
+            print()
+            
+            response = input("Продолжить? (yes/no): ").strip().lower()
+            if response != 'yes':
+                print("[X] Отменено")
+                return
+            
+            print()
+            print("[*] Начинаем удаление JSON файлов...")
+            print()
+            
+            success = cleanup_json_files(dry_run=False)
+            
+            if success:
+                print()
+                print("[OK] Операция завершена успешно!")
+            else:
+                print()
+                print("[ERROR] Операция завершена с ошибками!")
+                sys.exit(1)
+        else:
+            cleanup_json_files(dry_run=True)
+            
+    except KeyboardInterrupt:
         print()
-        
-        response = input("Продолжить? (yes/no): ").strip().lower()
-        if response != 'yes':
-            print("[X] Отменено")
-            return
-        
+        print("[X] Прервано пользователем")
+        sys.exit(1)
+    except Exception as e:
         print()
-        cleanup_json_files(dry_run=False)
-    else:
-        cleanup_json_files(dry_run=True)
+        print(f"[ERROR] Критическая ошибка: {e}")
+        print()
+        traceback.print_exc()
+        sys.exit(1)
 
 
 if __name__ == '__main__':
