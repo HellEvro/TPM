@@ -99,19 +99,121 @@ class AIDatabase:
             logger.debug(f"⚠️ Не удалось проверить файл БД: {e}")
             return False
     
-    def _recreate_database(self):
-        """Удаляет поврежденную БД и создает новую (только при явной ошибке подключения)"""
+    def _backup_database(self) -> Optional[str]:
+        """
+        Создает резервную копию БД перед удалением
+        
+        Returns:
+            Путь к резервной копии или None если не удалось создать
+        """
+        if not os.path.exists(self.db_path):
+            return None
+        
         try:
-            if os.path.exists(self.db_path):
-                # Удаляем поврежденный файл и связанные файлы WAL/SHM
-                os.remove(self.db_path)
-                wal_file = self.db_path + '-wal'
-                shm_file = self.db_path + '-shm'
-                if os.path.exists(wal_file):
-                    os.remove(wal_file)
-                if os.path.exists(shm_file):
-                    os.remove(shm_file)
-                logger.warning(f"🗑️ Удалена поврежденная БД: {self.db_path}")
+            import shutil
+            from datetime import datetime
+            
+            # Создаем имя резервной копии с timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_path = f"{self.db_path}.backup_{timestamp}"
+            
+            # Копируем БД и связанные файлы
+            shutil.copy2(self.db_path, backup_path)
+            
+            # Копируем WAL и SHM файлы если есть
+            wal_file = self.db_path + '-wal'
+            shm_file = self.db_path + '-shm'
+            if os.path.exists(wal_file):
+                shutil.copy2(wal_file, f"{backup_path}-wal")
+            if os.path.exists(shm_file):
+                shutil.copy2(shm_file, f"{backup_path}-shm")
+            
+            logger.warning(f"💾 Создана резервная копия БД: {backup_path}")
+            return backup_path
+        except Exception as e:
+            logger.error(f"❌ Ошибка создания резервной копии БД: {e}")
+            return None
+    
+    def _check_database_has_data(self) -> bool:
+        """
+        Проверяет, есть ли данные в БД (пытается прочитать хотя бы одну таблицу)
+        
+        Returns:
+            True если в БД есть данные, False если БД пуста или повреждена
+        """
+        if not os.path.exists(self.db_path):
+            return False
+        
+        try:
+            # Пытаемся подключиться в режиме только чтения
+            conn = sqlite3.connect(f"file:{self.db_path}?mode=ro", uri=True, timeout=10.0)
+            cursor = conn.cursor()
+            
+            # Проверяем наличие таблиц
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = cursor.fetchall()
+            
+            if not tables:
+                conn.close()
+                return False
+            
+            # Пытаемся посчитать записи в основных таблицах
+            main_tables = ['simulated_trades', 'bot_trades', 'exchange_trades', 'candles_history']
+            for table in main_tables:
+                try:
+                    cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                    count = cursor.fetchone()[0]
+                    if count > 0:
+                        conn.close()
+                        return True
+                except:
+                    continue
+            
+            conn.close()
+            return False
+        except Exception as e:
+            logger.debug(f"⚠️ Не удалось проверить данные в БД: {e}")
+            return False
+    
+    def _recreate_database(self):
+        """
+        Удаляет поврежденную БД и создает новую (только при явной ошибке подключения)
+        
+        ВАЖНО: Перед удалением создает резервную копию и проверяет наличие данных
+        """
+        if not os.path.exists(self.db_path):
+            return
+        
+        try:
+            # Проверяем, есть ли данные в БД
+            has_data = self._check_database_has_data()
+            
+            if has_data:
+                # Если есть данные - ОБЯЗАТЕЛЬНО создаем резервную копию
+                backup_path = self._backup_database()
+                if not backup_path:
+                    # Не удаляем БД если не удалось создать резервную копию!
+                    logger.error(f"❌ КРИТИЧНО: Не удалось создать резервную копию БД с данными!")
+                    logger.error(f"❌ БД НЕ БУДЕТ УДАЛЕНА для защиты данных!")
+                    raise Exception("Не удалось создать резервную копию БД с данными - удаление отменено")
+                logger.warning(f"⚠️ ВНИМАНИЕ: БД содержит данные, создана резервная копия: {backup_path}")
+            else:
+                # Если данных нет - все равно создаем резервную копию на всякий случай
+                self._backup_database()
+            
+            # Удаляем поврежденный файл и связанные файлы WAL/SHM
+            wal_file = self.db_path + '-wal'
+            shm_file = self.db_path + '-shm'
+            
+            if os.path.exists(wal_file):
+                os.remove(wal_file)
+            if os.path.exists(shm_file):
+                os.remove(shm_file)
+            os.remove(self.db_path)
+            
+            logger.warning(f"🗑️ Удалена поврежденная БД: {self.db_path}")
+            if has_data:
+                logger.warning(f"💾 Данные сохранены в резервной копии - можно восстановить при необходимости")
         except Exception as e:
             logger.error(f"❌ Ошибка удаления поврежденной БД: {e}")
             raise
@@ -2357,6 +2459,121 @@ class AIDatabase:
         except Exception as e:
             logger.error(f"❌ Ошибка очистки старых снимков: {e}")
             return 0
+    
+    def list_backups(self) -> List[Dict[str, Any]]:
+        """
+        Список доступных резервных копий БД
+        
+        Returns:
+            Список словарей с информацией о резервных копиях
+        """
+        backups = []
+        db_dir = os.path.dirname(self.db_path)
+        db_name = os.path.basename(self.db_path)
+        
+        try:
+            if not os.path.exists(db_dir):
+                return backups
+            
+            # Ищем все файлы резервных копий
+            for filename in os.listdir(db_dir):
+                if filename.startswith(f"{db_name}.backup_") and not filename.endswith('-wal') and not filename.endswith('-shm'):
+                    backup_path = os.path.join(db_dir, filename)
+                    try:
+                        file_size = os.path.getsize(backup_path)
+                        # Извлекаем timestamp из имени файла
+                        timestamp_str = filename.replace(f"{db_name}.backup_", "")
+                        try:
+                            backup_time = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S")
+                        except:
+                            backup_time = datetime.fromtimestamp(os.path.getmtime(backup_path))
+                        
+                        backups.append({
+                            'path': backup_path,
+                            'filename': filename,
+                            'size_mb': file_size / 1024 / 1024,
+                            'created_at': backup_time.isoformat(),
+                            'timestamp': timestamp_str
+                        })
+                    except Exception as e:
+                        logger.debug(f"⚠️ Ошибка обработки резервной копии {filename}: {e}")
+            
+            # Сортируем по дате создания (новые первыми)
+            backups.sort(key=lambda x: x['created_at'], reverse=True)
+            return backups
+        except Exception as e:
+            logger.error(f"❌ Ошибка получения списка резервных копий: {e}")
+            return []
+    
+    def restore_from_backup(self, backup_path: str = None) -> bool:
+        """
+        Восстанавливает БД из резервной копии
+        
+        Args:
+            backup_path: Путь к резервной копии (если None, используется последняя)
+        
+        Returns:
+            True если восстановление успешно, False в противном случае
+        """
+        try:
+            import shutil
+            
+            # Если путь не указан, используем последнюю резервную копию
+            if backup_path is None:
+                backups = self.list_backups()
+                if not backups:
+                    logger.error("❌ Нет доступных резервных копий")
+                    return False
+                backup_path = backups[0]['path']
+                logger.info(f"📦 Используется последняя резервная копия: {backup_path}")
+            
+            if not os.path.exists(backup_path):
+                logger.error(f"❌ Резервная копия не найдена: {backup_path}")
+                return False
+            
+            # Создаем резервную копию текущей БД (если она существует)
+            if os.path.exists(self.db_path):
+                current_backup = self._backup_database()
+                if current_backup:
+                    logger.info(f"💾 Текущая БД сохранена как: {current_backup}")
+            
+            # Восстанавливаем БД
+            shutil.copy2(backup_path, self.db_path)
+            
+            # Восстанавливаем WAL и SHM файлы если есть
+            wal_backup = f"{backup_path}-wal"
+            shm_backup = f"{backup_path}-shm"
+            wal_file = self.db_path + '-wal'
+            shm_file = self.db_path + '-shm'
+            
+            if os.path.exists(wal_backup):
+                shutil.copy2(wal_backup, wal_file)
+            elif os.path.exists(wal_file):
+                os.remove(wal_file)
+            
+            if os.path.exists(shm_backup):
+                shutil.copy2(shm_backup, shm_file)
+            elif os.path.exists(shm_file):
+                os.remove(shm_file)
+            
+            logger.info(f"✅ БД восстановлена из резервной копии: {backup_path}")
+            
+            # Проверяем, что БД работает
+            try:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT 1")
+                    logger.info("✅ Восстановленная БД проверена и работает")
+                    return True
+            except Exception as e:
+                logger.error(f"❌ Восстановленная БД не работает: {e}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Ошибка восстановления БД из резервной копии: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return False
     
     def get_database_stats(self) -> Dict[str, Any]:
         """Получает общую статистику базы данных"""
