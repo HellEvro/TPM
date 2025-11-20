@@ -399,9 +399,15 @@ class LicenseGeneratorGUI(tk.Tk):
             if license_file:
                 license_file = Path(license_file).name
             
+            # Обрабатываем hw_id (может быть None для developer лицензий)
+            hw_id_display = recipient.get('hw_id') or 'NONE (developer)'
+            if hw_id_display and hw_id_display != 'NONE (developer)':
+                if len(hw_id_display) > 20:
+                    hw_id_display = hw_id_display[:20] + "..."
+            
             self.recipients_tree.insert("", tk.END, values=(
                 recipient['id'],
-                recipient['hw_id'][:20] + "..." if len(recipient['hw_id']) > 20 else recipient['hw_id'],
+                hw_id_display,
                 recipient['days'],
                 start_date,
                 end_date,
@@ -474,9 +480,15 @@ class LicenseGeneratorGUI(tk.Tk):
             if license_file:
                 license_file = Path(license_file).name
             
+            # Обрабатываем hw_id (может быть None для developer лицензий)
+            hw_id_display = recipient.get('hw_id') or 'NONE (developer)'
+            if hw_id_display and hw_id_display != 'NONE (developer)':
+                if len(hw_id_display) > 20:
+                    hw_id_display = hw_id_display[:20] + "..."
+            
             self.recipients_tree.insert("", tk.END, values=(
                 recipient['id'],
-                recipient['hw_id'][:20] + "..." if len(recipient['hw_id']) > 20 else recipient['hw_id'],
+                hw_id_display,
                 recipient['days'],
                 start_date,
                 end_date,
