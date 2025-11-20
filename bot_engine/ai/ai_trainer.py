@@ -2764,6 +2764,21 @@ class AITrainer:
             # Собираем все симулированные сделки для сохранения
             all_simulated_trades = []
             
+            # Генерируем уникальный ID процесса для координации параллельной работы
+            import socket
+            hostname = socket.gethostname()
+            process_id = f"{hostname}-{os.getpid()}-{int(time_module.time())}"
+            
+            # Получаем доступные символы (не заблокированные другими процессами)
+            if self.ai_db:
+                available_symbols = list(candles_data.keys())
+                try:
+                    available_symbols = self.ai_db.get_available_symbols(available_symbols, process_id, hostname)
+                    if len(available_symbols) < len(candles_data):
+                        logger.info(f"📊 Доступно для обработки: {len(available_symbols)}/{len(candles_data)} монет (остальные заняты другими процессами)")
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка получения доступных символов: {e}, используем все")
+            
             for symbol_idx, (symbol, candle_info) in enumerate(candles_data.items(), 1):
                 # Показываем прогресс каждые 50 монет или для первых 10 монет
                 if symbol_idx % progress_interval == 0 or symbol_idx <= 10:
@@ -3925,7 +3940,10 @@ class AITrainer:
                 finally:
                     # Освобождаем блокировку символа (для параллельной работы на разных ПК)
                     if self.ai_db:
-                        self.ai_db.release_lock(symbol, process_id)
+                        try:
+                            self.ai_db.release_lock(symbol, process_id)
+                        except Exception as lock_error:
+                            logger.debug(f"⚠️ Ошибка освобождения блокировки для {symbol}: {lock_error}")
             
             # Win Rate targets теперь сохраняются в БД автоматически
             
