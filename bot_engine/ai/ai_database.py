@@ -24,10 +24,12 @@ import sqlite3
 import json
 import os
 import threading
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Any, Tuple
 from contextlib import contextmanager
+from functools import wraps
 import logging
 
 logger = logging.getLogger('AI.Database')
@@ -115,50 +117,100 @@ class AIDatabase:
             raise
     
     @contextmanager
-    def _get_connection(self):
-        """Контекстный менеджер для работы с БД"""
-        try:
-            conn = sqlite3.connect(self.db_path, timeout=30.0)
-            conn.row_factory = sqlite3.Row
-            # Включаем WAL режим для лучшей производительности (параллельные чтения)
-            conn.execute("PRAGMA journal_mode=WAL")
-            # Оптимизируем для быстрых записей
-            conn.execute("PRAGMA synchronous=NORMAL")  # Быстрее чем FULL, но безопаснее чем OFF
-            conn.execute("PRAGMA cache_size=-64000")  # 64MB кеш
-            conn.execute("PRAGMA temp_store=MEMORY")  # Временные таблицы в памяти
-        except sqlite3.DatabaseError as e:
-            error_str = str(e).lower()
-            # Восстанавливаем БД ТОЛЬКО при явной ошибке "file is not a database"
-            # Это означает, что файл точно поврежден и не является SQLite БД
-            if "file is not a database" in error_str or ("not a database" in error_str and "unable to open" not in error_str):
-                logger.error(f"❌ Файл БД поврежден (явная ошибка SQLite): {self.db_path}")
-                logger.error(f"❌ Ошибка: {e}")
-                try:
-                    conn.close()
-                except:
-                    pass
-                # Восстанавливаем БД только при явной ошибке
-                self._recreate_database()
-                # Пытаемся подключиться снова
-                conn = sqlite3.connect(self.db_path, timeout=30.0)
-                conn.row_factory = sqlite3.Row
-                conn.execute("PRAGMA journal_mode=WAL")
-                conn.execute("PRAGMA synchronous=NORMAL")
-                conn.execute("PRAGMA cache_size=-64000")
-                conn.execute("PRAGMA temp_store=MEMORY")
-                logger.info(f"✅ БД восстановлена: {self.db_path}")
-            else:
-                # Другие ошибки (блокировка, недоступность и т.д.) - не восстанавливаем
-                raise
+    def _get_connection(self, retry_on_locked: bool = True, max_retries: int = 5):
+        """
+        Контекстный менеджер для работы с БД с поддержкой retry при блокировках
         
-        try:
-            yield conn
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            raise e
-        finally:
-            conn.close()
+        Args:
+            retry_on_locked: Повторять попытки при ошибке "database is locked"
+            max_retries: Максимальное количество попыток при блокировке
+        """
+        last_error = None
+        
+        for attempt in range(max_retries if retry_on_locked else 1):
+            try:
+                # Увеличиваем timeout для операций записи при параллельном доступе
+                # 60 секунд должно быть достаточно для работы через сеть
+                conn = sqlite3.connect(self.db_path, timeout=60.0)
+                conn.row_factory = sqlite3.Row
+                
+                # Включаем WAL режим для лучшей производительности (параллельные чтения)
+                # WAL позволяет нескольким читателям работать одновременно с одним писателем
+                conn.execute("PRAGMA journal_mode=WAL")
+                # Оптимизируем для быстрых записей
+                conn.execute("PRAGMA synchronous=NORMAL")  # Быстрее чем FULL, но безопаснее чем OFF
+                conn.execute("PRAGMA cache_size=-64000")  # 64MB кеш
+                conn.execute("PRAGMA temp_store=MEMORY")  # Временные таблицы в памяти
+                
+                # Успешное подключение
+                try:
+                    yield conn
+                    conn.commit()
+                    conn.close()
+                    return  # Успешно выполнили операцию
+                except sqlite3.OperationalError as e:
+                    error_str = str(e).lower()
+                    # Обрабатываем ошибки блокировки
+                    if "database is locked" in error_str or "locked" in error_str:
+                        conn.rollback()
+                        conn.close()
+                        last_error = e
+                        if retry_on_locked and attempt < max_retries - 1:
+                            wait_time = (attempt + 1) * 0.5  # Экспоненциальная задержка: 0.5s, 1s, 1.5s...
+                            logger.debug(f"⚠️ БД заблокирована (попытка {attempt + 1}/{max_retries}), ждем {wait_time:.1f}s...")
+                            time.sleep(wait_time)
+                            continue  # Повторяем попытку
+                        else:
+                            # Превышено количество попыток
+                            logger.warning(f"⚠️ БД заблокирована после {max_retries} попыток")
+                            raise
+                    else:
+                        # Другие OperationalError - не повторяем
+                        conn.rollback()
+                        conn.close()
+                        raise
+                except Exception as e:
+                    try:
+                        conn.rollback()
+                    except:
+                        pass
+                    try:
+                        conn.close()
+                    except:
+                        pass
+                    raise e
+                    
+            except sqlite3.DatabaseError as e:
+                error_str = str(e).lower()
+                # Восстанавливаем БД ТОЛЬКО при явной ошибке "file is not a database"
+                if "file is not a database" in error_str or ("not a database" in error_str and "unable to open" not in error_str):
+                    logger.error(f"❌ Файл БД поврежден (явная ошибка SQLite): {self.db_path}")
+                    logger.error(f"❌ Ошибка: {e}")
+                    # Восстанавливаем БД только при явной ошибке
+                    self._recreate_database()
+                    # Пытаемся подключиться снова (только один раз)
+                    if attempt == 0:
+                        continue
+                    else:
+                        raise
+                elif "database is locked" in error_str or "locked" in error_str:
+                    # Ошибка блокировки при подключении
+                    last_error = e
+                    if retry_on_locked and attempt < max_retries - 1:
+                        wait_time = (attempt + 1) * 0.5
+                        logger.debug(f"⚠️ БД заблокирована при подключении (попытка {attempt + 1}/{max_retries}), ждем {wait_time:.1f}s...")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        logger.warning(f"⚠️ БД заблокирована при подключении после {max_retries} попыток")
+                        raise
+                else:
+                    # Другие ошибки - не повторяем
+                    raise
+        
+        # Если дошли сюда, значит все попытки исчерпаны
+        if last_error:
+            raise last_error
     
     def _init_database(self):
         """Создает все таблицы и индексы"""
