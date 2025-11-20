@@ -138,11 +138,8 @@ class AITrainer:
         # Файл для отслеживания сделок с AI решениями
         self.ai_decisions_file = os.path.normpath(os.path.join(self.data_dir, 'ai_decisions_tracking.json'))
         
-        # Файл для хранения симулированных сделок ИИ (виртуальные сделки)
-        self.simulated_trades_file = os.path.normpath(os.path.join(self.data_dir, 'simulated_trades.json'))
-        
-        # Файл для истории сделок трейдера из биржи (загружается через API, дополняется, не перезаписывается)
-        self.exchange_trades_history_file = os.path.normpath(os.path.join(self.data_dir, 'exchange_trades_history.json'))
+        # ПРИМЕЧАНИЕ: Все данные теперь хранятся в БД (ai_data.db)
+        # JSON файлы больше не используются
         
         # Инициализируем хранилище данных AI
         try:
@@ -559,60 +556,64 @@ class AITrainer:
         """
         Загрузить данные истории трейдов
         
-        AI получает сделки из следующих источников:
-        1. data/ai/history_data.json - данные собранные через API из bots.py
-        2. data/bot_history.json - основной файл где bots.py сохраняет все сделки
+        AI получает сделки из следующих источников (в порядке приоритета):
+        1. БД (ai_data.db) - основной источник, все сделки ботов уже там
+        2. data/bot_history.json - fallback если БД недоступна
         3. API endpoint /api/bots/trades - если файлы недоступны
         
         ВАЖНО: AI использует ТОЛЬКО закрытые сделки с PnL (status='CLOSED' и pnl != None)
         Это нужно для обучения на реальных результатах торговли
+        
+        ПРИМЕЧАНИЕ: history_data.json больше не используется, так как все данные в БД
         """
         # Убрано: все DEBUG логи о загрузке сделок - слишком шумно
         
         trades = []
         source_counts = {}
         
-        # 1. Пробуем загрузить из data/ai/history_data.json (данные собранные через API)
-        try:
-            history_file = os.path.normpath(os.path.join(self.data_dir, 'history_data.json'))
-            if os.path.exists(history_file):
-                # Убрано: logger.debug(f"📖 Источник 1: {history_file}") - слишком шумно
-                try:
-                    with open(history_file, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                except json.JSONDecodeError as json_error:
-                    logger.warning(f"   ⚠️ Файл истории поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}): {history_file}")
-                    raise  # Пробрасываем дальше для обработки в общем except
-                
-                # Извлекаем все сделки из истории
-                latest = data.get('latest', {})
-                history = data.get('history', [])
-                
-                # Добавляем сделки из latest
-                latest_trades = latest.get('trades', []) if latest else []
-                if latest_trades:
-                    trades.extend(latest_trades)
-                    # Убрано: logger.debug(f"   ✅ Загружено {len(latest_trades)} сделок из 'latest'") - слишком шумно
-                
-                # Добавляем сделки из истории
-                history_trades_count = 0
-                for entry in history:
-                    entry_trades = entry.get('trades', [])
-                    if entry_trades:
-                        trades.extend(entry_trades)
-                        history_trades_count += len(entry_trades)
-                
-                if history_trades_count > 0:
-                    # Убрано: logger.debug(f"   ✅ Загружено {history_trades_count} сделок из 'history'") - слишком шумно
-                    pass
-                
-                source_counts['history_data.json'] = len(latest_trades) + history_trades_count
-            else:
-                logger.debug(f"   ⏳ Файл {history_file} не найден")
-        except Exception as e:
-            logger.warning(f"   ⚠️ Ошибка загрузки history_data.json: {e}")
+        # 1. ПРИОРИТЕТ: Загружаем из БД (основной источник)
+        if self.ai_db:
+            try:
+                # Получаем все реальные сделки ботов из БД
+                db_trades = self.ai_db.get_trades_for_training(
+                    include_simulated=False,
+                    include_real=True,
+                    include_exchange=False,
+                    limit=None
+                )
+                if db_trades:
+                    # Конвертируем формат БД в формат для обучения
+                    for trade in db_trades:
+                        # Преобразуем данные из БД в формат, ожидаемый AI
+                        converted_trade = {
+                            'id': f"db_{trade.get('symbol')}_{trade.get('timestamp', '')}",
+                            'timestamp': trade.get('timestamp') or trade.get('entry_time'),
+                            'bot_id': trade.get('bot_id', trade.get('symbol')),
+                            'symbol': trade.get('symbol'),
+                            'direction': trade.get('direction'),
+                            'entry_price': trade.get('entry_price'),
+                            'exit_price': trade.get('exit_price'),
+                            'pnl': trade.get('pnl'),
+                            'roi': trade.get('roi'),
+                            'status': 'CLOSED',
+                            'decision_source': trade.get('decision_source', 'SCRIPT'),
+                            'rsi': trade.get('rsi'),
+                            'trend': trade.get('trend'),
+                            'close_timestamp': trade.get('close_timestamp') or trade.get('exit_time'),
+                            'close_reason': trade.get('close_reason'),
+                            'is_successful': trade.get('is_successful', False),
+                            'is_simulated': False
+                        }
+                        trades.append(converted_trade)
+                    
+                    source_counts['database'] = len(trades)
+                    # Если данные есть в БД, возвращаем их (не загружаем из JSON)
+                    if trades:
+                        return trades
+            except Exception as e:
+                logger.debug(f"   ⚠️ Ошибка загрузки из БД: {e}, используем fallback")
         
-        # 2. Пробуем загрузить напрямую из data/bot_history.json (основной файл bots.py)
+        # 2. Fallback: Пробуем загрузить напрямую из data/bot_history.json (основной файл bots.py)
         try:
             bot_history_file = os.path.normpath(os.path.join('data', 'bot_history.json'))
             if os.path.exists(bot_history_file):
@@ -769,7 +770,7 @@ class AITrainer:
         if simulated_count > 0:
             logger.info(f"   ⚠️ Отфильтровано симулированных/бэктест: {simulated_count}")
         logger.info(f"   💡 AI будет обучаться на {len(closed_trades)} сделках БОТОВ (из bot_history.json)")
-        logger.info(f"   📦 История биржи загружается отдельно в exchange_trades_history.json")
+        logger.info(f"   📦 История биржи загружается из БД")
         
         if len(closed_trades) < 10:
             logger.warning("=" * 80)
@@ -792,7 +793,7 @@ class AITrainer:
     
     def _save_simulated_trades(self, simulated_trades: List[Dict]) -> None:
         """
-        Сохраняет симулированные сделки в БД для последующего обучения
+        Сохраняет симулированные сделки в БД
         
         Args:
             simulated_trades: Список симулированных сделок
@@ -800,43 +801,11 @@ class AITrainer:
         if not simulated_trades:
             return
         
-        # Используем БД если доступна
-        if self.ai_db:
-            try:
-                # Добавляем метку времени и флаг симуляции
-                for trade in simulated_trades:
-                    trade['is_simulated'] = True
-                    trade['simulation_timestamp'] = datetime.now().isoformat()
-                    if 'status' not in trade:
-                        trade['status'] = 'CLOSED'
-                
-                # Получаем текущую сессию обучения (если есть)
-                training_session_id = getattr(self, '_current_training_session_id', None)
-                
-                # Сохраняем в БД
-                saved_count = self.ai_db.save_simulated_trades(simulated_trades, training_session_id)
-                
-                if saved_count > 0:
-                    total_count = self.ai_db.count_simulated_trades()
-                    logger.info(f"💾 Сохранено {saved_count} симулированных сделок в БД (всего: {total_count})")
-                
-                return
-            except Exception as e:
-                logger.warning(f"⚠️ Ошибка сохранения симуляций в БД: {e}, используем JSON fallback")
+        if not self.ai_db:
+            logger.error("❌ БД недоступна! Невозможно сохранить симуляции. Проверьте инициализацию БД.")
+            return
         
-        # Fallback на JSON (для обратной совместимости)
         try:
-            # Загружаем существующие сделки
-            existing_trades = []
-            if os.path.exists(self.simulated_trades_file):
-                try:
-                    with open(self.simulated_trades_file, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        existing_trades = data.get('trades', [])
-                except (json.JSONDecodeError, Exception) as e:
-                    logger.debug(f"⚠️ Ошибка загрузки симулированных сделок: {e}")
-                    existing_trades = []
-            
             # Добавляем метку времени и флаг симуляции
             for trade in simulated_trades:
                 trade['is_simulated'] = True
@@ -844,52 +813,18 @@ class AITrainer:
                 if 'status' not in trade:
                     trade['status'] = 'CLOSED'
             
-            # Объединяем с существующими (избегаем дубликатов по ID или ключевым полям)
-            existing_ids = {
-                (t.get('symbol'), t.get('entry_time'), t.get('exit_time'), t.get('entry_price'), t.get('exit_price'))
-                for t in existing_trades
-            }
+            # Получаем текущую сессию обучения (если есть)
+            training_session_id = getattr(self, '_current_training_session_id', None)
             
-            new_trades = []
-            for trade in simulated_trades:
-                trade_key = (
-                    trade.get('symbol'),
-                    trade.get('entry_time'),
-                    trade.get('exit_time'),
-                    trade.get('entry_price'),
-                    trade.get('exit_price')
-                )
-                if trade_key not in existing_ids:
-                    new_trades.append(trade)
-                    existing_ids.add(trade_key)
+            # Сохраняем в БД
+            saved_count = self.ai_db.save_simulated_trades(simulated_trades, training_session_id)
             
-            # Сохраняем все сделки
-            all_trades = existing_trades + new_trades
-            
-            # Ограничиваем количество (последние 50000 сделок, ~11MB)
-            # Это обеспечивает достаточный объем данных для обучения без чрезмерного размера файла
-            MAX_SIMULATED_TRADES = 50000
-            if len(all_trades) > MAX_SIMULATED_TRADES:
-                removed_count = len(all_trades) - MAX_SIMULATED_TRADES
-                all_trades = all_trades[-MAX_SIMULATED_TRADES:]
-                logger.debug(f"💾 Ограничение размера: удалено {removed_count} старых симуляций (осталось {len(all_trades)})")
-            
-            data = {
-                'last_update': datetime.now().isoformat(),
-                'total_trades': len(all_trades),
-                'trades': all_trades
-            }
-            
-            # Атомарная запись
-            temp_file = f"{self.simulated_trades_file}.tmp"
-            with open(temp_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_file, self.simulated_trades_file)
-            
-            if new_trades:
-                logger.debug(f"💾 Сохранено {len(new_trades)} новых симулированных сделок (всего: {len(all_trades)})")
+            if saved_count > 0:
+                total_count = self.ai_db.count_simulated_trades()
+                logger.info(f"💾 Сохранено {saved_count} симулированных сделок в БД (всего: {total_count})")
         except Exception as e:
-            logger.warning(f"⚠️ Ошибка сохранения симулированных сделок: {e}")
+            logger.error(f"❌ Ошибка сохранения симуляций в БД: {e}")
+            raise
     
     def _create_exchange_for_history(self):
         """
@@ -1132,42 +1067,11 @@ class AITrainer:
         if not new_trades:
             return
         
-        # Используем БД если доступна
-        if self.ai_db:
-            try:
-                # Добавляем метки
-                for trade in new_trades:
-                    trade['is_simulated'] = False
-                    trade['is_real'] = True
-                    trade['source'] = trade.get('source', 'exchange_api')
-                    if 'saved_timestamp' not in trade:
-                        trade['saved_timestamp'] = datetime.now().isoformat()
-                    if 'status' not in trade:
-                        trade['status'] = 'CLOSED'
-                
-                # Сохраняем в БД
-                saved_count = self.ai_db.save_exchange_trades(new_trades)
-                
-                if saved_count > 0:
-                    logger.debug(f"💾 Сохранено {saved_count} новых сделок с биржи в БД")
-                
-                return
-            except Exception as e:
-                logger.warning(f"⚠️ Ошибка сохранения сделок биржи в БД: {e}, используем JSON fallback")
+        if not self.ai_db:
+            logger.error("❌ БД недоступна! Невозможно сохранить сделки биржи. Проверьте инициализацию БД.")
+            return
         
-        # Fallback на JSON (для обратной совместимости)
         try:
-            # Загружаем существующие сделки
-            existing_trades = []
-            if os.path.exists(self.exchange_trades_history_file):
-                try:
-                    with open(self.exchange_trades_history_file, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        existing_trades = data.get('trades', [])
-                except (json.JSONDecodeError, Exception) as e:
-                    logger.debug(f"⚠️ Ошибка загрузки истории сделок биржи: {e}")
-                    existing_trades = []
-            
             # Добавляем метки
             for trade in new_trades:
                 trade['is_simulated'] = False
@@ -1178,51 +1082,15 @@ class AITrainer:
                 if 'status' not in trade:
                     trade['status'] = 'CLOSED'
             
-            # Объединяем с существующими (избегаем дубликатов)
-            existing_ids = {
-                (t.get('symbol'), t.get('timestamp'), t.get('close_timestamp'), 
-                 t.get('entry_price'), t.get('exit_price'), t.get('id'), t.get('orderId'))
-                for t in existing_trades
-            }
+            # Сохраняем в БД
+            saved_count = self.ai_db.save_exchange_trades(new_trades)
             
-            added_trades = []
-            for trade in new_trades:
-                trade_key = (
-                    trade.get('symbol'),
-                    trade.get('timestamp'),
-                    trade.get('close_timestamp'),
-                    trade.get('entry_price'),
-                    trade.get('exit_price'),
-                    trade.get('id'),
-                    trade.get('orderId')
-                )
-                if trade_key not in existing_ids:
-                    added_trades.append(trade)
-                    existing_ids.add(trade_key)
-            
-            # ДОПОЛНЯЕМ существующие сделки новыми (не перезаписываем!)
-            all_trades = existing_trades + added_trades
-            
-            # Ограничиваем количество (последние 100000 сделок)
-            if len(all_trades) > 100000:
-                all_trades = all_trades[-100000:]
-            
-            data = {
-                'last_update': datetime.now().isoformat(),
-                'total_trades': len(all_trades),
-                'trades': all_trades
-            }
-            
-            # Атомарная запись
-            temp_file = f"{self.exchange_trades_history_file}.tmp"
-            with open(temp_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(temp_file, self.exchange_trades_history_file)
-            
-            if added_trades:
-                logger.info(f"💾 ДОПОЛНЕНО {len(added_trades)} новых сделок из истории биржи (всего: {len(all_trades)})")
+            if saved_count > 0:
+                total_count = self.ai_db.count_exchange_trades()
+                logger.info(f"💾 Сохранено {saved_count} новых сделок биржи в БД (всего: {total_count})")
         except Exception as e:
-            logger.warning(f"⚠️ Ошибка сохранения истории сделок биржи: {e}")
+            logger.error(f"❌ Ошибка сохранения сделок биржи в БД: {e}")
+            raise
     
     def _migrate_json_to_database(self):
         """
@@ -1267,46 +1135,28 @@ class AITrainer:
         Returns:
             Список сделок из истории биржи
         """
-        # Используем БД если доступна
-        if self.ai_db:
-            try:
-                # Получаем все сделки биржи из БД
-                trades = self.ai_db.get_trades_for_training(
-                    include_simulated=False,
-                    include_real=False,
-                    include_exchange=True,
-                    limit=None
-                )
-                
-                # Фильтруем только сделки биржи
-                exchange_trades = [t for t in trades if t.get('source') == 'EXCHANGE']
-                
-                if exchange_trades:
-                    logger.debug(f"📊 Загружено {len(exchange_trades)} сделок биржи из БД")
-                
-                return exchange_trades
-            except Exception as e:
-                logger.warning(f"⚠️ Ошибка загрузки сделок биржи из БД: {e}, используем JSON fallback")
+        if not self.ai_db:
+            logger.error("❌ БД недоступна! Невозможно загрузить сделки биржи. Проверьте инициализацию БД.")
+            return []
         
-        # Fallback на JSON (для обратной совместимости)
         try:
-            if not os.path.exists(self.exchange_trades_history_file):
-                return []
+            # Получаем все сделки биржи из БД
+            trades = self.ai_db.get_trades_for_training(
+                include_simulated=False,
+                include_real=False,
+                include_exchange=True,
+                limit=None
+            )
             
-            with open(self.exchange_trades_history_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+            # Фильтруем только сделки биржи
+            exchange_trades = [t for t in trades if t.get('source') == 'EXCHANGE']
             
-            trades = data.get('trades', [])
+            if exchange_trades:
+                logger.debug(f"📊 Загружено {len(exchange_trades)} сделок биржи из БД")
             
-            # Фильтруем только закрытые сделки с PnL
-            closed_trades = [
-                t for t in trades
-                if t.get('status') == 'CLOSED' and t.get('pnl') is not None and t.get('is_real', True)
-            ]
-            
-            return closed_trades
-        except (json.JSONDecodeError, Exception) as e:
-            logger.debug(f"⚠️ Ошибка загрузки истории сделок биржи: {e}")
+            return exchange_trades
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки сделок биржи из БД: {e}")
             return []
     
     def _update_exchange_trades_history(self) -> None:
@@ -1320,7 +1170,7 @@ class AITrainer:
         
         КАК РАБОТАЕТ:
         - Загружает историю через exchange.get_closed_pnl()
-        - Сохраняет в exchange_trades_history.json
+        - Сохраняет в БД (exchange_trades)
         - ДОПОЛНЯЕТ файл (не перезаписывает!)
         - Избегает дубликатов по ключевым полям
         """
@@ -1345,7 +1195,7 @@ class AITrainer:
                 # Проверяем итоговое количество
                 final_count = len(self._load_saved_exchange_trades())
                 logger.info(f"✅ История сделок биржи обновлена: добавлено {len(new_trades)} новых сделок")
-                logger.info(f"   📊 Всего в файле exchange_trades_history.json: {final_count} сделок")
+                logger.info(f"   📊 Всего в БД: {final_count} сделок биржи")
             else:
                 if existing_count > 0:
                     logger.info(f"💡 Новых сделок в истории биржи не найдено (в файле уже {existing_count} сделок)")
@@ -1954,7 +1804,7 @@ class AITrainer:
         
         ИСПОЛЬЗУЕТ ДВА ИСТОЧНИКА ДАННЫХ:
         1. bot_history.json - сделки ботов (текущие сделки)
-        2. exchange_trades_history.json - история сделок трейдера из биржи (загружается через API)
+        2. БД (exchange_trades) - история сделок трейдера из биржи (загружается через API)
         
         Связывает свечи с реальными сделками:
         - Что было на свечах когда открыли позицию (RSI, тренд, волатильность)
@@ -2012,7 +1862,7 @@ class AITrainer:
             else:
                 bot_trades = self._load_history_data()
             
-            # 2. Загружаем историю сделок трейдера из биржи (exchange_trades_history.json или БД)
+            # 2. Загружаем историю сделок трейдера из биржи (из БД)
             exchange_trades = self._load_saved_exchange_trades()
             
             # 3. Объединяем сделки из обоих источников (избегаем дубликатов)
@@ -2056,7 +1906,7 @@ class AITrainer:
             if len(trades) < 10:
                 logger.warning(f"⚠️ Недостаточно сделок для обучения (есть {len(trades)})")
                 logger.warning(f"   🤖 Сделки ботов (bot_history.json): {len(bot_trades)}")
-                logger.warning(f"   📈 Сделки биржи (exchange_trades_history.json): {len(exchange_trades)}")
+                logger.warning(f"   📈 Сделки биржи (из БД): {len(exchange_trades)}")
                 logger.info("💡 Накопите больше сделок - AI будет обучаться на вашем опыте!")
                 self._record_training_event(
                     'real_trades_training',
@@ -2069,7 +1919,7 @@ class AITrainer:
             
             logger.info(f"📊 Загружено {len(trades)} сделок ДЛЯ ОБУЧЕНИЯ ИИ (объединенные данные)")
             logger.info(f"   🤖 Из bot_history.json (сделки БОТОВ): {len(bot_trades)}")
-            logger.info(f"   📈 Из exchange_trades_history.json (сделки БИРЖИ): {len(exchange_trades)}")
+            logger.info(f"   📈 Из БД (сделки БИРЖИ): {len(exchange_trades)}")
             if len(exchange_trades) > 0:
                 logger.info(f"   ✅ ИСТОРИЯ БИРЖИ ИСПОЛЬЗУЕТСЯ ДЛЯ ОБУЧЕНИЯ ИИ!")
             else:
@@ -2467,7 +2317,7 @@ class AITrainer:
             
             logger.info(f"✅ Обработано {processed_trades} сделок ДЛЯ ОБУЧЕНИЯ ИИ")
             logger.info(f"   📦 Из bot_history.json (сделки ботов): {processed_from_bot_history}")
-            logger.info(f"   📦 Из истории биржи (exchange_trades_history.json): {processed_from_exchange}")
+            logger.info(f"   📦 Из истории биржи (БД): {processed_from_exchange}")
             logger.info(f"   ✅ Успешных: {len(successful_samples)} (PnL > 0)")
             logger.info(f"   ❌ Неуспешных: {len(failed_samples)} (PnL <= 0)")
             logger.info(f"   ⏭️ Пропущено: {skipped_trades}")
@@ -2667,12 +2517,12 @@ class AITrainer:
                 )
             
             # КРИТИЧНО: Сначала генерируем симуляции на исторических данных
-            # Это создает simulated_trades.json для последующего обучения
+            # Это создает симуляции в БД для последующего обучения
             try:
                 logger.info("=" * 80)
                 logger.info("🎮 ГЕНЕРАЦИЯ AI СИМУЛЯЦИЙ НА ИСТОРИЧЕСКИХ ДАННЫХ")
                 logger.info("=" * 80)
-                logger.info("💡 Это создаст simulated_trades.json для обучения AI")
+                logger.info("💡 Это создаст симуляции в БД для обучения AI")
                 self.train_on_historical_data()
                 logger.info("✅ Генерация симуляций завершена")
             except Exception as hist_error:
@@ -4635,9 +4485,9 @@ class AITrainer:
         """
         Получить количество сделок для обучения
         
-        Возвращает количество закрытых сделок с PnL из:
-        - data/bot_history.json (основной файл bots.py)
-        - data/ai/history_data.json (данные через API)
+        Возвращает количество закрытых сделок с PnL из БД (ai_data.db)
+        - bot_trades - реальные сделки ботов
+        - exchange_trades - сделки с биржи
         
         ВАЖНО: Используются ТОЛЬКО закрытые сделки с PnL (status='CLOSED' и pnl != None)
         """

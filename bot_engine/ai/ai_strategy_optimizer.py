@@ -138,32 +138,53 @@ class AIStrategyOptimizer:
             logger.info(f"         - {key}: {prev_value} → {next_value}")
     
     def _load_history_data(self) -> List[Dict]:
-        """Загрузить историю трейдов"""
+        """
+        Загрузить историю трейдов
+        
+        ПРИОРИТЕТ: БД (если доступна), затем bot_history.json
+        history_data.json больше не используется, так как все данные в БД
+        """
         trades = []
         
-        # 1. Пробуем загрузить из data/ai/history_data.json (данные собранные через API)
+        # 1. ПРИОРИТЕТ: Загружаем из БД (если доступна)
         try:
-            history_file = os.path.join(self.data_dir, 'history_data.json')
-            if os.path.exists(history_file):
-                try:
-                    with open(history_file, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                except json.JSONDecodeError as json_error:
-                    logger.warning(f"⚠️ Файл истории поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}): {history_file}")
-                    raise  # Пробрасываем дальше для обработки в общем except
-                
-                latest = data.get('latest', {})
-                history = data.get('history', [])
-                
-                if latest:
-                    trades.extend(latest.get('trades', []))
-                
-                for entry in history:
-                    trades.extend(entry.get('trades', []))
-                
-                # Убрано: logger.debug(f"📊 Загружено {len(trades)} сделок из history_data.json") - слишком шумно
+            from bot_engine.ai.ai_database import get_ai_database
+            ai_db = get_ai_database()
+            if ai_db:
+                db_trades = ai_db.get_trades_for_training(
+                    include_simulated=False,
+                    include_real=True,
+                    include_exchange=False,
+                    limit=None
+                )
+                if db_trades:
+                    # Конвертируем формат БД в формат для обучения
+                    for trade in db_trades:
+                        converted_trade = {
+                            'id': f"db_{trade.get('symbol')}_{trade.get('timestamp', '')}",
+                            'timestamp': trade.get('timestamp') or trade.get('entry_time'),
+                            'bot_id': trade.get('bot_id', trade.get('symbol')),
+                            'symbol': trade.get('symbol'),
+                            'direction': trade.get('direction'),
+                            'entry_price': trade.get('entry_price'),
+                            'exit_price': trade.get('exit_price'),
+                            'pnl': trade.get('pnl'),
+                            'roi': trade.get('roi'),
+                            'status': 'CLOSED',
+                            'decision_source': trade.get('decision_source', 'SCRIPT'),
+                            'rsi': trade.get('rsi'),
+                            'trend': trade.get('trend'),
+                            'close_timestamp': trade.get('close_timestamp') or trade.get('exit_time'),
+                            'close_reason': trade.get('close_reason'),
+                            'is_successful': trade.get('is_successful', False),
+                            'is_simulated': False
+                        }
+                        trades.append(converted_trade)
+                    
+                    if trades:
+                        return trades
         except Exception as e:
-            logger.debug(f"⚠️ Ошибка загрузки history_data.json: {e}")
+            logger.debug(f"⚠️ Ошибка загрузки из БД: {e}, используем fallback")
         
         # 2. Пробуем загрузить напрямую из data/bot_history.json (основной файл bots.py)
         try:
