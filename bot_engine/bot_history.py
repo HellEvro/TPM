@@ -18,9 +18,12 @@ logger = logging.getLogger(__name__)
 # Файл для хранения истории
 HISTORY_FILE = 'data/bot_history.json'
 
-# Ограничения на количество записей (None = без ограничений, для обучения ботов)
-MAX_HISTORY_ENTRIES = None  # Ранее было 10000
-MAX_TRADE_ENTRIES = None    # Ранее было 5000
+# Ограничения на количество записей в JSON файле
+# КРИТИЧНО: Для обучения AI все данные в БД (ai_data.db)
+# JSON файл нужен только для быстрого доступа через API (UI отображение)
+# Ограничиваем размер, чтобы файл не рос бесконечно
+MAX_HISTORY_ENTRIES = 1000  # Последние 1000 действий (достаточно для UI)
+MAX_TRADE_ENTRIES = 1000    # Последние 1000 сделок (достаточно для UI)
 
 # Типы действий
 ACTION_TYPES = {
@@ -175,7 +178,14 @@ class BotHistoryManager:
             self.trades = []
     
     def _save_history(self):
-        """Сохраняет историю в файл (атомарная запись через временный файл)"""
+        """
+        Сохраняет историю в файл (атомарная запись через временный файл)
+        
+        КРИТИЧНО: 
+        - История действий (BOT_START, BOT_STOP, SIGNAL) - только для UI, ограниченная
+        - Сделки (trades) - НЕ сохраняем в JSON, они уже в БД!
+        - JSON нужен только для быстрого доступа к истории действий через API
+        """
         import time
         max_retries = 3
         retry_delay = 0.1
@@ -183,10 +193,23 @@ class BotHistoryManager:
         for attempt in range(max_retries):
             try:
                 with self.lock:
+                    # Ограничиваем размер истории действий (только для UI)
+                    history_to_save = self.history
+                    if MAX_HISTORY_ENTRIES is not None and len(history_to_save) > MAX_HISTORY_ENTRIES:
+                        history_to_save = history_to_save[-MAX_HISTORY_ENTRIES:]
+                    
+                    # КРИТИЧНО: Сделки НЕ сохраняем в JSON - они уже в БД!
+                    # В JSON оставляем только последние N сделок для быстрого fallback (если БД недоступна)
+                    trades_to_save = []
+                    if MAX_TRADE_ENTRIES is not None and not self.ai_db:
+                        # Сохраняем только последние N сделок для fallback (только если БД недоступна)
+                        trades_to_save = self.trades[-MAX_TRADE_ENTRIES:] if len(self.trades) > MAX_TRADE_ENTRIES else self.trades.copy()
+                    
                     data = {
-                        'history': self.history,
-                        'trades': self.trades,
-                        'last_update': datetime.now().isoformat()
+                        'history': history_to_save,
+                        'trades': trades_to_save,  # Только для fallback если БД недоступна
+                        'last_update': datetime.now().isoformat(),
+                        'note': 'История действий для UI. Сделки в БД (ai_data.db). JSON только для fallback.'
                     }
                     # Атомарная запись через временный файл
                     from pathlib import Path
@@ -279,9 +302,7 @@ class BotHistoryManager:
         
         with self.lock:
             self.history.append(entry)
-            # Ограничиваем размер истории (если установлен лимит)
-            if MAX_HISTORY_ENTRIES is not None and len(self.history) > MAX_HISTORY_ENTRIES:
-                self.history = self.history[-MAX_HISTORY_ENTRIES:]
+            # Ограничение размера выполняется при сохранении в _save_history()
         self._save_history()
     
     def _add_trade_entry(self, trade: Dict[str, Any]):
@@ -363,9 +384,7 @@ class BotHistoryManager:
             
             # Добавляем сделку
             self.trades.append(trade)
-            # Ограничиваем размер (если установлен лимит)
-            if MAX_TRADE_ENTRIES is not None and len(self.trades) > MAX_TRADE_ENTRIES:
-                self.trades = self.trades[-MAX_TRADE_ENTRIES:]
+            # Ограничение размера выполняется при сохранении в _save_history()
         
         self._save_history()
     
@@ -999,6 +1018,8 @@ class BotHistoryManager:
         """
         Получает историю торговых сделок
         
+        ПРИОРИТЕТ: БД (если доступна), затем JSON fallback
+        
         Args:
             symbol: Фильтр по символу
             trade_type: Фильтр по направлению (LONG/SHORT)
@@ -1007,6 +1028,76 @@ class BotHistoryManager:
         Returns:
             Список сделок (от новых к старым)
         """
+        # ПРИОРИТЕТ: Загружаем из БД (если доступна)
+        if self.ai_db:
+            try:
+                trades = self.ai_db.get_bot_trades(
+                    symbol=symbol,
+                    bot_id=None,
+                    status='CLOSED',  # Только закрытые сделки для UI
+                    decision_source=None,
+                    min_pnl=None,
+                    max_pnl=None,
+                    limit=limit,
+                    offset=0
+                )
+                
+                # Фильтр по направлению
+                if trade_type:
+                    direction_upper = trade_type.upper()
+                    trades = [t for t in trades if (t.get('direction') or '').upper() == direction_upper]
+                
+                # Фильтр по периоду
+                if period:
+                    trades = self._filter_by_period(trades, period, ['exit_time', 'entry_time'])
+                
+                # Конвертируем формат БД в формат для API
+                result = []
+                for trade in trades:
+                    converted = {
+                        'id': trade.get('trade_id') or f"db_{trade.get('id')}",
+                        'timestamp': trade.get('entry_time'),
+                        'bot_id': trade.get('bot_id'),
+                        'symbol': trade.get('symbol'),
+                        'direction': trade.get('direction'),
+                        'size': trade.get('position_size_coins'),
+                        'entry_price': trade.get('entry_price'),
+                        'exit_price': trade.get('exit_price'),
+                        'pnl': trade.get('pnl'),
+                        'roi': trade.get('roi'),
+                        'status': trade.get('status', 'CLOSED'),
+                        'decision_source': trade.get('decision_source', 'SCRIPT'),
+                        'rsi': trade.get('entry_rsi'),
+                        'trend': trade.get('entry_trend'),
+                        'close_timestamp': trade.get('exit_time'),
+                        'close_reason': trade.get('close_reason'),
+                        'is_successful': trade.get('is_successful', False),
+                        'is_simulated': bool(trade.get('is_simulated', 0))
+                    }
+                    # Восстанавливаем JSON поля если есть
+                    if trade.get('entry_data_json'):
+                        try:
+                            import json
+                            converted['entry_data'] = json.loads(trade['entry_data_json'])
+                        except:
+                            pass
+                    if trade.get('exit_market_data_json'):
+                        try:
+                            import json
+                            converted['exit_market_data'] = json.loads(trade['exit_market_data_json'])
+                        except:
+                            pass
+                    result.append(converted)
+                
+                # Сортируем от новых к старым
+                result.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+                
+                if result:
+                    return result[:limit]
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка загрузки сделок из БД: {e}, используем JSON fallback")
+        
+        # Fallback: загружаем из JSON (только для UI, не для обучения)
         with self.lock:
             filtered = self.trades.copy()
             
@@ -1026,84 +1117,124 @@ class BotHistoryManager:
             filtered = self._filter_by_period(filtered, period, ['close_timestamp', 'timestamp'])
             
             # Сортируем от новых к старым
-            filtered.sort(key=lambda x: x['timestamp'], reverse=True)
+            filtered.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
             
             # Ограничиваем количество
             return filtered[:limit]
     
     def get_bot_statistics(self, symbol: Optional[str] = None, period: Optional[str] = None) -> Dict:
-        """Получает агрегированную статистику по истории и сделкам"""
+        """
+        Получает агрегированную статистику по истории и сделкам
+        
+        ПРИОРИТЕТ: БД для сделок (если доступна), JSON для истории действий
+        """
+        # ПРИОРИТЕТ: Загружаем сделки из БД (если доступна)
+        trades = []
+        if self.ai_db:
+            try:
+                db_trades = self.ai_db.get_bot_trades(
+                    symbol=symbol,
+                    bot_id=None,
+                    status=None,  # Все сделки для статистики
+                    decision_source=None,
+                    min_pnl=None,
+                    max_pnl=None,
+                    limit=None,  # Все сделки для статистики
+                    offset=0
+                )
+                
+                # Конвертируем формат БД
+                for trade in db_trades:
+                    converted = {
+                        'id': trade.get('trade_id') or f"db_{trade.get('id')}",
+                        'timestamp': trade.get('entry_time'),
+                        'symbol': trade.get('symbol'),
+                        'status': trade.get('status', 'CLOSED'),
+                        'pnl': trade.get('pnl'),
+                        'close_timestamp': trade.get('exit_time')
+                    }
+                    trades.append(converted)
+                
+                # Фильтр по периоду
+                if period:
+                    trades = self._filter_by_period(trades, period, ['close_timestamp', 'timestamp'])
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка загрузки сделок из БД для статистики: {e}, используем JSON fallback")
+        
+        # Fallback: загружаем из JSON (только если БД недоступна)
+        if not trades:
+            with self.lock:
+                trades = self.trades.copy()
+                if symbol:
+                    trades = [t for t in trades if t.get('symbol') == symbol]
+                trades = self._filter_by_period(trades, period, ['close_timestamp', 'timestamp'])
+        
+        # История действий - только из JSON (не хранится в БД, только для UI)
         with self.lock:
-            trades = self.trades.copy()
             history = self.history.copy()
-
-            # Собираем список всех доступных символов
-            all_symbols_set = {
-                entry.get('symbol')
-                for entry in self.history
-                if entry.get('symbol')
-            }
-            all_symbols_set.update(
-                trade.get('symbol')
-                for trade in self.trades
-                if trade.get('symbol')
-            )
-            all_symbols = sorted(all_symbols_set)
-
-            # Фильтры
             if symbol:
-                trades = [t for t in trades if t.get('symbol') == symbol]
                 history = [h for h in history if h.get('symbol') == symbol]
-
-            trades = self._filter_by_period(trades, period, ['close_timestamp', 'timestamp'])
             history = self._filter_by_period(history, period, ['timestamp'])
 
-            closed_trades = [t for t in trades if t.get('status') == 'CLOSED']
-            open_trades = [t for t in trades if t.get('status') == 'OPEN']
-            profitable = [t for t in closed_trades if t.get('pnl', 0) > 0]
-            losing = [t for t in closed_trades if t.get('pnl', 0) < 0]
+        # Собираем список всех доступных символов
+        all_symbols_set = {
+            entry.get('symbol')
+            for entry in history
+            if entry.get('symbol')
+        }
+        all_symbols_set.update(
+            trade.get('symbol')
+            for trade in trades
+            if trade.get('symbol')
+        )
+        all_symbols = sorted(all_symbols_set)
 
-            total_pnl = sum(t.get('pnl', 0) for t in closed_trades)
-            avg_pnl = total_pnl / len(closed_trades) if closed_trades else 0
-            win_rate = (len(profitable) / len(closed_trades) * 100) if closed_trades else 0
+        closed_trades = [t for t in trades if t.get('status') == 'CLOSED']
+        open_trades = [t for t in trades if t.get('status') == 'OPEN']
+        profitable = [t for t in closed_trades if t.get('pnl', 0) > 0]
+        losing = [t for t in closed_trades if t.get('pnl', 0) < 0]
 
-            best_trade = max(closed_trades, key=lambda x: x.get('pnl', 0)) if closed_trades else None
-            worst_trade = min(closed_trades, key=lambda x: x.get('pnl', 0)) if closed_trades else None
+        total_pnl = sum(t.get('pnl', 0) for t in closed_trades)
+        avg_pnl = total_pnl / len(closed_trades) if closed_trades else 0
+        win_rate = (len(profitable) / len(closed_trades) * 100) if closed_trades else 0
 
-            filtered_symbols_set = {
-                entry.get('symbol')
-                for entry in history
-                if entry.get('symbol')
-            }
-            filtered_symbols_set.update(
-                trade.get('symbol')
-                for trade in trades
-                if trade.get('symbol')
-            )
+        best_trade = max(closed_trades, key=lambda x: x.get('pnl', 0)) if closed_trades else None
+        worst_trade = min(closed_trades, key=lambda x: x.get('pnl', 0)) if closed_trades else None
 
-            signals_count = sum(
-                1 for entry in history
-                if (entry.get('action_type') or '').upper() == 'SIGNAL'
-            )
+        filtered_symbols_set = {
+            entry.get('symbol')
+            for entry in history
+            if entry.get('symbol')
+        }
+        filtered_symbols_set.update(
+            trade.get('symbol')
+            for trade in trades
+            if trade.get('symbol')
+        )
 
-            return {
-                'total_actions': len(history),
-                'total_trades': len(closed_trades),
-                'total_trades_overall': len(trades),
-                'open_trades': len(open_trades),
-                'signals_count': signals_count,
-                'profitable_trades': len(profitable),
-                'losing_trades': len(losing),
-                'win_rate': win_rate,
-                'success_rate': win_rate,
-                'total_pnl': total_pnl,
-                'avg_pnl': avg_pnl,
-                'best_trade': best_trade,
-                'worst_trade': worst_trade,
-                'symbols': all_symbols,
-                'symbols_filtered': sorted(filtered_symbols_set),
-                'symbol': symbol if symbol else 'ALL',
-            }
+        signals_count = sum(
+            1 for entry in history
+            if (entry.get('action_type') or '').upper() == 'SIGNAL'
+        )
+
+        return {
+            'total_actions': len(history),
+            'total_trades': len(closed_trades),
+            'total_trades_overall': len(trades),
+            'open_trades': len(open_trades),
+            'signals_count': signals_count,
+            'profitable_trades': len(profitable),
+            'losing_trades': len(losing),
+            'win_rate': win_rate,
+            'success_rate': win_rate,
+            'total_pnl': total_pnl,
+            'avg_pnl': avg_pnl,
+            'best_trade': best_trade,
+            'worst_trade': worst_trade,
+            'symbols': all_symbols,
+            'symbols_filtered': sorted(filtered_symbols_set),
+            'symbol': symbol if symbol else 'ALL',
+        }
     
     def clear_history(self, symbol: Optional[str] = None):
         """

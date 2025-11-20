@@ -43,10 +43,10 @@ class AIDataCollector:
         # Создаем директорию для данных
         os.makedirs(self.data_dir, exist_ok=True)
         
-        # Файлы для хранения данных
+        # Файлы для хранения данных (только для временных данных, основные данные в БД)
         self.market_data_file = os.path.join(self.data_dir, 'market_data.json')
         self.bots_data_file = os.path.join(self.data_dir, 'bots_data.json')
-        self.history_data_file = os.path.join(self.data_dir, 'history_data.json')
+        # ПРИМЕЧАНИЕ: history_data.json больше не используется - все данные в БД
         
         logger.info("✅ AIDataCollector инициализирован")
     
@@ -348,52 +348,9 @@ class AIDataCollector:
             if history_response and history_response.get('success'):
                 collected_data['actions'] = history_response.get('history', [])
             
-            # Сохраняем данные
-            existing_data = self._load_data(self.history_data_file)
-            if 'history' not in existing_data:
-                existing_data['history'] = []
-            
-            # КРИТИЧНО: Сохраняем только новые сделки, а не все каждый раз!
-            # Это предотвращает экспоненциальный рост размера файла
-            existing_trade_ids = set()
-            for entry in existing_data['history']:
-                for trade in entry.get('trades', []):
-                    trade_id = trade.get('id') or trade.get('timestamp')
-                    if trade_id:
-                        existing_trade_ids.add(trade_id)
-            
-            # Фильтруем только новые сделки
-            new_trades = []
-            for trade in collected_data.get('trades', []):
-                trade_id = trade.get('id') or trade.get('timestamp')
-                if trade_id and trade_id not in existing_trade_ids:
-                    new_trades.append(trade)
-                    existing_trade_ids.add(trade_id)
-            
-            # Добавляем только если есть новые сделки
-            if new_trades:
-                new_entry = {
-                    'timestamp': collected_data['timestamp'],
-                    'trades': new_trades,  # Только новые сделки!
-                    'statistics': collected_data.get('statistics', {}),
-                    'actions': collected_data.get('actions', [])
-                }
-                existing_data['history'].append(new_entry)
-            
-            # Ограничиваем историю (максимум 100 записей вместо 1000)
-            if len(existing_data['history']) > 100:
-                existing_data['history'] = existing_data['history'][-100:]
-            
-            existing_data['last_update'] = datetime.now().isoformat()
-            # В latest сохраняем только последние 100 сделок для быстрого доступа
-            latest_trades = collected_data.get('trades', [])[-100:]
-            existing_data['latest'] = {
-                'timestamp': collected_data['timestamp'],
-                'trades': latest_trades,
-                'statistics': collected_data.get('statistics', {})
-            }
-            
-            self._save_data(self.history_data_file, existing_data)
+            # КРИТИЧНО: Все данные теперь сохраняются в БД через bot_history.py -> save_bot_trade()
+            # history_data.json больше не используется - все данные в БД
+            # Не сохраняем в JSON, чтобы не засорять файловую систему
             
             trades_count = len(collected_data.get('trades', []))
             # Убрано: logger.debug(f"✅ Собрано данных: {trades_count} сделок") - слишком шумно

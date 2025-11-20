@@ -785,6 +785,32 @@ class AIDatabase:
         
         return saved_count
     
+    def count_exchange_trades(self) -> int:
+        """Подсчитывает количество сделок биржи"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM exchange_trades")
+            return cursor.fetchone()[0]
+    
+    def count_bot_trades(self, symbol: Optional[str] = None, is_simulated: Optional[bool] = None) -> int:
+        """Подсчитывает количество сделок ботов"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            query = "SELECT COUNT(*) FROM bot_trades WHERE 1=1"
+            params = []
+            
+            if symbol:
+                query += " AND symbol = ?"
+                params.append(symbol)
+            
+            if is_simulated is not None:
+                query += " AND is_simulated = ?"
+                params.append(1 if is_simulated else 0)
+            
+            cursor.execute(query, params)
+            return cursor.fetchone()[0]
+    
     # ==================== МЕТОДЫ ДЛЯ РЕШЕНИЙ AI ====================
     
     def save_ai_decision(self, decision: Dict[str, Any]) -> int:
