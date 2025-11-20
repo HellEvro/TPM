@@ -82,95 +82,82 @@ def save_maturity_check_cache():
         logger.error(f" ❌ Ошибка сохранения кэша: {e}")
 
 def load_mature_coins_storage(expected_coins_count=None):
-    """Загружает постоянное хранилище зрелых монет из БД (с fallback на JSON)"""
+    """Загружает постоянное хранилище зрелых монет из БД"""
     global mature_coins_storage, maturity_data_invalidated
     try:
-        # ПРИОРИТЕТ: Загружаем из БД
+        # Загружаем из БД
         from bot_engine.storage import load_mature_coins as storage_load_mature
         loaded_data = storage_load_mature()
-        loaded_from_db = bool(loaded_data)
         
-        # FALLBACK: Если в БД нет данных, пробуем загрузить из JSON
-        if not loaded_data and os.path.exists(MATURE_COINS_FILE):
-            try:
-                with open(MATURE_COINS_FILE, 'r', encoding='utf-8') as f:
-                    loaded_data = json.load(f)
+        # ✅ ПРОВЕРКА КОНФИГУРАЦИИ: Сравниваем настройки из БД с текущими
+        need_recalculation = False
+        if loaded_data:
+            # 🎯 ПРОВЕРКА 1: Количество монет
+            if expected_coins_count is not None and len(loaded_data) != expected_coins_count:
+                logger.warning(f" 🔄 Количество монет изменилось: БД={len(loaded_data)}, биржа={expected_coins_count}")
+                need_recalculation = True
             
-            # ✅ ПРОВЕРКА КОНФИГУРАЦИИ: Сравниваем настройки из файла/БД с текущими
-            need_recalculation = False
-            if loaded_data:
-                # 🎯 ПРОВЕРКА 1: Количество монет
-                if expected_coins_count is not None and len(loaded_data) != expected_coins_count:
-                    logger.warning(f" 🔄 Количество монет изменилось: файл={len(loaded_data)}, биржа={expected_coins_count}")
-                    need_recalculation = True
+            # Берем первую монету для проверки настроек
+            first_coin = list(loaded_data.values())[0]
+            if 'maturity_data' in first_coin and 'details' in first_coin['maturity_data']:
+                db_min_required = first_coin['maturity_data']['details'].get('min_required')
                 
-                # Берем первую монету для проверки настроек
-                first_coin = list(loaded_data.values())[0]
-                if 'maturity_data' in first_coin and 'details' in first_coin['maturity_data']:
-                    file_min_required = first_coin['maturity_data']['details'].get('min_required')
+                # Получаем текущие настройки
+                from bots_modules.imports_and_globals import bots_data, bots_data_lock
+                with bots_data_lock:
+                    config = bots_data.get('auto_bot_config', {})
+                
+                current_min_candles = config.get('min_candles_for_maturity', MIN_CANDLES_FOR_MATURITY)
+                current_min_rsi_low = config.get('min_rsi_low', MIN_RSI_LOW)
+                current_max_rsi_high = config.get('max_rsi_high', MAX_RSI_HIGH)
+                
+                # Проверяем, изменились ли настройки
+                if (db_min_required != current_min_candles or 
+                    first_coin['maturity_data']['details'].get('config_min_rsi_low') != current_min_rsi_low or
+                    first_coin['maturity_data']['details'].get('config_max_rsi_high') != current_max_rsi_high):
                     
-                    # Получаем текущие настройки
-                    from bots_modules.imports_and_globals import bots_data, bots_data_lock
-                    with bots_data_lock:
-                        config = bots_data.get('auto_bot_config', {})
+                    logger.warning(f" ⚠️ Настройки зрелости изменились!")
+                    logger.warning(f" БД: min_candles={db_min_required}, min_rsi={first_coin['maturity_data']['details'].get('config_min_rsi_low')}, max_rsi={first_coin['maturity_data']['details'].get('config_max_rsi_high')}")
+                    logger.warning(f" Текущие: min_candles={current_min_candles}, min_rsi={current_min_rsi_low}, max_rsi={current_max_rsi_high}")
+                    logger.warning(f" 🔄 Пересчитываем данные зрелости...")
                     
-                    current_min_candles = config.get('min_candles_for_maturity', MIN_CANDLES_FOR_MATURITY)
-                    current_min_rsi_low = config.get('min_rsi_low', MIN_RSI_LOW)
-                    current_max_rsi_high = config.get('max_rsi_high', MAX_RSI_HIGH)
+                    need_recalculation = True
                     
-                    # Проверяем, изменились ли настройки
-                    if (file_min_required != current_min_candles or 
-                        first_coin['maturity_data']['details'].get('config_min_rsi_low') != current_min_rsi_low or
-                        first_coin['maturity_data']['details'].get('config_max_rsi_high') != current_max_rsi_high):
-                        
-                        logger.warning(f" ⚠️ Настройки зрелости изменились!")
-                        logger.warning(f" Файл: min_candles={file_min_required}, min_rsi={first_coin['maturity_data']['details'].get('config_min_rsi_low')}, max_rsi={first_coin['maturity_data']['details'].get('config_max_rsi_high')}")
-                        logger.warning(f" Текущие: min_candles={current_min_candles}, min_rsi={current_min_rsi_low}, max_rsi={current_max_rsi_high}")
-                        logger.warning(f" 🔄 Пересчитываем данные зрелости...")
-                        
-                        need_recalculation = True
-                        
-                        # Очищаем данные: удаляем файл и очищаем БД
-                        if not loaded_from_db and os.path.exists(MATURE_COINS_FILE):
-                            os.remove(MATURE_COINS_FILE)
-                        if loaded_from_db:
-                            # Очищаем БД
-                            from bot_engine.storage import save_mature_coins as storage_save_mature
-                            storage_save_mature({})
-                        
-                        loaded_data = {}
-                        
-                        # ✅ УСТАНАВЛИВАЕМ ФЛАГ: данные недействительны и не должны сохраняться
-                        maturity_data_invalidated = True
-                        logger.warning(f" 🚫 Данные зрелости сброшены - сохранение ЗАПРЕЩЕНО до пересчета")
-            
-            # ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Изменяем словарь in-place, а не переприсваиваем
-            # Это важно, т.к. mature_coins_storage импортируется в другие модули
-            with mature_coins_lock:
-                mature_coins_storage.clear()
-                mature_coins_storage.update(loaded_data)
-            
-            # ✅ ДОПОЛНИТЕЛЬНОЕ ИСПРАВЛЕНИЕ: Обновляем глобальную переменную в imports_and_globals
-            try:
-                import bots_modules.imports_and_globals as ig_module
-                if hasattr(ig_module, 'mature_coins_storage'):
-                    with ig_module.mature_coins_lock:
-                        ig_module.mature_coins_storage.clear()
-                        ig_module.mature_coins_storage.update(loaded_data)
-                    # Убрано: logger.debug(f" ✅ Обновлена глобальная копия в imports_and_globals") - слишком шумно
-            except Exception as sync_error:
-                logger.warning(f" ⚠️ Не удалось синхронизировать с imports_and_globals: {sync_error}")
-            
-            if need_recalculation:
-                logger.info(f" 🔄 Данные будут пересчитаны при следующей проверке зрелости")
-            else:
-                logger.info(f" ✅ Загружено {len(mature_coins_storage)} зрелых монет из файла")
+                    # Очищаем БД
+                    if loaded_data:
+                        from bot_engine.storage import save_mature_coins as storage_save_mature
+                        storage_save_mature({})
+                    
+                    loaded_data = {}
+                    
+                    # ✅ УСТАНАВЛИВАЕМ ФЛАГ: данные недействительны и не должны сохраняться
+                    maturity_data_invalidated = True
+                    logger.warning(f" 🚫 Данные зрелости сброшены - сохранение ЗАПРЕЩЕНО до пересчета")
+        
+        # ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Изменяем словарь in-place, а не переприсваиваем
+        # Это важно, т.к. mature_coins_storage импортируется в другие модули
+        with mature_coins_lock:
+            mature_coins_storage.clear()
+            mature_coins_storage.update(loaded_data if loaded_data else {})
+        
+        # ✅ ДОПОЛНИТЕЛЬНОЕ ИСПРАВЛЕНИЕ: Обновляем глобальную переменную в imports_and_globals
+        try:
+            import bots_modules.imports_and_globals as ig_module
+            if hasattr(ig_module, 'mature_coins_storage'):
+                with ig_module.mature_coins_lock:
+                    ig_module.mature_coins_storage.clear()
+                    ig_module.mature_coins_storage.update(loaded_data if loaded_data else {})
+        except Exception as sync_error:
+            logger.warning(f" ⚠️ Не удалось синхронизировать с imports_and_globals: {sync_error}")
+        
+        if need_recalculation:
+            logger.info(f" 🔄 Данные будут пересчитаны при следующей проверке зрелости")
+        elif loaded_data:
+            logger.info(f" ✅ Загружено {len(mature_coins_storage)} зрелых монет из БД")
         else:
-            with mature_coins_lock:
-                mature_coins_storage.clear()
-            logger.info(" Файл хранилища не найден, создаем новый")
+            logger.info(" 📝 БД хранилища пуста, создаем новое")
     except Exception as e:
-        logger.error(f" Ошибка загрузки хранилища: {e}")
+        logger.error(f" ❌ Ошибка загрузки хранилища: {e}")
         with mature_coins_lock:
             mature_coins_storage.clear()
 
