@@ -99,9 +99,12 @@ class AIDatabase:
             logger.debug(f"⚠️ Не удалось проверить файл БД: {e}")
             return False
     
-    def _backup_database(self) -> Optional[str]:
+    def _backup_database(self, max_retries: int = 3) -> Optional[str]:
         """
         Создает резервную копию БД перед удалением
+        
+        Args:
+            max_retries: Максимальное количество попыток при блокировке файла
         
         Returns:
             Путь к резервной копии или None если не удалось создать
@@ -109,30 +112,65 @@ class AIDatabase:
         if not os.path.exists(self.db_path):
             return None
         
-        try:
-            import shutil
-            from datetime import datetime
-            
-            # Создаем имя резервной копии с timestamp
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_path = f"{self.db_path}.backup_{timestamp}"
-            
-            # Копируем БД и связанные файлы
-            shutil.copy2(self.db_path, backup_path)
-            
-            # Копируем WAL и SHM файлы если есть
-            wal_file = self.db_path + '-wal'
-            shm_file = self.db_path + '-shm'
-            if os.path.exists(wal_file):
-                shutil.copy2(wal_file, f"{backup_path}-wal")
-            if os.path.exists(shm_file):
-                shutil.copy2(shm_file, f"{backup_path}-shm")
-            
-            logger.warning(f"💾 Создана резервная копия БД: {backup_path}")
-            return backup_path
-        except Exception as e:
-            logger.error(f"❌ Ошибка создания резервной копии БД: {e}")
-            return None
+        import shutil
+        from datetime import datetime
+        
+        # Создаем имя резервной копии с timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = f"{self.db_path}.backup_{timestamp}"
+        
+        # Пытаемся создать резервную копию с retry логикой
+        for attempt in range(max_retries):
+            try:
+                # Пытаемся закрыть все соединения перед копированием
+                # Это может помочь освободить файл
+                if attempt > 0:
+                    logger.debug(f"🔄 Попытка создания резервной копии {attempt + 1}/{max_retries}...")
+                    time.sleep(1.0 * attempt)  # Увеличиваем задержку с каждой попыткой
+                
+                # Копируем БД и связанные файлы
+                shutil.copy2(self.db_path, backup_path)
+                
+                # Копируем WAL и SHM файлы если есть
+                wal_file = self.db_path + '-wal'
+                shm_file = self.db_path + '-shm'
+                if os.path.exists(wal_file):
+                    try:
+                        shutil.copy2(wal_file, f"{backup_path}-wal")
+                    except Exception as e:
+                        logger.debug(f"⚠️ Не удалось скопировать WAL файл: {e}")
+                if os.path.exists(shm_file):
+                    try:
+                        shutil.copy2(shm_file, f"{backup_path}-shm")
+                    except Exception as e:
+                        logger.debug(f"⚠️ Не удалось скопировать SHM файл: {e}")
+                
+                logger.warning(f"💾 Создана резервная копия БД: {backup_path}")
+                return backup_path
+            except PermissionError as e:
+                # Файл заблокирован другим процессом
+                if attempt < max_retries - 1:
+                    logger.debug(f"⚠️ Файл БД заблокирован, повторяем попытку через {1.0 * (attempt + 1)}s...")
+                    continue
+                else:
+                    logger.error(f"❌ Не удалось создать резервную копию БД после {max_retries} попыток: {e}")
+                    return None
+            except Exception as e:
+                error_str = str(e).lower()
+                if "процесс не может получить доступ к файлу" in error_str or "file is locked" in error_str or "access" in error_str:
+                    # Файл заблокирован
+                    if attempt < max_retries - 1:
+                        logger.debug(f"⚠️ Файл БД заблокирован, повторяем попытку через {1.0 * (attempt + 1)}s...")
+                        continue
+                    else:
+                        logger.error(f"❌ Не удалось создать резервную копию БД после {max_retries} попыток: {e}")
+                        return None
+                else:
+                    # Другая ошибка - не повторяем
+                    logger.error(f"❌ Ошибка создания резервной копии БД: {e}")
+                    return None
+        
+        return None
     
     def _check_database_has_data(self) -> bool:
         """
@@ -404,13 +442,16 @@ class AIDatabase:
         try:
             logger.warning("🔧 Попытка исправления БД...")
             
-            # Создаем резервную копию перед исправлением
-            backup_path = self._backup_database()
-            if not backup_path:
-                logger.error("❌ Не удалось создать резервную копию перед исправлением")
-                return False
+            # Пытаемся создать резервную копию перед исправлением
+            backup_path = self._backup_database(max_retries=3)
+            backup_created = backup_path is not None
             
-            # Пытаемся использовать VACUUM для исправления
+            if not backup_created:
+                logger.warning("⚠️ Не удалось создать резервную копию перед исправлением (файл может быть заблокирован)")
+                logger.info("💡 Попробую использовать существующие резервные копии для восстановления...")
+            
+            # Пытаемся использовать VACUUM для исправления (только если БД не слишком повреждена)
+            vacuum_tried = False
             try:
                 # Подключаемся без retry для VACUUM (может быть долго)
                 conn = sqlite3.connect(self.db_path, timeout=300.0)  # 5 минут для VACUUM
@@ -420,36 +461,60 @@ class AIDatabase:
                 conn.commit()
                 conn.close()
                 logger.info("✅ VACUUM выполнен")
+                vacuum_tried = True
             except Exception as vacuum_error:
-                logger.warning(f"⚠️ VACUUM не помог: {vacuum_error}")
+                error_str = str(vacuum_error).lower()
+                if "malformed" in error_str or "disk i/o error" in error_str:
+                    logger.warning(f"⚠️ VACUUM невозможен из-за критического повреждения: {vacuum_error}")
+                    logger.info("💡 Пропускаю VACUUM, пытаюсь восстановить из резервной копии...")
+                else:
+                    logger.warning(f"⚠️ VACUUM не помог: {vacuum_error}")
                 try:
                     conn.close()
                 except:
                     pass
             
-            # Проверяем, исправилась ли БД
-            is_ok, error_msg = self._check_integrity()
-            if is_ok:
-                logger.info("✅ БД успешно исправлена с помощью VACUUM")
-                return True
-            else:
-                logger.warning(f"⚠️ БД все еще повреждена после VACUUM: {error_msg}")
-                # Пытаемся восстановить из резервной копии (которая была создана ДО повреждения)
-                logger.info("🔄 Попытка восстановления из резервной копии...")
-                # Ищем более старую резервную копию (до текущей)
-                backups = self.list_backups()
-                if backups and len(backups) > 1:
+            # Проверяем, исправилась ли БД (только если VACUUM был выполнен)
+            if vacuum_tried:
+                is_ok, error_msg = self._check_integrity()
+                if is_ok:
+                    logger.info("✅ БД успешно исправлена с помощью VACUUM")
+                    return True
+                else:
+                    logger.warning(f"⚠️ БД все еще повреждена после VACUUM: {error_msg[:200]}...")
+            
+            # Пытаемся восстановить из резервной копии
+            logger.info("🔄 Попытка восстановления из резервной копии...")
+            backups = self.list_backups()
+            
+            if backups:
+                # Если мы создали резервную копию только что, используем более старую
+                if backup_created and len(backups) > 1:
                     # Используем предпоследнюю копию (последняя - это та, что мы только что создали)
                     older_backup = backups[1]['path']
                     logger.info(f"📦 Восстанавливаю из более старой резервной копии: {older_backup}")
-                    return self.restore_from_backup(older_backup)
-                elif backups:
-                    # Только одна копия - используем её
-                    logger.info(f"📦 Восстанавливаю из резервной копии: {backups[0]['path']}")
-                    return self.restore_from_backup(backups[0]['path'])
+                    if self.restore_from_backup(older_backup):
+                        return True
                 else:
-                    logger.error("❌ Нет доступных резервных копий для восстановления")
-                    return False
+                    # Используем последнюю доступную копию
+                    latest_backup = backups[0]['path']
+                    logger.info(f"📦 Восстанавливаю из резервной копии: {latest_backup}")
+                    if self.restore_from_backup(latest_backup):
+                        return True
+            
+            # Если не удалось восстановить из резервной копии
+            if not backups:
+                logger.error("❌ Нет доступных резервных копий для восстановления")
+                if not backup_created:
+                    logger.error("❌ КРИТИЧНО: Не удалось создать резервную копию и нет существующих копий!")
+                    logger.error("⚠️ БД останется поврежденной. Рекомендуется:")
+                    logger.error("   1. Закрыть все процессы, использующие БД")
+                    logger.error("   2. Попробовать восстановить вручную: db.restore_from_backup()")
+                    logger.error("   3. Или создать новую БД (данные будут потеряны)")
+            else:
+                logger.error("❌ Не удалось восстановить БД из резервной копии")
+            
+            return False
         except Exception as e:
             logger.error(f"❌ Ошибка исправления БД: {e}")
             import traceback
