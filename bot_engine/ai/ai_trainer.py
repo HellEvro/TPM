@@ -193,9 +193,6 @@ class AITrainer:
             else:
                 logger.info("📥 Первичная загрузка истории сделок с биржи...")
                 self._update_exchange_trades_history()
-                    self._update_exchange_trades_history()
-                else:
-                    logger.debug(f"💾 История биржи уже загружена: {len(saved_trades)} сделок")
         except Exception as e:
             logger.debug(f"⚠️ Ошибка загрузки истории биржи при инициализации: {e}")
 
