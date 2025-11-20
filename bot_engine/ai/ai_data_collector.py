@@ -43,10 +43,16 @@ class AIDataCollector:
         # Создаем директорию для данных
         os.makedirs(self.data_dir, exist_ok=True)
         
-        # Файлы для хранения данных (только для временных данных, основные данные в БД)
-        self.market_data_file = os.path.join(self.data_dir, 'market_data.json')
-        self.bots_data_file = os.path.join(self.data_dir, 'bots_data.json')
-        # ПРИМЕЧАНИЕ: history_data.json больше не используется - все данные в БД
+        # Файлы больше не используются - все данные в БД
+        
+        # Подключаемся к БД
+        try:
+            from bot_engine.ai.ai_database import get_ai_database
+            self.ai_db = get_ai_database()
+            logger.debug("✅ AI Database подключена для AIDataCollector")
+        except Exception as e:
+            logger.warning(f"⚠️ Не удалось подключиться к AI Database: {e}")
+            self.ai_db = None
         
         logger.info("✅ AIDataCollector инициализирован")
     
@@ -257,21 +263,24 @@ class AIDataCollector:
             if status_response and status_response.get('success'):
                 collected_data['bots_status'] = status_response.get('status', {})
             
-            # Сохраняем данные
-            existing_data = self._load_data(self.bots_data_file)
-            if 'history' not in existing_data:
-                existing_data['history'] = []
+            # Сохраняем ТОЛЬКО в БД
+            if not self.ai_db:
+                logger.error("❌ AI Database не подключена!")
+                return collected_data
             
-            existing_data['history'].append(collected_data)
-            
-            # Ограничиваем историю (последние 1000 записей)
-            if len(existing_data['history']) > 1000:
-                existing_data['history'] = existing_data['history'][-1000:]
-            
-            existing_data['last_update'] = datetime.now().isoformat()
-            existing_data['latest'] = collected_data
-            
-            self._save_data(self.bots_data_file, existing_data)
+            try:
+                snapshot_id = self.ai_db.save_bots_data_snapshot(collected_data)
+                if snapshot_id:
+                    logger.debug(f"✅ Снимок данных ботов сохранен в БД (ID: {snapshot_id})")
+                
+                # Очищаем старые снимки (оставляем последние 1000)
+                deleted_count = self.ai_db.cleanup_old_bots_data_snapshots(keep_count=1000)
+                if deleted_count > 0:
+                    logger.debug(f"🗑️ Удалено {deleted_count} старых снимков")
+            except Exception as db_error:
+                logger.error(f"❌ Ошибка сохранения в БД: {db_error}")
+                import traceback
+                logger.error(traceback.format_exc())
             
             logger.info(f"✅ Собрано данных: {len(collected_data.get('bots', []))} ботов, {len(collected_data.get('rsi_data', {}))} монет с RSI")
             
@@ -466,11 +475,11 @@ class AIDataCollector:
     
     def collect_market_data(self) -> Dict:
         """
-        Сбор рыночных данных ТОЛЬКО из полной истории свечей
+        Сбор рыночных данных ТОЛЬКО из БД
         
-        ВАЖНО: Использует ТОЛЬКО data/ai/candles_full_history.json
-        Если файла нет - возвращает пустые данные (не использует candles_cache.json!)
-        Файл должен быть загружен через load_full_candles_history() перед использованием
+        ВАЖНО: Использует ТОЛЬКО БД (таблица candles_history)
+        Если БД пуста - возвращает пустые данные
+        Свечи должны быть загружены через load_full_candles_history() перед использованием
         """
         # Сокращенные логи
         # Убрано: logger.debug("📊 Сбор рыночных данных...") - слишком шумно
@@ -482,44 +491,24 @@ class AIDataCollector:
         }
         
         try:
-            # ВАЖНО: Используем ТОЛЬКО полную историю свечей (data/ai/candles_full_history.json)
-            # НЕ используем candles_cache.json - только полная история!
-            full_history_file = os.path.join('data', 'ai', 'candles_full_history.json')
+            # Загружаем ТОЛЬКО из БД
             candles_data = {}
-            
-            if not os.path.exists(full_history_file):
-                logger.warning("⚠️ Файл candles_full_history.json не найден, ожидаем загрузки...")
-                return collected_data
-            
-            # Читаем ТОЛЬКО из полной истории свечей
             try:
-                # Убрано: logger.debug(f"📖 Чтение {full_history_file}...") - слишком шумно
+                from bot_engine.ai.ai_database import get_ai_database
+                ai_db = get_ai_database()
+                if not ai_db:
+                    logger.warning("⚠️ AI Database не доступна")
+                    return collected_data
                 
-                with open(full_history_file, 'r', encoding='utf-8') as f:
-                    full_data = json.load(f)
-                
-                # Извлекаем свечи из структуры с метаданными
-                if 'candles' in full_data:
-                    candles_data = full_data['candles']
-                elif isinstance(full_data, dict) and not full_data.get('metadata'):
-                    candles_data = full_data
+                candles_data = ai_db.get_all_candles_dict(timeframe='6h')
+                if candles_data:
+                    logger.debug(f"✅ Загружено {len(candles_data)} монет из БД")
                 else:
-                    logger.warning("⚠️ Неожиданная структура файла candles_full_history.json")
-                    candles_data = {}
-                    
-            except json.JSONDecodeError as json_error:
-                logger.error(f"❌ Файл candles_full_history.json поврежден (позиция {json_error.pos}), удаляем...")
-                try:
-                    os.remove(full_history_file)
-                    logger.info("✅ Поврежденный файл удален")
-                except Exception as del_error:
-                    logger.debug(f"⚠️ Не удалось удалить файл: {del_error}")
-                candles_data = {}
-            except Exception as e:
-                logger.error(f"❌ Ошибка чтения полной истории свечей: {e}")
+                    logger.warning("⚠️ БД пуста, ожидаем загрузки свечей...")
+            except Exception as db_error:
+                logger.error(f"❌ Ошибка загрузки из БД: {db_error}")
                 import traceback
                 logger.error(traceback.format_exc())
-                candles_data = {}
             
             # Обрабатываем свечи
             if candles_data:
@@ -539,7 +528,7 @@ class AIDataCollector:
                                 'count': len(candles_list),
                                 'timeframe': candle_info.get('timeframe', '6h'),
                                 'last_update': candle_info.get('last_update') or candle_info.get('loaded_at'),
-                                'source': full_history_file,  # ВСЕГДА из полной истории
+                                'source': 'ai_data.db',  # ВСЕГДА из БД
                                 'is_full_history': True  # ВСЕГДА полная история
                             }
                             candles_count += 1
@@ -558,7 +547,7 @@ class AIDataCollector:
                 
                 logger.info(f"✅ Обработано свечей: {candles_count} монет, {total_candles} свечей всего")
             else:
-                logger.warning(f"⚠️ Файл {full_history_file} не найден или пуст")
+                logger.warning("⚠️ БД пуста, ожидаем загрузки свечей...")
             
             # 2. Получаем индикаторы через API (RSI, тренды, сигналы)
             rsi_response = self._call_bots_api('/api/bots/coins-with-rsi')
@@ -610,6 +599,37 @@ class AIDataCollector:
         
         return collected_data
     
+    def _get_bots_data(self) -> Dict:
+        """
+        Получает данные ботов из БД
+        
+        Returns:
+            Словарь с данными ботов в формате как bots_data.json
+        """
+        result = {
+            'history': [],
+            'last_update': None,
+            'latest': {}
+        }
+        
+        # Загружаем ТОЛЬКО из БД
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна")
+            return result
+        
+        try:
+            snapshots = self.ai_db.get_bots_data_snapshots(limit=1000)
+            if snapshots:
+                result['history'] = snapshots
+                result['last_update'] = snapshots[0]['timestamp'] if snapshots else None
+                result['latest'] = snapshots[0] if snapshots else {}
+        except Exception as db_error:
+            logger.error(f"❌ Ошибка загрузки из БД: {db_error}")
+            import traceback
+            logger.error(traceback.format_exc())
+        
+        return result
+    
     def get_training_data(self) -> Dict:
         """
         Получить данные для обучения
@@ -622,8 +642,8 @@ class AIDataCollector:
         """
         return {
             # market_data.json больше не используется - свечи из candles_full_history.json
-            'bots_data': self._load_data(self.bots_data_file),
-            'history_data': self._load_data(self.history_data_file)
+            'bots_data': self._get_bots_data(),
+            'history_data': {}  # history_data.json больше не используется - все данные в БД
         }
     
     def get_latest_market_data(self, symbol: str) -> Optional[Dict]:
@@ -639,26 +659,18 @@ class AIDataCollector:
         Returns:
             Словарь с данными или None
         """
-        # Свечи из полной истории
-        full_history_file = os.path.join('data', 'ai', 'candles_full_history.json')
+        # Загружаем ТОЛЬКО из БД
         candles = None
-        
-        if os.path.exists(full_history_file):
-            try:
-                with open(full_history_file, 'r', encoding='utf-8') as f:
-                    full_data = json.load(f)
-                
-                candles_data = {}
-                if 'candles' in full_data:
-                    candles_data = full_data['candles']
-                elif isinstance(full_data, dict) and not full_data.get('metadata'):
-                    candles_data = full_data
-                
-                if symbol in candles_data:
-                    candle_info = candles_data[symbol]
-                    candles = candle_info.get('candles', []) if isinstance(candle_info, dict) else []
-            except Exception as e:
-                logger.debug(f"⚠️ Ошибка чтения candles_full_history.json для {symbol}: {e}")
+        try:
+            from bot_engine.ai.ai_database import get_ai_database
+            ai_db = get_ai_database()
+            if not ai_db:
+                logger.warning(f"⚠️ AI Database не доступна для {symbol}")
+                return None
+            
+            candles = ai_db.get_candles(symbol, timeframe='6h')
+        except Exception as db_error:
+            logger.error(f"❌ Ошибка загрузки свечей из БД для {symbol}: {db_error}")
         
         # Индикаторы через API
         indicators = None

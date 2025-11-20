@@ -4,7 +4,7 @@
 Модуль загрузки ВСЕХ доступных свечей для AI обучения
 
 Загружает максимально возможное количество свечей для всех монет
-и сохраняет в отдельный файл data/ai/candles_full_history.json
+и сохраняет в БД (таблица candles_history)
 """
 
 import os
@@ -35,8 +35,15 @@ class AICandlesLoader:
             exchange_obj: Объект биржи (если None, получает через API)
         """
         self.exchange = exchange_obj
-        self.candles_file = Path('data/ai/candles_full_history.json')
-        self.candles_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Подключаемся к БД
+        try:
+            from bot_engine.ai.ai_database import get_ai_database
+            self.ai_db = get_ai_database()
+            logger.debug("✅ AI Database подключена для AICandlesLoader")
+        except Exception as e:
+            logger.warning(f"⚠️ Не удалось подключиться к AI Database: {e}")
+            self.ai_db = None
         
         # Максимальные периоды для разных бирж
         self.max_periods = {
@@ -472,13 +479,13 @@ class AICandlesLoader:
             # Итоговая статистика (кратко)
             logger.info(f"✅ Загрузка завершена: {loaded_count} монет, {total_candles} свечей, {total_new_candles} новых, {failed_count} ошибок")
             
-            # Проверка файла
-            if self.candles_file.exists():
-                file_size = self.candles_file.stat().st_size
-                logger.debug(f"📁 Файл: {file_size / 1024 / 1024:.2f} MB")
+            # Проверка БД
+            if self.ai_db:
+                count = self.ai_db.count_candles()
+                logger.debug(f"📁 БД: {count:,} свечей")
                 return True
             else:
-                logger.error(f"❌ Файл не создан: {self.candles_file}")
+                logger.error("❌ AI Database не доступна")
                 return False
             
         except Exception as e:
@@ -516,136 +523,63 @@ class AICandlesLoader:
         return '2000'  # По умолчанию максимум
     
     def _load_existing_candles(self) -> Dict:
-        """Загрузить существующие свечи из файла"""
-        if not self.candles_file.exists():
+        """Загрузить существующие свечи из БД"""
+        if not self.ai_db:
             return {}
         
         try:
-            with open(self.candles_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            return self.ai_db.get_all_candles_dict(timeframe='6h')
         except Exception as e:
-            logger.warning(f"⚠️ Ошибка загрузки существующих свечей: {e}")
+            logger.warning(f"⚠️ Ошибка загрузки существующих свечей из БД: {e}")
             return {}
     
     def _save_candles(self, candles_data: Dict):
-        """Сохранить свечи в файл (безопасно с retry логикой)"""
-        import time
-        import uuid
-        max_retries = 5
-        retry_delay = 0.5
-        
+        """Сохранить свечи в БД"""
         # ВАЖНО: Проверяем что есть данные для сохранения
         if not candles_data:
             logger.error("❌ КРИТИЧЕСКАЯ ОШИБКА: candles_data пустой!")
             raise ValueError("candles_data пустой - нечего сохранять")
         
         total_candles_count = sum(info.get('count', 0) if isinstance(info, dict) else 0 for info in candles_data.values())
-        logger.info(f"💾 Сохранение {len(candles_data)} монет, {total_candles_count} свечей...")
+        logger.info(f"💾 Сохранение {len(candles_data)} монет, {total_candles_count} свечей в БД...")
         
-        for attempt in range(max_retries):
-            try:
-                # Сохраняем с метаданными
-                data_to_save = {
-                    'metadata': {
-                        'total_symbols': len(candles_data),
-                        'total_candles': total_candles_count,
-                        'timeframe': '6h',
-                        'last_update': datetime.now().isoformat(),
-                        'source': 'ai_full_history_loader'
-                    },
-                    'candles': candles_data
-                }
-                
-                # Убеждаемся что директория существует
-                self.candles_file.parent.mkdir(parents=True, exist_ok=True)
-                
-                # Создаем уникальное имя временного файла
-                temp_file = self.candles_file.with_suffix(f'.json.tmp.{uuid.uuid4().hex[:8]}')
-                
-                logger.info(f"💾 Сохранение во временный файл...")
-                
-                # Сохраняем во временный файл сначала
-                try:
-                    with open(temp_file, 'w', encoding='utf-8') as f:
-                        json.dump(data_to_save, f, indent=2, ensure_ascii=False)
-                    file_size_mb = temp_file.stat().st_size / 1024 / 1024
-                    logger.debug(f"✅ Временный файл создан: {file_size_mb:.2f} MB")
-                except Exception as write_error:
-                    logger.error(f"   ❌ Ошибка записи во временный файл: {write_error}")
-                    try:
-                        if temp_file.exists():
-                            temp_file.unlink()
-                    except:
-                        pass
-                    raise write_error
-                
-                # Заменяем оригинальный файл атомарно
-                if self.candles_file.exists():
-                    logger.debug(f"🔄 Замена существующего файла...")
-                    try:
-                        self.candles_file.unlink()
-                    except PermissionError:
-                        if attempt < max_retries - 1:
-                            try:
-                                if temp_file.exists():
-                                    temp_file.unlink()
-                            except:
-                                pass
-                            logger.debug(f"⚠️ Файл занят, повтор {attempt + 1}/{max_retries}...")
-                            time.sleep(retry_delay * (attempt + 1))
-                            continue
-                        else:
-                            raise
-                
-                # Переименовываем временный файл
-                try:
-                    temp_file.rename(self.candles_file)
-                    logger.debug(f"✅ Файл сохранен: {self.candles_file}")
-                except PermissionError:
-                    if attempt < max_retries - 1:
-                        try:
-                            if temp_file.exists():
-                                temp_file.unlink()
-                        except:
-                            pass
-                        logger.warning(f"   ⚠️ Не удалось переименовать, повторная попытка {attempt + 1}/{max_retries}...")
-                        time.sleep(retry_delay * (attempt + 1))
-                        continue
-                    else:
-                        raise
-                
-                # Проверяем что файл создан и не пустой
-                if self.candles_file.exists():
-                    file_size = self.candles_file.stat().st_size
-                    if file_size > 0:
-                        logger.debug(f"✅ Файл сохранен: {file_size / 1024 / 1024:.2f} MB")
-                        return
-                    else:
-                        logger.error(f"❌ Файл пустой: {self.candles_file}")
-                        raise ValueError("Файл пустой после сохранения")
+        # Сохраняем ТОЛЬКО в БД
+        if not self.ai_db:
+            logger.error("❌ AI Database не подключена!")
+            raise RuntimeError("AI Database не доступна")
+        
+        try:
+            # Преобразуем формат данных для БД
+            db_candles_data = {}
+            for symbol, candle_info in candles_data.items():
+                if isinstance(candle_info, dict):
+                    candles = candle_info.get('candles', [])
                 else:
-                    logger.error(f"❌ Файл не создан: {self.candles_file}")
-                    raise FileNotFoundError(f"Файл не создан: {self.candles_file}")
+                    candles = candle_info if isinstance(candle_info, list) else []
                 
-            except (PermissionError, OSError) as file_error:
-                if attempt < max_retries - 1:
-                    logger.warning(f"⚠️ Файл {self.candles_file} занят, повторная попытка {attempt + 1}/{max_retries}...")
-                    logger.warning(f"   Ошибка: {file_error}")
-                    time.sleep(retry_delay * (attempt + 1))
-                    continue
-                else:
-                    logger.error(f"❌ Не удалось сохранить свечи после {max_retries} попыток (файл занят)")
-                    logger.error(f"   Ошибка: {file_error}")
-                    raise
-            except Exception as e:
-                logger.error(f"❌ Ошибка сохранения свечей: {e}")
-                import traceback
-                logger.error(traceback.format_exc())
-                raise
+                if candles:
+                    db_candles_data[symbol] = candles
+            
+            if db_candles_data:
+                saved_results = self.ai_db.save_candles_batch(db_candles_data, timeframe='6h')
+                total_saved = sum(saved_results.values())
+                logger.info(f"✅ Сохранено {total_saved} свечей в БД для {len(saved_results)} монет")
+            else:
+                logger.warning("⚠️ Нет данных для сохранения в БД")
+        except Exception as db_error:
+            logger.error(f"❌ Ошибка сохранения свечей в БД: {db_error}")
+            import traceback
+            logger.error(traceback.format_exc())
+            raise
     
     def get_candles_for_symbol(self, symbol: str) -> Optional[List[Dict]]:
-        """Получить свечи для символа из файла"""
-        candles_data = self._load_existing_candles()
-        symbol_data = candles_data.get(symbol, {})
-        return symbol_data.get('candles', [])
+        """Получить свечи для символа из БД"""
+        if not self.ai_db:
+            return None
+        
+        try:
+            return self.ai_db.get_candles(symbol, timeframe='6h')
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка загрузки свечей для {symbol} из БД: {e}")
+            return None
 

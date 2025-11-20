@@ -884,13 +884,13 @@ def remove_all_individual_coin_settings(persist=True):
 # ===== РЕЕСТР ПОЗИЦИЙ БОТОВ =====
 
 def load_bot_positions_registry():
-    """Загружает реестр позиций, открытых ботами"""
+    """Загружает реестр позиций, открытых ботами (из БД или JSON)"""
     try:
-        if os.path.exists(BOTS_POSITIONS_REGISTRY_FILE):
-            with open(BOTS_POSITIONS_REGISTRY_FILE, 'r', encoding='utf-8') as f:
-                registry = json.load(f)
-                logger.info(f" ✅ Загружен реестр позиций: {len(registry)} записей")
-                return registry
+        from bot_engine.storage import load_bot_positions_registry as storage_load_positions
+        registry = storage_load_positions()
+        if registry:
+            logger.info(f" ✅ Загружен реестр позиций: {len(registry)} записей")
+            return registry
         else:
             logger.info(f" 📁 Реестр позиций не найден, создаём новый")
             return {}
@@ -900,12 +900,13 @@ def load_bot_positions_registry():
 
 
 def save_bot_positions_registry(registry):
-    """Сохраняет реестр позиций ботов"""
+    """Сохраняет реестр позиций ботов (в БД или JSON)"""
     try:
-        with open(BOTS_POSITIONS_REGISTRY_FILE, 'w', encoding='utf-8') as f:
-            json.dump(registry, f, indent=2, ensure_ascii=False)
-        logger.debug(f" ✅ Реестр позиций сохранён: {len(registry)} записей")
-        return True
+        from bot_engine.storage import save_bot_positions_registry as storage_save_positions
+        success = storage_save_positions(registry)
+        if success:
+            logger.debug(f" ✅ Реестр позиций сохранён: {len(registry)} записей")
+        return success
     except Exception as e:
         logger.error(f" ❌ Ошибка сохранения реестра: {e}")
         return False
