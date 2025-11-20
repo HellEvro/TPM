@@ -27,6 +27,10 @@ numpy>=1.26.0
 matplotlib>=3.7.0
 pytz>=2023.3.post1
 
+# Database (SQLite встроен в Python, но может потребоваться для расширенных функций)
+# sqlite3 встроен в Python 3.x, дополнительные зависимости не требуются
+# Для работы с БД используется стандартный модуль sqlite3
+
 # Async support
 aiohttp>=3.8.6
 asyncio>=3.4.3

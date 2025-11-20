@@ -18,6 +18,7 @@
 - 🔐 **Premium License & Protection**: единый HWID (`scripts/activate_premium.py`), проверка `.lic` через `bot_engine/ai/license_checker.pyc`, обновляемый билд `license_generator/build_ai_launcher.py`, загрузчик `_infobot_ai_protected.py`.
 - ⚖️ **Smart Risk Manager**: премиум-модуль (`bot_engine/ai/smart_risk_manager.py`) анализирует стопы, делает быстрый бэктест перед входом и оптимизирует SL/TP на основе `ml_risk_predictor`.
 - 📡 **AI Data Service & Automation**: постоянный сбор/хранение (`AIDataCollector`, `ai_data_storage.py`), backtest (`ai_backtester_new.py`), оптимизация (`ai_strategy_optimizer.py`), управление ботами (`ai_bot_manager.py`) и непрерывное обучение (`ai_continuous_learning.py`).
+- 🗄️ **SQLite Database Migration**: Все данные AI модуля теперь хранятся в SQLite БД (`data/ai/ai_data.db`) вместо JSON файлов. Масштабируемость до миллиардов записей, автоматическая проверка целостности, резервное копирование, поддержка параллельного доступа с нескольких серверов. См. `docs/AI_DATABASE_MIGRATION_GUIDE.md`.
 - 📦 **Release tooling**: `sync_to_public.py` формирует `InfoBot_Public` с обязательными стартовыми скриптами и скомпилированными AI файлами, `start_infobot_manager` получил пошаговый лицензионный этап.
 - ♻️ **Единый снимок конфигурации**: `bots_modules/imports_and_globals.get_config_snapshot()` обеспечивает актуальные глобальные настройки + индивидуальные overrides для `ai_trainer`, `ai_backtester_new` и тулзов бэкенда (см. `docs/TZ_AI_Extended_Testing.md`).
 - 🛡️ **Protection Engine 1.0**: вынесенная логика стоп-лосс/безубыток/трейлинг/лимит времени (`bot_engine/protections.py`) подключена к AI симуляциям (`ai_trainer`, `ai_backtester_new`) и постепенно замещает внутренние проверки `NewTradingBot`, что устраняет расхождения между реалом и тренером.
@@ -64,7 +65,7 @@
 - **Сервисы:** `app.py` (порт 5000, Web UI) + `bots.py` (порт 5001, торговые/AI API + `/api/bots/*`).
 - **AI Launcher:** `ai.py` → `_ai_launcher.pyc` orchestrator (data-service/train/scheduler) + процессы `AIDataCollector`, `AITrainer`, `AIBacktester`, `AIStrategyOptimizer`, `AIBotManager`, `AIContinuousLearning`.
 - **AI ядро:** `bot_engine/ai/` (анализаторы, автообучение, premium, лицензирование, ml модели).
-- **История и данные:** `bot_engine/bot_history.py`, REST `/api/bots/history|trades|statistics`, файлы `data/ai/*`, `data/bot_history.json`.
+- **История и данные:** `bot_engine/bot_history.py`, REST `/api/bots/history|trades|statistics`, SQLite БД `data/ai/ai_data.db` (AI модуль), `data/bots_data.db` (bots модуль), файлы `data/bot_history.json` (UI).
 - **Фронтенд:** `templates/pages/bots.html`, `static/js/managers/*.js`, `static/css/`.
 - **Лицензирование:** `.lic` в корне, `bot_engine/ai/license_checker.pyc`, `scripts/activate_premium.py`, генератор HWID в `license_generator/`.
 - **Релизы:** `sync_to_public.py`, каталог `InfoBot_Public/`, авто-добавление `start_infobot_manager.{cmd|sh|vbs}`, `launcher/`.
@@ -139,6 +140,7 @@ python scripts/verify_ai_ready.py          # Финальная проверка
 - ⚡ `docs/QUICKSTART.md` — быстрый старт (лаунчер + ручной сценарий).
 - 🧭 `docs/START_HERE.md` — навигатор по актуальным гайдам и интерфейсу.
 - 🎯 `docs/WHITELIST_BLACKLIST.md` — настройка фильтров монет и рабочих режимов.
+- 🗄️ `docs/AI_DATABASE_MIGRATION_GUIDE.md` — полное руководство по SQLite БД: архитектура, миграция данных, защита данных, автоматическое исправление, флаги миграций.
 
 🔍 Остальные материалы ищите в каталоге `docs/` — там 4000+ строк гайдлайнов, тестов и отчётов.
 
