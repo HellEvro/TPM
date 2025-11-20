@@ -266,6 +266,23 @@ class AIDatabase:
                             # Превышено количество попыток
                             logger.warning(f"⚠️ БД заблокирована после {max_retries} попыток")
                             raise
+                    elif "disk i/o error" in error_str or "i/o error" in error_str:
+                        # Критическая ошибка I/O - БД может быть повреждена
+                        conn.rollback()
+                        conn.close()
+                        logger.error(f"❌ КРИТИЧНО: Ошибка I/O при работе с БД: {e}")
+                        logger.warning("🔧 Попытка автоматического исправления...")
+                        if attempt == 0:
+                            # Пытаемся исправить только один раз
+                            if self._repair_database():
+                                logger.info("✅ БД исправлена, повторяем операцию...")
+                                time.sleep(1)  # Небольшая задержка перед повтором
+                                continue
+                            else:
+                                logger.error("❌ Не удалось исправить БД после I/O ошибки")
+                                raise
+                        else:
+                            raise
                     else:
                         # Другие OperationalError - не повторяем
                         conn.rollback()
@@ -284,7 +301,7 @@ class AIDatabase:
                     
             except sqlite3.DatabaseError as e:
                 error_str = str(e).lower()
-                # Восстанавливаем БД ТОЛЬКО при явной ошибке "file is not a database"
+                # Восстанавливаем БД при критических ошибках повреждения
                 if "file is not a database" in error_str or ("not a database" in error_str and "unable to open" not in error_str):
                     logger.error(f"❌ Файл БД поврежден (явная ошибка SQLite): {self.db_path}")
                     logger.error(f"❌ Ошибка: {e}")
@@ -293,6 +310,38 @@ class AIDatabase:
                     # Пытаемся подключиться снова (только один раз)
                     if attempt == 0:
                         continue
+                    else:
+                        raise
+                elif "database disk image is malformed" in error_str or "malformed" in error_str:
+                    # Критическая ошибка - БД повреждена
+                    logger.error(f"❌ КРИТИЧНО: БД повреждена (malformed): {self.db_path}")
+                    logger.error(f"❌ Ошибка: {e}")
+                    logger.warning("🔧 Попытка автоматического исправления...")
+                    if attempt == 0:
+                        # Пытаемся исправить только один раз
+                        if self._repair_database():
+                            logger.info("✅ БД исправлена, повторяем подключение...")
+                            time.sleep(1)  # Небольшая задержка перед повтором
+                            continue
+                        else:
+                            logger.error("❌ Не удалось исправить поврежденную БД")
+                            raise
+                    else:
+                        raise
+                elif "disk i/o error" in error_str or "i/o error" in error_str:
+                    # Критическая ошибка I/O
+                    logger.error(f"❌ КРИТИЧНО: Ошибка I/O при подключении к БД: {self.db_path}")
+                    logger.error(f"❌ Ошибка: {e}")
+                    logger.warning("🔧 Попытка автоматического исправления...")
+                    if attempt == 0:
+                        # Пытаемся исправить только один раз
+                        if self._repair_database():
+                            logger.info("✅ БД исправлена, повторяем подключение...")
+                            time.sleep(1)  # Небольшая задержка перед повтором
+                            continue
+                        else:
+                            logger.error("❌ Не удалось исправить БД после I/O ошибки")
+                            raise
                     else:
                         raise
                 elif "database is locked" in error_str or "locked" in error_str:

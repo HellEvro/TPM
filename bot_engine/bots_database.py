@@ -379,6 +379,7 @@ class BotsDatabase:
                     return  # Успешно выполнили операцию
                 except sqlite3.OperationalError as e:
                     error_str = str(e).lower()
+                    
                     # Обрабатываем ошибки блокировки
                     if "database is locked" in error_str or "locked" in error_str:
                         conn.rollback()
@@ -392,6 +393,24 @@ class BotsDatabase:
                         else:
                             # Превышено количество попыток
                             logger.warning(f"⚠️ БД заблокирована после {max_retries} попыток")
+                            raise
+                    
+                    # КРИТИЧНО: Обработка ошибок I/O
+                    elif "disk i/o error" in error_str or "i/o error" in error_str:
+                        conn.rollback()
+                        conn.close()
+                        logger.error(f"❌ КРИТИЧНО: Ошибка I/O при работе с БД: {e}")
+                        logger.warning("🔧 Попытка автоматического исправления...")
+                        if attempt == 0:
+                            # Пытаемся исправить только один раз
+                            if self._repair_database():
+                                logger.info("✅ БД исправлена, повторяем операцию...")
+                                time.sleep(1)  # Небольшая задержка перед повтором
+                                continue
+                            else:
+                                logger.error("❌ Не удалось исправить БД после I/O ошибки")
+                                raise
+                        else:
                             raise
                     else:
                         # Другие OperationalError - не повторяем
