@@ -67,17 +67,77 @@ class AIDatabase:
         
         logger.info(f"✅ AI Database инициализирована: {db_path}")
     
+    def _is_valid_database(self) -> bool:
+        """Проверяет, является ли файл валидной SQLite базой данных"""
+        if not os.path.exists(self.db_path):
+            return False
+        
+        try:
+            # Проверяем заголовок SQLite файла (первые 16 байт)
+            with open(self.db_path, 'rb') as f:
+                header = f.read(16)
+                # SQLite файлы начинаются с "SQLite format 3\000"
+                if header[:15] != b'SQLite format 3\x00':
+                    return False
+            
+            # Пытаемся подключиться и выполнить простой запрос
+            test_conn = sqlite3.connect(self.db_path, timeout=5.0)
+            try:
+                test_conn.execute("SELECT 1")
+                test_conn.close()
+                return True
+            except sqlite3.DatabaseError:
+                test_conn.close()
+                return False
+        except Exception:
+            return False
+    
+    def _recreate_database(self):
+        """Удаляет поврежденную БД и создает новую"""
+        try:
+            if os.path.exists(self.db_path):
+                # Удаляем поврежденный файл и связанные файлы WAL/SHM
+                os.remove(self.db_path)
+                wal_file = self.db_path + '-wal'
+                shm_file = self.db_path + '-shm'
+                if os.path.exists(wal_file):
+                    os.remove(wal_file)
+                if os.path.exists(shm_file):
+                    os.remove(shm_file)
+                logger.warning(f"🗑️ Удалена поврежденная БД: {self.db_path}")
+        except Exception as e:
+            logger.error(f"❌ Ошибка удаления поврежденной БД: {e}")
+            raise
+    
     @contextmanager
     def _get_connection(self):
         """Контекстный менеджер для работы с БД"""
-        conn = sqlite3.connect(self.db_path, timeout=30.0)
-        conn.row_factory = sqlite3.Row
-        # Включаем WAL режим для лучшей производительности (параллельные чтения)
-        conn.execute("PRAGMA journal_mode=WAL")
-        # Оптимизируем для быстрых записей
-        conn.execute("PRAGMA synchronous=NORMAL")  # Быстрее чем FULL, но безопаснее чем OFF
-        conn.execute("PRAGMA cache_size=-64000")  # 64MB кеш
-        conn.execute("PRAGMA temp_store=MEMORY")  # Временные таблицы в памяти
+        try:
+            conn = sqlite3.connect(self.db_path, timeout=30.0)
+            conn.row_factory = sqlite3.Row
+            # Включаем WAL режим для лучшей производительности (параллельные чтения)
+            conn.execute("PRAGMA journal_mode=WAL")
+            # Оптимизируем для быстрых записей
+            conn.execute("PRAGMA synchronous=NORMAL")  # Быстрее чем FULL, но безопаснее чем OFF
+            conn.execute("PRAGMA cache_size=-64000")  # 64MB кеш
+            conn.execute("PRAGMA temp_store=MEMORY")  # Временные таблицы в памяти
+        except sqlite3.DatabaseError as e:
+            if "file is not a database" in str(e) or "not a database" in str(e).lower():
+                logger.error(f"❌ Файл БД поврежден: {self.db_path}")
+                conn.close()
+                # Восстанавливаем БД
+                self._recreate_database()
+                # Пытаемся подключиться снова
+                conn = sqlite3.connect(self.db_path, timeout=30.0)
+                conn.row_factory = sqlite3.Row
+                conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA synchronous=NORMAL")
+                conn.execute("PRAGMA cache_size=-64000")
+                conn.execute("PRAGMA temp_store=MEMORY")
+                logger.info(f"✅ БД восстановлена: {self.db_path}")
+            else:
+                raise
+        
         try:
             yield conn
             conn.commit()
@@ -89,12 +149,14 @@ class AIDatabase:
     
     def _init_database(self):
         """Создает все таблицы и индексы"""
+        # Проверяем, является ли существующий файл валидной БД
+        if os.path.exists(self.db_path):
+            if not self._is_valid_database():
+                logger.warning(f"⚠️ Файл БД поврежден или не является валидной БД: {self.db_path}")
+                self._recreate_database()
+        
         # SQLite автоматически создает файл БД при первом подключении
-        # Но убедимся, что файл будет создан явно
-        if not os.path.exists(self.db_path):
-            # Создаем пустой файл БД
-            Path(self.db_path).touch()
-            logger.debug(f"📁 Создан файл БД: {self.db_path}")
+        # Не нужно создавать пустой файл через touch() - это создает невалидную БД
         
         with self._get_connection() as conn:
             cursor = conn.cursor()
