@@ -72,9 +72,11 @@ import sqlite3
 import json
 import os
 import threading
+import time
+import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Tuple, List
 from contextlib import contextmanager
 import logging
 
@@ -115,15 +117,234 @@ class BotsDatabase:
         
         logger.info(f"✅ Bots Database инициализирована: {db_path}")
     
-    @contextmanager
-    def _get_connection(self):
+    def _check_integrity(self) -> Tuple[bool, Optional[str]]:
         """
-        Контекстный менеджер для работы с БД
+        Проверяет целостность БД
+        
+        Returns:
+            Tuple[bool, Optional[str]]: (is_ok, error_message)
+            is_ok = True если БД в порядке, False если есть проблемы
+            error_message = описание проблемы или None
+        """
+        if not os.path.exists(self.db_path):
+            return True, None  # Нет БД - это нормально, будет создана
+        
+        try:
+            # Используем прямое подключение для проверки целостности (не через retry)
+            conn = sqlite3.connect(self.db_path, timeout=60.0)
+            cursor = conn.cursor()
+            
+            # Быстрая проверка целостности (быстрее чем integrity_check)
+            cursor.execute("PRAGMA quick_check")
+            result = cursor.fetchone()[0]
+            conn.close()
+            
+            if result == "ok":
+                return True, None
+            else:
+                # Есть проблемы - делаем полную проверку для деталей
+                conn = sqlite3.connect(self.db_path, timeout=60.0)
+                cursor = conn.cursor()
+                cursor.execute("PRAGMA integrity_check")
+                integrity_results = cursor.fetchall()
+                error_details = "; ".join([row[0] for row in integrity_results if row[0] != "ok"])
+                conn.close()
+                return False, error_details or result
+        except Exception as e:
+            return False, f"Ошибка проверки целостности: {e}"
+    
+    def _backup_database(self) -> Optional[str]:
+        """
+        Создает резервную копию БД перед удалением
+        
+        Returns:
+            Путь к резервной копии или None если не удалось создать
+        """
+        if not os.path.exists(self.db_path):
+            return None
+        
+        try:
+            # Создаем имя резервной копии с timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_path = f"{self.db_path}.backup_{timestamp}"
+            
+            # Копируем БД и связанные файлы
+            shutil.copy2(self.db_path, backup_path)
+            
+            # Копируем WAL и SHM файлы если есть
+            wal_file = self.db_path + '-wal'
+            shm_file = self.db_path + '-shm'
+            if os.path.exists(wal_file):
+                shutil.copy2(wal_file, f"{backup_path}-wal")
+            if os.path.exists(shm_file):
+                shutil.copy2(shm_file, f"{backup_path}-shm")
+            
+            logger.warning(f"💾 Создана резервная копия БД: {backup_path}")
+            return backup_path
+        except Exception as e:
+            logger.error(f"❌ Ошибка создания резервной копии БД: {e}")
+            return None
+    
+    def _check_database_has_data(self) -> bool:
+        """
+        Проверяет, есть ли данные в БД (пытается прочитать хотя бы одну таблицу)
+        
+        Returns:
+            True если в БД есть данные, False если БД пуста или повреждена
+        """
+        if not os.path.exists(self.db_path):
+            return False
+        
+        try:
+            # Пытаемся подключиться в режиме только чтения
+            conn = sqlite3.connect(f"file:{self.db_path}?mode=ro", uri=True, timeout=10.0)
+            cursor = conn.cursor()
+            
+            # Проверяем наличие таблиц
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = cursor.fetchall()
+            
+            if not tables:
+                conn.close()
+                return False
+            
+            # Пытаемся посчитать записи в основных таблицах
+            main_tables = ['bots_state', 'bot_positions_registry', 'individual_coin_settings', 'mature_coins']
+            for table in main_tables:
+                try:
+                    cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                    count = cursor.fetchone()[0]
+                    if count > 0:
+                        conn.close()
+                        return True
+                except:
+                    continue
+            
+            conn.close()
+            return False
+        except Exception as e:
+            logger.debug(f"⚠️ Не удалось проверить данные в БД: {e}")
+            return False
+    
+    def _recreate_database(self):
+        """
+        Удаляет поврежденную БД и создает новую (только при явной ошибке подключения)
+        
+        ВАЖНО: Перед удалением создает резервную копию и проверяет наличие данных
+        """
+        if not os.path.exists(self.db_path):
+            return
+        
+        try:
+            # Проверяем, есть ли данные в БД
+            has_data = self._check_database_has_data()
+            
+            if has_data:
+                # Если есть данные - ОБЯЗАТЕЛЬНО создаем резервную копию
+                backup_path = self._backup_database()
+                if not backup_path:
+                    # Не удаляем БД если не удалось создать резервную копию!
+                    logger.error(f"❌ КРИТИЧНО: Не удалось создать резервную копию БД с данными!")
+                    logger.error(f"❌ БД НЕ БУДЕТ УДАЛЕНА для защиты данных!")
+                    raise Exception("Не удалось создать резервную копию БД с данными - удаление отменено")
+                logger.warning(f"⚠️ ВНИМАНИЕ: БД содержит данные, создана резервная копия: {backup_path}")
+            else:
+                # Если данных нет - все равно создаем резервную копию на всякий случай
+                self._backup_database()
+            
+            # Удаляем поврежденный файл и связанные файлы WAL/SHM
+            wal_file = self.db_path + '-wal'
+            shm_file = self.db_path + '-shm'
+            
+            if os.path.exists(wal_file):
+                os.remove(wal_file)
+            if os.path.exists(shm_file):
+                os.remove(shm_file)
+            os.remove(self.db_path)
+            
+            logger.warning(f"🗑️ Удалена поврежденная БД: {self.db_path}")
+            if has_data:
+                logger.warning(f"💾 Данные сохранены в резервной копии - можно восстановить при необходимости")
+        except Exception as e:
+            logger.error(f"❌ Ошибка удаления поврежденной БД: {e}")
+            raise
+    
+    def _repair_database(self) -> bool:
+        """
+        Пытается исправить поврежденную БД
+        
+        Returns:
+            True если удалось исправить, False в противном случае
+        """
+        try:
+            logger.warning("🔧 Попытка исправления БД...")
+            
+            # Создаем резервную копию перед исправлением
+            backup_path = self._backup_database()
+            if not backup_path:
+                logger.error("❌ Не удалось создать резервную копию перед исправлением")
+                return False
+            
+            # Пытаемся использовать VACUUM для исправления
+            try:
+                # Подключаемся без retry для VACUUM (может быть долго)
+                conn = sqlite3.connect(self.db_path, timeout=300.0)  # 5 минут для VACUUM
+                cursor = conn.cursor()
+                logger.info("🔧 Выполняю VACUUM для исправления БД (это может занять время)...")
+                cursor.execute("VACUUM")
+                conn.commit()
+                conn.close()
+                logger.info("✅ VACUUM выполнен")
+            except Exception as vacuum_error:
+                logger.warning(f"⚠️ VACUUM не помог: {vacuum_error}")
+                try:
+                    conn.close()
+                except:
+                    pass
+            
+            # Проверяем, исправилась ли БД
+            is_ok, error_msg = self._check_integrity()
+            if is_ok:
+                logger.info("✅ БД успешно исправлена с помощью VACUUM")
+                return True
+            else:
+                logger.warning(f"⚠️ БД все еще повреждена после VACUUM: {error_msg}")
+                # Пытаемся восстановить из резервной копии (которая была создана ДО повреждения)
+                logger.info("🔄 Попытка восстановления из резервной копии...")
+                # Ищем более старую резервную копию (до текущей)
+                backups = self.list_backups()
+                if backups and len(backups) > 1:
+                    # Используем предпоследнюю копию (последняя - это та, что мы только что создали)
+                    older_backup = backups[1]['path']
+                    logger.info(f"📦 Восстанавливаю из более старой резервной копии: {older_backup}")
+                    return self.restore_from_backup(older_backup)
+                elif backups:
+                    # Только одна копия - используем её
+                    logger.info(f"📦 Восстанавливаю из резервной копии: {backups[0]['path']}")
+                    return self.restore_from_backup(backups[0]['path'])
+                else:
+                    logger.error("❌ Нет доступных резервных копий для восстановления")
+                    return False
+        except Exception as e:
+            logger.error(f"❌ Ошибка исправления БД: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return False
+    
+    @contextmanager
+    def _get_connection(self, retry_on_locked: bool = True, max_retries: int = 5):
+        """
+        Контекстный менеджер для работы с БД с поддержкой retry при блокировках
+        
+        Args:
+            retry_on_locked: Повторять попытки при ошибке "database is locked"
+            max_retries: Максимальное количество попыток при блокировке
         
         Автоматически настраивает БД для оптимальной производительности:
         - WAL режим для параллельных операций
         - Оптимизированные настройки кеша и синхронизации
         - Автоматический commit/rollback при ошибках
+        - Retry логика при блокировках (до 5 попыток с экспоненциальной задержкой)
         
         Использование:
         ```python
@@ -133,58 +354,123 @@ class BotsDatabase:
             # Автоматический commit при выходе
         ```
         """
-        conn = None
-        try:
-            conn = sqlite3.connect(self.db_path, timeout=30.0)
-            conn.row_factory = sqlite3.Row
-            
-            # Включаем WAL режим для лучшей производительности (параллельные чтения/записи)
-            # Преимущества WAL:
-            # - Читатели не блокируют писателей
-            # - Писатели не блокируют читателей
-            # - Параллельная работа нескольких процессов
-            conn.execute("PRAGMA journal_mode=WAL")
-            
-            # Оптимизируем для быстрых записей
-            # NORMAL - баланс между скоростью и надежностью (быстрее чем FULL, безопаснее чем OFF)
-            conn.execute("PRAGMA synchronous=NORMAL")
-            
-            # Увеличиваем кеш до 64MB для быстрого доступа к часто используемым данным
-            conn.execute("PRAGMA cache_size=-64000")  # -64000 = 64MB (отрицательное значение = KB)
-            
-            # Временные таблицы храним в памяти для скорости
-            conn.execute("PRAGMA temp_store=MEMORY")
-            
-            yield conn
-            conn.commit()
-            
-        except sqlite3.Error as e:
-            if conn:
-                conn.rollback()
-            logger.error(f"❌ Ошибка SQLite: {e}")
-            raise
-        except Exception as e:
-            if conn:
-                conn.rollback()
-            logger.error(f"❌ Неожиданная ошибка БД: {e}")
-            raise
-        finally:
-            if conn:
-                conn.close()
+        last_error = None
+        
+        for attempt in range(max_retries if retry_on_locked else 1):
+            try:
+                # Увеличиваем timeout для операций записи при параллельном доступе
+                # 60 секунд должно быть достаточно для работы через сеть
+                conn = sqlite3.connect(self.db_path, timeout=60.0)
+                conn.row_factory = sqlite3.Row
+                
+                # Включаем WAL режим для лучшей производительности (параллельные чтения)
+                # WAL позволяет нескольким читателям работать одновременно с одним писателем
+                conn.execute("PRAGMA journal_mode=WAL")
+                # Оптимизируем для быстрых записей
+                conn.execute("PRAGMA synchronous=NORMAL")  # Быстрее чем FULL, но безопаснее чем OFF
+                conn.execute("PRAGMA cache_size=-64000")  # 64MB кеш
+                conn.execute("PRAGMA temp_store=MEMORY")  # Временные таблицы в памяти
+                
+                # Успешное подключение
+                try:
+                    yield conn
+                    conn.commit()
+                    conn.close()
+                    return  # Успешно выполнили операцию
+                except sqlite3.OperationalError as e:
+                    error_str = str(e).lower()
+                    # Обрабатываем ошибки блокировки
+                    if "database is locked" in error_str or "locked" in error_str:
+                        conn.rollback()
+                        conn.close()
+                        last_error = e
+                        if retry_on_locked and attempt < max_retries - 1:
+                            wait_time = (attempt + 1) * 0.5  # Экспоненциальная задержка: 0.5s, 1s, 1.5s...
+                            logger.debug(f"⚠️ БД заблокирована (попытка {attempt + 1}/{max_retries}), ждем {wait_time:.1f}s...")
+                            time.sleep(wait_time)
+                            continue  # Повторяем попытку
+                        else:
+                            # Превышено количество попыток
+                            logger.warning(f"⚠️ БД заблокирована после {max_retries} попыток")
+                            raise
+                    else:
+                        # Другие OperationalError - не повторяем
+                        conn.rollback()
+                        conn.close()
+                        raise
+                except Exception as e:
+                    try:
+                        conn.rollback()
+                    except:
+                        pass
+                    try:
+                        conn.close()
+                    except:
+                        pass
+                    raise e
+                    
+            except sqlite3.DatabaseError as e:
+                error_str = str(e).lower()
+                # Восстанавливаем БД ТОЛЬКО при явной ошибке "file is not a database"
+                if "file is not a database" in error_str or ("not a database" in error_str and "unable to open" not in error_str):
+                    logger.error(f"❌ Файл БД поврежден (явная ошибка SQLite): {self.db_path}")
+                    logger.error(f"❌ Ошибка: {e}")
+                    # Восстанавливаем БД только при явной ошибке
+                    self._recreate_database()
+                    # Пытаемся подключиться снова (только один раз)
+                    if attempt == 0:
+                        continue
+                    else:
+                        raise
+                elif "database is locked" in error_str or "locked" in error_str:
+                    # Ошибка блокировки при подключении
+                    last_error = e
+                    if retry_on_locked and attempt < max_retries - 1:
+                        wait_time = (attempt + 1) * 0.5
+                        logger.debug(f"⚠️ БД заблокирована при подключении (попытка {attempt + 1}/{max_retries}), ждем {wait_time:.1f}s...")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        logger.warning(f"⚠️ БД заблокирована при подключении после {max_retries} попыток")
+                        raise
+                else:
+                    # Другие ошибки - не повторяем
+                    raise
+        
+        # Если дошли сюда, значит все попытки исчерпаны
+        if last_error:
+            raise last_error
     
     def _init_database(self):
         """Создает все таблицы и индексы"""
-        # Проверяем, создается ли база впервые
+        # Проверяем целостность БД при каждом запуске
         db_exists = os.path.exists(self.db_path)
         
-        # SQLite автоматически создает файл БД при первом подключении
-        # Но убедимся, что файл будет создан явно
-        if not db_exists:
-            # Создаем пустой файл БД
-            Path(self.db_path).touch()
-            logger.info(f"📁 Создана новая база данных: {self.db_path}")
+        if db_exists:
+            logger.info("🔍 Проверка целостности БД...")
+            is_ok, error_msg = self._check_integrity()
+            
+            if not is_ok:
+                logger.error(f"❌ Обнаружены повреждения в БД: {error_msg}")
+                logger.warning("🔧 Попытка автоматического исправления...")
+                
+                if self._repair_database():
+                    logger.info("✅ БД успешно исправлена")
+                    # Проверяем еще раз после исправления
+                    is_ok, error_msg = self._check_integrity()
+                    if not is_ok:
+                        logger.error(f"❌ БД все еще повреждена после исправления: {error_msg}")
+                        logger.error("⚠️ Рекомендуется восстановить из резервной копии вручную")
+                else:
+                    logger.error("❌ Не удалось автоматически исправить БД")
+                    logger.error("⚠️ Попробуйте восстановить из резервной копии: db.restore_from_backup()")
+            else:
+                logger.debug("✅ БД проверена, целостность в порядке")
         else:
-            logger.debug(f"📁 Используется существующая база данных: {self.db_path}")
+            logger.info(f"📁 Создается новая база данных: {self.db_path}")
+        
+        # SQLite автоматически создает файл БД при первом подключении
+        # Не нужно создавать пустой файл через touch() - это создает невалидную БД
         
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -1314,6 +1600,126 @@ class BotsDatabase:
         except Exception as e:
             logger.error(f"❌ Ошибка получения статистики БД: {e}")
             return {}
+    
+    def list_backups(self) -> List[Dict[str, Any]]:
+        """
+        Список доступных резервных копий БД
+        
+        Returns:
+            Список словарей с информацией о резервных копиях
+        """
+        backups = []
+        db_dir = os.path.dirname(self.db_path)
+        db_name = os.path.basename(self.db_path)
+        
+        try:
+            if not os.path.exists(db_dir):
+                return backups
+            
+            # Ищем все файлы резервных копий
+            for filename in os.listdir(db_dir):
+                if filename.startswith(f"{db_name}.backup_") and not filename.endswith('-wal') and not filename.endswith('-shm'):
+                    backup_path = os.path.join(db_dir, filename)
+                    try:
+                        file_size = os.path.getsize(backup_path)
+                        # Извлекаем timestamp из имени файла
+                        timestamp_str = filename.replace(f"{db_name}.backup_", "")
+                        try:
+                            backup_time = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S")
+                        except:
+                            backup_time = datetime.fromtimestamp(os.path.getmtime(backup_path))
+                        
+                        backups.append({
+                            'path': backup_path,
+                            'filename': filename,
+                            'size_mb': file_size / 1024 / 1024,
+                            'created_at': backup_time.isoformat(),
+                            'timestamp': timestamp_str
+                        })
+                    except Exception as e:
+                        logger.debug(f"⚠️ Ошибка обработки резервной копии {filename}: {e}")
+            
+            # Сортируем по дате создания (новые первыми)
+            backups.sort(key=lambda x: x['created_at'], reverse=True)
+            return backups
+        except Exception as e:
+            logger.error(f"❌ Ошибка получения списка резервных копий: {e}")
+            return []
+    
+    def restore_from_backup(self, backup_path: str = None) -> bool:
+        """
+        Восстанавливает БД из резервной копии
+        
+        Args:
+            backup_path: Путь к резервной копии (если None, используется последняя)
+        
+        Returns:
+            True если восстановление успешно, False в противном случае
+        """
+        try:
+            # Если путь не указан, используем последнюю резервную копию
+            if backup_path is None:
+                backups = self.list_backups()
+                if not backups:
+                    logger.error("❌ Нет доступных резервных копий")
+                    return False
+                backup_path = backups[0]['path']
+                logger.info(f"📦 Используется последняя резервная копия: {backup_path}")
+            
+            if not os.path.exists(backup_path):
+                logger.error(f"❌ Резервная копия не найдена: {backup_path}")
+                return False
+            
+            logger.info(f"📦 Восстановление БД из резервной копии: {backup_path}")
+            
+            # Закрываем все соединения перед восстановлением
+            # (в SQLite это не критично, но для чистоты)
+            
+            # Создаем резервную копию текущей БД перед восстановлением (на всякий случай)
+            if os.path.exists(self.db_path):
+                current_backup = self._backup_database()
+                if current_backup:
+                    logger.info(f"💾 Текущая БД сохранена в: {current_backup}")
+            
+            # Копируем резервную копию на место основной БД
+            shutil.copy2(backup_path, self.db_path)
+            
+            # Восстанавливаем WAL и SHM файлы если есть
+            wal_backup = f"{backup_path}-wal"
+            shm_backup = f"{backup_path}-shm"
+            wal_file = f"{self.db_path}-wal"
+            shm_file = f"{self.db_path}-shm"
+            
+            if os.path.exists(wal_backup):
+                shutil.copy2(wal_backup, wal_file)
+                logger.debug("✅ Восстановлен WAL файл")
+            elif os.path.exists(wal_file):
+                # Удаляем старый WAL файл если нет резервной копии
+                os.remove(wal_file)
+                logger.debug("🗑️ Удален старый WAL файл")
+            
+            if os.path.exists(shm_backup):
+                shutil.copy2(shm_backup, shm_file)
+                logger.debug("✅ Восстановлен SHM файл")
+            elif os.path.exists(shm_file):
+                # Удаляем старый SHM файл если нет резервной копии
+                os.remove(shm_file)
+                logger.debug("🗑️ Удален старый SHM файл")
+            
+            # Проверяем целостность восстановленной БД
+            is_ok, error_msg = self._check_integrity()
+            if is_ok:
+                logger.info("✅ БД успешно восстановлена из резервной копии")
+                return True
+            else:
+                logger.error(f"❌ Восстановленная БД повреждена: {error_msg}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Ошибка восстановления БД из резервной копии: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return False
 
 
 # Глобальный экземпляр базы данных
