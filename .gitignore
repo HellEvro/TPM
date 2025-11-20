@@ -232,6 +232,13 @@ data/ai/market_data.json
 data/ai/candles_full_history.json
 data/ai/history_data.json
 data/ai/bots_data.json
+data/ai/parameter_training_data.json
+data/ai/parameter_training_data.json.backup
+data/ai/parameter_training_data.json.corrupted
+data/ai/used_training_parameters.json
+data/ai/best_params_per_symbol.json
+data/ai/blocked_params.json
+data/ai/win_rate_targets.json
 data/maturity_check_cache.json
 data/bots_state.json
 data/bot_history.json

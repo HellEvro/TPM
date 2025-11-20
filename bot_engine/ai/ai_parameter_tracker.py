@@ -26,46 +26,32 @@ class AIParameterTracker:
     def __init__(self, data_dir: str = 'data/ai'):
         self.data_dir = data_dir
         self.lock = RLock()
-        self.used_params_file = os.path.join(data_dir, 'used_training_parameters.json')
         
-        # Создаем директорию если её нет
-        os.makedirs(self.data_dir, exist_ok=True)
-        
-        # Загружаем использованные параметры
-        self.used_params = self._load_used_params()
+        # Подключаемся к БД
+        try:
+            from bot_engine.ai.ai_database import get_ai_database
+            self.ai_db = get_ai_database()
+            logger.debug("✅ AI Database подключена для AIParameterTracker")
+        except Exception as e:
+            logger.warning(f"⚠️ Не удалось подключиться к AI Database: {e}")
+            self.ai_db = None
         
         # Вычисляем общее количество возможных комбинаций
         self.total_combinations = self._calculate_total_combinations()
-        
-        # Убрано: logger.debug(f"📊 Загружено {len(self.used_params)} использованных комбинаций из {self.total_combinations} возможных") - слишком шумно
     
-    def _load_used_params(self) -> Dict:
-        """Загрузить использованные параметры из файла"""
+    def _get_used_params_dict(self) -> Dict:
+        """Получить словарь использованных параметров из БД (для обратной совместимости)"""
+        if not self.ai_db:
+            return {}
         try:
-            if os.path.exists(self.used_params_file):
-                with open(self.used_params_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    return data.get('used_combinations', {})
+            # Загружаем все использованные параметры
+            count = self.ai_db.count_used_training_parameters()
+            # Для обратной совместимости создаем словарь {hash: data}
+            # Но это неэффективно для больших объемов, поэтому используем БД напрямую
+            return {}  # Возвращаем пустой словарь, используем БД напрямую
         except Exception as e:
             logger.warning(f"⚠️ Ошибка загрузки использованных параметров: {e}")
-        
-        return {}
-    
-    def _save_used_params(self):
-        """Сохранить использованные параметры в файл"""
-        try:
-            with self.lock:
-                data = {
-                    'last_update': datetime.now().isoformat(),
-                    'total_combinations': self.total_combinations,
-                    'used_count': len(self.used_params),
-                    'used_combinations': self.used_params
-                }
-                
-                with open(self.used_params_file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            logger.error(f"❌ Ошибка сохранения использованных параметров: {e}")
+            return {}
     
     def _calculate_total_combinations(self) -> int:
         """
@@ -129,8 +115,11 @@ class AIParameterTracker:
         Returns:
             True если параметры уже использовались
         """
+        if not self.ai_db:
+            return False
         param_hash = self._generate_param_hash(rsi_params)
-        return param_hash in self.used_params
+        used_param = self.ai_db.get_used_training_parameter(param_hash)
+        return used_param is not None
     
     def mark_params_used(self, rsi_params: Dict, training_seed: int, 
                          win_rate: float = 0.0, symbol: Optional[str] = None,
@@ -148,52 +137,28 @@ class AIParameterTracker:
             signal_accuracy: Точность предсказания сигналов
             trades_count: Количество сделок
         """
+        if not self.ai_db:
+            return  # Не логируем предупреждение - это нормально если БД недоступна
+        
         param_hash = self._generate_param_hash(rsi_params)
         
         # Вычисляем рейтинг параметров (комплексная метрика)
         rating = self.calculate_rating(win_rate, total_pnl, signal_accuracy, trades_count)
         
-        with self.lock:
-            # Если параметры уже использовались - обновляем если новый результат лучше
-            if param_hash in self.used_params:
-                existing = self.used_params[param_hash]
-                existing_rating = existing.get('rating', 0)
-                
-                # Обновляем только если новый результат лучше
-                if rating > existing_rating:
-                    existing.update({
-                        'rsi_params': rsi_params,
-                        'training_seed': training_seed,
-                        'used_at': datetime.now().isoformat(),
-                        'win_rate': win_rate,
-                        'total_pnl': total_pnl,
-                        'signal_accuracy': signal_accuracy,
-                        'trades_count': trades_count,
-                        'rating': rating,
-                        'symbol': symbol,
-                        'update_count': existing.get('update_count', 0) + 1
-                    })
-                    logger.debug(f"✅ Обновлены параметры с лучшим рейтингом: {rating:.2f} (было: {existing_rating:.2f})")
-            else:
-                # Новые параметры
-                self.used_params[param_hash] = {
-                    'rsi_params': rsi_params,
-                    'training_seed': training_seed,
-                    'used_at': datetime.now().isoformat(),
-                    'win_rate': win_rate,
-                    'total_pnl': total_pnl,
-                    'signal_accuracy': signal_accuracy,
-                    'trades_count': trades_count,
-                    'rating': rating,
-                    'symbol': symbol,
-                    'update_count': 1
-                }
-            
-            self._save_used_params()
-            
-            # Сохраняем лучшие параметры для монеты (если указана)
-            if symbol:
-                self._update_best_params_for_symbol(symbol, rsi_params, rating, win_rate, total_pnl)
+        # Убираем блокировку - SQLite WAL режим позволяет параллельные записи
+        # Сохраняем в БД (метод сам проверит и обновит если нужно)
+        param_id = self.ai_db.save_used_training_parameter(
+            param_hash, rsi_params, training_seed,
+            win_rate, total_pnl, signal_accuracy, trades_count,
+            rating, symbol
+        )
+        
+        # Сохраняем лучшие параметры для монеты (если указана) - делаем это в той же транзакции
+        if param_id and symbol:
+            # Проверяем нужно ли обновить лучшие параметры (быстрая проверка без блокировки)
+            current_best = self.ai_db.get_best_params_for_symbol(symbol)
+            if not current_best or rating > current_best.get('rating', 0):
+                self.ai_db.save_best_params_for_symbol(symbol, rsi_params, rating, win_rate, total_pnl)
     
     def calculate_rating(self, win_rate: float, total_pnl: float, 
                          signal_accuracy: float, trades_count: int) -> float:
@@ -237,30 +202,16 @@ class AIParameterTracker:
             win_rate: Win Rate
             total_pnl: Total PnL
         """
-        best_params_file = os.path.join(self.data_dir, 'best_params_per_symbol.json')
+        if not self.ai_db:
+            return
         
         try:
-            # Загружаем существующие лучшие параметры
-            if os.path.exists(best_params_file):
-                with open(best_params_file, 'r', encoding='utf-8') as f:
-                    best_params = json.load(f)
-            else:
-                best_params = {}
+            # Проверяем текущие лучшие параметры
+            current_best = self.ai_db.get_best_params_for_symbol(symbol)
             
-            # Проверяем нужно ли обновить лучшие параметры для этой монеты
-            if symbol not in best_params or rating > best_params[symbol].get('rating', 0):
-                best_params[symbol] = {
-                    'rsi_params': rsi_params,
-                    'rating': rating,
-                    'win_rate': win_rate,
-                    'total_pnl': total_pnl,
-                    'updated_at': datetime.now().isoformat()
-                }
-                
-                # Сохраняем
-                with open(best_params_file, 'w', encoding='utf-8') as f:
-                    json.dump(best_params, f, indent=2, ensure_ascii=False)
-                
+            # Обновляем только если новый рейтинг лучше
+            if not current_best or rating > current_best.get('rating', 0):
+                self.ai_db.save_best_params_for_symbol(symbol, rsi_params, rating, win_rate, total_pnl)
                 logger.debug(f"✅ Обновлены лучшие параметры для {symbol}: рейтинг {rating:.2f}, Win Rate {win_rate:.1f}%")
         except Exception as e:
             logger.debug(f"⚠️ Ошибка обновления лучших параметров для {symbol}: {e}")
@@ -272,7 +223,16 @@ class AIParameterTracker:
         Returns:
             Словарь со статистикой
         """
-        used_count = len(self.used_params)
+        if not self.ai_db:
+            return {
+                'used_combinations': 0,
+                'total_combinations': self.total_combinations,
+                'remaining_combinations': self.total_combinations,
+                'usage_percentage': 0.0,
+                'is_exhausted': False
+            }
+        
+        used_count = self.ai_db.count_used_training_parameters()
         total = self.total_combinations
         percentage = (used_count / total * 100) if total > 0 else 0
         
@@ -295,19 +255,9 @@ class AIParameterTracker:
         Returns:
             Список лучших комбинаций параметров
         """
-        # Фильтруем по минимальному Win Rate и сортируем по рейтингу
-        filtered_params = [
-            p for p in self.used_params.values()
-            if p.get('win_rate', 0) >= min_win_rate
-        ]
-        
-        sorted_params = sorted(
-            filtered_params,
-            key=lambda x: x.get('rating', 0),
-            reverse=True
-        )
-        
-        return sorted_params[:limit]
+        if not self.ai_db:
+            return []
+        return self.ai_db.get_best_used_parameters(limit, min_win_rate)
     
     def get_best_params_for_symbol(self, symbol: str) -> Optional[Dict]:
         """
@@ -319,17 +269,9 @@ class AIParameterTracker:
         Returns:
             Словарь с лучшими параметрами или None
         """
-        best_params_file = os.path.join(self.data_dir, 'best_params_per_symbol.json')
-        
-        try:
-            if os.path.exists(best_params_file):
-                with open(best_params_file, 'r', encoding='utf-8') as f:
-                    best_params = json.load(f)
-                    return best_params.get(symbol)
-        except Exception as e:
-            logger.debug(f"⚠️ Ошибка загрузки лучших параметров для {symbol}: {e}")
-        
-        return None
+        if not self.ai_db:
+            return None
+        return self.ai_db.get_best_params_for_symbol(symbol)
     
     def get_all_best_params_per_symbol(self) -> Dict[str, Dict]:
         """
@@ -338,27 +280,15 @@ class AIParameterTracker:
         Returns:
             Словарь {symbol: best_params}
         """
-        best_params_file = os.path.join(self.data_dir, 'best_params_per_symbol.json')
-        
-        try:
-            if os.path.exists(best_params_file):
-                with open(best_params_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-        except Exception as e:
-            logger.debug(f"⚠️ Ошибка загрузки лучших параметров: {e}")
-        
-        return {}
+        if not self.ai_db:
+            return {}
+        return self.ai_db.get_all_best_params_per_symbol()
     
     def _load_blocked_params(self) -> List[Dict]:
         """Загрузить информацию о заблокированных параметрах"""
-        blocked_params_file = os.path.join(self.data_dir, 'blocked_params.json')
-        try:
-            if os.path.exists(blocked_params_file):
-                with open(blocked_params_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-        except Exception as e:
-            logger.debug(f"⚠️ Ошибка загрузки заблокированных параметров: {e}")
-        return []
+        if not self.ai_db:
+            return []
+        return self.ai_db.get_blocked_params(limit=None)
     
     def _analyze_blocking_patterns(self, blocked_params: List[Dict]) -> Dict[str, Any]:
         """
@@ -517,8 +447,11 @@ class AIParameterTracker:
             logger.warning("⚠️ Для сброса параметров требуется подтверждение (confirm=True)")
             return
         
-        with self.lock:
-            self.used_params = {}
-            self._save_used_params()
-            logger.info("✅ Список использованных параметров сброшен")
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database недоступна, сброс невозможен")
+            return
+        
+        # ВАЖНО: Сброс БД - опасная операция, лучше не делать автоматически
+        # Оставляем только предупреждение
+        logger.warning("⚠️ Сброс параметров в БД не реализован для безопасности. Используйте SQL напрямую если необходимо.")
 

@@ -72,6 +72,12 @@ class AIDatabase:
         """Контекстный менеджер для работы с БД"""
         conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
+        # Включаем WAL режим для лучшей производительности (параллельные чтения)
+        conn.execute("PRAGMA journal_mode=WAL")
+        # Оптимизируем для быстрых записей
+        conn.execute("PRAGMA synchronous=NORMAL")  # Быстрее чем FULL, но безопаснее чем OFF
+        conn.execute("PRAGMA cache_size=-64000")  # 64MB кеш
+        conn.execute("PRAGMA temp_store=MEMORY")  # Временные таблицы в памяти
         try:
             yield conn
             conn.commit()
@@ -298,6 +304,101 @@ class AIDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_perf_metrics_type ON performance_metrics(metric_type)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_perf_metrics_recorded_at ON performance_metrics(recorded_at)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_perf_metrics_session ON performance_metrics(training_session_id)")
+            
+            # ==================== ТАБЛИЦА: ОБРАЗЦЫ ДЛЯ ОБУЧЕНИЯ ПРЕДСКАЗАТЕЛЯ КАЧЕСТВА ПАРАМЕТРОВ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS parameter_training_samples (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    rsi_params_json TEXT NOT NULL,
+                    risk_params_json TEXT,
+                    win_rate REAL NOT NULL,
+                    total_pnl REAL NOT NULL,
+                    trades_count INTEGER NOT NULL,
+                    quality REAL NOT NULL,
+                    blocked INTEGER NOT NULL DEFAULT 0,
+                    rsi_entered_zones INTEGER DEFAULT 0,
+                    filters_blocked INTEGER DEFAULT 0,
+                    block_reasons_json TEXT,
+                    symbol TEXT,
+                    created_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для parameter_training_samples
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_param_samples_symbol ON parameter_training_samples(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_param_samples_quality ON parameter_training_samples(quality)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_param_samples_blocked ON parameter_training_samples(blocked)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_param_samples_created_at ON parameter_training_samples(created_at)")
+            
+            # ==================== ТАБЛИЦА: ИСПОЛЬЗОВАННЫЕ ПАРАМЕТРЫ ОБУЧЕНИЯ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS used_training_parameters (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    param_hash TEXT UNIQUE NOT NULL,
+                    rsi_params_json TEXT NOT NULL,
+                    training_seed INTEGER,
+                    win_rate REAL DEFAULT 0.0,
+                    total_pnl REAL DEFAULT 0.0,
+                    signal_accuracy REAL DEFAULT 0.0,
+                    trades_count INTEGER DEFAULT 0,
+                    rating REAL DEFAULT 0.0,
+                    symbol TEXT,
+                    used_at TEXT NOT NULL,
+                    update_count INTEGER DEFAULT 1
+                )
+            """)
+            
+            # Индексы для used_training_parameters
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_used_params_hash ON used_training_parameters(param_hash)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_used_params_symbol ON used_training_parameters(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_used_params_rating ON used_training_parameters(rating)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_used_params_win_rate ON used_training_parameters(win_rate)")
+            
+            # ==================== ТАБЛИЦА: ЛУЧШИЕ ПАРАМЕТРЫ ДЛЯ МОНЕТ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS best_params_per_symbol (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT UNIQUE NOT NULL,
+                    rsi_params_json TEXT NOT NULL,
+                    rating REAL NOT NULL,
+                    win_rate REAL NOT NULL,
+                    total_pnl REAL NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для best_params_per_symbol
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_best_params_symbol ON best_params_per_symbol(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_best_params_rating ON best_params_per_symbol(rating)")
+            
+            # ==================== ТАБЛИЦА: ЗАБЛОКИРОВАННЫЕ ПАРАМЕТРЫ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS blocked_params (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    rsi_params_json TEXT NOT NULL,
+                    block_reasons_json TEXT,
+                    blocked_at TEXT NOT NULL,
+                    symbol TEXT
+                )
+            """)
+            
+            # Индексы для blocked_params
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_blocked_params_symbol ON blocked_params(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_blocked_params_blocked_at ON blocked_params(blocked_at)")
+            
+            # ==================== ТАБЛИЦА: ЦЕЛЕВЫЕ ЗНАЧЕНИЯ WIN RATE ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS win_rate_targets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT UNIQUE NOT NULL,
+                    target_win_rate REAL NOT NULL,
+                    current_win_rate REAL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для win_rate_targets
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_win_rate_targets_symbol ON win_rate_targets(symbol)")
             
             # ==================== ТАБЛИЦА: ПАТТЕРНЫ И ИНСАЙТЫ ====================
             cursor.execute("""
@@ -1174,6 +1275,410 @@ class AIDatabase:
             
             return result
     
+    def save_parameter_training_sample(self, sample: Dict[str, Any]) -> Optional[int]:
+        """
+        Сохраняет образец для обучения предсказателя качества параметров
+        
+        Args:
+            sample: Словарь с данными образца:
+                - rsi_params: Dict - параметры RSI
+                - risk_params: Optional[Dict] - параметры риск-менеджмента
+                - win_rate: float - Win Rate (0-100)
+                - total_pnl: float - Total PnL
+                - trades_count: int - Количество сделок
+                - quality: float - Качество (вычисленное)
+                - blocked: bool - Были ли входы заблокированы
+                - rsi_entered_zones: int - Сколько раз RSI входил в зоны
+                - filters_blocked: int - Сколько раз фильтры заблокировали вход
+                - block_reasons: Optional[Dict] - Причины блокировок
+                - symbol: Optional[str] - Символ монеты
+        
+        Returns:
+            ID сохраненного образца или None при ошибке
+        """
+        try:
+            now = datetime.now().isoformat()
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO parameter_training_samples (
+                        rsi_params_json, risk_params_json, win_rate, total_pnl,
+                        trades_count, quality, blocked, rsi_entered_zones,
+                        filters_blocked, block_reasons_json, symbol, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    json.dumps(sample.get('rsi_params', {})),
+                    json.dumps(sample.get('risk_params', {})) if sample.get('risk_params') else None,
+                    sample.get('win_rate', 0.0),
+                    sample.get('total_pnl', 0.0),
+                    sample.get('trades_count', 0),
+                    sample.get('quality', 0.0),
+                    1 if sample.get('blocked', False) else 0,
+                    sample.get('rsi_entered_zones', 0),
+                    sample.get('filters_blocked', 0),
+                    json.dumps(sample.get('block_reasons', {})) if sample.get('block_reasons') else None,
+                    sample.get('symbol'),
+                    now
+                ))
+                sample_id = cursor.lastrowid
+                conn.commit()
+                return sample_id
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения образца параметров: {e}")
+            return None
+    
+    def get_parameter_training_samples(self, limit: Optional[int] = None, 
+                                       order_by: str = 'created_at DESC') -> List[Dict[str, Any]]:
+        """
+        Получает образцы для обучения предсказателя качества параметров
+        
+        Args:
+            limit: Максимальное количество образцов (None = все)
+            order_by: Поле для сортировки (по умолчанию: created_at DESC)
+        
+        Returns:
+            Список словарей с данными образцов
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                query = f"SELECT * FROM parameter_training_samples ORDER BY {order_by}"
+                if limit:
+                    query += f" LIMIT {limit}"
+                
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                
+                samples = []
+                for row in rows:
+                    sample = {
+                        'id': row['id'],
+                        'rsi_params': json.loads(row['rsi_params_json']) if row['rsi_params_json'] else {},
+                        'risk_params': json.loads(row['risk_params_json']) if row['risk_params_json'] else {},
+                        'win_rate': row['win_rate'],
+                        'total_pnl': row['total_pnl'],
+                        'trades_count': row['trades_count'],
+                        'quality': row['quality'],
+                        'blocked': bool(row['blocked']),
+                        'rsi_entered_zones': row['rsi_entered_zones'],
+                        'filters_blocked': row['filters_blocked'],
+                        'block_reasons': json.loads(row['block_reasons_json']) if row['block_reasons_json'] else {},
+                        'symbol': row['symbol'],
+                        'timestamp': row['created_at']
+                    }
+                    samples.append(sample)
+                
+                return samples
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки образцов параметров: {e}")
+            return []
+    
+    def count_parameter_training_samples(self) -> int:
+        """Возвращает количество сохраненных образцов параметров"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM parameter_training_samples")
+                return cursor.fetchone()[0]
+        except Exception as e:
+            logger.error(f"❌ Ошибка подсчета образцов параметров: {e}")
+            return 0
+    
+    # ==================== МЕТОДЫ ДЛЯ РАБОТЫ С ИСПОЛЬЗОВАННЫМИ ПАРАМЕТРАМИ ====================
+    
+    def save_used_training_parameter(self, param_hash: str, rsi_params: Dict, training_seed: int,
+                                     win_rate: float = 0.0, total_pnl: float = 0.0,
+                                     signal_accuracy: float = 0.0, trades_count: int = 0,
+                                     rating: float = 0.0, symbol: Optional[str] = None) -> Optional[int]:
+        """
+        Сохраняет или обновляет использованные параметры обучения
+        
+        Returns:
+            ID записи или None при ошибке
+        """
+        try:
+            now = datetime.now().isoformat()
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                # Используем INSERT OR REPLACE для атомарной операции (быстрее чем SELECT + UPDATE)
+                # Но сначала проверяем рейтинг, чтобы обновлять только если лучше
+                cursor.execute("SELECT rating FROM used_training_parameters WHERE param_hash = ?", (param_hash,))
+                existing = cursor.fetchone()
+                
+                if existing and rating <= existing['rating']:
+                    # Не обновляем если рейтинг не лучше
+                    cursor.execute("SELECT id FROM used_training_parameters WHERE param_hash = ?", (param_hash,))
+                    return cursor.fetchone()['id']
+                
+                # Обновляем или вставляем
+                cursor.execute("""
+                    INSERT INTO used_training_parameters (
+                        param_hash, rsi_params_json, training_seed, win_rate,
+                        total_pnl, signal_accuracy, trades_count, rating, symbol, used_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(param_hash) DO UPDATE SET
+                        rsi_params_json = excluded.rsi_params_json,
+                        training_seed = excluded.training_seed,
+                        win_rate = excluded.win_rate,
+                        total_pnl = excluded.total_pnl,
+                        signal_accuracy = excluded.signal_accuracy,
+                        trades_count = excluded.trades_count,
+                        rating = excluded.rating,
+                        symbol = excluded.symbol,
+                        used_at = excluded.used_at,
+                        update_count = update_count + 1
+                    WHERE excluded.rating > used_training_parameters.rating
+                """, (
+                    param_hash, json.dumps(rsi_params), training_seed, win_rate,
+                    total_pnl, signal_accuracy, trades_count, rating, symbol, now
+                ))
+                param_id = cursor.lastrowid
+                conn.commit()
+                return param_id
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка сохранения использованных параметров: {e}")
+            return None
+    
+    def get_used_training_parameter(self, param_hash: str) -> Optional[Dict[str, Any]]:
+        """Получает использованные параметры по хешу"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM used_training_parameters WHERE param_hash = ?", (param_hash,))
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'id': row['id'],
+                        'param_hash': row['param_hash'],
+                        'rsi_params': json.loads(row['rsi_params_json']),
+                        'training_seed': row['training_seed'],
+                        'win_rate': row['win_rate'],
+                        'total_pnl': row['total_pnl'],
+                        'signal_accuracy': row['signal_accuracy'],
+                        'trades_count': row['trades_count'],
+                        'rating': row['rating'],
+                        'symbol': row['symbol'],
+                        'used_at': row['used_at'],
+                        'update_count': row['update_count']
+                    }
+                return None
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки использованных параметров: {e}")
+            return None
+    
+    def count_used_training_parameters(self) -> int:
+        """Возвращает количество использованных параметров"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM used_training_parameters")
+                return cursor.fetchone()[0]
+        except Exception as e:
+            logger.error(f"❌ Ошибка подсчета использованных параметров: {e}")
+            return 0
+    
+    def get_best_used_parameters(self, limit: int = 10, min_win_rate: float = 80.0) -> List[Dict[str, Any]]:
+        """Получает лучшие использованные параметры"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM used_training_parameters
+                    WHERE win_rate >= ?
+                    ORDER BY rating DESC
+                    LIMIT ?
+                """, (min_win_rate, limit))
+                rows = cursor.fetchall()
+                result = []
+                for row in rows:
+                    result.append({
+                        'rsi_params': json.loads(row['rsi_params_json']),
+                        'training_seed': row['training_seed'],
+                        'win_rate': row['win_rate'],
+                        'total_pnl': row['total_pnl'],
+                        'signal_accuracy': row['signal_accuracy'],
+                        'trades_count': row['trades_count'],
+                        'rating': row['rating'],
+                        'symbol': row['symbol'],
+                        'used_at': row['used_at']
+                    })
+                return result
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки лучших параметров: {e}")
+            return []
+    
+    # ==================== МЕТОДЫ ДЛЯ РАБОТЫ С ЛУЧШИМИ ПАРАМЕТРАМИ ДЛЯ МОНЕТ ====================
+    
+    def save_best_params_for_symbol(self, symbol: str, rsi_params: Dict, rating: float,
+                                    win_rate: float, total_pnl: float) -> Optional[int]:
+        """Сохраняет или обновляет лучшие параметры для монеты"""
+        try:
+            now = datetime.now().isoformat()
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT OR REPLACE INTO best_params_per_symbol (
+                        symbol, rsi_params_json, rating, win_rate, total_pnl, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    symbol, json.dumps(rsi_params), rating, win_rate, total_pnl, now
+                ))
+                param_id = cursor.lastrowid
+                conn.commit()
+                return param_id
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения лучших параметров для {symbol}: {e}")
+            return None
+    
+    def get_best_params_for_symbol(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """Получает лучшие параметры для монеты"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM best_params_per_symbol WHERE symbol = ?", (symbol,))
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'symbol': row['symbol'],
+                        'rsi_params': json.loads(row['rsi_params_json']),
+                        'rating': row['rating'],
+                        'win_rate': row['win_rate'],
+                        'total_pnl': row['total_pnl'],
+                        'updated_at': row['updated_at']
+                    }
+                return None
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки лучших параметров для {symbol}: {e}")
+            return None
+    
+    def get_all_best_params_per_symbol(self) -> Dict[str, Dict[str, Any]]:
+        """Получает лучшие параметры для всех монет"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM best_params_per_symbol")
+                rows = cursor.fetchall()
+                result = {}
+                for row in rows:
+                    result[row['symbol']] = {
+                        'rsi_params': json.loads(row['rsi_params_json']),
+                        'rating': row['rating'],
+                        'win_rate': row['win_rate'],
+                        'total_pnl': row['total_pnl'],
+                        'updated_at': row['updated_at']
+                    }
+                return result
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки лучших параметров: {e}")
+            return {}
+    
+    # ==================== МЕТОДЫ ДЛЯ РАБОТЫ С ЗАБЛОКИРОВАННЫМИ ПАРАМЕТРАМИ ====================
+    
+    def save_blocked_params(self, rsi_params: Dict, block_reasons: Optional[Dict] = None,
+                           symbol: Optional[str] = None) -> Optional[int]:
+        """Сохраняет заблокированные параметры"""
+        try:
+            now = datetime.now().isoformat()
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO blocked_params (
+                        rsi_params_json, block_reasons_json, blocked_at, symbol
+                    ) VALUES (?, ?, ?, ?)
+                """, (
+                    json.dumps(rsi_params),
+                    json.dumps(block_reasons) if block_reasons else None,
+                    now, symbol
+                ))
+                param_id = cursor.lastrowid
+                conn.commit()
+                return param_id
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения заблокированных параметров: {e}")
+            return None
+    
+    def get_blocked_params(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Получает заблокированные параметры"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                query = "SELECT * FROM blocked_params ORDER BY blocked_at DESC"
+                if limit:
+                    query += f" LIMIT {limit}"
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                result = []
+                for row in rows:
+                    result.append({
+                        'rsi_params': json.loads(row['rsi_params_json']),
+                        'block_reasons': json.loads(row['block_reasons_json']) if row['block_reasons_json'] else {},
+                        'blocked_at': row['blocked_at'],
+                        'symbol': row['symbol']
+                    })
+                return result
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки заблокированных параметров: {e}")
+            return []
+    
+    # ==================== МЕТОДЫ ДЛЯ РАБОТЫ С ЦЕЛЕВЫМИ ЗНАЧЕНИЯМИ WIN RATE ====================
+    
+    def save_win_rate_target(self, symbol: str, target_win_rate: float,
+                             current_win_rate: Optional[float] = None) -> Optional[int]:
+        """Сохраняет или обновляет целевое значение win rate для монеты"""
+        try:
+            now = datetime.now().isoformat()
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT OR REPLACE INTO win_rate_targets (
+                        symbol, target_win_rate, current_win_rate, updated_at
+                    ) VALUES (?, ?, ?, ?)
+                """, (symbol, target_win_rate, current_win_rate, now))
+                target_id = cursor.lastrowid
+                conn.commit()
+                return target_id
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения целевого win rate для {symbol}: {e}")
+            return None
+    
+    def get_win_rate_target(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """Получает целевое значение win rate для монеты"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM win_rate_targets WHERE symbol = ?", (symbol,))
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'symbol': row['symbol'],
+                        'target_win_rate': row['target_win_rate'],
+                        'current_win_rate': row['current_win_rate'],
+                        'updated_at': row['updated_at']
+                    }
+                return None
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки целевого win rate для {symbol}: {e}")
+            return None
+    
+    def get_all_win_rate_targets(self) -> Dict[str, Dict[str, Any]]:
+        """Получает все целевые значения win rate"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM win_rate_targets")
+                rows = cursor.fetchall()
+                result = {}
+                for row in rows:
+                    result[row['symbol']] = {
+                        'target_win_rate': row['target_win_rate'],
+                        'current_win_rate': row['current_win_rate'],
+                        'updated_at': row['updated_at']
+                    }
+                return result
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки целевых win rate: {e}")
+            return {}
+    
     def get_database_stats(self) -> Dict[str, Any]:
         """Получает общую статистику базы данных"""
         with self._get_connection() as conn:
@@ -1182,7 +1687,9 @@ class AIDatabase:
             stats = {}
             
             # Подсчеты по таблицам
-            tables = ['simulated_trades', 'bot_trades', 'exchange_trades', 'ai_decisions', 'training_sessions']
+            tables = ['simulated_trades', 'bot_trades', 'exchange_trades', 'ai_decisions', 
+                     'training_sessions', 'parameter_training_samples', 'used_training_parameters',
+                     'best_params_per_symbol', 'blocked_params', 'win_rate_targets']
             for table in tables:
                 cursor.execute(f"SELECT COUNT(*) FROM {table}")
                 stats[f"{table}_count"] = cursor.fetchone()[0]
