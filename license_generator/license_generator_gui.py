@@ -35,10 +35,12 @@ class LicenseGeneratorGUI(tk.Tk):
         
         # Переменные для формы
         self.hw_id_var = tk.StringVar()
+        self.license_type_var = tk.StringVar(value="premium")
         self.days_var = tk.StringVar(value="30")
         self.start_date_var = tk.StringVar()
         self.comments_var = tk.StringVar()
         self.recipient_var = tk.StringVar()
+        self.developer_mode_var = tk.BooleanVar(value=False)
         
         # Создаем интерфейс
         self._build_ui()
@@ -63,41 +65,59 @@ class LicenseGeneratorGUI(tk.Tk):
         recipient_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
         ttk.Label(gen_frame, text="(email, telegram, и т.д.)").grid(row=0, column=2, sticky="w", padx=5, pady=5)
         
+        # Тип лицензии
+        ttk.Label(gen_frame, text="Тип лицензии:").grid(row=1, column=0, sticky="w", pady=5)
+        license_type_frame = ttk.Frame(gen_frame)
+        license_type_frame.grid(row=1, column=1, sticky="w", padx=5, pady=5)
+        
+        license_type_combo = ttk.Combobox(license_type_frame, textvariable=self.license_type_var, 
+                                         values=["premium", "trial", "monthly", "yearly", "lifetime", "developer"],
+                                         state="readonly", width=20)
+        license_type_combo.grid(row=0, column=0, sticky="w")
+        license_type_combo.bind("<<ComboboxSelected>>", self._on_license_type_change)
+        
+        # Чекбокс для developer режима (автоматически отключает HWID)
+        developer_check = ttk.Checkbutton(license_type_frame, text="Developer (без привязки к HWID)", 
+                                         variable=self.developer_mode_var,
+                                         command=self._on_developer_mode_change)
+        developer_check.grid(row=0, column=1, padx=(10, 0), sticky="w")
+        
         # Hardware ID
-        ttk.Label(gen_frame, text="Hardware ID:").grid(row=1, column=0, sticky="w", pady=5)
+        ttk.Label(gen_frame, text="Hardware ID:").grid(row=2, column=0, sticky="w", pady=5)
         hw_frame = ttk.Frame(gen_frame)
-        hw_frame.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+        hw_frame.grid(row=2, column=1, sticky="ew", padx=5, pady=5)
         hw_frame.columnconfigure(0, weight=1)
         
         hw_entry = ttk.Entry(hw_frame, textvariable=self.hw_id_var, width=40)
         hw_entry.grid(row=0, column=0, sticky="ew")
+        self.hw_entry = hw_entry  # Сохраняем ссылку для изменения состояния
         
         btn_get_hwid = ttk.Button(hw_frame, text="Получить HWID", command=self._get_current_hwid)
         btn_get_hwid.grid(row=0, column=1, padx=(5, 0))
         
         # Количество дней
-        ttk.Label(gen_frame, text="Количество дней:").grid(row=2, column=0, sticky="w", pady=5)
+        ttk.Label(gen_frame, text="Количество дней:").grid(row=3, column=0, sticky="w", pady=5)
         days_entry = ttk.Entry(gen_frame, textvariable=self.days_var, width=40)
         days_entry.grid(row=2, column=1, sticky="w", padx=5, pady=5)
         
         # Дата начала (опционально)
-        ttk.Label(gen_frame, text="Дата начала (опционально):").grid(row=3, column=0, sticky="w", pady=5)
+        ttk.Label(gen_frame, text="Дата начала (опционально):").grid(row=4, column=0, sticky="w", pady=5)
         date_frame = ttk.Frame(gen_frame)
-        date_frame.grid(row=3, column=1, sticky="w", padx=5, pady=5)
+        date_frame.grid(row=4, column=1, sticky="w", padx=5, pady=5)
         
         start_date_entry = ttk.Entry(date_frame, textvariable=self.start_date_var, width=20)
         start_date_entry.grid(row=0, column=0)
         ttk.Label(date_frame, text="(формат: YYYY-MM-DD, если не указано - текущая дата + 1 день)").grid(row=0, column=1, padx=(5, 0), sticky="w")
         
         # Комментарии
-        ttk.Label(gen_frame, text="Комментарии:").grid(row=4, column=0, sticky="nw", pady=5)
+        ttk.Label(gen_frame, text="Комментарии:").grid(row=5, column=0, sticky="nw", pady=5)
         comments_text = tk.Text(gen_frame, height=3, width=40)
-        comments_text.grid(row=4, column=1, sticky="ew", padx=5, pady=5)
+        comments_text.grid(row=5, column=1, sticky="ew", padx=5, pady=5)
         self.comments_text = comments_text
         
         # Кнопка генерации
         btn_generate = ttk.Button(gen_frame, text="Сгенерировать лицензию", command=self._generate_license)
-        btn_generate.grid(row=5, column=0, columnspan=2, pady=10)
+        btn_generate.grid(row=6, column=0, columnspan=2, pady=10)
         
         # === СЕКЦИЯ 2: Список получателей ===
         recipients_frame = ttk.LabelFrame(main_frame, text="База данных получателей", padding=10)
@@ -146,8 +166,43 @@ class LicenseGeneratorGUI(tk.Tk):
         ttk.Button(buttons_frame, text="Поиск по HWID", command=self._search_by_hwid).pack(side=tk.LEFT, padx=5)
         ttk.Button(buttons_frame, text="Открыть папку с лицензиями", command=self._open_licenses_folder).pack(side=tk.LEFT, padx=5)
     
+    def _on_license_type_change(self, event=None):
+        """Обработчик изменения типа лицензии"""
+        license_type = self.license_type_var.get()
+        if license_type == "developer":
+            # Для developer автоматически включаем режим без HWID
+            self.developer_mode_var.set(True)
+            self._on_developer_mode_change()
+        else:
+            # Для других типов можно включить HWID
+            if not self.developer_mode_var.get():
+                self.hw_entry.config(state="normal")
+    
+    def _on_developer_mode_change(self):
+        """Обработчик изменения developer режима"""
+        if self.developer_mode_var.get():
+            # Отключаем поле HWID и очищаем его
+            self.hw_entry.config(state="disabled")
+            self.hw_id_var.set("")
+            self.license_type_var.set("developer")
+            self.days_var.set("99999")
+            messagebox.showinfo("Developer режим", 
+                               "Developer лицензия будет работать на любом оборудовании!\n"
+                               "HWID не требуется.")
+        else:
+            # Включаем поле HWID
+            self.hw_entry.config(state="normal")
+            if self.license_type_var.get() == "developer":
+                self.license_type_var.set("premium")
+    
     def _get_current_hwid(self):
         """Получает Hardware ID текущего компьютера"""
+        if self.developer_mode_var.get():
+            messagebox.showwarning("Developer режим", 
+                                 "В developer режиме HWID не требуется.\n"
+                                 "Лицензия будет работать на любом оборудовании.")
+            return
+        
         try:
             # Используем короткий ID (первые 16 символов) для совместимости с проверкой лицензий
             short_hw_id = get_short_hardware_id()
@@ -180,22 +235,30 @@ class LicenseGeneratorGUI(tk.Tk):
     def _generate_license(self):
         """Генерирует лицензию"""
         try:
-            # Валидация полей
-            hw_id = self.hw_id_var.get().strip().upper()
-            if not hw_id:
-                messagebox.showerror("Ошибка", "Укажите Hardware ID")
+            # Определяем тип лицензии
+            license_type = self.license_type_var.get()
+            if self.developer_mode_var.get():
+                license_type = "developer"
+            
+            # Для developer лицензий HWID не требуется
+            hw_id = self.hw_id_var.get().strip().upper() if not self.developer_mode_var.get() else None
+            
+            if not hw_id and not self.developer_mode_var.get() and license_type != "developer":
+                messagebox.showerror("Ошибка", "Укажите Hardware ID или выберите Developer режим")
                 return
             
             # Нормализуем HWID: берем только первые 16 символов для совместимости с проверкой лицензий
             # (при проверке сравниваются только первые 16 символов)
-            if len(hw_id) > 16:
-                hw_id = hw_id[:16]
-                messagebox.showinfo("Информация", 
-                                   f"HWID обрезан до 16 символов для совместимости:\n{hw_id}")
-            elif len(hw_id) < 16:
-                messagebox.showwarning("Предупреждение", 
-                                      f"HWID короче 16 символов. Убедитесь, что это правильный ID.\n"
-                                      f"Текущий HWID: {hw_id}")
+            # Только если HWID указан (не developer лицензия)
+            if hw_id:
+                if len(hw_id) > 16:
+                    hw_id = hw_id[:16]
+                    messagebox.showinfo("Информация", 
+                                       f"HWID обрезан до 16 символов для совместимости:\n{hw_id}")
+                elif len(hw_id) < 16:
+                    messagebox.showwarning("Предупреждение", 
+                                          f"HWID короче 16 символов. Убедитесь, что это правильный ID.\n"
+                                          f"Текущий HWID: {hw_id}")
             
             try:
                 days = int(self.days_var.get().strip())
@@ -206,8 +269,11 @@ class LicenseGeneratorGUI(tk.Tk):
                 return
             
             recipient = self.recipient_var.get().strip()
-            # Email для генерации license_id (если recipient содержит email, используем его)
-            email = recipient if recipient and '@' in recipient else 'customer@example.com'
+            # Email для генерации license_id
+            if license_type == "developer":
+                email = 'developer@infobot.local'
+            else:
+                email = recipient if recipient and '@' in recipient else 'customer@example.com'
             
             # Парсим дату начала
             start_date = None
@@ -223,8 +289,8 @@ class LicenseGeneratorGUI(tk.Tk):
             # Генерируем лицензию
             license_data = self.license_manager.generate_license(
                 user_email=email,
-                license_type='premium',
-                hardware_id=hw_id,
+                license_type=license_type,
+                hardware_id=hw_id,  # None для developer лицензий
                 custom_duration_days=days,
                 start_date=start_date
             )
@@ -234,7 +300,9 @@ class LicenseGeneratorGUI(tk.Tk):
             output_dir.mkdir(exist_ok=True)
             
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f"{hw_id[:16]}_{days}days_{timestamp}.lic"
+            # Для developer лицензий используем специальное имя
+            hw_prefix = hw_id[:16] if hw_id else "UNIVERSAL"
+            filename = f"{hw_prefix}_{license_type}_{days}days_{timestamp}.lic"
             license_path = output_dir / filename
             
             with open(license_path, 'wb') as f:
@@ -262,9 +330,11 @@ class LicenseGeneratorGUI(tk.Tk):
             
             # Показываем результат
             expires_at = license_data['license_data']['expires_at']
+            hw_id_display = hw_id if hw_id else "NONE (универсальная лицензия)"
             message = (
                 f"Лицензия успешно сгенерирована!\n\n"
-                f"Hardware ID: {hw_id}\n"
+                f"Тип лицензии: {license_type}\n"
+                f"Hardware ID: {hw_id_display}\n"
                 f"Длительность: {days} дней\n"
                 f"Дата начала: {start_date.strftime('%Y-%m-%d')}\n"
                 f"Дата окончания: {expires_at}\n"
