@@ -98,7 +98,7 @@ class LicenseGeneratorGUI(tk.Tk):
         # Количество дней
         ttk.Label(gen_frame, text="Количество дней:").grid(row=3, column=0, sticky="w", pady=5)
         days_entry = ttk.Entry(gen_frame, textvariable=self.days_var, width=40)
-        days_entry.grid(row=2, column=1, sticky="w", padx=5, pady=5)
+        days_entry.grid(row=3, column=1, sticky="w", padx=5, pady=5)
         
         # Дата начала (опционально)
         ttk.Label(gen_frame, text="Дата начала (опционально):").grid(row=4, column=0, sticky="w", pady=5)
@@ -162,6 +162,7 @@ class LicenseGeneratorGUI(tk.Tk):
         buttons_frame.grid(row=1, column=0, columnspan=2, pady=(10, 0))
         
         ttk.Button(buttons_frame, text="Обновить список", command=self._refresh_recipients_list).pack(side=tk.LEFT, padx=5)
+        ttk.Button(buttons_frame, text="Продлить лицензию", command=self._extend_license).pack(side=tk.LEFT, padx=5)
         ttk.Button(buttons_frame, text="Удалить выбранное", command=self._delete_selected).pack(side=tk.LEFT, padx=5)
         ttk.Button(buttons_frame, text="Поиск по HWID", command=self._search_by_hwid).pack(side=tk.LEFT, padx=5)
         ttk.Button(buttons_frame, text="Открыть папку с лицензиями", command=self._open_licenses_folder).pack(side=tk.LEFT, padx=5)
@@ -185,10 +186,11 @@ class LicenseGeneratorGUI(tk.Tk):
             self.hw_entry.config(state="disabled")
             self.hw_id_var.set("")
             self.license_type_var.set("developer")
-            self.days_var.set("99999")
+            # НЕ меняем количество дней автоматически - пользователь может указать любое
             messagebox.showinfo("Developer режим", 
                                "Developer лицензия будет работать на любом оборудовании!\n"
-                               "HWID не требуется.")
+                               "HWID не требуется.\n"
+                               "Укажите количество дней в поле 'Количество дней'.")
         else:
             # Включаем поле HWID
             self.hw_entry.config(state="normal")
@@ -336,7 +338,7 @@ class LicenseGeneratorGUI(tk.Tk):
                 f"Тип лицензии: {license_type}\n"
                 f"Hardware ID: {hw_id_display}\n"
                 f"Длительность: {days} дней\n"
-                f"Дата начала: {start_date.strftime('%Y-%m-%d')}\n"
+                f"Дата начала: {start_date.strftime('%Y-%m-%d') if start_date else 'завтра'}\n"
                 f"Дата окончания: {expires_at}\n"
                 f"Файл: {license_path}\n\n"
                 f"Запись добавлена в базу данных (ID: {recipient_id})"
@@ -349,7 +351,8 @@ class LicenseGeneratorGUI(tk.Tk):
             # Очищаем форму (опционально)
             if messagebox.askyesno("Очистить форму", "Очистить форму для следующей лицензии?"):
                 self.hw_id_var.set("")
-                self.days_var.set("30")
+                # НЕ сбрасываем количество дней - оставляем пользовательское значение
+                # self.days_var.set("30")
                 self.start_date_var.set("")
                 self.recipient_var.set("")
                 self.comments_text.delete("1.0", tk.END)
@@ -415,6 +418,57 @@ class LicenseGeneratorGUI(tk.Tk):
                 comments,
                 license_file
             ))
+    
+    def _extend_license(self):
+        """Продлевает выбранную лицензию (добавляет дни)"""
+        selected = self.recipients_tree.selection()
+        if not selected:
+            messagebox.showwarning("Предупреждение", "Выберите лицензию для продления")
+            return
+        
+        item = self.recipients_tree.item(selected[0])
+        recipient_id = item['values'][0]
+        
+        # Запрашиваем количество дней для добавления
+        days_str = simpledialog.askstring("Продление лицензии", 
+                                          "Введите количество дней для добавления:",
+                                          initialvalue="30")
+        if not days_str:
+            return
+        
+        try:
+            days_to_add = int(days_str)
+            if days_to_add <= 0:
+                raise ValueError("Количество дней должно быть положительным")
+        except ValueError as e:
+            messagebox.showerror("Ошибка", f"Неверное количество дней: {str(e)}")
+            return
+        
+        # Получаем текущую запись
+        recipient = self.database.get_recipient(recipient_id)
+        if not recipient:
+            messagebox.showerror("Ошибка", "Запись не найдена")
+            return
+        
+        # Вычисляем новую дату окончания
+        from datetime import datetime, timedelta
+        current_end_date = datetime.fromisoformat(recipient['end_date']) if recipient['end_date'] else datetime.now()
+        new_end_date = current_end_date + timedelta(days=days_to_add)
+        new_days = recipient['days'] + days_to_add
+        
+        # Обновляем в базе данных
+        self.database.update_recipient(
+            recipient_id=recipient_id,
+            days=new_days,
+            end_date=new_end_date
+        )
+        
+        # Обновляем список
+        self._refresh_recipients_list()
+        
+        messagebox.showinfo("Успех", 
+                           f"Лицензия продлена на {days_to_add} дней!\n"
+                           f"Новая дата окончания: {new_end_date.strftime('%Y-%m-%d')}")
     
     def _delete_selected(self):
         """Удаляет выбранного получателя"""
