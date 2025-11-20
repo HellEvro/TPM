@@ -67,33 +67,38 @@ class AIDatabase:
         
         logger.info(f"✅ AI Database инициализирована: {db_path}")
     
-    def _is_valid_database(self) -> bool:
-        """Проверяет, является ли файл валидной SQLite базой данных"""
+    def _is_likely_corrupted(self) -> bool:
+        """
+        Проверяет, вероятно ли файл поврежден (только для очень очевидных случаев)
+        НЕ удаляет БД автоматически - только предупреждает
+        """
         if not os.path.exists(self.db_path):
             return False
         
         try:
+            # Проверяем размер файла - если меньше 100 байт, это точно не БД
+            file_size = os.path.getsize(self.db_path)
+            if file_size < 100:
+                logger.warning(f"⚠️ Файл БД слишком маленький ({file_size} байт) - возможно поврежден")
+                return True
+            
             # Проверяем заголовок SQLite файла (первые 16 байт)
             with open(self.db_path, 'rb') as f:
                 header = f.read(16)
                 # SQLite файлы начинаются с "SQLite format 3\000"
-                if header[:15] != b'SQLite format 3\x00':
-                    return False
+                if len(header) < 16 or header[:15] != b'SQLite format 3\x00':
+                    logger.warning(f"⚠️ Файл не имеет валидного заголовка SQLite")
+                    return True
             
-            # Пытаемся подключиться и выполнить простой запрос
-            test_conn = sqlite3.connect(self.db_path, timeout=5.0)
-            try:
-                test_conn.execute("SELECT 1")
-                test_conn.close()
-                return True
-            except sqlite3.DatabaseError:
-                test_conn.close()
-                return False
-        except Exception:
+            return False
+        except Exception as e:
+            # Если не можем прочитать файл, не считаем его поврежденным
+            # Возможно, он заблокирован другим процессом
+            logger.debug(f"⚠️ Не удалось проверить файл БД: {e}")
             return False
     
     def _recreate_database(self):
-        """Удаляет поврежденную БД и создает новую"""
+        """Удаляет поврежденную БД и создает новую (только при явной ошибке подключения)"""
         try:
             if os.path.exists(self.db_path):
                 # Удаляем поврежденный файл и связанные файлы WAL/SHM
@@ -122,10 +127,17 @@ class AIDatabase:
             conn.execute("PRAGMA cache_size=-64000")  # 64MB кеш
             conn.execute("PRAGMA temp_store=MEMORY")  # Временные таблицы в памяти
         except sqlite3.DatabaseError as e:
-            if "file is not a database" in str(e) or "not a database" in str(e).lower():
-                logger.error(f"❌ Файл БД поврежден: {self.db_path}")
-                conn.close()
-                # Восстанавливаем БД
+            error_str = str(e).lower()
+            # Восстанавливаем БД ТОЛЬКО при явной ошибке "file is not a database"
+            # Это означает, что файл точно поврежден и не является SQLite БД
+            if "file is not a database" in error_str or ("not a database" in error_str and "unable to open" not in error_str):
+                logger.error(f"❌ Файл БД поврежден (явная ошибка SQLite): {self.db_path}")
+                logger.error(f"❌ Ошибка: {e}")
+                try:
+                    conn.close()
+                except:
+                    pass
+                # Восстанавливаем БД только при явной ошибке
                 self._recreate_database()
                 # Пытаемся подключиться снова
                 conn = sqlite3.connect(self.db_path, timeout=30.0)
@@ -136,6 +148,7 @@ class AIDatabase:
                 conn.execute("PRAGMA temp_store=MEMORY")
                 logger.info(f"✅ БД восстановлена: {self.db_path}")
             else:
+                # Другие ошибки (блокировка, недоступность и т.д.) - не восстанавливаем
                 raise
         
         try:
@@ -149,11 +162,13 @@ class AIDatabase:
     
     def _init_database(self):
         """Создает все таблицы и индексы"""
-        # Проверяем, является ли существующий файл валидной БД
+        # Проверяем только очевидные случаи повреждения (очень маленький файл или неправильный заголовок)
+        # НЕ удаляем БД автоматически - только предупреждаем
+        # Восстановление происходит только при явной ошибке подключения в _get_connection
         if os.path.exists(self.db_path):
-            if not self._is_valid_database():
-                logger.warning(f"⚠️ Файл БД поврежден или не является валидной БД: {self.db_path}")
-                self._recreate_database()
+            if self._is_likely_corrupted():
+                logger.warning(f"⚠️ Файл БД может быть поврежден: {self.db_path}")
+                logger.warning(f"⚠️ Попытка подключения... Если ошибка - БД будет восстановлена автоматически")
         
         # SQLite автоматически создает файл БД при первом подключении
         # Не нужно создавать пустой файл через touch() - это создает невалидную БД
