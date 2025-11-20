@@ -17,6 +17,7 @@ sys.path.insert(0, str(script_dir))
 from license_manager import LicenseManager
 from license_database import LicenseDatabase
 from hardware_id import get_hardware_id, get_short_hardware_id
+from license_types import LicenseFeatures
 
 
 class LicenseGeneratorGUI(tk.Tk):
@@ -75,6 +76,7 @@ class LicenseGeneratorGUI(tk.Tk):
                                          state="readonly", width=20)
         license_type_combo.grid(row=0, column=0, sticky="w")
         license_type_combo.bind("<<ComboboxSelected>>", self._on_license_type_change)
+        self.license_type_combo = license_type_combo  # Сохраняем ссылку
         
         # Чекбокс для developer режима (автоматически отключает HWID)
         developer_check = ttk.Checkbutton(license_type_frame, text="Developer (без привязки к HWID)", 
@@ -82,10 +84,26 @@ class LicenseGeneratorGUI(tk.Tk):
                                          command=self._on_developer_mode_change)
         developer_check.grid(row=0, column=1, padx=(10, 0), sticky="w")
         
+        # Описание типа лицензии
+        ttk.Label(gen_frame, text="Описание:").grid(row=2, column=0, sticky="nw", pady=5)
+        description_frame = ttk.Frame(gen_frame)
+        description_frame.grid(row=2, column=1, sticky="ew", padx=5, pady=5)
+        description_frame.columnconfigure(0, weight=1)
+        
+        # Текстовое поле для описания (readonly, многострочное)
+        description_text = tk.Text(description_frame, height=4, width=60, wrap=tk.WORD, 
+                                   state=tk.DISABLED, bg="#f5f5f5", relief=tk.FLAT, 
+                                   font=("TkDefaultFont", 9))
+        description_text.grid(row=0, column=0, sticky="ew")
+        self.description_text = description_text  # Сохраняем ссылку
+        
+        # Обновляем описание при загрузке (для premium по умолчанию)
+        self._update_license_description()
+        
         # Hardware ID
-        ttk.Label(gen_frame, text="Hardware ID:").grid(row=2, column=0, sticky="w", pady=5)
+        ttk.Label(gen_frame, text="Hardware ID:").grid(row=3, column=0, sticky="w", pady=5)
         hw_frame = ttk.Frame(gen_frame)
-        hw_frame.grid(row=2, column=1, sticky="ew", padx=5, pady=5)
+        hw_frame.grid(row=3, column=1, sticky="ew", padx=5, pady=5)
         hw_frame.columnconfigure(0, weight=1)
         
         hw_entry = ttk.Entry(hw_frame, textvariable=self.hw_id_var, width=40)
@@ -96,28 +114,28 @@ class LicenseGeneratorGUI(tk.Tk):
         btn_get_hwid.grid(row=0, column=1, padx=(5, 0))
         
         # Количество дней
-        ttk.Label(gen_frame, text="Количество дней:").grid(row=3, column=0, sticky="w", pady=5)
+        ttk.Label(gen_frame, text="Количество дней:").grid(row=4, column=0, sticky="w", pady=5)
         days_entry = ttk.Entry(gen_frame, textvariable=self.days_var, width=40)
-        days_entry.grid(row=3, column=1, sticky="w", padx=5, pady=5)
+        days_entry.grid(row=4, column=1, sticky="w", padx=5, pady=5)
         
         # Дата начала (опционально)
-        ttk.Label(gen_frame, text="Дата начала (опционально):").grid(row=4, column=0, sticky="w", pady=5)
+        ttk.Label(gen_frame, text="Дата начала (опционально):").grid(row=5, column=0, sticky="w", pady=5)
         date_frame = ttk.Frame(gen_frame)
-        date_frame.grid(row=4, column=1, sticky="w", padx=5, pady=5)
+        date_frame.grid(row=5, column=1, sticky="w", padx=5, pady=5)
         
         start_date_entry = ttk.Entry(date_frame, textvariable=self.start_date_var, width=20)
         start_date_entry.grid(row=0, column=0)
         ttk.Label(date_frame, text="(формат: YYYY-MM-DD, если не указано - текущая дата + 1 день)").grid(row=0, column=1, padx=(5, 0), sticky="w")
         
         # Комментарии
-        ttk.Label(gen_frame, text="Комментарии:").grid(row=5, column=0, sticky="nw", pady=5)
+        ttk.Label(gen_frame, text="Комментарии:").grid(row=6, column=0, sticky="nw", pady=5)
         comments_text = tk.Text(gen_frame, height=3, width=40)
-        comments_text.grid(row=5, column=1, sticky="ew", padx=5, pady=5)
+        comments_text.grid(row=6, column=1, sticky="ew", padx=5, pady=5)
         self.comments_text = comments_text
         
         # Кнопка генерации
         btn_generate = ttk.Button(gen_frame, text="Сгенерировать лицензию", command=self._generate_license)
-        btn_generate.grid(row=6, column=0, columnspan=2, pady=10)
+        btn_generate.grid(row=7, column=0, columnspan=2, pady=10)
         
         # === СЕКЦИЯ 2: Список получателей ===
         recipients_frame = ttk.LabelFrame(main_frame, text="База данных получателей", padding=10)
@@ -167,6 +185,108 @@ class LicenseGeneratorGUI(tk.Tk):
         ttk.Button(buttons_frame, text="Поиск по HWID", command=self._search_by_hwid).pack(side=tk.LEFT, padx=5)
         ttk.Button(buttons_frame, text="Открыть папку с лицензиями", command=self._open_licenses_folder).pack(side=tk.LEFT, padx=5)
     
+    def _get_license_description(self, license_type: str) -> str:
+        """Получает описание типа лицензии"""
+        features = LicenseFeatures.get_features(license_type)
+        price = LicenseFeatures.get_price(license_type)
+        
+        descriptions = {
+            'trial': (
+                "🧪 ПРОБНАЯ ВЕРСИЯ (TRIAL)\n\n"
+                "✅ Доступно:\n"
+                "  • Обнаружение аномалий\n\n"
+                "❌ Недоступно:\n"
+                "  • LSTM предсказания\n"
+                "  • Распознавание паттернов\n"
+                "  • Динамический риск\n"
+                "  • Автообучение\n\n"
+                "📊 Ограничения:\n"
+                "  • Максимум 3 бота\n"
+                "  • Срок: 7 дней\n\n"
+                "💰 Цена: Бесплатно"
+            ),
+            'premium': (
+                "⭐ ПРЕМИУМ (PREMIUM)\n\n"
+                "✅ Все функции включены\n\n"
+                "📊 Количество дней указывается вручную\n\n"
+                "💡 Выберите конкретный тип лицензии для детальной информации"
+            ),
+            'monthly': (
+                "📅 МЕСЯЧНАЯ ПОДПИСКА (MONTHLY)\n\n"
+                "✅ Доступно:\n"
+                "  • Все функции AI\n"
+                "  • LSTM предсказания\n"
+                "  • Распознавание паттернов\n"
+                "  • Динамический риск\n"
+                "  • Автообучение\n\n"
+                "📊 Ограничения:\n"
+                "  • Максимум 20 ботов\n"
+                "  • По умолчанию: 30 дней (можно указать любое)\n\n"
+                "💰 Цена: $29.99/месяц"
+            ),
+            'yearly': (
+                "📆 ГОДОВАЯ ПОДПИСКА (YEARLY)\n\n"
+                "✅ Доступно:\n"
+                "  • Все функции AI\n"
+                "  • LSTM предсказания\n"
+                "  • Распознавание паттернов\n"
+                "  • Динамический риск\n"
+                "  • Автообучение\n\n"
+                "📊 Ограничения:\n"
+                "  • Максимум 50 ботов\n"
+                "  • По умолчанию: 365 дней (можно указать любое)\n\n"
+                "💰 Цена: $299.00/год (скидка 16%)"
+            ),
+            'lifetime': (
+                "♾️ ПОЖИЗНЕННАЯ ЛИЦЕНЗИЯ (LIFETIME)\n\n"
+                "✅ Доступно:\n"
+                "  • Все функции AI\n"
+                "  • LSTM предсказания\n"
+                "  • Распознавание паттернов\n"
+                "  • Динамический риск\n"
+                "  • Автообучение\n\n"
+                "📊 Ограничения:\n"
+                "  • Максимум 999 ботов (практически без ограничений)\n"
+                "  • По умолчанию: ~274 года (можно указать любое)\n\n"
+                "🎁 Бонусы:\n"
+                "  • Приоритетная поддержка\n"
+                "  • Ранний доступ к новым функциям\n\n"
+                "💰 Цена: $999.00"
+            ),
+            'developer': (
+                "👨‍💻 ДЛЯ РАЗРАБОТЧИКОВ (DEVELOPER)\n\n"
+                "✅ Доступно:\n"
+                "  • Все функции AI\n"
+                "  • LSTM предсказания\n"
+                "  • Распознавание паттернов\n"
+                "  • Динамический риск\n"
+                "  • Автообучение\n\n"
+                "📊 Ограничения:\n"
+                "  • Максимум 999 ботов\n"
+                "  • По умолчанию: ~274 года (можно указать любое)\n\n"
+                "🔓 Специальные возможности:\n"
+                "  • Отладочный режим\n"
+                "  • БЕЗ привязки к HWID (работает на любом ПК)\n"
+                "  • Неограниченные активации\n\n"
+                "💰 Цена: Бесплатно (для разработчиков)"
+            )
+        }
+        
+        return descriptions.get(license_type, descriptions['premium'])
+    
+    def _update_license_description(self):
+        """Обновляет описание выбранного типа лицензии"""
+        license_type = self.license_type_var.get()
+        if self.developer_mode_var.get():
+            license_type = "developer"
+        
+        description = self._get_license_description(license_type)
+        
+        self.description_text.config(state=tk.NORMAL)
+        self.description_text.delete("1.0", tk.END)
+        self.description_text.insert("1.0", description)
+        self.description_text.config(state=tk.DISABLED)
+    
     def _on_license_type_change(self, event=None):
         """Обработчик изменения типа лицензии"""
         license_type = self.license_type_var.get()
@@ -178,6 +298,9 @@ class LicenseGeneratorGUI(tk.Tk):
             # Для других типов можно включить HWID
             if not self.developer_mode_var.get():
                 self.hw_entry.config(state="normal")
+        
+        # Обновляем описание
+        self._update_license_description()
     
     def _on_developer_mode_change(self):
         """Обработчик изменения developer режима"""
@@ -187,15 +310,15 @@ class LicenseGeneratorGUI(tk.Tk):
             self.hw_id_var.set("")
             self.license_type_var.set("developer")
             # НЕ меняем количество дней автоматически - пользователь может указать любое
-            messagebox.showinfo("Developer режим", 
-                               "Developer лицензия будет работать на любом оборудовании!\n"
-                               "HWID не требуется.\n"
-                               "Укажите количество дней в поле 'Количество дней'.")
+            # Обновляем описание
+            self._update_license_description()
         else:
             # Включаем поле HWID
             self.hw_entry.config(state="normal")
             if self.license_type_var.get() == "developer":
                 self.license_type_var.set("premium")
+            # Обновляем описание
+            self._update_license_description()
     
     def _get_current_hwid(self):
         """Получает Hardware ID текущего компьютера"""
