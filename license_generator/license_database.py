@@ -31,10 +31,11 @@ class LicenseDatabase:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
+        # Создаем таблицу, если её нет
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS license_recipients (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                hw_id TEXT NOT NULL,
+                hw_id TEXT,
                 days INTEGER NOT NULL,
                 start_date TEXT,
                 end_date TEXT NOT NULL,
@@ -46,6 +47,39 @@ class LicenseDatabase:
             )
         """)
         
+        # Миграция: если таблица существует с NOT NULL, обновляем схему
+        try:
+            cursor.execute("PRAGMA table_info(license_recipients)")
+            columns = cursor.fetchall()
+            # Проверяем, есть ли ограничение NOT NULL на hw_id
+            hw_id_not_null = any(col[1] == 'hw_id' and col[3] == 1 for col in columns)
+            if hw_id_not_null:
+                # Создаем новую таблицу без NOT NULL
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS license_recipients_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        hw_id TEXT,
+                        days INTEGER NOT NULL,
+                        start_date TEXT,
+                        end_date TEXT NOT NULL,
+                        recipient TEXT,
+                        comments TEXT,
+                        license_file TEXT,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL
+                    )
+                """)
+                # Копируем данные
+                cursor.execute("INSERT INTO license_recipients_new SELECT * FROM license_recipients")
+                # Удаляем старую таблицу
+                cursor.execute("DROP TABLE license_recipients")
+                # Переименовываем новую
+                cursor.execute("ALTER TABLE license_recipients_new RENAME TO license_recipients")
+                conn.commit()
+        except Exception:
+            # Если ошибка - значит таблица уже обновлена или её нет
+            pass
+        
         # Индекс для быстрого поиска по HWID
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_hw_id ON license_recipients(hw_id)
@@ -55,8 +89,8 @@ class LicenseDatabase:
         conn.close()
     
     def add_recipient(self, 
-                     hw_id: str,
-                     days: int,
+                     hw_id: Optional[str] = None,
+                     days: int = None,
                      start_date: Optional[datetime] = None,
                      end_date: Optional[datetime] = None,
                      recipient: str = None,
@@ -66,7 +100,7 @@ class LicenseDatabase:
         Добавляет получателя лицензии в базу данных
         
         Args:
-            hw_id: Hardware ID
+            hw_id: Hardware ID (None для developer/универсальных лицензий)
             days: Количество дней лицензии
             start_date: Дата начала (опционально)
             end_date: Дата окончания (обязательно, если не указана start_date)
