@@ -927,13 +927,57 @@ class BotsDatabase:
     
     # ==================== МЕТОДЫ МИГРАЦИИ ====================
     
+    def _is_migration_needed(self) -> bool:
+        """
+        Проверяет, нужна ли миграция (есть ли уже данные в БД)
+        
+        Returns:
+            True если миграция нужна (БД пуста), False если уже есть данные
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Проверяем наличие данных в основных таблицах
+                check_tables = [
+                    'bots_state', 'bot_positions_registry', 'individual_coin_settings', 
+                    'mature_coins', 'rsi_cache', 'process_state'
+                ]
+                
+                for table in check_tables:
+                    try:
+                        cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                        count = cursor.fetchone()[0]
+                        if count > 0:
+                            # Есть данные в БД - миграция не нужна
+                            logger.debug(f"ℹ️ В таблице {table} уже есть {count} записей - миграция не требуется")
+                            return False
+                    except sqlite3.OperationalError:
+                        # Таблица не существует - это нормально, будет создана
+                        continue
+                
+                # БД пуста - миграция нужна
+                return True
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка проверки необходимости миграции: {e}")
+            # В случае ошибки - выполняем миграцию на всякий случай
+            return True
+    
     def migrate_json_to_database(self) -> Dict[str, int]:
         """
         Мигрирует данные из JSON файлов в БД (однократно)
         
+        Проверяет наличие данных в БД перед миграцией - если данные уже есть,
+        миграция не выполняется.
+        
         Returns:
             Словарь с количеством мигрированных записей для каждого файла
         """
+        # Проверяем, нужна ли миграция
+        if not self._is_migration_needed():
+            logger.debug("ℹ️ Миграция не требуется - данные уже есть в БД")
+            return {}
+        
         migration_stats = {}
         
         try:
