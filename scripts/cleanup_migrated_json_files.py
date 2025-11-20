@@ -284,12 +284,21 @@ def main():
     """Главная функция"""
     import sys
     
+    # Настройка кодировки для Windows консоли
+    if sys.platform == 'win32':
+        try:
+            import codecs
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+        except:
+            pass
+    
     # Проверяем аргументы
     execute = '--execute' in sys.argv or '-e' in sys.argv
     
     if execute:
         print("\n" + "=" * 80)
-        print("⚠️  ВНИМАНИЕ: Вы собираетесь удалить JSON файлы!")
+        print("[!]  ВНИМАНИЕ: Вы собираетесь удалить JSON файлы!")
         print("=" * 80)
         print("Это действие:")
         print("  - Удалит JSON файлы после миграции в БД")
@@ -300,7 +309,7 @@ def main():
         
         response = input("Продолжить? (yes/no): ").strip().lower()
         if response != 'yes':
-            print("❌ Отменено")
+            print("[X] Отменено")
             return
         
         print()
