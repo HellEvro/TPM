@@ -308,12 +308,32 @@ class BotsDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_delisted_symbol ON delisted(symbol)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_delisted_date ON delisted(delisted_at)")
             
-            conn.commit()
+            # ==================== ТАБЛИЦА: МЕТАДАННЫЕ БД ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS db_metadata (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    key TEXT UNIQUE NOT NULL,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+            """)
             
+            # Индексы для db_metadata
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_db_metadata_key ON db_metadata(key)")
+            
+            # Если БД новая - устанавливаем флаг что миграция не выполнена
             if not db_exists:
+                now = datetime.now().isoformat()
+                cursor.execute("""
+                    INSERT OR IGNORE INTO db_metadata (key, value, updated_at, created_at)
+                    VALUES ('json_migration_completed', '0', ?, ?)
+                """, (now, now))
                 logger.info("✅ Все таблицы и индексы созданы в новой базе данных")
             else:
                 logger.debug("✅ Все таблицы и индексы проверены")
+            
+            conn.commit()
     
     def _migrate_schema(self, cursor, conn):
         """
@@ -929,39 +949,79 @@ class BotsDatabase:
     
     def _is_migration_needed(self) -> bool:
         """
-        Проверяет, нужна ли миграция (есть ли уже данные в БД)
+        Проверяет, нужна ли миграция из JSON файлов
+        
+        Использует флаг в таблице db_metadata для отслеживания статуса миграции.
         
         Returns:
-            True если миграция нужна (БД пуста), False если уже есть данные
+            True если миграция нужна (флаг = 0 или отсутствует), False если уже выполнена (флаг = 1)
         """
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Проверяем наличие данных в основных таблицах
-                check_tables = [
-                    'bots_state', 'bot_positions_registry', 'individual_coin_settings', 
-                    'mature_coins', 'rsi_cache', 'process_state'
-                ]
-                
-                for table in check_tables:
-                    try:
-                        cursor.execute(f"SELECT COUNT(*) FROM {table}")
-                        count = cursor.fetchone()[0]
-                        if count > 0:
-                            # Есть данные в БД - миграция не нужна
-                            logger.debug(f"ℹ️ В таблице {table} уже есть {count} записей - миграция не требуется")
+                # Проверяем флаг миграции в метаданных БД
+                try:
+                    cursor.execute("""
+                        SELECT value FROM db_metadata 
+                        WHERE key = 'json_migration_completed'
+                    """)
+                    row = cursor.fetchone()
+                    
+                    if row:
+                        migration_completed = row['value'] == '1'
+                        if migration_completed:
+                            logger.debug("ℹ️ Миграция из JSON уже выполнена (флаг в БД)")
                             return False
-                    except sqlite3.OperationalError:
-                        # Таблица не существует - это нормально, будет создана
-                        continue
-                
-                # БД пуста - миграция нужна
-                return True
+                        else:
+                            logger.debug("ℹ️ Миграция из JSON еще не выполнена (флаг = 0)")
+                            return True
+                    else:
+                        # Флага нет - значит БД новая, миграция нужна
+                        logger.debug("ℹ️ Флаг миграции отсутствует - миграция нужна")
+                        return True
+                except sqlite3.OperationalError:
+                    # Таблица db_metadata не существует - это старая БД без метаданных
+                    # Проверяем наличие данных в основных таблицах как fallback
+                    logger.debug("ℹ️ Таблица db_metadata не найдена, проверяем наличие данных...")
+                    check_tables = [
+                        'bots_state', 'bot_positions_registry', 'individual_coin_settings', 
+                        'mature_coins', 'rsi_cache', 'process_state'
+                    ]
+                    
+                    for table in check_tables:
+                        try:
+                            cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                            count = cursor.fetchone()[0]
+                            if count > 0:
+                                # Есть данные - считаем что миграция уже выполнена
+                                logger.debug(f"ℹ️ В таблице {table} есть {count} записей - миграция не требуется")
+                                return False
+                        except sqlite3.OperationalError:
+                            continue
+                    
+                    # БД пуста - миграция нужна
+                    return True
         except Exception as e:
             logger.debug(f"⚠️ Ошибка проверки необходимости миграции: {e}")
             # В случае ошибки - выполняем миграцию на всякий случай
             return True
+    
+    def _set_migration_completed(self):
+        """Устанавливает флаг что миграция из JSON выполнена"""
+        try:
+            now = datetime.now().isoformat()
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT OR REPLACE INTO db_metadata (key, value, updated_at, created_at)
+                    VALUES ('json_migration_completed', '1', ?, 
+                            COALESCE((SELECT created_at FROM db_metadata WHERE key = 'json_migration_completed'), ?))
+                """, (now, now))
+                conn.commit()
+                logger.debug("✅ Флаг миграции установлен: json_migration_completed = 1")
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка установки флага миграции: {e}")
     
     def migrate_json_to_database(self) -> Dict[str, int]:
         """
@@ -1094,6 +1154,8 @@ class BotsDatabase:
             
             if migration_stats:
                 logger.info(f"✅ Миграция завершена: {sum(migration_stats.values())} записей мигрировано")
+                # Устанавливаем флаг что миграция выполнена
+                self._set_migration_completed()
             
         except Exception as e:
             logger.error(f"❌ Ошибка миграции JSON в БД: {e}")
