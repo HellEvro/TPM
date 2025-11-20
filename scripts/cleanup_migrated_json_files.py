@@ -35,9 +35,18 @@ logger = logging.getLogger(__name__)
 def check_database_migration():
     """Проверяет, что данные успешно мигрированы в БД"""
     try:
+        # Определяем корневую директорию проекта (на уровень выше scripts/)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        
+        # Путь к БД в корне проекта
+        db_path = os.path.join(project_root, 'data', 'bots_data.db')
+        db_path = os.path.normpath(db_path)
+        
         from bot_engine.bots_database import get_bots_database
         
-        db = get_bots_database()
+        # Используем БД из корневой директории проекта
+        db = get_bots_database(db_path=db_path)
         if not db:
             logger.error("❌ БД недоступна!")
             return False
@@ -80,12 +89,18 @@ def check_database_migration():
         return False
 
 
-def backup_json_file(file_path):
+def backup_json_file(file_path, backup_dir=None):
     """Создает резервную копию JSON файла"""
     if not os.path.exists(file_path):
         return None
     
-    backup_dir = Path('data/backup_json_before_migration')
+    if backup_dir is None:
+        # Определяем корневую директорию проекта
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        backup_dir = os.path.join(project_root, 'data', 'backup_json_before_migration')
+    
+    backup_dir = Path(backup_dir)
     backup_dir.mkdir(parents=True, exist_ok=True)
     
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -126,45 +141,49 @@ def cleanup_json_files(dry_run=True):
     Args:
         dry_run: Если True, только показывает что будет удалено, без реального удаления
     """
+    # Определяем корневую директорию проекта (на уровень выше scripts/)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    
     # Файлы которые мигрированы в БД
     migrated_files = {
         'bots_state.json': {
-            'path': 'data/bots_state.json',
+            'path': os.path.join(project_root, 'data', 'bots_state.json'),
             'table': 'bots_state',
             'description': 'Состояние ботов'
         },
         'bot_positions_registry.json': {
-            'path': 'data/bot_positions_registry.json',
+            'path': os.path.join(project_root, 'data', 'bot_positions_registry.json'),
             'table': 'bot_positions_registry',
             'description': 'Реестр позиций ботов'
         },
         'rsi_cache.json': {
-            'path': 'data/rsi_cache.json',
+            'path': os.path.join(project_root, 'data', 'rsi_cache.json'),
             'table': 'rsi_cache',
             'description': 'RSI кэш'
         },
         'process_state.json': {
-            'path': 'data/process_state.json',
+            'path': os.path.join(project_root, 'data', 'process_state.json'),
             'table': 'process_state',
             'description': 'Состояние процессов'
         },
         'individual_coin_settings.json': {
-            'path': 'data/individual_coin_settings.json',
+            'path': os.path.join(project_root, 'data', 'individual_coin_settings.json'),
             'table': 'individual_coin_settings',
             'description': 'Индивидуальные настройки монет'
         },
         'mature_coins.json': {
-            'path': 'data/mature_coins.json',
+            'path': os.path.join(project_root, 'data', 'mature_coins.json'),
             'table': 'mature_coins',
             'description': 'Зрелые монеты'
         },
         'maturity_check_cache.json': {
-            'path': 'data/maturity_check_cache.json',
+            'path': os.path.join(project_root, 'data', 'maturity_check_cache.json'),
             'table': 'maturity_check_cache',
             'description': 'Кэш проверки зрелости'
         },
         'delisted.json': {
-            'path': 'data/delisted.json',
+            'path': os.path.join(project_root, 'data', 'delisted.json'),
             'table': 'delisted',
             'description': 'Делистированные монеты'
         }
@@ -228,10 +247,11 @@ def cleanup_json_files(dry_run=True):
     
     # Создаем резервные копии
     logger.info("📦 Создание резервных копий...")
+    backup_dir = os.path.join(project_root, 'data', 'backup_json_before_migration')
     backup_paths = []
     
     for filename, info, file_path in files_with_data:
-        backup_path = backup_json_file(file_path)
+        backup_path = backup_json_file(file_path, backup_dir=backup_dir)
         if backup_path:
             backup_paths.append(backup_path)
     
@@ -253,7 +273,8 @@ def cleanup_json_files(dry_run=True):
     logger.info("")
     logger.info("=" * 80)
     logger.info(f"✅ Очистка завершена: удалено {removed_count} файлов")
-    logger.info(f"📦 Резервные копии сохранены в: data/backup_json_before_migration/")
+    backup_dir_abs = os.path.join(project_root, 'data', 'backup_json_before_migration')
+    logger.info(f"📦 Резервные копии сохранены в: {backup_dir_abs}")
     logger.info("=" * 80)
     
     return True
