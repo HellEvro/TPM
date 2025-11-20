@@ -17,7 +17,6 @@ import logging
 import numpy as np
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
-from threading import Lock
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 import joblib
@@ -36,12 +35,19 @@ class ParameterQualityPredictor:
         
         self.model_file = os.path.join(data_dir, 'parameter_quality_predictor.pkl')
         self.scaler_file = os.path.join(data_dir, 'parameter_quality_scaler.pkl')
-        self.training_data_file = os.path.join(data_dir, 'parameter_training_data.json')
         
         self.model = None
         self.scaler = StandardScaler()
         self.is_trained = False
-        self._file_lock = Lock()  # Блокировка для многопоточного доступа к файлу
+        
+        # Подключаемся к БД
+        try:
+            from bot_engine.ai.ai_database import get_ai_database
+            self.ai_db = get_ai_database()
+            logger.debug("✅ AI Database подключена для ParameterQualityPredictor")
+        except Exception as e:
+            logger.warning(f"⚠️ Не удалось подключиться к AI Database: {e}")
+            self.ai_db = None
         
         # Загружаем модель если есть
         self._load_model()
@@ -120,173 +126,93 @@ class ParameterQualityPredictor:
             blocked: Были ли входы заблокированы
             rsi_entered_zones: Сколько раз RSI входил в зоны входа (для градации качества)
         """
-        # Используем блокировку для защиты от одновременной записи
-        with self._file_lock:
-            try:
-                # Загружаем существующие данные
-                training_data = []
-                if os.path.exists(self.training_data_file):
-                    try:
-                        with open(self.training_data_file, 'r', encoding='utf-8') as f:
-                            training_data = json.load(f)
-                    except (json.JSONDecodeError, ValueError) as json_error:
-                        # Файл поврежден - пытаемся восстановить
-                        logger.warning(f"⚠️ Файл {self.training_data_file} поврежден: {json_error}")
-                        logger.warning("   💡 Пытаемся восстановить данные...")
-                        
-                        # Пытаемся загрузить резервную копию
-                        backup_file = self.training_data_file + '.backup'
-                        if os.path.exists(backup_file):
-                            try:
-                                with open(backup_file, 'r', encoding='utf-8') as f:
-                                    training_data = json.load(f)
-                                logger.info(f"   ✅ Восстановлено из резервной копии: {len(training_data)} образцов")
-                            except Exception:
-                                logger.warning("   ⚠️ Резервная копия тоже повреждена, начинаем с нуля")
-                                training_data = []
-                        else:
-                            logger.warning("   ⚠️ Резервной копии нет, начинаем с нуля")
-                            training_data = []
-                        
-                        # Переименовываем поврежденный файл
-                        corrupted_file = self.training_data_file + '.corrupted'
-                        try:
-                            if os.path.exists(corrupted_file):
-                                os.remove(corrupted_file)
-                            os.rename(self.training_data_file, corrupted_file)
-                            logger.info(f"   📁 Поврежденный файл переименован в {corrupted_file}")
-                        except Exception as e:
-                            logger.debug(f"   ⚠️ Не удалось переименовать файл: {e}")
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database недоступна, образец не сохранен")
+            return
+        
+        try:
+            # Вычисляем качество (target для обучения)
+            # Качество = комбинация win_rate, pnl, trades_count
+            # Если заблокировано - используем отрицательное качество для разнообразия
+            if blocked or trades_count == 0:
+                # ВАЖНО: Используем отрицательное качество вместо 0.0
+                # Это позволяет модели различать заблокированные параметры
+                # Градация качества для заблокированных:
+                # -0.10: RSI не входил в зоны (параметры не подходят)
+                # -0.05: RSI входил в зоны, но все заблокированы фильтрами
+                # -0.02: Были попытки входа (win_rate > 0)
                 
-                # Вычисляем качество (target для обучения)
-                # Качество = комбинация win_rate, pnl, trades_count
-                # Если заблокировано - используем отрицательное качество для разнообразия
-                if blocked or trades_count == 0:
-                    # ВАЖНО: Используем отрицательное качество вместо 0.0
-                    # Это позволяет модели различать заблокированные параметры
-                    # Градация качества для заблокированных:
-                    # -0.10: RSI не входил в зоны (параметры не подходят)
-                    # -0.05: RSI входил в зоны, но все заблокированы фильтрами
-                    # -0.02: Были попытки входа (win_rate > 0)
+                if rsi_entered_zones > 0:
+                    # RSI входил в зоны, но входы заблокированы фильтрами
+                    # Это лучше чем параметры, которые вообще не дают сигналов
+                    # Базовое качество зависит от количества попыток
+                    base_quality = -0.05 + (0.01 * min(rsi_entered_zones / 20.0, 1.0))  # -0.05 до -0.04
                     
-                    if rsi_entered_zones > 0:
-                        # RSI входил в зоны, но входы заблокированы фильтрами
-                        # Это лучше чем параметры, которые вообще не дают сигналов
-                        # Базовое качество зависит от количества попыток
-                        base_quality = -0.05 + (0.01 * min(rsi_entered_zones / 20.0, 1.0))  # -0.05 до -0.04
-                        
-                        # Улучшаем качество если были заблокированные попытки (значит фильтры работают)
-                        if filters_blocked > 0:
-                            # Чем больше попыток было заблокировано, тем лучше параметры
-                            # (значит они хотя бы генерируют сигналы)
-                            blocked_ratio = min(filters_blocked / max(rsi_entered_zones, 1), 1.0)
-                            base_quality += 0.01 * blocked_ratio  # До -0.03
-                        
-                        # Учитываем типы блокировок
-                        if block_reasons:
-                            # Если блокируется только одним типом фильтра - это лучше
-                            # (значит можно оптимизировать параметры под этот фильтр)
-                            unique_reasons = len(block_reasons)
-                            if unique_reasons == 1:
-                                base_quality += 0.005  # Немного лучше
-                            elif unique_reasons >= 3:
-                                base_quality -= 0.005  # Хуже если много разных причин
-                        
-                        quality = base_quality
-                    else:
-                        # RSI не входил в зоны - параметры не подходят для этой монеты
-                        quality = -0.10
+                    # Улучшаем качество если были заблокированные попытки (значит фильтры работают)
+                    if filters_blocked > 0:
+                        # Чем больше попыток было заблокировано, тем лучше параметры
+                        # (значит они хотя бы генерируют сигналы)
+                        blocked_ratio = min(filters_blocked / max(rsi_entered_zones, 1), 1.0)
+                        base_quality += 0.01 * blocked_ratio  # До -0.03
                     
-                    # Если есть win_rate > 0, значит были попытки, но заблокированы
-                    # Это лучше чем полное отсутствие сигналов
-                    if win_rate > 0:
-                        quality = max(quality, -0.02)  # Не хуже -0.02 если были попытки
+                    # Учитываем типы блокировок
+                    if block_reasons:
+                        # Если блокируется только одним типом фильтра - это лучше
+                        # (значит можно оптимизировать параметры под этот фильтр)
+                        unique_reasons = len(block_reasons)
+                        if unique_reasons == 1:
+                            base_quality += 0.005  # Немного лучше
+                        elif unique_reasons >= 3:
+                            base_quality -= 0.005  # Хуже если много разных причин
+                    
+                    quality = base_quality
                 else:
-                    # Нормализуем метрики
-                    win_rate_norm = win_rate / 100.0  # 0-1
-                    pnl_norm = min(max(total_pnl / 1000.0, -1), 1)  # -1 до 1 (1000 USDT = 1.0)
-                    trades_norm = min(trades_count / 50.0, 1)  # 0-1 (50 сделок = 1.0)
-                    
-                    # Взвешенная сумма (положительное качество)
-                    quality = (
-                        win_rate_norm * 0.5 +
-                        pnl_norm * 0.3 +
-                        trades_norm * 0.2
-                    )
-                    
-                    # Обеспечиваем, что качество всегда положительное для успешных параметров
-                    quality = max(quality, 0.01)  # Минимум 0.01 для параметров с сделками
+                    # RSI не входил в зоны - параметры не подходят для этой монеты
+                    quality = -0.10
                 
-                # Добавляем образец
-                sample = {
-                    'rsi_params': rsi_params,
-                    'risk_params': risk_params or {},
-                    'win_rate': win_rate,
-                    'total_pnl': total_pnl,
-                    'trades_count': trades_count,
-                    'quality': quality,
-                    'blocked': blocked,
-                    'rsi_entered_zones': rsi_entered_zones,
-                    'filters_blocked': filters_blocked,
-                    'block_reasons': block_reasons or {},
-                    'symbol': symbol,
-                    'timestamp': datetime.now().isoformat()
-                }
+                # Если есть win_rate > 0, значит были попытки, но заблокированы
+                # Это лучше чем полное отсутствие сигналов
+                if win_rate > 0:
+                    quality = max(quality, -0.02)  # Не хуже -0.02 если были попытки
+            else:
+                # Нормализуем метрики
+                win_rate_norm = win_rate / 100.0  # 0-1
+                pnl_norm = min(max(total_pnl / 1000.0, -1), 1)  # -1 до 1 (1000 USDT = 1.0)
+                trades_norm = min(trades_count / 50.0, 1)  # 0-1 (50 сделок = 1.0)
                 
-                training_data.append(sample)
+                # Взвешенная сумма (положительное качество)
+                quality = (
+                    win_rate_norm * 0.5 +
+                    pnl_norm * 0.3 +
+                    trades_norm * 0.2
+                )
                 
-                # Оставляем только последние 5000 образцов
-                if len(training_data) > 5000:
-                    training_data = training_data[-5000:]
+                # Обеспечиваем, что качество всегда положительное для успешных параметров
+                quality = max(quality, 0.01)  # Минимум 0.01 для параметров с сделками
+            
+            # Сохраняем в БД
+            sample = {
+                'rsi_params': rsi_params,
+                'risk_params': risk_params or {},
+                'win_rate': win_rate,
+                'total_pnl': total_pnl,
+                'trades_count': trades_count,
+                'quality': quality,
+                'blocked': blocked,
+                'rsi_entered_zones': rsi_entered_zones,
+                'filters_blocked': filters_blocked,
+                'block_reasons': block_reasons or {},
+                'symbol': symbol
+            }
+            
+            sample_id = self.ai_db.save_parameter_training_sample(sample)
+            if sample_id:
+                logger.debug(f"📝 Добавлен образец для обучения (ID: {sample_id}, quality: {quality:.3f}, win_rate: {win_rate:.1f}%)")
+            else:
+                logger.warning("⚠️ Не удалось сохранить образец в БД")
                 
-                # ВАЖНО: Атомарная запись через временный файл для защиты от повреждений
-                # 1. Создаем резервную копию текущего файла
-                backup_file = self.training_data_file + '.backup'
-                if os.path.exists(self.training_data_file):
-                    try:
-                        import shutil
-                        shutil.copy2(self.training_data_file, backup_file)
-                    except Exception as e:
-                        logger.debug(f"⚠️ Не удалось создать резервную копию: {e}")
-                
-                # 2. Валидируем данные перед записью
-                try:
-                    # Проверяем что данные можно сериализовать
-                    json.dumps(training_data)
-                except (TypeError, ValueError) as e:
-                    logger.error(f"❌ Данные не могут быть сериализованы: {e}")
-                    return
-                
-                # 3. Записываем во временный файл
-                temp_file = self.training_data_file + '.tmp'
-                try:
-                    with open(temp_file, 'w', encoding='utf-8') as f:
-                        json.dump(training_data, f, indent=2, ensure_ascii=False)
-                    
-                    # 4. Проверяем что временный файл валидный
-                    with open(temp_file, 'r', encoding='utf-8') as f:
-                        json.load(f)  # Проверка валидности
-                    
-                    # 5. Атомарно заменяем основной файл
-                    if os.path.exists(self.training_data_file):
-                        os.replace(temp_file, self.training_data_file)
-                    else:
-                        os.rename(temp_file, self.training_data_file)
-                        
-                except Exception as e:
-                    logger.error(f"❌ Ошибка записи файла: {e}")
-                    # Удаляем временный файл если он есть
-                    if os.path.exists(temp_file):
-                        try:
-                            os.remove(temp_file)
-                        except Exception:
-                            pass
-                    raise
-                
-                logger.debug(f"📝 Добавлен образец для обучения (quality: {quality:.3f}, win_rate: {win_rate:.1f}%)")
-                
-            except Exception as e:
-                logger.error(f"❌ Ошибка добавления образца: {e}")
+        except Exception as e:
+            logger.error(f"❌ Ошибка добавления образца: {e}")
     
     def train(self, min_samples: int = 50) -> Optional[Dict[str, Any]]:
         """
@@ -298,39 +224,16 @@ class ParameterQualityPredictor:
         Returns:
             Словарь с метриками обучения или None если обучение не удалось
         """
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database недоступна, обучение невозможно")
+            return {
+                'success': False,
+                'reason': 'database_unavailable'
+            }
+        
         try:
-            if not os.path.exists(self.training_data_file):
-                logger.warning("⚠️ Нет данных для обучения")
-                return None
-            
-            # Загружаем данные с обработкой ошибок
-            training_data = []
-            if os.path.exists(self.training_data_file):
-                try:
-                    with open(self.training_data_file, 'r', encoding='utf-8') as f:
-                        training_data = json.load(f)
-                except (json.JSONDecodeError, ValueError) as json_error:
-                    logger.error(f"❌ Файл {self.training_data_file} поврежден: {json_error}")
-                    logger.error("   💡 Пытаемся восстановить из резервной копии...")
-                    
-                    # Пытаемся загрузить резервную копию
-                    backup_file = self.training_data_file + '.backup'
-                    if os.path.exists(backup_file):
-                        try:
-                            with open(backup_file, 'r', encoding='utf-8') as f:
-                                training_data = json.load(f)
-                            logger.info(f"   ✅ Восстановлено из резервной копии: {len(training_data)} образцов")
-                            
-                            # Восстанавливаем основной файл из резервной копии
-                            import shutil
-                            shutil.copy2(backup_file, self.training_data_file)
-                            logger.info("   ✅ Основной файл восстановлен из резервной копии")
-                        except Exception as e:
-                            logger.error(f"   ❌ Резервная копия тоже повреждена: {e}")
-                            training_data = []
-                    else:
-                        logger.error("   ❌ Резервной копии нет")
-                        training_data = []
+            # Загружаем данные из БД (последние 5000 образцов)
+            training_data = self.ai_db.get_parameter_training_samples(limit=5000)
             
             samples_count = len(training_data)
             if samples_count < min_samples:

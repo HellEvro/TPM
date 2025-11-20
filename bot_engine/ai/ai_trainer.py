@@ -182,14 +182,17 @@ class AITrainer:
         # Загружаем историю биржи при инициализации (если файл пустой или не существует)
         # История будет дополняться при каждом обучении и периодически
         try:
-            if not os.path.exists(self.exchange_trades_history_file):
-                logger.info("📥 Первичная загрузка истории сделок с биржи...")
-                self._update_exchange_trades_history()
-            else:
-                # Проверяем, есть ли сделки в файле
+            # Проверяем, есть ли сделки в БД
+            if self.ai_db:
                 saved_trades = self._load_saved_exchange_trades()
                 if len(saved_trades) == 0:
-                    logger.info("📥 Файл истории биржи пуст, загружаем историю...")
+                    logger.info("📥 История биржи пуста, загружаем историю...")
+                    self._update_exchange_trades_history()
+                else:
+                    logger.info(f"📥 В БД уже есть {len(saved_trades)} сделок из истории биржи")
+            else:
+                logger.info("📥 Первичная загрузка истории сделок с биржи...")
+                self._update_exchange_trades_history()
                     self._update_exchange_trades_history()
                 else:
                     logger.debug(f"💾 История биржи уже загружена: {len(saved_trades)} сделок")
@@ -205,9 +208,9 @@ class AITrainer:
             self.training_mutable_flags = getattr(AITrainingStrategyConfig, 'MUTABLE_FILTERS', {}) or {}
         
         # Целевые значения Win Rate для монет с динамическим повышением порога
-        self.win_rate_targets_path = os.path.normpath(os.path.join(self.data_dir, 'win_rate_targets.json'))
-        self.win_rate_targets = self._load_win_rate_targets()
+        # Win Rate targets теперь в БД
         self.win_rate_targets_dirty = False
+        self.win_rate_targets_default = 80.0  # Значение по умолчанию
         
         # Загружаем существующие модели
         self._load_models()
@@ -452,75 +455,30 @@ class AITrainer:
             import traceback
             logger.error(traceback.format_exc())
     
-    def _load_win_rate_targets(self) -> Dict[str, Any]:
-        """
-        Загрузить целевые значения Win Rate для монет.
-        
-        Возвращает словарь формата:
-        {
-            "default_target": 80.0,
-            "symbols": {
-                "BTCUSDT": {"target": 84.0, ...},
-                ...
-            }
-        }
-        """
-        default_data = {'default_target': 80.0, 'symbols': {}}
-        try:
-            if os.path.exists(self.win_rate_targets_path):
-                with open(self.win_rate_targets_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                if isinstance(data, dict):
-                    if 'symbols' not in data or not isinstance(data.get('symbols'), dict):
-                        data['symbols'] = {}
-                    if 'default_target' not in data:
-                        data['default_target'] = 80.0
-                    return data
-        except Exception as e:
-            logger.warning(f"⚠️ Не удалось загрузить цели Win Rate: {e}")
-        return default_data
-    
-    def _save_win_rate_targets(self):
-        """Сохранить целевые значения Win Rate, если были изменения."""
-        try:
-            payload = {
-                'default_target': float(self.win_rate_targets.get('default_target', 80.0)),
-                'symbols': self.win_rate_targets.get('symbols', {}),
-                'updated_at': datetime.now().isoformat()
-            }
-            with open(self.win_rate_targets_path, 'w', encoding='utf-8') as f:
-                json.dump(payload, f, indent=2, ensure_ascii=False)
-            self.win_rate_targets_dirty = False
-        except Exception as e:
-            logger.warning(f"⚠️ Не удалось сохранить цели Win Rate: {e}")
-    
     def _get_win_rate_target(self, symbol: str) -> float:
         """Получить текущую цель Win Rate для монеты (по умолчанию 80%)."""
-        default_target = float(self.win_rate_targets.get('default_target', 80.0))
-        symbols = self.win_rate_targets.get('symbols', {})
-        entry = symbols.get((symbol or '').upper())
-        if isinstance(entry, dict):
-            return float(entry.get('target', default_target))
-        if isinstance(entry, (int, float)):
-            return float(entry)
-        return default_target
+        if not self.ai_db:
+            return self.win_rate_targets_default
+        
+        try:
+            target_data = self.ai_db.get_win_rate_target(symbol)
+            if target_data:
+                return float(target_data.get('target_win_rate', self.win_rate_targets_default))
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка загрузки целевого win rate для {symbol}: {e}")
+        
+        return self.win_rate_targets_default
     
     def _register_win_rate_success(self, symbol: str, achieved_win_rate: float):
         """
         Зафиксировать успешное достижение цели Win Rate и повысить порог на 1%.
         """
+        if not self.ai_db:
+            return
+        
         try:
             symbol_key = (symbol or '').upper()
-            default_target = float(self.win_rate_targets.get('default_target', 80.0))
-            symbols = self.win_rate_targets.setdefault('symbols', {})
-            entry = symbols.get(symbol_key)
-            if not isinstance(entry, dict):
-                entry = {'target': self._get_win_rate_target(symbol_key)}
-            
-            current_target = float(entry.get('target', default_target))
-            entry['last_success_at'] = datetime.now().isoformat()
-            entry['last_success_win_rate'] = achieved_win_rate
-            entry['achievements'] = entry.get('achievements', 0) + 1
+            current_target = self._get_win_rate_target(symbol_key)
             
             if current_target >= 100.0:
                 reset_target = max(default_target, 80.0)
@@ -1100,10 +1058,11 @@ class AITrainer:
             return
         
         try:
-            # Миграция симулированных сделок
-            if os.path.exists(self.simulated_trades_file):
+            # Миграция симулированных сделок (если есть старый файл)
+            simulated_trades_file = os.path.join(self.data_dir, 'simulated_trades.json')
+            if os.path.exists(simulated_trades_file):
                 try:
-                    with open(self.simulated_trades_file, 'r', encoding='utf-8') as f:
+                    with open(simulated_trades_file, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                         trades = data.get('trades', [])
                         if trades:
@@ -1113,10 +1072,11 @@ class AITrainer:
                 except Exception as e:
                     logger.debug(f"⚠️ Ошибка миграции симуляций: {e}")
             
-            # Миграция сделок биржи
-            if os.path.exists(self.exchange_trades_history_file):
+            # Миграция сделок биржи (если есть старый файл)
+            exchange_trades_history_file = os.path.join(self.data_dir, 'exchange_trades_history.json')
+            if os.path.exists(exchange_trades_history_file):
                 try:
-                    with open(self.exchange_trades_history_file, 'r', encoding='utf-8') as f:
+                    with open(exchange_trades_history_file, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                         trades = data.get('trades', [])
                         if trades:
@@ -1177,14 +1137,14 @@ class AITrainer:
         try:
             logger.info("📥 Загрузка истории сделок с биржи через API...")
             
-            # Проверяем текущее количество сделок в файле
+            # Проверяем текущее количество сделок в БД
             existing_count = 0
-            if os.path.exists(self.exchange_trades_history_file):
+            if self.ai_db:
                 try:
                     saved_trades = self._load_saved_exchange_trades()
                     existing_count = len(saved_trades)
                     if existing_count > 0:
-                        logger.info(f"   💾 В файле уже есть {existing_count} сделок из истории биржи")
+                        logger.info(f"   💾 В БД уже есть {existing_count} сделок из истории биржи")
                 except:
                     pass
             
@@ -1213,14 +1173,18 @@ class AITrainer:
         Returns:
             Список симулированных сделок
         """
+        # Теперь все симулированные сделки в БД
+        if not self.ai_db:
+            return []
+        
         try:
-            if not os.path.exists(self.simulated_trades_file):
-                return []
-            
-            with open(self.simulated_trades_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            
-            trades = data.get('trades', [])
+            # Загружаем из БД
+            trades = self.ai_db.get_trades_for_training(
+                include_simulated=True,
+                include_real=False,
+                include_exchange=False,
+                limit=None
+            )
             
             # Фильтруем только закрытые сделки с PnL
             closed_trades = [
@@ -4013,8 +3977,7 @@ class AITrainer:
                     total_failed_coins += 1
                     continue
             
-            if self.win_rate_targets_dirty:
-                self._save_win_rate_targets()
+            # Win Rate targets теперь сохраняются в БД автоматически
             
             # Итоговая статистика
             logger.info("=" * 80)
@@ -4036,7 +3999,7 @@ class AITrainer:
             if all_simulated_trades:
                 logger.info(f"💾 Сохранение {len(all_simulated_trades)} симулированных сделок...")
                 self._save_simulated_trades(all_simulated_trades)
-                logger.info(f"✅ Сохранено {len(all_simulated_trades)} симулированных сделок в {self.simulated_trades_file}")
+                logger.info(f"✅ Сохранено {len(all_simulated_trades)} симулированных сделок в БД")
             
             # Также создаем общую модель на всех данных (для монет без индивидуальных моделей)
             logger.info("💡 Общая модель будет создана при следующем обучении (после сбора всех сделок)")
@@ -4138,11 +4101,7 @@ class AITrainer:
             logger.error(f"❌ Ошибка обучения на исторических данных: {e}")
             import traceback
             logger.error(traceback.format_exc())
-            if self.win_rate_targets_dirty:
-                try:
-                    self._save_win_rate_targets()
-                except Exception as save_error:
-                    logger.debug(f"⚠️ Не удалось сохранить цели Win Rate после ошибки: {save_error}")
+            # Win Rate targets теперь сохраняются в БД автоматически
             self._record_training_event(
                 'historical_data_training',
                 status='FAILED',
