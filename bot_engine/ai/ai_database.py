@@ -419,6 +419,46 @@ class AIDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_training_locks_expires_at ON training_locks(expires_at)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_training_locks_status ON training_locks(status)")
             
+            # ==================== ТАБЛИЦА: ИСТОРИЯ СВЕЧЕЙ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS candles_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL,
+                    timeframe TEXT NOT NULL DEFAULT '6h',
+                    candle_time INTEGER NOT NULL,
+                    open_price REAL NOT NULL,
+                    high_price REAL NOT NULL,
+                    low_price REAL NOT NULL,
+                    close_price REAL NOT NULL,
+                    volume REAL NOT NULL,
+                    created_at TEXT NOT NULL,
+                    UNIQUE(symbol, timeframe, candle_time)
+                )
+            """)
+            
+            # Индексы для candles_history
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_symbol ON candles_history(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_timeframe ON candles_history(timeframe)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_time ON candles_history(candle_time)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_symbol_time ON candles_history(symbol, candle_time)")
+            
+            # ==================== ТАБЛИЦА: СНИМКИ ДАННЫХ БОТОВ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bots_data_snapshots (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    snapshot_time TEXT NOT NULL,
+                    bots_json TEXT,
+                    rsi_data_json TEXT,
+                    signals_json TEXT,
+                    bots_status_json TEXT,
+                    created_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для bots_data_snapshots
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bots_snapshots_time ON bots_data_snapshots(snapshot_time)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bots_snapshots_created ON bots_data_snapshots(created_at)")
+            
             # ==================== ТАБЛИЦА: ПАТТЕРНЫ И ИНСАЙТЫ ====================
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS trading_patterns (
@@ -1838,6 +1878,359 @@ class AIDatabase:
             logger.debug(f"⚠️ Ошибка продления блокировки {symbol}: {e}")
             return False
     
+    # ==================== МЕТОДЫ ДЛЯ РАБОТЫ С ИСТОРИЕЙ СВЕЧЕЙ ====================
+    
+    def save_candles(self, symbol: str, candles: List[Dict], timeframe: str = '6h') -> int:
+        """
+        Сохраняет свечи для символа в БД
+        
+        Args:
+            symbol: Символ монеты
+            candles: Список свечей [{'time': int, 'open': float, 'high': float, 'low': float, 'close': float, 'volume': float}, ...]
+            timeframe: Таймфрейм (по умолчанию '6h')
+        
+        Returns:
+            Количество сохраненных свечей
+        """
+        if not candles:
+            return 0
+        
+        try:
+            now = datetime.now().isoformat()
+            saved_count = 0
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                # Используем INSERT OR IGNORE для пропуска дубликатов
+                cursor.executemany("""
+                    INSERT OR IGNORE INTO candles_history (
+                        symbol, timeframe, candle_time, open_price, high_price,
+                        low_price, close_price, volume, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, [
+                    (
+                        symbol, timeframe,
+                        int(candle['time']),
+                        float(candle['open']),
+                        float(candle['high']),
+                        float(candle['low']),
+                        float(candle['close']),
+                        float(candle['volume']),
+                        now
+                    )
+                    for candle in candles
+                ])
+                saved_count = cursor.rowcount
+                conn.commit()
+            return saved_count
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения свечей для {symbol}: {e}")
+            return 0
+    
+    def save_candles_batch(self, candles_data: Dict[str, List[Dict]], timeframe: str = '6h') -> Dict[str, int]:
+        """
+        Сохраняет свечи для нескольких символов (батч операция)
+        
+        Args:
+            candles_data: Словарь {symbol: [candles]}
+            timeframe: Таймфрейм
+        
+        Returns:
+            Словарь {symbol: saved_count}
+        """
+        results = {}
+        for symbol, candles in candles_data.items():
+            results[symbol] = self.save_candles(symbol, candles, timeframe)
+        return results
+    
+    def get_candles(self, symbol: str, timeframe: str = '6h', 
+                    limit: Optional[int] = None,
+                    start_time: Optional[int] = None,
+                    end_time: Optional[int] = None) -> List[Dict]:
+        """
+        Получает свечи для символа
+        
+        Args:
+            symbol: Символ монеты
+            timeframe: Таймфрейм
+            limit: Максимальное количество свечей
+            start_time: Начальное время (timestamp)
+            end_time: Конечное время (timestamp)
+        
+        Returns:
+            Список свечей [{'time': int, 'open': float, ...}, ...]
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                query = """
+                    SELECT candle_time, open_price, high_price, low_price, close_price, volume
+                    FROM candles_history
+                    WHERE symbol = ? AND timeframe = ?
+                """
+                params = [symbol, timeframe]
+                
+                if start_time:
+                    query += " AND candle_time >= ?"
+                    params.append(start_time)
+                
+                if end_time:
+                    query += " AND candle_time <= ?"
+                    params.append(end_time)
+                
+                query += " ORDER BY candle_time ASC"
+                
+                if limit:
+                    query += " LIMIT ?"
+                    params.append(limit)
+                
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+                
+                candles = []
+                for row in rows:
+                    candles.append({
+                        'time': row['candle_time'],
+                        'open': row['open_price'],
+                        'high': row['high_price'],
+                        'low': row['low_price'],
+                        'close': row['close_price'],
+                        'volume': row['volume']
+                    })
+                
+                return candles
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки свечей для {symbol}: {e}")
+            return []
+    
+    def get_all_candles_dict(self, timeframe: str = '6h') -> Dict[str, List[Dict]]:
+        """
+        Получает все свечи для всех символов (в формате как candles_full_history.json)
+        
+        Args:
+            timeframe: Таймфрейм
+        
+        Returns:
+            Словарь {symbol: [candles]}
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT symbol, candle_time, open_price, high_price, low_price, close_price, volume
+                    FROM candles_history
+                    WHERE timeframe = ?
+                    ORDER BY symbol, candle_time ASC
+                """, (timeframe,))
+                rows = cursor.fetchall()
+                
+                result = {}
+                for row in rows:
+                    symbol = row['symbol']
+                    if symbol not in result:
+                        result[symbol] = []
+                    
+                    result[symbol].append({
+                        'time': row['candle_time'],
+                        'open': row['open_price'],
+                        'high': row['high_price'],
+                        'low': row['low_price'],
+                        'close': row['close_price'],
+                        'volume': row['volume']
+                    })
+                
+                return result
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки всех свечей: {e}")
+            return {}
+    
+    def count_candles(self, symbol: Optional[str] = None, timeframe: str = '6h') -> int:
+        """Подсчитывает количество свечей"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                if symbol:
+                    cursor.execute("SELECT COUNT(*) FROM candles_history WHERE symbol = ? AND timeframe = ?", (symbol, timeframe))
+                else:
+                    cursor.execute("SELECT COUNT(*) FROM candles_history WHERE timeframe = ?", (timeframe,))
+                return cursor.fetchone()[0]
+        except Exception as e:
+            logger.error(f"❌ Ошибка подсчета свечей: {e}")
+            return 0
+    
+    def get_candles_last_time(self, symbol: str, timeframe: str = '6h') -> Optional[int]:
+        """Получает время последней свечи для символа"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT MAX(candle_time) as last_time
+                    FROM candles_history
+                    WHERE symbol = ? AND timeframe = ?
+                """, (symbol, timeframe))
+                row = cursor.fetchone()
+                return row['last_time'] if row and row['last_time'] else None
+        except Exception as e:
+            logger.error(f"❌ Ошибка получения последнего времени для {symbol}: {e}")
+            return None
+    
+    # ==================== МЕТОДЫ ДЛЯ РАБОТЫ С ДАННЫМИ БОТОВ ====================
+    
+    def save_bots_data_snapshot(self, bots_data: Dict) -> int:
+        """
+        Сохраняет снимок данных ботов в БД
+        
+        Args:
+            bots_data: Словарь с данными ботов {
+                'timestamp': str,
+                'bots': [],
+                'rsi_data': {},
+                'signals': {},
+                'bots_status': {}
+            }
+        
+        Returns:
+            ID сохраненной записи
+        """
+        try:
+            now = datetime.now().isoformat()
+            snapshot_time = bots_data.get('timestamp', now)
+            
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO bots_data_snapshots (
+                        snapshot_time, bots_json, rsi_data_json,
+                        signals_json, bots_status_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    snapshot_time,
+                    json.dumps(bots_data.get('bots', [])),
+                    json.dumps(bots_data.get('rsi_data', {})),
+                    json.dumps(bots_data.get('signals', {})),
+                    json.dumps(bots_data.get('bots_status', {})),
+                    now
+                ))
+                conn.commit()
+                return cursor.lastrowid
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения снимка данных ботов: {e}")
+            return 0
+    
+    def get_bots_data_snapshots(self, limit: int = 1000, 
+                                start_time: Optional[str] = None,
+                                end_time: Optional[str] = None) -> List[Dict]:
+        """
+        Получает снимки данных ботов
+        
+        Args:
+            limit: Максимальное количество записей
+            start_time: Начальное время (ISO format)
+            end_time: Конечное время (ISO format)
+        
+        Returns:
+            Список снимков
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                query = """
+                    SELECT id, snapshot_time, bots_json, rsi_data_json,
+                           signals_json, bots_status_json, created_at
+                    FROM bots_data_snapshots
+                """
+                params = []
+                
+                conditions = []
+                if start_time:
+                    conditions.append("snapshot_time >= ?")
+                    params.append(start_time)
+                if end_time:
+                    conditions.append("snapshot_time <= ?")
+                    params.append(end_time)
+                
+                if conditions:
+                    query += " WHERE " + " AND ".join(conditions)
+                
+                query += " ORDER BY snapshot_time DESC LIMIT ?"
+                params.append(limit)
+                
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+                
+                snapshots = []
+                for row in rows:
+                    snapshots.append({
+                        'id': row['id'],
+                        'timestamp': row['snapshot_time'],
+                        'bots': json.loads(row['bots_json']) if row['bots_json'] else [],
+                        'rsi_data': json.loads(row['rsi_data_json']) if row['rsi_data_json'] else {},
+                        'signals': json.loads(row['signals_json']) if row['signals_json'] else {},
+                        'bots_status': json.loads(row['bots_status_json']) if row['bots_status_json'] else {},
+                        'created_at': row['created_at']
+                    })
+                
+                return snapshots
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки снимков данных ботов: {e}")
+            return []
+    
+    def get_latest_bots_data(self) -> Optional[Dict]:
+        """
+        Получает последний снимок данных ботов
+        
+        Returns:
+            Последний снимок или None
+        """
+        snapshots = self.get_bots_data_snapshots(limit=1)
+        if snapshots:
+            return snapshots[0]
+        return None
+    
+    def count_bots_data_snapshots(self) -> int:
+        """Подсчитывает количество снимков данных ботов"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM bots_data_snapshots")
+                return cursor.fetchone()[0]
+        except Exception as e:
+            logger.error(f"❌ Ошибка подсчета снимков данных ботов: {e}")
+            return 0
+    
+    def cleanup_old_bots_data_snapshots(self, keep_count: int = 1000) -> int:
+        """
+        Удаляет старые снимки, оставляя только последние N
+        
+        Args:
+            keep_count: Количество снимков для сохранения
+        
+        Returns:
+            Количество удаленных записей
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                # Получаем ID записей для удаления
+                cursor.execute("""
+                    SELECT id FROM bots_data_snapshots
+                    ORDER BY snapshot_time DESC
+                    LIMIT -1 OFFSET ?
+                """, (keep_count,))
+                ids_to_delete = [row[0] for row in cursor.fetchall()]
+                
+                if ids_to_delete:
+                    placeholders = ','.join(['?'] * len(ids_to_delete))
+                    cursor.execute(f"""
+                        DELETE FROM bots_data_snapshots
+                        WHERE id IN ({placeholders})
+                    """, ids_to_delete)
+                    conn.commit()
+                    return cursor.rowcount
+                return 0
+        except Exception as e:
+            logger.error(f"❌ Ошибка очистки старых снимков: {e}")
+            return 0
+    
     def get_database_stats(self) -> Dict[str, Any]:
         """Получает общую статистику базы данных"""
         with self._get_connection() as conn:
@@ -1848,7 +2241,8 @@ class AIDatabase:
             # Подсчеты по таблицам
             tables = ['simulated_trades', 'bot_trades', 'exchange_trades', 'ai_decisions', 
                      'training_sessions', 'parameter_training_samples', 'used_training_parameters',
-                     'best_params_per_symbol', 'blocked_params', 'win_rate_targets', 'training_locks']
+                     'best_params_per_symbol', 'blocked_params', 'win_rate_targets', 'training_locks',
+                     'candles_history', 'bots_data_snapshots']
             for table in tables:
                 cursor.execute(f"SELECT COUNT(*) FROM {table}")
                 stats[f"{table}_count"] = cursor.fetchone()[0]

@@ -52,40 +52,51 @@ last_maturity_check = {'coins_count': 0, 'config_hash': None}
 maturity_data_invalidated = False  # Флаг: True если данные были сброшены и не должны сохраняться
 
 def load_maturity_check_cache():
-    """🚀 Загружает кэш последней проверки зрелости из файла"""
+    """🚀 Загружает кэш последней проверки зрелости из БД (с fallback на JSON)"""
     global last_maturity_check
     try:
-        if os.path.exists(MATURITY_CHECK_CACHE_FILE):
-            with open(MATURITY_CHECK_CACHE_FILE, 'r', encoding='utf-8') as f:
-                cached_data = json.load(f)
-                last_maturity_check['coins_count'] = cached_data.get('coins_count', 0)
-                last_maturity_check['config_hash'] = cached_data.get('config_hash', None)
-                logger.info(f" 💾 Загружен кэш: {last_maturity_check['coins_count']} монет")
+        from bot_engine.storage import load_maturity_check_cache as storage_load_cache
+        cached_data = storage_load_cache()
+        if cached_data:
+            last_maturity_check['coins_count'] = cached_data.get('coins_count', 0)
+            last_maturity_check['config_hash'] = cached_data.get('config_hash', None)
+            logger.info(f" 💾 Загружен кэш: {last_maturity_check['coins_count']} монет")
         else:
-            logger.info(" 📝 Файл кэша не найден, создаем новый")
+            logger.info(" 📝 Кэш не найден, создаем новый")
+            last_maturity_check = {'coins_count': 0, 'config_hash': None}
     except Exception as e:
         logger.error(f" ❌ Ошибка загрузки кэша: {e}")
         last_maturity_check = {'coins_count': 0, 'config_hash': None}
 
 def save_maturity_check_cache():
-    """🚀 Сохраняет кэш последней проверки зрелости в файл"""
+    """🚀 Сохраняет кэш последней проверки зрелости в БД (с fallback на JSON)"""
+    global last_maturity_check
     try:
-        os.makedirs(os.path.dirname(MATURITY_CHECK_CACHE_FILE), exist_ok=True)
-        with open(MATURITY_CHECK_CACHE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(last_maturity_check, f, indent=2, ensure_ascii=False)
+        from bot_engine.storage import save_maturity_check_cache as storage_save_cache
+        storage_save_cache(
+            last_maturity_check.get('coins_count', 0),
+            last_maturity_check.get('config_hash')
+        )
         logger.debug(f" 💾 Кэш сохранен: {last_maturity_check['coins_count']} монет")
     except Exception as e:
         logger.error(f" ❌ Ошибка сохранения кэша: {e}")
 
 def load_mature_coins_storage(expected_coins_count=None):
-    """Загружает постоянное хранилище зрелых монет из файла"""
+    """Загружает постоянное хранилище зрелых монет из БД (с fallback на JSON)"""
     global mature_coins_storage, maturity_data_invalidated
     try:
-        if os.path.exists(MATURE_COINS_FILE):
-            with open(MATURE_COINS_FILE, 'r', encoding='utf-8') as f:
-                loaded_data = json.load(f)
+        # ПРИОРИТЕТ: Загружаем из БД
+        from bot_engine.storage import load_mature_coins as storage_load_mature
+        loaded_data = storage_load_mature()
+        loaded_from_db = bool(loaded_data)
+        
+        # FALLBACK: Если в БД нет данных, пробуем загрузить из JSON
+        if not loaded_data and os.path.exists(MATURE_COINS_FILE):
+            try:
+                with open(MATURE_COINS_FILE, 'r', encoding='utf-8') as f:
+                    loaded_data = json.load(f)
             
-            # ✅ ПРОВЕРКА КОНФИГУРАЦИИ: Сравниваем настройки из файла с текущими
+            # ✅ ПРОВЕРКА КОНФИГУРАЦИИ: Сравниваем настройки из файла/БД с текущими
             need_recalculation = False
             if loaded_data:
                 # 🎯 ПРОВЕРКА 1: Количество монет
@@ -119,8 +130,14 @@ def load_mature_coins_storage(expected_coins_count=None):
                         
                         need_recalculation = True
                         
-                        # Очищаем файл для пересчета
-                        os.remove(MATURE_COINS_FILE)
+                        # Очищаем данные: удаляем файл и очищаем БД
+                        if not loaded_from_db and os.path.exists(MATURE_COINS_FILE):
+                            os.remove(MATURE_COINS_FILE)
+                        if loaded_from_db:
+                            # Очищаем БД
+                            from bot_engine.storage import save_mature_coins as storage_save_mature
+                            storage_save_mature({})
+                        
                         loaded_data = {}
                         
                         # ✅ УСТАНАВЛИВАЕМ ФЛАГ: данные недействительны и не должны сохраняться
@@ -158,7 +175,7 @@ def load_mature_coins_storage(expected_coins_count=None):
             mature_coins_storage.clear()
 
 def save_mature_coins_storage():
-    """Сохраняет постоянное хранилище зрелых монет в файл"""
+    """Сохраняет постоянное хранилище зрелых монет в БД (с fallback на JSON)"""
     global maturity_data_invalidated
     
     # ✅ ПРОВЕРКА: Если данные были сброшены, не сохраняем их
@@ -171,12 +188,16 @@ def save_mature_coins_storage():
             # Создаем копию для безопасной сериализации
             storage_copy = mature_coins_storage.copy()
         
-        os.makedirs(os.path.dirname(MATURE_COINS_FILE), exist_ok=True)
+        # ПРИОРИТЕТ: Сохраняем в БД
+        from bot_engine.storage import save_mature_coins as storage_save_mature
+        if storage_save_mature(storage_copy):
+            return True  # Успешно сохранили в БД
         
-        # Используем стандартную функцию сохранения из bot_engine.storage
+        # FALLBACK: Сохраняем в JSON (для обратной совместимости)
+        os.makedirs(os.path.dirname(MATURE_COINS_FILE), exist_ok=True)
         from bot_engine.storage import save_json_file
         save_json_file(MATURE_COINS_FILE, storage_copy)
-        return True  # Успешно сохранили
+        return True
     except Exception as e:
         logger.error(f" Ошибка сохранения хранилища: {e}")
         return False
