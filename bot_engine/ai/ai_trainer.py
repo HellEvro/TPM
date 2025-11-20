@@ -2829,6 +2829,12 @@ class AITrainer:
                 if symbol_idx <= 10 or symbol_idx % progress_interval == 0:
                     logger.info(f"   🎓 [{symbol_idx}/{total_coins}] Начало обработки {symbol}...")
                 
+                # Блокируем символ для обработки (для параллельной работы на разных ПК)
+                if self.ai_db:
+                    if not self.ai_db.try_lock_symbol(symbol, process_id, hostname, lock_duration_minutes=120):
+                        logger.debug(f"   ⏭️ {symbol}: пропущен (обрабатывается другим процессом)")
+                        continue
+                
                 try:
                     candles = candle_info.get('candles', [])
                     coin_seed = training_seed + (abs(hash(symbol)) % 1000)
@@ -3972,7 +3978,10 @@ class AITrainer:
                     else:
                         logger.debug(traceback.format_exc())
                     total_failed_coins += 1
-                    continue
+                finally:
+                    # Освобождаем блокировку символа (для параллельной работы на разных ПК)
+                    if self.ai_db:
+                        self.ai_db.release_lock(symbol, process_id)
             
             # Win Rate targets теперь сохраняются в БД автоматически
             

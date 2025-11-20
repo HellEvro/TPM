@@ -400,6 +400,25 @@ class AIDatabase:
             # Индексы для win_rate_targets
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_win_rate_targets_symbol ON win_rate_targets(symbol)")
             
+            # ==================== ТАБЛИЦА: БЛОКИРОВКИ ДЛЯ ПАРАЛЛЕЛЬНОЙ ОБРАБОТКИ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS training_locks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL,
+                    process_id TEXT NOT NULL,
+                    hostname TEXT,
+                    locked_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'PROCESSING',
+                    UNIQUE(symbol)
+                )
+            """)
+            
+            # Индексы для training_locks
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_training_locks_symbol ON training_locks(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_training_locks_expires_at ON training_locks(expires_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_training_locks_status ON training_locks(status)")
+            
             # ==================== ТАБЛИЦА: ПАТТЕРНЫ И ИНСАЙТЫ ====================
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS trading_patterns (
@@ -1679,6 +1698,146 @@ class AIDatabase:
             logger.error(f"❌ Ошибка загрузки целевых win rate: {e}")
             return {}
     
+    # ==================== МЕТОДЫ ДЛЯ КООРДИНАЦИИ ПАРАЛЛЕЛЬНОЙ ОБРАБОТКИ ====================
+    
+    def try_lock_symbol(self, symbol: str, process_id: str, hostname: str = None, 
+                        lock_duration_minutes: int = 60) -> bool:
+        """
+        Пытается заблокировать символ для обработки (для параллельной работы на разных ПК)
+        
+        Args:
+            symbol: Символ монеты
+            process_id: Уникальный ID процесса (например, PID + timestamp)
+            hostname: Имя хоста (опционально)
+            lock_duration_minutes: Длительность блокировки в минутах
+        
+        Returns:
+            True если удалось заблокировать, False если уже заблокирован
+        """
+        try:
+            now = datetime.now()
+            expires_at = now.replace(second=0, microsecond=0)
+            from datetime import timedelta
+            expires_at += timedelta(minutes=lock_duration_minutes)
+            
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Очищаем истекшие блокировки
+                cursor.execute("""
+                    DELETE FROM training_locks 
+                    WHERE expires_at < ?
+                """, (now.isoformat(),))
+                
+                # Пытаемся заблокировать
+                try:
+                    cursor.execute("""
+                        INSERT INTO training_locks (
+                            symbol, process_id, hostname, locked_at, expires_at, status
+                        ) VALUES (?, ?, ?, ?, ?, 'PROCESSING')
+                    """, (
+                        symbol, process_id, hostname, now.isoformat(), expires_at.isoformat()
+                    ))
+                    conn.commit()
+                    return True
+                except sqlite3.IntegrityError:
+                    # Символ уже заблокирован
+                    return False
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка блокировки символа {symbol}: {e}")
+            return False
+    
+    def release_lock(self, symbol: str, process_id: str) -> bool:
+        """
+        Освобождает блокировку символа
+        
+        Args:
+            symbol: Символ монеты
+            process_id: ID процесса, который блокировал
+        
+        Returns:
+            True если удалось освободить
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    DELETE FROM training_locks 
+                    WHERE symbol = ? AND process_id = ?
+                """, (symbol, process_id))
+                conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка освобождения блокировки {symbol}: {e}")
+            return False
+    
+    def get_available_symbols(self, all_symbols: List[str], process_id: str, 
+                             hostname: str = None) -> List[str]:
+        """
+        Получает список доступных символов (не заблокированных другими процессами)
+        
+        Args:
+            all_symbols: Все символы для обработки
+            process_id: ID текущего процесса
+            hostname: Имя хоста (опционально)
+        
+        Returns:
+            Список доступных символов
+        """
+        try:
+            now = datetime.now()
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Очищаем истекшие блокировки
+                cursor.execute("""
+                    DELETE FROM training_locks 
+                    WHERE expires_at < ?
+                """, (now.isoformat(),))
+                conn.commit()
+                
+                # Получаем заблокированные символы
+                cursor.execute("SELECT symbol FROM training_locks")
+                locked_symbols = {row[0] for row in cursor.fetchall()}
+                
+                # Возвращаем только незаблокированные
+                available = [s for s in all_symbols if s not in locked_symbols]
+                return available
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка получения доступных символов: {e}")
+            return all_symbols  # В случае ошибки возвращаем все
+    
+    def extend_lock(self, symbol: str, process_id: str, 
+                   additional_minutes: int = 30) -> bool:
+        """
+        Продлевает блокировку символа
+        
+        Args:
+            symbol: Символ монеты
+            process_id: ID процесса
+            additional_minutes: Сколько минут добавить
+        
+        Returns:
+            True если удалось продлить
+        """
+        try:
+            from datetime import timedelta
+            now = datetime.now()
+            new_expires_at = now + timedelta(minutes=additional_minutes)
+            
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE training_locks 
+                    SET expires_at = ?
+                    WHERE symbol = ? AND process_id = ?
+                """, (new_expires_at.isoformat(), symbol, process_id))
+                conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка продления блокировки {symbol}: {e}")
+            return False
+    
     def get_database_stats(self) -> Dict[str, Any]:
         """Получает общую статистику базы данных"""
         with self._get_connection() as conn:
@@ -1689,7 +1848,7 @@ class AIDatabase:
             # Подсчеты по таблицам
             tables = ['simulated_trades', 'bot_trades', 'exchange_trades', 'ai_decisions', 
                      'training_sessions', 'parameter_training_samples', 'used_training_parameters',
-                     'best_params_per_symbol', 'blocked_params', 'win_rate_targets']
+                     'best_params_per_symbol', 'blocked_params', 'win_rate_targets', 'training_locks']
             for table in tables:
                 cursor.execute(f"SELECT COUNT(*) FROM {table}")
                 stats[f"{table}_count"] = cursor.fetchone()[0]
