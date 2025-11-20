@@ -1009,19 +1009,106 @@ class BotsDatabase:
     
     def _set_migration_completed(self):
         """Устанавливает флаг что миграция из JSON выполнена"""
+        self._set_metadata_flag('json_migration_completed', '1')
+    
+    def _set_metadata_flag(self, key: str, value: str):
+        """
+        Устанавливает флаг в метаданных БД
+        
+        Универсальный метод для установки любых флагов миграций или других метаданных.
+        
+        Args:
+            key: Ключ флага (например, 'json_migration_completed', 'schema_v2_migrated')
+            value: Значение флага (обычно '0' или '1', но может быть любое строковое значение)
+        
+        Example:
+            ```python
+            # Установить флаг миграции
+            db._set_metadata_flag('json_migration_completed', '1')
+            
+            # Установить флаг миграции схемы
+            db._set_metadata_flag('schema_v2_migrated', '1')
+            
+            # Установить версию БД
+            db._set_metadata_flag('db_version', '2.0')
+            ```
+        """
         try:
             now = datetime.now().isoformat()
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
                     INSERT OR REPLACE INTO db_metadata (key, value, updated_at, created_at)
-                    VALUES ('json_migration_completed', '1', ?, 
-                            COALESCE((SELECT created_at FROM db_metadata WHERE key = 'json_migration_completed'), ?))
-                """, (now, now))
+                    VALUES (?, ?, ?, 
+                            COALESCE((SELECT created_at FROM db_metadata WHERE key = ?), ?))
+                """, (key, value, now, key, now))
                 conn.commit()
-                logger.debug("✅ Флаг миграции установлен: json_migration_completed = 1")
+                logger.debug(f"✅ Флаг метаданных установлен: {key} = {value}")
         except Exception as e:
-            logger.warning(f"⚠️ Ошибка установки флага миграции: {e}")
+            logger.warning(f"⚠️ Ошибка установки флага метаданных {key}: {e}")
+    
+    def _get_metadata_flag(self, key: str, default: str = None) -> Optional[str]:
+        """
+        Получает значение флага из метаданных БД
+        
+        Универсальный метод для получения любых флагов миграций или других метаданных.
+        
+        Args:
+            key: Ключ флага
+            default: Значение по умолчанию если флаг не найден
+        
+        Returns:
+            Значение флага или default
+        
+        Example:
+            ```python
+            # Проверить флаг миграции
+            if db._get_metadata_flag('json_migration_completed') == '1':
+                print("Миграция выполнена")
+            
+            # Получить версию БД
+            version = db._get_metadata_flag('db_version', '1.0')
+            ```
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT value FROM db_metadata WHERE key = ?", (key,))
+                row = cursor.fetchone()
+                if row:
+                    return row['value']
+                return default
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка получения флага метаданных {key}: {e}")
+            return default
+    
+    def _is_migration_flag_set(self, flag_key: str) -> bool:
+        """
+        Проверяет, установлен ли флаг миграции
+        
+        Удобный метод для проверки флагов миграций.
+        
+        Args:
+            flag_key: Ключ флага миграции
+        
+        Returns:
+            True если флаг установлен в '1', False в противном случае
+        
+        Example:
+            ```python
+            # Проверить выполнена ли миграция JSON
+            if not db._is_migration_flag_set('json_migration_completed'):
+                # Выполнить миграцию
+                db.migrate_json_to_database()
+            
+            # Проверить выполнена ли миграция схемы v2
+            if not db._is_migration_flag_set('schema_v2_migrated'):
+                # Выполнить миграцию схемы
+                db.migrate_schema_v2()
+            ```
+        """
+        flag_value = self._get_metadata_flag(flag_key, '0')
+        return flag_value == '1'
     
     def migrate_json_to_database(self) -> Dict[str, int]:
         """
