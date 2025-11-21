@@ -181,22 +181,72 @@ class AppDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             
-            # ==================== ТАБЛИЦА: ПОЗИЦИИ И СТАТИСТИКА ====================
+            # ==================== ТАБЛИЦА: ПОЗИЦИИ (НОРМАЛИЗОВАННАЯ) ====================
+            # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: одна строка = одна позиция со всеми полями
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS positions_data (
+                CREATE TABLE IF NOT EXISTS positions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    data_type TEXT NOT NULL,
-                    data_json TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    pnl REAL NOT NULL,
+                    max_profit REAL,
+                    max_loss REAL,
+                    roi REAL,
+                    high_roi INTEGER DEFAULT 0,
+                    high_loss INTEGER DEFAULT 0,
+                    side TEXT,
+                    size REAL,
+                    realized_pnl REAL,
+                    leverage REAL,
+                    position_category TEXT NOT NULL,
                     last_update TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 )
             """)
             
-            # Индексы для positions_data
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_data_type ON positions_data(data_type)")
+            # Индексы для positions
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_symbol ON positions(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_category ON positions(position_category)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_pnl ON positions(pnl)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_last_update ON positions(last_update)")
             
-            # ==================== ТАБЛИЦА: ЗАКРЫТЫЕ PNL ====================
+            # ==================== ТАБЛИЦА: СТАТИСТИКА ПОЗИЦИЙ (НОРМАЛИЗОВАННАЯ) ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS positions_stats (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    total_pnl REAL DEFAULT 0,
+                    total_profit REAL DEFAULT 0,
+                    total_loss REAL DEFAULT 0,
+                    high_profitable_count INTEGER DEFAULT 0,
+                    profitable_count INTEGER DEFAULT 0,
+                    losing_count INTEGER DEFAULT 0,
+                    total_trades INTEGER DEFAULT 0,
+                    last_update TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            
+            # ==================== ТАБЛИЦА: БЫСТРЫЙ РОСТ (НОРМАЛИЗОВАННАЯ) ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS rapid_growth_positions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL,
+                    start_pnl REAL NOT NULL,
+                    current_pnl REAL NOT NULL,
+                    growth_ratio REAL NOT NULL,
+                    last_update TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для rapid_growth_positions
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_rapid_growth_symbol ON rapid_growth_positions(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_rapid_growth_ratio ON rapid_growth_positions(growth_ratio)")
+            
+            # ==================== ТАБЛИЦА: ЗАКРЫТЫЕ PNL (НОРМАЛИЗОВАННАЯ) ====================
+            # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: все поля в отдельных столбцах, data_json только для дополнительных данных
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS closed_pnl (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -212,7 +262,7 @@ class AppDatabase:
                     entry_timestamp INTEGER,
                     duration_seconds INTEGER,
                     exchange TEXT,
-                    data_json TEXT,
+                    extra_data_json TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     UNIQUE(symbol, side, close_timestamp)
@@ -243,6 +293,126 @@ class AppDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_max_values_symbol ON max_values(symbol)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_max_values_type ON max_values(value_type)")
             
+            # ==================== МИГРАЦИЯ: Нормализация positions_data из JSON в отдельные таблицы ====================
+            try:
+                # Проверяем, есть ли старая структура (positions_data с data_json)
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='positions_data'")
+                if cursor.fetchone():
+                    # Проверяем, есть ли данные в старой таблице
+                    cursor.execute("SELECT COUNT(*) FROM positions_data")
+                    old_count = cursor.fetchone()[0]
+                    
+                    if old_count > 0:
+                        # Проверяем, мигрированы ли уже данные
+                        cursor.execute("SELECT COUNT(*) FROM positions")
+                        new_count = cursor.fetchone()[0]
+                        
+                        if new_count == 0:
+                            logger.info("📦 Обнаружены данные в positions_data, выполняю миграцию в нормализованные таблицы...")
+                            
+                            # Загружаем данные из старой таблицы
+                            cursor.execute("SELECT data_type, data_json, last_update FROM positions_data")
+                            old_rows = cursor.fetchall()
+                            
+                            now = datetime.now().isoformat()
+                            
+                            for row in old_rows:
+                                data_type = row['data_type']
+                                data_json = row['data_json']
+                                last_update = row['last_update']
+                                
+                                try:
+                                    data_value = json.loads(data_json)
+                                    
+                                    if data_type in ['high_profitable', 'profitable', 'losing']:
+                                        # Мигрируем позиции
+                                        positions = data_value if isinstance(data_value, list) else []
+                                        for position in positions:
+                                            cursor.execute("""
+                                                INSERT INTO positions (
+                                                    symbol, pnl, max_profit, max_loss, roi,
+                                                    high_roi, high_loss, side, size, realized_pnl,
+                                                    leverage, position_category, last_update, created_at, updated_at
+                                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                            """, (
+                                                position.get('symbol'),
+                                                position.get('pnl', 0),
+                                                position.get('max_profit'),
+                                                position.get('max_loss'),
+                                                position.get('roi'),
+                                                1 if position.get('high_roi', False) else 0,
+                                                1 if position.get('high_loss', False) else 0,
+                                                position.get('side'),
+                                                position.get('size'),
+                                                position.get('realized_pnl'),
+                                                position.get('leverage'),
+                                                data_type,
+                                                last_update,
+                                                now,
+                                                now
+                                            ))
+                                    elif data_type == 'stats':
+                                        # Мигрируем статистику
+                                        stats = data_value if isinstance(data_value, dict) else {}
+                                        cursor.execute("""
+                                            INSERT INTO positions_stats (
+                                                total_pnl, total_profit, total_loss,
+                                                high_profitable_count, profitable_count, losing_count,
+                                                total_trades, last_update, created_at, updated_at
+                                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                        """, (
+                                            stats.get('total_pnl', 0),
+                                            stats.get('total_profit', 0),
+                                            stats.get('total_loss', 0),
+                                            stats.get('high_profitable_count', 0),
+                                            stats.get('profitable_count', 0),
+                                            stats.get('losing_count', 0),
+                                            stats.get('total_trades', 0),
+                                            last_update,
+                                            now,
+                                            now
+                                        ))
+                                    elif data_type == 'rapid_growth':
+                                        # Мигрируем rapid_growth
+                                        rapid_growth = data_value if isinstance(data_value, list) else []
+                                        for growth in rapid_growth:
+                                            cursor.execute("""
+                                                INSERT INTO rapid_growth_positions (
+                                                    symbol, start_pnl, current_pnl, growth_ratio,
+                                                    last_update, created_at, updated_at
+                                                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                                            """, (
+                                                growth.get('symbol'),
+                                                growth.get('start_pnl', 0),
+                                                growth.get('current_pnl', 0),
+                                                growth.get('growth_ratio', 0),
+                                                last_update,
+                                                now,
+                                                now
+                                            ))
+                                except Exception as e:
+                                    logger.warning(f"⚠️ Ошибка миграции {data_type}: {e}")
+                                    continue
+                            
+                            logger.info("✅ Миграция positions_data завершена: данные перенесены из JSON в нормализованные таблицы")
+                        else:
+                            logger.debug("ℹ️ Данные positions_data уже мигрированы")
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка миграции positions_data: {e}")
+            
+            # ==================== МИГРАЦИЯ: Переименование data_json в extra_data_json для closed_pnl ====================
+            try:
+                # Проверяем, есть ли столбец data_json
+                cursor.execute("PRAGMA table_info(closed_pnl)")
+                columns = [col[1] for col in cursor.fetchall()]
+                
+                if 'data_json' in columns and 'extra_data_json' not in columns:
+                    logger.info("📦 Миграция: переименовываю data_json в extra_data_json для closed_pnl")
+                    cursor.execute("ALTER TABLE closed_pnl RENAME COLUMN data_json TO extra_data_json")
+                    logger.info("✅ Миграция closed_pnl завершена")
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка миграции closed_pnl: {e}")
+            
             conn.commit()
             
             logger.debug("✅ Все таблицы и индексы созданы")
@@ -251,7 +421,7 @@ class AppDatabase:
     
     def save_positions_data(self, positions_data: Dict) -> bool:
         """
-        Сохраняет positions_data в БД
+        Сохраняет positions_data в нормализованные таблицы БД
         
         Args:
             positions_data: Словарь с данными позиций
@@ -262,22 +432,82 @@ class AppDatabase:
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
-                
-                # Сохраняем каждую часть positions_data отдельно
                 now = datetime.now().isoformat()
+                last_update = positions_data.get('last_update')
                 
-                for data_type in ['high_profitable', 'profitable', 'losing', 'rapid_growth', 'stats']:
-                    data_value = positions_data.get(data_type, [])
-                    data_json = json.dumps(data_value, ensure_ascii=False)
-                    
+                # Удаляем старые данные позиций
+                cursor.execute("DELETE FROM positions")
+                
+                # Сохраняем позиции в нормализованную таблицу
+                for category in ['high_profitable', 'profitable', 'losing']:
+                    positions = positions_data.get(category, [])
+                    for position in positions:
+                        cursor.execute("""
+                            INSERT INTO positions (
+                                symbol, pnl, max_profit, max_loss, roi,
+                                high_roi, high_loss, side, size, realized_pnl,
+                                leverage, position_category, last_update, created_at, updated_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            position.get('symbol'),
+                            position.get('pnl', 0),
+                            position.get('max_profit'),
+                            position.get('max_loss'),
+                            position.get('roi'),
+                            1 if position.get('high_roi', False) else 0,
+                            1 if position.get('high_loss', False) else 0,
+                            position.get('side'),
+                            position.get('size'),
+                            position.get('realized_pnl'),
+                            position.get('leverage'),
+                            category,
+                            last_update,
+                            now,
+                            now
+                        ))
+                
+                # Сохраняем статистику
+                stats = positions_data.get('stats', {})
+                cursor.execute("DELETE FROM positions_stats")
+                cursor.execute("""
+                    INSERT INTO positions_stats (
+                        total_pnl, total_profit, total_loss,
+                        high_profitable_count, profitable_count, losing_count,
+                        total_trades, last_update, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    stats.get('total_pnl', 0),
+                    stats.get('total_profit', 0),
+                    stats.get('total_loss', 0),
+                    stats.get('high_profitable_count', 0),
+                    stats.get('profitable_count', 0),
+                    stats.get('losing_count', 0),
+                    stats.get('total_trades', 0),
+                    last_update,
+                    now,
+                    now
+                ))
+                
+                # Сохраняем rapid_growth
+                rapid_growth = positions_data.get('rapid_growth', [])
+                cursor.execute("DELETE FROM rapid_growth_positions")
+                for growth in rapid_growth:
                     cursor.execute("""
-                        INSERT OR REPLACE INTO positions_data (data_type, data_json, last_update, created_at, updated_at)
-                        VALUES (?, ?, ?, 
-                            COALESCE((SELECT created_at FROM positions_data WHERE data_type = ?), ?),
-                            ?)
-                    """, (data_type, data_json, positions_data.get('last_update'), data_type, now, now))
+                        INSERT INTO rapid_growth_positions (
+                            symbol, start_pnl, current_pnl, growth_ratio,
+                            last_update, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        growth.get('symbol'),
+                        growth.get('start_pnl', 0),
+                        growth.get('current_pnl', 0),
+                        growth.get('growth_ratio', 0),
+                        last_update,
+                        now,
+                        now
+                    ))
                 
-                logger.debug("💾 positions_data сохранен в БД")
+                logger.debug("💾 positions_data сохранен в нормализованные таблицы БД")
                 return True
                 
         except Exception as e:
@@ -288,7 +518,7 @@ class AppDatabase:
     
     def load_positions_data(self) -> Dict:
         """
-        Загружает positions_data из БД
+        Загружает positions_data из нормализованных таблиц БД
         
         Returns:
             Dict: Словарь с данными позиций
@@ -308,43 +538,116 @@ class AppDatabase:
                     'total_trades': 0
                 }
                 
-                cursor.execute("SELECT data_type, data_json, last_update FROM positions_data")
-                rows = cursor.fetchall()
+                # Загружаем позиции из нормализованной таблицы
+                cursor.execute("""
+                    SELECT symbol, pnl, max_profit, max_loss, roi,
+                           high_roi, high_loss, side, size, realized_pnl,
+                           leverage, position_category, last_update
+                    FROM positions
+                """)
+                position_rows = cursor.fetchall()
                 
-                for row in rows:
-                    data_type = row['data_type']
-                    data_json = row['data_json']
-                    last_update = row['last_update']
+                for row in position_rows:
+                    position = {
+                        'symbol': row['symbol'],
+                        'pnl': row['pnl'],
+                        'max_profit': row['max_profit'],
+                        'max_loss': row['max_loss'],
+                        'roi': row['roi'],
+                        'high_roi': bool(row['high_roi']),
+                        'high_loss': bool(row['high_loss']),
+                        'side': row['side'],
+                        'size': row['size'],
+                        'realized_pnl': row['realized_pnl'],
+                        'leverage': row['leverage']
+                    }
                     
-                    try:
-                        data_value = json.loads(data_json)
-                        result[data_type] = data_value
-                        if last_update:
-                            result['last_update'] = last_update
-                    except json.JSONDecodeError as e:
-                        logger.error(f"❌ Ошибка парсинга JSON для {data_type}: {e}")
+                    category = row['position_category']
+                    if category in result:
+                        result[category].append(position)
+                    
+                    if row['last_update']:
+                        result['last_update'] = row['last_update']
                 
-                # Обновляем total_trades из stats
-                if result['stats'] and isinstance(result['stats'], dict):
-                    result['total_trades'] = result['stats'].get('total_trades', 0)
+                # Загружаем статистику
+                cursor.execute("SELECT * FROM positions_stats ORDER BY id DESC LIMIT 1")
+                stats_row = cursor.fetchone()
+                if stats_row:
+                    result['stats'] = {
+                        'total_pnl': stats_row['total_pnl'],
+                        'total_profit': stats_row['total_profit'],
+                        'total_loss': stats_row['total_loss'],
+                        'high_profitable_count': stats_row['high_profitable_count'],
+                        'profitable_count': stats_row['profitable_count'],
+                        'losing_count': stats_row['losing_count'],
+                        'total_trades': stats_row['total_trades']
+                    }
+                    result['total_trades'] = stats_row['total_trades']
+                    if stats_row['last_update']:
+                        result['last_update'] = stats_row['last_update']
                 
-                logger.debug("✅ positions_data загружен из БД")
+                # Загружаем rapid_growth
+                cursor.execute("""
+                    SELECT symbol, start_pnl, current_pnl, growth_ratio, last_update
+                    FROM rapid_growth_positions
+                """)
+                growth_rows = cursor.fetchall()
+                for row in growth_rows:
+                    result['rapid_growth'].append({
+                        'symbol': row['symbol'],
+                        'start_pnl': row['start_pnl'],
+                        'current_pnl': row['current_pnl'],
+                        'growth_ratio': row['growth_ratio']
+                    })
+                    if row['last_update']:
+                        result['last_update'] = row['last_update']
+                
+                logger.debug("✅ positions_data загружен из нормализованных таблиц БД")
                 return result
                 
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки positions_data: {e}")
             import traceback
             logger.debug(traceback.format_exc())
-            return {
-                'high_profitable': [],
-                'profitable': [],
-                'losing': [],
-                'rapid_growth': [],
-                'stats': {},
-                'last_update': None,
-                'closed_pnl': [],
-                'total_trades': 0
-            }
+            # Пробуем загрузить из старой структуры для обратной совместимости
+            try:
+                cursor.execute("SELECT data_type, data_json, last_update FROM positions_data")
+                rows = cursor.fetchall()
+                result = {
+                    'high_profitable': [],
+                    'profitable': [],
+                    'losing': [],
+                    'rapid_growth': [],
+                    'stats': {},
+                    'last_update': None,
+                    'closed_pnl': [],
+                    'total_trades': 0
+                }
+                for row in rows:
+                    data_type = row['data_type']
+                    data_json = row['data_json']
+                    last_update = row['last_update']
+                    try:
+                        data_value = json.loads(data_json)
+                        result[data_type] = data_value
+                        if last_update:
+                            result['last_update'] = last_update
+                    except json.JSONDecodeError:
+                        pass
+                if result['stats'] and isinstance(result['stats'], dict):
+                    result['total_trades'] = result['stats'].get('total_trades', 0)
+                return result
+            except:
+                return {
+                    'high_profitable': [],
+                    'profitable': [],
+                    'losing': [],
+                    'rapid_growth': [],
+                    'stats': {},
+                    'last_update': None,
+                    'closed_pnl': [],
+                    'total_trades': 0
+                }
     
     # ==================== МЕТОДЫ ДЛЯ CLOSED_PNL ====================
     
@@ -382,7 +685,17 @@ class AppDatabase:
                         close_timestamp = pnl_data.get('close_timestamp', 0)
                         entry_timestamp = pnl_data.get('entry_timestamp')
                         duration_seconds = pnl_data.get('duration_seconds')
-                        data_json = json.dumps(pnl_data, ensure_ascii=False)
+                        # Собираем дополнительные данные в extra_data_json
+                        extra_data = {}
+                        known_fields = {
+                            'symbol', 'side', 'entry_price', 'exit_price', 'size',
+                            'closed_pnl', 'closed_pnl_percent', 'fee',
+                            'close_timestamp', 'entry_timestamp', 'duration_seconds', 'exchange'
+                        }
+                        for key, value in pnl_data.items():
+                            if key not in known_fields:
+                                extra_data[key] = value
+                        extra_data_json = json.dumps(extra_data, ensure_ascii=False) if extra_data else None
                         
                         # Вставляем или обновляем запись
                         cursor.execute("""
@@ -390,7 +703,7 @@ class AppDatabase:
                                 symbol, side, entry_price, exit_price, size,
                                 closed_pnl, closed_pnl_percent, fee,
                                 close_timestamp, entry_timestamp, duration_seconds,
-                                exchange, data_json, created_at, updated_at
+                                exchange, extra_data_json, created_at, updated_at
                             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                                 COALESCE((SELECT created_at FROM closed_pnl 
                                     WHERE symbol = ? AND side = ? AND close_timestamp = ?), ?),
@@ -399,7 +712,7 @@ class AppDatabase:
                             symbol, side, entry_price, exit_price, size,
                             closed_pnl, closed_pnl_percent, fee,
                             close_timestamp, entry_timestamp, duration_seconds,
-                            exchange or '', data_json,
+                            exchange or '', extra_data_json,
                             symbol, side, close_timestamp, now, now
                         ))
                         
@@ -486,7 +799,14 @@ class AppDatabase:
                     period_end = now
                 
                 # Строим запрос
-                query = "SELECT data_json FROM closed_pnl WHERE close_timestamp >= ? AND close_timestamp <= ?"
+                query = """
+                    SELECT symbol, side, entry_price, exit_price, size,
+                           closed_pnl, closed_pnl_percent, fee,
+                           close_timestamp, entry_timestamp, duration_seconds,
+                           exchange, extra_data_json
+                    FROM closed_pnl
+                    WHERE close_timestamp >= ? AND close_timestamp <= ?
+                """
                 params = [period_start, period_end]
                 
                 if exchange:
@@ -504,12 +824,30 @@ class AppDatabase:
                 
                 result = []
                 for row in rows:
-                    try:
-                        pnl_data = json.loads(row['data_json'])
-                        result.append(pnl_data)
-                    except json.JSONDecodeError as e:
-                        logger.error(f"❌ Ошибка парсинга JSON для closed_pnl: {e}")
-                        continue
+                    pnl_data = {
+                        'symbol': row['symbol'],
+                        'side': row['side'],
+                        'entry_price': row['entry_price'],
+                        'exit_price': row['exit_price'],
+                        'size': row['size'],
+                        'closed_pnl': row['closed_pnl'],
+                        'closed_pnl_percent': row['closed_pnl_percent'],
+                        'fee': row['fee'],
+                        'close_timestamp': row['close_timestamp'],
+                        'entry_timestamp': row['entry_timestamp'],
+                        'duration_seconds': row['duration_seconds'],
+                        'exchange': row['exchange']
+                    }
+                    
+                    # Загружаем дополнительные данные из extra_data_json
+                    if row['extra_data_json']:
+                        try:
+                            extra_data = json.loads(row['extra_data_json'])
+                            pnl_data.update(extra_data)
+                        except json.JSONDecodeError:
+                            pass
+                    
+                    result.append(pnl_data)
                 
                 logger.debug(f"✅ Загружено {len(result)} записей closed_pnl из БД")
                 return result
