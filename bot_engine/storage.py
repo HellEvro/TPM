@@ -12,6 +12,7 @@ import time
 import threading
 import importlib
 from datetime import datetime
+from typing import Dict, Optional
 
 logger = logging.getLogger('Storage')
 
@@ -452,3 +453,42 @@ def is_coin_delisted(symbol: str) -> bool:
         logger.error(f"❌ Ошибка проверки делистирования в БД: {e}")
         raise  # Поднимаем исключение - БД обязательна!
 
+
+# Candles Cache
+def save_candles_cache(candles_cache: Dict) -> bool:
+    """Сохраняет кэш свечей в БД"""
+    db = _get_bots_database()
+    
+    try:
+        if db.save_candles_cache(candles_cache):
+            logger.debug(f"💾 Кэш свечей сохранен в БД ({len(candles_cache)} символов)")
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"❌ Ошибка сохранения кэша свечей в БД: {e}")
+        raise  # Поднимаем исключение - БД обязательна!
+
+
+def load_candles_cache(symbol: Optional[str] = None) -> Dict:
+    """Загружает кэш свечей из БД"""
+    db = _get_bots_database()
+    
+    try:
+        cache = db.load_candles_cache(symbol=symbol)
+        if cache:
+            logger.debug(f"✅ Кэш свечей загружен из БД ({len(cache)} символов)")
+        return cache if cache else {}
+    except Exception as e:
+        logger.error(f"❌ Ошибка загрузки кэша свечей из БД: {e}")
+        raise  # Поднимаем исключение - БД обязательна!
+
+
+def get_candles_for_symbol(symbol: str) -> Optional[Dict]:
+    """Получает свечи для конкретного символа из БД"""
+    db = _get_bots_database()
+    
+    try:
+        return db.get_candles_for_symbol(symbol)
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения свечей для {symbol} из БД: {e}")
+        raise  # Поднимаем исключение - БД обязательна!

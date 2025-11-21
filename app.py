@@ -1281,32 +1281,20 @@ def background_cache_cleanup():
 
 # Прокси для API endpoints ботов (перенаправляем на внешний сервис)
 def get_candles_from_file(symbol, timeframe='6h', period_days=None):
-    """Читает свечи напрямую из файла data/candles_cache.json (не требует запущенного bots.py)"""
+    """Читает свечи напрямую из БД (не требует запущенного bots.py)"""
     try:
-        # Определяем путь к файлу кэша
-        project_root = Path(__file__).parent
-        candles_cache_file = project_root / 'data' / 'candles_cache.json'
+        from bot_engine.storage import get_candles_for_symbol
         
-        if not candles_cache_file.exists():
-            return {'success': False, 'error': f'Файл кэша не найден: {candles_cache_file}'}
+        # Читаем из БД
+        cached_data = get_candles_for_symbol(symbol)
         
-        # Читаем файл с безопасной обработкой ошибок JSON
-        try:
-            with open(candles_cache_file, 'r', encoding='utf-8') as f:
-                file_cache = json.load(f)
-        except json.JSONDecodeError as e:
-            # Если JSON поврежден, возвращаем ошибку без падения приложения
-            logging.getLogger('app').warning(f"JSON файл поврежден при чтении для {symbol}: {e}")
-            return {'success': False, 'error': f'JSON файл кэша поврежден. Перезапустите bots.py для восстановления.'}
+        if not cached_data:
+            return {'success': False, 'error': f'Свечи для {symbol} не найдены в БД кэша'}
         
-        if symbol not in file_cache:
-            return {'success': False, 'error': f'Свечи для {symbol} не найдены в файле кэша'}
-        
-        cached_data = file_cache[symbol]
         candles_6h = cached_data.get('candles', [])
         
         if not candles_6h:
-            return {'success': False, 'error': f'Нет свечей в файле кэша для {symbol}'}
+            return {'success': False, 'error': f'Нет свечей в БД кэша для {symbol}'}
         
         # Конвертируем свечи в нужный таймфрейм
         if timeframe == '1d':
