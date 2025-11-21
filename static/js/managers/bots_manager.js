@@ -5898,7 +5898,12 @@ class BotsManager {
             console.log('[BotsManager] 🔴📈 RSI выход SHORT (против тренда):', rsiExitShortAgainstTrendEl.value);
         }
         
-        // Торговые настройки (торговля включена по умолчанию в backend)
+        // Торговые настройки (перенесены в блок Торговые параметры)
+        const tradingEnabledEl = document.getElementById('tradingEnabled');
+        if (tradingEnabledEl) {
+            tradingEnabledEl.checked = autoBotConfig.trading_enabled !== false;
+            console.log('[BotsManager] 🎛️ Реальная торговля:', tradingEnabledEl.checked);
+        }
         
         const useTestServerEl1 = document.getElementById('useTestServer');
         if (useTestServerEl1) {
@@ -6877,7 +6882,11 @@ class BotsManager {
                 rsi_exit_short_against_trend: config.autoBot.rsi_exit_short_against_trend,
                 default_position_size: config.autoBot.default_position_size,
                 default_position_mode: config.autoBot.default_position_mode,
-                check_interval: config.autoBot.check_interval
+                check_interval: config.autoBot.check_interval,
+                // Торговые настройки (перенесены из отдельного блока)
+                trading_enabled: config.autoBot.trading_enabled,
+                use_test_server: config.autoBot.use_test_server,
+                max_risk_per_trade: config.autoBot.max_risk_per_trade
             };
             
             await this.sendConfigUpdate('auto-bot', tradingParams, 'Торговые параметры');
@@ -6982,23 +6991,6 @@ class BotsManager {
             this.showNotification('❌ Ошибка сохранения Enhanced RSI', 'error');
         }
     }
-    async saveTradingSettings() {
-        console.log('[BotsManager] 💾 Сохранение торговых настроек...');
-        try {
-            const config = this.collectConfigurationData();
-            const tradingSettings = {
-                trading_enabled: config.autoBot.trading_enabled,
-                use_test_server: config.autoBot.use_test_server,
-                max_risk_per_trade: config.autoBot.max_risk_per_trade
-            };
-            
-            await this.sendConfigUpdate('auto-bot', tradingSettings, 'Торговые настройки');
-        } catch (error) {
-            console.error('[BotsManager] ❌ Ошибка сохранения торговых настроек:', error);
-            this.showNotification('❌ Ошибка сохранения торговых настроек', 'error');
-        }
-    }
-    
     async saveProtectiveMechanisms() {
         console.log('[BotsManager] 💾 Сохранение защитных механизмов...');
         try {
@@ -7963,14 +7955,6 @@ class BotsManager {
             saveEnhancedRsiBtn.setAttribute('data-initialized', 'true');
             saveEnhancedRsiBtn.addEventListener('click', () => this.saveEnhancedRsi());
             console.log('[BotsManager] ✅ Кнопка "Сохранить Enhanced RSI" инициализирована');
-        }
-        
-        // Торговые настройки
-        const saveTradingSettingsBtn = document.querySelector('.config-section-save-btn[data-section="trading-settings"]');
-        if (saveTradingSettingsBtn && !saveTradingSettingsBtn.hasAttribute('data-initialized')) {
-            saveTradingSettingsBtn.setAttribute('data-initialized', 'true');
-            saveTradingSettingsBtn.addEventListener('click', () => this.saveTradingSettings());
-            console.log('[BotsManager] ✅ Кнопка "Сохранить торговые настройки" инициализирована');
         }
         
         // Защитные механизмы

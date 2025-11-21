@@ -1246,7 +1246,7 @@
                     <div class="section-header">
                         <h3 data-translate="trading_params_title">📈 Торговые параметры</h3>
                         <div class="section-description" data-translate="trading_params_desc">
-                            Настройки RSI и управления позициями
+                            Настройки RSI, управления позициями, реальной торговли и управления рисками
                         </div>
                     </div>
                     
@@ -1307,6 +1307,36 @@
                                 <span class="input-unit" data-translate="seconds_unit">сек</span>
                             </div>
                             <small class="config-help" data-translate="refresh_interval_help">Управляет обновлением блока с балансом, PnL, позициями и мониторингом ботов. Рекомендуется: 30 сек, минимум: 3 сек</small>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">🎛️</span>
+                                <span class="label-text" data-translate="real_trading_label">Реальная торговля:</span>
+                            </label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="tradingEnabled" checked />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">🧪</span>
+                                <span class="label-text" data-translate="test_server_label">Тестовый сервер:</span>
+                            </label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="useTestServer" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">⚠️</span>
+                                <span class="label-text" data-translate="max_risk_per_trade_label">Макс. риск на сделку (%):</span>
+                            </label>
+                            <input type="number" id="maxRiskPerTrade" value="2.0" min="0.1" max="10" step="0.1" class="config-input" />
                         </div>
                     </div>
                     
@@ -1715,54 +1745,6 @@
                     <div class="config-section-actions">
                         <button class="btn btn-success config-section-save-btn" data-section="enhanced-rsi">
                             <span data-translate="save_enhanced_rsi_section_btn">💾 Сохранить Enhanced RSI</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Торговые настройки -->
-                <div class="config-section">
-                    <div class="section-header">
-                        <h3 data-translate="trading_settings_title">💼 Торговые настройки</h3>
-                        <div class="section-description">
-                            <span data-translate="trading_settings_description">Настройки реальной торговли и управления рисками</span>
-                        </div>
-                    </div>
-                    
-                    <div class="config-grid">
-                        <div class="config-item">
-                            <label class="config-label">
-                                <span class="label-icon">🎛️</span>
-                                <span class="label-text" data-translate="real_trading_label">Реальная торговля:</span>
-                            </label>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="tradingEnabled" checked />
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        
-                        <div class="config-item">
-                            <label class="config-label">
-                                <span class="label-icon">🧪</span>
-                                <span class="label-text" data-translate="test_server_label">Тестовый сервер:</span>
-                            </label>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="useTestServer" />
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        
-                        <div class="config-item">
-                            <label class="config-label">
-                                <span class="label-icon">⚠️</span>
-                                <span class="label-text" data-translate="max_risk_per_trade_label">Макс. риск на сделку (%):</span>
-                            </label>
-                            <input type="number" id="maxRiskPerTrade" value="2.0" min="0.1" max="10" step="0.1" class="config-input" />
-                        </div>
-                    </div>
-                    
-                    <div class="config-section-actions">
-                        <button class="btn btn-success config-section-save-btn" data-section="trading-settings">
-                            <span data-translate="save_trading_settings_section_btn">💾 Сохранить торговые настройки</span>
                         </button>
                     </div>
                 </div>
