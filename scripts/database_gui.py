@@ -618,7 +618,7 @@ class DatabaseGUI(tk.Tk):
         known_paths = [
             ROOT / "data" / "bots_data.db",
             ROOT / "data" / "app_data.db",
-            ROOT / "data" / "ai" / "ai_data.db",
+            ROOT / "data" / "ai_data.db",
             ROOT / "license_generator" / "licenses.db",
         ]
         

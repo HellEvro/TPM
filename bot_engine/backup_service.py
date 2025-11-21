@@ -85,7 +85,7 @@ class DatabaseBackupService:
             
             # Получаем пути к БД
             base_dir = os.getcwd()
-            ai_db_path = os.path.normpath(os.path.join(base_dir, 'data', 'ai', 'ai_data.db'))
+            ai_db_path = os.path.normpath(os.path.join(base_dir, 'data', 'ai_data.db'))
             bots_db_path = os.path.normpath(os.path.join(base_dir, 'data', 'bots_data.db'))
             
             # Бэкап AI БД
@@ -381,7 +381,7 @@ class DatabaseBackupService:
         # Определяем путь к целевой БД
         base_dir = os.getcwd()
         if db_name == 'ai_data':
-            target_db_path = os.path.normpath(os.path.join(base_dir, 'data', 'ai', 'ai_data.db'))
+            target_db_path = os.path.normpath(os.path.join(base_dir, 'data', 'ai_data.db'))
         elif db_name == 'bots_data':
             target_db_path = os.path.normpath(os.path.join(base_dir, 'data', 'bots_data.db'))
         else:
