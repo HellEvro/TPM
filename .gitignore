@@ -434,3 +434,4 @@ data/bot_history.json.corrupted
 data/ai/models/
 data/async_state.json
 data/rsi_cache.json
+data/bots_data.db
