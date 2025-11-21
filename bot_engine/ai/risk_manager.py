@@ -436,15 +436,8 @@ class DynamicRiskManager:
         
         position_size = max(min_size, min(position_size, max_size))
         
-        # Проверяем доступный баланс
-        max_risk_percent = DEFAULT_AUTO_BOT_CONFIG.get('max_risk_per_trade', 2.0)
-        max_allowed = balance_usdt * (max_risk_percent / 100)
-        
-        if position_size > max_allowed:
-            position_size = max_allowed
-            reason = f"Ограничено максимальным риском ({max_risk_percent}%)"
-        else:
-            reason = f"Оптимально для уверенности {signal_confidence:.0%} и волатильности {volatility:.2f}"
+        # Формируем причину
+        reason = f"Оптимально для уверенности {signal_confidence:.0%} и волатильности {volatility:.2f}"
         
         # Округляем до 0.1 USDT
         position_size = round(position_size, 1)
