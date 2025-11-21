@@ -84,6 +84,24 @@ import logging
 logger = logging.getLogger('Bots.Database')
 
 
+def _get_project_root() -> Path:
+    """
+    Определяет корень проекта относительно текущего файла.
+    Корень проекта - директория, где лежит bots.py и bot_engine/
+    """
+    current = Path(__file__).resolve()
+    # Поднимаемся от bot_engine/bots_database.py до корня проекта
+    # bot_engine/ -> корень
+    for parent in [current.parent.parent] + list(current.parents):
+        if parent and (parent / 'bots.py').exists() and (parent / 'bot_engine').exists():
+            return parent
+    # Фолбек: поднимаемся на 1 уровень
+    try:
+        return current.parents[1]
+    except IndexError:
+        return current.parent
+
+
 class BotsDatabase:
     """
     Реляционная база данных для всех данных bots.py
@@ -97,11 +115,10 @@ class BotsDatabase:
             db_path: Путь к файлу базы данных (если None, используется data/bots_data.db)
         """
         if db_path is None:
-            # Поддержка UNC путей: используем абсолютный путь относительно текущей рабочей директории
-            base_dir = os.getcwd()
-            db_path = os.path.join(base_dir, 'data', 'bots_data.db')
-            # Нормализуем путь (работает и с UNC путями)
-            db_path = os.path.normpath(db_path)
+            # ✅ ПУТЬ ОТНОСИТЕЛЬНО КОРНЯ ПРОЕКТА, А НЕ РАБОЧЕЙ ДИРЕКТОРИИ
+            project_root = _get_project_root()
+            db_path = project_root / 'data' / 'bots_data.db'
+            db_path = str(db_path.resolve())
         
         self.db_path = db_path
         self.lock = threading.RLock()
@@ -1206,7 +1223,7 @@ class BotsDatabase:
                                     current_price, last_price, last_rsi, last_trend,
                                     last_signal_time, last_bar_timestamp, entry_trend,
                                     opened_by_autobot, bot_id, extra_data_json,
-                                    now, created_at
+                                    now, created_at or now
                                 ))
                                 migrated_bots += 1
                             except Exception as e:
@@ -1534,6 +1551,20 @@ class BotsDatabase:
                 logger.warning(f"⚠️ Ошибка миграции mature_coins: {e}")
             
             # ==================== МИГРАЦИЯ: maturity_check_cache из JSON в нормализованные столбцы ====================
+            # Сначала проверяем и добавляем столбцы, если их нет
+            new_fields_maturity = [
+                ('min_candles', 'INTEGER'),
+                ('min_rsi_low', 'INTEGER'),
+                ('max_rsi_high', 'INTEGER'),
+                ('extra_config_json', 'TEXT')
+            ]
+            for field_name, field_type in new_fields_maturity:
+                try:
+                    cursor.execute(f"SELECT {field_name} FROM maturity_check_cache LIMIT 1")
+                except sqlite3.OperationalError:
+                    logger.info(f"📦 Миграция: добавляем {field_name} в maturity_check_cache")
+                    cursor.execute(f"ALTER TABLE maturity_check_cache ADD COLUMN {field_name} {field_type}")
+            
             # Проверяем, есть ли старая структура (с config_hash как JSON)
             try:
                 cursor.execute("SELECT config_hash FROM maturity_check_cache LIMIT 1")
@@ -2041,53 +2072,53 @@ class BotsDatabase:
                             status = bot_data.get('status', 'idle')
                             auto_managed = 1 if bot_data.get('auto_managed', False) else 0
                             volume_mode = bot_data.get('volume_mode', 'usdt')
-                            volume_value = float(bot_data.get('volume_value', 0.0)) if bot_data.get('volume_value') is not None else None
+                            volume_value = float(bot_data.get('volume_value', 0.0)) if bot_data.get('volume_value') not in (None, '') else None
                             
                             # Позиция
-                            entry_price = float(bot_data.get('entry_price', 0.0)) if bot_data.get('entry_price') is not None else None
+                            entry_price = float(bot_data.get('entry_price', 0.0)) if bot_data.get('entry_price') not in (None, '') else None
                             entry_time = bot_data.get('entry_time') or bot_data.get('position_start_time')
                             entry_timestamp = bot_data.get('entry_timestamp')
                             position_side = bot_data.get('position_side')
-                            position_size = float(bot_data.get('position_size', 0.0)) if bot_data.get('position_size') is not None else None
-                            position_size_coins = float(bot_data.get('position_size_coins', 0.0)) if bot_data.get('position_size_coins') is not None else None
+                            position_size = float(bot_data.get('position_size', 0.0)) if bot_data.get('position_size') not in (None, '') else None
+                            position_size_coins = float(bot_data.get('position_size_coins', 0.0)) if bot_data.get('position_size_coins') not in (None, '') else None
                             position_start_time = bot_data.get('position_start_time')
                             
                             # PnL
-                            unrealized_pnl = float(bot_data.get('unrealized_pnl', 0.0)) if bot_data.get('unrealized_pnl') is not None else 0.0
-                            unrealized_pnl_usdt = float(bot_data.get('unrealized_pnl_usdt', 0.0)) if bot_data.get('unrealized_pnl_usdt') is not None else 0.0
-                            realized_pnl = float(bot_data.get('realized_pnl', 0.0)) if bot_data.get('realized_pnl') is not None else 0.0
+                            unrealized_pnl = float(bot_data.get('unrealized_pnl', 0.0)) if bot_data.get('unrealized_pnl') not in (None, '') else 0.0
+                            unrealized_pnl_usdt = float(bot_data.get('unrealized_pnl_usdt', 0.0)) if bot_data.get('unrealized_pnl_usdt') not in (None, '') else 0.0
+                            realized_pnl = float(bot_data.get('realized_pnl', 0.0)) if bot_data.get('realized_pnl') not in (None, '') else 0.0
                             
                             # Другие поля
-                            leverage = float(bot_data.get('leverage', 1.0)) if bot_data.get('leverage') is not None else 1.0
-                            margin_usdt = float(bot_data.get('margin_usdt', 0.0)) if bot_data.get('margin_usdt') is not None else None
-                            max_profit_achieved = float(bot_data.get('max_profit_achieved', 0.0)) if bot_data.get('max_profit_achieved') is not None else 0.0
+                            leverage = float(bot_data.get('leverage', 1.0)) if bot_data.get('leverage') not in (None, '') else 1.0
+                            margin_usdt = float(bot_data.get('margin_usdt', 0.0)) if bot_data.get('margin_usdt') not in (None, '') else None
+                            max_profit_achieved = float(bot_data.get('max_profit_achieved', 0.0)) if bot_data.get('max_profit_achieved') not in (None, '') else 0.0
                             
                             # Trailing stop
-                            trailing_stop_price = float(bot_data.get('trailing_stop_price', 0.0)) if bot_data.get('trailing_stop_price') is not None else None
-                            trailing_activation_threshold = float(bot_data.get('trailing_activation_threshold', 0.0)) if bot_data.get('trailing_activation_threshold') is not None else None
-                            trailing_activation_profit = float(bot_data.get('trailing_activation_profit', 0.0)) if bot_data.get('trailing_activation_profit') is not None else 0.0
-                            trailing_locked_profit = float(bot_data.get('trailing_locked_profit', 0.0)) if bot_data.get('trailing_locked_profit') is not None else 0.0
+                            trailing_stop_price = float(bot_data.get('trailing_stop_price', 0.0)) if bot_data.get('trailing_stop_price') not in (None, '') else None
+                            trailing_activation_threshold = float(bot_data.get('trailing_activation_threshold', 0.0)) if bot_data.get('trailing_activation_threshold') not in (None, '') else None
+                            trailing_activation_profit = float(bot_data.get('trailing_activation_profit', 0.0)) if bot_data.get('trailing_activation_profit') not in (None, '') else 0.0
+                            trailing_locked_profit = float(bot_data.get('trailing_locked_profit', 0.0)) if bot_data.get('trailing_locked_profit') not in (None, '') else 0.0
                             trailing_active = 1 if bot_data.get('trailing_active', False) else 0
-                            trailing_max_profit_usdt = float(bot_data.get('trailing_max_profit_usdt', 0.0)) if bot_data.get('trailing_max_profit_usdt') is not None else 0.0
-                            trailing_step_usdt = float(bot_data.get('trailing_step_usdt', 0.0)) if bot_data.get('trailing_step_usdt') is not None else None
-                            trailing_step_price = float(bot_data.get('trailing_step_price', 0.0)) if bot_data.get('trailing_step_price') is not None else None
-                            trailing_steps = int(bot_data.get('trailing_steps', 0)) if bot_data.get('trailing_steps') is not None else 0
-                            trailing_reference_price = float(bot_data.get('trailing_reference_price', 0.0)) if bot_data.get('trailing_reference_price') is not None else None
-                            trailing_last_update_ts = float(bot_data.get('trailing_last_update_ts', 0.0)) if bot_data.get('trailing_last_update_ts') is not None else 0.0
-                            trailing_take_profit_price = float(bot_data.get('trailing_take_profit_price', 0.0)) if bot_data.get('trailing_take_profit_price') is not None else None
+                            trailing_max_profit_usdt = float(bot_data.get('trailing_max_profit_usdt', 0.0)) if bot_data.get('trailing_max_profit_usdt') not in (None, '') else 0.0
+                            trailing_step_usdt = float(bot_data.get('trailing_step_usdt', 0.0)) if bot_data.get('trailing_step_usdt') not in (None, '') else None
+                            trailing_step_price = float(bot_data.get('trailing_step_price', 0.0)) if bot_data.get('trailing_step_price') not in (None, '') else None
+                            trailing_steps = int(bot_data.get('trailing_steps', 0)) if bot_data.get('trailing_steps') not in (None, '') else 0
+                            trailing_reference_price = float(bot_data.get('trailing_reference_price', 0.0)) if bot_data.get('trailing_reference_price') not in (None, '') else None
+                            trailing_last_update_ts = float(bot_data.get('trailing_last_update_ts', 0.0)) if bot_data.get('trailing_last_update_ts') not in (None, '') else 0.0
+                            trailing_take_profit_price = float(bot_data.get('trailing_take_profit_price', 0.0)) if bot_data.get('trailing_take_profit_price') not in (None, '') else None
                             
                             # Break even
                             break_even_activated = 1 if bot_data.get('break_even_activated', False) else 0
-                            break_even_stop_price = float(bot_data.get('break_even_stop_price', 0.0)) if bot_data.get('break_even_stop_price') is not None else None
+                            break_even_stop_price = float(bot_data.get('break_even_stop_price', 0.0)) if bot_data.get('break_even_stop_price') not in (None, '') else None
                             
                             # Другие
                             order_id = bot_data.get('order_id')
-                            current_price = float(bot_data.get('current_price', 0.0)) if bot_data.get('current_price') is not None else None
-                            last_price = float(bot_data.get('last_price', 0.0)) if bot_data.get('last_price') is not None else None
-                            last_rsi = float(bot_data.get('last_rsi', 0.0)) if bot_data.get('last_rsi') is not None else None
+                            current_price = float(bot_data.get('current_price', 0.0)) if bot_data.get('current_price') not in (None, '') else None
+                            last_price = float(bot_data.get('last_price', 0.0)) if bot_data.get('last_price') not in (None, '') else None
+                            last_rsi = float(bot_data.get('last_rsi', 0.0)) if bot_data.get('last_rsi') not in (None, '') else None
                             last_trend = bot_data.get('last_trend')
                             last_signal_time = bot_data.get('last_signal_time')
-                            last_bar_timestamp = float(bot_data.get('last_bar_timestamp', 0.0)) if bot_data.get('last_bar_timestamp') is not None else None
+                            last_bar_timestamp = float(bot_data.get('last_bar_timestamp', 0.0)) if bot_data.get('last_bar_timestamp') not in (None, '') else None
                             entry_trend = bot_data.get('entry_trend')
                             opened_by_autobot = 1 if bot_data.get('opened_by_autobot', False) else 0
                             bot_id = bot_data.get('id')
@@ -2145,7 +2176,7 @@ class BotsDatabase:
                                     opened_by_autobot, bot_id, extra_data_json,
                                     updated_at, created_at
                                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-                                    COALESCE((SELECT created_at FROM bots WHERE symbol = ?), ?), ?)
+                                    ?, COALESCE((SELECT created_at FROM bots WHERE symbol = ?), ?))
                             """, (
                                 symbol, status, auto_managed, volume_mode, volume_value,
                                 entry_price, entry_time, entry_timestamp, position_side,
@@ -2160,7 +2191,7 @@ class BotsDatabase:
                                 current_price, last_price, last_rsi, last_trend,
                                 last_signal_time, last_bar_timestamp, entry_trend,
                                 opened_by_autobot, bot_id, extra_data_json,
-                                symbol, created_at, now
+                                now, symbol, created_at
                             ))
                         except Exception as e:
                             logger.warning(f"⚠️ Ошибка сохранения бота {symbol}: {e}")
@@ -3241,34 +3272,51 @@ class BotsDatabase:
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT coins_count, min_candles, min_rsi_low, max_rsi_high, extra_config_json
-                    FROM maturity_check_cache
-                    ORDER BY created_at DESC
-                    LIMIT 1
-                """)
+                # Проверяем, есть ли столбцы min_candles, min_rsi_low, max_rsi_high
+                try:
+                    cursor.execute("SELECT min_candles FROM maturity_check_cache LIMIT 1")
+                    # Столбцы есть - используем нормализованную структуру
+                    cursor.execute("""
+                        SELECT coins_count, min_candles, min_rsi_low, max_rsi_high, extra_config_json
+                        FROM maturity_check_cache
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                    """)
+                except sqlite3.OperationalError:
+                    # Столбцов нет - используем старую структуру с config_hash
+                    cursor.execute("""
+                        SELECT coins_count, config_hash
+                        FROM maturity_check_cache
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                    """)
                 row = cursor.fetchone()
                 
                 if row:
-                    # Собираем config_hash из нормализованных полей
-                    config_data = {}
-                    if row[1] is not None:
-                        config_data['min_candles'] = row[1]
-                    if row[2] is not None:
-                        config_data['min_rsi_low'] = row[2]
-                    if row[3] is not None:
-                        config_data['max_rsi_high'] = row[3]
-                    
-                    # Добавляем данные из extra_config_json если есть
-                    if row[4]:
-                        try:
-                            extra_data = json.loads(row[4])
-                            config_data.update(extra_data)
-                        except:
-                            pass
-                    
-                    # Формируем config_hash как JSON строку для обратной совместимости
-                    config_hash = json.dumps(config_data) if config_data else None
+                    # Определяем, какая структура (новая или старая)
+                    if len(row) >= 5:
+                        # Новая нормализованная структура
+                        config_data = {}
+                        if row[1] is not None:
+                            config_data['min_candles'] = row[1]
+                        if row[2] is not None:
+                            config_data['min_rsi_low'] = row[2]
+                        if row[3] is not None:
+                            config_data['max_rsi_high'] = row[3]
+                        
+                        # Добавляем данные из extra_config_json если есть
+                        if row[4]:
+                            try:
+                                extra_data = json.loads(row[4])
+                                config_data.update(extra_data)
+                            except:
+                                pass
+                        
+                        # Формируем config_hash как JSON строку для обратной совместимости
+                        config_hash = json.dumps(config_data) if config_data else None
+                    else:
+                        # Старая структура с config_hash
+                        config_hash = row[1] if len(row) > 1 else None
                     
                     return {
                         'coins_count': row[0],

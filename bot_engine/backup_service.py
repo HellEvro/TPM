@@ -22,6 +22,24 @@ import logging
 logger = logging.getLogger('BackupService')
 
 
+def _get_project_root() -> Path:
+    """
+    Определяет корень проекта относительно текущего файла.
+    Корень проекта - директория, где лежит app.py/bots.py и bot_engine/
+    """
+    current = Path(__file__).resolve()
+    # Поднимаемся от bot_engine/backup_service.py до корня проекта
+    # bot_engine/ -> корень
+    for parent in [current.parent.parent] + list(current.parents):
+        if parent and ((parent / 'app.py').exists() or (parent / 'bots.py').exists()) and (parent / 'bot_engine').exists():
+            return parent
+    # Фолбек: поднимаемся на 1 уровень
+    try:
+        return current.parents[1]
+    except IndexError:
+        return current.parent
+
+
 class DatabaseBackupService:
     """
     Сервис для управления бэкапами баз данных AI и Bots
@@ -35,8 +53,10 @@ class DatabaseBackupService:
             backup_dir: Директория для хранения бэкапов (по умолчанию: data/backups/)
         """
         if backup_dir is None:
-            base_dir = os.getcwd()
-            backup_dir = os.path.join(base_dir, 'data', 'backups')
+            # ✅ ПУТЬ ОТНОСИТЕЛЬНО КОРНЯ ПРОЕКТА, А НЕ РАБОЧЕЙ ДИРЕКТОРИИ
+            project_root = _get_project_root()
+            backup_dir = project_root / 'data' / 'backups'
+            backup_dir = str(backup_dir.resolve())
         
         self.backup_dir = os.path.normpath(backup_dir)
         self.lock = threading.RLock()
@@ -83,10 +103,10 @@ class DatabaseBackupService:
                 'errors': []
             }
             
-            # Получаем пути к БД
-            base_dir = os.getcwd()
-            ai_db_path = os.path.normpath(os.path.join(base_dir, 'data', 'ai_data.db'))
-            bots_db_path = os.path.normpath(os.path.join(base_dir, 'data', 'bots_data.db'))
+            # ✅ ПУТИ ОТНОСИТЕЛЬНО КОРНЯ ПРОЕКТА, А НЕ РАБОЧЕЙ ДИРЕКТОРИИ
+            project_root = _get_project_root()
+            ai_db_path = str((project_root / 'data' / 'ai_data.db').resolve())
+            bots_db_path = str((project_root / 'data' / 'bots_data.db').resolve())
             
             # Бэкап AI БД
             if include_ai:
@@ -378,12 +398,12 @@ class DatabaseBackupService:
                 logger.error(f"❌ Не удалось определить имя БД из имени файла: {filename}")
                 return False
         
-        # Определяем путь к целевой БД
-        base_dir = os.getcwd()
+        # ✅ ПУТИ ОТНОСИТЕЛЬНО КОРНЯ ПРОЕКТА, А НЕ РАБОЧЕЙ ДИРЕКТОРИИ
+        project_root = _get_project_root()
         if db_name == 'ai_data':
-            target_db_path = os.path.normpath(os.path.join(base_dir, 'data', 'ai_data.db'))
+            target_db_path = str((project_root / 'data' / 'ai_data.db').resolve())
         elif db_name == 'bots_data':
-            target_db_path = os.path.normpath(os.path.join(base_dir, 'data', 'bots_data.db'))
+            target_db_path = str((project_root / 'data' / 'bots_data.db').resolve())
         else:
             logger.error(f"❌ Неизвестное имя БД: {db_name}")
             return False
