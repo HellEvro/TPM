@@ -20,30 +20,75 @@ Function CommandExists(cmd)
     On Error GoTo 0
 End Function
 
+' Функция проверки версии Python (должна быть >= 3.13)
+Function CheckPythonVersion()
+    On Error Resume Next
+    Dim versionOutput, versionParts, major, minor
+    Dim pythonCmd
+    
+    ' Пробуем разные команды для получения версии
+    If CommandExists("python") Then
+        pythonCmd = "python"
+    ElseIf CommandExists("py") Then
+        pythonCmd = "py -3"
+    ElseIf CommandExists("python3") Then
+        pythonCmd = "python3"
+    Else
+        CheckPythonVersion = False
+        Exit Function
+    End If
+    
+    ' Получаем версию Python
+    Dim wshExec
+    Set wshExec = shell.Exec("cmd /c " & pythonCmd & " --version")
+    versionOutput = wshExec.StdOut.ReadAll
+    Set wshExec = Nothing
+    
+    ' Парсим версию (формат: Python 3.13.0)
+    If InStr(versionOutput, "Python") > 0 Then
+        versionParts = Split(versionOutput, " ")
+        If UBound(versionParts) >= 1 Then
+            Dim versionStr
+            versionStr = versionParts(1)
+            versionParts = Split(versionStr, ".")
+            If UBound(versionParts) >= 1 Then
+                major = CInt(versionParts(0))
+                minor = CInt(versionParts(1))
+                ' Проверяем версию >= 3.13
+                If major > 3 Or (major = 3 And minor >= 13) Then
+                    CheckPythonVersion = True
+                    Exit Function
+                End If
+            End If
+        End If
+    End If
+    
+    CheckPythonVersion = False
+    On Error GoTo 0
+End Function
+
 ' Проверка Python
 pythonFound = False
-If CommandExists("python") Then
-    pythonFound = True
-ElseIf CommandExists("py") Then
-    pythonFound = True
-ElseIf CommandExists("python3") Then
-    pythonFound = True
+If CommandExists("python") Or CommandExists("py") Or CommandExists("python3") Then
+    If CheckPythonVersion() Then
+        pythonFound = True
+    End If
 End If
 
 If Not pythonFound Then
     ' Попытка установки через winget
     wingetFound = CommandExists("winget")
     If wingetFound Then
-        ' Тихая установка Python через winget
-        shell.Run "winget install --id Python.Python.3.12 --silent --accept-package-agreements --accept-source-agreements", 0, True
+        ' Тихая установка Python 3.13 через winget
+        shell.Run "winget install --id Python.Python.3.13 --silent --accept-package-agreements --accept-source-agreements", 0, True
         ' Проверка после установки
-        WScript.Sleep 2000
-        If CommandExists("python") Or CommandExists("py") Then
+        WScript.Sleep 3000
+        If CheckPythonVersion() Then
             pythonFound = True
         End If
     End If
     
-    ' Если Python всё ещё не найден - открываем страницу скачивания
+    ' Если Python всё ещё не найден или версия < 3.13 - открываем страницу скачивания
     If Not pythonFound Then
         shell.Run "https://www.python.org/downloads/windows/", 1, False
         WScript.Quit 1
@@ -112,4 +157,3 @@ End If
 
 shell.CurrentDirectory = projectDir
 shell.Run cmd, 0, False
-

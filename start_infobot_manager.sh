@@ -25,57 +25,132 @@ detect_package_manager() {
   fi
 }
 
+# Функция проверки версии Python (должна быть >= 3.13)
+check_python_version() {
+  local python_cmd="$1"
+  if ! command_exists "$python_cmd"; then
+    return 1
+  fi
+  
+  local version_output
+  version_output=$("$python_cmd" --version 2>&1)
+  if [ $? -ne 0 ]; then
+    return 1
+  fi
+  
+  # Парсим версию (формат: Python 3.13.0)
+  local version_str
+  version_str=$(echo "$version_output" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+  if [ -z "$version_str" ]; then
+    return 1
+  fi
+  
+  local major minor
+  major=$(echo "$version_str" | cut -d. -f1)
+  minor=$(echo "$version_str" | cut -d. -f2)
+  
+  # Проверяем версию >= 3.13
+  if [ "$major" -gt 3 ] || ([ "$major" -eq 3 ] && [ "$minor" -ge 13 ]); then
+    return 0
+  fi
+  
+  return 1
+}
+
 # Проверка Python
 PYTHON_FOUND=0
-if command_exists python3; then
+PYTHON_CMD=""
+
+if check_python_version python3; then
   PYTHON_FOUND=1
-elif command_exists python; then
+  PYTHON_CMD="python3"
+elif check_python_version python; then
   PYTHON_FOUND=1
+  PYTHON_CMD="python"
 fi
 
-# Если Python не найден - пытаемся установить
+# Если Python не найден или версия < 3.13 - пытаемся установить
 if [ $PYTHON_FOUND -eq 0 ]; then
   PKG_MGR=$(detect_package_manager)
   case "$PKG_MGR" in
     apt)
-      echo "[INFO] Установка Python через apt..."
-      if sudo apt-get update -qq >/dev/null 2>&1 && sudo apt-get install -y python3 python3-venv >/dev/null 2>&1; then
-        command_exists python3 && PYTHON_FOUND=1
+      echo "[INFO] Установка Python 3.13+ через apt..."
+      # Для Ubuntu/Debian нужно добавить deadsnakes PPA для Python 3.13
+      if sudo apt-get update -qq >/dev/null 2>&1; then
+        # Пробуем установить python3.13 напрямую или последнюю доступную версию
+        if sudo apt-get install -y python3.13 python3.13-venv >/dev/null 2>&1 || \
+           sudo apt-get install -y python3 python3-venv >/dev/null 2>&1; then
+          if check_python_version python3.13; then
+            PYTHON_FOUND=1
+            PYTHON_CMD="python3.13"
+          elif check_python_version python3; then
+            PYTHON_FOUND=1
+            PYTHON_CMD="python3"
+          fi
+        fi
       fi
       ;;
     yum)
-      echo "[INFO] Установка Python через yum..."
-      if sudo yum install -y python3 >/dev/null 2>&1; then
-        command_exists python3 && PYTHON_FOUND=1
+      echo "[INFO] Установка Python 3.13+ через yum..."
+      # Для CentOS/RHEL может потребоваться дополнительный репозиторий
+      if sudo yum install -y python3.13 >/dev/null 2>&1 || \
+         sudo yum install -y python3 >/dev/null 2>&1; then
+        if check_python_version python3.13; then
+          PYTHON_FOUND=1
+          PYTHON_CMD="python3.13"
+        elif check_python_version python3; then
+          PYTHON_FOUND=1
+          PYTHON_CMD="python3"
+        fi
       fi
       ;;
     dnf)
-      echo "[INFO] Установка Python через dnf..."
-      if sudo dnf install -y python3 >/dev/null 2>&1; then
-        command_exists python3 && PYTHON_FOUND=1
+      echo "[INFO] Установка Python 3.13+ через dnf..."
+      if sudo dnf install -y python3.13 >/dev/null 2>&1 || \
+         sudo dnf install -y python3 >/dev/null 2>&1; then
+        if check_python_version python3.13; then
+          PYTHON_FOUND=1
+          PYTHON_CMD="python3.13"
+        elif check_python_version python3; then
+          PYTHON_FOUND=1
+          PYTHON_CMD="python3"
+        fi
       fi
       ;;
     pacman)
-      echo "[INFO] Установка Python через pacman..."
+      echo "[INFO] Установка Python 3.13+ через pacman..."
       if sudo pacman -S --noconfirm python >/dev/null 2>&1; then
-        command_exists python3 && PYTHON_FOUND=1
+        if check_python_version python; then
+          PYTHON_FOUND=1
+          PYTHON_CMD="python"
+        elif check_python_version python3; then
+          PYTHON_FOUND=1
+          PYTHON_CMD="python3"
+        fi
       fi
       ;;
     brew)
-      echo "[INFO] Установка Python через brew..."
-      if brew install python3 >/dev/null 2>&1; then
-        command_exists python3 && PYTHON_FOUND=1
+      echo "[INFO] Установка Python 3.13+ через brew..."
+      if brew install python@3.13 >/dev/null 2>&1 || \
+         brew install python3 >/dev/null 2>&1; then
+        if check_python_version python3.13; then
+          PYTHON_FOUND=1
+          PYTHON_CMD="python3.13"
+        elif check_python_version python3; then
+          PYTHON_FOUND=1
+          PYTHON_CMD="python3"
+        fi
       fi
       ;;
   esac
   
-  # Если Python всё ещё не найден - выводим сообщение
+  # Если Python всё ещё не найден или версия < 3.13 - выводим сообщение
   if [ $PYTHON_FOUND -eq 0 ]; then
-    echo "[ERROR] Python не найден. Пожалуйста, установите Python 3.9+ вручную."
+    echo "[ERROR] Python 3.13+ не найден. Пожалуйста, установите Python 3.13+ вручную."
     if [[ "$OSTYPE" == "darwin"* ]]; then
       echo "Для macOS: https://www.python.org/downloads/macos/"
     else
-      echo "Для Linux: используйте менеджер пакетов вашего дистрибутива"
+      echo "Для Linux: используйте менеджер пакетов вашего дистрибутива или установите с https://www.python.org/downloads/"
     fi
     exit 1
   fi
@@ -126,7 +201,8 @@ if [[ -x ".venv/bin/activate" ]]; then
   source ".venv/bin/activate"
   PYTHON_BIN="python"
 else
-  PYTHON_BIN="${PYTHON_BIN:-python3}"
+  # Используем найденную команду Python или fallback
+  PYTHON_BIN="${PYTHON_CMD:-python3}"
   echo "[WARN] Virtual environment not found. Falling back to ${PYTHON_BIN}."
 fi
 exec "$PYTHON_BIN" launcher/infobot_manager.py "$@"
