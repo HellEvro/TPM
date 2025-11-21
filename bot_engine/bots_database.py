@@ -1330,7 +1330,7 @@ class BotsDatabase:
                                     rsi_time_filter_candles, rsi_time_filter_upper,
                                     rsi_time_filter_lower, avoid_down_trend,
                                     extra_settings_json, updated_at, created_at
-                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """, (
                                 symbol,
                                 settings.get('rsi_long_threshold'),
@@ -1626,19 +1626,21 @@ class BotsDatabase:
                 logger.warning(f"⚠️ Ошибка миграции maturity_check_cache: {e}")
             
             # ==================== МИГРАЦИЯ: process_state из JSON в нормализованные столбцы ====================
-            # Проверяем, есть ли старая структура (с value_json)
+            # Проверяем, есть ли столбец process_name (новая структура)
             try:
-                cursor.execute("SELECT value_json FROM process_state WHERE key = 'main' LIMIT 1")
-                row = cursor.fetchone()
-                
-                if row:
-                    # Проверяем, мигрированы ли уже данные
-                    cursor.execute("SELECT COUNT(*) FROM process_state WHERE process_name IS NOT NULL")
-                    processes_count = cursor.fetchone()[0]
+                cursor.execute("SELECT process_name FROM process_state LIMIT 1")
+                # Столбец process_name существует - таблица уже в новой структуре
+                logger.debug("ℹ️ Таблица process_state уже в нормализованной структуре")
+            except sqlite3.OperationalError:
+                # Столбца process_name нет - нужно проверить старую структуру или создать новую
+                try:
+                    # Проверяем, есть ли старая структура (с value_json и key)
+                    cursor.execute("SELECT value_json FROM process_state WHERE key = 'main' LIMIT 1")
+                    row = cursor.fetchone()
                     
-                    if processes_count == 0:
-                        # Данные еще не мигрированы
-                        logger.info("📦 Обнаружены данные в process_state, выполняю миграцию в нормализованные столбцы...")
+                    if row:
+                        # Есть старая структура - мигрируем
+                        logger.info("📦 Обнаружена старая структура process_state, выполняю миграцию в нормализованные столбцы...")
                         
                         state_data = json.loads(row[0])
                         process_state_dict = state_data.get('process_state', {})
@@ -1733,13 +1735,43 @@ class BotsDatabase:
                         
                         logger.info(f"✅ Миграция process_state завершена: {migrated_count} процессов мигрировано из JSON в нормализованные столбцы")
                     else:
-                        logger.debug("ℹ️ Данные process_state уже мигрированы")
-                        
-            except sqlite3.OperationalError:
-                # Таблица process_state не существует или нет данных - ничего не делаем
-                pass
-            except Exception as e:
-                logger.warning(f"⚠️ Ошибка миграции process_state: {e}")
+                        # Старой структуры нет, но и новой тоже нет - таблица пустая или не существует
+                        # Проверяем, существует ли таблица вообще
+                        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='process_state'")
+                        if cursor.fetchone():
+                            # Таблица существует, но без process_name - пересоздаем
+                            logger.info("📦 Таблица process_state существует без process_name, пересоздаю...")
+                            cursor.execute("DROP TABLE IF EXISTS process_state")
+                            cursor.execute("""
+                                CREATE TABLE process_state (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    process_name TEXT UNIQUE NOT NULL,
+                                    active INTEGER DEFAULT 0,
+                                    initialized INTEGER DEFAULT 0,
+                                    last_update TEXT,
+                                    last_check TEXT,
+                                    last_save TEXT,
+                                    last_sync TEXT,
+                                    update_count INTEGER DEFAULT 0,
+                                    check_count INTEGER DEFAULT 0,
+                                    save_count INTEGER DEFAULT 0,
+                                    connection_count INTEGER DEFAULT 0,
+                                    signals_processed INTEGER DEFAULT 0,
+                                    bots_created INTEGER DEFAULT 0,
+                                    last_error TEXT,
+                                    extra_process_data_json TEXT,
+                                    updated_at TEXT NOT NULL,
+                                    created_at TEXT NOT NULL
+                                )
+                            """)
+                            cursor.execute("CREATE INDEX IF NOT EXISTS idx_process_state_name ON process_state(process_name)")
+                            cursor.execute("CREATE INDEX IF NOT EXISTS idx_process_state_active ON process_state(active)")
+                            logger.info("✅ Таблица process_state пересоздана с нормализованной структурой")
+                except sqlite3.OperationalError:
+                    # Таблица process_state не существует - ничего не делаем, она создастся при CREATE TABLE IF NOT EXISTS
+                    pass
+                except Exception as e:
+                    logger.warning(f"⚠️ Ошибка миграции process_state: {e}")
             
             # ==================== МИГРАЦИЯ: rsi_cache из JSON в нормализованные таблицы ====================
             # Проверяем, есть ли старая структура (с coins_data_json)
