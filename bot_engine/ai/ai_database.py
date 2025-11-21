@@ -2281,15 +2281,17 @@ class AIDatabase:
                 rows = cursor.fetchall()
                 result = []
                 for row in rows:
+                    # Конвертируем sqlite3.Row в словарь для работы с .get()
+                    row_dict = dict(row)
                     result.append({
-                        'rsi_params': json.loads(row['rsi_params_json']),
-                        'block_reasons': json.loads(row['block_reasons_json']) if row['block_reasons_json'] else {},
-                        'blocked_at': row['blocked_at'],
-                        'blocked_attempts': row.get('blocked_attempts', 0),
-                        'blocked_long': row.get('blocked_long', 0),
-                        'blocked_short': row.get('blocked_short', 0),
-                        'symbol': row.get('symbol'),
-                        'timestamp': row.get('blocked_at')  # Для совместимости
+                        'rsi_params': json.loads(row_dict['rsi_params_json']),
+                        'block_reasons': json.loads(row_dict['block_reasons_json']) if row_dict.get('block_reasons_json') else {},
+                        'blocked_at': row_dict['blocked_at'],
+                        'blocked_attempts': row_dict.get('blocked_attempts', 0),
+                        'blocked_long': row_dict.get('blocked_long', 0),
+                        'blocked_short': row_dict.get('blocked_short', 0),
+                        'symbol': row_dict.get('symbol'),
+                        'timestamp': row_dict.get('blocked_at')  # Для совместимости
                     })
                 return result
         except Exception as e:
