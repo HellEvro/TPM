@@ -827,10 +827,14 @@ class AIDatabase:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS blocked_params (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    param_hash TEXT,
                     rsi_params_json TEXT NOT NULL,
                     block_reasons_json TEXT,
-                    blocked_at TEXT NOT NULL,
-                    symbol TEXT
+                    blocked_attempts INTEGER DEFAULT 0,
+                    blocked_long INTEGER DEFAULT 0,
+                    blocked_short INTEGER DEFAULT 0,
+                    symbol TEXT,
+                    blocked_at TEXT NOT NULL
                 )
             """)
             
@@ -1060,6 +1064,34 @@ class AIDatabase:
                 except sqlite3.OperationalError:
                     logger.info(f"📦 Миграция: добавляем {field_name} в bot_trades")
                     cursor.execute(f"ALTER TABLE bot_trades ADD COLUMN {field_name} {field_type}")
+            
+            # Проверяем и добавляем поля в blocked_params
+            new_fields_blocked = [
+                ('param_hash', 'TEXT'),
+                ('blocked_attempts', 'INTEGER DEFAULT 0'),
+                ('blocked_long', 'INTEGER DEFAULT 0'),
+                ('blocked_short', 'INTEGER DEFAULT 0')
+            ]
+            for field_name, field_type in new_fields_blocked:
+                try:
+                    cursor.execute(f"SELECT {field_name} FROM blocked_params LIMIT 1")
+                except sqlite3.OperationalError:
+                    logger.info(f"📦 Миграция: добавляем {field_name} в bot_trades")
+                    cursor.execute(f"ALTER TABLE bot_trades ADD COLUMN {field_name} {field_type}")
+            
+            # Проверяем и добавляем поля в blocked_params
+            new_fields_blocked = [
+                ('param_hash', 'TEXT'),
+                ('blocked_attempts', 'INTEGER DEFAULT 0'),
+                ('blocked_long', 'INTEGER DEFAULT 0'),
+                ('blocked_short', 'INTEGER DEFAULT 0')
+            ]
+            for field_name, field_type in new_fields_blocked:
+                try:
+                    cursor.execute(f"SELECT {field_name} FROM blocked_params LIMIT 1")
+                except sqlite3.OperationalError:
+                    logger.info(f"📦 Миграция: добавляем {field_name} в blocked_params")
+                    cursor.execute(f"ALTER TABLE blocked_params ADD COLUMN {field_name} {field_type}")
             
             conn.commit()
         except Exception as e:
@@ -2192,20 +2224,34 @@ class AIDatabase:
     # ==================== МЕТОДЫ ДЛЯ РАБОТЫ С ЗАБЛОКИРОВАННЫМИ ПАРАМЕТРАМИ ====================
     
     def save_blocked_params(self, rsi_params: Dict, block_reasons: Optional[Dict] = None,
-                           symbol: Optional[str] = None) -> Optional[int]:
+                           symbol: Optional[str] = None, blocked_attempts: int = 0,
+                           blocked_long: int = 0, blocked_short: int = 0) -> Optional[int]:
         """Сохраняет заблокированные параметры"""
         try:
             now = datetime.now().isoformat()
+            # Вычисляем hash параметров для уникальности
+            import hashlib
+            params_str = json.dumps(rsi_params, sort_keys=True)
+            param_hash = hashlib.md5(params_str.encode()).hexdigest()
+            
             with self._get_connection() as conn:
                 cursor = conn.cursor()
+                # Используем INSERT OR IGNORE чтобы не дублировать одинаковые параметры
                 cursor.execute("""
-                    INSERT INTO blocked_params (
-                        rsi_params_json, block_reasons_json, blocked_at, symbol
-                    ) VALUES (?, ?, ?, ?)
+                    INSERT OR IGNORE INTO blocked_params (
+                        param_hash, rsi_params_json, block_reasons_json, 
+                        blocked_attempts, blocked_long, blocked_short,
+                        symbol, blocked_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
+                    param_hash,
                     json.dumps(rsi_params),
                     json.dumps(block_reasons) if block_reasons else None,
-                    now, symbol
+                    blocked_attempts,
+                    blocked_long,
+                    blocked_short,
+                    symbol,
+                    now
                 ))
                 param_id = cursor.lastrowid
                 conn.commit()
@@ -2214,15 +2260,24 @@ class AIDatabase:
             logger.error(f"❌ Ошибка сохранения заблокированных параметров: {e}")
             return None
     
-    def get_blocked_params(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_blocked_params(self, limit: Optional[int] = None, symbol: Optional[str] = None) -> List[Dict[str, Any]]:
         """Получает заблокированные параметры"""
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
-                query = "SELECT * FROM blocked_params ORDER BY blocked_at DESC"
+                query = "SELECT * FROM blocked_params WHERE 1=1"
+                params = []
+                
+                if symbol:
+                    query += " AND symbol = ?"
+                    params.append(symbol)
+                
+                query += " ORDER BY blocked_at DESC"
                 if limit:
-                    query += f" LIMIT {limit}"
-                cursor.execute(query)
+                    query += " LIMIT ?"
+                    params.append(limit)
+                
+                cursor.execute(query, params)
                 rows = cursor.fetchall()
                 result = []
                 for row in rows:
@@ -2230,7 +2285,11 @@ class AIDatabase:
                         'rsi_params': json.loads(row['rsi_params_json']),
                         'block_reasons': json.loads(row['block_reasons_json']) if row['block_reasons_json'] else {},
                         'blocked_at': row['blocked_at'],
-                        'symbol': row['symbol']
+                        'blocked_attempts': row.get('blocked_attempts', 0),
+                        'blocked_long': row.get('blocked_long', 0),
+                        'blocked_short': row.get('blocked_short', 0),
+                        'symbol': row.get('symbol'),
+                        'timestamp': row.get('blocked_at')  # Для совместимости
                     })
                 return result
         except Exception as e:

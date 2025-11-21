@@ -31,10 +31,12 @@ class ParameterQualityPredictor:
     
     def __init__(self, data_dir: str = 'data/ai'):
         self.data_dir = data_dir
-        os.makedirs(data_dir, exist_ok=True)
+        # Модели сохраняются в data/ai/models
+        self.models_dir = os.path.normpath(os.path.join(data_dir, 'models'))
+        os.makedirs(self.models_dir, exist_ok=True)
         
-        self.model_file = os.path.join(data_dir, 'parameter_quality_predictor.pkl')
-        self.scaler_file = os.path.join(data_dir, 'parameter_quality_scaler.pkl')
+        self.model_file = os.path.normpath(os.path.join(self.models_dir, 'parameter_quality_predictor.pkl'))
+        self.scaler_file = os.path.normpath(os.path.join(self.models_dir, 'parameter_quality_scaler.pkl'))
         
         self.model = None
         self.scaler = StandardScaler()
