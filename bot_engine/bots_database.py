@@ -21,6 +21,7 @@
 - Состояние ботов (bots_state)
 - Реестр позиций (bot_positions_registry)
 - RSI кэш (rsi_cache)
+- Кэш свечей (candles_cache)
 - Состояние процессов (process_state)
 - Индивидуальные настройки монет (individual_coin_settings)
 - Зрелые монеты (mature_coins)
@@ -714,6 +715,22 @@ class BotsDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_delisted_symbol ON delisted(symbol)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_delisted_date ON delisted(delisted_at)")
             
+            # ==================== ТАБЛИЦА: КЭШ СВЕЧЕЙ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS candles_cache (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT UNIQUE NOT NULL,
+                    candles_json TEXT NOT NULL,
+                    timeframe TEXT NOT NULL DEFAULT '6h',
+                    updated_at TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для candles_cache
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_symbol ON candles_cache(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_updated ON candles_cache(updated_at)")
+            
             # ==================== ТАБЛИЦА: МЕТАДАННЫЕ БД ====================
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS db_metadata (
@@ -1351,6 +1368,109 @@ class BotsDatabase:
             logger.error(f"❌ Ошибка проверки делистирования: {e}")
             return False
     
+    # ==================== МЕТОДЫ ДЛЯ КЭША СВЕЧЕЙ ====================
+    
+    def save_candles_cache(self, candles_cache: Dict) -> bool:
+        """
+        Сохраняет кэш свечей
+        
+        Args:
+            candles_cache: Словарь {symbol: {candles: [], timeframe: '6h', ...}}
+        
+        Returns:
+            True если успешно сохранено
+        """
+        try:
+            now = datetime.now().isoformat()
+            
+            with self.lock:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    
+                    for symbol, cache_data in candles_cache.items():
+                        candles = cache_data.get('candles', [])
+                        timeframe = cache_data.get('timeframe', '6h')
+                        
+                        cursor.execute("""
+                            INSERT OR REPLACE INTO candles_cache 
+                            (symbol, candles_json, timeframe, updated_at, created_at)
+                            VALUES (?, ?, ?, ?, 
+                                COALESCE((SELECT created_at FROM candles_cache WHERE symbol = ?), ?))
+                        """, (
+                            symbol,
+                            json.dumps(candles),
+                            timeframe,
+                            now,
+                            symbol,
+                            now
+                        ))
+                    
+                    conn.commit()
+            
+            logger.debug(f"💾 Кэш свечей сохранен в БД ({len(candles_cache)} символов)")
+            return True
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения кэша свечей: {e}")
+            return False
+    
+    def load_candles_cache(self, symbol: Optional[str] = None) -> Dict:
+        """
+        Загружает кэш свечей
+        
+        Args:
+            symbol: Символ монеты (если None, загружает все)
+        
+        Returns:
+            Словарь {symbol: {candles: [], timeframe: '6h', ...}}
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                if symbol:
+                    cursor.execute("""
+                        SELECT symbol, candles_json, timeframe, updated_at
+                        FROM candles_cache
+                        WHERE symbol = ?
+                    """, (symbol,))
+                else:
+                    cursor.execute("""
+                        SELECT symbol, candles_json, timeframe, updated_at
+                        FROM candles_cache
+                    """)
+                
+                rows = cursor.fetchall()
+                result = {}
+                
+                for row in rows:
+                    symbol_key = row['symbol']
+                    candles = json.loads(row['candles_json'])
+                    timeframe = row['timeframe']
+                    
+                    result[symbol_key] = {
+                        'candles': candles,
+                        'timeframe': timeframe,
+                        'updated_at': row['updated_at']
+                    }
+                
+                return result
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки кэша свечей: {e}")
+            return {}
+    
+    def get_candles_for_symbol(self, symbol: str) -> Optional[Dict]:
+        """
+        Получает свечи для конкретного символа
+        
+        Args:
+            symbol: Символ монеты
+        
+        Returns:
+            Словарь с данными свечей или None
+        """
+        cache = self.load_candles_cache(symbol=symbol)
+        return cache.get(symbol)
+    
     # ==================== МЕТОДЫ МИГРАЦИИ ====================
     
     def _is_migration_needed(self) -> bool:
@@ -1645,6 +1765,19 @@ class BotsDatabase:
                 except Exception as e:
                     logger.debug(f"⚠️ Ошибка миграции delisted.json: {e}")
             
+            # Миграция candles_cache.json
+            candles_cache_file = 'data/candles_cache.json'
+            if os.path.exists(candles_cache_file):
+                try:
+                    with open(candles_cache_file, 'r', encoding='utf-8') as f:
+                        candles_cache = json.load(f)
+                        if candles_cache and isinstance(candles_cache, dict):
+                            if self.save_candles_cache(candles_cache):
+                                migration_stats['candles_cache'] = len(candles_cache)
+                                logger.info(f"📦 Мигрирован candles_cache.json в БД ({len(candles_cache)} символов)")
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка миграции candles_cache.json: {e}")
+            
             if migration_stats:
                 logger.info(f"✅ Миграция завершена: {sum(migration_stats.values())} записей мигрировано")
                 # Устанавливаем флаг что миграция выполнена
@@ -1690,8 +1823,8 @@ class BotsDatabase:
                 # Подсчеты по таблицам
                 tables = [
                     'bots_state', 'bot_positions_registry', 'rsi_cache', 
-                    'process_state', 'individual_coin_settings', 'mature_coins',
-                    'maturity_check_cache', 'delisted'
+                    'candles_cache', 'process_state', 'individual_coin_settings', 
+                    'mature_coins', 'maturity_check_cache', 'delisted'
                 ]
                 for table in tables:
                     try:

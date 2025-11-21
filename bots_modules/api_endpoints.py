@@ -967,29 +967,21 @@ def create_bot_endpoint():
                     'success': False,
                     'error': 'Exchange not initialized'
                 }), 503
-            # ✅ ИСПОЛЬЗУЕМ КЭШ ИЗ ПАМЯТИ ИЛИ ФАЙЛА (не требует запроса к бирже)
+            # ✅ ИСПОЛЬЗУЕМ КЭШ ИЗ ПАМЯТИ ИЛИ БД (не требует запроса к бирже)
             candles = []
             candles_cache = coins_rsi_data.get('candles_cache', {})
             if symbol in candles_cache:
                 cached_data = candles_cache[symbol]
                 candles = cached_data.get('candles', [])
             else:
-                # Если нет в памяти, читаем из файла
+                # Если нет в памяти, читаем из БД
                 try:
-                    from pathlib import Path
-                    project_root = Path(__file__).parent.parent
-                    candles_cache_file = project_root / 'data' / 'candles_cache.json'
-                    if candles_cache_file.exists():
-                        import json
-                        with open(candles_cache_file, 'r', encoding='utf-8') as f:
-                            file_cache = json.load(f)
-                        if symbol in file_cache:
-                            cached_data = file_cache[symbol]
-                            candles = cached_data.get('candles', [])
-                except json.JSONDecodeError as json_error:
-                    logger.warning(f"⚠️ Файл кэша поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}) для {symbol}")
+                    from bot_engine.storage import get_candles_for_symbol
+                    db_cached_data = get_candles_for_symbol(symbol)
+                    if db_cached_data:
+                        candles = db_cached_data.get('candles', [])
                 except Exception as e:
-                    logger.debug(f"Не удалось прочитать кэш из файла для {symbol}: {e}")
+                    logger.debug(f"Не удалось прочитать кэш из БД для {symbol}: {e}")
             
             if candles and len(candles) >= 15:
                 maturity_check = check_coin_maturity_with_storage(symbol, candles)
@@ -2031,30 +2023,22 @@ def get_rsi_history_for_chart(symbol):
     try:
         from bots_modules.calculations import calculate_rsi_history
         
-        # ✅ СНАЧАЛА ПРОВЕРЯЕМ КЭШ В ПАМЯТИ, ПОТОМ ФАЙЛ
+        # ✅ СНАЧАЛА ПРОВЕРЯЕМ КЭШ В ПАМЯТИ, ПОТОМ БД
         candles = None
         candles_cache = coins_rsi_data.get('candles_cache', {})
         if symbol in candles_cache:
             cached_data = candles_cache[symbol]
             candles = cached_data.get('candles')
         
-        # Если нет в памяти, читаем из файла
+        # Если нет в памяти, читаем из БД
         if not candles:
             try:
-                from pathlib import Path
-                project_root = Path(__file__).parent.parent
-                candles_cache_file = project_root / 'data' / 'candles_cache.json'
-                if candles_cache_file.exists():
-                    import json
-                    with open(candles_cache_file, 'r', encoding='utf-8') as f:
-                        file_cache = json.load(f)
-                    if symbol in file_cache:
-                        cached_data = file_cache[symbol]
-                        candles = cached_data.get('candles', [])
-            except json.JSONDecodeError as json_error:
-                logger.warning(f"⚠️ Файл кэша поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}) для {symbol}")
+                from bot_engine.storage import get_candles_for_symbol
+                db_cached_data = get_candles_for_symbol(symbol)
+                if db_cached_data:
+                    candles = db_cached_data.get('candles', [])
             except Exception as e:
-                logger.debug(f"Не удалось прочитать кэш из файла для {symbol}: {e}")
+                logger.debug(f"Не удалось прочитать кэш из БД для {symbol}: {e}")
         
         if not candles or len(candles) < 15:
             return jsonify({
@@ -2103,35 +2087,27 @@ def get_candles_from_cache(symbol):
         timeframe = request.args.get('timeframe', '6h')  # По умолчанию 6h
         period_days = request.args.get('period', None)  # Опционально, для совместимости
         
-        # ✅ СНАЧАЛА ПРОВЕРЯЕМ КЭШ В ПАМЯТИ, ПОТОМ ФАЙЛ
+        # ✅ СНАЧАЛА ПРОВЕРЯЕМ КЭШ В ПАМЯТИ, ПОТОМ БД
         candles_6h = None
         candles_cache = coins_rsi_data.get('candles_cache', {})
         if symbol in candles_cache:
             cached_data = candles_cache[symbol]
             candles_6h = cached_data.get('candles')
         
-        # Если нет в памяти, читаем из файла
+        # Если нет в памяти, читаем из БД
         if not candles_6h:
             try:
-                from pathlib import Path
-                project_root = Path(__file__).parent.parent
-                candles_cache_file = project_root / 'data' / 'candles_cache.json'
-                if candles_cache_file.exists():
-                    import json
-                    with open(candles_cache_file, 'r', encoding='utf-8') as f:
-                        file_cache = json.load(f)
-                    if symbol in file_cache:
-                        cached_data = file_cache[symbol]
-                        candles_6h = cached_data.get('candles', [])
-            except json.JSONDecodeError as json_error:
-                logger.warning(f"⚠️ Файл кэша поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}) для {symbol}")
+                from bot_engine.storage import get_candles_for_symbol
+                db_cached_data = get_candles_for_symbol(symbol)
+                if db_cached_data:
+                    candles_6h = db_cached_data.get('candles', [])
             except Exception as e:
-                logger.debug(f"Не удалось прочитать кэш из файла для {symbol}: {e}")
+                logger.debug(f"Не удалось прочитать кэш из БД для {symbol}: {e}")
         
         if not candles_6h:
             return jsonify({
                 'success': False,
-                'error': f'Свечи для {symbol} не найдены в кэше или файле'
+                'error': f'Свечи для {symbol} не найдены в кэше или БД'
             }), 404
         
         # Конвертируем свечи в нужный таймфрейм

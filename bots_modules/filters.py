@@ -1315,41 +1315,13 @@ def load_all_coins_candles_fast():
         except Exception as cache_error:
             logger.warning(f"⚠️ Ошибка сохранения кэша: {cache_error}")
         
-        # ✅ ДОПОЛНИТЕЛЬНО: Сохраняем свечи в файл кэша с НАРАЩИВАНИЕМ данных
+        # ✅ ДОПОЛНИТЕЛЬНО: Сохраняем свечи в БД с НАРАЩИВАНИЕМ данных
         # Каждый раунд добавляет новые свечи к существующим, накапливая историю
         try:
-            import os
-            import json
-            from pathlib import Path
+            from bot_engine.storage import load_candles_cache, save_candles_cache
             
-            # Определяем путь к файлу кэша (относительно корня проекта)
-            project_root = Path(__file__).parent.parent
-            candles_cache_file = project_root / 'data' / 'candles_cache.json'
-            
-            # Создаем директорию если нужно
-            candles_cache_file.parent.mkdir(parents=True, exist_ok=True)
-            
-            # Загружаем существующий кэш (если есть)
-            file_cache = {}
-            if candles_cache_file.exists():
-                try:
-                    with open(candles_cache_file, 'r', encoding='utf-8') as f:
-                        file_cache = json.load(f)
-                except json.JSONDecodeError as json_error:
-                    # Файл поврежден - создаем резервную копию и начинаем с пустого кэша
-                    import shutil
-                    backup_file = candles_cache_file.parent / f"candles_cache_corrupted_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json.backup"
-                    try:
-                        shutil.copy2(candles_cache_file, backup_file)
-                        logger.warning(f"⚠️ Файл кэша поврежден (JSON ошибка на строке {json_error.lineno}, колонка {json_error.colno}). "
-                                     f"Создана резервная копия: {backup_file}")
-                        logger.warning(f"⚠️ Начинаем с пустого кэша. Данные будут восстановлены при следующем обновлении.")
-                    except Exception as backup_error:
-                        logger.error(f"❌ Не удалось создать резервную копию поврежденного файла: {backup_error}")
-                    file_cache = {}  # Начинаем с пустого кэша
-                except Exception as load_error:
-                    logger.warning(f"⚠️ Ошибка загрузки файла кэша: {load_error}. Начинаем с пустого кэша.")
-                    file_cache = {}
+            # Загружаем существующий кэш из БД
+            db_cache = load_candles_cache()
             
             # ✅ НАРАЩИВАЕМ данные: объединяем старые и новые свечи
             updated_count = 0
@@ -1361,7 +1333,7 @@ def load_all_coins_candles_fast():
                     continue
                 
                 # Получаем существующие свечи для этой монеты
-                existing_data = file_cache.get(symbol, {})
+                existing_data = db_cache.get(symbol, {})
                 existing_candles = existing_data.get('candles', [])
                 
                 # ✅ ОБЪЕДИНЯЕМ: создаем словарь для быстрого поиска по timestamp
@@ -1394,7 +1366,7 @@ def load_all_coins_candles_fast():
                 new_count = len(merged_candles)
                 added_count = new_count - old_count
                 
-                file_cache[symbol] = {
+                db_cache[symbol] = {
                     'candles': merged_candles,
                     'timeframe': candle_data.get('timeframe', '6h'),
                     'timestamp': datetime.now().isoformat(),
@@ -1405,27 +1377,12 @@ def load_all_coins_candles_fast():
                 updated_count += 1
                 total_candles_added += added_count
             
-            # Сохраняем обновленный кэш (атомарная запись через временный файл)
-            import tempfile
-            temp_file = candles_cache_file.with_suffix('.tmp')
-            try:
-                # Записываем во временный файл
-                with open(temp_file, 'w', encoding='utf-8') as f:
-                    json.dump(file_cache, f, indent=2, ensure_ascii=False)
-                # Атомарно заменяем старый файл новым
-                temp_file.replace(candles_cache_file)
-                logger.info(f"💾 Кэш накоплен в файл: {updated_count} монет, +{total_candles_added} новых свечей -> {candles_cache_file}")
-            except Exception as save_error:
-                # Удаляем временный файл в случае ошибки
-                if temp_file.exists():
-                    try:
-                        temp_file.unlink()
-                    except Exception:
-                        pass
-                raise save_error
+            # Сохраняем обновленный кэш в БД
+            if save_candles_cache(db_cache):
+                logger.info(f"💾 Кэш накоплен в БД: {updated_count} монет, +{total_candles_added} новых свечей")
             
-        except Exception as file_error:
-            logger.warning(f"⚠️ Ошибка сохранения в файл кэша: {file_error}")
+        except Exception as db_error:
+            logger.warning(f"⚠️ Ошибка сохранения в БД кэша: {db_error}")
         
         # 🔄 Сбрасываем задержку запросов после успешной загрузки раунда
         try:
