@@ -392,31 +392,36 @@ class AITrainer:
                 saved_count += 1
                 
                 # Сохраняем метаданные модели
-                metadata_path = os.path.normpath(os.path.join(self.models_dir, 'signal_predictor_metadata.json'))
+                # Сохраняем метаданные в БД
                 metadata = {
-                    'model_type': 'RandomForestClassifier',
+                    'id': 'signal_predictor',
+                    'model_type': 'signal_predictor',
+                    'model_path': str(self.signal_model_path),
+                    'model_class': 'RandomForestClassifier',
                     'saved_at': datetime.now().isoformat(),
                     'n_estimators': getattr(self.signal_predictor, 'n_estimators', 'unknown'),
                     'max_depth': getattr(self.signal_predictor, 'max_depth', 'unknown')
                 }
-                with open(metadata_path, 'w', encoding='utf-8') as f:
-                    json.dump(metadata, f, indent=2, ensure_ascii=False)
+                if self.ai_db:
+                    self.ai_db.save_model_version(metadata)
             
             if self.profit_predictor:
                 joblib.dump(self.profit_predictor, self.profit_model_path)
                 logger.info(f"✅ Сохранена модель предсказания прибыли: {self.profit_model_path}")
                 saved_count += 1
                 
-                # Сохраняем метаданные модели
-                metadata_path = os.path.normpath(os.path.join(self.models_dir, 'profit_predictor_metadata.json'))
+                # Сохраняем метаданные в БД
                 metadata = {
-                    'model_type': 'GradientBoostingRegressor',
+                    'id': 'profit_predictor',
+                    'model_type': 'profit_predictor',
+                    'model_path': str(self.profit_model_path),
+                    'model_class': 'GradientBoostingRegressor',
                     'saved_at': datetime.now().isoformat(),
                     'n_estimators': getattr(self.profit_predictor, 'n_estimators', 'unknown'),
                     'max_depth': getattr(self.profit_predictor, 'max_depth', 'unknown')
                 }
-                with open(metadata_path, 'w', encoding='utf-8') as f:
-                    json.dump(metadata, f, indent=2, ensure_ascii=False)
+                if self.ai_db:
+                    self.ai_db.save_model_version(metadata)
             
             if self.scaler:
                 joblib.dump(self.scaler, self.scaler_path)
@@ -426,9 +431,12 @@ class AITrainer:
             if self.ai_decision_model:
                 joblib.dump(self.ai_decision_model, self.ai_decision_model_path)
                 logger.info(f"✅ Сохранена модель анализа AI решений: {self.ai_decision_model_path}")
-                metadata_path = os.path.normpath(os.path.join(self.models_dir, 'ai_decision_model_metadata.json'))
+                # Сохраняем метаданные в БД
                 metadata = {
-                    'model_type': type(self.ai_decision_model).__name__,
+                    'id': 'ai_decision_model',
+                    'model_type': 'ai_decision_model',
+                    'model_path': str(self.ai_decision_model_path),
+                    'model_class': type(self.ai_decision_model).__name__,
                     'saved_at': datetime.now().isoformat(),
                     'samples': getattr(self, 'ai_decisions_last_trained_count', 0),
                     'min_samples_required': self.ai_decisions_min_samples
@@ -436,8 +444,8 @@ class AITrainer:
                 accuracy = getattr(self, '_ai_decision_last_accuracy', None)
                 if accuracy is not None:
                     metadata['accuracy'] = float(accuracy)
-                with open(metadata_path, 'w', encoding='utf-8') as f:
-                    json.dump(metadata, f, indent=2, ensure_ascii=False)
+                if self.ai_db:
+                    self.ai_db.save_model_version(metadata)
 
             if self.ai_decision_scaler:
                 joblib.dump(self.ai_decision_scaler, self.ai_decision_scaler_path)
@@ -1692,10 +1700,9 @@ class AITrainer:
                             results[range_name]['winning'] += 1
                         break
             
-            # Сохраняем результаты анализа
-            analysis_file = os.path.normpath(os.path.join(self.models_dir, 'strategy_analysis.json'))
-            with open(analysis_file, 'w', encoding='utf-8') as f:
-                json.dump(results, f, ensure_ascii=False, indent=2)
+            # Сохраняем результаты анализа в БД
+            if self.ai_db:
+                self.ai_db.save_strategy_analysis('parameter_analysis', results)
             
             logger.info("✅ Анализ параметров стратегии завершен")
             logger.info(f"📊 Результаты: {json.dumps(results, indent=2, ensure_ascii=False)}")
@@ -2684,7 +2691,8 @@ class AITrainer:
                     calculate_rsi_history_func = calculate_rsi_history
             
             # Загружаем рыночные данные
-            # ВАЖНО: Используем ТОЛЬКО полную историю свечей из candles_full_history.json
+            # ВАЖНО: Используем ТОЛЬКО БД (ai_data.db, таблица candles_history)!
+            # Файлы больше не используются - все данные в БД!
             market_data = self._load_market_data()
             
             if not market_data:
@@ -2701,9 +2709,9 @@ class AITrainer:
             
             if not candles_data:
                 logger.warning("⚠️ Нет свечей для обучения!")
-                logger.info("💡 Файл data/ai/candles_full_history.json не найден или пуст")
+                logger.info("💡 БД ai_data.db пуста или таблица candles_history не содержит данных")
                 logger.info("💡 Запустите загрузку полной истории свечей через ai.py")
-                logger.info("   💡 Это загрузит ВСЕ доступные свечи для всех монет через пагинацию")
+                logger.info("   💡 Это загрузит ВСЕ доступные свечи для всех монет в БД через пагинацию")
                 self._record_training_event(
                     'historical_data_training',
                     status='SKIPPED',
@@ -2842,18 +2850,18 @@ class AITrainer:
                     # Нормализуем путь и имя символа для Windows
                     safe_symbol = symbol.replace('/', '_').replace('\\', '_').replace(':', '_')
                     symbol_models_dir = os.path.normpath(os.path.join(self.models_dir, safe_symbol))
-                    metadata_path = os.path.normpath(os.path.join(symbol_models_dir, 'metadata.json'))
+                    # Загружаем метаданные из БД
                     previous_candles_count = 0
                     model_exists = False
                     
-                    if os.path.exists(metadata_path):
+                    if self.ai_db:
                         try:
-                            with open(metadata_path, 'r', encoding='utf-8') as f:
-                                existing_metadata = json.load(f)
-                            previous_candles_count = existing_metadata.get('candles_count', 0)
-                            model_exists = True
+                            latest_version = self.ai_db.get_latest_model_version(model_type=f'symbol_model_{symbol}')
+                            if latest_version:
+                                previous_candles_count = latest_version.get('training_samples', 0)
+                                model_exists = True
                         except Exception as e:
-                            logger.debug(f"   ⚠️ Ошибка чтения метаданных модели для {symbol}: {e}")
+                            logger.debug(f"   ⚠️ Ошибка чтения метаданных модели для {symbol} из БД: {e}")
                     
                     current_candles_count = len(candles)
                     candles_increased = current_candles_count > previous_candles_count
@@ -3687,10 +3695,25 @@ class AITrainer:
                                 'previous_candles_count': previous_candles_count if 'previous_candles_count' in locals() else 0,
                                 'candles_increased': candles_increased if 'candles_increased' in locals() else False
                             }
-                            metadata_path = os.path.normpath(os.path.join(symbol_models_dir, 'metadata.json'))
-                            with open(metadata_path, 'w', encoding='utf-8') as f:
-                                json.dump(metadata, f, indent=2, ensure_ascii=False)
-                            logger.debug(f"   🗄️ {symbol}: metadata.json обновлён")
+                            # Сохраняем метаданные в БД
+                            if self.ai_db:
+                                db_metadata = {
+                                    'id': f'symbol_model_{symbol}',
+                                    'model_type': f'symbol_model_{symbol}',
+                                    'model_path': str(symbol_models_dir),
+                                    'symbol': symbol,
+                                    'training_samples': metadata.get('candles_count', len(candles)),
+                                    'trained_at': metadata.get('trained_at', datetime.now().isoformat()),
+                                    'trades_count': metadata.get('trades_count', 0),
+                                    'win_rate': metadata.get('win_rate'),
+                                    'accuracy': metadata.get('signal_accuracy'),
+                                    'mse': metadata.get('profit_mse'),
+                                    'total_pnl': metadata.get('total_pnl')
+                                }
+                                # Сохраняем полные метаданные в metadata_json
+                                db_metadata.update(metadata)
+                                self.ai_db.save_model_version(db_metadata)
+                                logger.debug(f"   🗄️ {symbol}: метаданные сохранены в БД")
                             if symbol_idx <= 10:
                                 logger.info(f"   ✅ {symbol}: метаданные сохранены")
                             

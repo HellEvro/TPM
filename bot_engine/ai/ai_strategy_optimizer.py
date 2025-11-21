@@ -313,10 +313,32 @@ class AIStrategyOptimizer:
             
             patterns['trend_analysis'] = trend_stats
             
-            # Сохраняем результаты анализа
-            analysis_file = os.path.join(self.results_dir, 'trade_patterns.json')
-            with open(analysis_file, 'w', encoding='utf-8') as f:
-                json.dump(patterns, f, ensure_ascii=False, indent=2)
+            # Сохраняем результаты анализа в БД
+            try:
+                from bot_engine.ai.ai_database import get_ai_database
+                ai_db = get_ai_database()
+                if ai_db:
+                    # Преобразуем паттерны в формат для БД
+                    patterns_list = []
+                    if 'rsi_analysis' in patterns:
+                        patterns_list.append({
+                            'pattern_type': 'rsi_analysis',
+                            'pattern_data': patterns['rsi_analysis']
+                        })
+                    if 'trend_analysis' in patterns:
+                        for trend, stats in patterns['trend_analysis'].items():
+                            patterns_list.append({
+                                'pattern_type': 'trend_analysis',
+                                'trend_condition': trend,
+                                'success_count': stats.get('profitable', 0),
+                                'failure_count': stats.get('trades', 0) - stats.get('profitable', 0),
+                                'avg_pnl': stats.get('total_pnl', 0) / stats.get('trades', 1) if stats.get('trades', 0) > 0 else 0,
+                                'pattern_data': stats
+                            })
+                    if patterns_list:
+                        ai_db.save_trade_patterns(patterns_list)
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка сохранения паттернов в БД: {e}")
             
             logger.info(f"✅ Анализ завершен: Win Rate={patterns['win_rate']:.2f}%")
             
@@ -389,10 +411,14 @@ class AIStrategyOptimizer:
                 optimized_params['best_trend'] = best_trend
                 optimized_params['trend_win_rate'] = best_win_rate
             
-            # Сохраняем оптимизированные параметры
-            optimization_file = os.path.join(self.results_dir, 'optimized_params.json')
-            with open(optimization_file, 'w', encoding='utf-8') as f:
-                json.dump(optimized_params, f, ensure_ascii=False, indent=2)
+            # Сохраняем оптимизированные параметры в БД
+            try:
+                from bot_engine.ai.ai_database import get_ai_database
+                ai_db = get_ai_database()
+                if ai_db:
+                    ai_db.save_optimized_params(None, optimized_params, 'strategy_optimization')
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка сохранения оптимизированных параметров в БД: {e}")
             
             logger.info(f"✅ Оптимизация завершена: {optimized_params}")
             
