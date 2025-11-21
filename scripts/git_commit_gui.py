@@ -27,7 +27,7 @@ if os.name == 'nt':
             pass
 
 ROOT = Path(__file__).parent.parent
-PUBLIC = ROOT / "InfoBot_Public"
+PUBLIC = ROOT.parent / "InfoBot_Public"
 SYNC_SCRIPT = ROOT / "sync_to_public.py"
 GIT_COMMIT_SCRIPT = ROOT / "scripts" / "git_commit_push.py"
 

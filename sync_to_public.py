@@ -20,7 +20,7 @@ if os.name == 'nt':
             pass
 
 ROOT = Path(__file__).parent
-PUBLIC = ROOT / "InfoBot_Public"
+PUBLIC = ROOT.parent / "InfoBot_Public"
 
 # Что копируем
 INCLUDE = [
@@ -28,7 +28,7 @@ INCLUDE = [
     "INSTALL.md", "LICENSE",
     "start_infobot_manager.cmd", "start_infobot_manager.sh", "start_infobot_manager.vbs",
     "app/", "bot_engine/", "bots_modules/", "exchanges/", "utils/",
-    "static/", "templates/", "docs/", "data/", "scripts/", "installer/", "launcher/",
+    "static/", "templates/", "docs/", "scripts/", "installer/", "launcher/",
 ]
 
 # Файлы, которые нужно ВСЕГДА копировать даже если они попали в исключения.
@@ -40,7 +40,6 @@ ALWAYS_INCLUDE = [
     "bot_engine/protections.py",
     "bots_modules/bot_class.py",
     "bots_modules/imports_and_globals.py",
-    "data/ai/optimizer_genomes.json",
     "tests/test_ai_optimizer_genomes.py",
     "tests/test_ai_simulator_parity.py",
     "tests/test_ai_individual_settings.py",
@@ -68,6 +67,7 @@ EXCLUDE_DIRS = [
     "docs/ai_development",
     "docs/ai_technical",
     "docs/ai_guides",
+    "data",  # ВСЯ папка data - данные не копируются в публичную версию (кроме файлов из ALWAYS_INCLUDE)
 ]
 
 EXCLUDE_FILES = [
@@ -233,6 +233,19 @@ for pattern in INCLUDE:
                 dst_file = PUBLIC / rel_path
                 if sync_file(src_file, dst_file):
                     copied += 1
+
+# ✅ Отдельно копируем файлы из ALWAYS_INCLUDE (могут быть в исключенных папках, например data/)
+print()
+print("[INFO] Копирование обязательных файлов из ALWAYS_INCLUDE...")
+for always_path in ALWAYS_INCLUDE:
+    src = ROOT / always_path
+    if src.exists() and src.is_file():
+        # Проверяем, не был ли уже скопирован в основном цикле
+        dst = PUBLIC / always_path
+        if not dst.exists() or src.stat().st_mtime > dst.stat().st_mtime:
+            if sync_file(src, dst):
+                copied += 1
+                print(f"[COPY] {always_path}")
 
 print()
 print(f"[OK] Скопировано файлов: {copied}")

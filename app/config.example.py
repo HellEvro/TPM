@@ -134,3 +134,14 @@ TELEGRAM_NOTIFY = {
     'STATISTICS_TIME_ENABLED': False,     # Включить/выключить отправку в определенное время
     'STATISTICS_TIME': ['09:00', '21:00']  # Время отправки (если включено)
 }
+
+# Настройки резервного копирования баз данных
+DATABASE_BACKUP = {
+    'ENABLED': True,             # Включить фоновые бэкапы
+    'INTERVAL_MINUTES': 60,      # Интервал между бэкапами в минутах
+    'RUN_ON_START': True,        # Сделать бэкап сразу при запуске
+    'AI_ENABLED': True,          # Включить бэкап AI БД
+    'BOTS_ENABLED': True,        # Включить бэкап Bots БД
+    'BACKUP_DIR': None,          # Кастомная директория (None = data/backups)
+    'MAX_RETRIES': 3             # Количество попыток при блокировках файлов
+}
