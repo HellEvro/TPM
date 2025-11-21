@@ -39,6 +39,149 @@ if os.name == 'nt':
 ROOT = Path(__file__).parent.parent
 
 
+class DraggablePanel(ttk.LabelFrame):
+    """Панель с возможностью перетаскивания и прилипания"""
+    
+    SNAP_DISTANCE = 15  # Расстояние для прилипания в пикселях
+    
+    def __init__(self, parent_canvas, canvas_id, text="", **kwargs):
+        super().__init__(parent_canvas, text=text, **kwargs)
+        self.parent_canvas = parent_canvas
+        self.canvas_id = canvas_id  # ID окна на Canvas
+        self.drag_start_x = 0
+        self.drag_start_y = 0
+        self.drag_start_canvas_x = 0
+        self.drag_start_canvas_y = 0
+        self.is_dragging = False
+        self.all_panels = []  # Список всех панелей (обновляется извне)
+        
+        # Делаем заголовок перетаскиваемым
+        self._make_draggable()
+    
+    def set_panels_list(self, panels):
+        """Устанавливает список всех панелей для snap"""
+        self.all_panels = [p for p in panels if p != self]
+    
+    def _make_draggable(self):
+        """Делает панель перетаскиваемой через заголовок"""
+        # Привязываем события мыши
+        self.bind("<Button-1>", self._on_drag_start)
+        self.bind("<B1-Motion>", self._on_drag_motion)
+        self.bind("<ButtonRelease-1>", self._on_drag_stop)
+        
+        # Изменяем курсор при наведении на верхнюю часть (заголовок)
+        self.bind("<Motion>", self._on_motion)
+    
+    def _is_header_area(self, event):
+        """Проверяет, находится ли курсор в области заголовка"""
+        # Заголовок занимает примерно верхние 30 пикселей
+        return event.y < 30
+    
+    def _on_motion(self, event):
+        """Обработчик движения мыши"""
+        if self._is_header_area(event):
+            self.config(cursor="hand2")
+        elif not self.is_dragging:
+            self.config(cursor="")
+    
+    def _on_drag_start(self, event):
+        """Начало перетаскивания"""
+        if not self._is_header_area(event):
+            return
+        
+        self.is_dragging = True
+        self.drag_start_x = event.x_root
+        self.drag_start_y = event.y_root
+        
+        # Получаем текущую позицию на Canvas
+        coords = self.parent_canvas.coords(self.canvas_id)
+        if coords:
+            self.drag_start_canvas_x = coords[0]
+            self.drag_start_canvas_y = coords[1]
+        
+        # Поднимаем панель наверх (z-order)
+        self.parent_canvas.tag_raise(self.canvas_id)
+    
+    def _on_drag_motion(self, event):
+        """Перетаскивание панели"""
+        if not self.is_dragging:
+            return
+        
+        # Вычисляем новую позицию
+        delta_x = event.x_root - self.drag_start_x
+        delta_y = event.y_root - self.drag_start_y
+        
+        new_x = self.drag_start_canvas_x + delta_x
+        new_y = self.drag_start_canvas_y + delta_y
+        
+        # Проверяем прилипание к другим панелям
+        snap_x, snap_y = self._check_snap(new_x, new_y)
+        
+        # Ограничиваем перемещение границами Canvas
+        canvas_width = self.parent_canvas.winfo_width()
+        canvas_height = self.parent_canvas.winfo_height()
+        widget_width = self.winfo_width()
+        widget_height = self.winfo_height()
+        
+        snap_x = max(0, min(snap_x, max(0, canvas_width - widget_width)))
+        snap_y = max(0, min(snap_y, max(0, canvas_height - widget_height)))
+        
+        # Перемещаем панель на Canvas
+        self.parent_canvas.coords(self.canvas_id, snap_x, snap_y)
+        self.parent_canvas.update()
+    
+    def _on_drag_stop(self, event):
+        """Окончание перетаскивания"""
+        if self.is_dragging:
+            self.is_dragging = False
+            self.config(cursor="")
+            # Обновляем scrollregion
+            self.parent_canvas.config(scrollregion=self.parent_canvas.bbox("all"))
+    
+    def _check_snap(self, x, y):
+        """Проверяет прилипание к другим панелям"""
+        snap_x, snap_y = x, y
+        widget_width = self.winfo_width()
+        widget_height = self.winfo_height()
+        
+        # Проверяем прилипание к каждой панели
+        for panel in self.all_panels:
+            # Получаем позицию панели на Canvas
+            coords = self.parent_canvas.coords(panel.canvas_id)
+            if not coords:
+                continue
+            
+            px, py = coords
+            pw = panel.winfo_width()
+            ph = panel.winfo_height()
+            
+            # Проверяем прилипание слева (к правой стороне другой панели)
+            if abs(x - (px + pw)) < self.SNAP_DISTANCE:
+                snap_x = px + pw
+            
+            # Проверяем прилипание справа (к левой стороне другой панели)
+            if abs((x + widget_width) - px) < self.SNAP_DISTANCE:
+                snap_x = px - widget_width
+            
+            # Проверяем прилипание сверху (к нижней стороне другой панели)
+            if abs(y - (py + ph)) < self.SNAP_DISTANCE:
+                snap_y = py + ph
+            
+            # Проверяем прилипание снизу (к верхней стороне другой панели)
+            if abs((y + widget_height) - py) < self.SNAP_DISTANCE:
+                snap_y = py - widget_height
+            
+            # Проверяем прилипание по горизонтали (выравнивание левого края)
+            if abs(x - px) < self.SNAP_DISTANCE:
+                snap_x = px
+            
+            # Проверяем прилипание по вертикали (выравнивание верхнего края)
+            if abs(y - py) < self.SNAP_DISTANCE:
+                snap_y = py
+        
+        return snap_x, snap_y
+
+
 class DatabaseConnection:
     """Класс для работы с подключением к базе данных"""
     
@@ -53,8 +196,8 @@ class DatabaseConnection:
             self.conn.row_factory = sqlite3.Row  # Возвращаем результаты как словари
             return True
         except Exception as e:
-            messagebox.showerror("Ошибка подключения", f"Не удалось подключиться к БД:\n{e}")
-            return False
+            # Ошибка подключения будет обработана в вызывающем коде
+            raise
     
     def disconnect(self):
         """Отключается от базы данных"""
@@ -194,21 +337,28 @@ class DatabaseGUI(tk.Tk):
     
     def _build_ui(self):
         """Создает интерфейс приложения"""
-        # Главный контейнер с изменяемыми размерами
-        main_paned = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
-        main_paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # Главный контейнер - Canvas для перетаскиваемых панелей
+        main_container = tk.Frame(self)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Создаем Canvas для размещения панелей
+        self.main_canvas = tk.Canvas(main_container, bg='SystemButtonFace', highlightthickness=0)
+        self.main_canvas.pack(fill=tk.BOTH, expand=True)
+        
+        # Хранилище панелей
+        self.panels = {}
         
         # === ЛЕВАЯ ПАНЕЛЬ: Управление БД ===
-        left_frame = ttk.Frame(main_paned, width=300)
-        main_paned.add(left_frame, weight=1)
+        left_frame_container = ttk.Frame(self.main_canvas)
+        left_frame = DraggablePanel(left_frame_container, None, text="Базы данных")
+        left_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Заголовок
-        title_label = ttk.Label(
-            left_frame,
-            text="Базы данных",
-            font=("Arial", 12, "bold")
-        )
-        title_label.pack(pady=10)
+        # Размещаем панель на Canvas
+        left_id = self.main_canvas.create_window(10, 10, window=left_frame_container, anchor="nw", width=300, height=600)
+        left_frame.canvas_id = left_id
+        left_frame.parent_canvas = self.main_canvas
+        
+        # Убираем заголовок - он уже есть в DraggablePanel
         
         # Кнопки управления БД
         db_buttons_frame = ttk.Frame(left_frame)
@@ -257,13 +407,16 @@ class DatabaseGUI(tk.Tk):
         self.db_info_text = tk.Text(info_frame, height=5, wrap=tk.WORD, state=tk.DISABLED)
         self.db_info_text.pack(fill=tk.X)
         
-        # === ПРАВАЯ ПАНЕЛЬ: Работа с данными ===
-        right_paned = ttk.PanedWindow(main_paned, orient=tk.VERTICAL)
-        main_paned.add(right_paned, weight=3)
+        self.panels['left'] = left_frame
         
-        # === ВЕРХНЯЯ ПАНЕЛЬ: SQL редактор ===
-        sql_frame = ttk.LabelFrame(right_paned, text="SQL Редактор", padding=5)
-        right_paned.add(sql_frame, weight=1)
+        # === ПАНЕЛЬ: SQL редактор ===
+        sql_frame_container = ttk.Frame(self.main_canvas)
+        sql_frame = DraggablePanel(sql_frame_container, None, text="SQL Редактор")
+        sql_frame.pack(fill=tk.BOTH, expand=True)
+        
+        sql_id = self.main_canvas.create_window(320, 10, window=sql_frame_container, anchor="nw", width=600, height=300)
+        sql_frame.canvas_id = sql_id
+        sql_frame.parent_canvas = self.main_canvas
         
         # SQL редактор
         sql_text = scrolledtext.ScrolledText(
@@ -294,13 +447,16 @@ class DatabaseGUI(tk.Tk):
         # Привязываем F5 к выполнению запроса
         self.bind('<F5>', lambda e: self._execute_sql())
         
-        # === НИЖНЯЯ ПАНЕЛЬ: GUI для таблиц ===
-        tables_paned = ttk.PanedWindow(right_paned, orient=tk.HORIZONTAL)
-        right_paned.add(tables_paned, weight=2)
+        self.panels['sql'] = sql_frame
         
-        # Левая часть: Список таблиц и данные
-        tables_frame = ttk.LabelFrame(tables_paned, text="Таблицы и данные", padding=5)
-        tables_paned.add(tables_frame, weight=2)
+        # === ПАНЕЛЬ: Таблицы и данные ===
+        tables_frame_container = ttk.Frame(self.main_canvas)
+        tables_frame = DraggablePanel(tables_frame_container, None, text="Таблицы и данные")
+        tables_frame.pack(fill=tk.BOTH, expand=True)
+        
+        tables_id = self.main_canvas.create_window(320, 320, window=tables_frame_container, anchor="nw", width=600, height=400)
+        tables_frame.canvas_id = tables_id
+        tables_frame.parent_canvas = self.main_canvas
         
         # Список таблиц
         tables_list_frame = ttk.Frame(tables_frame)
@@ -368,9 +524,16 @@ class DatabaseGUI(tk.Tk):
         records_info.pack(padx=5, pady=2)
         self.records_info = records_info
         
-        # Правая часть: Результаты SQL
-        results_frame = ttk.LabelFrame(tables_paned, text="Результаты SQL", padding=5)
-        tables_paned.add(results_frame, weight=1)
+        self.panels['tables'] = tables_frame
+        
+        # === ПАНЕЛЬ: Результаты SQL ===
+        results_frame_container = ttk.Frame(self.main_canvas)
+        results_frame = DraggablePanel(results_frame_container, None, text="Результаты SQL")
+        results_frame.pack(fill=tk.BOTH, expand=True)
+        
+        results_id = self.main_canvas.create_window(930, 320, window=results_frame_container, anchor="nw", width=400, height=400)
+        results_frame.canvas_id = results_id
+        results_frame.parent_canvas = self.main_canvas
         
         # Treeview для результатов
         results_tree = ttk.Treeview(results_frame)
@@ -385,32 +548,139 @@ class DatabaseGUI(tk.Tk):
         results_tree.configure(yscrollcommand=res_v_scroll.set, xscrollcommand=res_h_scroll.set)
         
         self.results_tree = results_tree
+        
+        self.panels['results'] = results_frame
+        
+        # Обновляем размер Canvas при изменении окна
+        def update_canvas_size(event=None):
+            self.main_canvas.config(scrollregion=self.main_canvas.bbox("all"))
+        
+        self.main_canvas.bind('<Configure>', update_canvas_size)
+        self.bind('<Configure>', update_canvas_size)
+        
+        # Обновляем список панелей для snap
+        panels_list = list(self.panels.values())
+        for panel in panels_list:
+            panel.set_panels_list(panels_list)
+        
+        # Обновляем scrollregion при изменении размера
+        def update_scrollregion(event=None):
+            self.main_canvas.config(scrollregion=self.main_canvas.bbox("all"))
+        
+        self.main_canvas.bind('<Configure>', update_scrollregion)
+        self.bind('<Configure>', update_scrollregion)
+        
+        # === СТРОКА СТАТУСА ВНИЗУ ===
+        status_frame = ttk.Frame(self)
+        status_frame.pack(fill=tk.X, side=tk.BOTTOM, padx=5, pady=2)
+        
+        status_label = ttk.Label(
+            status_frame,
+            text="Готов к работе",
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=5
+        )
+        status_label.pack(fill=tk.X)
+        self.status_label = status_label
+    
+    def _update_status(self, message: str, status_type: str = "info"):
+        """
+        Обновляет строку статуса
+        
+        Args:
+            message: Текст сообщения
+            status_type: Тип статуса - "info", "success", "warning", "error"
+        """
+        self.status_label.config(text=message)
+        
+        # Цвета для разных типов статуса
+        colors = {
+            "info": "SystemButtonFace",
+            "success": "#d4edda",  # Светло-зеленый
+            "warning": "#fff3cd",  # Светло-желтый
+            "error": "#f8d7da"     # Светло-красный
+        }
+        
+        bg_color = colors.get(status_type, "SystemButtonFace")
+        self.status_label.config(background=bg_color)
+        
+        # Автоматически очищаем статус через 5 секунд (кроме ошибок)
+        if status_type != "error":
+            self.after(5000, lambda: self.status_label.config(text="Готов к работе", background="SystemButtonFace"))
     
     def _auto_discover_databases(self):
         """Автоматически находит все БД в проекте"""
         databases = []
+        found_paths = set()  # Для отслеживания уже добавленных путей
         
-        # Список известных путей к БД
+        # Список известных путей к БД (показываем даже если файлы еще не созданы)
         known_paths = [
             ROOT / "data" / "bots_data.db",
+            ROOT / "data" / "app_data.db",
             ROOT / "data" / "ai" / "ai_data.db",
             ROOT / "license_generator" / "licenses.db",
         ]
         
-        # Добавляем все .db файлы из проекта
+        # Добавляем известные пути
+        for db_path in known_paths:
+            if db_path.exists():
+                found_paths.add(str(db_path))
+                databases.append({
+                    'name': db_path.name,
+                    'path': str(db_path),
+                    'relative_path': str(db_path.relative_to(ROOT)),
+                    'size': db_path.stat().st_size,
+                    'exists': True
+                })
+            else:
+                # Добавляем даже если файл не существует (с пометкой)
+                databases.append({
+                    'name': db_path.name,
+                    'path': str(db_path),
+                    'relative_path': str(db_path.relative_to(ROOT)),
+                    'size': 0,
+                    'exists': False
+                })
+        
+        # Добавляем все .db файлы из проекта (кроме уже добавленных)
+        # Исключаем служебные папки
+        excluded_dirs = {'.git', '.venv', '__pycache__', 'node_modules', '.idea', '.vscode'}
+        
         for db_file in ROOT.rglob("*.db"):
             # Пропускаем файлы .db-wal и .db-shm
             if db_file.name.endswith(('-wal', '-shm')):
                 continue
+            
+            # Пропускаем если путь уже добавлен
+            db_path_str = str(db_file)
+            if db_path_str in found_paths:
+                continue
+            
+            # Пропускаем если в пути есть исключенные директории
+            if any(excluded in db_path_str for excluded in excluded_dirs):
+                continue
+            
+            found_paths.add(db_path_str)
             databases.append({
                 'name': db_file.name,
-                'path': str(db_file),
+                'path': db_path_str,
                 'relative_path': str(db_file.relative_to(ROOT)),
-                'size': db_file.stat().st_size if db_file.exists() else 0
+                'size': db_file.stat().st_size if db_file.exists() else 0,
+                'exists': db_file.exists()
             })
+        
+        # Сортируем: сначала существующие, затем по имени
+        databases.sort(key=lambda x: (not x.get('exists', True), x['name']))
         
         # Обновляем дерево БД
         self._update_database_tree(databases)
+        
+        # Обновляем статус (если метод вызван не из __init__)
+        if hasattr(self, 'status_label'):
+            count = len([db for db in databases if db.get('exists', True)])
+            total = len(databases)
+            self._update_status(f"Найдено баз данных: {count} существующих из {total} известных", "info")
     
     def _update_database_tree(self, databases: List[Dict]):
         """Обновляет дерево со списком БД"""
@@ -422,14 +692,23 @@ class DatabaseGUI(tk.Tk):
         root_id = self.db_tree.insert("", tk.END, text="Проект", open=True)
         
         for db in databases:
-            size_mb = db['size'] / 1024 / 1024
-            display_text = f"{db['name']} ({size_mb:.2f} MB)"
+            exists = db.get('exists', True)
+            if exists:
+                size_mb = db['size'] / 1024 / 1024
+                display_text = f"{db['name']} ({size_mb:.2f} MB)"
+            else:
+                display_text = f"{db['name']} (не создана)"
+            
             item_id = self.db_tree.insert(
                 root_id,
                 tk.END,
                 text=display_text,
-                values=(db['path'], db['relative_path'])
+                values=(db['path'], db['relative_path'], '1' if exists else '0')
             )
+            
+            # Визуально выделяем несуществующие файлы (серым цветом)
+            if not exists:
+                self.db_tree.set(item_id, 'exists', '0')
     
     def _open_database_from_tree(self):
         """Открывает БД из дерева (двойной клик)"""
@@ -446,6 +725,7 @@ class DatabaseGUI(tk.Tk):
     
     def _open_external_database(self):
         """Открывает внешнюю БД через диалог выбора файла"""
+        self._update_status("Выбор базы данных...", "info")
         db_path = filedialog.askopenfilename(
             title="Выберите базу данных",
             filetypes=[("SQLite databases", "*.db"), ("All files", "*.*")]
@@ -455,17 +735,39 @@ class DatabaseGUI(tk.Tk):
             self._open_database(db_path)
             # Добавляем в дерево
             self._refresh_databases()
+        else:
+            self._update_status("Выбор базы данных отменен", "info")
     
     def _open_database(self, db_path: str):
         """Открывает базу данных"""
+        # Проверяем существование файла
+        if not os.path.exists(db_path):
+            if messagebox.askyesno(
+                "База данных не найдена",
+                f"Файл базы данных не существует:\n{db_path}\n\nСоздать новую базу данных?"
+            ):
+                # Создаем директорию если её нет
+                os.makedirs(os.path.dirname(db_path), exist_ok=True)
+                # Создаем пустую БД
+                try:
+                    conn = sqlite3.connect(db_path)
+                    conn.close()
+                except Exception as e:
+                    messagebox.showerror("Ошибка", f"Не удалось создать базу данных:\n{e}")
+                    return
+            else:
+                return
+        
         # Закрываем текущее подключение
         if self.db_conn:
             self.db_conn.disconnect()
         
         # Создаем новое подключение
-        self.db_conn = DatabaseConnection(db_path)
-        
-        if not self.db_conn.connect():
+        try:
+            self.db_conn = DatabaseConnection(db_path)
+            self.db_conn.connect()
+        except Exception as e:
+            self._update_status(f"Ошибка подключения: {e}", "error")
             self.db_conn = None
             return
         
@@ -477,7 +779,12 @@ class DatabaseGUI(tk.Tk):
         # Загружаем список таблиц
         self._load_tables_list()
         
-        messagebox.showinfo("Успех", f"База данных открыта:\n{db_path}")
+        # Обновляем статус
+        db_name = os.path.basename(db_path)
+        self._update_status(f"База данных открыта: {db_name}", "success")
+        
+        # Обновляем список БД (чтобы обновился статус "не создана" -> "существует")
+        self._auto_discover_databases()
     
     def _update_database_info(self):
         """Обновляет информацию о текущей БД"""
@@ -526,13 +833,17 @@ class DatabaseGUI(tk.Tk):
         if not self.db_conn:
             return
         
+        self._update_status("Загрузка списка таблиц...", "info")
         tables = self.db_conn.get_tables()
         self.tables_combo['values'] = tables
         
         if tables:
             self.tables_combo.current(0)
             self.current_table = tables[0]
+            self._update_status(f"Найдено таблиц: {len(tables)}", "success")
             self._load_table_data()
+        else:
+            self._update_status("База данных не содержит таблиц", "warning")
     
     def _load_table_data(self):
         """Загружает данные из выбранной таблицы"""
@@ -545,6 +856,9 @@ class DatabaseGUI(tk.Tk):
         
         self.current_table = table_name
         
+        # Обновляем статус
+        self._update_status(f"Загрузка данных из таблицы '{table_name}'...", "info")
+        
         # Очищаем treeview
         for item in self.data_tree.get_children():
             self.data_tree.delete(item)
@@ -552,6 +866,7 @@ class DatabaseGUI(tk.Tk):
         # Получаем схему таблицы
         schema = self.db_conn.get_table_schema(table_name)
         if not schema:
+            self._update_status(f"Ошибка: Не удалось получить схему таблицы '{table_name}'", "error")
             return
         
         # Настраиваем колонки
@@ -574,23 +889,29 @@ class DatabaseGUI(tk.Tk):
         
         # Обновляем информацию о записях
         self.records_info.config(text=f"Записей: {total_count} (показано: {len(rows)})")
+        
+        # Обновляем статус
+        self._update_status(f"Загружено {len(rows)} записей из таблицы '{table_name}' (всего: {total_count})", "success")
     
     def _execute_sql(self):
         """Выполняет SQL запрос"""
         if not self.db_conn:
-            messagebox.showwarning("Предупреждение", "База данных не открыта")
+            self._update_status("Ошибка: База данных не открыта", "error")
             return
         
         query = self.sql_text.get(1.0, tk.END).strip()
         if not query:
-            messagebox.showwarning("Предупреждение", "SQL запрос пуст")
+            self._update_status("Предупреждение: SQL запрос пуст", "warning")
             return
+        
+        # Обновляем статус
+        self._update_status("Выполнение SQL запроса...", "info")
         
         # Выполняем запрос
         results, error = self.db_conn.execute_query(query)
         
         if error:
-            messagebox.showerror("Ошибка SQL", f"Ошибка выполнения запроса:\n{error}")
+            self._update_status(f"Ошибка SQL: {error}", "error")
             return
         
         # Очищаем результаты
@@ -614,9 +935,9 @@ class DatabaseGUI(tk.Tk):
                 values = [str(row.get(col, '')) for col in columns]
                 self.results_tree.insert("", tk.END, values=values)
             
-            messagebox.showinfo("Успех", f"Запрос выполнен. Найдено записей: {len(results)}")
+            self._update_status(f"Запрос выполнен. Найдено записей: {len(results)}", "success")
         else:
-            messagebox.showinfo("Успех", "Запрос выполнен успешно")
+            self._update_status("Запрос выполнен успешно", "success")
             # Обновляем данные таблицы, если была выбрана таблица
             if self.current_table:
                 self._load_table_data()
@@ -624,20 +945,21 @@ class DatabaseGUI(tk.Tk):
     def _add_record(self):
         """Открывает диалог для добавления новой записи"""
         if not self.db_conn or not self.current_table:
-            messagebox.showwarning("Предупреждение", "Выберите таблицу")
+            self._update_status("Предупреждение: Выберите таблицу", "warning")
             return
         
+        self._update_status("Открытие диалога добавления записи...", "info")
         RecordDialog(self, self.db_conn, self.current_table, mode='add', callback=self._load_table_data)
     
     def _edit_record(self):
         """Открывает диалог для редактирования записи"""
         if not self.db_conn or not self.current_table:
-            messagebox.showwarning("Предупреждение", "Выберите таблицу")
+            self._update_status("Предупреждение: Выберите таблицу", "warning")
             return
         
         selection = self.data_tree.selection()
         if not selection:
-            messagebox.showwarning("Предупреждение", "Выберите запись для редактирования")
+            self._update_status("Предупреждение: Выберите запись для редактирования", "warning")
             return
         
         # Получаем данные выбранной записи
@@ -647,21 +969,23 @@ class DatabaseGUI(tk.Tk):
         
         record = {col: values[i] for i, col in enumerate(columns)}
         
+        self._update_status("Открытие диалога редактирования записи...", "info")
         RecordDialog(self, self.db_conn, self.current_table, mode='edit', record=record, callback=self._load_table_data)
     
     def _delete_record(self):
         """Удаляет выбранную запись"""
         if not self.db_conn or not self.current_table:
-            messagebox.showwarning("Предупреждение", "Выберите таблицу")
+            self._update_status("Предупреждение: Выберите таблицу", "warning")
             return
         
         selection = self.data_tree.selection()
         if not selection:
-            messagebox.showwarning("Предупреждение", "Выберите запись для удаления")
+            self._update_status("Предупреждение: Выберите запись для удаления", "warning")
             return
         
         # Подтверждение
         if not messagebox.askyesno("Подтверждение", "Вы уверены, что хотите удалить эту запись?"):
+            self._update_status("Удаление отменено", "info")
             return
         
         # Получаем данные выбранной записи
@@ -692,14 +1016,16 @@ class DatabaseGUI(tk.Tk):
         results, error = self.db_conn.execute_query(query, tuple(params))
         
         if error:
-            messagebox.showerror("Ошибка", f"Ошибка удаления записи:\n{error}")
+            self._update_status(f"Ошибка удаления записи: {error}", "error")
         else:
-            messagebox.showinfo("Успех", "Запись удалена")
+            self._update_status("Запись удалена", "success")
             self._load_table_data()
     
     def _refresh_databases(self):
         """Обновляет список БД"""
+        self._update_status("Поиск баз данных...", "info")
         self._auto_discover_databases()
+        self._update_status("Список баз данных обновлен", "success")
     
     def on_closing(self):
         """Обработчик закрытия окна"""
@@ -933,7 +1259,11 @@ class RecordDialog(tk.Toplevel):
         if error:
             messagebox.showerror("Ошибка", f"Ошибка сохранения записи:\n{error}")
         else:
-            messagebox.showinfo("Успех", "Запись сохранена")
+            # Обновляем статус в родительском окне
+            if self.callback:
+                parent = self.master
+                if hasattr(parent, '_update_status'):
+                    parent._update_status("Запись сохранена", "success")
             if self.callback:
                 self.callback()
             self.destroy()
