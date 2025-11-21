@@ -138,7 +138,7 @@ def main() -> None:
     git_push()
     
     # Шаг 3: Коммит в публичном репозитории
-    public_dir = root_dir / "InfoBot_Public"
+    public_dir = root_dir.parent / "InfoBot_Public"
     if public_dir.exists() and (public_dir / ".git").exists():
         print("=" * 80)
         print("КОММИТ И PUSH В ПУБЛИЧНЫЙ РЕПОЗИТОРИЙ")

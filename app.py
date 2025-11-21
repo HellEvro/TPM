@@ -55,12 +55,31 @@ if not os.path.exists('app/config.py'):
 
 from app.config import *
 
+# Конфигурация резервного копирования (значения по умолчанию)
+_DATABASE_BACKUP_DEFAULTS = {
+    'ENABLED': True,
+    'INTERVAL_MINUTES': 60,
+    'RUN_ON_START': True,
+    'AI_ENABLED': True,
+    'BOTS_ENABLED': True,
+    'BACKUP_DIR': None,
+    'MAX_RETRIES': 3,
+}
+
+if 'DATABASE_BACKUP' not in globals() or not isinstance(globals().get('DATABASE_BACKUP'), dict):
+    DATABASE_BACKUP = _DATABASE_BACKUP_DEFAULTS.copy()
+else:
+    _merged_backup_config = _DATABASE_BACKUP_DEFAULTS.copy()
+    _merged_backup_config.update(DATABASE_BACKUP)
+    DATABASE_BACKUP = _merged_backup_config
+
 import sys
 from app.telegram_notifier import TelegramNotifier
 from exchanges.exchange_factory import ExchangeFactory
 import json
 import logging
 from utils.color_logger import setup_color_logging
+from bot_engine.backup_service import get_backup_service
 
 # Проверка валидности API ключей
 def check_api_keys():
@@ -316,6 +335,93 @@ def format_stats(stats):
 stats_lock = Lock()
 # Блокировка для операций matplotlib (не потокобезопасен)
 matplotlib_lock = Lock()
+backup_scheduler_stop_event = threading.Event()
+
+
+def _run_backup_job(backup_service, backup_config):
+    """Запускает единичный цикл резервного копирования."""
+    backup_logger = logging.getLogger('BackupScheduler')
+    include_ai = backup_config.get('AI_ENABLED', True)
+    include_bots = backup_config.get('BOTS_ENABLED', True)
+
+    if not include_ai and not include_bots:
+        backup_logger.info("[Backup] Нет активных БД для резервного копирования, задание пропущено")
+        return
+
+    max_retries = backup_config.get('MAX_RETRIES', 3)
+
+    try:
+        result = backup_service.create_backup(
+            include_ai=include_ai,
+            include_bots=include_bots,
+            max_retries=max_retries
+        )
+    except Exception as exc:
+        backup_logger.exception(f"[Backup] Ошибка выполнения резервного копирования: {exc}")
+        return
+
+    timestamp = result.get('timestamp', 'unknown')
+    if result.get('success'):
+        backup_logger.info(f"[Backup] Резервное копирование завершено успешно (timestamp={timestamp})")
+    else:
+        backup_logger.warning(f"[Backup] Резервное копирование завершено с ошибками (timestamp={timestamp})")
+
+    for db_key in ('ai', 'bots'):
+        backup_info = result['backups'].get(db_key)
+        if backup_info:
+            backup_logger.info(
+                "[Backup] %s: файл %s (%.2f MB, valid=%s)",
+                db_key.upper(),
+                backup_info['path'],
+                backup_info['size_mb'],
+                'yes' if backup_info.get('valid', True) else 'no'
+            )
+
+    for warning_msg in result.get('errors', []):
+        backup_logger.warning(f"[Backup] {warning_msg}")
+
+
+def backup_scheduler_loop():
+    """Фоновый планировщик регулярных бэкапов."""
+    backup_logger = logging.getLogger('BackupScheduler')
+    backup_config = DATABASE_BACKUP or {}
+
+    if not backup_config.get('ENABLED', True):
+        backup_logger.info("[Backup] Автоматическое резервное копирование выключено настройками")
+        return
+
+    if not (backup_config.get('AI_ENABLED', True) or backup_config.get('BOTS_ENABLED', True)):
+        backup_logger.info("[Backup] Ни одна база не выбрана для резервного копирования, поток остановлен")
+        return
+
+    backup_dir = backup_config.get('BACKUP_DIR')
+
+    try:
+        backup_service = get_backup_service(backup_dir)
+    except Exception as exc:
+        backup_logger.exception(f"[Backup] Не удалось инициализировать сервис бэкапов: {exc}")
+        return
+
+    interval_minutes = backup_config.get('INTERVAL_MINUTES', 60)
+    try:
+        interval_minutes = float(interval_minutes)
+    except (TypeError, ValueError):
+        backup_logger.warning("[Backup] Некорректное значение INTERVAL_MINUTES, используется 60 минут")
+        interval_minutes = 60
+
+    interval_seconds = max(60, int(interval_minutes * 60))
+    backup_logger.info(
+        "[Backup] Планировщик запущен: каждые %s минут (%.0f секунд). Директория: %s",
+        interval_minutes,
+        interval_seconds,
+        backup_dir or 'data/backups'
+    )
+
+    if backup_config.get('RUN_ON_START', True):
+        _run_backup_job(backup_service, backup_config)
+
+    while not backup_scheduler_stop_event.wait(interval_seconds):
+        _run_backup_job(backup_service, backup_config)
 
 def background_update():
     global positions_data, last_stats_time
@@ -1859,6 +1965,13 @@ if __name__ == '__main__':
     cache_cleanup_thread = threading.Thread(target=background_cache_cleanup)
     cache_cleanup_thread.daemon = True
     cache_cleanup_thread.start()
+
+    if DATABASE_BACKUP.get('ENABLED', True) and (
+        DATABASE_BACKUP.get('AI_ENABLED', True) or DATABASE_BACKUP.get('BOTS_ENABLED', True)
+    ):
+        backup_thread = threading.Thread(target=backup_scheduler_loop, name='DatabaseBackupScheduler')
+        backup_thread.daemon = True
+        backup_thread.start()
     
     # Отключаем логи werkzeug - они не нужны и засоряют консоль
     werkzeug_logger = logging.getLogger('werkzeug')
