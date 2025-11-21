@@ -1070,15 +1070,34 @@ class AIDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_strategy_analysis_symbol ON strategy_analysis(symbol)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_strategy_analysis_created_at ON strategy_analysis(created_at)")
             
-            # ==================== ТАБЛИЦА: ОПТИМИЗИРОВАННЫЕ ПАРАМЕТРЫ ====================
+            # ==================== ТАБЛИЦА: ОПТИМИЗИРОВАННЫЕ ПАРАМЕТРЫ (НОРМАЛИЗОВАННАЯ) ====================
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS optimized_params (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     symbol TEXT,
-                    params_json TEXT NOT NULL,
+                    -- RSI параметры
+                    rsi_long_threshold REAL,
+                    rsi_short_threshold REAL,
+                    rsi_exit_long_with_trend REAL,
+                    rsi_exit_long_against_trend REAL,
+                    rsi_exit_short_with_trend REAL,
+                    rsi_exit_short_against_trend REAL,
+                    -- Risk параметры
+                    max_loss_percent REAL,
+                    take_profit_percent REAL,
+                    trailing_stop_activation REAL,
+                    trailing_stop_distance REAL,
+                    trailing_take_distance REAL,
+                    trailing_update_interval REAL,
+                    break_even_trigger REAL,
+                    break_even_protection REAL,
+                    max_position_hours REAL,
+                    -- Дополнительные параметры
                     optimization_type TEXT,
                     win_rate REAL,
                     total_pnl REAL,
+                    params_json TEXT,
+                    extra_params_json TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 )
@@ -1705,6 +1724,252 @@ class AIDatabase:
                 except sqlite3.OperationalError:
                     logger.info(f"📦 Миграция: добавляем {field_name} в blocked_params")
                     cursor.execute(f"ALTER TABLE blocked_params ADD COLUMN {field_name} {field_type}")
+            
+            # ==================== МИГРАЦИЯ: Нормализация JSON параметров в столбцы для optimized_params ====================
+            # Добавляем новые нормализованные столбцы если их нет
+            optimized_params_fields = [
+                ('rsi_long_threshold', 'REAL'),
+                ('rsi_short_threshold', 'REAL'),
+                ('rsi_exit_long_with_trend', 'REAL'),
+                ('rsi_exit_long_against_trend', 'REAL'),
+                ('rsi_exit_short_with_trend', 'REAL'),
+                ('rsi_exit_short_against_trend', 'REAL'),
+                ('max_loss_percent', 'REAL'),
+                ('take_profit_percent', 'REAL'),
+                ('trailing_stop_activation', 'REAL'),
+                ('trailing_stop_distance', 'REAL'),
+                ('trailing_take_distance', 'REAL'),
+                ('trailing_update_interval', 'REAL'),
+                ('break_even_trigger', 'REAL'),
+                ('break_even_protection', 'REAL'),
+                ('max_position_hours', 'REAL'),
+                ('extra_params_json', 'TEXT')
+            ]
+            for field_name, field_type in optimized_params_fields:
+                try:
+                    cursor.execute(f"SELECT {field_name} FROM optimized_params LIMIT 1")
+                except sqlite3.OperationalError:
+                    logger.info(f"📦 Миграция: добавляем {field_name} в optimized_params")
+                    cursor.execute(f"ALTER TABLE optimized_params ADD COLUMN {field_name} {field_type}")
+            
+            # Мигрируем данные из JSON в столбцы (если есть старые данные)
+            try:
+                cursor.execute("SELECT id, params_json FROM optimized_params WHERE params_json IS NOT NULL AND rsi_long_threshold IS NULL LIMIT 1")
+                if cursor.fetchone():
+                    logger.info("📦 Обнаружены JSON данные в optimized_params, выполняю миграцию в нормализованные столбцы...")
+                    
+                    cursor.execute("SELECT id, params_json FROM optimized_params WHERE params_json IS NOT NULL")
+                    rows = cursor.fetchall()
+                    
+                    migrated_count = 0
+                    for row in rows:
+                        try:
+                            param_id = row[0]
+                            params_json = row[1]
+                            
+                            # Парсим params
+                            params = {}
+                            if params_json:
+                                try:
+                                    params = json.loads(params_json)
+                                except:
+                                    params = {}
+                            
+                            # Извлекаем RSI параметры
+                            rsi_params = params.get('rsi_params', {}) if isinstance(params.get('rsi_params'), dict) else {}
+                            if not rsi_params:
+                                rsi_params = {k: v for k, v in params.items() if 'rsi' in k.lower() or k in ['oversold', 'overbought', 'exit_long_with_trend', 'exit_long_against_trend', 'exit_short_with_trend', 'exit_short_against_trend']}
+                            
+                            rsi_long = rsi_params.get('oversold') or rsi_params.get('rsi_long_threshold') or params.get('rsi_long_threshold')
+                            rsi_short = rsi_params.get('overbought') or rsi_params.get('rsi_short_threshold') or params.get('rsi_short_threshold')
+                            rsi_exit_long_with = rsi_params.get('exit_long_with_trend') or rsi_params.get('rsi_exit_long_with_trend') or params.get('rsi_exit_long_with_trend')
+                            rsi_exit_long_against = rsi_params.get('exit_long_against_trend') or rsi_params.get('rsi_exit_long_against_trend') or params.get('rsi_exit_long_against_trend')
+                            rsi_exit_short_with = rsi_params.get('exit_short_with_trend') or rsi_params.get('rsi_exit_short_with_trend') or params.get('rsi_exit_short_with_trend')
+                            rsi_exit_short_against = rsi_params.get('exit_short_against_trend') or rsi_params.get('rsi_exit_short_against_trend') or params.get('rsi_exit_short_against_trend')
+                            
+                            # Извлекаем Risk параметры
+                            risk_params = params.get('risk_params', {}) if isinstance(params.get('risk_params'), dict) else {}
+                            if not risk_params:
+                                risk_params = {k: v for k, v in params.items() if k in ['max_loss_percent', 'take_profit_percent', 'trailing_stop_activation', 'trailing_stop_distance', 'trailing_take_distance', 'trailing_update_interval', 'break_even_trigger', 'break_even_protection', 'max_position_hours']}
+                            
+                            max_loss = risk_params.get('max_loss_percent') or params.get('max_loss_percent')
+                            take_profit = risk_params.get('take_profit_percent') or params.get('take_profit_percent')
+                            trailing_activation = risk_params.get('trailing_stop_activation') or params.get('trailing_stop_activation')
+                            trailing_distance = risk_params.get('trailing_stop_distance') or params.get('trailing_stop_distance')
+                            trailing_take = risk_params.get('trailing_take_distance') or params.get('trailing_take_distance')
+                            trailing_interval = risk_params.get('trailing_update_interval') or params.get('trailing_update_interval')
+                            break_even_trigger = risk_params.get('break_even_trigger') or params.get('break_even_trigger')
+                            break_even_protection = risk_params.get('break_even_protection') or params.get('break_even_protection')
+                            max_hours = risk_params.get('max_position_hours') or params.get('max_position_hours')
+                            
+                            # Собираем остальные параметры в extra_params_json
+                            extra_params = {}
+                            known_fields = {
+                                'rsi_params', 'risk_params', 'rsi_long_threshold', 'rsi_short_threshold',
+                                'rsi_exit_long_with_trend', 'rsi_exit_long_against_trend',
+                                'rsi_exit_short_with_trend', 'rsi_exit_short_against_trend',
+                                'max_loss_percent', 'take_profit_percent', 'trailing_stop_activation',
+                                'trailing_stop_distance', 'trailing_take_distance', 'trailing_update_interval',
+                                'break_even_trigger', 'break_even_protection', 'max_position_hours',
+                                'oversold', 'overbought', 'exit_long_with_trend', 'exit_long_against_trend',
+                                'exit_short_with_trend', 'exit_short_against_trend', 'win_rate', 'total_pnl'
+                            }
+                            for key, value in params.items():
+                                if key not in known_fields:
+                                    extra_params[key] = value
+                            
+                            extra_params_json = json.dumps(extra_params, ensure_ascii=False) if extra_params else None
+                            
+                            # Обновляем запись
+                            cursor.execute("""
+                                UPDATE optimized_params SET
+                                    rsi_long_threshold = COALESCE(rsi_long_threshold, ?),
+                                    rsi_short_threshold = COALESCE(rsi_short_threshold, ?),
+                                    rsi_exit_long_with_trend = COALESCE(rsi_exit_long_with_trend, ?),
+                                    rsi_exit_long_against_trend = COALESCE(rsi_exit_long_against_trend, ?),
+                                    rsi_exit_short_with_trend = COALESCE(rsi_exit_short_with_trend, ?),
+                                    rsi_exit_short_against_trend = COALESCE(rsi_exit_short_against_trend, ?),
+                                    max_loss_percent = COALESCE(max_loss_percent, ?),
+                                    take_profit_percent = COALESCE(take_profit_percent, ?),
+                                    trailing_stop_activation = COALESCE(trailing_stop_activation, ?),
+                                    trailing_stop_distance = COALESCE(trailing_stop_distance, ?),
+                                    trailing_take_distance = COALESCE(trailing_take_distance, ?),
+                                    trailing_update_interval = COALESCE(trailing_update_interval, ?),
+                                    break_even_trigger = COALESCE(break_even_trigger, ?),
+                                    break_even_protection = COALESCE(break_even_protection, ?),
+                                    max_position_hours = COALESCE(max_position_hours, ?),
+                                    extra_params_json = COALESCE(extra_params_json, ?)
+                                WHERE id = ? AND rsi_long_threshold IS NULL
+                            """, (
+                                rsi_long, rsi_short, rsi_exit_long_with, rsi_exit_long_against,
+                                rsi_exit_short_with, rsi_exit_short_against,
+                                max_loss, take_profit, trailing_activation, trailing_distance,
+                                trailing_take, trailing_interval, break_even_trigger,
+                                break_even_protection, max_hours, extra_params_json,
+                                param_id
+                            ))
+                            if cursor.rowcount > 0:
+                                migrated_count += 1
+                        except Exception as e:
+                            logger.debug(f"⚠️ Ошибка миграции записи optimized_params {row[0]}: {e}")
+                            continue
+                    
+                    if migrated_count > 0:
+                        logger.info(f"✅ Миграция optimized_params завершена: {migrated_count} записей мигрировано из JSON в нормализованные столбцы")
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка миграции optimized_params: {e}")
+            
+            # ==================== МИГРАЦИЯ: Нормализация JSON параметров в столбцы для ai_decisions ====================
+            # Добавляем новые нормализованные столбцы если их нет
+            ai_decisions_fields = [
+                ('volume', 'REAL'),
+                ('volatility', 'REAL'),
+                ('volume_ratio', 'REAL'),
+                ('rsi_long_threshold', 'REAL'),
+                ('rsi_short_threshold', 'REAL'),
+                ('max_loss_percent', 'REAL'),
+                ('take_profit_percent', 'REAL'),
+                ('extra_market_data_json', 'TEXT'),
+                ('extra_decision_params_json', 'TEXT')
+            ]
+            for field_name, field_type in ai_decisions_fields:
+                try:
+                    cursor.execute(f"SELECT {field_name} FROM ai_decisions LIMIT 1")
+                except sqlite3.OperationalError:
+                    logger.info(f"📦 Миграция: добавляем {field_name} в ai_decisions")
+                    cursor.execute(f"ALTER TABLE ai_decisions ADD COLUMN {field_name} {field_type}")
+            
+            # Мигрируем данные из JSON в столбцы (если есть старые данные)
+            try:
+                cursor.execute("SELECT id, market_data_json, decision_params_json FROM ai_decisions WHERE (market_data_json IS NOT NULL OR decision_params_json IS NOT NULL) AND (volume IS NULL OR rsi_long_threshold IS NULL) LIMIT 1")
+                if cursor.fetchone():
+                    logger.info("📦 Обнаружены JSON данные в ai_decisions, выполняю миграцию в нормализованные столбцы...")
+                    
+                    cursor.execute("SELECT id, market_data_json, decision_params_json FROM ai_decisions WHERE market_data_json IS NOT NULL OR decision_params_json IS NOT NULL")
+                    rows = cursor.fetchall()
+                    
+                    migrated_count = 0
+                    for row in rows:
+                        try:
+                            decision_id = row[0]
+                            market_data_json = row[1]
+                            decision_params_json = row[2] if len(row) > 2 else None
+                            
+                            # Парсим market_data
+                            market_data = {}
+                            if market_data_json:
+                                try:
+                                    market_data = json.loads(market_data_json)
+                                except:
+                                    market_data = {}
+                            
+                            volume = market_data.get('volume') if isinstance(market_data, dict) else None
+                            volatility = market_data.get('volatility') if isinstance(market_data, dict) else None
+                            volume_ratio = market_data.get('volume_ratio') if isinstance(market_data, dict) else None
+                            
+                            # Собираем остальные поля market_data в extra_market_data_json
+                            extra_market_data = {}
+                            if isinstance(market_data, dict):
+                                known_market_keys = {'volume', 'volatility', 'volume_ratio', 'rsi', 'trend', 'price', 'signal', 'confidence'}
+                                for key, value in market_data.items():
+                                    if key not in known_market_keys:
+                                        extra_market_data[key] = value
+                            
+                            extra_market_data_json = json.dumps(extra_market_data, ensure_ascii=False) if extra_market_data else None
+                            
+                            # Парсим decision_params
+                            decision_params = {}
+                            if decision_params_json:
+                                try:
+                                    decision_params = json.loads(decision_params_json)
+                                except:
+                                    decision_params = {}
+                            
+                            rsi_long_threshold = decision_params.get('rsi_long_threshold') if isinstance(decision_params, dict) else None
+                            rsi_short_threshold = decision_params.get('rsi_short_threshold') if isinstance(decision_params, dict) else None
+                            max_loss_percent = decision_params.get('max_loss_percent') if isinstance(decision_params, dict) else None
+                            take_profit_percent = decision_params.get('take_profit_percent') if isinstance(decision_params, dict) else None
+                            
+                            # Собираем остальные поля decision_params в extra_decision_params_json
+                            extra_decision_params = {}
+                            if isinstance(decision_params, dict):
+                                known_params_keys = {'rsi_long_threshold', 'rsi_short_threshold', 'max_loss_percent', 'take_profit_percent'}
+                                for key, value in decision_params.items():
+                                    if key not in known_params_keys:
+                                        extra_decision_params[key] = value
+                            
+                            extra_decision_params_json = json.dumps(extra_decision_params, ensure_ascii=False) if extra_decision_params else None
+                            
+                            # Обновляем запись только если поля еще не заполнены
+                            cursor.execute("""
+                                UPDATE ai_decisions SET
+                                    volume = COALESCE(volume, ?),
+                                    volatility = COALESCE(volatility, ?),
+                                    volume_ratio = COALESCE(volume_ratio, ?),
+                                    rsi_long_threshold = COALESCE(rsi_long_threshold, ?),
+                                    rsi_short_threshold = COALESCE(rsi_short_threshold, ?),
+                                    max_loss_percent = COALESCE(max_loss_percent, ?),
+                                    take_profit_percent = COALESCE(take_profit_percent, ?),
+                                    extra_market_data_json = COALESCE(extra_market_data_json, ?),
+                                    extra_decision_params_json = COALESCE(extra_decision_params_json, ?)
+                                WHERE id = ? AND (volume IS NULL OR rsi_long_threshold IS NULL)
+                            """, (
+                                volume, volatility, volume_ratio,
+                                rsi_long_threshold, rsi_short_threshold,
+                                max_loss_percent, take_profit_percent,
+                                extra_market_data_json, extra_decision_params_json,
+                                decision_id
+                            ))
+                            if cursor.rowcount > 0:
+                                migrated_count += 1
+                        except Exception as e:
+                            logger.debug(f"⚠️ Ошибка миграции записи ai_decisions {row[0]}: {e}")
+                            continue
+                    
+                    if migrated_count > 0:
+                        logger.info(f"✅ Миграция ai_decisions завершена: {migrated_count} записей мигрировано из JSON в нормализованные столбцы")
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка миграции ai_decisions: {e}")
             
             conn.commit()
         except Exception as e:
@@ -2429,18 +2694,72 @@ class AIDatabase:
     # ==================== МЕТОДЫ ДЛЯ РЕШЕНИЙ AI ====================
     
     def save_ai_decision(self, decision: Dict[str, Any]) -> int:
-        """Сохраняет решение AI"""
+        """Сохраняет решение AI с нормализованными полями"""
         with self.lock:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 now = datetime.now().isoformat()
                 
+                # Извлекаем данные из market_data
+                market_data = decision.get('market_data', {})
+                if isinstance(market_data, str):
+                    try:
+                        market_data = json.loads(market_data)
+                    except:
+                        market_data = {}
+                
+                volume = market_data.get('volume') if isinstance(market_data, dict) else None
+                volatility = market_data.get('volatility') if isinstance(market_data, dict) else None
+                volume_ratio = market_data.get('volume_ratio') if isinstance(market_data, dict) else None
+                
+                # Собираем остальные поля market_data в extra_market_data_json
+                extra_market_data = {}
+                if isinstance(market_data, dict):
+                    known_market_keys = {'volume', 'volatility', 'volume_ratio', 'rsi', 'trend', 'price', 'signal', 'confidence'}
+                    for key, value in market_data.items():
+                        if key not in known_market_keys:
+                            extra_market_data[key] = value
+                
+                extra_market_data_json = json.dumps(extra_market_data, ensure_ascii=False) if extra_market_data else None
+                
+                # Извлекаем данные из decision_params/params
+                decision_params = decision.get('params') or decision.get('decision_params', {})
+                if isinstance(decision_params, str):
+                    try:
+                        decision_params = json.loads(decision_params)
+                    except:
+                        decision_params = {}
+                
+                rsi_long_threshold = decision_params.get('rsi_long_threshold') if isinstance(decision_params, dict) else None
+                rsi_short_threshold = decision_params.get('rsi_short_threshold') if isinstance(decision_params, dict) else None
+                max_loss_percent = decision_params.get('max_loss_percent') if isinstance(decision_params, dict) else None
+                take_profit_percent = decision_params.get('take_profit_percent') if isinstance(decision_params, dict) else None
+                
+                # Собираем остальные поля decision_params в extra_decision_params_json
+                extra_decision_params = {}
+                if isinstance(decision_params, dict):
+                    known_params_keys = {'rsi_long_threshold', 'rsi_short_threshold', 'max_loss_percent', 'take_profit_percent'}
+                    for key, value in decision_params.items():
+                        if key not in known_params_keys:
+                            extra_decision_params[key] = value
+                
+                extra_decision_params_json = json.dumps(extra_decision_params, ensure_ascii=False) if extra_decision_params else None
+                
+                # Сохраняем полные JSON для обратной совместимости
+                market_data_json = json.dumps(market_data, ensure_ascii=False) if market_data else None
+                decision_params_json = json.dumps(decision_params, ensure_ascii=False) if decision_params else None
+                
                 cursor.execute("""
                     INSERT OR REPLACE INTO ai_decisions (
                         decision_id, symbol, decision_type, signal, confidence,
-                        rsi, trend, price, market_data_json, decision_params_json,
+                        rsi, trend, price,
+                        volume, volatility, volume_ratio,
+                        rsi_long_threshold, rsi_short_threshold,
+                        max_loss_percent, take_profit_percent,
+                        market_data_json, decision_params_json,
+                        extra_market_data_json, extra_decision_params_json,
                         created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     decision.get('decision_id'),
                     decision.get('symbol'),
@@ -2450,8 +2769,17 @@ class AIDatabase:
                     decision.get('rsi'),
                     decision.get('trend'),
                     decision.get('price'),
-                    json.dumps(decision.get('market_data'), ensure_ascii=False) if decision.get('market_data') else None,
-                    json.dumps(decision.get('params'), ensure_ascii=False) if decision.get('params') else None,
+                    volume,
+                    volatility,
+                    volume_ratio,
+                    rsi_long_threshold,
+                    rsi_short_threshold,
+                    max_loss_percent,
+                    take_profit_percent,
+                    market_data_json,
+                    decision_params_json,
+                    extra_market_data_json,
+                    extra_decision_params_json,
                     now
                 ))
                 
@@ -2471,7 +2799,7 @@ class AIDatabase:
                 """, (pnl, 1 if is_successful else 0, now, decision_id))
     
     def get_ai_decisions(self, status: Optional[str] = None, symbol: Optional[str] = None) -> List[Dict]:
-        """Получает решения AI с фильтрацией"""
+        """Получает решения AI с фильтрацией, восстанавливая структуру market_data и params"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             
@@ -2494,10 +2822,60 @@ class AIDatabase:
             result = []
             for row in rows:
                 decision = dict(row)
+                
+                # Восстанавливаем market_data из нормализованных полей или JSON
+                market_data = {}
                 if decision.get('market_data_json'):
-                    decision['market_data'] = json.loads(decision['market_data_json'])
+                    try:
+                        market_data = json.loads(decision['market_data_json'])
+                    except:
+                        market_data = {}
+                
+                # Добавляем нормализованные поля в market_data
+                if decision.get('volume') is not None:
+                    market_data['volume'] = decision['volume']
+                if decision.get('volatility') is not None:
+                    market_data['volatility'] = decision['volatility']
+                if decision.get('volume_ratio') is not None:
+                    market_data['volume_ratio'] = decision['volume_ratio']
+                
+                # Добавляем extra_market_data
+                if decision.get('extra_market_data_json'):
+                    try:
+                        extra_market_data = json.loads(decision['extra_market_data_json'])
+                        market_data.update(extra_market_data)
+                    except:
+                        pass
+                
+                decision['market_data'] = market_data if market_data else None
+                
+                # Восстанавливаем params из нормализованных полей или JSON
+                decision_params = {}
                 if decision.get('decision_params_json'):
-                    decision['params'] = json.loads(decision['decision_params_json'])
+                    try:
+                        decision_params = json.loads(decision['decision_params_json'])
+                    except:
+                        decision_params = {}
+                
+                # Добавляем нормализованные поля в params
+                if decision.get('rsi_long_threshold') is not None:
+                    decision_params['rsi_long_threshold'] = decision['rsi_long_threshold']
+                if decision.get('rsi_short_threshold') is not None:
+                    decision_params['rsi_short_threshold'] = decision['rsi_short_threshold']
+                if decision.get('max_loss_percent') is not None:
+                    decision_params['max_loss_percent'] = decision['max_loss_percent']
+                if decision.get('take_profit_percent') is not None:
+                    decision_params['take_profit_percent'] = decision['take_profit_percent']
+                
+                # Добавляем extra_decision_params
+                if decision.get('extra_decision_params_json'):
+                    try:
+                        extra_decision_params = json.loads(decision['extra_decision_params_json'])
+                        decision_params.update(extra_decision_params)
+                    except:
+                        pass
+                
+                decision['params'] = decision_params if decision_params else None
                 decision['status'] = 'SUCCESS' if decision.get('result_successful') else 'FAILED' if decision.get('result_successful') is not None else 'PENDING'
                 result.append(decision)
             
@@ -4361,11 +4739,61 @@ class AIDatabase:
     # ==================== МЕТОДЫ ДЛЯ ОПТИМИЗИРОВАННЫХ ПАРАМЕТРОВ ====================
     
     def save_optimized_params(self, symbol: Optional[str], params: Dict, optimization_type: Optional[str] = None) -> int:
-        """Сохраняет оптимизированные параметры"""
+        """Сохраняет оптимизированные параметры с нормализованными полями"""
         with self.lock:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 now = datetime.now().isoformat()
+                
+                # Извлекаем RSI параметры
+                rsi_params = params.get('rsi_params', {}) if isinstance(params.get('rsi_params'), dict) else {}
+                if not rsi_params:
+                    # Пытаемся извлечь напрямую из params
+                    rsi_params = {k: v for k, v in params.items() if 'rsi' in k.lower() or k in ['oversold', 'overbought', 'exit_long_with_trend', 'exit_long_against_trend', 'exit_short_with_trend', 'exit_short_against_trend']}
+                
+                rsi_long = rsi_params.get('oversold') or rsi_params.get('rsi_long_threshold') or params.get('rsi_long_threshold')
+                rsi_short = rsi_params.get('overbought') or rsi_params.get('rsi_short_threshold') or params.get('rsi_short_threshold')
+                rsi_exit_long_with = rsi_params.get('exit_long_with_trend') or rsi_params.get('rsi_exit_long_with_trend') or params.get('rsi_exit_long_with_trend')
+                rsi_exit_long_against = rsi_params.get('exit_long_against_trend') or rsi_params.get('rsi_exit_long_against_trend') or params.get('rsi_exit_long_against_trend')
+                rsi_exit_short_with = rsi_params.get('exit_short_with_trend') or rsi_params.get('rsi_exit_short_with_trend') or params.get('rsi_exit_short_with_trend')
+                rsi_exit_short_against = rsi_params.get('exit_short_against_trend') or rsi_params.get('rsi_exit_short_against_trend') or params.get('rsi_exit_short_against_trend')
+                
+                # Извлекаем Risk параметры
+                risk_params = params.get('risk_params', {}) if isinstance(params.get('risk_params'), dict) else {}
+                if not risk_params:
+                    # Пытаемся извлечь напрямую из params
+                    risk_params = {k: v for k, v in params.items() if k in ['max_loss_percent', 'take_profit_percent', 'trailing_stop_activation', 'trailing_stop_distance', 'trailing_take_distance', 'trailing_update_interval', 'break_even_trigger', 'break_even_protection', 'max_position_hours']}
+                
+                max_loss = risk_params.get('max_loss_percent') or params.get('max_loss_percent')
+                take_profit = risk_params.get('take_profit_percent') or params.get('take_profit_percent')
+                trailing_activation = risk_params.get('trailing_stop_activation') or params.get('trailing_stop_activation')
+                trailing_distance = risk_params.get('trailing_stop_distance') or params.get('trailing_stop_distance')
+                trailing_take = risk_params.get('trailing_take_distance') or params.get('trailing_take_distance')
+                trailing_interval = risk_params.get('trailing_update_interval') or params.get('trailing_update_interval')
+                break_even_trigger = risk_params.get('break_even_trigger') or params.get('break_even_trigger')
+                break_even_protection = risk_params.get('break_even_protection') or params.get('break_even_protection')
+                max_hours = risk_params.get('max_position_hours') or params.get('max_position_hours')
+                
+                # Собираем остальные параметры в extra_params_json
+                extra_params = {}
+                known_fields = {
+                    'rsi_params', 'risk_params', 'rsi_long_threshold', 'rsi_short_threshold',
+                    'rsi_exit_long_with_trend', 'rsi_exit_long_against_trend',
+                    'rsi_exit_short_with_trend', 'rsi_exit_short_against_trend',
+                    'max_loss_percent', 'take_profit_percent', 'trailing_stop_activation',
+                    'trailing_stop_distance', 'trailing_take_distance', 'trailing_update_interval',
+                    'break_even_trigger', 'break_even_protection', 'max_position_hours',
+                    'oversold', 'overbought', 'exit_long_with_trend', 'exit_long_against_trend',
+                    'exit_short_with_trend', 'exit_short_against_trend', 'win_rate', 'total_pnl'
+                }
+                for key, value in params.items():
+                    if key not in known_fields:
+                        extra_params[key] = value
+                
+                extra_params_json = json.dumps(extra_params, ensure_ascii=False) if extra_params else None
+                
+                # Сохраняем полный JSON для обратной совместимости
+                params_json = json.dumps(params, ensure_ascii=False)
                 
                 # Проверяем существующие параметры
                 cursor.execute("""
@@ -4377,13 +4805,24 @@ class AIDatabase:
                     # Обновляем существующие
                     cursor.execute("""
                         UPDATE optimized_params SET
-                            params_json = ?, win_rate = ?, total_pnl = ?, updated_at = ?
+                            rsi_long_threshold = ?, rsi_short_threshold = ?,
+                            rsi_exit_long_with_trend = ?, rsi_exit_long_against_trend = ?,
+                            rsi_exit_short_with_trend = ?, rsi_exit_short_against_trend = ?,
+                            max_loss_percent = ?, take_profit_percent = ?,
+                            trailing_stop_activation = ?, trailing_stop_distance = ?,
+                            trailing_take_distance = ?, trailing_update_interval = ?,
+                            break_even_trigger = ?, break_even_protection = ?,
+                            max_position_hours = ?, win_rate = ?, total_pnl = ?,
+                            params_json = ?, extra_params_json = ?, updated_at = ?
                         WHERE id = ?
                     """, (
-                        json.dumps(params, ensure_ascii=False),
-                        params.get('win_rate'),
-                        params.get('total_pnl'),
-                        now,
+                        rsi_long, rsi_short, rsi_exit_long_with, rsi_exit_long_against,
+                        rsi_exit_short_with, rsi_exit_short_against,
+                        max_loss, take_profit, trailing_activation, trailing_distance,
+                        trailing_take, trailing_interval, break_even_trigger,
+                        break_even_protection, max_hours,
+                        params.get('win_rate'), params.get('total_pnl'),
+                        params_json, extra_params_json, now,
                         existing['id']
                     ))
                     return existing['id']
@@ -4391,44 +4830,136 @@ class AIDatabase:
                     # Создаем новые
                     cursor.execute("""
                         INSERT INTO optimized_params (
-                            symbol, params_json, optimization_type, win_rate, total_pnl, created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                            symbol, rsi_long_threshold, rsi_short_threshold,
+                            rsi_exit_long_with_trend, rsi_exit_long_against_trend,
+                            rsi_exit_short_with_trend, rsi_exit_short_against_trend,
+                            max_loss_percent, take_profit_percent,
+                            trailing_stop_activation, trailing_stop_distance,
+                            trailing_take_distance, trailing_update_interval,
+                            break_even_trigger, break_even_protection,
+                            max_position_hours, optimization_type,
+                            win_rate, total_pnl, params_json, extra_params_json,
+                            created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
                         symbol,
-                        json.dumps(params, ensure_ascii=False),
+                        rsi_long, rsi_short, rsi_exit_long_with, rsi_exit_long_against,
+                        rsi_exit_short_with, rsi_exit_short_against,
+                        max_loss, take_profit, trailing_activation, trailing_distance,
+                        trailing_take, trailing_interval, break_even_trigger,
+                        break_even_protection, max_hours,
                         optimization_type,
-                        params.get('win_rate'),
-                        params.get('total_pnl'),
-                        now,
-                        now
+                        params.get('win_rate'), params.get('total_pnl'),
+                        params_json, extra_params_json,
+                        now, now
                     ))
                     return cursor.lastrowid
     
     def get_optimized_params(self, symbol: Optional[str] = None, optimization_type: Optional[str] = None) -> Optional[Dict]:
-        """Получает оптимизированные параметры"""
+        """Получает оптимизированные параметры, восстанавливая структуру params"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             
             query = "SELECT * FROM optimized_params WHERE 1=1"
-            params = []
+            query_params = []
             
             if symbol:
                 query += " AND symbol = ?"
-                params.append(symbol)
+                query_params.append(symbol)
             
             if optimization_type:
                 query += " AND optimization_type = ?"
-                params.append(optimization_type)
+                query_params.append(optimization_type)
             
             query += " ORDER BY updated_at DESC LIMIT 1"
             
-            cursor.execute(query, params)
+            cursor.execute(query, query_params)
             row = cursor.fetchone()
             
             if row:
                 result = dict(row)
+                
+                # Восстанавливаем params из нормализованных полей или JSON
+                params = {}
                 if result.get('params_json'):
-                    result['params'] = json.loads(result['params_json'])
+                    try:
+                        params = json.loads(result['params_json'])
+                    except:
+                        params = {}
+                
+                # Добавляем нормализованные RSI параметры
+                if result.get('rsi_long_threshold') is not None:
+                    if 'rsi_params' not in params:
+                        params['rsi_params'] = {}
+                    params['rsi_params']['rsi_long_threshold'] = result['rsi_long_threshold']
+                if result.get('rsi_short_threshold') is not None:
+                    if 'rsi_params' not in params:
+                        params['rsi_params'] = {}
+                    params['rsi_params']['rsi_short_threshold'] = result['rsi_short_threshold']
+                if result.get('rsi_exit_long_with_trend') is not None:
+                    if 'rsi_params' not in params:
+                        params['rsi_params'] = {}
+                    params['rsi_params']['rsi_exit_long_with_trend'] = result['rsi_exit_long_with_trend']
+                if result.get('rsi_exit_long_against_trend') is not None:
+                    if 'rsi_params' not in params:
+                        params['rsi_params'] = {}
+                    params['rsi_params']['rsi_exit_long_against_trend'] = result['rsi_exit_long_against_trend']
+                if result.get('rsi_exit_short_with_trend') is not None:
+                    if 'rsi_params' not in params:
+                        params['rsi_params'] = {}
+                    params['rsi_params']['rsi_exit_short_with_trend'] = result['rsi_exit_short_with_trend']
+                if result.get('rsi_exit_short_against_trend') is not None:
+                    if 'rsi_params' not in params:
+                        params['rsi_params'] = {}
+                    params['rsi_params']['rsi_exit_short_against_trend'] = result['rsi_exit_short_against_trend']
+                
+                # Добавляем нормализованные Risk параметры
+                if result.get('max_loss_percent') is not None:
+                    if 'risk_params' not in params:
+                        params['risk_params'] = {}
+                    params['risk_params']['max_loss_percent'] = result['max_loss_percent']
+                if result.get('take_profit_percent') is not None:
+                    if 'risk_params' not in params:
+                        params['risk_params'] = {}
+                    params['risk_params']['take_profit_percent'] = result['take_profit_percent']
+                if result.get('trailing_stop_activation') is not None:
+                    if 'risk_params' not in params:
+                        params['risk_params'] = {}
+                    params['risk_params']['trailing_stop_activation'] = result['trailing_stop_activation']
+                if result.get('trailing_stop_distance') is not None:
+                    if 'risk_params' not in params:
+                        params['risk_params'] = {}
+                    params['risk_params']['trailing_stop_distance'] = result['trailing_stop_distance']
+                if result.get('trailing_take_distance') is not None:
+                    if 'risk_params' not in params:
+                        params['risk_params'] = {}
+                    params['risk_params']['trailing_take_distance'] = result['trailing_take_distance']
+                if result.get('trailing_update_interval') is not None:
+                    if 'risk_params' not in params:
+                        params['risk_params'] = {}
+                    params['risk_params']['trailing_update_interval'] = result['trailing_update_interval']
+                if result.get('break_even_trigger') is not None:
+                    if 'risk_params' not in params:
+                        params['risk_params'] = {}
+                    params['risk_params']['break_even_trigger'] = result['break_even_trigger']
+                if result.get('break_even_protection') is not None:
+                    if 'risk_params' not in params:
+                        params['risk_params'] = {}
+                    params['risk_params']['break_even_protection'] = result['break_even_protection']
+                if result.get('max_position_hours') is not None:
+                    if 'risk_params' not in params:
+                        params['risk_params'] = {}
+                    params['risk_params']['max_position_hours'] = result['max_position_hours']
+                
+                # Добавляем extra_params
+                if result.get('extra_params_json'):
+                    try:
+                        extra_params = json.loads(result['extra_params_json'])
+                        params.update(extra_params)
+                    except:
+                        pass
+                
+                result['params'] = params
                 return result
             
             return None
