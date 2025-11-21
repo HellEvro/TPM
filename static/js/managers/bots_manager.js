@@ -5911,12 +5911,6 @@ class BotsManager {
             console.log('[BotsManager] 🧪 Тестовый сервер:', useTestServerEl1.checked);
         }
         
-        const maxRiskEl = document.getElementById('maxRiskPerTrade');
-        if (maxRiskEl) {
-            maxRiskEl.value = autoBotConfig.max_risk_per_trade || 2.0;
-            console.log('[BotsManager] ⚠️ Макс. риск на сделку:', maxRiskEl.value);
-        }
-        
         // ==========================================
         // ЗАЩИТНЫЕ МЕХАНИЗМЫ
         // ==========================================
@@ -6545,7 +6539,6 @@ class BotsManager {
             'exitScamMultiCandlePercent': 'exit_scam_multi_candle_percent',
             'tradingEnabled': 'trading_enabled',
             'useTestServer': 'use_test_server',
-            'maxRiskPerTrade': 'max_risk_per_trade',
             'enhancedRsiEnabled': 'enhanced_rsi_enabled',
             'enhancedRsiVolumeConfirm': 'enhanced_rsi_require_volume_confirmation',
             'enhancedRsiDivergenceConfirm': 'enhanced_rsi_require_divergence_confirmation',
@@ -6885,8 +6878,7 @@ class BotsManager {
                 check_interval: config.autoBot.check_interval,
                 // Торговые настройки (перенесены из отдельного блока)
                 trading_enabled: config.autoBot.trading_enabled,
-                use_test_server: config.autoBot.use_test_server,
-                max_risk_per_trade: config.autoBot.max_risk_per_trade
+                use_test_server: config.autoBot.use_test_server
             };
             
             await this.sendConfigUpdate('auto-bot', tradingParams, 'Торговые параметры');
@@ -7341,7 +7333,6 @@ class BotsManager {
                     max_rsi_high: 65,
                     trading_enabled: true,
                     use_test_server: false,
-                    max_risk_per_trade: 2.0,
                     enhanced_rsi_enabled: true,
                     enhanced_rsi_require_volume_confirmation: true,
                     enhanced_rsi_require_divergence_confirmation: false,
@@ -8450,7 +8441,6 @@ class BotsManager {
             'rsi_exit_short': window.languageUtils?.getCurrentLanguage() === 'en' ? 'RSI exit from SHORT' : 'RSI выход из SHORT',
             'default_position_size': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Default position size' : 'Размер позиции по умолчанию',
             'check_interval': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Check interval (min)' : 'Интервал проверки (мин)',
-            'max_risk_per_trade': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Max risk per trade (%)' : 'Макс. риск на сделку (%)',
             'max_loss_percent': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Max loss (%)' : 'Макс. убыток (%)',
             'trailing_stop_activation': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Trailing stop activation (%)' : 'Активация трейлинг-стопа (%)',
             'trailing_stop_distance': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Trailing stop distance (%)' : 'Расстояние трейлинг-стопа (%)',
