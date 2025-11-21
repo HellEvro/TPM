@@ -599,7 +599,80 @@ class BotsDatabase:
             # Миграция: добавляем новые поля если их нет
             self._migrate_schema(cursor, conn)
             
-            # ==================== ТАБЛИЦА: СОСТОЯНИЕ БОТОВ ====================
+            # ==================== ТАБЛИЦА: БОТЫ (НОРМАЛИЗОВАННАЯ СТРУКТУРА) ====================
+            # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: одна строка = один бот со всеми полями
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bots (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL UNIQUE,
+                    status TEXT NOT NULL,
+                    auto_managed INTEGER DEFAULT 0,
+                    volume_mode TEXT,
+                    volume_value REAL,
+                    entry_price REAL,
+                    entry_time TEXT,
+                    entry_timestamp REAL,
+                    position_side TEXT,
+                    position_size REAL,
+                    position_size_coins REAL,
+                    position_start_time TEXT,
+                    unrealized_pnl REAL DEFAULT 0.0,
+                    unrealized_pnl_usdt REAL DEFAULT 0.0,
+                    realized_pnl REAL DEFAULT 0.0,
+                    leverage REAL DEFAULT 1.0,
+                    margin_usdt REAL,
+                    max_profit_achieved REAL DEFAULT 0.0,
+                    trailing_stop_price REAL,
+                    trailing_activation_threshold REAL,
+                    trailing_activation_profit REAL DEFAULT 0.0,
+                    trailing_locked_profit REAL DEFAULT 0.0,
+                    trailing_active INTEGER DEFAULT 0,
+                    trailing_max_profit_usdt REAL DEFAULT 0.0,
+                    trailing_step_usdt REAL,
+                    trailing_step_price REAL,
+                    trailing_steps INTEGER DEFAULT 0,
+                    trailing_reference_price REAL,
+                    trailing_last_update_ts REAL DEFAULT 0.0,
+                    trailing_take_profit_price REAL,
+                    break_even_activated INTEGER DEFAULT 0,
+                    break_even_stop_price REAL,
+                    order_id TEXT,
+                    current_price REAL,
+                    last_price REAL,
+                    last_rsi REAL,
+                    last_trend TEXT,
+                    last_signal_time TEXT,
+                    last_bar_timestamp REAL,
+                    entry_trend TEXT,
+                    opened_by_autobot INTEGER DEFAULT 0,
+                    bot_id TEXT,
+                    extra_data_json TEXT,
+                    updated_at TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для bots
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bots_symbol ON bots(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bots_status ON bots(status)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bots_updated ON bots(updated_at)")
+            
+            # ==================== ТАБЛИЦА: КОНФИГУРАЦИЯ АВТОБОТА ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS auto_bot_config (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    key TEXT UNIQUE NOT NULL,
+                    value TEXT,
+                    updated_at TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для auto_bot_config
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_auto_bot_config_key ON auto_bot_config(key)")
+            
+            # ==================== ТАБЛИЦА: СОСТОЯНИЕ БОТОВ (СТАРАЯ, ДЛЯ МИГРАЦИИ) ====================
+            # Оставляем для обратной совместимости и миграции
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS bots_state (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -615,21 +688,26 @@ class BotsDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_bots_state_updated ON bots_state(updated_at)")
             
             # ==================== ТАБЛИЦА: РЕЕСТР ПОЗИЦИЙ ====================
+            # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: одна строка = одна позиция
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS bot_positions_registry (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    bot_id TEXT NOT NULL,
+                    bot_id TEXT NOT NULL UNIQUE,
                     symbol TEXT NOT NULL,
-                    position_data_json TEXT NOT NULL,
+                    side TEXT NOT NULL,
+                    entry_price REAL NOT NULL,
+                    quantity REAL NOT NULL,
+                    opened_at TEXT NOT NULL,
+                    managed_by_bot INTEGER DEFAULT 1,
                     updated_at TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    UNIQUE(bot_id, symbol)
+                    created_at TEXT NOT NULL
                 )
             """)
             
             # Индексы для bot_positions_registry
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_bot_id ON bot_positions_registry(bot_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_symbol ON bot_positions_registry(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_side ON bot_positions_registry(side)")
             
             # ==================== ТАБЛИЦА: RSI КЭШ ====================
             cursor.execute("""
@@ -660,12 +738,42 @@ class BotsDatabase:
             # Индексы для process_state
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_process_state_key ON process_state(key)")
             
-            # ==================== ТАБЛИЦА: ИНДИВИДУАЛЬНЫЕ НАСТРОЙКИ МОНЕТ ====================
+            # ==================== ТАБЛИЦА: ИНДИВИДУАЛЬНЫЕ НАСТРОЙКИ МОНЕТ (НОРМАЛИЗОВАННАЯ) ====================
+            # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: все настройки в отдельных столбцах
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS individual_coin_settings (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     symbol TEXT UNIQUE NOT NULL,
-                    settings_json TEXT NOT NULL,
+                    -- RSI пороги входа
+                    rsi_long_threshold INTEGER,
+                    rsi_short_threshold INTEGER,
+                    -- RSI пороги выхода
+                    rsi_exit_long_with_trend INTEGER,
+                    rsi_exit_long_against_trend INTEGER,
+                    rsi_exit_short_with_trend INTEGER,
+                    rsi_exit_short_against_trend INTEGER,
+                    -- Риск-менеджмент
+                    max_loss_percent REAL,
+                    take_profit_percent REAL,
+                    -- Trailing stop
+                    trailing_stop_activation REAL,
+                    trailing_stop_distance REAL,
+                    trailing_take_distance REAL,
+                    trailing_update_interval REAL,
+                    -- Break even
+                    break_even_trigger REAL,
+                    break_even_protection REAL,
+                    -- Ограничения
+                    max_position_hours REAL,
+                    -- RSI временной фильтр
+                    rsi_time_filter_enabled INTEGER DEFAULT 0,
+                    rsi_time_filter_candles INTEGER,
+                    rsi_time_filter_upper INTEGER,
+                    rsi_time_filter_lower INTEGER,
+                    -- Фильтры тренда
+                    avoid_down_trend INTEGER DEFAULT 0,
+                    -- Дополнительные настройки в JSON (для будущих расширений)
+                    extra_settings_json TEXT,
                     updated_at TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 )
@@ -777,29 +885,475 @@ class BotsDatabase:
         ```
         """
         try:
-            # В будущем здесь можно добавлять новые поля в существующие таблицы
-            # Пока схема новая, миграция не требуется
+            # ==================== МИГРАЦИЯ: bot_positions_registry из EAV в нормализованный формат ====================
+            # Проверяем, есть ли старая структура (EAV формат с position_data_json)
+            try:
+                cursor.execute("SELECT position_data_json FROM bot_positions_registry LIMIT 1")
+                # Если запрос выполнился - значит старая структура
+                logger.info("📦 Обнаружена старая EAV структура bot_positions_registry, выполняю миграцию...")
+                
+                # Загружаем все данные из старой структуры
+                cursor.execute("SELECT bot_id, symbol, position_data_json, updated_at, created_at FROM bot_positions_registry")
+                old_rows = cursor.fetchall()
+                
+                if old_rows:
+                    # Группируем данные по bot_id (в EAV формате один bot_id имеет несколько строк)
+                    positions_dict = {}
+                    for row in old_rows:
+                        bot_id = row[0]
+                        attr_name = row[1]  # Это название атрибута (entry_price, quantity и т.д.)
+                        attr_value = row[2]  # Это значение атрибута в JSON
+                        updated_at = row[3]
+                        created_at = row[4]
+                        
+                        if bot_id not in positions_dict:
+                            positions_dict[bot_id] = {
+                                'updated_at': updated_at,
+                                'created_at': created_at
+                            }
+                        
+                        # Парсим значение атрибута
+                        try:
+                            value = json.loads(attr_value)
+                            positions_dict[bot_id][attr_name] = value
+                        except:
+                            positions_dict[bot_id][attr_name] = attr_value
+                    
+                    # Удаляем старую таблицу
+                    cursor.execute("DROP TABLE IF EXISTS bot_positions_registry")
+                    
+                    # Создаем новую таблицу с нормализованной структурой
+                    cursor.execute("""
+                        CREATE TABLE bot_positions_registry (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            bot_id TEXT NOT NULL UNIQUE,
+                            symbol TEXT NOT NULL,
+                            side TEXT NOT NULL,
+                            entry_price REAL NOT NULL,
+                            quantity REAL NOT NULL,
+                            opened_at TEXT NOT NULL,
+                            managed_by_bot INTEGER DEFAULT 1,
+                            updated_at TEXT NOT NULL,
+                            created_at TEXT NOT NULL
+                        )
+                    """)
+                    
+                    # Создаем индексы
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_bot_id ON bot_positions_registry(bot_id)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_symbol ON bot_positions_registry(symbol)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_side ON bot_positions_registry(side)")
+                    
+                    # Вставляем данные в новую структуру
+                    migrated_count = 0
+                    for bot_id, pos_data in positions_dict.items():
+                        try:
+                            # Извлекаем значения полей
+                            symbol = pos_data.get('symbol', '')
+                            side = pos_data.get('side', 'LONG')
+                            entry_price = pos_data.get('entry_price', 0.0)
+                            quantity = pos_data.get('quantity', 0.0)
+                            opened_at = pos_data.get('opened_at', datetime.now().isoformat())
+                            managed_by_bot = 1 if pos_data.get('managed_by_bot', True) else 0
+                            updated_at = pos_data.get('updated_at', datetime.now().isoformat())
+                            created_at = pos_data.get('created_at', datetime.now().isoformat())
+                            
+                            # Вставляем в новую таблицу
+                            cursor.execute("""
+                                INSERT INTO bot_positions_registry 
+                                (bot_id, symbol, side, entry_price, quantity, opened_at, managed_by_bot, updated_at, created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (bot_id, symbol, side, entry_price, quantity, opened_at, managed_by_bot, updated_at, created_at))
+                            migrated_count += 1
+                        except Exception as e:
+                            logger.warning(f"⚠️ Ошибка миграции позиции {bot_id}: {e}")
+                            continue
+                    
+                    logger.info(f"✅ Миграция bot_positions_registry завершена: {migrated_count} позиций мигрировано из EAV в нормализованный формат")
+                else:
+                    # Таблица пуста, просто пересоздаем с новой структурой
+                    cursor.execute("DROP TABLE IF EXISTS bot_positions_registry")
+                    cursor.execute("""
+                        CREATE TABLE bot_positions_registry (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            bot_id TEXT NOT NULL UNIQUE,
+                            symbol TEXT NOT NULL,
+                            side TEXT NOT NULL,
+                            entry_price REAL NOT NULL,
+                            quantity REAL NOT NULL,
+                            opened_at TEXT NOT NULL,
+                            managed_by_bot INTEGER DEFAULT 1,
+                            updated_at TEXT NOT NULL,
+                            created_at TEXT NOT NULL
+                        )
+                    """)
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_bot_id ON bot_positions_registry(bot_id)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_symbol ON bot_positions_registry(symbol)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_side ON bot_positions_registry(side)")
+                    logger.info("✅ Таблица bot_positions_registry пересоздана с нормализованной структурой")
+                    
+            except sqlite3.OperationalError:
+                # Таблица не существует или уже новая структура - ничего не делаем
+                pass
             
-            # Пример для будущих миграций:
-            # try:
-            #     cursor.execute("SELECT new_field FROM bots_state LIMIT 1")
-            # except sqlite3.OperationalError:
-            #     logger.info("📦 Миграция: добавляем new_field в bots_state")
-            #     cursor.execute("ALTER TABLE bots_state ADD COLUMN new_field TEXT")
+            # ==================== МИГРАЦИЯ: bots_state из JSON в нормализованные таблицы ====================
+            # Проверяем, есть ли данные в старой таблице bots_state
+            try:
+                cursor.execute("SELECT value_json FROM bots_state WHERE key = 'main'")
+                row = cursor.fetchone()
+                
+                if row:
+                    # Проверяем, мигрированы ли уже данные
+                    cursor.execute("SELECT COUNT(*) FROM bots")
+                    bots_count = cursor.fetchone()[0]
+                    
+                    if bots_count == 0:
+                        # Данные еще не мигрированы
+                        logger.info("📦 Обнаружены данные в bots_state, выполняю миграцию в нормализованные таблицы...")
+                        
+                        state_data = json.loads(row[0])
+                        bots_data = state_data.get('bots', {})
+                        auto_bot_config = state_data.get('auto_bot_config', {})
+                        
+                        # Мигрируем ботов
+                        now = datetime.now().isoformat()
+                        migrated_bots = 0
+                        
+                        for symbol, bot_data in bots_data.items():
+                            try:
+                                # Извлекаем все поля бота
+                                extra_data = {}
+                                
+                                # Основные поля
+                                status = bot_data.get('status', 'idle')
+                                auto_managed = 1 if bot_data.get('auto_managed', False) else 0
+                                volume_mode = bot_data.get('volume_mode', 'usdt')
+                                volume_value = float(bot_data.get('volume_value', 0.0)) if bot_data.get('volume_value') is not None else None
+                                
+                                # Позиция
+                                entry_price = float(bot_data.get('entry_price', 0.0)) if bot_data.get('entry_price') is not None else None
+                                entry_time = bot_data.get('entry_time') or bot_data.get('position_start_time')
+                                entry_timestamp = bot_data.get('entry_timestamp')
+                                position_side = bot_data.get('position_side')
+                                position_size = float(bot_data.get('position_size', 0.0)) if bot_data.get('position_size') is not None else None
+                                position_size_coins = float(bot_data.get('position_size_coins', 0.0)) if bot_data.get('position_size_coins') is not None else None
+                                position_start_time = bot_data.get('position_start_time')
+                                
+                                # PnL
+                                unrealized_pnl = float(bot_data.get('unrealized_pnl', 0.0)) if bot_data.get('unrealized_pnl') is not None else 0.0
+                                unrealized_pnl_usdt = float(bot_data.get('unrealized_pnl_usdt', 0.0)) if bot_data.get('unrealized_pnl_usdt') is not None else 0.0
+                                realized_pnl = float(bot_data.get('realized_pnl', 0.0)) if bot_data.get('realized_pnl') is not None else 0.0
+                                
+                                # Другие поля
+                                leverage = float(bot_data.get('leverage', 1.0)) if bot_data.get('leverage') is not None else 1.0
+                                margin_usdt = float(bot_data.get('margin_usdt', 0.0)) if bot_data.get('margin_usdt') is not None else None
+                                max_profit_achieved = float(bot_data.get('max_profit_achieved', 0.0)) if bot_data.get('max_profit_achieved') is not None else 0.0
+                                
+                                # Trailing stop
+                                trailing_stop_price = float(bot_data.get('trailing_stop_price', 0.0)) if bot_data.get('trailing_stop_price') is not None else None
+                                trailing_activation_threshold = float(bot_data.get('trailing_activation_threshold', 0.0)) if bot_data.get('trailing_activation_threshold') is not None else None
+                                trailing_activation_profit = float(bot_data.get('trailing_activation_profit', 0.0)) if bot_data.get('trailing_activation_profit') is not None else 0.0
+                                trailing_locked_profit = float(bot_data.get('trailing_locked_profit', 0.0)) if bot_data.get('trailing_locked_profit') is not None else 0.0
+                                trailing_active = 1 if bot_data.get('trailing_active', False) else 0
+                                trailing_max_profit_usdt = float(bot_data.get('trailing_max_profit_usdt', 0.0)) if bot_data.get('trailing_max_profit_usdt') is not None else 0.0
+                                trailing_step_usdt = float(bot_data.get('trailing_step_usdt', 0.0)) if bot_data.get('trailing_step_usdt') is not None else None
+                                trailing_step_price = float(bot_data.get('trailing_step_price', 0.0)) if bot_data.get('trailing_step_price') is not None else None
+                                trailing_steps = int(bot_data.get('trailing_steps', 0)) if bot_data.get('trailing_steps') is not None else 0
+                                trailing_reference_price = float(bot_data.get('trailing_reference_price', 0.0)) if bot_data.get('trailing_reference_price') is not None else None
+                                trailing_last_update_ts = float(bot_data.get('trailing_last_update_ts', 0.0)) if bot_data.get('trailing_last_update_ts') is not None else 0.0
+                                trailing_take_profit_price = float(bot_data.get('trailing_take_profit_price', 0.0)) if bot_data.get('trailing_take_profit_price') is not None else None
+                                
+                                # Break even
+                                break_even_activated = 1 if bot_data.get('break_even_activated', False) else 0
+                                break_even_stop_price = float(bot_data.get('break_even_stop_price', 0.0)) if bot_data.get('break_even_stop_price') is not None else None
+                                
+                                # Другие
+                                order_id = bot_data.get('order_id')
+                                current_price = float(bot_data.get('current_price', 0.0)) if bot_data.get('current_price') is not None else None
+                                last_price = float(bot_data.get('last_price', 0.0)) if bot_data.get('last_price') is not None else None
+                                last_rsi = float(bot_data.get('last_rsi', 0.0)) if bot_data.get('last_rsi') is not None else None
+                                last_trend = bot_data.get('last_trend')
+                                last_signal_time = bot_data.get('last_signal_time')
+                                last_bar_timestamp = float(bot_data.get('last_bar_timestamp', 0.0)) if bot_data.get('last_bar_timestamp') is not None else None
+                                entry_trend = bot_data.get('entry_trend')
+                                opened_by_autobot = 1 if bot_data.get('opened_by_autobot', False) else 0
+                                bot_id = bot_data.get('id')
+                                
+                                # Собираем все остальные поля в extra_data_json
+                                known_fields = {
+                                    'symbol', 'status', 'auto_managed', 'volume_mode', 'volume_value',
+                                    'entry_price', 'entry_time', 'entry_timestamp', 'position_side',
+                                    'position_size', 'position_size_coins', 'position_start_time',
+                                    'unrealized_pnl', 'unrealized_pnl_usdt', 'realized_pnl', 'leverage',
+                                    'margin_usdt', 'max_profit_achieved', 'trailing_stop_price',
+                                    'trailing_activation_threshold', 'trailing_activation_profit',
+                                    'trailing_locked_profit', 'trailing_active', 'trailing_max_profit_usdt',
+                                    'trailing_step_usdt', 'trailing_step_price', 'trailing_steps',
+                                    'trailing_reference_price', 'trailing_last_update_ts', 'trailing_take_profit_price',
+                                    'break_even_activated', 'break_even_stop_price', 'order_id',
+                                    'current_price', 'last_price', 'last_rsi', 'last_trend',
+                                    'last_signal_time', 'last_bar_timestamp', 'entry_trend',
+                                    'opened_by_autobot', 'id', 'position', 'rsi_data', 'scaling_enabled',
+                                    'scaling_levels', 'scaling_current_level', 'scaling_group_id', 'created_at'
+                                }
+                                
+                                for key, value in bot_data.items():
+                                    if key not in known_fields:
+                                        extra_data[key] = value
+                                
+                                # Сохраняем сложные структуры в extra_data
+                                if bot_data.get('position'):
+                                    extra_data['position'] = bot_data['position']
+                                if bot_data.get('rsi_data'):
+                                    extra_data['rsi_data'] = bot_data['rsi_data']
+                                
+                                extra_data_json = json.dumps(extra_data) if extra_data else None
+                                created_at = bot_data.get('created_at', now)
+                                
+                                # Вставляем в новую таблицу
+                                cursor.execute("""
+                                    INSERT INTO bots (
+                                        symbol, status, auto_managed, volume_mode, volume_value,
+                                        entry_price, entry_time, entry_timestamp, position_side,
+                                        position_size, position_size_coins, position_start_time,
+                                        unrealized_pnl, unrealized_pnl_usdt, realized_pnl, leverage,
+                                        margin_usdt, max_profit_achieved, trailing_stop_price,
+                                        trailing_activation_threshold, trailing_activation_profit,
+                                        trailing_locked_profit, trailing_active, trailing_max_profit_usdt,
+                                        trailing_step_usdt, trailing_step_price, trailing_steps,
+                                        trailing_reference_price, trailing_last_update_ts, trailing_take_profit_price,
+                                        break_even_activated, break_even_stop_price, order_id,
+                                        current_price, last_price, last_rsi, last_trend,
+                                        last_signal_time, last_bar_timestamp, entry_trend,
+                                        opened_by_autobot, bot_id, extra_data_json,
+                                        updated_at, created_at
+                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                """, (
+                                    symbol, status, auto_managed, volume_mode, volume_value,
+                                    entry_price, entry_time, entry_timestamp, position_side,
+                                    position_size, position_size_coins, position_start_time,
+                                    unrealized_pnl, unrealized_pnl_usdt, realized_pnl, leverage,
+                                    margin_usdt, max_profit_achieved, trailing_stop_price,
+                                    trailing_activation_threshold, trailing_activation_profit,
+                                    trailing_locked_profit, trailing_active, trailing_max_profit_usdt,
+                                    trailing_step_usdt, trailing_step_price, trailing_steps,
+                                    trailing_reference_price, trailing_last_update_ts, trailing_take_profit_price,
+                                    break_even_activated, break_even_stop_price, order_id,
+                                    current_price, last_price, last_rsi, last_trend,
+                                    last_signal_time, last_bar_timestamp, entry_trend,
+                                    opened_by_autobot, bot_id, extra_data_json,
+                                    now, created_at
+                                ))
+                                migrated_bots += 1
+                            except Exception as e:
+                                logger.warning(f"⚠️ Ошибка миграции бота {symbol}: {e}")
+                                continue
+                        
+                        # Мигрируем auto_bot_config
+                        if auto_bot_config:
+                            for key, value in auto_bot_config.items():
+                                try:
+                                    cursor.execute("""
+                                        INSERT OR REPLACE INTO auto_bot_config (key, value, updated_at, created_at)
+                                        VALUES (?, ?, ?, ?)
+                                    """, (key, json.dumps(value) if not isinstance(value, (str, int, float, bool)) else str(value), now, now))
+                                except Exception as e:
+                                    logger.warning(f"⚠️ Ошибка миграции auto_bot_config.{key}: {e}")
+                        
+                        logger.info(f"✅ Миграция bots_state завершена: {migrated_bots} ботов мигрировано из JSON в нормализованные таблицы")
+                    else:
+                        logger.debug("ℹ️ Данные bots уже мигрированы")
+                        
+            except sqlite3.OperationalError:
+                # Таблица bots_state не существует или нет данных - ничего не делаем
+                pass
+            except Exception as e:
+                logger.warning(f"⚠️ Ошибка миграции bots_state: {e}")
+            
+            # ==================== МИГРАЦИЯ: individual_coin_settings из JSON в нормализованные столбцы ====================
+            # Проверяем, есть ли старая структура (с settings_json)
+            try:
+                cursor.execute("SELECT settings_json FROM individual_coin_settings LIMIT 1")
+                # Если запрос выполнился - значит старая структура
+                logger.info("📦 Обнаружена старая JSON структура individual_coin_settings, выполняю миграцию...")
+                
+                # Загружаем все данные из старой структуры
+                cursor.execute("SELECT symbol, settings_json, updated_at, created_at FROM individual_coin_settings")
+                old_rows = cursor.fetchall()
+                
+                if old_rows:
+                    # Удаляем старую таблицу
+                    cursor.execute("DROP TABLE IF EXISTS individual_coin_settings")
+                    
+                    # Создаем новую таблицу с нормализованной структурой
+                    cursor.execute("""
+                        CREATE TABLE individual_coin_settings (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            symbol TEXT UNIQUE NOT NULL,
+                            rsi_long_threshold INTEGER,
+                            rsi_short_threshold INTEGER,
+                            rsi_exit_long_with_trend INTEGER,
+                            rsi_exit_long_against_trend INTEGER,
+                            rsi_exit_short_with_trend INTEGER,
+                            rsi_exit_short_against_trend INTEGER,
+                            max_loss_percent REAL,
+                            take_profit_percent REAL,
+                            trailing_stop_activation REAL,
+                            trailing_stop_distance REAL,
+                            trailing_take_distance REAL,
+                            trailing_update_interval REAL,
+                            break_even_trigger REAL,
+                            break_even_protection REAL,
+                            max_position_hours REAL,
+                            rsi_time_filter_enabled INTEGER DEFAULT 0,
+                            rsi_time_filter_candles INTEGER,
+                            rsi_time_filter_upper INTEGER,
+                            rsi_time_filter_lower INTEGER,
+                            avoid_down_trend INTEGER DEFAULT 0,
+                            extra_settings_json TEXT,
+                            updated_at TEXT NOT NULL,
+                            created_at TEXT NOT NULL
+                        )
+                    """)
+                    
+                    # Создаем индекс
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_coin_settings_symbol ON individual_coin_settings(symbol)")
+                    
+                    # Мигрируем данные
+                    migrated_count = 0
+                    for row in old_rows:
+                        try:
+                            symbol = row[0]
+                            settings_json = row[1]
+                            updated_at = row[2]
+                            created_at = row[3]
+                            
+                            # Парсим JSON
+                            settings = json.loads(settings_json)
+                            
+                            # Извлекаем основные поля
+                            extra_settings = {}
+                            known_fields = {
+                                'rsi_long_threshold', 'rsi_short_threshold',
+                                'rsi_exit_long_with_trend', 'rsi_exit_long_against_trend',
+                                'rsi_exit_short_with_trend', 'rsi_exit_short_against_trend',
+                                'max_loss_percent', 'take_profit_percent',
+                                'trailing_stop_activation', 'trailing_stop_distance',
+                                'trailing_take_distance', 'trailing_update_interval',
+                                'break_even_trigger', 'break_even_protection',
+                                'max_position_hours', 'rsi_time_filter_enabled',
+                                'rsi_time_filter_candles', 'rsi_time_filter_upper',
+                                'rsi_time_filter_lower', 'avoid_down_trend'
+                            }
+                            
+                            for key, value in settings.items():
+                                if key not in known_fields:
+                                    extra_settings[key] = value
+                            
+                            extra_settings_json = json.dumps(extra_settings) if extra_settings else None
+                            
+                            # Вставляем в новую таблицу
+                            cursor.execute("""
+                                INSERT INTO individual_coin_settings (
+                                    symbol, rsi_long_threshold, rsi_short_threshold,
+                                    rsi_exit_long_with_trend, rsi_exit_long_against_trend,
+                                    rsi_exit_short_with_trend, rsi_exit_short_against_trend,
+                                    max_loss_percent, take_profit_percent,
+                                    trailing_stop_activation, trailing_stop_distance,
+                                    trailing_take_distance, trailing_update_interval,
+                                    break_even_trigger, break_even_protection,
+                                    max_position_hours, rsi_time_filter_enabled,
+                                    rsi_time_filter_candles, rsi_time_filter_upper,
+                                    rsi_time_filter_lower, avoid_down_trend,
+                                    extra_settings_json, updated_at, created_at
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                symbol,
+                                settings.get('rsi_long_threshold'),
+                                settings.get('rsi_short_threshold'),
+                                settings.get('rsi_exit_long_with_trend'),
+                                settings.get('rsi_exit_long_against_trend'),
+                                settings.get('rsi_exit_short_with_trend'),
+                                settings.get('rsi_exit_short_against_trend'),
+                                settings.get('max_loss_percent'),
+                                settings.get('take_profit_percent'),
+                                settings.get('trailing_stop_activation'),
+                                settings.get('trailing_stop_distance'),
+                                settings.get('trailing_take_distance'),
+                                settings.get('trailing_update_interval'),
+                                settings.get('break_even_trigger'),
+                                settings.get('break_even_protection'),
+                                settings.get('max_position_hours'),
+                                1 if settings.get('rsi_time_filter_enabled') else 0,
+                                settings.get('rsi_time_filter_candles'),
+                                settings.get('rsi_time_filter_upper'),
+                                settings.get('rsi_time_filter_lower'),
+                                1 if settings.get('avoid_down_trend') else 0,
+                                extra_settings_json,
+                                updated_at,
+                                created_at
+                            ))
+                            migrated_count += 1
+                        except Exception as e:
+                            logger.warning(f"⚠️ Ошибка миграции настроек для {symbol}: {e}")
+                            continue
+                    
+                    logger.info(f"✅ Миграция individual_coin_settings завершена: {migrated_count} записей мигрировано из JSON в нормализованные столбцы")
+                else:
+                    # Таблица пуста, просто пересоздаем с новой структурой
+                    cursor.execute("DROP TABLE IF EXISTS individual_coin_settings")
+                    cursor.execute("""
+                        CREATE TABLE individual_coin_settings (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            symbol TEXT UNIQUE NOT NULL,
+                            rsi_long_threshold INTEGER,
+                            rsi_short_threshold INTEGER,
+                            rsi_exit_long_with_trend INTEGER,
+                            rsi_exit_long_against_trend INTEGER,
+                            rsi_exit_short_with_trend INTEGER,
+                            rsi_exit_short_against_trend INTEGER,
+                            max_loss_percent REAL,
+                            take_profit_percent REAL,
+                            trailing_stop_activation REAL,
+                            trailing_stop_distance REAL,
+                            trailing_take_distance REAL,
+                            trailing_update_interval REAL,
+                            break_even_trigger REAL,
+                            break_even_protection REAL,
+                            max_position_hours REAL,
+                            rsi_time_filter_enabled INTEGER DEFAULT 0,
+                            rsi_time_filter_candles INTEGER,
+                            rsi_time_filter_upper INTEGER,
+                            rsi_time_filter_lower INTEGER,
+                            avoid_down_trend INTEGER DEFAULT 0,
+                            extra_settings_json TEXT,
+                            updated_at TEXT NOT NULL,
+                            created_at TEXT NOT NULL
+                        )
+                    """)
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_coin_settings_symbol ON individual_coin_settings(symbol)")
+                    logger.info("✅ Таблица individual_coin_settings пересоздана с нормализованной структурой")
+                    
+            except sqlite3.OperationalError:
+                # Таблица не существует или уже новая структура - ничего не делаем
+                pass
+            except Exception as e:
+                logger.warning(f"⚠️ Ошибка миграции individual_coin_settings: {e}")
             
             conn.commit()
         except Exception as e:
             logger.debug(f"⚠️ Ошибка миграции схемы: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             # Не прерываем выполнение - миграция схемы не критична
     
     # ==================== МЕТОДЫ ДЛЯ СОСТОЯНИЯ БОТОВ ====================
     
     def save_bots_state(self, bots_data: Dict, auto_bot_config: Dict) -> bool:
         """
-        Сохраняет состояние ботов
+        Сохраняет состояние ботов в нормализованные таблицы
         
         Args:
-            bots_data: Словарь с данными ботов
+            bots_data: Словарь с данными ботов {symbol: bot_dict}
             auto_bot_config: Конфигурация автобота
         
         Returns:
@@ -807,46 +1361,278 @@ class BotsDatabase:
         """
         try:
             now = datetime.now().isoformat()
-            state_data = {
-                'bots': bots_data,
-                'auto_bot_config': auto_bot_config,
-                'last_saved': now,
-                'version': '1.0'
-            }
             
             with self.lock:
                 with self._get_connection() as conn:
                     cursor = conn.cursor()
-                    cursor.execute("""
-                        INSERT OR REPLACE INTO bots_state (key, value_json, updated_at, created_at)
-                        VALUES (?, ?, ?, COALESCE((SELECT created_at FROM bots_state WHERE key = ?), ?))
-                    """, ('main', json.dumps(state_data), now, 'main', now))
+                    
+                    # Сохраняем каждого бота в нормализованную таблицу
+                    for symbol, bot_data in bots_data.items():
+                        try:
+                            # Извлекаем все поля бота
+                            extra_data = {}
+                            
+                            # Основные поля
+                            status = bot_data.get('status', 'idle')
+                            auto_managed = 1 if bot_data.get('auto_managed', False) else 0
+                            volume_mode = bot_data.get('volume_mode', 'usdt')
+                            volume_value = float(bot_data.get('volume_value', 0.0)) if bot_data.get('volume_value') is not None else None
+                            
+                            # Позиция
+                            entry_price = float(bot_data.get('entry_price', 0.0)) if bot_data.get('entry_price') is not None else None
+                            entry_time = bot_data.get('entry_time') or bot_data.get('position_start_time')
+                            entry_timestamp = bot_data.get('entry_timestamp')
+                            position_side = bot_data.get('position_side')
+                            position_size = float(bot_data.get('position_size', 0.0)) if bot_data.get('position_size') is not None else None
+                            position_size_coins = float(bot_data.get('position_size_coins', 0.0)) if bot_data.get('position_size_coins') is not None else None
+                            position_start_time = bot_data.get('position_start_time')
+                            
+                            # PnL
+                            unrealized_pnl = float(bot_data.get('unrealized_pnl', 0.0)) if bot_data.get('unrealized_pnl') is not None else 0.0
+                            unrealized_pnl_usdt = float(bot_data.get('unrealized_pnl_usdt', 0.0)) if bot_data.get('unrealized_pnl_usdt') is not None else 0.0
+                            realized_pnl = float(bot_data.get('realized_pnl', 0.0)) if bot_data.get('realized_pnl') is not None else 0.0
+                            
+                            # Другие поля
+                            leverage = float(bot_data.get('leverage', 1.0)) if bot_data.get('leverage') is not None else 1.0
+                            margin_usdt = float(bot_data.get('margin_usdt', 0.0)) if bot_data.get('margin_usdt') is not None else None
+                            max_profit_achieved = float(bot_data.get('max_profit_achieved', 0.0)) if bot_data.get('max_profit_achieved') is not None else 0.0
+                            
+                            # Trailing stop
+                            trailing_stop_price = float(bot_data.get('trailing_stop_price', 0.0)) if bot_data.get('trailing_stop_price') is not None else None
+                            trailing_activation_threshold = float(bot_data.get('trailing_activation_threshold', 0.0)) if bot_data.get('trailing_activation_threshold') is not None else None
+                            trailing_activation_profit = float(bot_data.get('trailing_activation_profit', 0.0)) if bot_data.get('trailing_activation_profit') is not None else 0.0
+                            trailing_locked_profit = float(bot_data.get('trailing_locked_profit', 0.0)) if bot_data.get('trailing_locked_profit') is not None else 0.0
+                            trailing_active = 1 if bot_data.get('trailing_active', False) else 0
+                            trailing_max_profit_usdt = float(bot_data.get('trailing_max_profit_usdt', 0.0)) if bot_data.get('trailing_max_profit_usdt') is not None else 0.0
+                            trailing_step_usdt = float(bot_data.get('trailing_step_usdt', 0.0)) if bot_data.get('trailing_step_usdt') is not None else None
+                            trailing_step_price = float(bot_data.get('trailing_step_price', 0.0)) if bot_data.get('trailing_step_price') is not None else None
+                            trailing_steps = int(bot_data.get('trailing_steps', 0)) if bot_data.get('trailing_steps') is not None else 0
+                            trailing_reference_price = float(bot_data.get('trailing_reference_price', 0.0)) if bot_data.get('trailing_reference_price') is not None else None
+                            trailing_last_update_ts = float(bot_data.get('trailing_last_update_ts', 0.0)) if bot_data.get('trailing_last_update_ts') is not None else 0.0
+                            trailing_take_profit_price = float(bot_data.get('trailing_take_profit_price', 0.0)) if bot_data.get('trailing_take_profit_price') is not None else None
+                            
+                            # Break even
+                            break_even_activated = 1 if bot_data.get('break_even_activated', False) else 0
+                            break_even_stop_price = float(bot_data.get('break_even_stop_price', 0.0)) if bot_data.get('break_even_stop_price') is not None else None
+                            
+                            # Другие
+                            order_id = bot_data.get('order_id')
+                            current_price = float(bot_data.get('current_price', 0.0)) if bot_data.get('current_price') is not None else None
+                            last_price = float(bot_data.get('last_price', 0.0)) if bot_data.get('last_price') is not None else None
+                            last_rsi = float(bot_data.get('last_rsi', 0.0)) if bot_data.get('last_rsi') is not None else None
+                            last_trend = bot_data.get('last_trend')
+                            last_signal_time = bot_data.get('last_signal_time')
+                            last_bar_timestamp = float(bot_data.get('last_bar_timestamp', 0.0)) if bot_data.get('last_bar_timestamp') is not None else None
+                            entry_trend = bot_data.get('entry_trend')
+                            opened_by_autobot = 1 if bot_data.get('opened_by_autobot', False) else 0
+                            bot_id = bot_data.get('id')
+                            
+                            # Собираем все остальные поля в extra_data_json
+                            known_fields = {
+                                'symbol', 'status', 'auto_managed', 'volume_mode', 'volume_value',
+                                'entry_price', 'entry_time', 'entry_timestamp', 'position_side',
+                                'position_size', 'position_size_coins', 'position_start_time',
+                                'unrealized_pnl', 'unrealized_pnl_usdt', 'realized_pnl', 'leverage',
+                                'margin_usdt', 'max_profit_achieved', 'trailing_stop_price',
+                                'trailing_activation_threshold', 'trailing_activation_profit',
+                                'trailing_locked_profit', 'trailing_active', 'trailing_max_profit_usdt',
+                                'trailing_step_usdt', 'trailing_step_price', 'trailing_steps',
+                                'trailing_reference_price', 'trailing_last_update_ts', 'trailing_take_profit_price',
+                                'break_even_activated', 'break_even_stop_price', 'order_id',
+                                'current_price', 'last_price', 'last_rsi', 'last_trend',
+                                'last_signal_time', 'last_bar_timestamp', 'entry_trend',
+                                'opened_by_autobot', 'id', 'position', 'rsi_data', 'scaling_enabled',
+                                'scaling_levels', 'scaling_current_level', 'scaling_group_id', 'created_at'
+                            }
+                            
+                            for key, value in bot_data.items():
+                                if key not in known_fields:
+                                    extra_data[key] = value
+                            
+                            # Сохраняем сложные структуры в extra_data
+                            if bot_data.get('position'):
+                                extra_data['position'] = bot_data['position']
+                            if bot_data.get('rsi_data'):
+                                extra_data['rsi_data'] = bot_data['rsi_data']
+                            
+                            extra_data_json = json.dumps(extra_data) if extra_data else None
+                            
+                            # Получаем created_at из существующей записи или используем текущее время
+                            cursor.execute("SELECT created_at FROM bots WHERE symbol = ?", (symbol,))
+                            existing = cursor.fetchone()
+                            created_at = existing[0] if existing else bot_data.get('created_at', now)
+                            
+                            # Вставляем или обновляем бота
+                            cursor.execute("""
+                                INSERT OR REPLACE INTO bots (
+                                    symbol, status, auto_managed, volume_mode, volume_value,
+                                    entry_price, entry_time, entry_timestamp, position_side,
+                                    position_size, position_size_coins, position_start_time,
+                                    unrealized_pnl, unrealized_pnl_usdt, realized_pnl, leverage,
+                                    margin_usdt, max_profit_achieved, trailing_stop_price,
+                                    trailing_activation_threshold, trailing_activation_profit,
+                                    trailing_locked_profit, trailing_active, trailing_max_profit_usdt,
+                                    trailing_step_usdt, trailing_step_price, trailing_steps,
+                                    trailing_reference_price, trailing_last_update_ts, trailing_take_profit_price,
+                                    break_even_activated, break_even_stop_price, order_id,
+                                    current_price, last_price, last_rsi, last_trend,
+                                    last_signal_time, last_bar_timestamp, entry_trend,
+                                    opened_by_autobot, bot_id, extra_data_json,
+                                    updated_at, created_at
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+                                    COALESCE((SELECT created_at FROM bots WHERE symbol = ?), ?), ?)
+                            """, (
+                                symbol, status, auto_managed, volume_mode, volume_value,
+                                entry_price, entry_time, entry_timestamp, position_side,
+                                position_size, position_size_coins, position_start_time,
+                                unrealized_pnl, unrealized_pnl_usdt, realized_pnl, leverage,
+                                margin_usdt, max_profit_achieved, trailing_stop_price,
+                                trailing_activation_threshold, trailing_activation_profit,
+                                trailing_locked_profit, trailing_active, trailing_max_profit_usdt,
+                                trailing_step_usdt, trailing_step_price, trailing_steps,
+                                trailing_reference_price, trailing_last_update_ts, trailing_take_profit_price,
+                                break_even_activated, break_even_stop_price, order_id,
+                                current_price, last_price, last_rsi, last_trend,
+                                last_signal_time, last_bar_timestamp, entry_trend,
+                                opened_by_autobot, bot_id, extra_data_json,
+                                symbol, created_at, now
+                            ))
+                        except Exception as e:
+                            logger.warning(f"⚠️ Ошибка сохранения бота {symbol}: {e}")
+                            continue
+                    
+                    # Сохраняем auto_bot_config
+                    for key, value in auto_bot_config.items():
+                        try:
+                            cursor.execute("""
+                                INSERT OR REPLACE INTO auto_bot_config (key, value, updated_at, created_at)
+                                VALUES (?, ?, ?, COALESCE((SELECT created_at FROM auto_bot_config WHERE key = ?), ?))
+                            """, (key, json.dumps(value) if not isinstance(value, (str, int, float, bool)) else str(value), now, key, now))
+                        except Exception as e:
+                            logger.warning(f"⚠️ Ошибка сохранения auto_bot_config.{key}: {e}")
+                    
                     conn.commit()
             
-            logger.debug("💾 Состояние ботов сохранено в БД")
+            logger.debug("💾 Состояние ботов сохранено в нормализованные таблицы БД")
             return True
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения состояния ботов: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return False
     
     def load_bots_state(self) -> Dict:
         """
-        Загружает состояние ботов
+        Загружает состояние ботов из нормализованных таблиц
         
         Returns:
-            Словарь с состоянием или пустой словарь
+            Словарь с состоянием {bots: {symbol: bot_dict}, auto_bot_config: {...}}
         """
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT value_json FROM bots_state WHERE key = ?", ('main',))
-                row = cursor.fetchone()
                 
-                if row:
-                    return json.loads(row['value_json'])
-                return {}
+                # Загружаем ботов из нормализованной таблицы
+                cursor.execute("""
+                    SELECT symbol, status, auto_managed, volume_mode, volume_value,
+                           entry_price, entry_time, entry_timestamp, position_side,
+                           position_size, position_size_coins, position_start_time,
+                           unrealized_pnl, unrealized_pnl_usdt, realized_pnl, leverage,
+                           margin_usdt, max_profit_achieved, trailing_stop_price,
+                           trailing_activation_threshold, trailing_activation_profit,
+                           trailing_locked_profit, trailing_active, trailing_max_profit_usdt,
+                           trailing_step_usdt, trailing_step_price, trailing_steps,
+                           trailing_reference_price, trailing_last_update_ts, trailing_take_profit_price,
+                           break_even_activated, break_even_stop_price, order_id,
+                           current_price, last_price, last_rsi, last_trend,
+                           last_signal_time, last_bar_timestamp, entry_trend,
+                           opened_by_autobot, bot_id, extra_data_json,
+                           updated_at, created_at
+                    FROM bots
+                """)
+                rows = cursor.fetchall()
+                
+                bots_data = {}
+                for row in rows:
+                    symbol = row[0]
+                    bot_dict = {
+                        'symbol': symbol,
+                        'status': row[1],
+                        'auto_managed': bool(row[2]),
+                        'volume_mode': row[3],
+                        'volume_value': row[4],
+                        'entry_price': row[5],
+                        'entry_time': row[6],
+                        'entry_timestamp': row[7],
+                        'position_side': row[8],
+                        'position_size': row[9],
+                        'position_size_coins': row[10],
+                        'position_start_time': row[11],
+                        'unrealized_pnl': row[12],
+                        'unrealized_pnl_usdt': row[13],
+                        'realized_pnl': row[14],
+                        'leverage': row[15],
+                        'margin_usdt': row[16],
+                        'max_profit_achieved': row[17],
+                        'trailing_stop_price': row[18],
+                        'trailing_activation_threshold': row[19],
+                        'trailing_activation_profit': row[20],
+                        'trailing_locked_profit': row[21],
+                        'trailing_active': bool(row[22]),
+                        'trailing_max_profit_usdt': row[23],
+                        'trailing_step_usdt': row[24],
+                        'trailing_step_price': row[25],
+                        'trailing_steps': row[26],
+                        'trailing_reference_price': row[27],
+                        'trailing_last_update_ts': row[28],
+                        'trailing_take_profit_price': row[29],
+                        'break_even_activated': bool(row[30]),
+                        'break_even_stop_price': row[31],
+                        'order_id': row[32],
+                        'current_price': row[33],
+                        'last_price': row[34],
+                        'last_rsi': row[35],
+                        'last_trend': row[36],
+                        'last_signal_time': row[37],
+                        'last_bar_timestamp': row[38],
+                        'entry_trend': row[39],
+                        'opened_by_autobot': bool(row[40]),
+                        'id': row[41],
+                        'created_at': row[43]
+                    }
+                    
+                    # Загружаем extra_data_json если есть
+                    if row[42]:
+                        try:
+                            extra_data = json.loads(row[42])
+                            bot_dict.update(extra_data)
+                        except:
+                            pass
+                    
+                    bots_data[symbol] = bot_dict
+                
+                # Загружаем auto_bot_config
+                cursor.execute("SELECT key, value FROM auto_bot_config")
+                config_rows = cursor.fetchall()
+                auto_bot_config = {}
+                for config_row in config_rows:
+                    key = config_row[0]
+                    value = config_row[1]
+                    try:
+                        # Пытаемся распарсить как JSON, если не получается - оставляем как строку
+                        auto_bot_config[key] = json.loads(value)
+                    except:
+                        auto_bot_config[key] = value
+                
+                return {
+                    'bots': bots_data,
+                    'auto_bot_config': auto_bot_config,
+                    'version': '2.0'  # Новая версия с нормализованной структурой
+                }
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки состояния ботов: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return {}
     
     # ==================== МЕТОДЫ ДЛЯ РЕЕСТРА ПОЗИЦИЙ ====================
@@ -856,7 +1642,8 @@ class BotsDatabase:
         Сохраняет реестр позиций ботов
         
         Args:
-            registry: Словарь {bot_id: {symbol: position_data}}
+            registry: Словарь {bot_id: {symbol: str, side: str, entry_price: float, quantity: float, opened_at: str, managed_by_bot: bool}}
+                      ИЛИ {bot_id: position_dict} где position_dict содержит все поля позиции
         
         Returns:
             True если успешно сохранено
@@ -871,19 +1658,33 @@ class BotsDatabase:
                     # Удаляем старые записи
                     cursor.execute("DELETE FROM bot_positions_registry")
                     
-                    # Вставляем новые записи
-                    for bot_id, positions in registry.items():
-                        for symbol, position_data in positions.items():
+                    # Вставляем новые записи в нормализованном формате
+                    for bot_id, position_data in registry.items():
+                        # Поддерживаем оба формата: прямой словарь или вложенный
+                        if isinstance(position_data, dict):
+                            # Извлекаем поля позиции
+                            symbol = position_data.get('symbol', '')
+                            side = position_data.get('side', 'LONG')
+                            entry_price = float(position_data.get('entry_price', 0.0))
+                            quantity = float(position_data.get('quantity', 0.0))
+                            opened_at = position_data.get('opened_at', now)
+                            managed_by_bot = 1 if position_data.get('managed_by_bot', True) else 0
+                            created_at = position_data.get('created_at', now)
+                            
                             cursor.execute("""
                                 INSERT INTO bot_positions_registry 
-                                (bot_id, symbol, position_data_json, updated_at, created_at)
-                                VALUES (?, ?, ?, ?, ?)
+                                (bot_id, symbol, side, entry_price, quantity, opened_at, managed_by_bot, updated_at, created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """, (
                                 bot_id,
                                 symbol,
-                                json.dumps(position_data),
+                                side,
+                                entry_price,
+                                quantity,
+                                opened_at,
+                                managed_by_bot,
                                 now,
-                                now
+                                created_at
                             ))
                     
                     conn.commit()
@@ -892,6 +1693,8 @@ class BotsDatabase:
             return True
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения реестра позиций: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return False
     
     def load_bot_positions_registry(self) -> Dict:
@@ -899,27 +1702,37 @@ class BotsDatabase:
         Загружает реестр позиций ботов
         
         Returns:
-            Словарь {bot_id: {symbol: position_data}}
+            Словарь {bot_id: {symbol: str, side: str, entry_price: float, quantity: float, opened_at: str, managed_by_bot: bool}}
         """
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT bot_id, symbol, position_data_json FROM bot_positions_registry")
+                cursor.execute("""
+                    SELECT bot_id, symbol, side, entry_price, quantity, opened_at, managed_by_bot, updated_at, created_at
+                    FROM bot_positions_registry
+                """)
                 rows = cursor.fetchall()
                 
                 registry = {}
                 for row in rows:
                     bot_id = row['bot_id']
-                    symbol = row['symbol']
-                    position_data = json.loads(row['position_data_json'])
-                    
-                    if bot_id not in registry:
-                        registry[bot_id] = {}
-                    registry[bot_id][symbol] = position_data
+                    position_data = {
+                        'symbol': row['symbol'],
+                        'side': row['side'],
+                        'entry_price': row['entry_price'],
+                        'quantity': row['quantity'],
+                        'opened_at': row['opened_at'],
+                        'managed_by_bot': bool(row['managed_by_bot']),
+                        'updated_at': row['updated_at'],
+                        'created_at': row['created_at']
+                    }
+                    registry[bot_id] = position_data
                 
                 return registry
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки реестра позиций: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return {}
     
     # ==================== МЕТОДЫ ДЛЯ RSI КЭША ====================
@@ -1087,7 +1900,7 @@ class BotsDatabase:
     
     def save_individual_coin_settings(self, settings: Dict) -> bool:
         """
-        Сохраняет индивидуальные настройки монет
+        Сохраняет индивидуальные настройки монет в нормализованные столбцы
         
         Args:
             settings: Словарь {symbol: settings_dict}
@@ -1105,30 +1918,90 @@ class BotsDatabase:
                     # Удаляем старые записи
                     cursor.execute("DELETE FROM individual_coin_settings")
                     
-                    # Вставляем новые записи
+                    # Вставляем новые записи в нормализованном формате
                     for symbol, symbol_settings in settings.items():
+                        # Извлекаем основные поля
+                        extra_settings = {}
+                        known_fields = {
+                            'rsi_long_threshold', 'rsi_short_threshold',
+                            'rsi_exit_long_with_trend', 'rsi_exit_long_against_trend',
+                            'rsi_exit_short_with_trend', 'rsi_exit_short_against_trend',
+                            'max_loss_percent', 'take_profit_percent',
+                            'trailing_stop_activation', 'trailing_stop_distance',
+                            'trailing_take_distance', 'trailing_update_interval',
+                            'break_even_trigger', 'break_even_protection',
+                            'max_position_hours', 'rsi_time_filter_enabled',
+                            'rsi_time_filter_candles', 'rsi_time_filter_upper',
+                            'rsi_time_filter_lower', 'avoid_down_trend'
+                        }
+                        
+                        for key, value in symbol_settings.items():
+                            if key not in known_fields:
+                                extra_settings[key] = value
+                        
+                        extra_settings_json = json.dumps(extra_settings) if extra_settings else None
+                        
+                        # Получаем created_at из существующей записи или используем текущее время
+                        cursor.execute("SELECT created_at FROM individual_coin_settings WHERE symbol = ?", (symbol,))
+                        existing = cursor.fetchone()
+                        created_at = existing[0] if existing else symbol_settings.get('created_at', now)
+                        
                         cursor.execute("""
-                            INSERT INTO individual_coin_settings 
-                            (symbol, settings_json, updated_at, created_at)
-                            VALUES (?, ?, ?, ?)
+                            INSERT OR REPLACE INTO individual_coin_settings (
+                                symbol, rsi_long_threshold, rsi_short_threshold,
+                                rsi_exit_long_with_trend, rsi_exit_long_against_trend,
+                                rsi_exit_short_with_trend, rsi_exit_short_against_trend,
+                                max_loss_percent, take_profit_percent,
+                                trailing_stop_activation, trailing_stop_distance,
+                                trailing_take_distance, trailing_update_interval,
+                                break_even_trigger, break_even_protection,
+                                max_position_hours, rsi_time_filter_enabled,
+                                rsi_time_filter_candles, rsi_time_filter_upper,
+                                rsi_time_filter_lower, avoid_down_trend,
+                                extra_settings_json, updated_at, created_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+                                COALESCE((SELECT created_at FROM individual_coin_settings WHERE symbol = ?), ?), ?)
                         """, (
                             symbol,
-                            json.dumps(symbol_settings),
-                            now,
+                            symbol_settings.get('rsi_long_threshold'),
+                            symbol_settings.get('rsi_short_threshold'),
+                            symbol_settings.get('rsi_exit_long_with_trend'),
+                            symbol_settings.get('rsi_exit_long_against_trend'),
+                            symbol_settings.get('rsi_exit_short_with_trend'),
+                            symbol_settings.get('rsi_exit_short_against_trend'),
+                            symbol_settings.get('max_loss_percent'),
+                            symbol_settings.get('take_profit_percent'),
+                            symbol_settings.get('trailing_stop_activation'),
+                            symbol_settings.get('trailing_stop_distance'),
+                            symbol_settings.get('trailing_take_distance'),
+                            symbol_settings.get('trailing_update_interval'),
+                            symbol_settings.get('break_even_trigger'),
+                            symbol_settings.get('break_even_protection'),
+                            symbol_settings.get('max_position_hours'),
+                            1 if symbol_settings.get('rsi_time_filter_enabled') else 0,
+                            symbol_settings.get('rsi_time_filter_candles'),
+                            symbol_settings.get('rsi_time_filter_upper'),
+                            symbol_settings.get('rsi_time_filter_lower'),
+                            1 if symbol_settings.get('avoid_down_trend') else 0,
+                            extra_settings_json,
+                            symbol,
+                            created_at,
                             now
                         ))
                     
                     conn.commit()
             
-            logger.debug(f"💾 Индивидуальные настройки сохранены в БД ({len(settings)} монет)")
+            logger.debug(f"💾 Индивидуальные настройки сохранены в нормализованные столбцы БД ({len(settings)} монет)")
             return True
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения индивидуальных настроек: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return False
     
     def load_individual_coin_settings(self) -> Dict:
         """
-        Загружает индивидуальные настройки монет
+        Загружает индивидуальные настройки монет из нормализованных столбцов
         
         Returns:
             Словарь {symbol: settings_dict}
@@ -1136,17 +2009,66 @@ class BotsDatabase:
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT symbol, settings_json FROM individual_coin_settings")
+                cursor.execute("""
+                    SELECT symbol, rsi_long_threshold, rsi_short_threshold,
+                           rsi_exit_long_with_trend, rsi_exit_long_against_trend,
+                           rsi_exit_short_with_trend, rsi_exit_short_against_trend,
+                           max_loss_percent, take_profit_percent,
+                           trailing_stop_activation, trailing_stop_distance,
+                           trailing_take_distance, trailing_update_interval,
+                           break_even_trigger, break_even_protection,
+                           max_position_hours, rsi_time_filter_enabled,
+                           rsi_time_filter_candles, rsi_time_filter_upper,
+                           rsi_time_filter_lower, avoid_down_trend,
+                           extra_settings_json
+                    FROM individual_coin_settings
+                """)
                 rows = cursor.fetchall()
                 
                 settings = {}
                 for row in rows:
-                    symbol = row['symbol']
-                    settings[symbol] = json.loads(row['settings_json'])
+                    symbol = row[0]
+                    settings_dict = {
+                        'rsi_long_threshold': row[1],
+                        'rsi_short_threshold': row[2],
+                        'rsi_exit_long_with_trend': row[3],
+                        'rsi_exit_long_against_trend': row[4],
+                        'rsi_exit_short_with_trend': row[5],
+                        'rsi_exit_short_against_trend': row[6],
+                        'max_loss_percent': row[7],
+                        'take_profit_percent': row[8],
+                        'trailing_stop_activation': row[9],
+                        'trailing_stop_distance': row[10],
+                        'trailing_take_distance': row[11],
+                        'trailing_update_interval': row[12],
+                        'break_even_trigger': row[13],
+                        'break_even_protection': row[14],
+                        'max_position_hours': row[15],
+                        'rsi_time_filter_enabled': bool(row[16]),
+                        'rsi_time_filter_candles': row[17],
+                        'rsi_time_filter_upper': row[18],
+                        'rsi_time_filter_lower': row[19],
+                        'avoid_down_trend': bool(row[20])
+                    }
+                    
+                    # Удаляем None значения
+                    settings_dict = {k: v for k, v in settings_dict.items() if v is not None}
+                    
+                    # Загружаем extra_settings_json если есть
+                    if row[21]:
+                        try:
+                            extra_settings = json.loads(row[21])
+                            settings_dict.update(extra_settings)
+                        except:
+                            pass
+                    
+                    settings[symbol] = settings_dict
                 
                 return settings
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки индивидуальных настроек: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return {}
     
     def remove_all_individual_coin_settings(self) -> bool:
