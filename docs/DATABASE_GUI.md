@@ -14,11 +14,11 @@
 ## Запуск
 
 ### Windows
-Двойной клик по `start_database_gui.vbs` или `start_database_gui.cmd`
+Двойной клик по `database_gui.vbs` или `database_gui.cmd`
 
 ### Linux/MacOS
 ```bash
-./start_database_gui.sh
+./database_gui.sh
 ```
 
 Или напрямую:
