@@ -1012,6 +1012,69 @@ class AIDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_patterns_symbol ON trading_patterns(symbol)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_patterns_rsi_range ON trading_patterns(rsi_range)")
             
+            # ==================== ТАБЛИЦА: РЕЗУЛЬТАТЫ БЭКТЕСТОВ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS backtest_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    backtest_name TEXT,
+                    symbol TEXT,
+                    results_json TEXT NOT NULL,
+                    total_return REAL,
+                    win_rate REAL,
+                    total_trades INTEGER,
+                    created_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для backtest_results
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_backtest_symbol ON backtest_results(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_backtest_created_at ON backtest_results(created_at)")
+            
+            # ==================== ТАБЛИЦА: БАЗА ЗНАНИЙ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS knowledge_base (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    knowledge_type TEXT NOT NULL,
+                    knowledge_data_json TEXT NOT NULL,
+                    last_update TEXT NOT NULL,
+                    UNIQUE(knowledge_type)
+                )
+            """)
+            
+            # Индексы для knowledge_base
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_knowledge_type ON knowledge_base(knowledge_type)")
+            
+            # ==================== ТАБЛИЦА: ДАННЫЕ ОБУЧЕНИЯ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS training_data (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    data_type TEXT NOT NULL,
+                    symbol TEXT,
+                    data_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для training_data
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_training_data_type ON training_data(data_type)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_training_data_symbol ON training_data(symbol)")
+            
+            # ==================== ТАБЛИЦА: КОНФИГИ БОТОВ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bot_configs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL,
+                    config_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(symbol)
+                )
+            """)
+            
+            # Индексы для bot_configs
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bot_configs_symbol ON bot_configs(symbol)")
+            
             conn.commit()
             
             logger.debug("✅ Все таблицы и индексы созданы")
@@ -3391,6 +3454,203 @@ class AIDatabase:
                 result = dict(row)
                 if result.get('status_json'):
                     result['status'] = json.loads(result['status_json'])
+                return result
+            
+            return None
+    
+    # ==================== МЕТОДЫ ДЛЯ РЕЗУЛЬТАТОВ БЭКТЕСТОВ ====================
+    
+    def save_backtest_result(self, results: Dict, backtest_name: str = None, symbol: str = None) -> int:
+        """Сохраняет результат бэктеста в БД"""
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now().isoformat()
+                
+                cursor.execute("""
+                    INSERT INTO backtest_results (
+                        backtest_name, symbol, results_json, total_return, win_rate, total_trades, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    backtest_name,
+                    symbol,
+                    json.dumps(results),
+                    results.get('total_return'),
+                    results.get('win_rate'),
+                    results.get('total_trades'),
+                    now
+                ))
+                conn.commit()
+                return cursor.lastrowid
+    
+    def get_backtest_results(self, symbol: str = None, limit: int = 100) -> List[Dict]:
+        """Получает результаты бэктестов из БД"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM backtest_results WHERE 1=1"
+            params = []
+            
+            if symbol:
+                query += " AND symbol = ?"
+                params.append(symbol)
+            
+            query += " ORDER BY created_at DESC LIMIT ?"
+            params.append(limit)
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            
+            result = []
+            for row in rows:
+                backtest = dict(row)
+                if backtest.get('results_json'):
+                    backtest['results'] = json.loads(backtest['results_json'])
+                result.append(backtest)
+            
+            return result
+    
+    # ==================== МЕТОДЫ ДЛЯ БАЗЫ ЗНАНИЙ ====================
+    
+    def save_knowledge_base(self, knowledge_type: str, knowledge_data: Dict) -> int:
+        """Сохраняет базу знаний в БД"""
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now().isoformat()
+                
+                cursor.execute("""
+                    INSERT OR REPLACE INTO knowledge_base (
+                        knowledge_type, knowledge_data_json, last_update
+                    ) VALUES (?, ?, ?)
+                """, (
+                    knowledge_type,
+                    json.dumps(knowledge_data),
+                    now
+                ))
+                conn.commit()
+                return cursor.lastrowid
+    
+    def get_knowledge_base(self, knowledge_type: str) -> Optional[Dict]:
+        """Получает базу знаний из БД"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM knowledge_base WHERE knowledge_type = ?
+            """, (knowledge_type,))
+            
+            row = cursor.fetchone()
+            if row:
+                result = dict(row)
+                if result.get('knowledge_data_json'):
+                    result['knowledge_data'] = json.loads(result['knowledge_data_json'])
+                return result
+            
+            return None
+    
+    # ==================== МЕТОДЫ ДЛЯ ДАННЫХ ОБУЧЕНИЯ ====================
+    
+    def save_training_data(self, data_type: str, data: Dict, symbol: str = None) -> int:
+        """Сохраняет данные обучения в БД"""
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now().isoformat()
+                
+                # Проверяем, есть ли уже данные этого типа для символа
+                if symbol:
+                    cursor.execute("""
+                        SELECT id FROM training_data WHERE data_type = ? AND symbol = ?
+                    """, (data_type, symbol))
+                    existing = cursor.fetchone()
+                    
+                    if existing:
+                        # Обновляем существующую запись
+                        cursor.execute("""
+                            UPDATE training_data 
+                            SET data_json = ?, updated_at = ?
+                            WHERE data_type = ? AND symbol = ?
+                        """, (json.dumps(data), now, data_type, symbol))
+                        conn.commit()
+                        return existing['id']
+                
+                # Создаем новую запись
+                cursor.execute("""
+                    INSERT INTO training_data (
+                        data_type, symbol, data_json, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?)
+                """, (
+                    data_type,
+                    symbol,
+                    json.dumps(data),
+                    now,
+                    now
+                ))
+                conn.commit()
+                return cursor.lastrowid
+    
+    def get_training_data(self, data_type: str, symbol: str = None) -> Optional[Dict]:
+        """Получает данные обучения из БД"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM training_data WHERE data_type = ?"
+            params = [data_type]
+            
+            if symbol:
+                query += " AND symbol = ?"
+                params.append(symbol)
+            
+            query += " ORDER BY updated_at DESC LIMIT 1"
+            
+            cursor.execute(query, params)
+            row = cursor.fetchone()
+            
+            if row:
+                result = dict(row)
+                if result.get('data_json'):
+                    result['data'] = json.loads(result['data_json'])
+                return result
+            
+            return None
+    
+    # ==================== МЕТОДЫ ДЛЯ КОНФИГОВ БОТОВ ====================
+    
+    def save_bot_config(self, symbol: str, config: Dict) -> int:
+        """Сохраняет конфиг бота в БД"""
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now().isoformat()
+                
+                cursor.execute("""
+                    INSERT OR REPLACE INTO bot_configs (
+                        symbol, config_json, created_at, updated_at
+                    ) VALUES (?, ?, 
+                        COALESCE((SELECT created_at FROM bot_configs WHERE symbol = ?), ?),
+                        ?
+                    )
+                """, (
+                    symbol,
+                    json.dumps(config),
+                    symbol,
+                    now,
+                    now
+                ))
+                conn.commit()
+                return cursor.lastrowid
+    
+    def get_bot_config(self, symbol: str) -> Optional[Dict]:
+        """Получает конфиг бота из БД"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM bot_configs WHERE symbol = ?
+            """, (symbol,))
+            
+            row = cursor.fetchone()
+            if row:
+                result = dict(row)
+                if result.get('config_json'):
+                    result['config'] = json.loads(result['config_json'])
                 return result
             
             return None

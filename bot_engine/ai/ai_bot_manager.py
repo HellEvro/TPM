@@ -167,10 +167,15 @@ class AIBotManager:
             if response and response.get('success'):
                 logger.info(f"✅ Конфигурация бота {symbol} обновлена")
                 
-                # Сохраняем конфигурацию локально
-                config_file = os.path.join(self.config_dir, f"{symbol}_config.json")
-                with open(config_file, 'w', encoding='utf-8') as f:
-                    json.dump(config, f, ensure_ascii=False, indent=2)
+                # Сохраняем конфигурацию в БД вместо файла
+                try:
+                    from bot_engine.ai.ai_database import get_ai_database
+                    ai_db = get_ai_database()
+                    if ai_db:
+                        ai_db.save_bot_config(symbol, config)
+                        logger.debug(f"✅ Конфиг бота {symbol} сохранен в БД")
+                except Exception as e:
+                    logger.warning(f"⚠️ Не удалось сохранить конфиг в БД: {e}")
                 
                 return True
             else:

@@ -29,6 +29,41 @@ if TYPE_CHECKING:
     def main(*args: Any, **kwargs: Any) -> Any: ...
 
 
+# ==================== ПЕРЕХВАТ СОХРАНЕНИЯ data_service.json В БД ====================
+# Патчим метод _update_data_status в AISystem, чтобы он сохранял в БД вместо файла
+def _patch_ai_system_update_data_status():
+    """Патчит метод _update_data_status в AISystem для сохранения в БД"""
+    try:
+        # Импортируем helper для работы с БД
+        from bot_engine.ai.data_service_status_helper import update_data_service_status_in_db
+        
+        # Получаем класс AISystem из защищенного модуля
+        if hasattr(_protected_module, 'AISystem'):
+            original_update_data_status = _protected_module.AISystem._update_data_status
+            
+            def patched_update_data_status(self, **kwargs):
+                """Патченный метод - сохраняет в БД вместо файла"""
+                try:
+                    # Сохраняем в БД вместо файла
+                    update_data_service_status_in_db(**kwargs)
+                except Exception as e:
+                    # Если БД недоступна, пробуем оригинальный метод (fallback)
+                    try:
+                        original_update_data_status(self, **kwargs)
+                    except:
+                        pass
+            
+            # Заменяем метод
+            _protected_module.AISystem._update_data_status = patched_update_data_status
+    except Exception as e:
+        # Если патч не удался - продолжаем работу (не критично)
+        pass
+
+# Применяем патч ПЕРЕД экспортом модуля
+_patch_ai_system_update_data_status()
+# ==================== КОНЕЦ ПЕРЕХВАТА ====================
+
+
 _globals = globals()
 _skip = {'__name__', '__doc__', '__package__', '__loader__', '__spec__', '__file__'}
 

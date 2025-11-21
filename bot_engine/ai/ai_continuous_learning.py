@@ -32,28 +32,32 @@ class AIContinuousLearning:
     def __init__(self):
         """Инициализация модуля постоянного обучения"""
         self.data_dir = 'data/ai'
-        self.learning_data_file = os.path.join(self.data_dir, 'continuous_learning.json')
-        self.knowledge_base_file = os.path.join(self.data_dir, 'trading_knowledge_base.json')
         
-        # Создаем директории
-        os.makedirs(self.data_dir, exist_ok=True)
+        # Подключаемся к БД
+        try:
+            from bot_engine.ai.ai_database import get_ai_database
+            self.ai_db = get_ai_database()
+        except Exception as e:
+            logger.warning(f"⚠️ Не удалось подключиться к AI Database: {e}")
+            self.ai_db = None
         
-        # Загружаем базу знаний
+        # Загружаем базу знаний из БД
         self.knowledge_base = self._load_knowledge_base()
         
         logger.info("✅ AIContinuousLearning инициализирован")
     
     def _load_knowledge_base(self) -> Dict:
-        """Загрузить базу знаний о торговле"""
+        """Загрузить базу знаний о торговле из БД"""
         try:
-            if os.path.exists(self.knowledge_base_file):
-                with open(self.knowledge_base_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+            if self.ai_db:
+                result = self.ai_db.get_knowledge_base('trading_knowledge_base')
+                if result and result.get('knowledge_data'):
+                    return result['knowledge_data']
         except Exception as e:
-            logger.debug(f"⚠️ Ошибка загрузки базы знаний: {e}")
+            logger.debug(f"⚠️ Ошибка загрузки базы знаний из БД: {e}")
         
         # База знаний по умолчанию
-        return {
+        default_kb = {
             'successful_patterns': {
                 'rsi_ranges': {},
                 'trend_conditions': {},
@@ -71,67 +75,28 @@ class AIContinuousLearning:
             'improvement_history': [],
             'last_update': None
         }
+        
+        # Сохраняем дефолтную базу в БД
+        try:
+            if self.ai_db:
+                self.ai_db.save_knowledge_base('trading_knowledge_base', default_kb)
+        except:
+            pass
+        
+        return default_kb
     
     def _save_knowledge_base(self):
-        """Сохранить базу знаний (безопасно с retry логикой)"""
-        max_retries = 5
-        retry_delay = 0.5
-        
-        for attempt in range(max_retries):
-            try:
-                self.knowledge_base['last_update'] = datetime.now().isoformat()
-                
-                # Создаем уникальное имя временного файла
-                temp_file = f"{self.knowledge_base_file}.tmp.{uuid.uuid4().hex[:8]}"
-                
-                # Сохраняем во временный файл
-                try:
-                    with open(temp_file, 'w', encoding='utf-8') as f:
-                        json.dump(self.knowledge_base, f, indent=2, ensure_ascii=False)
-                except Exception as write_error:
-                    try:
-                        if os.path.exists(temp_file):
-                            os.remove(temp_file)
-                    except:
-                        pass
-                    raise write_error
-                
-                # Заменяем оригинальный файл
-                if os.path.exists(self.knowledge_base_file):
-                    try:
-                        os.remove(self.knowledge_base_file)
-                    except PermissionError:
-                        if attempt < max_retries - 1:
-                            try:
-                                if os.path.exists(temp_file):
-                                    os.remove(temp_file)
-                            except:
-                                pass
-                            time.sleep(retry_delay * (attempt + 1))
-                            continue
-                        else:
-                            raise
-                
-                # Переименовываем временный файл
-                try:
-                    os.rename(temp_file, self.knowledge_base_file)
-                except PermissionError:
-                    if attempt < max_retries - 1:
-                        try:
-                            if os.path.exists(temp_file):
-                                os.remove(temp_file)
-                        except:
-                            pass
-                        time.sleep(retry_delay * (attempt + 1))
-                        continue
-                    else:
-                        raise
-                
-                # Успешно сохранено
+        """Сохранить базу знаний в БД"""
+        try:
+            if not self.ai_db:
+                logger.warning("⚠️ AI Database не доступна, база знаний не сохранена")
                 return
-                
-            except (PermissionError, OSError) as file_error:
-                if attempt < max_retries - 1:
+            
+            self.knowledge_base['last_update'] = datetime.now().isoformat()
+            self.ai_db.save_knowledge_base('trading_knowledge_base', self.knowledge_base)
+            logger.debug("✅ База знаний сохранена в БД")
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения базы знаний в БД: {e}")
                     logger.debug(f"⚠️ Файл {self.knowledge_base_file} занят, повторная попытка {attempt + 1}/{max_retries}...")
                     time.sleep(retry_delay * (attempt + 1))
                     continue

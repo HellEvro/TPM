@@ -2,7 +2,9 @@
 Сбор исторических данных для обучения ИИ моделей
 
 Скачивает свечи 6H для всех монет с биржи за последние 1-2 года.
-Данные сохраняются в CSV формате в data/ai/historical/
+Данные сохраняются в БД (ai_data.db, таблица candles_history)
+
+ВАЖНО: CSV файлы больше не используются - все данные в БД!
 
 Использование:
     python scripts/ai/collect_historical_data.py --limit 20    # Топ 20 монет
@@ -15,7 +17,6 @@ sys.path.append('.')
 
 from exchanges.exchange_factory import ExchangeFactory
 from app.config import EXCHANGES
-import pandas as pd
 from datetime import datetime, timedelta
 import time
 import os
@@ -118,51 +119,55 @@ def collect_data_for_coin(exchange, symbol, days=730):
             logger.error(f"[{symbol}] Ошибка в запросе {request_num+1}: {e}")
             break
     
-    # Сохраняем данные
+    # Сохраняем данные в БД вместо CSV файлов
     if all_candles:
-        new_df = pd.DataFrame(all_candles)
-        
-        # Убираем дубликаты в новых данных
-        new_df = new_df.drop_duplicates(subset=['timestamp'], keep='first')
-        
-        # Подготавливаем путь к файлу
-        output_dir = Path('data/ai/historical')
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / f'{symbol}_6h_historical.csv'
-        
-        # ИНКРЕМЕНТАЛЬНОЕ ОБНОВЛЕНИЕ: объединяем со старыми данными
-        if output_file.exists():
-            try:
-                # Загружаем существующие данные
-                old_df = pd.read_csv(output_file)
-                
-                # Объединяем старые + новые
-                combined_df = pd.concat([old_df, new_df], ignore_index=True)
-                
-                # Убираем дубликаты (оставляем более новую запись)
-                combined_df = combined_df.drop_duplicates(subset=['timestamp'], keep='last')
-                
-                # Сортируем от старых к новым
-                combined_df = combined_df.sort_values('timestamp')
-                
-                # Сохраняем объединённые данные
-                combined_df.to_csv(output_file, index=False)
-                
-                new_count = len(combined_df) - len(old_df)
-                print(f"  Updated: {len(old_df)} -> {len(combined_df)} (+{new_count} new candles)")
-                return new_count
-            except Exception as e:
-                print(f"  [WARNING] Error loading old data: {e}, overwriting...")
-                # Если ошибка при чтении старого файла, перезаписываем
-                new_df.to_csv(output_file, index=False)
-                print(f"  Saved: {len(new_df)} candles (overwritten)")
-                return len(new_df)
-        else:
-            # Файл не существует, создаём новый
-            new_df = new_df.sort_values('timestamp')
-            new_df.to_csv(output_file, index=False)
-            print(f"  Created: {len(new_df)} candles")
-            return len(new_df)
+        try:
+            from bot_engine.ai.ai_database import get_ai_database
+            from datetime import datetime
+            
+            ai_db = get_ai_database()
+            if not ai_db:
+                logger.error(f"[{symbol}] ❌ AI Database не доступна")
+                return 0
+            
+            # Получаем текущее количество свечей для этого символа
+            existing_count = ai_db.count_candles(symbol=symbol, timeframe='6h')
+            
+            # Преобразуем свечи в формат для БД (метод save_candles ожидает 'time' как int)
+            candles_for_db = []
+            for candle in all_candles:
+                try:
+                    # Метод save_candles ожидает 'time' как int (timestamp в миллисекундах)
+                    candles_for_db.append({
+                        'time': int(candle['timestamp']),  # Оставляем как int (миллисекунды)
+                        'open': float(candle['open']),
+                        'high': float(candle['high']),
+                        'low': float(candle['low']),
+                        'close': float(candle['close']),
+                        'volume': float(candle['volume'])
+                    })
+                except Exception as e:
+                    # Пропускаем некорректные свечи
+                    continue
+            
+            # Сохраняем все свечи батчем в БД
+            saved_count = ai_db.save_candles(symbol=symbol, candles=candles_for_db, timeframe='6h')
+            
+            total_count = ai_db.count_candles(symbol=symbol, timeframe='6h')
+            new_count = saved_count
+            
+            if new_count > 0:
+                print(f"  Saved to DB: {new_count} new candles (total: {total_count:,})")
+            else:
+                print(f"  No new candles (all duplicates, total in DB: {total_count:,})")
+            
+            return new_count
+            
+        except Exception as e:
+            logger.error(f"[{symbol}] ❌ Ошибка сохранения в БД: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return 0
     
     print(f"  [WARNING] No data to save")
     return 0
@@ -330,18 +335,16 @@ def main():
     # Итоговая статистика
     elapsed_total = time.time() - start_time
     
-    # Подсчитываем РЕАЛЬНОЕ количество свечей во всех файлах
-    print("\nПодсчет общего количества свечей...")
+    # Подсчитываем РЕАЛЬНОЕ количество свечей в БД
+    print("\nПодсчет общего количества свечей в БД...")
     actual_total_candles = 0
-    historical_dir = Path("data/ai/historical")
-    
-    if historical_dir.exists():
-        for csv_file in historical_dir.glob("*.csv"):
-            try:
-                df = pd.read_csv(csv_file)
-                actual_total_candles += len(df) - 1  # -1 для заголовка
-            except:
-                pass
+    try:
+        from bot_engine.ai.ai_database import get_ai_database
+        ai_db = get_ai_database()
+        if ai_db:
+            actual_total_candles = ai_db.count_candles(timeframe='6h')
+    except Exception as e:
+        logger.warning(f"Не удалось подсчитать свечи в БД: {e}")
     
     print()
     print("=" * 60)
@@ -353,7 +356,7 @@ def main():
     print(f"Всего свечей в базе: {actual_total_candles:,}")
     print(f"Время выполнения: {elapsed_total:.0f} секунд ({elapsed_total/60:.1f} минут)")
     print()
-    print(f"Данные сохранены в: data/ai/historical/")
+    print(f"Данные сохранены в БД: ai_data.db (таблица candles_history)")
     print()
     print("Следующий шаг:")
     print("  python scripts/ai/train_anomaly_on_real_data.py")

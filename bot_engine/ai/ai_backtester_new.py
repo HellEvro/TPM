@@ -857,12 +857,20 @@ class AIBacktester:
             }
             
             # Сохраняем результаты
-            results_file = os.path.join(
-                self.results_dir,
-                f"backtest_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            )
-            with open(results_file, 'w', encoding='utf-8') as f:
-                json.dump(results, f, ensure_ascii=False, indent=2)
+            # Сохраняем в БД вместо файла
+            try:
+                from bot_engine.ai.ai_database import get_ai_database
+                ai_db = get_ai_database()
+                if ai_db:
+                    backtest_name = f"backtest_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    ai_db.save_backtest_result(
+                        results=results,
+                        backtest_name=backtest_name,
+                        symbol=symbol
+                    )
+                    logger.debug(f"✅ Результаты бэктеста сохранены в БД: {backtest_name}")
+            except Exception as e:
+                logger.warning(f"⚠️ Не удалось сохранить результаты бэктеста в БД: {e}")
             
             logger.info(f"✅ Бэктест завершен: Return={total_return:.2f}%, Win Rate={win_rate:.2f}%")
             
