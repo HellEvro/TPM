@@ -102,8 +102,28 @@ class AutoTrainer:
     def _check_initial_training(self):
         """Проверяет нужно ли обучение при старте"""
         model_path = Path(AIConfig.AI_ANOMALY_MODEL_PATH)
+        model_found = False
         
-        if not model_path.exists():
+        # Проверяем файл модели
+        if model_path.exists():
+            model_found = True
+            logger.info("[AutoTrainer] ✅ Модель найдена в файле")
+        else:
+            # Проверяем БД на наличие модели
+            try:
+                from bot_engine.ai.ai_database import AIDatabase
+                ai_db = AIDatabase()
+                model_version = ai_db.get_latest_model_version(
+                    model_type='anomaly_detector',
+                    symbol=None
+                )
+                if model_version:
+                    model_found = True
+                    logger.info("[AutoTrainer] ✅ Модель найдена в БД")
+            except Exception as e:
+                logger.debug(f"[AutoTrainer] Ошибка проверки модели в БД: {e}")
+        
+        if not model_found:
             logger.warning("[AutoTrainer] ⚠️ Модель не найдена, требуется первичное обучение")
             
             if AIConfig.AI_AUTO_TRAIN_ON_STARTUP:

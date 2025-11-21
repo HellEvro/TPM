@@ -55,6 +55,9 @@ if not os.path.exists('app/config.py'):
 
 from app.config import *
 
+# Импортируем БД для app.py
+from bot_engine.app_database import get_app_database
+
 # Конфигурация резервного копирования (значения по умолчанию)
 _DATABASE_BACKUP_DEFAULTS = {
     'ENABLED': True,
@@ -142,30 +145,40 @@ from functools import partial
 class DEFAULTS:
     PNL_THRESHOLD = 100
 
-# Глобальные переменные для хранения данных
-positions_data = {
-    'high_profitable': [],
-    'profitable': [],
-    'losing': [],
-    'last_update': None,
-    'closed_pnl': [],
-    'total_trades': 0,
-    'rapid_growth': [],
-    'stats': {
-        'total_pnl': 0,
-        'total_profit': 0,
-        'total_loss': 0,
-        'high_profitable_count': 0,
-        'profitable_count': 0,
-        'losing_count': 0,
-        'top_profitable': [],
-        'top_losing': []
-    }
-}
+# Инициализация БД для app.py
+app_db = None
 
-# Глобальные переменные для максимальных значений
-max_profit_values = {}
-max_loss_values = {}
+def get_app_db():
+    """Получает экземпляр БД для app.py (ленивая инициализация)"""
+    global app_db
+    if app_db is None:
+        app_db = get_app_database()
+    return app_db
+
+# Глобальные переменные для хранения данных (загружаются из БД)
+def load_positions_data():
+    """Загружает positions_data из БД"""
+    db = get_app_db()
+    return db.load_positions_data()
+
+def save_positions_data(data):
+    """Сохраняет positions_data в БД"""
+    db = get_app_db()
+    return db.save_positions_data(data)
+
+def load_max_values():
+    """Загружает max_values из БД"""
+    db = get_app_db()
+    return db.load_max_values()
+
+def save_max_values(max_profit, max_loss):
+    """Сохраняет max_values в БД"""
+    db = get_app_db()
+    return db.save_max_values(max_profit, max_loss)
+
+# Инициализируем данные из БД при старте
+positions_data = load_positions_data()
+max_profit_values, max_loss_values = load_max_values()
 
 app = Flask(__name__, static_folder='static')
 app.config['DEBUG'] = APP_DEBUG

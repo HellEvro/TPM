@@ -721,9 +721,30 @@ class AITrainer:
                         logger.error("   💡 Убедитесь, что убыточные сделки тоже сохраняются с отрицательным PnL")
                         logger.error("=" * 80)
         else:
-            logger.warning("⚠️ Сделки не найдены! Убедитесь что bots.py запущен и совершает сделки.")
-            # 4. Фильтруем только закрытые сделки с PnL (пустой список)
-            closed_trades = []
+            # Проверяем БД на наличие сделок из биржи
+            exchange_trades_count = 0
+            if self.ai_db:
+                try:
+                    exchange_trades = self._load_saved_exchange_trades()
+                    exchange_trades_count = len(exchange_trades)
+                    if exchange_trades_count > 0:
+                        logger.info(f"   📊 Найдено {exchange_trades_count} сделок из биржи в БД")
+                        # Добавляем сделки из биржи в список для обучения
+                        for trade in exchange_trades:
+                            if trade.get('status') == 'CLOSED' and trade.get('pnl') is not None:
+                                if trade.get('entry_price') and trade.get('exit_price'):
+                                    closed_trades.append(trade)
+                        logger.info(f"   ✅ Добавлено {len(closed_trades)} сделок из биржи для обучения")
+                except Exception as e:
+                    logger.debug(f"   ⚠️ Ошибка проверки сделок из биржи в БД: {e}")
+            
+            if len(closed_trades) == 0:
+                logger.warning("⚠️ Сделки не найдены!")
+                logger.warning("   💡 Проверьте:")
+                logger.warning("      1. Запущен ли bots.py и совершает ли сделки")
+                logger.warning("      2. Есть ли сделки в БД (exchange_trades) - они загружаются через API биржи")
+                logger.warning("      3. Вызовите _update_exchange_trades_history() для загрузки сделок с биржи")
+            # 4. Фильтруем только закрытые сделки с PnL
             
         logger.info("=" * 80)
         logger.info("✅ РЕЗУЛЬТАТ ФИЛЬТРАЦИИ")
