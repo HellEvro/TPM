@@ -97,15 +97,6 @@ class AIContinuousLearning:
             logger.debug("✅ База знаний сохранена в БД")
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения базы знаний в БД: {e}")
-                    logger.debug(f"⚠️ Файл {self.knowledge_base_file} занят, повторная попытка {attempt + 1}/{max_retries}...")
-                    time.sleep(retry_delay * (attempt + 1))
-                    continue
-                else:
-                    logger.warning(f"⚠️ Не удалось сохранить базу знаний после {max_retries} попыток")
-                    logger.debug(f"   Ошибка: {file_error}")
-            except Exception as e:
-                logger.error(f"❌ Ошибка сохранения базы знаний: {e}")
-                return
     
     def analyze_trade_results(self, trades: List[Dict]) -> Dict:
         """
