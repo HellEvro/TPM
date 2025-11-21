@@ -553,28 +553,37 @@ class SmartRiskManager:
         return 50.0  # Дефолт в %
     
     def _load_stop_patterns(self):
-        """Загружает обученные паттерны"""
+        """Загружает обученные паттерны из БД"""
         try:
-            if self.training_data_path.exists():
-                with open(self.training_data_path, 'r') as f:
-                    data = json.load(f)
+            from bot_engine.ai.ai_database import get_ai_database
+            ai_db = get_ai_database()
+            if ai_db:
+                result = ai_db.get_training_data('stops_analysis')
+                if result and result.get('data'):
+                    data = result['data']
                     self.stop_patterns = data.get('patterns', {})
-                    logger.debug(f" Загружено {len(self.stop_patterns)} паттернов")
+                    logger.debug(f" Загружено {len(self.stop_patterns)} паттернов из БД")
+                    return
         except Exception as e:
-            logger.warning(f" Не удалось загрузить паттерны: {e}")
+            logger.debug(f" Не удалось загрузить паттерны из БД: {e}")
+        
+        # Дефолтные паттерны
+        self.stop_patterns = {}
     
     def _save_for_training(self, patterns: Dict):
-        """Сохраняет данные для обучения"""
+        """Сохраняет данные для обучения в БД"""
         try:
-            data = {
-                'patterns': patterns,
-                'updated_at': datetime.now().isoformat()
-            }
-            
-            with open(self.training_data_path, 'w') as f:
-                json.dump(data, f, indent=2)
+            from bot_engine.ai.ai_database import get_ai_database
+            ai_db = get_ai_database()
+            if ai_db:
+                data = {
+                    'patterns': patterns,
+                    'updated_at': datetime.now().isoformat()
+                }
+                ai_db.save_training_data('stops_analysis', data)
+                logger.debug("✅ Паттерны стопов сохранены в БД")
         except Exception as e:
-            logger.error(f" Не удалось сохранить данные: {e}")
+            logger.error(f" Не удалось сохранить данные в БД: {e}")
     
     def _generate_recommendations(self, stopped_trades: List[Dict]) -> List[str]:
         """Генерирует рекомендации на основе анализа стопов"""
@@ -797,14 +806,21 @@ class SmartRiskManager:
             logger.error(f" Ошибка сохранения feedback: {e}")
     
     def _load_optimized_params(self):
-        """Загружает оптимизированные параметры"""
+        """Загружает оптимизированные параметры из БД"""
         try:
-            if self.optimized_params_path.exists():
-                with open(self.optimized_params_path, 'r') as f:
-                    self.optimized_params = json.load(f)
-                    logger.debug(f" Загружено {len(self.optimized_params)} оптимизированных параметров")
+            from bot_engine.ai.ai_database import get_ai_database
+            ai_db = get_ai_database()
+            if ai_db:
+                result = ai_db.get_training_data('optimized_params')
+                if result and result.get('data'):
+                    self.optimized_params = result['data']
+                    logger.debug(f" Загружено {len(self.optimized_params)} оптимизированных параметров из БД")
+                    return
         except Exception as e:
-            logger.warning(f" Не удалось загрузить оптимизированные параметры: {e}")
+            logger.debug(f" Не удалось загрузить оптимизированные параметры из БД: {e}")
+        
+        # Дефолтные параметры
+        self.optimized_params = {}
     
     def learn_from_feedback(self):
         """
@@ -904,6 +920,15 @@ class SmartRiskManager:
         self.optimized_params[symbol]['sl_multiplier'] *= adjustments.get('sl_multiplier', 1.0)
         self.optimized_params[symbol]['tp_multiplier'] *= adjustments.get('tp_multiplier', 1.0)
         self.optimized_params[symbol]['last_updated'] = datetime.now().isoformat()
+        
+        # Сохраняем в БД
+        try:
+            from bot_engine.ai.ai_database import get_ai_database
+            ai_db = get_ai_database()
+            if ai_db:
+                ai_db.save_training_data('optimized_params', self.optimized_params, symbol=symbol)
+        except Exception as e:
+            logger.debug(f" Не удалось сохранить оптимизированные параметры в БД: {e}")
         
         # Сохраняем
         try:
