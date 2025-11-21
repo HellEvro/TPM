@@ -28,10 +28,7 @@ class AIBotManager:
             bots_service_url: URL сервиса bots.py
         """
         self.bots_service_url = bots_service_url
-        self.config_dir = 'data/ai/bot_configs'
-        
-        # Создаем директории
-        os.makedirs(self.config_dir, exist_ok=True)
+        # УДАЛЕНО: self.config_dir - конфиги теперь сохраняются в БД (bot_configs)
         
         logger.info("✅ AIBotManager инициализирован")
     

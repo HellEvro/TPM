@@ -126,13 +126,12 @@ class AIBacktester:
     
     def __init__(self):
         """Инициализация бэктестера"""
-        self.results_dir = 'data/ai/backtest_results'
+        # УДАЛЕНО: self.results_dir - результаты теперь сохраняются в БД (backtest_results)
         self.data_dir = 'data/ai'
         config_snapshot = _get_config_snapshot()
         self.auto_bot_config = config_snapshot.get('global', {})
         
-        # Создаем директории
-        os.makedirs(self.results_dir, exist_ok=True)
+        # Создаем только основную директорию (для БД и моделей)
         os.makedirs(self.data_dir, exist_ok=True)
         
         logger.info("✅ AIBacktester инициализирован")

@@ -349,6 +349,7 @@ stats_lock = Lock()
 # Блокировка для операций matplotlib (не потокобезопасен)
 matplotlib_lock = Lock()
 backup_scheduler_stop_event = threading.Event()
+closed_pnl_loader_stop_event = threading.Event()
 
 
 def _run_backup_job(backup_service, backup_config):
@@ -436,8 +437,70 @@ def backup_scheduler_loop():
     while not backup_scheduler_stop_event.wait(interval_seconds):
         _run_backup_job(backup_service, backup_config)
 
+def background_closed_pnl_loader():
+    """Фоновый процесс для загрузки закрытых PnL из биржи в БД каждые 30 секунд"""
+    app_logger = logging.getLogger('app')
+    app_logger.info("[CLOSED_PNL_LOADER] Запуск фонового процесса загрузки closed_pnl...")
+    
+    while not closed_pnl_loader_stop_event.is_set():
+        try:
+            db = get_app_db()
+            
+            # Получаем timestamp последней загруженной позиции
+            last_timestamp = db.get_latest_closed_pnl_timestamp(exchange=ACTIVE_EXCHANGE)
+            
+            app_logger.debug(f"[CLOSED_PNL_LOADER] Последний timestamp в БД: {last_timestamp}")
+            
+            # Загружаем новые закрытые позиции с биржи
+            # Если есть last_timestamp, загружаем только новые (после этого timestamp)
+            # Если нет, загружаем все данные (первая загрузка)
+            try:
+                if last_timestamp:
+                    # Загружаем только новые позиции (после last_timestamp)
+                    # Используем период 'custom' с start_date = last_timestamp
+                    closed_pnl = current_exchange.get_closed_pnl(
+                        sort_by='time',
+                        period='custom',
+                        start_date=last_timestamp + 1,  # +1 чтобы не дублировать последнюю (в миллисекундах)
+                        end_date=None
+                    )
+                else:
+                    # Первая загрузка - загружаем все данные
+                    app_logger.info("[CLOSED_PNL_LOADER] Первая загрузка - загружаем все закрытые позиции...")
+                    closed_pnl = current_exchange.get_closed_pnl(
+                        sort_by='time',
+                        period='all'
+                    )
+                
+                if closed_pnl:
+                    # Сохраняем в БД
+                    saved = db.save_closed_pnl(closed_pnl, exchange=ACTIVE_EXCHANGE)
+                    if saved:
+                        app_logger.info(f"[CLOSED_PNL_LOADER] Загружено {len(closed_pnl)} новых закрытых позиций в БД")
+                    else:
+                        app_logger.warning(f"[CLOSED_PNL_LOADER] Не удалось сохранить {len(closed_pnl)} позиций в БД")
+                else:
+                    app_logger.debug("[CLOSED_PNL_LOADER] Нет новых закрытых позиций")
+                    
+            except Exception as e:
+                app_logger.error(f"[CLOSED_PNL_LOADER] Ошибка загрузки closed_pnl с биржи: {e}")
+                import traceback
+                app_logger.debug(traceback.format_exc())
+            
+            # Ждем 30 секунд до следующей загрузки
+            closed_pnl_loader_stop_event.wait(30)
+            
+        except Exception as e:
+            app_logger.error(f"[CLOSED_PNL_LOADER] Критическая ошибка в фоновом процессе: {e}")
+            import traceback
+            app_logger.debug(traceback.format_exc())
+            # Ждем 30 секунд перед следующей попыткой
+            closed_pnl_loader_stop_event.wait(30)
+    
+    app_logger.info("[CLOSED_PNL_LOADER] Фоновый процесс загрузки closed_pnl остановлен")
+
 def background_update():
-    global positions_data, last_stats_time
+    global positions_data, max_profit_values, max_loss_values, last_stats_time
     last_log_minute = -1
     last_stats_time = None
     thread_id = threading.get_ident()
@@ -482,6 +545,16 @@ def background_update():
             # Распределяем позиции по категориям
             for position in positions:
                 pnl = position['pnl']
+                symbol = position.get('symbol', '')
+                
+                # Обновляем максимальные значения
+                if pnl > 0:
+                    if symbol not in max_profit_values or pnl > max_profit_values[symbol]:
+                        max_profit_values[symbol] = pnl
+                elif pnl < 0:
+                    if symbol not in max_loss_values or abs(pnl) > abs(max_loss_values.get(symbol, 0)):
+                        max_loss_values[symbol] = pnl
+                
                 if pnl > 0:
                     if pnl >= 100:
                         high_profitable.append(position)
@@ -523,6 +596,10 @@ def background_update():
                 'stats': stats,
                 'last_update': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             })
+            
+            # Сохраняем в БД
+            save_positions_data(positions_data)
+            save_max_values(max_profit_values, max_loss_values)
 
             # Отправка статистики в Telegram только если нужно
             if should_send_stats:
@@ -768,7 +845,7 @@ def get_balance():
 
 @app.route('/api/closed_pnl')
 def get_closed_pnl():
-    """Получение закрытых позиций"""
+    """Получение закрытых позиций из БД"""
     try:
         sort_by = request.args.get('sort', 'time')
         period = request.args.get('period', 'all')  # all, day, week, month, half_year, year, custom
@@ -776,19 +853,21 @@ def get_closed_pnl():
         end_date = request.args.get('end_date', None)
         
         api_logger = logging.getLogger('app')
-        api_logger.info(f"[API] Getting closed PNL, sort by: {sort_by}, period: {period}")
+        api_logger.info(f"[API] Getting closed PNL from DB, sort by: {sort_by}, period: {period}")
         
         # Получаем баланс и PNL
         wallet_data = current_exchange.get_wallet_balance()
         
-        # Получаем закрытые позиции с фильтрацией по датам
-        closed_pnl = current_exchange.get_closed_pnl(
+        # Получаем закрытые позиции из БД
+        db = get_app_db()
+        closed_pnl = db.get_closed_pnl(
             sort_by=sort_by,
             period=period,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            exchange=ACTIVE_EXCHANGE
         )
-        api_logger.info(f"[API] Found {len(closed_pnl)} closed positions")
+        api_logger.info(f"[API] Found {len(closed_pnl)} closed positions in DB")
         
         return jsonify({
             'success': True,
@@ -801,7 +880,7 @@ def get_closed_pnl():
         })
     except Exception as e:
         api_logger = logging.getLogger('app')
-        api_logger.error(f"[API] Error getting closed PNL: {str(e)}")
+        api_logger.error(f"[API] Error getting closed PNL from DB: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -1931,7 +2010,9 @@ if __name__ == '__main__':
                     'losing_count': len(losing)
                 }
             })
-            app_logger.info(f"[APP] ✅ positions_data обновлен: {len(positions)} позиций")
+            # Сохраняем в БД
+            save_positions_data(positions_data)
+            app_logger.info(f"[APP] ✅ positions_data обновлен и сохранен в БД: {len(positions)} позиций")
         else:
             # Очищаем positions_data если позиций нет
             positions_data.update({
@@ -1947,7 +2028,9 @@ if __name__ == '__main__':
                     'losing_count': 0
                 }
             })
-            app_logger.info("[APP] ✅ positions_data очищен (нет позиций)")
+            # Сохраняем в БД
+            save_positions_data(positions_data)
+            app_logger.info("[APP] ✅ positions_data очищен и сохранен в БД (нет позиций)")
     except Exception as e:
         app_logger.error(f"[APP] ❌ Ошибка принудительного обновления positions_data: {e}")
     
@@ -1955,6 +2038,37 @@ if __name__ == '__main__':
     update_thread = threading.Thread(target=background_update)
     update_thread.daemon = True
     update_thread.start()
+    
+    # Запускаем фоновый процесс загрузки closed_pnl каждые 30 секунд
+    closed_pnl_loader_thread = threading.Thread(target=background_closed_pnl_loader, name='ClosedPnLLoader')
+    closed_pnl_loader_thread.daemon = True
+    closed_pnl_loader_thread.start()
+    app_logger.info("[APP] ✅ Фоновый процесс загрузки closed_pnl запущен (обновление каждые 30 секунд)")
+    
+    # Выполняем первичную загрузку closed_pnl при старте (не ждем 30 секунд)
+    app_logger.info("[APP] 🔄 Выполняем первичную загрузку closed_pnl...")
+    try:
+        db = get_app_db()
+        last_timestamp = db.get_latest_closed_pnl_timestamp(exchange=ACTIVE_EXCHANGE)
+        
+        if not last_timestamp:
+            # Первая загрузка - загружаем все данные
+            app_logger.info("[APP] Первая загрузка closed_pnl - загружаем все данные...")
+            closed_pnl = current_exchange.get_closed_pnl(sort_by='time', period='all')
+            if closed_pnl:
+                saved = db.save_closed_pnl(closed_pnl, exchange=ACTIVE_EXCHANGE)
+                if saved:
+                    app_logger.info(f"[APP] ✅ Первичная загрузка: сохранено {len(closed_pnl)} закрытых позиций в БД")
+                else:
+                    app_logger.warning(f"[APP] ⚠️ Не удалось сохранить {len(closed_pnl)} позиций при первичной загрузке")
+            else:
+                app_logger.info("[APP] ℹ️ Нет закрытых позиций для загрузки")
+        else:
+            app_logger.info(f"[APP] ✅ В БД уже есть данные closed_pnl (последний timestamp: {last_timestamp})")
+    except Exception as e:
+        app_logger.error(f"[APP] ❌ Ошибка первичной загрузки closed_pnl: {e}")
+        import traceback
+        app_logger.debug(traceback.format_exc())
     
     # Запускаем поток для отправки дневного отчета
     if TELEGRAM_NOTIFY['DAILY_REPORT']:
