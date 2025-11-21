@@ -47,6 +47,24 @@ import logging
 logger = logging.getLogger('App.Database')
 
 
+def _get_project_root() -> Path:
+    """
+    Определяет корень проекта относительно текущего файла.
+    Корень проекта - директория, где лежит app.py и bot_engine/
+    """
+    current = Path(__file__).resolve()
+    # Поднимаемся от bot_engine/app_database.py до корня проекта
+    # bot_engine/ -> корень
+    for parent in [current.parent.parent] + list(current.parents):
+        if parent and (parent / 'app.py').exists() and (parent / 'bot_engine').exists():
+            return parent
+    # Фолбек: поднимаемся на 1 уровень
+    try:
+        return current.parents[1]
+    except IndexError:
+        return current.parent
+
+
 class AppDatabase:
     """
     Реляционная база данных для всех данных app.py
@@ -60,11 +78,10 @@ class AppDatabase:
             db_path: Путь к файлу базы данных (если None, используется data/app_data.db)
         """
         if db_path is None:
-            # Поддержка UNC путей: используем абсолютный путь относительно текущей рабочей директории
-            base_dir = os.getcwd()
-            db_path = os.path.join(base_dir, 'data', 'app_data.db')
-            # Нормализуем путь (работает и с UNC путями)
-            db_path = os.path.normpath(db_path)
+            # ✅ ПУТЬ ОТНОСИТЕЛЬНО КОРНЯ ПРОЕКТА, А НЕ РАБОЧЕЙ ДИРЕКТОРИИ
+            project_root = _get_project_root()
+            db_path = project_root / 'data' / 'app_data.db'
+            db_path = str(db_path.resolve())
         
         self.db_path = db_path
         self.lock = threading.RLock()

@@ -35,6 +35,24 @@ import logging
 logger = logging.getLogger('AI.Database')
 
 
+def _get_project_root() -> Path:
+    """
+    Определяет корень проекта относительно текущего файла.
+    Корень проекта - директория, где лежит ai.py и bot_engine/
+    """
+    current = Path(__file__).resolve()
+    # Поднимаемся от bot_engine/ai/ai_database.py до корня проекта
+    # bot_engine/ai/ -> bot_engine/ -> корень
+    for parent in [current.parent.parent.parent] + list(current.parents):
+        if parent and (parent / 'ai.py').exists() and (parent / 'bot_engine').exists():
+            return parent
+    # Фолбек: поднимаемся на 2 уровня
+    try:
+        return current.parents[2]
+    except IndexError:
+        return current.parent
+
+
 class AIDatabase:
     """
     Реляционная база данных для всех данных AI модуля
@@ -48,11 +66,10 @@ class AIDatabase:
             db_path: Путь к файлу базы данных (если None, используется data/ai_data.db)
         """
         if db_path is None:
-            # Поддержка UNC путей: используем абсолютный путь относительно текущей рабочей директории
-            base_dir = os.getcwd()
-            db_path = os.path.join(base_dir, 'data', 'ai_data.db')
-            # Нормализуем путь (работает и с UNC путями)
-            db_path = os.path.normpath(db_path)
+            # ✅ ПУТЬ ОТНОСИТЕЛЬНО КОРНЯ ПРОЕКТА, А НЕ РАБОЧЕЙ ДИРЕКТОРИИ
+            project_root = _get_project_root()
+            db_path = project_root / 'data' / 'ai_data.db'
+            db_path = str(db_path.resolve())
         
         self.db_path = db_path
         self.lock = threading.RLock()
@@ -716,7 +733,8 @@ class AIDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_exchange_trades_pnl ON exchange_trades(pnl)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_exchange_trades_order_id ON exchange_trades(order_id)")
             
-            # ==================== ТАБЛИЦА: РЕШЕНИЯ AI ====================
+            # ==================== ТАБЛИЦА: РЕШЕНИЯ AI (НОРМАЛИЗОВАННАЯ) ====================
+            # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: основные поля из JSON в отдельных столбцах
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS ai_decisions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -728,8 +746,20 @@ class AIDatabase:
                     rsi REAL,
                     trend TEXT,
                     price REAL,
+                    -- Дополнительные поля из market_data (если есть)
+                    volume REAL,
+                    volatility REAL,
+                    volume_ratio REAL,
+                    -- Дополнительные поля из decision_params (если есть)
+                    rsi_long_threshold REAL,
+                    rsi_short_threshold REAL,
+                    max_loss_percent REAL,
+                    take_profit_percent REAL,
+                    -- Дополнительные JSON для сложных структур
                     market_data_json TEXT,
                     decision_params_json TEXT,
+                    extra_market_data_json TEXT,
+                    extra_decision_params_json TEXT,
                     created_at TEXT NOT NULL,
                     executed_at TEXT,
                     result_pnl REAL,
