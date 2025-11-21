@@ -25,7 +25,16 @@ logger = logging.getLogger('BotsService')
 # Импорт SystemConfig
 from bot_engine.bot_config import SystemConfig
 from bot_engine.bot_history import log_position_closed as history_log_position_closed
-from bot_engine.storage import save_bots_state as storage_save_bots_state, load_bots_state as storage_load_bots_state
+from bot_engine.storage import (
+    save_bots_state as storage_save_bots_state,
+    load_bots_state as storage_load_bots_state,
+    save_rsi_cache as storage_save_rsi_cache,
+    load_rsi_cache as storage_load_rsi_cache,
+    save_process_state as storage_save_process_state,
+    load_process_state as storage_load_process_state,
+    save_delisted_coins as storage_save_delisted_coins,
+    load_delisted_coins as storage_load_delisted_coins
+)
 
 # Константы теперь в SystemConfig
 
@@ -403,49 +412,41 @@ def get_rsi_cache():
         return coins_rsi_data.get('coins', {})
 
 def save_rsi_cache():
-    """Сохранить кэш RSI данных в файл"""
+    """Сохранить кэш RSI данных в БД"""
     try:
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция в Python
-        cache_data = {
-            'timestamp': datetime.now().isoformat(),
-            'coins': coins_rsi_data.get('coins', {}),
-            'stats': {
-                'total_coins': len(coins_rsi_data.get('coins', {})),
-                'successful_coins': coins_rsi_data.get('successful_coins', 0),
-                'failed_coins': coins_rsi_data.get('failed_coins', 0)
-            }
+        coins_data = coins_rsi_data.get('coins', {})
+        stats = {
+            'total_coins': len(coins_data),
+            'successful_coins': coins_rsi_data.get('successful_coins', 0),
+            'failed_coins': coins_rsi_data.get('failed_coins', 0)
         }
         
-        with open(RSI_CACHE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(cache_data, f, indent=2, ensure_ascii=False)
-            
-        logger.info(f" RSI данные для {len(cache_data['coins'])} монет сохранены в кэш")
+        # ✅ Сохраняем в БД через storage.py
+        if storage_save_rsi_cache(coins_data, stats):
+            logger.info(f" RSI данные для {len(coins_data)} монет сохранены в БД")
+            return True
+        return False
         
     except Exception as e:
-        logger.error(f" Ошибка сохранения RSI кэша: {str(e)}")
+        logger.error(f" Ошибка сохранения RSI кэша в БД: {str(e)}")
+        return False
 
 def load_rsi_cache():
-    """Загрузить кэш RSI данных из файла"""
+    """Загрузить кэш RSI данных из БД"""
     global coins_rsi_data
     
     try:
-        if not os.path.exists(RSI_CACHE_FILE):
-            logger.info(" Файл RSI кэша не найден, будет создан при первом обновлении")
-            return False
-            
-        with open(RSI_CACHE_FILE, 'r', encoding='utf-8') as f:
-            cache_data = json.load(f)
+        # ✅ Загружаем из БД через storage.py
+        cache_data = storage_load_rsi_cache()
         
-        # Проверяем возраст кэша (не старше 6 часов)
-        cache_timestamp = datetime.fromisoformat(cache_data['timestamp'])
-        age_hours = (datetime.now() - cache_timestamp).total_seconds() / 3600
-        
-        if age_hours > 6:
-            logger.warning(f" RSI кэш устарел ({age_hours:.1f} часов), будет обновлен")
+        if not cache_data:
+            logger.info(" RSI кэш в БД не найден, будет создан при первом обновлении")
             return False
         
-        # Загружаем данные из кэша
+        # Получаем данные из кэша
         cached_coins = cache_data.get('coins', {})
+        stats = cache_data.get('stats', {})
         
         # Проверяем формат кэша (старый массив или новый словарь)
         if isinstance(cached_coins, list):
@@ -460,18 +461,18 @@ def load_rsi_cache():
         with rsi_data_lock:
             coins_rsi_data.update({
                 'coins': cached_coins,
-                'successful_coins': cache_data.get('stats', {}).get('successful_coins', len(cached_coins)),
-                'failed_coins': cache_data.get('stats', {}).get('failed_coins', 0),
+                'successful_coins': stats.get('successful_coins', len(cached_coins)),
+                'failed_coins': stats.get('failed_coins', 0),
                 'total_coins': len(cached_coins),
                 'last_update': datetime.now().isoformat(),  # Всегда используем текущее время
                 'update_in_progress': False
             })
         
-        logger.info(f" Загружено {len(cached_coins)} монет из RSI кэша (возраст: {age_hours:.1f}ч)")
+        logger.info(f" Загружено {len(cached_coins)} монет из RSI кэша (БД)")
         return True
         
     except Exception as e:
-        logger.error(f" Ошибка загрузки RSI кэша: {str(e)}")
+        logger.error(f" Ошибка загрузки RSI кэша из БД: {str(e)}")
         return False
 
 def save_default_config():
@@ -542,33 +543,28 @@ def update_process_state(process_name, status_update):
         logger.error(f" ❌ Ошибка обновления состояния {process_name}: {e}")
 
 def save_process_state():
-    """Сохраняет состояние всех процессов"""
+    """Сохраняет состояние всех процессов в БД"""
     try:
-        state_data = {
-            'process_state': process_state.copy(),
-            'last_saved': datetime.now().isoformat(),
-            'version': '1.0'
-        }
-        
-        with open(PROCESS_STATE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(state_data, f, indent=2, ensure_ascii=False)
-        
-        return True
+        # ✅ Сохраняем в БД через storage.py
+        if storage_save_process_state(process_state):
+            logger.debug("💾 Состояние процессов сохранено в БД")
+            return True
+        return False
         
     except Exception as e:
-        logger.error(f" ❌ Ошибка сохранения состояния процессов: {e}")
+        logger.error(f" ❌ Ошибка сохранения состояния процессов в БД: {e}")
         return False
 
 def load_process_state():
-    """Загружает состояние процессов из файла"""
+    """Загружает состояние процессов из БД"""
     try:
-        if not os.path.exists(PROCESS_STATE_FILE):
-            logger.info(f" 📁 Файл состояния процессов не найден, начинаем с дефолтного")
-            save_process_state()  # Создаем файл
-            return False
+        # ✅ Загружаем из БД через storage.py
+        state_data = storage_load_process_state()
         
-        with open(PROCESS_STATE_FILE, 'r', encoding='utf-8') as f:
-            state_data = json.load(f)
+        if not state_data:
+            logger.info(f" 📁 Состояние процессов в БД не найдено, начинаем с дефолтного")
+            save_process_state()  # Создаем в БД
+            return False
         
         if 'process_state' in state_data:
             # Обновляем глобальное состояние
@@ -577,13 +573,13 @@ def load_process_state():
                     process_state[process_name].update(process_info)
             
             last_saved = state_data.get('last_saved', 'неизвестно')
-            logger.info(f" ✅ Состояние процессов восстановлено (сохранено: {last_saved})")
+            logger.info(f" ✅ Состояние процессов восстановлено из БД (сохранено: {last_saved})")
             return True
         
         return False
         
     except Exception as e:
-        logger.error(f" ❌ Ошибка загрузки состояния процессов: {e}")
+        logger.error(f" ❌ Ошибка загрузки состояния процессов из БД: {e}")
         return False
 
 def save_system_config(config_data):
@@ -826,65 +822,56 @@ def load_bots_state():
         return False
 
 def load_delisted_coins():
-    """Загружает список делистинговых монет из файла"""
-    delisted_file = Path("data/delisted.json")
-    default_data = {"delisted_coins": {}, "last_scan": None, "scan_enabled": True}
-    
-    # Если файл не существует или пустой, создаем дефолтный
-    if not delisted_file.exists() or delisted_file.stat().st_size == 0:
-        logger.info("Создаем новый файл delisted.json с дефолтными данными")
-        # Создаем папку data если её нет
-        delisted_file.parent.mkdir(exist_ok=True)
-        # Сохраняем дефолтные данные
-        try:
-            with open(delisted_file, 'w', encoding='utf-8') as f:
-                json.dump(default_data, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            logger.warning(f"Не удалось создать файл delisted.json: {e}")
-        return default_data
-    
-    # Пытаемся загрузить существующий файл
+    """Загружает список делистинговых монет из БД"""
     try:
-        with open(delisted_file, 'r', encoding='utf-8') as f:
-            content = f.read().strip()
-            # Если файл пустой после trim
-            if not content:
-                logger.info("Файл delisted.json пустой, используем дефолтные данные")
-                # Записываем дефолтные данные
-                with open(delisted_file, 'w', encoding='utf-8') as fw:
-                    json.dump(default_data, fw, indent=2, ensure_ascii=False)
-                return default_data
-            # Парсим JSON
-            data = json.loads(content)
-            return data
-    except json.JSONDecodeError as e:
-        logger.warning(f"Невалидный JSON в delisted.json, восстанавливаем дефолтные данные: {e}")
-        # Перезаписываем файл дефолтными данными
-        try:
-            with open(delisted_file, 'w', encoding='utf-8') as f:
-                json.dump(default_data, f, indent=2, ensure_ascii=False)
-        except Exception as write_error:
-            logger.warning(f"Не удалось восстановить файл: {write_error}")
-        return default_data
+        # ✅ Загружаем из БД через storage.py
+        delisted_list = storage_load_delisted_coins()
+        
+        # Преобразуем список в формат словаря для обратной совместимости
+        if delisted_list:
+            delisted_coins = {}
+            for coin in delisted_list:
+                if isinstance(coin, dict):
+                    symbol = coin.get('symbol', '')
+                    if symbol:
+                        delisted_coins[symbol] = coin
+                elif isinstance(coin, str):
+                    delisted_coins[coin] = {}
+            
+            return {
+                "delisted_coins": delisted_coins,
+                "last_scan": None,
+                "scan_enabled": True
+            }
+        
+        # Если данных нет, возвращаем дефолт
+        return {"delisted_coins": {}, "last_scan": None, "scan_enabled": True}
+        
     except Exception as e:
-        logger.warning(f"Ошибка загрузки delisted.json: {e}, используем дефолтные данные")
-        return default_data
+        logger.warning(f"Ошибка загрузки делистированных монет из БД: {e}, используем дефолтные данные")
+        return {"delisted_coins": {}, "last_scan": None, "scan_enabled": True}
 
 def save_delisted_coins(data):
-    """Сохраняет список делистинговых монет в файл"""
-    delisted_file = Path("data/delisted.json")
-    
+    """Сохраняет список делистинговых монет в БД"""
     try:
-        # Создаем папку data если её нет
-        delisted_file.parent.mkdir(exist_ok=True)
+        # Преобразуем словарь в список для БД
+        delisted_coins_dict = data.get("delisted_coins", {}) if isinstance(data, dict) else {}
+        delisted_list = []
         
-        with open(delisted_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        for symbol, coin_data in delisted_coins_dict.items():
+            if isinstance(coin_data, dict):
+                coin_data['symbol'] = symbol
+                delisted_list.append(coin_data)
+            else:
+                delisted_list.append({'symbol': symbol})
         
-        logger.info(f"✅ Обновлен файл delisted.json")
-        return True
+        # ✅ Сохраняем в БД через storage.py
+        if storage_save_delisted_coins(delisted_list):
+            logger.info(f"✅ Обновлены делистированные монеты в БД ({len(delisted_list)} монет)")
+            return True
+        return False
     except Exception as e:
-        logger.error(f"Ошибка сохранения delisted.json: {e}")
+        logger.error(f"Ошибка сохранения делистированных монет в БД: {e}")
         return False
 
 def scan_all_coins_for_delisting():
