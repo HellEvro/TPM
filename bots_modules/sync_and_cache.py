@@ -25,7 +25,7 @@ logger = logging.getLogger('BotsService')
 # Импорт SystemConfig
 from bot_engine.bot_config import SystemConfig
 from bot_engine.bot_history import log_position_closed as history_log_position_closed
-from bot_engine.storage import save_json_file
+from bot_engine.storage import save_bots_state as storage_save_bots_state, load_bots_state as storage_load_bots_state
 
 # Константы теперь в SystemConfig
 
@@ -629,15 +629,8 @@ def load_system_config():
         return False
 
 def save_bots_state():
-    """Сохраняет состояние всех ботов в файл"""
+    """Сохраняет состояние всех ботов в БД"""
     try:
-        state_data = {
-            'bots': {},
-            'auto_bot_config': {},
-            'last_saved': datetime.now().isoformat(),
-            'version': '1.0'
-        }
-        
         # ✅ ИСПРАВЛЕНИЕ: Используем таймаут для блокировки чтобы не висеть при остановке
         import threading
         
@@ -653,28 +646,23 @@ def save_bots_state():
             return False
         
         try:
+            # Собираем данные ботов
+            bots_data_to_save = {}
             for symbol, bot_data in bots_data['bots'].items():
-                state_data['bots'][symbol] = bot_data
+                bots_data_to_save[symbol] = bot_data
             
-            # Сохраняем конфигурацию Auto Bot
-            state_data['auto_bot_config'] = bots_data['auto_bot_config'].copy()
+            # Получаем конфигурацию Auto Bot
+            auto_bot_config_to_save = bots_data['auto_bot_config'].copy()
         finally:
             bots_data_lock.release()
         
-        backup_file = f"{BOTS_STATE_FILE}.backup"
-        if os.path.exists(BOTS_STATE_FILE):
-            try:
-                # ⚠️ Windows может удерживать файловые дескрипторы — если копия не создается, просто логируем
-                shutil.copy2(BOTS_STATE_FILE, backup_file)
-            except PermissionError as backup_error:
-                logger.warning(f"[SAVE_STATE] ⚠️ Файл занят, резервная копия пропущена: {backup_error}")
-            except Exception as backup_error:
-                logger.debug(f"[SAVE_STATE] ⚠️ Не удалось создать резервную копию: {backup_error}")
-        
-        success = save_json_file(BOTS_STATE_FILE, state_data, "состояние ботов")
+        # ✅ Сохраняем в БД через storage.py
+        success = storage_save_bots_state(bots_data_to_save, auto_bot_config_to_save)
         if not success:
+            logger.error("[SAVE_STATE] ❌ Ошибка сохранения состояния в БД")
             return False
         
+        logger.debug("[SAVE_STATE] ✅ Состояние ботов сохранено в БД")
         return True
         
     except Exception as e:
@@ -777,122 +765,26 @@ def save_auto_bot_config():
 #     return True  # Заглушка
 
 def load_bots_state():
-    """Загружает состояние ботов из файла"""
+    """Загружает состояние ботов из БД"""
     try:
-        if not os.path.exists(BOTS_STATE_FILE):
-            logger.info(f" 📁 Файл состояния {BOTS_STATE_FILE} не найден, начинаем с пустого состояния")
+        logger.info(f" 📂 Загрузка состояния ботов из БД...")
+        
+        # ✅ Загружаем из БД через storage.py
+        state_data = storage_load_bots_state()
+        
+        if not state_data:
+            logger.info(f" 📁 Состояние ботов в БД не найдено, начинаем с пустого состояния")
             return False
-        
-        logger.info(f" 📂 Загрузка состояния ботов из {BOTS_STATE_FILE}...")
-        
-        # ✅ Проверяем, что файл не пустой
-        with open(BOTS_STATE_FILE, 'r', encoding='utf-8') as f:
-            file_content = f.read().strip()
-        
-        if not file_content:
-            logger.warning(f" ⚠️ Файл состояния {BOTS_STATE_FILE} пустой! Инициализируем базовую структуру...")
-            # Инициализируем файл с базовой структурой
-            from datetime import datetime
-            default_state = {
-                'version': '1.0',
-                'last_saved': datetime.now().isoformat(),
-                'bots': {},
-                'global_stats': {
-                    'total_trades': 0,
-                    'total_profit': 0.0,
-                    'win_rate': 0.0
-                }
-            }
-            with open(BOTS_STATE_FILE, 'w', encoding='utf-8') as f:
-                json.dump(default_state, f, ensure_ascii=False, indent=2)
-            logger.info(f" ✅ Файл состояния инициализирован с базовой структурой")
-            return False
-        
-        # ✅ Парсим JSON с обработкой ошибок
-        try:
-            state_data = json.loads(file_content)
-        except json.JSONDecodeError as e:
-            logger.warning(f" ⚠️ Ошибка парсинга JSON (строка {e.lineno}, колонка {e.colno}): {e.msg}")
-            logger.debug(f" Проблемный участок около символа {e.pos}")
-            
-            # ✅ Пытаемся восстановить из резервной копии
-            backup_file = f"{BOTS_STATE_FILE}.backup"
-            corrupted_file = f"{BOTS_STATE_FILE}.corrupted"
-            
-            if os.path.exists(backup_file):
-                try:
-                    logger.info(f" 🔄 Пытаемся восстановить из резервной копии: {backup_file}")
-                    with open(backup_file, 'r', encoding='utf-8') as backup_f:
-                        backup_content = backup_f.read().strip()
-                        if backup_content:
-                            state_data = json.loads(backup_content)
-                            # Восстанавливаем основной файл из резервной копии
-                            import shutil
-                            shutil.copy2(backup_file, BOTS_STATE_FILE)
-                            logger.info(f" ✅ Основной файл восстановлен из резервной копии")
-                        else:
-                            raise ValueError("Резервная копия пустая")
-                except Exception as backup_error:
-                    logger.error(f" ❌ Ошибка восстановления из резервной копии: {backup_error}")
-                    # Сохраняем поврежденный файл для анализа
-                    try:
-                        import shutil
-                        shutil.copy2(BOTS_STATE_FILE, corrupted_file)
-                        logger.info(f" 📁 Поврежденный файл сохранен: {corrupted_file}")
-                    except Exception:
-                        pass
-                    # Инициализируем файл с базовой структурой
-                    from datetime import datetime
-                    default_state = {
-                        'version': '1.0',
-                        'last_saved': datetime.now().isoformat(),
-                        'bots': {},
-                        'global_stats': {
-                            'total_trades': 0,
-                            'total_profit': 0.0,
-                            'win_rate': 0.0
-                        }
-                    }
-                    with open(BOTS_STATE_FILE, 'w', encoding='utf-8') as f:
-                        json.dump(default_state, f, ensure_ascii=False, indent=2)
-                    logger.info(f" ✅ Файл состояния инициализирован с базовой структурой")
-                    return False
-            else:
-                # Резервной копии нет - инициализируем файл с базовой структурой
-                logger.warning(f" ⚠️ Резервной копии нет, инициализируем файл с базовой структурой...")
-                from datetime import datetime
-                default_state = {
-                    'version': '1.0',
-                    'last_saved': datetime.now().isoformat(),
-                    'bots': {},
-                    'global_stats': {
-                        'total_trades': 0,
-                        'total_profit': 0.0,
-                        'win_rate': 0.0
-                    }
-                }
-                # Сохраняем поврежденный файл для анализа
-                try:
-                    import shutil
-                    shutil.copy2(BOTS_STATE_FILE, corrupted_file)
-                    logger.info(f" 📁 Поврежденный файл сохранен: {corrupted_file}")
-                except Exception:
-                    pass
-                with open(BOTS_STATE_FILE, 'w', encoding='utf-8') as f:
-                    json.dump(default_state, f, ensure_ascii=False, indent=2)
-                logger.info(f" ✅ Файл состояния инициализирован с базовой структурой")
-                return False
         
         version = state_data.get('version', '1.0')
         last_saved = state_data.get('last_saved', 'неизвестно')
         
         logger.info(f" 📊 Версия состояния: {version}, последнее сохранение: {last_saved}")
         
-        # ✅ Конфигурация Auto Bot никогда не берётся из bots_state.json
+        # ✅ Конфигурация Auto Bot никогда не берётся из БД
         # Настройки загружаются только из bot_engine/bot_config.py
-        # bots_state.json содержит только состояние ботов и глобальную статистику
         
-        logger.info(f" ⚙️ Конфигурация Auto Bot НЕ загружается из bots_state.json")
+        logger.info(f" ⚙️ Конфигурация Auto Bot НЕ загружается из БД")
         logger.info(f" 💡 Конфигурация загружается только из bot_engine/bot_config.py")
         
         # Восстанавливаем ботов
@@ -930,7 +822,7 @@ def load_bots_state():
         return restored_bots > 0
         
     except Exception as e:
-        logger.error(f" ❌ Ошибка загрузки состояния: {e}")
+        logger.error(f" ❌ Ошибка загрузки состояния из БД: {e}")
         return False
 
 def load_delisted_coins():
