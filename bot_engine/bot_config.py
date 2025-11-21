@@ -86,7 +86,6 @@ DEFAULT_AUTO_BOT_CONFIG = {
     # Торговые настройки
     'trading_enabled': True,    # Включить реальную торговлю
     'use_test_server': False,   # Использовать тестовый сервер
-    'max_risk_per_trade': 2,  # Максимальный риск на сделку в %
     # Защитные механизмы
     'max_loss_percent': 15,   # Максимальный убыток в % от входа (стоп-лосс)
     'take_profit_percent': 50, # Защитный Take Profit в % от входа (рассчитывается как стоп-лосс)
