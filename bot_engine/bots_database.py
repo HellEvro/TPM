@@ -709,13 +709,16 @@ class BotsDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_symbol ON bot_positions_registry(symbol)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_positions_side ON bot_positions_registry(side)")
             
-            # ==================== ТАБЛИЦА: RSI КЭШ ====================
+            # ==================== ТАБЛИЦА: RSI КЭШ МЕТАДАННЫЕ (НОРМАЛИЗОВАННАЯ) ====================
+            # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: метаданные кэша в отдельных столбцах
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS rsi_cache (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     timestamp TEXT NOT NULL,
-                    coins_data_json TEXT NOT NULL,
-                    stats_json TEXT,
+                    total_coins INTEGER DEFAULT 0,
+                    successful_coins INTEGER DEFAULT 0,
+                    failed_coins INTEGER DEFAULT 0,
+                    extra_stats_json TEXT,
                     created_at TEXT NOT NULL
                 )
             """)
@@ -723,6 +726,42 @@ class BotsDatabase:
             # Индексы для rsi_cache
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_timestamp ON rsi_cache(timestamp)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_created ON rsi_cache(created_at)")
+            
+            # ==================== ТАБЛИЦА: RSI КЭШ ДАННЫЕ МОНЕТ (НОРМАЛИЗОВАННАЯ) ====================
+            # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: одна строка = одна монета со всеми полями
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS rsi_cache_coins (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    cache_id INTEGER NOT NULL,
+                    symbol TEXT NOT NULL,
+                    rsi6h REAL,
+                    trend6h TEXT,
+                    rsi_zone TEXT,
+                    signal TEXT,
+                    price REAL,
+                    change24h REAL,
+                    last_update TEXT,
+                    blocked_by_scope INTEGER DEFAULT 0,
+                    has_existing_position INTEGER DEFAULT 0,
+                    is_mature INTEGER DEFAULT 1,
+                    blocked_by_exit_scam INTEGER DEFAULT 0,
+                    blocked_by_rsi_time INTEGER DEFAULT 0,
+                    trading_status TEXT,
+                    is_delisting INTEGER DEFAULT 0,
+                    trend_analysis_json TEXT,
+                    enhanced_rsi_json TEXT,
+                    time_filter_info_json TEXT,
+                    exit_scam_info_json TEXT,
+                    extra_coin_data_json TEXT,
+                    FOREIGN KEY (cache_id) REFERENCES rsi_cache(id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Индексы для rsi_cache_coins
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_cache_id ON rsi_cache_coins(cache_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_symbol ON rsi_cache_coins(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_rsi6h ON rsi_cache_coins(rsi6h)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_signal ON rsi_cache_coins(signal)")
             
             # ==================== ТАБЛИЦА: СОСТОЯНИЕ ПРОЦЕССОВ (НОРМАЛИЗОВАННАЯ) ====================
             # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: одна строка = один процесс со всеми полями
@@ -1702,6 +1741,237 @@ class BotsDatabase:
             except Exception as e:
                 logger.warning(f"⚠️ Ошибка миграции process_state: {e}")
             
+            # ==================== МИГРАЦИЯ: rsi_cache из JSON в нормализованные таблицы ====================
+            # Проверяем, есть ли старая структура (с coins_data_json)
+            try:
+                cursor.execute("SELECT coins_data_json FROM rsi_cache LIMIT 1")
+                # Если запрос выполнился - значит старая структура
+                logger.info("📦 Обнаружена старая JSON структура rsi_cache, выполняю миграцию...")
+                
+                # Загружаем все данные из старой структуры
+                cursor.execute("SELECT id, timestamp, coins_data_json, stats_json, created_at FROM rsi_cache")
+                old_rows = cursor.fetchall()
+                
+                if old_rows:
+                    # Удаляем старые таблицы
+                    cursor.execute("DROP TABLE IF EXISTS rsi_cache_coins")
+                    cursor.execute("DROP TABLE IF EXISTS rsi_cache")
+                    
+                    # Создаем новые таблицы с нормализованной структурой
+                    cursor.execute("""
+                        CREATE TABLE rsi_cache (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            timestamp TEXT NOT NULL,
+                            total_coins INTEGER DEFAULT 0,
+                            successful_coins INTEGER DEFAULT 0,
+                            failed_coins INTEGER DEFAULT 0,
+                            extra_stats_json TEXT,
+                            created_at TEXT NOT NULL
+                        )
+                    """)
+                    
+                    cursor.execute("""
+                        CREATE TABLE rsi_cache_coins (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            cache_id INTEGER NOT NULL,
+                            symbol TEXT NOT NULL,
+                            rsi6h REAL,
+                            trend6h TEXT,
+                            rsi_zone TEXT,
+                            signal TEXT,
+                            price REAL,
+                            change24h REAL,
+                            last_update TEXT,
+                            blocked_by_scope INTEGER DEFAULT 0,
+                            has_existing_position INTEGER DEFAULT 0,
+                            is_mature INTEGER DEFAULT 1,
+                            blocked_by_exit_scam INTEGER DEFAULT 0,
+                            blocked_by_rsi_time INTEGER DEFAULT 0,
+                            trading_status TEXT,
+                            is_delisting INTEGER DEFAULT 0,
+                            trend_analysis_json TEXT,
+                            enhanced_rsi_json TEXT,
+                            time_filter_info_json TEXT,
+                            exit_scam_info_json TEXT,
+                            extra_coin_data_json TEXT,
+                            FOREIGN KEY (cache_id) REFERENCES rsi_cache(id) ON DELETE CASCADE
+                        )
+                    """)
+                    
+                    # Создаем индексы
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_timestamp ON rsi_cache(timestamp)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_created ON rsi_cache(created_at)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_cache_id ON rsi_cache_coins(cache_id)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_symbol ON rsi_cache_coins(symbol)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_rsi6h ON rsi_cache_coins(rsi6h)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_signal ON rsi_cache_coins(signal)")
+                    
+                    # Мигрируем данные
+                    migrated_caches = 0
+                    migrated_coins = 0
+                    
+                    for old_row in old_rows:
+                        try:
+                            old_id = old_row[0]
+                            timestamp = old_row[1]
+                            coins_data_json = old_row[2]
+                            stats_json = old_row[3]
+                            created_at = old_row[4]
+                            
+                            # Парсим JSON
+                            coins_data = json.loads(coins_data_json) if coins_data_json else {}
+                            stats = json.loads(stats_json) if stats_json else {}
+                            
+                            # Извлекаем статистику
+                            total_coins = stats.get('total_coins', len(coins_data))
+                            successful_coins = stats.get('successful_coins', 0)
+                            failed_coins = stats.get('failed_coins', 0)
+                            
+                            # Собираем остальные поля stats в extra_stats_json
+                            extra_stats = {}
+                            known_stats_fields = {'total_coins', 'successful_coins', 'failed_coins'}
+                            for key, value in stats.items():
+                                if key not in known_stats_fields:
+                                    extra_stats[key] = value
+                            
+                            extra_stats_json = json.dumps(extra_stats) if extra_stats else None
+                            
+                            # Вставляем метаданные кэша
+                            cursor.execute("""
+                                INSERT INTO rsi_cache (
+                                    timestamp, total_coins, successful_coins, failed_coins,
+                                    extra_stats_json, created_at
+                                ) VALUES (?, ?, ?, ?, ?, ?)
+                            """, (timestamp, total_coins, successful_coins, failed_coins, extra_stats_json, created_at))
+                            
+                            cache_id = cursor.lastrowid
+                            
+                            # Мигрируем данные монет
+                            for symbol, coin_data in coins_data.items():
+                                try:
+                                    # Извлекаем основные поля
+                                    rsi6h = coin_data.get('rsi6h')
+                                    trend6h = coin_data.get('trend6h')
+                                    rsi_zone = coin_data.get('rsi_zone')
+                                    signal = coin_data.get('signal')
+                                    price = coin_data.get('price')
+                                    change24h = coin_data.get('change24h') or coin_data.get('change_24h')
+                                    last_update = coin_data.get('last_update')
+                                    blocked_by_scope = 1 if coin_data.get('blocked_by_scope', False) else 0
+                                    has_existing_position = 1 if coin_data.get('has_existing_position', False) else 0
+                                    is_mature = 1 if coin_data.get('is_mature', True) else 0
+                                    blocked_by_exit_scam = 1 if coin_data.get('blocked_by_exit_scam', False) else 0
+                                    blocked_by_rsi_time = 1 if coin_data.get('blocked_by_rsi_time', False) else 0
+                                    trading_status = coin_data.get('trading_status')
+                                    is_delisting = 1 if coin_data.get('is_delisting', False) else 0
+                                    
+                                    # Сохраняем сложные структуры в JSON
+                                    trend_analysis_json = json.dumps(coin_data.get('trend_analysis')) if coin_data.get('trend_analysis') else None
+                                    enhanced_rsi_json = json.dumps(coin_data.get('enhanced_rsi')) if coin_data.get('enhanced_rsi') else None
+                                    time_filter_info_json = json.dumps(coin_data.get('time_filter_info')) if coin_data.get('time_filter_info') else None
+                                    exit_scam_info_json = json.dumps(coin_data.get('exit_scam_info')) if coin_data.get('exit_scam_info') else None
+                                    
+                                    # Собираем остальные поля в extra_coin_data_json
+                                    extra_coin_data = {}
+                                    known_coin_fields = {
+                                        'symbol', 'rsi6h', 'trend6h', 'rsi_zone', 'signal', 'price',
+                                        'change24h', 'change_24h', 'last_update', 'blocked_by_scope',
+                                        'has_existing_position', 'is_mature', 'blocked_by_exit_scam',
+                                        'blocked_by_rsi_time', 'trading_status', 'is_delisting',
+                                        'trend_analysis', 'enhanced_rsi', 'time_filter_info', 'exit_scam_info'
+                                    }
+                                    
+                                    for key, value in coin_data.items():
+                                        if key not in known_coin_fields:
+                                            extra_coin_data[key] = value
+                                    
+                                    extra_coin_data_json = json.dumps(extra_coin_data) if extra_coin_data else None
+                                    
+                                    # Вставляем монету
+                                    cursor.execute("""
+                                        INSERT INTO rsi_cache_coins (
+                                            cache_id, symbol, rsi6h, trend6h, rsi_zone, signal,
+                                            price, change24h, last_update, blocked_by_scope,
+                                            has_existing_position, is_mature, blocked_by_exit_scam,
+                                            blocked_by_rsi_time, trading_status, is_delisting,
+                                            trend_analysis_json, enhanced_rsi_json, time_filter_info_json,
+                                            exit_scam_info_json, extra_coin_data_json
+                                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    """, (
+                                        cache_id, symbol, rsi6h, trend6h, rsi_zone, signal,
+                                        price, change24h, last_update, blocked_by_scope,
+                                        has_existing_position, is_mature, blocked_by_exit_scam,
+                                        blocked_by_rsi_time, trading_status, is_delisting,
+                                        trend_analysis_json, enhanced_rsi_json, time_filter_info_json,
+                                        exit_scam_info_json, extra_coin_data_json
+                                    ))
+                                    migrated_coins += 1
+                                except Exception as e:
+                                    logger.warning(f"⚠️ Ошибка миграции монеты {symbol}: {e}")
+                                    continue
+                            
+                            migrated_caches += 1
+                        except Exception as e:
+                            logger.warning(f"⚠️ Ошибка миграции кэша: {e}")
+                            continue
+                    
+                    logger.info(f"✅ Миграция rsi_cache завершена: {migrated_caches} кэшей, {migrated_coins} монет мигрировано из JSON в нормализованные таблицы")
+                else:
+                    # Таблица пуста, просто пересоздаем с новой структурой
+                    cursor.execute("DROP TABLE IF EXISTS rsi_cache_coins")
+                    cursor.execute("DROP TABLE IF EXISTS rsi_cache")
+                    cursor.execute("""
+                        CREATE TABLE rsi_cache (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            timestamp TEXT NOT NULL,
+                            total_coins INTEGER DEFAULT 0,
+                            successful_coins INTEGER DEFAULT 0,
+                            failed_coins INTEGER DEFAULT 0,
+                            extra_stats_json TEXT,
+                            created_at TEXT NOT NULL
+                        )
+                    """)
+                    cursor.execute("""
+                        CREATE TABLE rsi_cache_coins (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            cache_id INTEGER NOT NULL,
+                            symbol TEXT NOT NULL,
+                            rsi6h REAL,
+                            trend6h TEXT,
+                            rsi_zone TEXT,
+                            signal TEXT,
+                            price REAL,
+                            change24h REAL,
+                            last_update TEXT,
+                            blocked_by_scope INTEGER DEFAULT 0,
+                            has_existing_position INTEGER DEFAULT 0,
+                            is_mature INTEGER DEFAULT 1,
+                            blocked_by_exit_scam INTEGER DEFAULT 0,
+                            blocked_by_rsi_time INTEGER DEFAULT 0,
+                            trading_status TEXT,
+                            is_delisting INTEGER DEFAULT 0,
+                            trend_analysis_json TEXT,
+                            enhanced_rsi_json TEXT,
+                            time_filter_info_json TEXT,
+                            exit_scam_info_json TEXT,
+                            extra_coin_data_json TEXT,
+                            FOREIGN KEY (cache_id) REFERENCES rsi_cache(id) ON DELETE CASCADE
+                        )
+                    """)
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_timestamp ON rsi_cache(timestamp)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_created ON rsi_cache(created_at)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_cache_id ON rsi_cache_coins(cache_id)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_symbol ON rsi_cache_coins(symbol)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_rsi6h ON rsi_cache_coins(rsi6h)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_signal ON rsi_cache_coins(signal)")
+                    logger.info("✅ Таблицы rsi_cache пересозданы с нормализованной структурой")
+                    
+            except sqlite3.OperationalError:
+                # Таблица не существует или уже новая структура - ничего не делаем
+                pass
+            except Exception as e:
+                logger.warning(f"⚠️ Ошибка миграции rsi_cache: {e}")
+            
             conn.commit()
         except Exception as e:
             logger.debug(f"⚠️ Ошибка миграции схемы: {e}")
@@ -2102,11 +2372,11 @@ class BotsDatabase:
     
     def save_rsi_cache(self, coins_data: Dict, stats: Dict = None) -> bool:
         """
-        Сохраняет RSI кэш
+        Сохраняет RSI кэш в нормализованные таблицы
         
         Args:
-            coins_data: Словарь с данными монет
-            stats: Статистика (опционально)
+            coins_data: Словарь {symbol: {rsi6h, trend6h, signal, price, ...}}
+            stats: Статистика {total_coins, successful_coins, failed_coins, ...}
         
         Returns:
             True если успешно сохранено
@@ -2115,35 +2385,115 @@ class BotsDatabase:
             now = datetime.now().isoformat()
             timestamp = now
             
-            cache_data = {
-                'timestamp': timestamp,
-                'coins': coins_data,
-                'stats': stats or {}
-            }
-            
             with self.lock:
                 with self._get_connection() as conn:
                     cursor = conn.cursor()
+                    
+                    # Извлекаем статистику
+                    total_coins = stats.get('total_coins', len(coins_data)) if stats else len(coins_data)
+                    successful_coins = stats.get('successful_coins', 0) if stats else 0
+                    failed_coins = stats.get('failed_coins', 0) if stats else 0
+                    
+                    # Собираем остальные поля stats в extra_stats_json
+                    extra_stats = {}
+                    if stats:
+                        known_stats_fields = {'total_coins', 'successful_coins', 'failed_coins'}
+                        for key, value in stats.items():
+                            if key not in known_stats_fields:
+                                extra_stats[key] = value
+                    
+                    extra_stats_json = json.dumps(extra_stats) if extra_stats else None
+                    
+                    # Удаляем старые записи (оставляем только последний кэш)
+                    cursor.execute("DELETE FROM rsi_cache_coins")
+                    cursor.execute("DELETE FROM rsi_cache")
+                    
+                    # Вставляем метаданные кэша
                     cursor.execute("""
-                        INSERT INTO rsi_cache (timestamp, coins_data_json, stats_json, created_at)
-                        VALUES (?, ?, ?, ?)
-                    """, (
-                        timestamp,
-                        json.dumps(coins_data),
-                        json.dumps(stats) if stats else None,
-                        now
-                    ))
+                        INSERT INTO rsi_cache (
+                            timestamp, total_coins, successful_coins, failed_coins,
+                            extra_stats_json, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                    """, (timestamp, total_coins, successful_coins, failed_coins, extra_stats_json, now))
+                    
+                    cache_id = cursor.lastrowid
+                    
+                    # Вставляем данные монет
+                    for symbol, coin_data in coins_data.items():
+                        try:
+                            # Извлекаем основные поля
+                            rsi6h = coin_data.get('rsi6h')
+                            trend6h = coin_data.get('trend6h')
+                            rsi_zone = coin_data.get('rsi_zone')
+                            signal = coin_data.get('signal')
+                            price = coin_data.get('price')
+                            change24h = coin_data.get('change24h') or coin_data.get('change_24h')
+                            last_update = coin_data.get('last_update')
+                            blocked_by_scope = 1 if coin_data.get('blocked_by_scope', False) else 0
+                            has_existing_position = 1 if coin_data.get('has_existing_position', False) else 0
+                            is_mature = 1 if coin_data.get('is_mature', True) else 0
+                            blocked_by_exit_scam = 1 if coin_data.get('blocked_by_exit_scam', False) else 0
+                            blocked_by_rsi_time = 1 if coin_data.get('blocked_by_rsi_time', False) else 0
+                            trading_status = coin_data.get('trading_status')
+                            is_delisting = 1 if coin_data.get('is_delisting', False) else 0
+                            
+                            # Сохраняем сложные структуры в JSON
+                            trend_analysis_json = json.dumps(coin_data.get('trend_analysis')) if coin_data.get('trend_analysis') else None
+                            enhanced_rsi_json = json.dumps(coin_data.get('enhanced_rsi')) if coin_data.get('enhanced_rsi') else None
+                            time_filter_info_json = json.dumps(coin_data.get('time_filter_info')) if coin_data.get('time_filter_info') else None
+                            exit_scam_info_json = json.dumps(coin_data.get('exit_scam_info')) if coin_data.get('exit_scam_info') else None
+                            
+                            # Собираем остальные поля в extra_coin_data_json
+                            extra_coin_data = {}
+                            known_coin_fields = {
+                                'symbol', 'rsi6h', 'trend6h', 'rsi_zone', 'signal', 'price',
+                                'change24h', 'change_24h', 'last_update', 'blocked_by_scope',
+                                'has_existing_position', 'is_mature', 'blocked_by_exit_scam',
+                                'blocked_by_rsi_time', 'trading_status', 'is_delisting',
+                                'trend_analysis', 'enhanced_rsi', 'time_filter_info', 'exit_scam_info'
+                            }
+                            
+                            for key, value in coin_data.items():
+                                if key not in known_coin_fields:
+                                    extra_coin_data[key] = value
+                            
+                            extra_coin_data_json = json.dumps(extra_coin_data) if extra_coin_data else None
+                            
+                            # Вставляем монету
+                            cursor.execute("""
+                                INSERT INTO rsi_cache_coins (
+                                    cache_id, symbol, rsi6h, trend6h, rsi_zone, signal,
+                                    price, change24h, last_update, blocked_by_scope,
+                                    has_existing_position, is_mature, blocked_by_exit_scam,
+                                    blocked_by_rsi_time, trading_status, is_delisting,
+                                    trend_analysis_json, enhanced_rsi_json, time_filter_info_json,
+                                    exit_scam_info_json, extra_coin_data_json
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                cache_id, symbol, rsi6h, trend6h, rsi_zone, signal,
+                                price, change24h, last_update, blocked_by_scope,
+                                has_existing_position, is_mature, blocked_by_exit_scam,
+                                blocked_by_rsi_time, trading_status, is_delisting,
+                                trend_analysis_json, enhanced_rsi_json, time_filter_info_json,
+                                exit_scam_info_json, extra_coin_data_json
+                            ))
+                        except Exception as e:
+                            logger.warning(f"⚠️ Ошибка сохранения монеты {symbol} в RSI кэш: {e}")
+                            continue
+                    
                     conn.commit()
             
-            logger.debug("💾 RSI кэш сохранен в БД")
+            logger.debug("💾 RSI кэш сохранен в нормализованные таблицы БД")
             return True
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения RSI кэша: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return False
     
     def load_rsi_cache(self, max_age_hours: float = 6.0) -> Optional[Dict]:
         """
-        Загружает последний RSI кэш (если не старше max_age_hours)
+        Загружает последний RSI кэш из нормализованных таблиц (если не старше max_age_hours)
         
         Args:
             max_age_hours: Максимальный возраст кэша в часах
@@ -2155,7 +2505,7 @@ class BotsDatabase:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    SELECT timestamp, coins_data_json, stats_json, created_at
+                    SELECT id, timestamp, total_coins, successful_coins, failed_coins, extra_stats_json, created_at
                     FROM rsi_cache
                     ORDER BY created_at DESC
                     LIMIT 1
@@ -2165,21 +2515,108 @@ class BotsDatabase:
                 if not row:
                     return None
                 
+                cache_id = row[0]
+                
                 # Проверяем возраст кэша
-                cache_time = datetime.fromisoformat(row['timestamp'])
+                cache_time = datetime.fromisoformat(row[1])
                 age_hours = (datetime.now() - cache_time).total_seconds() / 3600
                 
                 if age_hours > max_age_hours:
                     logger.debug(f"⚠️ RSI кэш устарел ({age_hours:.1f} часов)")
                     return None
                 
+                # Загружаем данные монет
+                cursor.execute("""
+                    SELECT symbol, rsi6h, trend6h, rsi_zone, signal, price, change24h,
+                           last_update, blocked_by_scope, has_existing_position, is_mature,
+                           blocked_by_exit_scam, blocked_by_rsi_time, trading_status, is_delisting,
+                           trend_analysis_json, enhanced_rsi_json, time_filter_info_json,
+                           exit_scam_info_json, extra_coin_data_json
+                    FROM rsi_cache_coins
+                    WHERE cache_id = ?
+                """, (cache_id,))
+                coin_rows = cursor.fetchall()
+                
+                coins_data = {}
+                for coin_row in coin_rows:
+                    symbol = coin_row[0]
+                    coin_data = {
+                        'symbol': symbol,
+                        'rsi6h': coin_row[1],
+                        'trend6h': coin_row[2],
+                        'rsi_zone': coin_row[3],
+                        'signal': coin_row[4],
+                        'price': coin_row[5],
+                        'change24h': coin_row[6],
+                        'last_update': coin_row[7],
+                        'blocked_by_scope': bool(coin_row[8]),
+                        'has_existing_position': bool(coin_row[9]),
+                        'is_mature': bool(coin_row[10]),
+                        'blocked_by_exit_scam': bool(coin_row[11]),
+                        'blocked_by_rsi_time': bool(coin_row[12]),
+                        'trading_status': coin_row[13],
+                        'is_delisting': bool(coin_row[14])
+                    }
+                    
+                    # Удаляем None значения
+                    coin_data = {k: v for k, v in coin_data.items() if v is not None}
+                    
+                    # Загружаем сложные структуры из JSON
+                    if coin_row[15]:
+                        try:
+                            coin_data['trend_analysis'] = json.loads(coin_row[15])
+                        except:
+                            pass
+                    if coin_row[16]:
+                        try:
+                            coin_data['enhanced_rsi'] = json.loads(coin_row[16])
+                        except:
+                            pass
+                    if coin_row[17]:
+                        try:
+                            coin_data['time_filter_info'] = json.loads(coin_row[17])
+                        except:
+                            pass
+                    if coin_row[18]:
+                        try:
+                            coin_data['exit_scam_info'] = json.loads(coin_row[18])
+                        except:
+                            pass
+                    
+                    # Загружаем extra_coin_data_json если есть
+                    if coin_row[19]:
+                        try:
+                            extra_data = json.loads(coin_row[19])
+                            coin_data.update(extra_data)
+                        except:
+                            pass
+                    
+                    coins_data[symbol] = coin_data
+                
+                # Собираем статистику
+                stats = {
+                    'total_coins': row[2],
+                    'successful_coins': row[3],
+                    'failed_coins': row[4]
+                }
+                
+                # Загружаем extra_stats_json если есть
+                if row[5]:
+                    try:
+                        extra_stats = json.loads(row[5])
+                        stats.update(extra_stats)
+                    except:
+                        pass
+                
                 return {
-                    'timestamp': row['timestamp'],
-                    'coins': json.loads(row['coins_data_json']),
-                    'stats': json.loads(row['stats_json']) if row['stats_json'] else {}
+                    'timestamp': row[1],
+                    'coins': coins_data,
+                    'stats': stats
                 }
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки RSI кэша: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return None
     
     def clear_rsi_cache(self) -> bool:
@@ -2200,10 +2637,10 @@ class BotsDatabase:
     
     def save_process_state(self, process_state: Dict) -> bool:
         """
-        Сохраняет состояние процессов
+        Сохраняет состояние процессов в нормализованные столбцы
         
         Args:
-            process_state: Словарь с состоянием процессов
+            process_state: Словарь {process_name: {active, last_update, ...}}
         
         Returns:
             True если успешно сохранено
@@ -2215,48 +2652,135 @@ class BotsDatabase:
                 with self._get_connection() as conn:
                     cursor = conn.cursor()
                     
-                    # Удаляем старые записи
-                    cursor.execute("DELETE FROM process_state")
-                    
-                    # Сохраняем как одну запись
-                    state_data = {
-                        'process_state': process_state,
-                        'last_saved': now,
-                        'version': '1.0'
-                    }
-                    
-                    cursor.execute("""
-                        INSERT INTO process_state (key, value_json, updated_at, created_at)
-                        VALUES (?, ?, ?, ?)
-                    """, ('main', json.dumps(state_data), now, now))
+                    # Сохраняем каждый процесс отдельной строкой
+                    for process_name, process_data in process_state.items():
+                        try:
+                            # Извлекаем поля процесса
+                            active = 1 if process_data.get('active', False) else 0
+                            initialized = 1 if process_data.get('initialized', False) else 0
+                            last_update = process_data.get('last_update')
+                            last_check = process_data.get('last_check')
+                            last_save = process_data.get('last_save')
+                            last_sync = process_data.get('last_sync')
+                            update_count = process_data.get('update_count', 0)
+                            check_count = process_data.get('check_count', 0)
+                            save_count = process_data.get('save_count', 0)
+                            connection_count = process_data.get('connection_count', 0)
+                            signals_processed = process_data.get('signals_processed', 0)
+                            bots_created = process_data.get('bots_created', 0)
+                            last_error = process_data.get('last_error')
+                            
+                            # Собираем остальные поля в extra_process_data_json
+                            extra_data = {}
+                            known_fields = {
+                                'active', 'initialized', 'last_update', 'last_check',
+                                'last_save', 'last_sync', 'update_count', 'check_count',
+                                'save_count', 'connection_count', 'signals_processed',
+                                'bots_created', 'last_error'
+                            }
+                            
+                            for key, value in process_data.items():
+                                if key not in known_fields:
+                                    extra_data[key] = value
+                            
+                            extra_process_data_json = json.dumps(extra_data) if extra_data else None
+                            
+                            # Получаем created_at из существующей записи или используем текущее время
+                            cursor.execute("SELECT created_at FROM process_state WHERE process_name = ?", (process_name,))
+                            existing = cursor.fetchone()
+                            created_at = existing[0] if existing else now
+                            
+                            # Вставляем или обновляем процесс
+                            cursor.execute("""
+                                INSERT OR REPLACE INTO process_state (
+                                    process_name, active, initialized, last_update,
+                                    last_check, last_save, last_sync, update_count,
+                                    check_count, save_count, connection_count,
+                                    signals_processed, bots_created, last_error,
+                                    extra_process_data_json, updated_at, created_at
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+                                    COALESCE((SELECT created_at FROM process_state WHERE process_name = ?), ?), ?)
+                            """, (
+                                process_name, active, initialized, last_update,
+                                last_check, last_save, last_sync, update_count,
+                                check_count, save_count, connection_count,
+                                signals_processed, bots_created, last_error,
+                                extra_process_data_json,
+                                process_name,
+                                created_at,
+                                now
+                            ))
+                        except Exception as e:
+                            logger.warning(f"⚠️ Ошибка сохранения процесса {process_name}: {e}")
+                            continue
                     
                     conn.commit()
             
-            logger.debug("💾 Состояние процессов сохранено в БД")
+            logger.debug("💾 Состояние процессов сохранено в нормализованные столбцы БД")
             return True
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения состояния процессов: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return False
     
     def load_process_state(self) -> Dict:
         """
-        Загружает состояние процессов
+        Загружает состояние процессов из нормализованных столбцов
         
         Returns:
-            Словарь с состоянием процессов или пустой словарь
+            Словарь {process_name: {active, last_update, ...}}
         """
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT value_json FROM process_state WHERE key = ?", ('main',))
-                row = cursor.fetchone()
+                cursor.execute("""
+                    SELECT process_name, active, initialized, last_update,
+                           last_check, last_save, last_sync, update_count,
+                           check_count, save_count, connection_count,
+                           signals_processed, bots_created, last_error,
+                           extra_process_data_json
+                    FROM process_state
+                """)
+                rows = cursor.fetchall()
                 
-                if row:
-                    data = json.loads(row['value_json'])
-                    return data.get('process_state', {})
-                return {}
+                process_state_dict = {}
+                for row in rows:
+                    process_name = row[0]
+                    process_data = {
+                        'active': bool(row[1]),
+                        'initialized': bool(row[2]),
+                        'last_update': row[3],
+                        'last_check': row[4],
+                        'last_save': row[5],
+                        'last_sync': row[6],
+                        'update_count': row[7],
+                        'check_count': row[8],
+                        'save_count': row[9],
+                        'connection_count': row[10],
+                        'signals_processed': row[11],
+                        'bots_created': row[12],
+                        'last_error': row[13]
+                    }
+                    
+                    # Удаляем None значения
+                    process_data = {k: v for k, v in process_data.items() if v is not None}
+                    
+                    # Загружаем extra_process_data_json если есть
+                    if row[14]:
+                        try:
+                            extra_data = json.loads(row[14])
+                            process_data.update(extra_data)
+                        except:
+                            pass
+                    
+                    process_state_dict[process_name] = process_data
+                
+                return process_state_dict
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки состояния процессов: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return {}
     
     # ==================== МЕТОДЫ ДЛЯ ИНДИВИДУАЛЬНЫХ НАСТРОЕК ====================

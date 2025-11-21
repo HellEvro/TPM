@@ -554,7 +554,8 @@ class AIDatabase:
             # Миграция: добавляем новые поля если их нет
             self._migrate_schema(cursor, conn)
             
-            # ==================== ТАБЛИЦА: AI СИМУЛЯЦИИ ====================
+            # ==================== ТАБЛИЦА: AI СИМУЛЯЦИИ (НОРМАЛИЗОВАННАЯ) ====================
+            # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: все параметры из JSON в отдельных столбцах
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS simulated_trades (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -580,13 +581,30 @@ class AIDatabase:
                     exit_idx INTEGER,
                     simulation_timestamp TEXT NOT NULL,
                     training_session_id INTEGER,
-                    rsi_params_json TEXT,
-                    risk_params_json TEXT,
+                    -- RSI параметры (из rsi_params_json)
+                    rsi_long_threshold REAL,
+                    rsi_short_threshold REAL,
+                    rsi_exit_long_with_trend REAL,
+                    rsi_exit_long_against_trend REAL,
+                    rsi_exit_short_with_trend REAL,
+                    rsi_exit_short_against_trend REAL,
+                    -- Risk параметры (из risk_params_json)
+                    max_loss_percent REAL,
+                    take_profit_percent REAL,
+                    trailing_stop_activation REAL,
+                    trailing_stop_distance REAL,
+                    trailing_take_distance REAL,
+                    trailing_update_interval REAL,
+                    break_even_trigger REAL,
+                    break_even_protection REAL,
+                    max_position_hours REAL,
+                    -- Дополнительные JSON для сложных структур (оставляем для обратной совместимости)
                     config_params_json TEXT,
                     filters_params_json TEXT,
                     entry_conditions_json TEXT,
                     exit_conditions_json TEXT,
                     restrictions_json TEXT,
+                    extra_params_json TEXT,
                     created_at TEXT NOT NULL,
                     FOREIGN KEY (training_session_id) REFERENCES training_sessions(id)
                 )
@@ -1098,7 +1116,112 @@ class AIDatabase:
                 cursor.execute("ALTER TABLE bot_trades ADD COLUMN entry_volatility REAL")
                 cursor.execute("ALTER TABLE bot_trades ADD COLUMN entry_volume_ratio REAL")
             
-            # Проверяем и добавляем параметры конфига в simulated_trades
+            # ==================== МИГРАЦИЯ: Нормализация JSON параметров в столбцы для simulated_trades ====================
+            # Добавляем новые нормализованные столбцы если их нет
+            rsi_fields = [
+                ('rsi_long_threshold', 'REAL'),
+                ('rsi_short_threshold', 'REAL'),
+                ('rsi_exit_long_with_trend', 'REAL'),
+                ('rsi_exit_long_against_trend', 'REAL'),
+                ('rsi_exit_short_with_trend', 'REAL'),
+                ('rsi_exit_short_against_trend', 'REAL')
+            ]
+            risk_fields = [
+                ('max_loss_percent', 'REAL'),
+                ('take_profit_percent', 'REAL'),
+                ('trailing_stop_activation', 'REAL'),
+                ('trailing_stop_distance', 'REAL'),
+                ('trailing_take_distance', 'REAL'),
+                ('trailing_update_interval', 'REAL'),
+                ('break_even_trigger', 'REAL'),
+                ('break_even_protection', 'REAL'),
+                ('max_position_hours', 'REAL')
+            ]
+            extra_fields = [('extra_params_json', 'TEXT')]
+            
+            all_new_fields = rsi_fields + risk_fields + extra_fields
+            for field_name, field_type in all_new_fields:
+                try:
+                    cursor.execute(f"SELECT {field_name} FROM simulated_trades LIMIT 1")
+                except sqlite3.OperationalError:
+                    logger.info(f"📦 Миграция: добавляем {field_name} в simulated_trades")
+                    cursor.execute(f"ALTER TABLE simulated_trades ADD COLUMN {field_name} {field_type}")
+            
+            # Мигрируем данные из JSON в столбцы (если есть старые данные)
+            try:
+                cursor.execute("SELECT id, rsi_params_json, risk_params_json FROM simulated_trades WHERE rsi_params_json IS NOT NULL OR risk_params_json IS NOT NULL LIMIT 1")
+                if cursor.fetchone():
+                    logger.info("📦 Обнаружены JSON данные в simulated_trades, выполняю миграцию в нормализованные столбцы...")
+                    
+                    cursor.execute("SELECT id, rsi_params_json, risk_params_json FROM simulated_trades")
+                    rows = cursor.fetchall()
+                    
+                    migrated_count = 0
+                    for row in rows:
+                        try:
+                            trade_id = row[0]
+                            rsi_params_json = row[1]
+                            risk_params_json = row[2]
+                            
+                            # Парсим JSON
+                            rsi_params = json.loads(rsi_params_json) if rsi_params_json else {}
+                            risk_params = json.loads(risk_params_json) if risk_params_json else {}
+                            
+                            # Извлекаем значения (поддерживаем оба формата ключей)
+                            rsi_long = rsi_params.get('oversold') or rsi_params.get('rsi_long_threshold')
+                            rsi_short = rsi_params.get('overbought') or rsi_params.get('rsi_short_threshold')
+                            rsi_exit_long_with = rsi_params.get('exit_long_with_trend') or rsi_params.get('rsi_exit_long_with_trend')
+                            rsi_exit_long_against = rsi_params.get('exit_long_against_trend') or rsi_params.get('rsi_exit_long_against_trend')
+                            rsi_exit_short_with = rsi_params.get('exit_short_with_trend') or rsi_params.get('rsi_exit_short_with_trend')
+                            rsi_exit_short_against = rsi_params.get('exit_short_against_trend') or rsi_params.get('rsi_exit_short_against_trend')
+                            
+                            max_loss = risk_params.get('max_loss_percent')
+                            take_profit = risk_params.get('take_profit_percent')
+                            trailing_activation = risk_params.get('trailing_stop_activation')
+                            trailing_distance = risk_params.get('trailing_stop_distance')
+                            trailing_take = risk_params.get('trailing_take_distance')
+                            trailing_interval = risk_params.get('trailing_update_interval')
+                            break_even_trigger = risk_params.get('break_even_trigger')
+                            break_even_protection = risk_params.get('break_even_protection')
+                            max_hours = risk_params.get('max_position_hours')
+                            
+                            # Обновляем запись
+                            cursor.execute("""
+                                UPDATE simulated_trades SET
+                                    rsi_long_threshold = ?,
+                                    rsi_short_threshold = ?,
+                                    rsi_exit_long_with_trend = ?,
+                                    rsi_exit_long_against_trend = ?,
+                                    rsi_exit_short_with_trend = ?,
+                                    rsi_exit_short_against_trend = ?,
+                                    max_loss_percent = ?,
+                                    take_profit_percent = ?,
+                                    trailing_stop_activation = ?,
+                                    trailing_stop_distance = ?,
+                                    trailing_take_distance = ?,
+                                    trailing_update_interval = ?,
+                                    break_even_trigger = ?,
+                                    break_even_protection = ?,
+                                    max_position_hours = ?
+                                WHERE id = ?
+                            """, (
+                                rsi_long, rsi_short, rsi_exit_long_with, rsi_exit_long_against,
+                                rsi_exit_short_with, rsi_exit_short_against,
+                                max_loss, take_profit, trailing_activation, trailing_distance,
+                                trailing_take, trailing_interval, break_even_trigger,
+                                break_even_protection, max_hours, trade_id
+                            ))
+                            migrated_count += 1
+                        except Exception as e:
+                            logger.debug(f"⚠️ Ошибка миграции записи simulated_trades {row[0]}: {e}")
+                            continue
+                    
+                    if migrated_count > 0:
+                        logger.info(f"✅ Миграция simulated_trades завершена: {migrated_count} записей мигрировано из JSON в нормализованные столбцы")
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка миграции simulated_trades: {e}")
+            
+            # Проверяем и добавляем параметры конфига в simulated_trades (оставляем для обратной совместимости)
             new_fields_sim = [
                 ('config_params_json', 'TEXT'),
                 ('filters_params_json', 'TEXT'),
@@ -1184,6 +1307,78 @@ class AIDatabase:
                 
                 for trade in trades:
                     try:
+                        # Извлекаем параметры из JSON или напрямую
+                        rsi_params = trade.get('rsi_params', {})
+                        risk_params = trade.get('risk_params', {})
+                        
+                        # Поддерживаем оба формата ключей
+                        rsi_long = rsi_params.get('oversold') if isinstance(rsi_params, dict) else None
+                        if rsi_long is None:
+                            rsi_long = rsi_params.get('rsi_long_threshold') if isinstance(rsi_params, dict) else None
+                        if rsi_long is None:
+                            rsi_long = trade.get('rsi_long_threshold')
+                        
+                        rsi_short = rsi_params.get('overbought') if isinstance(rsi_params, dict) else None
+                        if rsi_short is None:
+                            rsi_short = rsi_params.get('rsi_short_threshold') if isinstance(rsi_params, dict) else None
+                        if rsi_short is None:
+                            rsi_short = trade.get('rsi_short_threshold')
+                        
+                        rsi_exit_long_with = rsi_params.get('exit_long_with_trend') if isinstance(rsi_params, dict) else None
+                        if rsi_exit_long_with is None:
+                            rsi_exit_long_with = rsi_params.get('rsi_exit_long_with_trend') if isinstance(rsi_params, dict) else None
+                        if rsi_exit_long_with is None:
+                            rsi_exit_long_with = trade.get('rsi_exit_long_with_trend')
+                        
+                        rsi_exit_long_against = rsi_params.get('exit_long_against_trend') if isinstance(rsi_params, dict) else None
+                        if rsi_exit_long_against is None:
+                            rsi_exit_long_against = rsi_params.get('rsi_exit_long_against_trend') if isinstance(rsi_params, dict) else None
+                        if rsi_exit_long_against is None:
+                            rsi_exit_long_against = trade.get('rsi_exit_long_against_trend')
+                        
+                        rsi_exit_short_with = rsi_params.get('exit_short_with_trend') if isinstance(rsi_params, dict) else None
+                        if rsi_exit_short_with is None:
+                            rsi_exit_short_with = rsi_params.get('rsi_exit_short_with_trend') if isinstance(rsi_params, dict) else None
+                        if rsi_exit_short_with is None:
+                            rsi_exit_short_with = trade.get('rsi_exit_short_with_trend')
+                        
+                        rsi_exit_short_against = rsi_params.get('exit_short_against_trend') if isinstance(rsi_params, dict) else None
+                        if rsi_exit_short_against is None:
+                            rsi_exit_short_against = rsi_params.get('rsi_exit_short_against_trend') if isinstance(rsi_params, dict) else None
+                        if rsi_exit_short_against is None:
+                            rsi_exit_short_against = trade.get('rsi_exit_short_against_trend')
+                        
+                        # Risk параметры
+                        max_loss = risk_params.get('max_loss_percent') if isinstance(risk_params, dict) else trade.get('max_loss_percent')
+                        take_profit = risk_params.get('take_profit_percent') if isinstance(risk_params, dict) else trade.get('take_profit_percent')
+                        trailing_activation = risk_params.get('trailing_stop_activation') if isinstance(risk_params, dict) else trade.get('trailing_stop_activation')
+                        trailing_distance = risk_params.get('trailing_stop_distance') if isinstance(risk_params, dict) else trade.get('trailing_stop_distance')
+                        trailing_take = risk_params.get('trailing_take_distance') if isinstance(risk_params, dict) else trade.get('trailing_take_distance')
+                        trailing_interval = risk_params.get('trailing_update_interval') if isinstance(risk_params, dict) else trade.get('trailing_update_interval')
+                        break_even_trigger = risk_params.get('break_even_trigger') if isinstance(risk_params, dict) else trade.get('break_even_trigger')
+                        break_even_protection = risk_params.get('break_even_protection') if isinstance(risk_params, dict) else trade.get('break_even_protection')
+                        max_hours = risk_params.get('max_position_hours') if isinstance(risk_params, dict) else trade.get('max_position_hours')
+                        
+                        # Собираем остальные параметры в extra_params_json
+                        extra_params = {}
+                        if isinstance(rsi_params, dict):
+                            known_rsi_keys = {'oversold', 'overbought', 'exit_long_with_trend', 'exit_long_against_trend',
+                                            'exit_short_with_trend', 'exit_short_against_trend', 'rsi_long_threshold',
+                                            'rsi_short_threshold', 'rsi_exit_long_with_trend', 'rsi_exit_long_against_trend',
+                                            'rsi_exit_short_with_trend', 'rsi_exit_short_against_trend'}
+                            for key, value in rsi_params.items():
+                                if key not in known_rsi_keys:
+                                    extra_params[key] = value
+                        if isinstance(risk_params, dict):
+                            known_risk_keys = {'max_loss_percent', 'take_profit_percent', 'trailing_stop_activation',
+                                             'trailing_stop_distance', 'trailing_take_distance', 'trailing_update_interval',
+                                             'break_even_trigger', 'break_even_protection', 'max_position_hours'}
+                            for key, value in risk_params.items():
+                                if key not in known_risk_keys:
+                                    extra_params[key] = value
+                        
+                        extra_params_json = json.dumps(extra_params, ensure_ascii=False) if extra_params else None
+                        
                         cursor.execute("""
                             INSERT OR IGNORE INTO simulated_trades (
                                 symbol, direction, entry_price, exit_price,
@@ -1192,11 +1387,18 @@ class AIDatabase:
                                 pnl, pnl_pct, roi,
                                 exit_reason, is_successful, duration_candles,
                                 entry_idx, exit_idx, simulation_timestamp,
-                                training_session_id, rsi_params_json, risk_params_json,
+                                training_session_id,
+                                rsi_long_threshold, rsi_short_threshold,
+                                rsi_exit_long_with_trend, rsi_exit_long_against_trend,
+                                rsi_exit_short_with_trend, rsi_exit_short_against_trend,
+                                max_loss_percent, take_profit_percent,
+                                trailing_stop_activation, trailing_stop_distance,
+                                trailing_take_distance, trailing_update_interval,
+                                break_even_trigger, break_even_protection, max_position_hours,
                                 config_params_json, filters_params_json, entry_conditions_json,
-                                exit_conditions_json, restrictions_json,
+                                exit_conditions_json, restrictions_json, extra_params_json,
                                 created_at
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, (
                             trade.get('symbol'),
                             trade.get('direction'),
@@ -1220,13 +1422,19 @@ class AIDatabase:
                             trade.get('exit_idx'),
                             trade.get('simulation_timestamp', now),
                             training_session_id,
-                            json.dumps(trade.get('rsi_params')) if trade.get('rsi_params') else None,
-                            json.dumps(trade.get('risk_params')) if trade.get('risk_params') else None,
-                            json.dumps(trade.get('config_params')) if trade.get('config_params') else None,
-                            json.dumps(trade.get('filters_params')) if trade.get('filters_params') else None,
-                            json.dumps(trade.get('entry_conditions')) if trade.get('entry_conditions') else None,
-                            json.dumps(trade.get('exit_conditions')) if trade.get('exit_conditions') else None,
-                            json.dumps(trade.get('restrictions')) if trade.get('restrictions') else None,
+                            rsi_long, rsi_short,
+                            rsi_exit_long_with, rsi_exit_long_against,
+                            rsi_exit_short_with, rsi_exit_short_against,
+                            max_loss, take_profit,
+                            trailing_activation, trailing_distance,
+                            trailing_take, trailing_interval,
+                            break_even_trigger, break_even_protection, max_hours,
+                            json.dumps(trade.get('config_params'), ensure_ascii=False) if trade.get('config_params') else None,
+                            json.dumps(trade.get('filters_params'), ensure_ascii=False) if trade.get('filters_params') else None,
+                            json.dumps(trade.get('entry_conditions'), ensure_ascii=False) if trade.get('entry_conditions') else None,
+                            json.dumps(trade.get('exit_conditions'), ensure_ascii=False) if trade.get('exit_conditions') else None,
+                            json.dumps(trade.get('restrictions'), ensure_ascii=False) if trade.get('restrictions') else None,
+                            extra_params_json,
                             now
                         ))
                         if cursor.rowcount > 0:
@@ -1298,7 +1506,85 @@ class AIDatabase:
             cursor.execute(query, params)
             rows = cursor.fetchall()
             
-            return [dict(row) for row in rows]
+            result = []
+            for row in rows:
+                trade = dict(row)
+                
+                # Восстанавливаем rsi_params из нормализованных столбцов
+                rsi_params = {}
+                if trade.get('rsi_long_threshold') is not None:
+                    rsi_params['oversold'] = trade['rsi_long_threshold']
+                    rsi_params['rsi_long_threshold'] = trade['rsi_long_threshold']
+                if trade.get('rsi_short_threshold') is not None:
+                    rsi_params['overbought'] = trade['rsi_short_threshold']
+                    rsi_params['rsi_short_threshold'] = trade['rsi_short_threshold']
+                if trade.get('rsi_exit_long_with_trend') is not None:
+                    rsi_params['exit_long_with_trend'] = trade['rsi_exit_long_with_trend']
+                    rsi_params['rsi_exit_long_with_trend'] = trade['rsi_exit_long_with_trend']
+                if trade.get('rsi_exit_long_against_trend') is not None:
+                    rsi_params['exit_long_against_trend'] = trade['rsi_exit_long_against_trend']
+                    rsi_params['rsi_exit_long_against_trend'] = trade['rsi_exit_long_against_trend']
+                if trade.get('rsi_exit_short_with_trend') is not None:
+                    rsi_params['exit_short_with_trend'] = trade['rsi_exit_short_with_trend']
+                    rsi_params['rsi_exit_short_with_trend'] = trade['rsi_exit_short_with_trend']
+                if trade.get('rsi_exit_short_against_trend') is not None:
+                    rsi_params['exit_short_against_trend'] = trade['rsi_exit_short_against_trend']
+                    rsi_params['rsi_exit_short_against_trend'] = trade['rsi_exit_short_against_trend']
+                
+                # Загружаем extra_params_json если есть
+                if trade.get('extra_params_json'):
+                    try:
+                        extra_params = json.loads(trade['extra_params_json'])
+                        rsi_params.update(extra_params)
+                    except:
+                        pass
+                
+                if rsi_params:
+                    trade['rsi_params'] = rsi_params
+                    trade['rsi_params_json'] = json.dumps(rsi_params, ensure_ascii=False)  # Для обратной совместимости
+                
+                # Восстанавливаем risk_params из нормализованных столбцов
+                risk_params = {}
+                if trade.get('max_loss_percent') is not None:
+                    risk_params['max_loss_percent'] = trade['max_loss_percent']
+                if trade.get('take_profit_percent') is not None:
+                    risk_params['take_profit_percent'] = trade['take_profit_percent']
+                if trade.get('trailing_stop_activation') is not None:
+                    risk_params['trailing_stop_activation'] = trade['trailing_stop_activation']
+                if trade.get('trailing_stop_distance') is not None:
+                    risk_params['trailing_stop_distance'] = trade['trailing_stop_distance']
+                if trade.get('trailing_take_distance') is not None:
+                    risk_params['trailing_take_distance'] = trade['trailing_take_distance']
+                if trade.get('trailing_update_interval') is not None:
+                    risk_params['trailing_update_interval'] = trade['trailing_update_interval']
+                if trade.get('break_even_trigger') is not None:
+                    risk_params['break_even_trigger'] = trade['break_even_trigger']
+                if trade.get('break_even_protection') is not None:
+                    risk_params['break_even_protection'] = trade['break_even_protection']
+                if trade.get('max_position_hours') is not None:
+                    risk_params['max_position_hours'] = trade['max_position_hours']
+                
+                # Загружаем extra_params_json если есть (может содержать дополнительные risk параметры)
+                if trade.get('extra_params_json'):
+                    try:
+                        extra_params = json.loads(trade['extra_params_json'])
+                        # Добавляем только risk параметры
+                        known_risk_keys = {'max_loss_percent', 'take_profit_percent', 'trailing_stop_activation',
+                                         'trailing_stop_distance', 'trailing_take_distance', 'trailing_update_interval',
+                                         'break_even_trigger', 'break_even_protection', 'max_position_hours'}
+                        for key, value in extra_params.items():
+                            if key not in known_risk_keys and key not in rsi_params:
+                                risk_params[key] = value
+                    except:
+                        pass
+                
+                if risk_params:
+                    trade['risk_params'] = risk_params
+                    trade['risk_params_json'] = json.dumps(risk_params, ensure_ascii=False)  # Для обратной совместимости
+                
+                result.append(trade)
+            
+            return result
     
     def count_simulated_trades(self, symbol: Optional[str] = None) -> int:
         """Подсчитывает количество симуляций"""
@@ -1362,7 +1648,7 @@ class AIDatabase:
                             entry_volatility,
                             entry_volume_ratio,
                             trade.get('close_reason'),
-                            json.dumps(trade.get('exit_market_data')) if trade.get('exit_market_data') else None,
+                            json.dumps(trade.get('exit_market_data'), ensure_ascii=False) if trade.get('exit_market_data') else None,
                             now,
                             trade_id
                         ))
@@ -1435,13 +1721,13 @@ class AIDatabase:
                     trade.get('close_reason'),
                     trade.get('position_size_usdt'),
                     trade.get('position_size_coins'),
-                    json.dumps(trade.get('entry_data')) if trade.get('entry_data') else None,
-                    json.dumps(trade.get('exit_market_data') or trade.get('market_data')) if (trade.get('exit_market_data') or trade.get('market_data')) else None,
-                    json.dumps(config_params) if config_params else None,
-                    json.dumps(filters_params) if filters_params else None,
-                    json.dumps(entry_conditions) if entry_conditions else None,
-                    json.dumps(exit_conditions) if exit_conditions else None,
-                    json.dumps(restrictions) if restrictions else None,
+                    json.dumps(trade.get('entry_data'), ensure_ascii=False) if trade.get('entry_data') else None,
+                    json.dumps(trade.get('exit_market_data') or trade.get('market_data'), ensure_ascii=False) if (trade.get('exit_market_data') or trade.get('market_data')) else None,
+                    json.dumps(config_params, ensure_ascii=False) if config_params else None,
+                    json.dumps(filters_params, ensure_ascii=False) if filters_params else None,
+                    json.dumps(entry_conditions, ensure_ascii=False) if entry_conditions else None,
+                    json.dumps(exit_conditions, ensure_ascii=False) if exit_conditions else None,
+                    json.dumps(restrictions, ensure_ascii=False) if restrictions else None,
                     1 if trade.get('is_simulated', False) else 0,
                     now,
                     now
@@ -1615,8 +1901,8 @@ class AIDatabase:
                     decision.get('rsi'),
                     decision.get('trend'),
                     decision.get('price'),
-                    json.dumps(decision.get('market_data')) if decision.get('market_data') else None,
-                    json.dumps(decision.get('params')) if decision.get('params') else None,
+                    json.dumps(decision.get('market_data'), ensure_ascii=False) if decision.get('market_data') else None,
+                    json.dumps(decision.get('params'), ensure_ascii=False) if decision.get('params') else None,
                     now
                 ))
                 
@@ -1685,7 +1971,7 @@ class AIDatabase:
                     session_type,
                     training_seed,
                     now,
-                    json.dumps(metadata) if metadata else None
+                    json.dumps(metadata, ensure_ascii=False) if metadata else None
                 ))
                 
                 return cursor.lastrowid
@@ -1703,7 +1989,7 @@ class AIDatabase:
                 for key, value in kwargs.items():
                     if key == 'metadata' and isinstance(value, dict):
                         updates.append("metadata_json = ?")
-                        params.append(json.dumps(value))
+                        params.append(json.dumps(value, ensure_ascii=False))
                     elif key in ('coins_processed', 'models_saved', 'candles_processed', 
                                 'total_trades', 'successful_trades', 'failed_trades',
                                 'params_used', 'params_total'):
@@ -2019,8 +2305,8 @@ class AIDatabase:
                         filters_blocked, block_reasons_json, symbol, created_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    json.dumps(sample.get('rsi_params', {})),
-                    json.dumps(sample.get('risk_params', {})) if sample.get('risk_params') else None,
+                    json.dumps(sample.get('rsi_params', {}), ensure_ascii=False),
+                    json.dumps(sample.get('risk_params', {}), ensure_ascii=False) if sample.get('risk_params') else None,
                     sample.get('win_rate', 0.0),
                     sample.get('total_pnl', 0.0),
                     sample.get('trades_count', 0),
@@ -2028,7 +2314,7 @@ class AIDatabase:
                     1 if sample.get('blocked', False) else 0,
                     sample.get('rsi_entered_zones', 0),
                     sample.get('filters_blocked', 0),
-                    json.dumps(sample.get('block_reasons', {})) if sample.get('block_reasons') else None,
+                    json.dumps(sample.get('block_reasons', {}), ensure_ascii=False) if sample.get('block_reasons') else None,
                     sample.get('symbol'),
                     now
                 ))
@@ -2141,7 +2427,7 @@ class AIDatabase:
                         update_count = update_count + 1
                     WHERE excluded.rating > used_training_parameters.rating
                 """, (
-                    param_hash, json.dumps(rsi_params), training_seed, win_rate,
+                    param_hash, json.dumps(rsi_params, ensure_ascii=False), training_seed, win_rate,
                     total_pnl, signal_accuracy, trades_count, rating, symbol, now
                 ))
                 param_id = cursor.lastrowid
@@ -2233,7 +2519,7 @@ class AIDatabase:
                         symbol, rsi_params_json, rating, win_rate, total_pnl, updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?)
                 """, (
-                    symbol, json.dumps(rsi_params), rating, win_rate, total_pnl, now
+                    symbol, json.dumps(rsi_params, ensure_ascii=False), rating, win_rate, total_pnl, now
                 ))
                 param_id = cursor.lastrowid
                 conn.commit()
@@ -2294,7 +2580,7 @@ class AIDatabase:
             now = datetime.now().isoformat()
             # Вычисляем hash параметров для уникальности
             import hashlib
-            params_str = json.dumps(rsi_params, sort_keys=True)
+            params_str = json.dumps(rsi_params, sort_keys=True, ensure_ascii=False)
             param_hash = hashlib.md5(params_str.encode()).hexdigest()
             
             with self._get_connection() as conn:
@@ -2308,8 +2594,8 @@ class AIDatabase:
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     param_hash,
-                    json.dumps(rsi_params),
-                    json.dumps(block_reasons) if block_reasons else None,
+                    json.dumps(rsi_params, ensure_ascii=False),
+                    json.dumps(block_reasons, ensure_ascii=False) if block_reasons else None,
                     blocked_attempts,
                     blocked_long,
                     blocked_short,
@@ -2786,10 +3072,10 @@ class AIDatabase:
                     ) VALUES (?, ?, ?, ?, ?, ?)
                 """, (
                     snapshot_time,
-                    json.dumps(bots_data.get('bots', [])),
-                    json.dumps(bots_data.get('rsi_data', {})),
-                    json.dumps(bots_data.get('signals', {})),
-                    json.dumps(bots_data.get('bots_status', {})),
+                    json.dumps(bots_data.get('bots', []), ensure_ascii=False),
+                    json.dumps(bots_data.get('rsi_data', {}), ensure_ascii=False),
+                    json.dumps(bots_data.get('signals', {}), ensure_ascii=False),
+                    json.dumps(bots_data.get('bots_status', {}), ensure_ascii=False),
                     now
                 ))
                 conn.commit()
@@ -3050,7 +3336,7 @@ class AIDatabase:
                     training_data.get('timestamp', now),
                     now if status in ('COMPLETED', 'FAILED') else None,
                     status,
-                    json.dumps(training_data)
+                    json.dumps(training_data, ensure_ascii=False)
                 ))
                 
                 return cursor.lastrowid
@@ -3174,7 +3460,7 @@ class AIDatabase:
                     version_data.get('win_rate'),
                     version_data.get('total_pnl'),
                     version_data.get('training_samples'),
-                    json.dumps(version_data),
+                    json.dumps(version_data, ensure_ascii=False),
                     now
                 ))
                 
@@ -3243,7 +3529,7 @@ class AIDatabase:
                 """, (
                     analysis_type,
                     symbol,
-                    json.dumps(results),
+                    json.dumps(results, ensure_ascii=False),
                     now
                 ))
                 
@@ -3302,7 +3588,7 @@ class AIDatabase:
                             params_json = ?, win_rate = ?, total_pnl = ?, updated_at = ?
                         WHERE id = ?
                     """, (
-                        json.dumps(params),
+                        json.dumps(params, ensure_ascii=False),
                         params.get('win_rate'),
                         params.get('total_pnl'),
                         now,
@@ -3317,7 +3603,7 @@ class AIDatabase:
                         ) VALUES (?, ?, ?, ?, ?, ?, ?)
                     """, (
                         symbol,
-                        json.dumps(params),
+                        json.dumps(params, ensure_ascii=False),
                         optimization_type,
                         params.get('win_rate'),
                         params.get('total_pnl'),
@@ -3382,7 +3668,7 @@ class AIDatabase:
                         pattern.get('failure_count', 0),
                         pattern.get('avg_pnl'),
                         pattern.get('avg_duration'),
-                        json.dumps(pattern.get('pattern_data', {})),
+                        json.dumps(pattern.get('pattern_data', {}), ensure_ascii=False),
                         pattern.get('discovered_at', now),
                         now
                     ))
@@ -3435,7 +3721,7 @@ class AIDatabase:
                     ) VALUES (?, ?, ?)
                 """, (
                     service_name,
-                    json.dumps(status),
+                    json.dumps(status, ensure_ascii=False),
                     now
                 ))
                 
@@ -3474,7 +3760,7 @@ class AIDatabase:
                 """, (
                     backtest_name,
                     symbol,
-                    json.dumps(results),
+                    json.dumps(results, ensure_ascii=False),
                     results.get('total_return'),
                     results.get('win_rate'),
                     results.get('total_trades'),
@@ -3524,7 +3810,7 @@ class AIDatabase:
                     ) VALUES (?, ?, ?)
                 """, (
                     knowledge_type,
-                    json.dumps(knowledge_data),
+                    json.dumps(knowledge_data, ensure_ascii=False),
                     now
                 ))
                 conn.commit()
@@ -3569,7 +3855,7 @@ class AIDatabase:
                             UPDATE training_data 
                             SET data_json = ?, updated_at = ?
                             WHERE data_type = ? AND symbol = ?
-                        """, (json.dumps(data), now, data_type, symbol))
+                        """, (json.dumps(data, ensure_ascii=False), now, data_type, symbol))
                         conn.commit()
                         return existing['id']
                 
@@ -3581,7 +3867,7 @@ class AIDatabase:
                 """, (
                     data_type,
                     symbol,
-                    json.dumps(data),
+                    json.dumps(data, ensure_ascii=False),
                     now,
                     now
                 ))
@@ -3630,7 +3916,7 @@ class AIDatabase:
                     )
                 """, (
                     symbol,
-                    json.dumps(config),
+                    json.dumps(config, ensure_ascii=False),
                     symbol,
                     now,
                     now
