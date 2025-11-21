@@ -579,7 +579,7 @@ class AppDatabase:
                         VALUES (?, ?, ?, ?,
                             COALESCE((SELECT created_at FROM max_values WHERE symbol = ? AND value_type = ?), ?),
                             ?)
-                    """, ('profit', symbol, float(value), timestamp, symbol, 'profit', now, now))
+                    """, (symbol, 'profit', float(value), timestamp, symbol, 'profit', now, now))
                 
                 # Сохраняем max_loss_values
                 for symbol, value in max_loss_values.items():
@@ -589,7 +589,7 @@ class AppDatabase:
                         VALUES (?, ?, ?, ?,
                             COALESCE((SELECT created_at FROM max_values WHERE symbol = ? AND value_type = ?), ?),
                             ?)
-                    """, ('loss', symbol, float(value), timestamp, symbol, 'loss', now, now))
+                    """, (symbol, 'loss', float(value), timestamp, symbol, 'loss', now, now))
                 
                 logger.debug("💾 max_values сохранены в БД")
                 return True

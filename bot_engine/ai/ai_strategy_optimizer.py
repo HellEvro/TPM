@@ -43,11 +43,10 @@ class AIStrategyOptimizer:
     
     def __init__(self):
         """Инициализация оптимизатора"""
-        self.results_dir = 'data/ai/optimization_results'
+        # УДАЛЕНО: self.results_dir - результаты теперь сохраняются в БД (optimized_params, strategy_analysis)
         self.data_dir = 'data/ai'
         
-        # Создаем директории
-        os.makedirs(self.results_dir, exist_ok=True)
+        # Создаем только основную директорию (для БД и моделей)
         os.makedirs(self.data_dir, exist_ok=True)
 
         self.parameter_genomes, self.parameter_genomes_meta = self._load_parameter_genomes()
