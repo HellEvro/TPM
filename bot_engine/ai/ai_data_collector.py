@@ -284,6 +284,13 @@ class AIDataCollector:
             
             logger.info(f"✅ Собрано данных: {len(collected_data.get('bots', []))} ботов, {len(collected_data.get('rsi_data', {}))} монет с RSI")
             
+            # Обновляем статус data-service в БД
+            self.update_data_service_status(
+                last_collection=datetime.now().isoformat(),
+                trades=len(collected_data.get('bots', [])),
+                ready=True
+            )
+            
         except Exception as e:
             logger.error(f"❌ Ошибка сбора данных из bots.py: {e}")
         
@@ -363,6 +370,12 @@ class AIDataCollector:
             
             trades_count = len(collected_data.get('trades', []))
             # Убрано: logger.debug(f"✅ Собрано данных: {trades_count} сделок") - слишком шумно
+            
+            # Обновляем статус data-service в БД
+            self.update_data_service_status(
+                trades=trades_count,
+                history_loaded=True
+            )
             
         except Exception as e:
             logger.error(f"❌ Ошибка сбора данных из bot_history: {e}")
@@ -478,6 +491,18 @@ class AIDataCollector:
             
             if success:
                 logger.info("✅ История свечей загружена")
+                # Обновляем статус data-service в БД
+                try:
+                    from bot_engine.ai.ai_database import get_ai_database
+                    ai_db = get_ai_database()
+                    if ai_db:
+                        candles_count = ai_db.count_candles()
+                        self.update_data_service_status(
+                            candles=candles_count,
+                            history_loaded=True
+                        )
+                except Exception as status_error:
+                    logger.debug(f"⚠️ Ошибка обновления статуса: {status_error}")
             else:
                 logger.warning("⚠️ Загрузка свечей не завершена, проверьте логи")
             
@@ -566,6 +591,11 @@ class AIDataCollector:
                         continue
                 
                 logger.info(f"✅ Обработано свечей: {candles_count} монет, {total_candles} свечей всего")
+                # Обновляем статус data-service в БД
+                self.update_data_service_status(
+                    candles=total_candles,
+                    history_loaded=True
+                )
             else:
                 logger.warning("⚠️ БД пуста, ожидаем загрузки свечей...")
             
@@ -714,4 +744,57 @@ class AIDataCollector:
             }
         
         return None
+    
+    def update_data_service_status(self, **kwargs):
+        """
+        Обновить статус data-service в БД
+        
+        ВАЖНО: Использует БД вместо файла data_service.json!
+        
+        Args:
+            **kwargs: Поля статуса для обновления
+        """
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна, статус не обновлен")
+            return
+        
+        try:
+            # Получаем текущий статус из БД
+            current_status = self.ai_db.get_data_service_status('data_service')
+            if current_status and current_status.get('status'):
+                status = current_status['status']
+            else:
+                status = {}
+            
+            # Обновляем статус
+            status.update(kwargs)
+            status['timestamp'] = datetime.now().isoformat()
+            
+            # Сохраняем в БД
+            self.ai_db.save_data_service_status('data_service', status)
+            logger.debug("✅ Статус data-service обновлен в БД")
+        except Exception as e:
+            logger.error(f"❌ Ошибка обновления статуса data-service: {e}")
+    
+    def get_data_service_status(self) -> Optional[Dict]:
+        """
+        Получить статус data-service из БД
+        
+        ВАЖНО: Использует БД вместо файла data_service.json!
+        
+        Returns:
+            Словарь со статусом или None
+        """
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна")
+            return None
+        
+        try:
+            result = self.ai_db.get_data_service_status('data_service')
+            if result and result.get('status'):
+                return result['status']
+            return None
+        except Exception as e:
+            logger.error(f"❌ Ошибка получения статуса data-service: {e}")
+            return None
 
