@@ -894,6 +894,29 @@ class AIDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_time ON candles_history(candle_time)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_symbol_time ON candles_history(symbol, candle_time)")
             
+            # ==================== ТАБЛИЦА: ВЕРСИИ МОДЕЛЕЙ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS model_versions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    model_id TEXT UNIQUE NOT NULL,
+                    model_type TEXT NOT NULL,
+                    version_number TEXT,
+                    model_path TEXT,
+                    accuracy REAL,
+                    mse REAL,
+                    win_rate REAL,
+                    total_pnl REAL,
+                    training_samples INTEGER,
+                    metadata_json TEXT,
+                    created_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для model_versions
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_model_versions_model_id ON model_versions(model_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_model_versions_model_type ON model_versions(model_type)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_model_versions_created_at ON model_versions(created_at)")
+            
             # ==================== ТАБЛИЦА: СНИМКИ ДАННЫХ БОТОВ ====================
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS bots_data_snapshots (
@@ -910,6 +933,56 @@ class AIDatabase:
             # Индексы для bots_data_snapshots
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_bots_snapshots_time ON bots_data_snapshots(snapshot_time)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_bots_snapshots_created ON bots_data_snapshots(created_at)")
+            
+            # ==================== ТАБЛИЦА: АНАЛИЗ СТРАТЕГИЙ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS strategy_analysis (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    analysis_type TEXT NOT NULL,
+                    symbol TEXT,
+                    results_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для strategy_analysis
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_strategy_analysis_type ON strategy_analysis(analysis_type)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_strategy_analysis_symbol ON strategy_analysis(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_strategy_analysis_created_at ON strategy_analysis(created_at)")
+            
+            # ==================== ТАБЛИЦА: ОПТИМИЗИРОВАННЫЕ ПАРАМЕТРЫ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS optimized_params (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT,
+                    params_json TEXT NOT NULL,
+                    optimization_type TEXT,
+                    win_rate REAL,
+                    total_pnl REAL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для optimized_params
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_optimized_params_symbol ON optimized_params(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_optimized_params_type ON optimized_params(optimization_type)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_optimized_params_created_at ON optimized_params(created_at)")
+            
+            # ==================== ТАБЛИЦА: СТАТУС СЕРВИСА ДАННЫХ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS data_service_status (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    service_name TEXT NOT NULL,
+                    status_json TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(service_name)
+                )
+            """)
+            
+            # Индексы для data_service_status
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_data_service_name ON data_service_status(service_name)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_data_service_updated_at ON data_service_status(updated_at)")
             
             # ==================== ТАБЛИЦА: ПАТТЕРНЫ И ИНСАЙТЫ ====================
             cursor.execute("""
@@ -1466,6 +1539,39 @@ class AIDatabase:
                         result_pnl = ?, result_successful = ?, executed_at = ?
                     WHERE decision_id = ?
                 """, (pnl, 1 if is_successful else 0, now, decision_id))
+    
+    def get_ai_decisions(self, status: Optional[str] = None, symbol: Optional[str] = None) -> List[Dict]:
+        """Получает решения AI с фильтрацией"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            query = "SELECT * FROM ai_decisions WHERE 1=1"
+            params = []
+            
+            if status:
+                query += " AND result_successful = ?"
+                params.append(1 if status == 'SUCCESS' else 0)
+            
+            if symbol:
+                query += " AND symbol = ?"
+                params.append(symbol)
+            
+            query += " ORDER BY created_at DESC"
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            
+            result = []
+            for row in rows:
+                decision = dict(row)
+                if decision.get('market_data_json'):
+                    decision['market_data'] = json.loads(decision['market_data_json'])
+                if decision.get('decision_params_json'):
+                    decision['params'] = json.loads(decision['decision_params_json'])
+                decision['status'] = 'SUCCESS' if decision.get('result_successful') else 'FAILED' if decision.get('result_successful') is not None else 'PENDING'
+                result.append(decision)
+            
+            return result
     
     # ==================== МЕТОДЫ ДЛЯ СЕССИЙ ОБУЧЕНИЯ ====================
     
@@ -2456,7 +2562,7 @@ class AIDatabase:
     
     def get_all_candles_dict(self, timeframe: str = '6h') -> Dict[str, List[Dict]]:
         """
-        Получает все свечи для всех символов (в формате как candles_full_history.json)
+        Получает все свечи для всех символов из БД (таблица candles_history)
         
         Args:
             timeframe: Таймфрейм
@@ -2798,6 +2904,436 @@ class AIDatabase:
             logger.debug(traceback.format_exc())
             return False
     
+    # ==================== МЕТОДЫ ДЛЯ ИСТОРИИ ОБУЧЕНИЯ (training_history) ====================
+    
+    def add_training_history_record(self, training_data: Dict) -> int:
+        """Добавляет запись в историю обучения"""
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now().isoformat()
+                
+                # Используем training_sessions для хранения истории
+                event_type = training_data.get('event_type', 'TRAINING')
+                status = training_data.get('status', 'COMPLETED')
+                
+                cursor.execute("""
+                    INSERT INTO training_sessions (
+                        session_type, started_at, completed_at, status, metadata_json
+                    ) VALUES (?, ?, ?, ?, ?)
+                """, (
+                    event_type,
+                    training_data.get('timestamp', now),
+                    now if status in ('COMPLETED', 'FAILED') else None,
+                    status,
+                    json.dumps(training_data)
+                ))
+                
+                return cursor.lastrowid
+    
+    def get_training_history(self, limit: int = 50) -> List[Dict]:
+        """Получает историю обучения"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM training_sessions
+                ORDER BY started_at DESC
+                LIMIT ?
+            """, (limit,))
+            
+            rows = cursor.fetchall()
+            result = []
+            for row in rows:
+                record = dict(row)
+                if record.get('metadata_json'):
+                    metadata = json.loads(record['metadata_json'])
+                    record.update(metadata)
+                result.append(record)
+            
+            return result
+    
+    # ==================== МЕТОДЫ ДЛЯ МЕТРИК ПРОИЗВОДИТЕЛЬНОСТИ ====================
+    
+    def save_performance_metrics(self, metrics: Dict, symbol: Optional[str] = None):
+        """Сохраняет метрики производительности"""
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now().isoformat()
+                
+                # Сохраняем общие метрики
+                if 'overall' in metrics:
+                    for name, value in metrics['overall'].items():
+                        if isinstance(value, (int, float)):
+                            cursor.execute("""
+                                INSERT INTO performance_metrics (
+                                    symbol, metric_type, metric_name, metric_value, recorded_at
+                                ) VALUES (?, 'overall', ?, ?, ?)
+                            """, (symbol, name, float(value), now))
+                
+                # Сохраняем метрики по символам
+                if 'by_symbol' in metrics:
+                    for sym, sym_metrics in metrics['by_symbol'].items():
+                        for name, value in sym_metrics.items():
+                            if isinstance(value, (int, float)):
+                                cursor.execute("""
+                                    INSERT INTO performance_metrics (
+                                        symbol, metric_type, metric_name, metric_value, recorded_at
+                                    ) VALUES (?, 'by_symbol', ?, ?, ?)
+                                """, (sym, name, float(value), now))
+    
+    def get_performance_metrics(self, symbol: Optional[str] = None) -> Dict:
+        """Получает метрики производительности"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            query = """
+                SELECT metric_type, metric_name, metric_value, symbol
+                FROM performance_metrics
+                WHERE 1=1
+            """
+            params = []
+            
+            if symbol:
+                query += " AND symbol = ?"
+                params.append(symbol)
+            
+            query += " ORDER BY recorded_at DESC LIMIT 1000"
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            
+            result = {
+                'overall': {},
+                'by_symbol': {}
+            }
+            
+            for row in rows:
+                metric_type = row['metric_type']
+                metric_name = row['metric_name']
+                metric_value = row['metric_value']
+                sym = row['symbol']
+                
+                if metric_type == 'overall':
+                    result['overall'][metric_name] = metric_value
+                elif metric_type == 'by_symbol' and sym:
+                    if sym not in result['by_symbol']:
+                        result['by_symbol'][sym] = {}
+                    result['by_symbol'][sym][metric_name] = metric_value
+            
+            return result
+    
+    # ==================== МЕТОДЫ ДЛЯ ВЕРСИЙ МОДЕЛЕЙ ====================
+    
+    def save_model_version(self, version_data: Dict) -> int:
+        """Сохраняет версию модели"""
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now().isoformat()
+                
+                model_id = version_data.get('id', f"model_{int(datetime.now().timestamp())}")
+                
+                cursor.execute("""
+                    INSERT OR REPLACE INTO model_versions (
+                        model_id, model_type, version_number, model_path,
+                        accuracy, mse, win_rate, total_pnl, training_samples,
+                        metadata_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    model_id,
+                    version_data.get('model_type', 'UNKNOWN'),
+                    version_data.get('version_number'),
+                    version_data.get('model_path'),
+                    version_data.get('accuracy'),
+                    version_data.get('mse'),
+                    version_data.get('win_rate'),
+                    version_data.get('total_pnl'),
+                    version_data.get('training_samples'),
+                    json.dumps(version_data),
+                    now
+                ))
+                
+                return cursor.lastrowid
+    
+    def get_model_versions(self, limit: int = 10) -> List[Dict]:
+        """Получает версии моделей"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM model_versions
+                ORDER BY created_at DESC
+                LIMIT ?
+            """, (limit,))
+            
+            rows = cursor.fetchall()
+            result = []
+            for row in rows:
+                version = dict(row)
+                if version.get('metadata_json'):
+                    metadata = json.loads(version['metadata_json'])
+                    version.update(metadata)
+                result.append(version)
+            
+            return result
+    
+    def get_latest_model_version(self, model_type: Optional[str] = None) -> Optional[Dict]:
+        """Получает последнюю версию модели"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            query = "SELECT * FROM model_versions WHERE 1=1"
+            params = []
+            
+            if model_type:
+                query += " AND model_type = ?"
+                params.append(model_type)
+            
+            query += " ORDER BY created_at DESC LIMIT 1"
+            
+            cursor.execute(query, params)
+            row = cursor.fetchone()
+            
+            if row:
+                version = dict(row)
+                if version.get('metadata_json'):
+                    metadata = json.loads(version['metadata_json'])
+                    version.update(metadata)
+                return version
+            
+            return None
+    
+    # ==================== МЕТОДЫ ДЛЯ АНАЛИЗА СТРАТЕГИЙ ====================
+    
+    def save_strategy_analysis(self, analysis_type: str, results: Dict, symbol: Optional[str] = None) -> int:
+        """Сохраняет анализ стратегии"""
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now().isoformat()
+                
+                cursor.execute("""
+                    INSERT INTO strategy_analysis (
+                        analysis_type, symbol, results_json, created_at
+                    ) VALUES (?, ?, ?, ?)
+                """, (
+                    analysis_type,
+                    symbol,
+                    json.dumps(results),
+                    now
+                ))
+                
+                return cursor.lastrowid
+    
+    def get_strategy_analysis(self, analysis_type: Optional[str] = None, symbol: Optional[str] = None, limit: int = 10) -> List[Dict]:
+        """Получает анализ стратегии"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            query = "SELECT * FROM strategy_analysis WHERE 1=1"
+            params = []
+            
+            if analysis_type:
+                query += " AND analysis_type = ?"
+                params.append(analysis_type)
+            
+            if symbol:
+                query += " AND symbol = ?"
+                params.append(symbol)
+            
+            query += " ORDER BY created_at DESC LIMIT ?"
+            params.append(limit)
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            
+            result = []
+            for row in rows:
+                analysis = dict(row)
+                if analysis.get('results_json'):
+                    analysis['results'] = json.loads(analysis['results_json'])
+                result.append(analysis)
+            
+            return result
+    
+    # ==================== МЕТОДЫ ДЛЯ ОПТИМИЗИРОВАННЫХ ПАРАМЕТРОВ ====================
+    
+    def save_optimized_params(self, symbol: Optional[str], params: Dict, optimization_type: Optional[str] = None) -> int:
+        """Сохраняет оптимизированные параметры"""
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now().isoformat()
+                
+                # Проверяем существующие параметры
+                cursor.execute("""
+                    SELECT id FROM optimized_params WHERE symbol = ? AND optimization_type = ?
+                """, (symbol, optimization_type))
+                existing = cursor.fetchone()
+                
+                if existing:
+                    # Обновляем существующие
+                    cursor.execute("""
+                        UPDATE optimized_params SET
+                            params_json = ?, win_rate = ?, total_pnl = ?, updated_at = ?
+                        WHERE id = ?
+                    """, (
+                        json.dumps(params),
+                        params.get('win_rate'),
+                        params.get('total_pnl'),
+                        now,
+                        existing['id']
+                    ))
+                    return existing['id']
+                else:
+                    # Создаем новые
+                    cursor.execute("""
+                        INSERT INTO optimized_params (
+                            symbol, params_json, optimization_type, win_rate, total_pnl, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        symbol,
+                        json.dumps(params),
+                        optimization_type,
+                        params.get('win_rate'),
+                        params.get('total_pnl'),
+                        now,
+                        now
+                    ))
+                    return cursor.lastrowid
+    
+    def get_optimized_params(self, symbol: Optional[str] = None, optimization_type: Optional[str] = None) -> Optional[Dict]:
+        """Получает оптимизированные параметры"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            query = "SELECT * FROM optimized_params WHERE 1=1"
+            params = []
+            
+            if symbol:
+                query += " AND symbol = ?"
+                params.append(symbol)
+            
+            if optimization_type:
+                query += " AND optimization_type = ?"
+                params.append(optimization_type)
+            
+            query += " ORDER BY updated_at DESC LIMIT 1"
+            
+            cursor.execute(query, params)
+            row = cursor.fetchone()
+            
+            if row:
+                result = dict(row)
+                if result.get('params_json'):
+                    result['params'] = json.loads(result['params_json'])
+                return result
+            
+            return None
+    
+    # ==================== МЕТОДЫ ДЛЯ ПАТТЕРНОВ ТОРГОВЛИ ====================
+    
+    def save_trade_patterns(self, patterns: List[Dict]) -> int:
+        """Сохраняет паттерны торговли"""
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now().isoformat()
+                saved_count = 0
+                
+                for pattern in patterns:
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO trading_patterns (
+                            pattern_type, symbol, rsi_range, trend_condition, volatility_range,
+                            success_count, failure_count, avg_pnl, avg_duration,
+                            pattern_data_json, discovered_at, last_seen_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        pattern.get('pattern_type'),
+                        pattern.get('symbol'),
+                        pattern.get('rsi_range'),
+                        pattern.get('trend_condition'),
+                        pattern.get('volatility_range'),
+                        pattern.get('success_count', 0),
+                        pattern.get('failure_count', 0),
+                        pattern.get('avg_pnl'),
+                        pattern.get('avg_duration'),
+                        json.dumps(pattern.get('pattern_data', {})),
+                        pattern.get('discovered_at', now),
+                        now
+                    ))
+                    saved_count += 1
+                
+                return saved_count
+    
+    def get_trade_patterns(self, pattern_type: Optional[str] = None, symbol: Optional[str] = None) -> List[Dict]:
+        """Получает паттерны торговли"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            query = "SELECT * FROM trading_patterns WHERE 1=1"
+            params = []
+            
+            if pattern_type:
+                query += " AND pattern_type = ?"
+                params.append(pattern_type)
+            
+            if symbol:
+                query += " AND symbol = ?"
+                params.append(symbol)
+            
+            query += " ORDER BY last_seen_at DESC"
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            
+            result = []
+            for row in rows:
+                pattern = dict(row)
+                if pattern.get('pattern_data_json'):
+                    pattern['pattern_data'] = json.loads(pattern['pattern_data_json'])
+                result.append(pattern)
+            
+            return result
+    
+    # ==================== МЕТОДЫ ДЛЯ СТАТУСА СЕРВИСА ДАННЫХ ====================
+    
+    def save_data_service_status(self, service_name: str, status: Dict) -> int:
+        """Сохраняет статус сервиса данных"""
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now().isoformat()
+                
+                cursor.execute("""
+                    INSERT OR REPLACE INTO data_service_status (
+                        service_name, status_json, updated_at
+                    ) VALUES (?, ?, ?)
+                """, (
+                    service_name,
+                    json.dumps(status),
+                    now
+                ))
+                
+                return cursor.lastrowid
+    
+    def get_data_service_status(self, service_name: str) -> Optional[Dict]:
+        """Получает статус сервиса данных"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM data_service_status WHERE service_name = ?
+            """, (service_name,))
+            
+            row = cursor.fetchone()
+            if row:
+                result = dict(row)
+                if result.get('status_json'):
+                    result['status'] = json.loads(result['status_json'])
+                return result
+            
+            return None
+    
     def get_database_stats(self) -> Dict[str, Any]:
         """Получает общую статистику базы данных"""
         with self._get_connection() as conn:
@@ -2809,7 +3345,8 @@ class AIDatabase:
             tables = ['simulated_trades', 'bot_trades', 'exchange_trades', 'ai_decisions', 
                      'training_sessions', 'parameter_training_samples', 'used_training_parameters',
                      'best_params_per_symbol', 'blocked_params', 'win_rate_targets', 'training_locks',
-                     'candles_history', 'bots_data_snapshots']
+                     'candles_history', 'bots_data_snapshots', 'model_versions', 'performance_metrics',
+                     'strategy_analysis', 'optimized_params', 'trading_patterns', 'data_service_status']
             for table in tables:
                 cursor.execute(f"SELECT COUNT(*) FROM {table}")
                 stats[f"{table}_count"] = cursor.fetchone()[0]

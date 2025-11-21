@@ -1,4 +1,4 @@
-Set fso = CreateObject("Scripting.FileSystemObject")
+afSet fso = CreateObject("Scripting.FileSystemObject")
 Set shell = CreateObject("WScript.Shell")
 
 projectDir = fso.GetParentFolderName(WScript.ScriptFullName)

@@ -3,11 +3,14 @@
 """
 Модуль для хранения данных AI модуля
 
-Управляет JSON файлами для:
-- Отслеживания решений AI
-- История обучения
-- Метрики производительности
-- Версии моделей
+ВАЖНО: Все данные теперь хранятся в БД (ai_data.db)!
+JSON файлы больше не используются.
+
+Управляет данными для:
+- Отслеживания решений AI (таблица ai_decisions)
+- История обучения (таблица training_sessions)
+- Метрики производительности (таблица performance_metrics)
+- Версии моделей (таблица model_versions)
 """
 
 import os
@@ -25,7 +28,7 @@ logger = logging.getLogger('AI.DataStorage')
 
 
 class AIDataStorage:
-    """Класс для управления данными AI модуля"""
+    """Класс для управления данными AI модуля через БД"""
     
     def __init__(self, data_dir: str = 'data/ai'):
         self.data_dir = data_dir
@@ -34,184 +37,100 @@ class AIDataStorage:
         # Создаем директорию если её нет
         os.makedirs(self.data_dir, exist_ok=True)
         
-        # Пути к файлам
-        self.decisions_file = os.path.join(self.data_dir, 'ai_decisions_tracking.json')
-        self.training_history_file = os.path.join(self.data_dir, 'ai_training_history.json')
-        self.performance_metrics_file = os.path.join(self.data_dir, 'ai_performance_metrics.json')
-        self.model_versions_file = os.path.join(self.data_dir, 'ai_model_versions.json')
-        
-        # Инициализируем файлы если их нет
-        self._init_files()
-    
-    def _init_files(self):
-        """Инициализирует файлы если их нет"""
+        # Подключаемся к БД
         try:
-            if not os.path.exists(self.decisions_file):
-                self._save_data(self.decisions_file, {})
-            
-            if not os.path.exists(self.training_history_file):
-                self._save_data(self.training_history_file, {'trainings': []})
-            
-            if not os.path.exists(self.performance_metrics_file):
-                self._save_data(self.performance_metrics_file, {
-                    'overall': {},
-                    'vs_script': {},
-                    'by_symbol': {}
-                })
-            
-            if not os.path.exists(self.model_versions_file):
-                self._save_data(self.model_versions_file, {'versions': []})
-                
+            from bot_engine.ai.ai_database import get_ai_database
+            self.ai_db = get_ai_database()
+            if self.ai_db:
+                logger.info("✅ AI Database подключена для AIDataStorage")
+            else:
+                logger.warning("⚠️ AI Database не доступна")
         except Exception as e:
-            logger.error(f"❌ Ошибка инициализации файлов: {e}")
-    
-    def _load_data(self, filepath: str) -> Dict:
-        """Загрузить данные из файла"""
-        try:
-            if os.path.exists(filepath):
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-        except json.JSONDecodeError as json_error:
-            logger.warning(f"⚠️ Файл {filepath} поврежден (JSON ошибка на позиции {json_error.pos})")
-            logger.info("🧯 Сохраняем копию повреждённого файла (оригинал оставляем)")
-            try:
-                corrupted_file = f"{filepath}.corrupted"
-                if os.path.exists(filepath):
-                    shutil.copy2(filepath, corrupted_file)
-                    logger.info(f"📁 Копия сохранена: {corrupted_file}")
-            except Exception as copy_error:
-                logger.debug(f"⚠️ Не удалось сохранить копию: {copy_error}")
-        except Exception as e:
-            logger.error(f"❌ Ошибка загрузки данных из {filepath}: {e}")
-        return {}
-    
-    def _save_data(self, filepath: str, data: Dict):
-        """Сохранить данные в файл (безопасно с retry логикой)"""
-        max_retries = 5
-        retry_delay = 0.5  # секунд
-        
-        for attempt in range(max_retries):
-            try:
-                with self.lock:
-                    logger.debug(f"🧪 DIAG: _save_data start filepath={filepath} attempt={attempt + 1}")
-                    # Создаем уникальное имя временного файла
-                    temp_file = f"{filepath}.tmp.{uuid.uuid4().hex[:8]}"
-                    
-                    # Сохраняем во временный файл сначала
-                    try:
-                        logger.debug(f"🧪 DIAG: writing temp file {temp_file}")
-                        with open(temp_file, 'w', encoding='utf-8') as f:
-                            json.dump(data, f, ensure_ascii=False, indent=2)
-                    except Exception as write_error:
-                        try:
-                            if os.path.exists(temp_file):
-                                os.remove(temp_file)
-                        except:
-                            pass
-                        raise write_error
-                    
-                    # Заменяем оригинальный файл атомарно
-                    if os.path.exists(filepath):
-                        logger.debug(f"🧪 DIAG: removing original file {filepath}")
-                        try:
-                            os.remove(filepath)
-                        except PermissionError:
-                            if attempt < max_retries - 1:
-                                try:
-                                    if os.path.exists(temp_file):
-                                        os.remove(temp_file)
-                                except:
-                                    pass
-                                time.sleep(retry_delay * (attempt + 1))
-                                continue
-                            else:
-                                raise
-                    
-                    # Переименовываем временный файл
-                    try:
-                        logger.debug(f"🧪 DIAG: renaming {temp_file} -> {filepath}")
-                        os.rename(temp_file, filepath)
-                    except PermissionError:
-                        if attempt < max_retries - 1:
-                            try:
-                                if os.path.exists(temp_file):
-                                    os.remove(temp_file)
-                            except:
-                                pass
-                            time.sleep(retry_delay * (attempt + 1))
-                            continue
-                        else:
-                            raise
-                    
-                    # Успешно сохранено
-                    basename = os.path.basename(os.path.normpath(filepath))
-                    if basename == 'ai_training_history.json':
-                        trainings_len = len(data.get('trainings', []))
-                        abs_path = os.path.abspath(filepath)
-                        logger.debug(f"💾 История обучения обновлена ({abs_path}) — записей: {trainings_len}")
-                        if trainings_len == 0:
-                            stack = ''.join(traceback.format_stack(limit=12))
-                            logger.warning(
-                                "🩺 DIAG: training_history.json записывается пустым списком!\n"
-                                f"   Путь: {abs_path}\n"
-                                f"   Вызов:\n{stack}"
-                            )
-                    logger.debug("🧪 DIAG: _save_data completed successfully")
-                    return
-                    
-            except (PermissionError, OSError) as file_error:
-                if attempt < max_retries - 1:
-                    logger.debug(f"⚠️ Файл {filepath} занят, повторная попытка {attempt + 1}/{max_retries}...")
-                    time.sleep(retry_delay * (attempt + 1))
-                    continue
-                else:
-                    logger.warning(f"⚠️ Не удалось сохранить {filepath} после {max_retries} попыток (файл занят)")
-                    logger.debug(f"   Ошибка: {file_error}")
-            except Exception as e:
-                logger.error(f"❌ Ошибка сохранения данных в {filepath}: {e}")
-                return
+            logger.warning(f"⚠️ Не удалось подключиться к AI Database: {e}")
+            self.ai_db = None
     
     # ==================== Управление решениями AI ====================
     
     def save_ai_decision(self, decision_id: str, decision_data: Dict):
-        """Сохранить решение AI"""
+        """Сохранить решение AI в БД"""
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна, решение не сохранено")
+            return
+        
         try:
-            with self.lock:
-                decisions = self._load_data(self.decisions_file)
-                decisions[decision_id] = decision_data
-                self._save_data(self.decisions_file, decisions)
+            # Преобразуем формат для БД
+            decision = {
+                'decision_id': decision_id,
+                'symbol': decision_data.get('symbol'),
+                'decision_type': decision_data.get('decision_type', 'SIGNAL'),
+                'signal': decision_data.get('signal'),
+                'confidence': decision_data.get('confidence'),
+                'rsi': decision_data.get('rsi'),
+                'trend': decision_data.get('trend'),
+                'price': decision_data.get('price'),
+                'market_data': decision_data.get('market_data'),
+                'params': decision_data.get('params')
+            }
+            
+            self.ai_db.save_ai_decision(decision)
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения решения AI: {e}")
     
     def update_ai_decision(self, decision_id: str, updates: Dict):
-        """Обновить решение AI"""
+        """Обновить решение AI в БД"""
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна, решение не обновлено")
+            return False
+        
         try:
-            with self.lock:
-                decisions = self._load_data(self.decisions_file)
-                if decision_id in decisions:
-                    decisions[decision_id].update(updates)
-                    self._save_data(self.decisions_file, decisions)
-                    return True
+            # Если есть результат - обновляем через специальный метод
+            if 'pnl' in updates or 'is_successful' in updates:
+                pnl = updates.get('pnl', 0)
+                is_successful = updates.get('is_successful', False)
+                self.ai_db.update_ai_decision_result(decision_id, pnl, is_successful)
+                return True
+            else:
+                # Для других обновлений нужно получить текущее решение и обновить
+                decisions = self.ai_db.get_ai_decisions()
+                for decision in decisions:
+                    if decision.get('decision_id') == decision_id:
+                        # Обновляем через сохранение с обновленными данными
+                        decision.update(updates)
+                        self.ai_db.save_ai_decision(decision)
+                        return True
+                return False
         except Exception as e:
             logger.error(f"❌ Ошибка обновления решения AI: {e}")
-        return False
+            return False
     
     def get_ai_decisions(self, status: Optional[str] = None, symbol: Optional[str] = None) -> List[Dict]:
-        """Получить решения AI с фильтрацией"""
+        """Получить решения AI с фильтрацией из БД"""
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна")
+            return []
+        
         try:
-            decisions = self._load_data(self.decisions_file)
+            decisions = self.ai_db.get_ai_decisions(status=status, symbol=symbol)
+            
+            # Преобразуем формат для совместимости
             result = []
+            for decision in decisions:
+                result.append({
+                    'id': decision.get('decision_id'),
+                    'symbol': decision.get('symbol'),
+                    'decision_type': decision.get('decision_type'),
+                    'signal': decision.get('signal'),
+                    'confidence': decision.get('confidence'),
+                    'rsi': decision.get('rsi'),
+                    'trend': decision.get('trend'),
+                    'price': decision.get('price'),
+                    'market_data': decision.get('market_data'),
+                    'params': decision.get('params'),
+                    'status': decision.get('status', 'PENDING'),
+                    'pnl': decision.get('result_pnl'),
+                    'timestamp': decision.get('created_at')
+                })
             
-            for decision_id, decision in decisions.items():
-                if status and decision.get('status') != status:
-                    continue
-                if symbol and decision.get('symbol') != symbol:
-                    continue
-                decision['id'] = decision_id
-                result.append(decision)
-            
-            # Сортируем по времени (новые первыми)
-            result.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
             return result
         except Exception as e:
             logger.error(f"❌ Ошибка получения решений AI: {e}")
@@ -220,44 +139,29 @@ class AIDataStorage:
     # ==================== История обучения ====================
     
     def add_training_record(self, training_data: Dict):
-        """Добавить запись об обучении"""
+        """Добавить запись об обучении в БД"""
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна, запись не добавлена")
+            return
+        
         try:
-            with self.lock:
-                history = self._load_data(self.training_history_file)
-                trainings = history.get('trainings', [])
-                
-                logger.debug(
-                    f"🧪 DIAG: add_training_record event={training_data.get('event_type')} "
-                    f"status={training_data.get('status')} (до добавления={len(trainings)})"
-                )
-                
-                training_record = {
-                    'id': f"training_{int(datetime.now().timestamp())}",
-                    'timestamp': datetime.now().isoformat(),
-                    **training_data
-                }
-                
-                trainings.append(training_record)
-                
-                # Ограничиваем историю последними 100 записями
-                if len(trainings) > 100:
-                    trainings = trainings[-100:]
-                
-                history['trainings'] = trainings
+            # Добавляем timestamp если его нет
+            if 'timestamp' not in training_data:
+                training_data['timestamp'] = datetime.now().isoformat()
             
-            logger.info(f"🧠 Добавлена запись обучения AI (всего: {len(trainings)}) — id={training_record['id']}")
-            logger.debug("🧪 DIAG: вызываем _save_data для истории обучения…")
-            self._save_data(self.training_history_file, history)
-            logger.debug("🧪 DIAG: _save_data завершился без исключения")
+            self.ai_db.add_training_history_record(training_data)
+            logger.info(f"🧠 Добавлена запись обучения AI в БД — event={training_data.get('event_type')}, status={training_data.get('status')}")
         except Exception as e:
             logger.error(f"❌ Ошибка добавления записи об обучении: {e}")
     
     def get_training_history(self, limit: int = 50) -> List[Dict]:
-        """Получить историю обучения"""
+        """Получить историю обучения из БД"""
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна")
+            return []
+        
         try:
-            history = self._load_data(self.training_history_file)
-            trainings = history.get('trainings', [])
-            return trainings[-limit:] if limit else trainings
+            return self.ai_db.get_training_history(limit=limit)
         except Exception as e:
             logger.error(f"❌ Ошибка получения истории обучения: {e}")
             return []
@@ -265,33 +169,24 @@ class AIDataStorage:
     # ==================== Метрики производительности ====================
     
     def update_performance_metrics(self, metrics: Dict):
-        """Обновить метрики производительности"""
+        """Обновить метрики производительности в БД"""
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна, метрики не обновлены")
+            return
+        
         try:
-            with self.lock:
-                data = self._load_data(self.performance_metrics_file)
-                
-                # Обновляем общие метрики
-                if 'overall' in metrics:
-                    data['overall'].update(metrics['overall'])
-                
-                # Обновляем сравнение с скриптовыми правилами
-                if 'vs_script' in metrics:
-                    data['vs_script'].update(metrics['vs_script'])
-                
-                # Обновляем метрики по символам
-                if 'by_symbol' in metrics:
-                    if 'by_symbol' not in data:
-                        data['by_symbol'] = {}
-                    data['by_symbol'].update(metrics['by_symbol'])
-                
-                self._save_data(self.performance_metrics_file, data)
+            self.ai_db.save_performance_metrics(metrics)
         except Exception as e:
             logger.error(f"❌ Ошибка обновления метрик: {e}")
     
     def calculate_performance_metrics(self) -> Dict:
-        """Вычислить метрики производительности на основе решений AI"""
+        """Вычислить метрики производительности на основе решений AI из БД"""
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна")
+            return {}
+        
         try:
-            decisions = self.get_ai_decisions(status='SUCCESS') + self.get_ai_decisions(status='FAILED')
+            decisions = self.ai_db.get_ai_decisions()
             
             if not decisions:
                 return {}
@@ -300,7 +195,7 @@ class AIDataStorage:
             successful = sum(1 for d in decisions if d.get('status') == 'SUCCESS')
             failed = total_decisions - successful
             
-            total_pnl = sum(d.get('pnl', 0) for d in decisions)
+            total_pnl = sum(d.get('result_pnl', 0) or 0 for d in decisions)
             avg_pnl = total_pnl / total_decisions if total_decisions > 0 else 0
             win_rate = successful / total_decisions if total_decisions > 0 else 0
             
@@ -321,7 +216,7 @@ class AIDataStorage:
                         by_symbol[symbol]['successful'] += 1
                     else:
                         by_symbol[symbol]['failed'] += 1
-                    by_symbol[symbol]['total_pnl'] += decision.get('pnl', 0)
+                    by_symbol[symbol]['total_pnl'] += decision.get('result_pnl', 0) or 0
             
             # Вычисляем win_rate и avg_pnl для каждого символа
             for symbol, metrics in by_symbol.items():
@@ -345,51 +240,58 @@ class AIDataStorage:
             return {}
     
     def get_performance_metrics(self) -> Dict:
-        """Получить метрики производительности"""
+        """Получить метрики производительности из БД"""
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна")
+            return {'overall': {}, 'vs_script': {}, 'by_symbol': {}}
+        
         try:
-            return self._load_data(self.performance_metrics_file)
+            return self.ai_db.get_performance_metrics()
         except Exception as e:
             logger.error(f"❌ Ошибка получения метрик: {e}")
-            return {}
+            return {'overall': {}, 'vs_script': {}, 'by_symbol': {}}
     
     # ==================== Версии моделей ====================
     
     def save_model_version(self, version_data: Dict):
-        """Сохранить информацию о версии модели"""
+        """Сохранить информацию о версии модели в БД"""
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна, версия модели не сохранена")
+            return
+        
         try:
-            with self.lock:
-                data = self._load_data(self.model_versions_file)
-                versions = data.get('versions', [])
-                
-                version_record = {
-                    'id': f"model_{int(datetime.now().timestamp())}",
-                    'timestamp': datetime.now().isoformat(),
-                    **version_data
-                }
-                
-                versions.append(version_record)
-                
-                # Ограничиваем историю последними 50 версиями
-                if len(versions) > 50:
-                    versions = versions[-50:]
-                
-                data['versions'] = versions
-                self._save_data(self.model_versions_file, data)
+            # Добавляем id если его нет
+            if 'id' not in version_data:
+                version_data['id'] = f"model_{int(datetime.now().timestamp())}"
+            
+            # Добавляем timestamp если его нет
+            if 'timestamp' not in version_data:
+                version_data['timestamp'] = datetime.now().isoformat()
+            
+            self.ai_db.save_model_version(version_data)
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения версии модели: {e}")
     
     def get_model_versions(self, limit: int = 10) -> List[Dict]:
-        """Получить версии моделей"""
+        """Получить версии моделей из БД"""
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна")
+            return []
+        
         try:
-            data = self._load_data(self.model_versions_file)
-            versions = data.get('versions', [])
-            return versions[-limit:] if limit else versions
+            return self.ai_db.get_model_versions(limit=limit)
         except Exception as e:
             logger.error(f"❌ Ошибка получения версий моделей: {e}")
             return []
     
     def get_latest_model_version(self) -> Optional[Dict]:
-        """Получить последнюю версию модели"""
-        versions = self.get_model_versions(limit=1)
-        return versions[0] if versions else None
-
+        """Получить последнюю версию модели из БД"""
+        if not self.ai_db:
+            logger.warning("⚠️ AI Database не доступна")
+            return None
+        
+        try:
+            return self.ai_db.get_latest_model_version()
+        except Exception as e:
+            logger.error(f"❌ Ошибка получения последней версии модели: {e}")
+            return None
