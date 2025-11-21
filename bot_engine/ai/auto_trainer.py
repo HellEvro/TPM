@@ -211,7 +211,18 @@ class AutoTrainer:
                 self.last_data_update = time.time()
                 return True
             else:
-                logger.error(f"[AutoTrainer] ❌ Ошибка обновления данных: {result.stderr}")
+                # Проверяем, не был ли прерван скрипт (KeyboardInterrupt)
+                stderr_text = result.stderr or ""
+                if "KeyboardInterrupt" in stderr_text:
+                    logger.warning("[AutoTrainer] ⚠️ Сбор данных прерван пользователем")
+                    # Останавливаем Auto Trainer при прерывании
+                    self.running = False
+                else:
+                    # Ограничиваем вывод ошибки (первые 500 символов)
+                    error_preview = stderr_text[:500] if len(stderr_text) > 500 else stderr_text
+                    if len(stderr_text) > 500:
+                        error_preview += f"\n... (еще {len(stderr_text) - 500} символов)"
+                    logger.error(f"[AutoTrainer] ❌ Ошибка обновления данных: {error_preview}")
                 return False
         
         except subprocess.TimeoutExpired:
