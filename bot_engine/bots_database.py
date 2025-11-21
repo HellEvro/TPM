@@ -724,19 +724,34 @@ class BotsDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_timestamp ON rsi_cache(timestamp)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_created ON rsi_cache(created_at)")
             
-            # ==================== ТАБЛИЦА: СОСТОЯНИЕ ПРОЦЕССОВ ====================
+            # ==================== ТАБЛИЦА: СОСТОЯНИЕ ПРОЦЕССОВ (НОРМАЛИЗОВАННАЯ) ====================
+            # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: одна строка = один процесс со всеми полями
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS process_state (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    key TEXT UNIQUE NOT NULL,
-                    value_json TEXT NOT NULL,
+                    process_name TEXT UNIQUE NOT NULL,
+                    active INTEGER DEFAULT 0,
+                    initialized INTEGER DEFAULT 0,
+                    last_update TEXT,
+                    last_check TEXT,
+                    last_save TEXT,
+                    last_sync TEXT,
+                    update_count INTEGER DEFAULT 0,
+                    check_count INTEGER DEFAULT 0,
+                    save_count INTEGER DEFAULT 0,
+                    connection_count INTEGER DEFAULT 0,
+                    signals_processed INTEGER DEFAULT 0,
+                    bots_created INTEGER DEFAULT 0,
+                    last_error TEXT,
+                    extra_process_data_json TEXT,
                     updated_at TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 )
             """)
             
             # Индексы для process_state
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_process_state_key ON process_state(key)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_process_state_name ON process_state(process_name)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_process_state_active ON process_state(active)")
             
             # ==================== ТАБЛИЦА: ИНДИВИДУАЛЬНЫЕ НАСТРОЙКИ МОНЕТ (НОРМАЛИЗОВАННАЯ) ====================
             # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: все настройки в отдельных столбцах
@@ -782,13 +797,19 @@ class BotsDatabase:
             # Индексы для individual_coin_settings
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_coin_settings_symbol ON individual_coin_settings(symbol)")
             
-            # ==================== ТАБЛИЦА: ЗРЕЛЫЕ МОНЕТЫ ====================
+            # ==================== ТАБЛИЦА: ЗРЕЛЫЕ МОНЕТЫ (НОРМАЛИЗОВАННАЯ) ====================
+            # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: все поля в отдельных столбцах
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS mature_coins (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     symbol TEXT UNIQUE NOT NULL,
                     timestamp REAL NOT NULL,
-                    maturity_data_json TEXT NOT NULL,
+                    is_mature INTEGER DEFAULT 0,
+                    candles_count INTEGER,
+                    min_required INTEGER,
+                    config_min_rsi_low INTEGER,
+                    config_max_rsi_high INTEGER,
+                    extra_maturity_data_json TEXT,
                     updated_at TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 )
@@ -797,13 +818,18 @@ class BotsDatabase:
             # Индексы для mature_coins
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_mature_coins_symbol ON mature_coins(symbol)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_mature_coins_timestamp ON mature_coins(timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_mature_coins_is_mature ON mature_coins(is_mature)")
             
-            # ==================== ТАБЛИЦА: КЭШ ПРОВЕРКИ ЗРЕЛОСТИ ====================
+            # ==================== ТАБЛИЦА: КЭШ ПРОВЕРКИ ЗРЕЛОСТИ (НОРМАЛИЗОВАННАЯ) ====================
+            # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: все параметры конфигурации в отдельных столбцах
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS maturity_check_cache (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     coins_count INTEGER NOT NULL,
-                    config_hash TEXT,
+                    min_candles INTEGER,
+                    min_rsi_low INTEGER,
+                    max_rsi_high INTEGER,
+                    extra_config_json TEXT,
                     updated_at TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 )
@@ -1338,6 +1364,343 @@ class BotsDatabase:
                 pass
             except Exception as e:
                 logger.warning(f"⚠️ Ошибка миграции individual_coin_settings: {e}")
+            
+            # ==================== МИГРАЦИЯ: mature_coins из JSON в нормализованные столбцы ====================
+            # Проверяем, есть ли старая структура (с maturity_data_json)
+            try:
+                cursor.execute("SELECT maturity_data_json FROM mature_coins LIMIT 1")
+                # Если запрос выполнился - значит старая структура
+                logger.info("📦 Обнаружена старая JSON структура mature_coins, выполняю миграцию...")
+                
+                # Загружаем все данные из старой структуры
+                cursor.execute("SELECT symbol, timestamp, maturity_data_json, updated_at, created_at FROM mature_coins")
+                old_rows = cursor.fetchall()
+                
+                if old_rows:
+                    # Удаляем старую таблицу
+                    cursor.execute("DROP TABLE IF EXISTS mature_coins")
+                    
+                    # Создаем новую таблицу с нормализованной структурой
+                    cursor.execute("""
+                        CREATE TABLE mature_coins (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            symbol TEXT UNIQUE NOT NULL,
+                            timestamp REAL NOT NULL,
+                            is_mature INTEGER DEFAULT 0,
+                            candles_count INTEGER,
+                            min_required INTEGER,
+                            config_min_rsi_low INTEGER,
+                            config_max_rsi_high INTEGER,
+                            extra_maturity_data_json TEXT,
+                            updated_at TEXT NOT NULL,
+                            created_at TEXT NOT NULL
+                        )
+                    """)
+                    
+                    # Создаем индексы
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_mature_coins_symbol ON mature_coins(symbol)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_mature_coins_timestamp ON mature_coins(timestamp)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_mature_coins_is_mature ON mature_coins(is_mature)")
+                    
+                    # Мигрируем данные
+                    migrated_count = 0
+                    for row in old_rows:
+                        try:
+                            symbol = row[0]
+                            timestamp = row[1]
+                            maturity_data_json = row[2]
+                            updated_at = row[3]
+                            created_at = row[4]
+                            
+                            # Парсим JSON
+                            maturity_data = json.loads(maturity_data_json)
+                            
+                            # Извлекаем основные поля
+                            is_mature = 1 if maturity_data.get('is_mature', False) else 0
+                            details = maturity_data.get('details', {})
+                            candles_count = details.get('candles_count')
+                            min_required = details.get('min_required')
+                            config_min_rsi_low = details.get('config_min_rsi_low')
+                            config_max_rsi_high = details.get('config_max_rsi_high')
+                            
+                            # Собираем остальные поля в extra_maturity_data_json
+                            extra_data = {}
+                            known_fields = {'is_mature', 'details'}
+                            for key, value in maturity_data.items():
+                                if key not in known_fields:
+                                    extra_data[key] = value
+                            
+                            # Также сохраняем неизвестные поля из details
+                            known_details_fields = {'candles_count', 'min_required', 'config_min_rsi_low', 'config_max_rsi_high'}
+                            for key, value in details.items():
+                                if key not in known_details_fields:
+                                    if 'extra_details' not in extra_data:
+                                        extra_data['extra_details'] = {}
+                                    extra_data['extra_details'][key] = value
+                            
+                            extra_maturity_data_json = json.dumps(extra_data) if extra_data else None
+                            
+                            # Вставляем в новую таблицу
+                            cursor.execute("""
+                                INSERT INTO mature_coins (
+                                    symbol, timestamp, is_mature, candles_count,
+                                    min_required, config_min_rsi_low, config_max_rsi_high,
+                                    extra_maturity_data_json, updated_at, created_at
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                symbol,
+                                timestamp,
+                                is_mature,
+                                candles_count,
+                                min_required,
+                                config_min_rsi_low,
+                                config_max_rsi_high,
+                                extra_maturity_data_json,
+                                updated_at,
+                                created_at
+                            ))
+                            migrated_count += 1
+                        except Exception as e:
+                            logger.warning(f"⚠️ Ошибка миграции зрелой монеты {symbol}: {e}")
+                            continue
+                    
+                    logger.info(f"✅ Миграция mature_coins завершена: {migrated_count} записей мигрировано из JSON в нормализованные столбцы")
+                else:
+                    # Таблица пуста, просто пересоздаем с новой структурой
+                    cursor.execute("DROP TABLE IF EXISTS mature_coins")
+                    cursor.execute("""
+                        CREATE TABLE mature_coins (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            symbol TEXT UNIQUE NOT NULL,
+                            timestamp REAL NOT NULL,
+                            is_mature INTEGER DEFAULT 0,
+                            candles_count INTEGER,
+                            min_required INTEGER,
+                            config_min_rsi_low INTEGER,
+                            config_max_rsi_high INTEGER,
+                            extra_maturity_data_json TEXT,
+                            updated_at TEXT NOT NULL,
+                            created_at TEXT NOT NULL
+                        )
+                    """)
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_mature_coins_symbol ON mature_coins(symbol)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_mature_coins_timestamp ON mature_coins(timestamp)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_mature_coins_is_mature ON mature_coins(is_mature)")
+                    logger.info("✅ Таблица mature_coins пересоздана с нормализованной структурой")
+                    
+            except sqlite3.OperationalError:
+                # Таблица не существует или уже новая структура - ничего не делаем
+                pass
+            except Exception as e:
+                logger.warning(f"⚠️ Ошибка миграции mature_coins: {e}")
+            
+            # ==================== МИГРАЦИЯ: maturity_check_cache из JSON в нормализованные столбцы ====================
+            # Проверяем, есть ли старая структура (с config_hash как JSON)
+            try:
+                cursor.execute("SELECT config_hash FROM maturity_check_cache LIMIT 1")
+                # Если запрос выполнился - проверяем структуру
+                row = cursor.fetchone()
+                if row and row[0]:
+                    # Пытаемся распарсить config_hash как JSON
+                    try:
+                        config_data = json.loads(row[0])
+                        # Если это словарь с min_candles/min_rsi_low/max_rsi_high - значит старая структура
+                        if isinstance(config_data, dict) and ('min_candles' in config_data or 'min_rsi_low' in config_data):
+                            logger.info("📦 Обнаружена старая JSON структура maturity_check_cache, выполняю миграцию...")
+                            
+                            # Загружаем все данные из старой структуры
+                            cursor.execute("SELECT coins_count, config_hash, updated_at, created_at FROM maturity_check_cache")
+                            old_rows = cursor.fetchall()
+                            
+                            if old_rows:
+                                # Удаляем старую таблицу
+                                cursor.execute("DROP TABLE IF EXISTS maturity_check_cache")
+                                
+                                # Создаем новую таблицу с нормализованной структурой
+                                cursor.execute("""
+                                    CREATE TABLE maturity_check_cache (
+                                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                        coins_count INTEGER NOT NULL,
+                                        min_candles INTEGER,
+                                        min_rsi_low INTEGER,
+                                        max_rsi_high INTEGER,
+                                        extra_config_json TEXT,
+                                        updated_at TEXT NOT NULL,
+                                        created_at TEXT NOT NULL
+                                    )
+                                """)
+                                
+                                # Мигрируем данные
+                                migrated_count = 0
+                                for old_row in old_rows:
+                                    try:
+                                        coins_count = old_row[0]
+                                        config_hash = old_row[1]
+                                        updated_at = old_row[2]
+                                        created_at = old_row[3]
+                                        
+                                        # Парсим JSON из config_hash
+                                        config_data = json.loads(config_hash) if config_hash else {}
+                                        
+                                        # Извлекаем основные поля
+                                        min_candles = config_data.get('min_candles')
+                                        min_rsi_low = config_data.get('min_rsi_low')
+                                        max_rsi_high = config_data.get('max_rsi_high')
+                                        
+                                        # Собираем остальные поля в extra_config_json
+                                        extra_data = {}
+                                        known_fields = {'min_candles', 'min_rsi_low', 'max_rsi_high'}
+                                        for key, value in config_data.items():
+                                            if key not in known_fields:
+                                                extra_data[key] = value
+                                        
+                                        extra_config_json = json.dumps(extra_data) if extra_data else None
+                                        
+                                        # Вставляем в новую таблицу
+                                        cursor.execute("""
+                                            INSERT INTO maturity_check_cache (
+                                                coins_count, min_candles, min_rsi_low, max_rsi_high,
+                                                extra_config_json, updated_at, created_at
+                                            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                                        """, (
+                                            coins_count,
+                                            min_candles,
+                                            min_rsi_low,
+                                            max_rsi_high,
+                                            extra_config_json,
+                                            updated_at,
+                                            created_at
+                                        ))
+                                        migrated_count += 1
+                                    except Exception as e:
+                                        logger.warning(f"⚠️ Ошибка миграции кэша проверки зрелости: {e}")
+                                        continue
+                                
+                                logger.info(f"✅ Миграция maturity_check_cache завершена: {migrated_count} записей мигрировано из JSON в нормализованные столбцы")
+                    except (json.JSONDecodeError, TypeError):
+                        # config_hash не JSON или уже строка - пропускаем миграцию
+                        pass
+            except sqlite3.OperationalError:
+                # Таблица не существует или уже новая структура - ничего не делаем
+                pass
+            except Exception as e:
+                logger.warning(f"⚠️ Ошибка миграции maturity_check_cache: {e}")
+            
+            # ==================== МИГРАЦИЯ: process_state из JSON в нормализованные столбцы ====================
+            # Проверяем, есть ли старая структура (с value_json)
+            try:
+                cursor.execute("SELECT value_json FROM process_state WHERE key = 'main' LIMIT 1")
+                row = cursor.fetchone()
+                
+                if row:
+                    # Проверяем, мигрированы ли уже данные
+                    cursor.execute("SELECT COUNT(*) FROM process_state WHERE process_name IS NOT NULL")
+                    processes_count = cursor.fetchone()[0]
+                    
+                    if processes_count == 0:
+                        # Данные еще не мигрированы
+                        logger.info("📦 Обнаружены данные в process_state, выполняю миграцию в нормализованные столбцы...")
+                        
+                        state_data = json.loads(row[0])
+                        process_state_dict = state_data.get('process_state', {})
+                        
+                        # Удаляем старую таблицу
+                        cursor.execute("DROP TABLE IF EXISTS process_state")
+                        
+                        # Создаем новую таблицу с нормализованной структурой
+                        cursor.execute("""
+                            CREATE TABLE process_state (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                process_name TEXT UNIQUE NOT NULL,
+                                active INTEGER DEFAULT 0,
+                                initialized INTEGER DEFAULT 0,
+                                last_update TEXT,
+                                last_check TEXT,
+                                last_save TEXT,
+                                last_sync TEXT,
+                                update_count INTEGER DEFAULT 0,
+                                check_count INTEGER DEFAULT 0,
+                                save_count INTEGER DEFAULT 0,
+                                connection_count INTEGER DEFAULT 0,
+                                signals_processed INTEGER DEFAULT 0,
+                                bots_created INTEGER DEFAULT 0,
+                                last_error TEXT,
+                                extra_process_data_json TEXT,
+                                updated_at TEXT NOT NULL,
+                                created_at TEXT NOT NULL
+                            )
+                        """)
+                        
+                        # Создаем индексы
+                        cursor.execute("CREATE INDEX IF NOT EXISTS idx_process_state_name ON process_state(process_name)")
+                        cursor.execute("CREATE INDEX IF NOT EXISTS idx_process_state_active ON process_state(active)")
+                        
+                        # Мигрируем данные
+                        now = datetime.now().isoformat()
+                        migrated_count = 0
+                        
+                        for process_name, process_data in process_state_dict.items():
+                            try:
+                                # Извлекаем поля процесса
+                                active = 1 if process_data.get('active', False) else 0
+                                initialized = 1 if process_data.get('initialized', False) else 0
+                                last_update = process_data.get('last_update')
+                                last_check = process_data.get('last_check')
+                                last_save = process_data.get('last_save')
+                                last_sync = process_data.get('last_sync')
+                                update_count = process_data.get('update_count', 0)
+                                check_count = process_data.get('check_count', 0)
+                                save_count = process_data.get('save_count', 0)
+                                connection_count = process_data.get('connection_count', 0)
+                                signals_processed = process_data.get('signals_processed', 0)
+                                bots_created = process_data.get('bots_created', 0)
+                                last_error = process_data.get('last_error')
+                                
+                                # Собираем остальные поля в extra_process_data_json
+                                extra_data = {}
+                                known_fields = {
+                                    'active', 'initialized', 'last_update', 'last_check',
+                                    'last_save', 'last_sync', 'update_count', 'check_count',
+                                    'save_count', 'connection_count', 'signals_processed',
+                                    'bots_created', 'last_error'
+                                }
+                                
+                                for key, value in process_data.items():
+                                    if key not in known_fields:
+                                        extra_data[key] = value
+                                
+                                extra_process_data_json = json.dumps(extra_data) if extra_data else None
+                                
+                                # Вставляем в новую таблицу
+                                cursor.execute("""
+                                    INSERT INTO process_state (
+                                        process_name, active, initialized, last_update,
+                                        last_check, last_save, last_sync, update_count,
+                                        check_count, save_count, connection_count,
+                                        signals_processed, bots_created, last_error,
+                                        extra_process_data_json, updated_at, created_at
+                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                """, (
+                                    process_name, active, initialized, last_update,
+                                    last_check, last_save, last_sync, update_count,
+                                    check_count, save_count, connection_count,
+                                    signals_processed, bots_created, last_error,
+                                    extra_process_data_json, now, now
+                                ))
+                                migrated_count += 1
+                            except Exception as e:
+                                logger.warning(f"⚠️ Ошибка миграции процесса {process_name}: {e}")
+                                continue
+                        
+                        logger.info(f"✅ Миграция process_state завершена: {migrated_count} процессов мигрировано из JSON в нормализованные столбцы")
+                    else:
+                        logger.debug("ℹ️ Данные process_state уже мигрированы")
+                        
+            except sqlite3.OperationalError:
+                # Таблица process_state не существует или нет данных - ничего не делаем
+                pass
+            except Exception as e:
+                logger.warning(f"⚠️ Ошибка миграции process_state: {e}")
             
             conn.commit()
         except Exception as e:
@@ -2089,7 +2452,7 @@ class BotsDatabase:
     
     def save_mature_coins(self, mature_coins: Dict) -> bool:
         """
-        Сохраняет зрелые монеты
+        Сохраняет зрелые монеты в нормализованные столбцы
         
         Args:
             mature_coins: Словарь {symbol: {timestamp: float, maturity_data: dict}}
@@ -2107,34 +2470,75 @@ class BotsDatabase:
                     # Удаляем старые записи
                     cursor.execute("DELETE FROM mature_coins")
                     
-                    # Вставляем новые записи
+                    # Вставляем новые записи в нормализованном формате
                     for symbol, coin_data in mature_coins.items():
                         timestamp = coin_data.get('timestamp', 0.0)
                         maturity_data = coin_data.get('maturity_data', {})
                         
+                        # Извлекаем основные поля
+                        is_mature = 1 if maturity_data.get('is_mature', False) else 0
+                        details = maturity_data.get('details', {})
+                        candles_count = details.get('candles_count')
+                        min_required = details.get('min_required')
+                        config_min_rsi_low = details.get('config_min_rsi_low')
+                        config_max_rsi_high = details.get('config_max_rsi_high')
+                        
+                        # Собираем остальные поля в extra_maturity_data_json
+                        extra_data = {}
+                        known_fields = {'is_mature', 'details'}
+                        for key, value in maturity_data.items():
+                            if key not in known_fields:
+                                extra_data[key] = value
+                        
+                        # Также сохраняем неизвестные поля из details
+                        known_details_fields = {'candles_count', 'min_required', 'config_min_rsi_low', 'config_max_rsi_high'}
+                        for key, value in details.items():
+                            if key not in known_details_fields:
+                                if 'extra_details' not in extra_data:
+                                    extra_data['extra_details'] = {}
+                                extra_data['extra_details'][key] = value
+                        
+                        extra_maturity_data_json = json.dumps(extra_data) if extra_data else None
+                        
+                        # Получаем created_at из существующей записи или используем текущее время
+                        cursor.execute("SELECT created_at FROM mature_coins WHERE symbol = ?", (symbol,))
+                        existing = cursor.fetchone()
+                        created_at = existing[0] if existing else coin_data.get('created_at', now)
+                        
                         cursor.execute("""
-                            INSERT INTO mature_coins 
-                            (symbol, timestamp, maturity_data_json, updated_at, created_at)
-                            VALUES (?, ?, ?, ?, ?)
+                            INSERT OR REPLACE INTO mature_coins (
+                                symbol, timestamp, is_mature, candles_count,
+                                min_required, config_min_rsi_low, config_max_rsi_high,
+                                extra_maturity_data_json, updated_at, created_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 
+                                COALESCE((SELECT created_at FROM mature_coins WHERE symbol = ?), ?), ?)
                         """, (
                             symbol,
                             timestamp,
-                            json.dumps(maturity_data),
-                            now,
+                            is_mature,
+                            candles_count,
+                            min_required,
+                            config_min_rsi_low,
+                            config_max_rsi_high,
+                            extra_maturity_data_json,
+                            symbol,
+                            created_at,
                             now
                         ))
                     
                     conn.commit()
             
-            logger.debug(f"💾 Зрелые монеты сохранены в БД ({len(mature_coins)} монет)")
+            logger.debug(f"💾 Зрелые монеты сохранены в нормализованные столбцы БД ({len(mature_coins)} монет)")
             return True
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения зрелых монет: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return False
     
     def load_mature_coins(self) -> Dict:
         """
-        Загружает зрелые монеты
+        Загружает зрелые монеты из нормализованных столбцов
         
         Returns:
             Словарь {symbol: {timestamp: float, maturity_data: dict}}
@@ -2142,37 +2546,104 @@ class BotsDatabase:
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT symbol, timestamp, maturity_data_json FROM mature_coins")
+                cursor.execute("""
+                    SELECT symbol, timestamp, is_mature, candles_count,
+                           min_required, config_min_rsi_low, config_max_rsi_high,
+                           extra_maturity_data_json
+                    FROM mature_coins
+                """)
                 rows = cursor.fetchall()
                 
                 mature_coins = {}
                 for row in rows:
-                    symbol = row['symbol']
+                    symbol = row[0]
+                    
+                    # Собираем maturity_data из нормализованных столбцов
+                    maturity_data = {
+                        'is_mature': bool(row[2]),
+                        'details': {
+                            'candles_count': row[3],
+                            'min_required': row[4],
+                            'config_min_rsi_low': row[5],
+                            'config_max_rsi_high': row[6]
+                        }
+                    }
+                    
+                    # Удаляем None значения из details
+                    maturity_data['details'] = {k: v for k, v in maturity_data['details'].items() if v is not None}
+                    
+                    # Загружаем extra_maturity_data_json если есть
+                    if row[7]:
+                        try:
+                            extra_data = json.loads(row[7])
+                            # Добавляем поля из extra_data в maturity_data
+                            for key, value in extra_data.items():
+                                if key == 'extra_details':
+                                    # Объединяем extra_details с details
+                                    maturity_data['details'].update(value)
+                                else:
+                                    maturity_data[key] = value
+                        except:
+                            pass
+                    
                     mature_coins[symbol] = {
-                        'timestamp': row['timestamp'],
-                        'maturity_data': json.loads(row['maturity_data_json'])
+                        'timestamp': row[1],
+                        'maturity_data': maturity_data
                     }
                 
                 return mature_coins
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки зрелых монет: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return {}
     
     # ==================== МЕТОДЫ ДЛЯ КЭША ПРОВЕРКИ ЗРЕЛОСТИ ====================
     
     def save_maturity_check_cache(self, coins_count: int, config_hash: str = None) -> bool:
         """
-        Сохраняет кэш проверки зрелости
+        Сохраняет кэш проверки зрелости в нормализованные столбцы
         
         Args:
             coins_count: Количество монет
-            config_hash: Хеш конфигурации (опционально)
+            config_hash: Хеш конфигурации (JSON строка или словарь) (опционально)
         
         Returns:
             True если успешно сохранено
         """
         try:
             now = datetime.now().isoformat()
+            
+            # Парсим config_hash если он передан
+            min_candles = None
+            min_rsi_low = None
+            max_rsi_high = None
+            extra_config_json = None
+            
+            if config_hash:
+                try:
+                    # Если config_hash - это строка JSON, парсим её
+                    if isinstance(config_hash, str):
+                        config_data = json.loads(config_hash)
+                    else:
+                        config_data = config_hash
+                    
+                    # Извлекаем основные поля
+                    min_candles = config_data.get('min_candles')
+                    min_rsi_low = config_data.get('min_rsi_low')
+                    max_rsi_high = config_data.get('max_rsi_high')
+                    
+                    # Собираем остальные поля в extra_config_json
+                    extra_data = {}
+                    known_fields = {'min_candles', 'min_rsi_low', 'max_rsi_high'}
+                    for key, value in config_data.items():
+                        if key not in known_fields:
+                            extra_data[key] = value
+                    
+                    extra_config_json = json.dumps(extra_data) if extra_data else None
+                except (json.JSONDecodeError, TypeError, AttributeError):
+                    # Если не удалось распарсить - сохраняем как extra_config_json
+                    extra_config_json = json.dumps({'config_hash': config_hash}) if config_hash else None
             
             with self.lock:
                 with self._get_connection() as conn:
@@ -2181,33 +2652,41 @@ class BotsDatabase:
                     # Удаляем старые записи
                     cursor.execute("DELETE FROM maturity_check_cache")
                     
-                    # Вставляем новую запись
+                    # Получаем created_at из существующей записи или используем текущее время
+                    cursor.execute("SELECT created_at FROM maturity_check_cache LIMIT 1")
+                    existing = cursor.fetchone()
+                    created_at = existing[0] if existing else now
+                    
+                    # Вставляем новую запись в нормализованном формате
                     cursor.execute("""
                         INSERT INTO maturity_check_cache 
-                        (coins_count, config_hash, updated_at, created_at)
-                        VALUES (?, ?, ?, ?)
-                    """, (coins_count, config_hash, now, now))
+                        (coins_count, min_candles, min_rsi_low, max_rsi_high, extra_config_json, updated_at, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, 
+                            COALESCE((SELECT created_at FROM maturity_check_cache LIMIT 1), ?))
+                    """, (coins_count, min_candles, min_rsi_low, max_rsi_high, extra_config_json, now, created_at))
                     
                     conn.commit()
             
-            logger.debug("💾 Кэш проверки зрелости сохранен в БД")
+            logger.debug("💾 Кэш проверки зрелости сохранен в нормализованные столбцы БД")
             return True
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения кэша проверки зрелости: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return False
     
     def load_maturity_check_cache(self) -> Dict:
         """
-        Загружает кэш проверки зрелости
+        Загружает кэш проверки зрелости из нормализованных столбцов
         
         Returns:
-            Словарь {coins_count: int, config_hash: str}
+            Словарь {coins_count: int, config_hash: str} (config_hash собирается из нормализованных полей)
         """
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    SELECT coins_count, config_hash
+                    SELECT coins_count, min_candles, min_rsi_low, max_rsi_high, extra_config_json
                     FROM maturity_check_cache
                     ORDER BY created_at DESC
                     LIMIT 1
@@ -2215,13 +2694,35 @@ class BotsDatabase:
                 row = cursor.fetchone()
                 
                 if row:
+                    # Собираем config_hash из нормализованных полей
+                    config_data = {}
+                    if row[1] is not None:
+                        config_data['min_candles'] = row[1]
+                    if row[2] is not None:
+                        config_data['min_rsi_low'] = row[2]
+                    if row[3] is not None:
+                        config_data['max_rsi_high'] = row[3]
+                    
+                    # Добавляем данные из extra_config_json если есть
+                    if row[4]:
+                        try:
+                            extra_data = json.loads(row[4])
+                            config_data.update(extra_data)
+                        except:
+                            pass
+                    
+                    # Формируем config_hash как JSON строку для обратной совместимости
+                    config_hash = json.dumps(config_data) if config_data else None
+                    
                     return {
-                        'coins_count': row['coins_count'],
-                        'config_hash': row['config_hash']
+                        'coins_count': row[0],
+                        'config_hash': config_hash
                     }
                 return {'coins_count': 0, 'config_hash': None}
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки кэша проверки зрелости: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return {'coins_count': 0, 'config_hash': None}
     
     # ==================== МЕТОДЫ ДЛЯ ДЕЛИСТИРОВАННЫХ МОНЕТ ====================
