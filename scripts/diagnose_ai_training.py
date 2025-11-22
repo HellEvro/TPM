@@ -17,10 +17,22 @@ from pathlib import Path
 # Настройка кодировки для Windows консоли
 if os.name == 'nt':
     try:
-        sys.stdout.reconfigure(encoding='utf-8')
-        sys.stderr.reconfigure(encoding='utf-8')
+        # Пробуем установить UTF-8 кодировку
+        import codecs
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
     except:
-        pass
+        try:
+            # Альтернативный способ через reconfigure
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+        except:
+            try:
+                # Устанавливаем кодовую страницу Windows на UTF-8
+                import subprocess
+                subprocess.run(['chcp', '65001'], shell=True, capture_output=True)
+            except:
+                pass
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
