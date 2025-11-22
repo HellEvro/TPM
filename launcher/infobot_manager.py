@@ -761,6 +761,49 @@ class InfoBotManager(tk.Tk):
             )
             if remote_result.stdout.strip():
                 self.log(remote_result.stdout.strip())
+            
+            # Проверяем, есть ли коммиты, и создаем первый коммит, если его нет
+            commit_check = subprocess.run(
+                ["git", "rev-list", "--count", "HEAD"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+            if commit_check.returncode != 0 or commit_check.stdout.strip() == "0":
+                # Настраиваем Git пользователя для коммита (если не настроен)
+                subprocess.run(
+                    ["git", "config", "user.name", "InfoBot User"],
+                    cwd=str(PROJECT_ROOT),
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                )
+                subprocess.run(
+                    ["git", "config", "user.email", "infobot@local"],
+                    cwd=str(PROJECT_ROOT),
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                )
+                # Добавляем все файлы и делаем первый коммит
+                subprocess.run(
+                    ["git", "add", "-A"],
+                    cwd=str(PROJECT_ROOT),
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                )
+                commit_result = subprocess.run(
+                    ["git", "commit", "-m", "Initial commit: InfoBot Public repository"],
+                    cwd=str(PROJECT_ROOT),
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                )
+                if commit_result.returncode == 0:
+                    self.log("Создан первый коммит в репозитории.", channel="system")
+            
             self._configure_git_upstream()
             self.log(f"Git репозиторий инициализирован. origin → {DEFAULT_REMOTE_URL}")
         except subprocess.CalledProcessError as exc:
@@ -772,11 +815,24 @@ class InfoBotManager(tk.Tk):
             self.git_status_var.set("git не найден (обновления недоступны)")
             return
         try:
+            # Проверяем, есть ли коммиты
+            commit_check = subprocess.run(
+                ["git", "rev-list", "--count", "HEAD"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+            if commit_check.returncode != 0 or commit_check.stdout.strip() == "0":
+                self.git_status_var.set("Репозиторий инициализирован (нет коммитов)")
+                return
+            
             result = subprocess.run(
                 ["git", "status", "-sb"],
                 cwd=str(PROJECT_ROOT),
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 check=True,
             )
             line = result.stdout.strip().splitlines()[0] if result.stdout else "Репозиторий"
@@ -1329,6 +1385,19 @@ class InfoBotManager(tk.Tk):
         if not shutil.which("git"):
             return
         try:
+            # Проверяем, есть ли коммиты перед синхронизацией
+            commit_check = subprocess.run(
+                ["git", "rev-list", "--count", "HEAD"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+            if commit_check.returncode != 0 or commit_check.stdout.strip() == "0":
+                self.log("[git] Нет локальных коммитов. Синхронизация пропущена.", channel="system")
+                self.after(0, self.update_git_status)
+                return
+            
             self._stream_command("git fetch", ["git", "fetch", "--all", "--prune"])
             self.log(
                 "[git] Локальные изменения будут перезаписаны состоянием origin/main (игнорируются только файлы из .gitignore).",
@@ -1421,6 +1490,18 @@ class InfoBotManager(tk.Tk):
         if not shutil.which("git"):
             return
         try:
+            # Сначала проверяем, есть ли коммиты
+            commit_check = subprocess.run(
+                ["git", "rev-list", "--count", "HEAD"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+            if commit_check.returncode != 0 or commit_check.stdout.strip() == "0":
+                # Нет коммитов - upstream настроить нельзя
+                return
+            
             branch_result = subprocess.run(
                 ["git", "symbolic-ref", "--short", "HEAD"],
                 cwd=str(PROJECT_ROOT),
@@ -1455,10 +1536,12 @@ class InfoBotManager(tk.Tk):
                 detail = ""
                 if isinstance(exc, subprocess.CalledProcessError):
                     detail = (exc.stderr or "").strip() if getattr(exc, "stderr", None) else ""
-                message = "[git] Не удалось настроить upstream для ветки main."
-                if detail:
-                    message = f"{message} {detail}"
-                self.log(message, channel="system")
+                # Не показываем ошибку, если просто нет коммитов
+                if "no commit" not in detail.lower() and "unknown revision" not in detail.lower():
+                    message = "[git] Не удалось настроить upstream для ветки main."
+                    if detail:
+                        message = f"{message} {detail}"
+                    self.log(message, channel="system")
                 self._git_upstream_warned = True
 
     def _run_git_log_preview(self) -> None:
@@ -1471,12 +1554,12 @@ class InfoBotManager(tk.Tk):
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
-                check=True,
             )
-            if commit_check.stdout.strip() == "0":
-                self.log("[git log] Нет коммитов для отображения истории.", channel="system")
+            # Если команда не выполнилась или вернула 0 - нет коммитов
+            if commit_check.returncode != 0 or commit_check.stdout.strip() == "0":
                 self._git_log_warned = False
-                return
+                return  # Не показываем ошибку, просто выходим
+            
             # Показываем новый и предыдущий коммит(c) c датами
             result = subprocess.run(
                 ["git", "log", "-2", "--pretty=format:%h | %cd | %s%n    Автор: %an", "--graph", "--date=format:%Y-%m-%d %H:%M:%S"],
@@ -1493,10 +1576,12 @@ class InfoBotManager(tk.Tk):
         except subprocess.CalledProcessError as exc:
             if not self._git_log_warned:
                 detail = (exc.stderr or "").strip() if getattr(exc, "stderr", None) else ""
-                message = "[git log] Не удалось получить историю коммитов."
-                if detail:
-                    message = f"{message} {detail}"
-                self.log(message, channel="system")
+                # Не показываем ошибку, если просто нет коммитов
+                if "unknown revision" not in detail.lower() and "no commit" not in detail.lower():
+                    message = "[git log] Не удалось получить историю коммитов."
+                    if detail:
+                        message = f"{message} {detail}"
+                    self.log(message, channel="system")
                 self._git_log_warned = True
 
     def _ensure_utf8_console(self) -> None:
