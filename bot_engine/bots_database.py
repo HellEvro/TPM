@@ -690,19 +690,10 @@ class BotsDatabase:
             
             # ==================== ТАБЛИЦА: СОСТОЯНИЕ БОТОВ (СТАРАЯ, ДЛЯ МИГРАЦИИ) ====================
             # Оставляем для обратной совместимости и миграции
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS bots_state (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    key TEXT UNIQUE NOT NULL,
-                    value_json TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    created_at TEXT NOT NULL
-                )
-            """)
-            
-            # Индексы для bots_state
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bots_state_key ON bots_state(key)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bots_state_updated ON bots_state(updated_at)")
+            # ==================== ТАБЛИЦА: СОСТОЯНИЕ БОТОВ ====================
+            # ВАЖНО: Старая таблица bots_state с value_json БОЛЬШЕ НЕ СОЗДАЕТСЯ!
+            # Все данные хранятся в нормализованных таблицах: bots и auto_bot_config
+            # Старая таблица будет удалена после миграции данных (см. миграцию ниже)
             
             # ==================== ТАБЛИЦА: РЕЕСТР ПОЗИЦИЙ ====================
             # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: одна строка = одна позиция
@@ -905,13 +896,16 @@ class BotsDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_delisted_symbol ON delisted(symbol)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_delisted_date ON delisted(delisted_at)")
             
-            # ==================== ТАБЛИЦА: КЭШ СВЕЧЕЙ ====================
+            # ==================== ТАБЛИЦА: КЭШ СВЕЧЕЙ (НОРМАЛИЗОВАННАЯ) ====================
+            # Метаданные кэша свечей
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS candles_cache (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     symbol TEXT UNIQUE NOT NULL,
-                    candles_json TEXT NOT NULL,
                     timeframe TEXT NOT NULL DEFAULT '6h',
+                    candles_count INTEGER DEFAULT 0,
+                    first_candle_time INTEGER,
+                    last_candle_time INTEGER,
                     updated_at TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 )
@@ -920,6 +914,75 @@ class BotsDatabase:
             # Индексы для candles_cache
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_symbol ON candles_cache(symbol)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_updated ON candles_cache(updated_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_timeframe ON candles_cache(timeframe)")
+            
+            # ==================== ТАБЛИЦА: ДАННЫЕ СВЕЧЕЙ КЭША (НОРМАЛИЗОВАННАЯ) ====================
+            # Отдельная таблица для хранения свечей (вместо JSON)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS candles_cache_data (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    cache_id INTEGER NOT NULL,
+                    time INTEGER NOT NULL,
+                    open REAL NOT NULL,
+                    high REAL NOT NULL,
+                    low REAL NOT NULL,
+                    close REAL NOT NULL,
+                    volume REAL NOT NULL,
+                    FOREIGN KEY (cache_id) REFERENCES candles_cache(id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Индексы для candles_cache_data
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_data_cache_id ON candles_cache_data(cache_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_data_time ON candles_cache_data(time)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_data_cache_time ON candles_cache_data(cache_id, time)")
+            
+            # ==================== ТАБЛИЦА: ИСТОРИЯ ТОРГОВЛИ БОТОВ ====================
+            # Нормализованная структура для хранения истории всех сделок ботов
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bot_trades_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    bot_id TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    direction TEXT NOT NULL,
+                    entry_price REAL NOT NULL,
+                    exit_price REAL,
+                    entry_time TEXT NOT NULL,
+                    exit_time TEXT,
+                    entry_timestamp REAL,
+                    exit_timestamp REAL,
+                    position_size_usdt REAL,
+                    position_size_coins REAL,
+                    pnl REAL,
+                    roi REAL,
+                    status TEXT NOT NULL DEFAULT 'CLOSED',
+                    close_reason TEXT,
+                    decision_source TEXT DEFAULT 'SCRIPT',
+                    ai_decision_id TEXT,
+                    ai_confidence REAL,
+                    entry_rsi REAL,
+                    exit_rsi REAL,
+                    entry_trend TEXT,
+                    exit_trend TEXT,
+                    entry_volatility REAL,
+                    entry_volume_ratio REAL,
+                    is_successful INTEGER DEFAULT 0,
+                    is_simulated INTEGER DEFAULT 0,
+                    source TEXT DEFAULT 'bot',
+                    order_id TEXT,
+                    extra_data_json TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            
+            # Индексы для bot_trades_history
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bot_trades_bot_id ON bot_trades_history(bot_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bot_trades_symbol ON bot_trades_history(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bot_trades_status ON bot_trades_history(status)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bot_trades_entry_time ON bot_trades_history(entry_timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bot_trades_exit_time ON bot_trades_history(exit_timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bot_trades_decision_source ON bot_trades_history(decision_source)")
             
             # ==================== ТАБЛИЦА: МЕТАДАННЫЕ БД ====================
             cursor.execute("""
@@ -1274,14 +1337,142 @@ class BotsDatabase:
                                     logger.warning(f"⚠️ Ошибка миграции auto_bot_config.{key}: {e}")
                         
                         logger.info(f"✅ Миграция bots_state завершена: {migrated_bots} ботов мигрировано из JSON в нормализованные таблицы")
+                        
+                        # Удаляем старую таблицу bots_state после успешной миграции
+                        try:
+                            cursor.execute("DROP TABLE IF EXISTS bots_state")
+                            logger.info("🗑️ Старая таблица bots_state удалена (данные мигрированы в нормализованные таблицы)")
+                        except Exception as drop_error:
+                            logger.warning(f"⚠️ Не удалось удалить старую таблицу bots_state: {drop_error}")
                     else:
                         logger.debug("ℹ️ Данные bots уже мигрированы")
                         
+                        # Проверяем, есть ли еще старая таблица bots_state и удаляем её
+                        try:
+                            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='bots_state'")
+                            if cursor.fetchone():
+                                # Проверяем, что в ней нет данных или только старые данные
+                                cursor.execute("SELECT COUNT(*) FROM bots_state")
+                                old_count = cursor.fetchone()[0]
+                                if old_count > 0:
+                                    # Проверяем, что данные действительно мигрированы
+                                    cursor.execute("SELECT COUNT(*) FROM bots")
+                                    new_count = cursor.fetchone()[0]
+                                    if new_count > 0:
+                                        # Данные мигрированы - удаляем старую таблицу
+                                        cursor.execute("DROP TABLE IF EXISTS bots_state")
+                                        logger.info("🗑️ Старая таблица bots_state удалена (данные уже были мигрированы)")
+                        except Exception as cleanup_error:
+                            logger.debug(f"⚠️ Ошибка очистки старой таблицы bots_state: {cleanup_error}")
+                        
             except sqlite3.OperationalError:
-                # Таблица bots_state не существует или нет данных - ничего не делаем
-                pass
+                # Таблица bots_state не существует - это нормально, значит уже удалена или не создавалась
+                logger.debug("ℹ️ Таблица bots_state не существует (уже удалена или не создавалась)")
             except Exception as e:
                 logger.warning(f"⚠️ Ошибка миграции bots_state: {e}")
+            
+            # ==================== МИГРАЦИЯ: candles_cache из JSON в нормализованные таблицы ====================
+            # Проверяем, есть ли старая структура (с candles_json)
+            try:
+                cursor.execute("SELECT candles_json FROM candles_cache LIMIT 1")
+                # Если запрос выполнился - значит старая структура
+                logger.info("📦 Обнаружена старая JSON структура candles_cache, выполняю миграцию...")
+                
+                # Загружаем все данные из старой структуры
+                cursor.execute("SELECT id, symbol, candles_json, timeframe, updated_at, created_at FROM candles_cache")
+                old_rows = cursor.fetchall()
+                
+                if old_rows:
+                    # Создаем новую таблицу candles_cache_data если её еще нет
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS candles_cache_data (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            cache_id INTEGER NOT NULL,
+                            time INTEGER NOT NULL,
+                            open REAL NOT NULL,
+                            high REAL NOT NULL,
+                            low REAL NOT NULL,
+                            close REAL NOT NULL,
+                            volume REAL NOT NULL,
+                            FOREIGN KEY (cache_id) REFERENCES candles_cache(id) ON DELETE CASCADE
+                        )
+                    """)
+                    
+                    # Создаем индексы для candles_cache_data
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_data_cache_id ON candles_cache_data(cache_id)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_data_time ON candles_cache_data(time)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_data_cache_time ON candles_cache_data(cache_id, time)")
+                    
+                    # Добавляем новые колонки в candles_cache если их нет
+                    try:
+                        cursor.execute("SELECT candles_count FROM candles_cache LIMIT 1")
+                    except sqlite3.OperationalError:
+                        cursor.execute("ALTER TABLE candles_cache ADD COLUMN candles_count INTEGER DEFAULT 0")
+                        cursor.execute("ALTER TABLE candles_cache ADD COLUMN first_candle_time INTEGER")
+                        cursor.execute("ALTER TABLE candles_cache ADD COLUMN last_candle_time INTEGER")
+                    
+                    migrated_count = 0
+                    for old_row in old_rows:
+                        cache_id = old_row['id']
+                        symbol = old_row['symbol']
+                        candles_json = old_row['candles_json']
+                        timeframe = old_row['timeframe']
+                        updated_at = old_row['updated_at']
+                        created_at = old_row['created_at']
+                        
+                        try:
+                            candles = json.loads(candles_json) if candles_json else []
+                            
+                            if candles:
+                                # Определяем временные границы
+                                times = [c.get('time') for c in candles if c.get('time')]
+                                first_time = min(times) if times else None
+                                last_time = max(times) if times else None
+                                
+                                # Обновляем метаданные в candles_cache
+                                cursor.execute("""
+                                    UPDATE candles_cache 
+                                    SET candles_count = ?, first_candle_time = ?, last_candle_time = ?
+                                    WHERE id = ?
+                                """, (len(candles), first_time, last_time, cache_id))
+                                
+                                # Удаляем старые свечи для этого cache_id
+                                cursor.execute("DELETE FROM candles_cache_data WHERE cache_id = ?", (cache_id,))
+                                
+                                # Вставляем свечи в нормализованную таблицу
+                                for candle in candles:
+                                    cursor.execute("""
+                                        INSERT INTO candles_cache_data 
+                                        (cache_id, time, open, high, low, close, volume)
+                                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                                    """, (
+                                        cache_id,
+                                        candle.get('time'),
+                                        candle.get('open'),
+                                        candle.get('high'),
+                                        candle.get('low'),
+                                        candle.get('close'),
+                                        candle.get('volume', 0)
+                                    ))
+                                
+                                migrated_count += 1
+                        except Exception as e:
+                            logger.warning(f"⚠️ Ошибка миграции свечей для {symbol}: {e}")
+                            continue
+                    
+                    # Удаляем колонку candles_json после миграции
+                    try:
+                        # SQLite не поддерживает DROP COLUMN напрямую, нужно пересоздать таблицу
+                        # Но для безопасности оставляем колонку, просто не используем её
+                        logger.info(f"✅ Миграция candles_cache завершена: {migrated_count} символов мигрировано из JSON в нормализованные таблицы")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Ошибка удаления колонки candles_json: {e}")
+                        
+            except sqlite3.OperationalError:
+                # Колонка candles_json не существует - значит уже мигрировано или новая структура
+                logger.debug("ℹ️ candles_cache уже в нормализованном формате")
+            except Exception as e:
+                logger.warning(f"⚠️ Ошибка миграции candles_cache: {e}")
             
             # ==================== МИГРАЦИЯ: individual_coin_settings из JSON в нормализованные столбцы ====================
             # Проверяем, есть ли старая структура (с settings_json)
@@ -3426,7 +3617,7 @@ class BotsDatabase:
     
     def save_candles_cache(self, candles_cache: Dict) -> bool:
         """
-        Сохраняет кэш свечей
+        Сохраняет кэш свечей в нормализованные таблицы
         
         Args:
             candles_cache: Словарь {symbol: {candles: [], timeframe: '6h', ...}}
@@ -3445,19 +3636,53 @@ class BotsDatabase:
                         candles = cache_data.get('candles', [])
                         timeframe = cache_data.get('timeframe', '6h')
                         
+                        # Определяем временные границы
+                        times = [c.get('time') for c in candles if c.get('time')]
+                        first_time = min(times) if times else None
+                        last_time = max(times) if times else None
+                        candles_count = len(candles)
+                        
+                        # Сохраняем или обновляем метаданные кэша
                         cursor.execute("""
                             INSERT OR REPLACE INTO candles_cache 
-                            (symbol, candles_json, timeframe, updated_at, created_at)
-                            VALUES (?, ?, ?, ?, 
+                            (symbol, timeframe, candles_count, first_candle_time, last_candle_time, updated_at, created_at)
+                            VALUES (?, ?, ?, ?, ?, ?, 
                                 COALESCE((SELECT created_at FROM candles_cache WHERE symbol = ?), ?))
                         """, (
                             symbol,
-                            json.dumps(candles),
                             timeframe,
+                            candles_count,
+                            first_time,
+                            last_time,
                             now,
                             symbol,
                             now
                         ))
+                        
+                        # Получаем cache_id
+                        cursor.execute("SELECT id FROM candles_cache WHERE symbol = ?", (symbol,))
+                        cache_row = cursor.fetchone()
+                        if cache_row:
+                            cache_id = cache_row[0]
+                            
+                            # Удаляем старые свечи для этого символа
+                            cursor.execute("DELETE FROM candles_cache_data WHERE cache_id = ?", (cache_id,))
+                            
+                            # Вставляем свечи в нормализованную таблицу
+                            for candle in candles:
+                                cursor.execute("""
+                                    INSERT INTO candles_cache_data 
+                                    (cache_id, time, open, high, low, close, volume)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                                """, (
+                                    cache_id,
+                                    candle.get('time'),
+                                    candle.get('open'),
+                                    candle.get('high'),
+                                    candle.get('low'),
+                                    candle.get('close'),
+                                    candle.get('volume', 0)
+                                ))
                     
                     conn.commit()
             
@@ -3465,11 +3690,13 @@ class BotsDatabase:
             return True
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения кэша свечей: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return False
     
     def load_candles_cache(self, symbol: Optional[str] = None) -> Dict:
         """
-        Загружает кэш свечей
+        Загружает кэш свечей из нормализованных таблиц
         
         Args:
             symbol: Символ монеты (если None, загружает все)
@@ -3481,35 +3708,90 @@ class BotsDatabase:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 
-                if symbol:
-                    cursor.execute("""
-                        SELECT symbol, candles_json, timeframe, updated_at
-                        FROM candles_cache
-                        WHERE symbol = ?
-                    """, (symbol,))
-                else:
-                    cursor.execute("""
-                        SELECT symbol, candles_json, timeframe, updated_at
-                        FROM candles_cache
-                    """)
-                
-                rows = cursor.fetchall()
-                result = {}
-                
-                for row in rows:
-                    symbol_key = row['symbol']
-                    candles = json.loads(row['candles_json'])
-                    timeframe = row['timeframe']
+                # Проверяем, есть ли старая структура с candles_json
+                try:
+                    cursor.execute("SELECT candles_json FROM candles_cache LIMIT 1")
+                    # Старая структура - используем её для обратной совместимости
+                    if symbol:
+                        cursor.execute("""
+                            SELECT symbol, candles_json, timeframe, updated_at
+                            FROM candles_cache
+                            WHERE symbol = ?
+                        """, (symbol,))
+                    else:
+                        cursor.execute("""
+                            SELECT symbol, candles_json, timeframe, updated_at
+                            FROM candles_cache
+                        """)
                     
-                    result[symbol_key] = {
-                        'candles': candles,
-                        'timeframe': timeframe,
-                        'updated_at': row['updated_at']
-                    }
-                
-                return result
+                    rows = cursor.fetchall()
+                    result = {}
+                    
+                    for row in rows:
+                        symbol_key = row['symbol']
+                        candles = json.loads(row['candles_json']) if row['candles_json'] else []
+                        timeframe = row['timeframe']
+                        
+                        result[symbol_key] = {
+                            'candles': candles,
+                            'timeframe': timeframe,
+                            'updated_at': row['updated_at']
+                        }
+                    
+                    return result
+                except sqlite3.OperationalError:
+                    # Новая нормализованная структура
+                    if symbol:
+                        cursor.execute("""
+                            SELECT id, symbol, timeframe, updated_at
+                            FROM candles_cache
+                            WHERE symbol = ?
+                        """, (symbol,))
+                    else:
+                        cursor.execute("""
+                            SELECT id, symbol, timeframe, updated_at
+                            FROM candles_cache
+                        """)
+                    
+                    cache_rows = cursor.fetchall()
+                    result = {}
+                    
+                    for cache_row in cache_rows:
+                        cache_id = cache_row['id']
+                        symbol_key = cache_row['symbol']
+                        timeframe = cache_row['timeframe']
+                        
+                        # Загружаем свечи из нормализованной таблицы
+                        cursor.execute("""
+                            SELECT time, open, high, low, close, volume
+                            FROM candles_cache_data
+                            WHERE cache_id = ?
+                            ORDER BY time ASC
+                        """, (cache_id,))
+                        
+                        candle_rows = cursor.fetchall()
+                        candles = []
+                        for candle_row in candle_rows:
+                            candles.append({
+                                'time': candle_row['time'],
+                                'open': candle_row['open'],
+                                'high': candle_row['high'],
+                                'low': candle_row['low'],
+                                'close': candle_row['close'],
+                                'volume': candle_row['volume']
+                            })
+                        
+                        result[symbol_key] = {
+                            'candles': candles,
+                            'timeframe': timeframe,
+                            'updated_at': cache_row['updated_at']
+                        }
+                    
+                    return result
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки кэша свечей: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return {}
     
     def get_candles_for_symbol(self, symbol: str) -> Optional[Dict]:
@@ -3524,6 +3806,241 @@ class BotsDatabase:
         """
         cache = self.load_candles_cache(symbol=symbol)
         return cache.get(symbol)
+    
+    def save_bot_trade_history(self, trade: Dict[str, Any]) -> Optional[int]:
+        """
+        Сохраняет историю сделки бота в БД
+        
+        Args:
+            trade: Словарь с данными сделки
+        
+        Returns:
+            ID сохраненной записи или None в случае ошибки
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                now = datetime.now().isoformat()
+                
+                # Извлекаем значения с дефолтами
+                bot_id = trade.get('bot_id') or trade.get('symbol', '')
+                symbol = trade.get('symbol', '')
+                direction = trade.get('direction', 'LONG')
+                entry_price = trade.get('entry_price', 0.0)
+                exit_price = trade.get('exit_price')
+                entry_time = trade.get('entry_time', now)
+                exit_time = trade.get('exit_time')
+                entry_timestamp = trade.get('entry_timestamp') or trade.get('entry_timestamp_ms')
+                exit_timestamp = trade.get('exit_timestamp') or trade.get('exit_timestamp_ms')
+                position_size_usdt = trade.get('position_size_usdt')
+                position_size_coins = trade.get('position_size_coins') or trade.get('size')
+                pnl = trade.get('pnl')
+                roi = trade.get('roi') or trade.get('roi_pct') or trade.get('closed_pnl_percent')
+                status = trade.get('status', 'CLOSED')
+                close_reason = trade.get('close_reason') or trade.get('reason')
+                decision_source = trade.get('decision_source', 'SCRIPT')
+                ai_decision_id = trade.get('ai_decision_id')
+                ai_confidence = trade.get('ai_confidence')
+                entry_rsi = trade.get('entry_rsi') or trade.get('rsi')
+                exit_rsi = trade.get('exit_rsi')
+                entry_trend = trade.get('entry_trend') or trade.get('trend')
+                exit_trend = trade.get('exit_trend')
+                entry_volatility = trade.get('entry_volatility')
+                entry_volume_ratio = trade.get('entry_volume_ratio')
+                is_successful = 1 if trade.get('is_successful', False) or (pnl and pnl > 0) else 0
+                is_simulated = 1 if trade.get('is_simulated', False) else 0
+                source = trade.get('source', 'bot')
+                order_id = trade.get('order_id')
+                
+                # Обрабатываем extra_data_json
+                extra_data = trade.get('extra_data') or trade.get('extra_data_json')
+                if isinstance(extra_data, dict):
+                    extra_data_json = json.dumps(extra_data, ensure_ascii=False) if extra_data else None
+                elif isinstance(extra_data, str):
+                    extra_data_json = extra_data if extra_data else None
+                else:
+                    extra_data_json = None
+                
+                # Конвертируем timestamps если нужно
+                if entry_timestamp is None and entry_time:
+                    try:
+                        dt = datetime.fromisoformat(entry_time.replace('Z', '+00:00'))
+                        entry_timestamp = dt.timestamp() * 1000
+                    except:
+                        pass
+                
+                if exit_timestamp is None and exit_time:
+                    try:
+                        dt = datetime.fromisoformat(exit_time.replace('Z', '+00:00'))
+                        exit_timestamp = dt.timestamp() * 1000
+                    except:
+                        pass
+                
+                # Проверяем на дубликаты (по bot_id, symbol, entry_price, entry_timestamp)
+                if entry_timestamp:
+                    cursor.execute("""
+                        SELECT id FROM bot_trades_history
+                        WHERE bot_id = ? AND symbol = ? AND entry_price = ? AND entry_timestamp = ?
+                    """, (bot_id, symbol, entry_price, entry_timestamp))
+                    existing = cursor.fetchone()
+                    if existing:
+                        # Обновляем существующую запись
+                        cursor.execute("""
+                            UPDATE bot_trades_history SET
+                                exit_price = ?,
+                                exit_time = ?,
+                                exit_timestamp = ?,
+                                pnl = ?,
+                                roi = ?,
+                                status = ?,
+                                close_reason = ?,
+                                exit_rsi = ?,
+                                exit_trend = ?,
+                                is_successful = ?,
+                                updated_at = ?
+                            WHERE id = ?
+                        """, (exit_price, exit_time, exit_timestamp, pnl, roi, status, close_reason,
+                              exit_rsi, exit_trend, is_successful, now, existing['id']))
+                        conn.commit()
+                        return existing['id']
+                
+                # Создаем новую запись
+                cursor.execute("""
+                    INSERT INTO bot_trades_history (
+                        bot_id, symbol, direction, entry_price, exit_price,
+                        entry_time, exit_time, entry_timestamp, exit_timestamp,
+                        position_size_usdt, position_size_coins, pnl, roi,
+                        status, close_reason, decision_source, ai_decision_id,
+                        ai_confidence, entry_rsi, exit_rsi, entry_trend, exit_trend,
+                        entry_volatility, entry_volume_ratio, is_successful,
+                        is_simulated, source, order_id, extra_data_json,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    bot_id, symbol, direction, entry_price, exit_price,
+                    entry_time, exit_time, entry_timestamp, exit_timestamp,
+                    position_size_usdt, position_size_coins, pnl, roi,
+                    status, close_reason, decision_source, ai_decision_id,
+                    ai_confidence, entry_rsi, exit_rsi, entry_trend, exit_trend,
+                    entry_volatility, entry_volume_ratio, is_successful,
+                    is_simulated, source, order_id, extra_data_json,
+                    now, now
+                ))
+                
+                conn.commit()
+                return cursor.lastrowid
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения истории сделки: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return None
+    
+    def get_bot_trades_history(self, 
+                              bot_id: Optional[str] = None,
+                              symbol: Optional[str] = None,
+                              status: Optional[str] = None,
+                              decision_source: Optional[str] = None,
+                              limit: Optional[int] = None,
+                              offset: int = 0) -> List[Dict[str, Any]]:
+        """
+        Загружает историю сделок ботов из БД
+        
+        Args:
+            bot_id: Фильтр по ID бота
+            symbol: Фильтр по символу
+            status: Фильтр по статусу (OPEN/CLOSED)
+            decision_source: Фильтр по источнику решения (SCRIPT/AI/EXCHANGE_IMPORT)
+            limit: Максимальное количество записей
+            offset: Смещение для пагинации
+        
+        Returns:
+            Список словарей с данными сделок
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Строим запрос с фильтрами
+                query = "SELECT * FROM bot_trades_history WHERE 1=1"
+                params = []
+                
+                if bot_id:
+                    query += " AND bot_id = ?"
+                    params.append(bot_id)
+                
+                if symbol:
+                    query += " AND symbol = ?"
+                    params.append(symbol)
+                
+                if status:
+                    query += " AND status = ?"
+                    params.append(status)
+                
+                if decision_source:
+                    query += " AND decision_source = ?"
+                    params.append(decision_source)
+                
+                query += " ORDER BY entry_timestamp DESC, created_at DESC"
+                
+                if limit:
+                    query += " LIMIT ? OFFSET ?"
+                    params.extend([limit, offset])
+                
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+                
+                result = []
+                for row in rows:
+                    trade = {
+                        'id': row['id'],
+                        'bot_id': row['bot_id'],
+                        'symbol': row['symbol'],
+                        'direction': row['direction'],
+                        'entry_price': row['entry_price'],
+                        'exit_price': row['exit_price'],
+                        'entry_time': row['entry_time'],
+                        'exit_time': row['exit_time'],
+                        'entry_timestamp': row['entry_timestamp'],
+                        'exit_timestamp': row['exit_timestamp'],
+                        'position_size_usdt': row['position_size_usdt'],
+                        'position_size_coins': row['position_size_coins'],
+                        'pnl': row['pnl'],
+                        'roi': row['roi'],
+                        'status': row['status'],
+                        'close_reason': row['close_reason'],
+                        'decision_source': row['decision_source'],
+                        'ai_decision_id': row['ai_decision_id'],
+                        'ai_confidence': row['ai_confidence'],
+                        'entry_rsi': row['entry_rsi'],
+                        'exit_rsi': row['exit_rsi'],
+                        'entry_trend': row['entry_trend'],
+                        'exit_trend': row['exit_trend'],
+                        'entry_volatility': row['entry_volatility'],
+                        'entry_volume_ratio': row['entry_volume_ratio'],
+                        'is_successful': bool(row['is_successful']),
+                        'is_simulated': bool(row['is_simulated']),
+                        'source': row['source'],
+                        'order_id': row['order_id'],
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    }
+                    
+                    # Парсим extra_data_json если есть
+                    if row['extra_data_json']:
+                        try:
+                            trade['extra_data'] = json.loads(row['extra_data_json'])
+                        except:
+                            trade['extra_data'] = None
+                    
+                    result.append(trade)
+                
+                return result
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки истории сделок: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return []
     
     # ==================== МЕТОДЫ МИГРАЦИИ ====================
     

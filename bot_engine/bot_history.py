@@ -656,6 +656,54 @@ class BotHistoryManager:
         }
         self._add_trade_entry(trade)
         
+        # КРИТИЧНО: Также сохраняем в bots_data.db для истории торговли ботов
+        if not is_simulated:
+            try:
+                from bot_engine.bots_database import get_bots_database
+                bots_db = get_bots_database()
+                
+                # Формируем данные для сохранения
+                trade_data = {
+                    'bot_id': bot_id,
+                    'symbol': symbol,
+                    'direction': direction,
+                    'entry_price': entry_price,
+                    'exit_price': None,
+                    'entry_time': entry['timestamp'],
+                    'exit_time': None,
+                    'entry_timestamp': datetime.now().timestamp() * 1000,
+                    'exit_timestamp': None,
+                    'position_size_usdt': None,  # TODO: получить из size если есть
+                    'position_size_coins': size,
+                    'pnl': None,
+                    'roi': None,
+                    'status': 'OPEN',
+                    'close_reason': None,
+                    'decision_source': decision_source,
+                    'ai_decision_id': ai_decision_id,
+                    'ai_confidence': ai_confidence,
+                    'entry_rsi': rsi,
+                    'exit_rsi': None,
+                    'entry_trend': trend,
+                    'exit_trend': None,
+                    'entry_volatility': None,
+                    'entry_volume_ratio': None,
+                    'is_successful': None,
+                    'is_simulated': False,
+                    'source': 'bot',
+                    'order_id': None,
+                    'extra_data': {
+                        'stop_loss': stop_loss,
+                        'take_profit': take_profit
+                    }
+                }
+                
+                trade_id = bots_db.save_bot_trade_history(trade_data)
+                if trade_id:
+                    logger.debug(f"[BOT_HISTORY] ✅ История открытия позиции {symbol} сохранена в bots_data.db (ID: {trade_id})")
+            except Exception as bots_db_error:
+                logger.debug(f"[BOT_HISTORY] ⚠️ Ошибка сохранения истории открытия в bots_data.db: {bots_db_error}")
+        
         logger.info(f"📈 {entry['details']}")
     
     def log_limit_order_placed(self, bot_id: str, symbol: str, order_type: str, order_id: str,

@@ -16,6 +16,8 @@ from pathlib import Path
 root_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(root_dir))
 
+from bot_engine.bots_database import get_bots_database
+
 def load_json_file(filepath):
     """Загружает JSON файл"""
     try:
@@ -45,6 +47,13 @@ def restore_missing_history():
     import io
     if sys.platform == 'win32':
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    
+    # Инициализируем БД ботов
+    try:
+        bots_db = get_bots_database()
+    except Exception as e:
+        print(f"⚠️ Не удалось подключиться к Bots Database: {e}")
+        bots_db = None
     
     print("=" * 60)
     print("ВОССТАНОВЛЕНИЕ ОТСУТСТВУЮЩЕЙ ИСТОРИИ")
@@ -164,6 +173,62 @@ def restore_missing_history():
         history_entries.append(history_entry)
         trades.append(trade_entry)
         restored_count += 1
+        
+        # КРИТИЧНО: Также сохраняем в bots_data.db для истории торговли ботов
+        if bots_db:
+            try:
+                # Конвертируем timestamp в нужный формат
+            entry_timestamp = None
+            if isinstance(timestamp, str):
+                try:
+                    dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                    entry_timestamp = dt.timestamp() * 1000
+                except:
+                    pass
+            elif isinstance(timestamp, (int, float)):
+                entry_timestamp = timestamp * 1000 if timestamp < 1e10 else timestamp
+            
+            trade_data = {
+                'bot_id': symbol,
+                'symbol': symbol,
+                'direction': pos_data['direction'],
+                'entry_price': pos_data['entry_price'],
+                'exit_price': None,  # Позиция еще открыта
+                'entry_time': timestamp if isinstance(timestamp, str) else dt.isoformat() if 'dt' in locals() else datetime.now().isoformat(),
+                'exit_time': None,
+                'entry_timestamp': entry_timestamp,
+                'exit_timestamp': None,
+                'position_size_usdt': None,  # TODO: получить если есть
+                'position_size_coins': pos_data['size'],
+                'pnl': None,
+                'roi': None,
+                'status': 'OPEN',
+                'close_reason': None,
+                'decision_source': 'SCRIPT',
+                'ai_decision_id': None,
+                'ai_confidence': None,
+                'entry_rsi': None,
+                'exit_rsi': None,
+                'entry_trend': None,
+                'exit_trend': None,
+                'entry_volatility': None,
+                'entry_volume_ratio': None,
+                'is_successful': None,
+                'is_simulated': False,
+                'source': 'script_restore',
+                'order_id': None,
+                'extra_data': {
+                    'stop_loss': pos_data.get('stop_loss'),
+                    'take_profit': pos_data.get('take_profit'),
+                    'restored': True
+                }
+            }
+            
+                trade_id = bots_db.save_bot_trade_history(trade_data)
+                if trade_id:
+                    print(f"  ✅ История для {symbol} сохранена в bots_data.db (ID: {trade_id})")
+            except Exception as bots_db_error:
+                print(f"  ⚠️ Ошибка сохранения истории для {symbol} в bots_data.db: {bots_db_error}")
         
         print(f"  Восстановлена история для {symbol}")
     

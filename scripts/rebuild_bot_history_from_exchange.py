@@ -36,7 +36,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from bot_engine.ai.ai_database import get_ai_database
+from bot_engine.bots_database import get_bots_database
 from bot_engine.app_database import AppDatabase
 from exchanges.exchange_factory import ExchangeFactory
 
@@ -181,13 +181,13 @@ def fetch_and_filter_trades(exchange, period: str, target_usdt: Optional[float],
     return filtered
 
 
-def build_exchange_trades_payload(trades: List[Dict[str, Any]], exchange_name: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+def build_exchange_trades_payload(trades: List[Dict[str, Any]], exchange_name: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
     Строит данные для сохранения в БД:
-    - exchange_trades: для ai_database.save_exchange_trades()
-    - closed_pnl: для app_database.save_closed_pnl()
+    - bot_trades_history: для bots_database.save_bot_trade_history() - история торговли ботов
+    - closed_pnl: для app_database.save_closed_pnl() - закрытые PnL
     """
-    exchange_trades: List[Dict[str, Any]] = []
+    bot_trades_history: List[Dict[str, Any]] = []
     closed_pnl_list: List[Dict[str, Any]] = []
     
     for idx, trade in enumerate(trades, start=1):
@@ -206,25 +206,30 @@ def build_exchange_trades_payload(trades: List[Dict[str, Any]], exchange_name: s
         # Генерируем уникальный trade_id
         trade_id = f"exchange_import_{symbol}_{int(close_ts or idx)}_{idx}"
         
-        # Данные для exchange_trades (ai_database)
-        exchange_trade = {
-            'id': trade_id,
+        # Данные для bot_trades_history (bots_database) - история торговли ботов
+        bot_trade = {
+            'bot_id': symbol,  # Используем symbol как bot_id
             'symbol': symbol,
             'direction': direction,
             'entry_price': entry_price,
             'exit_price': exit_price,
-            'timestamp': entry_ts,  # entry_time (timestamp в миллисекундах)
-            'close_timestamp': close_ts,  # exit_time (timestamp в миллисекундах)
-            'pnl': pnl,
-            'roi': roi,
+            'entry_time': ms_to_iso(entry_ts) if entry_ts else None,
+            'exit_time': ms_to_iso(close_ts) if close_ts else None,
+            'entry_timestamp': entry_ts,
+            'exit_timestamp': close_ts,
             'position_size_usdt': position_value,
             'position_size_coins': qty,
-            'orderId': trade.get('raw', {}).get('orderId'),
+            'pnl': pnl,
+            'roi': roi,
+            'status': 'CLOSED',
+            'close_reason': 'EXCHANGE_IMPORT',
+            'decision_source': 'EXCHANGE_IMPORT',
+            'is_successful': pnl > 0 if pnl else False,
+            'is_simulated': False,
             'source': 'exchange_api_import',
-            'saved_timestamp': datetime.now(timezone.utc).isoformat(),
-            'is_real': True
+            'order_id': trade.get('raw', {}).get('orderId')
         }
-        exchange_trades.append(exchange_trade)
+        bot_trades_history.append(bot_trade)
         
         # Данные для closed_pnl (app_database)
         side = trade.get('side', 'BUY' if direction == 'LONG' else 'SELL')
@@ -248,7 +253,7 @@ def build_exchange_trades_payload(trades: List[Dict[str, Any]], exchange_name: s
         }
         closed_pnl_list.append(closed_pnl_entry)
     
-    return exchange_trades, closed_pnl_list
+    return bot_trades_history, closed_pnl_list
 
 
 # Функция backup_history_file больше не нужна, так как мы пишем в БД
@@ -273,30 +278,34 @@ def main():
     print(f"✅ Получено {len(trades)} сделок с биржи {exchange_name} (период: {args.period})")
     
     # Строим данные для БД
-    exchange_trades, closed_pnl_list = build_exchange_trades_payload(trades, exchange_name)
+    bot_trades_history, closed_pnl_list = build_exchange_trades_payload(trades, exchange_name)
     
     if args.dry_run:
         print("ℹ️ DRY-RUN: БД не изменена.")
         print(json.dumps({
-            'exchange_trades': len(exchange_trades),
+            'bot_trades_history': len(bot_trades_history),
             'closed_pnl_entries': len(closed_pnl_list),
-            'sample_exchange_trade': exchange_trades[0] if exchange_trades else {},
+            'sample_bot_trade': bot_trades_history[0] if bot_trades_history else {},
             'sample_closed_pnl': closed_pnl_list[0] if closed_pnl_list else {}
         }, ensure_ascii=False, indent=2))
         return
     
-    # Подключаемся к БД
+    # Подключаемся к БД ботов
     try:
-        ai_db = get_ai_database()
-        print("✅ Подключено к AI Database")
+        bots_db = get_bots_database()
+        print("✅ Подключено к Bots Database")
     except Exception as e:
-        print(f"❌ Ошибка подключения к AI Database: {e}")
+        print(f"❌ Ошибка подключения к Bots Database: {e}")
         sys.exit(1)
     
-    # Сохраняем сделки в exchange_trades
-    print(f"💾 Сохранение {len(exchange_trades)} сделок в таблицу exchange_trades...")
-    saved_count = ai_db.save_exchange_trades(exchange_trades)
-    print(f"✅ Сохранено {saved_count} сделок в exchange_trades (всего в БД: {ai_db.count_exchange_trades()})")
+    # Сохраняем сделки в bot_trades_history (история торговли ботов)
+    print(f"💾 Сохранение {len(bot_trades_history)} сделок в таблицу bot_trades_history...")
+    saved_count = 0
+    for trade in bot_trades_history:
+        trade_id = bots_db.save_bot_trade_history(trade)
+        if trade_id:
+            saved_count += 1
+    print(f"✅ Сохранено {saved_count} сделок в bot_trades_history")
     
     # Опционально сохраняем в closed_pnl
     if args.save_closed_pnl:
@@ -312,9 +321,9 @@ def main():
             print(f"⚠️ Ошибка сохранения в closed_pnl: {e}")
     
     print(f"🎉 Импорт завершён:")
-    print(f"   📥 Сделки с биржи: {saved_count} сохранено в exchange_trades")
+    print(f"   📥 История торговли ботов: {saved_count} сохранено в bot_trades_history (bots_data.db)")
     if args.save_closed_pnl:
-        print(f"   📊 Закрытые PnL: {len(closed_pnl_list)} сохранено в closed_pnl")
+        print(f"   📊 Закрытые PnL: {len(closed_pnl_list)} сохранено в closed_pnl (app_data.db)")
 
 
 if __name__ == '__main__':

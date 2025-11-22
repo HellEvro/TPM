@@ -541,7 +541,8 @@ class AITrainer:
                 db_trades = self.ai_db.get_trades_for_training(
                     include_simulated=False,
                     include_real=True,
-                    include_exchange=False,
+                    include_exchange=True,  # ВАЖНО: Включаем сделки с биржи!
+                    min_trades=0,  # КРИТИЧНО: 0 чтобы получить все сделки, не фильтровать по символам
                     limit=None
                 )
                 if db_trades:
@@ -4114,6 +4115,192 @@ class AITrainer:
             logger.error(f"❌ Ошибка обучения на исторических данных: {e}")
             import traceback
             logger.error(traceback.format_exc())
+    
+    def analyze_open_positions(self) -> List[Dict[str, Any]]:
+        """
+        Анализирует открытые позиции и дает рекомендации ИИ по точкам выхода и стопам
+        
+        ВАЖНО: Используется для получения рекомендаций ИИ в реальном времени
+        для управления текущими позициями
+        
+        Returns:
+            Список рекомендаций для каждой открытой позиции
+        """
+        try:
+            if not self.ai_db:
+                logger.warning("⚠️ AI Database не доступна для анализа позиций")
+                return []
+            
+            # Загружаем открытые позиции с обогащенными данными
+            open_positions = self.ai_db.get_open_positions_for_ai()
+            
+            if not open_positions:
+                logger.debug("ℹ️ Нет открытых позиций для анализа")
+                return []
+            
+            recommendations = []
+            
+            for position in open_positions:
+                symbol = position.get('symbol', '')
+                if not symbol:
+                    continue
+                
+                try:
+                    # Анализируем позицию с помощью ИИ
+                    recommendation = self._analyze_single_position(position)
+                    if recommendation:
+                        recommendations.append(recommendation)
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка анализа позиции {symbol}: {e}")
+                    continue
+            
+            logger.info(f"✅ Проанализировано {len(recommendations)} открытых позиций")
+            return recommendations
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка анализа открытых позиций: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return []
+    
+    def _analyze_single_position(self, position: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Анализирует одну открытую позицию и дает рекомендации ИИ
+        
+        Args:
+            position: Данные открытой позиции (с entry_rsi, current_rsi, etc.)
+        
+        Returns:
+            Словарь с рекомендациями ИИ или None
+        """
+        try:
+            symbol = position.get('symbol', '')
+            entry_price = position.get('entry_price')
+            current_price = position.get('current_price')
+            entry_rsi = position.get('entry_rsi')
+            current_rsi = position.get('current_rsi')
+            entry_trend = position.get('entry_trend', 'NEUTRAL')
+            current_trend = position.get('current_trend', 'NEUTRAL')
+            position_side = position.get('position_side', 'LONG')
+            pnl = position.get('pnl', 0)
+            roi = position.get('roi', 0)
+            
+            if not entry_price or not current_price:
+                return None
+            
+            # Вычисляем процент изменения цены
+            if position_side == 'LONG':
+                price_change_pct = ((current_price - entry_price) / entry_price) * 100
+            else:
+                price_change_pct = ((entry_price - current_price) / entry_price) * 100
+            
+            # Анализируем с помощью ИИ моделей
+            should_exit = False
+            exit_reason = None
+            recommended_stop = None
+            recommended_take_profit = None
+            confidence = 0.0
+            
+            # Используем обученные модели для предсказания
+            if hasattr(self, 'signal_model') and self.signal_model:
+                try:
+                    # Подготавливаем features для текущей позиции
+                    features = np.array([[
+                        entry_rsi or 50.0,
+                        current_rsi or 50.0,
+                        0.0,  # entry_volatility (нет данных)
+                        1.0 if position_side == 'LONG' else 0.0,
+                        1.0 if entry_trend == 'UP' else (0.0 if entry_trend == 'DOWN' else 0.5),
+                        1.0 if current_trend == 'UP' else (0.0 if current_trend == 'DOWN' else 0.5),
+                        price_change_pct,
+                        0.0  # hours_in_position (нет данных)
+                    ]])
+                    
+                    # Нормализуем features
+                    if hasattr(self, 'scaler') and self.scaler:
+                        features_scaled = self.scaler.transform(features)
+                    else:
+                        features_scaled = features
+                    
+                    # Предсказываем вероятность успешного выхода
+                    exit_probability = self.signal_model.predict_proba(features_scaled)[0][1]
+                    confidence = float(exit_probability)
+                    
+                    # Рекомендация выхода если вероятность успеха высокая или низкая
+                    if exit_probability > 0.8:  # Высокая вероятность успеха - можно выходить
+                        should_exit = True
+                        exit_reason = 'AI_HIGH_SUCCESS_PROBABILITY'
+                    elif exit_probability < 0.2:  # Низкая вероятность успеха - лучше выйти
+                        should_exit = True
+                        exit_reason = 'AI_LOW_SUCCESS_PROBABILITY'
+                    
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка предсказания ИИ для {symbol}: {e}")
+            
+            # Анализ RSI для рекомендаций по выходу
+            if current_rsi:
+                if position_side == 'LONG':
+                    # Для LONG позиций: выход при высоком RSI
+                    if current_rsi >= 70:
+                        should_exit = True
+                        exit_reason = exit_reason or 'RSI_OVERBOUGHT'
+                    elif current_rsi >= 65 and not should_exit:
+                        # Предупреждение о возможном выходе
+                        exit_reason = exit_reason or 'RSI_APPROACHING_OVERBOUGHT'
+                else:  # SHORT
+                    # Для SHORT позиций: выход при низком RSI
+                    if current_rsi <= 30:
+                        should_exit = True
+                        exit_reason = exit_reason or 'RSI_OVERSOLD'
+                    elif current_rsi <= 35 and not should_exit:
+                        exit_reason = exit_reason or 'RSI_APPROACHING_OVERSOLD'
+            
+            # Рекомендации по стопам на основе текущего PnL
+            if pnl < 0:
+                # Убыточная позиция - рекомендуем стоп
+                if abs(roi) > 5.0:  # Убыток больше 5%
+                    recommended_stop = current_price * 0.98  # Стоп на 2% ниже текущей цены
+                    if position_side == 'SHORT':
+                        recommended_stop = current_price * 1.02  # Для SHORT наоборот
+            elif pnl > 0:
+                # Прибыльная позиция - рекомендуем trailing stop
+                if roi > 10.0:  # Прибыль больше 10%
+                    # Trailing stop на уровне 80% от максимальной прибыли
+                    recommended_stop = entry_price + (current_price - entry_price) * 0.8
+                    if position_side == 'SHORT':
+                        recommended_stop = entry_price - (entry_price - current_price) * 0.8
+            
+            # Рекомендации по take profit
+            if pnl > 0 and not should_exit:
+                # Если прибыль хорошая, но еще не время выходить - рекомендуем take profit
+                if roi > 15.0:
+                    recommended_take_profit = current_price * 1.05  # Take profit на 5% выше
+                    if position_side == 'SHORT':
+                        recommended_take_profit = current_price * 0.95  # Для SHORT наоборот
+            
+            return {
+                'symbol': symbol,
+                'position_side': position_side,
+                'entry_price': entry_price,
+                'current_price': current_price,
+                'pnl': pnl,
+                'roi': roi,
+                'entry_rsi': entry_rsi,
+                'current_rsi': current_rsi,
+                'entry_trend': entry_trend,
+                'current_trend': current_trend,
+                'should_exit': should_exit,
+                'exit_reason': exit_reason,
+                'exit_confidence': confidence,
+                'recommended_stop': recommended_stop,
+                'recommended_take_profit': recommended_take_profit,
+                'price_change_pct': price_change_pct,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.debug(f"⚠️ Ошибка анализа позиции: {e}")
+            return None
             # Win Rate targets теперь сохраняются в БД автоматически
             self._record_training_event(
                 'historical_data_training',
