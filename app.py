@@ -1720,10 +1720,10 @@ def get_symbol_chart(symbol):
                 if theme == 'light':
                     plt.style.use('default')
                     bg_color = 'white'
-                    rsi_color = '#000000'  # Черная линия RSI на светлом фоне
-                    upper_color = '#ff9999'  # Светло-красная граница 70
-                    lower_color = '#99ff99'  # Светло-зеленая граница 30
-                    center_color = '#cccccc'  # Светло-серая линия 50
+                    rsi_color = '#1a1a1a'  # Темно-серая линия RSI на светлом фоне (более контрастная)
+                    upper_color = '#e53935'  # Насыщенная красная граница 70
+                    lower_color = '#43a047'  # Насыщенная зеленая граница 30
+                    center_color = '#757575'  # Темно-серая линия 50 (хорошо видна на белом)
                 else:
                     plt.style.use('dark_background')
                     bg_color = '#2d2d2d'

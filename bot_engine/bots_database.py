@@ -2188,7 +2188,7 @@ class BotsDatabase:
                             # Получаем created_at из существующей записи или используем текущее время
                             cursor.execute("SELECT created_at FROM bots WHERE symbol = ?", (symbol,))
                             existing = cursor.fetchone()
-                            created_at = existing[0] if existing else bot_data.get('created_at', now)
+                            final_created_at = existing[0] if existing else (bot_data.get('created_at') or now)
                             
                             # Вставляем или обновляем бота
                             cursor.execute("""
@@ -2207,8 +2207,7 @@ class BotsDatabase:
                                     last_signal_time, last_bar_timestamp, entry_trend,
                                     opened_by_autobot, bot_id, extra_data_json,
                                     updated_at, created_at
-                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-                                    COALESCE((SELECT created_at FROM bots WHERE symbol = ?), ?))
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """, (
                                 symbol, status, auto_managed, volume_mode, volume_value,
                                 entry_price, entry_time, entry_timestamp, position_side,
@@ -2223,7 +2222,7 @@ class BotsDatabase:
                                 current_price, last_price, last_rsi, last_trend,
                                 last_signal_time, last_bar_timestamp, entry_trend,
                                 opened_by_autobot, bot_id, extra_data_json,
-                                now, symbol, created_at or now
+                                now, final_created_at
                             ))
                         except Exception as e:
                             logger.warning(f"⚠️ Ошибка сохранения бота {symbol}: {e}")
@@ -2564,7 +2563,7 @@ class BotsDatabase:
                                     trend_analysis_json, enhanced_rsi_json, time_filter_info_json,
                                     exit_scam_info_json, extra_coin_data_json
                                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            """, (
+                    """, (
                                 cache_id, symbol, rsi6h, trend6h, rsi_zone, signal,
                                 price, change24h, last_update, blocked_by_scope,
                                 has_existing_position, is_mature, blocked_by_exit_scam,
@@ -2783,7 +2782,7 @@ class BotsDatabase:
                             # Получаем created_at из существующей записи или используем текущее время
                             cursor.execute("SELECT created_at FROM process_state WHERE process_name = ?", (process_name,))
                             existing = cursor.fetchone()
-                            created_at = existing[0] if existing else now
+                            final_created_at = existing[0] if existing else now
                             
                             # Вставляем или обновляем процесс
                             cursor.execute("""
@@ -2793,17 +2792,13 @@ class BotsDatabase:
                                     check_count, save_count, connection_count,
                                     signals_processed, bots_created, last_error,
                                     extra_process_data_json, updated_at, created_at
-                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-                                    COALESCE((SELECT created_at FROM process_state WHERE process_name = ?), ?), ?)
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """, (
                                 process_name, active, initialized, last_update,
                                 last_check, last_save, last_sync, update_count,
                                 check_count, save_count, connection_count,
                                 signals_processed, bots_created, last_error,
-                                extra_process_data_json,
-                                process_name,
-                                created_at,
-                                now
+                                extra_process_data_json, now, final_created_at
                             ))
                         except Exception as e:
                             logger.warning(f"⚠️ Ошибка сохранения процесса {process_name}: {e}")
@@ -3317,11 +3312,11 @@ class BotsDatabase:
                 except sqlite3.OperationalError:
                     # Столбцов нет - используем старую структуру с config_hash
                     cursor.execute("""
-                        SELECT coins_count, config_hash
-                        FROM maturity_check_cache
-                        ORDER BY created_at DESC
-                        LIMIT 1
-                    """)
+                    SELECT coins_count, config_hash
+                    FROM maturity_check_cache
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                """)
                 row = cursor.fetchone()
                 
                 if row:
