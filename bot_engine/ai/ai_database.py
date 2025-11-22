@@ -3341,17 +3341,26 @@ class AIDatabase:
             union_query = " UNION ALL ".join(queries)
             
             # Группируем по символам и фильтруем по минимальному количеству
-            final_query = f"""
-                WITH all_trades AS ({union_query})
-                SELECT * FROM all_trades
-                WHERE symbol IN (
-                    SELECT symbol FROM all_trades
-                    GROUP BY symbol
-                    HAVING COUNT(*) >= ?
-                )
-                ORDER BY timestamp DESC
-            """
-            params.append(min_trades)
+            # ВАЖНО: Если min_trades=0, НЕ фильтруем по символам - возвращаем ВСЕ сделки
+            if min_trades > 0:
+                final_query = f"""
+                    WITH all_trades AS ({union_query})
+                    SELECT * FROM all_trades
+                    WHERE symbol IN (
+                        SELECT symbol FROM all_trades
+                        GROUP BY symbol
+                        HAVING COUNT(*) >= ?
+                    )
+                    ORDER BY timestamp DESC
+                """
+                params.append(min_trades)
+            else:
+                # min_trades=0 - возвращаем ВСЕ сделки без фильтрации по символам
+                final_query = f"""
+                    WITH all_trades AS ({union_query})
+                    SELECT * FROM all_trades
+                    ORDER BY timestamp DESC
+                """
             
             if limit:
                 final_query += " LIMIT ?"
@@ -3362,7 +3371,9 @@ class AIDatabase:
             rows = cursor.fetchall()
             
             # Преобразуем Row в dict
-            return [dict(row) for row in rows]
+            result = [dict(row) for row in rows]
+            logger.debug(f"✅ get_trades_for_training: загружено {len(result)} сделок (simulated={include_simulated}, real={include_real}, exchange={include_exchange}, min_trades={min_trades})")
+            return result
     
     def analyze_patterns(self, 
                          symbol: Optional[str] = None,
@@ -4548,24 +4559,46 @@ class AIDatabase:
                 """, (timeframe,))
                 rows = cursor.fetchall()
                 
+                if not rows:
+                    logger.debug(f"⚠️ В таблице candles_history нет данных для timeframe={timeframe}")
+                    return {}
+                
                 result = {}
                 for row in rows:
-                    symbol = row['symbol']
+                    # Преобразуем Row в dict для надежного доступа
+                    if hasattr(row, 'keys'):
+                        row_dict = dict(row)
+                    else:
+                        # Fallback для обычных кортежей
+                        row_dict = {
+                            'symbol': row[0],
+                            'candle_time': row[1],
+                            'open_price': row[2],
+                            'high_price': row[3],
+                            'low_price': row[4],
+                            'close_price': row[5],
+                            'volume': row[6]
+                        }
+                    
+                    symbol = row_dict['symbol']
                     if symbol not in result:
                         result[symbol] = []
                     
                     result[symbol].append({
-                        'time': row['candle_time'],
-                        'open': row['open_price'],
-                        'high': row['high_price'],
-                        'low': row['low_price'],
-                        'close': row['close_price'],
-                        'volume': row['volume']
+                        'time': row_dict['candle_time'],
+                        'open': row_dict['open_price'],
+                        'high': row_dict['high_price'],
+                        'low': row_dict['low_price'],
+                        'close': row_dict['close_price'],
+                        'volume': row_dict['volume']
                     })
                 
+                logger.debug(f"✅ get_all_candles_dict: загружено {len(result)} символов, {sum(len(c) for c in result.values())} свечей")
                 return result
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки всех свечей: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return {}
     
     def count_candles(self, symbol: Optional[str] = None, timeframe: str = '6h') -> int:
