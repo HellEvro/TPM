@@ -321,7 +321,7 @@ class AIDataCollector:
                 db_trades = ai_db.get_trades_for_training(
                     include_simulated=False,
                     include_real=True,
-                    include_exchange=False,  # Исключаем сделки с биржи - они отдельно
+                    include_exchange=True,  # ВАЖНО: Включаем сделки с биржи тоже!
                     min_trades=0,  # КРИТИЧНО: 0 чтобы получить все сделки, не фильтровать по символам
                     limit=None
                 )
@@ -599,10 +599,12 @@ class AIDataCollector:
                     return collected_data
                 
                 candles_data = ai_db.get_all_candles_dict(timeframe='6h')
-                if candles_data:
-                    logger.debug(f"✅ Загружено {len(candles_data)} монет из БД")
+                if candles_data and len(candles_data) > 0:
+                    total_candles = sum(len(c) for c in candles_data.values())
+                    logger.info(f"✅ Загружено {len(candles_data)} монет из БД ({total_candles:,} свечей)")
                 else:
-                    logger.warning("⚠️ БД пуста, ожидаем загрузки свечей...")
+                    logger.warning("⚠️ БД пуста или get_all_candles_dict вернул пустой результат, ожидаем загрузки свечей...")
+                    logger.debug(f"   candles_data type: {type(candles_data)}, length: {len(candles_data) if candles_data else 0}")
             except Exception as db_error:
                 logger.error(f"❌ Ошибка загрузки из БД: {db_error}")
                 import traceback
@@ -613,19 +615,20 @@ class AIDataCollector:
                 candles_count = 0
                 total_candles = 0
                 
-                for symbol, candle_info in candles_data.items():
+                for symbol, candles_list in candles_data.items():
                     try:
-                        candles = candle_info.get('candles', [])
-                        if candles and len(candles) > 0:
+                        # ВАЖНО: get_all_candles_dict() возвращает {symbol: [candles]}, а не {symbol: {'candles': [...]}}
+                        if candles_list and len(candles_list) > 0:
                             # ВАЖНО: Используем ВСЕ свечи без ограничений!
                             # НЕ обрезаем до 1000 свечей - используем все что есть
-                            candles_list = candles if isinstance(candles, list) else []
+                            if not isinstance(candles_list, list):
+                                candles_list = []
                             
                             collected_data['candles'][symbol] = {
                                 'candles': candles_list,  # ВСЕ свечи без ограничений
                                 'count': len(candles_list),
-                                'timeframe': candle_info.get('timeframe', '6h'),
-                                'last_update': candle_info.get('last_update') or candle_info.get('loaded_at'),
+                                'timeframe': '6h',  # Всегда 6h из БД
+                                'last_update': None,  # БД не хранит last_update для каждой монеты
                                 'source': 'ai_data.db',  # ВСЕГДА из БД
                                 'is_full_history': True  # ВСЕГДА полная история
                             }
