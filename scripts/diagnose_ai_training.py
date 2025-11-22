@@ -17,22 +17,10 @@ from pathlib import Path
 # Настройка кодировки для Windows консоли
 if os.name == 'nt':
     try:
-        # Пробуем установить UTF-8 кодировку
-        import codecs
-        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
-        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
     except:
-        try:
-            # Альтернативный способ через reconfigure
-            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-        except:
-            try:
-                # Устанавливаем кодовую страницу Windows на UTF-8
-                import subprocess
-                subprocess.run(['chcp', '65001'], shell=True, capture_output=True)
-            except:
-                pass
+        pass
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -169,6 +157,70 @@ try:
         print(f"   [WARNING] Файл лицензии не найден: {license_path}")
 except Exception as e:
     print(f"   [WARNING] Не удалось проверить лицензию: {e}")
+
+# 7. Проверка конфигурации AI системы
+print("\n[7] Проверка конфигурации AI системы...")
+try:
+    from bot_engine.bot_config import AIConfig
+    print(f"   [INFO] AI_ENABLED: {AIConfig.AI_ENABLED}")
+    print(f"   [INFO] AI_AUTO_TRAIN_ENABLED: {AIConfig.AI_AUTO_TRAIN_ENABLED}")
+except Exception as e:
+    print(f"   [WARNING] Не удалось проверить конфигурацию: {e}")
+
+# 8. Проверка запущенных процессов AI
+print("\n[8] Проверка запущенных процессов AI...")
+try:
+    import psutil
+    ai_processes = []
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            cmdline = proc.info.get('cmdline', [])
+            if cmdline and any('ai.py' in str(arg) for arg in cmdline):
+                mode = 'unknown'
+                for i, arg in enumerate(cmdline):
+                    if arg == '--mode' and i + 1 < len(cmdline):
+                        mode = cmdline[i + 1]
+                        break
+                ai_processes.append({
+                    'pid': proc.info['pid'],
+                    'mode': mode,
+                    'cmdline': ' '.join(cmdline)
+                })
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+    
+    if ai_processes:
+        print(f"   [INFO] Найдено {len(ai_processes)} процессов AI:")
+        for proc in ai_processes:
+            print(f"      - PID {proc['pid']}: режим '{proc['mode']}'")
+            if proc['mode'] == 'data-service':
+                print("      [WARNING] Режим 'data-service' - обучение ОТКЛЮЧЕНО!")
+            elif proc['mode'] == 'train':
+                print("      [OK] Режим 'train' - обучение ВКЛЮЧЕНО")
+            elif proc['mode'] == 'all':
+                print("      [OK] Режим 'all' - должны быть запущены все процессы (data-service, train, scheduler)")
+    else:
+        print("   [WARNING] Процессы AI не найдены!")
+        print("   [INFO] Запустите: python ai.py --mode all")
+except ImportError:
+    print("   [INFO] psutil не установлен, пропускаем проверку процессов")
+except Exception as e:
+    print(f"   [WARNING] Ошибка проверки процессов: {e}")
+
+# 9. Рекомендации
+print("\n[9] РЕКОМЕНДАЦИИ:")
+if trades_count == 0:
+    print("   [ACTION] Нет сделок для обучения!")
+    print("   [ACTION] Запустите: python scripts/rebuild_bot_history_from_exchange.py")
+elif trades_count < 10:
+    print(f"   [ACTION] Мало сделок ({trades_count} < 10)")
+    print("   [ACTION] Накопите больше сделок или используйте симуляции")
+else:
+    print("   [OK] Достаточно сделок для обучения")
+    print("   [ACTION] Убедитесь, что AI система запущена в режиме 'all' или 'train':")
+    print("           python ai.py --mode all")
+    print("   [ACTION] Или только обучение:")
+    print("           python ai.py --mode train")
 
 print("\n" + "=" * 80)
 print("[OK] ДИАГНОСТИКА ЗАВЕРШЕНА")
