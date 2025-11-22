@@ -40,9 +40,12 @@ ROOT = Path(__file__).parent.parent
 
 
 class DraggablePanel(ttk.LabelFrame):
-    """Панель с возможностью перетаскивания и прилипания"""
+    """Панель с возможностью перетаскивания, прилипания и изменения размера"""
     
     SNAP_DISTANCE = 15  # Расстояние для прилипания в пикселях
+    RESIZE_BORDER = 8  # Ширина области для изменения размера в пикселях
+    MIN_WIDTH = 200  # Минимальная ширина панели
+    MIN_HEIGHT = 150  # Минимальная высота панели
     
     def __init__(self, parent_canvas, canvas_id, text="", **kwargs):
         super().__init__(parent_canvas, text=text, **kwargs)
@@ -52,40 +55,127 @@ class DraggablePanel(ttk.LabelFrame):
         self.drag_start_y = 0
         self.drag_start_canvas_x = 0
         self.drag_start_canvas_y = 0
+        self.drag_start_width = 0
+        self.drag_start_height = 0
         self.is_dragging = False
+        self.is_resizing = False
+        self.resize_edge = None  # 'n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'
         self.all_panels = []  # Список всех панелей (обновляется извне)
         
-        # Делаем заголовок перетаскиваемым
-        self._make_draggable()
+        # Делаем заголовок перетаскиваемым и панель изменяемой по размеру
+        self._make_draggable_and_resizable()
     
     def set_panels_list(self, panels):
         """Устанавливает список всех панелей для snap"""
         self.all_panels = [p for p in panels if p != self]
     
-    def _make_draggable(self):
-        """Делает панель перетаскиваемой через заголовок"""
+    def _make_draggable_and_resizable(self):
+        """Делает панель перетаскиваемой через заголовок и изменяемой по размеру через края"""
         # Привязываем события мыши
         self.bind("<Button-1>", self._on_drag_start)
         self.bind("<B1-Motion>", self._on_drag_motion)
         self.bind("<ButtonRelease-1>", self._on_drag_stop)
         
-        # Изменяем курсор при наведении на верхнюю часть (заголовок)
+        # Изменяем курсор при наведении на края (для изменения размера) и заголовок
         self.bind("<Motion>", self._on_motion)
+        self.bind("<Leave>", self._on_leave)
+    
+    def _get_resize_edge(self, event):
+        """Определяет край, рядом с которым находится курсор"""
+        width = self.winfo_width()
+        height = self.winfo_height()
+        x = event.x
+        y = event.y
+        
+        # Проверяем углы
+        if x < self.RESIZE_BORDER and y < self.RESIZE_BORDER:
+            return 'nw'
+        elif x >= width - self.RESIZE_BORDER and y < self.RESIZE_BORDER:
+            return 'ne'
+        elif x < self.RESIZE_BORDER and y >= height - self.RESIZE_BORDER:
+            return 'sw'
+        elif x >= width - self.RESIZE_BORDER and y >= height - self.RESIZE_BORDER:
+            return 'se'
+        # Проверяем края
+        elif x < self.RESIZE_BORDER:
+            return 'w'
+        elif x >= width - self.RESIZE_BORDER:
+            return 'e'
+        elif y < self.RESIZE_BORDER:
+            return 'n'
+        elif y >= height - self.RESIZE_BORDER:
+            return 's'
+        return None
+    
+    def _get_cursor_for_edge(self, edge):
+        """Возвращает курсор для указанного края"""
+        cursors = {
+            'n': 'sb_v_double_arrow',  # Север
+            's': 'sb_v_double_arrow',  # Юг
+            'e': 'sb_h_double_arrow',  # Восток
+            'w': 'sb_h_double_arrow',  # Запад
+            'ne': 'top_right_corner',  # Северо-восток
+            'nw': 'top_left_corner',   # Северо-запад
+            'se': 'bottom_right_corner',  # Юго-восток
+            'sw': 'bottom_left_corner',   # Юго-запад
+        }
+        return cursors.get(edge, '')
     
     def _is_header_area(self, event):
         """Проверяет, находится ли курсор в области заголовка"""
         # Заголовок занимает примерно верхние 30 пикселей
-        return event.y < 30
+        return event.y < 30 and event.y > self.RESIZE_BORDER
     
     def _on_motion(self, event):
         """Обработчик движения мыши"""
-        if self._is_header_area(event):
+        # Проверяем, не меняем ли мы размер
+        if self.is_resizing:
+            return
+        
+        # Проверяем край для изменения размера
+        edge = self._get_resize_edge(event)
+        if edge:
+            cursor = self._get_cursor_for_edge(edge)
+            if cursor:
+                self.config(cursor=cursor)
+        elif self._is_header_area(event):
             self.config(cursor="hand2")
-        elif not self.is_dragging:
+        else:
+            self.config(cursor="")
+    
+    def _on_leave(self, event):
+        """Обработчик выхода курсора из панели"""
+        if not self.is_dragging and not self.is_resizing:
             self.config(cursor="")
     
     def _on_drag_start(self, event):
-        """Начало перетаскивания"""
+        """Начало перетаскивания или изменения размера"""
+        # Проверяем, не кликнули ли мы по краю для изменения размера
+        edge = self._get_resize_edge(event)
+        if edge:
+            # Начинаем изменение размера
+            self.is_resizing = True
+            self.resize_edge = edge
+            self.drag_start_x = event.x_root
+            self.drag_start_y = event.y_root
+            
+            # Получаем текущие размеры и позицию
+            coords = self.parent_canvas.coords(self.canvas_id)
+            if coords:
+                self.drag_start_canvas_x = coords[0]
+                self.drag_start_canvas_y = coords[1]
+            
+            # Получаем текущие размеры из Canvas
+            width = self.parent_canvas.itemcget(self.canvas_id, "width")
+            height = self.parent_canvas.itemcget(self.canvas_id, "height")
+            self.drag_start_width = int(width) if width else self.winfo_width()
+            self.drag_start_height = int(height) if height else self.winfo_height()
+            
+            # Поднимаем панель наверх (z-order)
+            self.parent_canvas.tag_raise(self.canvas_id)
+            return
+        
+        # Если кликнули по заголовку - начинаем перетаскивание
         if not self._is_header_area(event):
             return
         
@@ -103,36 +193,91 @@ class DraggablePanel(ttk.LabelFrame):
         self.parent_canvas.tag_raise(self.canvas_id)
     
     def _on_drag_motion(self, event):
-        """Перетаскивание панели"""
-        if not self.is_dragging:
-            return
-        
-        # Вычисляем новую позицию
-        delta_x = event.x_root - self.drag_start_x
-        delta_y = event.y_root - self.drag_start_y
-        
-        new_x = self.drag_start_canvas_x + delta_x
-        new_y = self.drag_start_canvas_y + delta_y
-        
-        # Проверяем прилипание к другим панелям
-        snap_x, snap_y = self._check_snap(new_x, new_y)
-        
-        # Ограничиваем перемещение границами Canvas
-        canvas_width = self.parent_canvas.winfo_width()
-        canvas_height = self.parent_canvas.winfo_height()
-        widget_width = self.winfo_width()
-        widget_height = self.winfo_height()
-        
-        snap_x = max(0, min(snap_x, max(0, canvas_width - widget_width)))
-        snap_y = max(0, min(snap_y, max(0, canvas_height - widget_height)))
-        
-        # Перемещаем панель на Canvas
-        self.parent_canvas.coords(self.canvas_id, snap_x, snap_y)
-        self.parent_canvas.update()
+        """Перетаскивание панели или изменение размера"""
+        if self.is_resizing:
+            # Изменяем размер
+            delta_x = event.x_root - self.drag_start_x
+            delta_y = event.y_root - self.drag_start_y
+            
+            new_width = self.drag_start_width
+            new_height = self.drag_start_height
+            new_x = self.drag_start_canvas_x
+            new_y = self.drag_start_canvas_y
+            
+            # Вычисляем новые размеры и позицию в зависимости от края
+            edge = self.resize_edge
+            
+            # Запад (лево)
+            if 'w' in edge:
+                new_width = max(self.MIN_WIDTH, self.drag_start_width - delta_x)
+                new_x = self.drag_start_canvas_x + (self.drag_start_width - new_width)
+            
+            # Восток (право)
+            if 'e' in edge:
+                new_width = max(self.MIN_WIDTH, self.drag_start_width + delta_x)
+            
+            # Север (верх)
+            if 'n' in edge:
+                new_height = max(self.MIN_HEIGHT, self.drag_start_height - delta_y)
+                new_y = self.drag_start_canvas_y + (self.drag_start_height - new_height)
+            
+            # Юг (низ)
+            if 's' in edge:
+                new_height = max(self.MIN_HEIGHT, self.drag_start_height + delta_y)
+            
+            # Ограничиваем размерами Canvas
+            canvas_width = self.parent_canvas.winfo_width()
+            canvas_height = self.parent_canvas.winfo_height()
+            
+            if new_x + new_width > canvas_width:
+                new_width = canvas_width - new_x
+            if new_y + new_height > canvas_height:
+                new_height = canvas_height - new_y
+            if new_x < 0:
+                new_width += new_x
+                new_x = 0
+            if new_y < 0:
+                new_height += new_y
+                new_y = 0
+            
+            # Обновляем размер и позицию на Canvas
+            self.parent_canvas.coords(self.canvas_id, new_x, new_y)
+            self.parent_canvas.itemconfig(self.canvas_id, width=int(new_width), height=int(new_height))
+            self.parent_canvas.update()
+            
+        elif self.is_dragging:
+            # Перетаскиваем панель
+            delta_x = event.x_root - self.drag_start_x
+            delta_y = event.y_root - self.drag_start_y
+            
+            new_x = self.drag_start_canvas_x + delta_x
+            new_y = self.drag_start_canvas_y + delta_y
+            
+            # Проверяем прилипание к другим панелям
+            snap_x, snap_y = self._check_snap(new_x, new_y)
+            
+            # Ограничиваем перемещение границами Canvas
+            canvas_width = self.parent_canvas.winfo_width()
+            canvas_height = self.parent_canvas.winfo_height()
+            widget_width = self.winfo_width()
+            widget_height = self.winfo_height()
+            
+            snap_x = max(0, min(snap_x, max(0, canvas_width - widget_width)))
+            snap_y = max(0, min(snap_y, max(0, canvas_height - widget_height)))
+            
+            # Перемещаем панель на Canvas
+            self.parent_canvas.coords(self.canvas_id, snap_x, snap_y)
+            self.parent_canvas.update()
     
     def _on_drag_stop(self, event):
-        """Окончание перетаскивания"""
-        if self.is_dragging:
+        """Окончание перетаскивания или изменения размера"""
+        if self.is_resizing:
+            self.is_resizing = False
+            self.resize_edge = None
+            self.config(cursor="")
+            # Обновляем scrollregion
+            self.parent_canvas.config(scrollregion=self.parent_canvas.bbox("all"))
+        elif self.is_dragging:
             self.is_dragging = False
             self.config(cursor="")
             # Обновляем scrollregion
