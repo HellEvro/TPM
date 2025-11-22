@@ -81,6 +81,16 @@ from typing import Dict, Optional, Any, Tuple, List
 from contextlib import contextmanager
 import logging
 
+# Импортируем утилиты для выполнения SQL-скриптов
+try:
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from scripts.database_utils import load_sql_file, execute_sql_string
+except ImportError:
+    # Если утилиты недоступны, используем встроенный код
+    load_sql_file = None
+    execute_sql_string = None
+
 logger = logging.getLogger('Bots.Database')
 
 
@@ -2274,6 +2284,128 @@ class BotsDatabase:
                     ai_db_path = project_root / 'data' / 'ai_data.db'
                     app_db_path = project_root / 'data' / 'app_data.db'
                     
+                    # Пытаемся использовать SQL-скрипт миграции
+                    migration_sql_path = project_root / 'migrations' / '001_migrate_trades_from_other_dbs.sql'
+                    
+                    if load_sql_file and migration_sql_path.exists():
+                        try:
+                            # Загружаем SQL-скрипт
+                            sql_script = load_sql_file(str(migration_sql_path))
+                            
+                            # Заменяем плейсхолдеры на реальные пути (экранируем для SQL)
+                            ai_db_path_str = str(ai_db_path).replace("'", "''").replace("\\", "/")
+                            app_db_path_str = str(app_db_path).replace("'", "''").replace("\\", "/")
+                            
+                            sql_script = sql_script.replace('{AI_DB_PATH}', ai_db_path_str)
+                            sql_script = sql_script.replace('{APP_DB_PATH}', app_db_path_str)
+                            
+                            # Проверяем наличие таблиц перед выполнением
+                            should_migrate_ai = ai_db_path.exists()
+                            should_migrate_app = app_db_path.exists()
+                            
+                            if should_migrate_ai:
+                                # Проверяем наличие таблиц в ai_data.db
+                                try:
+                                    ai_conn = sqlite3.connect(str(ai_db_path))
+                                    ai_cursor = ai_conn.cursor()
+                                    ai_cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('bot_trades', 'exchange_trades')")
+                                    ai_tables = [row[0] for row in ai_cursor.fetchall()]
+                                    ai_conn.close()
+                                    
+                                    if not ai_tables:
+                                        should_migrate_ai = False
+                                        logger.info("   ℹ️ Таблицы bot_trades и exchange_trades не найдены в ai_data.db")
+                                except Exception as e:
+                                    logger.warning(f"⚠️ Не удалось проверить ai_data.db: {e}")
+                                    should_migrate_ai = False
+                            
+                            if should_migrate_app:
+                                # Проверяем наличие таблицы closed_pnl в app_data.db
+                                try:
+                                    app_conn = sqlite3.connect(str(app_db_path))
+                                    app_cursor = app_conn.cursor()
+                                    app_cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='closed_pnl'")
+                                    if not app_cursor.fetchone():
+                                        should_migrate_app = False
+                                        logger.info("   ℹ️ Таблица closed_pnl не найдена в app_data.db")
+                                    
+                                    # Проверяем наличие необходимых полей
+                                    if should_migrate_app:
+                                        app_cursor.execute("PRAGMA table_info(closed_pnl)")
+                                        columns = [row[1] for row in app_cursor.fetchall()]
+                                        if 'symbol' not in columns or 'pnl' not in columns:
+                                            should_migrate_app = False
+                                            logger.info("   ℹ️ Таблица closed_pnl не содержит необходимых полей")
+                                    
+                                    app_conn.close()
+                                except Exception as e:
+                                    logger.warning(f"⚠️ Не удалось проверить app_data.db: {e}")
+                                    should_migrate_app = False
+                            
+                            # Удаляем части скрипта для несуществующих БД
+                            if not should_migrate_ai:
+                                # Удаляем секцию миграции из ai_data.db
+                                import re
+                                sql_script = re.sub(r'-- =+.*?ai_data\.db.*?DETACH DATABASE ai_db;', '', sql_script, flags=re.DOTALL)
+                            
+                            if not should_migrate_app:
+                                # Удаляем секцию миграции из app_data.db
+                                import re
+                                sql_script = re.sub(r'-- =+.*?app_data\.db.*?DETACH DATABASE app_db;', '', sql_script, flags=re.DOTALL)
+                            
+                            # Выполняем SQL-скрипт через database_utils
+                            if should_migrate_ai or should_migrate_app:
+                                db_path_str = str(self.db_path)
+                                success, error, count = execute_sql_string(db_path_str, sql_script, stop_on_error=False)
+                                
+                                if success:
+                                    # Подсчитываем количество мигрированных записей
+                                    cursor.execute("SELECT COUNT(*) FROM bot_trades_history")
+                                    total_count = cursor.fetchone()[0]
+                                    
+                                    # Устанавливаем флаг миграции
+                                    now = datetime.now().isoformat()
+                                    cursor.execute("""
+                                        INSERT OR REPLACE INTO db_metadata (key, value, updated_at, created_at)
+                                        VALUES ('trades_migration_from_other_dbs', '1', ?, 
+                                            COALESCE((SELECT created_at FROM db_metadata WHERE key = 'trades_migration_from_other_dbs'), ?))
+                                    """, (now, now))
+                                    
+                                    logger.info(f"✅ Миграция завершена через SQL-скрипт: выполнено {count} запросов, всего записей в bot_trades_history: {total_count}")
+                                    conn.commit()
+                                    return
+                                else:
+                                    logger.warning(f"⚠️ Ошибка выполнения SQL-скрипта миграции: {error}")
+                                    # Продолжаем с встроенным кодом как fallback
+                                    raise Exception(f"SQL-скрипт не выполнен: {error}")
+                            else:
+                                # Нет данных для миграции, просто устанавливаем флаг
+                                now = datetime.now().isoformat()
+                                cursor.execute("""
+                                    INSERT OR REPLACE INTO db_metadata (key, value, updated_at, created_at)
+                                    VALUES ('trades_migration_from_other_dbs', '1', ?, ?)
+                                """, (now, now))
+                                logger.info("✅ Миграция проверена: данных для миграции не найдено")
+                                conn.commit()
+                                return
+                                
+                        except Exception as e:
+                            logger.warning(f"⚠️ Не удалось использовать SQL-скрипт миграции, используем встроенный код: {e}")
+                            # Продолжаем с встроенным кодом как fallback
+                            # Не выбрасываем исключение, чтобы выполнить встроенный код
+                    else:
+                        # SQL-скрипт не найден или утилиты недоступны, используем встроенный код
+                        if not migration_sql_path.exists():
+                            logger.debug("ℹ️ SQL-скрипт миграции не найден, используем встроенный код")
+                        else:
+                            logger.debug("ℹ️ Утилиты database_utils недоступны, используем встроенный код")
+                        raise Exception("Используем встроенный код миграции")
+                    
+                    # Если дошли сюда - миграция выполнена через SQL-скрипт
+                    conn.commit()
+                    return
+                    
+                    # ========== FALLBACK: Встроенный код миграции (если SQL-скрипт недоступен) ==========
                     migrated_count = 0
                     
                     # Миграция из ai_data.db -> bot_trades
