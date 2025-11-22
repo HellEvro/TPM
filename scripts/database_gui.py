@@ -1066,6 +1066,62 @@ class DatabaseGUI(tk.Tk):
         # Обновляем статус
         self._update_status(f"Загружено {len(rows)} записей из таблицы '{table_name}' (всего: {total_count})", "success")
     
+    def _filter_table_data(self):
+        """Фильтрует данные таблицы по поисковому запросу"""
+        if not self.all_table_data or not self.all_table_columns:
+            return
+        
+        self._display_filtered_data()
+    
+    def _display_filtered_data(self):
+        """Отображает отфильтрованные данные в таблице"""
+        # Очищаем treeview
+        for item in self.data_tree.get_children():
+            self.data_tree.delete(item)
+        
+        if not self.all_table_data or not self.all_table_columns:
+            self.records_info.config(text="Записей: 0")
+            return
+        
+        # Получаем поисковый запрос
+        search_text = self.search_var.get().strip().lower()
+        
+        # Фильтруем данные
+        if search_text:
+            filtered_rows = []
+            for row in self.all_table_data:
+                # Проверяем, содержится ли поисковый запрос в любой из колонок
+                match = False
+                for col in self.all_table_columns:
+                    value = str(row.get(col, '')).lower()
+                    if search_text in value:
+                        match = True
+                        break
+                
+                if match:
+                    filtered_rows.append(row)
+        else:
+            # Если поисковый запрос пуст, показываем все данные
+            filtered_rows = self.all_table_data
+        
+        # Добавляем отфильтрованные данные
+        for row in filtered_rows:
+            values = [str(row.get(col, '')) for col in self.all_table_columns]
+            self.data_tree.insert("", tk.END, values=values)
+        
+        # Обновляем информацию о записях
+        total_count = len(self.all_table_data)
+        shown_count = len(filtered_rows)
+        if search_text:
+            self.records_info.config(text=f"Записей: {total_count} (найдено: {shown_count})")
+        else:
+            self.records_info.config(text=f"Записей: {total_count} (показано: {shown_count})")
+    
+    def _clear_search(self):
+        """Очищает поле поиска"""
+        self.search_var.set("")
+        self._display_filtered_data()
+    
     def _execute_sql(self):
         """Выполняет SQL запрос"""
         if not self.db_conn:
