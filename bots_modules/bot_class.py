@@ -1682,7 +1682,7 @@ class NewTradingBot:
             
             logger.info(f"[NEW_BOT_{self.symbol}] 📊 Логируем закрытие: Entry RSI={entry_rsi}, Entry Trend={entry_trend}, Exit RSI={exit_rsi}, Exit Trend={exit_trend}")
             
-            # Сохраняем в историю
+            # Сохраняем в историю (bot_history.json и ai_data.db)
             bot_history_manager.log_position_closed(
                 bot_id=self.symbol,
                 symbol=self.symbol,
@@ -1695,6 +1695,55 @@ class NewTradingBot:
                 market_data=market_data,
                 is_simulated=False  # КРИТИЧНО: реальные боты - это НЕ симуляция!
             )
+            
+            # КРИТИЧНО: Также сохраняем в bots_data.db для истории торговли ботов
+            try:
+                from bot_engine.bots_database import get_bots_database
+                bots_db = get_bots_database()
+                
+                # Формируем данные для сохранения
+                trade_data = {
+                    'bot_id': self.symbol,
+                    'symbol': self.symbol,
+                    'direction': self.position_side,
+                    'entry_price': self.entry_price,
+                    'exit_price': exit_price,
+                    'entry_time': self.position_start_time.isoformat() if self.position_start_time else None,
+                    'exit_time': datetime.now().isoformat(),
+                    'entry_timestamp': self.position_start_time.timestamp() * 1000 if self.position_start_time else None,
+                    'exit_timestamp': datetime.now().timestamp() * 1000,
+                    'position_size_usdt': position_size,
+                    'position_size_coins': position_size_coins,
+                    'pnl': pnl,
+                    'roi': pnl_pct,
+                    'status': 'CLOSED',
+                    'close_reason': reason,
+                    'decision_source': getattr(self, 'decision_source', 'SCRIPT'),
+                    'ai_decision_id': getattr(self, 'ai_decision_id', None),
+                    'ai_confidence': getattr(self, 'ai_confidence', None),
+                    'entry_rsi': entry_rsi,
+                    'exit_rsi': exit_rsi,
+                    'entry_trend': entry_trend or getattr(self, 'entry_trend', None),
+                    'exit_trend': exit_trend,
+                    'entry_volatility': entry_data.get('volatility'),
+                    'entry_volume_ratio': None,  # TODO: получить из entry_data если есть
+                    'is_successful': pnl > 0,
+                    'is_simulated': False,
+                    'source': 'bot',
+                    'order_id': close_result.get('order_id') if close_result else None,
+                    'extra_data': {
+                        'entry_data': entry_data,
+                        'market_data': market_data
+                    }
+                }
+                
+                trade_id = bots_db.save_bot_trade_history(trade_data)
+                if trade_id:
+                    logger.info(f"[NEW_BOT_{self.symbol}] ✅ История сделки сохранена в bots_data.db (ID: {trade_id})")
+                else:
+                    logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось сохранить историю сделки в bots_data.db")
+            except Exception as bots_db_error:
+                logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка сохранения истории в bots_data.db: {bots_db_error}")
             
             # ВАЖНО: Обновляем результат решения AI для переобучения
             if hasattr(self, 'ai_decision_id') and self.ai_decision_id:

@@ -2795,6 +2795,62 @@ def sync_bots_with_exchange():
                                     market_data=market_data,
                                     is_simulated=False  # КРИТИЧНО: это сделки ботов, закрытые вручную на бирже
                                 )
+                                
+                                # КРИТИЧНО: Также сохраняем в bots_data.db для истории торговли ботов
+                                try:
+                                    from bot_engine.bots_database import get_bots_database
+                                    from datetime import datetime
+                                    bots_db = get_bots_database()
+                                    
+                                    entry_time_str = bot_data.get('position_start_time') or bot_data.get('entry_time')
+                                    entry_timestamp = None
+                                    if entry_time_str:
+                                        try:
+                                            entry_time = datetime.fromisoformat(entry_time_str.replace('Z', ''))
+                                            entry_timestamp = entry_time.timestamp() * 1000
+                                        except Exception:
+                                            pass
+                                    
+                                    trade_data = {
+                                        'bot_id': bot_id,
+                                        'symbol': symbol,
+                                        'direction': direction or 'UNKNOWN',
+                                        'entry_price': entry_price or 0.0,
+                                        'exit_price': exit_price or entry_price or 0.0,
+                                        'entry_time': entry_time_str,
+                                        'exit_time': datetime.now().isoformat(),
+                                        'entry_timestamp': entry_timestamp,
+                                        'exit_timestamp': datetime.now().timestamp() * 1000,
+                                        'position_size_usdt': bot_data.get('volume_value'),
+                                        'position_size_coins': position_size_coins,
+                                        'pnl': pnl_usdt,
+                                        'roi': roi_percent,
+                                        'status': 'CLOSED',
+                                        'close_reason': 'MANUAL_CLOSE',
+                                        'decision_source': bot_data.get('decision_source', 'SCRIPT'),
+                                        'ai_decision_id': bot_data.get('ai_decision_id'),
+                                        'ai_confidence': bot_data.get('ai_confidence'),
+                                        'entry_rsi': None,  # TODO: получить из entry_data если есть
+                                        'exit_rsi': None,
+                                        'entry_trend': entry_data.get('trend'),
+                                        'exit_trend': None,
+                                        'entry_volatility': entry_data.get('volatility'),
+                                        'entry_volume_ratio': None,
+                                        'is_successful': pnl_usdt > 0 if pnl_usdt else False,
+                                        'is_simulated': False,
+                                        'source': 'bot_manual_close',
+                                        'order_id': None,
+                                        'extra_data': {
+                                            'entry_data': entry_data,
+                                            'market_data': market_data
+                                        }
+                                    }
+                                    
+                                    trade_id = bots_db.save_bot_trade_history(trade_data)
+                                    if trade_id:
+                                        logger.info(f"[SYNC_EXCHANGE] ✅ История сделки {symbol} сохранена в bots_data.db (ID: {trade_id})")
+                                except Exception as bots_db_error:
+                                    logger.warning(f"[SYNC_EXCHANGE] ⚠️ Ошибка сохранения истории в bots_data.db: {bots_db_error}")
                                 logger.info(
                                     f"[SYNC_EXCHANGE] ✋ {symbol}: позиция закрыта вручную на бирже "
                                     f"(entry={entry_price:.6f}, exit={exit_price:.6f}, pnl={pnl_usdt:.2f} USDT)"

@@ -1038,21 +1038,12 @@ class AIDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_model_versions_created_at ON model_versions(created_at)")
             
             # ==================== ТАБЛИЦА: СНИМКИ ДАННЫХ БОТОВ ====================
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS bots_data_snapshots (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    snapshot_time TEXT NOT NULL,
-                    bots_json TEXT,
-                    rsi_data_json TEXT,
-                    signals_json TEXT,
-                    bots_status_json TEXT,
-                    created_at TEXT NOT NULL
-                )
-            """)
-            
-            # Индексы для bots_data_snapshots
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bots_snapshots_time ON bots_data_snapshots(snapshot_time)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_bots_snapshots_created ON bots_data_snapshots(created_at)")
+            # ВАЖНО: Таблица bots_data_snapshots БОЛЬШЕ НЕ ИСПОЛЬЗУЕТСЯ!
+            # Все данные ботов уже есть в нормализованных таблицах:
+            # - bots_data.db → bots (текущее состояние ботов)
+            # - bots_data.db → rsi_cache_coins (RSI данные)
+            # Снапшоты - это избыточное дублирование данных!
+            # Таблица будет удалена при миграции (см. ниже)
             
             # ==================== ТАБЛИЦА: АНАЛИЗ СТРАТЕГИЙ ====================
             cursor.execute("""
@@ -1108,14 +1099,19 @@ class AIDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_optimized_params_type ON optimized_params(optimization_type)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_optimized_params_created_at ON optimized_params(created_at)")
             
-            # ==================== ТАБЛИЦА: СТАТУС СЕРВИСА ДАННЫХ ====================
+            # ==================== ТАБЛИЦА: СТАТУС СЕРВИСА ДАННЫХ (НОРМАЛИЗОВАННАЯ) ====================
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS data_service_status (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    service_name TEXT NOT NULL,
-                    status_json TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    UNIQUE(service_name)
+                    service_name TEXT NOT NULL UNIQUE,
+                    last_collection TEXT,
+                    trades_count INTEGER DEFAULT 0,
+                    candles_count INTEGER DEFAULT 0,
+                    ready INTEGER DEFAULT 0,
+                    history_loaded INTEGER DEFAULT 0,
+                    timestamp TEXT,
+                    extra_status_json TEXT,
+                    updated_at TEXT NOT NULL
                 )
             """)
             
@@ -1258,6 +1254,94 @@ class AIDatabase:
     def _migrate_schema(self, cursor, conn):
         """Миграция схемы БД: добавляет новые поля если их нет"""
         try:
+            # ==================== МИГРАЦИЯ: data_service_status из JSON в нормализованные столбцы ====================
+            # Проверяем, есть ли старая структура (с status_json)
+            try:
+                cursor.execute("SELECT status_json FROM data_service_status LIMIT 1")
+                # Если запрос выполнился - значит старая структура
+                logger.info("📦 Обнаружена старая JSON структура data_service_status, выполняю миграцию...")
+                
+                # Загружаем все данные из старой структуры
+                cursor.execute("SELECT service_name, status_json, updated_at FROM data_service_status")
+                old_rows = cursor.fetchall()
+                
+                if old_rows:
+                    # Добавляем новые колонки если их нет
+                    try:
+                        cursor.execute("SELECT last_collection FROM data_service_status LIMIT 1")
+                    except sqlite3.OperationalError:
+                        cursor.execute("ALTER TABLE data_service_status ADD COLUMN last_collection TEXT")
+                        cursor.execute("ALTER TABLE data_service_status ADD COLUMN trades_count INTEGER DEFAULT 0")
+                        cursor.execute("ALTER TABLE data_service_status ADD COLUMN candles_count INTEGER DEFAULT 0")
+                        cursor.execute("ALTER TABLE data_service_status ADD COLUMN ready INTEGER DEFAULT 0")
+                        cursor.execute("ALTER TABLE data_service_status ADD COLUMN history_loaded INTEGER DEFAULT 0")
+                        cursor.execute("ALTER TABLE data_service_status ADD COLUMN timestamp TEXT")
+                        cursor.execute("ALTER TABLE data_service_status ADD COLUMN extra_status_json TEXT")
+                    
+                    # Мигрируем данные
+                    for old_row in old_rows:
+                        service_name = old_row['service_name']
+                        status_json = old_row['status_json']
+                        updated_at = old_row['updated_at']
+                        
+                        try:
+                            status = json.loads(status_json) if status_json else {}
+                            
+                            # Извлекаем основные поля
+                            last_collection = status.get('last_collection')
+                            trades_count = status.get('trades', 0)
+                            candles_count = status.get('candles', 0)
+                            ready = 1 if status.get('ready', False) else 0
+                            history_loaded = 1 if status.get('history_loaded', False) else 0
+                            timestamp = status.get('timestamp')
+                            
+                            # Собираем остальные поля в extra_status_json
+                            extra_status = {}
+                            known_fields = {
+                                'last_collection', 'trades', 'candles', 'ready', 
+                                'history_loaded', 'timestamp'
+                            }
+                            for key, value in status.items():
+                                if key not in known_fields:
+                                    extra_status[key] = value
+                            
+                            extra_status_json = json.dumps(extra_status, ensure_ascii=False) if extra_status else None
+                            
+                            # Обновляем запись
+                            cursor.execute("""
+                                UPDATE data_service_status 
+                                SET last_collection = ?, trades_count = ?, candles_count = ?,
+                                    ready = ?, history_loaded = ?, timestamp = ?, extra_status_json = ?
+                                WHERE service_name = ?
+                            """, (
+                                last_collection, trades_count, candles_count,
+                                ready, history_loaded, timestamp, extra_status_json,
+                                service_name
+                            ))
+                        except Exception as e:
+                            logger.warning(f"⚠️ Ошибка миграции статуса для {service_name}: {e}")
+                            continue
+                    
+                    logger.info("✅ Миграция data_service_status завершена: данные перенесены из JSON в нормализованные столбцы")
+                    
+            except sqlite3.OperationalError:
+                # Колонка status_json не существует - значит уже мигрировано или новая структура
+                logger.debug("ℹ️ data_service_status уже в нормализованном формате")
+            except Exception as e:
+                logger.warning(f"⚠️ Ошибка миграции data_service_status: {e}")
+            
+            # ==================== МИГРАЦИЯ: Удаление таблицы bots_data_snapshots ====================
+            # ВАЖНО: Снапшоты больше не нужны - данные уже в нормализованных таблицах!
+            # - bots_data.db → bots (текущее состояние ботов)
+            # - bots_data.db → rsi_cache_coins (RSI данные)
+            try:
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='bots_data_snapshots'")
+                if cursor.fetchone():
+                    # Таблица существует - удаляем её
+                    cursor.execute("DROP TABLE IF EXISTS bots_data_snapshots")
+                    logger.info("🗑️ Таблица bots_data_snapshots удалена (снапшоты больше не используются - данные в нормализованных таблицах)")
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка удаления bots_data_snapshots: {e}")
             # Проверяем и добавляем entry_volatility и entry_volume_ratio в simulated_trades
             try:
                 cursor.execute("SELECT entry_volatility FROM simulated_trades LIMIT 1")
@@ -3274,15 +3358,30 @@ class AIDatabase:
         """
         Получает все сделки для обучения ИИ (объединенные из разных источников)
         
+        ВАЖНО: AI система НЕ совершает реальные сделки, она только симулирует!
+        Для обучения ИИ нужны сделки с RSI/трендом/волатильностью:
+        - entry_rsi, entry_trend, entry_volatility (ОБЯЗАТЕЛЬНО для обучения!)
+        - exit_rsi, exit_trend
+        
+        Источники данных:
+        - ai_data.db -> simulated_trades (симуляции с полными данными)
+        - ai_data.db -> bot_trades (реальные сделки ботов с RSI/трендом, если сохраняются)
+        - ai_data.db -> exchange_trades (сделки с биржи, но может не быть RSI)
+        - bots_data.db -> bot_trades_history (история торговли ботов с RSI/трендом)
+        
+        НЕ ИСПОЛЬЗУЕМ:
+        - app_data.db -> closed_pnl (НЕТ RSI/тренда, только статистика PnL)
+        - bots_data.db -> bots (только текущее состояние, не история закрытых сделок)
+        
         Args:
-            include_simulated: Включить симуляции
-            include_real: Включить реальные сделки ботов
-            include_exchange: Включить сделки с биржи
+            include_simulated: Включить симуляции (ai_data.db -> simulated_trades)
+            include_real: Включить реальные сделки ботов (ai_data.db -> bot_trades)
+            include_exchange: Включить сделки с биржи (ai_data.db -> exchange_trades)
             min_trades: Минимальное количество сделок для символа
             limit: Лимит на общее количество
         
         Returns:
-            Список сделок для обучения
+            Список сделок для обучения (только с RSI/трендом)
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -3372,8 +3471,202 @@ class AIDatabase:
             
             # Преобразуем Row в dict
             result = [dict(row) for row in rows]
+            
+            # КРИТИЧНО: Также загружаем сделки из bots_data.db -> bot_trades_history
+            # Это история торговли ботов, которая теперь хранится в bots_data.db
+            if include_real:
+                try:
+                    from bot_engine.bots_database import get_bots_database
+                    bots_db = get_bots_database()
+                    
+                    # Загружаем закрытые сделки из bot_trades_history
+                    bots_trades = bots_db.get_bot_trades_history(
+                        status='CLOSED',
+                        decision_source=None,  # Все источники
+                        limit=None
+                    )
+                    
+                    # Конвертируем формат в формат для обучения
+                    for trade in bots_trades:
+                        # Пропускаем симуляции
+                        if trade.get('is_simulated'):
+                            continue
+                        
+                        # Пропускаем если нет PnL
+                        if trade.get('pnl') is None:
+                            continue
+                        
+                        # Формируем запись в формате для обучения
+                        converted_trade = {
+                            'source': 'BOTS_HISTORY',
+                            'symbol': trade.get('symbol', ''),
+                            'direction': trade.get('direction', 'LONG'),
+                            'entry_price': trade.get('entry_price', 0.0),
+                            'exit_price': trade.get('exit_price'),
+                            'rsi': trade.get('entry_rsi'),  # RSI на входе
+                            'trend': trade.get('entry_trend'),  # Тренд на входе
+                            'entry_volatility': trade.get('entry_volatility'),
+                            'entry_volume_ratio': trade.get('entry_volume_ratio'),
+                            'pnl': trade.get('pnl'),
+                            'roi': trade.get('roi'),
+                            'is_successful': 1 if trade.get('is_successful') else 0,
+                            'timestamp': trade.get('entry_time') or trade.get('entry_timestamp'),
+                            'close_timestamp': trade.get('exit_time') or trade.get('exit_timestamp'),
+                            'close_reason': trade.get('close_reason'),
+                            'ai_decision_id': trade.get('ai_decision_id'),
+                            'ai_confidence': trade.get('ai_confidence')
+                        }
+                        
+                        result.append(converted_trade)
+                    
+                    logger.debug(f"✅ Загружено {len(bots_trades)} сделок из bots_data.db -> bot_trades_history")
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка загрузки сделок из bots_data.db: {e}")
+            
+            # ВАЖНО: НЕ загружаем closed_pnl из app_data.db для обучения!
+            # Причина: в closed_pnl НЕТ RSI/тренда/волатильности, которые ОБЯЗАТЕЛЬНЫ для обучения ИИ
+            # ИИ использует entry_rsi, entry_trend, entry_volatility для подготовки features
+            # Без этих данных сделки будут пропущены (см. ai_trainer.py:1266 - if not entry_rsi: continue)
+            # 
+            # Для обучения используем только:
+            # - simulated_trades (симуляции с полными данными)
+            # - bot_trades (реальные сделки ботов с RSI/трендом)
+            # - exchange_trades (сделки с биржи, но может не быть RSI)
+            # - bot_trades_history (история торговли ботов из bots_data.db)
+            
+            # Фильтруем по min_trades если нужно (только для сделок из ai_data.db, bots_trades уже загружены)
+            if min_trades > 0:
+                # Группируем по символам
+                symbol_counts = {}
+                for trade in result:
+                    symbol = trade.get('symbol', '')
+                    symbol_counts[symbol] = symbol_counts.get(symbol, 0) + 1
+                
+                # Фильтруем только символы с >= min_trades
+                result = [trade for trade in result if symbol_counts.get(trade.get('symbol', ''), 0) >= min_trades]
+            
+            # Сортируем по timestamp
+            result.sort(key=lambda x: x.get('timestamp') or '', reverse=True)
+            
+            # Применяем limit если указан
+            if limit:
+                result = result[:limit]
+            
             logger.debug(f"✅ get_trades_for_training: загружено {len(result)} сделок (simulated={include_simulated}, real={include_real}, exchange={include_exchange}, min_trades={min_trades})")
             return result
+    
+    def get_open_positions_for_ai(self) -> List[Dict[str, Any]]:
+        """
+        Получает открытые позиции из app_data.db и обогащает их данными для ИИ
+        
+        ВАЖНО: Открытые позиции используются для:
+        1. Обучения ИИ (как примеры текущих сделок)
+        2. Получения рекомендаций ИИ в реальном времени (точки выхода, стопы)
+        
+        Обогащает позиции данными из:
+        - bots_data.db -> bots (entry_price, entry_time, entry_rsi, entry_trend)
+        - bots_data.db -> rsi_cache_coins (текущий RSI, тренд)
+        
+        Returns:
+            Список открытых позиций с полными данными для ИИ
+        """
+        try:
+            from bot_engine.app_database import AppDatabase
+            from bot_engine.bots_database import BotsDatabase
+            
+            app_db = AppDatabase()
+            bots_db = BotsDatabase()
+            
+            # Загружаем открытые позиции из app_data.db
+            positions_data = app_db.load_positions_data()
+            all_positions = []
+            
+            for category in ['high_profitable', 'profitable', 'losing']:
+                positions = positions_data.get(category, [])
+                all_positions.extend(positions)
+            
+            if not all_positions:
+                logger.debug("ℹ️ Нет открытых позиций для анализа ИИ")
+                return []
+            
+            # Загружаем текущий RSI cache
+            rsi_cache = bots_db.load_rsi_cache(max_age_hours=6.0)
+            coins_rsi_data = rsi_cache.get('coins', {}) if rsi_cache else {}
+            
+            # Загружаем состояние ботов для получения entry_price, entry_time, entry_rsi
+            bots_state = bots_db.load_bots_state()
+            bots_data = bots_state.get('bots', {})
+            
+            enriched_positions = []
+            for position in all_positions:
+                symbol = position.get('symbol', '')
+                if not symbol:
+                    continue
+                
+                # Получаем данные бота для этой позиции
+                bot_data = bots_data.get(symbol, {})
+                
+                # Получаем текущий RSI/тренд из cache
+                coin_rsi_data = coins_rsi_data.get(symbol, {})
+                current_rsi = coin_rsi_data.get('rsi6h')
+                current_trend = coin_rsi_data.get('trend6h', 'NEUTRAL')
+                current_price = coin_rsi_data.get('price')
+                
+                # Получаем данные входа из бота
+                entry_price = bot_data.get('entry_price') or position.get('entry_price')
+                entry_time = bot_data.get('entry_time')
+                entry_timestamp = bot_data.get('entry_timestamp')
+                entry_rsi = bot_data.get('last_rsi')  # Последний RSI при входе
+                entry_trend = bot_data.get('entry_trend') or bot_data.get('last_trend', 'NEUTRAL')
+                position_side = bot_data.get('position_side') or position.get('side', 'LONG')
+                
+                # Если нет entry_price из бота, пытаемся вычислить из текущей цены и PnL
+                if not entry_price and current_price and position.get('pnl') and position.get('size'):
+                    # Приблизительный расчет entry_price из PnL
+                    pnl = position.get('pnl', 0)
+                    size = position.get('size', 0)
+                    if size > 0:
+                        if position_side == 'LONG':
+                            entry_price = current_price - (pnl / size)
+                        else:
+                            entry_price = current_price + (pnl / size)
+                
+                # Формируем обогащенную позицию
+                enriched_position = {
+                    'symbol': symbol,
+                    'position_side': position_side,
+                    'entry_price': entry_price,
+                    'entry_time': entry_time,
+                    'entry_timestamp': entry_timestamp,
+                    'entry_rsi': entry_rsi,
+                    'entry_trend': entry_trend,
+                    'current_price': current_price,
+                    'current_rsi': current_rsi,
+                    'current_trend': current_trend,
+                    'pnl': position.get('pnl', 0),
+                    'roi': position.get('roi', 0),
+                    'max_profit': position.get('max_profit'),
+                    'max_loss': position.get('max_loss'),
+                    'size': position.get('size'),
+                    'leverage': position.get('leverage', 1.0),
+                    'position_category': position.get('position_category', category),
+                    'high_roi': position.get('high_roi', False),
+                    'high_loss': position.get('high_loss', False),
+                    'last_update': position.get('last_update'),
+                    'is_open': True,  # Маркер открытой позиции
+                    'source': 'APP_POSITIONS'
+                }
+                
+                enriched_positions.append(enriched_position)
+            
+            logger.debug(f"✅ Загружено {len(enriched_positions)} открытых позиций для анализа ИИ")
+            return enriched_positions
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки открытых позиций для ИИ: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return []
     
     def analyze_patterns(self, 
                          symbol: Optional[str] = None,
@@ -4635,159 +4928,78 @@ class AIDatabase:
     
     def save_bots_data_snapshot(self, bots_data: Dict) -> int:
         """
-        Сохраняет снимок данных ботов в БД
+        ВАЖНО: Метод больше не сохраняет снапшоты!
+        
+        Снапшоты - это избыточное дублирование данных.
+        Все данные ботов уже есть в нормализованных таблицах:
+        - bots_data.db → bots (текущее состояние ботов)
+        - bots_data.db → rsi_cache_coins (RSI данные)
         
         Args:
-            bots_data: Словарь с данными ботов {
-                'timestamp': str,
-                'bots': [],
-                'rsi_data': {},
-                'signals': {},
-                'bots_status': {}
-            }
+            bots_data: Словарь с данными ботов (игнорируется)
         
         Returns:
-            ID сохраненной записи
+            0 (не сохраняем)
         """
-        try:
-            now = datetime.now().isoformat()
-            snapshot_time = bots_data.get('timestamp', now)
-            
-            with self._get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO bots_data_snapshots (
-                        snapshot_time, bots_json, rsi_data_json,
-                        signals_json, bots_status_json, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    snapshot_time,
-                    json.dumps(bots_data.get('bots', []), ensure_ascii=False),
-                    json.dumps(bots_data.get('rsi_data', {}), ensure_ascii=False),
-                    json.dumps(bots_data.get('signals', {}), ensure_ascii=False),
-                    json.dumps(bots_data.get('bots_status', {}), ensure_ascii=False),
-                    now
-                ))
-                conn.commit()
-                return cursor.lastrowid
-        except Exception as e:
-            logger.error(f"❌ Ошибка сохранения снимка данных ботов: {e}")
-            return 0
+        # Не сохраняем снапшоты - данные уже в нормализованных таблицах
+        logger.debug("ℹ️ Снапшоты больше не сохраняются - данные уже в нормализованных таблицах")
+        return 0
     
     def get_bots_data_snapshots(self, limit: int = 1000, 
                                 start_time: Optional[str] = None,
                                 end_time: Optional[str] = None) -> List[Dict]:
         """
-        Получает снимки данных ботов
+        ВАЖНО: Метод больше не загружает снапшоты из старой таблицы!
+        
+        Вместо снапшотов используйте напрямую нормализованные таблицы:
+        - bots_data.db → bots (текущее состояние ботов)
+        - bots_data.db → rsi_cache_coins (RSI данные)
         
         Args:
-            limit: Максимальное количество записей
-            start_time: Начальное время (ISO format)
-            end_time: Конечное время (ISO format)
+            limit: Максимальное количество записей (игнорируется)
+            start_time: Начальное время (игнорируется)
+            end_time: Конечное время (игнорируется)
         
         Returns:
-            Список снимков
+            Пустой список (снапшоты больше не используются)
         """
-        try:
-            with self._get_connection() as conn:
-                cursor = conn.cursor()
-                query = """
-                    SELECT id, snapshot_time, bots_json, rsi_data_json,
-                           signals_json, bots_status_json, created_at
-                    FROM bots_data_snapshots
-                """
-                params = []
-                
-                conditions = []
-                if start_time:
-                    conditions.append("snapshot_time >= ?")
-                    params.append(start_time)
-                if end_time:
-                    conditions.append("snapshot_time <= ?")
-                    params.append(end_time)
-                
-                if conditions:
-                    query += " WHERE " + " AND ".join(conditions)
-                
-                query += " ORDER BY snapshot_time DESC LIMIT ?"
-                params.append(limit)
-                
-                cursor.execute(query, params)
-                rows = cursor.fetchall()
-                
-                snapshots = []
-                for row in rows:
-                    snapshots.append({
-                        'id': row['id'],
-                        'timestamp': row['snapshot_time'],
-                        'bots': json.loads(row['bots_json']) if row['bots_json'] else [],
-                        'rsi_data': json.loads(row['rsi_data_json']) if row['rsi_data_json'] else {},
-                        'signals': json.loads(row['signals_json']) if row['signals_json'] else {},
-                        'bots_status': json.loads(row['bots_status_json']) if row['bots_status_json'] else {},
-                        'created_at': row['created_at']
-                    })
-                
-                return snapshots
-        except Exception as e:
-            logger.error(f"❌ Ошибка загрузки снимков данных ботов: {e}")
-            return []
+        # Не загружаем снапшоты - используйте напрямую bots_data.db
+        logger.debug("ℹ️ Снапшоты больше не загружаются - используйте напрямую bots_data.db")
+        return []
     
     def get_latest_bots_data(self) -> Optional[Dict]:
         """
-        Получает последний снимок данных ботов
+        ВАЖНО: Метод больше не использует снапшоты!
+        
+        Используйте напрямую bots_data.db:
+        - bots_data.db → bots (текущее состояние ботов)
+        - bots_data.db → rsi_cache_coins (RSI данные)
         
         Returns:
-            Последний снимок или None
+            None (снапшоты больше не используются)
         """
-        snapshots = self.get_bots_data_snapshots(limit=1)
-        if snapshots:
-            return snapshots[0]
+        logger.debug("ℹ️ get_latest_bots_data больше не использует снапшоты - используйте напрямую bots_data.db")
         return None
     
     def count_bots_data_snapshots(self) -> int:
-        """Подсчитывает количество снимков данных ботов"""
-        try:
-            with self._get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT COUNT(*) FROM bots_data_snapshots")
-                return cursor.fetchone()[0]
-        except Exception as e:
-            logger.error(f"❌ Ошибка подсчета снимков данных ботов: {e}")
-            return 0
+        """Подсчитывает количество снимков данных ботов (всегда 0 - снапшоты больше не используются)"""
+        return 0
     
     def cleanup_old_bots_data_snapshots(self, keep_count: int = 1000) -> int:
         """
-        Удаляет старые снимки, оставляя только последние N
+        ВАЖНО: Метод больше не удаляет снапшоты!
+        
+        Таблица bots_data_snapshots будет удалена при миграции.
+        Снапшоты больше не используются - данные в нормализованных таблицах.
         
         Args:
-            keep_count: Количество снимков для сохранения
+            keep_count: Количество снимков для сохранения (игнорируется)
         
         Returns:
-            Количество удаленных записей
+            0 (нечего удалять)
         """
-        try:
-            with self._get_connection() as conn:
-                cursor = conn.cursor()
-                # Получаем ID записей для удаления
-                cursor.execute("""
-                    SELECT id FROM bots_data_snapshots
-                    ORDER BY snapshot_time DESC
-                    LIMIT -1 OFFSET ?
-                """, (keep_count,))
-                ids_to_delete = [row[0] for row in cursor.fetchall()]
-                
-                if ids_to_delete:
-                    placeholders = ','.join(['?'] * len(ids_to_delete))
-                    cursor.execute(f"""
-                        DELETE FROM bots_data_snapshots
-                        WHERE id IN ({placeholders})
-                    """, ids_to_delete)
-                    conn.commit()
-                    return cursor.rowcount
-                return 0
-        except Exception as e:
-            logger.error(f"❌ Ошибка очистки старых снимков: {e}")
-            return 0
+        logger.debug("ℹ️ cleanup_old_bots_data_snapshots больше не удаляет снапшоты - таблица будет удалена при миграции")
+        return 0
     
     def list_backups(self) -> List[Dict[str, Any]]:
         """
@@ -5452,38 +5664,112 @@ class AIDatabase:
     # ==================== МЕТОДЫ ДЛЯ СТАТУСА СЕРВИСА ДАННЫХ ====================
     
     def save_data_service_status(self, service_name: str, status: Dict) -> int:
-        """Сохраняет статус сервиса данных"""
+        """Сохраняет статус сервиса данных в нормализованные столбцы"""
         with self.lock:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 now = datetime.now().isoformat()
                 
-                cursor.execute("""
-                    INSERT OR REPLACE INTO data_service_status (
-                        service_name, status_json, updated_at
-                    ) VALUES (?, ?, ?)
-                """, (
-                    service_name,
-                    json.dumps(status, ensure_ascii=False),
-                    now
-                ))
+                # Извлекаем основные поля
+                last_collection = status.get('last_collection')
+                trades_count = status.get('trades', 0)
+                candles_count = status.get('candles', 0)
+                ready = 1 if status.get('ready', False) else 0
+                history_loaded = 1 if status.get('history_loaded', False) else 0
+                timestamp = status.get('timestamp', now)
                 
+                # Собираем остальные поля в extra_status_json
+                extra_status = {}
+                known_fields = {
+                    'last_collection', 'trades', 'candles', 'ready', 
+                    'history_loaded', 'timestamp'
+                }
+                for key, value in status.items():
+                    if key not in known_fields:
+                        extra_status[key] = value
+                
+                extra_status_json = json.dumps(extra_status, ensure_ascii=False) if extra_status else None
+                
+                # Проверяем, есть ли старая структура с status_json
+                try:
+                    cursor.execute("SELECT status_json FROM data_service_status LIMIT 1")
+                    # Старая структура - используем её для обратной совместимости
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO data_service_status (
+                            service_name, status_json, updated_at
+                        ) VALUES (?, ?, ?)
+                    """, (
+                        service_name,
+                        json.dumps(status, ensure_ascii=False),
+                        now
+                    ))
+                except sqlite3.OperationalError:
+                    # Новая нормализованная структура
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO data_service_status (
+                            service_name, last_collection, trades_count, candles_count,
+                            ready, history_loaded, timestamp, extra_status_json, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        service_name, last_collection, trades_count, candles_count,
+                        ready, history_loaded, timestamp, extra_status_json, now
+                    ))
+                
+                conn.commit()
                 return cursor.lastrowid
     
     def get_data_service_status(self, service_name: str) -> Optional[Dict]:
-        """Получает статус сервиса данных"""
+        """Получает статус сервиса данных из нормализованных столбцов"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM data_service_status WHERE service_name = ?
-            """, (service_name,))
             
-            row = cursor.fetchone()
-            if row:
-                result = dict(row)
-                if result.get('status_json'):
-                    result['status'] = json.loads(result['status_json'])
-                return result
+            # Проверяем, есть ли старая структура с status_json
+            try:
+                cursor.execute("SELECT status_json FROM data_service_status LIMIT 1")
+                # Старая структура - используем её для обратной совместимости
+                cursor.execute("""
+                    SELECT * FROM data_service_status WHERE service_name = ?
+                """, (service_name,))
+                
+                row = cursor.fetchone()
+                if row:
+                    result = dict(row)
+                    if result.get('status_json'):
+                        result['status'] = json.loads(result['status_json'])
+                    return result
+            except sqlite3.OperationalError:
+                # Новая нормализованная структура
+                cursor.execute("""
+                    SELECT service_name, last_collection, trades_count, candles_count,
+                           ready, history_loaded, timestamp, extra_status_json, updated_at
+                    FROM data_service_status WHERE service_name = ?
+                """, (service_name,))
+                
+                row = cursor.fetchone()
+                if row:
+                    # Восстанавливаем структуру status из нормализованных столбцов
+                    status = {
+                        'last_collection': row['last_collection'],
+                        'trades': row['trades_count'],
+                        'candles': row['candles_count'],
+                        'ready': bool(row['ready']),
+                        'history_loaded': bool(row['history_loaded']),
+                        'timestamp': row['timestamp'] or row['updated_at']
+                    }
+                    
+                    # Добавляем дополнительные поля из extra_status_json
+                    if row['extra_status_json']:
+                        try:
+                            extra_status = json.loads(row['extra_status_json'])
+                            status.update(extra_status)
+                        except:
+                            pass
+                    
+                    return {
+                        'service_name': row['service_name'],
+                        'status': status,
+                        'updated_at': row['updated_at']
+                    }
             
             return None
     
@@ -5890,7 +6176,7 @@ class AIDatabase:
             tables = ['simulated_trades', 'bot_trades', 'exchange_trades', 'ai_decisions', 
                      'training_sessions', 'parameter_training_samples', 'used_training_parameters',
                      'best_params_per_symbol', 'blocked_params', 'win_rate_targets', 'training_locks',
-                     'candles_history', 'bots_data_snapshots', 'model_versions', 'performance_metrics',
+                     'candles_history', 'model_versions', 'performance_metrics',
                      'strategy_analysis', 'optimized_params', 'trading_patterns', 'data_service_status']
             for table in tables:
                 cursor.execute(f"SELECT COUNT(*) FROM {table}")

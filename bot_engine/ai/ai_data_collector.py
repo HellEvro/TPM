@@ -268,15 +268,14 @@ class AIDataCollector:
                 logger.error("❌ AI Database не подключена!")
                 return collected_data
             
+            # ВАЖНО: Снапшоты больше не сохраняются!
+            # Данные ботов уже есть в нормализованных таблицах:
+            # - bots_data.db → bots (текущее состояние ботов)
+            # - bots_data.db → rsi_cache_coins (RSI данные)
+            # Снапшоты - это избыточное дублирование данных!
             try:
-                snapshot_id = self.ai_db.save_bots_data_snapshot(collected_data)
-                if snapshot_id:
-                    logger.debug(f"✅ Снимок данных ботов сохранен в БД (ID: {snapshot_id})")
-                
-                # Очищаем старые снимки (оставляем последние 1000)
-                deleted_count = self.ai_db.cleanup_old_bots_data_snapshots(keep_count=1000)
-                if deleted_count > 0:
-                    logger.debug(f"🗑️ Удалено {deleted_count} старых снимков")
+                # Не сохраняем снапшоты - данные уже в нормализованных таблицах
+                pass
             except Exception as db_error:
                 logger.error(f"❌ Ошибка сохранения в БД: {db_error}")
                 import traceback
@@ -716,10 +715,15 @@ class AIDataCollector:
     
     def _get_bots_data(self) -> Dict:
         """
-        Получает данные ботов из БД
+        Получает данные ботов из нормализованных таблиц
+        
+        ВАЖНО: Снапшоты больше не используются!
+        Данные берутся напрямую из:
+        - bots_data.db → bots (текущее состояние ботов)
+        - bots_data.db → rsi_cache_coins (RSI данные)
         
         Returns:
-            Словарь с данными ботов в формате как bots_data.json
+            Словарь с данными ботов
         """
         result = {
             'history': [],
@@ -727,19 +731,29 @@ class AIDataCollector:
             'latest': {}
         }
         
-        # Загружаем ТОЛЬКО из БД
-        if not self.ai_db:
-            logger.warning("⚠️ AI Database не доступна")
-            return result
-        
+        # Загружаем напрямую из нормализованных таблиц
         try:
-            snapshots = self.ai_db.get_bots_data_snapshots(limit=1000)
-            if snapshots:
-                result['history'] = snapshots
-                result['last_update'] = snapshots[0]['timestamp'] if snapshots else None
-                result['latest'] = snapshots[0] if snapshots else {}
+            from bot_engine.bots_database import get_bots_database
+            bots_db = get_bots_database()
+            
+            # Загружаем текущее состояние ботов
+            bots_state = bots_db.load_bots_state()
+            bots_data = bots_state.get('bots', {})
+            
+            # Загружаем RSI данные
+            rsi_cache = bots_db.load_rsi_cache(max_age_hours=6.0)
+            rsi_data = rsi_cache.get('coins', {}) if rsi_cache else {}
+            
+            # Формируем результат
+            result['latest'] = {
+                'bots': bots_data,
+                'rsi_data': rsi_data,
+                'timestamp': datetime.now().isoformat()
+            }
+            result['last_update'] = result['latest']['timestamp']
+            
         except Exception as db_error:
-            logger.error(f"❌ Ошибка загрузки из БД: {db_error}")
+            logger.error(f"❌ Ошибка загрузки данных ботов из нормализованных таблиц: {db_error}")
             import traceback
             logger.error(traceback.format_exc())
         

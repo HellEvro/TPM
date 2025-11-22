@@ -243,7 +243,8 @@ class AIBacktester:
                 db_trades = ai_db.get_trades_for_training(
                     include_simulated=False,
                     include_real=True,
-                    include_exchange=False,
+                    include_exchange=True,  # ВАЖНО: Включаем сделки с биржи!
+                    min_trades=0,  # КРИТИЧНО: 0 чтобы получить все сделки, не фильтровать по символам
                     limit=None
                 )
                 if db_trades:
