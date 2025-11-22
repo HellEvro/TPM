@@ -48,6 +48,8 @@ class DraggablePanel(ttk.LabelFrame):
     MIN_HEIGHT = 150  # Минимальная высота панели
     
     def __init__(self, parent_canvas, canvas_id, text="", **kwargs):
+        # Применяем стиль для панели
+        kwargs.setdefault('style', 'TPanel.TLabelframe')
         super().__init__(parent_canvas, text=text, **kwargs)
         self.parent_canvas = parent_canvas
         self.canvas_id = canvas_id  # ID окна на Canvas
@@ -466,6 +468,9 @@ class DatabaseGUI(tk.Tk):
         self.geometry("1400x900")
         self.minsize(1000, 700)
         
+        # Настраиваем современную цветовую схему
+        self._setup_styles()
+        
         # Текущее подключение к БД
         self.db_conn: Optional[DatabaseConnection] = None
         self.current_table: Optional[str] = None
@@ -485,14 +490,100 @@ class DatabaseGUI(tk.Tk):
         # Автоматически находим и загружаем БД из проекта
         self._auto_discover_databases()
     
+    def _setup_styles(self):
+        """Настраивает современные стили для интерфейса"""
+        style = ttk.Style()
+        
+        # Пробуем использовать современную тему
+        try:
+            style.theme_use('clam')
+        except:
+            pass
+        
+        # Цветовая схема
+        bg_color = '#f5f5f5'  # Светло-серый фон
+        panel_bg = '#ffffff'  # Белый для панелей
+        border_color = '#d0d0d0'  # Серая граница
+        accent_color = '#0078d4'  # Синий акцент
+        hover_color = '#e8f4f8'  # Светло-голубой при наведении
+        text_color = '#1a1a1a'  # Темно-серый текст
+        
+        # Настраиваем стили для Frame
+        style.configure('TPanel.TFrame', background=panel_bg, relief='flat', borderwidth=1)
+        
+        # Стили для LabelFrame
+        style.configure('TPanel.TLabelframe', 
+                       background=panel_bg, 
+                       relief='flat', 
+                       borderwidth=1,
+                       bordercolor=border_color)
+        style.configure('TPanel.TLabelframe.Label',
+                       background=panel_bg,
+                       foreground=text_color,
+                       font=('Segoe UI', 10, 'bold'))
+        
+        # Стили для кнопок
+        style.configure('TPrimary.TButton',
+                       background=accent_color,
+                       foreground='white',
+                       borderwidth=0,
+                       focuscolor='none',
+                       padding=(12, 6),
+                       font=('Segoe UI', 9))
+        style.map('TPrimary.TButton',
+                 background=[('active', '#005a9e'), ('pressed', '#004578')])
+        
+        style.configure('TDefault.TButton',
+                       background='#f0f0f0',
+                       foreground=text_color,
+                       borderwidth=1,
+                       bordercolor=border_color,
+                       focuscolor='none',
+                       padding=(10, 5),
+                       font=('Segoe UI', 9))
+        style.map('TDefault.TButton',
+                 background=[('active', hover_color)])
+        
+        # Стили для Entry
+        style.configure('TSearch.TEntry',
+                       fieldbackground='white',
+                       foreground=text_color,
+                       borderwidth=1,
+                       bordercolor=border_color,
+                       padding=(8, 6),
+                       font=('Segoe UI', 9))
+        style.map('TSearch.TEntry',
+                 bordercolor=[('focus', accent_color)])
+        
+        # Стили для Treeview
+        style.configure('TModern.Treeview',
+                       background='white',
+                       foreground=text_color,
+                       fieldbackground='white',
+                       borderwidth=0,
+                       font=('Segoe UI', 9))
+        style.configure('TModern.Treeview.Heading',
+                       background='#f8f8f8',
+                       foreground=text_color,
+                       relief='flat',
+                       borderwidth=1,
+                       bordercolor=border_color,
+                       font=('Segoe UI', 9, 'bold'))
+        style.map('TModern.Treeview',
+                 background=[('selected', accent_color)],
+                 foreground=[('selected', 'white')])
+        
+        # Настраиваем фон главного окна
+        self.configure(bg=bg_color)
+    
     def _build_ui(self):
         """Создает интерфейс приложения"""
         # Главный контейнер - Canvas для перетаскиваемых панелей
-        main_container = tk.Frame(self)
-        main_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        main_container = tk.Frame(self, bg='#f5f5f5')
+        main_container.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
         
         # Создаем Canvas для размещения панелей
-        self.main_canvas = tk.Canvas(main_container, bg='SystemButtonFace', highlightthickness=0)
+        self.main_canvas = tk.Canvas(main_container, bg='#f5f5f5', highlightthickness=0)
         self.main_canvas.pack(fill=tk.BOTH, expand=True)
         
         # Хранилище панелей
@@ -503,41 +594,44 @@ class DatabaseGUI(tk.Tk):
         left_frame = DraggablePanel(left_frame_container, None, text="Базы данных")
         left_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Размещаем панель на Canvas
-        left_id = self.main_canvas.create_window(10, 10, window=left_frame_container, anchor="nw", width=300, height=600)
+        # Размещаем панель на Canvas - левая панель слева, занимает всю высоту
+        left_id = self.main_canvas.create_window(10, 10, window=left_frame_container, anchor="nw", width=300, height=840)
         left_frame.canvas_id = left_id
         left_frame.parent_canvas = self.main_canvas
         
         # Убираем заголовок - он уже есть в DraggablePanel
         
         # Кнопки управления БД
-        db_buttons_frame = ttk.Frame(left_frame)
-        db_buttons_frame.pack(fill=tk.X, padx=5, pady=5)
+        db_buttons_frame = ttk.Frame(left_frame, style='TPanel.TFrame')
+        db_buttons_frame.pack(fill=tk.X, padx=8, pady=8)
         
         ttk.Button(
             db_buttons_frame,
             text="Найти БД в проекте",
-            command=self._auto_discover_databases
-        ).pack(fill=tk.X, pady=2)
+            command=self._auto_discover_databases,
+            style='TDefault.TButton'
+        ).pack(fill=tk.X, pady=3)
         
         ttk.Button(
             db_buttons_frame,
             text="Открыть внешнюю БД",
-            command=self._open_external_database
-        ).pack(fill=tk.X, pady=2)
+            command=self._open_external_database,
+            style='TDefault.TButton'
+        ).pack(fill=tk.X, pady=3)
         
         ttk.Button(
             db_buttons_frame,
             text="Обновить список",
-            command=self._refresh_databases
-        ).pack(fill=tk.X, pady=2)
+            command=self._refresh_databases,
+            style='TDefault.TButton'
+        ).pack(fill=tk.X, pady=3)
         
         # Список найденных БД
-        db_list_frame = ttk.LabelFrame(left_frame, text="Найденные БД", padding=5)
-        db_list_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        db_list_frame = ttk.LabelFrame(left_frame, text="Найденные БД", padding=8, style='TPanel.TLabelframe')
+        db_list_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
         
         # Treeview для списка БД
-        db_tree = ttk.Treeview(db_list_frame, show="tree", height=15)
+        db_tree = ttk.Treeview(db_list_frame, show="tree", height=15, style='TModern.Treeview')
         db_tree.pack(fill=tk.BOTH, expand=True)
         
         # Scrollbar для списка
@@ -551,10 +645,13 @@ class DatabaseGUI(tk.Tk):
         db_tree.bind("<Double-1>", lambda e: self._open_database_from_tree())
         
         # Информация о текущей БД
-        info_frame = ttk.LabelFrame(left_frame, text="Информация о БД", padding=5)
-        info_frame.pack(fill=tk.X, padx=5, pady=5)
+        info_frame = ttk.LabelFrame(left_frame, text="Информация о БД", padding=8, style='TPanel.TLabelframe')
+        info_frame.pack(fill=tk.X, padx=8, pady=8)
         
-        self.db_info_text = tk.Text(info_frame, height=5, wrap=tk.WORD, state=tk.DISABLED)
+        self.db_info_text = tk.Text(info_frame, height=5, wrap=tk.WORD, state=tk.DISABLED,
+                                    bg='white', fg='#1a1a1a', font=('Segoe UI', 9),
+                                    relief='flat', borderwidth=1, highlightthickness=1,
+                                    highlightbackground='#d0d0d0', highlightcolor='#0078d4')
         self.db_info_text.pack(fill=tk.X)
         
         self.panels['left'] = left_frame
@@ -564,7 +661,8 @@ class DatabaseGUI(tk.Tk):
         sql_frame = DraggablePanel(sql_frame_container, None, text="SQL Редактор")
         sql_frame.pack(fill=tk.BOTH, expand=True)
         
-        sql_id = self.main_canvas.create_window(320, 10, window=sql_frame_container, anchor="nw", width=600, height=300)
+        # SQL редактор справа вверху
+        sql_id = self.main_canvas.create_window(320, 10, window=sql_frame_container, anchor="nw", width=580, height=280)
         sql_frame.canvas_id = sql_id
         sql_frame.parent_canvas = self.main_canvas
         
@@ -573,26 +671,37 @@ class DatabaseGUI(tk.Tk):
             sql_frame,
             wrap=tk.NONE,
             font=("Consolas", 10),
-            height=10
+            height=10,
+            bg='white',
+            fg='#1a1a1a',
+            relief='flat',
+            borderwidth=1,
+            highlightthickness=1,
+            highlightbackground='#d0d0d0',
+            highlightcolor='#0078d4',
+            padx=8,
+            pady=8
         )
-        sql_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        sql_text.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
         self.sql_text = sql_text
         
         # Кнопки SQL
-        sql_buttons_frame = ttk.Frame(sql_frame)
-        sql_buttons_frame.pack(fill=tk.X, padx=5, pady=5)
+        sql_buttons_frame = ttk.Frame(sql_frame, style='TPanel.TFrame')
+        sql_buttons_frame.pack(fill=tk.X, padx=8, pady=8)
         
         ttk.Button(
             sql_buttons_frame,
             text="Выполнить запрос (F5)",
-            command=self._execute_sql
-        ).pack(side=tk.LEFT, padx=2)
+            command=self._execute_sql,
+            style='TPrimary.TButton'
+        ).pack(side=tk.LEFT, padx=4)
         
         ttk.Button(
             sql_buttons_frame,
             text="Очистить",
-            command=lambda: self.sql_text.delete(1.0, tk.END)
-        ).pack(side=tk.LEFT, padx=2)
+            command=lambda: self.sql_text.delete(1.0, tk.END),
+            style='TDefault.TButton'
+        ).pack(side=tk.LEFT, padx=4)
         
         # Привязываем F5 к выполнению запроса
         self.bind('<F5>', lambda e: self._execute_sql())
@@ -604,36 +713,39 @@ class DatabaseGUI(tk.Tk):
         tables_frame = DraggablePanel(tables_frame_container, None, text="Таблицы и данные")
         tables_frame.pack(fill=tk.BOTH, expand=True)
         
-        tables_id = self.main_canvas.create_window(320, 320, window=tables_frame_container, anchor="nw", width=600, height=400)
+        # Таблицы и данные справа внизу, занимают всю ширину справа
+        tables_id = self.main_canvas.create_window(320, 300, window=tables_frame_container, anchor="nw", width=1020, height=550)
         tables_frame.canvas_id = tables_id
         tables_frame.parent_canvas = self.main_canvas
         
         # Список таблиц
-        tables_list_frame = ttk.Frame(tables_frame)
-        tables_list_frame.pack(fill=tk.X, padx=5, pady=5)
+        tables_list_frame = ttk.Frame(tables_frame, style='TPanel.TFrame')
+        tables_list_frame.pack(fill=tk.X, padx=8, pady=8)
         
-        ttk.Label(tables_list_frame, text="Таблицы:").pack(side=tk.LEFT)
+        ttk.Label(tables_list_frame, text="Таблицы:", font=('Segoe UI', 9)).pack(side=tk.LEFT, padx=4)
         tables_combo = ttk.Combobox(
             tables_list_frame,
             textvariable=self.table_var,
             state="readonly",
-            width=30
+            width=30,
+            font=('Segoe UI', 9)
         )
-        tables_combo.pack(side=tk.LEFT, padx=5)
+        tables_combo.pack(side=tk.LEFT, padx=4)
         tables_combo.bind("<<ComboboxSelected>>", lambda e: self._load_table_data())
         self.tables_combo = tables_combo
         
         # Поиск/фильтр
-        search_frame = ttk.Frame(tables_frame)
-        search_frame.pack(fill=tk.X, padx=5, pady=5)
+        search_frame = ttk.Frame(tables_frame, style='TPanel.TFrame')
+        search_frame.pack(fill=tk.X, padx=8, pady=8)
         
-        ttk.Label(search_frame, text="Поиск:").pack(side=tk.LEFT, padx=2)
+        ttk.Label(search_frame, text="Поиск:", font=('Segoe UI', 9)).pack(side=tk.LEFT, padx=4)
         search_entry = ttk.Entry(
             search_frame,
             textvariable=self.search_var,
-            width=30
+            width=30,
+            style='TSearch.TEntry'
         )
-        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=4)
         
         # Привязываем поиск при вводе
         self.search_var.trace_add('write', lambda *args: self._filter_table_data())
@@ -641,43 +753,48 @@ class DatabaseGUI(tk.Tk):
         ttk.Button(
             search_frame,
             text="Очистить",
-            command=self._clear_search
-        ).pack(side=tk.LEFT, padx=2)
+            command=self._clear_search,
+            style='TDefault.TButton'
+        ).pack(side=tk.LEFT, padx=4)
         
         # Кнопки управления таблицей
-        table_buttons_frame = ttk.Frame(tables_frame)
-        table_buttons_frame.pack(fill=tk.X, padx=5, pady=5)
+        table_buttons_frame = ttk.Frame(tables_frame, style='TPanel.TFrame')
+        table_buttons_frame.pack(fill=tk.X, padx=8, pady=8)
         
         ttk.Button(
             table_buttons_frame,
             text="Обновить",
-            command=self._load_table_data
-        ).pack(side=tk.LEFT, padx=2)
+            command=self._load_table_data,
+            style='TDefault.TButton'
+        ).pack(side=tk.LEFT, padx=3)
         
         ttk.Button(
             table_buttons_frame,
             text="Добавить запись",
-            command=self._add_record
-        ).pack(side=tk.LEFT, padx=2)
+            command=self._add_record,
+            style='TPrimary.TButton'
+        ).pack(side=tk.LEFT, padx=3)
         
         ttk.Button(
             table_buttons_frame,
             text="Редактировать",
-            command=self._edit_record
-        ).pack(side=tk.LEFT, padx=2)
+            command=self._edit_record,
+            style='TDefault.TButton'
+        ).pack(side=tk.LEFT, padx=3)
         
         ttk.Button(
             table_buttons_frame,
             text="Удалить",
-            command=self._delete_record
-        ).pack(side=tk.LEFT, padx=2)
+            command=self._delete_record,
+            style='TDefault.TButton'
+        ).pack(side=tk.LEFT, padx=3)
         
         # Данные таблицы
-        data_frame = ttk.Frame(tables_frame)
-        data_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        data_frame = ttk.Frame(tables_frame, style='TPanel.TFrame')
+        data_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
         
         # Treeview для отображения данных
-        data_tree = ttk.Treeview(data_frame)
+        data_tree = ttk.Treeview(data_frame, style='TModern.Treeview')
         data_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         # Scrollbars
@@ -691,8 +808,8 @@ class DatabaseGUI(tk.Tk):
         self.data_tree = data_tree
         
         # Информация о записях
-        records_info = ttk.Label(tables_frame, text="Записей: 0")
-        records_info.pack(padx=5, pady=2)
+        records_info = ttk.Label(tables_frame, text="Записей: 0", font=('Segoe UI', 9))
+        records_info.pack(padx=8, pady=4)
         self.records_info = records_info
         
         self.panels['tables'] = tables_frame
@@ -702,12 +819,13 @@ class DatabaseGUI(tk.Tk):
         results_frame = DraggablePanel(results_frame_container, None, text="Результаты SQL")
         results_frame.pack(fill=tk.BOTH, expand=True)
         
-        results_id = self.main_canvas.create_window(930, 320, window=results_frame_container, anchor="nw", width=400, height=400)
+        # Результаты SQL справа вверху, рядом с SQL редактором
+        results_id = self.main_canvas.create_window(910, 10, window=results_frame_container, anchor="nw", width=430, height=280)
         results_frame.canvas_id = results_id
         results_frame.parent_canvas = self.main_canvas
         
         # Treeview для результатов
-        results_tree = ttk.Treeview(results_frame)
+        results_tree = ttk.Treeview(results_frame, style='TModern.Treeview')
         results_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         # Scrollbars для результатов
@@ -742,17 +860,21 @@ class DatabaseGUI(tk.Tk):
         self.bind('<Configure>', update_scrollregion)
         
         # === СТРОКА СТАТУСА ВНИЗУ ===
-        status_frame = ttk.Frame(self)
-        status_frame.pack(fill=tk.X, side=tk.BOTTOM, padx=5, pady=2)
+        status_frame = tk.Frame(self, bg='#0078d4', height=30)
+        status_frame.pack(fill=tk.X, side=tk.BOTTOM)
+        status_frame.pack_propagate(False)
         
-        status_label = ttk.Label(
+        status_label = tk.Label(
             status_frame,
             text="Готов к работе",
-            relief=tk.SUNKEN,
             anchor=tk.W,
-            padding=5
+            bg='#0078d4',
+            fg='white',
+            font=('Segoe UI', 9),
+            padx=10,
+            pady=6
         )
-        status_label.pack(fill=tk.X)
+        status_label.pack(fill=tk.BOTH, expand=True)
         self.status_label = status_label
     
     def _update_status(self, message: str, status_type: str = "info"):
@@ -767,18 +889,18 @@ class DatabaseGUI(tk.Tk):
         
         # Цвета для разных типов статуса
         colors = {
-            "info": "SystemButtonFace",
-            "success": "#d4edda",  # Светло-зеленый
-            "warning": "#fff3cd",  # Светло-желтый
-            "error": "#f8d7da"     # Светло-красный
+            "info": "#0078d4",      # Синий
+            "success": "#107c10",   # Зеленый
+            "warning": "#ffaa44",   # Оранжевый
+            "error": "#d13438"      # Красный
         }
         
-        bg_color = colors.get(status_type, "SystemButtonFace")
+        bg_color = colors.get(status_type, "#0078d4")
         self.status_label.config(background=bg_color)
         
         # Автоматически очищаем статус через 5 секунд (кроме ошибок)
         if status_type != "error":
-            self.after(5000, lambda: self.status_label.config(text="Готов к работе", background="SystemButtonFace"))
+            self.after(5000, lambda: self.status_label.config(text="Готов к работе", background="#0078d4", fg='white'))
     
     def _auto_discover_databases(self):
         """Автоматически находит все БД в проекте"""
