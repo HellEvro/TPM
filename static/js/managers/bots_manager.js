@@ -10584,7 +10584,10 @@ class BotsManager {
         try {
             // ✅ Защита от повторной инициализации
             const toggleEl = document.getElementById('limitOrdersEntryEnabled');
-            if (!toggleEl) return;
+            if (!toggleEl) {
+                console.warn('[BotsManager] ⚠️ Элемент limitOrdersEntryEnabled не найден');
+                return;
+            }
             
             // Проверяем, не инициализирован ли уже обработчик
             if (toggleEl.hasAttribute('data-limit-orders-ui-initialized')) {
@@ -10593,20 +10596,14 @@ class BotsManager {
             toggleEl.setAttribute('data-limit-orders-ui-initialized', 'true');
             
             const configDiv = document.getElementById('limitOrdersConfig');
-            const addBtn = document.getElementById('addLimitOrderBtn');
             const positionSizeEl = document.getElementById('defaultPositionSize');
             const positionModeEl = document.getElementById('defaultPositionMode');
             
             // Безопасная проверка - если элементов нет, просто выходим
-            if (!toggleEl || !configDiv) {
+            if (!configDiv) {
+                console.warn('[BotsManager] ⚠️ Элемент limitOrdersConfig не найден');
                 return;
             }
-            
-            // Проверяем, не инициализирован ли уже
-            if (toggleEl.hasAttribute('data-limit-orders-ui-initialized')) {
-                return;
-            }
-            toggleEl.setAttribute('data-limit-orders-ui-initialized', 'true');
             
             // Обработчик переключателя
             const updateUIState = (isEnabled) => {
@@ -10657,28 +10654,82 @@ class BotsManager {
             const currentChecked = toggleEl.checked;
             updateUIState(currentChecked);
             
-            // Обработчик кнопки добавления
-            if (addBtn) {
-                addBtn.addEventListener('click', () => {
-                    try {
-                        this.addLimitOrderRow();
-                        // ✅ Триггерим автосохранение при добавлении строки
-                        if (!this.isProgrammaticChange) {
-                            this.scheduleAutoSave();
+            // ✅ Обработчик кнопки добавления - используем делегирование событий для надежности
+            // Это работает даже если кнопка находится в скрытом контейнере или добавляется динамически
+            const setupAddButtonHandler = () => {
+                const addBtn = document.getElementById('addLimitOrderBtn');
+                if (addBtn) {
+                    // Проверяем, не добавлен ли уже обработчик
+                    if (addBtn.hasAttribute('data-handler-attached')) {
+                        console.log('[BotsManager] ℹ️ Обработчик кнопки уже установлен');
+                        return;
+                    }
+                    
+                    // Добавляем новый обработчик
+                    addBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        try {
+                            console.log('[BotsManager] ➕ Клик по кнопке добавления ордера');
+                            this.addLimitOrderRow();
+                            // ✅ Триггерим автосохранение при добавлении строки
+                            if (!this.isProgrammaticChange) {
+                                this.scheduleAutoSave();
+                            }
+                        } catch (error) {
+                            console.error('[BotsManager] ❌ Ошибка добавления строки лимитного ордера:', error);
+                            console.error('[BotsManager] Stack trace:', error.stack);
                         }
-                    } catch (e) {
-                        console.error('[BotsManager] ❌ Ошибка добавления строки лимитного ордера:', e);
+                    });
+                    addBtn.setAttribute('data-handler-attached', 'true');
+                    console.log('[BotsManager] ✅ Обработчик кнопки добавления ордера установлен');
+                } else {
+                    console.warn('[BotsManager] ⚠️ Кнопка addLimitOrderBtn не найдена, попытка повторной инициализации через 100мс');
+                    // Пробуем еще раз через небольшую задержку (на случай, если элемент еще не загружен)
+                    setTimeout(setupAddButtonHandler, 100);
+                }
+            };
+            
+            // Пытаемся установить обработчик сразу
+            setupAddButtonHandler();
+            
+            // ✅ Дополнительно: делегирование событий на родительском контейнере для надежности
+            // Это работает даже если кнопка находится в скрытом контейнере
+            if (configDiv) {
+                configDiv.addEventListener('click', (e) => {
+                    // Проверяем, был ли клик по кнопке добавления
+                    if (e.target && (e.target.id === 'addLimitOrderBtn' || e.target.closest('#addLimitOrderBtn'))) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        try {
+                            console.log('[BotsManager] ➕ Клик по кнопке добавления ордера (через делегирование)');
+                            this.addLimitOrderRow();
+                            // ✅ Триггерим автосохранение при добавлении строки
+                            if (!this.isProgrammaticChange) {
+                                this.scheduleAutoSave();
+                            }
+                        } catch (error) {
+                            console.error('[BotsManager] ❌ Ошибка добавления строки лимитного ордера (делегирование):', error);
+                            console.error('[BotsManager] Stack trace:', error.stack);
+                        }
                     }
                 });
+                console.log('[BotsManager] ✅ Делегирование событий для кнопки добавления установлено');
             }
+            
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка инициализации UI лимитных ордеров:', error);
         }
     }
     
     addLimitOrderRow(percent = 0, margin = 0) {
+        console.log('[BotsManager] ➕ addLimitOrderRow вызван с параметрами:', { percent, margin });
         const listEl = document.getElementById('limitOrdersList');
-        if (!listEl) return;
+        if (!listEl) {
+            console.error('[BotsManager] ❌ Элемент limitOrdersList не найден!');
+            return;
+        }
+        console.log('[BotsManager] ✅ Элемент limitOrdersList найден, текущее количество строк:', listEl.children.length);
         
         const row = document.createElement('div');
         row.className = 'limit-order-row';
@@ -10724,6 +10775,7 @@ class BotsManager {
         });
         
         listEl.appendChild(row);
+        console.log('[BotsManager] ✅ Строка добавлена в DOM, новое количество строк:', listEl.children.length);
         
         // ✅ ДОБАВЛЯЕМ АВТОСОХРАНЕНИЕ ДЛЯ ДИНАМИЧЕСКИХ ПОЛЕЙ
         // Находим новые поля и добавляем обработчики автосохранения
