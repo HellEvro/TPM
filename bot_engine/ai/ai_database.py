@@ -1147,16 +1147,28 @@ class AIDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_patterns_symbol ON trading_patterns(symbol)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_patterns_rsi_range ON trading_patterns(rsi_range)")
             
-            # ==================== ТАБЛИЦА: РЕЗУЛЬТАТЫ БЭКТЕСТОВ ====================
+            # ==================== ТАБЛИЦА: РЕЗУЛЬТАТЫ БЭКТЕСТОВ (НОРМАЛИЗОВАННАЯ) ====================
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS backtest_results (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     backtest_name TEXT,
                     symbol TEXT,
-                    results_json TEXT NOT NULL,
+                    -- Основные метрики
+                    period_days INTEGER,
+                    initial_balance REAL,
+                    final_balance REAL,
                     total_return REAL,
-                    win_rate REAL,
+                    total_pnl REAL,
                     total_trades INTEGER,
+                    winning_trades INTEGER,
+                    losing_trades INTEGER,
+                    win_rate REAL,
+                    avg_win REAL,
+                    avg_loss REAL,
+                    profit_factor REAL,
+                    -- Дополнительные данные
+                    results_json TEXT,
+                    extra_results_json TEXT,
                     created_at TEXT NOT NULL
                 )
             """)
@@ -1195,15 +1207,44 @@ class AIDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_training_data_type ON training_data(data_type)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_training_data_symbol ON training_data(symbol)")
             
-            # ==================== ТАБЛИЦА: КОНФИГИ БОТОВ ====================
+            # ==================== ТАБЛИЦА: КОНФИГИ БОТОВ (НОРМАЛИЗОВАННАЯ) ====================
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS bot_configs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    symbol TEXT NOT NULL,
-                    config_json TEXT NOT NULL,
+                    symbol TEXT NOT NULL UNIQUE,
+                    -- RSI пороги входа
+                    rsi_long_threshold INTEGER,
+                    rsi_short_threshold INTEGER,
+                    -- RSI пороги выхода
+                    rsi_exit_long_with_trend INTEGER,
+                    rsi_exit_long_against_trend INTEGER,
+                    rsi_exit_short_with_trend INTEGER,
+                    rsi_exit_short_against_trend INTEGER,
+                    -- Риск-менеджмент
+                    max_loss_percent REAL,
+                    take_profit_percent REAL,
+                    -- Trailing stop
+                    trailing_stop_activation REAL,
+                    trailing_stop_distance REAL,
+                    trailing_take_distance REAL,
+                    trailing_update_interval REAL,
+                    -- Break even
+                    break_even_trigger REAL,
+                    break_even_protection REAL,
+                    -- Ограничения
+                    max_position_hours REAL,
+                    -- RSI временной фильтр
+                    rsi_time_filter_enabled INTEGER DEFAULT 0,
+                    rsi_time_filter_candles INTEGER,
+                    rsi_time_filter_upper INTEGER,
+                    rsi_time_filter_lower INTEGER,
+                    -- Фильтры тренда
+                    avoid_down_trend INTEGER DEFAULT 0,
+                    -- Дополнительные настройки в JSON (для будущих расширений)
+                    config_json TEXT,
+                    extra_config_json TEXT,
                     created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    UNIQUE(symbol)
+                    updated_at TEXT NOT NULL
                 )
             """)
             
@@ -1859,6 +1900,103 @@ class AIDatabase:
             except Exception as e:
                 logger.debug(f"⚠️ Ошибка миграции optimized_params: {e}")
             
+            # ==================== МИГРАЦИЯ: Нормализация JSON параметров в столбцы для backtest_results ====================
+            # Добавляем новые нормализованные столбцы если их нет
+            backtest_fields = [
+                ('period_days', 'INTEGER'),
+                ('initial_balance', 'REAL'),
+                ('final_balance', 'REAL'),
+                ('total_pnl', 'REAL'),
+                ('winning_trades', 'INTEGER'),
+                ('losing_trades', 'INTEGER'),
+                ('avg_win', 'REAL'),
+                ('avg_loss', 'REAL'),
+                ('profit_factor', 'REAL'),
+                ('extra_results_json', 'TEXT')
+            ]
+            for field_name, field_type in backtest_fields:
+                try:
+                    cursor.execute(f"SELECT {field_name} FROM backtest_results LIMIT 1")
+                except sqlite3.OperationalError:
+                    logger.info(f"📦 Миграция: добавляем {field_name} в backtest_results")
+                    cursor.execute(f"ALTER TABLE backtest_results ADD COLUMN {field_name} {field_type}")
+            
+            # Мигрируем данные из JSON в столбцы (если есть старые данные)
+            try:
+                cursor.execute("SELECT id, results_json FROM backtest_results WHERE results_json IS NOT NULL AND period_days IS NULL LIMIT 1")
+                if cursor.fetchone():
+                    logger.info("📦 Обнаружены JSON данные в backtest_results, выполняю миграцию в нормализованные столбцы...")
+                    
+                    cursor.execute("SELECT id, results_json FROM backtest_results WHERE results_json IS NOT NULL")
+                    rows = cursor.fetchall()
+                    
+                    migrated_count = 0
+                    for row in rows:
+                        try:
+                            result_id = row[0]
+                            results_json = row[1]
+                            
+                            # Парсим results
+                            results = {}
+                            if results_json:
+                                try:
+                                    results = json.loads(results_json)
+                                except:
+                                    results = {}
+                            
+                            period_days = results.get('period_days')
+                            initial_balance = results.get('initial_balance')
+                            final_balance = results.get('final_balance')
+                            total_pnl = results.get('total_pnl')
+                            winning_trades = results.get('winning_trades')
+                            losing_trades = results.get('losing_trades')
+                            avg_win = results.get('avg_win')
+                            avg_loss = results.get('avg_loss')
+                            profit_factor = results.get('profit_factor')
+                            
+                            # Собираем остальные поля в extra_results_json
+                            extra_results = {}
+                            known_fields = {
+                                'period_days', 'initial_balance', 'final_balance', 'total_return',
+                                'total_pnl', 'total_trades', 'winning_trades', 'losing_trades',
+                                'win_rate', 'avg_win', 'avg_loss', 'profit_factor', 'timestamp'
+                            }
+                            for key, value in results.items():
+                                if key not in known_fields:
+                                    extra_results[key] = value
+                            
+                            extra_results_json = json.dumps(extra_results, ensure_ascii=False) if extra_results else None
+                            
+                            # Обновляем запись
+                            cursor.execute("""
+                                UPDATE backtest_results SET
+                                    period_days = COALESCE(period_days, ?),
+                                    initial_balance = COALESCE(initial_balance, ?),
+                                    final_balance = COALESCE(final_balance, ?),
+                                    total_pnl = COALESCE(total_pnl, ?),
+                                    winning_trades = COALESCE(winning_trades, ?),
+                                    losing_trades = COALESCE(losing_trades, ?),
+                                    avg_win = COALESCE(avg_win, ?),
+                                    avg_loss = COALESCE(avg_loss, ?),
+                                    profit_factor = COALESCE(profit_factor, ?),
+                                    extra_results_json = COALESCE(extra_results_json, ?)
+                                WHERE id = ? AND period_days IS NULL
+                            """, (
+                                period_days, initial_balance, final_balance, total_pnl,
+                                winning_trades, losing_trades, avg_win, avg_loss, profit_factor,
+                                extra_results_json, result_id
+                            ))
+                            if cursor.rowcount > 0:
+                                migrated_count += 1
+                        except Exception as e:
+                            logger.debug(f"⚠️ Ошибка миграции записи backtest_results {row[0]}: {e}")
+                            continue
+                    
+                    if migrated_count > 0:
+                        logger.info(f"✅ Миграция backtest_results завершена: {migrated_count} записей мигрировано из JSON в нормализованные столбцы")
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка миграции backtest_results: {e}")
+            
             # ==================== МИГРАЦИЯ: Нормализация JSON параметров в столбцы для ai_decisions ====================
             # Добавляем новые нормализованные столбцы если их нет
             ai_decisions_fields = [
@@ -1970,6 +2108,153 @@ class AIDatabase:
                         logger.info(f"✅ Миграция ai_decisions завершена: {migrated_count} записей мигрировано из JSON в нормализованные столбцы")
             except Exception as e:
                 logger.debug(f"⚠️ Ошибка миграции ai_decisions: {e}")
+            
+            # ==================== МИГРАЦИЯ: Нормализация JSON параметров в столбцы для bot_configs ====================
+            # Добавляем новые нормализованные столбцы если их нет
+            bot_configs_fields = [
+                ('rsi_long_threshold', 'INTEGER'),
+                ('rsi_short_threshold', 'INTEGER'),
+                ('rsi_exit_long_with_trend', 'INTEGER'),
+                ('rsi_exit_long_against_trend', 'INTEGER'),
+                ('rsi_exit_short_with_trend', 'INTEGER'),
+                ('rsi_exit_short_against_trend', 'INTEGER'),
+                ('max_loss_percent', 'REAL'),
+                ('take_profit_percent', 'REAL'),
+                ('trailing_stop_activation', 'REAL'),
+                ('trailing_stop_distance', 'REAL'),
+                ('trailing_take_distance', 'REAL'),
+                ('trailing_update_interval', 'REAL'),
+                ('break_even_trigger', 'REAL'),
+                ('break_even_protection', 'REAL'),
+                ('max_position_hours', 'REAL'),
+                ('rsi_time_filter_enabled', 'INTEGER DEFAULT 0'),
+                ('rsi_time_filter_candles', 'INTEGER'),
+                ('rsi_time_filter_upper', 'INTEGER'),
+                ('rsi_time_filter_lower', 'INTEGER'),
+                ('avoid_down_trend', 'INTEGER DEFAULT 0'),
+                ('extra_config_json', 'TEXT')
+            ]
+            for field_name, field_type in bot_configs_fields:
+                try:
+                    cursor.execute(f"SELECT {field_name} FROM bot_configs LIMIT 1")
+                except sqlite3.OperationalError:
+                    logger.info(f"📦 Миграция: добавляем {field_name} в bot_configs")
+                    cursor.execute(f"ALTER TABLE bot_configs ADD COLUMN {field_name} {field_type}")
+            
+            # Мигрируем данные из JSON в столбцы (если есть старые данные)
+            try:
+                cursor.execute("SELECT id, symbol, config_json FROM bot_configs WHERE config_json IS NOT NULL AND rsi_long_threshold IS NULL LIMIT 1")
+                if cursor.fetchone():
+                    logger.info("📦 Обнаружены JSON данные в bot_configs, выполняю миграцию в нормализованные столбцы...")
+                    
+                    cursor.execute("SELECT id, symbol, config_json FROM bot_configs WHERE config_json IS NOT NULL")
+                    rows = cursor.fetchall()
+                    
+                    migrated_count = 0
+                    for row in rows:
+                        try:
+                            config_id = row[0]
+                            symbol = row[1]
+                            config_json = row[2]
+                            
+                            # Парсим config
+                            config = {}
+                            if config_json:
+                                try:
+                                    config = json.loads(config_json)
+                                except:
+                                    config = {}
+                            
+                            # Извлекаем поля
+                            rsi_long_threshold = config.get('rsi_long_threshold')
+                            rsi_short_threshold = config.get('rsi_short_threshold')
+                            rsi_exit_long_with_trend = config.get('rsi_exit_long_with_trend')
+                            rsi_exit_long_against_trend = config.get('rsi_exit_long_against_trend')
+                            rsi_exit_short_with_trend = config.get('rsi_exit_short_with_trend')
+                            rsi_exit_short_against_trend = config.get('rsi_exit_short_against_trend')
+                            max_loss_percent = config.get('max_loss_percent')
+                            take_profit_percent = config.get('take_profit_percent')
+                            trailing_stop_activation = config.get('trailing_stop_activation')
+                            trailing_stop_distance = config.get('trailing_stop_distance')
+                            trailing_take_distance = config.get('trailing_take_distance')
+                            trailing_update_interval = config.get('trailing_update_interval')
+                            break_even_trigger = config.get('break_even_trigger')
+                            break_even_protection = config.get('break_even_protection')
+                            max_position_hours = config.get('max_position_hours')
+                            rsi_time_filter_enabled = 1 if config.get('rsi_time_filter_enabled') else 0
+                            rsi_time_filter_candles = config.get('rsi_time_filter_candles')
+                            rsi_time_filter_upper = config.get('rsi_time_filter_upper')
+                            rsi_time_filter_lower = config.get('rsi_time_filter_lower')
+                            avoid_down_trend = 1 if config.get('avoid_down_trend') else 0
+                            
+                            # Собираем остальные поля в extra_config_json
+                            extra_config = {}
+                            known_fields = {
+                                'rsi_long_threshold', 'rsi_short_threshold',
+                                'rsi_exit_long_with_trend', 'rsi_exit_long_against_trend',
+                                'rsi_exit_short_with_trend', 'rsi_exit_short_against_trend',
+                                'max_loss_percent', 'take_profit_percent',
+                                'trailing_stop_activation', 'trailing_stop_distance',
+                                'trailing_take_distance', 'trailing_update_interval',
+                                'break_even_trigger', 'break_even_protection',
+                                'max_position_hours', 'rsi_time_filter_enabled',
+                                'rsi_time_filter_candles', 'rsi_time_filter_upper',
+                                'rsi_time_filter_lower', 'avoid_down_trend'
+                            }
+                            for key, value in config.items():
+                                if key not in known_fields:
+                                    extra_config[key] = value
+                            
+                            extra_config_json = json.dumps(extra_config, ensure_ascii=False) if extra_config else None
+                            
+                            # Обновляем запись
+                            cursor.execute("""
+                                UPDATE bot_configs SET
+                                    rsi_long_threshold = COALESCE(rsi_long_threshold, ?),
+                                    rsi_short_threshold = COALESCE(rsi_short_threshold, ?),
+                                    rsi_exit_long_with_trend = COALESCE(rsi_exit_long_with_trend, ?),
+                                    rsi_exit_long_against_trend = COALESCE(rsi_exit_long_against_trend, ?),
+                                    rsi_exit_short_with_trend = COALESCE(rsi_exit_short_with_trend, ?),
+                                    rsi_exit_short_against_trend = COALESCE(rsi_exit_short_against_trend, ?),
+                                    max_loss_percent = COALESCE(max_loss_percent, ?),
+                                    take_profit_percent = COALESCE(take_profit_percent, ?),
+                                    trailing_stop_activation = COALESCE(trailing_stop_activation, ?),
+                                    trailing_stop_distance = COALESCE(trailing_stop_distance, ?),
+                                    trailing_take_distance = COALESCE(trailing_take_distance, ?),
+                                    trailing_update_interval = COALESCE(trailing_update_interval, ?),
+                                    break_even_trigger = COALESCE(break_even_trigger, ?),
+                                    break_even_protection = COALESCE(break_even_protection, ?),
+                                    max_position_hours = COALESCE(max_position_hours, ?),
+                                    rsi_time_filter_enabled = COALESCE(rsi_time_filter_enabled, ?),
+                                    rsi_time_filter_candles = COALESCE(rsi_time_filter_candles, ?),
+                                    rsi_time_filter_upper = COALESCE(rsi_time_filter_upper, ?),
+                                    rsi_time_filter_lower = COALESCE(rsi_time_filter_lower, ?),
+                                    avoid_down_trend = COALESCE(avoid_down_trend, ?),
+                                    extra_config_json = COALESCE(extra_config_json, ?)
+                                WHERE symbol = ? AND rsi_long_threshold IS NULL
+                            """, (
+                                rsi_long_threshold, rsi_short_threshold,
+                                rsi_exit_long_with_trend, rsi_exit_long_against_trend,
+                                rsi_exit_short_with_trend, rsi_exit_short_against_trend,
+                                max_loss_percent, take_profit_percent,
+                                trailing_stop_activation, trailing_stop_distance,
+                                trailing_take_distance, trailing_update_interval,
+                                break_even_trigger, break_even_protection,
+                                max_position_hours, rsi_time_filter_enabled,
+                                rsi_time_filter_candles, rsi_time_filter_upper,
+                                rsi_time_filter_lower, avoid_down_trend,
+                                extra_config_json, symbol
+                            ))
+                            if cursor.rowcount > 0:
+                                migrated_count += 1
+                        except Exception as e:
+                            logger.debug(f"⚠️ Ошибка миграции записи bot_configs {row[0]}: {e}")
+                            continue
+                    
+                    if migrated_count > 0:
+                        logger.info(f"✅ Миграция bot_configs завершена: {migrated_count} записей мигрировано из JSON в нормализованные столбцы")
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка миграции bot_configs: {e}")
             
             conn.commit()
         except Exception as e:
@@ -3628,36 +3913,95 @@ class AIDatabase:
     
     def save_best_params_for_symbol(self, symbol: str, rsi_params: Dict, rating: float,
                                     win_rate: float, total_pnl: float) -> Optional[int]:
-        """Сохраняет или обновляет лучшие параметры для монеты"""
+        """Сохраняет или обновляет лучшие параметры для монеты с нормализованными полями"""
         try:
             now = datetime.now().isoformat()
-            with self._get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT OR REPLACE INTO best_params_per_symbol (
-                        symbol, rsi_params_json, rating, win_rate, total_pnl, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    symbol, json.dumps(rsi_params, ensure_ascii=False), rating, win_rate, total_pnl, now
-                ))
-                param_id = cursor.lastrowid
-                conn.commit()
-                return param_id
+            with self.lock:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    
+                    # Извлекаем RSI параметры
+                    rsi_long = rsi_params.get('oversold') or rsi_params.get('rsi_long_threshold')
+                    rsi_short = rsi_params.get('overbought') or rsi_params.get('rsi_short_threshold')
+                    rsi_exit_long_with = rsi_params.get('exit_long_with_trend') or rsi_params.get('rsi_exit_long_with_trend')
+                    rsi_exit_long_against = rsi_params.get('exit_long_against_trend') or rsi_params.get('rsi_exit_long_against_trend')
+                    rsi_exit_short_with = rsi_params.get('exit_short_with_trend') or rsi_params.get('rsi_exit_short_with_trend')
+                    rsi_exit_short_against = rsi_params.get('exit_short_against_trend') or rsi_params.get('rsi_exit_short_against_trend')
+                    
+                    # Собираем остальные RSI параметры в extra_rsi_params_json
+                    extra_rsi = {}
+                    known_rsi = {'oversold', 'overbought', 'exit_long_with_trend', 'exit_long_against_trend',
+                                'exit_short_with_trend', 'exit_short_against_trend', 'rsi_long_threshold',
+                                'rsi_short_threshold', 'rsi_exit_long_with_trend', 'rsi_exit_long_against_trend',
+                                'rsi_exit_short_with_trend', 'rsi_exit_short_against_trend'}
+                    for key, value in rsi_params.items():
+                        if key not in known_rsi:
+                            extra_rsi[key] = value
+                    
+                    extra_rsi_json = json.dumps(extra_rsi, ensure_ascii=False) if extra_rsi else None
+                    
+                    # Сохраняем полный JSON для обратной совместимости
+                    rsi_params_json = json.dumps(rsi_params, ensure_ascii=False)
+                    
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO best_params_per_symbol (
+                            symbol, rsi_long_threshold, rsi_short_threshold,
+                            rsi_exit_long_with_trend, rsi_exit_long_against_trend,
+                            rsi_exit_short_with_trend, rsi_exit_short_against_trend,
+                            extra_rsi_params_json, rating, win_rate, total_pnl, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        symbol, rsi_long, rsi_short, rsi_exit_long_with, rsi_exit_long_against,
+                        rsi_exit_short_with, rsi_exit_short_against, extra_rsi_json,
+                        rating, win_rate, total_pnl, now
+                    ))
+                    param_id = cursor.lastrowid
+                    conn.commit()
+                    return param_id
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения лучших параметров для {symbol}: {e}")
             return None
     
     def get_best_params_for_symbol(self, symbol: str) -> Optional[Dict[str, Any]]:
-        """Получает лучшие параметры для монеты"""
+        """Получает лучшие параметры для монеты, восстанавливая структуру rsi_params"""
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT * FROM best_params_per_symbol WHERE symbol = ?", (symbol,))
                 row = cursor.fetchone()
                 if row:
+                    # Восстанавливаем rsi_params из нормализованных полей
+                    rsi_params = {}
+                    if row.get('rsi_long_threshold') is not None:
+                        rsi_params['oversold'] = row['rsi_long_threshold']
+                        rsi_params['rsi_long_threshold'] = row['rsi_long_threshold']
+                    if row.get('rsi_short_threshold') is not None:
+                        rsi_params['overbought'] = row['rsi_short_threshold']
+                        rsi_params['rsi_short_threshold'] = row['rsi_short_threshold']
+                    if row.get('rsi_exit_long_with_trend') is not None:
+                        rsi_params['exit_long_with_trend'] = row['rsi_exit_long_with_trend']
+                        rsi_params['rsi_exit_long_with_trend'] = row['rsi_exit_long_with_trend']
+                    if row.get('rsi_exit_long_against_trend') is not None:
+                        rsi_params['exit_long_against_trend'] = row['rsi_exit_long_against_trend']
+                        rsi_params['rsi_exit_long_against_trend'] = row['rsi_exit_long_against_trend']
+                    if row.get('rsi_exit_short_with_trend') is not None:
+                        rsi_params['exit_short_with_trend'] = row['rsi_exit_short_with_trend']
+                        rsi_params['rsi_exit_short_with_trend'] = row['rsi_exit_short_with_trend']
+                    if row.get('rsi_exit_short_against_trend') is not None:
+                        rsi_params['exit_short_against_trend'] = row['rsi_exit_short_against_trend']
+                        rsi_params['rsi_exit_short_against_trend'] = row['rsi_exit_short_against_trend']
+                    
+                    # Добавляем extra_rsi_params
+                    if row.get('extra_rsi_params_json'):
+                        try:
+                            extra_rsi = json.loads(row['extra_rsi_params_json'])
+                            rsi_params.update(extra_rsi)
+                        except:
+                            pass
+                    
                     return {
                         'symbol': row['symbol'],
-                        'rsi_params': json.loads(row['rsi_params_json']),
+                        'rsi_params': rsi_params,
                         'rating': row['rating'],
                         'win_rate': row['win_rate'],
                         'total_pnl': row['total_pnl'],
@@ -3669,7 +4013,7 @@ class AIDatabase:
             return None
     
     def get_all_best_params_per_symbol(self) -> Dict[str, Dict[str, Any]]:
-        """Получает лучшие параметры для всех монет"""
+        """Получает лучшие параметры для всех монет, восстанавливая структуру rsi_params"""
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
@@ -3677,8 +4021,37 @@ class AIDatabase:
                 rows = cursor.fetchall()
                 result = {}
                 for row in rows:
+                    # Восстанавливаем rsi_params из нормализованных полей
+                    rsi_params = {}
+                    if row.get('rsi_long_threshold') is not None:
+                        rsi_params['oversold'] = row['rsi_long_threshold']
+                        rsi_params['rsi_long_threshold'] = row['rsi_long_threshold']
+                    if row.get('rsi_short_threshold') is not None:
+                        rsi_params['overbought'] = row['rsi_short_threshold']
+                        rsi_params['rsi_short_threshold'] = row['rsi_short_threshold']
+                    if row.get('rsi_exit_long_with_trend') is not None:
+                        rsi_params['exit_long_with_trend'] = row['rsi_exit_long_with_trend']
+                        rsi_params['rsi_exit_long_with_trend'] = row['rsi_exit_long_with_trend']
+                    if row.get('rsi_exit_long_against_trend') is not None:
+                        rsi_params['exit_long_against_trend'] = row['rsi_exit_long_against_trend']
+                        rsi_params['rsi_exit_long_against_trend'] = row['rsi_exit_long_against_trend']
+                    if row.get('rsi_exit_short_with_trend') is not None:
+                        rsi_params['exit_short_with_trend'] = row['rsi_exit_short_with_trend']
+                        rsi_params['rsi_exit_short_with_trend'] = row['rsi_exit_short_with_trend']
+                    if row.get('rsi_exit_short_against_trend') is not None:
+                        rsi_params['exit_short_against_trend'] = row['rsi_exit_short_against_trend']
+                        rsi_params['rsi_exit_short_against_trend'] = row['rsi_exit_short_against_trend']
+                    
+                    # Добавляем extra_rsi_params
+                    if row.get('extra_rsi_params_json'):
+                        try:
+                            extra_rsi = json.loads(row['extra_rsi_params_json'])
+                            rsi_params.update(extra_rsi)
+                        except:
+                            pass
+                    
                     result[row['symbol']] = {
-                        'rsi_params': json.loads(row['rsi_params_json']),
+                        'rsi_params': rsi_params,
                         'rating': row['rating'],
                         'win_rate': row['win_rate'],
                         'total_pnl': row['total_pnl'],
@@ -5070,30 +5443,60 @@ class AIDatabase:
     # ==================== МЕТОДЫ ДЛЯ РЕЗУЛЬТАТОВ БЭКТЕСТОВ ====================
     
     def save_backtest_result(self, results: Dict, backtest_name: str = None, symbol: str = None) -> int:
-        """Сохраняет результат бэктеста в БД"""
+        """Сохраняет результат бэктеста в БД с нормализованными полями"""
         with self.lock:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 now = datetime.now().isoformat()
                 
+                # Извлекаем основные поля
+                period_days = results.get('period_days')
+                initial_balance = results.get('initial_balance')
+                final_balance = results.get('final_balance')
+                total_return = results.get('total_return')
+                total_pnl = results.get('total_pnl')
+                total_trades = results.get('total_trades')
+                winning_trades = results.get('winning_trades')
+                losing_trades = results.get('losing_trades')
+                win_rate = results.get('win_rate')
+                avg_win = results.get('avg_win')
+                avg_loss = results.get('avg_loss')
+                profit_factor = results.get('profit_factor')
+                
+                # Собираем остальные поля в extra_results_json
+                extra_results = {}
+                known_fields = {
+                    'period_days', 'initial_balance', 'final_balance', 'total_return',
+                    'total_pnl', 'total_trades', 'winning_trades', 'losing_trades',
+                    'win_rate', 'avg_win', 'avg_loss', 'profit_factor', 'timestamp'
+                }
+                for key, value in results.items():
+                    if key not in known_fields:
+                        extra_results[key] = value
+                
+                extra_results_json = json.dumps(extra_results, ensure_ascii=False) if extra_results else None
+                
+                # Сохраняем полный JSON для обратной совместимости
+                results_json = json.dumps(results, ensure_ascii=False)
+                
                 cursor.execute("""
                     INSERT INTO backtest_results (
-                        backtest_name, symbol, results_json, total_return, win_rate, total_trades, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        backtest_name, symbol, period_days, initial_balance, final_balance,
+                        total_return, total_pnl, total_trades, winning_trades, losing_trades,
+                        win_rate, avg_win, avg_loss, profit_factor,
+                        results_json, extra_results_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    backtest_name,
-                    symbol,
-                    json.dumps(results, ensure_ascii=False),
-                    results.get('total_return'),
-                    results.get('win_rate'),
-                    results.get('total_trades'),
-                    now
+                    backtest_name, symbol, period_days, initial_balance, final_balance,
+                    total_return, total_pnl, total_trades, winning_trades, losing_trades,
+                    win_rate, avg_win, avg_loss, profit_factor,
+                    results_json, extra_results_json, now
                 ))
                 conn.commit()
                 return cursor.lastrowid
     
     def get_backtest_results(self, symbol: str = None, limit: int = 100) -> List[Dict]:
-        """Получает результаты бэктестов из БД"""
+        """Получает результаты бэктестов из БД, восстанавливая структуру results"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             query = "SELECT * FROM backtest_results WHERE 1=1"
@@ -5112,8 +5515,50 @@ class AIDatabase:
             result = []
             for row in rows:
                 backtest = dict(row)
+                
+                # Восстанавливаем results из нормализованных полей или JSON
+                results = {}
                 if backtest.get('results_json'):
-                    backtest['results'] = json.loads(backtest['results_json'])
+                    try:
+                        results = json.loads(backtest['results_json'])
+                    except:
+                        results = {}
+                
+                # Добавляем нормализованные поля в results
+                if backtest.get('period_days') is not None:
+                    results['period_days'] = backtest['period_days']
+                if backtest.get('initial_balance') is not None:
+                    results['initial_balance'] = backtest['initial_balance']
+                if backtest.get('final_balance') is not None:
+                    results['final_balance'] = backtest['final_balance']
+                if backtest.get('total_return') is not None:
+                    results['total_return'] = backtest['total_return']
+                if backtest.get('total_pnl') is not None:
+                    results['total_pnl'] = backtest['total_pnl']
+                if backtest.get('total_trades') is not None:
+                    results['total_trades'] = backtest['total_trades']
+                if backtest.get('winning_trades') is not None:
+                    results['winning_trades'] = backtest['winning_trades']
+                if backtest.get('losing_trades') is not None:
+                    results['losing_trades'] = backtest['losing_trades']
+                if backtest.get('win_rate') is not None:
+                    results['win_rate'] = backtest['win_rate']
+                if backtest.get('avg_win') is not None:
+                    results['avg_win'] = backtest['avg_win']
+                if backtest.get('avg_loss') is not None:
+                    results['avg_loss'] = backtest['avg_loss']
+                if backtest.get('profit_factor') is not None:
+                    results['profit_factor'] = backtest['profit_factor']
+                
+                # Добавляем extra_results
+                if backtest.get('extra_results_json'):
+                    try:
+                        extra_results = json.loads(backtest['extra_results_json'])
+                        results.update(extra_results)
+                    except:
+                        pass
+                
+                backtest['results'] = results
                 result.append(backtest)
             
             return result
@@ -5224,31 +5669,96 @@ class AIDatabase:
     # ==================== МЕТОДЫ ДЛЯ КОНФИГОВ БОТОВ ====================
     
     def save_bot_config(self, symbol: str, config: Dict) -> int:
-        """Сохраняет конфиг бота в БД"""
+        """Сохраняет конфиг бота в БД с нормализованными полями"""
         with self.lock:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 now = datetime.now().isoformat()
                 
+                # Извлекаем основные поля
+                rsi_long_threshold = config.get('rsi_long_threshold')
+                rsi_short_threshold = config.get('rsi_short_threshold')
+                rsi_exit_long_with_trend = config.get('rsi_exit_long_with_trend')
+                rsi_exit_long_against_trend = config.get('rsi_exit_long_against_trend')
+                rsi_exit_short_with_trend = config.get('rsi_exit_short_with_trend')
+                rsi_exit_short_against_trend = config.get('rsi_exit_short_against_trend')
+                max_loss_percent = config.get('max_loss_percent')
+                take_profit_percent = config.get('take_profit_percent')
+                trailing_stop_activation = config.get('trailing_stop_activation')
+                trailing_stop_distance = config.get('trailing_stop_distance')
+                trailing_take_distance = config.get('trailing_take_distance')
+                trailing_update_interval = config.get('trailing_update_interval')
+                break_even_trigger = config.get('break_even_trigger')
+                break_even_protection = config.get('break_even_protection')
+                max_position_hours = config.get('max_position_hours')
+                rsi_time_filter_enabled = 1 if config.get('rsi_time_filter_enabled') else 0
+                rsi_time_filter_candles = config.get('rsi_time_filter_candles')
+                rsi_time_filter_upper = config.get('rsi_time_filter_upper')
+                rsi_time_filter_lower = config.get('rsi_time_filter_lower')
+                avoid_down_trend = 1 if config.get('avoid_down_trend') else 0
+                
+                # Собираем остальные поля в extra_config_json
+                extra_config = {}
+                known_fields = {
+                    'rsi_long_threshold', 'rsi_short_threshold',
+                    'rsi_exit_long_with_trend', 'rsi_exit_long_against_trend',
+                    'rsi_exit_short_with_trend', 'rsi_exit_short_against_trend',
+                    'max_loss_percent', 'take_profit_percent',
+                    'trailing_stop_activation', 'trailing_stop_distance',
+                    'trailing_take_distance', 'trailing_update_interval',
+                    'break_even_trigger', 'break_even_protection',
+                    'max_position_hours', 'rsi_time_filter_enabled',
+                    'rsi_time_filter_candles', 'rsi_time_filter_upper',
+                    'rsi_time_filter_lower', 'avoid_down_trend'
+                }
+                for key, value in config.items():
+                    if key not in known_fields:
+                        extra_config[key] = value
+                
+                extra_config_json = json.dumps(extra_config, ensure_ascii=False) if extra_config else None
+                
+                # Сохраняем полный JSON для обратной совместимости
+                config_json = json.dumps(config, ensure_ascii=False)
+                
+                # Получаем created_at из существующей записи
+                cursor.execute("SELECT created_at FROM bot_configs WHERE symbol = ?", (symbol,))
+                existing = cursor.fetchone()
+                final_created_at = existing[0] if existing else now
+                
                 cursor.execute("""
                     INSERT OR REPLACE INTO bot_configs (
-                        symbol, config_json, created_at, updated_at
-                    ) VALUES (?, ?, 
-                        COALESCE((SELECT created_at FROM bot_configs WHERE symbol = ?), ?),
-                        ?
-                    )
+                        symbol, rsi_long_threshold, rsi_short_threshold,
+                        rsi_exit_long_with_trend, rsi_exit_long_against_trend,
+                        rsi_exit_short_with_trend, rsi_exit_short_against_trend,
+                        max_loss_percent, take_profit_percent,
+                        trailing_stop_activation, trailing_stop_distance,
+                        trailing_take_distance, trailing_update_interval,
+                        break_even_trigger, break_even_protection,
+                        max_position_hours, rsi_time_filter_enabled,
+                        rsi_time_filter_candles, rsi_time_filter_upper,
+                        rsi_time_filter_lower, avoid_down_trend,
+                        config_json, extra_config_json,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    symbol,
-                    json.dumps(config, ensure_ascii=False),
-                    symbol,
-                    now,
-                    now
+                    symbol, rsi_long_threshold, rsi_short_threshold,
+                    rsi_exit_long_with_trend, rsi_exit_long_against_trend,
+                    rsi_exit_short_with_trend, rsi_exit_short_against_trend,
+                    max_loss_percent, take_profit_percent,
+                    trailing_stop_activation, trailing_stop_distance,
+                    trailing_take_distance, trailing_update_interval,
+                    break_even_trigger, break_even_protection,
+                    max_position_hours, rsi_time_filter_enabled,
+                    rsi_time_filter_candles, rsi_time_filter_upper,
+                    rsi_time_filter_lower, avoid_down_trend,
+                    config_json, extra_config_json,
+                    final_created_at, now
                 ))
                 conn.commit()
                 return cursor.lastrowid
     
     def get_bot_config(self, symbol: str) -> Optional[Dict]:
-        """Получает конфиг бота из БД"""
+        """Получает конфиг бота из БД, восстанавливая структуру config"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -5258,8 +5768,66 @@ class AIDatabase:
             row = cursor.fetchone()
             if row:
                 result = dict(row)
+                
+                # Восстанавливаем config из нормализованных полей или JSON
+                config = {}
                 if result.get('config_json'):
-                    result['config'] = json.loads(result['config_json'])
+                    try:
+                        config = json.loads(result['config_json'])
+                    except:
+                        config = {}
+                
+                # Добавляем нормализованные поля в config
+                if result.get('rsi_long_threshold') is not None:
+                    config['rsi_long_threshold'] = result['rsi_long_threshold']
+                if result.get('rsi_short_threshold') is not None:
+                    config['rsi_short_threshold'] = result['rsi_short_threshold']
+                if result.get('rsi_exit_long_with_trend') is not None:
+                    config['rsi_exit_long_with_trend'] = result['rsi_exit_long_with_trend']
+                if result.get('rsi_exit_long_against_trend') is not None:
+                    config['rsi_exit_long_against_trend'] = result['rsi_exit_long_against_trend']
+                if result.get('rsi_exit_short_with_trend') is not None:
+                    config['rsi_exit_short_with_trend'] = result['rsi_exit_short_with_trend']
+                if result.get('rsi_exit_short_against_trend') is not None:
+                    config['rsi_exit_short_against_trend'] = result['rsi_exit_short_against_trend']
+                if result.get('max_loss_percent') is not None:
+                    config['max_loss_percent'] = result['max_loss_percent']
+                if result.get('take_profit_percent') is not None:
+                    config['take_profit_percent'] = result['take_profit_percent']
+                if result.get('trailing_stop_activation') is not None:
+                    config['trailing_stop_activation'] = result['trailing_stop_activation']
+                if result.get('trailing_stop_distance') is not None:
+                    config['trailing_stop_distance'] = result['trailing_stop_distance']
+                if result.get('trailing_take_distance') is not None:
+                    config['trailing_take_distance'] = result['trailing_take_distance']
+                if result.get('trailing_update_interval') is not None:
+                    config['trailing_update_interval'] = result['trailing_update_interval']
+                if result.get('break_even_trigger') is not None:
+                    config['break_even_trigger'] = result['break_even_trigger']
+                if result.get('break_even_protection') is not None:
+                    config['break_even_protection'] = result['break_even_protection']
+                if result.get('max_position_hours') is not None:
+                    config['max_position_hours'] = result['max_position_hours']
+                if result.get('rsi_time_filter_enabled') is not None:
+                    config['rsi_time_filter_enabled'] = bool(result['rsi_time_filter_enabled'])
+                if result.get('rsi_time_filter_candles') is not None:
+                    config['rsi_time_filter_candles'] = result['rsi_time_filter_candles']
+                if result.get('rsi_time_filter_upper') is not None:
+                    config['rsi_time_filter_upper'] = result['rsi_time_filter_upper']
+                if result.get('rsi_time_filter_lower') is not None:
+                    config['rsi_time_filter_lower'] = result['rsi_time_filter_lower']
+                if result.get('avoid_down_trend') is not None:
+                    config['avoid_down_trend'] = bool(result['avoid_down_trend'])
+                
+                # Добавляем extra_config
+                if result.get('extra_config_json'):
+                    try:
+                        extra_config = json.loads(result['extra_config_json'])
+                        config.update(extra_config)
+                    except:
+                        pass
+                
+                result['config'] = config
                 return result
             
             return None
