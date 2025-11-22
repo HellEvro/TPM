@@ -30,9 +30,26 @@ class ParameterQualityPredictor:
     """
     
     def __init__(self, data_dir: str = 'data/ai'):
-        self.data_dir = data_dir
-        # Модели сохраняются в data/ai/models
-        self.models_dir = os.path.normpath(os.path.join(data_dir, 'models'))
+        # Определяем корень проекта для правильных путей
+        try:
+            from bot_engine.ai.ai_database import _get_project_root
+            project_root = _get_project_root()
+        except:
+            # Fallback: используем текущую директорию
+            import sys
+            from pathlib import Path
+            current_file = Path(__file__).resolve()
+            project_root = None
+            for parent in current_file.parents:
+                if (parent / 'ai.py').exists() and (parent / 'bot_engine').exists():
+                    project_root = parent
+                    break
+            if project_root is None:
+                project_root = Path.cwd()
+        
+        # Модели сохраняются в data/ai/models относительно корня проекта
+        self.data_dir = str(project_root / data_dir)
+        self.models_dir = os.path.normpath(os.path.join(self.data_dir, 'models'))
         os.makedirs(self.models_dir, exist_ok=True)
         
         self.model_file = os.path.normpath(os.path.join(self.models_dir, 'parameter_quality_predictor.pkl'))
