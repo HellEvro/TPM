@@ -194,6 +194,12 @@ if command_exists git && [ ! -d ".git" ]; then
     # Добавляем remote только если его нет
     git remote add origin git@github.com:HellEvro/TPM_Public.git >/dev/null 2>&1
   fi
+  # Делаем первый коммит, если репозиторий только что инициализирован
+  if ! git rev-list --count HEAD >/dev/null 2>&1; then
+    # Нет коммитов - делаем первый коммит
+    git add -A >/dev/null 2>&1
+    git commit -m "Initial commit: InfoBot Public repository" >/dev/null 2>&1
+  fi
 fi
 
 # Определение Python для запуска

@@ -164,6 +164,16 @@ If GitInstalled() Then
             ' Добавляем remote только если его нет
             shell.Run "cmd /c cd /d """ & projectDir & """ && git remote add origin git@github.com:HellEvro/TPM_Public.git", 0, True
         End If
+        
+        ' Делаем первый коммит, если репозиторий только что инициализирован
+        ' Проверяем, есть ли коммиты
+        Dim commitCheck
+        commitCheck = shell.Run("cmd /c cd /d """ & projectDir & """ && git rev-list --count HEAD >nul 2>&1", 0, True)
+        If commitCheck <> 0 Then
+            ' Нет коммитов - делаем первый коммит
+            shell.Run "cmd /c cd /d """ & projectDir & """ && git add -A", 0, True
+            shell.Run "cmd /c cd /d """ & projectDir & """ && git commit -m ""Initial commit: InfoBot Public repository""", 0, True
+        End If
     End If
 End If
 
