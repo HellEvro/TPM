@@ -1471,12 +1471,49 @@ class BotsDatabase:
                             continue
                     
                     # Удаляем колонку candles_json после миграции
+                    # SQLite не поддерживает DROP COLUMN напрямую, нужно пересоздать таблицу
                     try:
-                        # SQLite не поддерживает DROP COLUMN напрямую, нужно пересоздать таблицу
-                        # Но для безопасности оставляем колонку, просто не используем её
-                        logger.info(f"✅ Миграция candles_cache завершена: {migrated_count} символов мигрировано из JSON в нормализованные таблицы")
+                        # Сохраняем данные из старой таблицы
+                        cursor.execute("""
+                            SELECT id, symbol, timeframe, candles_count, first_candle_time, last_candle_time, updated_at, created_at
+                            FROM candles_cache
+                        """)
+                        old_data = cursor.fetchall()
+                        
+                        # Удаляем старую таблицу
+                        cursor.execute("DROP TABLE IF EXISTS candles_cache")
+                        
+                        # Создаем новую таблицу без candles_json
+                        cursor.execute("""
+                            CREATE TABLE candles_cache (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                symbol TEXT UNIQUE NOT NULL,
+                                timeframe TEXT NOT NULL DEFAULT '6h',
+                                candles_count INTEGER DEFAULT 0,
+                                first_candle_time INTEGER,
+                                last_candle_time INTEGER,
+                                updated_at TEXT NOT NULL,
+                                created_at TEXT NOT NULL
+                            )
+                        """)
+                        
+                        # Восстанавливаем индексы
+                        cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_symbol ON candles_cache(symbol)")
+                        cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_updated ON candles_cache(updated_at)")
+                        cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_timeframe ON candles_cache(timeframe)")
+                        
+                        # Восстанавливаем данные
+                        for row in old_data:
+                            cursor.execute("""
+                                INSERT INTO candles_cache 
+                                (id, symbol, timeframe, candles_count, first_candle_time, last_candle_time, updated_at, created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            """, row)
+                        
+                        logger.info(f"✅ Миграция candles_cache завершена: {migrated_count} символов мигрировано из JSON в нормализованные таблицы, колонка candles_json удалена")
                     except Exception as e:
                         logger.warning(f"⚠️ Ошибка удаления колонки candles_json: {e}")
+                        # Продолжаем работу, даже если не удалось удалить колонку
                         
             except sqlite3.OperationalError:
                 # Колонка candles_json не существует - значит уже мигрировано или новая структура
@@ -4051,6 +4088,91 @@ class BotsDatabase:
             with self.lock:
                 with self._get_connection() as conn:
                     cursor = conn.cursor()
+                    
+                    # Проверяем, есть ли старая колонка candles_json (NOT NULL constraint)
+                    try:
+                        cursor.execute("SELECT candles_json FROM candles_cache LIMIT 1")
+                        # Если запрос выполнился - значит старая структура, нужно пересоздать таблицу
+                        logger.warning("⚠️ Обнаружена старая структура candles_cache с candles_json, пересоздаю таблицу...")
+                        
+                        # Сохраняем данные из старой таблицы
+                        cursor.execute("""
+                            SELECT id, symbol, timeframe, candles_count, first_candle_time, last_candle_time, updated_at, created_at
+                            FROM candles_cache
+                        """)
+                        old_data = cursor.fetchall()
+                        
+                        # Сохраняем данные свечей (если таблица существует)
+                        old_candles_data = []
+                        try:
+                            cursor.execute("SELECT cache_id, time, open, high, low, close, volume FROM candles_cache_data")
+                            old_candles_data = cursor.fetchall()
+                        except sqlite3.OperationalError:
+                            # Таблица candles_cache_data не существует - это нормально для старой структуры
+                            pass
+                        
+                        # Удаляем старую таблицу
+                        cursor.execute("DROP TABLE IF EXISTS candles_cache")
+                        cursor.execute("DROP TABLE IF EXISTS candles_cache_data")
+                        
+                        # Создаем новую таблицу без candles_json
+                        cursor.execute("""
+                            CREATE TABLE candles_cache (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                symbol TEXT UNIQUE NOT NULL,
+                                timeframe TEXT NOT NULL DEFAULT '6h',
+                                candles_count INTEGER DEFAULT 0,
+                                first_candle_time INTEGER,
+                                last_candle_time INTEGER,
+                                updated_at TEXT NOT NULL,
+                                created_at TEXT NOT NULL
+                            )
+                        """)
+                        
+                        # Создаем таблицу для данных свечей
+                        cursor.execute("""
+                            CREATE TABLE candles_cache_data (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                cache_id INTEGER NOT NULL,
+                                time INTEGER NOT NULL,
+                                open REAL NOT NULL,
+                                high REAL NOT NULL,
+                                low REAL NOT NULL,
+                                close REAL NOT NULL,
+                                volume REAL NOT NULL,
+                                FOREIGN KEY (cache_id) REFERENCES candles_cache(id) ON DELETE CASCADE
+                            )
+                        """)
+                        
+                        # Восстанавливаем индексы
+                        cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_symbol ON candles_cache(symbol)")
+                        cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_updated ON candles_cache(updated_at)")
+                        cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_timeframe ON candles_cache(timeframe)")
+                        cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_data_cache_id ON candles_cache_data(cache_id)")
+                        cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_data_time ON candles_cache_data(time)")
+                        cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_cache_data_cache_time ON candles_cache_data(cache_id, time)")
+                        
+                        # Восстанавливаем данные
+                        for row in old_data:
+                            cursor.execute("""
+                                INSERT INTO candles_cache 
+                                (id, symbol, timeframe, candles_count, first_candle_time, last_candle_time, updated_at, created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            """, row)
+                        
+                        # Восстанавливаем данные свечей
+                        for row in old_candles_data:
+                            cursor.execute("""
+                                INSERT INTO candles_cache_data 
+                                (cache_id, time, open, high, low, close, volume)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                            """, row)
+                        
+                        conn.commit()
+                        logger.info("✅ Таблица candles_cache пересоздана без колонки candles_json")
+                    except sqlite3.OperationalError:
+                        # Колонка candles_json не существует - значит структура правильная
+                        pass
                     
                     for symbol, cache_data in candles_cache.items():
                         candles = cache_data.get('candles', [])
