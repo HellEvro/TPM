@@ -167,41 +167,60 @@ End If
 
 ' Безопасная инициализация Git репозитория (если Git установлен)
 If GitInstalled() Then
+    ' Настраиваем Git пользователя (если не настроен) - ДО любых операций
+    Dim userCheck
+    userCheck = shell.Run("cmd /c cd /d """ & projectDir & """ && git config user.name >nul 2>&1", 0, True)
+    If userCheck <> 0 Then
+        shell.Run "cmd /c cd /d """ & projectDir & """ && git config user.name ""InfoBot User""", 0, True
+    End If
+    userCheck = shell.Run("cmd /c cd /d """ & projectDir & """ && git config user.email >nul 2>&1", 0, True)
+    If userCheck <> 0 Then
+        shell.Run "cmd /c cd /d """ & projectDir & """ && git config user.email ""infobot@local""", 0, True
+    End If
+    
     Dim gitDir
     gitDir = fso.BuildPath(projectDir, ".git")
     If Not fso.FolderExists(gitDir) Then
         ' Инициализируем репозиторий БЕЗ pull/fetch, чтобы не перезаписать существующие файлы
         shell.Run "cmd /c cd /d """ & projectDir & """ && git init", 0, True
         shell.Run "cmd /c cd /d """ & projectDir & """ && git branch -m main", 0, True
-        ' Проверяем, есть ли уже remote origin
+        ' Добавляем remote с HTTPS URL
+        shell.Run "cmd /c cd /d """ & projectDir & """ && git remote add origin https://github.com/HellEvro/TPM_Public.git", 0, True
+    Else
+        ' Репозиторий уже существует - проверяем и исправляем remote URL
         Dim remoteCheck
         remoteCheck = shell.Run("cmd /c cd /d """ & projectDir & """ && git remote get-url origin >nul 2>&1", 0, True)
-        If remoteCheck <> 0 Then
-            ' Добавляем remote только если его нет
-            ' Используем HTTPS URL вместо SSH для публичного репозитория (не требует настройки SSH ключей)
+        If remoteCheck = 0 Then
+            ' Remote существует - проверяем, используется ли SSH
+            Dim remoteUrlCmd
+            Set remoteUrlCmd = shell.Exec("cmd /c cd /d """ & projectDir & """ && git remote get-url origin")
+            Do While remoteUrlCmd.Status = 0
+                WScript.Sleep 10
+            Loop
+            Dim currentUrl
+            currentUrl = ""
+            Do While Not remoteUrlCmd.StdOut.AtEndOfStream
+                currentUrl = currentUrl & remoteUrlCmd.StdOut.ReadLine
+            Loop
+            If InStr(currentUrl, "git@github.com") > 0 Then
+                ' Используется SSH - меняем на HTTPS
+                shell.Run "cmd /c cd /d """ & projectDir & """ && git remote set-url origin https://github.com/HellEvro/TPM_Public.git", 0, True
+            End If
+        Else
+            ' Remote не существует - добавляем
             shell.Run "cmd /c cd /d """ & projectDir & """ && git remote add origin https://github.com/HellEvro/TPM_Public.git", 0, True
         End If
-        
-        ' Делаем первый коммит, если репозиторий только что инициализирован
-        ' Проверяем, есть ли коммиты
-        Dim commitCheck
-        commitCheck = shell.Run("cmd /c cd /d """ & projectDir & """ && git rev-list --count HEAD >nul 2>&1", 0, True)
-        If commitCheck <> 0 Then
-            ' Нет коммитов - делаем первый коммит
-            ' Настраиваем Git пользователя для коммита (если не настроен)
-            shell.Run "cmd /c cd /d """ & projectDir & """ && git config user.name ""InfoBot User"" >nul 2>&1", 0, True
-            shell.Run "cmd /c cd /d """ & projectDir & """ && git config user.email ""infobot@local"" >nul 2>&1", 0, True
-            ' Добавляем все файлы
-            shell.Run "cmd /c cd /d """ & projectDir & """ && git add -A", 0, True
-            ' Делаем коммит
-            Dim commitResult
-            commitResult = shell.Run("cmd /c cd /d """ & projectDir & """ && git commit -m ""Initial commit: InfoBot Public repository""", 0, True)
-            ' Проверяем успешность коммита
-            If commitResult = 0 Then
-                ' Коммит успешен - проверяем еще раз
-                commitCheck = shell.Run("cmd /c cd /d """ & projectDir & """ && git rev-list --count HEAD >nul 2>&1", 0, True)
-            End If
-        End If
+    End If
+    
+    ' Делаем первый коммит, если нет коммитов (независимо от того, новый репозиторий или существующий)
+    Dim commitCheck
+    commitCheck = shell.Run("cmd /c cd /d """ & projectDir & """ && git rev-list --count HEAD >nul 2>&1", 0, True)
+    If commitCheck <> 0 Then
+        ' Нет коммитов - делаем первый коммит
+        ' Добавляем все файлы
+        shell.Run "cmd /c cd /d """ & projectDir & """ && git add -A", 0, True
+        ' Делаем коммит
+        shell.Run "cmd /c cd /d """ & projectDir & """ && git commit -m ""Initial commit: InfoBot Public repository""", 0, True
     End If
 End If
 
