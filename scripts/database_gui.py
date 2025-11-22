@@ -681,14 +681,22 @@ class DatabaseGUI(tk.Tk):
         db_list_frame = ttk.LabelFrame(left_frame, text="Найденные БД", padding=8, style='TPanel.TLabelframe')
         db_list_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
         
+        # Контейнер для Treeview и Scrollbar с правильным layout
+        db_tree_container = ttk.Frame(db_list_frame)
+        db_tree_container.pack(fill=tk.BOTH, expand=True)
+        
         # Treeview для списка БД
-        db_tree = ttk.Treeview(db_list_frame, show="tree", height=15, style='TModern.Treeview')
-        db_tree.pack(fill=tk.BOTH, expand=True)
+        db_tree = ttk.Treeview(db_tree_container, show="tree", height=15, style='TModern.Treeview')
+        db_tree.grid(row=0, column=0, sticky="nsew")
         
         # Scrollbar для списка
-        db_scroll = ttk.Scrollbar(db_list_frame, orient=tk.VERTICAL, command=db_tree.yview)
-        db_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        db_scroll = ttk.Scrollbar(db_tree_container, orient=tk.VERTICAL, command=db_tree.yview)
+        db_scroll.grid(row=0, column=1, sticky="ns")
         db_tree.configure(yscrollcommand=db_scroll.set)
+        
+        # Настраиваем grid weights
+        db_tree_container.grid_rowconfigure(0, weight=1)
+        db_tree_container.grid_columnconfigure(0, weight=1)
         
         self.db_tree = db_tree
         
@@ -860,15 +868,21 @@ class DatabaseGUI(tk.Tk):
         
         # Treeview для отображения данных
         data_tree = ttk.Treeview(data_frame, style='TModern.Treeview')
-        data_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        data_tree.grid(row=0, column=0, sticky="nsew")
         
-        # Scrollbars
+        # Вертикальный Scrollbar
         v_scroll = ttk.Scrollbar(data_frame, orient=tk.VERTICAL, command=data_tree.yview)
-        v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        v_scroll.grid(row=0, column=1, sticky="ns")
+        
+        # Горизонтальный Scrollbar
         h_scroll = ttk.Scrollbar(data_frame, orient=tk.HORIZONTAL, command=data_tree.xview)
-        h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+        h_scroll.grid(row=1, column=0, sticky="ew")
         
         data_tree.configure(yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
+        
+        # Настраиваем grid weights
+        data_frame.grid_rowconfigure(0, weight=1)
+        data_frame.grid_columnconfigure(0, weight=1)
         
         self.data_tree = data_tree
         
@@ -891,15 +905,21 @@ class DatabaseGUI(tk.Tk):
         
         # Treeview для результатов
         results_tree = ttk.Treeview(results_frame, style='TModern.Treeview')
-        results_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        results_tree.grid(row=0, column=0, sticky="nsew")
         
-        # Scrollbars для результатов
+        # Вертикальный Scrollbar для результатов
         res_v_scroll = ttk.Scrollbar(results_frame, orient=tk.VERTICAL, command=results_tree.yview)
-        res_v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        res_v_scroll.grid(row=0, column=1, sticky="ns")
+        
+        # Горизонтальный Scrollbar для результатов
         res_h_scroll = ttk.Scrollbar(results_frame, orient=tk.HORIZONTAL, command=results_tree.xview)
-        res_h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+        res_h_scroll.grid(row=1, column=0, sticky="ew")
         
         results_tree.configure(yscrollcommand=res_v_scroll.set, xscrollcommand=res_h_scroll.set)
+        
+        # Настраиваем grid weights
+        results_frame.grid_rowconfigure(0, weight=1)
+        results_frame.grid_columnconfigure(0, weight=1)
         
         self.results_tree = results_tree
         
