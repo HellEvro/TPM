@@ -1,4 +1,4 @@
-afSet fso = CreateObject("Scripting.FileSystemObject")
+Set fso = CreateObject("Scripting.FileSystemObject")
 Set shell = CreateObject("WScript.Shell")
 
 projectDir = fso.GetParentFolderName(WScript.ScriptFullName)
@@ -116,6 +116,22 @@ Function GitInstalled()
     On Error GoTo 0
 End Function
 
+' Функция получения пути к Git для добавления в PATH
+Function GetGitPath()
+    On Error Resume Next
+    Dim gitPaths
+    gitPaths = Array("C:\Program Files\Git\cmd", "C:\Program Files (x86)\Git\cmd", "C:\Program Files\Git\bin")
+    Dim i
+    For i = 0 To UBound(gitPaths)
+        If fso.FolderExists(gitPaths(i)) Then
+            GetGitPath = gitPaths(i)
+            Exit Function
+        End If
+    Next
+    GetGitPath = ""
+    On Error GoTo 0
+End Function
+
 ' Проверка Git (только если Python установлен)
 ' Сначала проверяем, установлен ли Git
 Dim gitCheckResult
@@ -177,6 +193,30 @@ If GitInstalled() Then
     End If
 End If
 
+' Обновляем PATH для текущей сессии, если Git установлен
+Dim gitPath
+gitPath = GetGitPath()
+If gitPath <> "" Then
+    ' Добавляем путь к Git в PATH через переменные окружения
+    Dim envPath
+    envPath = shell.ExpandEnvironmentStrings("%PATH%")
+    If InStr(envPath, gitPath) = 0 Then
+        ' Обновляем PATH в реестре для текущего пользователя (для будущих сессий)
+        Dim wshShell
+        Set wshShell = CreateObject("WScript.Shell")
+        On Error Resume Next
+        Dim userPath
+        userPath = wshShell.RegRead("HKCU\Environment\PATH")
+        If Err.Number = 0 Then
+            If InStr(userPath, gitPath) = 0 Then
+                wshShell.RegWrite "HKCU\Environment\PATH", userPath & ";" & gitPath, "REG_EXPAND_SZ"
+            End If
+        End If
+        On Error GoTo 0
+        Set wshShell = Nothing
+    End If
+End If
+
 ' Запуск приложения
 If fso.FileExists(venvPython) Then
     cmd = """" & venvPython & """ """ & launcher & """"
@@ -205,5 +245,28 @@ Else
     End If
 End If
 
+' Запускаем Python с обновленным PATH
 shell.CurrentDirectory = projectDir
-shell.Run cmd, 0, False
+If gitPath <> "" Then
+    ' Создаем временный bat файл с обновленным PATH
+    Dim batFile
+    batFile = fso.BuildPath(projectDir, "start_launcher_temp.bat")
+    Dim batContent
+    batContent = "@echo off" & vbCrLf
+    batContent = batContent & "set PATH=%PATH%;" & gitPath & vbCrLf
+    batContent = batContent & "cd /d """ & projectDir & """" & vbCrLf
+    batContent = batContent & cmd & vbCrLf
+    batContent = batContent & "del ""%~f0""" & vbCrLf
+    
+    Dim batStream
+    Set batStream = fso.CreateTextFile(batFile, True)
+    batStream.Write batContent
+    batStream.Close
+    Set batStream = Nothing
+    
+    ' Запускаем bat файл
+    shell.Run """" & batFile & """", 0, False
+Else
+    ' Запускаем напрямую, если Git не установлен
+    shell.Run cmd, 0, False
+End If

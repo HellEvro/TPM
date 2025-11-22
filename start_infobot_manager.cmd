@@ -150,6 +150,18 @@ if !GIT_FOUND!==1 (
     )
 )
 
+REM Обновляем PATH для текущей сессии, если Git установлен
+if !GIT_FOUND!==1 (
+    REM Проверяем стандартные пути Git и добавляем в PATH
+    if exist "C:\Program Files\Git\cmd\git.exe" (
+        set "PATH=%PATH%;C:\Program Files\Git\cmd"
+    ) else if exist "C:\Program Files (x86)\Git\cmd\git.exe" (
+        set "PATH=%PATH%;C:\Program Files (x86)\Git\cmd"
+    ) else if exist "C:\Program Files\Git\bin\git.exe" (
+        set "PATH=%PATH%;C:\Program Files\Git\bin"
+    )
+)
+
 REM Определение Python для запуска
 if exist .venv\Scripts\activate.bat (
     call .venv\Scripts\activate.bat
