@@ -2258,6 +2258,294 @@ class BotsDatabase:
             except Exception as e:
                 logger.warning(f"⚠️ Ошибка миграции rsi_cache: {e}")
             
+            # ==================== МИГРАЦИЯ ДАННЫХ: Перенос сделок из других БД ====================
+            try:
+                # Проверяем, выполнена ли миграция данных из других БД
+                cursor.execute("""
+                    SELECT value FROM db_metadata 
+                    WHERE key = 'trades_migration_from_other_dbs'
+                """)
+                migration_result = cursor.fetchone()
+                
+                if not migration_result or migration_result[0] != '1':
+                    logger.info("📦 Начинаю миграцию сделок из других баз данных...")
+                    
+                    project_root = _get_project_root()
+                    ai_db_path = project_root / 'data' / 'ai_data.db'
+                    app_db_path = project_root / 'data' / 'app_data.db'
+                    
+                    migrated_count = 0
+                    
+                    # Миграция из ai_data.db -> bot_trades
+                    if ai_db_path.exists():
+                        try:
+                            # Подключаем ai_data.db (экранируем путь для SQL)
+                            ai_db_path_str = str(ai_db_path).replace("'", "''").replace("\\", "/")
+                            cursor.execute(f"ATTACH DATABASE '{ai_db_path_str}' AS ai_db")
+                            
+                            # Проверяем наличие таблицы bot_trades
+                            cursor.execute("""
+                                SELECT name FROM ai_db.sqlite_master 
+                                WHERE type='table' AND name='bot_trades'
+                            """)
+                            if cursor.fetchone():
+                                # Мигрируем bot_trades
+                                cursor.execute("""
+                                    INSERT OR IGNORE INTO bot_trades_history (
+                                        bot_id, symbol, direction, entry_price, exit_price,
+                                        entry_time, exit_time, entry_timestamp, exit_timestamp,
+                                        position_size_usdt, position_size_coins, pnl, roi,
+                                        status, close_reason, decision_source, ai_decision_id,
+                                        ai_confidence, entry_rsi, exit_rsi, entry_trend, exit_trend,
+                                        entry_volatility, entry_volume_ratio, is_successful,
+                                        is_simulated, source, order_id, extra_data_json,
+                                        created_at, updated_at
+                                    )
+                                    SELECT 
+                                        COALESCE(bot_id, 'unknown') as bot_id,
+                                        symbol,
+                                        COALESCE(direction, 'LONG') as direction,
+                                        entry_price,
+                                        exit_price,
+                                        entry_time,
+                                        exit_time,
+                                        CASE 
+                                            WHEN entry_time IS NOT NULL 
+                                            THEN CAST((julianday(entry_time) - 2440587.5) * 86400.0 AS REAL)
+                                            ELSE NULL
+                                        END as entry_timestamp,
+                                        CASE 
+                                            WHEN exit_time IS NOT NULL 
+                                            THEN CAST((julianday(exit_time) - 2440587.5) * 86400.0 AS REAL)
+                                            ELSE NULL
+                                        END as exit_timestamp,
+                                        position_size as position_size_usdt,
+                                        position_size_coins,
+                                        pnl,
+                                        roi,
+                                        COALESCE(status, 'CLOSED') as status,
+                                        close_reason,
+                                        'AI_BOT_TRADE' as decision_source,
+                                        ai_decision_id,
+                                        ai_confidence,
+                                        entry_rsi,
+                                        exit_rsi,
+                                        entry_trend,
+                                        exit_trend,
+                                        entry_volatility,
+                                        entry_volume_ratio,
+                                        CASE WHEN pnl > 0 THEN 1 ELSE 0 END as is_successful,
+                                        0 as is_simulated,
+                                        'ai_bot' as source,
+                                        order_id,
+                                        json_object(
+                                            'rsi_params', rsi_params,
+                                            'risk_params', risk_params,
+                                            'config_params', config_params,
+                                            'filters_params', filters_params,
+                                            'entry_conditions', entry_conditions,
+                                            'exit_conditions', exit_conditions,
+                                            'restrictions', restrictions,
+                                            'extra_config', extra_config_json
+                                        ) as extra_data_json,
+                                        COALESCE(created_at, datetime('now')) as created_at,
+                                        COALESCE(updated_at, datetime('now')) as updated_at
+                                    FROM ai_db.bot_trades
+                                    WHERE status = 'CLOSED' AND pnl IS NOT NULL
+                                """)
+                                count1 = cursor.rowcount
+                                migrated_count += count1
+                                logger.info(f"   ✅ Мигрировано {count1} сделок из ai_data.db -> bot_trades")
+                            
+                            # Мигрируем exchange_trades
+                            cursor.execute("""
+                                SELECT name FROM ai_db.sqlite_master 
+                                WHERE type='table' AND name='exchange_trades'
+                            """)
+                            if cursor.fetchone():
+                                cursor.execute("""
+                                    INSERT OR IGNORE INTO bot_trades_history (
+                                        bot_id, symbol, direction, entry_price, exit_price,
+                                        entry_time, exit_time, entry_timestamp, exit_timestamp,
+                                        position_size_usdt, position_size_coins, pnl, roi,
+                                        status, close_reason, decision_source, ai_decision_id,
+                                        ai_confidence, entry_rsi, exit_rsi, entry_trend, exit_trend,
+                                        entry_volatility, entry_volume_ratio, is_successful,
+                                        is_simulated, source, order_id, extra_data_json,
+                                        created_at, updated_at
+                                    )
+                                    SELECT 
+                                        COALESCE(bot_id, 'exchange') as bot_id,
+                                        symbol,
+                                        COALESCE(direction, 'LONG') as direction,
+                                        entry_price,
+                                        exit_price,
+                                        entry_time,
+                                        exit_time,
+                                        CASE 
+                                            WHEN entry_time IS NOT NULL 
+                                            THEN CAST((julianday(entry_time) - 2440587.5) * 86400.0 AS REAL)
+                                            ELSE NULL
+                                        END as entry_timestamp,
+                                        CASE 
+                                            WHEN exit_time IS NOT NULL 
+                                            THEN CAST((julianday(exit_time) - 2440587.5) * 86400.0 AS REAL)
+                                            ELSE NULL
+                                        END as exit_timestamp,
+                                        position_size as position_size_usdt,
+                                        position_size_coins,
+                                        pnl,
+                                        roi,
+                                        COALESCE(status, 'CLOSED') as status,
+                                        close_reason,
+                                        'EXCHANGE' as decision_source,
+                                        ai_decision_id,
+                                        ai_confidence,
+                                        entry_rsi,
+                                        exit_rsi,
+                                        entry_trend,
+                                        exit_trend,
+                                        entry_volatility,
+                                        entry_volume_ratio,
+                                        CASE WHEN pnl > 0 THEN 1 ELSE 0 END as is_successful,
+                                        CASE WHEN is_real = 0 OR is_real IS NULL THEN 1 ELSE 0 END as is_simulated,
+                                        'exchange' as source,
+                                        order_id,
+                                        json_object(
+                                            'is_real', is_real,
+                                            'exchange', exchange,
+                                            'extra_data', extra_data_json
+                                        ) as extra_data_json,
+                                        COALESCE(created_at, datetime('now')) as created_at,
+                                        COALESCE(updated_at, datetime('now')) as updated_at
+                                    FROM ai_db.exchange_trades
+                                    WHERE status = 'CLOSED' AND pnl IS NOT NULL
+                                      AND (is_real = 1 OR is_real IS NULL)
+                                """)
+                                count2 = cursor.rowcount
+                                migrated_count += count2
+                                logger.info(f"   ✅ Мигрировано {count2} сделок из ai_data.db -> exchange_trades")
+                            
+                            # Отключаем ai_db
+                            cursor.execute("DETACH DATABASE ai_db")
+                            
+                        except Exception as e:
+                            logger.warning(f"⚠️ Ошибка миграции из ai_data.db: {e}")
+                            try:
+                                cursor.execute("DETACH DATABASE ai_db")
+                            except:
+                                pass
+                    
+                    # Миграция из app_data.db -> closed_pnl
+                    if app_db_path.exists():
+                        try:
+                            # Подключаем app_data.db (экранируем путь для SQL)
+                            app_db_path_str = str(app_db_path).replace("'", "''").replace("\\", "/")
+                            cursor.execute(f"ATTACH DATABASE '{app_db_path_str}' AS app_db")
+                            
+                            # Проверяем наличие таблицы closed_pnl
+                            cursor.execute("""
+                                SELECT name FROM app_db.sqlite_master 
+                                WHERE type='table' AND name='closed_pnl'
+                            """)
+                            if cursor.fetchone():
+                                # Проверяем структуру таблицы closed_pnl
+                                cursor.execute("PRAGMA table_info(app_db.closed_pnl)")
+                                columns = [row[1] for row in cursor.fetchall()]
+                                
+                                # Мигрируем closed_pnl (если есть необходимые поля)
+                                if 'symbol' in columns and 'pnl' in columns:
+                                    cursor.execute("""
+                                        INSERT OR IGNORE INTO bot_trades_history (
+                                            bot_id, symbol, direction, entry_price, exit_price,
+                                            entry_time, exit_time, entry_timestamp, exit_timestamp,
+                                            position_size_usdt, position_size_coins, pnl, roi,
+                                            status, close_reason, decision_source, ai_decision_id,
+                                            ai_confidence, entry_rsi, exit_rsi, entry_trend, exit_trend,
+                                            entry_volatility, entry_volume_ratio, is_successful,
+                                            is_simulated, source, order_id, extra_data_json,
+                                            created_at, updated_at
+                                        )
+                                        SELECT 
+                                            COALESCE(bot_id, 'app') as bot_id,
+                                            symbol,
+                                            COALESCE(direction, 'LONG') as direction,
+                                            entry_price,
+                                            exit_price,
+                                            entry_time,
+                                            exit_time,
+                                            CASE 
+                                                WHEN entry_time IS NOT NULL 
+                                                THEN CAST((julianday(entry_time) - 2440587.5) * 86400.0 AS REAL)
+                                                ELSE NULL
+                                            END as entry_timestamp,
+                                            CASE 
+                                                WHEN exit_time IS NOT NULL 
+                                                THEN CAST((julianday(exit_time) - 2440587.5) * 86400.0 AS REAL)
+                                                ELSE NULL
+                                            END as exit_timestamp,
+                                            position_size as position_size_usdt,
+                                            position_size_coins,
+                                            pnl,
+                                            roi,
+                                            'CLOSED' as status,
+                                            close_reason,
+                                            'APP_CLOSED_PNL' as decision_source,
+                                            NULL as ai_decision_id,
+                                            NULL as ai_confidence,
+                                            NULL as entry_rsi,
+                                            NULL as exit_rsi,
+                                            NULL as entry_trend,
+                                            NULL as exit_trend,
+                                            NULL as entry_volatility,
+                                            NULL as entry_volume_ratio,
+                                            CASE WHEN pnl > 0 THEN 1 ELSE 0 END as is_successful,
+                                            0 as is_simulated,
+                                            'app_closed_pnl' as source,
+                                            order_id,
+                                            COALESCE(extra_data_json, '{}') as extra_data_json,
+                                            COALESCE(created_at, datetime('now')) as created_at,
+                                            COALESCE(updated_at, datetime('now')) as updated_at
+                                        FROM app_db.closed_pnl
+                                        WHERE pnl IS NOT NULL
+                                    """)
+                                    count3 = cursor.rowcount
+                                    migrated_count += count3
+                                    logger.info(f"   ✅ Мигрировано {count3} сделок из app_data.db -> closed_pnl")
+                            
+                            # Отключаем app_db
+                            cursor.execute("DETACH DATABASE app_db")
+                            
+                        except Exception as e:
+                            logger.warning(f"⚠️ Ошибка миграции из app_data.db: {e}")
+                            try:
+                                cursor.execute("DETACH DATABASE app_db")
+                            except:
+                                pass
+                    
+                    if migrated_count > 0:
+                        # Устанавливаем флаг, что миграция выполнена
+                        now = datetime.now().isoformat()
+                        cursor.execute("""
+                            INSERT OR REPLACE INTO db_metadata (key, value, updated_at, created_at)
+                            VALUES ('trades_migration_from_other_dbs', '1', ?, 
+                                COALESCE((SELECT created_at FROM db_metadata WHERE key = 'trades_migration_from_other_dbs'), ?))
+                        """, (now, now))
+                        logger.info(f"✅ Миграция завершена: всего мигрировано {migrated_count} сделок")
+                    else:
+                        # Устанавливаем флаг, что миграция проверена (но данных не было)
+                        now = datetime.now().isoformat()
+                        cursor.execute("""
+                            INSERT OR REPLACE INTO db_metadata (key, value, updated_at, created_at)
+                            VALUES ('trades_migration_from_other_dbs', '1', ?, ?)
+                        """, (now, now))
+                        logger.info("✅ Миграция проверена: данных для миграции не найдено")
+                        
+            except Exception as e:
+                logger.warning(f"⚠️ Ошибка миграции данных из других БД: {e}")
+                import traceback
+                logger.debug(traceback.format_exc())
+            
             conn.commit()
         except Exception as e:
             logger.debug(f"⚠️ Ошибка миграции схемы: {e}")

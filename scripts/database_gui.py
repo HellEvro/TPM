@@ -391,6 +391,57 @@ class DatabaseConnection:
         except sqlite3.Error as e:
             return None, str(e)
     
+    def execute_script(self, script: str, stop_on_error: bool = True) -> Tuple[bool, Optional[str], int]:
+        """
+        Выполняет SQL-скрипт (может содержать несколько запросов, разделенных ';')
+        
+        Args:
+            script: SQL-скрипт (может содержать несколько запросов)
+            stop_on_error: Останавливать выполнение при ошибке
+        
+        Returns:
+            (success, error_message, executed_count) - успех, сообщение об ошибке, количество выполненных запросов
+        """
+        if not self.conn:
+            return False, "Нет подключения к БД", 0
+        
+        # Импортируем функцию разделения скрипта
+        try:
+            from scripts.database_utils import split_sql_script
+        except ImportError:
+            # Если модуль недоступен, используем простую реализацию
+            def split_sql_script(script: str):
+                # Простое разделение по ';' (не обрабатывает строки)
+                return [q.strip() for q in script.split(';') if q.strip()]
+        
+        queries = split_sql_script(script)
+        executed_count = 0
+        
+        try:
+            cursor = self.conn.cursor()
+            
+            for query in queries:
+                if not query:
+                    continue
+                
+                try:
+                    cursor.execute(query)
+                    executed_count += 1
+                except sqlite3.Error as e:
+                    if stop_on_error:
+                        self.conn.rollback()
+                        return False, f"Ошибка выполнения запроса #{executed_count + 1}: {e}", executed_count
+                    # Продолжаем выполнение даже при ошибке
+                    print(f"Предупреждение: ошибка в запросе #{executed_count + 1}: {e}", file=sys.stderr)
+            
+            # Коммитим все изменения
+            self.conn.commit()
+            return True, None, executed_count
+            
+        except Exception as e:
+            self.conn.rollback()
+            return False, f"Ошибка выполнения скрипта: {e}", executed_count
+    
     def get_tables(self) -> List[str]:
         """Получает список всех таблиц в БД"""
         if not self.conn:
@@ -700,6 +751,20 @@ class DatabaseGUI(tk.Tk):
             sql_buttons_frame,
             text="Очистить",
             command=lambda: self.sql_text.delete(1.0, tk.END),
+            style='TDefault.TButton'
+        ).pack(side=tk.LEFT, padx=4)
+        
+        ttk.Button(
+            sql_buttons_frame,
+            text="Загрузить SQL файл",
+            command=self._load_sql_file,
+            style='TDefault.TButton'
+        ).pack(side=tk.LEFT, padx=4)
+        
+        ttk.Button(
+            sql_buttons_frame,
+            text="Сохранить SQL запрос",
+            command=self._save_sql_query,
             style='TDefault.TButton'
         ).pack(side=tk.LEFT, padx=4)
         
@@ -1292,6 +1357,86 @@ class DatabaseGUI(tk.Tk):
             # Обновляем данные таблицы, если была выбрана таблица
             if self.current_table:
                 self._load_table_data()
+    
+    def _load_sql_file(self):
+        """Загружает SQL файл в редактор"""
+        self._update_status("Выбор SQL файла...", "info")
+        
+        sql_file = filedialog.askopenfilename(
+            title="Выберите SQL файл",
+            filetypes=[
+                ("SQL файлы", "*.sql"),
+                ("Текстовые файлы", "*.txt"),
+                ("Все файлы", "*.*")
+            ],
+            initialdir=str(ROOT)
+        )
+        
+        if not sql_file:
+            self._update_status("Загрузка SQL файла отменена", "info")
+            return
+        
+        try:
+            # Читаем файл с поддержкой разных кодировок
+            encodings = ['utf-8', 'utf-8-sig', 'cp1251', 'latin-1']
+            content = None
+            
+            for encoding in encodings:
+                try:
+                    with open(sql_file, 'r', encoding=encoding) as f:
+                        content = f.read()
+                    break
+                except UnicodeDecodeError:
+                    continue
+            
+            if content is None:
+                self._update_status(f"Ошибка: Не удалось прочитать файл '{sql_file}'", "error")
+                return
+            
+            # Заменяем содержимое редактора
+            self.sql_text.delete(1.0, tk.END)
+            self.sql_text.insert(1.0, content)
+            
+            file_name = os.path.basename(sql_file)
+            self._update_status(f"SQL файл загружен: {file_name}", "success")
+            
+        except Exception as e:
+            self._update_status(f"Ошибка загрузки SQL файла: {e}", "error")
+    
+    def _save_sql_query(self):
+        """Сохраняет текущий SQL запрос в файл"""
+        query = self.sql_text.get(1.0, tk.END).strip()
+        
+        if not query:
+            self._update_status("Предупреждение: SQL запрос пуст, нечего сохранять", "warning")
+            return
+        
+        self._update_status("Сохранение SQL запроса...", "info")
+        
+        sql_file = filedialog.asksaveasfilename(
+            title="Сохранить SQL запрос",
+            defaultextension=".sql",
+            filetypes=[
+                ("SQL файлы", "*.sql"),
+                ("Текстовые файлы", "*.txt"),
+                ("Все файлы", "*.*")
+            ],
+            initialdir=str(ROOT)
+        )
+        
+        if not sql_file:
+            self._update_status("Сохранение SQL запроса отменено", "info")
+            return
+        
+        try:
+            with open(sql_file, 'w', encoding='utf-8') as f:
+                f.write(query)
+            
+            file_name = os.path.basename(sql_file)
+            self._update_status(f"SQL запрос сохранен: {file_name}", "success")
+            
+        except Exception as e:
+            self._update_status(f"Ошибка сохранения SQL запроса: {e}", "error")
     
     def _add_record(self):
         """Открывает диалог для добавления новой записи"""
