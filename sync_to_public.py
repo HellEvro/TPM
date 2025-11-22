@@ -101,11 +101,13 @@ EXCLUDE = [
     "docs/CHANGELOG.md",
     "docs/DUPLICATES_REPORT.md",
     "docs/MIGRATION_SUMMARY.md",
+    "docs/POSTGRES_MIGRATION_PLAN.md",  # Внутренний план миграции
     "docs/ML_MODELS_DISTRIBUTION.md",
     "docs/MODULES.md",
     "docs/PREMIUM_STOP_ANALYSIS_ARCHITECTURE.md",
     "docs/SYSTEM_OVERVIEW.md",
     "docs/TZ_AI_Extended_Testing.md",
+    "docs/HWID_*.md",  # Все файлы про HWID (внутренние отчеты)
     
     # Служебные файлы
     ".cursorrules",
