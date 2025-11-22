@@ -140,6 +140,13 @@ if !GIT_FOUND!==1 (
             REM Добавляем remote только если его нет
             git remote add origin git@github.com:HellEvro/TPM_Public.git >nul 2>&1
         )
+        REM Делаем первый коммит, если репозиторий только что инициализирован
+        git rev-list --count HEAD >nul 2>&1
+        if !errorlevel! neq 0 (
+            REM Нет коммитов - делаем первый коммит
+            git add -A >nul 2>&1
+            git commit -m "Initial commit: InfoBot Public repository" >nul 2>&1
+        )
     )
 )
 
