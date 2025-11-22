@@ -130,29 +130,47 @@ if !GIT_FOUND!==0 (
 
 REM Безопасная инициализация Git репозитория (если Git установлен)
 if !GIT_FOUND!==1 (
+    REM Настраиваем Git пользователя (если не настроен) - ДО любых операций
+    git config user.name >nul 2>&1
+    if !errorlevel! neq 0 (
+        git config user.name "InfoBot User" >nul 2>&1
+    )
+    git config user.email >nul 2>&1
+    if !errorlevel! neq 0 (
+        git config user.email "infobot@local" >nul 2>&1
+    )
+    
     if not exist ".git" (
         REM Инициализируем репозиторий БЕЗ pull/fetch, чтобы не перезаписать существующие файлы
         git init >nul 2>&1
         git branch -m main >nul 2>&1
-        REM Проверяем, есть ли уже remote origin
+        REM Добавляем remote с HTTPS URL
+        git remote add origin https://github.com/HellEvro/TPM_Public.git >nul 2>&1
+    ) else (
+        REM Репозиторий уже существует - проверяем и исправляем remote URL
         git remote get-url origin >nul 2>&1
-        if !errorlevel! neq 0 (
-            REM Добавляем remote только если его нет
-            REM Используем HTTPS URL вместо SSH для публичного репозитория (не требует настройки SSH ключей)
+        if !errorlevel!==0 (
+            REM Remote существует - проверяем, используется ли SSH
+            for /f "tokens=*" %%i in ('git remote get-url origin') do set "REMOTE_URL=%%i"
+            echo !REMOTE_URL! | findstr /C:"git@github.com" >nul 2>&1
+            if !errorlevel!==0 (
+                REM Используется SSH - меняем на HTTPS
+                git remote set-url origin https://github.com/HellEvro/TPM_Public.git >nul 2>&1
+            )
+        ) else (
+            REM Remote не существует - добавляем
             git remote add origin https://github.com/HellEvro/TPM_Public.git >nul 2>&1
         )
-        REM Делаем первый коммит, если репозиторий только что инициализирован
-        git rev-list --count HEAD >nul 2>&1
-        if !errorlevel! neq 0 (
-            REM Нет коммитов - делаем первый коммит
-            REM Настраиваем Git пользователя для коммита (если не настроен)
-            git config user.name "InfoBot User" >nul 2>&1
-            git config user.email "infobot@local" >nul 2>&1
-            REM Добавляем все файлы
-            git add -A >nul 2>&1
-            REM Делаем коммит
-            git commit -m "Initial commit: InfoBot Public repository" >nul 2>&1
-        )
+    )
+    
+    REM Делаем первый коммит, если нет коммитов (независимо от того, новый репозиторий или существующий)
+    git rev-list --count HEAD >nul 2>&1
+    if !errorlevel! neq 0 (
+        REM Нет коммитов - делаем первый коммит
+        REM Добавляем все файлы
+        git add -A >nul 2>&1
+        REM Делаем коммит
+        git commit -m "Initial commit: InfoBot Public repository" >nul 2>&1
     )
 )
 

@@ -185,21 +185,39 @@ if ! command_exists git; then
 fi
 
 # Безопасная инициализация Git репозитория (если Git установлен)
-# Инициализируем БЕЗ pull/fetch, чтобы не перезаписать существующие файлы
-if command_exists git && [ ! -d ".git" ]; then
-  git init >/dev/null 2>&1
-  git branch -m main >/dev/null 2>&1
-  # Проверяем, есть ли уже remote origin
-  if ! git remote get-url origin >/dev/null 2>&1; then
-    # Добавляем remote только если его нет (используем HTTPS для публичного репозитория)
-    git remote add origin https://github.com/HellEvro/TPM_Public.git >/dev/null 2>&1
+if command_exists git; then
+  # Настраиваем Git пользователя (если не настроен) - ДО любых операций
+  if ! git config user.name >/dev/null 2>&1; then
+    git config user.name "InfoBot User" >/dev/null 2>&1
   fi
-  # Делаем первый коммит, если репозиторий только что инициализирован
+  if ! git config user.email >/dev/null 2>&1; then
+    git config user.email "infobot@local" >/dev/null 2>&1
+  fi
+  
+  # Инициализируем БЕЗ pull/fetch, чтобы не перезаписать существующие файлы
+  if [ ! -d ".git" ]; then
+    git init >/dev/null 2>&1
+    git branch -m main >/dev/null 2>&1
+    # Добавляем remote с HTTPS URL
+    git remote add origin https://github.com/HellEvro/TPM_Public.git >/dev/null 2>&1
+  else
+    # Репозиторий уже существует - проверяем и исправляем remote URL
+    if git remote get-url origin >/dev/null 2>&1; then
+      # Remote существует - проверяем, используется ли SSH
+      REMOTE_URL=$(git remote get-url origin 2>/dev/null)
+      if echo "$REMOTE_URL" | grep -q "git@github.com"; then
+        # Используется SSH - меняем на HTTPS
+        git remote set-url origin https://github.com/HellEvro/TPM_Public.git >/dev/null 2>&1
+      fi
+    else
+      # Remote не существует - добавляем
+      git remote add origin https://github.com/HellEvro/TPM_Public.git >/dev/null 2>&1
+    fi
+  fi
+  
+  # Делаем первый коммит, если нет коммитов (независимо от того, новый репозиторий или существующий)
   if ! git rev-list --count HEAD >/dev/null 2>&1; then
     # Нет коммитов - делаем первый коммит
-    # Настраиваем Git пользователя для коммита (если не настроен)
-    git config user.name "InfoBot User" >/dev/null 2>&1
-    git config user.email "infobot@local" >/dev/null 2>&1
     # Добавляем все файлы
     git add -A >/dev/null 2>&1
     # Делаем коммит
