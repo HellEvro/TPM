@@ -117,24 +117,34 @@ Function GitInstalled()
 End Function
 
 ' Проверка Git (только если Python установлен)
-If Not GitInstalled() Then
+' Сначала проверяем, установлен ли Git
+Dim gitCheckResult
+gitCheckResult = GitInstalled()
+If Not gitCheckResult Then
+    ' Git не найден - пытаемся установить
     wingetFound = CommandExists("winget")
     If wingetFound Then
-        ' Выводим сообщение об установке Git
-        shell.Run "cmd /c echo [INFO] Установка Git через winget...", 1, True
+        ' Выводим сообщение об установке Git (показываем на 3 секунды)
+        shell.Run "cmd /c echo [INFO] Установка Git через winget... && timeout /t 3 >nul", 1, True
         ' Тихая установка Git с максимальной интеграцией
         ' Параметры установщика Git передаются через --override
         ' /VERYSILENT /NORESTART /NOCANCEL /SP- /SUPPRESSMSGBOXES
         ' /COMPONENTS=icons,ext\shellhere,assoc,assoc_sh /PATHOPTION=user /EDITOR=nano
         Dim gitParams
         gitParams = "/VERYSILENT /NORESTART /NOCANCEL /SP- /SUPPRESSMSGBOXES /COMPONENTS=icons,ext\shellhere,assoc,assoc_sh /PATHOPTION=user /EDITOR=nano"
+        ' Запускаем установку Git (скрыто, но ждем завершения)
         shell.Run "winget install --id Git.Git --silent --accept-package-agreements --accept-source-agreements --override """ & gitParams & """", 0, True
         ' Ждем завершения установки (winget может установить Git в фоне)
-        WScript.Sleep 8000
+        WScript.Sleep 12000
         ' Проверяем установку через стандартные пути
         If Not GitInstalled() Then
             ' Если Git все еще не найден, ждем еще немного
             WScript.Sleep 5000
+            ' Повторная проверка
+            If Not GitInstalled() Then
+                ' Последняя попытка - проверяем через команду git
+                WScript.Sleep 3000
+            End If
         End If
     End If
 End If
