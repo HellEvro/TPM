@@ -298,87 +298,140 @@ class AIDataCollector:
     
     def collect_history_data(self) -> Dict:
         """
-        Сбор данных из bot_history.py
+        Сбор данных из БД (приоритет) или bot_history.json (fallback)
         
         Собирает:
         - Историю трейдов
         - Статистику торговли
         - Закрытые позиции с PnL
         """
-        # Убрано: logger.debug("📊 Сбор данных из bot_history...") - слишком шумно
-        
         collected_data = {
             'timestamp': datetime.now().isoformat(),
             'trades': [],
             'statistics': {}
         }
         
-        # ВАЖНО: Загружаем напрямую из data/bot_history.json
+        # ПРИОРИТЕТ 1: Загружаем из БД (ai_database)
         try:
-            bot_history_file = os.path.join('data', 'bot_history.json')
-            if os.path.exists(bot_history_file):
-                import shutil
-                snapshot_file = f"{bot_history_file}.snapshot"
-                try:
-                    shutil.copy2(bot_history_file, snapshot_file)
-                    with open(snapshot_file, 'r', encoding='utf-8') as f:
-                        bot_history_data = json.load(f)
-                finally:
-                    try:
-                        if os.path.exists(snapshot_file):
-                            os.remove(snapshot_file)
-                    except Exception:
-                        pass
+            from bot_engine.ai.ai_database import get_ai_database
+            ai_db = get_ai_database()
+            if ai_db:
+                # Загружаем сделки ботов из БД
+                # ВАЖНО: min_trades=0 чтобы получить ВСЕ сделки, не только для символов с >=10 сделками
+                db_trades = ai_db.get_trades_for_training(
+                    include_simulated=False,
+                    include_real=True,
+                    include_exchange=False,  # Исключаем сделки с биржи - они отдельно
+                    min_trades=0,  # КРИТИЧНО: 0 чтобы получить все сделки, не фильтровать по символам
+                    limit=None
+                )
                 
-                # Извлекаем сделки из bot_history.json
-                bot_trades = bot_history_data.get('trades', [])
-                if bot_trades:
-                    collected_data['trades'].extend(bot_trades)
-                    # Убрано: logger.debug(f"📊 Загружено {len(bot_trades)} сделок напрямую из bot_history.json") - слишком шумно
-        except json.JSONDecodeError as json_error:
-            logger.debug(f"⚠️ bot_history.json содержит ошибку JSON на позиции {json_error.pos} (пропускаем, оригинал не трогаем)")
-            # Не сохраняем копию автоматически - это может быть временная проблема при записи
-            # Если проблема критична, пользователь может проверить файл вручную
+                if db_trades:
+                    # Конвертируем формат БД в формат для коллектора
+                    for trade in db_trades:
+                        # get_trades_for_training возвращает данные с полями timestamp, close_timestamp
+                        # но может быть и entry_time, exit_time в зависимости от источника
+                        converted_trade = {
+                            'id': trade.get('trade_id') or trade.get('id') or f"db_{trade.get('symbol')}_{trade.get('timestamp', '')}",
+                            'timestamp': trade.get('timestamp') or trade.get('entry_time'),
+                            'bot_id': trade.get('bot_id', trade.get('symbol')),
+                            'symbol': trade.get('symbol'),
+                            'direction': trade.get('direction'),
+                            'entry_price': trade.get('entry_price'),
+                            'exit_price': trade.get('exit_price'),
+                            'pnl': trade.get('pnl'),
+                            'roi': trade.get('roi'),
+                            'status': trade.get('status', 'CLOSED'),
+                            'close_timestamp': trade.get('close_timestamp') or trade.get('exit_time'),
+                            'decision_source': trade.get('decision_source', 'SCRIPT'),
+                            'is_simulated': trade.get('is_simulated', False) or (trade.get('source') == 'SIMULATED'),
+                            'is_real': trade.get('is_real', True) and (trade.get('source') != 'SIMULATED')
+                        }
+                        collected_data['trades'].append(converted_trade)
+                    
+                    logger.info(f"✅ История трейдов: {len(db_trades)} сделок (загружено из БД)")
+                else:
+                    logger.warning(f"⚠️ История трейдов: 0 сделок в БД (проверьте наличие сделок в таблицах bot_trades, exchange_trades)")
         except Exception as e:
-            logger.debug(f"⚠️ Ошибка загрузки bot_history.json: {e}")
+            logger.error(f"❌ Ошибка загрузки из БД: {e}, используем fallback")
+            import traceback
+            logger.debug(traceback.format_exc())
+        
+        # FALLBACK: Загружаем из bot_history.json только если БД пуста
+        if not collected_data['trades']:
+            try:
+                bot_history_file = os.path.join('data', 'bot_history.json')
+                if os.path.exists(bot_history_file):
+                    import shutil
+                    snapshot_file = f"{bot_history_file}.snapshot"
+                    try:
+                        shutil.copy2(bot_history_file, snapshot_file)
+                        with open(snapshot_file, 'r', encoding='utf-8') as f:
+                            bot_history_data = json.load(f)
+                    finally:
+                        try:
+                            if os.path.exists(snapshot_file):
+                                os.remove(snapshot_file)
+                        except Exception:
+                            pass
+                    
+                    # Извлекаем сделки из bot_history.json
+                    bot_trades = bot_history_data.get('trades', [])
+                    if bot_trades:
+                        collected_data['trades'].extend(bot_trades)
+                        logger.debug(f"📊 Загружено {len(bot_trades)} сделок из bot_history.json (fallback)")
+            except json.JSONDecodeError as json_error:
+                logger.debug(f"⚠️ bot_history.json содержит ошибку JSON на позиции {json_error.pos}")
+            except Exception as e:
+                logger.debug(f"⚠️ Ошибка загрузки bot_history.json: {e}")
         
         try:
-            # Получаем историю сделок через API (дополняем прямую загрузку) - неблокирующий вызов
-            trades_response = self._call_bots_api('/api/bots/trades?limit=1000', silent=True)
-            if trades_response and trades_response.get('success'):
-                api_trades = trades_response.get('trades', [])
-                # Объединяем с уже загруженными из bot_history.json (избегаем дубликатов)
-                existing_ids = {t.get('id') for t in collected_data['trades'] if t.get('id')}
-                for trade in api_trades:
-                    trade_id = trade.get('id') or trade.get('timestamp')
-                    if trade_id not in existing_ids:
-                        collected_data['trades'].append(trade)
+            # Получаем историю сделок через API (дополняем загрузку из БД) - неблокирующий вызов
+            # ВАЖНО: Обернуто в try-except чтобы не блокировать выполнение
+            try:
+                trades_response = self._call_bots_api('/api/bots/trades?limit=1000', silent=True)
+                if trades_response and trades_response.get('success'):
+                    api_trades = trades_response.get('trades', [])
+                    # Объединяем с уже загруженными из БД (избегаем дубликатов)
+                    existing_ids = {t.get('id') for t in collected_data['trades'] if t.get('id')}
+                    for trade in api_trades:
+                        trade_id = trade.get('id') or trade.get('timestamp')
+                        if trade_id not in existing_ids:
+                            collected_data['trades'].append(trade)
+            except Exception as api_error:
+                logger.debug(f"⚠️ Ошибка получения сделок через API: {api_error}")
             
             # Получаем статистику - неблокирующий вызов
-            stats_response = self._call_bots_api('/api/bots/statistics', silent=True)
-            if stats_response and stats_response.get('success'):
-                collected_data['statistics'] = stats_response.get('statistics', {})
+            try:
+                stats_response = self._call_bots_api('/api/bots/statistics', silent=True)
+                if stats_response and stats_response.get('success'):
+                    collected_data['statistics'] = stats_response.get('statistics', {})
+            except Exception as api_error:
+                logger.debug(f"⚠️ Ошибка получения статистики через API: {api_error}")
             
             # Получаем историю действий - неблокирующий вызов
-            history_response = self._call_bots_api('/api/bots/history?limit=500', silent=True)
-            if history_response and history_response.get('success'):
-                collected_data['actions'] = history_response.get('history', [])
-            
-            # КРИТИЧНО: Все данные теперь сохраняются в БД через bot_history.py -> save_bot_trade()
-            # history_data.json больше не используется - все данные в БД
-            # Не сохраняем в JSON, чтобы не засорять файловую систему
+            try:
+                history_response = self._call_bots_api('/api/bots/history?limit=500', silent=True)
+                if history_response and history_response.get('success'):
+                    collected_data['actions'] = history_response.get('history', [])
+            except Exception as api_error:
+                logger.debug(f"⚠️ Ошибка получения истории через API: {api_error}")
             
             trades_count = len(collected_data.get('trades', []))
-            # Убрано: logger.debug(f"✅ Собрано данных: {trades_count} сделок") - слишком шумно
             
-            # Обновляем статус data-service в БД
-            self.update_data_service_status(
-                trades=trades_count,
-                history_loaded=True
-            )
+            # Обновляем статус data-service в БД (с обработкой ошибок)
+            try:
+                self.update_data_service_status(
+                    trades=trades_count,
+                    history_loaded=True
+                )
+            except Exception as status_error:
+                logger.debug(f"⚠️ Ошибка обновления статуса data-service: {status_error}")
             
         except Exception as e:
             logger.error(f"❌ Ошибка сбора данных из bot_history: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
         
         return collected_data
     
@@ -591,47 +644,56 @@ class AIDataCollector:
                         continue
                 
                 logger.info(f"✅ Обработано свечей: {candles_count} монет, {total_candles} свечей всего")
-                # Обновляем статус data-service в БД
-                self.update_data_service_status(
-                    candles=total_candles,
-                    history_loaded=True
-                )
+                # Обновляем статус data-service в БД (с обработкой ошибок)
+                try:
+                    self.update_data_service_status(
+                        candles=total_candles,
+                        history_loaded=True
+                    )
+                except Exception as status_error:
+                    logger.debug(f"⚠️ Ошибка обновления статуса: {status_error}")
             else:
                 logger.warning("⚠️ БД пуста, ожидаем загрузки свечей...")
             
-            # 2. Получаем индикаторы через API (RSI, тренды, сигналы)
-            rsi_response = self._call_bots_api('/api/bots/coins-with-rsi')
-            if rsi_response and rsi_response.get('success'):
-                coins_data = rsi_response.get('coins', {})
-                
-                logger.info(f"📊 Получено индикаторов для {len(coins_data)} монет")
-                
-                # Сохраняем индикаторы
-                indicators_count = 0
-                for symbol, coin_data in coins_data.items():
-                    try:
-                        collected_data['indicators'][symbol] = {
-                            'rsi': coin_data.get('rsi6h'),
-                            'trend': coin_data.get('trend6h'),
-                            'signal': coin_data.get('signal'),
-                            'price': coin_data.get('price'),
-                            'volume': coin_data.get('volume'),
-                            'stochastic': coin_data.get('stochastic'),
-                            'stoch_rsi_k': coin_data.get('stoch_rsi_k'),
-                            'stoch_rsi_d': coin_data.get('stoch_rsi_d'),
-                            'enhanced_rsi': coin_data.get('enhanced_rsi'),
-                            'trend_analysis': coin_data.get('trend_analysis'),
-                            'time_filter_info': coin_data.get('time_filter_info'),
-                            'exit_scam_info': coin_data.get('exit_scam_info'),
-                            'source': 'coins_rsi_data'
-                        }
-                        indicators_count += 1
-                        
-                    except Exception as e:
-                        logger.debug(f"⚠️ Ошибка обработки индикаторов для {symbol}: {e}")
-                        continue
-                
-                # Убрано: logger.debug(f"✅ Индикаторы: {indicators_count} монет") - слишком шумно
+            # 2. Получаем индикаторы через API (RSI, тренды, сигналы) - неблокирующий вызов
+            try:
+                rsi_response = self._call_bots_api('/api/bots/coins-with-rsi', silent=True)
+                if rsi_response and rsi_response.get('success'):
+                    coins_data = rsi_response.get('coins', {})
+                    
+                    logger.info(f"📊 Получено индикаторов для {len(coins_data)} монет")
+                    
+                    # Сохраняем индикаторы
+                    indicators_count = 0
+                    for symbol, coin_data in coins_data.items():
+                        try:
+                            collected_data['indicators'][symbol] = {
+                                'rsi': coin_data.get('rsi6h'),
+                                'trend': coin_data.get('trend6h'),
+                                'signal': coin_data.get('signal'),
+                                'price': coin_data.get('price'),
+                                'volume': coin_data.get('volume'),
+                                'stochastic': coin_data.get('stochastic'),
+                                'stoch_rsi_k': coin_data.get('stoch_rsi_k'),
+                                'stoch_rsi_d': coin_data.get('stoch_rsi_d'),
+                                'enhanced_rsi': coin_data.get('enhanced_rsi'),
+                                'trend_analysis': coin_data.get('trend_analysis'),
+                                'time_filter_info': coin_data.get('time_filter_info'),
+                                'exit_scam_info': coin_data.get('exit_scam_info'),
+                                'source': 'coins_rsi_data'
+                            }
+                            indicators_count += 1
+                            
+                        except Exception as e:
+                            logger.debug(f"⚠️ Ошибка обработки индикаторов для {symbol}: {e}")
+                            continue
+                    
+                    # Убрано: logger.debug(f"✅ Индикаторы: {indicators_count} монет") - слишком шумно
+                else:
+                    logger.debug("⚠️ Не удалось получить индикаторы через API (продолжаем без них)")
+            except Exception as api_error:
+                logger.debug(f"⚠️ Ошибка получения индикаторов через API: {api_error}")
+                # Продолжаем работу без индикаторов - это не критично
             
             # Итоговая статистика (кратко)
             # Убрано: logger.debug(f"📊 Данные собраны: {len(collected_data['candles'])} монет со свечами, {len(collected_data['indicators'])} с индикаторами") - слишком шумно
@@ -759,22 +821,25 @@ class AIDataCollector:
             return
         
         try:
-            # Получаем текущий статус из БД
-            current_status = self.ai_db.get_data_service_status('data_service')
-            if current_status and current_status.get('status'):
-                status = current_status['status']
-            else:
-                status = {}
-            
-            # Обновляем статус
-            status.update(kwargs)
-            status['timestamp'] = datetime.now().isoformat()
-            
-            # Сохраняем в БД
-            self.ai_db.save_data_service_status('data_service', status)
-            logger.debug("✅ Статус data-service обновлен в БД")
+            # Используем блокировку для предотвращения deadlock
+            with self.lock:
+                # Получаем текущий статус из БД
+                current_status = self.ai_db.get_data_service_status('data_service')
+                if current_status and current_status.get('status'):
+                    status = current_status['status']
+                else:
+                    status = {}
+                
+                # Обновляем статус
+                status.update(kwargs)
+                status['timestamp'] = datetime.now().isoformat()
+                
+                # Сохраняем в БД
+                self.ai_db.save_data_service_status('data_service', status)
+                logger.debug("✅ Статус data-service обновлен в БД")
         except Exception as e:
-            logger.error(f"❌ Ошибка обновления статуса data-service: {e}")
+            logger.debug(f"⚠️ Ошибка обновления статуса data-service: {e}")
+            # НЕ логируем как ERROR, чтобы не засорять логи - это не критично
     
     def get_data_service_status(self) -> Optional[Dict]:
         """

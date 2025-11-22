@@ -3357,9 +3357,11 @@ class AIDatabase:
                 final_query += " LIMIT ?"
                 params.append(limit)
             
+            conn.row_factory = sqlite3.Row
             cursor.execute(final_query, params)
             rows = cursor.fetchall()
             
+            # Преобразуем Row в dict
             return [dict(row) for row in rows]
     
     def analyze_patterns(self, 

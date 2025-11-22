@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ЭКСТРЕННЫЙ скрипт для восстановления потерянных сделок с биржи в bot_history.json.
+ЭКСТРЕННЫЙ скрипт для восстановления потерянных сделок с биржи в БД.
 
 ВАЖНО: Этот скрипт используется ТОЛЬКО в экстренных случаях для восстановления
-потерянных сделок с биржи. В обычной работе bot_history.json содержит ТОЛЬКО
-сделки ботов из bots.py (decision_source='SCRIPT' или 'AI').
+потерянных сделок с биржи. В обычной работе сделки ботов сохраняются через bot_history.py.
 
 Алгоритм:
 1. Подключаемся к активной бирже из app.config.
 2. Загружаем историю закрытых позиций (exchange.get_closed_pnl).
 3. Фильтруем сделки по размеру позиции (по умолчанию около 5 USDT).
-4. Сохраняет все существующие сделки ботов (decision_source='SCRIPT' или 'AI').
-5. Добавляет сделки с биржи (decision_source='EXCHANGE_IMPORT').
+4. Сохраняет сделки с биржи в БД (таблица exchange_trades в ai_data.db).
+5. Опционально сохраняет закрытые PnL в app_database (таблица closed_pnl).
 
 Запуск:
     python scripts/rebuild_bot_history_from_exchange.py
@@ -21,13 +20,12 @@
     --target-usdt   Желаемый размер позиции в USDT (по умолчанию 5).
     --tolerance     Допустимое отклонение от target-usdt (по умолчанию 0.6).
     --period        Период загрузки истории (all/day/week/month/...).
-    --output        Путь к bot_history.json (по умолчанию data/bot_history.json).
-    --dry-run       Только показать статистику, не изменяя файл.
+    --save-closed-pnl Сохранять также в таблицу closed_pnl (по умолчанию False).
+    --dry-run       Только показать статистику, не изменяя БД.
 """
 
 import argparse
 import json
-import shutil
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
@@ -38,7 +36,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from bot_engine.bot_history import BotHistoryManager, ACTION_TYPES, HISTORY_FILE
+from bot_engine.ai.ai_database import get_ai_database
+from bot_engine.app_database import AppDatabase
 from exchanges.exchange_factory import ExchangeFactory
 
 
@@ -182,9 +181,14 @@ def fetch_and_filter_trades(exchange, period: str, target_usdt: Optional[float],
     return filtered
 
 
-def build_history_payload(trades: List[Dict[str, Any]], batch_label: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    history_entries: List[Dict[str, Any]] = []
-    trade_entries: List[Dict[str, Any]] = []
+def build_exchange_trades_payload(trades: List[Dict[str, Any]], exchange_name: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Строит данные для сохранения в БД:
+    - exchange_trades: для ai_database.save_exchange_trades()
+    - closed_pnl: для app_database.save_closed_pnl()
+    """
+    exchange_trades: List[Dict[str, Any]] = []
+    closed_pnl_list: List[Dict[str, Any]] = []
     
     for idx, trade in enumerate(trades, start=1):
         symbol = trade['symbol']
@@ -196,125 +200,67 @@ def build_history_payload(trades: List[Dict[str, Any]], batch_label: str) -> Tup
         roi = trade['roi']
         position_value = trade['position_value']
         
-        close_ts = trade.get('close_timestamp')
+        close_ts = trade.get('close_timestamp') or 0
         entry_ts = trade.get('created_timestamp') or close_ts
-        entry_iso = ms_to_iso(entry_ts) or datetime.now(timezone.utc).isoformat()
-        close_iso = ms_to_iso(close_ts) or entry_iso
         
-        bot_id = f"exchange_import_{symbol}"
-        trade_id = f"exchange_trade_{idx}_{int(close_ts or idx)}"
+        # Генерируем уникальный trade_id
+        trade_id = f"exchange_import_{symbol}_{int(close_ts or idx)}_{idx}"
         
-        entry_data = {
-            'entry_price': entry_price,
-            'position_size_usdt': position_value,
-            'position_size_coins': qty,
-            'source': 'exchange_api_import',
-            'batch': batch_label
-        }
-        market_data = {
-            'exit_price': exit_price,
-            'close_timestamp': close_iso,
-            'source': 'exchange_api_import',
-            'batch': batch_label
-        }
-        
-        open_entry = {
-            'id': f"{trade_id}_open",
-            'timestamp': entry_iso,
-            'action_type': 'POSITION_OPENED',
-            'action_name': ACTION_TYPES['POSITION_OPENED'],
-            'bot_id': bot_id,
-            'symbol': symbol,
-            'direction': direction,
-            'size': qty,
-            'entry_price': entry_price,
-            'stop_loss': None,
-            'take_profit': None,
-            'decision_source': 'EXCHANGE_IMPORT',
-            'ai_decision_id': None,
-            'ai_confidence': None,
-            'ai_signal': None,
-            'rsi': None,
-            'trend': None,
-            'is_simulated': False,  # КРИТИЧНО: это реальные сделки с биржи!
-            'details': f"Импортирована позиция {direction} для {symbol}: размер {qty:.6f}, вход {entry_price:.6f} [EXCHANGE_IMPORT]",
-            'source': 'exchange_api_import',
-            'batch': batch_label
-        }
-        
-        close_entry = {
-            'id': f"{trade_id}_close",
-            'timestamp': close_iso,
-            'action_type': 'POSITION_CLOSED',
-            'action_name': ACTION_TYPES['POSITION_CLOSED'],
-            'bot_id': bot_id,
-            'symbol': symbol,
-            'direction': direction,
-            'exit_price': exit_price,
-            'pnl': pnl,
-            'roi': roi,
-            'reason': 'EXCHANGE_IMPORT',
-            'decision_source': 'EXCHANGE_IMPORT',
-            'ai_decision_id': None,
-            'ai_confidence': None,
-            'is_successful': pnl > 0,
-            'is_simulated': False,  # КРИТИЧНО: это реальные сделки с биржи!
-            'details': f"Закрыта позиция {direction} для {symbol}: выход {exit_price:.6f}, PnL {pnl:.4f} USDT ({roi:.2f}%) [EXCHANGE_IMPORT]",
-            'entry_data': entry_data,
-            'market_data': market_data,
-            'source': 'exchange_api_import',
-            'batch': batch_label
-        }
-        
-        trade_entry = {
+        # Данные для exchange_trades (ai_database)
+        exchange_trade = {
             'id': trade_id,
-            'timestamp': entry_iso,
-            'bot_id': bot_id,
             'symbol': symbol,
             'direction': direction,
-            'size': qty,
             'entry_price': entry_price,
             'exit_price': exit_price,
+            'timestamp': entry_ts,  # entry_time (timestamp в миллисекундах)
+            'close_timestamp': close_ts,  # exit_time (timestamp в миллисекундах)
             'pnl': pnl,
             'roi': roi,
-            'status': 'CLOSED',
-            'decision_source': 'EXCHANGE_IMPORT',
-            'ai_decision_id': None,
-            'ai_confidence': None,
-            'is_simulated': False,
-            'is_real': True,
-            'entry_data': entry_data,
-            'exit_market_data': market_data,
-            'close_timestamp': close_iso,
-            'close_reason': 'EXCHANGE_IMPORT',
-            'source': 'exchange_api_import',
             'position_size_usdt': position_value,
             'position_size_coins': qty,
-            'batch': batch_label
+            'orderId': trade.get('raw', {}).get('orderId'),
+            'source': 'exchange_api_import',
+            'saved_timestamp': datetime.now(timezone.utc).isoformat(),
+            'is_real': True
         }
+        exchange_trades.append(exchange_trade)
         
-        history_entries.extend([open_entry, close_entry])
-        trade_entries.append(trade_entry)
+        # Данные для closed_pnl (app_database)
+        side = trade.get('side', 'BUY' if direction == 'LONG' else 'SELL')
+        duration_seconds = None
+        if entry_ts and close_ts and entry_ts > 0 and close_ts > 0:
+            duration_seconds = int((close_ts - entry_ts) / 1000)  # Конвертируем из мс в секунды
+        
+        closed_pnl_entry = {
+            'symbol': symbol,
+            'side': side,
+            'entry_price': entry_price,
+            'exit_price': exit_price,
+            'size': qty,
+            'closed_pnl': pnl,
+            'closed_pnl_percent': roi,
+            'fee': trade.get('raw', {}).get('fee', 0),
+            'close_timestamp': close_ts,
+            'entry_timestamp': entry_ts if entry_ts > 0 else None,
+            'duration_seconds': duration_seconds,
+            'exchange': exchange_name
+        }
+        closed_pnl_list.append(closed_pnl_entry)
     
-    return history_entries, trade_entries
+    return exchange_trades, closed_pnl_list
 
 
-def backup_history_file(path: Path) -> Optional[Path]:
-    if not path.exists():
-        return None
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = path.with_suffix(f".backup_{timestamp}")
-    shutil.copy2(path, backup_path)
-    return backup_path
+# Функция backup_history_file больше не нужна, так как мы пишем в БД
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Пересборка bot_history.json из истории биржи")
+    parser = argparse.ArgumentParser(description="Импорт сделок с биржи в БД")
     parser.add_argument('--target-usdt', type=float, default=5.0, help="Размер позиции (USDT), который считаем реальным (default=5)")
     parser.add_argument('--tolerance', type=float, default=0.6, help="Допустимое отклонение размера (default=0.6)")
     parser.add_argument('--period', type=str, default='all', help="Период загрузки истории (all/day/week/month/...)")
-    parser.add_argument('--output', type=str, default=HISTORY_FILE, help="Путь к bot_history.json")
-    parser.add_argument('--dry-run', action='store_true', help="Только показать статистику, не записывая файл")
+    parser.add_argument('--save-closed-pnl', action='store_true', help="Также сохранять в таблицу closed_pnl")
+    parser.add_argument('--dry-run', action='store_true', help="Только показать статистику, не записывая в БД")
     args = parser.parse_args()
     
     exchange, exchange_name = load_exchange()
@@ -326,149 +272,49 @@ def main():
     
     print(f"✅ Получено {len(trades)} сделок с биржи {exchange_name} (период: {args.period})")
     
-    history_entries, trade_entries = build_history_payload(trades, batch_label=datetime.now().strftime("%Y-%m-%d %H:%M"))
+    # Строим данные для БД
+    exchange_trades, closed_pnl_list = build_exchange_trades_payload(trades, exchange_name)
     
     if args.dry_run:
-        print("ℹ️ DRY-RUN: файл bot_history.json не изменён.")
+        print("ℹ️ DRY-RUN: БД не изменена.")
         print(json.dumps({
-            'history_entries': len(history_entries),
-            'trade_entries': len(trade_entries),
-            'sample_trade': trade_entries[0] if trade_entries else {}
+            'exchange_trades': len(exchange_trades),
+            'closed_pnl_entries': len(closed_pnl_list),
+            'sample_exchange_trade': exchange_trades[0] if exchange_trades else {},
+            'sample_closed_pnl': closed_pnl_list[0] if closed_pnl_list else {}
         }, ensure_ascii=False, indent=2))
         return
     
-    output_path = Path(args.output)
-    backup_path = backup_history_file(output_path)
-    if backup_path:
-        print(f"💾 Создан бэкап: {backup_path}")
+    # Подключаемся к БД
+    try:
+        ai_db = get_ai_database()
+        print("✅ Подключено к AI Database")
+    except Exception as e:
+        print(f"❌ Ошибка подключения к AI Database: {e}")
+        sys.exit(1)
     
-    # КРИТИЧНО: Загружаем существующий файл и сохраняем сделки ботов
-    existing_bot_history = []
-    existing_bot_trades = []
+    # Сохраняем сделки в exchange_trades
+    print(f"💾 Сохранение {len(exchange_trades)} сделок в таблицу exchange_trades...")
+    saved_count = ai_db.save_exchange_trades(exchange_trades)
+    print(f"✅ Сохранено {saved_count} сделок в exchange_trades (всего в БД: {ai_db.count_exchange_trades()})")
     
-    if output_path.exists():
+    # Опционально сохраняем в closed_pnl
+    if args.save_closed_pnl:
         try:
-            with open(output_path, 'r', encoding='utf-8') as f:
-                existing_data = json.load(f)
-                existing_history = existing_data.get('history', [])
-                existing_trades = existing_data.get('trades', [])
-                
-                # Сохраняем ТОЛЬКО сделки ботов (decision_source='SCRIPT' или 'AI')
-                # НЕ сохраняем сделки с биржи (EXCHANGE_IMPORT) - они будут добавлены заново
-                for entry in existing_history:
-                    decision_source = entry.get('decision_source', '')
-                    if decision_source in ('SCRIPT', 'AI'):
-                        existing_bot_history.append(entry)
-                
-                for trade in existing_trades:
-                    decision_source = trade.get('decision_source', '')
-                    if decision_source in ('SCRIPT', 'AI'):
-                        existing_bot_trades.append(trade)
-                
-                print(f"📦 Сохранено {len(existing_bot_history)} записей истории ботов")
-                print(f"📦 Сохранено {len(existing_bot_trades)} сделок ботов")
-        except Exception as e:
-            print(f"⚠️ Ошибка загрузки существующего файла: {e}")
-            print("   Продолжаем с пустым файлом...")
-    
-    # Объединяем: сначала сделки ботов, потом сделки с биржи
-    final_history = existing_bot_history + history_entries
-    final_trades = existing_bot_trades + trade_entries
-    
-    print(f"📊 Итого будет записано:")
-    print(f"   История: {len(final_history)} записей ({len(existing_bot_history)} ботов + {len(history_entries)} с биржи)")
-    print(f"   Сделки: {len(final_trades)} сделок ({len(existing_bot_trades)} ботов + {len(trade_entries)} с биржи)")
-    
-    # Сохраняем напрямую в файл (обходим возможные проблемы с блокировкой)
-    import time
-    max_retries = 3
-    retry_delay = 0.2
-    
-    for attempt in range(max_retries):
-        try:
-            data = {
-                'history': final_history,
-                'trades': final_trades,
-                'last_update': datetime.now().isoformat()
-            }
-            # Атомарная запись через временный файл
-            temp_file = output_path.with_suffix('.tmp')
-            try:
-                with open(temp_file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                
-                # На Windows: сначала удаляем старый файл, если он существует
-                # Это помогает избежать ошибки "Отказано в доступе"
-                if output_path.exists():
-                    try:
-                        output_path.unlink()
-                    except PermissionError as perm_error:
-                        # Если файл заблокирован, ждем и пробуем снова
-                        if attempt < max_retries - 1:
-                            print(f"⚠️ Файл заблокирован, повторная попытка {attempt + 2}/{max_retries}...")
-                            time.sleep(retry_delay * (attempt + 1))
-                            if temp_file.exists():
-                                try:
-                                    temp_file.unlink()
-                                except Exception:
-                                    pass
-                            continue
-                        else:
-                            # Последняя попытка - пробуем записать напрямую
-                            print(f"⚠️ Не удалось удалить старый файл, пробуем прямую запись...")
-                            try:
-                                with open(output_path, 'w', encoding='utf-8') as f:
-                                    json.dump(data, f, ensure_ascii=False, indent=2)
-                                print(f"✅ Файл {output_path} успешно перезаписан (прямая запись)")
-                                if temp_file.exists():
-                                    try:
-                                        temp_file.unlink()
-                                    except Exception:
-                                        pass
-                                break
-                            except Exception as direct_error:
-                                raise perm_error
-                
-                # Атомарно заменяем старый файл новым
-                temp_file.replace(output_path)
-                print(f"✅ Файл {output_path} успешно перезаписан")
-                break  # Успешно сохранено
-                
-            except (PermissionError, OSError) as save_error:
-                # Удаляем временный файл в случае ошибки
-                if temp_file.exists():
-                    try:
-                        temp_file.unlink()
-                    except Exception:
-                        pass
-                
-                if attempt < max_retries - 1:
-                    print(f"⚠️ Ошибка доступа к файлу, повторная попытка {attempt + 2}/{max_retries}...")
-                    time.sleep(retry_delay * (attempt + 1))
-                    continue
-                else:
-                    # Последняя попытка - пробуем записать напрямую еще раз
-                    print(f"⚠️ Не удалось сохранить атомарно, пробуем прямую запись...")
-                    try:
-                        with open(output_path, 'w', encoding='utf-8') as f:
-                            json.dump(data, f, ensure_ascii=False, indent=2)
-                        print(f"✅ Файл сохранен (прямая запись)")
-                        break
-                    except Exception as direct_error:
-                        print(f"❌ Не удалось сохранить даже напрямую: {direct_error}")
-                        raise
-                    
-        except Exception as e:
-            if attempt == max_retries - 1:
-                print(f"❌ Ошибка сохранения файла после {max_retries} попыток: {e}")
-                raise
+            app_db = AppDatabase()
+            print(f"💾 Сохранение {len(closed_pnl_list)} записей в таблицу closed_pnl...")
+            success = app_db.save_closed_pnl(closed_pnl_list, exchange=exchange_name)
+            if success:
+                print(f"✅ Сохранено {len(closed_pnl_list)} записей в closed_pnl")
             else:
-                time.sleep(retry_delay * (attempt + 1))
+                print(f"⚠️ Ошибка сохранения в closed_pnl")
+        except Exception as e:
+            print(f"⚠️ Ошибка сохранения в closed_pnl: {e}")
     
-    print(f"🎉 bot_history.json обновлён:")
-    print(f"   📦 Сделки ботов: {len(existing_bot_trades)} (сохранены)")
-    print(f"   📥 Сделки с биржи: {len(trade_entries)} (добавлены)")
-    print(f"   📊 Всего: {len(final_trades)} сделок, {len(final_history)} записей истории")
+    print(f"🎉 Импорт завершён:")
+    print(f"   📥 Сделки с биржи: {saved_count} сохранено в exchange_trades")
+    if args.save_closed_pnl:
+        print(f"   📊 Закрытые PnL: {len(closed_pnl_list)} сохранено в closed_pnl")
 
 
 if __name__ == '__main__':
