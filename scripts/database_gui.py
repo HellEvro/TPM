@@ -473,6 +473,11 @@ class DatabaseGUI(tk.Tk):
         # Переменные
         self.db_path_var = tk.StringVar()
         self.table_var = tk.StringVar()
+        self.search_var = tk.StringVar()
+        
+        # Хранилище всех загруженных данных для фильтрации
+        self.all_table_data: List[Dict] = []
+        self.all_table_columns: List[str] = []
         
         # Создаем интерфейс
         self._build_ui()
@@ -617,6 +622,27 @@ class DatabaseGUI(tk.Tk):
         tables_combo.pack(side=tk.LEFT, padx=5)
         tables_combo.bind("<<ComboboxSelected>>", lambda e: self._load_table_data())
         self.tables_combo = tables_combo
+        
+        # Поиск/фильтр
+        search_frame = ttk.Frame(tables_frame)
+        search_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        ttk.Label(search_frame, text="Поиск:").pack(side=tk.LEFT, padx=2)
+        search_entry = ttk.Entry(
+            search_frame,
+            textvariable=self.search_var,
+            width=30
+        )
+        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        
+        # Привязываем поиск при вводе
+        self.search_var.trace_add('write', lambda *args: self._filter_table_data())
+        
+        ttk.Button(
+            search_frame,
+            text="Очистить",
+            command=self._clear_search
+        ).pack(side=tk.LEFT, padx=2)
         
         # Кнопки управления таблицей
         table_buttons_frame = ttk.Frame(tables_frame)
@@ -1027,13 +1053,15 @@ class DatabaseGUI(tk.Tk):
         # Загружаем данные
         rows, total_count = self.db_conn.get_table_data(table_name)
         
-        # Добавляем данные
-        for row in rows:
-            values = [str(row.get(col, '')) for col in columns]
-            self.data_tree.insert("", tk.END, values=values)
+        # Сохраняем все данные для фильтрации
+        self.all_table_data = rows
+        self.all_table_columns = columns
         
-        # Обновляем информацию о записях
-        self.records_info.config(text=f"Записей: {total_count} (показано: {len(rows)})")
+        # Очищаем фильтр при загрузке новой таблицы
+        self.search_var.set("")
+        
+        # Отображаем данные (с учетом текущего фильтра)
+        self._display_filtered_data()
         
         # Обновляем статус
         self._update_status(f"Загружено {len(rows)} записей из таблицы '{table_name}' (всего: {total_count})", "success")

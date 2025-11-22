@@ -101,13 +101,14 @@ class AutoTrainer:
     
     def _check_initial_training(self):
         """Проверяет нужно ли обучение при старте"""
-        model_path = Path(AIConfig.AI_ANOMALY_MODEL_PATH)
-        model_found = False
+        # Проверяем несколько моделей
+        models_found = []
         
-        # Проверяем файл модели
-        if model_path.exists():
-            model_found = True
-            logger.info("[AutoTrainer] ✅ Модель найдена в файле")
+        # 1. Проверяем Anomaly Detector
+        anomaly_model_path = Path(AIConfig.AI_ANOMALY_MODEL_PATH)
+        if anomaly_model_path.exists():
+            models_found.append("anomaly_detector")
+            logger.info("[AutoTrainer] ✅ Anomaly Detector найден в файле")
         else:
             # Проверяем БД на наличие модели
             try:
@@ -118,19 +119,45 @@ class AutoTrainer:
                     symbol=None
                 )
                 if model_version:
-                    model_found = True
-                    logger.info("[AutoTrainer] ✅ Модель найдена в БД")
+                    models_found.append("anomaly_detector")
+                    logger.info("[AutoTrainer] ✅ Anomaly Detector найден в БД")
             except Exception as e:
-                logger.debug(f"[AutoTrainer] Ошибка проверки модели в БД: {e}")
+                logger.debug(f"[AutoTrainer] Ошибка проверки Anomaly Detector в БД: {e}")
         
-        if not model_found:
+        # 2. Проверяем Parameter Quality Predictor
+        try:
+            from bot_engine.ai.ai_database import _get_project_root
+            project_root = _get_project_root()
+            param_quality_model_path = project_root / 'data' / 'ai' / 'models' / 'parameter_quality_predictor.pkl'
+        except:
+            # Fallback: используем относительный путь
+            param_quality_model_path = Path('data/ai/models/parameter_quality_predictor.pkl')
+        
+        if param_quality_model_path.exists():
+            models_found.append("parameter_quality_predictor")
+            logger.info("[AutoTrainer] ✅ Parameter Quality Predictor найден в файле")
+        else:
+            # Проверяем БД на наличие образцов для обучения
+            try:
+                from bot_engine.ai.ai_database import AIDatabase
+                ai_db = AIDatabase()
+                samples_count = ai_db.count_parameter_training_samples()
+                if samples_count >= 50:  # Минимум для обучения
+                    # Модель может быть обучена, но файл не найден
+                    # Это нормально - модель будет обучена при следующем запуске обучения
+                    logger.info(f"[AutoTrainer] ℹ️ Parameter Quality Predictor: {samples_count} образцов в БД (достаточно для обучения)")
+            except Exception as e:
+                logger.debug(f"[AutoTrainer] Ошибка проверки Parameter Quality Predictor: {e}")
+        
+        # Если хотя бы одна модель найдена - считаем что обучение не требуется
+        if len(models_found) > 0:
+            logger.info(f"[AutoTrainer] ✅ Найдено моделей: {', '.join(models_found)}, первичное обучение не требуется")
+        else:
             logger.warning("[AutoTrainer] ⚠️ Модель не найдена, требуется первичное обучение")
             
             if AIConfig.AI_AUTO_TRAIN_ON_STARTUP:
                 logger.info("[AutoTrainer] 🚀 Запускаем первичное обучение...")
                 self._initial_setup()
-        else:
-            logger.info("[AutoTrainer] ✅ Модель найдена, первичное обучение не требуется")
     
     def _initial_setup(self):
         """Первичная настройка - сбор данных и обучение"""
