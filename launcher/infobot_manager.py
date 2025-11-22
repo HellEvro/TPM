@@ -41,7 +41,7 @@ except ImportError as exc:  # pragma: no cover - tkinter should be available on 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 VENV_DIR = PROJECT_ROOT / ".venv"
-DEFAULT_REMOTE_URL = "git@github.com:HellEvro/TPM_Public.git"
+DEFAULT_REMOTE_URL = "https://github.com/HellEvro/TPM_Public.git"
 STATE_FILE = PROJECT_ROOT / "launcher" / ".infobot_manager_state.json"
 DEFAULT_GEOMETRY = "850x874"
 

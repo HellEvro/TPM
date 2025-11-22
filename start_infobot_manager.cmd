@@ -138,13 +138,19 @@ if !GIT_FOUND!==1 (
         git remote get-url origin >nul 2>&1
         if !errorlevel! neq 0 (
             REM Добавляем remote только если его нет
-            git remote add origin git@github.com:HellEvro/TPM_Public.git >nul 2>&1
+            REM Используем HTTPS URL вместо SSH для публичного репозитория (не требует настройки SSH ключей)
+            git remote add origin https://github.com/HellEvro/TPM_Public.git >nul 2>&1
         )
         REM Делаем первый коммит, если репозиторий только что инициализирован
         git rev-list --count HEAD >nul 2>&1
         if !errorlevel! neq 0 (
             REM Нет коммитов - делаем первый коммит
+            REM Настраиваем Git пользователя для коммита (если не настроен)
+            git config user.name "InfoBot User" >nul 2>&1
+            git config user.email "infobot@local" >nul 2>&1
+            REM Добавляем все файлы
             git add -A >nul 2>&1
+            REM Делаем коммит
             git commit -m "Initial commit: InfoBot Public repository" >nul 2>&1
         )
     )

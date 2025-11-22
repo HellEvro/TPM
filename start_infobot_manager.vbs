@@ -178,7 +178,8 @@ If GitInstalled() Then
         remoteCheck = shell.Run("cmd /c cd /d """ & projectDir & """ && git remote get-url origin >nul 2>&1", 0, True)
         If remoteCheck <> 0 Then
             ' Добавляем remote только если его нет
-            shell.Run "cmd /c cd /d """ & projectDir & """ && git remote add origin git@github.com:HellEvro/TPM_Public.git", 0, True
+            ' Используем HTTPS URL вместо SSH для публичного репозитория (не требует настройки SSH ключей)
+            shell.Run "cmd /c cd /d """ & projectDir & """ && git remote add origin https://github.com/HellEvro/TPM_Public.git", 0, True
         End If
         
         ' Делаем первый коммит, если репозиторий только что инициализирован
@@ -187,8 +188,19 @@ If GitInstalled() Then
         commitCheck = shell.Run("cmd /c cd /d """ & projectDir & """ && git rev-list --count HEAD >nul 2>&1", 0, True)
         If commitCheck <> 0 Then
             ' Нет коммитов - делаем первый коммит
+            ' Настраиваем Git пользователя для коммита (если не настроен)
+            shell.Run "cmd /c cd /d """ & projectDir & """ && git config user.name ""InfoBot User"" >nul 2>&1", 0, True
+            shell.Run "cmd /c cd /d """ & projectDir & """ && git config user.email ""infobot@local"" >nul 2>&1", 0, True
+            ' Добавляем все файлы
             shell.Run "cmd /c cd /d """ & projectDir & """ && git add -A", 0, True
-            shell.Run "cmd /c cd /d """ & projectDir & """ && git commit -m ""Initial commit: InfoBot Public repository""", 0, True
+            ' Делаем коммит
+            Dim commitResult
+            commitResult = shell.Run("cmd /c cd /d """ & projectDir & """ && git commit -m ""Initial commit: InfoBot Public repository""", 0, True)
+            ' Проверяем успешность коммита
+            If commitResult = 0 Then
+                ' Коммит успешен - проверяем еще раз
+                commitCheck = shell.Run("cmd /c cd /d """ & projectDir & """ && git rev-list --count HEAD >nul 2>&1", 0, True)
+            End If
         End If
     End If
 End If

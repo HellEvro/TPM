@@ -191,13 +191,18 @@ if command_exists git && [ ! -d ".git" ]; then
   git branch -m main >/dev/null 2>&1
   # Проверяем, есть ли уже remote origin
   if ! git remote get-url origin >/dev/null 2>&1; then
-    # Добавляем remote только если его нет
-    git remote add origin git@github.com:HellEvro/TPM_Public.git >/dev/null 2>&1
+    # Добавляем remote только если его нет (используем HTTPS для публичного репозитория)
+    git remote add origin https://github.com/HellEvro/TPM_Public.git >/dev/null 2>&1
   fi
   # Делаем первый коммит, если репозиторий только что инициализирован
   if ! git rev-list --count HEAD >/dev/null 2>&1; then
     # Нет коммитов - делаем первый коммит
+    # Настраиваем Git пользователя для коммита (если не настроен)
+    git config user.name "InfoBot User" >/dev/null 2>&1
+    git config user.email "infobot@local" >/dev/null 2>&1
+    # Добавляем все файлы
     git add -A >/dev/null 2>&1
+    # Делаем коммит
     git commit -m "Initial commit: InfoBot Public repository" >/dev/null 2>&1
   fi
 fi
