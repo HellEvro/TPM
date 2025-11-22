@@ -76,9 +76,27 @@ if !PYTHON_FOUND!==0 (
     )
 )
 
-REM Проверка Git (только если Python установлен)
+REM Функция проверки установки Git
+set "GIT_FOUND=0"
 git --version >nul 2>&1
-if !errorlevel! neq 0 (
+if !errorlevel!==0 (
+    set "GIT_FOUND=1"
+) else (
+    REM Проверяем стандартные пути установки Git
+    if exist "C:\Program Files\Git\cmd\git.exe" (
+        set "PATH=%PATH%;C:\Program Files\Git\cmd"
+        set "GIT_FOUND=1"
+    ) else if exist "C:\Program Files (x86)\Git\cmd\git.exe" (
+        set "PATH=%PATH%;C:\Program Files (x86)\Git\cmd"
+        set "GIT_FOUND=1"
+    ) else if exist "C:\Program Files\Git\bin\git.exe" (
+        set "PATH=%PATH%;C:\Program Files\Git\bin"
+        set "GIT_FOUND=1"
+    )
+)
+
+REM Проверка Git (только если Python установлен)
+if !GIT_FOUND!==0 (
     winget --version >nul 2>&1
     if !errorlevel!==0 (
         echo [INFO] Установка Git через winget...
@@ -86,12 +104,32 @@ if !errorlevel! neq 0 (
         REM Параметры: /VERYSILENT /NORESTART /NOCANCEL /SP- /SUPPRESSMSGBOXES
         REM /COMPONENTS=icons,ext\shellhere,assoc,assoc_sh /PATHOPTION=user /EDITOR=nano
         winget install --id Git.Git --silent --accept-package-agreements --accept-source-agreements --override "/VERYSILENT /NORESTART /NOCANCEL /SP- /SUPPRESSMSGBOXES /COMPONENTS=icons,ext\shellhere,assoc,assoc_sh /PATHOPTION=user /EDITOR=nano"
+        REM Ждем завершения установки (winget может установить Git в фоне)
+        timeout /t 8 /nobreak >nul
+        REM Проверяем установку через стандартные пути
+        if exist "C:\Program Files\Git\cmd\git.exe" (
+            set "PATH=%PATH%;C:\Program Files\Git\cmd"
+            set "GIT_FOUND=1"
+        ) else if exist "C:\Program Files (x86)\Git\cmd\git.exe" (
+            set "PATH=%PATH%;C:\Program Files (x86)\Git\cmd"
+            set "GIT_FOUND=1"
+        ) else if exist "C:\Program Files\Git\bin\git.exe" (
+            set "PATH=%PATH%;C:\Program Files\Git\bin"
+            set "GIT_FOUND=1"
+        )
+        REM Если Git все еще не найден, ждем еще немного
+        if !GIT_FOUND!==0 (
+            timeout /t 5 /nobreak >nul
+            git --version >nul 2>&1
+            if !errorlevel!==0 (
+                set "GIT_FOUND=1"
+            )
+        )
     )
 )
 
 REM Безопасная инициализация Git репозитория (если Git установлен)
-git --version >nul 2>&1
-if !errorlevel!==0 (
+if !GIT_FOUND!==1 (
     if not exist ".git" (
         REM Инициализируем репозиторий БЕЗ pull/fetch, чтобы не перезаписать существующие файлы
         git init >nul 2>&1

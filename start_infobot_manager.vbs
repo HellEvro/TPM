@@ -95,10 +95,33 @@ If Not pythonFound Then
     End If
 End If
 
+' Функция проверки установки Git через стандартные пути
+Function GitInstalled()
+    On Error Resume Next
+    Dim gitPaths
+    gitPaths = Array("C:\Program Files\Git\cmd\git.exe", "C:\Program Files (x86)\Git\cmd\git.exe", "C:\Program Files\Git\bin\git.exe")
+    Dim i
+    For i = 0 To UBound(gitPaths)
+        If fso.FileExists(gitPaths(i)) Then
+            GitInstalled = True
+            Exit Function
+        End If
+    Next
+    ' Проверяем через команду git
+    If CommandExists("git") Then
+        GitInstalled = True
+        Exit Function
+    End If
+    GitInstalled = False
+    On Error GoTo 0
+End Function
+
 ' Проверка Git (только если Python установлен)
-If Not CommandExists("git") Then
+If Not GitInstalled() Then
     wingetFound = CommandExists("winget")
     If wingetFound Then
+        ' Выводим сообщение об установке Git
+        shell.Run "cmd /c echo [INFO] Установка Git через winget...", 1, True
         ' Тихая установка Git с максимальной интеграцией
         ' Параметры установщика Git передаются через --override
         ' /VERYSILENT /NORESTART /NOCANCEL /SP- /SUPPRESSMSGBOXES
@@ -106,11 +129,18 @@ If Not CommandExists("git") Then
         Dim gitParams
         gitParams = "/VERYSILENT /NORESTART /NOCANCEL /SP- /SUPPRESSMSGBOXES /COMPONENTS=icons,ext\shellhere,assoc,assoc_sh /PATHOPTION=user /EDITOR=nano"
         shell.Run "winget install --id Git.Git --silent --accept-package-agreements --accept-source-agreements --override """ & gitParams & """", 0, True
+        ' Ждем завершения установки (winget может установить Git в фоне)
+        WScript.Sleep 8000
+        ' Проверяем установку через стандартные пути
+        If Not GitInstalled() Then
+            ' Если Git все еще не найден, ждем еще немного
+            WScript.Sleep 5000
+        End If
     End If
 End If
 
 ' Безопасная инициализация Git репозитория (если Git установлен)
-If CommandExists("git") Then
+If GitInstalled() Then
     Dim gitDir
     gitDir = fso.BuildPath(projectDir, ".git")
     If Not fso.FolderExists(gitDir) Then
