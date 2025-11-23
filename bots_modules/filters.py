@@ -1327,16 +1327,20 @@ def load_all_coins_candles_fast():
             main_file = None
             try:
                 if hasattr(sys.modules.get('__main__', None), '__file__') and sys.modules['__main__'].__file__:
-                    main_file = str(sys.modules['__main__'].__file__)
+                    main_file = str(sys.modules['__main__'].__file__).lower()
             except:
                 pass
+            
+            # ⚠️ КРИТИЧНО: Явно инициализируем переменные
+            is_bots_process = False
+            is_ai_process = False
             
             # Проверяем по имени скрипта, аргументам, файлу __main__ и переменной окружения
             # ⚠️ ВАЖНО: Сначала проверяем, что это НЕ bots.py, потом проверяем ai.py
             is_bots_process = (
                 'bots.py' in script_name.lower() or 
                 any('bots.py' in str(arg).lower() for arg in sys.argv) or
-                (main_file and 'bots.py' in main_file.lower())
+                (main_file and 'bots.py' in main_file)
             )
             
             # Если это точно bots.py - НЕ проверяем дальше и игнорируем переменную окружения
@@ -1349,15 +1353,15 @@ def load_all_coins_candles_fast():
                 is_ai_process = (
                     'ai.py' in script_name.lower() or 
                     any('ai.py' in str(arg).lower() for arg in sys.argv) or
-                    (main_file and 'ai.py' in main_file.lower()) or
+                    (main_file and 'ai.py' in main_file) or
                     env_flag
                 )
                 if is_ai_process:
-                    logger.debug(f"🔍 Обнаружен процесс ai.py - сохраняем свечи в ai_data.db (script_name={script_name}, main_file={main_file}, env_flag={env_flag})")
+                    logger.info(f"🔍 Обнаружен процесс ai.py - сохраняем свечи ТОЛЬКО в ai_data.db (script_name={script_name}, main_file={main_file}, env_flag={env_flag})")
             
             if is_ai_process:
                 # Если это процесс ai.py - сохраняем ТОЛЬКО в ai_data.db, НЕ в bots_data.db!
-                logger.debug("🔍 Обнаружен процесс ai.py - сохраняем свечи только в ai_data.db")
+                logger.info(f"🔍 Обнаружен процесс ai.py - сохраняем свечи ТОЛЬКО в ai_data.db (script_name={script_name}, main_file={main_file}, env={os.environ.get('INFOBOT_AI_PROCESS', '')})")
                 try:
                     from bot_engine.ai.ai_database import get_ai_database
                     ai_db = get_ai_database()
@@ -1370,18 +1374,27 @@ def load_all_coins_candles_fast():
                                 if candles:
                                     ai_db.save_candles(symbol, candles, timeframe='6h')
                                     saved_count += 1
-                        logger.info(f"💾 Свечи сохранены в ai_data.db: {saved_count} монет (процесс ai.py)")
+                        logger.info(f"✅ Свечи сохранены в ai_data.db: {saved_count} монет (процесс ai.py)")
                     else:
-                        logger.warning("⚠️ AI Database недоступна, свечи не сохранены")
+                        logger.error("❌ AI Database недоступна, свечи НЕ сохранены!")
                 except Exception as ai_db_error:
-                    logger.warning(f"⚠️ Ошибка сохранения в ai_data.db: {ai_db_error}")
+                    logger.error(f"❌ Ошибка сохранения в ai_data.db: {ai_db_error}")
+                    import traceback
+                    logger.error(traceback.format_exc())
             else:
-                # Это процесс bots.py - сохраняем в bots_data.db
+                # Это процесс bots.py или неизвестный процесс - сохраняем в bots_data.db
+                # ⚠️ ВАЖНО: Если это НЕ bots.py и НЕ ai.py - это может быть ошибка!
+                if not is_bots_process:
+                    logger.warning(f"⚠️ Неизвестный процесс вызывает load_all_coins_candles_fast()! script_name={script_name}, main_file={main_file}")
+                    logger.warning(f"⚠️ Сохраняем в bots_data.db (по умолчанию)")
+                
                 from bot_engine.storage import save_candles_cache
                 
                 # Просто сохраняем текущие свечи - save_candles_cache() сам ограничит до 1000 и удалит старые
                 if save_candles_cache(candles_cache):
                     logger.info(f"💾 Кэш свечей сохранен в bots_data.db: {len(candles_cache)} монет (процесс bots.py)")
+                else:
+                    logger.error(f"❌ Не удалось сохранить свечи в bots_data.db!")
             
         except Exception as db_error:
             logger.warning(f"⚠️ Ошибка сохранения в БД кэша: {db_error}")
