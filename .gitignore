@@ -441,3 +441,4 @@ data/ai_data.db-shm
 data/ai_data.db-wal
 data/bots_data.db-shm
 data/bots_data.db-wal
+data/app_data.db-shm
