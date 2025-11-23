@@ -442,5 +442,4 @@ data/ai_data.db-wal
 data/bots_data.db-shm
 data/bots_data.db-wal
 data/app_data.db-shm
-bot_engine/bot_config.py
 data/database_gui_settings.json
