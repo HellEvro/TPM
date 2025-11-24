@@ -678,7 +678,13 @@ def load_auto_bot_config():
         
         # ✅ Логируем leverage только при первой загрузке или при изменении (не спамим)
         leverage_from_file = merged_config.get('leverage')
-        if not hasattr(load_auto_bot_config, '_leverage_logged') or getattr(load_auto_bot_config, '_last_leverage', None) != leverage_from_file:
+        # Логируем только если это первая загрузка ИЛИ значение действительно изменилось
+        should_log_leverage = (
+            not hasattr(load_auto_bot_config, '_leverage_logged') or 
+            (hasattr(load_auto_bot_config, '_last_leverage') and 
+             load_auto_bot_config._last_leverage != leverage_from_file)
+        )
+        if should_log_leverage:
             logger.info(f"[CONFIG] ⚡ Кредитное плечо загружено из bot_config.py: {leverage_from_file}x")
             load_auto_bot_config._leverage_logged = True
             load_auto_bot_config._last_leverage = leverage_from_file
