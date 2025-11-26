@@ -49,6 +49,7 @@ EXCLUDE = [
     ".idea",
     ".vscode",
     "backups",
+    "restored_cursor_sessions",  # Восстановленные сессии Cursor (большие файлы)
     
     # Внутренние папки (не для публики)
     "license_generator",  # Исходники генерации лицензий
