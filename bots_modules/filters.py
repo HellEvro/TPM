@@ -602,8 +602,12 @@ def _check_loss_reentry_protection_static(symbol, candles, loss_reentry_count, l
         
         # Получаем timestamp закрытия последней сделки
         exit_timestamp = last_trade.get('exit_timestamp')
+        exit_time_str = last_trade.get('exit_time')
+        
+        # ✅ ОТЛАДКА: Логируем информацию о сделке
+        logger.debug(f"[LOSS_REENTRY_{symbol}] Последняя убыточная сделка: exit_timestamp={exit_timestamp}, exit_time={exit_time_str}, pnl={last_trade.get('pnl')}")
+        
         if not exit_timestamp:
-            exit_time_str = last_trade.get('exit_time')
             if exit_time_str:
                 try:
                     from datetime import datetime
@@ -612,14 +616,19 @@ def _check_loss_reentry_protection_static(symbol, candles, loss_reentry_count, l
                         exit_timestamp = int(exit_dt.timestamp())
                     else:
                         exit_timestamp = int(exit_time_str)
-                except:
+                except Exception as e:
+                    logger.error(f"[LOSS_REENTRY_{symbol}] Ошибка преобразования exit_time: {e}")
                     return {'allowed': True, 'reason': 'Не удалось получить время закрытия', 'candles_passed': None}
             else:
+                logger.warning(f"[LOSS_REENTRY_{symbol}] Нет exit_timestamp и exit_time")
                 return {'allowed': True, 'reason': 'Нет данных о времени закрытия', 'candles_passed': None}
         
         # Если exit_timestamp в миллисекундах, конвертируем в секунды
+        original_exit_timestamp = exit_timestamp
         if exit_timestamp > 1e12:
             exit_timestamp = exit_timestamp / 1000
+        
+        logger.debug(f"[LOSS_REENTRY_{symbol}] exit_timestamp после конвертации: {exit_timestamp} (было {original_exit_timestamp})")
         
         # Подсчитываем количество свечей, прошедших с момента закрытия
         CANDLE_INTERVAL_SECONDS = 6 * 3600  # 6 часов
