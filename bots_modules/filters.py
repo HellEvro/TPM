@@ -1426,9 +1426,11 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         if signal in ['ENTER_LONG', 'ENTER_SHORT']:
             logger.info(f"🎯 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} (${current_price:.4f}) → {signal}")
         elif signal == 'WAIT' and rsi <= SystemConfig.RSI_OVERSOLD and trend == 'DOWN' and avoid_down_trend:
-            logger.debug(f"🚫 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} LONG заблокирован (фильтр DOWN тренда)")
+            # Убрано избыточное логирование
+            pass
         elif signal == 'WAIT' and rsi >= SystemConfig.RSI_OVERBOUGHT and trend == 'UP' and avoid_up_trend:
-            logger.debug(f"🚫 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} SHORT заблокирован (фильтр UP тренда)")
+            # Убрано избыточное логирование
+            pass
         
         debug_payload = {
             'source': data_source,
@@ -1951,12 +1953,12 @@ def get_effective_signal(coin):
     
     # Проверяем ExitScam фильтр
     if coin.get('blocked_by_exit_scam', False):
-        logger.debug(f"{symbol}: ❌ {signal} заблокирован ExitScam фильтром")
+        # Убрано избыточное логирование
         return 'WAIT'
     
     # Проверяем RSI Time фильтр
     if coin.get('blocked_by_rsi_time', False):
-        logger.debug(f"{symbol}: ❌ {signal} заблокирован RSI Time фильтром")
+        # Убрано избыточное логирование
         return 'WAIT'
     
     # ✅ Проверяем защиту от повторных входов после убыточных закрытий
@@ -1964,14 +1966,7 @@ def get_effective_signal(coin):
         loss_reentry_info = coin.get('loss_reentry_info', {})
         reason = loss_reentry_info.get('reason', 'Защита от повторных входов') if loss_reentry_info else 'Защита от повторных входов'
         
-        # ✅ АНТИСПАМ: Логируем не чаще раза в минуту для каждой монеты
-        current_time = time.time()
-        with _loss_reentry_log_lock:
-            last_log_time = _loss_reentry_log_cache.get(symbol, 0)
-            if current_time - last_log_time >= _loss_reentry_log_interval:
-                logger.debug(f"{symbol}: ❌ {signal} заблокирован защитой от повторных входов после убытка: {reason}")
-                _loss_reentry_log_cache[symbol] = current_time
-        
+        # Убрано избыточное логирование - фильтр работает, но не спамит логи
         return 'WAIT'
     
     # Проверяем зрелость монеты
@@ -1986,11 +1981,11 @@ def get_effective_signal(coin):
     
     # УПРОЩЕННАЯ ПРОВЕРКА ТРЕНДОВ - только экстремальные случаи
     if signal == 'ENTER_SHORT' and avoid_up_trend and rsi >= rsi_short_threshold and trend == 'UP':
-        logger.debug(f"{symbol}: ❌ SHORT заблокирован (RSI={rsi:.1f} >= {rsi_short_threshold} + UP тренд)")
+        # Убрано избыточное логирование
         return 'WAIT'
     
     if signal == 'ENTER_LONG' and avoid_down_trend and rsi <= rsi_long_threshold and trend == 'DOWN':
-        logger.debug(f"{symbol}: ❌ LONG заблокирован (RSI={rsi:.1f} <= {rsi_long_threshold} + DOWN тренд)")
+        # Убрано избыточное логирование
         return 'WAIT'
     
     # Все проверки пройдены
