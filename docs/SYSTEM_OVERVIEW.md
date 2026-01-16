@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | Web UI | `app.py` (порт 5000) | Панель управления, страница «Боты», настройки и статусы. |
 | Bots Service | `bots.py` (порт 5001) + `bots_modules/*` | REST API, обработка сигналов, автосоздание/управление ботами. |
-| AI Launcher | `ai.py` (см. `docs/AI_README.md`) | Сбор данных, обучение моделей, Smart Risk, лицензирование. |
+| AI Launcher | `ai.py` (см. `docs/AI_README.md`) | Сбор данных, обучение моделей, Smart Risk, лицензирование, самообучение в реальном времени. |
 | Launcher GUI | `start_infobot_manager.*` | Устанавливает зависимости, запускает сервисы, проверяет лицензии. |
 | InfoBot_Public | `sync_to_public.py` | Собирает релизный пакет с необходимыми скриптами и защищёнными файлами. |
 
@@ -29,6 +29,7 @@
    - 🤖 AI Anomaly Detection (внутри ExitScam)
    - 🤖 AI Optimal Entry Detection
    - 🤖 AI Risk Management (размер позиции и стоп-лосс)
+5. **После закрытия позиции**: AISelfLearning автоматически обучается на результате для улучшения будущих решений
 5. Статусы и действия пишутся в `bots_data` (в памяти) и `data/bots_state.json`.  
 6. История сделок/действий уходит в `bot_engine/bot_history.py` → REST `/api/bots/history|trades|statistics`. Подробности — `docs/BOT_SIGNAL_PROCESSING_FLOW.md` и `docs/BOT_HISTORY.md`.
 
@@ -91,7 +92,7 @@
 | Сигналы и фильтры | `docs/BOT_SIGNAL_PROCESSING_FLOW.md`, `docs/WHITELIST_BLACKLIST.md` |
 | История/отчётность | `docs/BOT_HISTORY.md`, `docs/READY_FOR_YOU.md` |
 | Установка и запуск | `docs/START_HERE.md`, `docs/QUICKSTART.md`, `docs/INSTALL.md` |
-| AI и премиальные модули | `docs/AI_README.md`, `docs/AI_UI_CONFIGURATION.md`, `docs/PREMIUM_STOP_ANALYSIS_ARCHITECTURE.md` |
+| AI и премиальные модули | `docs/AI_README.md`, `docs/AI_UI_CONFIGURATION.md`, `docs/PREMIUM_STOP_ANALYSIS_ARCHITECTURE.md`, `docs/AI_SELF_LEARNING_SYSTEM.md` |
 | Будущие задачи | `docs/FUTURE_FEATURES.md`, `docs/Bots_TZ.md` (оригинальное ТЗ) |
 
 ---
