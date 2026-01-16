@@ -286,6 +286,20 @@ tmp/
 backup/
 backups/
 
+# Database backup files
+*.db.backup
+*.db.bak
+*.sqlite.backup
+*.sqlite.bak
+*.sqlite3.backup
+*.sqlite3.bak
+data/*.db.backup
+data/*.db.bak
+data/*.sqlite.backup
+data/*.sqlite.bak
+data/*.sqlite3.backup
+data/*.sqlite3.bak
+
 # Configuration backups
 *_backup_*.json
 *_bak_*.json
