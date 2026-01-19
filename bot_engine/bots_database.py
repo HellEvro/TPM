@@ -1095,6 +1095,7 @@ class BotsDatabase:
             
             # ==================== ТАБЛИЦА: RSI КЭШ ДАННЫЕ МОНЕТ (НОРМАЛИЗОВАННАЯ) ====================
             # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: одна строка = одна монета со всеми полями
+            # Поддерживает динамические таймфреймы через дополнительные колонки
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS rsi_cache_coins (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1125,10 +1126,42 @@ class BotsDatabase:
                 )
             """)
             
+            # Добавляем колонки для текущего таймфрейма, если их нет
+            from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+            current_timeframe = get_current_timeframe()
+            rsi_key = get_rsi_key(current_timeframe)
+            trend_key = get_trend_key(current_timeframe)
+            
+            # Проверяем существующие колонки
+            cursor.execute("PRAGMA table_info(rsi_cache_coins)")
+            columns_info = cursor.fetchall()
+            column_names = [col[1] for col in columns_info]
+            
+            # Добавляем колонки для текущего таймфрейма, если их нет
+            if rsi_key not in column_names and current_timeframe != '6h':
+                try:
+                    cursor.execute(f"ALTER TABLE rsi_cache_coins ADD COLUMN {rsi_key} REAL")
+                    logger.info(f"✅ Добавлена колонка {rsi_key} в таблицу rsi_cache_coins")
+                except Exception as e:
+                    logger.debug(f"Колонка {rsi_key} уже существует или ошибка: {e}")
+            
+            if trend_key not in column_names and current_timeframe != '6h':
+                try:
+                    cursor.execute(f"ALTER TABLE rsi_cache_coins ADD COLUMN {trend_key} TEXT")
+                    logger.info(f"✅ Добавлена колонка {trend_key} в таблицу rsi_cache_coins")
+                except Exception as e:
+                    logger.debug(f"Колонка {trend_key} уже существует или ошибка: {e}")
+            
             # Индексы для rsi_cache_coins
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_cache_id ON rsi_cache_coins(cache_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_symbol ON rsi_cache_coins(symbol)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_rsi6h ON rsi_cache_coins(rsi6h)")
+            # Создаем индекс для текущего таймфрейма, если это не 6h
+            if current_timeframe != '6h' and rsi_key in column_names:
+                try:
+                    cursor.execute(f"CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_{rsi_key} ON rsi_cache_coins({rsi_key})")
+                except Exception as e:
+                    logger.debug(f"Не удалось создать индекс для {rsi_key}: {e}")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_rsi_cache_coins_signal ON rsi_cache_coins(signal)")
             
             # ==================== ТАБЛИЦА: СОСТОЯНИЕ ПРОЦЕССОВ (НОРМАЛИЗОВАННАЯ) ====================
@@ -3682,12 +3715,44 @@ class BotsDatabase:
                     
                     cache_id = cursor.lastrowid
                     
+                    # Получаем текущий таймфрейм для сохранения данных
+                    from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+                    current_timeframe = get_current_timeframe()
+                    rsi_key = get_rsi_key(current_timeframe)
+                    trend_key = get_trend_key(current_timeframe)
+                    
+                    # Проверяем, есть ли колонки для текущего таймфрейма, если нет - добавляем
+                    cursor.execute("PRAGMA table_info(rsi_cache_coins)")
+                    columns_info = cursor.fetchall()
+                    column_names = [col[1] for col in columns_info]
+                    
+                    # Добавляем колонки для текущего таймфрейма, если их нет
+                    if rsi_key not in column_names:
+                        try:
+                            cursor.execute(f"ALTER TABLE rsi_cache_coins ADD COLUMN {rsi_key} REAL")
+                            logger.info(f"✅ Добавлена колонка {rsi_key} в таблицу rsi_cache_coins")
+                        except Exception as e:
+                            logger.warning(f"⚠️ Не удалось добавить колонку {rsi_key}: {e}")
+                    
+                    if trend_key not in column_names:
+                        try:
+                            cursor.execute(f"ALTER TABLE rsi_cache_coins ADD COLUMN {trend_key} TEXT")
+                            logger.info(f"✅ Добавлена колонка {trend_key} в таблицу rsi_cache_coins")
+                        except Exception as e:
+                            logger.warning(f"⚠️ Не удалось добавить колонку {trend_key}: {e}")
+                    
                     # Вставляем данные монет
                     for symbol, coin_data in coins_data.items():
                         try:
-                            # Извлекаем основные поля
-                            rsi6h = coin_data.get('rsi6h')
-                            trend6h = coin_data.get('trend6h')
+                            # Извлекаем RSI и тренд с учетом текущего таймфрейма
+                            from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                            current_rsi = get_rsi_from_coin_data(coin_data, current_timeframe)
+                            current_trend = get_trend_from_coin_data(coin_data, current_timeframe)
+                            
+                            # Для обратной совместимости также сохраняем в rsi6h/trend6h, если это не 6h
+                            rsi6h = coin_data.get('rsi6h') or (current_rsi if current_timeframe == '6h' else None)
+                            trend6h = coin_data.get('trend6h') or (current_trend if current_timeframe == '6h' else None)
+                            
                             rsi_zone = coin_data.get('rsi_zone')
                             signal = coin_data.get('signal')
                             price = coin_data.get('price')
@@ -3712,12 +3777,14 @@ class BotsDatabase:
                             # Собираем остальные поля в extra_coin_data_json
                             extra_coin_data = {}
                             known_coin_fields = {
-                                'symbol', 'rsi6h', 'trend6h', 'rsi_zone', 'signal', 'price',
+                                'symbol', 'rsi_zone', 'signal', 'price',
                                 'change24h', 'change_24h', 'last_update', 'blocked_by_scope',
                                 'has_existing_position', 'is_mature', 'blocked_by_exit_scam',
                                 'blocked_by_rsi_time', 'blocked_by_loss_reentry', 'trading_status', 'is_delisting',
                                 'trend_analysis', 'enhanced_rsi', 'time_filter_info', 'exit_scam_info', 'loss_reentry_info'
                             }
+                            # Добавляем все возможные ключи RSI/тренда в known_coin_fields
+                            known_coin_fields.update(['rsi6h', 'trend6h', rsi_key, trend_key])
                             
                             for key, value in coin_data.items():
                                 if key not in known_coin_fields:
@@ -3725,24 +3792,41 @@ class BotsDatabase:
                             
                             extra_coin_data_json = json.dumps(extra_coin_data) if extra_coin_data else None
                             
-                            # Вставляем монету
-                            cursor.execute("""
-                                INSERT INTO rsi_cache_coins (
-                                    cache_id, symbol, rsi6h, trend6h, rsi_zone, signal,
-                                    price, change24h, last_update, blocked_by_scope,
-                                    has_existing_position, is_mature, blocked_by_exit_scam,
-                                    blocked_by_rsi_time, blocked_by_loss_reentry, trading_status, is_delisting,
-                                    trend_analysis_json, enhanced_rsi_json, time_filter_info_json,
-                                    exit_scam_info_json, loss_reentry_info_json, extra_coin_data_json
-                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (
-                                cache_id, symbol, rsi6h, trend6h, rsi_zone, signal,
-                                price, change24h, last_update, blocked_by_scope,
-                                has_existing_position, is_mature, blocked_by_exit_scam,
-                                blocked_by_rsi_time, blocked_by_loss_reentry, trading_status, is_delisting,
-                                trend_analysis_json, enhanced_rsi_json, time_filter_info_json,
-                                exit_scam_info_json, loss_reentry_info_json, extra_coin_data_json
-                            ))
+                            # Формируем запрос с динамическими колонками
+                            # Сначала проверяем, какие колонки доступны
+                            available_columns = ['cache_id', 'symbol', 'rsi6h', 'trend6h', rsi_key, trend_key, 
+                                                'rsi_zone', 'signal', 'price', 'change24h', 'last_update', 
+                                                'blocked_by_scope', 'has_existing_position', 'is_mature',
+                                                'blocked_by_exit_scam', 'blocked_by_rsi_time', 'blocked_by_loss_reentry',
+                                                'trading_status', 'is_delisting', 'trend_analysis_json', 
+                                                'enhanced_rsi_json', 'time_filter_info_json', 'exit_scam_info_json',
+                                                'loss_reentry_info_json', 'extra_coin_data_json']
+                            
+                            # Фильтруем только существующие колонки
+                            existing_columns = [col for col in available_columns if col in column_names or col in ['cache_id', 'symbol', rsi_key, trend_key]]
+                            
+                            # Формируем список значений
+                            values = [cache_id, symbol, rsi6h, trend6h, current_rsi, current_trend,
+                                     rsi_zone, signal, price, change24h, last_update, blocked_by_scope,
+                                     has_existing_position, is_mature, blocked_by_exit_scam,
+                                     blocked_by_rsi_time, blocked_by_loss_reentry, trading_status, is_delisting,
+                                     trend_analysis_json, enhanced_rsi_json, time_filter_info_json,
+                                     exit_scam_info_json, loss_reentry_info_json, extra_coin_data_json]
+                            
+                            # Вставляем монету (используем стандартные колонки + динамические)
+                            columns_str = 'cache_id, symbol, rsi6h, trend6h, ' + f'{rsi_key}, {trend_key}, ' + \
+                                         'rsi_zone, signal, price, change24h, last_update, blocked_by_scope, ' + \
+                                         'has_existing_position, is_mature, blocked_by_exit_scam, ' + \
+                                         'blocked_by_rsi_time, blocked_by_loss_reentry, trading_status, is_delisting, ' + \
+                                         'trend_analysis_json, enhanced_rsi_json, time_filter_info_json, ' + \
+                                         'exit_scam_info_json, loss_reentry_info_json, extra_coin_data_json'
+                            
+                            placeholders = ', '.join(['?'] * len(values))
+                            
+                            cursor.execute(f"""
+                                INSERT INTO rsi_cache_coins ({columns_str})
+                                VALUES ({placeholders})
+                            """, values)
                         except Exception as e:
                             logger.warning(f"⚠️ Ошибка сохранения монеты {symbol} в RSI кэш: {e}")
                             continue
@@ -3791,9 +3875,26 @@ class BotsDatabase:
                     logger.debug(f"⚠️ RSI кэш устарел ({age_hours:.1f} часов)")
                     return None
                 
-                # Загружаем данные монет
-                cursor.execute("""
-                    SELECT symbol, rsi6h, trend6h, rsi_zone, signal, price, change24h,
+                # Получаем текущий таймфрейм для загрузки правильных колонок
+                from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+                current_timeframe = get_current_timeframe()
+                rsi_key = get_rsi_key(current_timeframe)
+                trend_key = get_trend_key(current_timeframe)
+                
+                # Загружаем данные монет с учетом текущего таймфрейма
+                # Поддерживаем обратную совместимость: если колонки для текущего таймфрейма нет, используем rsi6h/trend6h
+                # Сначала проверяем, есть ли колонки для текущего таймфрейма
+                cursor.execute("PRAGMA table_info(rsi_cache_coins)")
+                columns_info = cursor.fetchall()
+                column_names = [col[1] for col in columns_info]
+                
+                # Определяем, какие колонки использовать
+                use_rsi_col = rsi_key if rsi_key in column_names else 'rsi6h'
+                use_trend_col = trend_key if trend_key in column_names else 'trend6h'
+                
+                # Формируем запрос с правильными именами колонок
+                query = f"""
+                    SELECT symbol, {use_rsi_col}, {use_trend_col}, rsi_zone, signal, price, change24h,
                            last_update, blocked_by_scope, has_existing_position, is_mature,
                            blocked_by_exit_scam, blocked_by_rsi_time, blocked_by_loss_reentry,
                            trading_status, is_delisting,
@@ -3801,16 +3902,18 @@ class BotsDatabase:
                            exit_scam_info_json, loss_reentry_info_json, extra_coin_data_json
                     FROM rsi_cache_coins
                     WHERE cache_id = ?
-                """, (cache_id,))
+                """
+                cursor.execute(query, (cache_id,))
                 coin_rows = cursor.fetchall()
                 
                 coins_data = {}
                 for coin_row in coin_rows:
                     symbol = coin_row[0]
+                    # Используем динамические ключи для сохранения данных
                     coin_data = {
                         'symbol': symbol,
-                        'rsi6h': coin_row[1],
-                        'trend6h': coin_row[2],
+                        rsi_key: coin_row[1],  # Сохраняем с ключом текущего таймфрейма
+                        trend_key: coin_row[2],  # Сохраняем с ключом текущего таймфрейма
                         'rsi_zone': coin_row[3],
                         'signal': coin_row[4],
                         'price': coin_row[5],
