@@ -2420,10 +2420,11 @@ def analyze_trends_for_signal_coins():
                     # ✅ СОБИРАЕМ обновления во временном хранилище
                     if symbol in coins_rsi_data['coins']:
                         coin_data = coins_rsi_data['coins'][symbol]
-                        from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_key
+                        from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_key, get_current_timeframe
                         rsi = get_rsi_from_coin_data(coin_data)
                         new_trend = trend_analysis['trend']
-                        trend_key = get_trend_key()
+                        current_timeframe = get_current_timeframe()
+                        trend_key = get_trend_key(current_timeframe)
                         
                         # Пересчитываем сигнал с учетом нового тренда
                         old_signal = coin_data.get('signal')
@@ -2461,8 +2462,9 @@ def analyze_trends_for_signal_coins():
                 failed_count += 1
         
         # ✅ АТОМАРНО применяем ВСЕ обновления одним махом!
-        from bot_engine.bot_config import get_trend_key
-        trend_key = get_trend_key()
+        from bot_engine.bot_config import get_trend_key, get_current_timeframe
+        current_timeframe = get_current_timeframe()
+        trend_key = get_trend_key(current_timeframe)
         for symbol, updates in temp_updates.items():
             coins_rsi_data['coins'][symbol][trend_key] = updates[trend_key]  # Динамический ключ
             coins_rsi_data['coins'][symbol]['trend_analysis'] = updates['trend_analysis']
