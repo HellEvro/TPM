@@ -44,8 +44,12 @@ class BotsManager {
         this.isProgrammaticChange = false;
         
         // URL сервиса ботов - используем тот же хост что и у приложения
-        this.BOTS_SERVICE_URL = `${window.location.protocol}//${window.location.hostname}:5001`;
-        this.apiUrl = `${window.location.protocol}//${window.location.hostname}:5001/api/bots`; // Для совместимости
+        // Fallback на 127.0.0.1 если hostname пустой или localhost
+        const hostname = window.location.hostname || '127.0.0.1';
+        const protocol = window.location.protocol || 'http:';
+        this.BOTS_SERVICE_URL = `${protocol}//${hostname}:5001`;
+        this.apiUrl = `${protocol}//${hostname}:5001/api/bots`; // Для совместимости
+        console.log('[BotsManager] 🔗 BOTS_SERVICE_URL:', this.BOTS_SERVICE_URL);
         
         // Уровень логирования: 'error' - только ошибки, 'info' - важные события, 'debug' - все
         this.logLevel = 'error'; // ✅ ОТКЛЮЧЕНЫ СПАМ-ЛОГИ - только ошибки
