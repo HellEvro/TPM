@@ -722,7 +722,7 @@ def check_exit_scam_filter(symbol, coin_data):
         return _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=individual_settings)
 
 def get_coin_rsi_data(symbol, exchange_obj=None):
-    """Получает RSI данные для одной монеты (6H таймфрейм)"""
+    """Получает RSI данные для одной монеты (использует текущий таймфрейм из конфига)"""
     # ⚡ Включаем трейсинг для этого потока (если включен глобально)
     try:
         from bot_engine.bot_config import SystemConfig
@@ -758,11 +758,17 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         if symbol in delisted_coins:
             delisting_info = delisted_coins.get(symbol, {})
             logger.info(f"{symbol}: Исключаем из всех проверок - {delisting_info.get('reason', 'Delisting detected')}")
+            # Получаем ключи для текущего таймфрейма
+            from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+            current_timeframe = get_current_timeframe()
+            rsi_key = get_rsi_key(current_timeframe)
+            trend_key = get_trend_key(current_timeframe)
+            
             # Возвращаем минимальные данные для делистинговых монет
-            return {
+            result = {
                 'symbol': symbol,
-                'rsi6h': 0,
-                'trend6h': 'NEUTRAL',
+                rsi_key: 0,  # Динамический ключ
+                trend_key: 'NEUTRAL',  # Динамический ключ
                 'rsi_zone': 'NEUTRAL',
                 'signal': 'WAIT',
                 'price': 0,
@@ -839,9 +845,13 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             with _exchange_api_semaphore:
                 import time as time_module
                 api_start = time_module.time()
-                logger.info(f"🌐 {symbol}: Начало запроса get_chart_data()...")
+                # Получаем текущий таймфрейм
+                from bot_engine.bot_config import get_current_timeframe
+                current_timeframe = get_current_timeframe()
                 
-                chart_response = exchange_to_use.get_chart_data(symbol, '6h', '30d')
+                logger.info(f"🌐 {symbol}: Начало запроса get_chart_data() для таймфрейма {current_timeframe}...")
+                
+                chart_response = exchange_to_use.get_chart_data(symbol, current_timeframe, '30d')
                 
                 api_duration = time_module.time() - api_start
                 logger.info(f"🌐 {symbol}: get_chart_data() завершен за {api_duration:.1f}с")
@@ -851,7 +861,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                     return None
                 
                 candles = chart_response['data']['candles']
-                logger.info(f"✅ {symbol}: Свечи загружены с биржи ({len(candles)} свечей)")
+                logger.info(f"✅ {symbol}: Свечи загружены с биржи ({len(candles)} свечей) для таймфрейма {current_timeframe}")
                 data_source = 'api'
                 
                 # ✅ КРИТИЧНО: Сохраняем свечи в кэш после загрузки с биржи!
@@ -862,7 +872,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                         candles_cache[symbol] = {
                             'symbol': symbol,
                             'candles': candles,
-                            'timeframe': '6h',
+                            'timeframe': current_timeframe,
                             'last_update': datetime.now().isoformat()
                         }
                         # Обновляем глобальный кэш
@@ -874,7 +884,13 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         if not candles or len(candles) < 15:  # Базовая проверка для RSI(14)
             return None
         
-        # Рассчитываем RSI для 6H
+        # Получаем текущий таймфрейм и ключи для хранения данных
+        from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+        current_timeframe = get_current_timeframe()
+        rsi_key = get_rsi_key(current_timeframe)
+        trend_key = get_trend_key(current_timeframe)
+        
+        # Рассчитываем RSI для текущего таймфрейма
         # Bybit отправляет свечи в правильном порядке для RSI (от старой к новой)
         closes = [candle['close'] for candle in candles]
         
@@ -889,8 +905,8 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         trend = None  # Изначально None
         trend_analysis = None
         try:
-            from bots_modules.calculations import analyze_trend_6h
-            trend_analysis = analyze_trend_6h(symbol, exchange_obj=exchange_obj, candles_data=candles)
+            from bots_modules.calculations import analyze_trend
+            trend_analysis = analyze_trend(symbol, exchange_obj=exchange_obj, candles_data=candles, timeframe=current_timeframe)
             if trend_analysis:
                 trend = trend_analysis['trend']  # ТОЛЬКО рассчитанное значение!
             # НЕ устанавливаем дефолт если анализ не удался - оставляем None
@@ -898,10 +914,18 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             logger.debug(f"{symbol}: Ошибка анализа тренда: {e}")
             # НЕ устанавливаем дефолт при ошибке - оставляем None
         
-        # Рассчитываем изменение за 24h (примерно 4 свечи 6H)
+        # Рассчитываем изменение за 24h
+        # Для разных таймфреймов количество свечей в 24 часа разное
+        # 1h = 24 свечи, 2h = 12 свечей, 4h = 6 свечей, 6h = 4 свечи, 12h = 2 свечи, 1d = 1 свеча
         change_24h = 0
-        if len(closes) >= 5:
-            change_24h = round(((closes[-1] - closes[-5]) / closes[-5]) * 100, 2)
+        # Определяем количество свечей для 24 часов
+        timeframe_hours = {'1m': 1/60, '3m': 3/60, '5m': 5/60, '15m': 15/60, '30m': 30/60, 
+                          '1h': 1, '2h': 2, '4h': 4, '6h': 6, '8h': 8, '12h': 12, '1d': 24}
+        hours_per_candle = timeframe_hours.get(current_timeframe, 6)  # По умолчанию 6 часов
+        candles_for_24h = max(1, int(24 / hours_per_candle))
+        
+        if len(closes) >= candles_for_24h + 1:
+            change_24h = round(((closes[-1] - closes[-candles_for_24h-1]) / closes[-candles_for_24h-1]) * 100, 2)
         
         # ✅ КРИТИЧНО: Получаем оптимальные EMA периоды ДО определения сигнала!
         # ❌ ОТКЛЮЧЕНО: EMA фильтр удален из системы
@@ -1366,10 +1390,16 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         #     # Если не удалось получить статус, используем значения по умолчанию
         #     logger.debug(f"[TRADING_STATUS] {symbol}: Не удалось получить статус торговли: {e}")
         
+        # Получаем ключи для текущего таймфрейма
+        from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+        current_timeframe = get_current_timeframe()
+        rsi_key = get_rsi_key(current_timeframe)
+        trend_key = get_trend_key(current_timeframe)
+        
         result = {
             'symbol': symbol,
-            'rsi6h': round(rsi, 1),
-            'trend6h': trend,
+            rsi_key: round(rsi, 1),  # Динамический ключ (например, 'rsi6h', 'rsi1h')
+            trend_key: trend,  # Динамический ключ (например, 'trend6h', 'trend1h')
             'rsi_zone': rsi_zone,
             'signal': signal,
             'price': current_price,
@@ -1909,9 +1939,10 @@ def get_effective_signal(coin):
     rsi_long_threshold = auto_config.get('rsi_long_threshold', 29)
     rsi_short_threshold = auto_config.get('rsi_short_threshold', 71)
         
-    # Получаем данные монеты
-    rsi = coin.get('rsi6h', 50)
-    trend = coin.get('trend', coin.get('trend6h', 'NEUTRAL'))
+    # Получаем данные монеты с учетом текущего таймфрейма
+    from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+    rsi = get_rsi_from_coin_data(coin) or 50
+    trend = get_trend_from_coin_data(coin)
     
     # ✅ КРИТИЧНО: Проверяем зрелость монеты ПЕРВЫМ ДЕЛОМ
     # Незрелые монеты НЕ МОГУТ иметь активных ботов и НЕ ДОЛЖНЫ показываться в LONG/SHORT фильтрах!
@@ -2000,10 +2031,11 @@ def process_auto_bot_signals(exchange_obj=None):
         
         # Получаем монеты с сигналами
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
+        from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
         potential_coins = []
         for symbol, coin_data in coins_rsi_data['coins'].items():
-            rsi = coin_data.get('rsi6h')
-            trend = coin_data.get('trend6h', 'NEUTRAL')
+            rsi = get_rsi_from_coin_data(coin_data)
+            trend = get_trend_from_coin_data(coin_data)
             
             if rsi is None:
                 continue
@@ -2104,8 +2136,9 @@ def process_auto_bot_signals(exchange_obj=None):
                 
                 # Проверяем фильтры
                 if candles and len(candles) >= 10:
-                    current_rsi = coin.get('rsi') or coin_data.get('rsi6h')
-                    current_trend = coin.get('trend') or coin_data.get('trend6h', 'NEUTRAL')
+                    from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                    current_rsi = get_rsi_from_coin_data(coin) or get_rsi_from_coin_data(coin_data)
+                    current_trend = get_trend_from_coin_data(coin) if coin.get('trend') else get_trend_from_coin_data(coin_data)
                     signal = coin['signal']
                     
                     filters_allowed, filters_reason = apply_entry_filters(
@@ -2155,9 +2188,10 @@ def process_auto_bot_signals(exchange_obj=None):
                     except Exception:
                         pass
                 
-                # Получаем RSI и тренд
-                rsi = coin.get('rsi') or coin.get('rsi6h', 50)
-                trend = coin.get('trend') or coin.get('trend6h', 'NEUTRAL')
+                # Получаем RSI и тренд с учетом текущего таймфрейма
+                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                rsi = get_rsi_from_coin_data(coin) or 50
+                trend = get_trend_from_coin_data(coin)
                 
                 # ✅ КРИТИЧНО: Проверяем should_open_long/short ПЕРЕД входом!
                 if direction == 'LONG':
@@ -2229,8 +2263,9 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                     logger.warning(f"❌ {symbol}: RSI данные не найдены - пропускаем проверку")
                     continue
                 
-                current_rsi = rsi_data.get('rsi6h')
-                current_trend = rsi_data.get('trend6h')
+                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                current_rsi = get_rsi_from_coin_data(rsi_data)
+                current_trend = get_trend_from_coin_data(rsi_data)
                 logger.info(f"✅ {symbol}: RSI={current_rsi}, Trend={current_trend}, Проверяем условия закрытия...")
                 
                 # Обрабатываем торговые сигналы через метод update
@@ -2319,9 +2354,10 @@ def analyze_trends_for_signal_coins():
         
         # Находим монеты с сигналами для анализа тренда
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
+        from bot_engine.bot_config import get_rsi_from_coin_data
         signal_coins = []
         for symbol, coin_data in coins_rsi_data['coins'].items():
-            rsi = coin_data.get('rsi6h')
+            rsi = get_rsi_from_coin_data(coin_data)
             if rsi is not None and (rsi <= 29 or rsi >= 71):
                 signal_coins.append(symbol)
         
@@ -2344,8 +2380,10 @@ def analyze_trends_for_signal_coins():
                     # ✅ СОБИРАЕМ обновления во временном хранилище
                     if symbol in coins_rsi_data['coins']:
                         coin_data = coins_rsi_data['coins'][symbol]
-                        rsi = coin_data.get('rsi6h')
+                        from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_key
+                        rsi = get_rsi_from_coin_data(coin_data)
                         new_trend = trend_analysis['trend']
+                        trend_key = get_trend_key()
                         
                         # Пересчитываем сигнал с учетом нового тренда
                         old_signal = coin_data.get('signal')
@@ -2361,7 +2399,7 @@ def analyze_trends_for_signal_coins():
                         
                         # Сохраняем обновления во временном хранилище
                         temp_updates[symbol] = {
-                            'trend6h': new_trend,
+                            trend_key: new_trend,  # Динамический ключ для текущего таймфрейма
                             'trend_analysis': trend_analysis,
                             'signal': new_signal,
                             'old_signal': old_signal
@@ -2383,8 +2421,10 @@ def analyze_trends_for_signal_coins():
                 failed_count += 1
         
         # ✅ АТОМАРНО применяем ВСЕ обновления одним махом!
+        from bot_engine.bot_config import get_trend_key
+        trend_key = get_trend_key()
         for symbol, updates in temp_updates.items():
-            coins_rsi_data['coins'][symbol]['trend6h'] = updates['trend6h']
+            coins_rsi_data['coins'][symbol][trend_key] = updates[trend_key]  # Динамический ключ
             coins_rsi_data['coins'][symbol]['trend_analysis'] = updates['trend_analysis']
             coins_rsi_data['coins'][symbol]['signal'] = updates['signal']
         
@@ -3086,7 +3126,8 @@ def test_rsi_time_filter(symbol):
             logger.error(f"{symbol}: Нет RSI данных")
             return
         
-        current_rsi = coin_data.get('rsi6h', 0)
+        from bot_engine.bot_config import get_rsi_from_coin_data
+        current_rsi = get_rsi_from_coin_data(coin_data) or 0
         signal = coin_data.get('signal', 'WAIT')
         
         # ✅ Определяем ОРИГИНАЛЬНЫЙ сигнал на основе только RSI с учетом индивидуальных настроек
