@@ -611,6 +611,8 @@ def load_auto_bot_config():
     - Система читает напрямую из DEFAULT_AUTO_BOT_CONFIG
     """
     try:
+        logger.debug("[CONFIG] 🔄 Начало load_auto_bot_config()")
+        
         # ✅ КРИТИЧЕСКИ ВАЖНО: Перезагружаем модуль перед чтением
         # Это гарантирует, что мы читаем актуальные данные из файла, а не из кэша Python
         import importlib
@@ -620,6 +622,8 @@ def load_auto_bot_config():
         
         config_file_path = os.path.join('bot_engine', 'bot_config.py')
         reloaded = False
+        
+        logger.debug(f"[CONFIG] 📂 Путь к конфигу: {config_file_path}")
 
         if os.path.exists(config_file_path):
             # Проверяем время модификации файла
@@ -634,30 +638,41 @@ def load_auto_bot_config():
             # ✅ КРИТИЧНО: При _last_mtime == 0 ВСЕГДА перезагружаем модуль, даже если файл не изменился
             # Это нужно для принудительной перезагрузки из API endpoint
             is_forced_reload = load_auto_bot_config._last_mtime == 0
+            logger.debug(f"[CONFIG] 🔍 Проверка перезагрузки: current_mtime={current_mtime}, _last_mtime={load_auto_bot_config._last_mtime}, is_forced={is_forced_reload}")
+            
             if current_mtime > load_auto_bot_config._last_mtime or is_forced_reload:
+                logger.debug("[CONFIG] 🔄 Файл изменился или принудительная перезагрузка - перезагружаем модуль")
+                
                 # ✅ КРИТИЧНО: Сохраняем таймфрейм из БД перед перезагрузкой
                 saved_timeframe_from_db = None
                 try:
+                    logger.debug("[CONFIG] 💾 Сохраняем таймфрейм из БД перед перезагрузкой...")
                     from bot_engine.bots_database import get_bots_database
                     db = get_bots_database()
                     saved_timeframe_from_db = db.load_timeframe()
-                except:
-                    pass
+                    logger.debug(f"[CONFIG] ✅ Таймфрейм из БД: {saved_timeframe_from_db}")
+                except Exception as tf_save_err:
+                    logger.warning(f"[CONFIG] ⚠️ Не удалось сохранить таймфрейм из БД: {tf_save_err}")
                 
                 # Импортируем модуль, если его еще нет
+                logger.debug("[CONFIG] 📦 Импорт/перезагрузка модуля bot_config...")
                 if 'bot_engine.bot_config' not in sys.modules:
                     import bot_engine.bot_config
+                    logger.debug("[CONFIG] ✅ Модуль bot_config импортирован")
                 else:
                     import bot_engine.bot_config
                     importlib.reload(bot_engine.bot_config)
+                    logger.debug("[CONFIG] ✅ Модуль bot_config перезагружен")
                 
                 # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после перезагрузки
                 if saved_timeframe_from_db:
                     try:
+                        logger.debug(f"[CONFIG] 🔄 Восстанавливаем таймфрейм из БД: {saved_timeframe_from_db}")
                         from bot_engine.bot_config import set_current_timeframe
                         set_current_timeframe(saved_timeframe_from_db)
-                    except:
-                        pass
+                        logger.debug(f"[CONFIG] ✅ Таймфрейм восстановлен: {saved_timeframe_from_db}")
+                    except Exception as tf_restore_err:
+                        logger.warning(f"[CONFIG] ⚠️ Не удалось восстановить таймфрейм: {tf_restore_err}")
                 
                 # ✅ ВАЖНО: ВСЕГДА обновляем _last_mtime после перезагрузки модуля
                 # Это предотвращает бесконечную перезагрузку при принудительной перезагрузке
@@ -691,27 +706,39 @@ def load_auto_bot_config():
         
         # ✅ КРИТИЧНО: Принудительно перезагружаем модуль ПЕРЕД импортом DEFAULT_AUTO_BOT_CONFIG
         # Это гарантирует, что мы получим актуальное значение из файла, а не из кэша
+        logger.debug("[CONFIG] 🔄 Финальная перезагрузка модуля перед импортом DEFAULT_AUTO_BOT_CONFIG...")
+        
         # ✅ КРИТИЧНО: Сохраняем таймфрейм из БД перед перезагрузкой
         saved_timeframe_from_db_final = None
         try:
+            logger.debug("[CONFIG] 💾 Сохраняем таймфрейм из БД перед финальной перезагрузкой...")
             from bot_engine.bots_database import get_bots_database
             db = get_bots_database()
             saved_timeframe_from_db_final = db.load_timeframe()
-        except:
-            pass
+            logger.debug(f"[CONFIG] ✅ Таймфрейм из БД (финальный): {saved_timeframe_from_db_final}")
+        except Exception as tf_final_err:
+            logger.warning(f"[CONFIG] ⚠️ Не удалось сохранить таймфрейм из БД (финальный): {tf_final_err}")
         
         if 'bot_engine.bot_config' in sys.modules:
+            logger.debug("[CONFIG] 🔄 Выполняем финальную перезагрузку модуля...")
             importlib.reload(sys.modules['bot_engine.bot_config'])
+            logger.debug("[CONFIG] ✅ Финальная перезагрузка завершена")
+        else:
+            logger.debug("[CONFIG] ⚠️ Модуль bot_config не найден в sys.modules")
         
         # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после финальной перезагрузки
         if saved_timeframe_from_db_final:
             try:
+                logger.debug(f"[CONFIG] 🔄 Восстанавливаем таймфрейм из БД (финальный): {saved_timeframe_from_db_final}")
                 from bot_engine.bot_config import set_current_timeframe
                 set_current_timeframe(saved_timeframe_from_db_final)
-            except:
-                pass
+                logger.debug(f"[CONFIG] ✅ Таймфрейм восстановлен (финальный): {saved_timeframe_from_db_final}")
+            except Exception as tf_final_restore_err:
+                logger.warning(f"[CONFIG] ⚠️ Не удалось восстановить таймфрейм (финальный): {tf_final_restore_err}")
         
+        logger.debug("[CONFIG] 📥 Импорт DEFAULT_AUTO_BOT_CONFIG...")
         from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
+        logger.debug("[CONFIG] ✅ DEFAULT_AUTO_BOT_CONFIG импортирован")
         
         # ✅ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: читаем значение напрямую из файла для сравнения
         try:
@@ -734,7 +761,9 @@ def load_auto_bot_config():
 
         # ✅ ЕДИНСТВЕННЫЙ источник истины: bot_engine/bot_config.py
         # Все настройки загружаются ТОЛЬКО из файла, БД не используется для auto_bot_config
+        logger.debug("[CONFIG] 📋 Создание merged_config из DEFAULT_AUTO_BOT_CONFIG...")
         merged_config = DEFAULT_AUTO_BOT_CONFIG.copy()
+        logger.debug(f"[CONFIG] ✅ merged_config создан, ключей: {len(merged_config)}")
         
         # ✅ Логируем leverage только при первой загрузке или при изменении (не спамим)
         leverage_from_file = merged_config.get('leverage')
@@ -801,9 +830,12 @@ def load_auto_bot_config():
             # ✅ Логирование leverage убрано (было слишком много спама) - логируется только при загрузке из файла
         
         # Конфигурация загружена и обновлена в bots_data
+        logger.debug("[CONFIG] ✅ load_auto_bot_config() завершена успешно")
             
     except Exception as e:
         logger.error(f" ❌ Ошибка загрузки конфигурации: {e}")
+        import traceback
+        logger.error(f" ❌ Трассировка ошибки:\n{traceback.format_exc()}")
 
 def get_auto_bot_config():
     """Получает текущую конфигурацию Auto Bot из bots_data"""
