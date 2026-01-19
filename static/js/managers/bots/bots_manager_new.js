@@ -441,8 +441,14 @@ class BotsManager {
         }
 
         const coinsHtml = coins.map(coin => {
-            const rsiClass = this.uiComponents.getRsiZoneClass(coin.rsi6h);
-            const trendClass = coin.trend6h ? `trend-${coin.trend6h.toLowerCase()}` : '';
+            // Получаем текущий таймфрейм для отображения данных
+            const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+            const rsiKey = `rsi${currentTimeframe}`;
+            const trendKey = `trend${currentTimeframe}`;
+            const rsiValue = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
+            const trendValue = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
+            const rsiClass = this.uiComponents.getRsiZoneClass(rsiValue);
+            const trendClass = trendValue ? `trend-${trendValue.toLowerCase()}` : '';
             const effectiveSignal = this.uiComponents.getEffectiveSignal(coin);
             const signalClass = effectiveSignal === 'ENTER_LONG' ? 'enter-long' : 
                                effectiveSignal === 'ENTER_SHORT' ? 'enter-short' : '';
@@ -454,7 +460,7 @@ class BotsManager {
                             <span class="coin-symbol">${coin.symbol}</span>
                             <div class="coin-header-right">
                                 ${this.uiComponents.generateWarningIndicator(coin)}
-                                <span class="coin-rsi ${rsiClass}">${coin.rsi6h}</span>
+                                <span class="coin-rsi ${rsiClass}">${rsiValue}</span>
                                 <a href="${this.uiComponents.createTickerLink(coin.symbol)}" 
                                    target="_blank" 
                                    class="external-link" 
@@ -465,7 +471,7 @@ class BotsManager {
                             </div>
                         </div>
                         <div class="coin-details">
-                            <span class="coin-trend ${coin.trend6h}">${coin.trend6h || 'NEUTRAL'}</span>
+                            <span class="coin-trend ${trendValue}">${trendValue}</span>
                             <span class="coin-price">$${coin.price?.toFixed(6) || '0'}</span>
                             ${this.uiComponents.generateEnhancedSignalInfo(coin)}
                         </div>
@@ -543,7 +549,7 @@ class BotsManager {
         if (coinInfoElement) {
             coinInfoElement.innerHTML = `
                 <h4>${selectedCoin.symbol}</h4>
-                <p>RSI 6H: <span class="rsi-value">${selectedCoin.rsi6h}</span></p>
+                <p>RSI ${currentTimeframe.toUpperCase()}: <span class="rsi-value">${rsiValue}</span></p>
                 <p>Тренд: <span class="trend-value">${selectedCoin.trend6h || 'NEUTRAL'}</span></p>
                 <p>Цена: <span class="price-value">$${selectedCoin.price?.toFixed(6) || '0'}</span></p>
             `;
