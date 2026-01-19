@@ -678,7 +678,9 @@ class BotsManager {
             return;
         }
 
-        this.logDebug('[BotsManager] 📊 Загрузка данных RSI 6H...');
+        // Получаем текущий таймфрейм для логирования
+        const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+        this.logDebug(`[BotsManager] 📊 Загрузка данных RSI ${currentTimeframe.toUpperCase()}...`);
         
         // Сохраняем текущее состояние поиска
         const searchInput = document.getElementById('coinSearchInput');
