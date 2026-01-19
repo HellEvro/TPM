@@ -2308,6 +2308,21 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                 from bots_modules.bot_class import NewTradingBot
                 trading_bot = NewTradingBot(symbol, bot_data, exchange_to_use)
                 
+                # ✅ КРИТИЧНО: Определяем таймфрейм для проверки сигналов
+                # Если бот в позиции - используем его entry_timeframe, иначе системный
+                bot_entry_timeframe = bot_data.get('entry_timeframe')
+                if bot_entry_timeframe and bot_data.get('status') in [
+                    BOT_STATUS.get('IN_POSITION_LONG'),
+                    BOT_STATUS.get('IN_POSITION_SHORT')
+                ]:
+                    # Бот в позиции - используем его таймфрейм
+                    timeframe_to_use = bot_entry_timeframe
+                    logger.debug(f"🔍 {symbol}: Используем таймфрейм бота: {timeframe_to_use} (позиция открыта в этом ТФ)")
+                else:
+                    # Бот не в позиции - используем системный таймфрейм
+                    from bot_engine.bot_config import get_current_timeframe
+                    timeframe_to_use = get_current_timeframe()
+                
                 # Получаем RSI данные для монеты
                 # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
                 rsi_data = coins_rsi_data['coins'].get(symbol)
@@ -2316,14 +2331,18 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                     logger.warning(f"❌ {symbol}: RSI данные не найдены - пропускаем проверку")
                     continue
                 
-                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
-                current_rsi = get_rsi_from_coin_data(rsi_data)
-                current_trend = get_trend_from_coin_data(rsi_data)
-                logger.info(f"✅ {symbol}: RSI={current_rsi}, Trend={current_trend}, Проверяем условия закрытия...")
+                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data, get_rsi_key, get_trend_key
+                # ✅ Используем таймфрейм бота для получения RSI и тренда
+                current_rsi = get_rsi_from_coin_data(rsi_data, timeframe=timeframe_to_use)
+                current_trend = get_trend_from_coin_data(rsi_data, timeframe=timeframe_to_use)
+                logger.info(f"✅ {symbol}: RSI={current_rsi} (ТФ={timeframe_to_use}), Trend={current_trend}, Проверяем условия закрытия...")
                 
                 # Обрабатываем торговые сигналы через метод update
-                external_signal = rsi_data.get('signal')
-                external_trend = rsi_data.get('trend6h')
+                # ✅ Используем сигнал и тренд для таймфрейма бота
+                rsi_key = get_rsi_key(timeframe_to_use)
+                trend_key = get_trend_key(timeframe_to_use)
+                external_signal = rsi_data.get('signal')  # Сигнал определяется по текущему RSI
+                external_trend = rsi_data.get(trend_key) or rsi_data.get('trend6h')  # Тренд для таймфрейма бота
                 
                 signal_result = trading_bot.update(
                     force_analysis=True, 

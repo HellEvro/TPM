@@ -995,6 +995,7 @@ class BotsDatabase:
                     entry_trend TEXT,
                     opened_by_autobot INTEGER DEFAULT 0,
                     bot_id TEXT,
+                    entry_timeframe TEXT,
                     extra_data_json TEXT,
                     updated_at TEXT NOT NULL,
                     created_at TEXT NOT NULL
@@ -1565,6 +1566,16 @@ class BotsDatabase:
                 conn.commit()
                 logger.info("✅ Миграция: поля защиты от повторных входов добавлены в individual_coin_settings")
             
+            # ==================== МИГРАЦИЯ: Добавляем entry_timeframe в таблицу bots ====================
+            try:
+                cursor.execute("SELECT entry_timeframe FROM bots LIMIT 1")
+            except sqlite3.OperationalError:
+                # Поля нет - добавляем
+                logger.info("📦 Миграция: добавляем entry_timeframe в bots")
+                cursor.execute("ALTER TABLE bots ADD COLUMN entry_timeframe TEXT")
+                conn.commit()
+                logger.info("✅ Миграция: entry_timeframe добавлен в bots")
+            
             # ==================== МИГРАЦИЯ: bots_state из JSON в нормализованные таблицы ====================
             # Проверяем, есть ли данные в старой таблице bots_state
             try:
@@ -1680,6 +1691,7 @@ class BotsDatabase:
                                 entry_trend = bot_data.get('entry_trend')
                                 opened_by_autobot = 1 if bot_data.get('opened_by_autobot', False) else 0
                                 bot_id = bot_data.get('id')
+                                entry_timeframe = bot_data.get('entry_timeframe')
                                 
                                 # Собираем все остальные поля в extra_data_json
                                 known_fields = {
@@ -1695,7 +1707,7 @@ class BotsDatabase:
                                     'break_even_activated', 'break_even_stop_price', 'break_even_stop_set', 'order_id',
                                     'current_price', 'last_price', 'last_rsi', 'last_trend',
                                     'last_signal_time', 'last_bar_timestamp', 'entry_trend',
-                                    'opened_by_autobot', 'id', 'position', 'rsi_data', 'scaling_enabled',
+                                    'opened_by_autobot', 'id', 'entry_timeframe', 'position', 'rsi_data', 'scaling_enabled',
                                     'scaling_levels', 'scaling_current_level', 'scaling_group_id', 'created_at'
                                 }
                                 
@@ -1712,7 +1724,7 @@ class BotsDatabase:
                                 extra_data_json = json.dumps(extra_data) if extra_data else None
                                 created_at = bot_data.get('created_at', now)
                                 
-                                # Вставляем в новую таблицу (45 столбцов: symbol до created_at)
+                                # Вставляем в новую таблицу (46 столбцов: symbol до created_at, включая entry_timeframe)
                                 cursor.execute("""
                                     INSERT INTO bots (
                                         symbol, status, auto_managed, volume_mode, volume_value,
@@ -1727,9 +1739,9 @@ class BotsDatabase:
                                         break_even_activated, break_even_stop_price, break_even_stop_set, order_id,
                                         current_price, last_price, last_rsi, last_trend,
                                         last_signal_time, last_bar_timestamp, entry_trend,
-                                        opened_by_autobot, bot_id, extra_data_json,
+                                        opened_by_autobot, bot_id, entry_timeframe, extra_data_json,
                                         updated_at, created_at
-                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                                 """, (
                                     symbol, status, auto_managed, volume_mode, volume_value,
                                     entry_price, entry_time, entry_timestamp, position_side,
@@ -1740,10 +1752,10 @@ class BotsDatabase:
                                     trailing_locked_profit, trailing_active, trailing_max_profit_usdt,
                                     trailing_step_usdt, trailing_step_price, trailing_steps,
                                     trailing_reference_price, trailing_last_update_ts, trailing_take_profit_price,
-                                    break_even_activated, break_even_stop_price, order_id,
+                                    break_even_activated, break_even_stop_price, break_even_stop_set, order_id,
                                     current_price, last_price, last_rsi, last_trend,
                                     last_signal_time, last_bar_timestamp, entry_trend,
-                                    opened_by_autobot, bot_id, extra_data_json,
+                                    opened_by_autobot, bot_id, entry_timeframe, extra_data_json,
                                     now, created_at or now
                                 ))
                                 migrated_bots += 1
@@ -3338,7 +3350,7 @@ class BotsDatabase:
                                     break_even_activated, break_even_stop_price, break_even_stop_set, order_id,
                                     current_price, last_price, last_rsi, last_trend,
                                     last_signal_time, last_bar_timestamp, entry_trend,
-                                    opened_by_autobot, bot_id, extra_data_json,
+                                    opened_by_autobot, bot_id, entry_timeframe, extra_data_json,
                                     updated_at, created_at
                                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """, (
@@ -3354,7 +3366,7 @@ class BotsDatabase:
                                 break_even_activated, break_even_stop_price, break_even_stop_set, order_id,
                                 current_price, last_price, last_rsi, last_trend,
                                 last_signal_time, last_bar_timestamp, entry_trend,
-                                opened_by_autobot, bot_id, extra_data_json,
+                                opened_by_autobot, bot_id, bot_data.get('entry_timeframe'), extra_data_json,
                                 now, final_created_at
                             ))
                         except Exception as e:
@@ -3420,10 +3432,10 @@ class BotsDatabase:
                            trailing_locked_profit, trailing_active, trailing_max_profit_usdt,
                            trailing_step_usdt, trailing_step_price, trailing_steps,
                            trailing_reference_price, trailing_last_update_ts, trailing_take_profit_price,
-                           break_even_activated, break_even_stop_price, order_id,
+                           break_even_activated, break_even_stop_price, break_even_stop_set, order_id,
                            current_price, last_price, last_rsi, last_trend,
                            last_signal_time, last_bar_timestamp, entry_trend,
-                           opened_by_autobot, bot_id, extra_data_json,
+                           opened_by_autobot, bot_id, entry_timeframe, extra_data_json,
                            updated_at, created_at
                     FROM bots
                 """)
@@ -3444,10 +3456,10 @@ class BotsDatabase:
                                        trailing_locked_profit, trailing_active, trailing_max_profit_usdt,
                                        trailing_step_usdt, trailing_step_price, trailing_steps,
                                        trailing_reference_price, trailing_last_update_ts, trailing_take_profit_price,
-                                       break_even_activated, break_even_stop_price, order_id,
+                                       break_even_activated, break_even_stop_price, break_even_stop_set, order_id,
                                        current_price, last_price, last_rsi, last_trend,
                                        last_signal_time, last_bar_timestamp, entry_trend,
-                                       opened_by_autobot, bot_id, extra_data_json,
+                                       opened_by_autobot, bot_id, entry_timeframe, extra_data_json,
                                        updated_at, created_at
                                 FROM bots
                             """)
@@ -3496,20 +3508,21 @@ class BotsDatabase:
                         'break_even_stop_price': row[31],
                         'break_even_stop_set': bool(row[32]),
                         'order_id': row[33],
-                        'current_price': row[33],
-                        'last_price': row[34],
-                        'last_rsi': row[35],
-                        'last_trend': row[36],
-                        'last_signal_time': row[37],
-                        'last_bar_timestamp': row[38],
-                        'entry_trend': row[39],
-                        'opened_by_autobot': bool(row[40]),
-                        'id': row[41],
-                        'created_at': row[43]
+                        'current_price': row[34],
+                        'last_price': row[35],
+                        'last_rsi': row[36],
+                        'last_trend': row[37],
+                        'last_signal_time': row[38],
+                        'last_bar_timestamp': row[39],
+                        'entry_trend': row[40],
+                        'opened_by_autobot': bool(row[41]),
+                        'id': row[42],
+                        'entry_timeframe': row[43],
+                        'created_at': row[45]
                     }
                     
                     # Загружаем extra_data_json если есть
-                    if row[42]:
+                    if row[44]:
                         try:
                             extra_data = json.loads(row[42])
                             bot_dict.update(extra_data)
