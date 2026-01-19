@@ -664,6 +664,15 @@ def save_system_config(config_data):
 def load_system_config():
     """Перезагружает SystemConfig из bot_config.py и применяет значения в память."""
     try:
+        # ✅ КРИТИЧНО: Сохраняем текущий таймфрейм перед перезагрузкой модуля
+        # чтобы не потерять его при reload
+        saved_timeframe = None
+        try:
+            from bot_engine.bot_config import get_current_timeframe, set_current_timeframe
+            saved_timeframe = get_current_timeframe()
+        except:
+            pass
+        
         bot_config_module = importlib.import_module('bot_engine.bot_config')
         importlib.reload(bot_config_module)
         file_system_config = bot_config_module.SystemConfig
@@ -671,6 +680,15 @@ def load_system_config():
         for attr in SYSTEM_CONFIG_FIELD_MAP.values():
             if hasattr(file_system_config, attr):
                 setattr(SystemConfig, attr, getattr(file_system_config, attr))
+
+        # ✅ КРИТИЧНО: Восстанавливаем таймфрейм после перезагрузки модуля
+        if saved_timeframe:
+            try:
+                from bot_engine.bot_config import set_current_timeframe
+                set_current_timeframe(saved_timeframe)
+                logger.debug(f"[SYSTEM_CONFIG] ✅ Таймфрейм восстановлен после перезагрузки: {saved_timeframe}")
+            except:
+                pass
 
         logger.info("[SYSTEM_CONFIG] ✅ Конфигурация перезагружена из bot_engine/bot_config.py")
         return True
