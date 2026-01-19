@@ -3922,6 +3922,31 @@ class BotsManager {
             });
         }
         
+        // Обработчики для кнопок ручного запуска в секции настроек
+        const manualLaunchLongBtn = document.getElementById('manualLaunchLongBtn');
+        if (manualLaunchLongBtn) {
+            manualLaunchLongBtn.addEventListener('click', async () => {
+                if (!this.selectedCoin) {
+                    this.showNotification('⚠️ Выберите монету для запуска', 'warning');
+                    return;
+                }
+                
+                await this.quickLaunchBot('LONG');
+            });
+        }
+        
+        const manualLaunchShortBtn = document.getElementById('manualLaunchShortBtn');
+        if (manualLaunchShortBtn) {
+            manualLaunchShortBtn.addEventListener('click', async () => {
+                if (!this.selectedCoin) {
+                    this.showNotification('⚠️ Выберите монету для запуска', 'warning');
+                    return;
+                }
+                
+                await this.quickLaunchBot('SHORT');
+            });
+        }
+        
         console.log('[BotsManager] ✅ Кнопки быстрого запуска инициализированы');
     }
 
