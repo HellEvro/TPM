@@ -776,8 +776,6 @@ def load_auto_bot_config():
             
             # ✅ Логируем только при первой загрузке или при реальных изменениях (не при каждом вызове)
             if not hasattr(load_auto_bot_config, '_filters_logged_once'):
-                logger.debug(f"📂 Фильтры загружены из БД: whitelist={len(merged_config.get('whitelist', []))}, blacklist={len(merged_config.get('blacklist', []))}")
-                logger.debug(f"📂 scope загружен из файла: {merged_config.get('scope', 'all')}")
                 load_auto_bot_config._filters_logged_once = True
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки фильтров из БД: {e}")
