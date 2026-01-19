@@ -1128,15 +1128,18 @@ class NewTradingBot:
                     with rsi_data_lock:
                         coin_data = coins_rsi_data['coins'].get(self.symbol)
                         if coin_data:
-                            current_rsi = coin_data.get('rsi6h')
+                            from bot_engine.bot_config import get_rsi_from_coin_data
+                            current_rsi = get_rsi_from_coin_data(coin_data)
                             current_price = coin_data.get('price')
                             if not current_trend:
-                                current_trend = coin_data.get('trend6h', 'NEUTRAL')
+                                from bot_engine.bot_config import get_trend_from_coin_data
+                                current_trend = get_trend_from_coin_data(coin_data)
                 else:
                     # Fallback если lock не определен
                     coin_data = coins_rsi_data['coins'].get(self.symbol)
                     if coin_data:
-                        current_rsi = coin_data.get('rsi6h')
+                        from bot_engine.bot_config import get_rsi_from_coin_data
+                        current_rsi = get_rsi_from_coin_data(coin_data)
                         current_price = coin_data.get('price')
                         if not current_trend:
                             current_trend = coin_data.get('trend6h', 'NEUTRAL')
@@ -1155,7 +1158,9 @@ class NewTradingBot:
                 return {'success': False, 'error': 'No RSI data'}
             
             # Получаем свечи для анализа
-            chart_response = self.exchange.get_chart_data(self.symbol, '6h', '30d')
+            from bot_engine.bot_config import get_current_timeframe
+            current_timeframe = get_current_timeframe()
+            chart_response = self.exchange.get_chart_data(self.symbol, current_timeframe, '30d')
             if not chart_response or not chart_response.get('success'):
                 logger.warning(f"[NEW_BOT_{self.symbol}] ❌ Не удалось получить свечи")
                 return {'success': False, 'error': 'No candles data'}
@@ -2257,8 +2262,9 @@ class NewTradingBot:
             try:
                 with rsi_data_lock:
                     rsi_info = coins_rsi_data.get(self.symbol, {})
-                    exit_rsi = rsi_info.get('rsi6h') or rsi_info.get('rsi')
-                    exit_trend = rsi_info.get('trend6h') or rsi_info.get('trend')
+                    from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                    exit_rsi = get_rsi_from_coin_data(rsi_info)
+                    exit_trend = get_trend_from_coin_data(rsi_info)
             except Exception:
                 pass
             
@@ -2543,7 +2549,8 @@ class NewTradingBot:
                 from bots_modules.imports_and_globals import coins_rsi_data, rsi_data_lock
                 with rsi_data_lock:
                     rsi_info = coins_rsi_data.get('coins', {}).get(self.symbol, {})
-                    entry_trend_value = rsi_info.get('trend6h') or rsi_info.get('trend')
+                    from bot_engine.bot_config import get_trend_from_coin_data
+                    entry_trend_value = get_trend_from_coin_data(rsi_info) or rsi_info.get('trend')
             except Exception as e:
                 logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось получить тренд из глобальных данных: {e}")
         
