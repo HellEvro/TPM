@@ -3184,7 +3184,13 @@ def test_rsi_time_filter(symbol):
             logger.error(f"{symbol}: Биржа не инициализирована")
             return
                 
-        chart_response = exch.get_chart_data(symbol, '6h', '30d')
+        # Получаем текущий таймфрейм динамически
+        try:
+            from bot_engine.bot_config import get_current_timeframe
+            current_timeframe = get_current_timeframe()
+        except:
+            current_timeframe = '6h'  # Fallback
+        chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
         if not chart_response or not chart_response.get('success'):
             logger.error(f"{symbol}: Не удалось получить свечи")
             return
