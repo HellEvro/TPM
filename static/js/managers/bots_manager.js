@@ -11583,10 +11583,43 @@ class BotsManager {
      * Обновляет все упоминания таймфрейма в интерфейсе
      */
     updateTimeframeInUI(timeframe) {
-        // Обновляем отображение текущего таймфрейма в заголовке
+        // Обновляем отображение текущего таймфрейма в заголовке списка монет
         const timeframeDisplay = document.getElementById('currentTimeframeDisplay');
         if (timeframeDisplay) {
             timeframeDisplay.textContent = timeframe.toUpperCase();
+        }
+        
+        // ✅ КРИТИЧНО: Обновляем весь заголовок "Монеты (RSI XH)" с учетом перевода
+        const coinsHeader = document.querySelector('h3[data-translate="coins_rsi_6h"]');
+        if (coinsHeader) {
+            const currentLang = document.documentElement.lang || 'ru';
+            const translationKey = 'coins_rsi_6h';
+            if (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[currentLang] && TRANSLATIONS[currentLang][translationKey]) {
+                // Используем перевод, но заменяем таймфрейм
+                let translatedText = TRANSLATIONS[currentLang][translationKey];
+                // Заменяем 6H на текущий таймфрейм в переводе
+                translatedText = translatedText.replace(/6[hH]/gi, timeframe.toUpperCase());
+                // Обновляем заголовок, сохраняя структуру с span
+                const timeframeSpan = coinsHeader.querySelector('#currentTimeframeDisplay');
+                if (timeframeSpan) {
+                    // Обновляем только текст до и после span
+                    const parts = translatedText.split(/6[hH]/i);
+                    if (parts.length >= 2) {
+                        coinsHeader.innerHTML = `${parts[0]}<span id="currentTimeframeDisplay">${timeframe.toUpperCase()}</span>${parts.slice(1).join('')}`;
+                    } else {
+                        // Если формат не совпадает, просто обновляем span
+                        timeframeSpan.textContent = timeframe.toUpperCase();
+                    }
+                } else {
+                    // Если span нет, обновляем весь текст
+                    coinsHeader.textContent = translatedText.replace(/6[hH]/gi, timeframe.toUpperCase());
+                }
+            } else {
+                // Если переводов нет, просто обновляем span
+                if (timeframeDisplay) {
+                    timeframeDisplay.textContent = timeframe.toUpperCase();
+                }
+            }
         }
         
         // Обновляем отображение таймфрейма в деталях монеты
@@ -11627,9 +11660,12 @@ class BotsManager {
             }
         });
         
-        // Обновляем заголовки с RSI
+        // Обновляем заголовки с RSI (дополнительная проверка)
         const rsiHeaders = document.querySelectorAll('h3');
         rsiHeaders.forEach(header => {
+            // Пропускаем заголовок, который уже обновлен выше
+            if (header === coinsHeader) return;
+            
             if (header.textContent.includes('RSI 6H') || header.textContent.includes('RSI 6h')) {
                 header.textContent = header.textContent.replace(/RSI 6[hH]/g, `RSI ${timeframe.toUpperCase()}`);
             }

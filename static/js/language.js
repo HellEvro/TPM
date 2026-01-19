@@ -61,6 +61,13 @@ function updateInterface() {
         // Пропускаем элемент с id="currentPage"
         if (element.id === 'currentPage') return;
         
+        // ✅ КРИТИЧНО: Пропускаем заголовок с таймфреймом - он обновляется отдельно
+        const timeframeDisplay = element.querySelector('#currentTimeframeDisplay');
+        if (timeframeDisplay) {
+            // Не перезаписываем элемент с таймфреймом - он обновляется через updateTimeframeInUI()
+            return;
+        }
+        
         const key = element.getAttribute('data-translate');
         if (key && TRANSLATIONS[currentLang] && TRANSLATIONS[currentLang][key]) {
             element.textContent = TRANSLATIONS[currentLang][key];
