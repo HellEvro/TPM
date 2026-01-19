@@ -465,11 +465,12 @@ class AIDataCollector:
                             # Проверяем время последнего обновления (берем максимальный created_at)
                             with ai_db._get_connection() as conn:
                                 cursor = conn.cursor()
+                                from bot_engine.bot_config import get_current_timeframe
                                 cursor.execute("""
                                     SELECT MAX(created_at) as last_update
                                     FROM candles_history
-                                    WHERE timeframe = '6h'
-                                """)
+                                    WHERE timeframe = ?
+                                """, (get_current_timeframe(),))
                                 row = cursor.fetchone()
                                 if row and row['last_update']:
                                     from datetime import datetime
@@ -599,7 +600,7 @@ class AIDataCollector:
                 
                 # Ограничиваем загрузку для экономии памяти
                 candles_data = ai_db.get_all_candles_dict(
-                    timeframe='6h',
+                    timeframe=get_current_timeframe(),
                     max_symbols=50,
                     max_candles_per_symbol=1000
                 )
@@ -631,7 +632,7 @@ class AIDataCollector:
                             collected_data['candles'][symbol] = {
                                 'candles': candles_list,  # ВСЕ свечи без ограничений
                                 'count': len(candles_list),
-                                'timeframe': '6h',  # Всегда 6h из БД
+                                'timeframe': get_current_timeframe(),  # Текущий таймфрейм
                                 'last_update': None,  # БД не хранит last_update для каждой монеты
                                 'source': 'ai_data.db',  # ВСЕГДА из БД
                                 'is_full_history': True  # ВСЕГДА полная история
@@ -675,8 +676,10 @@ class AIDataCollector:
                     for symbol, coin_data in coins_data.items():
                         try:
                             collected_data['indicators'][symbol] = {
-                                'rsi': coin_data.get('rsi6h'),
-                                'trend': coin_data.get('trend6h'),
+                                # Получаем RSI и тренд с учетом текущего таймфрейма
+                                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                                'rsi': get_rsi_from_coin_data(coin_data),
+                                'trend': get_trend_from_coin_data(coin_data),
                                 'signal': coin_data.get('signal'),
                                 'price': coin_data.get('price'),
                                 'volume': coin_data.get('volume'),
@@ -802,7 +805,9 @@ class AIDataCollector:
                 logger.warning(f"⚠️ AI Database не доступна для {symbol}")
                 return None
             
-            candles = ai_db.get_candles(symbol, timeframe='6h')
+            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.bot_config import get_current_timeframe
+            candles = ai_db.get_candles(symbol, timeframe=get_current_timeframe())
         except Exception as db_error:
             logger.error(f"❌ Ошибка загрузки свечей из БД для {symbol}: {db_error}")
         
@@ -812,9 +817,11 @@ class AIDataCollector:
         if rsi_response and rsi_response.get('success'):
             coins_data = rsi_response.get('coins', {})
             if symbol in coins_data:
+                # Получаем RSI и тренд с учетом текущего таймфрейма
+                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
                 indicators = {
-                    'rsi': coins_data[symbol].get('rsi6h'),
-                    'trend': coins_data[symbol].get('trend6h'),
+                    'rsi': get_rsi_from_coin_data(coins_data[symbol]),
+                    'trend': get_trend_from_coin_data(coins_data[symbol]),
                     'signal': coins_data[symbol].get('signal'),
                     'price': coins_data[symbol].get('price'),
                     'volume': coins_data[symbol].get('volume')

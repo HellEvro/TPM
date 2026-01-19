@@ -1753,9 +1753,10 @@ class AITrainer:
                 for symbol in symbols:
                     try:
                         # Загружаем свечи для конкретного символа
+                        from bot_engine.bot_config import get_current_timeframe
                         symbol_candles = self.ai_db.get_candles(
                             symbol=symbol,
-                            timeframe='6h',
+                            timeframe=get_current_timeframe(),
                             limit=1000  # Максимум 1000 свечей на символ
                         )
                         
@@ -1796,7 +1797,7 @@ class AITrainer:
                     if candles:
                         market_data['latest']['candles'][symbol] = {
                             'candles': candles,
-                            'timeframe': '6h',
+                            'timeframe': get_current_timeframe(),
                             'last_update': datetime.now().isoformat(),
                             'count': len(candles),
                             'source': 'ai_data.db'
@@ -1834,8 +1835,9 @@ class AITrainer:
             
             try:
                 # Ограничиваем загрузку для экономии памяти: максимум 30 символов, 1000 свечей на символ
+                from bot_engine.bot_config import get_current_timeframe
                 candles_data = self.ai_db.get_all_candles_dict(
-                    timeframe='6h',
+                    timeframe=get_current_timeframe(),
                     max_symbols=30,
                     max_candles_per_symbol=1000
                 )
@@ -1855,7 +1857,7 @@ class AITrainer:
                         if candles:
                             market_data['latest']['candles'][symbol] = {
                                 'candles': candles,
-                                'timeframe': '6h',
+                                'timeframe': get_current_timeframe(),
                                 'last_update': datetime.now().isoformat(),
                                 'count': len(candles),
                                 'source': 'ai_data.db'
