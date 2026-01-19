@@ -11460,31 +11460,31 @@ class BotsManager {
                 this.updateTimeframeInUI(newTimeframe);
                 
                 // Перезагружаем RSI данные через небольшую задержку
-                setTimeout(() => {
+                setTimeout(async () => {
                     if (statusDiv) {
                         statusDiv.innerHTML += '<div style="color: #2196F3; margin-top: 5px;">🔄 Перезагрузка RSI данных...</div>';
                     }
                     
-                // Триггерим обновление RSI данных с принудительной перезагрузкой
-                // Очищаем кэш и перезагружаем данные
-                this.coinsRsiData = [];
-                
-                // Запрашиваем принудительное обновление RSI на сервере
-                try {
-                    const refreshResponse = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/refresh-rsi/all`, {
-                        method: 'POST'
-                    });
-                    if (refreshResponse.ok) {
-                        console.log('[BotsManager] ✅ Запрошено принудительное обновление RSI на сервере');
+                    // Триггерим обновление RSI данных с принудительной перезагрузкой
+                    // Очищаем кэш и перезагружаем данные
+                    this.coinsRsiData = [];
+                    
+                    // Запрашиваем принудительное обновление RSI на сервере
+                    try {
+                        const refreshResponse = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/refresh-rsi/all`, {
+                            method: 'POST'
+                        });
+                        if (refreshResponse.ok) {
+                            console.log('[BotsManager] ✅ Запрошено принудительное обновление RSI на сервере');
+                        }
+                    } catch (refreshError) {
+                        console.warn('[BotsManager] ⚠️ Не удалось запросить обновление RSI:', refreshError);
                     }
-                } catch (refreshError) {
-                    console.warn('[BotsManager] ⚠️ Не удалось запросить обновление RSI:', refreshError);
-                }
-                
-                // Перезагружаем данные через небольшую задержку
-                setTimeout(() => {
-                    this.loadCoinsRsiData(true);
-                }, 2000);
+                    
+                    // Перезагружаем данные через небольшую задержку
+                    setTimeout(() => {
+                        this.loadCoinsRsiData(true);
+                    }, 2000);
                     
                     // Через еще немного времени скрываем статус
                     setTimeout(() => {
@@ -11492,7 +11492,7 @@ class BotsManager {
                             statusDiv.style.display = 'none';
                         }
                     }, 5000);
-                }, 1000);
+                }, 500);
                 
                 console.log('[BotsManager] ✅ Таймфрейм успешно изменен:', data);
             } else {
