@@ -59,6 +59,9 @@ class BotsManager {
         this.currentHistoryTab = 'actions';
         this.historyBotSymbols = [];
         
+        // Текущий таймфрейм системы (загружается из API)
+        this.currentTimeframe = '6h'; // Дефолтное значение, будет обновлено при загрузке
+        
         // Инициализация при создании
         this.init();
     }
@@ -551,7 +554,7 @@ class BotsManager {
                 
                 // Добавляем новые классы на основе обновленных порогов
                 // Получаем RSI с учетом текущего таймфрейма
-                const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+                const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
                 const rsiKey = `rsi${currentTimeframe}`;
                 const rsiValue = coinData[rsiKey] || coinData.rsi6h || coinData.rsi || 50;
                 const rsiClass = this.getRsiZoneClass(rsiValue);
@@ -704,7 +707,7 @@ class BotsManager {
         }
 
         // Получаем текущий таймфрейм для логирования
-        const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+        const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
         this.logDebug(`[BotsManager] 📊 Загрузка данных RSI ${currentTimeframe.toUpperCase()}...`);
         
         // Сохраняем текущее состояние поиска
@@ -11445,6 +11448,9 @@ class BotsManager {
             const data = await response.json();
             
             if (data.success) {
+                // Сохраняем таймфрейм в переменную класса
+                this.currentTimeframe = data.timeframe;
+                
                 const timeframeSelect = document.getElementById('systemTimeframe');
                 if (timeframeSelect) {
                     timeframeSelect.value = data.timeframe;
@@ -11453,11 +11459,13 @@ class BotsManager {
                 return data.timeframe;
             } else {
                 console.error('[BotsManager] ❌ Ошибка загрузки таймфрейма:', data.error);
-                return '6h'; // Дефолтное значение
+                this.currentTimeframe = '6h'; // Дефолтное значение
+                return '6h';
             }
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка запроса таймфрейма:', error);
-            return '6h'; // Дефолтное значение
+            this.currentTimeframe = '6h'; // Дефолтное значение
+            return '6h';
         }
     }
     
@@ -11503,6 +11511,9 @@ class BotsManager {
             const data = await response.json();
             
             if (data.success) {
+                // Обновляем текущий таймфрейм в переменной класса
+                this.currentTimeframe = newTimeframe;
+                
                 // Обновляем текущий таймфрейм
                 applyBtn.dataset.currentTimeframe = newTimeframe;
                 
@@ -11697,6 +11708,7 @@ class BotsManager {
         
         // Загружаем текущий таймфрейм при инициализации
         this.loadTimeframe().then(timeframe => {
+            // currentTimeframe уже установлен в loadTimeframe()
             if (applyBtn) {
                 applyBtn.dataset.currentTimeframe = timeframe;
             }
