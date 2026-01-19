@@ -79,6 +79,14 @@ class ContinuousDataLoader:
         # except Exception as e:
         #     logger.warning(f"⚠️ [CONTINUOUS] Не удалось включить трейсинг: {e}")
         
+        # Получаем текущий таймфрейм при старте цикла
+        try:
+            from bot_engine.bot_config import get_current_timeframe
+            startup_timeframe = get_current_timeframe()
+            logger.info(f"⏱️ [CONTINUOUS] Таймфрейм при старте загрузчика: {startup_timeframe}")
+        except Exception as tf_err:
+            logger.warning(f"⚠️ [CONTINUOUS] Не удалось получить таймфрейм при старте: {tf_err}")
+        
         # Небольшая задержка перед первым обновлением (даем системе запуститься)
         time.sleep(5)
         
