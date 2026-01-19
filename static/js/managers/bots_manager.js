@@ -97,6 +97,9 @@ class BotsManager {
             this.initializeGlobalAutoBotToggle();
             this.initializeMobileAutoBotToggle();
             
+            // Инициализируем управление таймфреймом
+            this.initTimeframeControls();
+            
             // Проверяем статус сервиса ботов
             await this.checkBotsService();
             
@@ -821,9 +824,16 @@ class BotsManager {
             return;
         }
         
+        // Получаем текущий таймфрейм для отображения данных
+        const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+        const rsiKey = `rsi${currentTimeframe}`;
+        const trendKey = `trend${currentTimeframe}`;
+        
         const coinsHtml = this.coinsRsiData.map(coin => {
-            const rsiClass = this.getRsiZoneClass(coin.rsi6h);
-            const trendClass = coin.trend6h ? `trend-${coin.trend6h.toLowerCase()}` : 'trend-none';
+            const rsiValue = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
+            const trendValue = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
+            const rsiClass = this.getRsiZoneClass(rsiValue);
+            const trendClass = trendValue ? `trend-${trendValue.toLowerCase()}` : 'trend-none';
             
             // Используем универсальную функцию для определения сигнала
             const effectiveSignal = this.getEffectiveSignal(coin);
@@ -1268,8 +1278,12 @@ class BotsManager {
         const autoConfig = this.cachedAutoBotConfig || {};
         const avoidDownTrend = autoConfig.avoid_down_trend === true;
         const avoidUpTrend = autoConfig.avoid_up_trend === true;
-        const rsi = coin.rsi6h || 50;
-        const trend = coin.trend6h || 'NEUTRAL';
+        // Получаем RSI и тренд с учетом текущего таймфрейма
+        const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+        const rsiKey = `rsi${currentTimeframe}`;
+        const trendKey = `trend${currentTimeframe}`;
+        const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
+        const trend = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
         const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
         const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
         
@@ -1295,8 +1309,17 @@ class BotsManager {
         const allCount = this.coinsRsiData.length;
         const longCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'ENTER_LONG').length;
         const shortCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'ENTER_SHORT').length;
-        const buyZoneCount = this.coinsRsiData.filter(coin => coin.rsi6h && coin.rsi6h <= this.rsiLongThreshold).length;
-        const sellZoneCount = this.coinsRsiData.filter(coin => coin.rsi6h && coin.rsi6h >= this.rsiShortThreshold).length;
+        // Получаем текущий таймфрейм для подсчета
+        const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+        const rsiKey = `rsi${currentTimeframe}`;
+        const buyZoneCount = this.coinsRsiData.filter(coin => {
+            const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi;
+            return rsi && rsi <= this.rsiLongThreshold;
+        }).length;
+        const sellZoneCount = this.coinsRsiData.filter(coin => {
+            const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi;
+            return rsi && rsi >= this.rsiShortThreshold;
+        }).length;
         const trendUpCount = this.coinsRsiData.filter(coin => coin.trend6h === 'UP').length;
         const trendDownCount = this.coinsRsiData.filter(coin => coin.trend6h === 'DOWN').length;
         const manualPositionCount = this.coinsRsiData.filter(coin => coin.manual_position === true).length;
@@ -1518,7 +1541,10 @@ class BotsManager {
         }
         
         if (rsiElement) {
-            const rsi = coin.enhanced_rsi?.rsi_6h || coin.rsi6h || '-';
+            const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+            const rsiKey = `rsi${currentTimeframe}`;
+            const enhancedRsiKey = `rsi_${currentTimeframe.replace('h', 'H')}`;
+            const rsi = coin.enhanced_rsi?.[enhancedRsiKey] || coin[rsiKey] || coin.rsi6h || coin.rsi || '-';
             rsiElement.textContent = rsi;
             rsiElement.className = `value rsi-indicator ${this.getRsiZoneClass(rsi)}`;
             console.log('[BotsManager] ✅ RSI обновлен:', rsi);
@@ -1923,7 +1949,10 @@ class BotsManager {
             const blockReasons = [];
             const autoConfig = this.cachedAutoBotConfig || {};
             const baseSignal = coin.signal || 'WAIT';
-            const rsi = coin.rsi6h || 50;
+            // Получаем RSI с учетом текущего таймфрейма
+            const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+            const rsiKey = `rsi${currentTimeframe}`;
+            const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
             const trend = coin.trend6h || 'NEUTRAL';
             const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
             const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
@@ -2035,7 +2064,10 @@ class BotsManager {
             // Базовый сигнал уже WAIT - проверяем ВСЕ фильтры
             const filterCheck = checkAllBlockingFilters(coin);
             const autoConfig = this.cachedAutoBotConfig || {};
-            const rsi = coin.rsi6h || 50;
+            // Получаем RSI с учетом текущего таймфрейма
+            const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+            const rsiKey = `rsi${currentTimeframe}`;
+            const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
             const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
             const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
             
@@ -2758,7 +2790,10 @@ class BotsManager {
         }
         
         console.log(`[BotsManager] 🤖 Создание бота для ${this.selectedCoin.symbol}`);
-        console.log(`[BotsManager] 📊 RSI текущий: ${this.selectedCoin.rsi6h || 'неизвестно'}`);
+        const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+        const rsiKey = `rsi${currentTimeframe}`;
+        const rsiValue = this.selectedCoin[rsiKey] || this.selectedCoin.rsi6h || this.selectedCoin.rsi || 'неизвестно';
+        console.log(`[BotsManager] 📊 RSI текущий (${currentTimeframe}): ${rsiValue}`);
         
         // Показываем уведомление о начале процесса
         this.showNotification(`🔄 ${this.translate('creating_bot_for')} ${this.selectedCoin.symbol}...`, 'info');
@@ -6236,6 +6271,17 @@ class BotsManager {
         // СИСТЕМНЫЕ НАСТРОЙКИ
         // ==========================================
         const systemConfig = config.system || {};
+        
+        // Загружаем таймфрейм в select
+        const timeframeSelect = document.getElementById('systemTimeframe');
+        if (timeframeSelect && systemConfig.timeframe) {
+            timeframeSelect.value = systemConfig.timeframe;
+            const applyBtn = document.getElementById('applyTimeframeBtn');
+            if (applyBtn) {
+                applyBtn.dataset.currentTimeframe = systemConfig.timeframe;
+            }
+            console.log('[BotsManager] ⏱️ Таймфрейм загружен:', systemConfig.timeframe);
+        }
         
         // Интервалы обновления - ТОЛЬКО из API, без значений по умолчанию
         const rsiUpdateIntervalEl = document.getElementById('rsiUpdateInterval');
@@ -11356,8 +11402,10 @@ class BotsManager {
                         statusDiv.innerHTML += '<div style="color: #2196F3; margin-top: 5px;">🔄 Перезагрузка RSI данных...</div>';
                     }
                     
-                    // Триггерим обновление RSI данных
-                    this.loadCoinsRsiData(true);
+                // Триггерим обновление RSI данных с принудительной перезагрузкой
+                // Очищаем кэш и перезагружаем данные
+                this.coinsRsiData = [];
+                this.loadCoinsRsiData(true);
                     
                     // Через еще немного времени скрываем статус
                     setTimeout(() => {
@@ -11392,6 +11440,29 @@ class BotsManager {
         const timeframeDisplay = document.getElementById('currentTimeframeDisplay');
         if (timeframeDisplay) {
             timeframeDisplay.textContent = timeframe.toUpperCase();
+        }
+        
+        // Обновляем отображение таймфрейма в деталях монеты
+        const selectedCoinTimeframeDisplay = document.getElementById('selectedCoinTimeframeDisplay');
+        if (selectedCoinTimeframeDisplay) {
+            selectedCoinTimeframeDisplay.textContent = timeframe.toUpperCase();
+        }
+        
+        // Обновляем select с таймфреймом
+        const timeframeSelect = document.getElementById('systemTimeframe');
+        if (timeframeSelect) {
+            timeframeSelect.value = timeframe;
+        }
+        
+        // Обновляем кнопку применения
+        const applyBtn = document.getElementById('applyTimeframeBtn');
+        if (applyBtn) {
+            applyBtn.dataset.currentTimeframe = timeframe;
+        }
+        
+        // Если есть выбранная монета, обновляем её информацию
+        if (this.selectedCoin) {
+            this.updateCoinInfo(this.selectedCoin);
         }
         
         // Обновляем заголовки и описания с упоминанием таймфрейма
