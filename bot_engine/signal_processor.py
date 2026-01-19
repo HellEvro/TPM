@@ -28,8 +28,9 @@ def get_effective_signal(coin, config):
     rsi_short_threshold = config.get('rsi_short_threshold', 71)
     
     # Получаем данные монеты
-    rsi = coin.get('rsi6h', 50)
-    trend = coin.get('trend', coin.get('trend6h', 'NEUTRAL'))
+    from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+    rsi = get_rsi_from_coin_data(coin)
+    trend = get_trend_from_coin_data(coin)
     
     # Если базовый сигнал WAIT (из-за незрелости) - возвращаем сразу
     base_signal = coin.get('signal', 'WAIT')
@@ -143,8 +144,9 @@ def process_auto_bot_signals(coins_rsi_data, bots_data, config, filter_check_fun
         # Получаем монеты с сигналами
         potential_coins = []
         for symbol, coin_data in coins_rsi_data.items():
-            rsi = coin_data.get('rsi6h')
-            trend = coin_data.get('trend6h', 'NEUTRAL')
+            from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+            rsi = get_rsi_from_coin_data(coin_data)
+            trend = get_trend_from_coin_data(coin_data)
             
             if rsi is None:
                 continue
