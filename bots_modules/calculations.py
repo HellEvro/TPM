@@ -377,7 +377,14 @@ def analyze_trend_6h(symbol, exchange_obj=None, candles_data=None):
     Устаревшая функция для обратной совместимости.
     Использует analyze_trend с таймфреймом '6h'.
     """
-    return analyze_trend(symbol, exchange_obj, candles_data, timeframe='6h')
+    # Получаем текущий таймфрейм динамически
+    try:
+        from bot_engine.bot_config import get_current_timeframe
+        current_timeframe = get_current_timeframe()
+    except:
+        current_timeframe = '6h'  # Fallback
+    
+    return analyze_trend(symbol, exchange_obj, candles_data, timeframe=current_timeframe)
 
 def perform_enhanced_rsi_analysis(candles, current_rsi, symbol):
     """Выполняет улучшенный анализ RSI для монеты"""

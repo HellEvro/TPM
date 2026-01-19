@@ -134,6 +134,26 @@ def init_bot_service():
         # 2. Загружаем системные настройки
         load_system_config()
         
+        # 2.1. Загружаем сохраненный таймфрейм из БД (если есть)
+        try:
+            from bot_engine.bots_database import get_bots_database
+            from bot_engine.bot_config import set_current_timeframe, get_current_timeframe
+            db = get_bots_database()
+            saved_timeframe = db.load_timeframe()
+            if saved_timeframe:
+                success = set_current_timeframe(saved_timeframe)
+                if success:
+                    logger.info(f"✅ Таймфрейм восстановлен из БД: {saved_timeframe}")
+                else:
+                    logger.warning(f"⚠️ Неподдерживаемый таймфрейм в БД: {saved_timeframe}, используем дефолтный")
+            else:
+                # Сохраняем текущий таймфрейм в БД (если еще не сохранен)
+                current_tf = get_current_timeframe()
+                db.save_timeframe(current_tf)
+                logger.info(f"✅ Текущий таймфрейм сохранен в БД: {current_tf}")
+        except Exception as tf_err:
+            logger.warning(f"⚠️ Ошибка загрузки таймфрейма из БД: {tf_err}")
+        
         # 3. Загружаем состояние процессов
         load_process_state()
         

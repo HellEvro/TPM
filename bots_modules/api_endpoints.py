@@ -1627,6 +1627,14 @@ def timeframe_config():
                     'error': f'Unsupported timeframe: {new_timeframe}'
                 }), 400
             
+            # Сохраняем таймфрейм в БД для сохранения между перезапусками
+            try:
+                from bot_engine.bots_database import get_bots_database
+                db = get_bots_database()
+                db.save_timeframe(new_timeframe)
+            except Exception as save_db_err:
+                logger.warning(f"⚠️ Не удалось сохранить таймфрейм в БД: {save_db_err}")
+            
             logger.info(f"🔄 Таймфрейм изменен: {old_timeframe} → {new_timeframe}")
             
             # Сохраняем текущие данные перед переключением

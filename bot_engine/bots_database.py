@@ -5926,6 +5926,57 @@ class BotsDatabase:
         except Exception as e:
             logger.warning(f"⚠️ Ошибка установки флага метаданных {key}: {e}")
     
+    def save_timeframe(self, timeframe: str) -> bool:
+        """
+        Сохраняет текущий таймфрейм системы в БД
+        
+        Args:
+            timeframe: Таймфрейм для сохранения (например, '1h', '6h', '1d')
+        
+        Returns:
+            True если успешно сохранено
+        """
+        try:
+            with self.lock:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    now = datetime.now().isoformat()
+                    
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO db_metadata (key, value, updated_at, created_at)
+                        VALUES ('system_timeframe', ?, ?, 
+                                COALESCE((SELECT created_at FROM db_metadata WHERE key = 'system_timeframe'), ?))
+                    """, (timeframe, now, now))
+                    
+                    conn.commit()
+                    logger.info(f"✅ Таймфрейм сохранен в БД: {timeframe}")
+                    return True
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения таймфрейма в БД: {e}")
+            return False
+    
+    def load_timeframe(self) -> Optional[str]:
+        """
+        Загружает сохраненный таймфрейм из БД
+        
+        Returns:
+            Таймфрейм или None если не найден
+        """
+        try:
+            with self.lock:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT value FROM db_metadata WHERE key = 'system_timeframe'")
+                    row = cursor.fetchone()
+                    if row:
+                        timeframe = row[0]
+                        logger.info(f"✅ Таймфрейм загружен из БД: {timeframe}")
+                        return timeframe
+                    return None
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка загрузки таймфрейма из БД: {e}")
+            return None
+    
     def _get_metadata_flag(self, key: str, default: str = None) -> Optional[str]:
         """
         Получает значение флага из метаданных БД
