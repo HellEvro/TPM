@@ -115,7 +115,8 @@ SYSTEM_CONFIG_FIELD_MAP = {
     'trend_min_confirmations': 'TREND_MIN_CONFIRMATIONS',
     'trend_require_slope': 'TREND_REQUIRE_SLOPE',
     'trend_require_price': 'TREND_REQUIRE_PRICE',
-    'trend_require_candles': 'TREND_REQUIRE_CANDLES'
+    'trend_require_candles': 'TREND_REQUIRE_CANDLES',
+    'system_timeframe': 'SYSTEM_TIMEFRAME'  # Таймфрейм системы
 }
 
 

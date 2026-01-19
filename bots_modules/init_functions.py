@@ -140,18 +140,24 @@ def init_bot_service():
             from bot_engine.bot_config import set_current_timeframe, get_current_timeframe
             db = get_bots_database()
             saved_timeframe = db.load_timeframe()
-            current_tf = get_current_timeframe()
             
             if saved_timeframe:
+                # Таймфрейм есть в БД - используем его
                 success = set_current_timeframe(saved_timeframe)
                 if success:
-                    logger.info(f"✅ Таймфрейм восстановлен из БД: {saved_timeframe} (был дефолтный: {current_tf})")
+                    logger.info(f"✅ Таймфрейм восстановлен из БД: {saved_timeframe}")
                 else:
-                    logger.warning(f"⚠️ Неподдерживаемый таймфрейм в БД: {saved_timeframe}, используем дефолтный: {current_tf}")
+                    logger.warning(f"⚠️ Неподдерживаемый таймфрейм в БД: {saved_timeframe}, используем дефолтный из конфига")
+                    # Используем дефолтный из конфига
+                    current_tf = get_current_timeframe()
+                    set_current_timeframe(current_tf)
+                    db.save_timeframe(current_tf)
             else:
-                # Сохраняем текущий таймфрейм в БД (если еще не сохранен)
+                # Таймфрейма нет в БД - используем дефолтный из конфига (SystemConfig.SYSTEM_TIMEFRAME)
+                current_tf = get_current_timeframe()
+                set_current_timeframe(current_tf)
                 db.save_timeframe(current_tf)
-                logger.info(f"✅ Текущий таймфрейм сохранен в БД: {current_tf}")
+                logger.info(f"✅ Текущий таймфрейм из конфига сохранен в БД: {current_tf}")
             
             # Логируем финальный таймфрейм
             final_tf = get_current_timeframe()
