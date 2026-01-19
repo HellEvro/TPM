@@ -1632,8 +1632,21 @@ def timeframe_config():
                 from bot_engine.bots_database import get_bots_database
                 db = get_bots_database()
                 db.save_timeframe(new_timeframe)
+                logger.info(f"✅ Таймфрейм сохранен в БД: {new_timeframe}")
             except Exception as save_db_err:
                 logger.warning(f"⚠️ Не удалось сохранить таймфрейм в БД: {save_db_err}")
+            
+            # Сохраняем таймфрейм в конфиг файл (bot_config.py)
+            try:
+                from bots_modules.sync_and_cache import save_system_config
+                from bot_engine.bot_config import SystemConfig
+                # Обновляем SystemConfig в памяти
+                SystemConfig.SYSTEM_TIMEFRAME = new_timeframe
+                # Сохраняем в файл
+                save_system_config({'system_timeframe': new_timeframe})
+                logger.info(f"✅ Таймфрейм сохранен в конфиг файл: {new_timeframe}")
+            except Exception as save_config_err:
+                logger.warning(f"⚠️ Не удалось сохранить таймфрейм в конфиг файл: {save_config_err}")
             
             logger.info(f"🔄 Таймфрейм изменен: {old_timeframe} → {new_timeframe}")
             
