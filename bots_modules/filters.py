@@ -1731,7 +1731,7 @@ def load_all_coins_candles_fast():
         return False
 
 def load_all_coins_rsi():
-    """Загружает RSI 6H для всех доступных монет"""
+    """Загружает RSI для всех доступных монет с текущим таймфреймом системы"""
     global coins_rsi_data
     
     try:
