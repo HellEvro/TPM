@@ -86,7 +86,8 @@ def check_autobot_filters(symbol, signal, coin_data, config, maturity_check_func
             return False
         
         # 3. Проверка тренда
-        trend = coin_data.get('trend6h', 'NEUTRAL')
+        from bot_engine.bot_config import get_trend_from_coin_data
+        trend = get_trend_from_coin_data(coin_data)
         # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
         avoid_down_trend = config.get('avoid_down_trend', False)
         avoid_up_trend = config.get('avoid_up_trend', False)
