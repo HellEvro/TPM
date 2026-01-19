@@ -735,9 +735,7 @@ def load_auto_bot_config():
 
         # ✅ ЕДИНСТВЕННЫЙ источник истины: bot_engine/bot_config.py
         # Все настройки загружаются ТОЛЬКО из файла, БД не используется для auto_bot_config
-        logger.debug("[CONFIG] 📋 Создание merged_config из DEFAULT_AUTO_BOT_CONFIG...")
         merged_config = DEFAULT_AUTO_BOT_CONFIG.copy()
-        logger.debug(f"[CONFIG] ✅ merged_config создан, ключей: {len(merged_config)}")
         
         # ✅ Логируем leverage только при первой загрузке или при изменении (не спамим)
         leverage_from_file = merged_config.get('leverage')
