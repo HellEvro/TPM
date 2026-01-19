@@ -659,7 +659,7 @@ def create_bot(symbol, config=None, exchange_obj=None):
 
 def process_trading_signals_on_candle_close(candle_timestamp: int, exchange_obj=None):
     """
-    Обрабатывает торговые сигналы при закрытии свечи 6H
+    Обрабатывает торговые сигналы при закрытии свечи текущего таймфрейма
     
     Args:
         candle_timestamp: Timestamp закрытой свечи
@@ -698,8 +698,10 @@ def process_trading_signals_on_candle_close(candle_timestamp: int, exchange_obj=
                     logger.warning(f"[TRADING] ⚠️ Нет RSI данных для {symbol}")
                     continue
                 
-                rsi = coin_rsi_data.get('rsi6h')
-                trend = coin_rsi_data.get('trend6h', 'NEUTRAL')
+                # Получаем RSI и тренд с учетом текущего таймфрейма
+                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                rsi = get_rsi_from_coin_data(coin_rsi_data)
+                trend = get_trend_from_coin_data(coin_rsi_data)
                 price = coin_rsi_data.get('price', 0)
                 
                 if not rsi or not price:
