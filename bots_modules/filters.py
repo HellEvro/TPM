@@ -429,8 +429,15 @@ def get_coin_candles_only(symbol, exchange_obj=None):
         if exchange_to_use is None:
             return None
         
-        # Получаем ТОЛЬКО свечи
-        chart_response = exchange_to_use.get_chart_data(symbol, '6h', '30d')
+        # Получаем текущий таймфрейм динамически
+        try:
+            from bot_engine.bot_config import get_current_timeframe
+            current_timeframe = get_current_timeframe()
+        except:
+            current_timeframe = '6h'  # Fallback
+        
+        # Получаем ТОЛЬКО свечи с текущим таймфреймом
+        chart_response = exchange_to_use.get_chart_data(symbol, current_timeframe, '30d')
         
         if not chart_response or not chart_response.get('success'):
             return None
@@ -731,7 +738,14 @@ def check_exit_scam_filter(symbol, coin_data):
         if not base_allowed:
             return False
 
-        chart_response = exchange_obj.get_chart_data(symbol, '6h', '30d')
+        # Получаем текущий таймфрейм динамически
+        try:
+            from bot_engine.bot_config import get_current_timeframe
+            current_timeframe = get_current_timeframe()
+        except:
+            current_timeframe = '6h'  # Fallback
+        
+        chart_response = exchange_obj.get_chart_data(symbol, current_timeframe, '30d')
         candles = chart_response.get('data', {}).get('candles', []) if chart_response and chart_response.get('success') else []
         if candles:
             return _run_exit_scam_ai_detection(symbol, candles)
@@ -2570,7 +2584,14 @@ def check_coin_maturity_stored_or_verify(symbol):
             logger.warning(f"{symbol}: Биржа не инициализирована")
             return False
         
-        chart_response = exch.get_chart_data(symbol, '6h', '30d')
+        # Получаем текущий таймфрейм динамически
+        try:
+            from bot_engine.bot_config import get_current_timeframe
+            current_timeframe = get_current_timeframe()
+        except:
+            current_timeframe = '6h'  # Fallback
+        
+        chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
         if not chart_response or not chart_response.get('success'):
             logger.warning(f"{symbol}: Не удалось получить свечи")
             return False
@@ -2662,7 +2683,14 @@ def _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=None):
         if not exch:
             return False
         
-        chart_response = exch.get_chart_data(symbol, '6h', '30d')
+        # Получаем текущий таймфрейм динамически
+        try:
+            from bot_engine.bot_config import get_current_timeframe
+            current_timeframe = get_current_timeframe()
+        except:
+            current_timeframe = '6h'  # Fallback
+        
+        chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
         if not chart_response or not chart_response.get('success'):
             return False
         
@@ -2794,7 +2822,14 @@ def get_lstm_prediction(symbol, signal, current_price):
             if not exch:
                 return None
             
-            chart_response = exch.get_chart_data(symbol, '6h', '30d')
+            # Получаем текущий таймфрейм динамически
+            try:
+                from bot_engine.bot_config import get_current_timeframe
+                current_timeframe = get_current_timeframe()
+            except:
+                current_timeframe = '6h'  # Fallback
+            
+            chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
             if not chart_response or not chart_response.get('success'):
                 return None
             
@@ -2883,7 +2918,14 @@ def get_pattern_analysis(symbol, signal, current_price):
             if not exch:
                 return None
             
-            chart_response = exch.get_chart_data(symbol, '6h', '30d')
+            # Получаем текущий таймфрейм динамически
+            try:
+                from bot_engine.bot_config import get_current_timeframe
+                current_timeframe = get_current_timeframe()
+            except:
+                current_timeframe = '6h'  # Fallback
+            
+            chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
             if not chart_response or not chart_response.get('success'):
                 return None
             
@@ -3056,7 +3098,14 @@ def test_exit_scam_filter(symbol):
             logger.error(f"{symbol}: Биржа не инициализирована")
             return
         
-        chart_response = exch.get_chart_data(symbol, '6h', '30d')
+        # Получаем текущий таймфрейм динамически
+        try:
+            from bot_engine.bot_config import get_current_timeframe
+            current_timeframe = get_current_timeframe()
+        except:
+            current_timeframe = '6h'  # Fallback
+        
+        chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
         if not chart_response or not chart_response.get('success'):
             logger.error(f"{symbol}: Не удалось получить свечи")
             return
