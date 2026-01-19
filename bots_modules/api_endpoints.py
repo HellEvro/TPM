@@ -4462,9 +4462,12 @@ def get_ai_self_learning_stats():
         # Проверяем премиум лицензию
         is_premium = False
         try:
-            from bot_engine.ai.license_checker import check_license
-            license_result = check_license()
-            is_premium = license_result.get('valid', False) and license_result.get('type', '').lower() == 'premium'
+            from bot_engine.ai.license_checker import get_license_checker
+            from pathlib import Path
+            project_root = Path(__file__).parent.parent.parent
+            license_checker = get_license_checker(project_root=project_root)
+            is_valid, license_info = license_checker.check_license()
+            is_premium = is_valid and license_info and license_info.get('type', '').lower() == 'premium'
         except Exception as e:
             logger.warning(f" Не удалось проверить лицензию: {e}")
             is_premium = False
@@ -4509,9 +4512,12 @@ def get_ai_self_learning_performance():
         # Проверяем премиум лицензию
         is_premium = False
         try:
-            from bot_engine.ai.license_checker import check_license
-            license_result = check_license()
-            is_premium = license_result.get('valid', False) and license_result.get('type', '').lower() == 'premium'
+            from bot_engine.ai.license_checker import get_license_checker
+            from pathlib import Path
+            project_root = Path(__file__).parent.parent.parent
+            license_checker = get_license_checker(project_root=project_root)
+            is_valid, license_info = license_checker.check_license()
+            is_premium = is_valid and license_info and license_info.get('type', '').lower() == 'premium'
         except Exception as e:
             logger.warning(f" Не удалось проверить лицензию: {e}")
             is_premium = False
