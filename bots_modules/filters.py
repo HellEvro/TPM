@@ -440,10 +440,17 @@ def get_coin_candles_only(symbol, exchange_obj=None):
             return None
         
         # Возвращаем ТОЛЬКО свечи и символ
+        # Получаем текущий таймфрейм динамически
+        try:
+            from bot_engine.bot_config import get_current_timeframe
+            current_timeframe = get_current_timeframe()
+        except:
+            current_timeframe = '6h'  # Fallback
+        
         return {
             'symbol': symbol,
             'candles': candles,
-            'timeframe': '6h',  # ✅ Добавляем timeframe для правильного накопления
+            'timeframe': current_timeframe,  # ✅ Используем текущий таймфрейм системы
             'last_update': datetime.now().isoformat()
         }
         
@@ -615,7 +622,19 @@ def _check_loss_reentry_protection_static(symbol, candles, loss_reentry_count, l
             exit_timestamp = exit_timestamp / 1000
         
         # Подсчитываем количество свечей, прошедших с момента закрытия
-        CANDLE_INTERVAL_SECONDS = 6 * 3600  # 6 часов
+        # Получаем текущий таймфрейм динамически
+        try:
+            from bot_engine.bot_config import get_current_timeframe
+            current_timeframe = get_current_timeframe()
+            # Конвертируем таймфрейм в секунды
+            timeframe_to_seconds = {
+                '1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800,
+                '1h': 3600, '2h': 7200, '4h': 14400, '6h': 21600, '8h': 28800,
+                '12h': 43200, '1d': 86400, '3d': 259200, '1w': 604800, '1M': 2592000
+            }
+            CANDLE_INTERVAL_SECONDS = timeframe_to_seconds.get(current_timeframe, 21600)  # По умолчанию 6h
+        except:
+            CANDLE_INTERVAL_SECONDS = 6 * 3600  # Fallback: 6 часов
         
         if not candles or len(candles) == 0:
             return None  # Нет свечей - не показываем фильтр
@@ -1644,14 +1663,21 @@ def load_all_coins_candles_fast():
                     ai_db = get_ai_database()
                     if ai_db:
                         # Преобразуем формат для ai_database
+                        # Получаем текущий таймфрейм динамически
+                        try:
+                            from bot_engine.bot_config import get_current_timeframe
+                            current_timeframe = get_current_timeframe()
+                        except:
+                            current_timeframe = '6h'  # Fallback
+                        
                         saved_count = 0
                         for symbol, candle_data in candles_cache.items():
                             if isinstance(candle_data, dict):
                                 candles = candle_data.get('candles', [])
                                 if candles:
-                                    ai_db.save_candles(symbol, candles, timeframe='6h')
+                                    ai_db.save_candles(symbol, candles, timeframe=current_timeframe)
                                     saved_count += 1
-                        logger.info(f"✅ Свечи сохранены в ai_data.db: {saved_count} монет (процесс ai.py)")
+                        logger.info(f"✅ Свечи сохранены в ai_data.db: {saved_count} монет (таймфрейм: {current_timeframe}, процесс ai.py)")
                     else:
                         logger.error("❌ AI Database недоступна, свечи НЕ сохранены!")
                 except Exception as ai_db_error:

@@ -924,7 +924,19 @@ class NewTradingBot:
                 
                 # Подсчитываем количество свечей, прошедших с момента закрытия
                 # Свечи 6h, значит одна свеча = 6 часов = 21600 секунд
-                CANDLE_INTERVAL_SECONDS = 6 * 3600  # 6 часов
+                # Получаем текущий таймфрейм динамически
+                try:
+                    from bot_engine.bot_config import get_current_timeframe
+                    current_timeframe = get_current_timeframe()
+                    # Конвертируем таймфрейм в секунды
+                    timeframe_to_seconds = {
+                        '1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800,
+                        '1h': 3600, '2h': 7200, '4h': 14400, '6h': 21600, '8h': 28800,
+                        '12h': 43200, '1d': 86400, '3d': 259200, '1w': 604800, '1M': 2592000
+                    }
+                    CANDLE_INTERVAL_SECONDS = timeframe_to_seconds.get(current_timeframe, 21600)  # По умолчанию 6h
+                except:
+                    CANDLE_INTERVAL_SECONDS = 6 * 3600  # Fallback: 6 часов
                 
                 # Находим последнюю свечу (самую новую) в переданных candles
                 if not candles or len(candles) == 0:
