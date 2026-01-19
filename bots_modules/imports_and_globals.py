@@ -731,7 +731,7 @@ def load_auto_bot_config():
                             DEFAULT_AUTO_BOT_CONFIG['leverage'] = leverage_from_file_direct
                             logger.info(f"[CONFIG] ✅ Исправлено: leverage обновлен до {leverage_from_file_direct}x из файла")
         except Exception as e:
-            logger.debug(f"[CONFIG] Не удалось проверить leverage напрямую из файла: {e}")
+            pass  # Игнорируем ошибки проверки leverage
 
         # ✅ ЕДИНСТВЕННЫЙ источник истины: bot_engine/bot_config.py
         # Все настройки загружаются ТОЛЬКО из файла, БД не используется для auto_bot_config
