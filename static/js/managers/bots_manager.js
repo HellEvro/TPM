@@ -1309,7 +1309,7 @@ class BotsManager {
         const avoidDownTrend = autoConfig.avoid_down_trend === true;
         const avoidUpTrend = autoConfig.avoid_up_trend === true;
         // Получаем RSI и тренд с учетом текущего таймфрейма
-        const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+        const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
         const rsiKey = `rsi${currentTimeframe}`;
         const trendKey = `trend${currentTimeframe}`;
         const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
