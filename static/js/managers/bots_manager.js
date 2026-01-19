@@ -1320,8 +1320,17 @@ class BotsManager {
             const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi;
             return rsi && rsi >= this.rsiShortThreshold;
         }).length;
-        const trendUpCount = this.coinsRsiData.filter(coin => coin.trend6h === 'UP').length;
-        const trendDownCount = this.coinsRsiData.filter(coin => coin.trend6h === 'DOWN').length;
+        // Получаем текущий таймфрейм для подсчета трендов
+        const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+        const trendKey = `trend${currentTimeframe}`;
+        const trendUpCount = this.coinsRsiData.filter(coin => {
+            const trend = coin[trendKey] || coin.trend6h || coin.trend;
+            return trend === 'UP';
+        }).length;
+        const trendDownCount = this.coinsRsiData.filter(coin => {
+            const trend = coin[trendKey] || coin.trend6h || coin.trend;
+            return trend === 'DOWN';
+        }).length;
         const manualPositionCount = this.coinsRsiData.filter(coin => coin.manual_position === true).length;
         const unavailableCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'UNAVAILABLE').length;
         
@@ -1500,6 +1509,11 @@ class BotsManager {
         // Обновляем основную информацию
         const symbolElement = document.getElementById('selectedCoinSymbol');
         const priceElement = document.getElementById('selectedCoinPrice');
+        // Получаем текущий таймфрейм для отображения
+        const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+        const rsiKey = `rsi${currentTimeframe}`;
+        const trendKey = `trend${currentTimeframe}`;
+        
         const rsiElement = document.getElementById('selectedCoinRSI');
         const trendElement = document.getElementById('selectedCoinTrend');
         const zoneElement = document.getElementById('selectedCoinZone');
@@ -1551,7 +1565,7 @@ class BotsManager {
         }
         
         if (trendElement) {
-            const trend = coin.trend6h || 'NEUTRAL';
+            const trend = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
             trendElement.textContent = trend;
             trendElement.className = `value trend-indicator ${trend}`;
             console.log('[BotsManager] ✅ Тренд обновлен:', trend);
@@ -1574,10 +1588,16 @@ class BotsManager {
                     trendHintElement.textContent = '(UP тренд не блокирует SHORT)';
                     trendHintElement.style.color = 'var(--text-muted)';
                 } else {
-                    // Оба фильтра включены - показываем период анализа
+                    // Оба фильтра включены - показываем период анализа с учетом текущего таймфрейма
                     const period = this.cachedAutoBotConfig?.trend_analysis_period || 30;
-                    const days = (period * 6 / 24).toFixed(1);
-                    trendHintElement.textContent = `(анализ за ${days} дней)`;
+                    // Пересчитываем дни для текущего таймфрейма
+                    const timeframeHours = {
+                        '1m': 1/60, '3m': 3/60, '5m': 5/60, '15m': 15/60, '30m': 30/60,
+                        '1h': 1, '2h': 2, '4h': 4, '6h': 6, '8h': 8, '12h': 12, '1d': 24
+                    };
+                    const hoursPerCandle = timeframeHours[currentTimeframe] || 6;
+                    const days = (period * hoursPerCandle / 24).toFixed(1);
+                    trendHintElement.textContent = `(анализ за ${days} дней на ${currentTimeframe.toUpperCase()})`;
                     trendHintElement.style.color = 'var(--text-muted)';
                 }
             }
@@ -1953,7 +1973,7 @@ class BotsManager {
             const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
             const rsiKey = `rsi${currentTimeframe}`;
             const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
-            const trend = coin.trend6h || 'NEUTRAL';
+            const trend = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
             const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
             const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
             
@@ -8972,7 +8992,10 @@ class BotsManager {
         if (!takeProfit && bot.entry_price) {
             const rsiExitLong = bot.rsi_exit_long || 55;
             const rsiExitShort = bot.rsi_exit_short || 45;
-            const currentRsi = bot.rsi_data?.rsi6h || 50;
+            // Получаем RSI с учетом текущего таймфрейма
+            const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+            const rsiKey = `rsi${currentTimeframe}`;
+            const currentRsi = bot.rsi_data?.[rsiKey] || bot.rsi_data?.rsi6h || bot.rsi_data?.rsi || 50;
             
             if (bot.position_side === 'LONG' && currentRsi < rsiExitLong) {
                 const takeProfitPercent = (rsiExitLong - currentRsi) * 0.5;
@@ -8996,8 +9019,12 @@ class BotsManager {
         
         // Добавляем RSI данные если есть
         if (bot.rsi_data) {
-            const rsi = bot.rsi_data.rsi6h;
-            const trend = bot.rsi_data.trend6h;
+            // Получаем RSI и тренд с учетом текущего таймфрейма
+            const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+            const rsiKey = `rsi${currentTimeframe}`;
+            const trendKey = `trend${currentTimeframe}`;
+            const rsi = bot.rsi_data[rsiKey] || bot.rsi_data.rsi6h || bot.rsi_data.rsi || 50;
+            const trend = bot.rsi_data[trendKey] || bot.rsi_data.trend6h || bot.rsi_data.trend || 'NEUTRAL';
             
             if (rsi) {
                 let rsiColor = 'var(--text-muted)';
@@ -9203,7 +9230,12 @@ class BotsManager {
                 volumeMode: 'USDT',
                 startTime: bot.created_at,
                 rsi: currentRsi,
-                trend: bot.trend6h || 'NEUTRAL',
+                // Получаем тренд с учетом текущего таймфрейма
+                trend: (() => {
+                    const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+                    const trendKey = `trend${currentTimeframe}`;
+                    return bot[trendKey] || bot.trend6h || bot.trend || 'NEUTRAL';
+                })(),
                 workTime: bot.work_time || '0м',
                 lastUpdate: bot.last_update || 'Неизвестно'
             });
@@ -9257,7 +9289,12 @@ class BotsManager {
                 volumeMode: 'USDT',
                 startTime: bot.created_at,
                 rsi: currentRsi,
-                trend: bot.trend6h || 'NEUTRAL',
+                // Получаем тренд с учетом текущего таймфрейма
+                trend: (() => {
+                    const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+                    const trendKey = `trend${currentTimeframe}`;
+                    return bot[trendKey] || bot.trend6h || bot.trend || 'NEUTRAL';
+                })(),
                 workTime: bot.work_time || '0м',
                 lastUpdate: bot.last_update || 'Неизвестно'
             });
