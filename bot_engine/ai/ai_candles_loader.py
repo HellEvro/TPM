@@ -16,6 +16,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from pathlib import Path
 import concurrent.futures
+from bot_engine.bot_config import get_current_timeframe
 
 logger = logging.getLogger('AI.CandlesLoader')
 
@@ -234,19 +235,20 @@ class AICandlesLoader:
                             # В инкрементальном режиме НЕ ограничиваем количество - загружаем все новые свечи
                             while (max_requests is None or request_count < max_requests) and (incremental_mode or len(all_candles) < MAX_CANDLES_TO_LOAD):
                                 try:
+                                    # Используем текущий таймфрейм
+                                    current_timeframe = get_current_timeframe()
+                                    # Конвертируем таймфрейм в интервал для биржи (в минутах)
+                                    timeframe_to_interval = {
+                                        '1m': 1, '3m': 3, '5m': 5, '15m': 15, '30m': 30,
+                                        '1h': 60, '2h': 120, '4h': 240, '6h': 360, '8h': 480,
+                                        '12h': 720, '1d': 1440, '3d': 4320, '1w': 10080, '1M': 43200
+                                    }
+                                    interval = timeframe_to_interval.get(current_timeframe, 360)  # По умолчанию 6h
+                                    
                                     response = exchange.client.get_kline(
                                         category="linear",
                                         symbol=f"{clean_sym}USDT",
-                                        # Используем текущий таймфрейм
-                                        from bot_engine.bot_config import get_current_timeframe
-                                        current_timeframe = get_current_timeframe()
-                                        # Конвертируем таймфрейм в интервал для биржи (в минутах)
-                                        timeframe_to_interval = {
-                                            '1m': 1, '3m': 3, '5m': 5, '15m': 15, '30m': 30,
-                                            '1h': 60, '2h': 120, '4h': 240, '6h': 360, '8h': 480,
-                                            '12h': 720, '1d': 1440, '3d': 4320, '1w': 10080, '1M': 43200
-                                        }
-                                        interval = timeframe_to_interval.get(current_timeframe, 360)  # По умолчанию 6h
+                                        interval=interval,
                                         limit=max_candles_per_request,
                                         end=str(end_time)  # Получаем свечи ДО этого времени
                                     )
