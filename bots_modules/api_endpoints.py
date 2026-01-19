@@ -610,10 +610,19 @@ def get_coins_with_rsi():
                 cleaned_coin = {}
                 
                 # Копируем только необходимые базовые поля
-                essential_fields = ['symbol', 'rsi6h', 'trend6h', 'rsi_zone', 'signal', 'price', 
+                # Получаем ключи для текущего таймфрейма
+                from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+                current_timeframe = get_current_timeframe()
+                rsi_key = get_rsi_key(current_timeframe)
+                trend_key = get_trend_key(current_timeframe)
+                
+                essential_fields = ['symbol', rsi_key, trend_key, 'rsi_zone', 'signal', 'price', 
                                   'change24h', 'last_update', 'blocked_by_scope', 'has_existing_position',
                                   'is_mature', 'blocked_by_exit_scam', 'blocked_by_rsi_time', 'blocked_by_loss_reentry',
                                   'trading_status', 'is_delisting']
+                # Также добавляем старые ключи для обратной совместимости
+                essential_fields.extend(['rsi6h', 'trend6h', 'rsi', 'trend'])
+                
                 for field in essential_fields:
                     if field in coin_data:
                         cleaned_coin[field] = coin_data[field]
