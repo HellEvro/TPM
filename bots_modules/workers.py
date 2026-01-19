@@ -412,7 +412,8 @@ def positions_monitor_worker():
                                 if not rsi_data:
                                     continue
                                 
-                                current_rsi = rsi_data.get('rsi6h')
+                                from bot_engine.bot_config import get_rsi_from_coin_data
+                                current_rsi = get_rsi_from_coin_data(rsi_data)
                                 current_price = rsi_data.get('price')
                                 
                                 if current_rsi is None or current_price is None:

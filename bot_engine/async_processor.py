@@ -298,7 +298,9 @@ class AsyncSignalProcessor:
             return {
                 'symbol': symbol,
                 'signal': 'NEUTRAL',
-                'rsi': rsi_data.get('rsi6h', 50),
+                # Получаем RSI с учетом текущего таймфрейма
+                from bot_engine.bot_config import get_rsi_from_coin_data
+                'rsi': get_rsi_from_coin_data(rsi_data) or 50,
                 'timestamp': time.time()
             }
         except Exception as e:
