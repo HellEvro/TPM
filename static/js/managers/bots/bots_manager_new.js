@@ -440,11 +440,12 @@ class BotsManager {
             return;
         }
 
+        // Получаем текущий таймфрейм для отображения данных
+        const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+        const rsiKey = `rsi${currentTimeframe}`;
+        const trendKey = `trend${currentTimeframe}`;
+        
         const coinsHtml = coins.map(coin => {
-            // Получаем текущий таймфрейм для отображения данных
-            const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
-            const rsiKey = `rsi${currentTimeframe}`;
-            const trendKey = `trend${currentTimeframe}`;
             const rsiValue = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
             const trendValue = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
             const rsiClass = this.uiComponents.getRsiZoneClass(rsiValue);
@@ -549,8 +550,8 @@ class BotsManager {
         if (coinInfoElement) {
             coinInfoElement.innerHTML = `
                 <h4>${selectedCoin.symbol}</h4>
-                <p>RSI ${currentTimeframe.toUpperCase()}: <span class="rsi-value">${rsiValue}</span></p>
-                <p>Тренд: <span class="trend-value">${selectedCoin.trend6h || 'NEUTRAL'}</span></p>
+                <p>RSI ${currentTimeframe.toUpperCase()}: <span class="rsi-value">${selectedCoin[rsiKey] || selectedCoin.rsi6h || selectedCoin.rsi || '-'}</span></p>
+                <p>Тренд: <span class="trend-value">${selectedCoin[trendKey] || selectedCoin.trend6h || selectedCoin.trend || 'NEUTRAL'}</span></p>
                 <p>Цена: <span class="price-value">$${selectedCoin.price?.toFixed(6) || '0'}</span></p>
             `;
         }
