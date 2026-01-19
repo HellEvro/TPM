@@ -830,13 +830,45 @@ def save_auto_bot_config(changed_data=None):
             else:
                 logger.error(f"[SAVE_CONFIG] ❌ НЕКОТОРЫЕ RSI exit пороги отсутствуют в конфигурации!")
             
+            # ✅ КРИТИЧНО: Если сохранялся system_timeframe, сохраняем его в БД ПЕРЕД перезагрузкой модуля
+            if 'system_timeframe' in config_data:
+                try:
+                    from bot_engine.bots_database import get_bots_database
+                    from bot_engine.bot_config import set_current_timeframe
+                    db = get_bots_database()
+                    new_timeframe = config_data['system_timeframe']
+                    db.save_timeframe(new_timeframe)
+                    set_current_timeframe(new_timeframe)
+                    logger.info(f"[SAVE_CONFIG] ✅ Таймфрейм сохранен в БД перед перезагрузкой модуля: {new_timeframe}")
+                except Exception as tf_save_err:
+                    logger.warning(f"[SAVE_CONFIG] ⚠️ Не удалось сохранить таймфрейм в БД: {tf_save_err}")
+            
             # ✅ Перезагружаем модуль bot_config и обновляем конфигурацию из него
             try:
                 if 'bot_engine.bot_config' in sys.modules:
                     logger.debug(f"[SAVE_CONFIG] 🔄 Перезагружаем модуль bot_config...")
+                    
+                    # ✅ КРИТИЧНО: Сохраняем таймфрейм из БД перед перезагрузкой
+                    saved_timeframe_from_db = None
+                    try:
+                        from bot_engine.bots_database import get_bots_database
+                        db = get_bots_database()
+                        saved_timeframe_from_db = db.load_timeframe()
+                    except:
+                        pass
+                    
                     import bot_engine.bot_config
                     importlib.reload(bot_engine.bot_config)
                     logger.debug(f"[SAVE_CONFIG] ✅ Модуль перезагружен")
+                    
+                    # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после перезагрузки
+                    if saved_timeframe_from_db:
+                        try:
+                            from bot_engine.bot_config import set_current_timeframe
+                            set_current_timeframe(saved_timeframe_from_db)
+                            logger.info(f"[SAVE_CONFIG] ✅ Таймфрейм восстановлен из БД после перезагрузки: {saved_timeframe_from_db}")
+                        except Exception as tf_restore_err:
+                            logger.warning(f"[SAVE_CONFIG] ⚠️ Не удалось восстановить таймфрейм: {tf_restore_err}")
                     
                     # ✅ КРИТИЧЕСКИ ВАЖНО: Перезагружаем конфигурацию из обновленного bot_config.py
                     # Это нужно, чтобы значения сразу брались из файла, а не из старой памяти
