@@ -1652,7 +1652,9 @@ def timeframe_config():
             try:
                 from bots_modules.imports_and_globals import coins_rsi_data, rsi_data_lock
                 with rsi_data_lock:
+                    # Полностью очищаем кэш свечей
                     coins_rsi_data['candles_cache'] = {}
+                    coins_rsi_data['last_candles_update'] = None
                     coins_rsi_data['last_update'] = None
                     # Очищаем данные монет, чтобы они перезагрузились с новым таймфреймом
                     coins_rsi_data['coins'] = {}

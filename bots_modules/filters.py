@@ -861,10 +861,23 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение кэша - безопасная операция
         candles = None
         candles_cache = coins_rsi_data.get('candles_cache', {})
+        
+        # Получаем текущий таймфрейм для проверки кэша
+        from bot_engine.bot_config import get_current_timeframe
+        current_timeframe = get_current_timeframe()
+        
         if symbol in candles_cache:
             cached_data = candles_cache[symbol]
-            candles = cached_data.get('candles')
-            # logger.debug(f"[CACHE] {symbol}: Используем кэш свечей")  # Отключено для скорости
+            cached_timeframe = cached_data.get('timeframe')
+            # Проверяем, что таймфрейм в кэше совпадает с текущим
+            if cached_timeframe == current_timeframe:
+                candles = cached_data.get('candles')
+                # logger.debug(f"[CACHE] {symbol}: Используем кэш свечей (таймфрейм: {current_timeframe})")  # Отключено для скорости
+            else:
+                # Таймфрейм не совпадает - удаляем из кэша
+                logger.debug(f"🗑️ {symbol}: Таймфрейм кэша не совпадает (кэш: {cached_timeframe}, текущий: {current_timeframe}), загружаем заново")
+                del candles_cache[symbol]
+                coins_rsi_data['candles_cache'] = candles_cache
         
         # Если нет в кэше - загружаем с биржи (с семафором!)
         if not candles:
