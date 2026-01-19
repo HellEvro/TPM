@@ -154,12 +154,9 @@ class BotsDatabase:
                 logger.warning(f"⚠️ Не удалось проверить/исправить права доступа к БД: {e}")
         
         # Инициализируем базу данных
-        logger.debug("🔍 Вызов _init_database()...")
         self._init_database()
-        logger.debug("✅ _init_database() завершен")
         
         logger.info(f"✅ Bots Database инициализирована: {db_path}")
-        logger.debug("✅ BotsDatabase.__init__() завершен")
     
     def _check_integrity(self) -> Tuple[bool, Optional[str]]:
         """
@@ -916,14 +913,10 @@ class BotsDatabase:
         else:
             logger.info(f"📁 Создается новая база данных: {self.db_path}")
         
-        logger.debug("🔍 Проверка целостности завершена, переходим к созданию таблиц...")
-        
         # SQLite автоматически создает файл БД при первом подключении
         # Не нужно создавать пустой файл через touch() - это создает невалидную БД
         
-        logger.debug("🔍 Получение соединения с БД для создания таблиц...")
         with self._get_connection() as conn:
-            logger.debug("✅ Соединение с БД получено, начинаем создание таблиц...")
             # После создания БД проверяем и исправляем права доступа
             if not db_exists and os.path.exists(self.db_path):
                 try:
@@ -952,10 +945,7 @@ class BotsDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_db_metadata_key ON db_metadata(key)")
             
             # Миграция: добавляем новые поля если их нет
-            logger.debug("🔍 Начало миграции схемы БД...")
             self._migrate_schema(cursor, conn)
-            logger.debug("✅ Миграция схемы БД завершена")
-            logger.debug("🔍 Продолжаем создание таблиц после миграции...")
             
             # ==================== ТАБЛИЦА: БОТЫ (НОРМАЛИЗОВАННАЯ СТРУКТУРА) ====================
             # НОВАЯ НОРМАЛИЗОВАННАЯ СТРУКТУРА: одна строка = один бот со всеми полями
@@ -1413,9 +1403,7 @@ class BotsDatabase:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_bot_trades_decision_source ON bot_trades_history(decision_source)")
             
             # Если БД новая - устанавливаем флаг что миграция не выполнена
-            logger.debug("🔍 Проверка, новая ли БД (db_exists={})...".format(db_exists))
             if not db_exists:
-                logger.debug("🔍 БД новая, устанавливаем флаг миграции...")
                 now = datetime.now().isoformat()
                 cursor.execute("""
                     INSERT OR IGNORE INTO db_metadata (key, value, updated_at, created_at)
@@ -1425,10 +1413,7 @@ class BotsDatabase:
             else:
                 logger.debug("✅ Все таблицы и индексы проверены")
             
-            logger.debug("🔍 Выполнение commit() для сохранения изменений...")
             conn.commit()
-            logger.debug("✅ commit() выполнен успешно")
-            logger.debug("✅ _init_database() завершен, выходим из with self._get_connection()...")
     
     def _migrate_schema(self, cursor, conn):
         """
@@ -6438,15 +6423,11 @@ def get_bots_database(db_path: str = None) -> BotsDatabase:
     with _bots_database_lock:
         if _bots_database_instance is None:
             logger.info("🔧 Инициализация Bots Database...")
-            logger.debug("🔍 Создание экземпляра BotsDatabase...")
             _bots_database_instance = BotsDatabase(db_path)
-            logger.debug("✅ Экземпляр BotsDatabase создан")
             
             # Автоматическая миграция при первом запуске (данные из JSON в БД)
             try:
-                logger.debug("🔍 Начало автоматической миграции JSON -> БД...")
                 migration_stats = _bots_database_instance.migrate_json_to_database()
-                logger.debug("✅ Автоматическая миграция завершена")
                 if migration_stats:
                     logger.info(f"✅ Автоматическая миграция выполнена: {migration_stats}")
                 else:
@@ -6456,8 +6437,6 @@ def get_bots_database(db_path: str = None) -> BotsDatabase:
                 import traceback
                 logger.debug(f"⚠️ Трассировка ошибки миграции:\n{traceback.format_exc()}")
                 # Продолжаем работу, даже если миграция не удалась
-            
-            logger.debug("✅ get_bots_database() завершен, возвращаем экземпляр")
         
         return _bots_database_instance
 
