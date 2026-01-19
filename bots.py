@@ -601,8 +601,15 @@ if __name__ == '__main__':
         from bots_modules.workers import auto_save_worker, auto_bot_worker, positions_monitor_worker
         
         logger.info("📋 Загрузка конфигурации Auto Bot...")
-        load_auto_bot_config()
-        logger.info("✅ Конфигурация Auto Bot загружена")
+        logger.info("🔍 Вызов load_auto_bot_config()...")
+        try:
+            load_auto_bot_config()
+            logger.info("✅ Конфигурация Auto Bot загружена")
+        except Exception as config_load_error:
+            logger.error(f"❌ Ошибка загрузки конфигурации: {config_load_error}")
+            import traceback
+            logger.error(f"❌ Трассировка:\n{traceback.format_exc()}")
+            raise
         
         # Инициализируем ботов в отдельном потоке, чтобы не блокировать запуск сервера
         def init_bots_async():
