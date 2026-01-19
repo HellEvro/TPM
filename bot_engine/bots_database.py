@@ -1691,7 +1691,9 @@ class BotsDatabase:
                                 entry_trend = bot_data.get('entry_trend')
                                 opened_by_autobot = 1 if bot_data.get('opened_by_autobot', False) else 0
                                 bot_id = bot_data.get('id')
-                                entry_timeframe = bot_data.get('entry_timeframe')
+                                # ✅ Обратная совместимость: если entry_timeframe не указан, используем '6h' по умолчанию
+                                # (все старые позиции были открыты в 6ч таймфрейме)
+                                entry_timeframe = bot_data.get('entry_timeframe') or '6h'
                                 
                                 # Собираем все остальные поля в extra_data_json
                                 known_fields = {
@@ -3366,7 +3368,7 @@ class BotsDatabase:
                                 break_even_activated, break_even_stop_price, break_even_stop_set, order_id,
                                 current_price, last_price, last_rsi, last_trend,
                                 last_signal_time, last_bar_timestamp, entry_trend,
-                                opened_by_autobot, bot_id, bot_data.get('entry_timeframe'), extra_data_json,
+                                opened_by_autobot, bot_id, bot_data.get('entry_timeframe') or '6h', extra_data_json,
                                 now, final_created_at
                             ))
                         except Exception as e:
@@ -3517,7 +3519,8 @@ class BotsDatabase:
                         'entry_trend': row[40],
                         'opened_by_autobot': bool(row[41]),
                         'id': row[42],
-                        'entry_timeframe': row[43],
+                        # ✅ Обратная совместимость: если entry_timeframe не указан (None), используем '6h' по умолчанию
+                        'entry_timeframe': row[43] if row[43] else '6h',
                         'created_at': row[45]
                     }
                     
