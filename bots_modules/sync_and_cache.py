@@ -665,12 +665,13 @@ def save_system_config(config_data):
 def load_system_config():
     """Перезагружает SystemConfig из bot_config.py и применяет значения в память."""
     try:
-        # ✅ КРИТИЧНО: Сохраняем текущий таймфрейм перед перезагрузкой модуля
-        # чтобы не потерять его при reload
-        saved_timeframe = None
+        # ✅ КРИТИЧНО: Сохраняем текущий таймфрейм из БД перед перезагрузкой модуля
+        # чтобы не потерять его при reload (приоритет БД над конфигом)
+        saved_timeframe_from_db = None
         try:
-            from bot_engine.bot_config import get_current_timeframe, set_current_timeframe
-            saved_timeframe = get_current_timeframe()
+            from bot_engine.bots_database import get_bots_database
+            db = get_bots_database()
+            saved_timeframe_from_db = db.load_timeframe()
         except:
             pass
         
@@ -683,13 +684,21 @@ def load_system_config():
                 setattr(SystemConfig, attr, getattr(file_system_config, attr))
 
         # ✅ КРИТИЧНО: Восстанавливаем таймфрейм после перезагрузки модуля
-        if saved_timeframe:
-            try:
-                from bot_engine.bot_config import set_current_timeframe
-                set_current_timeframe(saved_timeframe)
-                logger.debug(f"[SYSTEM_CONFIG] ✅ Таймфрейм восстановлен после перезагрузки: {saved_timeframe}")
-            except:
-                pass
+        # Приоритет: БД > SystemConfig.SYSTEM_TIMEFRAME из файла
+        try:
+            from bot_engine.bot_config import set_current_timeframe, get_current_timeframe
+            if saved_timeframe_from_db:
+                # Если есть таймфрейм в БД - используем его (пользователь переключал через UI)
+                set_current_timeframe(saved_timeframe_from_db)
+                logger.debug(f"[SYSTEM_CONFIG] ✅ Таймфрейм восстановлен из БД после перезагрузки: {saved_timeframe_from_db}")
+            else:
+                # Если нет в БД - используем из конфига
+                config_timeframe = getattr(file_system_config, 'SYSTEM_TIMEFRAME', None)
+                if config_timeframe:
+                    set_current_timeframe(config_timeframe)
+                    logger.debug(f"[SYSTEM_CONFIG] ✅ Таймфрейм установлен из конфига после перезагрузки: {config_timeframe}")
+        except Exception as tf_err:
+            logger.warning(f"[SYSTEM_CONFIG] ⚠️ Ошибка восстановления таймфрейма: {tf_err}")
 
         logger.info("[SYSTEM_CONFIG] ✅ Конфигурация перезагружена из bot_engine/bot_config.py")
         return True
