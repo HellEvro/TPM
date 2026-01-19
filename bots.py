@@ -261,17 +261,94 @@ from utils.color_logger import setup_color_logging
 # Импортируем все модули
 # Логгер еще не настроен, используем stderr для важных сообщений
 import sys
-sys.stderr.write("Загрузка модулей...\n")
-from bots_modules.imports_and_globals import *
-from bots_modules.calculations import *
-from bots_modules.maturity import *
+sys.stderr.write("[BOTS] 📦 Начало импорта модулей...\n")
+sys.stderr.flush()
+
+try:
+    from bots_modules.imports_and_globals import *
+    sys.stderr.write("[BOTS] ✅ imports_and_globals импортирован\n")
+    sys.stderr.flush()
+except Exception as e:
+    sys.stderr.write(f"[BOTS] ❌ Ошибка импорта imports_and_globals: {e}\n")
+    import traceback
+    traceback.print_exc()
+    raise
+
+try:
+    from bots_modules.calculations import *
+    sys.stderr.write("[BOTS] ✅ calculations импортирован\n")
+    sys.stderr.flush()
+except Exception as e:
+    sys.stderr.write(f"[BOTS] ❌ Ошибка импорта calculations: {e}\n")
+    import traceback
+    traceback.print_exc()
+    raise
+
+try:
+    from bots_modules.maturity import *
+    sys.stderr.write("[BOTS] ✅ maturity импортирован\n")
+    sys.stderr.flush()
+except Exception as e:
+    sys.stderr.write(f"[BOTS] ❌ Ошибка импорта maturity: {e}\n")
+    import traceback
+    traceback.print_exc()
+    raise
+
 # ❌ ОТКЛЮЧЕНО: optimal_ema перемещен в backup (используются заглушки из imports_and_globals)
 # from bots_modules.optimal_ema import *
-from bots_modules.filters import *
-from bots_modules.bot_class import *
-from bots_modules.sync_and_cache import *
-from bots_modules.workers import *
-from bots_modules.init_functions import *
+
+try:
+    from bots_modules.filters import *
+    sys.stderr.write("[BOTS] ✅ filters импортирован\n")
+    sys.stderr.flush()
+except Exception as e:
+    sys.stderr.write(f"[BOTS] ❌ Ошибка импорта filters: {e}\n")
+    import traceback
+    traceback.print_exc()
+    raise
+
+try:
+    from bots_modules.bot_class import *
+    sys.stderr.write("[BOTS] ✅ bot_class импортирован\n")
+    sys.stderr.flush()
+except Exception as e:
+    sys.stderr.write(f"[BOTS] ❌ Ошибка импорта bot_class: {e}\n")
+    import traceback
+    traceback.print_exc()
+    raise
+
+try:
+    from bots_modules.sync_and_cache import *
+    sys.stderr.write("[BOTS] ✅ sync_and_cache импортирован\n")
+    sys.stderr.flush()
+except Exception as e:
+    sys.stderr.write(f"[BOTS] ❌ Ошибка импорта sync_and_cache: {e}\n")
+    import traceback
+    traceback.print_exc()
+    raise
+
+try:
+    from bots_modules.workers import *
+    sys.stderr.write("[BOTS] ✅ workers импортирован\n")
+    sys.stderr.flush()
+except Exception as e:
+    sys.stderr.write(f"[BOTS] ❌ Ошибка импорта workers: {e}\n")
+    import traceback
+    traceback.print_exc()
+    raise
+
+try:
+    from bots_modules.init_functions import *
+    sys.stderr.write("[BOTS] ✅ init_functions импортирован\n")
+    sys.stderr.flush()
+except Exception as e:
+    sys.stderr.write(f"[BOTS] ❌ Ошибка импорта init_functions: {e}\n")
+    import traceback
+    traceback.print_exc()
+    raise
+
+sys.stderr.write("[BOTS] ✅ Все модули импортированы успешно\n")
+sys.stderr.flush()
 
 # Импорт системы истории ботов (ПЕРЕД импортом API endpoints!)
 # Настройка логирования (раньше, чтобы использовать logger)
@@ -357,7 +434,17 @@ except Exception as e:
     traceback.print_exc()
 
 # Теперь импортируем API endpoints (после установки bot_history_manager)
-from bots_modules.api_endpoints import *
+try:
+    sys.stderr.write("[BOTS] 📦 Импорт api_endpoints...\n")
+    sys.stderr.flush()
+    from bots_modules.api_endpoints import *
+    sys.stderr.write("[BOTS] ✅ api_endpoints импортирован\n")
+    sys.stderr.flush()
+except Exception as e:
+    sys.stderr.write(f"[BOTS] ❌ Ошибка импорта api_endpoints: {e}\n")
+    import traceback
+    traceback.print_exc()
+    raise
 
 # Файловый логгер уже настроен в setup_color_logging() выше, не нужно дублировать
 
