@@ -671,13 +671,14 @@ class AIDataCollector:
                     
                     logger.info(f"📊 Получено индикаторов для {len(coins_data)} монет")
                     
+                    # Получаем RSI и тренд с учетом текущего таймфрейма
+                    from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                    
                     # Сохраняем индикаторы
                     indicators_count = 0
                     for symbol, coin_data in coins_data.items():
                         try:
                             collected_data['indicators'][symbol] = {
-                                # Получаем RSI и тренд с учетом текущего таймфрейма
-                                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
                                 'rsi': get_rsi_from_coin_data(coin_data),
                                 'trend': get_trend_from_coin_data(coin_data),
                                 'signal': coin_data.get('signal'),

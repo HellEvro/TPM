@@ -213,10 +213,11 @@ class AIBacktester:
                         coins_data = data.get('coins', {})
                         logger.info(f"✅ Загружено индикаторов для {len(coins_data)} монет через API")
                         
+                        # Получаем RSI и тренд с учетом текущего таймфрейма
+                        from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                        
                         for symbol, coin_data in coins_data.items():
                             market_data['latest']['indicators'][symbol] = {
-                                # Получаем RSI и тренд с учетом текущего таймфрейма
-                                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
                                 'rsi': get_rsi_from_coin_data(coin_data),
                                 'trend': get_trend_from_coin_data(coin_data),
                                 'price': coin_data.get('price'),
