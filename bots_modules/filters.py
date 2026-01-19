@@ -2331,7 +2331,6 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                     external_trend=external_trend
                 )
                 
-                logger.debug(f"🔄 {symbol}: Результат update: {signal_result}")
                 
                 # Обновляем данные бота в хранилище если есть изменения
                 if signal_result and signal_result.get('success', False):
