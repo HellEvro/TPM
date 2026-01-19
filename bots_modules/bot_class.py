@@ -1147,11 +1147,12 @@ class NewTradingBot:
                 logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка получения RSI данных: {e}")
                 # Fallback если lock не определен
                 coin_data = coins_rsi_data['coins'].get(self.symbol)
-                if coin_data:
-                    current_rsi = coin_data.get('rsi6h')
-                    current_price = coin_data.get('price')
-                    if not current_trend:
-                        current_trend = coin_data.get('trend6h', 'NEUTRAL')
+                        if coin_data:
+                            from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                            current_rsi = get_rsi_from_coin_data(coin_data)
+                            current_price = coin_data.get('price')
+                            if not current_trend:
+                                current_trend = get_trend_from_coin_data(coin_data)
             
             if current_rsi is None or current_price is None:
                 logger.warning(f"[NEW_BOT_{self.symbol}] ❌ Нет RSI данных")
@@ -2235,10 +2236,11 @@ class NewTradingBot:
                 try:
                     with rsi_data_lock:
                         rsi_info = coins_rsi_data.get(self.symbol, {})
+                        from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
                         if entry_rsi is None:
-                            entry_rsi = rsi_info.get('rsi6h') or rsi_info.get('rsi')
+                            entry_rsi = get_rsi_from_coin_data(rsi_info)
                         if entry_trend is None:
-                            entry_trend = rsi_info.get('trend6h') or rsi_info.get('trend')
+                            entry_trend = get_trend_from_coin_data(rsi_info)
                 except Exception:
                     pass
             
