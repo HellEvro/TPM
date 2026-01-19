@@ -1322,8 +1322,7 @@ class BotsManager {
             const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi;
             return rsi && rsi >= this.rsiShortThreshold;
         }).length;
-        // Получаем текущий таймфрейм для подсчета трендов
-        const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+        // Используем тот же currentTimeframe для подсчета трендов
         const trendKey = `trend${currentTimeframe}`;
         const trendUpCount = this.coinsRsiData.filter(coin => {
             const trend = coin[trendKey] || coin.trend6h || coin.trend;
