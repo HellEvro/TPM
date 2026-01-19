@@ -1597,6 +1597,75 @@ def log_config_change(key, old_value, new_value, description=""):
         return True
     return False
 
+@bots_app.route('/api/bots/timeframe', methods=['GET', 'POST'])
+def timeframe_config():
+    """Получить или установить текущий таймфрейм системы"""
+    try:
+        from bot_engine.bot_config import get_current_timeframe, set_current_timeframe, reset_timeframe_to_config
+        
+        if request.method == 'GET':
+            current_tf = get_current_timeframe()
+            return jsonify({
+                'success': True,
+                'timeframe': current_tf,
+                'supported_timeframes': ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M']
+            })
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            if not data or 'timeframe' not in data:
+                return jsonify({'success': False, 'error': 'timeframe parameter is required'}), 400
+            
+            new_timeframe = data['timeframe']
+            old_timeframe = get_current_timeframe()
+            
+            # Устанавливаем новый таймфрейм
+            success = set_current_timeframe(new_timeframe)
+            if not success:
+                return jsonify({
+                    'success': False,
+                    'error': f'Unsupported timeframe: {new_timeframe}'
+                }), 400
+            
+            logger.info(f"🔄 Таймфрейм изменен: {old_timeframe} → {new_timeframe}")
+            
+            # Сохраняем текущие данные перед переключением
+            try:
+                from bots_modules.sync_and_cache import save_rsi_cache
+                from bots_modules.imports_and_globals import coins_rsi_data, rsi_data_lock
+                with rsi_data_lock:
+                    if coins_rsi_data.get('coins'):
+                        # Сохраняем текущий кэш
+                        save_rsi_cache()
+            except Exception as save_err:
+                logger.warning(f"⚠️ Не удалось сохранить RSI кэш при переключении таймфрейма: {save_err}")
+            
+            # Очищаем кэш свечей для перезагрузки с новым таймфреймом
+            try:
+                from bots_modules.imports_and_globals import coins_rsi_data, rsi_data_lock
+                with rsi_data_lock:
+                    coins_rsi_data['candles_cache'] = {}
+                    coins_rsi_data['last_update'] = None
+                    logger.info("🗑️ Кэш свечей очищен для перезагрузки с новым таймфреймом")
+            except Exception as clear_err:
+                logger.warning(f"⚠️ Не удалось очистить кэш свечей: {clear_err}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Таймфрейм изменен с {old_timeframe} на {new_timeframe}',
+                'old_timeframe': old_timeframe,
+                'new_timeframe': new_timeframe
+            })
+    
+    except Exception as e:
+        logger.error(f"❌ Ошибка работы с таймфреймом: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @bots_app.route('/api/bots/system-config', methods=['GET', 'POST'])
 def system_config():
     """Получить или обновить системные настройки"""
@@ -1607,9 +1676,15 @@ def system_config():
                 load_system_config()
             except Exception as load_err:
                 logger.warning(f" ⚠️ Не удалось перезагрузить системную конфигурацию перед GET: {load_err}")
+            
+            # Добавляем текущий таймфрейм в системные настройки
+            config = get_system_config_snapshot()
+            from bot_engine.bot_config import get_current_timeframe
+            config['timeframe'] = get_current_timeframe()
+            
             return jsonify({
                 'success': True,
-                'config': get_system_config_snapshot()
+                'config': config
             })
 
         elif request.method == 'POST':
