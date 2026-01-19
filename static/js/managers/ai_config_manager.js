@@ -287,6 +287,7 @@ class AIConfigManager {
                 await this.saveAIConfig();
             });
             console.log('[AIConfigManager] ✅ События привязаны');
+        }
 
         // События для самообучения AI
         this.bindSelfLearningEvents();
