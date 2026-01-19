@@ -4341,41 +4341,71 @@ class BotsManager {
         const quickStartShortBtn = document.getElementById('quickStartShortBtn');
         const quickStopBtn = document.getElementById('quickStopBtn');
         
+        // Кнопки ручного запуска в секции настроек
+        const manualLaunchLongBtn = document.getElementById('manualLaunchLongBtn');
+        const manualLaunchShortBtn = document.getElementById('manualLaunchShortBtn');
+        
         // Проверяем есть ли бот для выбранной монеты
         const selectedBot = this.selectedCoin && this.activeBots ? 
                            this.activeBots.find(bot => bot.symbol === this.selectedCoin.symbol) : null;
         
+        // Проверяем, есть ли активная позиция
+        const hasActivePosition = selectedBot && (
+            selectedBot.status === 'in_position_long' || 
+            selectedBot.status === 'in_position_short' ||
+            selectedBot.status === 'running'
+        );
+        
         console.log(`[BotsManager] 🔍 Выбранная монета: ${this.selectedCoin?.symbol}`);
         console.log(`[BotsManager] 🤖 Найден бот:`, selectedBot);
+        console.log(`[BotsManager] 📊 Есть активная позиция:`, hasActivePosition);
         
         if (selectedBot) {
             // Есть бот для выбранной монеты
             const isRunning = selectedBot.status === 'running';
             const isStopped = selectedBot.status === 'idle' || selectedBot.status === 'stopped' || selectedBot.status === 'paused';
+            const inPosition = selectedBot.status === 'in_position_long' || selectedBot.status === 'in_position_short';
             
             if (createBtn) createBtn.style.display = 'none';
             
-            if (isRunning) {
-                // Бот работает - показываем только Стоп
+            if (inPosition) {
+                // Бот в позиции - показываем только Стоп и Закрыть
                 if (startBtn) startBtn.style.display = 'none';
                 if (stopBtn) stopBtn.style.display = 'inline-block';
                 if (pauseBtn) pauseBtn.style.display = 'none';
                 if (resumeBtn) resumeBtn.style.display = 'none';
                 
-                // Кнопки быстрого запуска скрыты, показываем только быструю остановку
+                // Кнопки запуска скрыты
                 if (quickStartLongBtn) quickStartLongBtn.style.display = 'none';
                 if (quickStartShortBtn) quickStartShortBtn.style.display = 'none';
-                if (quickStopBtn) quickStopBtn.style.display = 'inline-block';
+                if (manualLaunchLongBtn) manualLaunchLongBtn.style.display = 'none';
+                if (manualLaunchShortBtn) manualLaunchShortBtn.style.display = 'none';
+                if (quickStopBtn) quickStopBtn.style.display = 'none';
+            } else if (isRunning) {
+                // Бот работает, но не в позиции - показываем Стоп и кнопки запуска
+                if (startBtn) startBtn.style.display = 'none';
+                if (stopBtn) stopBtn.style.display = 'inline-block';
+                if (pauseBtn) pauseBtn.style.display = 'none';
+                if (resumeBtn) resumeBtn.style.display = 'none';
+                
+                // Показываем кнопки быстрого запуска LONG/SHORT
+                if (quickStartLongBtn) quickStartLongBtn.style.display = 'inline-block';
+                if (quickStartShortBtn) quickStartShortBtn.style.display = 'inline-block';
+                if (manualLaunchLongBtn) manualLaunchLongBtn.style.display = 'inline-block';
+                if (manualLaunchShortBtn) manualLaunchShortBtn.style.display = 'inline-block';
+                if (quickStopBtn) quickStopBtn.style.display = 'none';
             } else if (isStopped) {
-                // Бот остановлен - показываем Старт
+                // Бот остановлен - показываем Старт и кнопки запуска
                 if (startBtn) startBtn.style.display = 'inline-block';
                 if (stopBtn) stopBtn.style.display = 'none';
                 if (pauseBtn) pauseBtn.style.display = 'none';
                 if (resumeBtn) resumeBtn.style.display = 'none';
                 
-                // Кнопки быстрого запуска скрыты, показываем только быструю остановку
-                if (quickStartLongBtn) quickStartLongBtn.style.display = 'none';
-                if (quickStartShortBtn) quickStartShortBtn.style.display = 'none';
+                // Показываем кнопки быстрого запуска LONG/SHORT
+                if (quickStartLongBtn) quickStartLongBtn.style.display = 'inline-block';
+                if (quickStartShortBtn) quickStartShortBtn.style.display = 'inline-block';
+                if (manualLaunchLongBtn) manualLaunchLongBtn.style.display = 'inline-block';
+                if (manualLaunchShortBtn) manualLaunchShortBtn.style.display = 'inline-block';
                 if (quickStopBtn) quickStopBtn.style.display = 'none';
             }
             
@@ -4388,12 +4418,14 @@ class BotsManager {
             if (pauseBtn) pauseBtn.style.display = 'none';
             if (resumeBtn) resumeBtn.style.display = 'none';
             
-            // Показываем кнопки быстрого запуска
+            // Показываем кнопки быстрого запуска LONG/SHORT
             if (quickStartLongBtn) quickStartLongBtn.style.display = 'inline-block';
             if (quickStartShortBtn) quickStartShortBtn.style.display = 'inline-block';
+            if (manualLaunchLongBtn) manualLaunchLongBtn.style.display = 'inline-block';
+            if (manualLaunchShortBtn) manualLaunchShortBtn.style.display = 'inline-block';
             if (quickStopBtn) quickStopBtn.style.display = 'none';
             
-            console.log(`[BotsManager] 🆕 Нет бота, показаны кнопки создания и быстрого запуска`);
+            console.log(`[BotsManager] 🆕 Нет бота, показаны кнопки создания и быстрого запуска LONG/SHORT`);
         }
     }
 
