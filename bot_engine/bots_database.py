@@ -4575,7 +4575,6 @@ class BotsDatabase:
                     
                     conn.commit()
             
-            logger.debug(f"💾 Зрелые монеты сохранены в нормализованные столбцы БД ({len(mature_coins)} монет)")
             return True
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения зрелых монет: {e}")
@@ -4839,7 +4838,6 @@ class BotsDatabase:
                     
                     conn.commit()
             
-            logger.debug(f"💾 Делистированные монеты сохранены в БД ({len(delisted)} монет)")
             return True
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения делистированных монет: {e}")
