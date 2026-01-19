@@ -2180,7 +2180,9 @@ def get_candles_from_cache(symbol):
     """Получить свечи из кэша или файла (без запроса к бирже)"""
     try:
         # Получаем параметры запроса
-        timeframe = request.args.get('timeframe', '6h')  # По умолчанию 6h
+        # Получаем текущий таймфрейм из конфига
+        from bot_engine.bot_config import get_current_timeframe
+        timeframe = request.args.get('timeframe', get_current_timeframe())  # По умолчанию текущий таймфрейм
         period_days = request.args.get('period', None)  # Опционально, для совместимости
         
         # ✅ СНАЧАЛА ПРОВЕРЯЕМ КЭШ В ПАМЯТИ, ПОТОМ БД
@@ -2245,11 +2247,19 @@ def get_candles_from_cache(symbol):
                 daily_candles.append(current_candle)
             
             candles = daily_candles
-        elif timeframe == '6h':
-            # Используем 6h свечи как есть
+        # Получаем текущий таймфрейм из конфига
+        from bot_engine.bot_config import get_current_timeframe
+        current_timeframe = get_current_timeframe()
+        
+        if timeframe == current_timeframe:
+            # Используем свечи текущего таймфрейма как есть
+            candles = candles_6h
+        elif timeframe == '1d':
+            # Конвертируем свечи текущего таймфрейма в дневные (если нужно)
+            # Пока возвращаем свечи текущего таймфрейма
             candles = candles_6h
         else:
-            # Для других таймфреймов возвращаем 6h (можно расширить логику)
+            # Для других таймфреймов возвращаем свечи текущего таймфрейма
             candles = candles_6h
         
         # Ограничиваем количество свечей по периоду (если указан)
