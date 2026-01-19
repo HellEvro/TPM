@@ -1637,14 +1637,15 @@ def timeframe_config():
                 logger.warning(f"⚠️ Не удалось сохранить таймфрейм в БД: {save_db_err}")
             
             # Сохраняем таймфрейм в конфиг файл (bot_config.py)
+            # ⚠️ ВАЖНО: НЕ вызываем load_system_config() после сохранения, чтобы не сбросить таймфрейм
             try:
-                from bots_modules.sync_and_cache import save_system_config
+                from bots_modules.config_writer import save_system_config_to_py
                 from bot_engine.bot_config import SystemConfig
                 # Обновляем SystemConfig в памяти
                 SystemConfig.SYSTEM_TIMEFRAME = new_timeframe
-                # Сохраняем в файл
-                save_system_config({'system_timeframe': new_timeframe})
-                logger.info(f"✅ Таймфрейм сохранен в конфиг файл: {new_timeframe}")
+                # Сохраняем напрямую в файл БЕЗ перезагрузки модуля
+                save_system_config_to_py({'SYSTEM_TIMEFRAME': new_timeframe})
+                logger.info(f"✅ Таймфрейм сохранен в конфиг файл: {new_timeframe} (без перезагрузки модуля)")
             except Exception as save_config_err:
                 logger.warning(f"⚠️ Не удалось сохранить таймфрейм в конфиг файл: {save_config_err}")
             
@@ -1920,6 +1921,7 @@ def system_config():
         else:
             logger.info("ℹ️  System config: изменений не обнаружено")
         
+        # ⚠️ ВАЖНО: При перезагрузке конфига таймфрейм восстанавливается из БД (приоритет БД над файлом)
         if saved_to_file and (changes_count > 0 or system_changes_count > 0):
             load_system_config()
 
