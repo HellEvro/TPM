@@ -95,9 +95,17 @@ class ContinuousDataLoader:
                 coins_rsi_data['processing_cycle'] = True  # Только флаг обработки
                 logger.info("Начинаем обработку данных (неблокирующий режим)")
                 
+                # Получаем текущий таймфрейм для логирования
+                try:
+                    from bot_engine.bot_config import get_current_timeframe
+                    current_timeframe = get_current_timeframe()
+                except:
+                    current_timeframe = '6h'  # Fallback
+                
                 logger.info("=" * 80)
                 logger.info(f"РАУНД #{self.update_count} НАЧАТ")
                 logger.info(f"🕐 Время: {datetime.now().strftime('%H:%M:%S')}")
+                logger.info(f"⏱️ Таймфрейм: {current_timeframe}")
                 logger.info("=" * 80)
                 
                 # ✅ Этап 1: Загружаем свечи всех монет (15-20 сек) - БЛОКИРУЮЩИЙ
