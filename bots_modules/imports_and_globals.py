@@ -177,8 +177,6 @@ def check_and_stop_existing_bots_processes():
                 
                 if python_processes:
                     process_to_stop = python_processes[0]  # Останавливаем первый найденный
-                else:
-                    process_to_stop = None
                 
                 if process_to_stop and process_to_stop != current_pid:
                     try:
@@ -191,36 +189,46 @@ def check_and_stop_existing_bots_processes():
                         print()
                         
                         print(f"🔧 Останавливаем процесс {process_to_stop}...")
-                        proc.terminate()
-                        
                         try:
-                            proc.wait(timeout=5)
-                            print(f"✅ Процесс {process_to_stop} остановлен")
-                        except psutil.TimeoutExpired:
-                            proc.kill()
-                            proc.wait()
-                            print(f"🔴 Процесс {process_to_stop} принудительно остановлен")
+                            proc.terminate()
+                            # Ждем завершения с таймаутом
+                            try:
+                                proc.wait(timeout=3)  # Уменьшаем таймаут до 3 секунд
+                                print(f"✅ Процесс {process_to_stop} остановлен")
+                            except psutil.TimeoutExpired:
+                                # Если не завершился за 3 секунды, принудительно убиваем
+                                try:
+                                    proc.kill()
+                                    proc.wait(timeout=1)
+                                    print(f"🔴 Процесс {process_to_stop} принудительно остановлен")
+                                except:
+                                    pass
+                            except psutil.NoSuchProcess:
+                                print(f"✅ Процесс {process_to_stop} уже завершен")
+                        except Exception as term_error:
+                            print(f"⚠️  Ошибка при остановке процесса: {term_error}")
                         
-                        print("\n⏳ Ожидание освобождения порта 5001...")
-                        for i in range(10):
+                        # Быстрая проверка порта (максимум 2 секунды)
+                        print("\n⏳ Проверка освобождения порта 5001...")
+                        port_freed = False
+                        for i in range(2):  # Только 2 секунды
                             time.sleep(1)
                             try:
                                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                                sock.settimeout(1)
+                                sock.settimeout(0.3)
                                 result = sock.connect_ex(('127.0.0.1', 5001))
                                 sock.close()
                                 
                                 if result != 0:
                                     print("✅ Порт 5001 освобожден")
+                                    port_freed = True
                                     break
                             except:
                                 pass
-                            
-                            if i == 9:
-                                print("❌ Порт 5001 все еще занят!")
-                                print("⚠️  Возможно нужно вручную остановить процесс")
-                                print("=" * 80)
-                                return False
+                        
+                        if not port_freed:
+                            print("⚠️  Порт 5001 все еще занят, но продолжаем запуск")
+                            # Не возвращаем False, продолжаем выполнение
                         
                     except Exception as e:
                         print(f"❌ Ошибка остановки процесса {process_to_stop}: {e}")

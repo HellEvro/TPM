@@ -359,8 +359,6 @@ except Exception as e:
 # Теперь импортируем API endpoints (после установки bot_history_manager)
 from bots_modules.api_endpoints import *
 
-logger.info("✅ Все модули загружены")
-
 # Файловый логгер уже настроен в setup_color_logging() выше, не нужно дублировать
 
 # Настройка кодировки для stdout

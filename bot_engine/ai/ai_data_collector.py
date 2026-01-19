@@ -17,6 +17,7 @@ import requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import threading
+from bot_engine.bot_config import get_current_timeframe
 
 logger = logging.getLogger('AI.DataCollector')
 
