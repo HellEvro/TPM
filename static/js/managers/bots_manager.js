@@ -605,15 +605,25 @@ class BotsManager {
 
     async checkBotsService() {
         console.log('[BotsManager] 🔍 Проверка сервиса ботов...');
+        console.log('[BotsManager] 🔗 URL:', `${this.BOTS_SERVICE_URL}/api/status`);
         
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/status`, {
                 method: 'GET',
-                timeout: 5000
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/json'
+                }
             });
+            
+            clearTimeout(timeoutId);
             
             if (response.ok) {
                 const data = await response.json();
+                console.log('[BotsManager] 📊 Ответ сервиса:', data);
                 this.serviceOnline = data.status === 'online';
                 
                 if (this.serviceOnline) {
@@ -621,15 +631,26 @@ class BotsManager {
                     this.updateServiceStatus('online', 'Сервис ботов онлайн');
                     await this.loadCoinsRsiData();
                 } else {
-                    console.warn('[BotsManager] ⚠️ Сервис ботов недоступен');
-                    this.updateServiceStatus('offline', window.languageUtils.translate('bot_service_unavailable'));
+                    console.warn('[BotsManager] ⚠️ Сервис ботов недоступен (статус не online)');
+                    this.updateServiceStatus('offline', window.languageUtils?.translate?.('bot_service_unavailable') || 'Сервис ботов недоступен');
                 }
             } else {
-                throw new Error(`HTTP ${response.status}`);
+                console.error('[BotsManager] ❌ HTTP ошибка:', response.status, response.statusText);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
         } catch (error) {
-            console.error('[BotsManager] ❌ Сервис ботов недоступен:', error);
+            if (error.name === 'AbortError') {
+                console.error('[BotsManager] ❌ Таймаут при проверке сервиса ботов (5 секунд)');
+            } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                console.error('[BotsManager] ❌ Ошибка сети при проверке сервиса ботов. Проверьте:');
+                console.error('[BotsManager]   1. Запущен ли bots.py?');
+                console.error('[BotsManager]   2. Доступен ли порт 5001?');
+                console.error('[BotsManager]   3. Нет ли блокировки CORS?');
+                console.error('[BotsManager]   URL:', `${this.BOTS_SERVICE_URL}/api/status`);
+            } else {
+                console.error('[BotsManager] ❌ Ошибка при проверке сервиса ботов:', error);
+            }
             this.serviceOnline = false;
             this.updateServiceStatus('offline', 'Сервис ботов недоступен');
             this.showServiceUnavailable();
