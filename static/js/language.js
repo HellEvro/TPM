@@ -98,6 +98,18 @@ function updateInterface() {
         window.botsManager.loadAccountInfo();
     }
     
+    // ✅ КРИТИЧНО: Обновляем таймфрейм в UI после перевода, чтобы заголовок был правильным
+    if (typeof window.botsManager !== 'undefined' && window.botsManager.currentTimeframe) {
+        window.botsManager.updateTimeframeInUI(window.botsManager.currentTimeframe);
+    } else if (typeof window.botsManager !== 'undefined' && window.botsManager.loadTimeframe) {
+        // Если таймфрейм еще не загружен, загружаем его
+        window.botsManager.loadTimeframe().then(timeframe => {
+            if (timeframe) {
+                window.botsManager.updateTimeframeInUI(timeframe);
+            }
+        });
+    }
+    
     console.log('Interface updated successfully');
 }
 
