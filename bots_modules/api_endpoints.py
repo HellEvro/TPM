@@ -130,7 +130,7 @@ try:
     from bots_modules.filters import (
         get_effective_signal, check_auto_bot_filters,
         process_auto_bot_signals, test_exit_scam_filter, test_rsi_time_filter,
-        process_trading_signals_for_all_bots
+        process_trading_signals_for_all_bots, get_coin_rsi_data
     )
     # Для clear_mature_coins_storage может быть в разных модулях
     try:
