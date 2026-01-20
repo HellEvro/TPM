@@ -2096,14 +2096,18 @@ def load_all_coins_rsi():
             coins_rsi_data['update_in_progress'] = False
             return False
         
-        logger.info(f"✅ RSI рассчитан для таймфрейма {timeframe}: {len(temp_coins_data)} монет с данными")
+        logger.info(f"✅ RSI рассчитан для таймфрейма {timeframe}: {len([s for s in temp_coins_data.keys()])} монет с данными")
         
-        # ✅ КРИТИЧНО: АТОМАРНОЕ обновление всех данных ОДНИМ МАХОМ после всех таймфреймов!
-        coins_rsi_data['coins'] = temp_coins_data
-        coins_rsi_data['last_update'] = datetime.now().isoformat()
-        coins_rsi_data['update_in_progress'] = False
-        
-        logger.info(f"✅ RSI рассчитан для всех таймфреймов: {len(temp_coins_data)} монет")
+        # Переходим к следующему таймфрейму
+        if shutdown_flag.is_set():
+            break
+    
+    # ✅ КРИТИЧНО: АТОМАРНОЕ обновление всех данных ОДНИМ МАХОМ после всех таймфреймов!
+    coins_rsi_data['coins'] = temp_coins_data
+    coins_rsi_data['last_update'] = datetime.now().isoformat()
+    coins_rsi_data['update_in_progress'] = False
+    
+    logger.info(f"✅ RSI рассчитан для всех таймфреймов: {len(temp_coins_data)} монет")
         
         # Финальный отчет
         success_count = coins_rsi_data['successful_coins']

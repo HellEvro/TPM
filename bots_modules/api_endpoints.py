@@ -2250,11 +2250,23 @@ def get_rsi_history_for_chart(symbol):
         from bots_modules.calculations import calculate_rsi_history
         
         # ✅ СНАЧАЛА ПРОВЕРЯЕМ КЭШ В ПАМЯТИ, ПОТОМ БД
+        # ✅ ОПТИМИЗАЦИЯ: Поддержка новой структуры кэша (несколько таймфреймов)
         candles = None
         candles_cache = coins_rsi_data.get('candles_cache', {})
+        from bot_engine.bot_config import get_current_timeframe
+        current_timeframe = get_current_timeframe()
+        
         if symbol in candles_cache:
-            cached_data = candles_cache[symbol]
-            candles = cached_data.get('candles')
+            symbol_cache = candles_cache[symbol]
+            # Новая структура: {timeframe: {candles: [...], ...}}
+            if isinstance(symbol_cache, dict) and current_timeframe in symbol_cache:
+                cached_data = symbol_cache[current_timeframe]
+                candles = cached_data.get('candles')
+            # Старая структура (обратная совместимость)
+            elif isinstance(symbol_cache, dict) and 'candles' in symbol_cache:
+                cached_timeframe = symbol_cache.get('timeframe')
+                if cached_timeframe == current_timeframe:
+                    candles = symbol_cache.get('candles')
         
         # Если нет в памяти, читаем из БД
         if not candles:
