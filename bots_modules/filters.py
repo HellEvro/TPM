@@ -2083,23 +2083,10 @@ def load_all_coins_rsi():
                 f"{time.time() - batch_start:.1f}s"
             )
             
-            if shutdown_requested:
-                break
-        
-        if shutdown_requested:
-            logger.warning("⏹️ Расчет RSI прерван из-за остановки системы")
-            coins_rsi_data['update_in_progress'] = False
-            return False
-        
-        logger.info(f"✅ RSI рассчитан для таймфрейма {timeframe}: {len(temp_coins_data)} монет")
-            
             # ✅ Выводим прогресс в лог
             processed = coins_rsi_data['successful_coins'] + coins_rsi_data['failed_coins']
             if batch_num <= total_batches:
-                logger.info(f"📊 Прогресс: {processed}/{len(pairs)} ({processed*100//len(pairs)}%)")
-
-            if shutdown_requested:
-                break
+                logger.info(f"📊 Прогресс (ТФ={timeframe}): {processed}/{len(pairs)} ({processed*100//len(pairs)}%)")
 
             if shutdown_requested:
                 break
@@ -2108,6 +2095,8 @@ def load_all_coins_rsi():
             logger.warning("⏹️ Расчет RSI прерван из-за остановки системы")
             coins_rsi_data['update_in_progress'] = False
             return False
+        
+        logger.info(f"✅ RSI рассчитан для таймфрейма {timeframe}: {len(temp_coins_data)} монет с данными")
         
         # ✅ КРИТИЧНО: АТОМАРНОЕ обновление всех данных ОДНИМ МАХОМ после всех таймфреймов!
         coins_rsi_data['coins'] = temp_coins_data
