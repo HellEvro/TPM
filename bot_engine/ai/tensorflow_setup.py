@@ -128,6 +128,36 @@ def install_tensorflow_with_gpu():
         except subprocess.CalledProcessError as e:
             return False, f"Ошибка установки: {e}"
 
+def suggest_python_downgrade():
+    """Предлагает даунгрейд до Python 3.12 для работы с GPU"""
+    logger.warning("")
+    logger.warning("=" * 80)
+    logger.warning("РЕКОМЕНДАЦИЯ: ДЛЯ РАБОТЫ С GPU НУЖЕН PYTHON 3.12")
+    logger.warning("=" * 80)
+    logger.warning("")
+    logger.warning("Текущая версия Python не поддерживает GPU в TensorFlow на Windows.")
+    logger.warning("")
+    logger.warning("РЕШЕНИЕ: Автоматическая настройка Python 3.12")
+    logger.warning("")
+    logger.warning("Выполните команду для автоматической настройки:")
+    logger.warning("  python scripts/setup_python_gpu.py")
+    logger.warning("")
+    logger.warning("Этот скрипт:")
+    logger.warning("  1. Проверит наличие Python 3.12 в системе")
+    logger.warning("  2. Создаст виртуальное окружение .venv_gpu с Python 3.12")
+    logger.warning("  3. Установит все зависимости включая TensorFlow с GPU")
+    logger.warning("  4. Проверит работу GPU")
+    logger.warning("")
+    logger.warning("После настройки используйте:")
+    if platform.system() == 'Windows':
+        logger.warning("  .venv_gpu\\Scripts\\activate")
+    else:
+        logger.warning("  source .venv_gpu/bin/activate")
+    logger.warning("  python ai.py")
+    logger.warning("")
+    logger.warning("=" * 80)
+    logger.warning("")
+
 def ensure_tensorflow_setup():
     """
     Главная функция: проверяет и при необходимости устанавливает TensorFlow
@@ -136,12 +166,19 @@ def ensure_tensorflow_setup():
     # Проверяем версию Python
     python_info = check_python_version()
     
+    # Проверяем наличие GPU
+    has_gpu = check_gpu_available()
+    
+    # Если есть GPU, но Python не поддерживает GPU - предлагаем даунгрейд
+    if has_gpu and not python_info['gpu_supported']:
+        suggest_python_downgrade()
+        # Продолжаем с CPU версией, но предупреждаем пользователя
+    
     # Проверяем установку TensorFlow
     tf_info = check_tensorflow_installation()
     
     if not tf_info['installed']:
         logger.info("TensorFlow не установлен. Начинаю автоматическую установку...")
-        has_gpu = check_gpu_available()
         
         if has_gpu and python_info['gpu_supported']:
             logger.info("Обнаружен GPU, устанавливается TensorFlow с поддержкой GPU...")
@@ -176,11 +213,16 @@ def ensure_tensorflow_setup():
                     logger.warning("   Возможно, требуется установка CUDA библиотек вручную")
         else:
             logger.warning("⚠️ TensorFlow установлен БЕЗ поддержки CUDA (CPU версия)")
-            if check_gpu_available() and python_info['gpu_supported']:
-                logger.warning("   GPU обнаружен в системе, но TensorFlow не может его использовать")
-                logger.warning(f"   {python_info['message']}")
-                if python_info['recommended']:
-                    logger.info(f"   Рекомендуется использовать {python_info['recommended']}")
+            if has_gpu:
+                if not python_info['gpu_supported']:
+                    logger.warning("   GPU обнаружен в системе, но текущая версия Python не поддерживает GPU")
+                    logger.warning(f"   {python_info['message']}")
+                    if python_info['recommended']:
+                        logger.warning(f"   Для работы с GPU рекомендуется использовать {python_info['recommended']}")
+                        logger.warning("   Запустите: python scripts/setup_python_gpu.py")
+                else:
+                    logger.warning("   GPU обнаружен в системе, но TensorFlow не может его использовать")
+                    logger.warning(f"   {python_info['message']}")
     
     return True
 

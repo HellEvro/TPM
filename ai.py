@@ -8,6 +8,30 @@
 # ⚠️ КРИТИЧНО: Устанавливаем переменную окружения для идентификации процесса ai.py
 # Это гарантирует, что функции из filters.py будут сохранять свечи в ai_data.db, а не в bots_data.db
 import os
+import sys
+from pathlib import Path
+
+# Проверяем наличие виртуального окружения с Python 3.12 для GPU
+# Если найдено .venv_gpu, используем его вместо системного Python
+venv_gpu_path = Path(__file__).parent / '.venv_gpu'
+if venv_gpu_path.exists():
+    if sys.platform == 'win32':
+        venv_python = venv_gpu_path / 'Scripts' / 'python.exe'
+    else:
+        venv_python = venv_gpu_path / 'bin' / 'python'
+    
+    if venv_python.exists():
+        # Перезапускаем скрипт с Python из venv_gpu
+        import subprocess
+        try:
+            subprocess.run([str(venv_python)] + sys.argv, check=True)
+            sys.exit(0)
+        except subprocess.CalledProcessError as e:
+            sys.exit(e.returncode)
+        except Exception:
+            # Если не удалось перезапустить, продолжаем с текущим Python
+            pass
+
 os.environ['INFOBOT_AI_PROCESS'] = 'true'
 
 # Настройка логирования ПЕРЕД импортом защищенного модуля
