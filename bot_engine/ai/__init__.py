@@ -68,6 +68,9 @@ except ImportError:
     # Модули еще не созданы - это нормально на этапе разработки
     __all__ = []
 
+# Импортируем sys для проверки циклических импортов
+import sys
+
 # Экспорт главного модуля AI системы (новый модуль)
 # ai.py находится в корне проекта
 # ВАЖНО: Используем ленивый импорт, чтобы избежать циклического импорта
@@ -111,13 +114,9 @@ def get_ai_system(*args, **kwargs):
         except ImportError as e:
             raise ImportError(f"Не удалось импортировать get_ai_system из ai.py (возможно, циклический импорт): {e}")
 
-# Добавляем в __all__ только если не происходит циклический импорт
-try:
-    # Проверяем, что мы не в процессе импорта ai.py
-    if 'ai' not in sys.modules or not hasattr(sys.modules.get('ai', None), '__file__'):
-        __all__.append('get_ai_system')
-except:
-    pass
+# НЕ добавляем get_ai_system в __all__ при импорте модуля
+# Это предотвращает циклический импорт при загрузке bot_engine.ai
+# Функция доступна через bot_engine.ai.get_ai_system(), но не экспортируется автоматически
 
 _license_logger = logging.getLogger('AI.License')
 _LICENSE_STATUS = None
