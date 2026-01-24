@@ -43,6 +43,30 @@ def compile_all():
         results.append(("license_checker", False))
     
     print()
+    
+    # Компилируем ai_manager
+    print("3. Compiling ai_manager...")
+    try:
+        from license_generator.compile_ai_manager import compile_ai_manager
+        success = compile_ai_manager()
+        results.append(("ai_manager", success))
+    except Exception as e:
+        print(f"[ERROR] Failed to compile ai_manager: {e}")
+        results.append(("ai_manager", False))
+    
+    print()
+    
+    # Компилируем _ai_launcher
+    print("4. Compiling _ai_launcher...")
+    try:
+        from license_generator.build_ai_launcher import build_launcher
+        build_launcher()
+        results.append(("_ai_launcher", True))
+    except Exception as e:
+        print(f"[ERROR] Failed to compile _ai_launcher: {e}")
+        results.append(("_ai_launcher", False))
+    
+    print()
     print("=" * 60)
     print("COMPILATION SUMMARY")
     print("=" * 60)
