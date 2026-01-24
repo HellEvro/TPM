@@ -12,8 +12,9 @@ import platform
 
 logger = logging.getLogger('TensorFlowSetup')
 
-# Глобальный флаг для предотвращения дублирования сообщений
+# Глобальные флаги для предотвращения дублирования
 _gpu_warning_shown = False
+_tensorflow_checked = False
 
 def check_python_version():
     """Проверяет версию Python и возвращает рекомендации"""
@@ -202,6 +203,14 @@ def ensure_tensorflow_setup():
     Главная функция: проверяет и при необходимости устанавливает TensorFlow
     Вызывается автоматически при импорте модуля
     """
+    global _tensorflow_checked
+    
+    # Проверяем только один раз во всей программе
+    if _tensorflow_checked:
+        return True
+    
+    _tensorflow_checked = True
+    
     try:
         # Проверяем версию Python
         python_info = check_python_version()
