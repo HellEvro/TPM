@@ -43,11 +43,11 @@ rich>=13.0.0
 cryptography>=41.0.0
 
 # AI/ML dependencies
-# TensorFlow с поддержкой GPU
-# ВАЖНО: Для использования GPU выполните:
-#   python scripts/install_tensorflow_gpu.py
-# Или вручную: pip install tensorflow[and-cuda]
-# Базовый TensorFlow (CPU версия, будет использоваться если GPU недоступен):
+# TensorFlow - автоматически устанавливается с поддержкой GPU если доступно
+# При запуске ai.py выполняется автоматическая проверка и установка правильной версии
+# Для Python 3.11-3.12: автоматически устанавливается tensorflow[and-cuda] (GPU)
+# Для Python 3.13 на Windows: устанавливается базовая версия (CPU)
+# Вручную можно установить: pip install tensorflow[and-cuda]
 tensorflow>=2.13.0
 scikit-learn>=1.3.0
 

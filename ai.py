@@ -26,6 +26,22 @@ except Exception as e:
         import sys
         sys.stderr.write(f"❌ Ошибка настройки логирования: {setup_error}\n")
 
+# Автоматическая проверка и установка TensorFlow с поддержкой GPU
+# Выполняется ПЕРЕД импортом защищенного модуля
+try:
+    from bot_engine.ai.tensorflow_setup import ensure_tensorflow_setup
+    logger = logging.getLogger('AI')
+    logger.info("=" * 80)
+    logger.info("ПРОВЕРКА И НАСТРОЙКА TENSORFLOW")
+    logger.info("=" * 80)
+    ensure_tensorflow_setup()
+    logger.info("=" * 80)
+except Exception as tf_setup_error:
+    # Если проверка не удалась, продолжаем работу
+    logger = logging.getLogger('AI')
+    logger.warning(f"Не удалось проверить TensorFlow: {tf_setup_error}")
+    logger.info("Продолжаем работу...")
+
 from typing import TYPE_CHECKING, Any
 from bot_engine.ai import _infobot_ai_protected as _protected_module
 
