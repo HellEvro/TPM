@@ -12,6 +12,9 @@ import platform
 
 logger = logging.getLogger('TensorFlowSetup')
 
+# Глобальный флаг для предотвращения дублирования сообщений
+_gpu_warning_shown = False
+
 def check_python_version():
     """Проверяет версию Python и возвращает рекомендации"""
     version = sys.version_info
@@ -143,33 +146,23 @@ def install_tensorflow_with_gpu():
 
 def suggest_python_downgrade():
     """Предлагает даунгрейд до Python 3.12 для работы с GPU"""
-    logger.warning("")
+    global _gpu_warning_shown
+    
+    # Показываем сообщение только один раз за сессию
+    if _gpu_warning_shown:
+        return
+    
+    _gpu_warning_shown = True
+    
     logger.warning("=" * 80)
     logger.warning("РЕКОМЕНДАЦИЯ: ДЛЯ РАБОТЫ С GPU НУЖЕН PYTHON 3.12")
     logger.warning("=" * 80)
-    logger.warning("")
     logger.warning("Текущая версия Python не поддерживает GPU в TensorFlow на Windows.")
     logger.warning("")
-    logger.warning("РЕШЕНИЕ: Автоматическая настройка Python 3.12")
-    logger.warning("")
-    logger.warning("Выполните команду для автоматической настройки:")
-    logger.warning("  python scripts/setup_python_gpu.py")
-    logger.warning("")
-    logger.warning("Этот скрипт:")
-    logger.warning("  1. Проверит наличие Python 3.12 в системе")
-    logger.warning("  2. Создаст виртуальное окружение .venv_gpu с Python 3.12")
-    logger.warning("  3. Установит все зависимости включая TensorFlow с GPU")
-    logger.warning("  4. Проверит работу GPU")
-    logger.warning("")
-    logger.warning("После настройки используйте:")
-    if platform.system() == 'Windows':
-        logger.warning("  .venv_gpu\\Scripts\\activate")
-    else:
-        logger.warning("  source .venv_gpu/bin/activate")
-    logger.warning("  python ai.py")
-    logger.warning("")
+    logger.warning("РЕШЕНИЕ: Выполните: python scripts/setup_python_gpu.py")
+    logger.warning("Это создаст .venv_gpu с Python 3.12 и установит TensorFlow с GPU.")
+    logger.warning("После настройки ai.py автоматически использует .venv_gpu")
     logger.warning("=" * 80)
-    logger.warning("")
 
 def ensure_tensorflow_setup():
     """
@@ -228,21 +221,14 @@ def ensure_tensorflow_setup():
             logger.warning("⚠️ TensorFlow установлен БЕЗ поддержки CUDA (CPU версия)")
             if has_gpu:
                 if not python_info['gpu_supported']:
-                    logger.warning("   GPU обнаружен в системе, но текущая версия Python не поддерживает GPU")
-                    logger.warning(f"   {python_info['message']}")
-                    if python_info['recommended']:
-                        logger.warning(f"   Для работы с GPU рекомендуется использовать {python_info['recommended']}")
-                        logger.warning("   Запустите: python scripts/setup_python_gpu.py")
+                    # Сообщение о даунгрейде уже показано выше через suggest_python_downgrade()
+                    # Не дублируем его здесь
+                    pass
                 else:
                     logger.warning("   GPU обнаружен в системе, но TensorFlow не может его использовать")
-                    logger.warning(f"   {python_info['message']}")
+                    logger.warning("   Возможно, требуется установка CUDA библиотек: pip install tensorflow[and-cuda]")
     
     return True
 
-# Автоматически проверяем при импорте модуля
-if __name__ != '__main__':
-    # Вызываем только если это не прямой запуск скрипта
-    try:
-        ensure_tensorflow_setup()
-    except Exception as e:
-        logger.debug(f"Ошибка при автоматической проверке TensorFlow: {e}")
+# НЕ вызываем автоматически при импорте - только по явному запросу
+# Это предотвращает множественные вызовы из разных модулей
