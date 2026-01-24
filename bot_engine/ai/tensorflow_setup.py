@@ -17,7 +17,7 @@ def check_python_version():
     version = sys.version_info
     major, minor = version.major, version.minor
     
-    # Python 3.13 на Windows не поддерживает GPU в TensorFlow
+    # Python 3.13 на Windows не поддерживает GPU в TensorFlow (известная проблема)
     if platform.system() == 'Windows' and major == 3 and minor == 13:
         return {
             'supported': False,
@@ -26,7 +26,7 @@ def check_python_version():
             'recommended': 'Python 3.11 или 3.12'
         }
     
-    # Python 3.11 и 3.12 поддерживают GPU
+    # Python 3.11 и 3.12 точно поддерживают GPU
     if major == 3 and minor in [11, 12]:
         return {
             'supported': True,
@@ -44,11 +44,24 @@ def check_python_version():
             'recommended': None
         }
     
+    # Python 3.14+ - проверяем динамически через попытку установки TensorFlow
+    # Если версия >= 3.14, пробуем установить и проверить поддержку GPU
+    if major == 3 and minor >= 14:
+        # Для новых версий Python проверяем динамически
+        # Пока что предполагаем, что поддержка может быть ограничена
+        return {
+            'supported': True,
+            'gpu_supported': True,  # Пробуем установить с GPU поддержкой
+            'message': f'Python {major}.{minor} - поддержка GPU будет проверена при установке TensorFlow',
+            'recommended': None
+        }
+    
+    # Для других версий - консервативный подход
     return {
         'supported': True,
         'gpu_supported': False,
-        'message': f'Python {major}.{minor} - GPU поддержка может быть ограничена',
-        'recommended': None
+        'message': f'Python {major}.{minor} - GPU поддержка может быть ограничена. Рекомендуется Python 3.11 или 3.12.',
+        'recommended': 'Python 3.11 или 3.12'
     }
 
 def check_gpu_available():
