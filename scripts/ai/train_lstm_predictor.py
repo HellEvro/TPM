@@ -370,6 +370,24 @@ def main():
         print("Install: pip install tensorflow")
         return 1
     
+    # Проверяем и настраиваем GPU
+    try:
+        import tensorflow as tf
+        gpus = tf.config.list_physical_devices('GPU')
+        if gpus:
+            print(f"\n[GPU] Найдено GPU устройств: {len(gpus)}")
+            for i, gpu in enumerate(gpus):
+                print(f"  GPU {i}: {gpu.name}")
+            # Настраиваем рост памяти GPU
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            print("[GPU] ✅ GPU будет использоваться для обучения")
+        else:
+            print("\n[GPU] ⚠️ GPU устройства не найдены, используется CPU")
+    except Exception as e:
+        print(f"\n[GPU] ⚠️ Ошибка проверки GPU: {e}")
+        print("[GPU] Продолжаем с CPU...")
+    
     print(f"\nParameters:")
     print(f"  Coins for training: {'all' if args.coins == 0 else args.coins}")
     print(f"  Epochs: {args.epochs}")

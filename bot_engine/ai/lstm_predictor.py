@@ -59,8 +59,47 @@ try:
     from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
     from sklearn.preprocessing import MinMaxScaler
     TENSORFLOW_AVAILABLE = True
+    
+    # Настройка GPU для TensorFlow
+    def configure_gpu():
+        """Настраивает TensorFlow для использования GPU"""
+        try:
+            # Проверяем доступность GPU
+            gpus = tf.config.list_physical_devices('GPU')
+            
+            if gpus:
+                try:
+                    # Включаем рост памяти GPU по мере необходимости
+                    for gpu in gpus:
+                        tf.config.experimental.set_memory_growth(gpu, True)
+                    
+                    logger.info(f"✅ Найдено GPU устройств: {len(gpus)}")
+                    for i, gpu in enumerate(gpus):
+                        logger.info(f"   GPU {i}: {gpu.name}")
+                    
+                    # Проверяем, что GPU действительно доступен
+                    # В TensorFlow 2.x GPU автоматически используется, если доступен
+                    logger.info("✅ GPU доступен и будет использоваться для обучения")
+                    
+                    return True
+                except RuntimeError as e:
+                    logger.warning(f"⚠️ Ошибка настройки GPU: {e}")
+                    logger.info("Продолжаем с CPU...")
+                    return False
+            else:
+                logger.warning("⚠️ GPU устройства не найдены, используется CPU")
+                return False
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка проверки GPU: {e}")
+            logger.info("Продолжаем с CPU...")
+            return False
+    
+    # Настраиваем GPU при импорте модуля
+    GPU_AVAILABLE = configure_gpu()
+    
 except ImportError:
     TENSORFLOW_AVAILABLE = False
+    GPU_AVAILABLE = False
     logger.warning("TensorFlow не установлен. LSTM Predictor недоступен.")
 
 
@@ -101,6 +140,13 @@ class LSTMPredictor:
         if not TENSORFLOW_AVAILABLE:
             logger.error("TensorFlow недоступен. Установите: pip install tensorflow")
             return
+        
+        # Выводим информацию о GPU при инициализации
+        if TENSORFLOW_AVAILABLE:
+            if GPU_AVAILABLE:
+                logger.info("🚀 LSTM Predictor инициализирован с поддержкой GPU")
+            else:
+                logger.info("💻 LSTM Predictor инициализирован (CPU режим)")
         
         # Загружаем модель, если существует
         if os.path.exists(model_path) and os.path.exists(scaler_path):
@@ -322,6 +368,20 @@ class LSTMPredictor:
             flat_X = X.reshape(-1, X.shape[-1])
             self.scaler.fit(flat_X)
             X_scaled = self.scaler.transform(flat_X).reshape(X.shape).astype(np.float32)
+            
+            # Проверяем и логируем информацию о GPU перед обучением
+            if TENSORFLOW_AVAILABLE:
+                try:
+                    import tensorflow as tf
+                    gpus = tf.config.list_physical_devices('GPU')
+                    if gpus:
+                        logger.info(f"🚀 Обучение на GPU: {len(gpus)} устройств")
+                        for i, gpu in enumerate(gpus):
+                            logger.info(f"   GPU {i}: {gpu.name}")
+                    else:
+                        logger.info("💻 Обучение на CPU (GPU не найдены)")
+                except Exception as e:
+                    logger.debug(f"Не удалось проверить GPU: {e}")
             
             logger.info(f"Начало обучения: {len(X)} образцов")
             logger.info(f"Форма X: {X.shape}, форма y: {y.shape}")
