@@ -70,17 +70,26 @@ except ImportError:
 
 # Экспорт главного модуля AI системы (новый модуль)
 # ai.py находится в корне проекта
-try:
-    import sys
-    import os
-    # Добавляем корень проекта в путь для импорта
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    if project_root not in sys.path:
-        sys.path.insert(0, project_root)
-    from ai import get_ai_system
-    __all__.append('get_ai_system')
-except ImportError:
-    pass
+# ВАЖНО: Используем ленивый импорт, чтобы избежать циклического импорта
+# ai.py импортирует bot_engine.ai, поэтому нельзя импортировать ai.py здесь напрямую
+def get_ai_system(*args, **kwargs):
+    """
+    Ленивый импорт get_ai_system из ai.py
+    Вызывается только при необходимости, чтобы избежать циклического импорта
+    """
+    try:
+        import sys
+        import os
+        # Добавляем корень проекта в путь для импорта
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        from ai import get_ai_system as _get_ai_system
+        return _get_ai_system(*args, **kwargs)
+    except ImportError as e:
+        raise ImportError(f"Не удалось импортировать get_ai_system из ai.py: {e}")
+
+__all__.append('get_ai_system')
 
 _license_logger = logging.getLogger('AI.License')
 _LICENSE_STATUS = None
