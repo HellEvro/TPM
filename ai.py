@@ -8,30 +8,7 @@
 # ⚠️ КРИТИЧНО: Устанавливаем переменную окружения для идентификации процесса ai.py
 # Это гарантирует, что функции из filters.py будут сохранять свечи в ai_data.db, а не в bots_data.db
 import os
-import sys
-from pathlib import Path
-
 os.environ['INFOBOT_AI_PROCESS'] = 'true'
-
-# Проверка версии Python и используемых .pyc файлов
-python_version = sys.version_info[:2]
-python_version_str = f"{python_version[0]}.{python_version[1]}"
-base_dir = Path(__file__).resolve().parent / 'bot_engine' / 'ai'
-
-if python_version == (3, 12):
-    # Для Python 3.12 используем файлы из pyc_312/
-    pyc_dir = base_dir / 'pyc_312'
-    print(f"[INFO] Python {python_version_str} обнаружен - используются .pyc файлы из pyc_312/")
-    required_file = pyc_dir / '_ai_launcher.pyc'
-    if not required_file.exists():
-        print(f"[WARNING] Файл {required_file} не найден!")
-        print("[INFO] Убедитесь, что файлы скомпилированы для Python 3.12 и находятся в репозитории")
-elif python_version >= (3, 14):
-    # Для Python 3.14+ используем файлы из pyc_314/
-    pyc_dir = base_dir / 'pyc_314'
-    print(f"[INFO] Python {python_version_str} обнаружен - используются .pyc файлы из pyc_314/")
-else:
-    print(f"[INFO] Python {python_version_str} - используются .pyc файлы из основной директории")
 
 # Настройка логирования ПЕРЕД импортом защищенного модуля
 import logging
