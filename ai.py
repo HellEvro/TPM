@@ -35,6 +35,7 @@ if not os.environ.get('INFOBOT_AI_VENV_RESTART'):
         # .venv_gpu существует
         if current_python_version >= (3, 14):
             # Текущий Python 3.14+ → перезапускаем через .venv_gpu для TensorFlow
+            print(f"[INFO] Обнаружен Python {current_python_version[0]}.{current_python_version[1]}, переключаюсь на .venv_gpu (Python 3.12) для TensorFlow")
             should_restart = True
             target_python = str(venv_gpu_python)
         elif current_python_version == (3, 12):
@@ -83,6 +84,7 @@ if not os.environ.get('INFOBOT_AI_VENV_RESTART'):
     
     # Перезапуск если нужно
     if should_restart and target_python:
+        print(f"[INFO] Перезапускаю ai.py через {target_python}")
         os.environ['INFOBOT_AI_VENV_RESTART'] = 'true'
         try:
             subprocess.run([target_python, __file__] + sys.argv[1:], check=False)
