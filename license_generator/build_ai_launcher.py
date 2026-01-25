@@ -15,7 +15,6 @@ import py_compile
 import textwrap
 
 SOURCE_PATH = Path('license_generator/source/@source/ai_launcher_source.py')
-TARGET_COMPILED = Path('bot_engine/ai/_ai_launcher.pyc')
 TARGET_WRAPPER = Path('ai.py')
 STUB_PATH = Path('bot_engine/ai/_infobot_ai_protected.py')
 
@@ -25,12 +24,27 @@ def build_launcher() -> None:
     if not SOURCE_PATH.exists():
         raise FileNotFoundError(f'Не найден исходник: {SOURCE_PATH}')
 
-    TARGET_COMPILED.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Компилируем с использованием текущей версии Python
-    # (должна быть 3.14, если скрипт запущен через Python 3.14)
     import sys
-    print(f"[INFO] Компиляция через Python {sys.version_info.major}.{sys.version_info.minor}")
+    python_version = sys.version_info[:2]
+    
+    # Определяем целевую директорию на основе версии Python
+    base_dir = Path('bot_engine/ai')
+    if python_version >= (3, 14):
+        target_dir = base_dir / 'pyc_314'
+        version_name = "3.14"
+    elif python_version == (3, 12):
+        target_dir = base_dir / 'pyc_312'
+        version_name = "3.12"
+    else:
+        # Для других версий используем основную директорию
+        target_dir = base_dir
+        version_name = f"{python_version[0]}.{python_version[1]}"
+    
+    target_dir.mkdir(parents=True, exist_ok=True)
+    TARGET_COMPILED = target_dir / '_ai_launcher.pyc'
+    
+    print(f"[INFO] Компиляция через Python {version_name}")
+    print(f"[INFO] Целевая директория: {target_dir}")
     
     py_compile.compile(
         file=str(SOURCE_PATH),
@@ -38,6 +52,8 @@ def build_launcher() -> None:
         dfile='ai_protected.py',
         optimize=2,
     )
+    
+    print(f"[OK] Скомпилирован: {TARGET_COMPILED}")
 
     wrapper = textwrap.dedent(
         '''\
@@ -160,7 +176,7 @@ def build_launcher() -> None:
 
     STUB_PATH.write_text(stub, encoding='utf-8')
 
-    print('[OK] Скомпилирован _ai_launcher.pyc, обновлены ai.py и loader')
+    print(f'[OK] Скомпилирован _ai_launcher.pyc для Python {version_name}, обновлены ai.py и loader')
 
 
 if __name__ == '__main__':

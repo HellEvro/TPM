@@ -4,6 +4,10 @@
 __pycache__/
 *.py[cod]
 # ВАЖНО: Скомпилированные .pyc файлы для лицензирования НУЖНЫ
+# Версионированные .pyc файлы для Python 3.14 и 3.12
+!bot_engine/ai/pyc_314/*.pyc
+!bot_engine/ai/pyc_312/*.pyc
+# Обратная совместимость (основная директория)
 !scripts/hardware_id.pyc
 !bot_engine/ai/ai_manager.pyc
 !bot_engine/ai/license_checker.pyc
