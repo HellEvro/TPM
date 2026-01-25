@@ -14,7 +14,7 @@ def _get_versioned_pyc_path():
     """Определяет путь к версионированному _ai_launcher.pyc на основе текущей версии Python."""
     base_dir = Path(__file__).resolve().parent
     python_version = sys.version_info[:2]
-    
+
     # Определяем версию Python и соответствующую директорию
     if python_version >= (3, 14):
         version_dir = base_dir / 'pyc_314'
@@ -22,17 +22,17 @@ def _get_versioned_pyc_path():
         version_dir = base_dir / 'pyc_312'
     else:
         version_dir = base_dir
-    
+
     # Путь к версионированному .pyc файлу
     versioned_path = version_dir / "_ai_launcher.pyc"
-    
+
     # Если версионированный файл не найден, пробуем основную директорию
     if not versioned_path.exists():
         fallback_path = base_dir / "_ai_launcher.pyc"
         if fallback_path.exists():
             return fallback_path
         return None
-    
+
     return versioned_path
 
 _compiled_path = _get_versioned_pyc_path()
