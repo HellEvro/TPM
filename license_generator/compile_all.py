@@ -1,8 +1,11 @@
 """
 Скрипт для компиляции всех модулей лицензирования в .pyc
+Поддерживает Python 3.14
 """
 
 import sys
+import subprocess
+import os
 from pathlib import Path
 
 # Добавляем текущую директорию в путь
@@ -10,13 +13,51 @@ script_dir = Path(__file__).parent
 project_root = script_dir.parent
 sys.path.insert(0, str(project_root))
 
-def compile_all():
+def get_python314():
+    """Пытается найти Python 3.14"""
+    # Пробуем разные варианты
+    for cmd in ['py -3.14', 'python3.14', 'python314', 'python']:
+        try:
+            result = subprocess.run(
+                [cmd.split()[0]] + cmd.split()[1:] + ['--version'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0 and '3.14' in result.stdout:
+                return cmd.split()[0] if ' ' not in cmd else cmd
+        except:
+            continue
+    return None
+
+def compile_all(use_python314=False):
     """Компилирует все модули лицензирования"""
     
     print("=" * 60)
     print("COMPILING ALL LICENSE MODULES")
+    if use_python314:
+        print("Using Python 3.14")
+    else:
+        print(f"Using Python {sys.version_info.major}.{sys.version_info.minor}")
     print("=" * 60)
     print()
+    
+    # Если нужно использовать Python 3.14, запускаем через subprocess
+    if use_python314:
+        python314 = get_python314()
+        if not python314:
+            print("[ERROR] Python 3.14 not found!")
+            print("Please install Python 3.14 first")
+            return False
+        
+        print(f"[INFO] Using Python 3.14: {python314}")
+        # Запускаем этот же скрипт через Python 3.14
+        script_path = Path(__file__).resolve()
+        result = subprocess.run(
+            python314.split() + [str(script_path), '--no-python314'],
+            cwd=project_root
+        )
+        return result.returncode == 0
     
     results = []
     
@@ -90,6 +131,15 @@ def compile_all():
 if __name__ == '__main__':
     import os
     os.chdir(project_root)
-    success = compile_all()
+    
+    # Проверяем аргументы командной строки
+    use_python314 = '--python314' in sys.argv or '--py314' in sys.argv
+    no_python314 = '--no-python314' in sys.argv
+    
+    if not no_python314 and use_python314:
+        success = compile_all(use_python314=True)
+    else:
+        success = compile_all(use_python314=False)
+    
     sys.exit(0 if success else 1)
 

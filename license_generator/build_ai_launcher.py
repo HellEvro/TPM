@@ -26,6 +26,12 @@ def build_launcher() -> None:
         raise FileNotFoundError(f'Не найден исходник: {SOURCE_PATH}')
 
     TARGET_COMPILED.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Компилируем с использованием текущей версии Python
+    # (должна быть 3.14, если скрипт запущен через Python 3.14)
+    import sys
+    print(f"[INFO] Компиляция через Python {sys.version_info.major}.{sys.version_info.minor}")
+    
     py_compile.compile(
         file=str(SOURCE_PATH),
         cfile=str(TARGET_COMPILED),
