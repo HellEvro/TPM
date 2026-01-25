@@ -45,7 +45,7 @@ def check_pyc_files():
         filepath = target_dir / filename
         if not filepath.exists():
             missing_files.append(filename)
-            print(f"❌ Отсутствует: {filename}")
+            print(f"[ERROR] Отсутствует: {filename}")
         else:
             # Проверяем совместимость
             try:
@@ -53,16 +53,16 @@ def check_pyc_files():
                 spec = importlib.util.spec_from_file_location('test', str(filepath))
                 if spec is None:
                     incompatible_files.append(filename)
-                    print(f"⚠️  Несовместим: {filename}")
+                    print(f"[WARNING] Несовместим: {filename}")
                 else:
-                    print(f"✅ Найден: {filename}")
+                    print(f"[OK] Найден: {filename}")
             except Exception as e:
                 err_msg = str(e).lower()
                 if "bad magic number" in err_msg or "bad magic" in err_msg:
                     incompatible_files.append(filename)
-                    print(f"⚠️  Несовместим (bad magic): {filename}")
+                    print(f"[WARNING] Несовместим (bad magic): {filename}")
                 else:
-                    print(f"✅ Найден: {filename}")
+                    print(f"[OK] Найден: {filename}")
     
     print()
     
@@ -94,21 +94,21 @@ def check_pyc_files():
                     timeout=300
                 )
                 if result.returncode == 0:
-                    print("✅ Компиляция завершена успешно")
+                    print("[OK] Компиляция завершена успешно")
                     return True
                 else:
-                    print(f"❌ Ошибка компиляции:")
+                    print(f"[ERROR] Ошибка компиляции:")
                     print(result.stderr)
                     return False
             except Exception as e:
-                print(f"❌ Ошибка при запуске компиляции: {e}")
+                print(f"[ERROR] Ошибка при запуске компиляции: {e}")
                 return False
         else:
-            print(f"❌ Скрипт компиляции не найден: {compile_script}")
+            print(f"[ERROR] Скрипт компиляции не найден: {compile_script}")
             return False
     else:
         print("=" * 60)
-        print("✅ ВСЕ .pyc ФАЙЛЫ НА МЕСТЕ И СОВМЕСТИМЫ")
+        print("[OK] ВСЕ .pyc ФАЙЛЫ НА МЕСТЕ И СОВМЕСТИМЫ")
         print("=" * 60)
         return True
 
