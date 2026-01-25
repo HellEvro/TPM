@@ -35,11 +35,50 @@ def get_python_version(python_cmd):
 
 def get_python312():
     """Пытается найти Python 3.12"""
-    for cmd in ['py -3.12', 'python3.12', 'python312', 'python']:
+    import platform
+    import os
+    
+    # Сначала проверяем .venv_gpu (если он существует, там должен быть Python 3.12)
+    venv_gpu_path = project_root / '.venv_gpu'
+    if venv_gpu_path.exists():
+        if platform.system() == 'Windows':
+            venv_python = venv_gpu_path / 'Scripts' / 'python.exe'
+        else:
+            venv_python = venv_gpu_path / 'bin' / 'python'
+        
+        if venv_python.exists():
+            try:
+                result = subprocess.run(
+                    [str(venv_python), '--version'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0 and '3.12' in (result.stdout or '') + (result.stderr or ''):
+                    return str(venv_python)
+            except:
+                pass
+    
+    # На Windows пробуем py -3.12
+    if platform.system() == 'Windows':
+        try:
+            result = subprocess.run(
+                ['py', '-3.12', '--version'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0 and '3.12' in (result.stdout or '') + (result.stderr or ''):
+                return 'py -3.12'
+        except:
+            pass
+    
+    # Пробуем другие варианты
+    for cmd in ['python3.12', 'python312', 'python']:
         try:
             version = get_python_version(cmd)
             if version and version == (3, 12):
-                return cmd.split()[0] if ' ' not in cmd else cmd
+                return cmd
         except:
             continue
     return None
@@ -170,8 +209,14 @@ def compile_all_both_versions():
     python312 = get_python312()
     if python312:
         print(f"[INFO] Found Python 3.12: {python312}")
+        # Правильно обрабатываем команду 'py -3.12'
+        if python312.startswith('py '):
+            cmd = python312.split() + [str(script_path), '--version-only']
+        else:
+            cmd = [python312, str(script_path), '--version-only']
+        
         result = subprocess.run(
-            python312.split() + [str(script_path), '--version-only'],
+            cmd,
             cwd=project_root
         )
         if result.returncode != 0:
@@ -179,6 +224,8 @@ def compile_all_both_versions():
             print("[ERROR] Failed to compile for Python 3.12")
     else:
         print("[WARNING] Python 3.12 not found, skipping compilation for Python 3.12")
+        print("[INFO] Попробуйте установить Python 3.12 или запустите компиляцию вручную:")
+        print("   py -3.12 license_generator/compile_all.py --version-only")
         all_success = False
     
     print("\n" + "=" * 80)
