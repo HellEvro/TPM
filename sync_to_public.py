@@ -130,16 +130,10 @@ INCLUDE_ANYWAY = [
     "bot_engine/ai/ai_manager.pyc",
     "bot_engine/ai/_ai_launcher.pyc",
     "scripts/hardware_id.pyc",
-    # Версионированные .pyc файлы для Python 3.12
-    "bot_engine/ai/pyc_312/_ai_launcher.pyc",
-    "bot_engine/ai/pyc_312/ai_manager.pyc",
-    "bot_engine/ai/pyc_312/license_checker.pyc",
-    "bot_engine/ai/pyc_312/hardware_id_source.pyc",
-    # Версионированные .pyc файлы для Python 3.14
-    "bot_engine/ai/pyc_314/_ai_launcher.pyc",
-    "bot_engine/ai/pyc_314/ai_manager.pyc",
-    "bot_engine/ai/pyc_314/license_checker.pyc",
-    "bot_engine/ai/pyc_314/hardware_id_source.pyc",
+    # Версионированные .pyc файлы для Python 3.12 (ВСЕ файлы из директории)
+    "bot_engine/ai/pyc_312/",
+    # Версионированные .pyc файлы для Python 3.14 (ВСЕ файлы из директории)
+    "bot_engine/ai/pyc_314/",
     # Скрипт проверки .pyc файлов
     "scripts/verify_pyc_files.py",
     # Исходные Python файлы
@@ -164,7 +158,14 @@ def should_exclude(path_str):
     # ✅ ПЕРВЫЙ ПРИОРИТЕТ: Если файл в INCLUDE_ANYWAY - НИКОГДА не исключаем
     for include_path in INCLUDE_ANYWAY:
         include_norm = include_path.replace('\\', '/')
-        if normalized_path == include_norm or normalized_path.endswith('/' + include_norm):
+        # Точное совпадение
+        if normalized_path == include_norm:
+            return False
+        # Если путь заканчивается на include_path
+        if normalized_path.endswith('/' + include_norm):
+            return False
+        # Если include_path заканчивается на /, проверяем что путь начинается с него
+        if include_norm.endswith('/') and normalized_path.startswith(include_norm):
             return False
     
     # ✅ Проверяем список исключений
