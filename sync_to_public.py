@@ -72,9 +72,8 @@ EXCLUDE = [
     "app/telegram_states.json",
     "launcher/.infobot_manager_state.json",
     
-    # Тестовые и служебные скрипты
+    # Тестовые и служебные скрипты (verify_pyc_files.py исключен через INCLUDE_ANYWAY)
     "scripts/test_*.py",
-    "scripts/verify_*.py",
     
     # Скомпилированные файлы (кроме нужных)
     "*.pyc",
@@ -125,11 +124,25 @@ EXCLUDE = [
 
 # ✅ ИСКЛЮЧЕНИЯ: Файлы которые НУЖНЫ в публичной версии (даже если в EXCLUDE)
 INCLUDE_ANYWAY = [
+    # Старые .pyc файлы (обратная совместимость)
     "bot_engine/ai/license_checker.pyc",
     "bot_engine/ai/hardware_id_source.pyc",
     "bot_engine/ai/ai_manager.pyc",
     "bot_engine/ai/_ai_launcher.pyc",
     "scripts/hardware_id.pyc",
+    # Версионированные .pyc файлы для Python 3.12
+    "bot_engine/ai/pyc_312/_ai_launcher.pyc",
+    "bot_engine/ai/pyc_312/ai_manager.pyc",
+    "bot_engine/ai/pyc_312/license_checker.pyc",
+    "bot_engine/ai/pyc_312/hardware_id_source.pyc",
+    # Версионированные .pyc файлы для Python 3.14
+    "bot_engine/ai/pyc_314/_ai_launcher.pyc",
+    "bot_engine/ai/pyc_314/ai_manager.pyc",
+    "bot_engine/ai/pyc_314/license_checker.pyc",
+    "bot_engine/ai/pyc_314/hardware_id_source.pyc",
+    # Скрипт проверки .pyc файлов
+    "scripts/verify_pyc_files.py",
+    # Исходные Python файлы
     "bot_engine/ai/ai_trainer.py",
     "bot_engine/ai/ai_backtester_new.py",
     "bot_engine/ai/ai_strategy_optimizer.py",
