@@ -15,6 +15,7 @@ def _get_versioned_pyc_path():
     """Определяет путь к версионированному _ai_launcher.pyc на основе текущей версии Python."""
     base_dir = Path(__file__).resolve().parent
     python_version = sys.version_info[:2]
+    python_version_str = f"{python_version[0]}.{python_version[1]}"
     
     # Определяем версию Python и соответствующую директорию
     if python_version >= (3, 14):
@@ -28,9 +29,16 @@ def _get_versioned_pyc_path():
     # Путь к версионированному .pyc файлу
     versioned_path = version_dir / "_ai_launcher.pyc"
     
+    # Отладочная информация
+    import logging
+    logger = logging.getLogger('AI')
+    logger.debug(f"[DEBUG] Python версия: {python_version_str}, ищу файл: {versioned_path}")
+    logger.debug(f"[DEBUG] Файл существует: {versioned_path.exists()}")
+    
     # Если версионированный файл не найден, пробуем основную директорию (для обратной совместимости)
     if not versioned_path.exists():
         fallback_path = base_dir / "_ai_launcher.pyc"
+        logger.debug(f"[DEBUG] Пробую fallback: {fallback_path}, существует: {fallback_path.exists()}")
         if fallback_path.exists():
             return fallback_path
         return None
