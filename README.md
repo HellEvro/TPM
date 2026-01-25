@@ -77,7 +77,7 @@
 ### 1. Основной сценарий (рекомендуется всем)
 1. Установите **Python 3.11+** (Windows/Mac/Linux).
 2. Запустите соответствующий лаунчер:
-   - Windows: двойной клик по `start_infobot_manager.vbs` (или `start_infobot_manager.cmd`).
+   - Windows: двойной клик по `start_infobot_manager.vbs` (или `start_infobot_manager.bat`).
    - Linux/macOS: `chmod +x start_infobot_manager.sh && ./start_infobot_manager.sh`.
 3. Далее GUI сделает всё автоматически:
    - создаст/обновит виртуальное окружение и поставит зависимости (включая TensorFlow);

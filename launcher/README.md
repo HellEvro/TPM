@@ -13,7 +13,7 @@
 
 После выполнения установочного скрипта (`installer/install_<os>.{ps1|sh}`) используйте соответствующий лончер:
 
-- Windows: `start_infobot_manager.cmd`
+- Windows: `start_infobot_manager.bat`
 - Linux/macOS: `./start_infobot_manager.sh`
 
 Лончер активирует `.venv` (если создан), запускает GUI и предоставляет доступ ко всем операциям из одной точки.
