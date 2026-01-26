@@ -1,615 +1,277 @@
 # План реализации улучшений AI системы InfoBot
 
-## ИНСТРУКЦИИ ДЛЯ CURSOR AGENT
+## СТАТУС: ФАЗА 1-3 ВЫПОЛНЕНЫ
 
-**ВАЖНО:** Этот файл содержит детальный план для автоматического выполнения в Cursor Agent Mode.  
+**Дата обновления:** 26 января 2026  
 **КОНФИДЕНЦИАЛЬНО:** Файл не синхронизируется в публичный репозиторий.
 
 ---
 
-## Как использовать этот план
+## Выполненные задачи
 
-1. Открой Cursor в Agent Mode (Ctrl+I или Cmd+I)
-2. Скопируй нужный раздел задачи
-3. Cursor выполнит задачу автоматически
-4. После завершения - сделай "пуш" для сохранения
+### ФАЗА 1: Критические улучшения ✅
 
----
+| Задача | Статус | Файл |
+|--------|--------|------|
+| 1.1 Smart Money Concepts (SMC) | ✅ Выполнено | `bot_engine/ai/smart_money_features.py` |
+| 1.2 Attention к LSTM | ✅ Выполнено | `bot_engine/ai/lstm_predictor.py` |
+| 1.3 Bayesian Optimizer | ✅ Выполнено | `bot_engine/ai/bayesian_optimizer.py` |
+| 1.4 Data Drift Detection | ✅ Выполнено | `bot_engine/ai/drift_detector.py` |
 
-## ФАЗА 1: Критические улучшения
+### ФАЗА 2: Важные улучшения ✅
 
-### Задача 1.1: Создание модуля Smart Money Concepts (SMC)
+| Задача | Статус | Файл |
+|--------|--------|------|
+| 2.1 Transformer (TFT) | ✅ Выполнено | `bot_engine/ai/transformer_predictor.py` |
+| 2.2 Ensemble методы | ✅ Выполнено | `bot_engine/ai/ensemble.py` |
+| 2.3 CNN Pattern Detector | ✅ Выполнено | `bot_engine/ai/pattern_detector.py` |
+| 2.4 Performance Monitoring | ✅ Выполнено | `bot_engine/ai/monitoring.py` |
 
-**Промпт для Cursor:**
-```
-Создай новый файл bot_engine/ai/smart_money_features.py со следующим функционалом:
+### ФАЗА 3: Продвинутые функции ✅
 
-1. Класс SmartMoneyFeatures с методом compute_features(df: pd.DataFrame)
-
-2. ОСНОВА - RSI (уже используется, только улучшить):
-   - RSI 14 периодов на 6H таймфрейме (основной)
-   - RSI дивергенции (скрытые и обычные)
-   - RSI зоны перепроданности (<30) и перекупленности (>70)
-   - Время с последнего сигнала RSI для каждой монеты
-
-3. SMART MONEY CONCEPTS (SMC):
-
-   a) Order Blocks (ордерблоки):
-      - Bullish OB: последняя медвежья свеча перед импульсным ростом
-      - Bearish OB: последняя бычья свеча перед импульсным падением
-      - Метод find_order_blocks(df, lookback=50) -> List[Dict]
-      - Возвращает: цена, тип (bullish/bearish), сила, был ли протестирован
-   
-   b) Fair Value Gaps (FVG / Imbalance):
-      - Bullish FVG: gap между high свечи N-2 и low свечи N (цена не заполнена)
-      - Bearish FVG: gap между low свечи N-2 и high свечи N
-      - Метод find_fvg(df) -> List[Dict] с верхней/нижней границей
-      - Отслеживание: заполнен ли gap (mitigation)
-   
-   c) Liquidity Zones (зоны ликвидности):
-      - Equal highs/lows (двойные/тройные вершины/дно)
-      - Зоны со стоп-лоссами (выше swing high, ниже swing low)
-      - Метод find_liquidity_zones(df) -> List[Dict]
-   
-   d) Break of Structure (BOS):
-      - Пробой предыдущего swing high (бычий BOS)
-      - Пробой предыдущего swing low (медвежий BOS)
-      - Метод detect_bos(df) -> Dict с направлением и силой
-   
-   e) Change of Character (CHoCH):
-      - Первый признак смены тренда (слом структуры)
-      - Метод detect_choch(df) -> Dict
-   
-   f) Premium/Discount Zones:
-      - Premium: верхние 50% диапазона (для продаж)
-      - Discount: нижние 50% диапазона (для покупок)
-      - Equilibrium: середина диапазона
-      - Метод get_price_zone(df, current_price) -> str
-
-4. SWING STRUCTURE:
-   - Swing Highs / Swing Lows (локальные экстремумы)
-   - Higher Highs (HH), Higher Lows (HL) - восходящий тренд
-   - Lower Highs (LH), Lower Lows (LL) - нисходящий тренд
-   - Метод analyze_market_structure(df) -> Dict
-
-5. Метод get_smc_signal(df) -> Dict:
-   - Возвращает комплексный сигнал на основе всех SMC факторов
-   - signal: 'LONG', 'SHORT', 'WAIT'
-   - confidence: 0-100
-   - reasons: список причин
-   - entry_zone: оптимальная зона входа (Order Block или FVG)
-
-6. Добавь docstrings на русском языке
-7. Используй numpy и pandas
-8. В конце файла добавь тестовый код: if __name__ == '__main__'
-```
-
-**Файлы для изменения:**
-- Создать: `bot_engine/ai/smart_money_features.py`
-- Изменить: `bot_engine/ai/lstm_predictor.py` (импорт SMC features)
-- Изменить: `bot_engine/ai/ai_integration.py` (использование SMC сигналов)
-- Изменить: `bots_modules/filters.py` (интеграция SMC в фильтры)
-
-**Критерии успеха:**
-- [ ] Order Blocks корректно определяются на исторических данных
-- [ ] FVG находятся и отслеживается их заполнение
-- [ ] Break of Structure детектируется
-- [ ] Интеграция с существующей RSI логикой
-- [ ] Тестовый код показывает найденные SMC зоны
+| Задача | Статус | Файл |
+|--------|--------|------|
+| 3.1 RL Agent (DQN) | ✅ Выполнено | `bot_engine/ai/rl_agent.py` |
+| 3.2 Sentiment Analysis | ✅ Выполнено | `bot_engine/ai/sentiment.py` |
+| 3.3 MLflow Tracking | ⏳ Не начато | - |
 
 ---
 
-### Задача 1.2: Добавление Attention к LSTM
+## Архитектура защиты AI
 
-**Промпт для Cursor:**
+### Как работает лицензирование:
+
 ```
-Модифицируй файл bot_engine/ai/lstm_predictor.py:
-
-1. Добавь класс MultiHeadSelfAttention:
-   - nn.MultiheadAttention с num_heads=4
-   - Layer Normalization
-   - Residual connection
-
-2. Создай новый класс ImprovedLSTMModel (не удаляй старый LSTMModel!):
-   - Bidirectional LSTM (2 слоя, hidden_sizes=[256, 128])
-   - Self-Attention после первого LSTM
-   - LayerNorm вместо BatchNorm
-   - Residual connections
-   - Gated Linear Units в MLP голове
-   - Отдельные головы для direction, change, confidence
-
-3. Добавь параметр use_improved_model=True в класс LSTMPredictor:
-   - Если True - использовать ImprovedLSTMModel
-   - Если False - использовать старый LSTMModel (для совместимости)
-
-4. Сохрани обратную совместимость со старыми моделями
-
-5. Обнови метод _create_new_model() для выбора архитектуры
-
-6. Добавь логирование какая архитектура используется
-
-Используй код из IMPROVEMENTS_PROPOSAL.md раздел 2.2 как референс.
+┌─────────────────────────────────────────────────────────────┐
+│                      ЯДРО (защищено .pyc)                   │
+│  ┌─────────────────┐  ┌──────────────────┐                 │
+│  │ ai_manager.pyc  │  │ license_checker  │                 │
+│  │   (логика AI)   │  │    .pyc          │                 │
+│  └────────┬────────┘  └────────┬─────────┘                 │
+│           │                    │                            │
+│           └────────┬───────────┘                            │
+│                    ▼                                        │
+│          check_premium_license()                            │
+│                    │                                        │
+│     ┌──────────────┴──────────────┐                        │
+│     ▼                              ▼                        │
+│  Лицензия ОК              Нет лицензии                     │
+│     │                              │                        │
+│     ▼                              ▼                        │
+│  AI работает              AI отключен                      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│              AI МОДУЛИ (обычные .py файлы)                  │
+│                                                             │
+│  smart_money_features.py    lstm_predictor.py               │
+│  transformer_predictor.py   bayesian_optimizer.py           │
+│  drift_detector.py          ensemble.py                     │
+│  monitoring.py              rl_agent.py                     │
+│  sentiment.py               pattern_detector.py             │
+│  ai_integration.py                                          │
+│                                                             │
+│  → Исходники редактируются на лету                         │
+│  → Проверка лицензии в ЯДРЕ, не в модулях                  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Файлы для изменения:**
-- `bot_engine/ai/lstm_predictor.py`
+### ВАЖНО: Правила разработки
 
-**Критерии успеха:**
-- [ ] ImprovedLSTMModel работает
-- [ ] Старые модели загружаются (обратная совместимость)
-- [ ] Attention визуализируется в логах
-- [ ] GPU ускорение работает
+1. **НЕ добавлять проверки лицензии в AI модули** — проверка только в ядре
+2. **AI модули — обычные .py файлы** — редактируются и тестируются на лету
+3. **Ядро компилируется отдельно** через `license_generator/compile_all.py`
+4. **Исходники AI синхронизируются в публичный репо** — это нормально
 
 ---
 
-### Задача 1.3: Bayesian Optimization вместо Grid Search
-
-**Промпт для Cursor:**
-```
-Создай новый файл bot_engine/ai/bayesian_optimizer.py:
-
-1. Класс BayesianOptimizer:
-   - __init__(param_space, objective_function, n_initial_points=20)
-   - optimize(n_iterations=100) -> Dict[str, Any]
-   - Gaussian Process для surrogate model
-   - Expected Improvement acquisition function
-   - Multi-start оптимизация
-
-2. Функция optimize_strategy_bayesian(symbol, candles, current_win_rate) -> Optional[Dict]:
-   - Параметры: rsi_long/short, exit levels, SL, TP, trailing
-   - Objective: win_rate * 100 + total_pnl * 0.5 + sharpe * 10
-   - Возвращает лучшие параметры
-
-3. Добавь интеграцию с Optuna (опционально, если установлен):
-   - TPESampler
-   - HyperbandPruner
-   - Параллельные trials
-
-Затем модифицируй bot_engine/ai/ai_strategy_optimizer.py:
-
-4. Добавь метод optimize_coin_parameters_bayesian() как альтернативу Grid Search
-5. Добавь параметр optimization_method='bayesian' | 'grid' в конфиг
-6. Логируй прогресс оптимизации
-
-Используй код из IMPROVEMENTS_PROPOSAL.md раздел 5.2-5.3.
-```
-
-**Файлы для изменения:**
-- Создать: `bot_engine/ai/bayesian_optimizer.py`
-- Изменить: `bot_engine/ai/ai_strategy_optimizer.py`
-- Изменить: `bot_engine/bot_config.py` (добавить настройку)
-
-**Критерии успеха:**
-- [ ] Bayesian оптимизация работает
-- [ ] Находит решение за меньше итераций чем Grid Search
-- [ ] Логи показывают прогресс
-- [ ] Optuna интеграция (опционально)
-
----
-
-### Задача 1.4: Data Drift Detection
-
-**Промпт для Cursor:**
-```
-Создай новый файл bot_engine/ai/drift_detector.py:
-
-1. Класс DataDriftDetector:
-   - __init__(reference_data, threshold=0.05)
-   - detect_drift(new_data) -> Dict с drift_detected, drifted_features, recommendation
-   - Kolmogorov-Smirnov test для каждого признака
-   - Сохранение reference статистик
-
-2. Класс ModelPerformanceMonitor:
-   - log_prediction(prediction, actual)
-   - get_metrics() -> Dict с direction_accuracy, MAE, calibration
-   - get_performance_trend() для отслеживания деградации
-
-3. Интеграция в auto_trainer.py:
-   - Проверка дрифта перед обучением
-   - Автоматическое переобучение при сильном дрифте
-
-Используй код из IMPROVEMENTS_PROPOSAL.md раздел 9.1.
-```
-
-**Файлы для изменения:**
-- Создать: `bot_engine/ai/drift_detector.py`
-- Изменить: `bot_engine/ai/auto_trainer.py`
-
-**Критерии успеха:**
-- [ ] Drift detection работает
-- [ ] Метрики логируются
-- [ ] Автоматическое переобучение срабатывает
-
----
-
-## ФАЗА 2: Важные улучшения
-
-### Задача 2.1: Transformer архитектура
-
-**Промпт для Cursor:**
-```
-Создай новый файл bot_engine/ai/transformer_predictor.py:
-
-1. Класс PositionalEncoding для временных рядов
-
-2. Класс GatedResidualNetwork (GRN):
-   - Linear -> ELU -> Linear -> GLU
-   - Residual connection
-   - LayerNorm
-
-3. Класс VariableSelectionNetwork:
-   - Softmax attention для выбора важных признаков
-   - Возвращает weights для интерпретации
-
-4. Класс TemporalFusionTransformer:
-   - Variable Selection
-   - LSTM Encoder
-   - Interpretable Multi-Head Attention
-   - Position-wise Feed-Forward
-   - Quantile output heads
-
-5. Класс TransformerPredictor (аналог LSTMPredictor):
-   - Методы: train(), predict(), save_model(), load_model(), get_status()
-   - Совместимый API с LSTMPredictor
-
-Используй код из IMPROVEMENTS_PROPOSAL.md раздел 3.2.
-```
-
-**Файлы для изменения:**
-- Создать: `bot_engine/ai/transformer_predictor.py`
-- Изменить: `bot_engine/ai/__init__.py` (экспорт)
-
-**Критерии успеха:**
-- [ ] TFT модель обучается
-- [ ] Variable weights интерпретируемы
-- [ ] Производительность не хуже LSTM
-
----
-
-### Задача 2.2: Ensemble методы
-
-**Промпт для Cursor:**
-```
-Создай новый файл bot_engine/ai/ensemble.py:
-
-1. Класс VotingEnsemble:
-   - add_model(name, model, weight)
-   - predict(x) с взвешенным голосованием
-   - Возвращает predictions от каждой модели
-
-2. Класс StackingEnsemble(nn.Module):
-   - base_models: Dict[str, nn.Module]
-   - meta_model: MLP
-   - train_meta_model() для обучения только мета-модели
-   - forward() возвращает финальное предсказание
-
-3. Класс EnsemblePredictor:
-   - Объединяет LSTM, Transformer, CNN
-   - Методы: train(), predict(), get_status()
-   - Автоматический выбор весов на основе валидации
-
-Используй код из IMPROVEMENTS_PROPOSAL.md раздел 6.
-```
-
-**Файлы для изменения:**
-- Создать: `bot_engine/ai/ensemble.py`
-
-**Критерии успеха:**
-- [ ] Voting ensemble работает
-- [ ] Stacking ensemble обучается
-- [ ] Улучшение метрик vs одиночные модели
-
----
-
-### Задача 2.3: CNN Pattern Detector
-
-**Промпт для Cursor:**
-```
-Модифицируй файл bot_engine/ai/pattern_detector.py:
-
-1. Добавь класс CNNPatternDetector(nn.Module):
-   - Conv1d слои для временных паттернов
-   - Multi-scale features (kernel 3, 5, 7)
-   - Global average и max pooling
-   - Classification head для 10 паттернов
-
-2. Обнови PATTERN_LABELS:
-   - bullish_engulfing, hammer, double_bottom, ascending_triangle (bullish)
-   - bearish_engulfing, shooting_star, double_top (bearish)
-   - descending_triangle, doji, no_pattern (neutral)
-
-3. Добавь метод train_cnn() для обучения CNN модели
-
-4. Добавь параметр use_cnn=True в PatternDetector:
-   - Если True - использовать CNN
-   - Если False - использовать текущую эвристику
-
-5. Обнови get_pattern_signal() для работы с CNN
-
-Используй код из IMPROVEMENTS_PROPOSAL.md раздел 8.2.
-```
-
-**Файлы для изменения:**
-- `bot_engine/ai/pattern_detector.py`
-
-**Критерии успеха:**
-- [ ] CNN обучается на паттернах
-- [ ] Accuracy > 70% на валидации
-- [ ] Интеграция с существующим кодом
-
----
-
-### Задача 2.4: Performance Monitoring Dashboard
-
-**Промпт для Cursor:**
-```
-Создай новый файл bot_engine/ai/monitoring.py:
-
-1. Класс AIPerformanceMonitor:
-   - track_prediction(symbol, prediction, timestamp)
-   - track_actual_result(symbol, actual, timestamp)
-   - get_daily_metrics() -> Dict
-   - get_weekly_report() -> str
-   - export_metrics_to_db()
-
-2. Класс ModelHealthChecker:
-   - check_model_staleness(model_path) -> bool
-   - check_prediction_distribution() -> Dict
-   - get_recommendations() -> List[str]
-
-3. Интеграция с endpoints_ai.py:
-   - Добавь /api/ai/performance endpoint
-   - Добавь /api/ai/health endpoint
-
-4. Добавь визуализацию в Web UI (templates/pages/bots.html):
-   - Карточка "AI Performance"
-   - Графики accuracy, win_rate за последние 7 дней
-```
-
-**Файлы для изменения:**
-- Создать: `bot_engine/ai/monitoring.py`
-- Изменить: `bot_engine/api/endpoints_ai.py`
-- Изменить: `templates/pages/bots.html`
-- Изменить: `static/js/managers/ai_config_manager.js`
-
-**Критерии успеха:**
-- [ ] Метрики собираются
-- [ ] API работает
-- [ ] UI показывает данные
-
----
-
-## ФАЗА 3: Продвинутые функции
-
-### Задача 3.1: Reinforcement Learning Agent
-
-**Промпт для Cursor:**
-```
-Создай новый файл bot_engine/ai/rl_agent.py:
-
-1. Класс TradingEnvironment:
-   - reset() -> state
-   - step(action) -> (next_state, reward, done, info)
-   - Actions: HOLD=0, BUY=1, SELL=2, CLOSE=3
-   - Reward shaping для PnL
-
-2. Класс DQNNetwork(nn.Module):
-   - MLP: 256 -> 128 -> 64 -> action_size
-   - Dropout для регуляризации
-
-3. Класс DQNAgent:
-   - act(state, training) с epsilon-greedy
-   - remember(experience) в replay buffer
-   - replay() для обучения на batch
-   - Double DQN для стабильности
-
-4. Класс RLTrader:
-   - train(candles, episodes=1000)
-   - predict_action(state) -> int
-   - save_model(), load_model()
-   - get_status()
-
-Используй код из IMPROVEMENTS_PROPOSAL.md раздел 7.2.
-```
-
-**Файлы для изменения:**
-- Создать: `bot_engine/ai/rl_agent.py`
-
-**Критерии успеха:**
-- [ ] Agent обучается
-- [ ] Положительный reward на тесте
-- [ ] Модель сохраняется/загружается
-
----
-
-### Задача 3.2: Sentiment Analysis
-
-**Промпт для Cursor:**
-```
-Создай новый файл bot_engine/ai/sentiment.py:
-
-1. Класс SentimentAnalyzer:
-   - analyze_text(text) -> Dict с sentiment, confidence
-   - Использовать transformers pipeline если доступен
-   - Fallback на простые правила
-
-2. Класс CryptoSentimentCollector:
-   - get_twitter_sentiment(symbol) [placeholder для API]
-   - get_reddit_sentiment(symbol) [placeholder]
-   - get_news_sentiment(symbol) [placeholder]
-   - get_aggregated_sentiment(symbol) -> Dict
-
-3. Интеграция в ai_integration.py:
-   - Добавить sentiment как дополнительный сигнал
-   - Логировать sentiment при принятии решений
-
-Используй код из IMPROVEMENTS_PROPOSAL.md раздел 10.1.
-```
-
-**Файлы для изменения:**
-- Создать: `bot_engine/ai/sentiment.py`
-- Изменить: `bot_engine/ai/ai_integration.py`
-
-**Критерии успеха:**
-- [ ] Базовый sentiment работает
-- [ ] Placeholders для API готовы
-- [ ] Интеграция в решения AI
-
----
-
-### Задача 3.3: MLflow Experiment Tracking
-
-**Промпт для Cursor:**
-```
-Модифицируй bot_engine/ai/auto_trainer.py:
-
-1. Добавь класс ExperimentTracker:
-   - start_run(run_name)
-   - log_params(params)
-   - log_metrics(metrics, step)
-   - log_model(model, name)
-   - end_run()
-   - Работает без MLflow если не установлен
-
-2. Интегрируй tracking в _retrain():
-   - Логировать все гиперпараметры
-   - Логировать loss на каждой эпохе
-   - Сохранять лучшую модель
-
-3. Добавь UI для просмотра экспериментов:
-   - /api/ai/experiments endpoint
-   - Список runs с метриками
-
-Используй код из IMPROVEMENTS_PROPOSAL.md раздел 9.2.
-```
-
-**Файлы для изменения:**
-- Изменить: `bot_engine/ai/auto_trainer.py`
-- Изменить: `bot_engine/api/endpoints_ai.py`
-
-**Критерии успеха:**
-- [ ] Эксперименты логируются
-- [ ] История доступна через API
-- [ ] Работает без MLflow
-
----
-
-## ПОРЯДОК ВЫПОЛНЕНИЯ
-
-### Рекомендуемая последовательность:
-
-```
-1. Задача 1.1 (Smart Money Concepts) - БАЗОВАЯ, институциональный анализ
-   ↓
-2. Задача 1.2 (Attention LSTM) - улучшает модель для SMC сигналов
-   ↓
-3. Задача 1.3 (Bayesian Opt) - ускоряет оптимизацию параметров
-   ↓
-4. Задача 1.4 (Drift Detection) - мониторинг качества
-   ↓
-5. Задача 2.3 (CNN Patterns) - распознавание SMC паттернов визуально
-   ↓
-6. Задача 2.1 (Transformer) - альтернативная архитектура для SMC
-   ↓
-7. Задача 2.2 (Ensemble) - объединяет модели
-   ↓
-8. Задача 2.4 (Monitoring) - полный мониторинг
-   ↓
-9. Задача 3.1 (RL Agent) - продвинутая торговля на базе SMC
-   ↓
-10. Задача 3.2 (Sentiment) - дополнительные данные
-    ↓
-11. Задача 3.3 (MLflow) - эксперименты
-```
-
----
-
-## ПРАВИЛА ДЛЯ CURSOR AGENT
-
-### При выполнении каждой задачи:
-
-1. **Перед началом:**
-   - Прочитай все связанные файлы
-   - Проверь текущую структуру импортов
-   - Убедись что понял задачу
-
-2. **Во время выполнения:**
-   - Сохраняй обратную совместимость
-   - Добавляй docstrings на русском
-   - Используй type hints
-   - Логируй важные события
-
-3. **После завершения:**
-   - Проверь linter ошибки (ReadLints)
-   - Запусти тесты если есть
-   - Сделай commit и push
-
-4. **При ошибках:**
-   - Не удаляй существующий код без необходимости
-   - Создавай новые классы/методы рядом со старыми
-   - Добавляй флаги для переключения версий
-
-### Шаблон commit сообщения:
-
-```
-AI улучшения: [название задачи]
-
-- Добавлено: [что добавлено]
-- Изменено: [что изменено]  
-- Исправлено: [что исправлено]
-```
-
----
-
-## ТЕСТИРОВАНИЕ
-
-### После каждой задачи проверить:
-
+## Созданные модули
+
+### 1. SmartMoneyFeatures (`smart_money_features.py`)
+
+**Реализовано:**
+- RSI с дивергенциями
+- Order Blocks (bullish/bearish)
+- Fair Value Gaps (FVG)
+- Liquidity Zones
+- Break of Structure (BOS)
+- Change of Character (CHoCH)
+- Market Structure (HH, HL, LH, LL)
+- Premium/Discount Zones
+
+**Использование:**
 ```python
-# 1. Импорты работают
 from bot_engine.ai.smart_money_features import SmartMoneyFeatures
-from bot_engine.ai.lstm_predictor import LSTMPredictor, ImprovedLSTMModel
-from bot_engine.ai.bayesian_optimizer import BayesianOptimizer
 
-# 2. Классы инстанцируются
 smc = SmartMoneyFeatures()
-predictor = LSTMPredictor()
-optimizer = BayesianOptimizer(param_space, objective)
-
-# 3. Основные методы работают
 signal = smc.get_smc_signal(df)
 order_blocks = smc.find_order_blocks(df)
 fvg = smc.find_fvg(df)
-structure = smc.analyze_market_structure(df)
-prediction = predictor.predict(candles, current_price)
-best_params = optimizer.optimize(n_iterations=50)
 ```
 
-### Скрипты для тестирования:
+### 2. LSTMPredictor с Attention (`lstm_predictor.py`)
 
-```bash
-# Проверка AI системы
-python scripts/verify_ai_ready.py
+**Реализовано:**
+- Базовая LSTM (обратная совместимость)
+- ImprovedLSTMModel: Bidirectional LSTM + Self-Attention + GLU
+- Автоматическое использование GPU (CUDA)
 
-# Тест обучения LSTM
-python scripts/ai/train_lstm_predictor.py --coins 1 --epochs 5
+**Использование:**
+```python
+from bot_engine.ai.lstm_predictor import LSTMPredictor
 
-# Тест оптимизатора
-python -c "from bot_engine.ai.ai_strategy_optimizer import AIStrategyOptimizer; o = AIStrategyOptimizer(); print(o.analyze_trade_patterns())"
+# Улучшенная модель (по умолчанию)
+predictor = LSTMPredictor(use_improved_model=True)
+
+# Базовая модель
+predictor = LSTMPredictor(use_improved_model=False)
+```
+
+### 3. TransformerPredictor (`transformer_predictor.py`)
+
+**Реализовано:**
+- Temporal Fusion Transformer (упрощенный)
+- Positional Encoding
+- Gated Residual Network
+- Variable Selection Network
+- Interpretable Multi-Head Attention
+
+**Использование:**
+```python
+from bot_engine.ai.transformer_predictor import TransformerPredictor
+
+predictor = TransformerPredictor()
+prediction = predictor.predict(candles, current_price)
+```
+
+### 4. BayesianOptimizer (`bayesian_optimizer.py`)
+
+**Реализовано:**
+- Gaussian Process surrogate
+- Expected Improvement acquisition
+- Optuna интеграция (опционально)
+
+**Использование:**
+```python
+from bot_engine.ai.bayesian_optimizer import BayesianOptimizer, ParameterSpace
+
+param_space = [
+    ParameterSpace('rsi_long', 20, 40, 'int'),
+    ParameterSpace('sl_percent', 1.0, 5.0, 'float'),
+]
+
+optimizer = BayesianOptimizer(param_space, objective_func)
+best = optimizer.optimize(n_iterations=50)
+```
+
+### 5. DataDriftDetector (`drift_detector.py`)
+
+**Реализовано:**
+- KS-тест для детекции дрифта
+- ModelPerformanceMonitor для метрик
+- CombinedDriftMonitor
+
+**Использование:**
+```python
+from bot_engine.ai.drift_detector import DataDriftDetector
+
+detector = DataDriftDetector(reference_data)
+result = detector.detect_drift(new_data)
+```
+
+### 6. Ensemble (`ensemble.py`)
+
+**Реализовано:**
+- VotingEnsemble (soft/hard voting)
+- StackingEnsemble (мета-модель)
+- EnsemblePredictor (объединяет LSTM + Transformer + SMC)
+
+### 7. CNNPatternDetector (`pattern_detector.py`)
+
+**Реализовано:**
+- Multi-scale Conv1d (kernel 3, 5, 7)
+- 10 паттернов (bullish_engulfing, hammer, double_bottom и др.)
+
+### 8. AIPerformanceMonitor (`monitoring.py`)
+
+**Реализовано:**
+- Трекинг предсказаний
+- Расчет метрик (accuracy, MAE, calibration)
+- ModelHealthChecker
+
+### 9. RLTrader (`rl_agent.py`)
+
+**Реализовано:**
+- TradingEnvironment (Gym-like)
+- DQN с Double DQN
+- Experience Replay
+
+### 10. SentimentAnalyzer (`sentiment.py`)
+
+**Реализовано:**
+- Transformers pipeline (если установлен)
+- Rule-based fallback
+- Placeholders для API (Twitter, Reddit, News)
+
+---
+
+## Интеграция SMC в торговлю
+
+Файл `bot_engine/ai/ai_integration.py` содержит интеграцию:
+
+```python
+from bot_engine.ai.ai_integration import get_smc_signal, should_open_position_with_ai
+
+# Получить SMC сигнал
+signal = get_smc_signal(candles, current_price)
+# signal = {'signal': 'LONG', 'score': 75, 'reasons': [...]}
+
+# Проверить вход с AI
+result = should_open_position_with_ai(symbol, candles, current_price, direction)
 ```
 
 ---
 
-## ССЫЛКИ НА ДОКУМЕНТАЦИЮ
+## Тестирование
+
+```bash
+# Проверка импортов
+python -c "from bot_engine.ai.smart_money_features import SmartMoneyFeatures; print('OK')"
+python -c "from bot_engine.ai.lstm_predictor import LSTMPredictor; print('OK')"
+
+# Тест SMC
+python bot_engine/ai/smart_money_features.py
+
+# Тест LSTM
+python bot_engine/ai/lstm_predictor.py
+```
+
+---
+
+## Следующие шаги (TODO)
+
+### Не выполнено:
+- [ ] MLflow Experiment Tracking (задача 3.3)
+- [ ] UI для AI мониторинга (карточки в bots.html)
+- [ ] API endpoints для AI метрик
+
+### Рекомендации:
+1. Протестировать SMC на реальных данных
+2. Обучить LSTM с Attention на исторических данных
+3. Настроить Bayesian Optimizer для оптимизации параметров
+4. Интегрировать Drift Detection в auto_trainer
+
+---
+
+## Ссылки
 
 - Полные предложения: `IMPROVEMENTS_PROPOSAL.md`
-- Текущая архитектура: `docs/ARCHITECTURE.md`
+- Архитектура: `docs/ARCHITECTURE.md`
 - AI документация: `docs/AI_README.md`
-- TODO проекта: `TODO.txt`
+- Лицензирование: `license_generator/README.md`
 
 ---
 
 **Автор:** AI Assistant  
-**Версия:** 1.0  
-**Дата:** 26 января 2026  
-**Статус:** КОНФИДЕНЦИАЛЬНО - только для приватного репозитория
+**Статус:** КОНФИДЕНЦИАЛЬНО
