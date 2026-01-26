@@ -131,36 +131,47 @@ class AIConfig:
 
 ### PyTorch и GPU
 
+⚠️ **ВАЖНО:** PyTorch ОБЯЗАТЕЛЕН для работы LSTM Predictor! Без PyTorch LSTM Predictor не будет работать (даже на CPU).
+
 **LSTM Predictor использует PyTorch** для обучения и предсказаний. PyTorch работает на всех версиях Python 3.8+, включая 3.12 и 3.14+.
 
-**Автоматическая установка PyTorch с GPU:**
+**Как работает система:**
+- **С GPU:** PyTorch использует GPU для ускорения обучения и предсказаний (быстрее)
+- **Без GPU:** PyTorch автоматически использует CPU (работает медленнее, но полностью функционально)
+- LSTM Predictor автоматически определяет доступное устройство и использует его
+
+**Автоматическая установка PyTorch (рекомендуется):**
 ```bash
 python scripts/setup_python_gpu.py
 ```
+Скрипт автоматически определяет наличие GPU и устанавливает нужную версию (GPU или CPU).
 
 **Ручная установка:**
 ```bash
-# С GPU (NVIDIA CUDA 12.1)
+# С GPU (NVIDIA CUDA 12.1) - если есть GPU
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
-# С GPU (NVIDIA CUDA 11.8)
+# С GPU (NVIDIA CUDA 11.8) - если CUDA 12.1 не поддерживается
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-# CPU версия (без GPU)
+# БЕЗ GPU (CPU версия) - если GPU нет
 pip install torch torchvision torchaudio
 ```
 
 **Проверка установки:**
 ```bash
-python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A')"
+python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU (GPU не найден)')"
 ```
 
-**Требования для GPU:**
+**Требования для GPU (опционально, если хотите ускорение):**
 - NVIDIA GPU с поддержкой CUDA
 - Драйверы NVIDIA (проверьте: `nvidia-smi`)
 - CUDA Toolkit 11.8 или 12.1 (устанавливается автоматически с PyTorch)
 
-> ⚠️ **ВАЖНО:** Отдельное виртуальное окружение `.venv_gpu` больше не требуется. PyTorch устанавливается в текущее окружение Python.
+> ⚠️ **ВАЖНО:** 
+> - PyTorch ОБЯЗАТЕЛЕН для работы LSTM Predictor (даже на CPU)
+> - Отдельное виртуальное окружение `.venv_gpu` больше не требуется — PyTorch устанавливается в текущее окружение Python
+> - Если GPU нет, система автоматически использует CPU — дополнительная настройка не требуется
 
 ---
 
