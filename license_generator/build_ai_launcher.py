@@ -28,15 +28,13 @@ def build_launcher() -> None:
     python_version = sys.version_info[:2]
     
     # Определяем целевую директорию на основе версии Python
+    # Используем только Python 3.14+ (pyc_314)
     base_dir = Path('bot_engine/ai')
     if python_version >= (3, 14):
         target_dir = base_dir / 'pyc_314'
         version_name = "3.14"
-    elif python_version == (3, 12):
-        target_dir = base_dir / 'pyc_312'
-        version_name = "3.12"
     else:
-        # Для других версий используем основную директорию
+        # Для версий ниже 3.14 используем основную директорию (fallback)
         target_dir = base_dir
         version_name = f"{python_version[0]}.{python_version[1]}"
     
@@ -163,7 +161,7 @@ def build_launcher() -> None:
                 """
                 Loader stub для защищённого AI лаунчера.
                 Подгружает bot_engine/ai/_ai_launcher.pyc и регистрирует его как модуль.
-                Поддерживает версионированные .pyc файлы для Python 3.14 и 3.12.
+                Поддерживает версионированные .pyc файлы для Python 3.12+ (pyc_312 для 3.12, pyc_314 для 3.14+).
                 """
 
                 import importlib.machinery
@@ -178,8 +176,7 @@ def build_launcher() -> None:
                     # Определяем версию Python и соответствующую директорию
                     if python_version >= (3, 14):
                         version_dir = base_dir / 'pyc_314'
-                    elif python_version == (3, 12):
-                        version_dir = base_dir / 'pyc_312'
+                    # Python 3.12 больше не поддерживается
                     else:
                         version_dir = base_dir
                     
@@ -246,11 +243,13 @@ def build_launcher() -> None:
                 python_version = sys.version_info[:2]
                 
                 # Определяем версию Python и соответствующую директорию
+                # Поддерживаем Python 3.12+ (pyc_312 для 3.12, pyc_314 для 3.14+)
                 if python_version >= (3, 14):
                     version_dir = base_dir / 'pyc_314'
                 elif python_version == (3, 12):
                     version_dir = base_dir / 'pyc_312'
                 else:
+                    # Для других версий используем основную директорию (fallback)
                     version_dir = base_dir
                 
                 # Путь к версионированному .pyc файлу

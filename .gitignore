@@ -4,7 +4,7 @@
 __pycache__/
 *.py[cod]
 # ВАЖНО: Скомпилированные .pyc файлы для лицензирования НУЖНЫ
-# Версионированные .pyc файлы для Python 3.14 и 3.12
+# Версионированные .pyc файлы для Python 3.12+ (pyc_312 для 3.12, pyc_314 для 3.14+)
 !bot_engine/ai/pyc_314/*.pyc
 !bot_engine/ai/pyc_312/*.pyc
 # Обратная совместимость (основная директория)
@@ -391,9 +391,9 @@ _work_TRADING_/
 !InfoBot_Public/bot_engine/ai/license_checker.pyc
 !InfoBot_Public/bot_engine/ai/hardware_id_source.pyc
 !InfoBot_Public/bot_engine/ai/ai_manager.pyc
-# Версионированные .pyc файлы для Python 3.12 и 3.14 в публичной версии
-!InfoBot_Public/bot_engine/ai/pyc_312/*.pyc
+# Версионированные .pyc файлы для Python 3.12+ в публичной версии
 !InfoBot_Public/bot_engine/ai/pyc_314/*.pyc
+!InfoBot_Public/bot_engine/ai/pyc_312/*.pyc
 InfoBot_Public/
 
 # Test files
