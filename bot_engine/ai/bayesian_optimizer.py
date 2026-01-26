@@ -169,8 +169,6 @@ class BayesianOptimizer:
     
     Использует Expected Improvement acquisition function
     для балансировки exploration и exploitation
-    
-    ТРЕБУЕТ ПРЕМИУМ ЛИЦЕНЗИЮ
     """
     
     def __init__(
@@ -193,9 +191,6 @@ class BayesianOptimizer:
             kappa: Exploration параметр для Upper Confidence Bound
             random_state: Seed для воспроизводимости
         """
-        # Проверка премиум лицензии
-        _check_premium()
-        
         self.param_space = param_space
         self.objective_function = objective_function
         self.n_initial_points = n_initial_points

@@ -6,8 +6,6 @@ AI Performance Monitoring - мониторинг производительно�
 - Расчета метрик производительности
 - Проверки здоровья моделей
 - Генерации отчетов
-
-ТРЕБУЕТ ПРЕМИУМ ЛИЦЕНЗИЮ
 """
 
 import logging
@@ -20,22 +18,6 @@ from dataclasses import dataclass, asdict
 import numpy as np
 
 logger = logging.getLogger('AI.Monitoring')
-
-# Проверка премиум лицензии
-def _check_premium():
-    """Проверяет наличие премиум лицензии"""
-    try:
-        from bot_engine.ai import check_premium_license
-        if not check_premium_license():
-            raise ImportError(
-                "AIPerformanceMonitor требует премиум лицензию.\n"
-                "Для активации: python scripts/activate_premium.py"
-            )
-    except ImportError as e:
-        if "check_premium_license" in str(e):
-            pass
-        else:
-            raise
 
 
 @dataclass
@@ -61,8 +43,6 @@ class AIPerformanceMonitor:
     - Калибровку уверенности
     - MAE предсказаний
     - Тренды производительности
-    
-    ТРЕБУЕТ ПРЕМИУМ ЛИЦЕНЗИЮ
     """
     
     def __init__(
@@ -70,9 +50,6 @@ class AIPerformanceMonitor:
         max_records: int = 10000,
         save_path: str = "data/ai/monitoring"
     ):
-        # Проверка премиум лицензии
-        _check_premium()
-        
         self.max_records = max_records
         self.save_path = save_path
         
