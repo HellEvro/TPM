@@ -130,9 +130,8 @@ INCLUDE_ANYWAY = [
     "bot_engine/ai/ai_manager.pyc",
     "bot_engine/ai/_ai_launcher.pyc",
     "scripts/hardware_id.pyc",
-    # Версионированные .pyc файлы для Python 3.12 (ВСЕ файлы из директории)
+    # Версионированные .pyc файлы для Python 3.12+ (ВСЕ файлы из директорий)
     "bot_engine/ai/pyc_312/",
-    # Версионированные .pyc файлы для Python 3.14 (ВСЕ файлы из директории)
     "bot_engine/ai/pyc_314/",
     # Скрипт проверки .pyc файлов
     "scripts/verify_pyc_files.py",
