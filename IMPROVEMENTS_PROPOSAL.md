@@ -450,284 +450,505 @@ class GatedResidualNetwork(nn.Module):
 
 ---
 
-## 4. Улучшение Feature Engineering
+## 4. Smart Money Concepts (SMC) вместо классических индикаторов
 
-### 4.1 Текущие признаки (недостаточно)
+### 4.1 Философия подхода
+
+**Текущий подход (правильный):**
+- RSI 6H таймфрейм - основа для входов
+- Зоны перепроданности (<30) и перекупленности (>70)
+- Время ожидания для отложенного входа
+
+**Проблема классических индикаторов:**
+- MACD, Stochastic, Williams %R - создают шум
+- Множество ложных сигналов
+- Не учитывают институциональную активность
+
+**Решение - Smart Money Concepts:**
+- Основаны на поведении крупных игроков (институционалы, банки)
+- Order Blocks, FVG, Liquidity - реальные зоны интереса
+- Меньше сигналов, но более качественные
+
+### 4.2 Реализация Smart Money Concepts
 
 ```python
-# Текущие признаки (lstm_predictor.py:183-184)
-'features': ['close', 'volume', 'high', 'low', 'rsi', 'ema_fast', 'ema_slow']
-```
-
-### 4.2 Предлагаемые дополнительные признаки
-
-```python
-class AdvancedFeatureEngineering:
-    """Продвинутый feature engineering для финансовых данных"""
+class SmartMoneyFeatures:
+    """
+    Smart Money Concepts (SMC) для институционального анализа рынка
     
-    def __init__(self):
-        pass
+    Основа: RSI 6H + Order Blocks + FVG + Liquidity + Market Structure
+    Минимум шума, максимум качества сигналов
+    """
     
-    def compute_all_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Вычисляет полный набор признаков
-        
-        Args:
-            df: DataFrame с колонками ['open', 'high', 'low', 'close', 'volume']
-        
-        Returns:
-            DataFrame с добавленными признаками
-        """
-        features = df.copy()
-        
-        # === ЦЕНОВЫЕ ПРИЗНАКИ ===
-        
-        # 1. Returns (доходность)
-        features['return_1'] = df['close'].pct_change(1)
-        features['return_5'] = df['close'].pct_change(5)
-        features['return_10'] = df['close'].pct_change(10)
-        features['return_20'] = df['close'].pct_change(20)
-        
-        # 2. Log returns (более стабильны)
-        features['log_return_1'] = np.log(df['close'] / df['close'].shift(1))
-        features['log_return_5'] = np.log(df['close'] / df['close'].shift(5))
-        
-        # 3. Price range features
-        features['range'] = (df['high'] - df['low']) / df['close']
-        features['body'] = abs(df['close'] - df['open']) / df['close']
-        features['upper_shadow'] = (df['high'] - df[['open', 'close']].max(axis=1)) / df['close']
-        features['lower_shadow'] = (df[['open', 'close']].min(axis=1) - df['low']) / df['close']
-        
-        # === ВОЛАТИЛЬНОСТЬ ===
-        
-        # 4. Realized volatility
-        features['volatility_5'] = features['log_return_1'].rolling(5).std() * np.sqrt(252)
-        features['volatility_10'] = features['log_return_1'].rolling(10).std() * np.sqrt(252)
-        features['volatility_20'] = features['log_return_1'].rolling(20).std() * np.sqrt(252)
-        
-        # 5. ATR (Average True Range)
-        high_low = df['high'] - df['low']
-        high_close = abs(df['high'] - df['close'].shift(1))
-        low_close = abs(df['low'] - df['close'].shift(1))
-        true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-        features['atr_14'] = true_range.rolling(14).mean() / df['close']
-        
-        # 6. Bollinger Bands width
-        sma_20 = df['close'].rolling(20).mean()
-        std_20 = df['close'].rolling(20).std()
-        features['bb_width'] = (2 * std_20) / sma_20
-        features['bb_position'] = (df['close'] - (sma_20 - 2*std_20)) / (4 * std_20)
-        
-        # === MOMENTUM ===
-        
-        # 7. RSI variants
-        features['rsi_7'] = self._compute_rsi(df['close'], 7)
-        features['rsi_14'] = self._compute_rsi(df['close'], 14)
-        features['rsi_21'] = self._compute_rsi(df['close'], 21)
-        
-        # 8. RSI divergence
-        features['rsi_divergence'] = self._compute_divergence(df['close'], features['rsi_14'])
-        
-        # 9. MACD
-        ema_12 = df['close'].ewm(span=12).mean()
-        ema_26 = df['close'].ewm(span=26).mean()
-        features['macd'] = (ema_12 - ema_26) / df['close']
-        features['macd_signal'] = features['macd'].ewm(span=9).mean()
-        features['macd_hist'] = features['macd'] - features['macd_signal']
-        
-        # 10. Stochastic
-        low_14 = df['low'].rolling(14).min()
-        high_14 = df['high'].rolling(14).max()
-        features['stoch_k'] = (df['close'] - low_14) / (high_14 - low_14) * 100
-        features['stoch_d'] = features['stoch_k'].rolling(3).mean()
-        
-        # 11. Williams %R
-        features['williams_r'] = (high_14 - df['close']) / (high_14 - low_14) * -100
-        
-        # 12. CCI (Commodity Channel Index)
-        typical_price = (df['high'] + df['low'] + df['close']) / 3
-        sma_tp = typical_price.rolling(20).mean()
-        mad = typical_price.rolling(20).apply(lambda x: np.abs(x - x.mean()).mean())
-        features['cci'] = (typical_price - sma_tp) / (0.015 * mad)
-        
-        # === ТРЕНД ===
-        
-        # 13. Multiple EMAs
-        for period in [5, 10, 20, 50, 100, 200]:
-            features[f'ema_{period}'] = df['close'].ewm(span=period).mean()
-            features[f'price_vs_ema_{period}'] = df['close'] / features[f'ema_{period}'] - 1
-        
-        # 14. EMA crossovers
-        features['ema_cross_5_20'] = (features['ema_5'] > features['ema_20']).astype(int)
-        features['ema_cross_20_50'] = (features['ema_20'] > features['ema_50']).astype(int)
-        features['ema_cross_50_200'] = (features['ema_50'] > features['ema_200']).astype(int)
-        
-        # 15. ADX (Average Directional Index)
-        features['adx'] = self._compute_adx(df, 14)
-        
-        # 16. Supertrend
-        features['supertrend'] = self._compute_supertrend(df, 10, 3)
-        
-        # === ОБЪЕМ ===
-        
-        # 17. Volume features
-        features['volume_sma_10'] = df['volume'].rolling(10).mean()
-        features['volume_ratio'] = df['volume'] / features['volume_sma_10']
-        features['volume_change'] = df['volume'].pct_change(1)
-        
-        # 18. OBV (On-Balance Volume)
-        features['obv'] = self._compute_obv(df)
-        features['obv_sma_10'] = features['obv'].rolling(10).mean()
-        
-        # 19. VWAP
-        features['vwap'] = (df['close'] * df['volume']).rolling(14).sum() / df['volume'].rolling(14).sum()
-        features['price_vs_vwap'] = df['close'] / features['vwap'] - 1
-        
-        # 20. MFI (Money Flow Index)
-        features['mfi'] = self._compute_mfi(df, 14)
-        
-        # === MARKET STRUCTURE ===
-        
-        # 21. Higher highs / Lower lows
-        features['hh'] = (df['high'] > df['high'].shift(1)).astype(int)
-        features['ll'] = (df['low'] < df['low'].shift(1)).astype(int)
-        features['hl'] = (df['low'] > df['low'].shift(1)).astype(int)
-        features['lh'] = (df['high'] < df['high'].shift(1)).astype(int)
-        
-        # 22. Pivot points
-        features['pivot'] = (df['high'] + df['low'] + df['close']) / 3
-        features['r1'] = 2 * features['pivot'] - df['low']
-        features['s1'] = 2 * features['pivot'] - df['high']
-        
-        # === ВРЕМЕННЫЕ ПРИЗНАКИ ===
-        
-        # 23. Time features (если есть timestamp)
-        if 'timestamp' in df.columns:
-            features['hour'] = pd.to_datetime(df['timestamp']).dt.hour / 24
-            features['day_of_week'] = pd.to_datetime(df['timestamp']).dt.dayofweek / 6
-            features['is_weekend'] = (pd.to_datetime(df['timestamp']).dt.dayofweek >= 5).astype(int)
-        
-        # === СТАТИСТИЧЕСКИЕ ПРИЗНАКИ ===
-        
-        # 24. Rolling statistics
-        for window in [5, 10, 20]:
-            features[f'close_mean_{window}'] = df['close'].rolling(window).mean() / df['close']
-            features[f'close_std_{window}'] = df['close'].rolling(window).std() / df['close']
-            features[f'close_skew_{window}'] = df['close'].rolling(window).skew()
-            features[f'close_kurt_{window}'] = df['close'].rolling(window).kurt()
-        
-        # 25. Z-score
-        features['zscore_20'] = (df['close'] - df['close'].rolling(20).mean()) / df['close'].rolling(20).std()
-        
-        # Заполняем NaN
-        features = features.fillna(method='ffill').fillna(0)
-        
-        return features
+    def __init__(self, rsi_period: int = 14):
+        self.rsi_period = rsi_period
+        self.swing_lookback = 5  # Свечей для определения swing point
     
-    def _compute_rsi(self, prices: pd.Series, period: int) -> pd.Series:
-        """Вычисляет RSI"""
-        delta = prices.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    # ==================== RSI (ОСНОВА) ====================
+    
+    def compute_rsi(self, df: pd.DataFrame) -> pd.Series:
+        """RSI - основной индикатор для входов"""
+        delta = df['close'].diff()
+        gain = delta.where(delta > 0, 0).rolling(self.rsi_period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(self.rsi_period).mean()
         rs = gain / loss
         return 100 - (100 / (1 + rs))
     
-    def _compute_divergence(self, prices: pd.Series, indicator: pd.Series) -> pd.Series:
-        """Вычисляет дивергенцию между ценой и индикатором"""
-        price_slope = prices.diff(5) / prices.shift(5)
-        indicator_slope = indicator.diff(5)
-        return price_slope * indicator_slope < 0  # Divergence когда знаки противоположны
+    def detect_rsi_divergence(self, df: pd.DataFrame, rsi: pd.Series) -> pd.Series:
+        """
+        Детектирует дивергенции RSI
+        
+        Bullish divergence: цена делает LL, RSI делает HL
+        Bearish divergence: цена делает HH, RSI делает LH
+        """
+        lookback = 10
+        divergence = pd.Series(0, index=df.index)
+        
+        for i in range(lookback, len(df)):
+            # Bullish divergence
+            if (df['low'].iloc[i] < df['low'].iloc[i-lookback] and 
+                rsi.iloc[i] > rsi.iloc[i-lookback]):
+                divergence.iloc[i] = 1  # Bullish
+            # Bearish divergence
+            elif (df['high'].iloc[i] > df['high'].iloc[i-lookback] and 
+                  rsi.iloc[i] < rsi.iloc[i-lookback]):
+                divergence.iloc[i] = -1  # Bearish
+        
+        return divergence
     
-    def _compute_adx(self, df: pd.DataFrame, period: int) -> pd.Series:
-        """Вычисляет ADX"""
-        plus_dm = df['high'].diff()
-        minus_dm = df['low'].diff()
-        
-        plus_dm[plus_dm < 0] = 0
-        minus_dm[minus_dm > 0] = 0
-        
-        tr = pd.concat([
-            df['high'] - df['low'],
-            abs(df['high'] - df['close'].shift(1)),
-            abs(df['low'] - df['close'].shift(1))
-        ], axis=1).max(axis=1)
-        
-        atr = tr.rolling(period).mean()
-        plus_di = 100 * (plus_dm.rolling(period).mean() / atr)
-        minus_di = 100 * (abs(minus_dm).rolling(period).mean() / atr)
-        
-        dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
-        adx = dx.rolling(period).mean()
-        
-        return adx
+    # ==================== ORDER BLOCKS ====================
     
-    def _compute_supertrend(self, df: pd.DataFrame, period: int, multiplier: float) -> pd.Series:
-        """Вычисляет Supertrend"""
-        hl2 = (df['high'] + df['low']) / 2
+    def find_order_blocks(self, df: pd.DataFrame, lookback: int = 50) -> List[Dict]:
+        """
+        Находит Order Blocks - зоны накопления крупных игроков
         
-        atr = pd.concat([
-            df['high'] - df['low'],
-            abs(df['high'] - df['close'].shift(1)),
-            abs(df['low'] - df['close'].shift(1))
-        ], axis=1).max(axis=1).rolling(period).mean()
+        Bullish OB: последняя медвежья свеча перед импульсным ростом
+        Bearish OB: последняя бычья свеча перед импульсным падением
+        """
+        order_blocks = []
         
-        upperband = hl2 + (multiplier * atr)
-        lowerband = hl2 - (multiplier * atr)
+        # Определяем импульсные движения (более 2% за 3 свечи)
+        impulse_threshold = 0.02
         
-        supertrend = pd.Series(index=df.index)
-        direction = pd.Series(index=df.index)
-        
-        for i in range(period, len(df)):
-            if df['close'].iloc[i] > upperband.iloc[i-1]:
-                direction.iloc[i] = 1
-            elif df['close'].iloc[i] < lowerband.iloc[i-1]:
-                direction.iloc[i] = -1
-            else:
-                direction.iloc[i] = direction.iloc[i-1]
+        for i in range(3, min(lookback, len(df))):
+            idx = len(df) - i
             
-            if direction.iloc[i] == 1:
-                supertrend.iloc[i] = lowerband.iloc[i]
-            else:
-                supertrend.iloc[i] = upperband.iloc[i]
+            # Проверяем импульс вверх (для Bullish OB)
+            if idx + 3 < len(df):
+                move = (df['close'].iloc[idx+3] - df['close'].iloc[idx]) / df['close'].iloc[idx]
+                
+                if move > impulse_threshold:
+                    # Ищем последнюю медвежью свечу перед импульсом
+                    for j in range(idx, max(idx-5, 0), -1):
+                        if df['close'].iloc[j] < df['open'].iloc[j]:  # Медвежья свеча
+                            order_blocks.append({
+                                'type': 'bullish',
+                                'high': df['high'].iloc[j],
+                                'low': df['low'].iloc[j],
+                                'index': j,
+                                'strength': move,
+                                'tested': self._is_ob_tested(df, j, 'bullish')
+                            })
+                            break
+                
+                elif move < -impulse_threshold:
+                    # Ищем последнюю бычью свечу перед падением
+                    for j in range(idx, max(idx-5, 0), -1):
+                        if df['close'].iloc[j] > df['open'].iloc[j]:  # Бычья свеча
+                            order_blocks.append({
+                                'type': 'bearish',
+                                'high': df['high'].iloc[j],
+                                'low': df['low'].iloc[j],
+                                'index': j,
+                                'strength': abs(move),
+                                'tested': self._is_ob_tested(df, j, 'bearish')
+                            })
+                            break
         
-        return (df['close'] - supertrend) / df['close']
+        return order_blocks
     
-    def _compute_obv(self, df: pd.DataFrame) -> pd.Series:
-        """Вычисляет OBV"""
-        obv = pd.Series(index=df.index)
-        obv.iloc[0] = 0
+    def _is_ob_tested(self, df: pd.DataFrame, ob_index: int, ob_type: str) -> bool:
+        """Проверяет, был ли Order Block протестирован"""
+        ob_high = df['high'].iloc[ob_index]
+        ob_low = df['low'].iloc[ob_index]
         
-        for i in range(1, len(df)):
-            if df['close'].iloc[i] > df['close'].iloc[i-1]:
-                obv.iloc[i] = obv.iloc[i-1] + df['volume'].iloc[i]
-            elif df['close'].iloc[i] < df['close'].iloc[i-1]:
-                obv.iloc[i] = obv.iloc[i-1] - df['volume'].iloc[i]
-            else:
-                obv.iloc[i] = obv.iloc[i-1]
+        for i in range(ob_index + 1, len(df)):
+            if ob_type == 'bullish':
+                # Bullish OB тестируется когда цена возвращается в зону
+                if df['low'].iloc[i] <= ob_high and df['low'].iloc[i] >= ob_low:
+                    return True
+            else:  # bearish
+                if df['high'].iloc[i] >= ob_low and df['high'].iloc[i] <= ob_high:
+                    return True
         
-        return obv
+        return False
     
-    def _compute_mfi(self, df: pd.DataFrame, period: int) -> pd.Series:
-        """Вычисляет MFI"""
-        typical_price = (df['high'] + df['low'] + df['close']) / 3
-        raw_money_flow = typical_price * df['volume']
+    # ==================== FAIR VALUE GAPS (FVG) ====================
+    
+    def find_fvg(self, df: pd.DataFrame) -> List[Dict]:
+        """
+        Находит Fair Value Gaps (FVG) - зоны дисбаланса
         
-        positive_flow = pd.Series(index=df.index)
-        negative_flow = pd.Series(index=df.index)
+        Bullish FVG: gap между high[i-2] и low[i] (цена не заполнила зону)
+        Bearish FVG: gap между low[i-2] и high[i]
+        """
+        fvg_list = []
         
-        for i in range(1, len(df)):
-            if typical_price.iloc[i] > typical_price.iloc[i-1]:
-                positive_flow.iloc[i] = raw_money_flow.iloc[i]
-                negative_flow.iloc[i] = 0
+        for i in range(2, len(df)):
+            # Bullish FVG
+            if df['low'].iloc[i] > df['high'].iloc[i-2]:
+                gap_size = (df['low'].iloc[i] - df['high'].iloc[i-2]) / df['close'].iloc[i]
+                if gap_size > 0.001:  # Минимум 0.1% gap
+                    fvg_list.append({
+                        'type': 'bullish',
+                        'top': df['low'].iloc[i],
+                        'bottom': df['high'].iloc[i-2],
+                        'index': i,
+                        'size_pct': gap_size * 100,
+                        'mitigated': self._is_fvg_mitigated(df, i, 'bullish', 
+                                                           df['high'].iloc[i-2], df['low'].iloc[i])
+                    })
+            
+            # Bearish FVG
+            if df['high'].iloc[i] < df['low'].iloc[i-2]:
+                gap_size = (df['low'].iloc[i-2] - df['high'].iloc[i]) / df['close'].iloc[i]
+                if gap_size > 0.001:
+                    fvg_list.append({
+                        'type': 'bearish',
+                        'top': df['low'].iloc[i-2],
+                        'bottom': df['high'].iloc[i],
+                        'index': i,
+                        'size_pct': gap_size * 100,
+                        'mitigated': self._is_fvg_mitigated(df, i, 'bearish',
+                                                           df['high'].iloc[i], df['low'].iloc[i-2])
+                    })
+        
+        return fvg_list
+    
+    def _is_fvg_mitigated(self, df: pd.DataFrame, fvg_index: int, 
+                          fvg_type: str, bottom: float, top: float) -> bool:
+        """Проверяет, был ли FVG заполнен (mitigated)"""
+        for i in range(fvg_index + 1, len(df)):
+            if fvg_type == 'bullish':
+                # Bullish FVG mitigated когда цена опускается в gap
+                if df['low'].iloc[i] <= top:
+                    return True
+            else:  # bearish
+                # Bearish FVG mitigated когда цена поднимается в gap
+                if df['high'].iloc[i] >= bottom:
+                    return True
+        return False
+    
+    # ==================== LIQUIDITY ZONES ====================
+    
+    def find_liquidity_zones(self, df: pd.DataFrame, lookback: int = 50) -> List[Dict]:
+        """
+        Находит зоны ликвидности - места со скоплением стоп-лоссов
+        
+        - Equal highs/lows (двойные/тройные вершины)
+        - Зоны выше swing high / ниже swing low
+        """
+        liquidity_zones = []
+        tolerance = 0.002  # 0.2% допуск для "равных" уровней
+        
+        # Находим swing points
+        swing_highs = self._find_swing_highs(df, self.swing_lookback)
+        swing_lows = self._find_swing_lows(df, self.swing_lookback)
+        
+        # Ищем equal highs (зоны продаж / buy-side liquidity)
+        for i, sh1 in enumerate(swing_highs):
+            for sh2 in swing_highs[i+1:]:
+                if abs(sh1['price'] - sh2['price']) / sh1['price'] < tolerance:
+                    liquidity_zones.append({
+                        'type': 'buy_side',  # Ликвидность сверху (стопы шортов)
+                        'price': max(sh1['price'], sh2['price']),
+                        'strength': 2,  # Двойная вершина
+                        'indices': [sh1['index'], sh2['index']]
+                    })
+        
+        # Ищем equal lows (зоны покупок / sell-side liquidity)
+        for i, sl1 in enumerate(swing_lows):
+            for sl2 in swing_lows[i+1:]:
+                if abs(sl1['price'] - sl2['price']) / sl1['price'] < tolerance:
+                    liquidity_zones.append({
+                        'type': 'sell_side',  # Ликвидность снизу (стопы лонгов)
+                        'price': min(sl1['price'], sl2['price']),
+                        'strength': 2,
+                        'indices': [sl1['index'], sl2['index']]
+                    })
+        
+        return liquidity_zones
+    
+    # ==================== MARKET STRUCTURE ====================
+    
+    def _find_swing_highs(self, df: pd.DataFrame, lookback: int) -> List[Dict]:
+        """Находит swing highs"""
+        swing_highs = []
+        for i in range(lookback, len(df) - lookback):
+            if df['high'].iloc[i] == df['high'].iloc[i-lookback:i+lookback+1].max():
+                swing_highs.append({
+                    'price': df['high'].iloc[i],
+                    'index': i
+                })
+        return swing_highs
+    
+    def _find_swing_lows(self, df: pd.DataFrame, lookback: int) -> List[Dict]:
+        """Находит swing lows"""
+        swing_lows = []
+        for i in range(lookback, len(df) - lookback):
+            if df['low'].iloc[i] == df['low'].iloc[i-lookback:i+lookback+1].min():
+                swing_lows.append({
+                    'price': df['low'].iloc[i],
+                    'index': i
+                })
+        return swing_lows
+    
+    def detect_bos(self, df: pd.DataFrame) -> Dict:
+        """
+        Детектирует Break of Structure (BOS)
+        
+        Bullish BOS: пробой предыдущего swing high
+        Bearish BOS: пробой предыдущего swing low
+        """
+        swing_highs = self._find_swing_highs(df, self.swing_lookback)
+        swing_lows = self._find_swing_lows(df, self.swing_lookback)
+        
+        current_price = df['close'].iloc[-1]
+        
+        # Проверяем пробой последнего swing high
+        if swing_highs:
+            last_sh = swing_highs[-1]['price']
+            if current_price > last_sh:
+                return {
+                    'type': 'bullish',
+                    'broken_level': last_sh,
+                    'current_price': current_price,
+                    'strength': (current_price - last_sh) / last_sh * 100
+                }
+        
+        # Проверяем пробой последнего swing low
+        if swing_lows:
+            last_sl = swing_lows[-1]['price']
+            if current_price < last_sl:
+                return {
+                    'type': 'bearish',
+                    'broken_level': last_sl,
+                    'current_price': current_price,
+                    'strength': (last_sl - current_price) / last_sl * 100
+                }
+        
+        return {'type': 'none'}
+    
+    def detect_choch(self, df: pd.DataFrame) -> Dict:
+        """
+        Детектирует Change of Character (CHoCH) - первый признак смены тренда
+        
+        В восходящем тренде: первый LL (пробой swing low)
+        В нисходящем тренде: первый HH (пробой swing high)
+        """
+        structure = self.analyze_market_structure(df)
+        bos = self.detect_bos(df)
+        
+        # CHoCH = BOS против текущего тренда
+        if structure['trend'] == 'bullish' and bos['type'] == 'bearish':
+            return {
+                'detected': True,
+                'type': 'bearish_choch',
+                'message': 'Смена тренда с бычьего на медвежий',
+                'broken_level': bos['broken_level']
+            }
+        elif structure['trend'] == 'bearish' and bos['type'] == 'bullish':
+            return {
+                'detected': True,
+                'type': 'bullish_choch',
+                'message': 'Смена тренда с медвежьего на бычий',
+                'broken_level': bos['broken_level']
+            }
+        
+        return {'detected': False}
+    
+    def analyze_market_structure(self, df: pd.DataFrame) -> Dict:
+        """
+        Анализирует рыночную структуру
+        
+        HH + HL = Bullish (восходящий тренд)
+        LH + LL = Bearish (нисходящий тренд)
+        """
+        swing_highs = self._find_swing_highs(df, self.swing_lookback)
+        swing_lows = self._find_swing_lows(df, self.swing_lookback)
+        
+        if len(swing_highs) < 2 or len(swing_lows) < 2:
+            return {'trend': 'undefined', 'structure': []}
+        
+        # Анализируем последние swing points
+        hh = swing_highs[-1]['price'] > swing_highs[-2]['price']  # Higher High
+        hl = swing_lows[-1]['price'] > swing_lows[-2]['price']    # Higher Low
+        lh = swing_highs[-1]['price'] < swing_highs[-2]['price']  # Lower High
+        ll = swing_lows[-1]['price'] < swing_lows[-2]['price']    # Lower Low
+        
+        if hh and hl:
+            trend = 'bullish'
+        elif lh and ll:
+            trend = 'bearish'
+        else:
+            trend = 'ranging'
+        
+        return {
+            'trend': trend,
+            'higher_high': hh,
+            'higher_low': hl,
+            'lower_high': lh,
+            'lower_low': ll,
+            'last_swing_high': swing_highs[-1]['price'],
+            'last_swing_low': swing_lows[-1]['price']
+        }
+    
+    def get_price_zone(self, df: pd.DataFrame, lookback: int = 50) -> Dict:
+        """
+        Определяет зону цены: Premium, Discount или Equilibrium
+        
+        Premium (верхние 50%): зона для продаж
+        Discount (нижние 50%): зона для покупок
+        Equilibrium: середина диапазона
+        """
+        recent = df.iloc[-lookback:]
+        high = recent['high'].max()
+        low = recent['low'].min()
+        current = df['close'].iloc[-1]
+        
+        range_size = high - low
+        equilibrium = low + range_size * 0.5
+        
+        position = (current - low) / range_size if range_size > 0 else 0.5
+        
+        if position > 0.7:
+            zone = 'premium'
+            recommendation = 'Зона для продаж (SHORT)'
+        elif position < 0.3:
+            zone = 'discount'
+            recommendation = 'Зона для покупок (LONG)'
+        else:
+            zone = 'equilibrium'
+            recommendation = 'Нейтральная зона'
+        
+        return {
+            'zone': zone,
+            'position_pct': position * 100,
+            'equilibrium': equilibrium,
+            'range_high': high,
+            'range_low': low,
+            'recommendation': recommendation
+        }
+    
+    # ==================== КОМПЛЕКСНЫЙ СИГНАЛ ====================
+    
+    def get_smc_signal(self, df: pd.DataFrame) -> Dict:
+        """
+        Возвращает комплексный сигнал на основе всех SMC факторов
+        """
+        # RSI
+        rsi = self.compute_rsi(df)
+        current_rsi = rsi.iloc[-1]
+        rsi_div = self.detect_rsi_divergence(df, rsi)
+        
+        # SMC компоненты
+        order_blocks = self.find_order_blocks(df)
+        fvg_list = self.find_fvg(df)
+        liquidity = self.find_liquidity_zones(df)
+        structure = self.analyze_market_structure(df)
+        bos = self.detect_bos(df)
+        choch = self.detect_choch(df)
+        price_zone = self.get_price_zone(df)
+        
+        # Анализ сигналов
+        reasons = []
+        score = 0  # -100 до +100
+        
+        # RSI сигналы
+        if current_rsi <= 30:
+            score += 30
+            reasons.append(f'RSI перепродан ({current_rsi:.1f})')
+        elif current_rsi >= 70:
+            score -= 30
+            reasons.append(f'RSI перекуплен ({current_rsi:.1f})')
+        
+        # RSI дивергенция
+        if rsi_div.iloc[-1] == 1:
+            score += 20
+            reasons.append('Bullish RSI дивергенция')
+        elif rsi_div.iloc[-1] == -1:
+            score -= 20
+            reasons.append('Bearish RSI дивергенция')
+        
+        # Order Blocks
+        current_price = df['close'].iloc[-1]
+        for ob in order_blocks[-5:]:  # Последние 5 OB
+            if ob['type'] == 'bullish' and not ob['tested']:
+                if ob['low'] <= current_price <= ob['high']:
+                    score += 25
+                    reasons.append('Цена в зоне Bullish Order Block')
+            elif ob['type'] == 'bearish' and not ob['tested']:
+                if ob['low'] <= current_price <= ob['high']:
+                    score -= 25
+                    reasons.append('Цена в зоне Bearish Order Block')
+        
+        # FVG
+        for fvg in fvg_list[-5:]:
+            if not fvg['mitigated']:
+                if fvg['type'] == 'bullish' and fvg['bottom'] <= current_price <= fvg['top']:
+                    score += 15
+                    reasons.append('Цена в Bullish FVG (незаполненный)')
+                elif fvg['type'] == 'bearish' and fvg['bottom'] <= current_price <= fvg['top']:
+                    score -= 15
+                    reasons.append('Цена в Bearish FVG (незаполненный)')
+        
+        # Market Structure
+        if structure['trend'] == 'bullish':
+            score += 10
+            reasons.append('Бычья структура рынка (HH+HL)')
+        elif structure['trend'] == 'bearish':
+            score -= 10
+            reasons.append('Медвежья структура рынка (LH+LL)')
+        
+        # CHoCH (сильный сигнал разворота)
+        if choch['detected']:
+            if choch['type'] == 'bullish_choch':
+                score += 30
+                reasons.append('CHoCH: разворот на бычий')
             else:
-                positive_flow.iloc[i] = 0
-                negative_flow.iloc[i] = raw_money_flow.iloc[i]
+                score -= 30
+                reasons.append('CHoCH: разворот на медвежий')
         
-        positive_mf = positive_flow.rolling(period).sum()
-        negative_mf = negative_flow.rolling(period).sum()
+        # Price Zone
+        if price_zone['zone'] == 'discount' and score > 0:
+            score += 10
+            reasons.append('Цена в Discount зоне (хорошо для LONG)')
+        elif price_zone['zone'] == 'premium' and score < 0:
+            score -= 10
+            reasons.append('Цена в Premium зоне (хорошо для SHORT)')
         
-        mfi = 100 - (100 / (1 + positive_mf / negative_mf))
-        return mfi
+        # Определяем сигнал
+        if score >= 40:
+            signal = 'LONG'
+            confidence = min(abs(score), 100)
+        elif score <= -40:
+            signal = 'SHORT'
+            confidence = min(abs(score), 100)
+        else:
+            signal = 'WAIT'
+            confidence = 100 - abs(score)
+        
+        return {
+            'signal': signal,
+            'score': score,
+            'confidence': confidence,
+            'reasons': reasons,
+            'rsi': current_rsi,
+            'structure': structure['trend'],
+            'price_zone': price_zone['zone'],
+            'order_blocks_count': len([ob for ob in order_blocks if not ob['tested']]),
+            'unfilled_fvg_count': len([fvg for fvg in fvg_list if not fvg['mitigated']])
+        }
 ```
 
 ---

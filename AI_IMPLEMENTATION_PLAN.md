@@ -18,50 +18,84 @@
 
 ## ФАЗА 1: Критические улучшения
 
-### Задача 1.1: Создание модуля Feature Engineering
+### Задача 1.1: Создание модуля Smart Money Concepts (SMC)
 
 **Промпт для Cursor:**
 ```
-Создай новый файл bot_engine/ai/feature_engineering.py со следующим функционалом:
+Создай новый файл bot_engine/ai/smart_money_features.py со следующим функционалом:
 
-1. Класс AdvancedFeatureEngineering с методом compute_all_features(df: pd.DataFrame)
-2. Вычисление 50+ признаков из IMPROVEMENTS_PROPOSAL.md раздел 4.2:
-   - Returns (1, 5, 10, 20 периодов)
-   - Log returns
-   - Price range features (range, body, shadows)
-   - Volatility (5, 10, 20 периодов + ATR)
-   - Bollinger Bands
-   - RSI variants (7, 14, 21)
-   - MACD + histogram
-   - Stochastic K/D
-   - Williams %R
-   - CCI
-   - Multiple EMAs (5, 10, 20, 50, 100, 200)
-   - EMA crossovers
-   - ADX
-   - Volume features (SMA, ratio, OBV, MFI)
-   - VWAP
-   - Higher highs / Lower lows
-   - Pivot points
-   - Rolling statistics (mean, std, skew, kurt)
-   - Z-score
+1. Класс SmartMoneyFeatures с методом compute_features(df: pd.DataFrame)
 
-3. Добавь метод get_feature_names() -> List[str]
-4. Добавь метод select_top_features(df, target, n_features=30) для отбора лучших признаков
-5. Используй numpy и pandas, избегай лишних зависимостей
+2. ОСНОВА - RSI (уже используется, только улучшить):
+   - RSI 14 периодов на 6H таймфрейме (основной)
+   - RSI дивергенции (скрытые и обычные)
+   - RSI зоны перепроданности (<30) и перекупленности (>70)
+   - Время с последнего сигнала RSI для каждой монеты
+
+3. SMART MONEY CONCEPTS (SMC):
+
+   a) Order Blocks (ордерблоки):
+      - Bullish OB: последняя медвежья свеча перед импульсным ростом
+      - Bearish OB: последняя бычья свеча перед импульсным падением
+      - Метод find_order_blocks(df, lookback=50) -> List[Dict]
+      - Возвращает: цена, тип (bullish/bearish), сила, был ли протестирован
+   
+   b) Fair Value Gaps (FVG / Imbalance):
+      - Bullish FVG: gap между high свечи N-2 и low свечи N (цена не заполнена)
+      - Bearish FVG: gap между low свечи N-2 и high свечи N
+      - Метод find_fvg(df) -> List[Dict] с верхней/нижней границей
+      - Отслеживание: заполнен ли gap (mitigation)
+   
+   c) Liquidity Zones (зоны ликвидности):
+      - Equal highs/lows (двойные/тройные вершины/дно)
+      - Зоны со стоп-лоссами (выше swing high, ниже swing low)
+      - Метод find_liquidity_zones(df) -> List[Dict]
+   
+   d) Break of Structure (BOS):
+      - Пробой предыдущего swing high (бычий BOS)
+      - Пробой предыдущего swing low (медвежий BOS)
+      - Метод detect_bos(df) -> Dict с направлением и силой
+   
+   e) Change of Character (CHoCH):
+      - Первый признак смены тренда (слом структуры)
+      - Метод detect_choch(df) -> Dict
+   
+   f) Premium/Discount Zones:
+      - Premium: верхние 50% диапазона (для продаж)
+      - Discount: нижние 50% диапазона (для покупок)
+      - Equilibrium: середина диапазона
+      - Метод get_price_zone(df, current_price) -> str
+
+4. SWING STRUCTURE:
+   - Swing Highs / Swing Lows (локальные экстремумы)
+   - Higher Highs (HH), Higher Lows (HL) - восходящий тренд
+   - Lower Highs (LH), Lower Lows (LL) - нисходящий тренд
+   - Метод analyze_market_structure(df) -> Dict
+
+5. Метод get_smc_signal(df) -> Dict:
+   - Возвращает комплексный сигнал на основе всех SMC факторов
+   - signal: 'LONG', 'SHORT', 'WAIT'
+   - confidence: 0-100
+   - reasons: список причин
+   - entry_zone: оптимальная зона входа (Order Block или FVG)
+
 6. Добавь docstrings на русском языке
-7. В конце файла добавь тестовый код: if __name__ == '__main__'
+7. Используй numpy и pandas
+8. В конце файла добавь тестовый код: if __name__ == '__main__'
 ```
 
 **Файлы для изменения:**
-- Создать: `bot_engine/ai/feature_engineering.py`
-- Изменить: `bot_engine/ai/lstm_predictor.py` (импорт и использование)
+- Создать: `bot_engine/ai/smart_money_features.py`
+- Изменить: `bot_engine/ai/lstm_predictor.py` (импорт SMC features)
+- Изменить: `bot_engine/ai/ai_integration.py` (использование SMC сигналов)
+- Изменить: `bots_modules/filters.py` (интеграция SMC в фильтры)
 
 **Критерии успеха:**
-- [ ] Файл создан без синтаксических ошибок
-- [ ] Все 50+ признаков реализованы
-- [ ] Тестовый код работает
-- [ ] Интегрировано в lstm_predictor.py
+- [ ] Order Blocks корректно определяются на исторических данных
+- [ ] FVG находятся и отслеживается их заполнение
+- [ ] Break of Structure детектируется
+- [ ] Интеграция с существующей RSI логикой
+- [ ] Тестовый код показывает найденные SMC зоны
 
 ---
 
@@ -465,23 +499,23 @@
 ### Рекомендуемая последовательность:
 
 ```
-1. Задача 1.1 (Feature Engineering) - БАЗОВАЯ, от неё зависят другие
+1. Задача 1.1 (Smart Money Concepts) - БАЗОВАЯ, институциональный анализ
    ↓
-2. Задача 1.2 (Attention LSTM) - улучшает основную модель
+2. Задача 1.2 (Attention LSTM) - улучшает модель для SMC сигналов
    ↓
-3. Задача 1.3 (Bayesian Opt) - ускоряет оптимизацию
+3. Задача 1.3 (Bayesian Opt) - ускоряет оптимизацию параметров
    ↓
-4. Задача 1.4 (Drift Detection) - мониторинг
+4. Задача 1.4 (Drift Detection) - мониторинг качества
    ↓
-5. Задача 2.3 (CNN Patterns) - завершает Pattern Detector
+5. Задача 2.3 (CNN Patterns) - распознавание SMC паттернов визуально
    ↓
-6. Задача 2.1 (Transformer) - альтернативная архитектура
+6. Задача 2.1 (Transformer) - альтернативная архитектура для SMC
    ↓
 7. Задача 2.2 (Ensemble) - объединяет модели
    ↓
 8. Задача 2.4 (Monitoring) - полный мониторинг
    ↓
-9. Задача 3.1 (RL Agent) - продвинутая торговля
+9. Задача 3.1 (RL Agent) - продвинутая торговля на базе SMC
    ↓
 10. Задача 3.2 (Sentiment) - дополнительные данные
     ↓
@@ -533,17 +567,20 @@ AI улучшения: [название задачи]
 
 ```python
 # 1. Импорты работают
-from bot_engine.ai.feature_engineering import AdvancedFeatureEngineering
+from bot_engine.ai.smart_money_features import SmartMoneyFeatures
 from bot_engine.ai.lstm_predictor import LSTMPredictor, ImprovedLSTMModel
 from bot_engine.ai.bayesian_optimizer import BayesianOptimizer
 
 # 2. Классы инстанцируются
-fe = AdvancedFeatureEngineering()
+smc = SmartMoneyFeatures()
 predictor = LSTMPredictor()
 optimizer = BayesianOptimizer(param_space, objective)
 
 # 3. Основные методы работают
-features = fe.compute_all_features(df)
+signal = smc.get_smc_signal(df)
+order_blocks = smc.find_order_blocks(df)
+fvg = smc.find_fvg(df)
+structure = smc.analyze_market_structure(df)
 prediction = predictor.predict(candles, current_price)
 best_params = optimizer.optimize(n_iterations=50)
 ```
