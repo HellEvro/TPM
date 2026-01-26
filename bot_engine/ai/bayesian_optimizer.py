@@ -8,8 +8,6 @@ Bayesian Optimizer - эффективная оптимизация гиперп�
 - Находит оптимум за меньшее число итераций
 - Учитывает неопределенность в оценках
 - Автоматически балансирует exploration vs exploitation
-
-ТРЕБУЕТ ПРЕМИУМ ЛИЦЕНЗИЮ
 """
 
 import logging
@@ -21,22 +19,6 @@ import json
 import os
 
 logger = logging.getLogger('BayesianOptimizer')
-
-# Проверка премиум лицензии
-def _check_premium():
-    """Проверяет наличие премиум лицензии"""
-    try:
-        from bot_engine.ai import check_premium_license
-        if not check_premium_license():
-            raise ImportError(
-                "BayesianOptimizer требует премиум лицензию.\n"
-                "Для активации: python scripts/activate_premium.py"
-            )
-    except ImportError as e:
-        if "check_premium_license" in str(e):
-            pass
-        else:
-            raise
 
 # Опциональные зависимости
 try:
