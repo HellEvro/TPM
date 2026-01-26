@@ -29,6 +29,19 @@ EXCLUDE = [
     "AI_IMPLEMENTATION_PLAN.md",
     "IMPROVEMENTS_PROPOSAL.md",
     
+    # ЗАЩИЩЁННЫЕ AI МОДУЛИ (исходники - только .pyc идут в публичный)
+    "bot_engine/ai/smart_money_features.py",
+    "bot_engine/ai/lstm_predictor.py",
+    "bot_engine/ai/transformer_predictor.py",
+    "bot_engine/ai/bayesian_optimizer.py",
+    "bot_engine/ai/drift_detector.py",
+    "bot_engine/ai/ensemble.py",
+    "bot_engine/ai/monitoring.py",
+    "bot_engine/ai/rl_agent.py",
+    "bot_engine/ai/sentiment.py",
+    "bot_engine/ai/pattern_detector.py",
+    "bot_engine/ai/ai_integration.py",
+    
     "README.md",
     "LICENSE.md",
     "CHANGELOG.md",
