@@ -25,6 +25,10 @@ PUBLIC = ROOT.parent / "InfoBot_Public"
 # ✅ ПРОСТАЯ ЛОГИКА: ОДИН СПИСОК ЧТО НЕ КОПИРУЕТСЯ, ВСЁ ОСТАЛЬНОЕ КОПИРУЕТСЯ
 EXCLUDE = [
 
+    # Внутренние планы и инструкции (не для публики)
+    "AI_IMPLEMENTATION_PLAN.md",
+    "IMPROVEMENTS_PROPOSAL.md",
+    
     "README.md",
     "LICENSE.md",
     "CHANGELOG.md",
