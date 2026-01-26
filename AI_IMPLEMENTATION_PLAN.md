@@ -33,7 +33,13 @@
 |--------|--------|------|
 | 3.1 RL Agent (DQN) | ✅ Выполнено | `bot_engine/ai/rl_agent.py` |
 | 3.2 Sentiment Analysis | ✅ Выполнено | `bot_engine/ai/sentiment.py` |
-| 3.3 MLflow Tracking | ⏳ Не начато | - |
+| 3.3 MLflow Tracking | ✅ Выполнено | `bot_engine/ai/auto_trainer.py` |
+
+### Дополнительно выполнено:
+
+| Задача | Статус | Файл |
+|--------|--------|------|
+| API endpoints для AI | ✅ Выполнено | `bot_engine/api/endpoints_ai.py` |
 
 ---
 
@@ -252,9 +258,12 @@ python bot_engine/ai/lstm_predictor.py
 ## Следующие шаги (TODO)
 
 ### Не выполнено:
-- [ ] MLflow Experiment Tracking (задача 3.3)
 - [ ] UI для AI мониторинга (карточки в bots.html)
-- [ ] API endpoints для AI метрик
+
+### Выполнено:
+- [x] MLflow Experiment Tracking (ExperimentTracker в auto_trainer.py)
+- [x] API endpoints для AI метрик (/api/ai/performance, /api/ai/health, /api/ai/experiments)
+- [x] API для SMC сигналов (/api/ai/smc/signal)
 
 ### Рекомендации:
 1. Протестировать SMC на реальных данных
