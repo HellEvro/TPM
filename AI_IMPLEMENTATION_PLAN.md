@@ -257,13 +257,17 @@ python bot_engine/ai/lstm_predictor.py
 
 ## Следующие шаги (TODO)
 
-### Не выполнено:
-- [ ] UI для AI мониторинга (карточки в bots.html)
+### ВСЕ ЗАДАЧИ ВЫПОЛНЕНЫ! ✅
 
 ### Выполнено:
 - [x] MLflow Experiment Tracking (ExperimentTracker в auto_trainer.py)
 - [x] API endpoints для AI метрик (/api/ai/performance, /api/ai/health, /api/ai/experiments)
 - [x] API для SMC сигналов (/api/ai/smc/signal)
+- [x] UI для AI мониторинга (карточки в bots.html)
+  - Карточки: Точность, Предсказания, Уверенность, Здоровье
+  - Секция SMC info
+  - CSS стили в bots.css
+  - JavaScript в ai_config_manager.js
 
 ### Рекомендации:
 1. Протестировать SMC на реальных данных
