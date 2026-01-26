@@ -26,12 +26,13 @@
 !data/ai/
 !data/ai/models/
 !data/ai/models/*.pkl      # Anomaly Detector, scalers
-!data/ai/models/*.h5       # Старый формат LSTM
-!data/ai/models/*.keras    # Новый формат LSTM (Keras 3)
-!data/ai/models/*.pt       # PyTorch модели
-!data/ai/models/*.pth      # PyTorch модели (альтернативное расширение)
+!data/ai/models/*.pth      # PyTorch модели (LSTM Predictor)
+!data/ai/models/*.pt      # PyTorch модели (альтернативное расширение)
 !data/ai/models/*.onnx     # ONNX модели
 !data/ai/models/*.json     # Конфигурации моделей
+# Устаревшие форматы (TensorFlow/Keras):
+# !data/ai/models/*.h5       # Старый формат TensorFlow/Keras
+# !data/ai/models/*.keras    # Формат Keras 3 (больше не используется)
 ```
 
 ### 3. Исторические данные и обучение
@@ -53,7 +54,7 @@
 ### AI Модели (критично!)
 - ✅ `data/ai/models/anomaly_detector.pkl` (836 KB)
 - ✅ `data/ai/models/anomaly_scaler.pkl` (959 B)
-- ✅ `data/ai/models/lstm_predictor.keras` (новый формат)
+- ✅ `data/ai/models/lstm_predictor.pth` (PyTorch формат)
 - ✅ `data/ai/models/lstm_scaler.pkl` (132 B)
 - ✅ `data/ai/models/lstm_config.json` (285 B)
 
