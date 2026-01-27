@@ -242,7 +242,15 @@ class AITrainer:
         except Exception as e:
             logger.debug(f"⚠️ Не удалось инициализировать AIParameterTracker: {e}")
             self.param_tracker = None
-        
+
+        # Performance Monitoring — опционально для метрик предсказаний
+        try:
+            from bot_engine.ai.monitoring import AIPerformanceMonitor
+            self._perf_monitor = AIPerformanceMonitor(max_records=5000)
+        except Exception as e:
+            logger.debug(f"⚠️ AIPerformanceMonitor недоступен: {e}")
+            self._perf_monitor = None
+
         # Инициализируем ML модель для предсказания качества параметров (только если включено)
         self.param_quality_predictor = None
         try:
@@ -5764,15 +5772,33 @@ class AITrainer:
                 signal = 'LONG' if rsi < 35 else 'SHORT' if rsi > 65 else 'WAIT'
             else:
                 signal = 'WAIT'
-            
-            return {
+
+            result = {
                 'signal': signal,
                 'confidence': float(signal_prob[1]),
                 'predicted_profit': float(predicted_profit) if predicted_profit is not None else None,
                 'rsi': rsi,
                 'trend': trend
             }
-            
+
+            # Performance Monitoring: логируем предсказание для метрик
+            if getattr(self, '_perf_monitor', None):
+                try:
+                    direction = 1 if signal == 'LONG' else (-1 if signal == 'SHORT' else 0)
+                    self._perf_monitor.track_prediction(
+                        symbol,
+                        {
+                            'direction': direction,
+                            'change_percent': result.get('predicted_profit') or 0,
+                            'confidence': (result.get('confidence') or 0.5) * 100,
+                        },
+                        model='signal_predictor'
+                    )
+                except Exception as mon_e:
+                    logger.debug(f"Performance monitor: {mon_e}")
+
+            return result
+
         except Exception as e:
             logger.error(f"❌ Ошибка предсказания: {e}")
             return {'error': str(e)}
