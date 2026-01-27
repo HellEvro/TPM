@@ -108,6 +108,28 @@ def _check_and_install_pytorch():
 # Выполняем проверку PyTorch перед импортом защищенного модуля
 _check_and_install_pytorch()
 
+
+def _run_rebuild_bot_history_from_exchange():
+    """При старте ai.py подтягивает историю биржи в bot_trades_history (bots_data.db), чтобы ИИ видел сделки для обучения."""
+    if os.environ.get("INFOBOT_SKIP_REBUILD_BOT_HISTORY", "").strip().lower() in ("1", "true", "yes"):
+        return
+    try:
+        import subprocess
+        _script_dir = os.path.dirname(os.path.abspath(__file__))
+        _rebuild = os.path.join(_script_dir, "scripts", "rebuild_bot_history_from_exchange.py")
+        if os.path.isfile(_rebuild):
+            subprocess.run(
+                [sys.executable, _rebuild],
+                cwd=_script_dir,
+                timeout=120,
+                capture_output=False,
+            )
+    except Exception:
+        pass
+
+
+_run_rebuild_bot_history_from_exchange()
+
 # Настройка логирования ПЕРЕД импортом защищенного модуля
 import logging
 try:
