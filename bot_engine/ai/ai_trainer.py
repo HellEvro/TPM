@@ -5966,7 +5966,8 @@ class AITrainer:
                 n_estimators=150,
                 max_depth=6,
                 random_state=42,
-                class_weight='balanced'
+                class_weight='balanced',
+                n_jobs=1,  # без параллелизма — устраняет UserWarning delayed/Parallel
             )
             model.fit(X_train, y_train)
             

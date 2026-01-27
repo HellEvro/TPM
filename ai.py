@@ -10,7 +10,10 @@
 import os
 import sys
 os.environ['INFOBOT_AI_PROCESS'] = 'true'
-
+# Корень проекта в path до импорта utils — иначе sklearn_parallel_config не найдётся при запуске из другой директории
+_root = os.path.dirname(os.path.abspath(__file__))
+if _root and _root not in sys.path:
+    sys.path.insert(0, _root)
 import utils.sklearn_parallel_config  # noqa: F401 — вариант 1 до импорта sklearn
 
 # Проверка и автоматическая установка PyTorch ПЕРЕД импортом защищенного модуля
