@@ -1289,6 +1289,12 @@ class BotsManager {
             return 'WAIT';
         }
         
+        // ✅ КРИТИЧНО: Если API уже установил effective_signal (в т.ч. WAIT после проверки AI) — используем его.
+        // Иначе список LONG/SHORT слева будет показывать монеты, которые API исключил (расхождение с карточкой).
+        if (coin.effective_signal !== undefined && coin.effective_signal !== null && coin.effective_signal !== '') {
+            return coin.effective_signal;
+        }
+        
         // Если базовый сигнал WAIT - возвращаем сразу
         if (signal === 'WAIT') {
             return 'WAIT';
@@ -1325,12 +1331,7 @@ class BotsManager {
             return 'WAIT';
         }
         
-        // Если API уже предоставил эффективный сигнал, используем его (но только если не заблокирован)
-        if (coin.effective_signal && coin.effective_signal !== 'WAIT') {
-            return coin.effective_signal;
-        }
-        
-        // Возвращаем проверенный сигнал
+        // Возвращаем проверенный сигнал (effective_signal из API уже обработан в начале функции)
         return signal;
     }
 

@@ -13,7 +13,7 @@ import requests
 import socket
 import psutil
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import concurrent.futures
@@ -869,7 +869,7 @@ def get_config_snapshot(symbol=None, force_reload=False):
         'individual': deepcopy(individual_settings) if individual_settings else None,
         'merged': merged_config,
         'symbol': normalized_symbol,
-        'timestamp': datetime.utcnow().isoformat()
+        'timestamp': datetime.now(timezone.utc).isoformat()
     }
     return snapshot
 

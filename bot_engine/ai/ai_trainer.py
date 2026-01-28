@@ -852,9 +852,10 @@ class AITrainer:
                     # Помечаем данные готовыми, чтобы лаунчер не выдавал «Не удалось дождаться готовности данных»
                     try:
                         from bot_engine.ai.data_service_status_helper import update_data_service_status_in_db
+                        from datetime import datetime as _dt_now
                         update_data_service_status_in_db(
                             ready=True,
-                            last_collection=datetime.now().isoformat(),
+                            last_collection=_dt_now.now().isoformat(),
                             trades=len(db_trades),
                         )
                     except Exception as _e:
@@ -5751,6 +5752,16 @@ class AITrainer:
         """
         if not self.signal_predictor:
             return {'error': 'Models not trained'}
+        if not hasattr(self.signal_predictor, 'predict_proba'):
+            return {'error': 'Модель сигналов не обучена или не поддерживает predict_proba'}
+        # Проверка готовности модели (RandomForest: estimators_ не пусты)
+        try:
+            if hasattr(self.signal_predictor, 'estimators_'):
+                est = getattr(self.signal_predictor, 'estimators_', None)
+                if not est or (len(est) > 0 and est[0] is None):
+                    return {'error': 'Модель сигналов не обучена (estimators пусты)'}
+        except (AttributeError, IndexError, TypeError):
+            pass
         
         # Модель прибыли при R²<0 не используется — решения только по модели сигналов
         use_profit = self.profit_predictor is not None and not getattr(self, '_profit_model_unreliable', True)
@@ -5803,17 +5814,15 @@ class AITrainer:
             # Адаптируем количество признаков под ожидаемое моделью
             # ВАЖНО: Система работает динамически для любого количества признаков (7, 8, 9, 10 и т.д.)
             if len(features) < expected_features:
-                # Дополняем нулями (если модель ожидает больше признаков, чем мы генерируем)
-                logger.debug(f"⚠️ Признаков меньше ожидаемого ({len(features)} < {expected_features}), дополняем нулями")
+                # Дополняем нулями (если модель ожидает больше признаков, чем мы генерируем). Не логируем каждый вызов.
                 while len(features) < expected_features:
                     features.append(0.0)  # Используем 0.0 вместо 0 для явности типа
             elif len(features) > expected_features:
-                # Обрезаем до нужного количества (если модель ожидает меньше признаков)
-                logger.debug(f"⚠️ Признаков больше ожидаемого ({len(features)} > {expected_features}), обрезаем до {expected_features}")
+                # Обрезаем до нужного количества (если модель ожидает меньше признаков). Не логируем каждый вызов.
                 features = features[:expected_features]
             else:
-                # Количество признаков совпадает - идеальный случай
-                logger.debug(f"✅ Количество признаков совпадает: {len(features)} = {expected_features}")
+                # Количество признаков совпадает - идеальный случай (не логируем каждый вызов, слишком шумно)
+                pass
             
             features_array = np.array([features])
             
@@ -5845,7 +5854,13 @@ class AITrainer:
                     raise
             
             # Предсказание сигнала (всегда по модели сигналов)
-            signal_prob = self.signal_predictor.predict_proba(features_scaled)[0]
+            try:
+                signal_prob = self.signal_predictor.predict_proba(features_scaled)[0]
+            except AttributeError as ae:
+                if 'tree_' in str(ae) or 'NoneType' in str(ae):
+                    logger.debug(f"Модель сигналов не готова к предсказанию: {ae}")
+                    return {'error': f'Модель не обучена или не загружена: {ae}'}
+                raise
             if use_profit:
                 predicted_profit = self.profit_predictor.predict(features_scaled)[0]
             else:
