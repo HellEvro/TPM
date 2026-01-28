@@ -2,8 +2,10 @@
 EXCHANGES = {
     'BYBIT': {
         'enabled': True,
-        'api_key': "y4gAHNR6RZA7U4oemb",
-        'api_secret': "noaw14FzkWkrR9sOFqFe1THSiqzkdzzBDKKj",
+        # 'api_key': "y4gAHNR6RZA7U4oemb",
+        # 'api_secret': "noaw14FzkWkrR9sOFqFe1THSiqzkdzzBDKKj",
+        'api_key': "PfdaIBxXNhB5GHXYLc",
+        'api_secret': "htZGrFxyuRIjOvFASgZ7PE96ZYZmrSVxewwu",        
         'test_server': False,
         'position_mode': 'Hedge',
         'limit_order_offset': 0.01
