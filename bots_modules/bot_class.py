@@ -1249,48 +1249,39 @@ class NewTradingBot:
         return fallback_price
 
     def _open_position_on_exchange(self, direction: str, price: Optional[float] = None) -> bool:
-        """Открывает позицию через TradingBot и логирует результат."""
+        """Открывает позицию через TradingBot и логирует результат. Автовход — всегда по рынку."""
         try:
-            result = self.enter_position(direction)
+            result = self.enter_position(direction, force_market_entry=True)
             return bool(result and result.get('success'))
         except Exception as e:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка открытия позиции {direction}: {e}")
             return False
 
     def _handle_idle_state(self, rsi, trend, candles, price):
-        """Обрабатывает состояние IDLE (ожидание сигнала)"""
+        """Бот в списке = проверки пройдены → по рынку заходим по условиям КОНФИГА (rsi_long_threshold, rsi_short_threshold)."""
         try:
-            # Проверяем, включен ли автобот
             with bots_data_lock:
                 auto_bot_enabled = bots_data['auto_bot_config']['enabled']
-            
             if not auto_bot_enabled:
                 logger.debug(f"[NEW_BOT_{self.symbol}] ⏹️ Автобот выключен - не открываем позицию")
                 return {'success': True, 'status': self.status}
-            
-            # Проверяем возможность открытия LONG
+            # Направление и момент входа — только по настройкам конфига (should_open_long / should_open_short)
             if self.should_open_long(rsi, trend, candles):
-                logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Открываем LONG")
+                logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Вход по рынку LONG (условия конфига)")
                 if self._open_position_on_exchange('LONG', price):
                     self.update_status(BOT_STATUS['IN_POSITION_LONG'], price, 'LONG')
                     return {'success': True, 'action': 'OPEN_LONG', 'status': self.status}
-            else:
-                    logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось открыть LONG позицию")
-                    return {'success': False, 'error': 'Failed to open LONG position'}
-            
-            # Проверяем возможность открытия SHORT
+                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось открыть LONG позицию")
+                return {'success': False, 'error': 'Failed to open LONG position'}
             if self.should_open_short(rsi, trend, candles):
-                logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Открываем SHORT")
+                logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Вход по рынку SHORT (условия конфига)")
                 if self._open_position_on_exchange('SHORT', price):
                     self.update_status(BOT_STATUS['IN_POSITION_SHORT'], price, 'SHORT')
                     return {'success': True, 'action': 'OPEN_SHORT', 'status': self.status}
-                else:
-                    logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось открыть SHORT позицию")
-                    return {'success': False, 'error': 'Failed to open SHORT position'}
-            
-            logger.debug(f"[NEW_BOT_{self.symbol}] ⏳ Ждем сигнал (RSI: {rsi:.1f}, Trend: {trend})")
+                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось открыть SHORT позицию")
+                return {'success': False, 'error': 'Failed to open SHORT position'}
+            logger.debug(f"[NEW_BOT_{self.symbol}] ⏳ Ждём условия конфига (RSI: {rsi:.1f}, пороги из конфига)")
             return {'success': True, 'status': self.status}
-            
         except Exception as e:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка в idle состоянии: {e}")
             return {'success': False, 'error': str(e)}
@@ -2530,11 +2521,12 @@ class NewTradingBot:
 
         return config
 
-    def enter_position(self, direction: str):
+    def enter_position(self, direction: str, force_market_entry: bool = True):
         """
         Открывает позицию через TradingBot, используя текущие настройки бота.
         Args:
             direction: 'LONG' или 'SHORT'
+            force_market_entry: True — автовход, всегда по рынку (лимитные ордера не используются).
         """
         if not direction:
             raise ValueError("Direction is required")
@@ -2558,9 +2550,9 @@ class NewTradingBot:
         trading_bot = TradingBot(self.symbol, self.exchange, bridge_config)
         
         # ✅ Логируем перед входом в позицию для диагностики
-        logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Вызываем _enter_position({side}) для входа в позицию")
+        logger.info(f"[NEW_BOT_{self.symbol}] 🚀 Вызываем _enter_position({side}) для входа в позицию" + (" по рынку" if force_market_entry else ""))
         
-        result = trading_bot._enter_position(side)
+        result = trading_bot._enter_position(side, force_market_entry=force_market_entry)
         
         # ✅ Логируем результат
         if result:

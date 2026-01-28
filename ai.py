@@ -130,6 +130,22 @@ def _run_rebuild_bot_history_from_exchange():
 
 _run_rebuild_bot_history_from_exchange()
 
+
+def _init_timeframe_from_bots_db():
+    """При старте ai.py подгружаем текущий таймфрейм из bots_data.db (тот же, что в UI/bots.py)."""
+    try:
+        from bot_engine.bots_database import get_bots_database
+        from bot_engine.bot_config import set_current_timeframe
+        db = get_bots_database()
+        tf = db.load_timeframe()
+        if tf:
+            set_current_timeframe(tf)
+    except Exception:
+        pass
+
+
+_init_timeframe_from_bots_db()
+
 # Настройка логирования ПЕРЕД импортом защищенного модуля
 import logging
 try:

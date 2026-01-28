@@ -1687,10 +1687,9 @@ class BotsManager {
                 // Используем bot_status из API, если есть
                 if (bot.bot_status) {
                     botStatus = bot.bot_status;
-                } else if (bot.status === 'running') {
-                    botStatus = window.languageUtils.translate('active_status');
-                } else if (bot.status === 'waiting') {
-                    botStatus = window.languageUtils.translate('waiting_signal');
+                } else if (bot.status === 'running' || bot.status === 'waiting') {
+                    // Бот запущен — вход по рынку при появлении сигнала
+                    botStatus = window.languageUtils.translate('entry_by_market');
                 } else if (bot.status === 'in_position_long') {
                     botStatus = window.languageUtils.translate('active_status');
                 } else if (bot.status === 'in_position_short') {
@@ -2407,9 +2406,9 @@ class BotsManager {
                         const manualButtons = document.getElementById('manualBotButtons');
                         if (manualButtons) manualButtons.style.display = 'none';
                     }
-                    else if (statusValue.includes('waiting') || statusValue.includes('idle')) { 
+                    else if (statusValue.includes('waiting') || statusValue.includes('running') || statusValue.includes('idle')) { 
                         icon = '🔵'; 
-                        description = window.languageUtils.translate('waiting_signal');
+                        description = window.languageUtils.translate('entry_by_market');
                         valueElement.style.color = 'var(--blue-color)';
                     }
                     else if (statusValue.includes('error')) { 
@@ -9014,8 +9013,8 @@ class BotsManager {
                 statusText = window.languageUtils.translate('short_closed');
                 statusColor = 'var(--red-color)';
                 statusIcon = '📉';
-            } else if (bot.status === 'running') {
-                statusText = window.languageUtils.translate('waiting_signal');
+            } else if (bot.status === 'running' || bot.status === 'waiting') {
+                statusText = window.languageUtils.translate('entry_by_market');
                 statusColor = 'var(--blue-color)';
                 statusIcon = '🔄';
             } else {

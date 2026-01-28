@@ -94,6 +94,10 @@ except ImportError:
 
 logger = logging.getLogger('Bots.Database')
 
+# Троттлинг лога "Таймфрейм загружен из БД" — не чаще раза в 60 с на таймфрейм (убирает спам при загрузке свечей)
+_load_timeframe_last_log = {}  # {timeframe: timestamp}
+_load_timeframe_log_interval = 60.0
+
 
 def _get_project_root() -> Path:
     """
@@ -6019,8 +6023,12 @@ class BotsDatabase:
                     row = cursor.fetchone()
                     if row:
                         timeframe = row[0]
-                        # Переводим спамный лог в DEBUG, чтобы не засорять основной лог
-                        logger.debug(f"✅ Таймфрейм загружен из БД: {timeframe}")
+                        # Логируем не чаще раза в 60 с на таймфрейм (убирает спам при массовой загрузке свечей)
+                        now = time.time()
+                        if (timeframe not in _load_timeframe_last_log or
+                                now - _load_timeframe_last_log[timeframe] >= _load_timeframe_log_interval):
+                            _load_timeframe_last_log[timeframe] = now
+                            logger.debug(f"✅ Таймфрейм загружен из БД: {timeframe}")
                         return timeframe
                     return None
         except Exception as e:
