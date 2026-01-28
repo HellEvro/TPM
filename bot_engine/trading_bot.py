@@ -8,8 +8,8 @@ from typing import Dict, List, Optional, Tuple
 import logging
 
 from .bot_config import (
-    BotStatus, TrendDirection, VolumeMode, 
-    DEFAULT_BOT_CONFIG, TIMEFRAME
+    BotStatus, TrendDirection, VolumeMode,
+    DEFAULT_BOT_CONFIG, TIMEFRAME, get_current_timeframe
 )
 from .indicators import SignalGenerator
 from .scaling_calculator import calculate_scaling_for_bot
@@ -439,25 +439,22 @@ class TradingBot:
                 'message': 'Ошибка проверки позиций на бирже'
             }
         
-        # ПРОВЕРКА RSI ВРЕМЕННОГО ФИЛЬТРА
+        # ПРОВЕРКА RSI ВРЕМЕННОГО ФИЛЬТРА (по выбранному таймфрейму)
         try:
-            # Импортируем функцию проверки временного фильтра
             import sys
             import os
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             from bots import check_rsi_time_filter
-            
-            # Получаем свечи для анализа временного фильтра
-            candles = self.exchange.get_candles(self.symbol, '6h', 100)
+
+            tf_entry = get_current_timeframe()
+            candles = self.exchange.get_candles(self.symbol, tf_entry, 100)
             if candles and len(candles) > 0:
-                # Получаем текущий RSI из данных монеты
                 current_rsi = getattr(self, 'current_rsi', None)
                 if current_rsi is None:
-                    # Если RSI не сохранен в боте, получаем из API
                     try:
-                        rsi_data = self.exchange.get_rsi_data(self.symbol, '6h', 14)
+                        rsi_data = self.exchange.get_rsi_data(self.symbol, tf_entry, 14)
                         current_rsi = rsi_data.get('rsi', 50) if rsi_data else 50
-                    except:
+                    except Exception:
                         current_rsi = 50
                 
                 # Проверяем временной фильтр
@@ -680,10 +677,8 @@ class TradingBot:
                     ai_manager = get_ai_manager()
                     
                     if ai_manager and ai_manager.risk_manager and self.volume_mode == VolumeMode.FIXED_USDT:
-                        # Получаем свечи и баланс
-                        # ✅ ИСПРАВЛЕНО: get_chart_data принимает period, а не limit
-                        # Для 6h таймфрейма: 50 свечей × 6ч = 300ч ≈ 12.5 дней, используем '14d'
-                        chart_response = self.exchange.get_chart_data(self.symbol, '6h', '14d')
+                        tf_use = self.config.get('entry_timeframe') or get_current_timeframe()
+                        chart_response = self.exchange.get_chart_data(self.symbol, tf_use, '14d')
                         candles = chart_response.get('data', {}).get('candles', []) if chart_response and chart_response.get('success') else None
                         balance = self._get_available_balance() or 1000  # Fallback
                         
@@ -911,10 +906,8 @@ class TradingBot:
                             ai_manager = get_ai_manager()
                             
                             if ai_manager and ai_manager.risk_manager:
-                                # Получаем свечи для анализа
-                                # ✅ ИСПРАВЛЕНО: get_chart_data принимает period, а не limit
-                                # Для 6h таймфрейма: 50 свечей × 6ч = 300ч ≈ 12.5 дней, используем '14d'
-                                chart_response = self.exchange.get_chart_data(self.symbol, '6h', '14d')
+                                tf_use = self.config.get('entry_timeframe') or get_current_timeframe()
+                                chart_response = self.exchange.get_chart_data(self.symbol, tf_use, '14d')
                                 candles = chart_response.get('data', {}).get('candles', []) if chart_response and chart_response.get('success') else None
                                 
                                 if candles and len(candles) >= 20:

@@ -105,10 +105,10 @@ class ContinuousDataLoader:
                 
                 # Получаем текущий таймфрейм для логирования
                 try:
-                    from bot_engine.bot_config import get_current_timeframe
+                    from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
                     current_timeframe = get_current_timeframe()
-                except:
-                    current_timeframe = '6h'  # Fallback
+                except Exception:
+                    current_timeframe = TIMEFRAME
                 
                 logger.info("=" * 80)
                 logger.info(f"РАУНД #{self.update_count} НАЧАТ")
