@@ -87,29 +87,134 @@ def _apply_memory_limit_if_configured():
     Ограничение потребления ОЗУ процессом ai.py (AI_MEMORY_LIMIT_MB или AI_MEMORY_PCT).
     На Linux/macOS: resource.setrlimit(RLIMIT_AS).
     На Windows: лимит на процесс недоступен — используются только ограничения нагрузки из AILauncherConfig.
+    Сообщения выводятся только в главном процессе, чтобы не дублировать в дочерних (data-service, scheduler, train).
     """
     computed, kind, total_mb, pct = _compute_memory_limit_mb()
     if computed is None:
         return
     limit_mb = computed
-    if kind == 'pct' and total_mb is not None and pct is not None:
-        sys.stderr.write(f"[AI] Лимит ОЗУ: {limit_mb} MB ({pct:.0f}% от {total_mb} MB)\n")
-    elif kind == 'mb':
-        sys.stderr.write(f"[AI] Лимит ОЗУ: {limit_mb} MB (AI_MEMORY_LIMIT_MB)\n")
+    try:
+        import multiprocessing
+        _is_main = multiprocessing.current_process().name == 'MainProcess'
+    except Exception:
+        _is_main = True
+    if _is_main:
+        if kind == 'pct' and total_mb is not None and pct is not None:
+            sys.stderr.write(f"[AI] Лимит ОЗУ: {limit_mb} MB ({pct:.0f}% от {total_mb} MB)\n")
+        elif kind == 'mb':
+            sys.stderr.write(f"[AI] Лимит ОЗУ: {limit_mb} MB (AI_MEMORY_LIMIT_MB)\n")
+        if sys.platform == 'win32':
+            sys.stderr.write(
+                "[AI] На Windows жёсткий лимит процесса недоступен. "
+                "Ограничения нагрузки (AILauncherConfig): меньше потоков/символов/свечей/батч — целевой ориентир, фактическое потребление может быть выше (модели, несколько процессов).\n"
+            )
     if sys.platform == 'win32':
-        sys.stderr.write("[AI] На Windows лимит процесса недоступен, используются ограничения нагрузки из AILauncherConfig.\n")
         return
     try:
         import resource
         limit_bytes = limit_mb * 1024 * 1024
         resource.setrlimit(resource.RLIMIT_AS, (limit_bytes, limit_bytes))
     except (ValueError, OSError) as e:
-        sys.stderr.write(f"[AI] Не удалось установить лимит ОЗУ {limit_mb} MB: {e}\n")
+        if _is_main:
+            sys.stderr.write(f"[AI] Не удалось установить лимит ОЗУ {limit_mb} MB: {e}\n")
     except Exception:
         pass
 
 
 _apply_memory_limit_if_configured()
+
+
+def _apply_cpu_limit_if_configured():
+    """
+    Ограничение загрузки CPU в % (только Windows 8+, Job Object).
+    Читает AI_CPU_PCT из bot_config.SystemConfig или env AI_CPU_PCT (1–100).
+    """
+    if sys.platform != 'win32':
+        return
+    pct = 0
+    try:
+        from bot_engine.bot_config import SystemConfig
+        pct = getattr(SystemConfig, 'AI_CPU_PCT', 0) or 0
+    except Exception:
+        pass
+    if not pct:
+        pct_str = os.environ.get('AI_CPU_PCT', '').strip()
+        if pct_str:
+            try:
+                pct = int(float(pct_str.replace(',', '.')))
+                pct = max(1, min(100, pct))
+            except ValueError:
+                return
+    if pct <= 0:
+        return
+    try:
+        import multiprocessing
+        if multiprocessing.current_process().name != 'MainProcess':
+            return
+    except Exception:
+        pass
+    try:
+        import ctypes
+        from ctypes import wintypes
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        JOB_OBJECT_CPU_RATE_CONTROL_ENABLE = 0x1
+        JOB_OBJECT_CPU_RATE_CONTROL_HARD_CAP = 0x4
+        JobObjectCpuRateControlInformation = 15
+        # CpuRate = процент × 100 (20% → 2000)
+        cpu_rate = pct * 100
+        class JOBOBJECT_CPU_RATE_CONTROL_INFORMATION(ctypes.Structure):
+            _fields_ = [
+                ('ControlFlags', wintypes.DWORD),
+                ('CpuRate', wintypes.DWORD),
+            ]
+        CreateJobObjectW = kernel32.CreateJobObjectW
+        CreateJobObjectW.argtypes = [wintypes.LPVOID, wintypes.LPCWSTR]
+        CreateJobObjectW.restype = wintypes.HANDLE
+        AssignProcessToJobObject = kernel32.AssignProcessToJobObject
+        AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        AssignProcessToJobObject.restype = wintypes.BOOL
+        SetInformationJobObject = kernel32.SetInformationJobObject
+        SetInformationJobObject.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.c_void_p]
+        SetInformationJobObject.restype = wintypes.BOOL
+        job = CreateJobObjectW(None, None)
+        if not job:
+            return
+        if not AssignProcessToJobObject(job, kernel32.GetCurrentProcess()):
+            kernel32.CloseHandle(job)
+            return
+        info = JOBOBJECT_CPU_RATE_CONTROL_INFORMATION(
+            ControlFlags=JOB_OBJECT_CPU_RATE_CONTROL_ENABLE | JOB_OBJECT_CPU_RATE_CONTROL_HARD_CAP,
+            CpuRate=cpu_rate,
+        )
+        if SetInformationJobObject(job, JobObjectCpuRateControlInformation, ctypes.byref(info)):
+            sys.stderr.write(f"[AI] Лимит CPU: {pct}%\n")
+        kernel32.CloseHandle(job)
+    except Exception:
+        pass
+
+
+def _set_gpu_memory_fraction_env():
+    """Выставляет AI_GPU_MEMORY_FRACTION в env из конфига (применяется при первом использовании CUDA в lstm_predictor/pytorch_setup)."""
+    frac = 0
+    try:
+        from bot_engine.bot_config import SystemConfig
+        frac = getattr(SystemConfig, 'AI_GPU_MEMORY_FRACTION', 0) or 0
+    except Exception:
+        pass
+    if not frac:
+        frac_str = os.environ.get('AI_GPU_MEMORY_FRACTION', '').strip()
+        if frac_str:
+            try:
+                frac = float(frac_str.replace(',', '.'))
+            except ValueError:
+                pass
+    if frac and 0 < frac <= 1:
+        os.environ['AI_GPU_MEMORY_FRACTION'] = str(max(0.01, min(1.0, frac)))
+
+
+_set_gpu_memory_fraction_env()
+_apply_cpu_limit_if_configured()
+
 
 # Проверка и автоматическая установка PyTorch ПЕРЕД импортом защищенного модуля
 def _check_and_install_pytorch():
