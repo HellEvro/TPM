@@ -454,10 +454,10 @@ def get_coin_candles_only(symbol, exchange_obj=None, timeframe=None):
         # Получаем таймфрейм (переданный или системный)
         if timeframe is None:
             try:
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
                 timeframe = get_current_timeframe()
-            except:
-                timeframe = '6h'  # Fallback
+            except Exception:
+                timeframe = TIMEFRAME
         
         # Получаем ТОЛЬКО свечи с указанным таймфреймом
         chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '30d')
@@ -755,10 +755,10 @@ def check_exit_scam_filter(symbol, coin_data):
 
         # Проверка ExitScam по выбранному таймфрейму (настройки — в опциях)
         try:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
             current_timeframe = get_current_timeframe()
         except Exception:
-            current_timeframe = '6h'
+            current_timeframe = TIMEFRAME
         chart_response = exchange_obj.get_chart_data(symbol, current_timeframe, '30d')
         candles = chart_response.get('data', {}).get('candles', []) if chart_response and chart_response.get('success') else []
         if candles:
@@ -1661,19 +1661,26 @@ def get_required_timeframes():
     """Таймфреймы для загрузки свечей (системный + 6h для change_24h + entry_tf ботов)."""
     timeframes = set()
     try:
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
         system_tf = get_current_timeframe()
         timeframes.add(system_tf)
     except Exception:
-        timeframes.add('6h')
+        from bot_engine.bot_config import TIMEFRAME
+        timeframes.add(TIMEFRAME)
     timeframes.add('6h')  # Свечи 6h нужны для change_24h (4 свечи 6h = 24ч)
+    try:
+        from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+        default_tf = get_current_timeframe()
+    except Exception:
+        from bot_engine.bot_config import TIMEFRAME
+        default_tf = TIMEFRAME
     try:
         from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
         with bots_data_lock:
             for symbol, bot_data in bots_data.get('bots', {}).items():
                 status = bot_data.get('status')
                 if status in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
-                    entry_tf = bot_data.get('entry_timeframe') or '6h'
+                    entry_tf = bot_data.get('entry_timeframe') or default_tf
                     timeframes.add(entry_tf)
     except Exception as e:
         logger.debug(f"⚠️ Ошибка сбора таймфреймов из ботов: {e}")
@@ -1684,22 +1691,28 @@ def get_required_timeframes():
 
 
 def get_required_timeframes_for_rsi():
-    """Таймфреймы только для расчёта RSI. 6h не добавляем при ТФ 1m — двойной расчёт по 560 монетам не нужен."""
+    """Таймфреймы только для расчёта RSI (системный + entry_tf ботов в позиции)."""
     timeframes = set()
     try:
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
         system_tf = get_current_timeframe()
         timeframes.add(system_tf)
     except Exception:
-        timeframes.add('6h')
-    # Не добавляем 6h: change_24h считается по свечам 6h из кэша, не по RSI 6h
+        from bot_engine.bot_config import TIMEFRAME
+        timeframes.add(TIMEFRAME)
+    try:
+        from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+        default_tf = get_current_timeframe()
+    except Exception:
+        from bot_engine.bot_config import TIMEFRAME
+        default_tf = TIMEFRAME
     try:
         from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
         with bots_data_lock:
             for symbol, bot_data in bots_data.get('bots', {}).items():
                 status = bot_data.get('status')
                 if status in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
-                    entry_tf = bot_data.get('entry_timeframe') or '6h'
+                    entry_tf = bot_data.get('entry_timeframe') or default_tf
                     timeframes.add(entry_tf)
     except Exception as e:
         logger.debug(f"⚠️ Ошибка сбора таймфреймов из ботов: {e}")
@@ -1729,7 +1742,12 @@ def load_all_coins_candles_fast():
         # ✅ ОПТИМИЗАЦИЯ: Получаем все требуемые таймфреймы
         required_timeframes = get_required_timeframes()
         if not required_timeframes:
-            required_timeframes = ['6h']  # Fallback
+            try:
+                from bot_engine.bot_config import get_current_timeframe
+                required_timeframes = [get_current_timeframe()]
+            except Exception:
+                from bot_engine.bot_config import TIMEFRAME
+                required_timeframes = [TIMEFRAME]
         
         logger.info(f"📦 Загружаем свечи для таймфреймов: {required_timeframes}")
 
@@ -1923,11 +1941,11 @@ def load_all_coins_candles_fast():
                         # Преобразуем формат для ai_database
                         # Получаем текущий таймфрейм динамически
                         try:
-                            from bot_engine.bot_config import get_current_timeframe
+                            from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
                             current_timeframe = get_current_timeframe()
-                        except:
-                            current_timeframe = '6h'  # Fallback
-                        
+                        except Exception:
+                            current_timeframe = TIMEFRAME
+
                         saved_count = 0
                         # ✅ ОПТИМИЗАЦИЯ: Сохраняем свечи для всех таймфреймов
                         for symbol, symbol_data in merged_candles_cache.items():
@@ -2024,7 +2042,12 @@ def load_all_coins_rsi():
         # ✅ ОПТИМИЗАЦИЯ: для RSI только системный ТФ + entry_tf ботов (6h не считаем — при 1m это двойной расчёт по 560 монетам)
         required_timeframes = get_required_timeframes_for_rsi()
         if not required_timeframes:
-            required_timeframes = ["6h"]  # Fallback
+            try:
+                from bot_engine.bot_config import get_current_timeframe
+                required_timeframes = [get_current_timeframe()]
+            except Exception:
+                from bot_engine.bot_config import TIMEFRAME
+                required_timeframes = [TIMEFRAME]
 
         logger.info(f"📊 RSI: рассчитываем для таймфреймов: {required_timeframes}")
 
@@ -2397,7 +2420,7 @@ def process_auto_bot_signals(exchange_obj=None):
         
         logger.info(" ✅ Автобот включен, начинаем проверку сигналов")
         
-        max_concurrent = bots_data['auto_bot_config']['max_concurrent']
+        max_concurrent = bots_data['auto_bot_config'].get('max_concurrent', 20)
         rsi_long_threshold = bots_data['auto_bot_config'].get('rsi_long_threshold', 29)
         rsi_short_threshold = bots_data['auto_bot_config'].get('rsi_short_threshold', 71)
         
@@ -2426,6 +2449,9 @@ def process_auto_bot_signals(exchange_obj=None):
         
         current_active = sum(1 for bot in bots_data['bots'].values() 
                            if bot['status'] not in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']])
+        
+        slots_free = max(0, max_concurrent - current_active)
+        logger.info(f" 📊 Лимит ботов: {current_active}/{max_concurrent} активных, слотов для новых: {slots_free}")
         
         if current_active >= max_concurrent:
             logger.debug(f" 🚫 Достигнут лимит активных ботов ({current_active}/{max_concurrent})")
@@ -2463,15 +2489,27 @@ def process_auto_bot_signals(exchange_obj=None):
                         'coin_data': coin_data
                     })
         
-        logger.info(f" 🎯 Найдено {len(potential_coins)} потенциальных сигналов")
+        long_count = sum(1 for c in potential_coins if c['signal'] == 'ENTER_LONG')
+        short_count = sum(1 for c in potential_coins if c['signal'] == 'ENTER_SHORT')
+        logger.info(f" 🎯 Найдено {len(potential_coins)} потенциальных сигналов (LONG: {long_count}, SHORT: {short_count})")
+        # Вывод в консоль: сигналы = все фильтры пройдены, можно заходить в сделку
+        try:
+            print(f"\n[BOTS] === SIGNALS (filters passed, can enter) ===", flush=True)
+            print(f"[BOTS] LONG: {long_count}  SHORT: {short_count}  candidates: {len(potential_coins)}", flush=True)
+            print(f"[BOTS] Active bots: {current_active}/{max_concurrent}  slots free: {slots_free}", flush=True)
+            print(f"[BOTS] ===========================================\n", flush=True)
+        except Exception:
+            pass
         
         # ✅ Логируем найденные сигналы для диагностики
         if potential_coins:
             logger.info(f" 📋 Потенциальные сигналы: {[(c['symbol'], c['signal'], f'RSI={c['rsi']:.1f}') for c in potential_coins[:10]]}")
         
-        # Создаем ботов для найденных сигналов
+        # Создаем ботов для найденных сигналов (до slots_free штук за один проход)
         created_bots = 0
-        for coin in potential_coins[:max_concurrent - current_active]:
+        to_try = potential_coins[:slots_free]
+        logger.info(f" 🎯 Пробуем создать до {len(to_try)} ботов из {len(potential_coins)} кандидатов")
+        for coin in to_try:
             symbol = coin['symbol']
             
             # Проверяем, нет ли уже бота для этого символа
@@ -2647,7 +2685,15 @@ def process_auto_bot_signals(exchange_obj=None):
                 # Бот не был в списке — не добавляем и не переводим в IDLE
         
         if created_bots > 0:
-            logger.info(f" ✅ Создано {created_bots} новых ботов")
+            logger.info(f" ✅ Создано {created_bots} новых ботов в этом цикле")
+        # Всегда логируем итог: сколько активных, сколько слотов до лимита
+        with bots_data_lock:
+            now_active = sum(1 for b in bots_data['bots'].values() if b.get('status') not in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']])
+        logger.info(f" 📊 Итог: активных ботов {now_active}/{max_concurrent}, слотов свободно: {max(0, max_concurrent - now_active)}")
+        try:
+            print(f"[BOTS] Cycle done: active bots {now_active}/{max_concurrent}, created this cycle: {created_bots}", flush=True)
+        except Exception:
+            pass
         
     except Exception as e:
         logger.error(f" ❌ Ошибка обработки сигналов: {e}")
@@ -2708,18 +2754,33 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                     logger.warning(f"❌ {symbol}: RSI данные не найдены - пропускаем проверку")
                     continue
                 
-                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data, get_rsi_key, get_trend_key
+                from bot_engine.bot_config import (
+                    get_rsi_from_coin_data, get_trend_from_coin_data, get_rsi_key, get_trend_key,
+                    RSI_EXIT_LONG_WITH_TREND, RSI_EXIT_LONG_AGAINST_TREND,
+                    RSI_EXIT_SHORT_WITH_TREND, RSI_EXIT_SHORT_AGAINST_TREND,
+                )
                 # ✅ Используем таймфрейм бота для получения RSI и тренда
                 current_rsi = get_rsi_from_coin_data(rsi_data, timeframe=timeframe_to_use)
                 current_trend = get_trend_from_coin_data(rsi_data, timeframe=timeframe_to_use)
                 logger.info(f"✅ {symbol}: RSI={current_rsi} (ТФ={timeframe_to_use}), Trend={current_trend}, Проверяем условия закрытия...")
-                
-                # Обрабатываем торговые сигналы через метод update
-                # ✅ Используем сигнал и тренд для таймфрейма бота
+
                 rsi_key = get_rsi_key(timeframe_to_use)
                 trend_key = get_trend_key(timeframe_to_use)
-                external_signal = rsi_data.get('signal')  # Сигнал определяется по текущему RSI
-                external_trend = rsi_data.get(trend_key) or rsi_data.get('trend6h')  # Тренд для таймфрейма бота
+                external_trend = rsi_data.get(trend_key) or rsi_data.get('trend6h')
+                # ✅ Сигнал выхода по RSI — по выбранному ТФ бота (не системному)
+                position_side = bot_data.get('position_side') or (bot_data.get('position') or {}).get('side')
+                entry_trend = bot_data.get('entry_trend')
+                if current_rsi is not None and position_side:
+                    if position_side == 'LONG':
+                        thr = RSI_EXIT_LONG_WITH_TREND if entry_trend == 'UP' else RSI_EXIT_LONG_AGAINST_TREND
+                        external_signal = 'EXIT_LONG' if current_rsi >= thr else (rsi_data.get('signal') or 'WAIT')
+                    elif position_side == 'SHORT':
+                        thr = RSI_EXIT_SHORT_WITH_TREND if entry_trend == 'DOWN' else RSI_EXIT_SHORT_AGAINST_TREND
+                        external_signal = 'EXIT_SHORT' if current_rsi <= thr else (rsi_data.get('signal') or 'WAIT')
+                    else:
+                        external_signal = rsi_data.get('signal') or 'WAIT'
+                else:
+                    external_signal = rsi_data.get('signal') or 'WAIT'
                 
                 signal_result = trading_bot.update(
                     force_analysis=True, 
@@ -3100,14 +3161,14 @@ def _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=None):
         if not exch:
             return False
         try:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
             current_timeframe = get_current_timeframe()
         except Exception:
-            current_timeframe = '6h'
+            current_timeframe = TIMEFRAME
         chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
         if not chart_response or not chart_response.get('success'):
             return False
-        
+
         candles = chart_response.get('data', {}).get('candles', [])
         if len(candles) < exit_scam_candles:
             return False
@@ -3236,17 +3297,16 @@ def get_lstm_prediction(symbol, signal, current_price):
             if not exch:
                 return None
             
-            # Получаем текущий таймфрейм динамически
             try:
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
                 current_timeframe = get_current_timeframe()
-            except:
-                current_timeframe = '6h'  # Fallback
-            
+            except Exception:
+                current_timeframe = TIMEFRAME
+
             chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
             if not chart_response or not chart_response.get('success'):
                 return None
-            
+
             candles = chart_response.get('data', {}).get('candles', [])
             if len(candles) < 60:  # LSTM требует минимум 60 свечей
                 return None
@@ -3332,17 +3392,16 @@ def get_pattern_analysis(symbol, signal, current_price):
             if not exch:
                 return None
             
-            # Получаем текущий таймфрейм динамически
             try:
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
                 current_timeframe = get_current_timeframe()
-            except:
-                current_timeframe = '6h'  # Fallback
-            
+            except Exception:
+                current_timeframe = TIMEFRAME
+
             chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
             if not chart_response or not chart_response.get('success'):
                 return None
-            
+
             candles = chart_response.get('data', {}).get('candles', [])
             if len(candles) < 100:  # Pattern требует минимум 100 свечей
                 return None
@@ -3584,17 +3643,16 @@ def test_rsi_time_filter(symbol):
             logger.error(f"{symbol}: Биржа не инициализирована")
             return
                 
-        # Получаем текущий таймфрейм динамически
         try:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
             current_timeframe = get_current_timeframe()
-        except:
-            current_timeframe = '6h'  # Fallback
+        except Exception:
+            current_timeframe = TIMEFRAME
         chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
         if not chart_response or not chart_response.get('success'):
             logger.error(f"{symbol}: Не удалось получить свечи")
             return
-        
+
         candles = chart_response.get('data', {}).get('candles', [])
         if len(candles) < 50:
             logger.error(f"{symbol}: Недостаточно свечей ({len(candles)})")

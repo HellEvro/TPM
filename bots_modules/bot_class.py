@@ -180,8 +180,13 @@ class NewTradingBot:
         self.entry_trend = self.config.get('entry_trend', None)
         
         # ✅ Таймфрейм при входе в позицию (критично для работы с позициями из разных ТФ)
-        # Обратная совместимость: если не указан, используем '6h' (все старые позиции были в 6ч)
-        self.entry_timeframe = self.config.get('entry_timeframe') or '6h'
+        # По умолчанию — выбранный системный ТФ; для старых записей из БД может быть '6h'
+        try:
+            from bot_engine.bot_config import get_current_timeframe
+            _default_tf = get_current_timeframe()
+        except Exception:
+            _default_tf = '6h'
+        self.entry_timeframe = self.config.get('entry_timeframe') or _default_tf
 
         # AI метаданные
         self.ai_decision_id = self.config.get('ai_decision_id')
