@@ -1005,10 +1005,10 @@ class BybitExchange(BaseExchange):
                     clean_symbol(item['symbol'])
                     for item in trading_pairs
                 ]
-                
+                # Исключаем псевдо-символ "all" (если API когда-либо вернёт ALLUSDT)
+                pairs = [p for p in pairs if p and str(p).strip().lower() != 'all']
                 # Логируем только общее количество пар
                 logger.info(f"✅ Загружено {len(pairs)} торговых пар")
-                
                 return sorted(pairs)
             else:
                 logger.error(f"Ошибка API: {response.get('retMsg', 'Unknown error')}")
@@ -1035,6 +1035,14 @@ class BybitExchange(BaseExchange):
         time.sleep(self.current_request_delay)
         
         try:
+            # Символ "all" не является торговой парой — не вызываем API (Bybit вернёт Symbol Is Invalid)
+            if not symbol or str(symbol).strip().lower() == 'all':
+                logger.warning("[BYBIT] get_chart_data: пропуск запроса для символа 'all' (не поддерживается API)")
+                return {
+                    'success': False,
+                    'error': 'Symbol "all" is not a valid trading pair',
+                    'data': {'candles': []}
+                }
             # Специальная обработка для таймфрейма "all"
             if timeframe == 'all':
                 # Последовательно пробуем разные интервалы
@@ -1222,6 +1230,7 @@ class BybitExchange(BaseExchange):
                 # Стандартная обработка для конкретного таймфрейма
                 timeframe_map = {
                     '1m': '1',
+                    '3m': '3',
                     '5m': '5',
                     '15m': '15',
                     '30m': '30',
@@ -1431,11 +1440,13 @@ class BybitExchange(BaseExchange):
             # Конвертируем таймфрейм в формат Bybit
             timeframe_map = {
                 '1m': '1',
+                '3m': '3',
                 '5m': '5',
                 '15m': '15',
                 '30m': '30',
                 '1h': '60',
                 '4h': '240',
+                '6h': '360',
                 '1d': 'D',
                 '1w': 'W'
             }

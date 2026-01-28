@@ -2001,6 +2001,7 @@ class BotsManager {
             // Получаем RSI с учетом текущего таймфрейма
             const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
             const rsiKey = `rsi${currentTimeframe}`;
+            const trendKey = `trend${currentTimeframe}`;
             const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
             const trend = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
             const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
@@ -11537,13 +11538,13 @@ class BotsManager {
                     // Очищаем кэш и перезагружаем данные
                     this.coinsRsiData = [];
                     
-                    // Запрашиваем принудительное обновление RSI на сервере
+                    // Запрашиваем полное обновление RSI на сервере (не refresh-rsi/all — символ "all" не поддерживается API биржи)
                     try {
-                        const refreshResponse = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/refresh-rsi/all`, {
+                        const refreshResponse = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/refresh-rsi-all`, {
                             method: 'POST'
                         });
                         if (refreshResponse.ok) {
-                            console.log('[BotsManager] ✅ Запрошено принудительное обновление RSI на сервере');
+                            console.log('[BotsManager] ✅ Запрошено полное обновление RSI на сервере');
                         }
                     } catch (refreshError) {
                         console.warn('[BotsManager] ⚠️ Не удалось запросить обновление RSI:', refreshError);

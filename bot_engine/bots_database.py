@@ -6019,7 +6019,8 @@ class BotsDatabase:
                     row = cursor.fetchone()
                     if row:
                         timeframe = row[0]
-                        logger.info(f"✅ Таймфрейм загружен из БД: {timeframe}")
+                        # Переводим спамный лог в DEBUG, чтобы не засорять основной лог
+                        logger.debug(f"✅ Таймфрейм загружен из БД: {timeframe}")
                         return timeframe
                     return None
         except Exception as e:

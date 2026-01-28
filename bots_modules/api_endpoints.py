@@ -1003,43 +1003,13 @@ def create_bot_endpoint():
             bot_runtime_config['rsi_time_filter_enabled'] = False
         
         if enable_maturity_check_coin and not has_manual_position:
-            # Получаем данные свечей для проверки зрелости
-            current_exchange = get_exchange()
-            if not current_exchange:
+            # Проверяем зрелость по каноническому ТФ 6h (хранилище или загрузка 6h свечей при верификации)
+            from bots_modules.filters import check_coin_maturity_stored_or_verify
+            if not check_coin_maturity_stored_or_verify(symbol):
+                logger.warning(f" {symbol}: Монета не прошла проверку зрелости (ТФ 6h)")
                 return jsonify({
                     'success': False,
-                    'error': 'Exchange not initialized'
-                }), 503
-            # ✅ ИСПОЛЬЗУЕМ КЭШ ИЗ ПАМЯТИ ИЛИ БД (не требует запроса к бирже)
-            candles = []
-            candles_cache = coins_rsi_data.get('candles_cache', {})
-            if symbol in candles_cache:
-                cached_data = candles_cache[symbol]
-                candles = cached_data.get('candles', [])
-            else:
-                # Если нет в памяти, читаем из БД
-                try:
-                    from bot_engine.storage import get_candles_for_symbol
-                    db_cached_data = get_candles_for_symbol(symbol)
-                    if db_cached_data:
-                        candles = db_cached_data.get('candles', [])
-                except Exception as e:
-                    logger.debug(f"Не удалось прочитать кэш из БД для {symbol}: {e}")
-            
-            if candles and len(candles) >= 15:
-                maturity_check = check_coin_maturity_with_storage(symbol, candles)
-                if not maturity_check['is_mature']:
-                    logger.warning(f" {symbol}: Монета не прошла проверку зрелости - {maturity_check['reason']}")
-                    return jsonify({
-                        'success': False, 
-                        'error': f'Монета {symbol} не прошла проверку зрелости: {maturity_check["reason"]}',
-                        'maturity_details': maturity_check['details']
-                    }), 400
-            else:
-                logger.warning(f" {symbol}: Недостаточно данных для проверки зрелости")
-                return jsonify({
-                    'success': False, 
-                    'error': f'Недостаточно данных для проверки зрелости монеты {symbol}'
+                    'error': f'Монета {symbol} не прошла проверку зрелости (проверка по таймфрейму 6h)'
                 }), 400
         elif has_manual_position:
             logger.info(f" ✋ {symbol}: Ручная позиция обнаружена - проверка зрелости пропущена")
@@ -2212,6 +2182,14 @@ def refresh_rsi_for_coin(symbol):
     try:
         global coins_rsi_data
         
+        # Символ "all" не является торговой парой — не вызываем get_coin_rsi_data (биржа вернёт Symbol Is Invalid)
+        if not symbol or str(symbol).strip().lower() == 'all':
+            logger.info(" 🔄 Обновление RSI для 'all': перенаправление на полное обновление или отказ")
+            return jsonify({
+                'success': False,
+                'error': 'Для обновления всех монет используйте полное обновление RSI (refresh-rsi-all). Символ "all" не поддерживается API биржи.'
+            }), 400
+
         logger.info(f" 🔄 Обновление RSI данных для {symbol}...")
         
         # Проверяем биржу
