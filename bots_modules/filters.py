@@ -1658,39 +1658,54 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         return None
 
 def get_required_timeframes():
-    """✅ ОПТИМИЗАЦИЯ: Собирает все таймфреймы, которые нужно загружать
-    
-    Возвращает:
-        list: Список уникальных таймфреймов (системный + 6h для change_24h/зрелости + entry_timeframe ботов в позиции)
-    """
+    """Таймфреймы для загрузки свечей (системный + 6h для change_24h + entry_tf ботов)."""
     timeframes = set()
-    
-    # 1. Добавляем системный таймфрейм (для новых входов)
     try:
         from bot_engine.bot_config import get_current_timeframe
         system_tf = get_current_timeframe()
         timeframes.add(system_tf)
-    except:
-        timeframes.add('6h')  # Fallback
-    
-    # 2. Всегда добавляем 6h: change_24h считаем по 4 свечам 6h (=24ч); 1 свеча 6h = 360 свечей 1m
-    timeframes.add('6h')
-    
-    # 3. Собираем entry_timeframe из всех ботов в позиции
+    except Exception:
+        timeframes.add('6h')
+    timeframes.add('6h')  # Свечи 6h нужны для change_24h (4 свечи 6h = 24ч)
     try:
         from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
         with bots_data_lock:
             for symbol, bot_data in bots_data.get('bots', {}).items():
                 status = bot_data.get('status')
                 if status in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
-                    entry_tf = bot_data.get('entry_timeframe') or '6h'  # По умолчанию 6h для старых позиций
+                    entry_tf = bot_data.get('entry_timeframe') or '6h'
                     timeframes.add(entry_tf)
     except Exception as e:
         logger.debug(f"⚠️ Ошибка сбора таймфреймов из ботов: {e}")
-    
     result = sorted(list(timeframes))
     if result:
-        logger.debug(f"📊 Требуемые таймфреймы: {result}")
+        logger.debug(f"📊 Требуемые таймфреймы (свечи): {result}")
+    return result
+
+
+def get_required_timeframes_for_rsi():
+    """Таймфреймы только для расчёта RSI. 6h не добавляем при ТФ 1m — двойной расчёт по 560 монетам не нужен."""
+    timeframes = set()
+    try:
+        from bot_engine.bot_config import get_current_timeframe
+        system_tf = get_current_timeframe()
+        timeframes.add(system_tf)
+    except Exception:
+        timeframes.add('6h')
+    # Не добавляем 6h: change_24h считается по свечам 6h из кэша, не по RSI 6h
+    try:
+        from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
+        with bots_data_lock:
+            for symbol, bot_data in bots_data.get('bots', {}).items():
+                status = bot_data.get('status')
+                if status in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
+                    entry_tf = bot_data.get('entry_timeframe') or '6h'
+                    timeframes.add(entry_tf)
+    except Exception as e:
+        logger.debug(f"⚠️ Ошибка сбора таймфреймов из ботов: {e}")
+    result = sorted(list(timeframes))
+    if result:
+        logger.debug(f"📊 Требуемые таймфреймы (RSI): {result}")
     return result
 
 
@@ -2006,8 +2021,8 @@ def load_all_coins_rsi():
         return False
 
     try:
-        # ✅ ОПТИМИЗАЦИЯ: Получаем все требуемые таймфреймы
-        required_timeframes = get_required_timeframes()
+        # ✅ ОПТИМИЗАЦИЯ: для RSI только системный ТФ + entry_tf ботов (6h не считаем — при 1m это двойной расчёт по 560 монетам)
+        required_timeframes = get_required_timeframes_for_rsi()
         if not required_timeframes:
             required_timeframes = ["6h"]  # Fallback
 
@@ -2383,6 +2398,32 @@ def process_auto_bot_signals(exchange_obj=None):
         logger.info(" ✅ Автобот включен, начинаем проверку сигналов")
         
         max_concurrent = bots_data['auto_bot_config']['max_concurrent']
+        rsi_long_threshold = bots_data['auto_bot_config'].get('rsi_long_threshold', 29)
+        rsi_short_threshold = bots_data['auto_bot_config'].get('rsi_short_threshold', 71)
+        
+        # Освобождаем слоты: боты без позиции, у которых монета уже вне зоны RSI — переводим в IDLE
+        # (чтобы справа были боты для монет с текущим сигналом слева, а не «зависшие» вне зоны)
+        with bots_data_lock:
+            from bot_engine.bot_config import get_rsi_from_coin_data
+            for symbol, bot_data in list(bots_data['bots'].items()):
+                status = bot_data.get('status')
+                if status in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']]:
+                    continue
+                if status in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
+                    continue
+                if bot_data.get('entry_price') or bot_data.get('position_side'):
+                    continue
+                coin_data = coins_rsi_data.get('coins', {}).get(symbol)
+                if not coin_data:
+                    continue
+                rsi = get_rsi_from_coin_data(coin_data)
+                if rsi is None:
+                    continue
+                # Монета вне зоны входа: RSI между порогами (не LONG, не SHORT)
+                if rsi > rsi_long_threshold and rsi < rsi_short_threshold:
+                    logger.info(f" 🧹 {symbol}: бот без позиции, RSI={rsi:.1f} вне зоны ({rsi_long_threshold}/{rsi_short_threshold}) — переводим в IDLE")
+                    bot_data['status'] = BOT_STATUS['IDLE']
+        
         current_active = sum(1 for bot in bots_data['bots'].values() 
                            if bot['status'] not in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']])
         
@@ -2538,67 +2579,72 @@ def process_auto_bot_signals(exchange_obj=None):
                 logger.warning(f" 🚫 {symbol}: Блокируем создание бота из-за ошибки проверки фильтров!")
                 continue
             
-            # Создаем нового бота (фильтры уже проверены!)
+            # Единая проверка AI перед входом (если включена)
+            signal = coin['signal']
+            direction = 'LONG' if signal == 'ENTER_LONG' else 'SHORT'
+            auto_config = bots_data.get('auto_bot_config', {})
+            last_ai_result = None
+            if auto_config.get('ai_enabled'):
+                try:
+                    from bot_engine.ai.ai_integration import should_open_position_with_ai
+                    from bots_modules.imports_and_globals import get_config_snapshot
+                    config_snapshot = get_config_snapshot(symbol)
+                    filter_config = config_snapshot.get('merged', {}) or auto_config
+                    price = float(coin.get('coin_data', {}).get('price') or coin.get('price') or 0)
+                    candles_for_ai = None
+                    if symbol in coins_rsi_data.get('candles_cache', {}):
+                        c = coins_rsi_data['candles_cache'][symbol]
+                        if isinstance(c, dict):
+                            candles_for_ai = c.get('candles')
+                            if not candles_for_ai and c:
+                                from bot_engine.bot_config import get_current_timeframe
+                                tf = get_current_timeframe()
+                                candles_for_ai = (c.get(tf) or {}).get('candles') if tf else None
+                                if not candles_for_ai:
+                                    for v in (c.values() if isinstance(c, dict) else []):
+                                        if isinstance(v, dict) and v.get('candles'):
+                                            candles_for_ai = v['candles']
+                                            break
+                    last_ai_result = should_open_position_with_ai(
+                        symbol=symbol,
+                        direction=direction,
+                        rsi=coin['rsi'],
+                        trend=coin.get('trend') or 'NEUTRAL',
+                        price=price,
+                        config=filter_config,
+                        candles=candles_for_ai
+                    )
+                    if last_ai_result.get('ai_used') and not last_ai_result.get('should_open'):
+                        if filter_config.get('ai_override_original', True):
+                            logger.info(f" 🤖 {symbol}: AI блокирует вход {direction}: {last_ai_result.get('reason', '')}")
+                            continue
+                except Exception as ai_err:
+                    logger.debug(f" {symbol}: Проверка AI не выполнена: {ai_err}")
+            
+            # Создаём бота в памяти, входим по рынку, в список добавляем только после успешного входа
             try:
-                logger.info(f" 🚀 Создаем бота для {symbol} ({coin['signal']}, RSI: {coin['rsi']:.1f})")
-                new_bot = create_new_bot(symbol, exchange_obj=exchange_obj)
-                
-                # ✅ КРИТИЧНО: Проверяем should_open_long/short ПЕРЕД входом в позицию!
-                # Это важно, так как там проверяется фильтр loss_reentry_protection
-                signal = coin['signal']
-                direction = 'LONG' if signal == 'ENTER_LONG' else 'SHORT'
-                
-                # Получаем свечи для проверки (кэш: symbol -> timeframe -> {candles} или symbol -> {candles})
-                candles = None
-                if symbol in coins_rsi_data.get('candles_cache', {}):
-                    c = coins_rsi_data['candles_cache'][symbol]
-                    if isinstance(c, dict) and c.get('candles'):
-                        candles = c['candles']
-                    elif isinstance(c, dict):
-                        from bot_engine.bot_config import get_current_timeframe
-                        tf = get_current_timeframe()
-                        candles = c.get(tf, {}).get('candles') if tf else None
-                        if not candles:
-                            for v in c.values():
-                                if isinstance(v, dict) and v.get('candles'):
-                                    candles = v['candles']
-                                    break
-                
-                if not candles:
-                    try:
-                        candles_data = get_coin_candles_only(symbol, exchange_obj=exchange_obj)
-                        if candles_data:
-                            candles = candles_data.get('candles')
-                    except Exception:
-                        pass
-                
-                # Получаем RSI и тренд с учетом текущего таймфрейма
-                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
-                rsi = get_rsi_from_coin_data(coin) or 50
-                trend = get_trend_from_coin_data(coin)
-                
-                # ✅ КРИТИЧНО: Проверяем should_open_long/short ПЕРЕД входом!
-                if direction == 'LONG':
-                    if not new_bot.should_open_long(rsi, trend, candles):
-                        logger.warning(f" 🚫 {symbol}: should_open_long вернул False - пропускаем вход в позицию")
-                        continue
-                else:  # SHORT
-                    if not new_bot.should_open_short(rsi, trend, candles):
-                        logger.warning(f" 🚫 {symbol}: should_open_short вернул False - пропускаем вход в позицию")
-                        continue
-                
+                logger.info(f" 🚀 Создаем бота для {symbol} ({signal}, RSI: {coin['rsi']:.1f})")
+                new_bot = create_new_bot(symbol, exchange_obj=exchange_obj, register=False)
+                new_bot._remember_entry_context(coin['rsi'], coin.get('trend'))
+                if last_ai_result and last_ai_result.get('ai_used') and last_ai_result.get('should_open'):
+                    new_bot.ai_decision_id = last_ai_result.get('ai_decision_id')
+                    new_bot._set_decision_source('AI', last_ai_result)
                 logger.info(f" 📈 Входим в позицию {direction} для {symbol} (по рынку)")
-                new_bot.enter_position(direction, force_market_entry=True)
-                
+                entry_result = new_bot.enter_position(direction, force_market_entry=True)
+                if isinstance(entry_result, dict) and not entry_result.get('success', True):
+                    err_msg = entry_result.get('error') or entry_result.get('message') or str(entry_result)
+                    logger.warning(f" 🚫 {symbol}: вход по рынку не выполнен — бот не добавлен в список: {err_msg}")
+                    continue
+                # При успехе enter_position сам добавляет бота в bots_data
                 created_bots += 1
-                
+                logger.info(f" ✅ {symbol}: позиция открыта, бот в списке")
             except Exception as e:
-                # Блокировка фильтрами - это нормальная работа системы, логируем как WARNING
                 error_str = str(e)
                 if 'заблокирован фильтрами' in error_str or 'filters_blocked' in error_str:
-                    logger.warning(f" ⚠️ Ошибка создания бота для {symbol}: {e}")
+                    logger.warning(f" ⚠️ Ошибка входа для {symbol}: {e}")
                 else:
-                    logger.error(f" ❌ Ошибка создания бота для {symbol}: {e}")
+                    logger.error(f" ❌ Ошибка входа для {symbol}: {e}")
+                # Бот не был в списке — не добавляем и не переводим в IDLE
         
         if created_bots > 0:
             logger.info(f" ✅ Создано {created_bots} новых ботов")
@@ -3382,54 +3428,40 @@ def check_no_existing_position(symbol, signal):
         logger.error(f"{symbol}: Ошибка проверки позиций: {e}")
         return False
 
-def create_new_bot(symbol, config=None, exchange_obj=None):
-    """Создает нового бота"""
+def create_new_bot(symbol, config=None, exchange_obj=None, register=True):
+    """Создает нового бота. register=False — только объект в памяти, не добавлять в bots_data (для автовхода: регистрируем после успешного enter_position)."""
     try:
-        # Локальный импорт для избежания циклического импорта
         from bots_modules.bot_class import NewTradingBot
         from bots_modules.imports_and_globals import get_exchange
         exchange_to_use = exchange_obj if exchange_obj else get_exchange()
-        
-        # Получаем настройки размера позиции из конфига
-        # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
         auto_bot_config = bots_data['auto_bot_config']
         default_volume = auto_bot_config.get('default_position_size')
         default_volume_mode = auto_bot_config.get('default_position_mode', 'usdt')
-        
-        # Создаем конфигурацию бота
         bot_config = {
             'symbol': symbol,
-            'status': BOT_STATUS['RUNNING'],  # ✅ ИСПРАВЛЕНО: бот должен быть активным
+            'status': BOT_STATUS['RUNNING'],
             'created_at': datetime.now().isoformat(),
             'opened_by_autobot': True,
             'volume_mode': default_volume_mode,
-            'volume_value': default_volume,  # ✅ ИСПРАВЛЕНО: используем значение из конфига
-            'leverage': auto_bot_config.get('leverage', 1)  # ✅ Добавляем leverage из глобального конфига
+            'volume_value': default_volume,
+            'leverage': auto_bot_config.get('leverage', 1)
         }
-
         individual_settings = get_individual_coin_settings(symbol)
         if individual_settings:
             bot_config.update(individual_settings)
-
-        # Гарантируем обязательные поля
         bot_config['symbol'] = symbol
         bot_config['status'] = BOT_STATUS['RUNNING']
         bot_config.setdefault('volume_mode', default_volume_mode)
         if bot_config.get('volume_value') is None:
             bot_config['volume_value'] = default_volume
         if bot_config.get('leverage') is None:
-            bot_config['leverage'] = auto_bot_config.get('leverage', 1)  # ✅ Fallback для leverage
-        
-        # Создаем бота
+            bot_config['leverage'] = auto_bot_config.get('leverage', 1)
         new_bot = NewTradingBot(symbol, bot_config, exchange_to_use)
-        
-        # Сохраняем в bots_data
-        # ⚡ БЕЗ БЛОКИРОВКИ: присваивание - атомарная операция
-        bots_data['bots'][symbol] = new_bot.to_dict()
-        
-        logger.info(f"✅ Бот для {symbol} создан успешно")
+        if register:
+            with bots_data_lock:
+                bots_data['bots'][symbol] = new_bot.to_dict()
+            logger.info(f"✅ Бот для {symbol} зарегистрирован")
         return new_bot
-        
     except Exception as e:
         logger.error(f"❌ Ошибка создания бота для {symbol}: {e}")
         raise
