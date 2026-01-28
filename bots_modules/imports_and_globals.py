@@ -208,27 +208,31 @@ def check_and_stop_existing_bots_processes():
                         except Exception as term_error:
                             print(f"⚠️  Ошибка при остановке процесса: {term_error}")
                         
-                        # Быстрая проверка порта (максимум 2 секунды)
-                        print("\n⏳ Проверка освобождения порта 5001...")
+                        # Проверяем освобождение порта (до 10 секунд).
+                        # ВАЖНО: если порт не освобожден — НЕ продолжаем запуск, иначе bots.py упадёт на bind,
+                        # а UI будет выглядеть как "не коннектится по порту".
+                        print("\n⏳ Ожидание освобождения порта 5001...")
                         port_freed = False
-                        for i in range(2):  # Только 2 секунды
+                        for i in range(10):
                             time.sleep(1)
                             try:
                                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                                sock.settimeout(0.3)
+                                sock.settimeout(0.5)
                                 result = sock.connect_ex(('127.0.0.1', 5001))
                                 sock.close()
-                                
+
                                 if result != 0:
                                     print("✅ Порт 5001 освобожден")
                                     port_freed = True
                                     break
-                            except:
+                            except Exception:
                                 pass
-                        
+
                         if not port_freed:
-                            print("⚠️  Порт 5001 все еще занят, но продолжаем запуск")
-                            # Не возвращаем False, продолжаем выполнение
+                            print("❌ Порт 5001 все еще занят!")
+                            print("⚠️  Возможно нужно вручную остановить процесс, который слушает порт 5001")
+                            print("=" * 80)
+                            return False
                         
                     except Exception as e:
                         print(f"❌ Ошибка остановки процесса {process_to_stop}: {e}")
