@@ -1595,10 +1595,13 @@ class NewTradingBot:
                 except Exception as log_err:
                     logger.debug(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка логирования стоп-лосса: {log_err}")
             else:
-                logger.warning(
-                    f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось установить break-even стоп: "
-                    f"result={result}, message={(result or {}).get('message', 'Unknown')}"
-                )
+                if (result or {}).get('zero_position'):
+                    logger.debug(f"[NEW_BOT_{self.symbol}] Позиция уже закрыта на бирже (zero position), пропуск break-even стопа")
+                else:
+                    logger.warning(
+                        f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось установить break-even стоп: "
+                        f"result={result}, message={(result or {}).get('message', 'Unknown')}"
+                    )
         except Exception as exc:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка установки break-even стопа: {exc}", exc_info=True)
 

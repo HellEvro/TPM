@@ -2752,8 +2752,8 @@ class BybitExchange(BaseExchange):
                         'message': f"Ошибка обновления SL: {response['retMsg']}"
                     }
             except Exception as e:
-                # Проверяем код ошибки 34040 (not modified) - это нормально, SL уже установлен
                 error_str = str(e)
+                # 34040 (not modified) — SL уже установлен
                 if "34040" in error_str or "not modified" in error_str:
                     logger.info(f"[BYBIT_BOT] ✅ SL уже установлен на {stop_loss_price:.6f}")
                     return {
@@ -2761,8 +2761,14 @@ class BybitExchange(BaseExchange):
                         'message': f'Stop Loss уже установлен: {stop_loss_price:.6f}',
                         'stop_loss': stop_loss_price
                     }
-                
-                # Для других ошибок - логируем и возвращаем ошибку
+                # 10001 (zero position) — позиция уже закрыта на бирже, стоп выставлять нечего
+                if "10001" in error_str or "zero position" in error_str.lower():
+                    logger.debug(f"[BYBIT_BOT] {symbol}: Позиция уже закрыта (zero position), пропуск установки SL")
+                    return {
+                        'success': False,
+                        'message': 'Позиция уже закрыта на бирже (zero position)',
+                        'zero_position': True
+                    }
                 logger.error(f"[BYBIT_BOT] Ошибка обновления Stop Loss: {e}")
                 import traceback
                 logger.error(f"[BYBIT_BOT] Трейсбек: {traceback.format_exc()}")
