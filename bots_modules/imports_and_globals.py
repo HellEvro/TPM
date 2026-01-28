@@ -177,8 +177,6 @@ def check_and_stop_existing_bots_processes():
                 
                 if python_processes:
                     process_to_stop = python_processes[0]  # Останавливаем первый найденный
-                else:
-                    process_to_stop = None
                 
                 if process_to_stop and process_to_stop != current_pid:
                     try:
@@ -191,36 +189,46 @@ def check_and_stop_existing_bots_processes():
                         print()
                         
                         print(f"🔧 Останавливаем процесс {process_to_stop}...")
-                        proc.terminate()
-                        
                         try:
-                            proc.wait(timeout=5)
-                            print(f"✅ Процесс {process_to_stop} остановлен")
-                        except psutil.TimeoutExpired:
-                            proc.kill()
-                            proc.wait()
-                            print(f"🔴 Процесс {process_to_stop} принудительно остановлен")
+                            proc.terminate()
+                            # Ждем завершения с таймаутом
+                            try:
+                                proc.wait(timeout=3)  # Уменьшаем таймаут до 3 секунд
+                                print(f"✅ Процесс {process_to_stop} остановлен")
+                            except psutil.TimeoutExpired:
+                                # Если не завершился за 3 секунды, принудительно убиваем
+                                try:
+                                    proc.kill()
+                                    proc.wait(timeout=1)
+                                    print(f"🔴 Процесс {process_to_stop} принудительно остановлен")
+                                except:
+                                    pass
+                            except psutil.NoSuchProcess:
+                                print(f"✅ Процесс {process_to_stop} уже завершен")
+                        except Exception as term_error:
+                            print(f"⚠️  Ошибка при остановке процесса: {term_error}")
                         
-                        print("\n⏳ Ожидание освобождения порта 5001...")
-                        for i in range(10):
+                        # Быстрая проверка порта (максимум 2 секунды)
+                        print("\n⏳ Проверка освобождения порта 5001...")
+                        port_freed = False
+                        for i in range(2):  # Только 2 секунды
                             time.sleep(1)
                             try:
                                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                                sock.settimeout(1)
+                                sock.settimeout(0.3)
                                 result = sock.connect_ex(('127.0.0.1', 5001))
                                 sock.close()
                                 
                                 if result != 0:
                                     print("✅ Порт 5001 освобожден")
+                                    port_freed = True
                                     break
                             except:
                                 pass
-                            
-                            if i == 9:
-                                print("❌ Порт 5001 все еще занят!")
-                                print("⚠️  Возможно нужно вручную остановить процесс")
-                                print("=" * 80)
-                                return False
+                        
+                        if not port_freed:
+                            print("⚠️  Порт 5001 все еще занят, но продолжаем запуск")
+                            # Не возвращаем False, продолжаем выполнение
                         
                     except Exception as e:
                         print(f"❌ Ошибка остановки процесса {process_to_stop}: {e}")
@@ -626,18 +634,46 @@ def load_auto_bot_config():
             # ✅ КРИТИЧНО: При _last_mtime == 0 ВСЕГДА перезагружаем модуль, даже если файл не изменился
             # Это нужно для принудительной перезагрузки из API endpoint
             is_forced_reload = load_auto_bot_config._last_mtime == 0
+            
             if current_mtime > load_auto_bot_config._last_mtime or is_forced_reload:
+                # ✅ КРИТИЧНО: Сохраняем таймфрейм из БД перед перезагрузкой
+                saved_timeframe_from_db = None
+                try:
+                    from bot_engine.bots_database import get_bots_database
+                    db = get_bots_database()
+                    saved_timeframe_from_db = db.load_timeframe()
+                except Exception as tf_save_err:
+                    logger.warning(f"[CONFIG] ⚠️ Не удалось сохранить таймфрейм из БД: {tf_save_err}")
+                
                 # Импортируем модуль, если его еще нет
                 if 'bot_engine.bot_config' not in sys.modules:
                     import bot_engine.bot_config
                 else:
                     import bot_engine.bot_config
                     importlib.reload(bot_engine.bot_config)
+                
+                # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после перезагрузки
+                if saved_timeframe_from_db:
+                    try:
+                        from bot_engine.bot_config import set_current_timeframe
+                        set_current_timeframe(saved_timeframe_from_db)
+                    except Exception as tf_restore_err:
+                        logger.warning(f"[CONFIG] ⚠️ Не удалось восстановить таймфрейм: {tf_restore_err}")
+                
                 # ✅ ВАЖНО: ВСЕГДА обновляем _last_mtime после перезагрузки модуля
                 # Это предотвращает бесконечную перезагрузку при принудительной перезагрузке
                 load_auto_bot_config._last_mtime = current_mtime
                 reloaded = True
         else:
+            # ✅ КРИТИЧНО: Сохраняем таймфрейм из БД перед перезагрузкой
+            saved_timeframe_from_db = None
+            try:
+                from bot_engine.bots_database import get_bots_database
+                db = get_bots_database()
+                saved_timeframe_from_db = db.load_timeframe()
+            except:
+                pass
+            
             # Если файла нет, просто перезагружаем модуль
             if 'bot_engine.bot_config' in sys.modules:
                 import bot_engine.bot_config
@@ -645,11 +681,36 @@ def load_auto_bot_config():
             else:
                 import bot_engine.bot_config  # pragma: no cover
             reloaded = True
+            
+            # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после перезагрузки
+            if saved_timeframe_from_db:
+                try:
+                    from bot_engine.bot_config import set_current_timeframe
+                    set_current_timeframe(saved_timeframe_from_db)
+                except:
+                    pass
         
         # ✅ КРИТИЧНО: Принудительно перезагружаем модуль ПЕРЕД импортом DEFAULT_AUTO_BOT_CONFIG
         # Это гарантирует, что мы получим актуальное значение из файла, а не из кэша
+        # ✅ КРИТИЧНО: Сохраняем таймфрейм из БД перед перезагрузкой
+        saved_timeframe_from_db_final = None
+        try:
+            from bot_engine.bots_database import get_bots_database
+            db = get_bots_database()
+            saved_timeframe_from_db_final = db.load_timeframe()
+        except Exception as tf_final_err:
+            logger.warning(f"[CONFIG] ⚠️ Не удалось сохранить таймфрейм из БД (финальный): {tf_final_err}")
+        
         if 'bot_engine.bot_config' in sys.modules:
             importlib.reload(sys.modules['bot_engine.bot_config'])
+        
+        # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после финальной перезагрузки
+        if saved_timeframe_from_db_final:
+            try:
+                from bot_engine.bot_config import set_current_timeframe
+                set_current_timeframe(saved_timeframe_from_db_final)
+            except Exception as tf_final_restore_err:
+                logger.warning(f"[CONFIG] ⚠️ Не удалось восстановить таймфрейм (финальный): {tf_final_restore_err}")
         
         from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
         
@@ -670,7 +731,7 @@ def load_auto_bot_config():
                             DEFAULT_AUTO_BOT_CONFIG['leverage'] = leverage_from_file_direct
                             logger.info(f"[CONFIG] ✅ Исправлено: leverage обновлен до {leverage_from_file_direct}x из файла")
         except Exception as e:
-            logger.debug(f"[CONFIG] Не удалось проверить leverage напрямую из файла: {e}")
+            pass  # Игнорируем ошибки проверки leverage
 
         # ✅ ЕДИНСТВЕННЫЙ источник истины: bot_engine/bot_config.py
         # Все настройки загружаются ТОЛЬКО из файла, БД не используется для auto_bot_config
@@ -713,8 +774,6 @@ def load_auto_bot_config():
             
             # ✅ Логируем только при первой загрузке или при реальных изменениях (не при каждом вызове)
             if not hasattr(load_auto_bot_config, '_filters_logged_once'):
-                logger.debug(f"📂 Фильтры загружены из БД: whitelist={len(merged_config.get('whitelist', []))}, blacklist={len(merged_config.get('blacklist', []))}")
-                logger.debug(f"📂 scope загружен из файла: {merged_config.get('scope', 'all')}")
                 load_auto_bot_config._filters_logged_once = True
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки фильтров из БД: {e}")
@@ -744,6 +803,8 @@ def load_auto_bot_config():
             
     except Exception as e:
         logger.error(f" ❌ Ошибка загрузки конфигурации: {e}")
+        import traceback
+        logger.error(f" ❌ Трассировка ошибки:\n{traceback.format_exc()}")
 
 def get_auto_bot_config():
     """Получает текущую конфигурацию Auto Bot из bots_data"""
