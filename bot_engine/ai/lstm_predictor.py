@@ -56,14 +56,22 @@ try:
                 gpu_count = torch.cuda.device_count()
                 primary_gpu = torch.device('cuda:0')
                 gpu_name = torch.cuda.get_device_name(0)
-                
+                # Лимит доли видеопамяти процесса (из bot_config.SystemConfig / AI_GPU_MEMORY_FRACTION)
+                try:
+                    import os
+                    frac_str = os.environ.get('AI_GPU_MEMORY_FRACTION', '').strip()
+                    if frac_str:
+                        frac = float(frac_str.replace(',', '.'))
+                        if 0 < frac <= 1:
+                            torch.cuda.set_per_process_memory_fraction(frac, 0)
+                            logger.info(f"   Лимит VRAM процесса: {frac * 100:.0f}%")
+                except Exception:
+                    pass
                 logger.info(f"✅ Найдено GPU устройств: {gpu_count}")
                 for i in range(gpu_count):
                     logger.info(f"   GPU {i}: {torch.cuda.get_device_name(i)}")
-                
                 logger.info(f"✅ GPU NVIDIA доступен и будет использоваться для обучения и предсказаний")
                 logger.info(f"   Основное устройство: {gpu_name}")
-                
                 return True, primary_gpu
             else:
                 logger.info("ℹ️ GPU устройства не найдены, используется CPU")

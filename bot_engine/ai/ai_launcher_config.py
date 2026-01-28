@@ -157,11 +157,13 @@ class AILauncherConfig:
     # На Windows: setrlimit недоступен; только снижение нагрузки (потоки, символы, свечи).
     MEMORY_LIMIT_MB = _memory_limit_mb_from_env()
 
-    # При заданном MEMORY_LIMIT_MB — более консервативные лимиты нагрузки:
-    # меньше потоков и объёма данных за раз (снижает пиковое потребление ОЗУ).
-    CANDLES_LOADER_MAX_WORKERS = 4 if MEMORY_LIMIT_MB else 10   # потоков при загрузке свечей
-    MAX_SYMBOLS_FOR_CANDLES = 80 if MEMORY_LIMIT_MB else 100   # макс. символов в get_all_candles_dict
-    MAX_CANDLES_PER_SYMBOL = 500 if MEMORY_LIMIT_MB else 1000   # макс. свечей на символ
+    # При заданном MEMORY_LIMIT_MB — жёсткие лимиты нагрузки (на Windows нет setrlimit,
+    # поэтому только так можно приблизить потребление к целевому; учитываем несколько процессов).
+    CANDLES_LOADER_MAX_WORKERS = 2 if MEMORY_LIMIT_MB else 10   # потоков при загрузке свечей
+    MAX_SYMBOLS_FOR_CANDLES = 50 if MEMORY_LIMIT_MB else 100   # макс. символов в get_all_candles_dict
+    MAX_CANDLES_PER_SYMBOL = 300 if MEMORY_LIMIT_MB else 1000   # макс. свечей на символ
+    # Размер батча при обучении моделей (LSTM, pattern_detector и т.д.) — меньше батч = меньше пик ОЗУ
+    TRAINING_BATCH_SIZE = 16 if MEMORY_LIMIT_MB else 32
 
 
 class AITrainingStrategyConfig:
