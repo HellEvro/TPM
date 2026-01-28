@@ -11,7 +11,7 @@ import json
 import logging
 from copy import deepcopy
 from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 
@@ -67,7 +67,7 @@ def _get_config_snapshot(symbol: Optional[str] = None) -> Dict[str, Any]:
             'individual': individual_config,
             'merged': merged_config,
             'symbol': symbol.upper() if symbol else None,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
 

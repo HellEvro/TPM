@@ -14,7 +14,7 @@ import time
 import threading
 import logging
 import importlib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import copy
 import math
@@ -3083,7 +3083,9 @@ def sync_bots_with_exchange():
                                 if entry_time_str:
                                     try:
                                         entry_time = datetime.fromisoformat(entry_time_str.replace('Z', ''))
-                                        duration_hours = (datetime.utcnow() - entry_time).total_seconds() / 3600.0
+                                        now_utc = datetime.now(timezone.utc)
+                                        entry_utc = entry_time.replace(tzinfo=timezone.utc) if entry_time.tzinfo is None else entry_time
+                                        duration_hours = (now_utc - entry_utc).total_seconds() / 3600.0
                                     except Exception:
                                         duration_hours = 0.0
 
