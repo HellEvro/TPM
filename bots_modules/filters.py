@@ -780,6 +780,8 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
     Returns:
         dict: Данные монеты с RSI и трендом для указанного таймфрейма
     """
+    if not symbol or str(symbol).strip().lower() == 'all':
+        return None
     from bots_modules.imports_and_globals import coins_rsi_data
     
     if timeframe is None:
@@ -900,6 +902,10 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
     # print(f"[{time.strftime('%H:%M:%S')}] >>> НАЧАЛО get_coin_rsi_data({symbol})", flush=True)  # Отключено для скорости
     
     try:
+        # Символ "all" не является торговой парой — не запрашиваем API (Bybit вернёт Symbol Is Invalid)
+        if not symbol or str(symbol).strip().lower() == 'all':
+            logger.debug(f"{symbol}: пропуск (символ 'all' не поддерживается API биржи)")
+            return None
         # ✅ ФИЛЬТР 0: ДЕЛИСТИНГОВЫЕ МОНЕТЫ - САМЫЙ ПЕРВЫЙ!
         # Исключаем делистинговые монеты ДО всех остальных проверок
         # Загружаем делистинговые монеты из файла
@@ -1949,224 +1955,268 @@ def load_all_coins_candles_fast():
 
 def load_all_coins_rsi():
     """✅ ОПТИМИЗАЦИЯ: Загружает RSI для всех доступных монет для всех требуемых таймфреймов
-    
+
     Рассчитывает RSI для:
     - Системного таймфрейма (для новых входов)
     - Всех entry_timeframe из ботов в позиции
     """
     global coins_rsi_data
-    
-    try:
-        operation_start = time.time()
-        logger.info("📊 RSI: запускаем полное обновление")
-        # ⚡ БЕЗ БЛОКИРОВКИ: проверяем флаг без блокировки
-        if coins_rsi_data['update_in_progress']:
-            logger.info("Обновление RSI уже выполняется...")
-            return False
-        
-        # ⚡ УСТАНАВЛИВАЕМ флаги БЕЗ блокировки
-        coins_rsi_data['update_in_progress'] = True
-        # ✅ UI блокировка уже установлена в continuous_data_loader
-        
-        if shutdown_flag.is_set():
-            logger.warning("⏹️ Обновление RSI отменено: система завершает работу")
-            coins_rsi_data['update_in_progress'] = False
-            return False
 
+    operation_start = time.time()
+    logger.info("📊 RSI: запускаем полное обновление")
+
+    # ⚡ БЕЗ БЛОКИРОВКИ: проверяем флаг без блокировки
+    if coins_rsi_data["update_in_progress"]:
+        logger.info("Обновление RSI уже выполняется...")
+        return False
+
+    # ⚡ УСТАНАВЛИВАЕМ флаг БЕЗ блокировки
+    coins_rsi_data["update_in_progress"] = True
+    # ✅ UI блокировка уже установлена в continuous_data_loader
+
+    if shutdown_flag.is_set():
+        logger.warning("⏹️ Обновление RSI отменено: система завершает работу")
+        coins_rsi_data["update_in_progress"] = False
+        return False
+
+    try:
         # ✅ ОПТИМИЗАЦИЯ: Получаем все требуемые таймфреймы
         required_timeframes = get_required_timeframes()
         if not required_timeframes:
-            required_timeframes = ['6h']  # Fallback
-        
+            required_timeframes = ["6h"]  # Fallback
+
         logger.info(f"📊 RSI: рассчитываем для таймфреймов: {required_timeframes}")
 
         # ✅ КРИТИЧНО: Создаем ВРЕМЕННОЕ хранилище для всех монет
         # Обновляем coins_rsi_data ТОЛЬКО после завершения всех проверок!
-        temp_coins_data = {}
-        
-        # Проверяем кэш свечей перед началом
-        candles_cache_size = len(coins_rsi_data.get('candles_cache', {}))
-        
+        temp_coins_data: dict[str, dict] = {}
+
+        # Проверяем кэш свечей перед началом (оставляем для будущих оптимизаций)
+        candles_cache_size = len(coins_rsi_data.get("candles_cache", {}))
+        logger.debug(f"📊 Текущий размер кэша свечей: {candles_cache_size}")
+
         # Получаем актуальную ссылку на биржу
         try:
             from bots_modules.imports_and_globals import get_exchange
+
             current_exchange = get_exchange()
         except Exception as e:
             logger.error(f"❌ Ошибка получения биржи: {e}")
             current_exchange = None
-        
+
         # Получаем список всех пар
         if not current_exchange:
             logger.error("❌ Биржа не инициализирована")
-            coins_rsi_data['update_in_progress'] = False
+            coins_rsi_data["update_in_progress"] = False
             return False
-            
+
         pairs = current_exchange.get_all_pairs()
-        
+
         if not pairs or not isinstance(pairs, list):
             logger.error("❌ Не удалось получить список пар с биржи")
             return False
-        
-        logger.info(f"📊 RSI: получено {len(pairs)} пар, готовим батчи по 100 монет")
-        
+
+        logger.info(
+            f"📊 RSI: получено {len(pairs)} пар, готовим батчи по 100 монет"
+        )
+
         # ⚡ БЕЗ БЛОКИРОВКИ: обновляем счетчики напрямую
-        coins_rsi_data['total_coins'] = len(pairs)
-        coins_rsi_data['successful_coins'] = 0
-        coins_rsi_data['failed_coins'] = 0
-        
+        coins_rsi_data["total_coins"] = len(pairs)
+        coins_rsi_data["successful_coins"] = 0
+        coins_rsi_data["failed_coins"] = 0
+
+        shutdown_requested = False
+
         # ✅ ОПТИМИЗАЦИЯ: Рассчитываем RSI для каждого требуемого таймфрейма
         for timeframe in required_timeframes:
             logger.info(f"📊 Рассчитываем RSI для таймфрейма {timeframe}...")
-            
+
             # ✅ ПАРАЛЛЕЛЬНАЯ загрузка с текстовым прогрессом (работает в лог-файле)
             batch_size = 100
             total_batches = (len(pairs) + batch_size - 1) // batch_size
-            
-            shutdown_requested = False
 
             for i in range(0, len(pairs), batch_size):
                 if shutdown_flag.is_set():
                     shutdown_requested = True
                     break
-                batch = pairs[i:i + batch_size]
+
+                batch = pairs[i : i + batch_size]
                 batch_num = i // batch_size + 1
                 batch_start = time.time()
-                request_delay = getattr(current_exchange, 'current_request_delay', 0) or 0
+                request_delay = getattr(
+                    current_exchange, "current_request_delay", 0
+                ) or 0
+
                 logger.info(
-                    f"📦 RSI Batch {batch_num}/{total_batches} (ТФ={timeframe}): size={len(batch)}, "
-                    f"workers=50, delay={request_delay:.2f}s"
+                    f"📦 RSI Batch {batch_num}/{total_batches} (ТФ={timeframe}): "
+                    f"size={len(batch)}, workers=50, delay={request_delay:.2f}s"
                 )
+
                 batch_success = 0
                 batch_fail = 0
-                
+
                 # Параллельная обработка пакета
                 with ThreadPoolExecutor(max_workers=50) as executor:
                     # ✅ Передаем timeframe в get_coin_rsi_data_for_timeframe
                     future_to_symbol = {
-                        executor.submit(get_coin_rsi_data_for_timeframe, symbol, current_exchange, timeframe): symbol 
+                        executor.submit(
+                            get_coin_rsi_data_for_timeframe,
+                            symbol,
+                            current_exchange,
+                            timeframe,
+                        ): symbol
                         for symbol in batch
                     }
 
-                if shutdown_flag.is_set():
-                    shutdown_requested = True
-                    for future in future_to_symbol:
-                        future.cancel()
-                    break
-                
-                try:
-                    for future in concurrent.futures.as_completed(future_to_symbol, timeout=60):
-                        if shutdown_flag.is_set():
-                            shutdown_requested = True
-                            break
+                    if shutdown_flag.is_set():
+                        shutdown_requested = True
+                        for future in future_to_symbol:
+                            future.cancel()
+                        break
 
-                        symbol = future_to_symbol[future]
-                        try:
-                            result = future.result(timeout=20)
-                            if result:
-                                # ✅ ОПТИМИЗАЦИЯ: Объединяем данные для всех таймфреймов
-                                if result['symbol'] in temp_coins_data:
-                                    # Объединяем с существующими данными
-                                    temp_coins_data[result['symbol']].update(result)
+                    try:
+                        for future in concurrent.futures.as_completed(
+                            future_to_symbol, timeout=60
+                        ):
+                            if shutdown_flag.is_set():
+                                shutdown_requested = True
+                                break
+
+                            symbol = future_to_symbol[future]
+                            try:
+                                result = future.result(timeout=20)
+                                if result:
+                                    # ✅ ОПТИМИЗАЦИЯ: Объединяем данные для всех таймфреймов
+                                    if result["symbol"] in temp_coins_data:
+                                        # Объединяем с существующими данными
+                                        temp_coins_data[result["symbol"]].update(
+                                            result
+                                        )
+                                    else:
+                                        temp_coins_data[result["symbol"]] = result
+
+                                    coins_rsi_data["successful_coins"] += 1
+                                    batch_success += 1
                                 else:
-                                    temp_coins_data[result['symbol']] = result
-                                coins_rsi_data['successful_coins'] += 1
-                                batch_success += 1
-                            else:
-                                coins_rsi_data['failed_coins'] += 1
+                                    coins_rsi_data["failed_coins"] += 1
+                                    batch_fail += 1
+                            except Exception as e:
+                                logger.error(f"❌ {symbol}: {e}")
+                                coins_rsi_data["failed_coins"] += 1
                                 batch_fail += 1
-                        except Exception as e:
-                            logger.error(f"❌ {symbol}: {e}")
-                            coins_rsi_data['failed_coins'] += 1
-                            batch_fail += 1
-                except concurrent.futures.TimeoutError:
-                    pending = list(future_to_symbol.values())
-                    logger.error(
-                        f"⚠️ Timeout при загрузке RSI для пакета {batch_num} (ТФ={timeframe}) "
-                        f"(ожидали {len(pending)} символов, примеры: {pending[:5]})"
-                    )
-                    coins_rsi_data['failed_coins'] += len(batch)
-                    batch_fail += len(batch)
+                    except concurrent.futures.TimeoutError:
+                        pending = list(future_to_symbol.values())
+                        logger.error(
+                            "⚠️ Timeout при загрузке RSI для пакета "
+                            f"{batch_num} (ТФ={timeframe}) "
+                            f"(ожидали {len(pending)} символов, примеры: {pending[:5]})"
+                        )
+                        coins_rsi_data["failed_coins"] += len(batch)
+                        batch_fail += len(batch)
 
                 if shutdown_flag.is_set():
                     shutdown_requested = True
                     for future in future_to_symbol:
                         future.cancel()
                     break
-            
-            logger.info(
-                f"📦 RSI Batch {batch_num}/{total_batches} (ТФ={timeframe}) завершен: "
-                f"{batch_success} успехов / {batch_fail} ошибок за "
-                f"{time.time() - batch_start:.1f}s"
-            )
-            
-            # ✅ Выводим прогресс в лог
-            processed = coins_rsi_data['successful_coins'] + coins_rsi_data['failed_coins']
-            if batch_num <= total_batches:
-                logger.info(f"📊 Прогресс (ТФ={timeframe}): {processed}/{len(pairs)} ({processed*100//len(pairs)}%)")
+
+                logger.info(
+                    f"📦 RSI Batch {batch_num}/{total_batches} (ТФ={timeframe}) "
+                    f"завершен: {batch_success} успехов / {batch_fail} ошибок за "
+                    f"{time.time() - batch_start:.1f}s"
+                )
+
+                # ✅ Выводим прогресс в лог (по текущему таймфрейму)
+                processed_in_timeframe = min(batch_num * batch_size, len(pairs))
+                if batch_num <= total_batches:
+                    percent = processed_in_timeframe * 100 // len(pairs)
+                    logger.info(
+                        f"📊 Прогресс (ТФ={timeframe}): {processed_in_timeframe}/{len(pairs)} "
+                        f"({percent}%)"
+                    )
+
+                if shutdown_requested:
+                    break
 
             if shutdown_requested:
                 break
-        
+
+            logger.info(
+                "✅ RSI рассчитан для таймфрейма "
+                f"{timeframe}: {len(list(temp_coins_data.keys()))} монет с данными"
+            )
+
         if shutdown_requested:
             logger.warning("⏹️ Расчет RSI прерван из-за остановки системы")
-            coins_rsi_data['update_in_progress'] = False
+            coins_rsi_data["update_in_progress"] = False
             return False
-        
-        logger.info(f"✅ RSI рассчитан для таймфрейма {timeframe}: {len([s for s in temp_coins_data.keys()])} монет с данными")
-        
-        # Переходим к следующему таймфрейму
-        if shutdown_flag.is_set():
-            break
-    
-    # ✅ КРИТИЧНО: АТОМАРНОЕ обновление всех данных ОДНИМ МАХОМ после всех таймфреймов!
-    coins_rsi_data['coins'] = temp_coins_data
-    coins_rsi_data['last_update'] = datetime.now().isoformat()
-    coins_rsi_data['update_in_progress'] = False
-    
-    logger.info(f"✅ RSI рассчитан для всех таймфреймов: {len(temp_coins_data)} монет")
-        
+
+        # ✅ КРИТИЧНО: АТОМАРНОЕ обновление всех данных ОДНИМ МАХОМ после всех таймфреймов!
+        coins_rsi_data["coins"] = temp_coins_data
+        coins_rsi_data["last_update"] = datetime.now().isoformat()
+        coins_rsi_data["update_in_progress"] = False
+
+        logger.info(
+            f"✅ RSI рассчитан для всех таймфреймов: {len(temp_coins_data)} монет"
+        )
+
         # Финальный отчет
-        success_count = coins_rsi_data['successful_coins']
-        failed_count = coins_rsi_data['failed_coins']
-            
+        # ✅ Уникальные монеты, для которых есть RSI
+        success_count = len(coins_rsi_data["coins"])
+        # Количество неуспешных запросов по всем таймфреймам
+        failed_count = coins_rsi_data["failed_coins"]
+
         # Подсчитываем сигналы
-        enter_long_count = sum(1 for coin in coins_rsi_data['coins'].values() if coin.get('signal') == 'ENTER_LONG')
-        enter_short_count = sum(1 for coin in coins_rsi_data['coins'].values() if coin.get('signal') == 'ENTER_SHORT')
-        
-        logger.info(f"✅ {success_count} монет | Сигналы: {enter_long_count} LONG + {enter_short_count} SHORT")
-        
+        enter_long_count = sum(
+            1
+            for coin in coins_rsi_data["coins"].values()
+            if coin.get("signal") == "ENTER_LONG"
+        )
+        enter_short_count = sum(
+            1
+            for coin in coins_rsi_data["coins"].values()
+            if coin.get("signal") == "ENTER_SHORT"
+        )
+
+        logger.info(
+            f"✅ {success_count} монет | Сигналы: "
+            f"{enter_long_count} LONG + {enter_short_count} SHORT"
+        )
+
         if failed_count > 0:
             logger.warning(f"⚠️ Ошибок: {failed_count} монет")
-        
+
         # Обновляем флаги is_mature
         try:
             update_is_mature_flags_in_rsi_data()
         except Exception as update_error:
             logger.warning(f"⚠️ Не удалось обновить is_mature: {update_error}")
-        
+
         # 🔄 Сбрасываем задержку запросов после успешной загрузки раунда
         try:
-            if current_exchange and hasattr(current_exchange, 'reset_request_delay'):
+            if current_exchange and hasattr(
+                current_exchange, "reset_request_delay"
+            ):
                 current_exchange.reset_request_delay()
-                logger.info(f"🔄 Задержка запросов сброшена к базовому значению")
+                logger.info("🔄 Задержка запросов сброшена к базовому значению")
         except Exception as reset_error:
             logger.warning(f"⚠️ Ошибка сброса задержки: {reset_error}")
-        
+
         return True
-        
+
     except Exception as e:
         logger.error(f"Ошибка загрузки RSI данных: {str(e)}")
         # ⚡ БЕЗ БЛОКИРОВКИ: атомарная операция
-        coins_rsi_data['update_in_progress'] = False
+        coins_rsi_data["update_in_progress"] = False
         return False
     finally:
         elapsed = time.time() - operation_start
         logger.info(f"📊 RSI: полное обновление завершено за {elapsed:.1f}s")
         # Гарантированно сбрасываем флаг обновления
         # ⚡ БЕЗ БЛОКИРОВКИ: атомарная операция
-        if coins_rsi_data['update_in_progress']:
-            logger.warning(f"⚠️ Принудительный сброс флага update_in_progress")
-            coins_rsi_data['update_in_progress'] = False
+        if coins_rsi_data.get("update_in_progress"):
+            logger.warning("⚠️ Принудительный сброс флага update_in_progress")
+            coins_rsi_data["update_in_progress"] = False
 
 def _recalculate_signal_with_trend(rsi, trend, symbol):
     """Пересчитывает сигнал с учетом нового тренда"""
@@ -2635,7 +2685,17 @@ def check_new_autobot_filters(symbol, signal, coin_data):
 def analyze_trends_for_signal_coins():
     """🎯 Определяет тренд для монет с сигналами (RSI ≤29 или ≥71)"""
     try:
-        from bots_modules.imports_and_globals import rsi_data_lock, coins_rsi_data, get_exchange, get_auto_bot_config
+        from bots_modules.imports_and_globals import (
+            rsi_data_lock,
+            coins_rsi_data,
+            get_exchange,
+            get_auto_bot_config,
+        )
+        from bot_engine.bot_config import (
+            get_rsi_from_coin_data,
+            get_trend_key,
+            get_current_timeframe,
+        )
         
         # Проверяем флаг trend_detection_enabled
         config = get_auto_bot_config()
@@ -2657,9 +2717,12 @@ def analyze_trends_for_signal_coins():
         # Не изменяем coins_rsi_data до завершения всех расчетов!
         temp_updates = {}
         
-        # Находим монеты с сигналами для анализа тренда
-        # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
-        from bot_engine.bot_config import get_rsi_from_coin_data
+        # Фиксируем таймфрейм и ключ тренда ОДИН раз на весь анализ,
+        # чтобы смена таймфрейма в UI не ломала текущий раунд (KeyError: 'trend1m')
+        current_timeframe = get_current_timeframe()
+        trend_key = get_trend_key(current_timeframe)
+
+        # Находим монеты с сигналами для анализа тренда (чтение словаря без блокировки)
         signal_coins = []
         for symbol, coin_data in coins_rsi_data['coins'].items():
             rsi = get_rsi_from_coin_data(coin_data)
@@ -2685,11 +2748,8 @@ def analyze_trends_for_signal_coins():
                     # ✅ СОБИРАЕМ обновления во временном хранилище
                     if symbol in coins_rsi_data['coins']:
                         coin_data = coins_rsi_data['coins'][symbol]
-                        from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_key, get_current_timeframe
-                        rsi = get_rsi_from_coin_data(coin_data)
+                        rsi = get_rsi_from_coin_data(coin_data, timeframe=current_timeframe)
                         new_trend = trend_analysis['trend']
-                        current_timeframe = get_current_timeframe()
-                        trend_key = get_trend_key(current_timeframe)
                         
                         # Пересчитываем сигнал с учетом нового тренда
                         old_signal = coin_data.get('signal')
@@ -2727,11 +2787,13 @@ def analyze_trends_for_signal_coins():
                 failed_count += 1
         
         # ✅ АТОМАРНО применяем ВСЕ обновления одним махом!
-        from bot_engine.bot_config import get_trend_key, get_current_timeframe
-        current_timeframe = get_current_timeframe()
-        trend_key = get_trend_key(current_timeframe)
+        # Используем тот же trend_key, что и при расчете, независимо от смены таймфрейма в UI
         for symbol, updates in temp_updates.items():
-            coins_rsi_data['coins'][symbol][trend_key] = updates[trend_key]  # Динамический ключ
+            # Защитно вытаскиваем значение тренда из updates, чтобы избежать KeyError,
+            # если по какой‑то причине ключа нет
+            new_trend_value = updates.get(trend_key)
+            if new_trend_value is not None:
+                coins_rsi_data['coins'][symbol][trend_key] = new_trend_value  # Динамический ключ
             coins_rsi_data['coins'][symbol]['trend_analysis'] = updates['trend_analysis']
             coins_rsi_data['coins'][symbol]['signal'] = updates['signal']
         
@@ -2845,20 +2907,15 @@ def check_coin_maturity_stored_or_verify(symbol):
         if is_coin_mature_stored(symbol):
             return True
         
-        # Если нет в хранилище, выполняем проверку
+        # Если нет в хранилище, выполняем проверку по каноническому ТФ 6h
+        # (зрелость всегда считается по 6h, результат используется для всех ТФ — без загрузки свечей по другим ТФ)
         exch = get_exchange()
         if not exch:
             logger.warning(f"{symbol}: Биржа не инициализирована")
             return False
         
-        # Получаем текущий таймфрейм динамически
-        try:
-            from bot_engine.bot_config import get_current_timeframe
-            current_timeframe = get_current_timeframe()
-        except:
-            current_timeframe = '6h'  # Fallback
-        
-        chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
+        from bots_modules.maturity import MATURITY_CANONICAL_TIMEFRAME
+        chart_response = exch.get_chart_data(symbol, MATURITY_CANONICAL_TIMEFRAME, '30d')
         if not chart_response or not chart_response.get('success'):
             logger.warning(f"{symbol}: Не удалось получить свечи")
             return False
