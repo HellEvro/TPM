@@ -1030,13 +1030,14 @@ def remove_individual_coin_settings(symbol, persist=True):
 
 
 def copy_individual_coin_settings_to_all(source_symbol, target_symbols=None, persist=True):
-    """Копирует индивидуальные настройки монеты ко всем целевым монетам"""
+    """Копирует индивидуальные настройки монеты ко всем целевым монетам. Если у монеты нет настроек — возвращает 0 без ошибки."""
     if not source_symbol:
         raise ValueError("Source symbol is required")
     normalized_source = _normalize_symbol(source_symbol)
     template = get_individual_coin_settings(normalized_source)
     if not template:
-        raise KeyError(f"Settings for {normalized_source} not found")
+        logger.info(f" ℹ️ У монеты {normalized_source} нет индивидуальных настроек — копировать нечего")
+        return 0
 
     with bots_data_lock:
         destination = bots_data.setdefault('individual_coin_settings', {})

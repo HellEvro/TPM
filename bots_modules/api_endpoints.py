@@ -1052,6 +1052,7 @@ def create_bot_endpoint():
                 manual_direction = 'LONG'
 
         # ✅ Запускаем вход в позицию АСИНХРОННО (только если НЕТ существующей позиции!)
+        # Бот в списке = проверки пройдены → обязан по рынку зайти в сделку, без ожидания сигнала.
         if not has_existing_position:
             def enter_position_async():
                 try:
@@ -1060,15 +1061,34 @@ def create_bot_endpoint():
                         direction = manual_direction
                         logger.info(f" 🚀 Принудительный вход в {direction} для {symbol} (ручной запуск)")
                     else:
+                        # Автовход — направление только по настройкам конфига (rsi_long_threshold, rsi_short_threshold)
                         with rsi_data_lock:
                             coin_data = coins_rsi_data['coins'].get(symbol)
                             if coin_data and coin_data.get('signal') in ['ENTER_LONG', 'ENTER_SHORT']:
                                 signal = coin_data.get('signal')
                                 direction = 'LONG' if signal == 'ENTER_LONG' else 'SHORT'
+                                logger.info(f" 🚀 Вход по рынку для {symbol}: направление по сигналу (конфиг) → {direction}")
+                            elif coin_data:
+                                from bot_engine.bot_config import get_rsi_key, get_current_timeframe
+                                tf = get_current_timeframe()
+                                rsi_key = get_rsi_key(tf)
+                                rsi_val = coin_data.get(rsi_key) or coin_data.get('rsi')
+                                if rsi_val is not None:
+                                    rsi_val = float(rsi_val)
+                                    with bots_data_lock:
+                                        auto_config = bots_data.get('auto_bot_config', {})
+                                        rsi_long_threshold = bot_state.get('rsi_long_threshold') or auto_config.get('rsi_long_threshold', 29)
+                                        rsi_short_threshold = bot_state.get('rsi_short_threshold') or auto_config.get('rsi_short_threshold', 71)
+                                    if rsi_val <= rsi_long_threshold:
+                                        direction = 'LONG'
+                                        logger.info(f" 🚀 Вход по рынку для {symbol}: RSI={rsi_val:.1f} <= {rsi_long_threshold} (конфиг) → LONG")
+                                    elif rsi_val >= rsi_short_threshold:
+                                        direction = 'SHORT'
+                                        logger.info(f" 🚀 Вход по рынку для {symbol}: RSI={rsi_val:.1f} >= {rsi_short_threshold} (конфиг) → SHORT")
                     
                     if direction:
                         trading_bot = RealTradingBot(symbol, get_exchange(), bot_state)
-                        result = trading_bot._enter_position(direction)
+                        result = trading_bot._enter_position(direction, force_market_entry=True)
                         if result and result.get('success'):
                             logger.info(f" ✅ Успешно вошли в {direction} позицию для {symbol}")
                             with bots_data_lock:
@@ -1077,7 +1097,7 @@ def create_bot_endpoint():
                             error_msg = (result or {}).get('error', 'unknown')
                             logger.error(f" ❌ НЕ УДАЛОСЬ войти в {direction} позицию для {symbol}: {error_msg}")
                     else:
-                        logger.info(f" ℹ️ Нет активного сигнала для {symbol}, бот будет ждать")
+                        logger.info(f" ℹ️ {symbol}: RSI не в зоне порогов конфига — бот будет ждать условия в следующем цикле")
                 except Exception as e:
                     logger.error(f" ❌ Ошибка входа в позицию: {e}")
             
@@ -2713,11 +2733,16 @@ def copy_individual_settings(symbol):
             persist=True
         )
 
-        return jsonify({
+        resp = {
             'success': True,
             'symbol': symbol.upper(),
             'copied_count': copied_count
-        })
+        }
+        if copied_count == 0:
+            from bots_modules.imports_and_globals import get_individual_coin_settings
+            if not get_individual_coin_settings(symbol):
+                resp['message'] = 'У выбранной монеты нет индивидуальных настроек'
+        return jsonify(resp)
 
     except KeyError as missing_error:
         logger.error(f" ❌ Настройки {symbol} не найдены для копирования: {missing_error}")
