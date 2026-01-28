@@ -676,6 +676,34 @@ def get_coins_with_rsi():
                 # Добавляем эффективный сигнал для единообразия с фронтендом
                 effective_signal = get_effective_signal(cleaned_coin)
                 cleaned_coin['effective_signal'] = effective_signal
+                # В список LONG/SHORT слева попадают только монеты, прошедшие проверку AI (как в potential_coins)
+                if effective_signal in ('ENTER_LONG', 'ENTER_SHORT'):
+                    try:
+                        auto_config = bots_data.get('auto_bot_config', {})
+                        if auto_config.get('ai_enabled'):
+                            from bot_engine.ai.ai_integration import should_open_position_with_ai
+                            direction = 'LONG' if effective_signal == 'ENTER_LONG' else 'SHORT'
+                            rsi_val = cleaned_coin.get('rsi') or cleaned_coin.get(rsi_key)
+                            trend_val = cleaned_coin.get('trend') or cleaned_coin.get(trend_key) or 'NEUTRAL'
+                            price_val = float(cleaned_coin.get('price') or 0)
+                            config_snapshot = get_config_snapshot(symbol)
+                            filter_config = (config_snapshot.get('merged') or {}) if config_snapshot else auto_config
+                            if not filter_config:
+                                filter_config = auto_config
+                            ai_result = should_open_position_with_ai(
+                                symbol=symbol,
+                                direction=direction,
+                                rsi=rsi_val or 50,
+                                trend=trend_val,
+                                price=price_val,
+                                config=filter_config,
+                                candles=None
+                            )
+                            if ai_result.get('ai_used') and not ai_result.get('should_open'):
+                                effective_signal = 'WAIT'
+                                cleaned_coin['effective_signal'] = 'WAIT'
+                    except Exception as ai_err:
+                        logger.debug(f" AI check for {symbol} in get_coins_with_rsi: {ai_err}")
                 
                 # ✅ ИСПРАВЛЕНИЕ: Добавляем количество свечей из данных зрелых монет
                 try:

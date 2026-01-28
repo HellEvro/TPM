@@ -911,6 +911,39 @@ class BybitExchange(BaseExchange):
             # Определяем сторону для закрытия (противоположную текущей позиции)
             close_side = "Sell" if side == "Long" else "Buy"
             
+            # Используем размер из ответа биржи (актуальная позиция)
+            size_to_close = abs(float(active_position.get('size', size)))
+            if size_to_close <= 0:
+                size_to_close = float(size)
+            # ✅ КРИТИЧНО: Округляем объём до qtyStep инструмента (ErrCode 110017 — orderQty truncated to zero)
+            close_qty = size_to_close
+            qty_step = None
+            try:
+                instruments_info = self.get_instruments_info(f"{symbol}USDT")
+                qty_step = instruments_info.get('qtyStep')
+                min_order_qty = instruments_info.get('minOrderQty')
+                if qty_step is not None:
+                    qty_step = float(qty_step)
+                    # Округляем вниз до кратности qtyStep (не закрываем больше, чем есть)
+                    close_qty = math.floor(size_to_close / qty_step) * qty_step
+                if min_order_qty is not None:
+                    min_order_qty = float(min_order_qty)
+                    if close_qty > 0 and close_qty < min_order_qty:
+                        close_qty = min_order_qty
+                if close_qty <= 0:
+                    logger.error(
+                        f"[BYBIT] {symbol}: объём после округления по qtyStep = 0 (size={size_to_close}, qtyStep={qty_step}). "
+                        "Размер позиции меньше минимального шага — закрытие через API невозможно."
+                    )
+                    return {
+                        'success': False,
+                        'message': f"orderQty truncated to zero: позиция {size_to_close} меньше qtyStep {qty_step} для {symbol}. Закройте позицию вручную или рыночным ордером."
+                    }
+            except Exception as e:
+                logger.debug(f"[BYBIT] {symbol}: не удалось округлить по qtyStep: {e}, используем size как есть")
+            # Формат qty: убираем лишние нули после запятой, но не теряем точность для малых qtyStep
+            qty_str = f"{close_qty:.8f}".rstrip('0').rstrip('.') if isinstance(close_qty, float) else str(close_qty)
+            
             # ✅ КРИТИЧНО: Определяем positionIdx в зависимости от режима позиции
             # В One-Way Mode: position_idx = 0 (для обеих сторон)
             # В Hedge Mode: position_idx = 1 (LONG), position_idx = 2 (SHORT)
@@ -929,7 +962,7 @@ class BybitExchange(BaseExchange):
                 "symbol": f"{symbol}USDT",
                 "side": close_side,
                 "orderType": order_type.upper(),  # Важно: используем верхний регистр
-                "qty": str(size),
+                "qty": qty_str,
                 "reduceOnly": True,
                 "positionIdx": position_idx
             }

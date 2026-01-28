@@ -3117,6 +3117,8 @@ def sync_bots_with_exchange():
 
                                     # КРИТИЧНО: Также сохраняем в bots_data.db для истории торговли ботов
                                     try:
+                                        from bot_engine.bots_database import get_bots_database
+                                        bots_db = get_bots_database()
                                         # Аккуратно рассчитываем entry_timestamp, чтобы избежать NameError
                                         entry_timestamp = None
                                         if entry_time_str:
