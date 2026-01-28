@@ -159,6 +159,7 @@ class AICandlesLoader:
             
             def load_symbol_candles(symbol):
                 """Загружает свечи для одного символа (инкрементально или полностью)"""
+                from bot_engine.bot_config import get_current_timeframe
                 try:
                     # Проверяем существующие свечи для этого символа
                     existing_symbol_data = existing_candles.get(symbol, {})
@@ -466,7 +467,6 @@ class AICandlesLoader:
                                 pass
                     else:
                         # Для других бирж используем стандартный метод
-                        from bot_engine.bot_config import get_current_timeframe
                         current_timeframe = get_current_timeframe()
                         chart_response = exchange.get_chart_data(symbol, current_timeframe, max_period)
                         if chart_response and chart_response.get('success'):
