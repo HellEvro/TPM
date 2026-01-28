@@ -80,18 +80,24 @@ class AICandlesLoader:
         except:
             return None
     
-    def load_all_candles_full_history(self, max_workers: int = 10) -> bool:
+    def load_all_candles_full_history(self, max_workers: int = None) -> bool:
         """
         Загружает ВСЕ доступные свечи для всех монет
         
         Использует максимальный период для получения максимального количества свечей
         
         Args:
-            max_workers: Количество параллельных потоков
+            max_workers: Количество параллельных потоков (если None — из AILauncherConfig при ограничении ОЗУ).
         
         Returns:
             True если успешно загружено
         """
+        if max_workers is None:
+            try:
+                from bot_engine.ai.ai_launcher_config import AILauncherConfig
+                max_workers = AILauncherConfig.CANDLES_LOADER_MAX_WORKERS
+            except Exception:
+                max_workers = 10
         # Сокращенные логи
         logger.info("📊 Загрузка свечей для AI...")
         
@@ -606,22 +612,25 @@ class AICandlesLoader:
         return '1000'  # По умолчанию 1000 свечей для обучения ИИ
     
     def _load_existing_candles(self) -> Dict:
-        """Загрузить существующие свечи из БД (ограничено до 1000 последних для каждого символа)"""
+        """Загрузить существующие свечи из БД (ограничено по AILauncherConfig при ограничении ОЗУ)."""
         if not self.ai_db:
             return {}
         
         try:
-            # Загружаем свечи из БД с ограничениями для экономии памяти
             from bot_engine.bot_config import get_current_timeframe
+            try:
+                from bot_engine.ai.ai_launcher_config import AILauncherConfig
+                max_symbols = AILauncherConfig.MAX_SYMBOLS_FOR_CANDLES
+                max_candles_per_symbol = AILauncherConfig.MAX_CANDLES_PER_SYMBOL
+            except Exception:
+                max_symbols = 100
+                max_candles_per_symbol = 1000
             all_candles = self.ai_db.get_all_candles_dict(
                 timeframe=get_current_timeframe(),
-                max_symbols=100,  # Больше символов для загрузчика, но все равно ограничено
-                max_candles_per_symbol=1000
+                max_symbols=max_symbols,
+                max_candles_per_symbol=max_candles_per_symbol
             )
-            
-            # КРИТИЧНО: Ограничиваем до 1000 последних свечей для каждого символа
-            # Это предотвращает раздувание БД и оптимизирует использование памяти
-            MAX_CANDLES_PER_SYMBOL = 1000
+            MAX_CANDLES_PER_SYMBOL = max_candles_per_symbol
             limited_candles = {}
             
             for symbol, candles_list in all_candles.items():

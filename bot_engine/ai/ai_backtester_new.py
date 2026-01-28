@@ -155,12 +155,18 @@ class AIBacktester:
                     logger.warning("⚠️ AI Database не доступна")
                     return market_data
                 
-                # Ограничиваем загрузку для экономии памяти
+                # Ограничиваем загрузку (при AI_MEMORY_LIMIT_MB лимиты из AILauncherConfig)
                 from bot_engine.bot_config import get_current_timeframe
+                try:
+                    from bot_engine.ai.ai_launcher_config import AILauncherConfig
+                    _max_sym = min(30, AILauncherConfig.MAX_SYMBOLS_FOR_CANDLES)
+                    _max_candles = AILauncherConfig.MAX_CANDLES_PER_SYMBOL
+                except Exception:
+                    _max_sym, _max_candles = 30, 1000
                 candles_data = ai_db.get_all_candles_dict(
                     timeframe=get_current_timeframe(),
-                    max_symbols=30,
-                    max_candles_per_symbol=1000
+                    max_symbols=_max_sym,
+                    max_candles_per_symbol=_max_candles
                 )
                 if candles_data:
                     total_candles = sum(len(c) for c in candles_data.values())

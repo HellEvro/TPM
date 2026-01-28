@@ -16,6 +16,101 @@ if _root and _root not in sys.path:
     sys.path.insert(0, _root)
 import utils.sklearn_parallel_config  # noqa: F401 — вариант 1 до импорта sklearn
 
+
+def _get_total_ram_mb():
+    """Возвращает объём общей ОЗУ системы в MB или None при ошибке."""
+    try:
+        import psutil
+        total_bytes = psutil.virtual_memory().total
+        return int(total_bytes / (1024 * 1024))
+    except Exception:
+        pass
+    if sys.platform == 'linux':
+        try:
+            with open('/proc/meminfo', 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.startswith('MemTotal:'):
+                        kb = int(line.split()[1])
+                        return kb // 1024
+        except Exception:
+            pass
+    return None
+
+
+def _compute_memory_limit_mb():
+    """
+    Вычисляет лимит ОЗУ в MB. Источники (приоритет):
+    1) bot_config.SystemConfig: AI_MEMORY_PCT, AI_MEMORY_LIMIT_MB
+    2) Переменные окружения: AI_MEMORY_PCT, AI_MEMORY_LIMIT_MB
+    Если заданы и процент, и MB — приоритет у процента.
+    """
+    pct_val = None
+    limit_mb_val = None
+    try:
+        from bot_engine.bot_config import SystemConfig
+        pct_val = getattr(SystemConfig, 'AI_MEMORY_PCT', 0) or 0
+        limit_mb_val = getattr(SystemConfig, 'AI_MEMORY_LIMIT_MB', 0) or 0
+    except Exception:
+        pass
+    if not pct_val and not limit_mb_val:
+        pct_str = os.environ.get('AI_MEMORY_PCT', '').strip()
+        if pct_str:
+            try:
+                pct_val = float(pct_str.replace(',', '.'))
+                pct_val = max(1.0, min(100.0, pct_val))
+            except ValueError:
+                pct_val = None
+        limit_mb_str = os.environ.get('AI_MEMORY_LIMIT_MB', '').strip()
+        if limit_mb_str:
+            try:
+                limit_mb_val = int(limit_mb_str)
+            except ValueError:
+                limit_mb_val = 0
+    if pct_val and pct_val > 0:
+        total_mb = _get_total_ram_mb()
+        if total_mb and total_mb > 0:
+            limit_mb = int(total_mb * pct_val / 100.0)
+            if limit_mb > 0:
+                # Если задана верхняя граница в MB (например 4 ГБ) — не превышаем её
+                if limit_mb_val and limit_mb_val > 0:
+                    limit_mb = min(limit_mb, limit_mb_val)
+                os.environ['AI_MEMORY_LIMIT_MB'] = str(limit_mb)
+                return limit_mb, 'pct', total_mb, pct_val
+    if limit_mb_val and limit_mb_val > 0:
+        os.environ['AI_MEMORY_LIMIT_MB'] = str(limit_mb_val)
+        return limit_mb_val, 'mb', None, None
+    return None, None, None, None
+
+
+def _apply_memory_limit_if_configured():
+    """
+    Ограничение потребления ОЗУ процессом ai.py (AI_MEMORY_LIMIT_MB или AI_MEMORY_PCT).
+    На Linux/macOS: resource.setrlimit(RLIMIT_AS).
+    На Windows: лимит на процесс недоступен — используются только ограничения нагрузки из AILauncherConfig.
+    """
+    computed, kind, total_mb, pct = _compute_memory_limit_mb()
+    if computed is None:
+        return
+    limit_mb = computed
+    if kind == 'pct' and total_mb is not None and pct is not None:
+        sys.stderr.write(f"[AI] Лимит ОЗУ: {limit_mb} MB ({pct:.0f}% от {total_mb} MB)\n")
+    elif kind == 'mb':
+        sys.stderr.write(f"[AI] Лимит ОЗУ: {limit_mb} MB (AI_MEMORY_LIMIT_MB)\n")
+    if sys.platform == 'win32':
+        sys.stderr.write("[AI] На Windows лимит процесса недоступен, используются ограничения нагрузки из AILauncherConfig.\n")
+        return
+    try:
+        import resource
+        limit_bytes = limit_mb * 1024 * 1024
+        resource.setrlimit(resource.RLIMIT_AS, (limit_bytes, limit_bytes))
+    except (ValueError, OSError) as e:
+        sys.stderr.write(f"[AI] Не удалось установить лимит ОЗУ {limit_mb} MB: {e}\n")
+    except Exception:
+        pass
+
+
+_apply_memory_limit_if_configured()
+
 # Проверка и автоматическая установка PyTorch ПЕРЕД импортом защищенного модуля
 def _check_and_install_pytorch():
     """Проверяет наличие PyTorch и устанавливает его при необходимости"""
