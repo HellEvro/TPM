@@ -5,6 +5,17 @@
 обучения/оркестрации и отладочные флаги, которые не нужны основному bots.py.
 """
 
+import os
+
+
+def _memory_limit_mb_from_env():
+    """Лимит ОЗУ в MB из переменной окружения AI_MEMORY_LIMIT_MB (0 = не задан)."""
+    try:
+        v = os.environ.get('AI_MEMORY_LIMIT_MB', '').strip()
+        return int(v) if v else 0
+    except ValueError:
+        return 0
+
 
 class AILauncherConfig:
     """Базовые параметры поведения ai.py."""
@@ -134,6 +145,23 @@ class AILauncherConfig:
     # Ожидание готовности данных (data_service_status.ready). Используется лаунчером, если поддерживается.
     # При таймауте лаунчер пишет «Не удалось дождаться готовности данных» и продолжает обучение.
     DATA_READY_WAIT_TIMEOUT_SECONDS = 120
+
+    # ========================================================================
+    # ОГРАНИЧЕНИЕ ОЗУ (снижение потребления памяти ai.py)
+    # ========================================================================
+    # Лимит задаётся в общем конфиге bot_config.SystemConfig или переменными окружения.
+    # В конфиге: SystemConfig.AI_MEMORY_PCT = 30  (30% ОЗУ) или SystemConfig.AI_MEMORY_LIMIT_MB = 2048.
+    # В env: AI_MEMORY_PCT=35, AI_MEMORY_LIMIT_MB=2048. Приоритет у процента.
+    # MEMORY_LIMIT_MB: сюда подставляется значение (ai.py при старте пишет его в env из конфига/env).
+    # На Linux/macOS: при старте вызывается resource.setrlimit(RLIMIT_AS).
+    # На Windows: setrlimit недоступен; только снижение нагрузки (потоки, символы, свечи).
+    MEMORY_LIMIT_MB = _memory_limit_mb_from_env()
+
+    # При заданном MEMORY_LIMIT_MB — более консервативные лимиты нагрузки:
+    # меньше потоков и объёма данных за раз (снижает пиковое потребление ОЗУ).
+    CANDLES_LOADER_MAX_WORKERS = 4 if MEMORY_LIMIT_MB else 10   # потоков при загрузке свечей
+    MAX_SYMBOLS_FOR_CANDLES = 80 if MEMORY_LIMIT_MB else 100   # макс. символов в get_all_candles_dict
+    MAX_CANDLES_PER_SYMBOL = 500 if MEMORY_LIMIT_MB else 1000   # макс. свечей на символ
 
 
 class AITrainingStrategyConfig:

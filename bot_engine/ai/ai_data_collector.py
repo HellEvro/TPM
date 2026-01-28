@@ -543,7 +543,7 @@ class AIDataCollector:
             logger.info("🚀 Начинаем загрузку свечей (может занять несколько минут)...")
             
             loader = AICandlesLoader(exchange_obj=exchange)
-            success = loader.load_all_candles_full_history(max_workers=10)
+            success = loader.load_all_candles_full_history()  # max_workers из AILauncherConfig при ограничении ОЗУ
             
             if success:
                 logger.info("✅ История свечей загружена")
@@ -601,11 +601,17 @@ class AIDataCollector:
                     logger.warning("⚠️ AI Database не доступна")
                     return collected_data
                 
-                # Ограничиваем загрузку для экономии памяти
+                # Ограничиваем загрузку (при AI_MEMORY_LIMIT_MB лимиты из AILauncherConfig)
+                try:
+                    from bot_engine.ai.ai_launcher_config import AILauncherConfig
+                    _max_sym = AILauncherConfig.MAX_SYMBOLS_FOR_CANDLES
+                    _max_candles = AILauncherConfig.MAX_CANDLES_PER_SYMBOL
+                except Exception:
+                    _max_sym, _max_candles = 50, 1000
                 candles_data = ai_db.get_all_candles_dict(
                     timeframe=get_current_timeframe(),
-                    max_symbols=50,
-                    max_candles_per_symbol=1000
+                    max_symbols=_max_sym,
+                    max_candles_per_symbol=_max_candles
                 )
                 if candles_data and len(candles_data) > 0:
                     total_candles = sum(len(c) for c in candles_data.values())
