@@ -891,7 +891,16 @@ class BybitExchange(BaseExchange):
                         break
                 
                 if not active_position:
-                    # ✅ Детальное логирование для отладки
+                    # Позиция уже закрыта на бирже (size=0 или пустой side) — считаем успехом, бот переведётся в idle
+                    any_zero = any(abs(float(p.get('size', 0))) == 0 for p in positions)
+                    if any_zero or not positions:
+                        logger.info(f"[BYBIT] {symbol}: позиция уже закрыта на бирже (size=0 или нет открытой), считаем успехом")
+                        return {
+                            'success': True,
+                            'message': f'Позиция {side} для {symbol} уже закрыта на бирже',
+                            'order_id': None,
+                            'close_price': None
+                        }
                     logger.debug(f"[BYBIT] DEBUG: ❌ Позиция не найдена! Искали: side={normalized_side} (было {side}), symbol={symbol}USDT")
                     return {
                         'success': False,

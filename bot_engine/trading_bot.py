@@ -982,6 +982,15 @@ class TradingBot:
                     'entry_price': self.entry_price
                 }
             else:
+                error_message = str(order_result.get('message', '') or order_result.get('error', ''))
+                error_code = str(order_result.get('error_code', ''))
+                if '30228' in error_code or '30228' in error_message or 'delisting' in error_message.lower() or 'No new positions during delisting' in error_message:
+                    try:
+                        from bots_modules.sync_and_cache import add_symbol_to_delisted
+                        add_symbol_to_delisted(self.symbol, reason="No new positions during delisting (ErrCode: 30228)")
+                    except Exception as add_err:
+                        self.logger.debug(f" add_symbol_to_delisted: {add_err}")
+                    self.logger.error(f" {self.symbol}: 🚫 ДЕЛИСТИНГ! Открытие позиции запрещено биржей (ErrCode: 30228)")
                 self.logger.error(f"Failed to enter position: {order_result}")
                 return {'success': False, 'error': order_result.get('error', 'order_failed')}
                 

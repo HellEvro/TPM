@@ -2606,6 +2606,9 @@ def process_auto_bot_signals(exchange_obj=None):
             
             # Если сигнал ENTER_LONG или ENTER_SHORT - проверяем остальные фильтры и AI до попадания в список
             if signal in ['ENTER_LONG', 'ENTER_SHORT']:
+                if coin_data.get('is_delisting') or coin_data.get('trading_status') in ('Closed', 'Delivering'):
+                    logger.debug(f" {symbol}: пропуск — делистинг (is_delisting/trading_status)")
+                    continue
                 if not check_new_autobot_filters(symbol, signal, coin_data):
                     continue
                 # ✅ Проверка AI ДО добавления в список: если AI не разрешает — монета не попадает в LONG/SHORT

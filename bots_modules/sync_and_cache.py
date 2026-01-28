@@ -1020,6 +1020,31 @@ def load_delisted_coins():
         logger.warning(f"Ошибка загрузки делистированных монет из БД: {e}, используем дефолтные данные")
         return {"delisted_coins": {}, "last_scan": None, "scan_enabled": True}
 
+def add_symbol_to_delisted(symbol: str, reason: str = "Delisting detected"):
+    """Добавляет символ в список делистинговых (например, при ошибке 30228 при открытии позиции)."""
+    try:
+        if not symbol or not symbol.strip():
+            return False
+        sym = symbol.strip().upper()
+        delisted_data = load_delisted_coins()
+        if "delisted_coins" not in delisted_data:
+            delisted_data["delisted_coins"] = {}
+        if sym in delisted_data["delisted_coins"]:
+            return True
+        delisted_data["delisted_coins"][sym] = {
+            "reason": reason,
+            "delisting_date": datetime.now().strftime("%Y-%m-%d"),
+            "detected_at": datetime.now().isoformat(),
+            "source": "order_error_30228",
+        }
+        save_delisted_coins(delisted_data)
+        logger.warning(f"🚨 Добавлен в список делистинга: {sym} — {reason}")
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка добавления {symbol} в список делистинга: {e}")
+        return False
+
+
 def save_delisted_coins(data):
     """Сохраняет список делистинговых монет в БД"""
     try:
