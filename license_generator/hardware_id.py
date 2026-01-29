@@ -149,7 +149,7 @@ def get_hardware_id() -> str:
             
             # ВАЖНО: MAC адреса на Windows часто случайные/виртуальные (особенно на мини-ПК)
             # Чтобы HWID не менялся после перезагрузки, полностью игнорируем MAC адрес
-            logger.debug("MAC адрес (Windows) пропущен для стабильности HWID")
+            pass
         
         # 3. Специфичные для Linux данные
         elif platform.system() == 'Linux':
@@ -159,7 +159,7 @@ def get_hardware_id() -> str:
                     machine_id = f.read().strip()
                     if machine_id:
                         components.append(f"MACHINE_ID:{machine_id}")
-                        logger.debug(f"Machine ID получен: {machine_id[:16]}...")
+                        pass
             except Exception as e:
                 logger.warning(f"Не удалось получить Machine ID: {e}")
             
@@ -172,10 +172,10 @@ def get_hardware_id() -> str:
                             cpu_serial = line.split(':')[1].strip()
                             if cpu_serial and cpu_serial != '0000000000000000':
                                 components.append(f"CPU_SERIAL:{cpu_serial}")
-                                logger.debug(f"CPU Serial получен: {cpu_serial[:16]}...")
+                                pass
                                 break
             except Exception as e:
-                logger.debug(f"CPU Serial недоступен: {e}")
+                pass
             
             # DMI Product Serial (СТАБИЛЬНЫЙ, если доступен)
             try:
@@ -185,7 +185,7 @@ def get_hardware_id() -> str:
                 ).decode().strip()
                 if result and result != 'Not Specified' and result.strip():
                     components.append(f"DMI_SERIAL:{result}")
-                    logger.debug(f"DMI Serial получен: {result[:20]}...")
+                    pass
             except:
                 pass
         
