@@ -523,5 +523,63 @@ try:
 except Exception:
     pass
 
+
+def _run_ai_http_server():
+    """
+    Запуск AI как HTTP-сервиса: вся логика предсказаний выполняется только в процессе ai.py.
+    bots.py получает решения через POST /api/predict (без загрузки моделей в процесс ботов).
+    """
+    from flask import Flask, request, jsonify
+
+    app = Flask(__name__)
+
+    @app.route('/api/predict', methods=['POST'])
+    def api_predict():
+        try:
+            data = request.get_json(force=True, silent=True) or {}
+            symbol = data.get('symbol', '')
+            direction = data.get('direction', '')
+            rsi = float(data.get('rsi', 0))
+            trend = data.get('trend', '')
+            price = float(data.get('price', 0))
+            config = data.get('config')
+            candles = data.get('candles')
+            from bot_engine.ai.ai_integration import should_open_position_with_ai
+            result = should_open_position_with_ai(
+                symbol=symbol,
+                direction=direction,
+                rsi=rsi,
+                trend=trend,
+                price=price,
+                config=config,
+                candles=candles,
+            )
+            return jsonify(result)
+        except Exception as e:
+            return jsonify({
+                'should_open': True,
+                'ai_used': False,
+                'reason': f'AI service error: {e}',
+                'error': str(e),
+            }), 500
+
+    @app.route('/api/health', methods=['GET'])
+    def api_health():
+        return jsonify({'status': 'ok', 'service': 'ai'})
+
+    try:
+        from bot_engine.bot_config import SystemConfig
+        host = getattr(SystemConfig, 'AI_SERVICE_HOST', '127.0.0.1')
+        port = int(getattr(SystemConfig, 'AI_SERVICE_PORT', 5002))
+    except Exception:
+        host = os.environ.get('AI_SERVICE_HOST', '127.0.0.1')
+        port = int(os.environ.get('AI_SERVICE_PORT', '5002'))
+    sys.stderr.write(f"[AI] HTTP-сервис: http://{host}:{port} (POST /api/predict)\n")
+    app.run(host=host, port=port, threaded=True, use_reloader=False)
+
+
 if __name__ == '__main__':
-    _protected_module.main()
+    if '--server' in sys.argv or os.environ.get('USE_AI_HTTP_SERVER', '').strip().lower() in ('1', 'true', 'yes'):
+        _run_ai_http_server()
+    else:
+        _protected_module.main()
