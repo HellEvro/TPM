@@ -3,8 +3,14 @@
 """
 Модуль интеграции AI в bots.py
 
-Применяет обученные стратегии AI в процессе принятия торговых решений
-Включает Smart Money Concepts (SMC) для институционального анализа
+Применяет обученные стратегии AI в процессе принятия торговых решений.
+Включает Smart Money Concepts (SMC) для институционального анализа.
+
+Режимы работы:
+- USE_AI_SERVICE=True (по умолчанию): bots.py получает предсказания по HTTP от ai.py --server.
+  Модели и инференс выполняются только в процессе ai.py; в bots.py AI не загружается.
+- USE_AI_SERVICE=False: локальный вызов get_ai_system() (from ai import get_ai_system) —
+  модели подтягиваются в процесс bots (как раньше).
 """
 
 import os
@@ -82,18 +88,22 @@ def _get_ai_data_storage():
 
 
 def get_ai_system():
-    """Получить экземпляр AI системы"""
+    """
+    Получить экземпляр AI системы.
+    ВАЖНО: при вызове из bots.py (filters, bot_class) импортирует ai и загружает модели
+    в процесс bots — все расчёты AI (LSTM, pattern, predict_signal) идут в bots.py.
+    Чтобы не грузить AI в bots, отключите ai_enabled в настройках автобота.
+    """
     global _ai_system
-    
+
     if _ai_system is None:
         try:
-            # ai.py находится в корне проекта
             from ai import get_ai_system as _get_ai_system
             _ai_system = _get_ai_system()
         except Exception as e:
             pass
             return None
-    
+
     return _ai_system
 
 
@@ -364,6 +374,62 @@ def get_optimized_bot_config(symbol: str) -> Optional[Dict]:
         return None
 
 
+def _use_ai_service() -> bool:
+    """
+    Проверяет, использовать ли AI через HTTP-сервис (ai.py --server).
+    В процессе ai.py (INFOBOT_AI_PROCESS=true) всегда False — логика выполняется локально.
+    """
+    if os.environ.get('INFOBOT_AI_PROCESS', '').strip().lower() in ('1', 'true', 'yes'):
+        return False
+    try:
+        from bot_engine.bot_config import SystemConfig
+        return bool(getattr(SystemConfig, 'USE_AI_SERVICE', False))
+    except Exception:
+        pass
+    return os.environ.get('USE_AI_SERVICE', '').strip().lower() in ('1', 'true', 'yes')
+
+
+def _call_ai_service_predict(
+    symbol: str,
+    direction: str,
+    rsi: float,
+    trend: str,
+    price: float,
+    config: Dict = None,
+    candles: List[Dict] = None,
+) -> Optional[Dict]:
+    """
+    Вызов AI-сервиса (ai.py --server) по HTTP. При недоступности возвращает None.
+    """
+    try:
+        from bot_engine.bot_config import SystemConfig
+        host = getattr(SystemConfig, 'AI_SERVICE_HOST', '127.0.0.1')
+        port = int(getattr(SystemConfig, 'AI_SERVICE_PORT', 5002))
+        timeout = int(getattr(SystemConfig, 'REQUEST_TIMEOUT', 30))
+    except Exception:
+        host = os.environ.get('AI_SERVICE_HOST', '127.0.0.1')
+        port = int(os.environ.get('AI_SERVICE_PORT', '5002'))
+        timeout = 30
+    url = f"http://{host}:{port}/api/predict"
+    payload = {
+        'symbol': symbol,
+        'direction': direction,
+        'rsi': float(rsi),
+        'trend': trend,
+        'price': float(price),
+        'config': config,
+        'candles': candles,
+    }
+    try:
+        import requests
+        resp = requests.post(url, json=payload, timeout=min(timeout, 15))
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        logger.warning(f"AI service unavailable ({url}): {e}")
+        return None
+
+
 def should_open_position_with_ai(
     symbol: str,
     direction: str,
@@ -374,25 +440,34 @@ def should_open_position_with_ai(
     candles: List[Dict] = None
 ) -> Dict:
     """
-    Проверяет, нужно ли открывать позицию с учетом AI предсказания и SMC
-    
-    Использует:
-    - Smart Money Concepts (Order Blocks, FVG, Market Structure)
-    - Обученные модели из data/ai/models/
-    
-    Args:
-        symbol: Символ монеты
-        direction: Направление (LONG/SHORT)
-        rsi: Текущий RSI
-        trend: Текущий тренд
-        price: Текущая цена
-        config: Конфигурация бота
-        candles: Список свечей для SMC анализа (опционально)
-    
-    Returns:
-        Словарь с решением и информацией об AI/SMC
+    Проверяет, нужно ли открывать позицию с учетом AI предсказания и SMC.
+    При USE_AI_SERVICE=True запрос уходит в ai.py по HTTP (модели не грузятся в процесс ботов).
     """
     try:
+        # === ВЫЗОВ AI ПО HTTP (логика только в процессе ai.py) ===
+        if _use_ai_service():
+            result = _call_ai_service_predict(
+                symbol=symbol,
+                direction=direction,
+                rsi=rsi,
+                trend=trend,
+                price=price,
+                config=config,
+                candles=candles,
+            )
+            if result is not None:
+                if 'timestamp' not in result:
+                    result['timestamp'] = datetime.now().isoformat()
+                return result
+            # Fallback при недоступности AI-сервиса: разрешаем по скриптовым правилам
+            return {
+                'should_open': True,
+                'ai_used': False,
+                'smc_used': False,
+                'reason': 'AI service unavailable, using script rules',
+                'timestamp': datetime.now().isoformat(),
+            }
+
         result = {
             'should_open': True,
             'ai_used': False,

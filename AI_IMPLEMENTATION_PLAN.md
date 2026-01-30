@@ -90,6 +90,17 @@
 3. **Ядро компилируется отдельно** через `license_generator/compile_all.py`
 4. **Исходники AI синхронизируются в публичный репо** — это нормально
 
+### AI HTTP-сервис (логика только в процессе ai.py)
+
+При **USE_AI_SERVICE=True** (по умолчанию в `bot_config.SystemConfig`):
+
+- **bots.py** не загружает модели AI — получает предсказания по HTTP.
+- **ai.py --server** (или `USE_AI_HTTP_SERVER=1`) запускает HTTP-сервис на порту `AI_SERVICE_PORT` (5002).
+- Endpoint **POST /api/predict** принимает `symbol`, `direction`, `rsi`, `trend`, `price`, `config`, `candles` и возвращает решение (`should_open`, `reason`, `ai_used` и т.д.).
+- При недоступности AI-сервиса bots используют скриптовые правила (fallback: `should_open=True`, `ai_used=False`).
+
+Запуск AI-сервиса: `python ai.py --server` или с переменной окружения `USE_AI_HTTP_SERVER=1`.
+
 ---
 
 ## Созданные модули
