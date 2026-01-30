@@ -90,16 +90,10 @@
 3. **Ядро компилируется отдельно** через `license_generator/compile_all.py`
 4. **Исходники AI синхронизируются в публичный репо** — это нормально
 
-### AI HTTP-сервис (логика только в процессе ai.py)
+### Два кода предсказаний (реальные vs обучение)
 
-При **USE_AI_SERVICE=True** (по умолчанию в `bot_config.SystemConfig`):
-
-- **bots.py** не загружает модели AI — получает предсказания по HTTP.
-- **ai.py --server** (или `USE_AI_HTTP_SERVER=1`) запускает HTTP-сервис на порту `AI_SERVICE_PORT` (5002).
-- Endpoint **POST /api/predict** принимает `symbol`, `direction`, `rsi`, `trend`, `price`, `config`, `candles` и возвращает решение (`should_open`, `reason`, `ai_used` и т.д.).
-- При недоступности AI-сервиса bots используют скриптовые правила (fallback: `should_open=True`, `ai_used=False`).
-
-Запуск AI-сервиса: `python ai.py --server` или с переменной окружения `USE_AI_HTTP_SERVER=1`.
+- **bots.py (реальные сделки):** логика предсказаний для открытия сделок — модуль `ai_inference`. Только загрузка сохранённых `signal_predictor.pkl` и `scaler.pkl` из `data/ai/models`, инференс. Никакого ai.py, trainer, обучения, виртуальных сделок.
+- **ai.py (обучение, виртуальные сделки):** полный стек — обучение моделей, виртуальные сделки, сохранение моделей. Использует trainer и `predict_signal` внутри процесса ai.py. Модели сохраняются в `data/ai/models`; bots читают их через `ai_inference`.
 
 ---
 
