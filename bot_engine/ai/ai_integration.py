@@ -3,14 +3,11 @@
 """
 Модуль интеграции AI в bots.py
 
-Применяет обученные стратегии AI в процессе принятия торговых решений.
-Включает Smart Money Concepts (SMC) для институционального анализа.
-
-Режимы работы:
-- USE_AI_SERVICE=True (по умолчанию): bots.py получает предсказания по HTTP от ai.py --server.
-  Модели и инференс выполняются только в процессе ai.py; в bots.py AI не загружается.
-- USE_AI_SERVICE=False: локальный вызов get_ai_system() (from ai import get_ai_system) —
-  модели подтягиваются в процесс bots (как раньше).
+Два разных кода предсказаний:
+- В bots.py (реальные сделки): используется ai_inference — только загрузка signal_predictor.pkl/scaler.pkl
+  и инференс. Никакого ai.py, trainer, обучения.
+- В ai.py (обучение, виртуальные сделки): используется get_ai_system() и trainer.predict_signal().
+SMC (Smart Money Concepts) общий; логика «открывать или нет» — в should_open_position_with_ai.
 """
 
 import os
@@ -89,10 +86,8 @@ def _get_ai_data_storage():
 
 def get_ai_system():
     """
-    Получить экземпляр AI системы.
-    ВАЖНО: при вызове из bots.py (filters, bot_class) импортирует ai и загружает модели
-    в процесс bots — все расчёты AI (LSTM, pattern, predict_signal) идут в bots.py.
-    Чтобы не грузить AI в bots, отключите ai_enabled в настройках автобота.
+    Получить экземпляр AI системы. Вызывается только в процессе ai.py (обучение, виртуальные сделки).
+    В bots.py для реальных сделок используется ai_inference (только pkl-модели), не get_ai_system().
     """
     global _ai_system
 
@@ -374,60 +369,9 @@ def get_optimized_bot_config(symbol: str) -> Optional[Dict]:
         return None
 
 
-def _use_ai_service() -> bool:
-    """
-    Проверяет, использовать ли AI через HTTP-сервис (ai.py --server).
-    В процессе ai.py (INFOBOT_AI_PROCESS=true) всегда False — логика выполняется локально.
-    """
-    if os.environ.get('INFOBOT_AI_PROCESS', '').strip().lower() in ('1', 'true', 'yes'):
-        return False
-    try:
-        from bot_engine.bot_config import SystemConfig
-        return bool(getattr(SystemConfig, 'USE_AI_SERVICE', False))
-    except Exception:
-        pass
-    return os.environ.get('USE_AI_SERVICE', '').strip().lower() in ('1', 'true', 'yes')
-
-
-def _call_ai_service_predict(
-    symbol: str,
-    direction: str,
-    rsi: float,
-    trend: str,
-    price: float,
-    config: Dict = None,
-    candles: List[Dict] = None,
-) -> Optional[Dict]:
-    """
-    Вызов AI-сервиса (ai.py --server) по HTTP. При недоступности возвращает None.
-    """
-    try:
-        from bot_engine.bot_config import SystemConfig
-        host = getattr(SystemConfig, 'AI_SERVICE_HOST', '127.0.0.1')
-        port = int(getattr(SystemConfig, 'AI_SERVICE_PORT', 5002))
-        timeout = int(getattr(SystemConfig, 'REQUEST_TIMEOUT', 30))
-    except Exception:
-        host = os.environ.get('AI_SERVICE_HOST', '127.0.0.1')
-        port = int(os.environ.get('AI_SERVICE_PORT', '5002'))
-        timeout = 30
-    url = f"http://{host}:{port}/api/predict"
-    payload = {
-        'symbol': symbol,
-        'direction': direction,
-        'rsi': float(rsi),
-        'trend': trend,
-        'price': float(price),
-        'config': config,
-        'candles': candles,
-    }
-    try:
-        import requests
-        resp = requests.post(url, json=payload, timeout=min(timeout, 15))
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as e:
-        logger.warning(f"AI service unavailable ({url}): {e}")
-        return None
+def _is_ai_process() -> bool:
+    """True, если код выполняется в процессе ai.py (обучение, виртуальные сделки)."""
+    return os.environ.get('INFOBOT_AI_PROCESS', '').strip().lower() in ('1', 'true', 'yes')
 
 
 def should_open_position_with_ai(
@@ -440,34 +384,11 @@ def should_open_position_with_ai(
     candles: List[Dict] = None
 ) -> Dict:
     """
-    Проверяет, нужно ли открывать позицию с учетом AI предсказания и SMC.
-    При USE_AI_SERVICE=True запрос уходит в ai.py по HTTP (модели не грузятся в процесс ботов).
+    Проверяет, нужно ли открывать позицию с учётом AI и SMC.
+    В bots.py: предсказание через ai_inference (только pkl-модели, без ai.py/trainer).
+    В ai.py: предсказание через get_ai_system() (обучение, виртуальные сделки).
     """
     try:
-        # === ВЫЗОВ AI ПО HTTP (логика только в процессе ai.py) ===
-        if _use_ai_service():
-            result = _call_ai_service_predict(
-                symbol=symbol,
-                direction=direction,
-                rsi=rsi,
-                trend=trend,
-                price=price,
-                config=config,
-                candles=candles,
-            )
-            if result is not None:
-                if 'timestamp' not in result:
-                    result['timestamp'] = datetime.now().isoformat()
-                return result
-            # Fallback при недоступности AI-сервиса: разрешаем по скриптовым правилам
-            return {
-                'should_open': True,
-                'ai_used': False,
-                'smc_used': False,
-                'reason': 'AI service unavailable, using script rules',
-                'timestamp': datetime.now().isoformat(),
-            }
-
         result = {
             'should_open': True,
             'ai_used': False,
@@ -511,20 +432,6 @@ def should_open_position_with_ai(
                         result['reason'] = f"SMC против SHORT (score: {smc_signal['score']})"
                         return result
         
-        # === AI СИСТЕМА (классические ML модели) ===
-        ai_system = get_ai_system()
-        
-        if not ai_system:
-            if smc_signal:
-                return result  # Используем только SMC
-            return {'should_open': True, 'ai_used': False, 'smc_used': False, 'reason': 'AI system not available'}
-        
-        if not ai_system.trainer or not ai_system.trainer.signal_predictor:
-            pass
-            if smc_signal:
-                return result  # Используем только SMC
-            return {'should_open': True, 'ai_used': False, 'smc_used': result.get('smc_used', False), 'reason': 'AI models not trained yet'}
-        
         # Подготавливаем рыночные данные
         market_data = {
             'rsi': rsi,
@@ -532,15 +439,24 @@ def should_open_position_with_ai(
             'price': price,
             'direction': direction
         }
-        
-        # Добавляем SMC данные если есть
         if smc_signal:
             market_data['smc_signal'] = smc_signal['signal']
             market_data['smc_score'] = smc_signal['score']
             market_data['smc_confidence'] = smc_signal['confidence']
         
-        # Получаем предсказание от обученной модели
-        prediction = ai_system.predict_signal(symbol, market_data)
+        # === ПРЕДСКАЗАНИЕ: два разных кода ===
+        # В ai.py — полный стек (trainer, обучение, виртуальные сделки)
+        # В bots.py — только инференс по сохранённым моделям (ai_inference)
+        if _is_ai_process():
+            ai_system = get_ai_system()
+            if not ai_system or not ai_system.trainer or not ai_system.trainer.signal_predictor:
+                if smc_signal:
+                    return result
+                return {'should_open': True, 'ai_used': False, 'smc_used': result.get('smc_used', False), 'reason': 'AI models not trained yet'}
+            prediction = ai_system.predict_signal(symbol, market_data)
+        else:
+            from bot_engine.ai.ai_inference import predict_signal as inference_predict_signal
+            prediction = inference_predict_signal(symbol, market_data)
         
         if 'error' in prediction:
             pass
