@@ -19,7 +19,8 @@ logger = logging.getLogger('BotsService')
 try:
     from bots_modules.imports_and_globals import (
         bots_data_lock, bots_data, rsi_data_lock, coins_rsi_data,
-        BOT_STATUS, get_exchange, system_initialized, get_auto_bot_config
+        BOT_STATUS, get_exchange, system_initialized, get_auto_bot_config,
+        get_individual_coin_settings
     )
 except ImportError:
     # Fallback если импорт не удался
@@ -38,6 +39,8 @@ except ImportError:
         'PAUSED': 'paused'
     }
     def get_exchange():
+        return None
+    def get_individual_coin_settings(symbol):
         return None
     system_initialized = False
 
@@ -1020,39 +1023,31 @@ class NewTradingBot:
             
             with bots_data_lock:
                 auto_config = bots_data.get('auto_bot_config', {})
-                
-                # ✅ Определяем уровень RSI выхода в зависимости от тренда при входе
-                # Получаем entry_trend из данных бота (сохраняется при входе в позицию)
                 bot_data = bots_data.get('bots', {}).get(symbol, {})
                 entry_trend = bot_data.get('entry_trend', None)
-                
-                # ВАЖНО: Используем индивидуальные настройки из bot_data если есть, иначе из auto_config
-                
+                # Пороги: individual_settings → bot_data → auto_config → константы (п.1 REVERTED_COMMITS_FIXES)
+                individual_settings = get_individual_coin_settings(symbol) or {}
+
+                def _thresh(key, default):
+                    return (individual_settings.get(key) or bot_data.get(key)
+                            or auto_config.get(key) or default)
+
                 if position_side == 'LONG':
-                    # Для LONG: проверяем был ли вход по UP тренду или против DOWN тренда
                     if entry_trend == 'UP':
-                        # Вход по тренду - можем ждать большего движения
                         config_key = 'rsi_exit_long_with_trend'
-                        threshold = bot_data.get(config_key) or auto_config.get(config_key, 65)
+                        threshold = _thresh(config_key, 65)
                     else:
-                        # Вход против тренда или тренд неизвестен - выходим раньше
                         config_key = 'rsi_exit_long_against_trend'
-                        threshold = bot_data.get(config_key) or auto_config.get(config_key, 60)
-                    
+                        threshold = _thresh(config_key, 60)
                     condition_func = lambda r, t: r >= t  # RSI >= порог для LONG
                     condition_str = ">="
-                    
                 else:  # SHORT
-                    # Для SHORT: проверяем был ли вход по DOWN тренду или против UP тренда
                     if entry_trend == 'DOWN':
-                        # Вход по тренду - можем ждать большего движения
                         config_key = 'rsi_exit_short_with_trend'
-                        threshold = bot_data.get(config_key) or auto_config.get(config_key, 35)
+                        threshold = _thresh(config_key, 35)
                     else:
-                        # Вход против тренда или тренд неизвестен - выходим раньше
                         config_key = 'rsi_exit_short_against_trend'
-                        threshold = bot_data.get(config_key) or auto_config.get(config_key, 40)
-                    
+                        threshold = _thresh(config_key, 40)
                     condition_func = lambda r, t: r <= t  # RSI <= порог для SHORT
                     condition_str = "<="
             

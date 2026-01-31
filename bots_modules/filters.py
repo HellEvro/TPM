@@ -2796,6 +2796,13 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                     RSI_EXIT_LONG_WITH_TREND, RSI_EXIT_LONG_AGAINST_TREND,
                     RSI_EXIT_SHORT_WITH_TREND, RSI_EXIT_SHORT_AGAINST_TREND,
                 )
+                # Пороги выхода по RSI из конфига: individual_settings → auto_config → константы (п.1 REVERTED_COMMITS_FIXES)
+                auto_config = bots_data.get('auto_bot_config', {})
+                individual_settings = get_individual_coin_settings(symbol) or {}
+                exit_long_with = individual_settings.get('rsi_exit_long_with_trend') or auto_config.get('rsi_exit_long_with_trend') or RSI_EXIT_LONG_WITH_TREND
+                exit_long_against = individual_settings.get('rsi_exit_long_against_trend') or auto_config.get('rsi_exit_long_against_trend') or RSI_EXIT_LONG_AGAINST_TREND
+                exit_short_with = individual_settings.get('rsi_exit_short_with_trend') or auto_config.get('rsi_exit_short_with_trend') or RSI_EXIT_SHORT_WITH_TREND
+                exit_short_against = individual_settings.get('rsi_exit_short_against_trend') or auto_config.get('rsi_exit_short_against_trend') or RSI_EXIT_SHORT_AGAINST_TREND
                 # ✅ Используем таймфрейм бота для получения RSI и тренда
                 current_rsi = get_rsi_from_coin_data(rsi_data, timeframe=timeframe_to_use)
                 current_trend = get_trend_from_coin_data(rsi_data, timeframe=timeframe_to_use)
@@ -2806,15 +2813,15 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                 # ✅ КРИТИЧНО: Используем только trend по ТФ бота, БЕЗ fallback на trend6h
                 # Иначе бот на 1m может получить trend6h и работать "как на 6ч"
                 external_trend = rsi_data.get(trend_key) or current_trend
-                # ✅ Сигнал выхода по RSI — по выбранному ТФ бота (не системному)
+                # ✅ Сигнал выхода по RSI — пороги из конфига (п.1)
                 position_side = bot_data.get('position_side') or (bot_data.get('position') or {}).get('side')
                 entry_trend = bot_data.get('entry_trend')
                 if current_rsi is not None and position_side:
                     if position_side == 'LONG':
-                        thr = RSI_EXIT_LONG_WITH_TREND if entry_trend == 'UP' else RSI_EXIT_LONG_AGAINST_TREND
+                        thr = exit_long_with if entry_trend == 'UP' else exit_long_against
                         external_signal = 'EXIT_LONG' if current_rsi >= thr else (rsi_data.get('signal') or 'WAIT')
                     elif position_side == 'SHORT':
-                        thr = RSI_EXIT_SHORT_WITH_TREND if entry_trend == 'DOWN' else RSI_EXIT_SHORT_AGAINST_TREND
+                        thr = exit_short_with if entry_trend == 'DOWN' else exit_short_against
                         external_signal = 'EXIT_SHORT' if current_rsi <= thr else (rsi_data.get('signal') or 'WAIT')
                     else:
                         external_signal = rsi_data.get('signal') or 'WAIT'
