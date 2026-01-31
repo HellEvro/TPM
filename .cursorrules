@@ -53,7 +53,7 @@ python scripts/git_commit_push.py "Описание изменений"
 
 ## Важное правило для конфигурационных файлов:
 
-**КРИТИЧЕСКИ ВАЖНО:** При обновлении любого конфигурационного файла (например, `bot_engine/bot_config.py`) ВСЕГДА обновляй также его example версию (например, `bot_engine/example.bot_config.py`).
+**КРИТИЧЕСКИ ВАЖНО:** При обновлении любого конфигурационного файла (например, `bot_engine/bot_config.py`) ВСЕГДА обновляй также его example версию (например, `bot_engine/bot_config.example.py`).
 
 - Example файлы являются эталонными и должны содержать актуальные дефолтные настройки
 - При изменении конфига сначала обнови example версию, затем обнови сам конфиг
@@ -61,7 +61,7 @@ python scripts/git_commit_push.py "Описание изменений"
 - Если конфиг не отслеживается в git (в .gitignore), то example версия - единственный способ сохранить дефолтные настройки
 
 **Примеры пар файлов:**
-- `bot_engine/bot_config.py` ↔ `bot_engine/example.bot_config.py`
+- `bot_engine/bot_config.py` ↔ `bot_engine/bot_config.example.py`
 - `app/config.py` ↔ `app/config.example.py` (если есть)
 - Любые другие конфиги с example версиями
 
