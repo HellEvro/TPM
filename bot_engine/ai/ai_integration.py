@@ -399,9 +399,15 @@ def should_open_position_with_ai(
             'timestamp': datetime.now().isoformat()
         }
         
-        # === SMC АНАЛИЗ (если есть свечи) ===
+        # === SMC АНАЛИЗ (если включён и есть свечи) ===
         smc_signal = None
-        if candles and len(candles) >= 10:
+        smc_enabled = True
+        try:
+            from bot_engine.bot_config import AIConfig
+            smc_enabled = getattr(AIConfig, 'AI_SMC_ENABLED', True)
+        except Exception:
+            pass
+        if smc_enabled and candles and len(candles) >= 10:
             smc_signal = get_smc_signal(candles, price)
             
             if smc_signal:
