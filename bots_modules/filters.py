@@ -2481,26 +2481,30 @@ def _recalculate_signal_with_trend(rsi, trend, symbol):
 
         # Получаем настройки автобота
         auto_config = bots_data.get('auto_bot_config', {})
+        # ✅ КРИТИЧНО: Используем rsi_long_threshold/rsi_short_threshold из конфига!
+        # Иначе при пороге 21 бот входил от 29 (зашитый RSI_OVERSOLD)
+        individual_settings = get_individual_coin_settings(symbol)
+        rsi_long_threshold = (individual_settings.get('rsi_long_threshold') if individual_settings else None) or auto_config.get('rsi_long_threshold', SystemConfig.RSI_OVERSOLD)
+        rsi_short_threshold = (individual_settings.get('rsi_short_threshold') if individual_settings else None) or auto_config.get('rsi_short_threshold', SystemConfig.RSI_OVERBOUGHT)
         # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
         avoid_down_trend = auto_config.get('avoid_down_trend', False)
         avoid_up_trend = auto_config.get('avoid_up_trend', False)
         
-        # Определяем базовый сигнал по RSI
-        if rsi <= SystemConfig.RSI_OVERSOLD:  # RSI ≤ 29 
+        # Определяем базовый сигнал по RSI (с учётом настроек пользователя!)
+        if rsi <= rsi_long_threshold:
             # Проверяем нужно ли избегать DOWN тренда для LONG
             if avoid_down_trend and trend == 'DOWN':
                 return 'WAIT'  # Ждем улучшения тренда
             else:
                 return 'ENTER_LONG'  # Входим независимо от тренда или при хорошем тренде
-        elif rsi >= SystemConfig.RSI_OVERBOUGHT:  # RSI ≥ 71
+        elif rsi >= rsi_short_threshold:
             # Проверяем нужно ли избегать UP тренда для SHORT
             if avoid_up_trend and trend == 'UP':
                 return 'WAIT'  # Ждем ослабления тренда
             else:
                 return 'ENTER_SHORT'  # Входим независимо от тренда или при хорошем тренде
         else:
-            # RSI между 30-70 - нейтральная зона
-            pass
+            # RSI между порогами - нейтральная зона
             return 'WAIT'
             
     except Exception as e:
@@ -3012,6 +3016,7 @@ def analyze_trends_for_signal_coins():
         from bots_modules.imports_and_globals import (
             rsi_data_lock,
             coins_rsi_data,
+            bots_data,
             get_exchange,
             get_auto_bot_config,
         )
@@ -3047,10 +3052,17 @@ def analyze_trends_for_signal_coins():
         trend_key = get_trend_key(current_timeframe)
 
         # Находим монеты с сигналами для анализа тренда (чтение словаря без блокировки)
+        # ✅ КРИТИЧНО: Используем пороги из конфига, не зашитые 29/71!
+        auto_config = bots_data.get('auto_bot_config', {})
+        rsi_long_th = auto_config.get('rsi_long_threshold', SystemConfig.RSI_OVERSOLD)
+        rsi_short_th = auto_config.get('rsi_short_threshold', SystemConfig.RSI_OVERBOUGHT)
         signal_coins = []
         for symbol, coin_data in coins_rsi_data['coins'].items():
             rsi = get_rsi_from_coin_data(coin_data)
-            if rsi is not None and (rsi <= 29 or rsi >= 71):
+            ind = get_individual_coin_settings(symbol)
+            long_th = (ind.get('rsi_long_threshold') if ind else None) or rsi_long_th
+            short_th = (ind.get('rsi_short_threshold') if ind else None) or rsi_short_th
+            if rsi is not None and (rsi <= long_th or rsi >= short_th):
                 signal_coins.append(symbol)
         
         logger.info(f" 📊 Найдено {len(signal_coins)} сигнальных монет для анализа тренда")
