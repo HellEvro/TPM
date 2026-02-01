@@ -4589,7 +4589,8 @@ class BotsManager {
             if (data.success && data.config) {
                 this.filtersData = {
                     whitelist: data.config.whitelist || [],
-                    blacklist: data.config.blacklist || []
+                    blacklist: data.config.blacklist || [],
+                    scope: ['all', 'whitelist', 'blacklist'].includes(data.config.scope) ? data.config.scope : 'all'
                 };
                 
                 this.renderFilters();
@@ -4669,13 +4670,18 @@ class BotsManager {
     }
 
     initializeFilterControls() {
-        // Новый поиск на вкладке фильтров
         const filtersSearchInput = document.getElementById('filtersSearchInput');
         if (filtersSearchInput) {
             filtersSearchInput.addEventListener('input', (e) => {
                 this.performFiltersSearch(e.target.value);
             });
         }
+        const exportBtn = document.getElementById('exportFiltersBtn');
+        const importBtn = document.getElementById('importFiltersBtn');
+        const importFile = document.getElementById('importFiltersFile');
+        if (exportBtn) exportBtn.addEventListener('click', () => this.exportFiltersToJson());
+        if (importBtn) importBtn.addEventListener('click', () => importFile && importFile.click());
+        if (importFile) importFile.addEventListener('change', (e) => { this.importFiltersFromJson(e.target.files[0]); e.target.value = ''; });
     }
     async addToWhitelist() {
         const input = document.getElementById('whitelistInput');
@@ -4761,10 +4767,49 @@ class BotsManager {
         }
     }
 
+    exportFiltersToJson() {
+        const w = this.filtersData?.whitelist || [];
+        const b = this.filtersData?.blacklist || [];
+        const scope = this.filtersData?.scope || 'all';
+        const payload = { whitelist: w, blacklist: b, scope };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const iso = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+        a.download = 'coin_filters_' + iso + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        this.showNotification('Списки выгружены в JSON', 'success');
+    }
+
+    async importFiltersFromJson(file) {
+        if (!file) return;
+        if (!this.serviceOnline) {
+            this.showNotification('Сервис ботов недоступен. Запустите bots.py', 'error');
+            return;
+        }
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            const w = Array.isArray(data.whitelist) ? data.whitelist : [];
+            const b = Array.isArray(data.blacklist) ? data.blacklist : [];
+            const scope = ['all', 'whitelist', 'blacklist'].includes(data.scope) ? data.scope : 'all';
+            const toSymbols = (arr) => arr.map(x => typeof x === 'string' ? x.trim().toUpperCase() : (x && x.symbol ? String(x.symbol).trim().toUpperCase() : '')).filter(Boolean);
+            const whitelist = [...new Set(toSymbols(w))];
+            const blacklist = [...new Set(toSymbols(b))];
+            await this.updateFilters({ whitelist, blacklist, scope });
+            this.showNotification('Списки загружены из JSON в БД', 'success');
+        } catch (err) {
+            console.error('[BotsManager] Ошибка импорта фильтров:', err);
+            this.showNotification('Ошибка: неверный формат JSON или чтение файла', 'error');
+        }
+    }
+
     async updateFilters(updates) {
         // Убеждаемся что filtersData инициализирован
         if (!this.filtersData) {
-            this.filtersData = { whitelist: [], blacklist: [] };
+            this.filtersData = { whitelist: [], blacklist: [], scope: 'all' };
         }
         
         // Обновляем локальные данные
@@ -4774,8 +4819,11 @@ class BotsManager {
         if (updates.blacklist !== undefined) {
             this.filtersData.blacklist = updates.blacklist;
         }
+        if (updates.scope !== undefined) {
+            this.filtersData.scope = updates.scope;
+        }
         
-        // Отправляем на сервер
+        // Отправляем на сервер (в БД через API)
         const response = await fetch(`${this.apiUrl}/auto-bot`, {
             method: 'POST',
             headers: {
