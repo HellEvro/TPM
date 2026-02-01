@@ -72,6 +72,7 @@ EXCLUDE = [
     # Конфиденциальные файлы
     "app/keys.py",
     "app/config.py",
+    "bot_engine/bot_config.py",  # Локальный конфиг пользователя, не перетирать при синке
     "app/current_language.txt",
     "app/telegram_states.json",
     "launcher/.infobot_manager_state.json",
