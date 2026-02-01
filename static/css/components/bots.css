@@ -1033,6 +1033,12 @@
     font-size: 14px;
 }
 
+.filters-export-import {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+
 .filters-content {
     display: grid;
     grid-template-columns: 1fr 1fr;

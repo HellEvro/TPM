@@ -971,6 +971,15 @@
             <div class="filters-header">
                 <h2 data-translate="filter_settings_for_auto_bot">Настройки фильтров для Auto Bot</h2>
                 <p data-translate="manage_coin_lists_for_auto_trading">Управляйте списками монет для автоматической торговли</p>
+                <div class="filters-export-import">
+                    <button type="button" id="exportFiltersBtn" class="btn btn-sm btn-outline" title="Скачать списки в JSON">
+                        📤 Выгрузить в JSON
+                    </button>
+                    <button type="button" id="importFiltersBtn" class="btn btn-sm btn-outline" title="Загрузить списки из JSON в БД">
+                        📥 Загрузить из JSON
+                    </button>
+                    <input type="file" id="importFiltersFile" accept=".json" style="display: none;" />
+                </div>
             </div>
             
             <div class="filters-content">
