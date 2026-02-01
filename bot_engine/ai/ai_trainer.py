@@ -3761,7 +3761,17 @@ class AITrainer:
             )
         
         try:
-            # Импортируем ВАШИ настройки из bots.py
+            # ✅ КРИТИЧНО: Сначала загружаем КОНФИГ пользователя — он база для всех расчётов
+            base_config_snapshot = _get_config_snapshot()
+            base_config = base_config_snapshot.get('global', {}) or {}
+            if self.training_param_overrides:
+                base_config = deepcopy(base_config)
+                base_config.update(self.training_param_overrides)
+                if not self._training_overrides_logged:
+                    logger.info("🎯 Используем тренировочные AI оверрайды (ai_launcher_config)")
+                    self._training_overrides_logged = True
+
+            # Константы из bot_config — только как fallback, если в конфиге нет значения
             try:
                 from bot_engine.bot_config import (
                     RSI_OVERSOLD, RSI_OVERBOUGHT,
@@ -3769,22 +3779,27 @@ class AITrainer:
                     RSI_EXIT_SHORT_WITH_TREND, RSI_EXIT_SHORT_AGAINST_TREND,
                     RSI_PERIOD
                 )
-                base_rsi_oversold = RSI_OVERSOLD
-                base_rsi_overbought = RSI_OVERBOUGHT
-                base_exit_long_with = RSI_EXIT_LONG_WITH_TREND
-                base_exit_long_against = RSI_EXIT_LONG_AGAINST_TREND
-                base_exit_short_with = RSI_EXIT_SHORT_WITH_TREND
-                base_exit_short_against = RSI_EXIT_SHORT_AGAINST_TREND
             except ImportError as e:
                 logger.warning(f"⚠️ Не удалось загрузить настройки из bot_config.py: {e}")
-                # Используем значения по умолчанию
-                base_rsi_oversold = 29
-                base_rsi_overbought = 71
-                base_exit_long_with = 65
-                base_exit_long_against = 60
-                base_exit_short_with = 35
-                base_exit_short_against = 40
+                RSI_OVERSOLD, RSI_OVERBOUGHT = 29, 71
+                RSI_EXIT_LONG_WITH_TREND, RSI_EXIT_LONG_AGAINST_TREND = 65, 60
+                RSI_EXIT_SHORT_WITH_TREND, RSI_EXIT_SHORT_AGAINST_TREND = 35, 40
                 RSI_PERIOD = 14
+
+            # ✅ Базовые RSI — СНАЧАЛА из конфига пользователя, затем константы (fallback)
+            def _safe_float(v, default):
+                if v is None:
+                    return default
+                try:
+                    return float(v)
+                except (TypeError, ValueError):
+                    return default
+            base_rsi_oversold = _safe_float(base_config.get('rsi_long_threshold'), RSI_OVERSOLD)
+            base_rsi_overbought = _safe_float(base_config.get('rsi_short_threshold'), RSI_OVERBOUGHT)
+            base_exit_long_with = _safe_float(base_config.get('rsi_exit_long_with_trend'), RSI_EXIT_LONG_WITH_TREND)
+            base_exit_long_against = _safe_float(base_config.get('rsi_exit_long_against_trend'), RSI_EXIT_LONG_AGAINST_TREND)
+            base_exit_short_with = _safe_float(base_config.get('rsi_exit_short_with_trend'), RSI_EXIT_SHORT_WITH_TREND)
+            base_exit_short_against = _safe_float(base_config.get('rsi_exit_short_against_trend'), RSI_EXIT_SHORT_AGAINST_TREND)
             
             # ВАРИАЦИЯ ПАРАМЕТРОВ: Добавляем случайное отклонение для разнообразия
             # Это позволяет модели обучаться на разных комбинациях параметров
@@ -3811,15 +3826,6 @@ class AITrainer:
                     pass  # доступно комбинаций RSI параметров
             else:
                 pass
-
-            base_config_snapshot = _get_config_snapshot()
-            base_config = base_config_snapshot.get('global', {})
-            if self.training_param_overrides:
-                base_config = deepcopy(base_config)
-                base_config.update(self.training_param_overrides)
-                if not self._training_overrides_logged:
-                    logger.info("🎯 Используем тренировочные AI оверрайды (ai_launcher_config)")
-                    self._training_overrides_logged = True
 
             base_stop_loss = base_config.get('max_loss_percent', 15.0)
             base_take_profit = base_config.get('take_profit_percent', 20.0)
@@ -3850,11 +3856,11 @@ class AITrainer:
             base_min_rsi_low = base_config.get('min_rsi_low', 35)
             base_max_rsi_high = base_config.get('max_rsi_high', 65)
 
-            logger.info("🎲 БАЗОВЫЕ ПАРАМЕТРЫ ОБУЧЕНИЯ (индивидуализация на уровне монеты)")
+            logger.info("🎲 БАЗОВЫЕ ПАРАМЕТРЫ ОБУЧЕНИЯ (конфиг → вариации на уровне монеты)")
 
             logger.info("=" * 80)
 
-            logger.info("📊 RSI базовые значения:")
+            logger.info("📊 RSI базовые значения (из конфига пользователя, ИИ варьирует от них):")
 
             logger.info(
 
@@ -4519,27 +4525,27 @@ class AITrainer:
                                 should_exit = False
                                 exit_reason = None
                                 
-                                # Используем ВАШИ правила выхода из bot_config.py
+                                # ✅ Используем coin_RSI_EXIT_* — сгенерированные/тестируемые параметры для этой монеты
                                 if direction == 'LONG':
                                     # Определяем был ли вход по тренду или против
                                     if entry_trend == 'UP':
                                         # Вход по тренду - используем WITH_TREND
-                                        if current_rsi >= RSI_EXIT_LONG_WITH_TREND:
+                                        if current_rsi >= coin_RSI_EXIT_LONG_WITH_TREND:
                                             should_exit = True
                                             exit_reason = 'RSI_EXIT_WITH_TREND'
                                     else:
                                         # Вход против тренда - используем AGAINST_TREND
-                                        if current_rsi >= RSI_EXIT_LONG_AGAINST_TREND:
+                                        if current_rsi >= coin_RSI_EXIT_LONG_AGAINST_TREND:
                                             should_exit = True
                                             exit_reason = 'RSI_EXIT_AGAINST_TREND'
                                 
                                 elif direction == 'SHORT':
                                     if entry_trend == 'DOWN':
-                                        if current_rsi <= RSI_EXIT_SHORT_WITH_TREND:
+                                        if current_rsi <= coin_RSI_EXIT_SHORT_WITH_TREND:
                                             should_exit = True
                                             exit_reason = 'RSI_EXIT_WITH_TREND'
                                     else:
-                                        if current_rsi <= RSI_EXIT_SHORT_AGAINST_TREND:
+                                        if current_rsi <= coin_RSI_EXIT_SHORT_AGAINST_TREND:
                                             should_exit = True
                                             exit_reason = 'RSI_EXIT_AGAINST_TREND'
 
