@@ -1392,6 +1392,10 @@ class TradingBot:
                 return {'success': False, 'error': 'failed_to_get_price'}
             
             self.logger.info(f" {self.symbol}: 💰 Текущая цена: {current_price}")
+
+            # ✅ КРИТИЧНО: Плечо из конфига — передаём в place_order для установки перед каждым ордером
+            leverage = self.config.get('leverage') or self.leverage
+            self.logger.info(f" {self.symbol}: 📊 Используемое плечо для лимитных ордеров: {leverage}x")
             
             # Сохраняем цену входа для расчета лимитных ордеров
             self.limit_orders_entry_price = current_price
@@ -1446,7 +1450,8 @@ class TradingBot:
                         quantity=actual_quantity,  # ✅ Используем значение из массива
                         order_type='market',
                         quantity_is_usdt=True,
-                        skip_min_notional_enforcement=True  # ✅ Для лимитных ордеров из набора - специальное предупреждение при увеличении до минимума
+                        skip_min_notional_enforcement=True,  # ✅ Для лимитных ордеров из набора - специальное предупреждение при увеличении до минимума
+                        leverage=leverage  # ✅ Кредитное плечо
                     )
                     if order_result.get('success'):
                         order_id = order_result.get('order_id')
@@ -1555,7 +1560,8 @@ class TradingBot:
                     order_type='limit',
                     price=limit_price,
                     quantity_is_usdt=True,
-                    skip_min_notional_enforcement=True  # ✅ Для лимитных ордеров из набора не принуждаем к minNotionalValue
+                    skip_min_notional_enforcement=True,  # ✅ Для лимитных ордеров из набора не принуждаем к minNotionalValue
+                    leverage=leverage  # ✅ Кредитное плечо
                 )
                 
                 if order_result.get('success'):

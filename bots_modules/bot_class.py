@@ -2419,11 +2419,15 @@ class NewTradingBot:
         except Exception:
             auto_config = {}
 
+        # ✅ КРИТИЧНО: Плечо — из настроек бота (индивидуальных) или из auto_bot_config
+        leverage = self.config.get('leverage') or getattr(self, 'leverage', None) or auto_config.get('leverage') or 10
+
         config = {
             'auto_managed': True,
             'status': 'idle',
             'volume_mode': self.volume_mode,
             'volume_value': self.volume_value,
+            'leverage': leverage,  # ✅ Кредитное плечо — передаём в TradingBot для установки при открытии позиции!
             'max_loss_percent': self.config.get('max_loss_percent', auto_config.get('max_loss_percent', 10)),
             'take_profit_percent': self.config.get('take_profit_percent', auto_config.get('take_profit_percent', 20)),
             'break_even_protection': self.config.get('break_even_protection', auto_config.get('break_even_protection', True)),
