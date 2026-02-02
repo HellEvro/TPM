@@ -4941,14 +4941,27 @@ class AITrainer:
                             y_signal_symbol = []
                             y_profit_symbol = []
                             
+                            # 7 признаков — как у глобальной модели и inference (без изменения логики, только совместимость)
                             symbol_trades = simulated_trades_symbol
                             for trade in symbol_trades:
+                                try:
+                                    vol = trade.get('entry_volatility')
+                                    vol = float(vol) if vol is not None else 0.0
+                                except (TypeError, ValueError):
+                                    vol = 0.0
+                                try:
+                                    vol_ratio = trade.get('entry_volume_ratio')
+                                    vol_ratio = float(vol_ratio) if vol_ratio is not None else 1.0
+                                except (TypeError, ValueError):
+                                    vol_ratio = 1.0
                                 features = [
-                                    trade['entry_rsi'],
-                                    trade['entry_trend'] == 'UP',
-                                    trade['entry_trend'] == 'DOWN',
-                                    trade['direction'] == 'LONG',
-                                    trade['entry_price'] / 1000.0 if trade['entry_price'] > 0 else 0,
+                                    float(trade.get('entry_rsi', 50)),
+                                    vol,
+                                    vol_ratio,
+                                    1.0 if (trade.get('entry_trend') or '') == 'UP' else 0.0,
+                                    1.0 if (trade.get('entry_trend') or '') == 'DOWN' else 0.0,
+                                    1.0 if (trade.get('direction') or 'LONG') == 'LONG' else 0.0,
+                                    (float(trade.get('entry_price') or 0) / 1000.0) if (trade.get('entry_price') or 0) > 0 else 0.0,
                                 ]
                                 X_symbol.append(features)
                                 y_signal_symbol.append(1 if trade['is_successful'] else 0)
@@ -6456,8 +6469,8 @@ class AITrainer:
                 pass
                 return False
 
-            # Извлекаем признаки из сделки
-            features = self._prepare_features(trade_result)
+            # Извлекаем признаки (7 признаков — как при обучении и инференсе)
+            features = self._build_signal_features_7(trade_result)
             if features is None:
                 pass
                 return False
@@ -6466,8 +6479,7 @@ class AITrainer:
             pnl = trade_result.get('pnl', 0)
             is_successful = pnl > 0
 
-            # Для онлайн обучения используем простую корректировку весов
-            # В реальной реализации здесь был бы более сложный алгоритм
+            # Буфер для инкрементального обучения (те же 7 признаков, что и scaler)
             self._online_learning_buffer.append({
                 'features': features,
                 'target': 1 if is_successful else 0,
