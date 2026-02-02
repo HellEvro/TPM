@@ -299,6 +299,19 @@ bots_cache_data = {
 }
 bots_cache_lock = threading.Lock()
 
+# Флаг «недостаточно средств» (ErrCode 110007): показывать на странице ботов, сбрасывать при достаточном балансе
+insufficient_funds_flag = False
+insufficient_funds_lock = threading.Lock()
+
+def set_insufficient_funds(value: bool) -> None:
+    global insufficient_funds_flag
+    with insufficient_funds_lock:
+        insufficient_funds_flag = bool(value)
+
+def get_insufficient_funds() -> bool:
+    with insufficient_funds_lock:
+        return insufficient_funds_flag
+
 # Кэш для подавления повторяющихся логов
 log_suppression_cache = {
     'auto_bot_signals': {'count': 0, 'last_log': 0, 'message': ''},

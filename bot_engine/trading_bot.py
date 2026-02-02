@@ -862,6 +862,11 @@ class TradingBot:
             self.logger.info(f" {self.symbol}: Результат ордера: {order_result}")
             
             if order_result.get('success'):
+                try:
+                    from bots_modules.imports_and_globals import set_insufficient_funds
+                    set_insufficient_funds(False)
+                except Exception:
+                    pass
                 # Обновляем состояние
                 self.position = {
                     'side': side,
@@ -991,8 +996,15 @@ class TradingBot:
                     except Exception as add_err:
                         pass
                     self.logger.error(f" {self.symbol}: 🚫 ДЕЛИСТИНГ! Открытие позиции запрещено биржей (ErrCode: 30228)")
+                if '110007' in error_code or '110007' in error_message:
+                    self.logger.error(f" {self.symbol}: 💰 Недостаточно средств на счёте для открытия позиции (ErrCode: 110007)")
+                    try:
+                        from bots_modules.imports_and_globals import set_insufficient_funds
+                        set_insufficient_funds(True)
+                    except Exception:
+                        pass
                 self.logger.error(f"Failed to enter position: {order_result}")
-                return {'success': False, 'error': order_result.get('error', 'order_failed')}
+                return {'success': False, 'error': error_message or order_result.get('error', 'order_failed')}
                 
         except Exception as e:
             self.logger.error(f"Error entering position: {str(e)}")
@@ -1049,8 +1061,9 @@ class TradingBot:
                     'pnl': pnl
                 }
             else:
+                error_message = order_result.get('message') or order_result.get('error', 'order_failed')
                 self.logger.error(f"Failed to exit position: {order_result}")
-                return {'success': False, 'error': order_result.get('error', 'order_failed')}
+                return {'success': False, 'error': error_message}
                 
         except Exception as e:
             self.logger.error(f"Error exiting position: {str(e)}")

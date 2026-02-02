@@ -97,7 +97,7 @@ from bots_modules.imports_and_globals import (
     get_individual_coin_settings, set_individual_coin_settings,
     remove_individual_coin_settings, copy_individual_coin_settings_to_all,
     remove_all_individual_coin_settings, RealTradingBot,
-    get_config_snapshot
+    get_config_snapshot, get_insufficient_funds, set_insufficient_funds
 )
 import bots_modules.imports_and_globals as globals_module
 
@@ -396,12 +396,17 @@ def get_account_info():
                 'error': 'Failed to get account info from exchange'
             }
         
-        # Добавляем информацию о ботах из актуальных данных
+        # Сбрасываем флаг «недостаточно средств», если доступный баланс достаточен (например > 5 USDT)
+        if get_insufficient_funds() and account_info.get("success") and float(account_info.get("total_available_balance", 0)) > 5:
+            set_insufficient_funds(False)
+        
+        # Добавляем информацию о ботах и флаг недостатка средств для UI
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
         bots_list = list(bots_data['bots'].values())
         account_info["bots_count"] = len(bots_list)
         account_info["active_bots"] = sum(1 for bot in bots_list 
                                         if bot.get('status') not in ['paused'])
+        account_info["insufficient_funds"] = get_insufficient_funds()
         
         response = jsonify(account_info)
         response.headers.add('Access-Control-Allow-Origin', '*')

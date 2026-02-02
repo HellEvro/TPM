@@ -2412,6 +2412,16 @@ class BybitExchange(BaseExchange):
                 error_code = response.get('retCode', '')
                 error_msg = response.get('retMsg', 'unknown error')
                 
+                # ✅ Обрабатываем ошибку недостатка средств для ордера (110007)
+                if error_code == 110007 or 'not enough for new order' in (error_msg or '').lower():
+                    user_message = "Недостаточно средств для нового ордера (баланс/маржа)"
+                    logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: {user_message} (ErrCode: 110007)")
+                    return {
+                        'success': False,
+                        'message': user_message,
+                        'error_code': '110007'
+                    }
+
                 # ✅ Обрабатываем ошибку превышения максимального кредитного плеча (110013)
                 if error_code == 110013 or 'maxLeverage' in error_msg.lower():
                     logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: Ошибка превышения максимального кредитного плеча (110013)")
@@ -2476,6 +2486,16 @@ class BybitExchange(BaseExchange):
                 if match:
                     error_code = match.group(1)
             
+            # ✅ Обрабатываем ошибку недостатка средств для ордера (110007)
+            if error_code == '110007' or '110007' in error_str or 'not enough for new order' in error_str.lower():
+                user_message = "Недостаточно средств для нового ордера (баланс/маржа)"
+                logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: {user_message} (ErrCode: 110007)")
+                return {
+                    'success': False,
+                    'message': user_message,
+                    'error_code': '110007'
+                }
+
             # ✅ Обрабатываем ошибку превышения максимального кредитного плеча (110013) в исключении
             if error_code == '110013' or '110013' in error_str or 'maxLeverage' in error_str.lower():
                 logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: Обнаружена ошибка превышения максимального кредитного плеча (110013) в исключении")

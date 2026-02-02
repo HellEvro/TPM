@@ -2435,6 +2435,17 @@ body .bots-page .config-input {
     color: var(--text-color);
 }
 
+.insufficient-funds-alert {
+    margin: 8px 16px 0;
+    padding: 8px 12px;
+    background: rgba(220, 53, 69, 0.15);
+    border: 1px solid rgba(220, 53, 69, 0.4);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-size: 13px;
+    font-weight: 500;
+}
+
 .stat-badge {
     background: var(--blue-color);
     color: white;

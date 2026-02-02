@@ -8836,22 +8836,34 @@ class BotsManager {
         this.logDebug('[BotsManager] 💰 Загрузка информации о едином торговом счете...');
         
         try {
-            // Используем тот же эндпоинт, что и страница Позиции
-            const response = await fetch('/api/positions');
+            // Используем account-info сервиса ботов (баланс + флаг недостатка средств)
+            const response = await fetch('/api/bots/account-info');
             const data = await response.json();
             
-            if (data.wallet_data) {
-                // Преобразуем данные в формат, ожидаемый updateAccountDisplay
+            if (data.success && (data.total_wallet_balance !== undefined || data.total_available_balance !== undefined)) {
+                const accountData = {
+                    success: true,
+                    total_wallet_balance: data.total_wallet_balance,
+                    total_available_balance: data.total_available_balance,
+                    total_unrealized_pnl: data.total_unrealized_pnl,
+                    active_positions: data.active_positions ?? 0,
+                    active_bots: data.active_bots ?? this.activeBots?.length ?? 0,
+                    insufficient_funds: !!data.insufficient_funds
+                };
+                this.updateAccountDisplay(accountData);
+                this.logDebug('[BotsManager] ✅ Информация о счете загружена:', accountData);
+            } else if (data.wallet_data) {
+                // Fallback: ответ в формате /api/positions
                 const accountData = {
                     success: true,
                     total_wallet_balance: data.wallet_data.total_balance,
                     total_available_balance: data.wallet_data.available_balance,
-                    total_unrealized_pnl: data.wallet_data.realized_pnl, // Используем realized_pnl как unrealized
+                    total_unrealized_pnl: data.wallet_data.realized_pnl,
                     active_positions: data.stats?.total_trades || 0,
-                    active_bots: this.activeBots?.length || 0
+                    active_bots: this.activeBots?.length || 0,
+                    insufficient_funds: !!data.insufficient_funds
                 };
                 this.updateAccountDisplay(accountData);
-                this.logDebug('[BotsManager] ✅ Информация о счете загружена:', accountData);
             } else {
                 console.warn('[BotsManager] ⚠️ Нет данных аккаунта в ответе');
                 this.updateAccountDisplay(null);
@@ -8897,6 +8909,14 @@ class BotsManager {
                 ${openPositionsText}  -
             `;
         }
+        
+        // Показ/скрытие сообщения «Недостаточно средств» (справа у блока с балансом и в мобильном блоке)
+        const showInsufficient = !!(accountData && accountData.insufficient_funds);
+        const trInsufficient = (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[document.documentElement.lang || 'ru'] && TRANSLATIONS[document.documentElement.lang || 'ru']['insufficient_funds']);
+        document.querySelectorAll('.insufficient-funds-alert').forEach(function (el) {
+            el.style.display = showInsufficient ? 'block' : 'none';
+            if (showInsufficient && trInsufficient) el.textContent = trInsufficient;
+        });
         
         // Автообновление происходит через основной интервал в startPeriodicUpdate()
         // Не создаем отдельный интервал для accountInfo
