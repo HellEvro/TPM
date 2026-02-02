@@ -71,8 +71,9 @@ def _load_models() -> bool:
 
 def build_features(market_data: Dict) -> list:
     """
-    Собирает вектор признаков в том же порядке, что и при обучении в ai_trainer.
-    Совпадение порядка обязательно для совместимости с сохранённой моделью.
+    Вектор из 7 признаков в том же порядке, что и ai_trainer._build_signal_features_7.
+    Порядок: rsi, volatility, volume_ratio, trend_UP, trend_DOWN, direction_LONG, price/1000.
+    Совпадение обязательно — иначе предсказания бессмысленны.
     """
     rsi = market_data.get('rsi', 50)
     trend = market_data.get('trend', 'NEUTRAL')

@@ -1978,16 +1978,22 @@ class AITrainer:
             if entry_price == 0 or exit_price == 0:
                 return None
             
-            # Данные входа
-            entry_data = trade.get('entry_data', {})
-            entry_rsi = entry_data.get('rsi', 50)
-            entry_trend = entry_data.get('trend', 'NEUTRAL')
-            entry_volatility = entry_data.get('volatility', 0)
+            # Данные входа (fallback: из БД приходят entry_rsi/entry_trend на верхнем уровне)
+            entry_data = trade.get('entry_data', {}) or {}
+            entry_rsi = entry_data.get('rsi') or trade.get('entry_rsi') or trade.get('rsi')
+            if entry_rsi is None:
+                entry_rsi = 50
+            entry_trend = entry_data.get('trend') or trade.get('entry_trend') or trade.get('trend') or 'NEUTRAL'
+            entry_volatility = entry_data.get('volatility') or trade.get('entry_volatility')
+            if entry_volatility is None:
+                entry_volatility = 0
             
-            # Данные выхода
-            exit_market_data = trade.get('exit_market_data', {})
-            exit_rsi = exit_market_data.get('rsi', 50)
-            exit_trend = exit_market_data.get('trend', 'NEUTRAL')
+            # Данные выхода (fallback: часто в БД нет exit_rsi — используем entry)
+            exit_market_data = trade.get('exit_market_data', {}) or {}
+            exit_rsi = exit_market_data.get('rsi') or trade.get('exit_rsi')
+            if exit_rsi is None:
+                exit_rsi = entry_rsi
+            exit_trend = exit_market_data.get('trend') or trade.get('exit_trend') or 'NEUTRAL'
             
             # Признаки
             features.append(entry_rsi)
@@ -2032,7 +2038,47 @@ class AITrainer:
         except Exception as e:
             logger.error(f"❌ Ошибка подготовки признаков: {e}")
             return None
-    
+
+    def _build_signal_features_7(self, trade: Dict) -> Optional[np.ndarray]:
+        """
+        Вектор из 7 признаков для модели сигнала — тот же порядок, что в ai_inference.build_features.
+        Обязательно для совместимости обучения и инференса.
+        Поддерживает формат из БД: entry_rsi, entry_trend, entry_volatility на верхнем уровне.
+        """
+        try:
+            entry_data = trade.get('entry_data', {}) or {}
+            entry_rsi = entry_data.get('rsi') or trade.get('entry_rsi') or trade.get('rsi')
+            if entry_rsi is None:
+                entry_rsi = 50
+            entry_rsi = float(entry_rsi)
+            entry_trend = (entry_data.get('trend') or trade.get('entry_trend') or trade.get('trend') or 'NEUTRAL')
+            if isinstance(entry_trend, str):
+                entry_trend = (entry_trend or 'NEUTRAL').upper()
+            entry_volatility = entry_data.get('volatility') or trade.get('entry_volatility')
+            if entry_volatility is None:
+                entry_volatility = 0
+            entry_volatility = float(entry_volatility)
+            entry_volume_ratio = entry_data.get('volume_ratio') or trade.get('entry_volume_ratio')
+            if entry_volume_ratio is None:
+                entry_volume_ratio = 1.0
+            entry_volume_ratio = float(entry_volume_ratio)
+            direction = (trade.get('direction') or 'LONG').upper()
+            entry_price = trade.get('entry_price') or trade.get('price') or 0
+            entry_price = float(entry_price) if entry_price else 0
+            features = [
+                entry_rsi,
+                entry_volatility,
+                entry_volume_ratio,
+                1.0 if entry_trend == 'UP' else 0.0,
+                1.0 if entry_trend == 'DOWN' else 0.0,
+                1.0 if direction == 'LONG' else 0.0,
+                (entry_price / 1000.0) if entry_price > 0 else 0.0,
+            ]
+            return np.array(features, dtype=np.float64)
+        except Exception as e:
+            logger.debug(f"Ошибка _build_signal_features_7: {e}")
+            return None
+
     def train_on_history(self):
         """
         Обучение на истории трейдов
@@ -2103,7 +2149,8 @@ class AITrainer:
             skipped = 0
             
             for trade in trades:
-                features = self._prepare_features(trade)
+                # Единый 7-признаковый вектор — как в ai_inference.build_features и train_on_real_trades_with_candles
+                features = self._build_signal_features_7(trade)
                 if features is None:
                     skipped += 1
                     continue
@@ -2117,7 +2164,7 @@ class AITrainer:
                 processed += 1
             
             if skipped > 0:
-                logger.info(f"⚠️ Пропущено {skipped} сделок (недостаточно данных)")
+                logger.info(f"⚠️ Пропущено {skipped} сделок (недостаточно данных для 7 признаков)")
             
             if len(X) < self._real_trades_min_samples:
                 logger.warning(f"⚠️ Недостаточно валидных данных для обучения ({len(X)} записей, нужно минимум {self._real_trades_min_samples})")
@@ -2125,14 +2172,25 @@ class AITrainer:
                 # Пробуем использовать симуляции если реальных сделок мало
                 return self.train_on_simulations()
             
-            logger.info(f"✅ Подготовлено {len(X)} валидных записей для обучения")
+            logger.info(f"✅ Подготовлено {len(X)} валидных записей для обучения (7 признаков, как при инференсе)")
             
             X = np.array(X)
             y_signal = np.array(y_signal)
             y_profit = np.array(y_profit)
             processed_samples = len(X)
             
-            # Нормализация признаков
+            # Проверка: оба класса должны быть представлены, иначе модель не учится различать
+            n_success = int(np.sum(y_signal))
+            n_fail = len(y_signal) - n_success
+            logger.info(f"   📊 Классы: прибыльных={n_success}, убыточных={n_fail}")
+            if n_success == 0 or n_fail == 0:
+                logger.warning("   ⚠️ ВНИМАНИЕ: Все сделки одного исхода (только прибыльные или только убыточные)!")
+                logger.warning("   ⚠️ Модель не сможет научиться различать — нужны и успешные, и неуспешные сделки.")
+            
+            # Scaler под 7 признаков (совместимость с inference)
+            current_n = X.shape[1] if len(X.shape) > 1 else len(X[0])
+            if getattr(self.scaler, 'n_features_in_', None) != current_n:
+                self.scaler = StandardScaler()
             X_scaled = self.scaler.fit_transform(X)
             
             # Разделение на train/test
@@ -2151,7 +2209,8 @@ class AITrainer:
                 n_estimators=100,
                 max_depth=10,
                 random_state=42,
-                n_jobs=1  # без параллелизма — устраняет UserWarning про delayed/Parallel
+                n_jobs=1,  # без параллелизма — устраняет UserWarning про delayed/Parallel
+                class_weight='balanced'  # баланс классов при неравном числе прибыльных/убыточных
             )
             self.signal_predictor.fit(X_train, y_signal_train)
             
@@ -2279,7 +2338,16 @@ class AITrainer:
                 mse=final_mse,
                 models_saved=models_count
             )
-            
+            try:
+                from bot_engine.ai.data_service_status_helper import update_data_service_status_in_db
+                update_data_service_status_in_db(
+                    training_samples=processed_samples,
+                    last_training=datetime.now().isoformat(),
+                    effectiveness=float(final_accuracy) if final_accuracy is not None else None,
+                    ready=True,
+                )
+            except Exception:
+                pass
         except Exception as e:
             logger.error(f"❌ Ошибка обучения на истории: {e}")
             import traceback
@@ -2388,13 +2456,13 @@ class AITrainer:
                 )
                 
                 if simulated_trades_for_training and len(simulated_trades_for_training) >= self._simulated_trades_min_samples:
-                    # Используем существующую логику обучения
+                    # Единый 7-признаковый вектор — как при инференсе
                     X = []
                     y_signal = []
                     y_profit = []
                     
                     for trade in simulated_trades_for_training:
-                        features = self._prepare_features(trade)
+                        features = self._build_signal_features_7(trade)
                         if features is None:
                             continue
                         
@@ -2408,7 +2476,9 @@ class AITrainer:
                         y_signal = np.array(y_signal)
                         y_profit = np.array(y_profit)
                         
-                        # Нормализация
+                        current_n = X.shape[1] if len(X.shape) > 1 else len(X[0])
+                        if getattr(self.scaler, 'n_features_in_', None) != current_n:
+                            self.scaler = StandardScaler()
                         X_scaled = self.scaler.fit_transform(X)
                         
                         # Разделение на train/test
@@ -3621,6 +3691,18 @@ class AITrainer:
                     mse=float(profit_mse) if profit_mse is not None else None,
                     models_saved=models_count
                 )
+                # Обновляем статус data_service для UI (выборка и эффективность)
+                try:
+                    from bot_engine.ai.data_service_status_helper import update_data_service_status_in_db
+                    update_data_service_status_in_db(
+                        training_samples=samples_count,
+                        trades=processed_trades,
+                        last_training=datetime.now().isoformat(),
+                        effectiveness=float(train_score) if train_score is not None else None,
+                        ready=True,
+                    )
+                except Exception:
+                    pass
             else:
                 logger.warning(f"⚠️ Недостаточно сделок для обучения (нужно минимум 20, есть {len(all_samples)})")
                 logger.warning(f"   📊 Статистика:")

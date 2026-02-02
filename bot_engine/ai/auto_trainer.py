@@ -508,10 +508,9 @@ class AutoTrainer:
         if self._training_stopped:
             return False
         
-        # При первом запуске НЕ переобучаем сразу (модель уже обучена или будет обучена при старте)
+        # При первом запуске разрешаем одно обучение сразу (не ждём 10 минут)
         if self.last_training is None:
-            self.last_training = current_time  # Инициализируем текущим временем
-            return False
+            return True
         
         # Проверяем качество модели перед запуском обучения
         if self._training_attempts >= get_ai_config_attr('AI_MIN_TRAINING_ATTEMPTS', 3):
@@ -662,19 +661,21 @@ class AutoTrainer:
                     all_success = False
             
             # 2. Обучаем основные модели (signal_predictor, profit_predictor)
-            # Проверяем количество реальных сделок
+            # Приоритет: train_on_real_trades_with_candles (нужно >= 10 сделок) — полный цикл с свечами и PnL.
+            # Иначе симуляции или train_on_history.
             from bot_engine.ai import get_ai_system
             ai_system = get_ai_system()
             if ai_system and ai_system.trainer:
                 trainer = ai_system.trainer
-                
-                # Проверяем количество реальных сделок
                 real_trades_count = trainer.get_trades_count()
-                
-                if real_trades_count < trainer._real_trades_min_samples and AIConfig.AI_USE_SIMULATIONS_WHEN_REAL_LOW:
+                min_for_real_candles = 10  # train_on_real_trades_with_candles требует минимум 10 сделок
+
+                if real_trades_count >= min_for_real_candles:
+                    logger.info(f"[AutoTrainer] 📊 Обучение на реальных сделках с свечами (сделок: {real_trades_count})...")
+                    trainer.train_on_real_trades_with_candles()
+                elif real_trades_count < trainer._real_trades_min_samples and AIConfig.AI_USE_SIMULATIONS_WHEN_REAL_LOW:
                     logger.info(f"[AutoTrainer] 📊 Реальных сделок мало ({real_trades_count} < {trainer._real_trades_min_samples})")
                     logger.info("[AutoTrainer] 🎲 Переключаемся на обучение на симуляциях с оптимизацией параметров...")
-                    
                     if AIConfig.AI_TRAIN_ON_SIMULATIONS:
                         success = trainer.train_on_simulations(
                             target_win_rate=AIConfig.AI_SIMULATIONS_TARGET_WIN_RATE,
@@ -685,8 +686,7 @@ class AutoTrainer:
                     else:
                         logger.warning("[AutoTrainer] ⚠️ Обучение на симуляциях отключено в конфиге")
                 else:
-                    # Обучаем на реальных сделках
-                    logger.info("[AutoTrainer] 📊 Обучение на реальных сделках...")
+                    logger.info("[AutoTrainer] 📊 Обучение на истории сделок...")
                     trainer.train_on_history()
             
             # 3. Обучаем LSTM Predictor
