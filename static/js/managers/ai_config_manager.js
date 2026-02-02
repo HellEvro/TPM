@@ -100,10 +100,9 @@ class AIConfigManager {
             this.setChildAIInputsEnabled(false);
         } else {
             this.setChildAIInputsEnabled(true);
-            // Anomaly Detection
+            // Anomaly Detection (логирование аномалий — только в блоке «Логирование AI», без дубликата)
             this.setCheckbox('anomalyDetectionEnabled', config.anomaly_detection_enabled);
             this.setValue('anomalyBlockThreshold', config.anomaly_block_threshold);
-            this.setCheckbox('anomalyLogEnabled', config.anomaly_log_enabled);
             
             // LSTM Predictor
             this.setCheckbox('lstmEnabled', config.lstm_enabled);
@@ -149,7 +148,7 @@ class AIConfigManager {
     /** ID чекбоксов дочерних AI-настроек (все выключаются при выключении мастер-переключателя) */
     getChildAICheckboxIds() {
         return [
-            'anomalyDetectionEnabled', 'anomalyLogEnabled', 'lstmEnabled', 'patternEnabled',
+            'anomalyDetectionEnabled', 'lstmEnabled', 'patternEnabled',
             'riskManagementEnabled', 'optimalEntryEnabled', 'selfLearningEnabled', 'smcEnabled',
             'autoTrainEnabled', 'autoUpdateData', 'autoRetrain', 'logPredictions', 'logAnomalies', 'logPatterns'
         ];
@@ -182,7 +181,7 @@ class AIConfigManager {
                 ai_enabled: masterOn,
                 anomaly_detection_enabled: masterOn && this.getCheckbox('anomalyDetectionEnabled'),
                 anomaly_block_threshold: parseFloat(this.getValue('anomalyBlockThreshold')),
-                anomaly_log_enabled: masterOn && this.getCheckbox('anomalyLogEnabled'),
+                anomaly_log_enabled: masterOn && this.getCheckbox('logAnomalies'),
                 lstm_enabled: masterOn && this.getCheckbox('lstmEnabled'),
                 lstm_min_confidence: parseFloat(this.getValue('lstmMinConfidence')),
                 lstm_weight: parseFloat(this.getValue('lstmWeight')),

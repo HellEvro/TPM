@@ -416,10 +416,12 @@ def register_ai_endpoints(app):
                         if log_ai_config_change('log_predictions', old_config['log_predictions'], data['log_predictions']):
                             changes_count += 1
                         line = f"    AI_LOG_PREDICTIONS = {data['log_predictions']}\n"
-                    elif 'AI_LOG_ANOMALIES =' in line and 'log_anomalies' in data:
-                        if log_ai_config_change('log_anomalies', old_config['log_anomalies'], data['log_anomalies']):
+                    elif 'AI_LOG_ANOMALIES =' in line and ('log_anomalies' in data or 'anomaly_log_enabled' in data):
+                        # Одна настройка — два чекбокса в UI (anomalyLogEnabled и logAnomalies); учитываем оба
+                        value = data.get('log_anomalies', False) or data.get('anomaly_log_enabled', False)
+                        if log_ai_config_change('log_anomalies', old_config['log_anomalies'], value):
                             changes_count += 1
-                        line = f"    AI_LOG_ANOMALIES = {data['log_anomalies']}\n"
+                        line = f"    AI_LOG_ANOMALIES = {value}\n"
                     elif 'AI_LOG_PATTERNS =' in line and 'log_patterns' in data:
                         old_value = old_config.get('log_patterns', AIConfig.AI_LOG_PATTERNS)
                         if log_ai_config_change('log_patterns', old_value, data['log_patterns']):
