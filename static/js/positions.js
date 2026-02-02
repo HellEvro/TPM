@@ -11,6 +11,9 @@ class PositionsManager {
         this.initializeSorting();
         this.chartCache = new Map();  // Кэш для миниграфиков
         this.rsiCache = new Map();  // Кэш для значений RSI
+        this.isUpdatingData = false;  // Защита от одновременного запуска (ERR_INSUFFICIENT_RESOURCES)
+        this.lastUpdateAllDataStart = 0;  // Время последнего старта обновления (throttle)
+        this.minUpdateAllDataInterval = 10000;  // Минимум 10 сек между запусками
         this.chartUpdateInterval = 5 * 60 * 1000;  // 5 минут (не используется)
         // ✅ КРИТИЧНО: Загружаем интервал обновления из конфига (в секундах, конвертируем в мс)
         this.updateInterval = 7 * 60 * 1000;  // Дефолт: 7 минут (420 секунд) - будет перезаписано из конфига
@@ -266,51 +269,81 @@ class PositionsManager {
     async updateAllData() {
         if (this.reduceLoad) return; // Не обновляем данные если включено снижение нагрузки
         if (!this.lastData) return;
-
-        const symbols = new Set();
-        // Собираем все уникальные символы с проверкой на undefined
-        Object.values(this.lastData).forEach(positions => {
-            if (Array.isArray(positions)) {
-                positions.forEach(pos => {
-                    if (pos && pos.symbol && pos.symbol !== 'undefined') {
-                        symbols.add(pos.symbol);
-                    }
-                });
-            }
-        });
-
-        console.log(`Starting data update for ${symbols.size} symbols:`, [...symbols]);
-        
-        // Обновляем данные для каждого символа последовательно
-        for (const symbol of symbols) {
-            await this.updateTickerData(symbol);
+        if (this.isUpdatingData) {
+            console.log('[PositionsManager] updateAllData skipped: previous run still in progress');
+            return;
         }
-        
-        console.log('All data updates completed');
+        const now = Date.now();
+        if (now - this.lastUpdateAllDataStart < this.minUpdateAllDataInterval) {
+            console.log('[PositionsManager] updateAllData skipped: throttle (min interval)', this.minUpdateAllDataInterval / 1000, 's');
+            return;
+        }
+        this.lastUpdateAllDataStart = now;
+        this.isUpdatingData = true;
+        try {
+            const symbols = new Set();
+            // Собираем все уникальные символы с проверкой на undefined
+            Object.values(this.lastData).forEach(positions => {
+                if (Array.isArray(positions)) {
+                    positions.forEach(pos => {
+                        if (pos && pos.symbol && pos.symbol !== 'undefined') {
+                            symbols.add(pos.symbol);
+                        }
+                    });
+                }
+            });
+
+            console.log(`Starting data update for ${symbols.size} symbols:`, [...symbols]);
+
+            // Обновляем данные для каждого символа последовательно (с паузой между запросами)
+            for (const symbol of symbols) {
+                await this.updateTickerData(symbol);
+                // Небольшая пауза между запросами, чтобы не перегружать браузер/сервер
+                if (symbols.size > 1) {
+                    await new Promise(r => setTimeout(r, 150));
+                }
+            }
+
+            console.log('All data updates completed');
+        } finally {
+            this.isUpdatingData = false;
+        }
     }
 
     async updateAllCharts() {
+        if (this.isUpdatingData) {
+            console.log('[PositionsManager] updateAllCharts skipped: updateAllData in progress');
+            return;
+        }
+        if (!this.lastData) return;
         const symbols = new Set();
-        
+
         // Правильно получаем все позиции из разных категорий
         const allPositions = [
             ...(this.lastData.high_profitable || []),
             ...(this.lastData.profitable || []),
             ...(this.lastData.losing || [])
         ];
-        
+
         // Собираем уникальные символы с проверкой на undefined
         allPositions.forEach(pos => {
             if (pos && pos.symbol && pos.symbol !== 'undefined') {
                 symbols.add(pos.symbol);
             }
         });
-        
+
         console.log(`Updating charts for ${symbols.size} symbols:`, [...symbols]);
-        
-        // Обновляем данные для всех символов
-        for (const symbol of symbols) {
-            await this.updateTickerData(symbol);
+
+        this.isUpdatingData = true;
+        try {
+            for (const symbol of symbols) {
+                await this.updateTickerData(symbol);
+                if (symbols.size > 1) {
+                    await new Promise(r => setTimeout(r, 150));
+                }
+            }
+        } finally {
+            this.isUpdatingData = false;
         }
     }
 

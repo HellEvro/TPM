@@ -3,12 +3,35 @@
 """
 import re
 import os
+import shutil
 import logging
 import threading
 from typing import Dict, Any
 
 logger = logging.getLogger('ConfigWriter')
 _config_write_lock = threading.Lock()
+
+
+def _ensure_bot_config_exists(config_file: str) -> bool:
+    """
+    Если bot_config.py отсутствует — создаёт его из bot_config.example.py.
+    Возвращает True если файл есть (или успешно создан), False если создать не удалось.
+    """
+    if os.path.exists(config_file):
+        return True
+    _current_dir = os.path.dirname(os.path.abspath(__file__))
+    _project_root = os.path.dirname(_current_dir)
+    example_file = os.path.join(_project_root, 'bot_engine', 'bot_config.example.py')
+    if not os.path.exists(example_file):
+        logger.error(f"[CONFIG_WRITER] ❌ Файл-пример {example_file} не найден, невозможно создать bot_config.py")
+        return False
+    try:
+        shutil.copy2(example_file, config_file)
+        logger.info(f"[CONFIG_WRITER] ✅ Создан {config_file} из bot_config.example.py")
+        return True
+    except Exception as e:
+        logger.error(f"[CONFIG_WRITER] ❌ Не удалось создать bot_config.py из примера: {e}")
+        return False
 
 
 def _format_python_value(value: Any) -> str:
@@ -52,8 +75,8 @@ def save_auto_bot_config_to_py(config: Dict[str, Any]) -> bool:
         _project_root = os.path.dirname(_current_dir)
         config_file = os.path.join(_project_root, 'bot_engine', 'bot_config.py')
         
-        if not os.path.exists(config_file):
-            logger.error(f"[CONFIG_WRITER] ❌ Файл {config_file} не найден")
+        if not _ensure_bot_config_exists(config_file):
+            logger.error(f"[CONFIG_WRITER] ❌ Файл {config_file} не найден и не удалось создать из примера")
             return False
         
         # Читаем файл
@@ -345,17 +368,18 @@ def save_system_config_to_py(config: Dict[str, Any]) -> bool:
         project_root = os.path.dirname(current_dir)
         # Формируем путь к bot_config.py
         config_file = os.path.join(project_root, 'bot_engine', 'bot_config.py')
-        
         if not os.path.exists(config_file):
-            # ✅ Попробуем альтернативный путь (относительный)
-            alt_config_file = 'bot_engine/bot_config.py'
-            if os.path.exists(alt_config_file):
-                config_file = alt_config_file
+            if _ensure_bot_config_exists(config_file):
+                pass  # файл создан по пути config_file
             else:
-                logger.error(f"[CONFIG_WRITER] ❌ Файл {config_file} не найден (проверяли также {alt_config_file})")
-                return False
-
-        pass
+                alt = os.path.join(os.getcwd(), 'bot_engine', 'bot_config.py')
+                if os.path.exists(alt):
+                    config_file = alt
+                elif os.path.exists('bot_engine/bot_config.py'):
+                    config_file = 'bot_engine/bot_config.py'
+                else:
+                    logger.error(f"[CONFIG_WRITER] ❌ Файл bot_config.py не найден и не удалось создать из примера")
+                    return False
         with open(config_file, 'r', encoding='utf-8') as f:
             lines = f.readlines()
 
