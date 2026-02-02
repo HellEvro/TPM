@@ -2911,7 +2911,7 @@ class BotsManager {
             const config = {
                 volume_mode: document.getElementById('volumeModeSelect')?.value || 'usdt',
                 volume_value: parseFloat(document.getElementById('volumeValueInput')?.value || '10'),
-                leverage: parseInt(document.getElementById('leverageCoinInput')?.value || '1')
+                leverage: parseInt(document.getElementById('leverageCoinInput')?.value || '10')
             };
             
             console.log('[BotsManager] 📊 Параметры запуска бота (overrides):', config);
@@ -3572,7 +3572,7 @@ class BotsManager {
             exit_scam_multi_candle_percent: 50, trend_detection_enabled: false,
             trend_analysis_period: 30, trend_price_change_threshold: 7,
             trend_candles_threshold: 70, volume_mode: 'usdt', volume_value: 10,
-            leverage: 1, enhanced_rsi_enabled: false,
+            leverage: 10, enhanced_rsi_enabled: false,
             enhanced_rsi_require_volume_confirmation: false,
             enhanced_rsi_require_divergence_confirmation: false,
             enhanced_rsi_use_stoch_rsi: false
@@ -4136,7 +4136,7 @@ class BotsManager {
         
         const leverageCoinEl = document.getElementById('leverageCoinInput');
         if (leverageCoinEl) {
-            leverageCoinEl.value = get('leverage', 1);
+            leverageCoinEl.value = get('leverage', 10);
         }
     }
 
@@ -4159,7 +4159,7 @@ class BotsManager {
                 const volumeValueEl = document.getElementById('volumeValueInput');
                 if (volumeValueEl) settings.volume_value = parseFloat(volumeValueEl.value) || 10;
                 const leverageCoinEl = document.getElementById('leverageCoinInput');
-                if (leverageCoinEl) settings.leverage = parseInt(leverageCoinEl.value) || 1;
+                if (leverageCoinEl) settings.leverage = parseInt(leverageCoinEl.value) || 10;
                 const success = await this.saveIndividualSettings(this.selectedCoin.symbol, settings);
                 if (success) {
                     this.highlightIndividualSettingDiffs(settings);
@@ -6622,7 +6622,7 @@ class BotsManager {
         
         const leverageEl = document.getElementById('leverage');
         if (leverageEl) {
-            leverageEl.value = autoBotConfig.leverage || 1;
+            leverageEl.value = autoBotConfig.leverage || 10;
             console.log('[BotsManager] ⚡ Кредитное плечо:', leverageEl.value);
         }
         

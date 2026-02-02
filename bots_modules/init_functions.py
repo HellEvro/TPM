@@ -206,7 +206,7 @@ def init_bot_service():
                         # Поэтому используем default_position_size как fallback не только при отсутствии ключа, но и при None.
                         'volume_value': (bot_data.get('volume_value') if bot_data.get('volume_value') is not None else auto_bot_config['default_position_size']),
                         'status': bot_data.get('status', 'paused'),
-                        'leverage': bot_data.get('leverage', auto_bot_config.get('leverage', 1))  # ✅ Добавляем leverage
+                        'leverage': bot_data.get('leverage', auto_bot_config.get('leverage', 10))  # ✅ Добавляем leverage
                     }
                     bot_config.setdefault('volume_mode', default_volume_mode)
                     
@@ -546,7 +546,7 @@ def create_bot(symbol, config=None, exchange_obj=None):
         'max_position_hours': auto_bot_config.get('max_position_hours', 48),
         'break_even_protection': auto_bot_config.get('break_even_protection', True),
         'break_even_trigger': auto_bot_config.get('break_even_trigger', 100.0),
-        'leverage': individual_settings.get('leverage') if individual_settings and 'leverage' in individual_settings else auto_bot_config.get('leverage', 1),  # ✅ Из конфиг-файла или индивидуальных настроек
+        'leverage': individual_settings.get('leverage') if individual_settings and 'leverage' in individual_settings else auto_bot_config.get('leverage', 10),  # ✅ Из конфиг-файла или индивидуальных настроек
         'break_even_trigger_percent': auto_bot_config.get(
             'break_even_trigger_percent',
             auto_bot_config.get('break_even_trigger', 100.0)

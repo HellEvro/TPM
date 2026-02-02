@@ -3717,7 +3717,7 @@ def create_new_bot(symbol, config=None, exchange_obj=None, register=True):
             'opened_by_autobot': True,
             'volume_mode': default_volume_mode,
             'volume_value': default_volume,
-            'leverage': auto_bot_config.get('leverage', 1)
+            'leverage': auto_bot_config.get('leverage', 10)
         }
         individual_settings = get_individual_coin_settings(symbol)
         if individual_settings:
@@ -3728,7 +3728,7 @@ def create_new_bot(symbol, config=None, exchange_obj=None, register=True):
         if bot_config.get('volume_value') is None:
             bot_config['volume_value'] = default_volume
         if bot_config.get('leverage') is None:
-            bot_config['leverage'] = auto_bot_config.get('leverage', 1)
+            bot_config['leverage'] = auto_bot_config.get('leverage', 10)
         new_bot = NewTradingBot(symbol, bot_config, exchange_to_use)
         if register:
             with bots_data_lock:

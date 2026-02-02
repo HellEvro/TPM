@@ -3330,6 +3330,15 @@ def auto_bot_config():
                     if normalized_old != normalized_new:
                         changed_data[key] = value
                         bots_data['auto_bot_config'][key] = value
+                        # ✅ Синхронизация break_even_trigger: при изменении break_even_trigger_percent обновляем оба ключа
+                        if key == 'break_even_trigger_percent':
+                            bots_data['auto_bot_config']['break_even_trigger'] = value
+                            if 'break_even_trigger' not in changed_data:
+                                changed_data['break_even_trigger'] = value
+                        elif key == 'break_even_trigger':
+                            bots_data['auto_bot_config']['break_even_trigger_percent'] = value
+                            if 'break_even_trigger_percent' not in changed_data:
+                                changed_data['break_even_trigger_percent'] = value
                         
                         # Формируем список изменений для логирования и toast
                         if key not in old_config:

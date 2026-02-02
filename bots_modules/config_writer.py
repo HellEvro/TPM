@@ -230,8 +230,8 @@ def save_auto_bot_config_to_py(config: Dict[str, Any]) -> bool:
         if 'leverage' not in config:
             # Проверяем, есть ли leverage в существующих ключах файла
             if 'leverage' not in existing_keys:
-                logger.info(f"[CONFIG_WRITER] ℹ️ leverage отсутствует в файле, добавляем значение по умолчанию: 1")
-                config['leverage'] = 1
+                logger.info(f"[CONFIG_WRITER] ℹ️ leverage отсутствует в файле, добавляем значение по умолчанию: 10")
+                config['leverage'] = 10
             else:
                 # leverage есть в файле, но не передан в config - это нормально (не изменялся)
                 pass
