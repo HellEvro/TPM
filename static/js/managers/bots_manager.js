@@ -6576,11 +6576,7 @@ class BotsManager {
             console.error('[BotsManager] ❌ Элемент autoBotScope не найден!');
         }
         
-        const aiToggleEl = document.getElementById('autoBotAIEnabled');
-        if (aiToggleEl) {
-            aiToggleEl.checked = Boolean(autoBotConfig.ai_enabled);
-        }
-        
+        // ai_enabled в auto-bot конфиге задаётся мастер-переключателем aiEnabled (см. mapElementIdToConfigKey)
         const aiConfidenceEl = document.getElementById('aiMinConfidence');
         if (aiConfidenceEl) {
             const value = Number.parseFloat(autoBotConfig.ai_min_confidence);
@@ -7312,7 +7308,7 @@ class BotsManager {
             'autoBotMaxConcurrent': 'max_concurrent',
             'autoBotRiskCap': 'risk_cap_percent',
             'autoBotScope': 'scope',  // ✅ КРИТИЧЕСКИ ВАЖНО: маппинг для scope
-            'autoBotAIEnabled': 'ai_enabled',
+            'aiEnabled': 'ai_enabled',  // мастер-переключатель AI
             'aiMinConfidence': 'ai_min_confidence',
             'aiOverrideOriginal': 'ai_override_original',
             'rsiLongThreshold': 'rsi_long_threshold',

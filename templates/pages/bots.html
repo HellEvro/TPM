@@ -2142,7 +2142,7 @@
                                     <span class="label-text">AI подтверждение сигналов:</span>
                                 </label>
                                 <label class="toggle-switch">
-                                    <input type="checkbox" id="autoBotAIEnabled" />
+                                    <input type="checkbox" id="optimalEntryEnabled" />
                                     <span class="toggle-slider"></span>
                                 </label>
                                 <small class="config-help">Включите, чтобы AI подтверждал входы (модель signal_predictor.pkl + опционально SMC)</small>
@@ -2367,30 +2367,6 @@
                                     <span class="input-unit" data-translate="hour_unit">час</span>
                                 </div>
                                 <small class="config-help" data-translate="retrain_hour_help">Час для запуска переобучения (3 = 3:00 AM, минимальная нагрузка)</small>
-                            </div>
-                        </div>
-
-                        <div class="config-block-row">
-                            <h4>🎯 <span data-translate="optimal_entry_title">Optimal Entry Detection</span></h4>
-                            <div class="config-item">
-                                <label class="config-label">
-                                    <span class="label-text" data-translate="optimal_entry_enabled_label">Определение оптимальной точки входа:</span>
-                                </label>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="optimalEntryEnabled" />
-                                    <span class="toggle-slider"></span>
-                                </label>
-                                <small class="config-help" data-translate="optimal_entry_enabled_help">ИИ определяет оптимальную цену входа и может отложить вход для лучшей цены</small>
-                            </div>
-                            <div class="config-item">
-                                <label class="config-label">
-                                    <span class="label-icon">📊</span>
-                                    <span class="label-text" data-translate="data_collection_label">Сбор данных для обучения:</span>
-                                </label>
-                                <label class="toggle-info" style="font-size: 14px; color: #4CAF50;">
-                                    ✅ <span data-translate="always_enabled">Всегда включен</span>
-                                </label>
-                                <small class="config-help" data-translate="data_collection_help">Данные о точках входа собираются автоматически даже при отключенной фильтрации</small>
                             </div>
                         </div>
 

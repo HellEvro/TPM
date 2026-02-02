@@ -215,7 +215,16 @@ class AIConfigManager {
             });
             
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const text = await response.text();
+                if (response.status === 403) {
+                    throw new Error('Сохранение AI настроек заблокировано (403). Перезапустите сервис ботов (bots.py) и обновите страницу.');
+                }
+                let errMsg = `HTTP ${response.status}`;
+                try {
+                    const j = JSON.parse(text);
+                    if (j && j.error) errMsg = j.error;
+                } catch (_) {}
+                throw new Error(errMsg);
             }
             
             const data = await response.json();
@@ -364,12 +373,15 @@ class AIConfigManager {
                 if (this.isProgrammaticChange) return;
                 const masterOn = masterToggle.checked;
                 this.setChildAIInputsEnabled(masterOn);
+                this.isProgrammaticChange = true;
                 if (!masterOn) {
-                    this.isProgrammaticChange = true;
                     this.getChildAICheckboxIds().forEach(id => this.setCheckbox(id, false));
-                    this.updateSmcStatusText();
-                    this.isProgrammaticChange = false;
+                } else {
+                    // Мастер включён — включаем все дочерние ползунки
+                    this.getChildAICheckboxIds().forEach(id => this.setCheckbox(id, true));
                 }
+                this.updateSmcStatusText();
+                this.isProgrammaticChange = false;
                 if (window.botsManager) {
                     window.botsManager.scheduleToggleAutoSave(masterToggle);
                 }

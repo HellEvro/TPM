@@ -205,18 +205,9 @@ def register_ai_endpoints(app):
 
     @app.route('/api/ai/config', methods=['POST'])
     def save_ai_config():
-        """Сохранить конфигурацию AI"""
+        """Сохранить конфигурацию AI (разрешено даже при неактивной лицензии — сохраняем только настройки в файл)."""
         try:
-            from bot_engine.ai import get_ai_manager
-
-            ai_manager = get_ai_manager()
-
-            # Проверяем лицензию
-            if not ai_manager.is_available():
-                return jsonify({
-                    'success': False,
-                    'error': 'Недействительная лицензия'
-                }), 403
+            # Сохранение конфига в файл разрешено всегда; проверку лицензии не делаем.
 
             # Проверяем формат данных
             content_type = request.headers.get('Content-Type', '')
