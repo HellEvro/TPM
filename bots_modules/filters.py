@@ -972,13 +972,14 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
         result['has_existing_position'] = base_data.get('has_existing_position', False) if base_data else False
 
         # Scope: черный список ВСЕГДА исключает монету из торговли (при любом scope)
+        # При scope=whitelist и ПУСТОМ whitelist — не блокируем никого (торгуем все, как при scope=all)
         scope = auto_config.get('scope', 'all')
-        whitelist = auto_config.get('whitelist', [])
-        blacklist = auto_config.get('blacklist', [])
+        whitelist = auto_config.get('whitelist', []) or []
+        blacklist = auto_config.get('blacklist', []) or []
         is_blocked_by_scope = False
         if symbol in blacklist:
             is_blocked_by_scope = True
-        elif scope == 'whitelist' and symbol not in whitelist:
+        elif scope == 'whitelist' and whitelist and symbol not in whitelist:
             is_blocked_by_scope = True
         result['blocked_by_scope'] = is_blocked_by_scope
         if is_blocked_by_scope:
@@ -1148,16 +1149,17 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         
         # ✅ ФИЛЬТР 1: Whitelist/Blacklist/Scope - Проверяем ДО загрузки данных с биржи
         # Черный список ВСЕГДА исключает монету из торговли при любой настройке scope.
+        # При scope=whitelist и ПУСТОМ whitelist — не блокируем никого (торгуем все)
         # ⚡ БЕЗ БЛОКИРОВКИ: конфиг не меняется во время выполнения, безопасно читать
         auto_config = bots_data.get('auto_bot_config', {})
         scope = auto_config.get('scope', 'all')
-        whitelist = auto_config.get('whitelist', [])
-        blacklist = auto_config.get('blacklist', [])
+        whitelist = auto_config.get('whitelist', []) or []
+        blacklist = auto_config.get('blacklist', []) or []
         
         is_blocked_by_scope = False
         if symbol in blacklist:
             is_blocked_by_scope = True
-        elif scope == 'whitelist' and symbol not in whitelist:
+        elif scope == 'whitelist' and whitelist and symbol not in whitelist:
             is_blocked_by_scope = True
         
         # БЕЗ задержки - семафор и ThreadPool уже контролируют rate limit
@@ -2576,21 +2578,22 @@ def get_effective_signal(coin):
     if exit_scam_enabled and coin.get('blocked_by_exit_scam', False):
         return 'WAIT'
     
-    # Проверяем RSI Time фильтр
-    if coin.get('blocked_by_rsi_time', False):
-        # Убрано избыточное логирование
+    # Проверяем RSI Time фильтр (только если фильтр включён — иначе не блокируем)
+    rsi_time_filter_enabled = auto_config.get('rsi_time_filter_enabled', True)
+    if rsi_time_filter_enabled and coin.get('blocked_by_rsi_time', False):
         return 'WAIT'
     
-    # ✅ Проверяем защиту от повторных входов после убыточных закрытий
-    if coin.get('blocked_by_loss_reentry', False):
+    # ✅ Проверяем защиту от повторных входов (только если включена — иначе не блокируем)
+    loss_reentry_enabled = auto_config.get('loss_reentry_protection', True)
+    if loss_reentry_enabled and coin.get('blocked_by_loss_reentry', False):
         loss_reentry_info = coin.get('loss_reentry_info', {})
         reason = loss_reentry_info.get('reason', 'Защита от повторных входов') if loss_reentry_info else 'Защита от повторных входов'
         
         # Убрано избыточное логирование - фильтр работает, но не спамит логи
         return 'WAIT'
     
-    # Проверяем зрелость монеты
-    if not coin.get('is_mature', True):
+    # Проверяем зрелость монеты (только если проверка зрелости включена)
+    if auto_config.get('enable_maturity_check', True) and not coin.get('is_mature', True):
         # Ограничиваем частоту логирования - не более раза в 2 минуты для каждой монеты
         log_message = f"{symbol}: ❌ {signal} заблокирован - монета незрелая"
         category = f'maturity_check_{symbol}'
@@ -2633,6 +2636,11 @@ def process_auto_bot_signals(exchange_obj=None):
         
         if not auto_bot_enabled:
             logger.info(" ⏹️ Автобот выключен")  # Изменено на INFO
+            return
+        
+        # ✅ Ранний выход: без RSI данных проверка сигналов бессмысленна (загрузка ~50+ сек после старта)
+        if not coins_rsi_data.get('coins') or len(coins_rsi_data['coins']) == 0:
+            logger.debug(" Пропуск проверки сигналов: RSI данные ещё не загружены")
             return
         
         logger.info(" ✅ Автобот включен, начинаем проверку сигналов")
@@ -2687,12 +2695,23 @@ def process_auto_bot_signals(exchange_obj=None):
         from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data, get_current_timeframe
         current_timeframe = get_current_timeframe()
         potential_coins = []
+        total_coins = len(coins_rsi_data['coins'])
+        # Диагностика: почему 0 кандидатов
+        diag_skipped_rsi_none = 0
+        diag_skipped_signal_wait = 0
+        diag_skipped_scope_delisting = 0
+        diag_skipped_filters = 0
+        diag_skipped_ai = 0
+        logger.info(f" 📊 Диагностика: монет в RSI данных: {total_coins}, таймфрейм: {current_timeframe}")
+        if total_coins == 0:
+            logger.warning(" ⚠️ Нет данных по монетам (coins_rsi_data пуст). Убедитесь, что загрузка RSI завершилась и биржа отдаёт пары.")
         for symbol, coin_data in coins_rsi_data['coins'].items():
             # ✅ КРИТИЧНО: Явно передаём текущий ТФ, чтобы не было fallback на rsi6h/trend6h
             rsi = get_rsi_from_coin_data(coin_data, timeframe=current_timeframe)
             trend = get_trend_from_coin_data(coin_data, timeframe=current_timeframe)
             
             if rsi is None:
+                diag_skipped_rsi_none += 1
                 continue
             
             # ✅ ИСПОЛЬЗУЕМ get_effective_signal() который учитывает ВСЕ проверки:
@@ -2705,11 +2724,13 @@ def process_auto_bot_signals(exchange_obj=None):
             # Если сигнал ENTER_LONG или ENTER_SHORT - проверяем остальные фильтры и AI до попадания в список
             if signal in ['ENTER_LONG', 'ENTER_SHORT']:
                 if coin_data.get('blocked_by_scope', False):
+                    diag_skipped_scope_delisting += 1
                     continue
                 if coin_data.get('is_delisting') or coin_data.get('trading_status') in ('Closed', 'Delivering'):
-                    pass
+                    diag_skipped_scope_delisting += 1
                     continue
                 if not check_new_autobot_filters(symbol, signal, coin_data):
+                    diag_skipped_filters += 1
                     continue
                 # ✅ Проверка AI ДО добавления в список: если AI не разрешает — монета не попадает в LONG/SHORT
                 # Флаг берём из AIConfig (сохраняется из UI «AI Модули») или из auto_bot_config (обратная совместимость)
@@ -2753,6 +2774,7 @@ def process_auto_bot_signals(exchange_obj=None):
                         )
                         if last_ai_result.get('ai_used') and not last_ai_result.get('should_open'):
                             logger.info(f" 🤖 AI блокирует вход {symbol}: {last_ai_result.get('reason', 'AI prediction')} — монета не в списке")
+                            diag_skipped_ai += 1
                             continue
                         if last_ai_result.get('ai_used') and last_ai_result.get('should_open'):
                             logger.info(f" 🤖 AI разрешает вход {symbol} (уверенность {last_ai_result.get('ai_confidence', 0):.0%})")
@@ -2766,7 +2788,16 @@ def process_auto_bot_signals(exchange_obj=None):
                     'coin_data': coin_data,
                     'last_ai_result': last_ai_result
                 })
+            else:
+                diag_skipped_signal_wait += 1
         
+        # Сводка диагностики при 0 кандидатах
+        if total_coins > 0 and len(potential_coins) == 0 and (diag_skipped_rsi_none or diag_skipped_signal_wait or diag_skipped_scope_delisting or diag_skipped_filters or diag_skipped_ai):
+            logger.info(
+                f" 📊 Почему 0 кандидатов: без RSI по ТФ: {diag_skipped_rsi_none}, "
+                f"сигнал WAIT: {diag_skipped_signal_wait}, scope/листинг: {diag_skipped_scope_delisting}, "
+                f"фильтры: {diag_skipped_filters}, AI: {diag_skipped_ai}"
+            )
         long_count = sum(1 for c in potential_coins if c['signal'] == 'ENTER_LONG')
         short_count = sum(1 for c in potential_coins if c['signal'] == 'ENTER_SHORT')
         logger.info(f" 🎯 Найдено {len(potential_coins)} потенциальных сигналов (LONG: {long_count}, SHORT: {short_count})")
@@ -2979,30 +3010,25 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
         logger.error(f"❌ Ошибка обработки торговых сигналов: {str(e)}")
 
 def check_new_autobot_filters(symbol, signal, coin_data):
-    """Проверяет фильтры для нового автобота"""
+    """Проверяет фильтры для нового автобота. Учитывает включение/выключение каждого фильтра в конфиге."""
     try:
-        # ✅ ВСЕ ФИЛЬТРЫ УЖЕ ПРОВЕРЕНЫ в get_coin_rsi_data():
-        # 1. Whitelist/blacklist/scope
-        # 2. Базовый RSI + Тренд
-        # 3. Существующие позиции (РАННИЙ выход!)
-        # 4. Enhanced RSI
-        # 5. Зрелость монеты
-        # 6. ExitScam фильтр
-        # 7. RSI временной фильтр
+        auto_config = bots_data.get('auto_bot_config', {})
         
         # ✅ Дубль-проверка черного списка (Scope) — монеты из blacklist не открываем
         if coin_data.get('blocked_by_scope', False):
             logger.warning(f" {symbol}: ❌ БЛОКИРОВКА: Монета в черном списке (blocked_by_scope)")
             return False
         
-        # Дубль-проверка зрелости монеты
-        if not check_coin_maturity_stored_or_verify(symbol):
-            return False
+        # Дубль-проверка зрелости монеты (только если проверка зрелости включена)
+        if auto_config.get('enable_maturity_check', True):
+            if not check_coin_maturity_stored_or_verify(symbol):
+                return False
         
-        # Дубль-проверка ExitScam
-        if not check_exit_scam_filter(symbol, coin_data):
-            logger.warning(f" {symbol}: ❌ БЛОКИРОВКА: Обнаружены резкие движения цены (ExitScam)")
-            return False
+        # Дубль-проверка ExitScam (только если фильтр включён)
+        if auto_config.get('exit_scam_enabled', True):
+            if not check_exit_scam_filter(symbol, coin_data):
+                logger.warning(f" {symbol}: ❌ БЛОКИРОВКА: Обнаружены резкие движения цены (ExitScam)")
+                return False
         
         return True
         
@@ -3270,20 +3296,27 @@ def check_coin_maturity_stored_or_verify(symbol):
         return False
 
 def update_is_mature_flags_in_rsi_data():
-    """Обновляет флаги is_mature в кэшированных данных RSI на основе хранилища зрелых монет"""
+    """Обновляет флаги is_mature в кэшированных данных RSI на основе хранилища зрелых монет.
+    Если проверка зрелости отключена (enable_maturity_check=False), все монеты помечаются зрелыми."""
     try:
-        from bots_modules.imports_and_globals import is_coin_mature_stored
+        from bots_modules.imports_and_globals import bots_data, is_coin_mature_stored
         
-        updated_count = 0
+        auto_config = bots_data.get('auto_bot_config', {})
+        enable_maturity_check = auto_config.get('enable_maturity_check', True)
+        
         total_count = len(coins_rsi_data['coins'])
         
-        # Обновляем флаги is_mature для всех монет в RSI данных
+        if not enable_maturity_check:
+            # Проверка зрелости отключена — все монеты считаем зрелыми, иначе сделки не открываются
+            for symbol, coin_data in coins_rsi_data['coins'].items():
+                coin_data['is_mature'] = True
+            logger.info(f"✅ Проверка зрелости отключена — все {total_count} монет помечены зрелыми")
+            return
+        
+        updated_count = 0
         for symbol, coin_data in coins_rsi_data['coins'].items():
-            # Обновляем флаг is_mature на основе хранилища
             old_status = coin_data.get('is_mature', False)
             coin_data['is_mature'] = is_coin_mature_stored(symbol)
-            
-            # Подсчитываем обновленные
             if coin_data['is_mature']:
                 updated_count += 1
         

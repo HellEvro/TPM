@@ -2304,7 +2304,7 @@ def check_trading_rules_activation():
             # Сохраняем обновленные данные зрелых монет
             save_mature_coins_storage()
         else:
-            logger.info(f" ✅ Нет зрелых монет для обновления времени проверки")
+            logger.debug(" Нет зрелых монет для обновления времени проверки")
         
         return activated_count > 0
         

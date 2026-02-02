@@ -192,6 +192,7 @@ class LogLevelFilter(logging.Filter):
                     'Settings CORS headers' in message or  # CORS логи с неформатированными %s
                     'CORS request received' in message or  # CORS логи с неформатированными %s
                     'Origin header matches' in message or  # CORS логи с неформатированными %s
+                    'CORS have been already evaluated, skipping' in message or  # flask-cors: повторяется на каждый запрос
                     unformatted_count >= 3 or  # Любое сообщение с 3+ неформатированными %s
                     (unformatted_count >= 2 and logger_name.startswith(('urllib3', 'pybit', 'flask_cors', 'requests', 'werkzeug', 'flask', 'app')))
                 )

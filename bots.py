@@ -7,6 +7,11 @@
 import errno
 import os
 import sys
+import warnings
+
+# Подавление FutureWarning LeafSpec (PyTorch 2.x / Python 3.14) — до любых импортов torch
+warnings.filterwarnings("ignore", category=FutureWarning, message=".*LeafSpec.*")
+warnings.filterwarnings("ignore", category=FutureWarning, message=".*TreeSpec.*is_leaf.*")
 # Корень проекта в path до импорта utils — иначе sklearn_parallel_config не найдётся при запуске из другой директории
 _root = os.path.dirname(os.path.abspath(__file__))
 if _root and _root not in sys.path:

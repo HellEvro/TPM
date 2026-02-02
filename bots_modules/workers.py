@@ -211,7 +211,13 @@ def auto_bot_worker():
             time_since_auto_bot_check = current_time - last_auto_bot_check
 
             if auto_bot_enabled and time_since_auto_bot_check >= check_interval_seconds:
-                from bots_modules.imports_and_globals import get_exchange
+                from bots_modules.imports_and_globals import get_exchange, coins_rsi_data
+                # Не проверяем сигналы, пока RSI данные не загружены (первый запуск ~50+ сек)
+                if not coins_rsi_data.get('coins') or len(coins_rsi_data['coins']) == 0:
+                    last_auto_bot_check = current_time
+                    if cycle_count % 30 == 0:  # раз в ~30 сек
+                        logger.info(" ⏳ Ожидание загрузки RSI данных перед проверкой сигналов...")
+                    continue
                 process_auto_bot_signals(exchange_obj=get_exchange())
 
                 # Обновляем время последней проверки сигналов

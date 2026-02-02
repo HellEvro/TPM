@@ -2068,9 +2068,8 @@ class BotsManager {
             const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
             const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
             
-            // 1. Проверяем ExitScam фильтр
-            if (coin.blocked_by_exit_scam === true) {
-                // Используем детальную информацию из exit_scam_info, если доступна
+            // 1. ExitScam — показываем только если фильтр включён
+            if (autoConfig.exit_scam_enabled !== false && coin.blocked_by_exit_scam === true) {
                 const exitScamInfo = coin.exit_scam_info;
                 if (exitScamInfo && exitScamInfo.reason) {
                     blockReasons.push(`ExitScam фильтр: ${exitScamInfo.reason}`);
@@ -2079,9 +2078,8 @@ class BotsManager {
                 }
             }
             
-            // 2. Проверяем RSI Time фильтр
-            if (coin.blocked_by_rsi_time === true) {
-                // Используем детальную информацию из time_filter_info, если доступна
+            // 2. RSI Time — показываем только если фильтр включён
+            if (autoConfig.rsi_time_filter_enabled !== false && coin.blocked_by_rsi_time === true) {
                 const timeFilterInfo = coin.time_filter_info;
                 if (timeFilterInfo && timeFilterInfo.reason) {
                     blockReasons.push(`RSI Time фильтр: ${timeFilterInfo.reason}`);
@@ -2090,8 +2088,8 @@ class BotsManager {
                 }
             }
             
-            // 3. Проверяем защиту от повторных входов после убытка
-            if (coin.blocked_by_loss_reentry === true) {
+            // 3. Защита от повторных входов — показываем только если фильтр включён
+            if (autoConfig.loss_reentry_protection !== false && coin.blocked_by_loss_reentry === true) {
                 const lossReentryInfo = coin.loss_reentry_info;
                 if (lossReentryInfo && lossReentryInfo.reason) {
                     blockReasons.push(`Защита от повторных входов: ${lossReentryInfo.reason}`);
@@ -2100,12 +2098,12 @@ class BotsManager {
                 }
             }
             
-            // 4. Проверяем зрелость монеты
-            if (coin.is_mature === false) {
+            // 4. Зрелость монеты — показываем только если проверка зрелости включена
+            if (autoConfig.enable_maturity_check !== false && coin.is_mature === false) {
                 blockReasons.push('Незрелая монета');
             }
             
-            // 4. Проверяем Whitelist/Blacklist
+            // 5. Whitelist/Blacklist (scope)
             if (coin.blocked_by_scope === true) {
                 blockReasons.push('Whitelist/Blacklist');
             }
