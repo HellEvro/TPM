@@ -6502,6 +6502,117 @@ class AITrainer:
             logger.error(f"❌ Ошибка онлайн обновления модели: {e}")
             return False
 
+    def retrain_on_recent_trades(
+        self,
+        min_samples: Optional[int] = None,
+        max_trades: Optional[int] = None,
+    ) -> bool:
+        """
+        Переобучение на последних сделках из БД (инкрементальное обновление модели).
+        Использует те же 7 признаков, что и при полном обучении и при инференсе.
+
+        Args:
+            min_samples: Минимум валидных образцов для ретрайна (по умолчанию из конфига или 20).
+            max_trades: Максимум последних сделок из БД (по умолчанию из конфига или 150).
+
+        Returns:
+            True если переобучение выполнено и модели сохранены.
+        """
+        try:
+            try:
+                from bot_engine.bot_config import AIConfig as _AIConfig
+            except ImportError:
+                _AIConfig = None
+            if _AIConfig is None:
+                min_samples = min_samples if min_samples is not None else 20
+                max_trades = max_trades if max_trades is not None else 150
+            else:
+                min_samples = min_samples if min_samples is not None else getattr(_AIConfig, 'AI_INCREMENTAL_RETRAIN_MIN_SAMPLES', 20)
+                max_trades = max_trades if max_trades is not None else getattr(_AIConfig, 'AI_INCREMENTAL_RETRAIN_MAX_TRADES', 150)
+
+            if not self.ai_db:
+                return False
+
+            trades = self.ai_db.get_trades_for_training(
+                include_simulated=True,
+                include_real=True,
+                include_exchange=True,
+                min_trades=0,
+                limit=max_trades,
+            )
+            if not trades or len(trades) < min_samples:
+                return False
+
+            X_list = []
+            y_signal_list = []
+            y_profit_list = []
+            for trade in trades:
+                feats = self._build_signal_features_7(trade)
+                if feats is None:
+                    continue
+                X_list.append(feats)
+                pnl = trade.get('pnl', 0) or 0
+                y_signal_list.append(1 if pnl > 0 else 0)
+                y_profit_list.append(float(pnl))
+
+            if len(X_list) < min_samples:
+                return False
+
+            X = np.array(X_list)
+            y_signal = np.array(y_signal_list)
+            y_profit = np.array(y_profit_list)
+
+            n_success = int(np.sum(y_signal))
+            n_fail = len(y_signal) - n_success
+            if n_success == 0 or n_fail == 0:
+                return False
+
+            self.scaler = StandardScaler()
+            X_scaled = self.scaler.fit_transform(X)
+            if hasattr(self.scaler, 'n_features_in_') and self.scaler.n_features_in_ is not None:
+                self.expected_features = self.scaler.n_features_in_
+
+            test_size = min(0.2, max(0.1, 5.0 / len(X)))
+            X_train, X_test, y_signal_train, y_signal_test, y_profit_train, y_profit_test = train_test_split(
+                X_scaled, y_signal, y_profit, test_size=test_size, random_state=42, stratify=y_signal if n_success >= 2 and n_fail >= 2 else None
+            )
+
+            # Те же классы и гиперпараметры, что в train_on_history / train_on_real_trades_with_candles
+            if not self.signal_predictor:
+                self.signal_predictor = RandomForestClassifier(
+                    n_estimators=100,
+                    max_depth=10,
+                    random_state=42,
+                    n_jobs=1,
+                    class_weight='balanced',
+                )
+            self.signal_predictor.fit(X_train, y_signal_train)
+            acc = float(accuracy_score(y_signal_test, self.signal_predictor.predict(X_test)))
+            self._signal_predictor_accuracy = acc
+
+            if not self.profit_predictor:
+                self.profit_predictor = GradientBoostingRegressor(
+                    n_estimators=100,
+                    max_depth=5,
+                    learning_rate=0.1,
+                    random_state=42,
+                )
+            self.profit_predictor.fit(X_train, y_profit_train)
+            from sklearn.metrics import r2_score
+            r2 = r2_score(y_profit_test, self.profit_predictor.predict(X_test))
+            self._profit_r2 = float(r2) if not np.isnan(r2) else None
+            if self._profit_r2 is not None and self._profit_r2 < 0:
+                self._profit_model_unreliable = True
+
+            self._save_models()
+            r2_str = f"{r2:.3f}" if not np.isnan(r2) else "n/a"
+            logger.info(f"✅ Инкрементальный ретрайн: {len(X_list)} образцов, accuracy={acc:.2%}, R²={r2_str}")
+            return True
+
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка инкрементального ретрайна: {e}")
+            return False
+
     def _perform_incremental_training(self) -> bool:
         """
         Выполнение инкрементального обучения на накопленных данных

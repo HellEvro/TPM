@@ -72,6 +72,7 @@ class AISelfLearning:
         self.self_learning_buffer_size = _get_ai_config_value('AI_SELF_LEARNING_BUFFER_SIZE', 50)
         self.adaptation_threshold = _get_ai_config_value('AI_ADAPTATION_THRESHOLD', 0.1)
         self.performance_window = _get_ai_config_value('AI_PERFORMANCE_WINDOW', 50)
+        self.incremental_retrain_enabled = _get_ai_config_value('AI_INCREMENTAL_RETRAIN_ENABLED', True)
 
         # Система самооценки (передаем performance_window из конфига)
         self.performance_tracker = PerformanceTracker(performance_window=self.performance_window)
@@ -153,6 +154,13 @@ class AISelfLearning:
             self.online_learning_buffer.append(trade_result)
             self.stats['total_trades_processed'] += 1
 
+            # Буфер тренера для инкрементального ретрайна (те же сделки, 7 признаков)
+            if self.ai_trainer:
+                try:
+                    self.ai_trainer.update_model_online(trade_result)
+                except Exception:
+                    pass
+
             # Обновляем трекер производительности
             self.performance_tracker.add_trade_result(trade_result)
 
@@ -184,18 +192,29 @@ class AISelfLearning:
             training_data = self._prepare_online_training_data()
 
             if training_data:
-                # Выполняем онлайн обновление модели
-                success = self._update_model_online(training_data)
+                # Инкрементальный ретрайн на последних сделках из БД (реальное переобучение)
+                retrain_success = False
+                if self.incremental_retrain_enabled and self.ai_trainer:
+                    try:
+                        retrain_success = self.ai_trainer.retrain_on_recent_trades()
+                    except Exception as e:
+                        logger.debug(f"Инкрементальный ретрайн: {e}")
 
-                if success:
+                if not retrain_success:
+                    # Fallback: попытка обновить «веса» (анализ паттернов, для RandomForest эффект ограничен)
+                    success = self._update_model_online(training_data)
+                    if success:
+                        self.stats['online_updates'] += 1
+                        self.stats['last_update_time'] = datetime.now().isoformat()
+                        logger.info("✅ Онлайн обучение выполнено успешно")
+                        self._evaluate_learning_effectiveness()
+                    else:
+                        logger.warning("⚠️ Онлайн обучение завершилось с ошибками")
+                else:
                     self.stats['online_updates'] += 1
                     self.stats['last_update_time'] = datetime.now().isoformat()
-                    logger.info("✅ Онлайн обучение выполнено успешно")
-
-                    # Оцениваем улучшение производительности
+                    logger.info("✅ Инкрементальный ретрайн выполнен успешно")
                     self._evaluate_learning_effectiveness()
-                else:
-                    logger.warning("⚠️ Онлайн обучение завершилось с ошибками")
 
             # Очищаем буфер после обработки
             self.online_learning_buffer.clear()
