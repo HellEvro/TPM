@@ -109,6 +109,63 @@ def migrate_old_bot_config_to_configs(project_root: Optional[str] = None) -> boo
     return True
 
 
+def migrate_old_keys_to_configs(project_root: Optional[str] = None) -> bool:
+    """
+    Переносит ключи из app/keys.py в configs/keys.py.
+    - Если configs/keys.py нет: создаём из app/keys.py (если не заглушка) или из configs/keys.example.py.
+    - Если configs/keys.py есть, но это шаблон (плейсхолдеры), а в app/keys.py реальные ключи — перезаписываем.
+    Возвращает True если ключи перенесены из app/, False иначе.
+    """
+    if project_root is None:
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    configs_keys = os.path.join(project_root, 'configs', 'keys.py')
+    app_keys = os.path.join(project_root, 'app', 'keys.py')
+    example_keys = os.path.join(project_root, 'configs', 'keys.example.py')
+
+    os.makedirs(os.path.dirname(configs_keys), exist_ok=True)
+
+    def app_has_real_keys():
+        if not os.path.isfile(app_keys):
+            return False
+        try:
+            with open(app_keys, 'r', encoding='utf-8') as f:
+                c = f.read()
+            return 'from configs.keys import' not in c
+        except Exception:
+            return False
+
+    def configs_is_template():
+        if not os.path.isfile(configs_keys):
+            return True
+        try:
+            with open(configs_keys, 'r', encoding='utf-8') as f:
+                return 'YOUR_BYBIT_API_KEY_HERE' in f.read()
+        except Exception:
+            return True
+
+    # configs/keys.py есть и не шаблон — не трогаем
+    if os.path.exists(configs_keys) and not configs_is_template():
+        return False
+
+    # Есть app/keys.py с реальными ключами — переносим в configs/
+    if app_has_real_keys():
+        try:
+            shutil.copy2(app_keys, configs_keys)
+            logger.info("[CONFIG_WRITER] ✅ Ключи перенесены из app/keys.py в configs/keys.py")
+            return True
+        except Exception as e:
+            logger.warning(f"[CONFIG_WRITER] ⚠️ Не удалось скопировать app/keys.py в configs/: {e}")
+
+    # configs/keys.py нет — создаём из примера
+    if not os.path.exists(configs_keys) and os.path.isfile(example_keys):
+        try:
+            shutil.copy2(example_keys, configs_keys)
+            logger.info("[CONFIG_WRITER] ✅ Создан configs/keys.py из примера (заполните ключи)")
+        except Exception as e:
+            logger.error(f"[CONFIG_WRITER] ❌ Не удалось создать configs/keys.py: {e}")
+    return False
+
+
 def _format_python_value(value: Any) -> str:
     """Возвращает строковое представление значения в синтаксисе Python."""
     if isinstance(value, bool):

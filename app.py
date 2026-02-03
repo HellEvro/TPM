@@ -48,32 +48,25 @@ _APP_CONFIG_EXAMPLE_PATH = _CONFIGS_DIR / "app_config.example.py"
 _KEYS_PATH = _CONFIGS_DIR / "keys.py"
 _KEYS_EXAMPLE_PATH = _CONFIGS_DIR / "keys.example.py"
 
-# Создать configs/app_config.py и configs/keys.py из примеров, если нет
+# Создать configs/app_config.py из примера, если нет
 _CONFIGS_DIR.mkdir(parents=True, exist_ok=True)
 if not _APP_CONFIG_PATH.exists() and _APP_CONFIG_EXAMPLE_PATH.exists():
     import shutil
     shutil.copyfile(_APP_CONFIG_EXAMPLE_PATH, _APP_CONFIG_PATH)
     sys.stderr.write("✅ Создан configs/app_config.py из примера\n")
+
+# Миграция: app/keys.py → configs/keys.py (если configs/keys.py ещё нет)
+try:
+    from bots_modules.config_writer import migrate_old_keys_to_configs
+    if migrate_old_keys_to_configs(str(_PROJECT_ROOT)):
+        sys.stderr.write("✅ Ключи перенесены из app/ в configs/keys.py\n")
+except Exception as e:
+    sys.stderr.write(f"⚠️ Миграция ключей: {e}\n")
+# Если configs/keys.py всё ещё нет — создать из примера (на случай сбоя миграции)
 if not _KEYS_PATH.exists() and _KEYS_EXAMPLE_PATH.exists():
     import shutil
     shutil.copyfile(_KEYS_EXAMPLE_PATH, _KEYS_PATH)
     sys.stderr.write("✅ Создан configs/keys.py из примера (заполните ключи)\n")
-# Миграция: если в app/keys.py были реальные ключи (не заглушка), а configs/keys.py — шаблон, скопировать
-_OLD_KEYS = _PROJECT_ROOT / "app" / "keys.py"
-if _OLD_KEYS.exists() and _KEYS_PATH.exists():
-    try:
-        old_content = _OLD_KEYS.read_text(encoding="utf-8")
-        # Не копировать, если app/keys.py — заглушка (реэкспорт из configs)
-        if "from configs.keys import" in old_content:
-            pass  # уже заглушка, не трогаем configs/keys.py
-        else:
-            with open(_KEYS_PATH, "r", encoding="utf-8") as f:
-                if "YOUR_BYBIT_API_KEY_HERE" in f.read():
-                    import shutil
-                    shutil.copyfile(_OLD_KEYS, _KEYS_PATH)
-                    sys.stderr.write("✅ Ключи перенесены из app/keys.py в configs/keys.py\n")
-    except Exception:
-        pass
 
 # Миграция: старый конфиг из bot_engine/bot_config.py → configs/bot_config.py (если нового ещё нет)
 try:
