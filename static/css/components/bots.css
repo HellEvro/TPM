@@ -3283,6 +3283,131 @@ input:checked + .toggle-slider:before {
     margin: 0;
 }
 
+/* Вкладка «Аналитика» */
+.analytics-layout {
+    padding: 20px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.analytics-header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.analytics-header h2 {
+    color: var(--text-color);
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.analytics-header p {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin: 0;
+}
+
+.analytics-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.analytics-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-color);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.analytics-loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.analytics-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--blue-color);
+    border-radius: 50%;
+    animation: analytics-spin 0.8s linear infinite;
+}
+
+@keyframes analytics-spin {
+    to { transform: rotate(360deg); }
+}
+
+.analytics-result {
+    min-height: 120px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.analytics-placeholder {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin: 0;
+}
+
+.analytics-error {
+    color: var(--red-color, #e53935);
+    font-size: 14px;
+    padding: 12px;
+}
+
+.analytics-report {
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.analytics-report .analytics-section {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.analytics-report .analytics-section:last-of-type {
+    border-bottom: none;
+}
+
+.analytics-report .analytics-section h3 {
+    font-size: 16px;
+    margin: 0 0 10px 0;
+    color: var(--text-color);
+}
+
+.analytics-report .analytics-section ul {
+    margin: 8px 0 0 0;
+    padding-left: 24px;
+}
+
+.analytics-report .analytics-section li {
+    margin-bottom: 4px;
+}
+
+.analytics-meta {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
 /* Фильтры истории */
 .history-filters {
     background: var(--bg-secondary);

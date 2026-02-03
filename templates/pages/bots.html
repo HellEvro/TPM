@@ -6,6 +6,7 @@
         <button class="bots-tab-btn active" data-tab="management">🎮 <span data-translate="management">Управление</span></button>
         <button class="bots-tab-btn" data-tab="active-bots">🚀 <span data-translate="active_bots">Боты в работе</span></button>
         <button class="bots-tab-btn" data-tab="history">📊 <span data-translate="bot_history">История</span></button>
+        <button class="bots-tab-btn" data-tab="analytics">📈 <span data-translate="analytics">Аналитика</span></button>
         <button class="bots-tab-btn" data-tab="filters">🔧 <span data-translate="coin_filters">Фильтры монет</span></button>
         <button class="bots-tab-btn" data-tab="config">⚙️ <span data-translate="configuration">Конфигурация</span></button>
     </div>
@@ -2554,6 +2555,32 @@
                     <p data-translate="no_active_bots">Активные боты отсутствуют</p>
                     <small data-translate="create_bots_for_trading">Создайте ботов во вкладке "Управление"</small>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Таб: Аналитика торговли -->
+    <div class="bots-tab-content" id="analyticsTab">
+        <div class="analytics-layout">
+            <div class="analytics-header">
+                <h2 data-translate="analytics_title">📈 Аналитика торговли</h2>
+                <p data-translate="analytics_description">Полный анализ сделок ботов и биржи: сверка, метрики, неудачные монеты и настройки по RSI/тренду</p>
+            </div>
+            <div class="analytics-controls">
+                <label class="analytics-option">
+                    <input type="checkbox" id="analyticsIncludeExchange" />
+                    <span data-translate="analytics_include_exchange">Загружать сделки с биржи (требуются API ключи)</span>
+                </label>
+                <button type="button" class="btn btn-primary" id="analyticsRunBtn">
+                    <span data-translate="analytics_run">🔄 Запустить аналитику</span>
+                </button>
+            </div>
+            <div class="analytics-loading" id="analyticsLoading" style="display: none;">
+                <span class="analytics-spinner"></span>
+                <span data-translate="analytics_loading">Выполняется расчёт...</span>
+            </div>
+            <div class="analytics-result" id="analyticsResult">
+                <p class="analytics-placeholder" data-translate="analytics_placeholder">Нажмите «Запустить аналитику» для построения отчёта</p>
             </div>
         </div>
     </div>

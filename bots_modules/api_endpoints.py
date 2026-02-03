@@ -4823,6 +4823,44 @@ def create_demo_history():
         logger.error(f" Ошибка создания демо-данных: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+@bots_app.route('/api/bots/analytics', methods=['GET'])
+def get_trading_analytics():
+    """Запуск полной аналитики торговли (сделки ботов и опционально биржи)."""
+    try:
+        from bot_engine.trading_analytics import run_full_analytics
+        include_exchange = request.args.get('include_exchange', '0').strip().lower() in ('1', 'true', 'yes')
+        limit = int(request.args.get('limit', 10000))
+        exchange_instance = None
+        if include_exchange:
+            try:
+                from app.config import EXCHANGES, ACTIVE_EXCHANGE
+                from exchanges.exchange_factory import ExchangeFactory
+                exchange_name = ACTIVE_EXCHANGE
+                cfg = EXCHANGES.get(exchange_name, {})
+                if cfg and cfg.get('enabled', True):
+                    api_key = cfg.get('api_key')
+                    api_secret = cfg.get('api_secret')
+                    passphrase = cfg.get('passphrase')
+                    if api_key and api_secret:
+                        exchange_instance = ExchangeFactory.create_exchange(
+                            exchange_name, api_key, api_secret, passphrase
+                        )
+            except Exception as ex:
+                logger.warning("Не удалось подключить биржу для аналитики: %s", ex)
+        report = run_full_analytics(
+            load_bot_trades_from_db=True,
+            load_exchange_from_api=include_exchange,
+            exchange_instance=exchange_instance,
+            exchange_period='all',
+            bots_db_limit=limit,
+        )
+        return jsonify({'success': True, 'report': report})
+    except Exception as e:
+        logger.exception("Ошибка аналитики торговли: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @bots_app.route('/api/ai/self-learning/stats', methods=['GET'])
 def get_ai_self_learning_stats():
     """Получить статистику самообучения AI (доступно с любой лицензией)"""
