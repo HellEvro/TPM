@@ -33,6 +33,10 @@ UNSUCCESSFUL_WIN_RATE_THRESHOLD_PCT = 45  # ниже этого Win Rate — м�
 BAD_RSI_WIN_RATE_THRESHOLD_PCT = 40       # диапазон RSI с Win Rate ниже — «неудачная настройка»
 MIN_TRADES_FOR_BAD_RSI_BUCKET = 2         # минимум сделок в диапазоне RSI для вывода
 
+# Пороги для «удачных» монет и настроек
+SUCCESSFUL_WIN_RATE_THRESHOLD_PCT = 55    # выше этого Win Rate и PnL > 0 — удачная монета
+GOOD_RSI_WIN_RATE_THRESHOLD_PCT = 55      # диапазон RSI/тренд с Win Rate выше — «удачная настройка»
+
 # Диапазоны RSI для аналитики (вход в сделку)
 RSI_BUCKETS = [
     (0, 25, "0-25 (сильный перепроданность)"),
@@ -357,13 +361,38 @@ def _rsi_bucket_label(rsi: float) -> str:
     return "unknown"
 
 
+def _deduplicate_trade_summaries(summaries: List[TradeSummary], window_sec: float = 120.0) -> List[TradeSummary]:
+    """Убирает дубликаты: одна и та же сделка могла попасть из бота и из импорта с биржи. Группировка по (symbol, exit_timestamp в окне window_sec)."""
+    if not summaries:
+        return summaries
+    seen: Dict[tuple, TradeSummary] = {}
+    for t in summaries:
+        ts = t.exit_timestamp
+        if ts is None or ts <= 0:
+            key = (t.symbol, -1.0)
+        else:
+            bucket = round(ts / window_sec) * window_sec
+            key = (t.symbol, bucket)
+        if key not in seen:
+            seen[key] = t
+        else:
+            # Оставляем запись с более полными данными (есть close_reason) или с большим |pnl|
+            existing = seen[key]
+            if (t.close_reason or t.bot_id) and not (existing.close_reason or existing.bot_id):
+                seen[key] = t
+            elif t.raw and existing.raw and (t.raw.get("entry_rsi") is not None) and (existing.raw.get("entry_rsi") is None):
+                seen[key] = t
+    return list(seen.values())
+
+
 def analyze_bot_trades(
     bot_summaries: List[TradeSummary],
 ) -> Dict[str, Any]:
-    """Полная аналитика по сделкам ботов (без биржи)."""
+    """Полная аналитика по сделкам ботов (без биржи). Перед расчётом дубликаты по (symbol, exit_timestamp) отбрасываются."""
     closed = [t for t in bot_summaries if t.raw and (t.raw.get("status") == "CLOSED" or t.pnl != 0 or t.raw.get("exit_timestamp"))]
     if not closed:
         closed = bot_summaries
+    closed = _deduplicate_trade_summaries(closed)
 
     total = len(closed)
     total_pnl = sum(t.pnl for t in closed)
@@ -506,6 +535,63 @@ def analyze_bot_trades(
             "trend_summary": {k: dict(v) for k, v in trend_data.items()} if trend_data else {},
         })
 
+    # Удачные монеты: достаточно сделок, PnL > 0 и Win Rate >= порога
+    successful_coins: List[Dict[str, Any]] = []
+    for symbol, data in by_symbol.items():
+        count = data["count"]
+        if count < MIN_TRADES_FOR_UNSUCCESSFUL_COIN:
+            continue
+        pnl = data["pnl"]
+        wins = data["wins"]
+        wr = (wins / count * 100) if count else 0
+        if pnl <= 0 or wr < SUCCESSFUL_WIN_RATE_THRESHOLD_PCT:
+            continue
+        successful_coins.append({
+            "symbol": symbol,
+            "trades_count": count,
+            "pnl_usdt": round(pnl, 2),
+            "win_rate_pct": round(wr, 2),
+            "wins": data["wins"],
+            "losses": data["losses"],
+        })
+    successful_coins.sort(key=lambda x: (-x["pnl_usdt"], -x["win_rate_pct"]))
+
+    # Удачные настройки по RSI и тренду для каждой удачной монеты
+    successful_settings: List[Dict[str, Any]] = []
+    for sc in successful_coins:
+        symbol = sc["symbol"]
+        good_rsi: List[Dict[str, Any]] = []
+        rsi_data = by_symbol_rsi.get(symbol, {})
+        for bucket, b in rsi_data.items():
+            if b["count"] < MIN_TRADES_FOR_BAD_RSI_BUCKET:
+                continue
+            wr = (b["wins"] / b["count"] * 100) if b["count"] else 0
+            if wr >= GOOD_RSI_WIN_RATE_THRESHOLD_PCT and b["pnl"] > 0:
+                good_rsi.append({
+                    "rsi_range": bucket,
+                    "trades_count": b["count"],
+                    "pnl_usdt": round(b["pnl"], 2),
+                    "win_rate_pct": round(wr, 2),
+                })
+        good_trends: List[Dict[str, Any]] = []
+        trend_data = by_symbol_trend.get(symbol, {})
+        for trend_name, b in trend_data.items():
+            if b["count"] < MIN_TRADES_FOR_BAD_RSI_BUCKET:
+                continue
+            wr = (b["wins"] / b["count"] * 100) if b["count"] else 0
+            if wr >= GOOD_RSI_WIN_RATE_THRESHOLD_PCT and b["pnl"] > 0:
+                good_trends.append({
+                    "trend": trend_name,
+                    "trades_count": b["count"],
+                    "pnl_usdt": round(b["pnl"], 2),
+                    "win_rate_pct": round(wr, 2),
+                })
+        successful_settings.append({
+            "symbol": symbol,
+            "good_rsi_ranges": good_rsi,
+            "good_trends": good_trends,
+        })
+
     series = _compute_series(closed)
     drawdown = _compute_drawdown(closed)
 
@@ -557,6 +643,8 @@ def analyze_bot_trades(
         "possible_errors": possible_errors[:100],
         "unsuccessful_coins": unsuccessful_coins,
         "unsuccessful_settings": unsuccessful_settings,
+        "successful_coins": successful_coins,
+        "successful_settings": successful_settings,
     }
 
 

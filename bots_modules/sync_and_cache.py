@@ -187,24 +187,27 @@ def _check_if_trade_already_closed(bot_id, symbol, entry_price, entry_time_str):
         if not existing_trades:
             return False
         
-        # Проверяем на дубликаты
+        # Проверяем на дубликаты: если уже есть закрытая сделка с той же позицией (symbol, entry_price, entry_time) — не сохраняем повторно
+        # КРИТИЧНО: не только MANUAL_CLOSE — иначе при закрытии ботом (SL/TP/RSI) sync потом дописывает вторую запись
         for existing_trade in existing_trades:
             existing_entry_price = existing_trade.get('entry_price')
             existing_entry_ts = existing_trade.get('entry_timestamp')
-            existing_close_reason = existing_trade.get('close_reason')
-            
-            # Сравниваем цену входа (погрешность для float)
-            price_match = existing_entry_price and abs(float(existing_entry_price) - float(entry_price)) < 0.0001
-            
-            # Сравниваем timestamp если есть (погрешность 1 минута)
-            timestamp_match = True
-            if entry_timestamp and existing_entry_ts:
-                timestamp_match = abs(float(existing_entry_ts) - float(entry_timestamp)) < 60000
-            
-            # Если совпадает цена и timestamp, и это MANUAL_CLOSE - это дубликат
-            if price_match and timestamp_match and existing_close_reason == 'MANUAL_CLOSE':
-                return True
-        
+            if existing_entry_ts is None:
+                continue
+            # Нормализуем в мс для сравнения
+            try:
+                ex_ts = float(existing_entry_ts)
+                if ex_ts < 1e12:
+                    ex_ts *= 1000
+                ent_ts = float(entry_timestamp) if entry_timestamp else 0
+                if ent_ts < 1e12:
+                    ent_ts *= 1000
+            except (TypeError, ValueError):
+                continue
+            price_match = existing_entry_price is not None and abs(float(existing_entry_price) - float(entry_price)) < 0.0001
+            timestamp_match = abs(ex_ts - ent_ts) < 120000  # 2 минуты
+            if price_match and timestamp_match:
+                return True  # дубликат — уже есть запись о закрытии этой позиции
         return False
     except Exception as e:
         pass

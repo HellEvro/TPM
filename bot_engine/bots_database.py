@@ -5675,6 +5675,27 @@ class BotsDatabase:
                             conn.commit()
                             return existing['id']
                     
+                    # Доп. проверка на дубликат по (symbol, exit_timestamp): одна и та же сделка могла прийти из биржи и от бота с разным entry_timestamp
+                    if exit_timestamp is not None and status == 'CLOSED':
+                        try:
+                            exit_ts_ms = float(exit_timestamp)
+                            if exit_ts_ms < 1e12:
+                                exit_ts_ms *= 1000
+                            cursor.execute("""
+                                SELECT id, exit_timestamp FROM bot_trades_history
+                                WHERE symbol = ? AND status = 'CLOSED' AND exit_timestamp IS NOT NULL
+                                ORDER BY exit_timestamp DESC LIMIT 500
+                            """, (symbol,))
+                            for row in cursor.fetchall():
+                                ex_ts = float(row['exit_timestamp'])
+                                if ex_ts < 1e12:
+                                    ex_ts *= 1000
+                                if abs(ex_ts - exit_ts_ms) < 120000:  # 2 мин
+                                    conn.commit()
+                                    return row['id']
+                        except Exception:
+                            pass
+                    
                     # Создаем новую запись
                     cursor.execute("""
                         INSERT INTO bot_trades_history (

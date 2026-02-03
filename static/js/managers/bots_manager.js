@@ -10537,66 +10537,154 @@ class BotsManager {
     }
 
     /**
-     * Формирует HTML отчёта аналитики и вставляет в контейнер
+     * Формирует HTML отчёта аналитики с переключаемыми категориями и вставляет в контейнер
      */
     renderAnalyticsReport(report, container) {
         if (!container) return;
         const s = report.summary || {};
         const bot = report.bot_analytics || {};
-        const recon = report.reconciliation || {};
-        let html = `<div class="analytics-report">
-            <div class="analytics-section">
-                <h3>Сводка</h3>
-                <p>Сделок на бирже: <strong>${s.exchange_trades_count ?? 0}</strong> · Сделок ботов: <strong>${s.bot_trades_count ?? 0}</strong>
-                · Совпадений: <strong>${s.reconciliation_matched ?? 0}</strong> · Только на бирже: <strong>${s.reconciliation_only_exchange ?? 0}</strong>
-                · Только в ботах: <strong>${s.reconciliation_only_bots ?? 0}</strong> · Расхождений PnL: <strong>${s.reconciliation_pnl_mismatches ?? 0}</strong></p>
-                <p>Win Rate ботов: <strong>${s.bot_win_rate_pct != null ? s.bot_win_rate_pct + '%' : '—'}</strong> · Общий PnL ботов: <strong>${s.bot_total_pnl_usdt != null ? s.bot_total_pnl_usdt + ' USDT' : '—'}</strong></p>
-            </div>`;
+        const categories = [
+            { id: 'summary', label: (window.languageUtils && window.languageUtils.translate('analytics_cat_summary')) || 'Сводка' },
+            { id: 'bots', label: (window.languageUtils && window.languageUtils.translate('analytics_cat_bots')) || 'Сделки ботов' },
+            { id: 'reasons', label: (window.languageUtils && window.languageUtils.translate('analytics_cat_reasons')) || 'Причины закрытия' },
+            { id: 'unsuccessful_coins', label: (window.languageUtils && window.languageUtils.translate('analytics_cat_unsuccessful_coins')) || 'Неудачные монеты' },
+            { id: 'unsuccessful_settings', label: (window.languageUtils && window.languageUtils.translate('analytics_cat_unsuccessful_settings')) || 'Неудачные настройки' },
+            { id: 'successful_coins', label: (window.languageUtils && window.languageUtils.translate('analytics_cat_successful_coins')) || 'Удачные монеты' },
+            { id: 'successful_settings', label: (window.languageUtils && window.languageUtils.translate('analytics_cat_successful_settings')) || 'Удачные настройки' }
+        ];
+        let tabsHtml = '<div class="analytics-category-tabs">';
+        categories.forEach((cat, i) => {
+            tabsHtml += `<button type="button" class="analytics-cat-btn ${i === 0 ? 'active' : ''}" data-category="${cat.id}">${cat.label}</button>`;
+        });
+        tabsHtml += '</div>';
+
+        let bodyHtml = '<div class="analytics-report">';
+        const exchangeCount = s.exchange_trades_count ?? 0;
+        const botCountRaw = s.bot_trades_count ?? 0;
+        const botCountUnique = (bot.total_trades != null ? bot.total_trades : botCountRaw);
+        const onlyBots = s.reconciliation_only_bots ?? 0;
+        let summaryNote = '';
+        if (botCountRaw > exchangeCount && exchangeCount > 0) {
+            summaryNote = '<p class="analytics-summary-note">В БД записей больше, чем биржа вернула по API: у биржи ограничена история (например 2 года или лимит страниц). «Только в БД» — сделки из БД без пары в ответе API (часто старые). В БД учтены закрытия ботов и ручные через интерфейс.</p>';
+        }
+        const botCountNote = (botCountUnique < botCountRaw) ? ` <small>(уникальных: ${botCountUnique}, всего записей в БД: ${botCountRaw})</small>` : ` <small>(всего записей в БД)</small>`;
+        bodyHtml += `<div class="analytics-section" data-category="summary">
+            <h3>${categories[0].label}</h3>
+            <p><strong>С биржи (по API):</strong> ${exchangeCount} · <strong>В БД</strong> (закрытия ботов и ручные через интерфейс): <strong>${botCountUnique}</strong>${botCountNote}<br>
+            Совпадений: <strong>${s.reconciliation_matched ?? 0}</strong> · Только в ответе биржи: <strong>${s.reconciliation_only_exchange ?? 0}</strong>
+            · Только в БД (нет пары в ответе API): <strong>${onlyBots}</strong> · Расхождений PnL: <strong>${s.reconciliation_pnl_mismatches ?? 0}</strong></p>
+            ${summaryNote}
+            <p>Win Rate по сделкам в БД: <strong>${s.bot_win_rate_pct != null ? s.bot_win_rate_pct + '%' : '—'}</strong> · Суммарный PnL по БД: <strong>${s.bot_total_pnl_usdt != null ? s.bot_total_pnl_usdt + ' USDT' : '—'}</strong></p>
+            <p class="analytics-summary-note" style="margin-top: 6px;">В отчёте учтены только уникальные сделки: дубликаты (одна и та же позиция из бота и из импорта с биржи) отброшены по времени закрытия.</p>
+        </div>`;
+
+        bodyHtml += `<div class="analytics-section" data-category="bots">`;
         if (bot.total_trades != null) {
             const series = bot.consecutive_series || {};
             const dd = bot.drawdown || {};
-            html += `<div class="analytics-section">
-                <h3>Аналитика сделок ботов</h3>
-                <p>Всего сделок: <strong>${bot.total_trades}</strong> · PnL: <strong>${bot.total_pnl_usdt} USDT</strong> · Win Rate: <strong>${bot.win_rate_pct}%</strong>
-                · Прибыльных: <strong>${bot.win_count ?? 0}</strong> · Убыточных: <strong>${bot.loss_count ?? 0}</strong></p>
-                <p>Макс. серия побед: <strong>${series.max_consecutive_wins ?? 0}</strong> · Макс. серия убытков: <strong>${series.max_consecutive_losses ?? 0}</strong>
-                · Просадка: <strong>${dd.max_drawdown_usdt ?? 0} USDT</strong> (${dd.max_drawdown_pct ?? 0}%)</p>
-            </div>`;
+            bodyHtml += `<h3>${categories[1].label}</h3>
+            <p>Всего сделок: <strong>${bot.total_trades}</strong> · PnL: <strong>${bot.total_pnl_usdt} USDT</strong> · Win Rate: <strong>${bot.win_rate_pct}%</strong>
+            · Прибыльных: <strong>${bot.win_count ?? 0}</strong> · Убыточных: <strong>${bot.loss_count ?? 0}</strong></p>
+            <p>Макс. серия побед: <strong>${series.max_consecutive_wins ?? 0}</strong> · Макс. серия убытков: <strong>${series.max_consecutive_losses ?? 0}</strong>
+            · Просадка: <strong>${dd.max_drawdown_usdt ?? 0} USDT</strong> (${dd.max_drawdown_pct ?? 0}%)</p>`;
+        } else {
+            bodyHtml += `<p>Нет данных</p>`;
         }
+        bodyHtml += '</div>';
+
         const byReason = bot.by_close_reason || {};
+        bodyHtml += `<div class="analytics-section" data-category="reasons"><h3>${categories[2].label}</h3>`;
         if (Object.keys(byReason).length) {
-            html += '<div class="analytics-section"><h3>По причинам закрытия</h3><ul>';
+            bodyHtml += '<ul>';
             for (const [reason, d] of Object.entries(byReason)) {
-                html += `<li><strong>${reason}</strong>: сделок ${d.count}, PnL ${(d.pnl || 0).toFixed(2)}, победы ${d.wins || 0}, убытки ${d.losses || 0}</li>`;
+                bodyHtml += `<li><strong>${reason}</strong>: сделок ${d.count}, PnL ${(d.pnl || 0).toFixed(2)}, победы ${d.wins || 0}, убытки ${d.losses || 0}</li>`;
             }
-            html += '</ul></div>';
+            bodyHtml += '</ul>';
+        } else {
+            bodyHtml += '<p>Нет данных</p>';
         }
+        bodyHtml += '</div>';
+
         const uc = bot.unsuccessful_coins || [];
+        bodyHtml += `<div class="analytics-section" data-category="unsuccessful_coins"><h3>${categories[3].label}</h3><p>(PnL &lt; 0 или Win Rate &lt; 45%, мин. 3 сделки)</p>`;
         if (uc.length) {
-            html += '<div class="analytics-section"><h3>Неудачные монеты</h3><p>(PnL &lt; 0 или Win Rate &lt; 45%, мин. 3 сделки)</p><ul>';
+            bodyHtml += '<ul>';
             uc.forEach(c => {
-                html += `<li><strong>${c.symbol}</strong>: сделок ${c.trades_count}, PnL ${c.pnl_usdt} USDT, Win Rate ${c.win_rate_pct}%, причины: ${(c.reasons || []).join(', ')}</li>`;
+                bodyHtml += `<li><strong>${c.symbol}</strong>: сделок ${c.trades_count}, PnL ${c.pnl_usdt} USDT, Win Rate ${c.win_rate_pct}%, причины: ${(c.reasons || []).join(', ')}</li>`;
             });
-            html += '</ul></div>';
+            bodyHtml += '</ul>';
+        } else {
+            bodyHtml += '<p>Нет неудачных монет по критериям</p>';
         }
+        bodyHtml += '</div>';
+
         const us = bot.unsuccessful_settings || [];
+        bodyHtml += `<div class="analytics-section" data-category="unsuccessful_settings"><h3>${categories[4].label}</h3>`;
         if (us.length) {
-            html += '<div class="analytics-section"><h3>Неудачные настройки (RSI и тренд)</h3>';
             us.forEach(u => {
                 if (!u.bad_rsi_ranges?.length && !u.bad_trends?.length) return;
-                html += `<p><strong>${u.symbol}</strong></p><ul>`;
+                bodyHtml += `<p><strong>${u.symbol}</strong></p><ul>`;
                 (u.bad_rsi_ranges || []).forEach(r => {
-                    html += `<li>RSI ${r.rsi_range}: сделок ${r.trades_count}, PnL ${r.pnl_usdt}, Win Rate ${r.win_rate_pct}%</li>`;
+                    bodyHtml += `<li>RSI ${r.rsi_range}: сделок ${r.trades_count}, PnL ${r.pnl_usdt}, Win Rate ${r.win_rate_pct}%</li>`;
                 });
                 (u.bad_trends || []).forEach(t => {
-                    html += `<li>Тренд ${t.trend}: сделок ${t.trades_count}, PnL ${t.pnl_usdt}, Win Rate ${t.win_rate_pct}%</li>`;
+                    bodyHtml += `<li>Тренд ${t.trend}: сделок ${t.trades_count}, PnL ${t.pnl_usdt}, Win Rate ${t.win_rate_pct}%</li>`;
                 });
-                html += '</ul>';
+                bodyHtml += '</ul>';
             });
-            html += '</div>';
+        } else {
+            bodyHtml += '<p>Нет данных</p>';
         }
-        html += `<div class="analytics-meta">Отчёт сформирован: ${report.generated_at || '—'}</div></div>`;
-        container.innerHTML = html;
+        bodyHtml += '</div>';
+
+        const sc = bot.successful_coins || [];
+        bodyHtml += `<div class="analytics-section" data-category="successful_coins"><h3>${categories[5].label}</h3><p>(PnL &gt; 0 и Win Rate ≥ 55%, мин. 3 сделки)</p>`;
+        if (sc.length) {
+            bodyHtml += '<ul>';
+            sc.forEach(c => {
+                bodyHtml += `<li><strong>${c.symbol}</strong>: сделок ${c.trades_count}, PnL ${c.pnl_usdt} USDT, Win Rate ${c.win_rate_pct}%</li>`;
+            });
+            bodyHtml += '</ul>';
+        } else {
+            bodyHtml += '<p>Нет удачных монет по критериям</p>';
+        }
+        bodyHtml += '</div>';
+
+        const ss = bot.successful_settings || [];
+        bodyHtml += `<div class="analytics-section" data-category="successful_settings"><h3>${categories[6].label}</h3><p>(Диапазоны RSI и тренды с Win Rate ≥ 55% и PnL &gt; 0)</p>`;
+        if (ss.length) {
+            ss.forEach(u => {
+                if (!u.good_rsi_ranges?.length && !u.good_trends?.length) return;
+                bodyHtml += `<p><strong>${u.symbol}</strong></p><ul>`;
+                (u.good_rsi_ranges || []).forEach(r => {
+                    bodyHtml += `<li>RSI ${r.rsi_range}: сделок ${r.trades_count}, PnL ${r.pnl_usdt}, Win Rate ${r.win_rate_pct}%</li>`;
+                });
+                (u.good_trends || []).forEach(t => {
+                    bodyHtml += `<li>Тренд ${t.trend}: сделок ${t.trades_count}, PnL ${t.pnl_usdt}, Win Rate ${t.win_rate_pct}%</li>`;
+                });
+                bodyHtml += '</ul>';
+            });
+        } else {
+            bodyHtml += '<p>Нет данных</p>';
+        }
+        bodyHtml += '</div>';
+
+        bodyHtml += `<div class="analytics-meta">Отчёт сформирован: ${report.generated_at || '—'}</div></div>`;
+
+        container.innerHTML = tabsHtml + '<div class="analytics-report-wrap">' + bodyHtml + '</div>';
+        container.querySelectorAll('.analytics-cat-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cat = btn.dataset.category;
+                container.querySelectorAll('.analytics-cat-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                container.querySelectorAll('.analytics-section').forEach(sec => {
+                    sec.classList.toggle('active', sec.dataset.category === cat);
+                });
+            });
+        });
+        container.querySelectorAll('.analytics-section').forEach(sec => {
+            sec.classList.toggle('active', sec.dataset.category === 'summary');
+        });
     }
 
     /**
