@@ -335,7 +335,7 @@ class ModelHealthChecker:
         root = _project_root()
         paths = []
         try:
-            from bot_engine.bot_config import AIConfig
+            from bot_engine.config_loader import AIConfig
             lstm_path = getattr(AIConfig, 'AI_LSTM_MODEL_PATH', 'data/ai/models/lstm_predictor.keras')
             paths.append((os.path.basename(lstm_path), os.path.join(root, lstm_path)))
             pattern_path = getattr(AIConfig, 'AI_PATTERN_MODEL_PATH', 'data/ai/models/pattern_detector.pkl')

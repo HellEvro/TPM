@@ -16,7 +16,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from pathlib import Path
 import concurrent.futures
-from bot_engine.bot_config import get_current_timeframe
+from bot_engine.config_loader import get_current_timeframe
 
 logger = logging.getLogger('AI.CandlesLoader')
 
@@ -165,7 +165,7 @@ class AICandlesLoader:
             
             def load_symbol_candles(symbol):
                 """Загружает свечи для одного символа (инкрементально или полностью)"""
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.config_loader import get_current_timeframe
                 try:
                     # Проверяем существующие свечи для этого символа
                     existing_symbol_data = existing_candles.get(symbol, {})
@@ -617,7 +617,7 @@ class AICandlesLoader:
             return {}
         
         try:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             try:
                 from bot_engine.ai.ai_launcher_config import AILauncherConfig
                 max_symbols = AILauncherConfig.MAX_SYMBOLS_FOR_CANDLES
@@ -683,7 +683,7 @@ class AICandlesLoader:
                     db_candles_data[symbol] = candles_sorted
             
             if db_candles_data:
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.config_loader import get_current_timeframe
                 saved_results = self.ai_db.save_candles_batch(db_candles_data, timeframe=get_current_timeframe())
                 total_saved = sum(saved_results.values())
                 logger.info(f"✅ Сохранено {total_saved} свечей в БД для {len(saved_results)} монет")
@@ -701,7 +701,7 @@ class AICandlesLoader:
             return None
         
         try:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             return self.ai_db.get_candles(symbol, timeframe=get_current_timeframe())
         except Exception as e:
             logger.warning(f"⚠️ Ошибка загрузки свечей для {symbol} из БД: {e}")

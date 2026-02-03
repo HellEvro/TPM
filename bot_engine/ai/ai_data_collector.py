@@ -17,7 +17,7 @@ import requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import threading
-from bot_engine.bot_config import get_current_timeframe
+from bot_engine.config_loader import get_current_timeframe
 
 logger = logging.getLogger('AI.DataCollector')
 
@@ -468,7 +468,7 @@ class AIDataCollector:
                             # Проверяем время последнего обновления (берем максимальный created_at)
                             with ai_db._get_connection() as conn:
                                 cursor = conn.cursor()
-                                from bot_engine.bot_config import get_current_timeframe
+                                from bot_engine.config_loader import get_current_timeframe
                                 cursor.execute("""
                                     SELECT MAX(created_at) as last_update
                                     FROM candles_history
@@ -681,7 +681,7 @@ class AIDataCollector:
                     logger.info(f"📊 Получено индикаторов для {len(coins_data)} монет")
                     
                     # Получаем RSI и тренд с учетом текущего таймфрейма
-                    from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                    from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
                     
                     # Сохраняем индикаторы
                     indicators_count = 0
@@ -815,8 +815,8 @@ class AIDataCollector:
                 logger.warning(f"⚠️ AI Database не доступна для {symbol}")
                 return None
             
-            from bot_engine.bot_config import get_current_timeframe
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             candles = ai_db.get_candles(symbol, timeframe=get_current_timeframe())
         except Exception as db_error:
             logger.error(f"❌ Ошибка загрузки свечей из БД для {symbol}: {db_error}")
@@ -828,7 +828,7 @@ class AIDataCollector:
             coins_data = rsi_response.get('coins', {})
             if symbol in coins_data:
                 # Получаем RSI и тренд с учетом текущего таймфрейма
-                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
                 indicators = {
                     'rsi': get_rsi_from_coin_data(coins_data[symbol]),
                     'trend': get_trend_from_coin_data(coins_data[symbol]),

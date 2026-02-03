@@ -29,7 +29,7 @@ try:
 except ImportError:
     bots_data_lock = threading.Lock()
     bots_data = {}
-    # ✅ ВАЖНО: Fallback значения должны совпадать с default_auto_bot_config.json
+    # ✅ ВАЖНО: Fallback значения должны совпадать с DEFAULT_AUTO_BOT_CONFIG в configs/bot_config.py
     MIN_CANDLES_FOR_MATURITY = 400  # Было 200, теперь 400
     MIN_RSI_LOW = 35
     MAX_RSI_HIGH = 65
@@ -433,7 +433,7 @@ def calculate_all_coins_maturity():
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
         all_coins = []
         for symbol, coin_data in coins_rsi_data['coins'].items():
-            from bot_engine.bot_config import get_rsi_from_coin_data
+            from bot_engine.config_loader import get_rsi_from_coin_data
             if get_rsi_from_coin_data(coin_data) is not None:
                 all_coins.append(symbol)
         

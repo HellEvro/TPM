@@ -185,11 +185,11 @@ class NewTradingBot:
         # ✅ Таймфрейм при входе в позицию (критично для работы с позициями из разных ТФ)
         # По умолчанию — выбранный системный ТФ; для старых записей из БД может быть значение из конфига
         try:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             _default_tf = get_current_timeframe()
         except Exception:
             # ✅ КРИТИЧНО: Используем TIMEFRAME из конфига вместо хардкода '6h'
-            from bot_engine.bot_config import TIMEFRAME
+            from bot_engine.config_loader import TIMEFRAME
             _default_tf = TIMEFRAME
         self.entry_timeframe = self.config.get('entry_timeframe') or _default_tf
 
@@ -344,7 +344,7 @@ class NewTradingBot:
                     with rsi_data_lock:
                         rsi_info = coins_rsi_data.get(self.symbol, {})
                         if rsi_value is None:
-                            from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                            from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
                             rsi_value = get_rsi_from_coin_data(rsi_info)
                         if trend_value is None:
                             trend_value = get_trend_from_coin_data(rsi_info)
@@ -358,7 +358,7 @@ class NewTradingBot:
                         bot_data = bots_data.get('bots', {}).get(self.symbol, {})
                         rsi_data = bot_data.get('rsi_data', {})
                         if rsi_value is None:
-                            from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                            from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
                             rsi_value = get_rsi_from_coin_data(rsi_data)
                         if trend_value is None:
                             trend_value = get_trend_from_coin_data(rsi_data)
@@ -920,7 +920,7 @@ class NewTradingBot:
                 # Свечи 6h, значит одна свеча = 6 часов = 21600 секунд
                 # Получаем текущий таймфрейм динамически
                 try:
-                    from bot_engine.bot_config import get_current_timeframe
+                    from bot_engine.config_loader import get_current_timeframe
                     current_timeframe = get_current_timeframe()
                     # Конвертируем таймфрейм в секунды
                     timeframe_to_seconds = {
@@ -1123,7 +1123,7 @@ class NewTradingBot:
             ]:
                 timeframe_to_use = self.entry_timeframe
             else:
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.config_loader import get_current_timeframe
                 timeframe_to_use = get_current_timeframe()
             
             # Получаем RSI данные с учетом таймфрейма бота
@@ -1133,19 +1133,19 @@ class NewTradingBot:
                     with rsi_data_lock:
                         coin_data = coins_rsi_data['coins'].get(self.symbol)
                         if coin_data:
-                            from bot_engine.bot_config import get_rsi_from_coin_data
+                            from bot_engine.config_loader import get_rsi_from_coin_data
                             # ✅ Используем таймфрейм бота для получения RSI
                             current_rsi = get_rsi_from_coin_data(coin_data, timeframe=timeframe_to_use)
                             current_price = coin_data.get('price')
                             if not current_trend:
-                                from bot_engine.bot_config import get_trend_from_coin_data
+                                from bot_engine.config_loader import get_trend_from_coin_data
                                 # ✅ Используем таймфрейм бота для получения тренда
                                 current_trend = get_trend_from_coin_data(coin_data, timeframe=timeframe_to_use)
                 else:
                     # Fallback если lock не определен
                     coin_data = coins_rsi_data['coins'].get(self.symbol)
                     if coin_data:
-                        from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                        from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
                         # ✅ Используем таймфрейм бота для получения RSI
                         current_rsi = get_rsi_from_coin_data(coin_data, timeframe=timeframe_to_use)
                         current_price = coin_data.get('price')
@@ -1157,7 +1157,7 @@ class NewTradingBot:
                 # Fallback если lock не определен
                 coin_data = coins_rsi_data['coins'].get(self.symbol)
                 if coin_data:
-                    from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                    from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
                     # ✅ Используем таймфрейм бота для получения RSI
                     current_rsi = get_rsi_from_coin_data(coin_data, timeframe=timeframe_to_use)
                     current_price = coin_data.get('price')
@@ -2179,7 +2179,7 @@ class NewTradingBot:
                 try:
                     with rsi_data_lock:
                         rsi_info = coins_rsi_data.get(self.symbol, {})
-                        from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                        from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
                         if entry_rsi is None:
                             entry_rsi = get_rsi_from_coin_data(rsi_info)
                         if entry_trend is None:
@@ -2207,7 +2207,7 @@ class NewTradingBot:
             try:
                 with rsi_data_lock:
                     rsi_info = coins_rsi_data.get(self.symbol, {})
-                    from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                    from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
                     exit_rsi = get_rsi_from_coin_data(rsi_info)
                     exit_trend = get_trend_from_coin_data(rsi_info)
             except Exception:
@@ -2298,7 +2298,7 @@ class NewTradingBot:
                         bots_data['bots'][self.symbol]['last_position_close_timestamp'] = current_timestamp
                 
                 try:
-                    from bot_engine.bot_config import get_current_timeframe
+                    from bot_engine.config_loader import get_current_timeframe
                     _tf = get_current_timeframe()
                 except Exception:
                     _tf = '?'
@@ -2466,7 +2466,7 @@ class NewTradingBot:
 
         try:
             from bot_engine.trading_bot import TradingBot
-            from bot_engine.bot_config import BotStatus
+            from bot_engine.config_loader import BotStatus
         except ImportError as e:
             logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось импортировать TradingBot: {e}")
             raise
@@ -2505,7 +2505,7 @@ class NewTradingBot:
                 from bots_modules.imports_and_globals import coins_rsi_data, rsi_data_lock
                 with rsi_data_lock:
                     rsi_info = coins_rsi_data.get('coins', {}).get(self.symbol, {})
-                    from bot_engine.bot_config import get_trend_from_coin_data
+                    from bot_engine.config_loader import get_trend_from_coin_data
                     entry_trend_value = get_trend_from_coin_data(rsi_info) or rsi_info.get('trend')
             except Exception as e:
                 pass
@@ -2521,7 +2521,7 @@ class NewTradingBot:
         
         # ✅ КРИТИЧНО: Сохраняем таймфрейм при входе в позицию
         # Это позволяет боту работать со своим таймфреймом независимо от системного
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         self.entry_timeframe = get_current_timeframe()
         
         target_status = BOT_STATUS['IN_POSITION_LONG'] if side == 'LONG' else BOT_STATUS['IN_POSITION_SHORT']

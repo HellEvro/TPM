@@ -258,7 +258,7 @@ def optimize_threshold():
     # Инструкции по применению
     print("TO APPLY:")
     print()
-    print("Edit bot_engine/bot_config.py:")
+    print("Edit configs/bot_config.py:")
     print()
     print("class AIConfig:")
     print(f"    AI_ANOMALY_BLOCK_THRESHOLD = {best_threshold}  # Recommended")

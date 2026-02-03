@@ -83,7 +83,7 @@ def _load_json_file(file_path):
         return None, None
 
 # Импорт SystemConfig
-from bot_engine.bot_config import SystemConfig
+from bot_engine.config_loader import SystemConfig
 
 # Импорт Flask приложения и глобальных переменных из imports_and_globals
 from bots_modules.imports_and_globals import (
@@ -616,7 +616,7 @@ def get_coins_with_rsi():
                 
                 # Копируем только необходимые базовые поля
                 # Получаем ключи для текущего таймфрейма
-                from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+                from bot_engine.config_loader import get_current_timeframe, get_rsi_key, get_trend_key
                 current_timeframe = get_current_timeframe()
                 rsi_key = get_rsi_key(current_timeframe)
                 trend_key = get_trend_key(current_timeframe)
@@ -1110,7 +1110,7 @@ def create_bot_endpoint():
                                 direction = 'LONG' if signal == 'ENTER_LONG' else 'SHORT'
                                 logger.info(f" 🚀 Вход по рынку для {symbol}: направление по сигналу (конфиг) → {direction}")
                             elif coin_data:
-                                from bot_engine.bot_config import get_rsi_key, get_current_timeframe
+                                from bot_engine.config_loader import get_rsi_key, get_current_timeframe
                                 tf = get_current_timeframe()
                                 rsi_key = get_rsi_key(tf)
                                 rsi_val = coin_data.get(rsi_key) or coin_data.get('rsi')
@@ -1634,7 +1634,7 @@ def log_config_change(key, old_value, new_value, description=""):
 def timeframe_config():
     """Получить или установить текущий таймфрейм системы"""
     try:
-        from bot_engine.bot_config import get_current_timeframe, set_current_timeframe, reset_timeframe_to_config
+        from bot_engine.config_loader import get_current_timeframe, set_current_timeframe, reset_timeframe_to_config
         
         if request.method == 'GET':
             current_tf = get_current_timeframe()
@@ -1673,7 +1673,7 @@ def timeframe_config():
             # ⚠️ ВАЖНО: НЕ вызываем load_system_config() после сохранения, чтобы не сбросить таймфрейм
             try:
                 from bots_modules.config_writer import save_system_config_to_py
-                from bot_engine.bot_config import SystemConfig
+                from bot_engine.config_loader import SystemConfig
                 # Обновляем SystemConfig в памяти
                 SystemConfig.SYSTEM_TIMEFRAME = new_timeframe
                 # Сохраняем напрямую в файл БЕЗ перезагрузки модуля
@@ -1751,7 +1751,7 @@ def _build_full_export_config():
         auto_bot = deepcopy(bots_data.get('auto_bot_config', {}))
     system_cfg = get_system_config_snapshot()
     try:
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         tf = get_current_timeframe() or '1m'
     except Exception:
         tf = '1m'
@@ -1759,7 +1759,7 @@ def _build_full_export_config():
     system_cfg['timeframe'] = tf
     ai_cfg = {}
     try:
-        from bot_engine.bot_config import AIConfig, RiskConfig
+        from bot_engine.config_loader import AIConfig, RiskConfig
         ai_cfg = {
             'ai_enabled': getattr(AIConfig, 'AI_ENABLED', False),
             'ai_confidence_threshold': getattr(AIConfig, 'AI_CONFIDENCE_THRESHOLD', 0.65),
@@ -1821,7 +1821,7 @@ def system_config():
             
             # Добавляем текущий таймфрейм в системные настройки
             config = get_system_config_snapshot()
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             config['timeframe'] = get_current_timeframe()
             
             return jsonify({
@@ -2373,7 +2373,7 @@ def get_rsi_history_for_chart(symbol):
         # ✅ ОПТИМИЗАЦИЯ: Поддержка новой структуры кэша (несколько таймфреймов)
         candles = None
         candles_cache = coins_rsi_data.get('candles_cache', {})
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         current_timeframe = get_current_timeframe()
         
         if symbol in candles_cache:
@@ -2443,7 +2443,7 @@ def get_candles_from_cache(symbol):
     try:
         # Получаем параметры запроса
         # Получаем текущий таймфрейм из конфига
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         timeframe = request.args.get('timeframe', get_current_timeframe())  # По умолчанию текущий таймфрейм
         period_days = request.args.get('period', None)  # Опционально, для совместимости
         
@@ -2510,7 +2510,7 @@ def get_candles_from_cache(symbol):
             
             candles = daily_candles
         # Получаем текущий таймфрейм из конфига
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         current_timeframe = get_current_timeframe()
         
         if timeframe == current_timeframe:
@@ -2877,7 +2877,7 @@ def copy_individual_settings(symbol):
 def _get_candles_for_learn_exit_scam(symbol, timeframe=None):
     """Берёт свечи только из кэша или БД для этой монеты (без запросов к бирже). Расчёт индивидуальный по своим данным."""
     try:
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         tf = timeframe or get_current_timeframe()
     except Exception:
         tf = '6h'
@@ -2917,7 +2917,7 @@ def learn_exit_scam_for_coin(symbol):
         timeframe = payload.get('timeframe') or None
 
         try:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             effective_tf = timeframe or get_current_timeframe()
         except Exception:
             effective_tf = '6h'
@@ -2957,7 +2957,7 @@ def learn_exit_scam_for_all_coins():
             aggressiveness = 'normal'
         timeframe = payload.get('timeframe') or None
         try:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             effective_tf = timeframe or get_current_timeframe()
         except Exception:
             effective_tf = '6h'
@@ -3143,9 +3143,8 @@ def _patch_ai_config_after_auto_bot_save(data):
             new_lines.append(line)
         with open(config_path, 'w', encoding='utf-8') as f:
             f.writelines(new_lines)
-        if 'bot_engine.bot_config' in sys.modules:
-            import bot_engine.bot_config
-            importlib.reload(bot_engine.bot_config)
+        from bot_engine.config_loader import reload_config
+        reload_config()
         logger.debug("[API] AI-настройки синхронизированы в RiskConfig/AIConfig")
     except Exception as e:
         logger.warning(f"[API] Синхронизация AI в bot_config: {e}")
@@ -3212,7 +3211,7 @@ def auto_bot_config():
                 # ✅ Синхронизация AI-настроек: они сохраняются в RiskConfig/AIConfig (POST /api/ai/config),
                 # а DEFAULT_AUTO_BOT_CONFIG в файле не обновляется — подмешиваем актуальные значения из bot_config
                 try:
-                    from bot_engine.bot_config import RiskConfig, AIConfig
+                    from bot_engine.config_loader import RiskConfig, AIConfig
                     config['ai_optimal_entry_enabled'] = getattr(RiskConfig, 'AI_OPTIMAL_ENTRY_ENABLED', config.get('ai_optimal_entry_enabled', False))
                     config['self_learning_enabled'] = getattr(AIConfig, 'AI_SELF_LEARNING_ENABLED', config.get('self_learning_enabled', False))
                     config['log_predictions'] = getattr(AIConfig, 'AI_LOG_PREDICTIONS', config.get('log_predictions', False))
@@ -3886,7 +3885,7 @@ def reload_modules():
         import sys
         # Определяем модули для перезагрузки в порядке зависимостей
         modules_to_reload = [
-            'bot_engine.bot_config',
+            'bot_engine.config_loader',
             'bot_engine.indicators',
             'bots_modules.maturity',
             'bots_modules.sync_and_cache',
@@ -3908,7 +3907,13 @@ def reload_modules():
         # Этап 1: Перезагружаем безопасные модули
         for module_name in modules_to_reload:
             try:
-                if module_name in sys.modules:
+                if module_name == 'bot_engine.config_loader':
+                    from bot_engine.config_loader import reload_config
+                    logger.info(" 🔄 Перезагрузка конфига (config_loader + configs.bot_config)...")
+                    reload_config()
+                    reloaded.append(module_name)
+                    logger.info(" ✅ Модуль bot_engine.config_loader перезагружен")
+                elif module_name in sys.modules:
                     logger.info(f" 🔄 Перезагрузка модуля {module_name}...")
                     module = sys.modules[module_name]
                     importlib.reload(module)

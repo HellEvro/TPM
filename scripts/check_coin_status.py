@@ -44,7 +44,7 @@ def check_coin_status(symbol):
     
     # ✅ КРИТИЧНО: Получаем текущий таймфрейм из конфига
     try:
-        from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+        from bot_engine.config_loader import get_current_timeframe, get_rsi_key, get_trend_key
         current_timeframe = get_current_timeframe()
         rsi_key = get_rsi_key(current_timeframe)
         trend_key = get_trend_key(current_timeframe)

@@ -279,7 +279,7 @@ def _get_timeframe_for_bots_logger(logger_name):
     if not logger_name or ('BotsService' not in logger_name and 'bot' not in logger_name.lower()):
         return ''
     try:
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         tf = get_current_timeframe()
         return f" TF:{tf}" if tf else ''
     except Exception:
@@ -298,7 +298,7 @@ def _get_timeframe_for_ai_logger(logger_name):
     if not is_ai:
         return ''
     try:
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         tf = get_current_timeframe()
         return f" TF:{tf}" if tf else ''
     except Exception:
@@ -312,7 +312,7 @@ def _get_timeframe_for_app_logger(logger_name):
     if logger_name.lower() != 'app' and 'app' not in logger_name.lower():
         return ''
     try:
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         tf = get_current_timeframe()
         return f" TF:{tf}" if tf else ''
     except Exception:

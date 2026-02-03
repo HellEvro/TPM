@@ -39,39 +39,61 @@ if os.name == 'nt':
         except:
             pass
 
-# Проверка наличия конфигурации (через абсолютные пути, чтобы запуск работал из любой директории)
+# Все конфиги в configs/
 _PROJECT_ROOT = Path(__file__).resolve().parent
-_CONFIG_PATH = _PROJECT_ROOT / "app" / "config.py"
-_CONFIG_EXAMPLE_PATH = _PROJECT_ROOT / "app" / "config.example.py"
-_KEYS_PATH = _PROJECT_ROOT / "app" / "keys.py"
-_KEYS_EXAMPLE_PATH = _PROJECT_ROOT / "app" / "keys.example.py"
+_CONFIGS_DIR = _PROJECT_ROOT / "configs"
+_CONFIG_PATH = _PROJECT_ROOT / "app" / "config.py"  # заглушка, реэкспорт из configs
+_APP_CONFIG_PATH = _CONFIGS_DIR / "app_config.py"
+_APP_CONFIG_EXAMPLE_PATH = _CONFIGS_DIR / "app_config.example.py"
+_KEYS_PATH = _CONFIGS_DIR / "keys.py"
+_KEYS_EXAMPLE_PATH = _CONFIGS_DIR / "keys.example.py"
+
+# Создать configs/app_config.py и configs/keys.py из примеров, если нет
+_CONFIGS_DIR.mkdir(parents=True, exist_ok=True)
+if not _APP_CONFIG_PATH.exists() and _APP_CONFIG_EXAMPLE_PATH.exists():
+    import shutil
+    shutil.copyfile(_APP_CONFIG_EXAMPLE_PATH, _APP_CONFIG_PATH)
+    sys.stderr.write("✅ Создан configs/app_config.py из примера\n")
+if not _KEYS_PATH.exists() and _KEYS_EXAMPLE_PATH.exists():
+    import shutil
+    shutil.copyfile(_KEYS_EXAMPLE_PATH, _KEYS_PATH)
+    sys.stderr.write("✅ Создан configs/keys.py из примера (заполните ключи)\n")
+# Миграция: если в app/keys.py были реальные ключи (не заглушка), а configs/keys.py — шаблон, скопировать
+_OLD_KEYS = _PROJECT_ROOT / "app" / "keys.py"
+if _OLD_KEYS.exists() and _KEYS_PATH.exists():
+    try:
+        old_content = _OLD_KEYS.read_text(encoding="utf-8")
+        # Не копировать, если app/keys.py — заглушка (реэкспорт из configs)
+        if "from configs.keys import" in old_content:
+            pass  # уже заглушка, не трогаем configs/keys.py
+        else:
+            with open(_KEYS_PATH, "r", encoding="utf-8") as f:
+                if "YOUR_BYBIT_API_KEY_HERE" in f.read():
+                    import shutil
+                    shutil.copyfile(_OLD_KEYS, _KEYS_PATH)
+                    sys.stderr.write("✅ Ключи перенесены из app/keys.py в configs/keys.py\n")
+    except Exception:
+        pass
 
 if not _CONFIG_PATH.exists():
     # Используем stderr, так как logger еще не настроен
     sys.stderr.write("\n" + "=" * 80 + "\n")
-    sys.stderr.write("⚠️  Файл конфигурации не найден: app/config.py\n")
+    sys.stderr.write("⚠️  Файл app/config.py (заглушка) не найден.\n")
     sys.stderr.write("=" * 80 + "\n\n")
 
-    # Автосоздание keys.py (если нужно), чтобы config.example.py мог импортироваться
+    # Создать заглушку app/config.py и убедиться, что configs/ заполнены
     try:
+        _CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        if not _APP_CONFIG_PATH.exists() and _APP_CONFIG_EXAMPLE_PATH.exists():
+            import shutil
+            shutil.copyfile(_APP_CONFIG_EXAMPLE_PATH, _APP_CONFIG_PATH)
         if not _KEYS_PATH.exists() and _KEYS_EXAMPLE_PATH.exists():
-            _KEYS_PATH.parent.mkdir(parents=True, exist_ok=True)
             import shutil
             shutil.copyfile(_KEYS_EXAMPLE_PATH, _KEYS_PATH)
-            sys.stderr.write("✅ Создан файл app/keys.py из app/keys.example.py (заполните ключи)\n")
-    except Exception as e:
-        sys.stderr.write(f"⚠️ Не удалось создать app/keys.py автоматически: {e}\n")
-
-    # Автосоздание config.py из примера
-    try:
-        if _CONFIG_EXAMPLE_PATH.exists():
-            _CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-            import shutil
-            shutil.copyfile(_CONFIG_EXAMPLE_PATH, _CONFIG_PATH)
-            sys.stderr.write("✅ Создан файл app/config.py из app/config.example.py\n")
-            sys.stderr.write("   Отредактируйте app/keys.py и app/config.py под себя (Telegram/биржи).\n\n")
-        else:
-            raise FileNotFoundError("app/config.example.py отсутствует")
+        # Заглушка app/config.py
+        _CONFIG_PATH.write_text('# Реальный конфиг в configs/app_config.py\nfrom configs.app_config import *  # noqa: F401, F403\n', encoding='utf-8')
+        sys.stderr.write("✅ Создан app/config.py (заглушка) и configs/ при необходимости.\n")
+        sys.stderr.write("   Отредактируйте configs/keys.py и configs/app_config.py под себя.\n\n")
     except Exception as e:
         sys.stderr.write("\n" + "=" * 80 + "\n")
         sys.stderr.write("❌ ОШИБКА: не удалось создать конфигурацию автоматически!\n")
@@ -79,11 +101,11 @@ if not _CONFIG_PATH.exists():
         sys.stderr.write("=" * 80 + "\n\n")
         sys.stderr.write("📝 Для первого запуска выполните:\n\n")
         if os.name == 'nt':
-            sys.stderr.write("   copy app\\config.example.py app\\config.py\n")
-            sys.stderr.write("   copy app\\keys.example.py app\\keys.py\n")
+            sys.stderr.write("   copy configs\\app_config.example.py configs\\app_config.py\n")
+            sys.stderr.write("   copy configs\\keys.example.py configs\\keys.py\n")
         else:
-            sys.stderr.write("   cp app/config.example.py app/config.py\n")
-            sys.stderr.write("   cp app/keys.example.py app/keys.py\n")
+            sys.stderr.write("   cp configs/app_config.example.py configs/app_config.py\n")
+            sys.stderr.write("   cp configs/keys.example.py configs/keys.py\n")
         sys.stderr.write("\n📖 Подробная инструкция: docs/INSTALL.md\n\n")
         sys.exit(1)
 
@@ -199,9 +221,9 @@ if not check_api_keys():
         sys.stderr.write("   API ключи: НЕ НАСТРОЕНЫ или СОДЕРЖАТ ПРИМЕРЫ\n")
     sys.stderr.write("\n")
     sys.stderr.write("💡 Что нужно сделать:\n")
-    sys.stderr.write("   1. Скопируйте app/config.example.py -> app/config.py (если еще не сделали)\n")
+    sys.stderr.write("   1. Скопируйте configs/app_config.example.py -> configs/app_config.py (если еще не сделали)\n")
     sys.stderr.write("   2. Создайте app/keys.py с реальными ключами\n")
-    sys.stderr.write("   3. Или добавьте ключи прямо в app/config.py\n")
+    sys.stderr.write("   3. Или добавьте ключи в configs/app_config.py или configs/keys.py\n")
     sys.stderr.write("   4. Перезапустите приложение\n")
     sys.stderr.write("\n")
     sys.stderr.write("⚠️  Приложение запущено в DEMO режиме (только UI, без торговли)\n")
@@ -1285,7 +1307,7 @@ def switch_exchange():
             positions, _ = new_exchange.get_positions()
             
             # Если все хорошо, обновляем конфигурацию
-            with open('app/config.py', 'r', encoding='utf-8') as f:
+            with open('configs/app_config.py', 'r', encoding='utf-8') as f:
                 config_content = f.read()
             
             # Обновляем активную биржу в конфиге
@@ -1294,7 +1316,7 @@ def switch_exchange():
                 f"ACTIVE_EXCHANGE = '{exchange_name}'"
             )
             
-            with open('app/config.py', 'w', encoding='utf-8') as f:
+            with open('configs/app_config.py', 'w', encoding='utf-8') as f:
                 f.write(new_config)
             
             # Обновляем текущую биржу
@@ -1677,7 +1699,7 @@ def get_candles_from_file(symbol, timeframe=None, period_days=None):
     Получает свечи из файла/кэша для символа.
     Если timeframe не указан, используется текущий таймфрейм из конфига.
     """
-    from bot_engine.bot_config import get_current_timeframe
+    from bot_engine.config_loader import get_current_timeframe
     if timeframe is None:
         timeframe = get_current_timeframe()
     """Читает свечи напрямую из БД (не требует запущенного bots.py)"""
@@ -1735,7 +1757,7 @@ def get_candles_from_file(symbol, timeframe=None, period_days=None):
             
             candles = daily_candles
         # Получаем текущий таймфрейм из конфига
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         current_timeframe = get_current_timeframe()
         
         if timeframe == current_timeframe:
@@ -2074,7 +2096,7 @@ def get_symbol_chart(symbol):
     try:
         theme = request.args.get('theme', 'dark')
         # Получаем текущий таймфрейм для логирования
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         current_timeframe = get_current_timeframe()
         chart_logger.info(f"[CHART] Getting RSI {current_timeframe} chart for {symbol} with theme {theme}")
         
@@ -2199,7 +2221,7 @@ def get_rsi_6h(symbol):
     """Получение RSI данных для текущего таймфрейма за 56 свечей (неделя)"""
     rsi_logger = logging.getLogger('app')
     try:
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         current_timeframe = get_current_timeframe()
         rsi_logger.info(f"[RSI {current_timeframe}] Getting RSI {current_timeframe} data for {symbol}")
         
@@ -2307,7 +2329,7 @@ def get_rsi_6h(symbol):
     except Exception as e:
         import traceback
         try:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             _tf = get_current_timeframe()
         except Exception:
             _tf = '?'
@@ -2580,6 +2602,6 @@ if __name__ == '__main__':
     except OSError as e:
         if getattr(e, "errno", None) in (errno.EADDRINUSE, 10048):
             logging.getLogger("app").error(
-                f"Порт {APP_PORT} занят. Закройте другой процесс на этом порту или измените APP_PORT в app/config.py."
+                f"Порт {APP_PORT} занят. Закройте другой процесс на этом порту или измените APP_PORT в configs/app_config.py."
             )
         raise 

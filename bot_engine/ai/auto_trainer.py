@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 import numpy as np
-from bot_engine.bot_config import AIConfig
+from bot_engine.config_loader import AIConfig
 from bot_engine.config_live import reload_bot_config_if_changed, get_ai_config_attr
 
 logger = logging.getLogger('AI.AutoTrainer')
@@ -757,7 +757,7 @@ class AutoTrainer:
 
     def _get_candles_matrix_for_drift(self, ai_db, max_symbols: int = 10, max_candles_per_symbol: int = 200):
         try:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             data = ai_db.get_all_candles_dict(
                 get_current_timeframe(),
                 max_symbols=max_symbols,

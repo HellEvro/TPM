@@ -44,7 +44,7 @@ def compute_memory_limit_mb() -> Tuple[Optional[int], Optional[str], Optional[in
     pct_val: Optional[float] = None
     limit_mb_val: Optional[int] = None
     try:
-        from bot_engine.bot_config import SystemConfig
+        from bot_engine.config_loader import SystemConfig
         pct_val = getattr(SystemConfig, "AI_MEMORY_PCT", 0) or 0
         limit_mb_val = getattr(SystemConfig, "AI_MEMORY_LIMIT_MB", 0) or 0
     except Exception:
@@ -120,7 +120,7 @@ def apply_windows_job_limits(
             memory_mb = 0
     if cpu_pct is None:
         try:
-            from bot_engine.bot_config import SystemConfig
+            from bot_engine.config_loader import SystemConfig
             cpu_pct = getattr(SystemConfig, "AI_CPU_PCT", 0) or 0
         except Exception:
             cpu_pct = 0

@@ -81,7 +81,7 @@ class ContinuousDataLoader:
 
         # Получаем текущий таймфрейм при старте цикла
         try:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             startup_timeframe = get_current_timeframe()
             logger.info(f"⏱️ [CONTINUOUS] Таймфрейм при старте загрузчика: {startup_timeframe}")
         except Exception as tf_err:
@@ -105,7 +105,7 @@ class ContinuousDataLoader:
 
                 # Получаем текущий таймфрейм для логирования
                 try:
-                    from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+                    from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
                     current_timeframe = get_current_timeframe()
                 except Exception:
                     current_timeframe = TIMEFRAME
@@ -214,7 +214,7 @@ class ContinuousDataLoader:
 
             # Проверяем, есть ли уже свечи в кэше с ПРАВИЛЬНЫМ таймфреймом
             from bots_modules.imports_and_globals import coins_rsi_data
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             current_timeframe = get_current_timeframe()
 
             if 'candles_cache' in coins_rsi_data and coins_rsi_data['candles_cache']:

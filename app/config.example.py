@@ -1,13 +1,8 @@
 """
-Пример конфигурации InfoBot
-Скопируйте этот файл в config.py
-
-⚠️  API КЛЮЧИ ХРАНЯТСЯ В ОТДЕЛЬНОМ ФАЙЛЕ!
-   1. Скопируйте app/keys.example.py -> app/keys.py
-   2. Добавьте реальные API ключи в app/keys.py
-   3. Скопируйте этот файл -> app/config.py
-   
-   config.py импортирует ключи из keys.py автоматически
+Устарело: пример конфигурации перенесён в configs/.
+Используйте: configs/app_config.example.py -> configs/app_config.py
+Ключи: configs/keys.example.py -> configs/keys.py
+app/config.py и app/keys.py — заглушки, реэкспортирующие из configs/.
 """
 
 from .keys import EXCHANGES, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID

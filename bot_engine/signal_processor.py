@@ -33,7 +33,7 @@ def get_effective_signal(coin, config):
     rsi_short_threshold = config.get('rsi_short_threshold', 71)
 
     # Получаем данные монеты
-    from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+    from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
     rsi = get_rsi_from_coin_data(coin)
     trend = get_trend_from_coin_data(coin)
 
@@ -90,7 +90,7 @@ def check_autobot_filters(symbol, signal, coin_data, config, maturity_check_func
             return False
 
         # 3. Проверка тренда
-        from bot_engine.bot_config import get_trend_from_coin_data
+        from bot_engine.config_loader import get_trend_from_coin_data
         trend = get_trend_from_coin_data(coin_data)
         # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
         avoid_down_trend = config.get('avoid_down_trend', False)
@@ -147,7 +147,7 @@ def process_auto_bot_signals(coins_rsi_data, bots_data, config, filter_check_fun
         # Получаем монеты с сигналами
         potential_coins = []
         for symbol, coin_data in coins_rsi_data.items():
-            from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+            from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
             rsi = get_rsi_from_coin_data(coin_data)
             trend = get_trend_from_coin_data(coin_data)
 

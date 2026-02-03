@@ -248,6 +248,7 @@ data/maturity_check_cache.json
 data/bots_state.json
 data/bot_history.json
 data/default_auto_bot_config.json
+data/auto_bot_config.json
 data/delisted.json
 data/individual_coin_settings.json
 data/mature_coins.json
@@ -260,8 +261,14 @@ data/ai/models/signal_predictor.pkl
 data/ai/models/signal_predictor_metadata.json
 app/config.py
 app/keys.py
-# П.4 REVERTED_COMMITS_FIXES: bot_config создаётся из bot_config.example.py при первом запуске
-bot_engine/bot_config.py
+# Ключи и рабочие конфиги — только локально, не коммитить
+configs/keys.py
+configs/app_config.py
+configs/bot_config.py
+# Auto Bot настройки только в bot_config.py (AUTO_BOT_CONFIG/DEFAULT_AUTO_BOT_CONFIG), JSON в configs/ не используется
+configs/auto_bot_config.json
+configs/default_auto_bot_config.json
+# bot_engine/config_loader.py — точка входа для импорта конфигов (код), в репозитории
 
 *.json.backup
 *.json.bak

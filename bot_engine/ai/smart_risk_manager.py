@@ -101,7 +101,7 @@ class SmartRiskManager:
         """Инициализирует ML модель (только если AI_ML_RISK_ENABLED)"""
         self.ml_predictor = None
         try:
-            from bot_engine.bot_config import AIConfig
+            from bot_engine.config_loader import AIConfig
             if not getattr(AIConfig, 'AI_ML_RISK_ENABLED', True):
                 pass
                 return
@@ -236,7 +236,7 @@ class SmartRiskManager:
                 anomaly_score = self.anomaly_detector.detect(candles)
                 block_threshold = 0.7
                 try:
-                    from bot_engine.bot_config import AIConfig
+                    from bot_engine.config_loader import AIConfig
                     block_threshold = getattr(AIConfig, 'AI_ANOMALY_BLOCK_THRESHOLD', 0.7)
                     block_threshold = (block_threshold / 100.0) if block_threshold > 1 else block_threshold
                 except Exception:

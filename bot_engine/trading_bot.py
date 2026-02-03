@@ -635,7 +635,7 @@ class TradingBot:
                             with rsi_data_lock:
                                 coin_data = coins_rsi_data.get('coins', {}).get(self.symbol)
                                 if coin_data:
-                                    from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                                    from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
                                     if current_rsi is None:
                                         current_rsi = get_rsi_from_coin_data(coin_data)
                                     if current_trend is None:
@@ -671,7 +671,7 @@ class TradingBot:
             
             # Адаптируем размер позиции с помощью AI (если доступно)
             try:
-                from bot_engine.bot_config import AIConfig
+                from bot_engine.config_loader import AIConfig
                 if AIConfig.AI_ENABLED and AIConfig.AI_RISK_MANAGEMENT_ENABLED:
                     from bot_engine.ai import get_ai_manager
                     ai_manager = get_ai_manager()
@@ -905,7 +905,7 @@ class TradingBot:
                     ai_reason = None
                     
                     try:
-                        from bot_engine.bot_config import AIConfig
+                        from bot_engine.config_loader import AIConfig
                         if AIConfig.AI_ENABLED and AIConfig.AI_RISK_MANAGEMENT_ENABLED:
                             from bot_engine.ai import get_ai_manager
                             ai_manager = get_ai_manager()

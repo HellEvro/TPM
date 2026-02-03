@@ -22,7 +22,7 @@ logger = logging.getLogger('OnChain')
 def _onchain_enabled() -> bool:
     """Проверка, включён ли On-Chain Analysis в конфиге."""
     try:
-        from bot_engine.bot_config import AIConfig
+        from bot_engine.config_loader import AIConfig
         return bool(getattr(AIConfig, 'AI_ONCHAIN_ENABLED', False))
     except Exception:
         return False
@@ -64,7 +64,7 @@ def get_onchain_signal(symbol: str) -> Dict[str, Any]:
         }
     # Заглушка под будущую интеграцию (Glassnode, Whale Alert)
     try:
-        from bot_engine.bot_config import AIConfig
+        from bot_engine.config_loader import AIConfig
         _ = (
             getattr(AIConfig, 'AI_ONCHAIN_GLASSNODE_API_KEY', ''),
             getattr(AIConfig, 'AI_ONCHAIN_WHALE_ALERT_API_KEY', ''),
@@ -108,7 +108,7 @@ def integrate_onchain_signal(
     if data.get('status') == 'disabled' or data.get('confidence', 0) < 0.1:
         return {**current_signal, 'onchain_used': False, 'onchain_data': data}
     try:
-        from bot_engine.bot_config import AIConfig
+        from bot_engine.config_loader import AIConfig
         w = onchain_weight if onchain_weight is not None else getattr(AIConfig, 'AI_ONCHAIN_WEIGHT', 0.15)
     except Exception:
         w = 0.15

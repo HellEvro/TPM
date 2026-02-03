@@ -68,7 +68,9 @@ EXCLUDE = [
     # Конфиденциальные файлы
     "app/keys.py",
     "app/config.py",
-    "bot_engine/bot_config.py",  # п.4: создаётся из example локально
+    "configs/keys.py",
+    "configs/app_config.py",
+    "configs/bot_config.py",  # создаётся из example локально
     "app/current_language.txt",
     "app/telegram_states.json",
     "launcher/.infobot_manager_state.json",

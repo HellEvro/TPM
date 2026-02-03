@@ -16,13 +16,13 @@ import threading
 # Импорты из bot_engine
 try:
     from bot_engine.indicators import SignalGenerator, TechnicalIndicators
-    from bot_engine.bot_config import SystemConfig
+    from bot_engine.config_loader import SystemConfig
 except ImportError:
     pass
 
 # Импорт констант из imports_and_globals
 try:
-    from bot_engine.bot_config import SystemConfig
+    from bot_engine.config_loader import SystemConfig
     TREND_CONFIRMATION_BARS = SystemConfig.TREND_CONFIRMATION_BARS
 except ImportError:
     TREND_CONFIRMATION_BARS = 3  # Значение по умолчанию
@@ -295,7 +295,7 @@ def analyze_trend(symbol, exchange_obj=None, candles_data=None, timeframe=None):
     try:
         # Получаем текущий таймфрейм
         if timeframe is None:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             timeframe = get_current_timeframe()
 
         # Получаем свечи для анализа тренда
@@ -375,7 +375,7 @@ def analyze_trend_6h(symbol, exchange_obj=None, candles_data=None):
     Использует analyze_trend с таймфреймом '6h'.
     """
     try:
-        from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+        from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
         current_timeframe = get_current_timeframe()
     except Exception:
         current_timeframe = TIMEFRAME

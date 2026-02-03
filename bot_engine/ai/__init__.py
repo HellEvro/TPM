@@ -39,7 +39,7 @@ recommendation = ai_manager.get_final_recommendation(
 
 Настройка:
 ----------
-Все настройки находятся в `bot_engine/bot_config.py`:
+Все настройки находятся в `configs/bot_config.py`:
 - AI_ENABLED - мастер-переключатель для всех ИИ модулей
 - AI_ANOMALY_DETECTION_ENABLED - включить обнаружение аномалий
 - AI_LSTM_ENABLED - включить LSTM предсказания

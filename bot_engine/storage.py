@@ -55,7 +55,7 @@ MATURE_COINS_FILE = 'data/mature_coins.json'
 # ❌ ОТКЛЮЧЕНО: optimal_ema удален (EMA фильтр убран)
 # OPTIMAL_EMA_FILE = 'data/optimal_ema.json'
 PROCESS_STATE_FILE = 'data/process_state.json'
-SYSTEM_CONFIG_FILE = 'data/system_config.json'
+SYSTEM_CONFIG_FILE = 'configs/system_config.json'
 
 def save_json_file(filepath, data, description="данные", max_retries=3):
     """Универсальная функция сохранения JSON с retry логикой"""
@@ -200,14 +200,14 @@ def load_bots_state():
 def save_auto_bot_config(config):
     """Больше не сохраняет конфигурацию автобота в JSON.
 
-    Настройки хранятся только в bot_engine/bot_config.py
+    Настройки хранятся только в configs/bot_config.py
     """
     return True
 
 def load_auto_bot_config():
     """Не загружает конфигурацию автобота из JSON.
 
-    Настройки читаются напрямую из bot_engine/bot_config.py
+    Настройки читаются напрямую из configs/bot_config.py
     """
     return {}
 
@@ -327,8 +327,8 @@ def save_system_config(config):
 def load_system_config():
     """Перезагружает SystemConfig из bot_config.py"""
     try:
-        module = importlib.import_module('bot_engine.bot_config')
-        importlib.reload(module)
+        from bot_engine.config_loader import reload_config
+        module = reload_config()
         return module.SystemConfig
     except Exception as e:
         logger.error(f" Ошибка загрузки системной конфигурации: {e}")

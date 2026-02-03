@@ -8,7 +8,7 @@ import threading
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Optional, Callable
-from bot_engine.bot_config import SystemConfig, get_current_timeframe
+from bot_engine.config_loader import SystemConfig, get_current_timeframe
 
 logger = logging.getLogger('SmartRSIManager')
 

@@ -161,7 +161,7 @@ except Exception as e:
 # 7. Проверка конфигурации AI системы
 print("\n[7] Проверка конфигурации AI системы...")
 try:
-    from bot_engine.bot_config import AIConfig
+    from bot_engine.config_loader import AIConfig
     print(f"   [INFO] AI_ENABLED: {AIConfig.AI_ENABLED}")
     print(f"   [INFO] AI_AUTO_TRAIN_ENABLED: {AIConfig.AI_AUTO_TRAIN_ENABLED}")
 except Exception as e:
@@ -335,7 +335,7 @@ except Exception as e:
 # 13. Проверка параметров обучения
 print("\n[13] Проверка параметров обучения...")
 try:
-    from bot_engine.bot_config import AIConfig
+    from bot_engine.config_loader import AIConfig
     print(f"   [INFO] AI_ENABLED: {AIConfig.AI_ENABLED}")
     print(f"   [INFO] AI_AUTO_TRAIN_ENABLED: {AIConfig.AI_AUTO_TRAIN_ENABLED}")
     print(f"   [INFO] AI_RETRAIN_INTERVAL: {getattr(AIConfig, 'AI_RETRAIN_INTERVAL', 'N/A')} сек")

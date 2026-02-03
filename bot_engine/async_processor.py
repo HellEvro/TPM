@@ -294,7 +294,7 @@ class AsyncSignalProcessor:
         """Синхронная функция для обработки сигнала"""
         try:
             # Получаем RSI с учетом текущего таймфрейма
-            from bot_engine.bot_config import get_rsi_from_coin_data
+            from bot_engine.config_loader import get_rsi_from_coin_data
             # Здесь вызываем существующие функции обработки сигналов
             # Пока что возвращаем заглушку
             return {

@@ -164,7 +164,7 @@ class TelegramNotifier:
                     error_code = error_data.get('error_code', response.status_code)
                     description = error_data.get('description', response.text)
 
-                    hint = " Проверьте TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID в app/keys.py (или app/config.py)."
+                    hint = " Проверьте TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID в configs/keys.py (или configs/app_config.py)."
                     if error_code == 404:
                         if 'chat not found' in description.lower():
                             error_reason = f"Chat ID {self.chat_id} not found. Бот не добавлен в чат или chat_id неверен.{hint}"
@@ -185,7 +185,7 @@ class TelegramNotifier:
                         self.logger.error(f"Failed to send Telegram message: {error_reason}")
 
                 except (ValueError, KeyError):
-                    hint = " Проверьте TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID в app/keys.py (или app/config.py)."
+                    hint = " Проверьте TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID в configs/keys.py (или configs/app_config.py)."
                     msg = f"Failed to send message: {response.text} (Status: {response.status_code}).{hint}"
                     if response.status_code in (401, 404):
                         self.logger.warning(f"Telegram: {msg}")

@@ -53,7 +53,7 @@ def _get_config_snapshot(symbol: Optional[str] = None) -> Dict[str, Any]:
     except Exception as exc:  # pragma: no cover - fallback при отсутствии сервиса ботов
         pass
         try:
-            from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG  # noqa: WPS433,E402
+            from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG  # noqa: WPS433,E402
 
             global_config = deepcopy(DEFAULT_AUTO_BOT_CONFIG)
         except Exception:
@@ -156,7 +156,7 @@ class AIBacktester:
                     return market_data
                 
                 # Ограничиваем загрузку (при AI_MEMORY_LIMIT_MB лимиты из AILauncherConfig)
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.config_loader import get_current_timeframe
                 try:
                     from bot_engine.ai.ai_launcher_config import AILauncherConfig
                     _max_sym = min(30, AILauncherConfig.MAX_SYMBOLS_FOR_CANDLES)
@@ -220,7 +220,7 @@ class AIBacktester:
                         logger.info(f"✅ Загружено индикаторов для {len(coins_data)} монет через API")
                         
                         # Получаем RSI и тренд с учетом текущего таймфрейма
-                        from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                        from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
                         
                         for symbol, coin_data in coins_data.items():
                             market_data['latest']['indicators'][symbol] = {

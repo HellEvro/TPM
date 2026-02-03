@@ -74,7 +74,7 @@ def get_cached_ai_manager():
         
         # Инициализируем
         try:
-            from bot_engine.bot_config import AIConfig
+            from bot_engine.config_loader import AIConfig
             if AIConfig.AI_ENABLED:
                 from bot_engine.ai import get_ai_manager
                 _ai_manager_cache = get_ai_manager()
@@ -218,7 +218,7 @@ try:
         BOT_STATUS, system_initialized, get_exchange,
         get_individual_coin_settings, set_individual_coin_settings
     )
-    from bot_engine.bot_config import SystemConfig
+    from bot_engine.config_loader import SystemConfig
 except ImportError:
     bots_data_lock = threading.Lock()
     bots_data = {}
@@ -506,7 +506,7 @@ def get_coin_candles_only(symbol, exchange_obj=None, timeframe=None):
         # Получаем таймфрейм (переданный или системный)
         if timeframe is None:
             try:
-                from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+                from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
                 timeframe = get_current_timeframe()
             except Exception:
                 timeframe = TIMEFRAME
@@ -583,7 +583,7 @@ def check_rsi_time_filter(candles, rsi, signal, symbol=None, individual_settings
 def _run_exit_scam_ai_detection(symbol, candles):
     """AI-анализ свечей на аномалии (reuse из легаси-логики)."""
     try:
-        from bot_engine.bot_config import AIConfig
+        from bot_engine.config_loader import AIConfig
     except ImportError:
         return True
 
@@ -707,7 +707,7 @@ def _check_loss_reentry_protection_static(symbol, candles, loss_reentry_count, l
         # Подсчитываем количество свечей, прошедших с момента закрытия
         # Получаем текущий таймфрейм динамически
         try:
-            from bot_engine.bot_config import get_current_timeframe
+            from bot_engine.config_loader import get_current_timeframe
             current_timeframe = get_current_timeframe()
             # Конвертируем таймфрейм в секунды
             timeframe_to_seconds = {
@@ -784,7 +784,7 @@ def get_exit_scam_effective_limits(single_pct, multi_count, multi_pct):
     Возвращает (current_tf, single_pct, multi_pct). Лимиты как в конфиге: 0.5 = 0.5%, без пересчёта по ТФ.
     """
     try:
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         current_tf = get_current_timeframe() or '1m'
     except Exception:
         current_tf = '1m'
@@ -832,7 +832,7 @@ def check_exit_scam_filter(symbol, coin_data):
 
         # Проверка ExitScam по выбранному таймфрейму (настройки — в опциях)
         try:
-            from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+            from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
             current_timeframe = get_current_timeframe()
         except Exception:
             current_timeframe = TIMEFRAME
@@ -861,7 +861,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
     from bots_modules.imports_and_globals import coins_rsi_data
     
     if timeframe is None:
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         timeframe = get_current_timeframe()
     
     # Получаем свечи для указанного таймфрейма
@@ -908,7 +908,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
         return None
     
     # Рассчитываем RSI и тренд для указанного таймфрейма
-    from bot_engine.bot_config import get_rsi_key, get_trend_key
+    from bot_engine.config_loader import get_rsi_key, get_trend_key
     rsi_key = get_rsi_key(timeframe)
     trend_key = get_trend_key(timeframe)
     
@@ -945,7 +945,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
 
     # ✅ КРИТИЧНО: Считаем signal, rsi_zone и *_info для отображения причин на странице монеты (как в get_coin_rsi_data)
     try:
-        from bot_engine.bot_config import SystemConfig
+        from bot_engine.config_loader import SystemConfig
         from bots_modules.imports_and_globals import bots_data
 
         individual_settings = get_individual_coin_settings(symbol)
@@ -1088,7 +1088,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
     """
     # ⚡ Включаем трейсинг для этого потока (если включен глобально)
     try:
-        from bot_engine.bot_config import SystemConfig
+        from bot_engine.config_loader import SystemConfig
         if SystemConfig.ENABLE_CODE_TRACING:
             from trace_debug import enable_trace
             enable_trace()
@@ -1126,7 +1126,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             delisting_info = delisted_coins.get(symbol, {})
             logger.info(f"{symbol}: Исключаем из всех проверок - {delisting_info.get('reason', 'Delisting detected')}")
             # Получаем ключи для текущего таймфрейма
-            from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+            from bot_engine.config_loader import get_current_timeframe, get_rsi_key, get_trend_key
             current_timeframe = get_current_timeframe()
             rsi_key = get_rsi_key(current_timeframe)
             trend_key = get_trend_key(current_timeframe)
@@ -1182,7 +1182,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         candles_cache = coins_rsi_data.get('candles_cache', {})
         
         # Получаем текущий таймфрейм для проверки кэша
-        from bot_engine.bot_config import get_current_timeframe
+        from bot_engine.config_loader import get_current_timeframe
         current_timeframe = get_current_timeframe()
         
         # ✅ ОПТИМИЗАЦИЯ: Проверяем новую структуру кэша (поддержка нескольких таймфреймов)
@@ -1216,7 +1216,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                 import time as time_module
                 api_start = time_module.time()
                 # Получаем текущий таймфрейм
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.config_loader import get_current_timeframe
                 current_timeframe = get_current_timeframe()
                 
                 logger.info(f"🌐 {symbol}: Начало запроса get_chart_data() для таймфрейма {current_timeframe}...")
@@ -1257,7 +1257,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
             return None
         
         # Получаем текущий таймфрейм и ключи для хранения данных
-        from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+        from bot_engine.config_loader import get_current_timeframe, get_rsi_key, get_trend_key
         current_timeframe = get_current_timeframe()
         rsi_key = get_rsi_key(current_timeframe)
         trend_key = get_trend_key(current_timeframe)
@@ -1336,14 +1336,15 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # Это позволяет использовать индивидуальные пороги RSI для определения сигнала
         individual_settings = get_individual_coin_settings(symbol)
         
-        # Определяем пороги RSI: сначала индивидуальные, затем глобальные
+        # Пороги RSI только из загруженного AUTO_BOT_CONFIG; если ключа нет — минимальный fallback числом
+        _auto = bots_data.get('auto_bot_config', {})
         rsi_long_threshold = individual_settings.get('rsi_long_threshold') if individual_settings else None
         if rsi_long_threshold is None:
-            rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', SystemConfig.RSI_OVERSOLD)
+            rsi_long_threshold = _auto.get('rsi_long_threshold', 29)
         
         rsi_short_threshold = individual_settings.get('rsi_short_threshold') if individual_settings else None
         if rsi_short_threshold is None:
-            rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', SystemConfig.RSI_OVERBOUGHT)
+            rsi_short_threshold = _auto.get('rsi_short_threshold', 71)
         
         # Определяем RSI зоны согласно техзаданию
         rsi_zone = 'NEUTRAL'
@@ -1652,7 +1653,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                         # 3. AI детекция аномалий (если включена и базовые проверки прошли)
                         if exit_scam_allowed:
                             try:
-                                from bot_engine.bot_config import AIConfig
+                                from bot_engine.config_loader import AIConfig
                                 if AIConfig.AI_ENABLED and AIConfig.AI_ANOMALY_DETECTION_ENABLED:
                                     exit_scam_allowed = _run_exit_scam_ai_detection(symbol, candles)
                                     if not exit_scam_allowed:
@@ -1785,7 +1786,7 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         #     logger.debug(f"[TRADING_STATUS] {symbol}: Не удалось получить статус торговли: {e}")
         
         # Получаем ключи для текущего таймфрейма
-        from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+        from bot_engine.config_loader import get_current_timeframe, get_rsi_key, get_trend_key
         current_timeframe = get_current_timeframe()
         rsi_key = get_rsi_key(current_timeframe)
         trend_key = get_trend_key(current_timeframe)
@@ -1836,11 +1837,11 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         
         if signal in ['ENTER_LONG', 'ENTER_SHORT']:
             logger.info(f"🎯 {symbol}: RSI={rsi:.1f} {trend_emoji}{trend_display} (${current_price:.4f}) → {signal}")
-        elif signal == 'WAIT' and rsi <= SystemConfig.RSI_OVERSOLD and trend == 'DOWN' and avoid_down_trend:
-            # Убрано избыточное логирование
+        elif signal == 'WAIT' and rsi <= rsi_long_threshold and trend == 'DOWN' and avoid_down_trend:
+            # Пороги из конфига (AUTO_BOT_CONFIG), не из констант
             pass
-        elif signal == 'WAIT' and rsi >= SystemConfig.RSI_OVERBOUGHT and trend == 'UP' and avoid_up_trend:
-            # Убрано избыточное логирование
+        elif signal == 'WAIT' and rsi >= rsi_short_threshold and trend == 'UP' and avoid_up_trend:
+            # Пороги из конфига (AUTO_BOT_CONFIG), не из констант
             pass
         
         debug_payload = {
@@ -1859,18 +1860,18 @@ def get_required_timeframes():
     """Таймфреймы для загрузки свечей (системный + 6h для change_24h + entry_tf ботов)."""
     timeframes = set()
     try:
-        from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+        from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
         system_tf = get_current_timeframe()
         timeframes.add(system_tf)
     except Exception:
-        from bot_engine.bot_config import TIMEFRAME
+        from bot_engine.config_loader import TIMEFRAME
         timeframes.add(TIMEFRAME)
     timeframes.add('6h')  # Свечи 6h нужны для change_24h (4 свечи 6h = 24ч)
     try:
-        from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+        from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
         default_tf = get_current_timeframe()
     except Exception:
-        from bot_engine.bot_config import TIMEFRAME
+        from bot_engine.config_loader import TIMEFRAME
         default_tf = TIMEFRAME
     try:
         from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
@@ -1890,17 +1891,17 @@ def get_required_timeframes_for_rsi():
     """Таймфреймы только для расчёта RSI (системный + entry_tf ботов в позиции)."""
     timeframes = set()
     try:
-        from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+        from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
         system_tf = get_current_timeframe()
         timeframes.add(system_tf)
     except Exception:
-        from bot_engine.bot_config import TIMEFRAME
+        from bot_engine.config_loader import TIMEFRAME
         timeframes.add(TIMEFRAME)
     try:
-        from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+        from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
         default_tf = get_current_timeframe()
     except Exception:
-        from bot_engine.bot_config import TIMEFRAME
+        from bot_engine.config_loader import TIMEFRAME
         default_tf = TIMEFRAME
     try:
         from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
@@ -1937,10 +1938,10 @@ def load_all_coins_candles_fast():
         required_timeframes = get_required_timeframes()
         if not required_timeframes:
             try:
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.config_loader import get_current_timeframe
                 required_timeframes = [get_current_timeframe()]
             except Exception:
-                from bot_engine.bot_config import TIMEFRAME
+                from bot_engine.config_loader import TIMEFRAME
                 required_timeframes = [TIMEFRAME]
         
         logger.info(f"📦 Загружаем свечи для таймфреймов: {required_timeframes}")
@@ -2134,7 +2135,7 @@ def load_all_coins_candles_fast():
                         # Преобразуем формат для ai_database
                         # Получаем текущий таймфрейм динамически
                         try:
-                            from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+                            from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
                             current_timeframe = get_current_timeframe()
                         except Exception:
                             current_timeframe = TIMEFRAME
@@ -2170,7 +2171,7 @@ def load_all_coins_candles_fast():
                 # Преобразуем новую структуру {symbol: {timeframe: {...}}} в плоскую для save_candles_cache
                 # (если save_candles_cache поддерживает только один таймфрейм, сохраняем системный)
                 flat_candles_cache = {}
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.config_loader import get_current_timeframe
                 system_tf = get_current_timeframe()
                 
                 for symbol, symbol_data in merged_candles_cache.items():
@@ -2236,10 +2237,10 @@ def load_all_coins_rsi():
         required_timeframes = get_required_timeframes_for_rsi()
         if not required_timeframes:
             try:
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.config_loader import get_current_timeframe
                 required_timeframes = [get_current_timeframe()]
             except Exception:
-                from bot_engine.bot_config import TIMEFRAME
+                from bot_engine.config_loader import TIMEFRAME
                 required_timeframes = [TIMEFRAME]
 
         logger.info(f"📊 RSI: рассчитываем для таймфреймов: {required_timeframes}")
@@ -2481,13 +2482,11 @@ def _recalculate_signal_with_trend(rsi, trend, symbol):
         if rsi is None:
             return 'WAIT'
 
-        # Получаем настройки автобота
+        # Пороги только из AUTO_BOT_CONFIG; fallback — число, без другого блока конфига
         auto_config = bots_data.get('auto_bot_config', {})
-        # ✅ КРИТИЧНО: Используем rsi_long_threshold/rsi_short_threshold из конфига!
-        # Иначе при пороге 21 бот входил от 29 (зашитый RSI_OVERSOLD)
         individual_settings = get_individual_coin_settings(symbol)
-        rsi_long_threshold = (individual_settings.get('rsi_long_threshold') if individual_settings else None) or auto_config.get('rsi_long_threshold', SystemConfig.RSI_OVERSOLD)
-        rsi_short_threshold = (individual_settings.get('rsi_short_threshold') if individual_settings else None) or auto_config.get('rsi_short_threshold', SystemConfig.RSI_OVERBOUGHT)
+        rsi_long_threshold = (individual_settings.get('rsi_long_threshold') if individual_settings else None) or auto_config.get('rsi_long_threshold', 29)
+        rsi_short_threshold = (individual_settings.get('rsi_short_threshold') if individual_settings else None) or auto_config.get('rsi_short_threshold', 71)
         # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
         avoid_down_trend = auto_config.get('avoid_down_trend', False)
         avoid_up_trend = auto_config.get('avoid_up_trend', False)
@@ -2541,7 +2540,7 @@ def get_effective_signal(coin):
     rsi_short_threshold = auto_config.get('rsi_short_threshold', 71)
         
     # Получаем данные монеты с учетом текущего таймфрейма
-    from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data, get_current_timeframe
+    from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data, get_current_timeframe
     current_timeframe = get_current_timeframe()
     # ✅ КРИТИЧНО: Явно передаём текущий ТФ, чтобы не было fallback на rsi6h/trend6h
     rsi = get_rsi_from_coin_data(coin, timeframe=current_timeframe) or 50
@@ -2658,7 +2657,7 @@ def process_auto_bot_signals(exchange_obj=None):
         # Освобождаем слоты: боты без позиции, у которых монета уже вне зоны RSI — переводим в IDLE
         # (чтобы справа были боты для монет с текущим сигналом слева, а не «зависшие» вне зоны)
         with bots_data_lock:
-            from bot_engine.bot_config import get_rsi_from_coin_data
+            from bot_engine.config_loader import get_rsi_from_coin_data
             for symbol, bot_data in list(bots_data['bots'].items()):
                 status = bot_data.get('status')
                 if status in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']]:
@@ -2692,7 +2691,7 @@ def process_auto_bot_signals(exchange_obj=None):
         
         # Получаем монеты с сигналами
         # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
-        from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data, get_current_timeframe
+        from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data, get_current_timeframe
         current_timeframe = get_current_timeframe()
         potential_coins = []
         total_coins = len(coins_rsi_data['coins'])
@@ -2755,7 +2754,7 @@ def process_auto_bot_signals(exchange_obj=None):
                         if symbol in candles_cache:
                             c = candles_cache[symbol]
                             if isinstance(c, dict):
-                                from bot_engine.bot_config import get_current_timeframe
+                                from bot_engine.config_loader import get_current_timeframe
                                 tf = get_current_timeframe()
                                 candles_for_ai = (c.get(tf) or {}).get('candles') if tf else c.get('candles')
                                 if not candles_for_ai and c:
@@ -2936,7 +2935,7 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                 ]:
                     timeframe_to_use = bot_entry_timeframe
                 else:
-                    from bot_engine.bot_config import get_current_timeframe
+                    from bot_engine.config_loader import get_current_timeframe
                     timeframe_to_use = get_current_timeframe()
                 
                 # Получаем RSI данные для монеты
@@ -2947,7 +2946,7 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                     logger.warning(f"❌ {symbol}: RSI данные не найдены - пропускаем проверку")
                     continue
                 
-                from bot_engine.bot_config import (
+                from bot_engine.config_loader import (
                     get_rsi_from_coin_data, get_trend_from_coin_data, get_rsi_key, get_trend_key,
                     RSI_EXIT_LONG_WITH_TREND, RSI_EXIT_LONG_AGAINST_TREND,
                     RSI_EXIT_SHORT_WITH_TREND, RSI_EXIT_SHORT_AGAINST_TREND,
@@ -3046,7 +3045,7 @@ def analyze_trends_for_signal_coins():
             get_exchange,
             get_auto_bot_config,
         )
-        from bot_engine.bot_config import (
+        from bot_engine.config_loader import (
             get_rsi_from_coin_data,
             get_trend_key,
             get_current_timeframe,
@@ -3077,11 +3076,10 @@ def analyze_trends_for_signal_coins():
         current_timeframe = get_current_timeframe()
         trend_key = get_trend_key(current_timeframe)
 
-        # Находим монеты с сигналами для анализа тренда (чтение словаря без блокировки)
-        # ✅ КРИТИЧНО: Используем пороги из конфига, не зашитые 29/71!
+        # Пороги только из AUTO_BOT_CONFIG; fallback — число
         auto_config = bots_data.get('auto_bot_config', {})
-        rsi_long_th = auto_config.get('rsi_long_threshold', SystemConfig.RSI_OVERSOLD)
-        rsi_short_th = auto_config.get('rsi_short_threshold', SystemConfig.RSI_OVERBOUGHT)
+        rsi_long_th = auto_config.get('rsi_long_threshold', 29)
+        rsi_short_th = auto_config.get('rsi_short_threshold', 71)
         signal_coins = []
         for symbol, coin_data in coins_rsi_data['coins'].items():
             rsi = get_rsi_from_coin_data(coin_data)
@@ -3380,7 +3378,7 @@ def _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=None):
         if not exch:
             return False
         try:
-            from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+            from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
             current_timeframe = get_current_timeframe()
         except Exception:
             current_timeframe = TIMEFRAME
@@ -3426,7 +3424,7 @@ def _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=None):
         
         if ai_check_enabled:
             try:
-                from bot_engine.bot_config import AIConfig
+                from bot_engine.config_loader import AIConfig
                 
                 # Быстрая проверка: AI включен и Anomaly Detection включен
                 if AIConfig.AI_ENABLED and AIConfig.AI_ANOMALY_DETECTION_ENABLED:
@@ -3490,7 +3488,7 @@ def get_lstm_prediction(symbol, signal, current_price):
         Dict с предсказанием или None
     """
     try:
-        from bot_engine.bot_config import AIConfig
+        from bot_engine.config_loader import AIConfig
         
         # Проверяем, включен ли LSTM
         if not (AIConfig.AI_ENABLED and AIConfig.AI_LSTM_ENABLED):
@@ -3510,7 +3508,7 @@ def get_lstm_prediction(symbol, signal, current_price):
                 return None
             
             try:
-                from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+                from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
                 current_timeframe = get_current_timeframe()
             except Exception:
                 current_timeframe = TIMEFRAME
@@ -3587,7 +3585,7 @@ def get_pattern_analysis(symbol, signal, current_price):
         Dict с анализом паттернов или None
     """
     try:
-        from bot_engine.bot_config import AIConfig
+        from bot_engine.config_loader import AIConfig
         
         # Проверяем, включен ли Pattern Recognition
         if not (AIConfig.AI_ENABLED and AIConfig.AI_PATTERN_ENABLED):
@@ -3607,7 +3605,7 @@ def get_pattern_analysis(symbol, signal, current_price):
                 return None
             
             try:
-                from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+                from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
                 current_timeframe = get_current_timeframe()
             except Exception:
                 current_timeframe = TIMEFRAME
@@ -3845,7 +3843,7 @@ def test_rsi_time_filter(symbol):
             return
                 
         try:
-            from bot_engine.bot_config import get_current_timeframe, TIMEFRAME
+            from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
             current_timeframe = get_current_timeframe()
         except Exception:
             current_timeframe = TIMEFRAME
@@ -3866,7 +3864,7 @@ def test_rsi_time_filter(symbol):
             logger.error(f"{symbol}: Нет RSI данных")
             return
         
-        from bot_engine.bot_config import get_rsi_from_coin_data
+        from bot_engine.config_loader import get_rsi_from_coin_data
         current_rsi = get_rsi_from_coin_data(coin_data) or 0
         signal = coin_data.get('signal', 'WAIT')
         

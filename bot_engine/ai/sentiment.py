@@ -292,7 +292,7 @@ class CryptoSentimentCollector:
 def _sentiment_enabled() -> bool:
     """Проверка, включён ли Sentiment Analysis в конфиге."""
     try:
-        from bot_engine.bot_config import AIConfig
+        from bot_engine.config_loader import AIConfig
         return bool(getattr(AIConfig, 'AI_SENTIMENT_ENABLED', False))
     except Exception:
         return False
@@ -317,7 +317,7 @@ def integrate_sentiment_signal(
     if not _sentiment_enabled():
         return {**current_signal, 'sentiment_used': False, 'sentiment_data': None}
     try:
-        from bot_engine.bot_config import AIConfig
+        from bot_engine.config_loader import AIConfig
         w = sentiment_weight if sentiment_weight is not None else getattr(AIConfig, 'AI_SENTIMENT_WEIGHT', 0.2)
     except Exception:
         w = 0.2

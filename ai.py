@@ -55,7 +55,7 @@ def _compute_memory_limit_mb():
     pct_val = None
     limit_mb_val = None
     try:
-        from bot_engine.bot_config import SystemConfig
+        from bot_engine.config_loader import SystemConfig
         pct_val = getattr(SystemConfig, 'AI_MEMORY_PCT', 0) or 0
         limit_mb_val = getattr(SystemConfig, 'AI_MEMORY_LIMIT_MB', 0) or 0
     except Exception:
@@ -162,7 +162,7 @@ def _apply_windows_job_limits():
         pass
     cpu_pct = 0
     try:
-        from bot_engine.bot_config import SystemConfig
+        from bot_engine.config_loader import SystemConfig
         cpu_pct = getattr(SystemConfig, 'AI_CPU_PCT', 0) or 0
     except Exception:
         pass
@@ -284,7 +284,7 @@ def _set_gpu_memory_fraction_env():
     """Выставляет AI_GPU_MEMORY_FRACTION в env из конфига (применяется при первом использовании CUDA в lstm_predictor/pytorch_setup)."""
     frac = 0
     try:
-        from bot_engine.bot_config import SystemConfig
+        from bot_engine.config_loader import SystemConfig
         frac = getattr(SystemConfig, 'AI_GPU_MEMORY_FRACTION', 0) or 0
     except Exception:
         pass
@@ -428,7 +428,7 @@ def _init_timeframe_from_bots_db():
     """При старте ai.py подгружаем текущий таймфрейм из bots_data.db (тот же, что в UI/bots.py)."""
     try:
         from bot_engine.bots_database import get_bots_database
-        from bot_engine.bot_config import set_current_timeframe
+        from bot_engine.config_loader import set_current_timeframe
         db = get_bots_database()
         tf = db.load_timeframe()
         if tf:

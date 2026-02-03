@@ -682,7 +682,7 @@ class AIStrategyOptimizer:
         try:
             # Загружаем базовые параметры из bot_config.py
             try:
-                from bot_engine.bot_config import (
+                from bot_engine.config_loader import (
                     RSI_OVERSOLD, RSI_OVERBOUGHT,
                     RSI_EXIT_LONG_WITH_TREND, RSI_EXIT_LONG_AGAINST_TREND,
                     RSI_EXIT_SHORT_WITH_TREND, RSI_EXIT_SHORT_AGAINST_TREND,

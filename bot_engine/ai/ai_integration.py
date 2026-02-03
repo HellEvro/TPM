@@ -384,7 +384,7 @@ def _is_ai_process() -> bool:
 def _smc_enabled_from_config() -> bool:
     """Читает AI_SMC_ENABLED из bot_config.py с диска (источник истины), чтобы процесс ботов видел сохранённое значение без перезапуска."""
     try:
-        import bot_engine.bot_config as _bc
+        import bot_engine.config_loader as _bc
         _path = os.path.abspath(getattr(_bc, '__file__', '')) or os.path.join(os.path.dirname(__file__), '..', 'bot_config.py')
         if _path and os.path.isfile(_path):
             with open(_path, 'r', encoding='utf-8') as f:
@@ -395,7 +395,7 @@ def _smc_enabled_from_config() -> bool:
     except Exception:
         pass
     try:
-        from bot_engine.bot_config import AIConfig
+        from bot_engine.config_loader import AIConfig
         return getattr(AIConfig, 'AI_SMC_ENABLED', True)
     except Exception:
         pass

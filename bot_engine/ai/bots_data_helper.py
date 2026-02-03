@@ -112,8 +112,8 @@ def get_rsi_cache() -> Optional[Dict[str, Any]]:
 def get_auto_bot_config() -> Optional[Dict[str, Any]]:
     """
     Получает конфигурацию Auto Bot — единый источник для bots.py и ai.py.
-    - При запуске bots.py: из bots_data (загружено из bot_engine/bot_config.py).
-    - При отдельном запуске ai.py: fallback на БД (фильтры), затем на bot_engine/bot_config.py
+    - При запуске bots.py: из bots_data (загружено из configs/bot_config.py).
+    - При отдельном запуске ai.py: fallback на БД (фильтры), затем на configs/bot_config.py
       (DEFAULT_AUTO_BOT_CONFIG), чтобы ExitScam, AI пороги и прочие настройки совпадали с ботами.
     """
     try:
@@ -140,7 +140,7 @@ def get_auto_bot_config() -> Optional[Dict[str, Any]]:
     # Fallback: конфиг из bot_config.py (тот же источник, что и у bots.py)
     try:
         from copy import deepcopy
-        from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
+        from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG
         return deepcopy(DEFAULT_AUTO_BOT_CONFIG)
     except Exception as e:
         pass

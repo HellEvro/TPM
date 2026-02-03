@@ -97,7 +97,7 @@ def _get_config_snapshot(symbol: Optional[str] = None) -> Dict[str, Any]:
             global_config = deepcopy(base) if base else {}
         except Exception:
             try:
-                from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG  # noqa: WPS433,E402
+                from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG  # noqa: WPS433,E402
                 global_config = deepcopy(DEFAULT_AUTO_BOT_CONFIG)
             except Exception:
                 global_config = {}
@@ -255,7 +255,7 @@ class AITrainer:
 
         self._perf_monitor = None
         try:
-            from bot_engine.bot_config import AIConfig
+            from bot_engine.config_loader import AIConfig
             perf_monitoring_enabled = getattr(AIConfig, 'AI_PERFORMANCE_MONITORING_ENABLED', True)
         except ImportError:
             perf_monitoring_enabled = True
@@ -272,7 +272,7 @@ class AITrainer:
         # Инициализируем ML модель для предсказания качества параметров (только если включено)
         self.param_quality_predictor = None
         try:
-            from bot_engine.bot_config import AIConfig
+            from bot_engine.config_loader import AIConfig
             if not getattr(AIConfig, 'AI_PARAMETER_QUALITY_ENABLED', True):
                 pass
             else:
@@ -314,7 +314,7 @@ class AITrainer:
         # ✅ Онлайн обучение: буфер для инкрементального обучения
         # Загружаем настройки из конфига с fallback на дефолтные значения
         try:
-            from bot_engine.bot_config import AIConfig
+            from bot_engine.config_loader import AIConfig
             self._online_learning_buffer_size = getattr(AIConfig, 'AI_SELF_LEARNING_BUFFER_SIZE', 50)
             self._online_learning_enabled = getattr(AIConfig, 'AI_SELF_LEARNING_ENABLED', True)
         except (ImportError, AttributeError):
@@ -1828,7 +1828,7 @@ class AITrainer:
                 for symbol in symbols:
                     try:
                         # Загружаем свечи для конкретного символа
-                        from bot_engine.bot_config import get_current_timeframe
+                        from bot_engine.config_loader import get_current_timeframe
                         symbol_candles = self.ai_db.get_candles(
                             symbol=symbol,
                             timeframe=get_current_timeframe(),
@@ -1910,7 +1910,7 @@ class AITrainer:
             
             try:
                 # Загружаем свечи для ВСЕХ монет (max_symbols=0), ТФ — системный из конфига
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.config_loader import get_current_timeframe
                 candles_data = self.ai_db.get_all_candles_dict(
                     timeframe=get_current_timeframe(),
                     max_symbols=0,  # 0 = без ограничения (все доступные монеты)
@@ -2635,7 +2635,7 @@ class AITrainer:
                 if len(candles) >= 50:  # Минимум свечей для симуляции
                     # Используем optimizer для симуляции
                     try:
-                        from bot_engine.bot_config import AIConfig
+                        from bot_engine.config_loader import AIConfig
                         use_bayesian = getattr(AIConfig, 'AI_USE_BAYESIAN', True)
                         optimized_params = optimizer.optimize_coin_parameters_on_candles(
                             symbol=symbol,
@@ -3855,7 +3855,7 @@ class AITrainer:
 
             # Константы из bot_config — только как fallback, если в конфиге нет значения
             try:
-                from bot_engine.bot_config import (
+                from bot_engine.config_loader import (
                     RSI_OVERSOLD, RSI_OVERBOUGHT,
                     RSI_EXIT_LONG_WITH_TREND, RSI_EXIT_LONG_AGAINST_TREND,
                     RSI_EXIT_SHORT_WITH_TREND, RSI_EXIT_SHORT_AGAINST_TREND,
@@ -4240,7 +4240,7 @@ class AITrainer:
                     
                     # Готовим индивидуальную базу конфигурации (общий конфиг + индивидуальные настройки монеты)
                     # ВАЖНО: Используем сохраненные настройки как базовые для симуляций
-                    from bot_engine.bot_config import AIConfig
+                    from bot_engine.config_loader import AIConfig
                     use_saved_as_base = AIConfig.AI_USE_SAVED_SETTINGS_AS_BASE
                     
                     existing_coin_settings = _get_existing_coin_settings(symbol) or {}
@@ -5162,7 +5162,7 @@ class AITrainer:
                             # Сохраняем параметры в индивидуальные настройки при:
                             # 1) win_rate >= AI_SAVE_BEST_PARAMS_MIN_WIN_RATE (90%), или
                             # 2) "save if better": win_rate > сохранённого по монете И >= 60% И сделок >= 5
-                            from bot_engine.bot_config import AIConfig
+                            from bot_engine.config_loader import AIConfig
                             min_win_rate_for_save = AIConfig.AI_SAVE_BEST_PARAMS_MIN_WIN_RATE * 100
                             min_wr_better = getattr(AIConfig, 'AI_SAVE_IF_BETTER_MIN_WIN_RATE', 0.60) * 100
                             min_trades_better = getattr(AIConfig, 'AI_SAVE_IF_BETTER_MIN_TRADES', 5)
@@ -5766,13 +5766,13 @@ class AITrainer:
         if self._ensemble_predictor is not None:
             return self._ensemble_predictor
         try:
-            from bot_engine.bot_config import AIConfig
+            from bot_engine.config_loader import AIConfig
             if not getattr(AIConfig, 'AI_USE_ENSEMBLE', False):
                 return None
         except Exception:
             return None
         try:
-            from bot_engine.bot_config import AIConfig
+            from bot_engine.config_loader import AIConfig
             from bot_engine.ai.ensemble import EnsemblePredictor
             lstm_p, trans_p, smc_p = None, None, None
             lstm_path = getattr(AIConfig, 'AI_LSTM_MODEL_PATH', 'data/ai/models/lstm_predictor.keras')
@@ -5952,7 +5952,7 @@ class AITrainer:
 
             # Ensemble (LSTM + Transformer + SMC): при AI_USE_ENSEMBLE и наличии candles в market_data
             try:
-                from bot_engine.bot_config import AIConfig
+                from bot_engine.config_loader import AIConfig
                 if getattr(AIConfig, 'AI_USE_ENSEMBLE', False):
                     candles = market_data.get('candles') or []
                     price = market_data.get('price') or 0
@@ -6520,7 +6520,7 @@ class AITrainer:
         """
         try:
             try:
-                from bot_engine.bot_config import AIConfig as _AIConfig
+                from bot_engine.config_loader import AIConfig as _AIConfig
             except ImportError:
                 _AIConfig = None
             if _AIConfig is None:

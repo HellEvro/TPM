@@ -69,10 +69,12 @@ EXCLUDE = [
     "docs/ai_technical",
     "docs/ai_guides",
     
-    # Конфиденциальные файлы
+    # Конфиденциальные файлы (реальные конфиги в configs/)
     "app/keys.py",
     "app/config.py",
-    "bot_engine/bot_config.py",  # Локальный конфиг пользователя, не перетирать при синке
+    "configs/keys.py",
+    "configs/app_config.py",
+    "configs/bot_config.py",  # Локальный конфиг пользователя, не перетирать при синке
     "app/current_language.txt",
     "app/telegram_states.json",
     "launcher/.infobot_manager_state.json",

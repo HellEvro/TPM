@@ -201,7 +201,7 @@ class AIBotManager:
 
             min_conf_raw = 0.7
             try:
-                from bot_engine.bot_config import AIConfig
+                from bot_engine.config_loader import AIConfig
                 min_conf_raw = getattr(AIConfig, 'AI_CONFIDENCE_THRESHOLD', 0.7)
             except Exception:
                 pass

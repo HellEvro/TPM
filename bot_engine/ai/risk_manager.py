@@ -21,7 +21,7 @@ class DynamicRiskManager:
         self.logger = logger
         
         # Базовые параметры (из конфигурации)
-        from bot_engine.bot_config import RiskConfig
+        from bot_engine.config_loader import RiskConfig
         
         self.base_sl_percent = RiskConfig.STOP_LOSS_PERCENT  # 15%
         self.base_tp_percent = RiskConfig.TRAILING_STOP_ACTIVATION  # 300%
@@ -400,7 +400,7 @@ class DynamicRiskManager:
         Returns:
             Словарь с рекомендуемым размером позиции
         """
-        from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
+        from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG
         
         base_size_value = DEFAULT_AUTO_BOT_CONFIG.get('default_position_size', 10.0)
         base_size_mode = DEFAULT_AUTO_BOT_CONFIG.get('default_position_mode', 'usdt')

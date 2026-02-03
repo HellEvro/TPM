@@ -36,7 +36,7 @@ def _get_ai_config_value(attr_name: str, default_value: Any) -> Any:
         Значение из конфига или дефолтное значение
     """
     try:
-        from bot_engine.bot_config import AIConfig
+        from bot_engine.config_loader import AIConfig
         return getattr(AIConfig, attr_name, default_value)
     except (ImportError, AttributeError):
         return default_value

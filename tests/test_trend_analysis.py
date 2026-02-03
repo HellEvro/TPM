@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from bots_modules.filters import get_coin_rsi_data
 from bots_modules.imports_and_globals import load_auto_bot_config, bots_data, bots_data_lock
-from bot_engine.bot_config import SystemConfig
+from bot_engine.config_loader import SystemConfig
 import json
 
 def print_header(text):

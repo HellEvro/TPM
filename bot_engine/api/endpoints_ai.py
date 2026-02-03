@@ -68,7 +68,7 @@ def register_ai_endpoints(app):
         try:
             from bot_engine.ai import get_ai_manager
             from bot_engine.ai.auto_trainer import get_auto_trainer
-            from bot_engine.bot_config import AIConfig, RiskConfig
+            from bot_engine.config_loader import AIConfig, RiskConfig
 
             ai_manager = get_ai_manager()
             auto_trainer = get_auto_trainer()
@@ -116,22 +116,21 @@ def register_ai_endpoints(app):
             }), 500
 
     def _get_ai_config_path():
-        """Абсолютный путь к bot_config.py (не зависит от cwd)."""
+        """Абсолютный путь к configs/bot_config.py (не зависит от cwd)."""
         import os
         try:
-            import bot_engine.bot_config as _bc
-            return os.path.abspath(getattr(_bc, '__file__', 'bot_engine/bot_config.py'))
+            _root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            return os.path.join(_root, 'configs', 'bot_config.py')
         except Exception:
-            return os.path.abspath('bot_engine/bot_config.py')
+            return os.path.abspath('configs/bot_config.py')
 
     @app.route('/api/ai/config', methods=['GET'])
     def get_ai_config():
         """Получить конфигурацию AI (всегда из файла — перезагружаем модуль перед ответом)."""
         try:
-            import importlib
-            import bot_engine.bot_config
-            importlib.reload(bot_engine.bot_config)
-            from bot_engine.bot_config import AIConfig, RiskConfig
+            from bot_engine.config_loader import reload_config
+            reload_config()
+            from bot_engine.config_loader import AIConfig, RiskConfig
             from bot_engine.ai import get_ai_manager
 
             ai_manager = get_ai_manager()
@@ -258,7 +257,7 @@ def register_ai_endpoints(app):
                 logger.info("[AI_CONFIG] ai_enabled=False → все дочерние AI флаги принудительно выключены")
 
             # Получаем текущие значения для сравнения
-            from bot_engine.bot_config import AIConfig, RiskConfig
+            from bot_engine.config_loader import AIConfig, RiskConfig
             old_config = {
                 'ai_enabled': AIConfig.AI_ENABLED,
                 'ai_confidence_threshold': AIConfig.AI_CONFIDENCE_THRESHOLD,
@@ -444,11 +443,8 @@ def register_ai_endpoints(app):
             with open(config_path, 'w', encoding='utf-8') as f:
                 f.writelines(updated_lines)
 
-            # Перезагружаем модуль bot_config
-            import importlib
-            import bot_engine.bot_config
-            importlib.reload(bot_engine.bot_config)
-
+            from bot_engine.config_loader import reload_config
+            reload_config()
             # Выводим итоговое сообщение
             if changes_count > 0:
                 logger.info(f"[AI_CONFIG] ✅ AI модули: изменено параметров: {changes_count}, конфигурация сохранена и перезагружена")

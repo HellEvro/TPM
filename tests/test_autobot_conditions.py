@@ -47,7 +47,7 @@ async def test_autobot_conditions():
         # Импортируем необходимые модули
         import bots_modules.imports_and_globals as globals_module
         from bots_modules.filters import get_coin_rsi_data
-        from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
+        from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG
 
         exchange = globals_module.exchange
         bots_data = globals_module.bots_data

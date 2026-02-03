@@ -15,7 +15,7 @@ logger = logging.getLogger('RL')
 
 def _rl_enabled() -> bool:
     try:
-        from bot_engine.bot_config import AIConfig
+        from bot_engine.config_loader import AIConfig
         return bool(getattr(AIConfig, 'AI_RL_ENABLED', False))
     except Exception:
         return False

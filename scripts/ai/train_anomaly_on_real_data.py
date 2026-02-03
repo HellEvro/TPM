@@ -18,7 +18,7 @@ os.environ['AI_DEV_MODE'] = '1'
 import utils.sklearn_parallel_config  # noqa: F401
 
 from bot_engine.ai.anomaly_detector import AnomalyDetector
-from bot_engine.bot_config import AIConfig
+from bot_engine.config_loader import AIConfig
 import logging
 
 logging.basicConfig(
@@ -219,7 +219,7 @@ def train_on_real_data():
     print()
     print("Чтобы активировать:")
     print()
-    print("1. Отредактируйте bot_engine/bot_config.py:")
+    print("1. Отредактируйте configs/bot_config.py:")
     print()
     print("   class AIConfig:")
     print("       AI_ENABLED = True")

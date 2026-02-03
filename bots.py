@@ -43,25 +43,26 @@ try:
 except Exception:
     pass
 
-# 🔍 Проверка и создание bot_config.py из bot_config.example.py (если отсутствует) — п.3 REVERTED_COMMITS_FIXES
+# 🔍 Проверка и создание configs/bot_config.py из configs/bot_config.example.py (если отсутствует)
 # Также настраиваем git skip-worktree для игнорирования локальных изменений
-_bot_config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bot_engine', 'bot_config.py')
-_example_bot_config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bot_engine', 'bot_config.example.py')
+_bot_config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'configs', 'bot_config.py')
+_example_bot_config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'configs', 'bot_config.example.py')
 
 if not os.path.exists(_bot_config_path):
     if os.path.exists(_example_bot_config_path):
         try:
             import shutil
+            os.makedirs(os.path.dirname(_bot_config_path), exist_ok=True)
             shutil.copy2(_example_bot_config_path, _bot_config_path)
             import sys
-            sys.stderr.write(f"[INFO] ✅ Создан bot_engine/bot_config.py из bot_config.example.py\n")
+            sys.stderr.write(f"[INFO] ✅ Создан configs/bot_config.py из configs/bot_config.example.py\n")
         except Exception as e:
             import sys
-            sys.stderr.write(f"[WARNING] Не удалось создать bot_config.py: {e}\n")
-            sys.stderr.write(f"[WARNING] Продолжаем с bot_config.example.py...\n")
+            sys.stderr.write(f"[WARNING] Не удалось создать configs/bot_config.py: {e}\n")
+            sys.stderr.write(f"[WARNING] Продолжаем с configs/bot_config.example.py...\n")
     else:
         import sys
-        sys.stderr.write(f"[WARNING] Файл bot_config.example.py не найден, bot_config.py не будет создан автоматически\n")
+        sys.stderr.write(f"[WARNING] Файл configs/bot_config.example.py не найден, configs/bot_config.py не будет создан автоматически\n")
 
 # Настройка git skip-worktree для игнорирования локальных изменений в bot_config.py
 # Это позволяет файлу оставаться в git, но локальные изменения не будут коммититься
@@ -90,10 +91,10 @@ if os.path.exists(_bot_config_path):
             )
             # Логгер еще не настроен, используем stderr
             import sys
-            sys.stderr.write(f"[INFO] ✅ Защита bot_config.py от перезаписи при git pull активирована\n")
+            sys.stderr.write(f"[INFO] ✅ Защита configs/bot_config.py от перезаписи при git pull активирована\n")
 
-        # Дополнительная защита: если файл был изменен в удаленном репозитории,
-        # но у нас есть локальная версия - восстанавливаем её из бэкапа (если есть)
+        # Дополнительная защита: если configs/bot_config.py был изменён в удалённом репозитории,
+        # но у нас есть локальная версия — восстанавливаем её из бэкапа (если есть)
         backup_path = _bot_config_path + '.local_backup'
         if os.path.exists(backup_path):
             try:
@@ -107,7 +108,7 @@ if os.path.exists(_bot_config_path):
                     pass
                 # Логгер еще не настроен, используем stderr
                 import sys
-                sys.stderr.write(f"[INFO] ✅ Восстановлена локальная версия bot_config.py после git pull\n")
+                sys.stderr.write(f"[INFO] ✅ Восстановлена локальная версия configs/bot_config.py после git pull\n")
             except Exception:
                 pass
 
@@ -142,7 +143,7 @@ if os.path.exists(_bot_config_path):
 try:
     # Читаем настройку трейсинга из конфига
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from bot_engine.bot_config import SystemConfig
+    from bot_engine.config_loader import SystemConfig
     ENABLE_TRACE = SystemConfig.ENABLE_CODE_TRACING
 
     if ENABLE_TRACE:
@@ -178,33 +179,21 @@ if os.name == 'nt':
         except:
             pass
 
-# Проверка наличия конфигурации ПЕРЕД всеми импортами
-if not os.path.exists('app/config.py'):
-    # Логгер еще не настроен, используем stderr для критических ошибок
+# Проверка наличия конфигурации (все конфиги в configs/)
+if not os.path.exists('configs/app_config.py') and not os.path.exists('app/config.py'):
     import sys
     sys.stderr.write("\n" + "="*80 + "\n")
-    sys.stderr.write("❌ ОШИБКА: Файл конфигурации не найден!\n")
-    sys.stderr.write("="*80 + "\n")
-    sys.stderr.write("\n")
-    sys.stderr.write("📝 Для первого запуска выполните:\n")
-    sys.stderr.write("\n")
-    sys.stderr.write("   1. Скопируйте файл конфигурации:\n")
-    if os.name == 'nt':  # Windows
-        sys.stderr.write("      copy app\\config.example.py app\\config.py\n")
-    else:  # Linux/Mac
-        sys.stderr.write("      cp app/config.example.py app/config.py\n")
-    sys.stderr.write("\n")
-    sys.stderr.write("   2. Отредактируйте app/config.py:\n")
-    sys.stderr.write("      - Добавьте свои API ключи бирж\n")
-    sys.stderr.write("      - Настройте Telegram (опционально)\n")
-    sys.stderr.write("\n")
-    sys.stderr.write("   3. Запустите снова:\n")
-    sys.stderr.write("      python bots.py\n")
-    sys.stderr.write("\n")
-    sys.stderr.write("   📖 Подробная инструкция: docs/INSTALL.md\n")
-    sys.stderr.write("\n")
-    sys.stderr.write("="*80 + "\n")
-    sys.stderr.write("\n")
+    sys.stderr.write("❌ ОШИБКА: Конфигурация не найдена!\n")
+    sys.stderr.write("="*80 + "\n\n")
+    sys.stderr.write("📝 Все конфиги в папке configs/. Выполните:\n\n")
+    if os.name == 'nt':
+        sys.stderr.write("      copy configs\\app_config.example.py configs\\app_config.py\n")
+        sys.stderr.write("      copy configs\\keys.example.py configs\\keys.py\n")
+    else:
+        sys.stderr.write("      cp configs/app_config.example.py configs/app_config.py\n")
+        sys.stderr.write("      cp configs/keys.example.py configs/keys.py\n")
+    sys.stderr.write("\n   Отредактируйте configs/keys.py (API ключи) и configs/app_config.py\n")
+    sys.stderr.write("   📖 Подробнее: docs/INSTALL.md\n\n" + "="*80 + "\n\n")
     sys.exit(1)
 
 import signal
@@ -226,8 +215,7 @@ from bots_modules.imports_and_globals import check_and_stop_existing_bots_proces
 def check_api_keys():
     """Проверяет наличие настроенных API ключей"""
     try:
-        # Проверяем наличие файла с ключами
-        if not os.path.exists('app/keys.py'):
+        if not os.path.exists('configs/keys.py') and not os.path.exists('app/keys.py'):
             return False
 
         from app.config import EXCHANGES, ACTIVE_EXCHANGE
@@ -272,14 +260,14 @@ if __name__ == '__main__':
         except:
             sys.stderr.write("   Биржа: НЕ ОПРЕДЕЛЕНА\n")
 
-        if not os.path.exists('app/keys.py'):
-            sys.stderr.write("   Файл с ключами: app/keys.py НЕ НАЙДЕН\n")
+        if not os.path.exists('configs/keys.py'):
+            sys.stderr.write("   Файл с ключами: configs/keys.py НЕ НАЙДЕН\n")
         else:
             sys.stderr.write("   API ключи: НЕ НАСТРОЕНЫ или СОДЕРЖАТ ПРИМЕРЫ\n")
         sys.stderr.write("\n")
         sys.stderr.write("💡 Что нужно сделать:\n")
-        sys.stderr.write("   1. Создайте app/keys.py с реальными ключами от биржи\n")
-        sys.stderr.write("   2. Или добавьте ключи в app/config.py (EXCHANGES)\n")
+        sys.stderr.write("   1. Отредактируйте configs/keys.py — добавьте реальные ключи биржи\n")
+        sys.stderr.write("   2. Или добавьте EXCHANGES в configs/app_config.py\n")
         sys.stderr.write("   3. Перезапустите bots.py\n")
         sys.stderr.write("\n")
         sys.stderr.write("⚠️  Сервис запущен, но торговля НЕВОЗМОЖНА без ключей!\n")
@@ -307,7 +295,7 @@ from bots_modules.init_functions import *
 # Настройка логирования (раньше, чтобы использовать logger)
 # Применяем фильтр уровней логирования из конфига
 try:
-    from bot_engine.bot_config import SystemConfig
+    from bot_engine.config_loader import SystemConfig
     console_levels = getattr(SystemConfig, 'CONSOLE_LOG_LEVELS', [])
     setup_color_logging(console_log_levels=console_levels if console_levels else None, log_file='logs/bots.log')
 except Exception as e:
@@ -703,7 +691,7 @@ if __name__ == '__main__':
         # Инициализируем AI Manager (проверка лицензии и загрузка модулей)
         ai_manager = None
         try:
-            from bot_engine.bot_config import AIConfig
+            from bot_engine.config_loader import AIConfig
 
             if AIConfig.AI_ENABLED:
                 logger.info("🤖 Инициализация AI модулей...")

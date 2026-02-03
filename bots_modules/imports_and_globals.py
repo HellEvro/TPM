@@ -275,7 +275,7 @@ BOT_HISTORY_AVAILABLE = False
 # Импорты для бот-движка
 from exchanges.exchange_factory import ExchangeFactory
 from app.config import EXCHANGES, APP_DEBUG
-from bot_engine.bot_config import (
+from bot_engine.config_loader import (
     SystemConfig, RiskConfig, FilterConfig, ExchangeConfig,
     RSI_EXTREME_ZONE_TIMEOUT, RSI_EXTREME_OVERSOLD, RSI_EXTREME_OVERBOUGHT,
     RSI_VOLUME_CONFIRMATION_MULTIPLIER, RSI_DIVERGENCE_LOOKBACK,
@@ -288,7 +288,7 @@ from bot_engine.trading_bot import TradingBot as RealTradingBot
 BOTS_STATE_FILE = 'data/bots_state.json'
 BOTS_POSITIONS_REGISTRY_FILE = 'data/bot_positions_registry.json'  # Реестр позиций открытых ботами
 
-# ✅ ВСЕ КОНСТАНТЫ НАСТРОЕК ПЕРЕНЕСЕНЫ В SystemConfig (bot_engine/bot_config.py)
+# ✅ ВСЕ КОНСТАНТЫ НАСТРОЕК ПЕРЕНЕСЕНЫ В SystemConfig (configs/bot_config.py)
 # Используйте SystemConfig.КОНСТАНТА для доступа к настройкам
 
 # Глобальные переменные для кэшированных данных (как в app.py)
@@ -320,9 +320,11 @@ log_suppression_cache = {
     'exchange_positions': {'count': 0, 'last_log': 0, 'message': ''}
 }
 RSI_CACHE_FILE = 'data/rsi_cache.json'
-DEFAULT_CONFIG_FILE = 'data/default_auto_bot_config.json'
+# Все настройки Auto Bot только в configs/bot_config.py: DEFAULT_AUTO_BOT_CONFIG и AUTO_BOT_CONFIG. JSON не используется.
+DEFAULT_CONFIG_FILE = None  # не используется — дефолты в bot_config.py
+CURRENT_AUTO_BOT_CONFIG_FILE = None  # не используется — рабочие настройки в bot_config.py
 PROCESS_STATE_FILE = 'data/process_state.json'
-SYSTEM_CONFIG_FILE = 'data/system_config.json'
+SYSTEM_CONFIG_FILE = 'configs/system_config.json'
 INDIVIDUAL_COIN_SETTINGS_FILE = 'data/individual_coin_settings.json'
 
 # Создаем папку для данных если её нет
@@ -334,7 +336,7 @@ _individual_coin_settings_state = {
 }
 
 # Дефолтная конфигурация Auto Bot (для восстановления)
-# ✅ ИСПОЛЬЗУЕМ КОНФИГ ИЗ bot_engine/bot_config.py
+# ✅ ИСПОЛЬЗУЕМ КОНФИГ ИЗ configs/bot_config.py
 # Импортирован как BOT_ENGINE_DEFAULT_CONFIG
 DEFAULT_AUTO_BOT_CONFIG = BOT_ENGINE_DEFAULT_CONFIG
 
@@ -620,25 +622,20 @@ bots_data_lock = threading.Lock()
 
 # Загружаем сохраненную конфигурацию Auto Bot
 def load_auto_bot_config():
-    """Загружает конфигурацию Auto Bot из bot_config.py
-    
-    ✅ ЕДИНСТВЕННЫЙ источник истины: bot_engine/bot_config.py
-    - Все настройки в Python-файле с комментариями
-    - Можно редактировать руками с подробными пояснениями
-    - Система читает напрямую из DEFAULT_AUTO_BOT_CONFIG
+    """Загружает конфигурацию Auto Bot из configs/bot_config.py.
+
+    ✅ ИСТОЧНИК ИСТИНЫ: только configs/bot_config.py.
+    AUTO_BOT_CONFIG — рабочие настройки. DEFAULT_AUTO_BOT_CONFIG — дефолты для «Сбросить к стандарту». JSON не используется.
     """
     try:
-        # ✅ КРИТИЧЕСКИ ВАЖНО: Перезагружаем модуль перед чтением
-        # Это гарантирует, что мы читаем актуальные данные из файла, а не из кэша Python
         import importlib
         import sys
         import os
         import re
-        
-        # Абсолютный путь к bot_config.py (не зависит от cwd — на лету подхватываем сохранённый конфиг)
+        # Все настройки только в configs/bot_config.py (AUTO_BOT_CONFIG — рабочие, DEFAULT_AUTO_BOT_CONFIG — дефолты). JSON не используется.
         _bc_dir = os.path.dirname(os.path.abspath(__file__))
         _project_root = os.path.dirname(_bc_dir)
-        config_file_path = os.path.join(_project_root, 'bot_engine', 'bot_config.py')
+        config_file_path = os.path.join(_project_root, 'configs', 'bot_config.py')
         reloaded = False
 
         if os.path.exists(config_file_path):
@@ -665,17 +662,12 @@ def load_auto_bot_config():
                 except Exception as tf_save_err:
                     logger.warning(f"[CONFIG] ⚠️ Не удалось сохранить таймфрейм из БД: {tf_save_err}")
                 
-                # Импортируем модуль, если его еще нет
-                if 'bot_engine.bot_config' not in sys.modules:
-                    import bot_engine.bot_config
-                else:
-                    import bot_engine.bot_config
-                    importlib.reload(bot_engine.bot_config)
-                
+                from bot_engine.config_loader import reload_config
+                reload_config()
                 # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после перезагрузки
                 if saved_timeframe_from_db:
                     try:
-                        from bot_engine.bot_config import set_current_timeframe
+                        from bot_engine.config_loader import set_current_timeframe
                         set_current_timeframe(saved_timeframe_from_db)
                     except Exception as tf_restore_err:
                         logger.warning(f"[CONFIG] ⚠️ Не удалось восстановить таймфрейм: {tf_restore_err}")
@@ -694,18 +686,14 @@ def load_auto_bot_config():
             except:
                 pass
             
-            # Если файла нет, просто перезагружаем модуль
-            if 'bot_engine.bot_config' in sys.modules:
-                import bot_engine.bot_config
-                importlib.reload(bot_engine.bot_config)
-            else:
-                import bot_engine.bot_config  # pragma: no cover
+            from bot_engine.config_loader import reload_config
+            reload_config()
             reloaded = True
             
             # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после перезагрузки
             if saved_timeframe_from_db:
                 try:
-                    from bot_engine.bot_config import set_current_timeframe
+                    from bot_engine.config_loader import set_current_timeframe
                     set_current_timeframe(saved_timeframe_from_db)
                 except:
                     pass
@@ -721,41 +709,23 @@ def load_auto_bot_config():
         except Exception as tf_final_err:
             logger.warning(f"[CONFIG] ⚠️ Не удалось сохранить таймфрейм из БД (финальный): {tf_final_err}")
         
-        if 'bot_engine.bot_config' in sys.modules:
-            importlib.reload(sys.modules['bot_engine.bot_config'])
-        
+        from bot_engine.config_loader import reload_config
+        reload_config()
         # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после финальной перезагрузки
         if saved_timeframe_from_db_final:
             try:
-                from bot_engine.bot_config import set_current_timeframe
+                from bot_engine.config_loader import set_current_timeframe
                 set_current_timeframe(saved_timeframe_from_db_final)
             except Exception as tf_final_restore_err:
                 logger.warning(f"[CONFIG] ⚠️ Не удалось восстановить таймфрейм (финальный): {tf_final_restore_err}")
         
-        from bot_engine.bot_config import DEFAULT_AUTO_BOT_CONFIG
-        
-        # ✅ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: читаем значение напрямую из файла для сравнения
-        try:
-            config_file_path_check = config_file_path
-            if config_file_path_check and os.path.exists(config_file_path_check):
-                with open(config_file_path_check, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    # Ищем значение leverage в DEFAULT_AUTO_BOT_CONFIG
-                    leverage_match = re.search(r"'leverage':\s*(\d+)", content)
-                    if leverage_match:
-                        leverage_from_file_direct = int(leverage_match.group(1))
-                        leverage_from_module = DEFAULT_AUTO_BOT_CONFIG.get('leverage')
-                        if leverage_from_file_direct != leverage_from_module:
-                            logger.error(f"[CONFIG] ❌ РАСХОЖДЕНИЕ! leverage в файле: {leverage_from_file_direct}x, в модуле: {leverage_from_module}x")
-                            # Принудительно обновляем значение из файла
-                            DEFAULT_AUTO_BOT_CONFIG['leverage'] = leverage_from_file_direct
-                            logger.info(f"[CONFIG] ✅ Исправлено: leverage обновлен до {leverage_from_file_direct}x из файла")
-        except Exception as e:
-            pass  # Игнорируем ошибки проверки leverage
-
-        # ✅ ЕДИНСТВЕННЫЙ источник истины: bot_engine/bot_config.py
-        # Все настройки загружаются ТОЛЬКО из файла, БД не используется для auto_bot_config
+        from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG
+        from bots_modules.config_writer import load_auto_bot_config_from_file
+        # Загружаем из файла каждый параметр отдельно (не копируем весь модуль)
+        file_config = load_auto_bot_config_from_file(config_file_path)
         merged_config = DEFAULT_AUTO_BOT_CONFIG.copy()
+        for key, value in file_config.items():
+            merged_config[key] = value
         
         # ✅ Логируем leverage только при первой загрузке или при изменении (не спамим)
         leverage_from_file = merged_config.get('leverage')

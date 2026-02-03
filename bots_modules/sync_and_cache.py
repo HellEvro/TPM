@@ -23,7 +23,7 @@ import shutil
 logger = logging.getLogger('BotsService')
 
 # Импорт SystemConfig
-from bot_engine.bot_config import SystemConfig
+from bot_engine.config_loader import SystemConfig
 from bot_engine.bot_history import log_position_closed as history_log_position_closed
 from bot_engine.storage import (
     save_bots_state as storage_save_bots_state,
@@ -45,7 +45,7 @@ try:
         bots_cache_data, bots_cache_lock, process_state, exchange,
         mature_coins_storage, mature_coins_lock, BOT_STATUS,
         DEFAULT_AUTO_BOT_CONFIG, RSI_CACHE_FILE, PROCESS_STATE_FILE,
-        SYSTEM_CONFIG_FILE, BOTS_STATE_FILE, DEFAULT_CONFIG_FILE,
+        SYSTEM_CONFIG_FILE, BOTS_STATE_FILE,
         should_log_message, get_coin_processing_lock, get_exchange,
         save_individual_coin_settings
     )
@@ -84,10 +84,9 @@ except ImportError as e:
     DEFAULT_AUTO_BOT_CONFIG = {}
     RSI_CACHE_FILE = 'data/rsi_cache.json'
     PROCESS_STATE_FILE = 'data/process_state.json'
-    SYSTEM_CONFIG_FILE = 'data/system_config.json'
+    SYSTEM_CONFIG_FILE = 'configs/system_config.json'
     BOTS_STATE_FILE = 'data/bots_state.json'
     MATURE_COINS_FILE = 'data/mature_coins.json'
-    DEFAULT_CONFIG_FILE = 'data/default_auto_bot_config.json'
     def should_log_message(cat, msg, interval=60):
         return (True, msg)
 
@@ -316,7 +315,7 @@ def get_system_config_snapshot():
     for key, attr in SYSTEM_CONFIG_FIELD_MAP.items():
         if key == 'system_timeframe':
             try:
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.config_loader import get_current_timeframe
                 snapshot[key] = get_current_timeframe()
             except Exception:
                 snapshot[key] = getattr(SystemConfig, attr, None)
@@ -541,56 +540,42 @@ def load_rsi_cache():
         return False
 
 def save_default_config():
-    """Сохраняет дефолтную конфигурацию в файл для восстановления"""
-    try:
-        with open(DEFAULT_CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(DEFAULT_AUTO_BOT_CONFIG, f, indent=2, ensure_ascii=False)
-        
-        logger.info(f" ✅ Дефолтная конфигурация сохранена в {DEFAULT_CONFIG_FILE}")
-        return True
-        
-    except Exception as e:
-        logger.error(f" ❌ Ошибка сохранения дефолтной конфигурации: {e}")
-        return False
+    """Дефолты хранятся в configs/bot_config.py (DEFAULT_AUTO_BOT_CONFIG). JSON не используется."""
+    return True
 
 def load_default_config():
-    """Загружает дефолтную конфигурацию из файла"""
+    """Загружает дефолтную конфигурацию из configs/bot_config.py (DEFAULT_AUTO_BOT_CONFIG)."""
     try:
-        if os.path.exists(DEFAULT_CONFIG_FILE):
-            with open(DEFAULT_CONFIG_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        else:
-            # Если файла нет, создаем его с текущими дефолтными значениями
-            save_default_config()
-            return DEFAULT_AUTO_BOT_CONFIG.copy()
-            
+        from bot_engine.config_loader import reload_config
+        reload_config()
+        from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG
+        return DEFAULT_AUTO_BOT_CONFIG.copy()
     except Exception as e:
         logger.error(f" ❌ Ошибка загрузки дефолтной конфигурации: {e}")
         return DEFAULT_AUTO_BOT_CONFIG.copy()
 
 def restore_default_config():
-    """Восстанавливает дефолтную конфигурацию Auto Bot"""
+    """Восстанавливает конфигурацию Auto Bot к стандарту из bot_config.py (DEFAULT_AUTO_BOT_CONFIG)."""
     try:
-        default_config = load_default_config()
-        
+        from bot_engine.config_loader import reload_config
+        reload_config()
+        from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG
+        default_config = DEFAULT_AUTO_BOT_CONFIG.copy()
+
         with bots_data_lock:
-            # Сохраняем критически важные значения (не сбрасываем их при восстановлении)
-            current_enabled = bots_data['auto_bot_config'].get('enabled', False)
-            current_trading_enabled = bots_data['auto_bot_config'].get('trading_enabled', True)
-            
-            # Восстанавливаем дефолтные значения
+            current_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
+            current_trading_enabled = bots_data.get('auto_bot_config', {}).get('trading_enabled', True)
             bots_data['auto_bot_config'] = default_config.copy()
-            
-            # Возвращаем текущие состояния важных настроек
             bots_data['auto_bot_config']['enabled'] = current_enabled
             bots_data['auto_bot_config']['trading_enabled'] = current_trading_enabled
-        
-        # Сохраняем состояние
+
+        from bots_modules.config_writer import save_auto_bot_config_current_to_py
+        save_auto_bot_config_current_to_py(bots_data['auto_bot_config'])
         save_result = save_bots_state()
-        
-        logger.info(" ✅ Дефолтная конфигурация восстановлена")
+
+        logger.info(" ✅ Конфигурация сброшена к стандарту (AUTO_BOT_CONFIG обновлён из DEFAULT в configs/bot_config.py)")
         return save_result
-        
+
     except Exception as e:
         logger.error(f" ❌ Ошибка восстановления дефолтной конфигурации: {e}")
         return False
@@ -649,7 +634,7 @@ def load_process_state():
         return False
 
 def save_system_config(config_data):
-    """Сохраняет системные настройки напрямую в bot_config.py."""
+    """Сохраняет системные настройки в configs/bot_config.py."""
     try:
         from bots_modules.config_writer import save_system_config_to_py
 
@@ -664,7 +649,7 @@ def save_system_config(config_data):
 
         success = save_system_config_to_py(attrs_to_update)
         if success:
-            logger.info("[SYSTEM_CONFIG] ✅ Настройки сохранены в bot_engine/bot_config.py")
+            logger.info("[SYSTEM_CONFIG] ✅ Настройки сохранены в configs/bot_config.py")
         return success
 
     except Exception as e:
@@ -673,7 +658,7 @@ def save_system_config(config_data):
 
 
 def load_system_config():
-    """Перезагружает SystemConfig из bot_config.py и применяет значения в память."""
+    """Перезагружает SystemConfig из configs/bot_config.py и применяет значения в память."""
     try:
         # ✅ КРИТИЧНО: Сохраняем текущий таймфрейм из БД перед перезагрузкой модуля
         # чтобы не потерять его при reload (приоритет БД над конфигом)
@@ -685,8 +670,8 @@ def load_system_config():
         except:
             pass
         
-        bot_config_module = importlib.import_module('bot_engine.bot_config')
-        importlib.reload(bot_config_module)
+        from bot_engine.config_loader import reload_config
+        bot_config_module = reload_config()
         file_system_config = bot_config_module.SystemConfig
 
         for attr in SYSTEM_CONFIG_FIELD_MAP.values():
@@ -696,7 +681,7 @@ def load_system_config():
         # ✅ КРИТИЧНО: Восстанавливаем таймфрейм после перезагрузки модуля
         # Приоритет: БД > SystemConfig.SYSTEM_TIMEFRAME из файла
         try:
-            from bot_engine.bot_config import set_current_timeframe, get_current_timeframe
+            from bot_engine.config_loader import set_current_timeframe, get_current_timeframe
             if saved_timeframe_from_db:
                 # Если есть таймфрейм в БД - используем его (пользователь переключал через UI)
                 set_current_timeframe(saved_timeframe_from_db)
@@ -708,7 +693,7 @@ def load_system_config():
         except Exception as tf_err:
             logger.warning(f"[SYSTEM_CONFIG] ⚠️ Ошибка восстановления таймфрейма: {tf_err}")
 
-        logger.info("[SYSTEM_CONFIG] ✅ Конфигурация перезагружена из bot_engine/bot_config.py")
+        logger.info("[SYSTEM_CONFIG] ✅ Конфигурация перезагружена из configs/bot_config.py")
         return True
 
     except Exception as e:
@@ -739,7 +724,7 @@ def save_bots_state():
                 bots_data_to_save[symbol] = bot_data
             
             # ✅ УБРАНО: auto_bot_config больше НЕ сохраняется в БД
-            # Настройки хранятся ТОЛЬКО в bot_engine/bot_config.py через config_writer
+            # Настройки хранятся ТОЛЬКО в configs/bot_config.py через config_writer
             # Передаем пустой словарь, чтобы не сохранять в БД
             auto_bot_config_to_save = {}
         finally:
@@ -760,142 +745,34 @@ def save_bots_state():
         return False
 
 def save_auto_bot_config(changed_data=None):
-    """Сохраняет конфигурацию автобота в bot_config.py
-    
-    ✅ Теперь сохраняет напрямую в bot_engine/bot_config.py
-    - Сохраняет ТОЛЬКО измененные значения (если передан changed_data)
-    - Комментарии в файле сохраняются
-    - Автоматически перезагружает модуль после сохранения (НЕ требуется перезапуск!)
-    
-    Args:
-        changed_data: dict с только измененными значениями (опционально)
-                      Если не передан, сохраняет весь config_data (для обратной совместимости)
+    """Сохраняет текущую конфигурацию автобота в configs/bot_config.py (блок AUTO_BOT_CONFIG).
+
+    Все настройки только в bot_config.py. JSON не используется.
     """
     try:
-        from bots_modules.config_writer import save_auto_bot_config_to_py
-        import importlib
-        import sys
-        
-        # ✅ КРИТИЧЕСКИ ВАЖНО: Если передан changed_data, используем только его!
-        # Иначе берем весь config_data (для обратной совместимости)
-        if changed_data is not None:
-            # Используем только измененные значения
-            config_data = changed_data.copy()
-            logger.info(f"[SAVE_CONFIG] 🔍 Сохраняем ТОЛЬКО измененные значения: {list(config_data.keys())}")
-        else:
-            # Обратная совместимость: берем весь config
-            with bots_data_lock:
-                config_data = bots_data['auto_bot_config'].copy()
-            logger.info(f"[SAVE_CONFIG] 🔍 Сохраняем весь конфиг (changed_data не передан)")
-        
-        # ✅ КРИТИЧЕСКИ ВАЖНО: Логируем enabled перед сохранением
-        logger.info(f"[SAVE_CONFIG] 🔍 enabled перед сохранением: {config_data.get('enabled')}")
-        
-        # Сохраняем в bot_config.py
-        success = save_auto_bot_config_to_py(config_data)
-        
-        if success:
-            logger.info(f"[SAVE_CONFIG] ✅ Конфигурация автобота сохранена в bot_engine/bot_config.py")
-            # ✅ КРИТИЧНО: Обновляем конфигурацию в памяти из СОХРАНЕННЫХ данных (не из DEFAULT!)
-            with bots_data_lock:
-                # ✅ Используем новые RSI exit с учетом тренда
-                old_rsi_long_with = bots_data['auto_bot_config'].get('rsi_exit_long_with_trend')
-                old_rsi_long_against = bots_data['auto_bot_config'].get('rsi_exit_long_against_trend')
-                old_rsi_short_with = bots_data['auto_bot_config'].get('rsi_exit_short_with_trend')
-                old_rsi_short_against = bots_data['auto_bot_config'].get('rsi_exit_short_against_trend')
-                
-                # Используем ТОЛЬКО ЧТО СОХРАНЕННЫЕ значения, а не дефолтные!
-                bots_data['auto_bot_config'].update(config_data)
-                
-                new_rsi_long_with = bots_data['auto_bot_config'].get('rsi_exit_long_with_trend')
-                new_rsi_long_against = bots_data['auto_bot_config'].get('rsi_exit_long_against_trend')
-                new_rsi_short_with = bots_data['auto_bot_config'].get('rsi_exit_short_with_trend')
-                new_rsi_short_against = bots_data['auto_bot_config'].get('rsi_exit_short_against_trend')
-            
-            # Проверяем что значения действительно есть
-            if new_rsi_long_with is None:
-                logger.error(f"[SAVE_CONFIG] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_exit_long_with_trend отсутствует в сохраненных данных!")
-            if new_rsi_long_against is None:
-                logger.error(f"[SAVE_CONFIG] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_exit_long_against_trend отсутствует в сохраненных данных!")
-            if new_rsi_short_with is None:
-                logger.error(f"[SAVE_CONFIG] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_exit_short_with_trend отсутствует в сохраненных данных!")
-            if new_rsi_short_against is None:
-                logger.error(f"[SAVE_CONFIG] ❌ КРИТИЧЕСКАЯ ОШИБКА: rsi_exit_short_against_trend отсутствует в сохраненных данных!")
-            
-            # Логируем изменения RSI exit порогов
-            if old_rsi_long_with is not None and new_rsi_long_with is not None and old_rsi_long_with != new_rsi_long_with:
-                logger.info(f"[SAVE_CONFIG] 🔄 RSI LONG exit (по тренду) изменен: {old_rsi_long_with} → {new_rsi_long_with}")
-            if old_rsi_long_against is not None and new_rsi_long_against is not None and old_rsi_long_against != new_rsi_long_against:
-                logger.info(f"[SAVE_CONFIG] 🔄 RSI LONG exit (против тренда) изменен: {old_rsi_long_against} → {new_rsi_long_against}")
-            if old_rsi_short_with is not None and new_rsi_short_with is not None and old_rsi_short_with != new_rsi_short_with:
-                logger.info(f"[SAVE_CONFIG] 🔄 RSI SHORT exit (по тренду) изменен: {old_rsi_short_with} → {new_rsi_short_with}")
-            if old_rsi_short_against is not None and new_rsi_short_against is not None and old_rsi_short_against != new_rsi_short_against:
-                logger.info(f"[SAVE_CONFIG] 🔄 RSI SHORT exit (против тренда) изменен: {old_rsi_short_against} → {new_rsi_short_against}")
-            
-            logger.info(f"[SAVE_CONFIG] ✅ Конфигурация обновлена в памяти из сохраненных данных!")
-            if new_rsi_long_with is not None and new_rsi_short_with is not None:
-                logger.info(f"[SAVE_CONFIG] 📊 Текущие RSI exit пороги: LONG(with)={new_rsi_long_with}, LONG(against)={new_rsi_long_against}, SHORT(with)={new_rsi_short_with}, SHORT(against)={new_rsi_short_against}")
-            else:
-                logger.error(f"[SAVE_CONFIG] ❌ НЕКОТОРЫЕ RSI exit пороги отсутствуют в конфигурации!")
-            
-            # ✅ КРИТИЧНО: Если сохранялся system_timeframe, сохраняем его в БД ПЕРЕД перезагрузкой модуля
-            if 'system_timeframe' in config_data:
-                try:
-                    from bot_engine.bots_database import get_bots_database
-                    from bot_engine.bot_config import set_current_timeframe
-                    db = get_bots_database()
-                    new_timeframe = config_data['system_timeframe']
-                    db.save_timeframe(new_timeframe)
-                    set_current_timeframe(new_timeframe)
-                    logger.info(f"[SAVE_CONFIG] ✅ Таймфрейм сохранен в БД перед перезагрузкой модуля: {new_timeframe}")
-                except Exception as tf_save_err:
-                    logger.warning(f"[SAVE_CONFIG] ⚠️ Не удалось сохранить таймфрейм в БД: {tf_save_err}")
-            
-            # ✅ Перезагружаем модуль bot_config и обновляем конфигурацию из него
+        with bots_data_lock:
+            config_data = bots_data['auto_bot_config'].copy()
+
+        from bots_modules.config_writer import save_auto_bot_config_current_to_py
+        ok = save_auto_bot_config_current_to_py(config_data)
+        if not ok:
+            return False
+        logger.info(f"[SAVE_CONFIG] ✅ Конфигурация автобота сохранена в configs/bot_config.py (AUTO_BOT_CONFIG)")
+
+        if 'system_timeframe' in config_data:
             try:
-                if 'bot_engine.bot_config' in sys.modules:
-                    pass
-                    
-                    # ✅ КРИТИЧНО: Сохраняем таймфрейм из БД перед перезагрузкой
-                    saved_timeframe_from_db = None
-                    try:
-                        from bot_engine.bots_database import get_bots_database
-                        db = get_bots_database()
-                        saved_timeframe_from_db = db.load_timeframe()
-                    except:
-                        pass
-                    
-                    import bot_engine.bot_config
-                    importlib.reload(bot_engine.bot_config)
-                    pass
-                    
-                    # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после перезагрузки
-                    if saved_timeframe_from_db:
-                        try:
-                            from bot_engine.bot_config import set_current_timeframe
-                            set_current_timeframe(saved_timeframe_from_db)
-                            logger.info(f"[SAVE_CONFIG] ✅ Таймфрейм восстановлен из БД после перезагрузки: {saved_timeframe_from_db}")
-                        except Exception as tf_restore_err:
-                            logger.warning(f"[SAVE_CONFIG] ⚠️ Не удалось восстановить таймфрейм: {tf_restore_err}")
-                    
-                    # ✅ КРИТИЧЕСКИ ВАЖНО: Перезагружаем конфигурацию из обновленного bot_config.py
-                    # Это нужно, чтобы значения сразу брались из файла, а не из старой памяти
-                    from bots_modules.imports_and_globals import load_auto_bot_config
-                    
-                    # ✅ СБРАСЫВАЕМ кэш времени модификации файла, чтобы при следующем вызове модуль перезагрузился
-                    if hasattr(load_auto_bot_config, '_last_mtime'):
-                        load_auto_bot_config._last_mtime = 0
-                    
-                    # ✅ НЕ сбрасываем флаг логирования leverage - иначе будет спам при каждой перезагрузке
-                    # Флаг _leverage_logged остается, чтобы не логировать leverage при перезагрузке после сохранения
-                    
-                    load_auto_bot_config()
-                    logger.info(f"[SAVE_CONFIG] ✅ Конфигурация перезагружена из bot_config.py после сохранения")
-            except Exception as reload_error:
-                logger.warning(f"[SAVE_CONFIG] ⚠️ Не удалось перезагрузить модуль (не критично): {reload_error}")
-        
-        return success
-        
+                from bot_engine.bots_database import get_bots_database
+                from bot_engine.config_loader import set_current_timeframe
+                db = get_bots_database()
+                new_timeframe = config_data['system_timeframe']
+                db.save_timeframe(new_timeframe)
+                set_current_timeframe(new_timeframe)
+                logger.info(f"[SAVE_CONFIG] ✅ Таймфрейм сохранен в БД: {new_timeframe}")
+            except Exception as tf_save_err:
+                logger.warning(f"[SAVE_CONFIG] ⚠️ Не удалось сохранить таймфрейм в БД: {tf_save_err}")
+
+        return True
+
     except Exception as e:
         logger.error(f"[SAVE_CONFIG] ❌ Ошибка сохранения конфигурации автобота: {e}")
         return False
@@ -923,10 +800,10 @@ def load_bots_state():
         logger.info(f" 📊 Версия состояния: {version}, последнее сохранение: {last_saved}")
         
         # ✅ Конфигурация Auto Bot никогда не берётся из БД
-        # Настройки загружаются только из bot_engine/bot_config.py
+        # Настройки загружаются только из configs/bot_config.py
         
         logger.info(f" ⚙️ Конфигурация Auto Bot НЕ загружается из БД")
-        logger.info(f" 💡 Конфигурация загружается только из bot_engine/bot_config.py")
+        logger.info(f" 💡 Конфигурация загружается только из configs/bot_config.py")
         
         # Восстанавливаем ботов
         restored_bots = 0
@@ -3256,7 +3133,7 @@ def sync_bots_with_exchange():
                                         bots_data['last_close_timestamps'] = {}
                                     bots_data['last_close_timestamps'][symbol] = current_timestamp
                                 try:
-                                    from bot_engine.bot_config import get_current_timeframe
+                                    from bot_engine.config_loader import get_current_timeframe
                                     _tf = get_current_timeframe()
                                 except Exception:
                                     _tf = '?'

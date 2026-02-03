@@ -26,7 +26,7 @@ class _DefaultTraceConfig:
     TRACE_MAX_LINE_LENGTH = 200
 
 try:
-    from bot_engine.bot_config import SystemConfig as _InitialTraceConfig
+    from bot_engine.config_loader import SystemConfig as _InitialTraceConfig
 except Exception:  # pragma: no cover
     # Фолбэк, если конфиг нельзя импортировать (например, при раннем старте)
     _InitialTraceConfig = _DefaultTraceConfig  # type: ignore

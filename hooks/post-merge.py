@@ -11,7 +11,7 @@ import sys
 import shutil
 import subprocess
 
-BOT_CONFIG = "bot_engine/bot_config.py"
+BOT_CONFIG = "configs/bot_config.py"
 BACKUP_SUFFIX = ".local_backup"
 
 def main():

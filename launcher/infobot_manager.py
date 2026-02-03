@@ -653,8 +653,8 @@ class InfoBotManager(tk.Tk):
 
         config_frame = ttk.Frame(services_frame, style="Services.TFrame")
         config_frame.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(0, 8))
-        ttk.Button(config_frame, text="Редактировать конфиг (app/config.py)", command=self.open_config_file).pack(side=tk.LEFT)
-        ttk.Button(config_frame, text="Редактировать ключи (app/keys.py)", command=self.open_keys_file).pack(side=tk.LEFT, padx=(8, 0))
+        ttk.Button(config_frame, text="Редактировать конфиг (configs/app_config.py)", command=self.open_config_file).pack(side=tk.LEFT)
+        ttk.Button(config_frame, text="Редактировать ключи (configs/keys.py)", command=self.open_keys_file).pack(side=tk.LEFT, padx=(8, 0))
 
         for idx, (service_id, meta) in enumerate(self._services().items(), start=2):
             status_var = tk.StringVar(value="Не запущен")
@@ -1796,39 +1796,39 @@ class InfoBotManager(tk.Tk):
             messagebox.showerror("Ошибка открытия ссылки", str(exc))
 
     def open_config_file(self) -> None:
-        target = PROJECT_ROOT / "app" / "config.py"
-        example = PROJECT_ROOT / "app" / "config.example.py"
+        target = PROJECT_ROOT / "configs" / "app_config.py"
+        example = PROJECT_ROOT / "configs" / "app_config.example.py"
         if not target.exists():
             if example.exists():
                 if messagebox.askyesno(
                     "Создать конфиг",
-                    "Файл app/config.py не найден. Создать его из app/config.example.py?",
+                    "Файл configs/app_config.py не найден. Создать из configs/app_config.example.py?",
                 ):
                     if not self._create_config_file_from_example(silent=False):
                         return
             else:
                 messagebox.showwarning(
                     "Файл не найден",
-                    "Файл app/config.py отсутствует. Скопируйте app/config.example.py и заполните его вручную.",
+                    "Файл configs/app_config.example.py отсутствует. Скопируйте шаблон вручную.",
                 )
                 return
         self.open_path(target)
 
     def open_keys_file(self) -> None:
-        target = PROJECT_ROOT / "app" / "keys.py"
-        example = PROJECT_ROOT / "app" / "keys.example.py"
+        target = PROJECT_ROOT / "configs" / "keys.py"
+        example = PROJECT_ROOT / "configs" / "keys.example.py"
         if not target.exists():
             if example.exists():
                 if messagebox.askyesno(
                     "Создать файл ключей",
-                    "Файл app/keys.py не найден. Создать его из app/keys.example.py?",
+                    "Файл configs/keys.py не найден. Создать из configs/keys.example.py?",
                 ):
                     if not self._create_keys_file_from_example(silent=False):
                         return
             else:
                 messagebox.showwarning(
                     "Файл не найден",
-                    "Файл app/keys.py отсутствует. Скопируйте app/keys.example.py и заполните его вручную.",
+                    "Файл configs/keys.example.py отсутствует. Скопируйте шаблон вручную.",
                 )
                 return
         self.open_path(target)
@@ -1908,8 +1908,8 @@ class InfoBotManager(tk.Tk):
                 "[git] Локальные изменения будут перезаписаны состоянием origin/main (игнорируются только файлы из .gitignore).",
                 channel="system",
             )
-            # Снимаем skip-worktree с bot_config.py, иначе "Entry not uptodate" при reset
-            _skip_worktree_path = "bot_engine/bot_config.py"
+            # Снимаем skip-worktree с configs/bot_config.py, иначе "Entry not uptodate" при reset
+            _skip_worktree_path = "configs/bot_config.py"
             try:
                 subprocess.run(
                     ["git", "update-index", "--no-skip-worktree", _skip_worktree_path],
@@ -1944,7 +1944,7 @@ class InfoBotManager(tk.Tk):
                 self.log(
                     "[git reset] Не удалось сбросить на origin/main. Если было «Entry not uptodate», "
                     "в терминале в каталоге репозитория выполните:\n"
-                    "  git update-index --no-skip-worktree bot_engine/bot_config.py\n"
+                    "  git update-index --no-skip-worktree configs/bot_config.py\n"
                     "  git update-index --refresh\n"
                     "  git reset --hard origin/main",
                     channel="system",
@@ -2169,12 +2169,10 @@ class InfoBotManager(tk.Tk):
             self._create_bot_config_file_from_example(silent=True)
 
     def _create_config_file_from_example(self, silent: bool = False) -> bool:
-        target = PROJECT_ROOT / "app" / "config.py"
-        example = PROJECT_ROOT / "app" / "config.example.py"
+        target = PROJECT_ROOT / "configs" / "app_config.py"
+        example = PROJECT_ROOT / "configs" / "app_config.example.py"
         if not example.exists():
-            message = (
-                "Файл app/config.example.py не найден. Скопируйте шаблон конфигурации вручную."
-            )
+            message = "Файл configs/app_config.example.py не найден. Скопируйте шаблон вручную."
             if silent:
                 self.log(message, channel="system")
             else:
@@ -2185,10 +2183,10 @@ class InfoBotManager(tk.Tk):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(example, target)
             self._strip_example_header(target)
-            self.log("Создан app/config.py из app/config.example.py", channel="system")
+            self.log("Создан configs/app_config.py из примера", channel="system")
             return True
         except OSError as exc:
-            message = f"Не удалось создать app/config.py: {exc}"
+            message = f"Не удалось создать configs/app_config.py: {exc}"
             if silent:
                 self.log(message, channel="system")
             else:
@@ -2196,10 +2194,10 @@ class InfoBotManager(tk.Tk):
             return False
 
     def _create_keys_file_from_example(self, silent: bool = False) -> bool:
-        target = PROJECT_ROOT / "app" / "keys.py"
-        example = PROJECT_ROOT / "app" / "keys.example.py"
+        target = PROJECT_ROOT / "configs" / "keys.py"
+        example = PROJECT_ROOT / "configs" / "keys.example.py"
         if not example.exists():
-            message = "Файл app/keys.example.py не найден. Скопируйте шаблон ключей вручную."
+            message = "Файл configs/keys.example.py не найден. Скопируйте шаблон ключей вручную."
             if silent:
                 self.log(message, channel="system")
             else:
@@ -2209,11 +2207,11 @@ class InfoBotManager(tk.Tk):
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(example, target)
-            self.log("Создан app/keys.py из app/keys.example.py", channel="system")
-            self.log("Добавьте свои API ключи в app/keys.py перед запуском сервисов.", channel="system")
+            self.log("Создан configs/keys.py из примера", channel="system")
+            self.log("Добавьте API ключи в configs/keys.py перед запуском сервисов.", channel="system")
             return True
         except OSError as exc:
-            message = f"Не удалось создать app/keys.py: {exc}"
+            message = f"Не удалось создать configs/keys.py: {exc}"
             if silent:
                 self.log(message, channel="system")
             else:
@@ -2221,12 +2219,11 @@ class InfoBotManager(tk.Tk):
             return False
 
     def _create_bot_config_file_from_example(self, silent: bool = False) -> bool:
-        """Создает bot_config.py из bot_config.example.py, если он отсутствует. П.3 REVERTED_COMMITS_FIXES."""
-        target = PROJECT_ROOT / "bot_engine" / "bot_config.py"
-        example = PROJECT_ROOT / "bot_engine" / "bot_config.example.py"
-        
+        """Создает configs/bot_config.py из configs/bot_config.example.py, если отсутствует."""
+        target = PROJECT_ROOT / "configs" / "bot_config.py"
+        example = PROJECT_ROOT / "configs" / "bot_config.example.py"
         if not example.exists():
-            message = "Файл bot_engine/bot_config.example.py не найден."
+            message = "Файл configs/bot_config.example.py не найден."
             if silent:
                 self.log(message, channel="system")
             else:
@@ -2236,10 +2233,10 @@ class InfoBotManager(tk.Tk):
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(example, target)
-            self.log("Создан bot_engine/bot_config.py из example файла", channel="system")
+            self.log("Создан configs/bot_config.py из примера", channel="system")
             return True
         except OSError as exc:
-            message = f"Не удалось создать bot_engine/bot_config.py: {exc}"
+            message = f"Не удалось создать configs/bot_config.py: {exc}"
             if silent:
                 self.log(message, channel="system")
             else:
@@ -2262,7 +2259,7 @@ class InfoBotManager(tk.Tk):
                 new_text = new_text.lstrip("\n")
                 try:
                     config_path.write_text(new_text, encoding="utf-8")
-                    self.log("Удалён пояснительный блок из app/config.py.", channel="system")
+                    self.log("Удалён пояснительный блок из configs/app_config.py.", channel="system")
                 except OSError as exc:
                     self.log(f"[config] Не удалось очистить заголовок config.py: {exc}", channel="system")
 

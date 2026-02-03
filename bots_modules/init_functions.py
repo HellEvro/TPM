@@ -70,7 +70,7 @@ try:
 except:
     AsyncMainProcessor = None
 
-from bot_engine.bot_config import SystemConfig
+from bot_engine.config_loader import SystemConfig
 
 # Импорт функций из других модулей
 try:
@@ -137,7 +137,7 @@ def init_bot_service():
         # 2.1. Загружаем сохраненный таймфрейм из БД (если есть)
         try:
             from bot_engine.bots_database import get_bots_database
-            from bot_engine.bot_config import set_current_timeframe, get_current_timeframe
+            from bot_engine.config_loader import set_current_timeframe, get_current_timeframe
             db = get_bots_database()
             saved_timeframe = db.load_timeframe()
             
@@ -733,7 +733,7 @@ def process_trading_signals_on_candle_close(candle_timestamp: int, exchange_obj=
                 ]:
                     timeframe_to_use = bot_entry_timeframe
                 else:
-                    from bot_engine.bot_config import get_current_timeframe
+                    from bot_engine.config_loader import get_current_timeframe
                     timeframe_to_use = get_current_timeframe()
                 
                 # Получаем актуальные RSI данные для монеты
@@ -745,7 +745,7 @@ def process_trading_signals_on_candle_close(candle_timestamp: int, exchange_obj=
                     continue
                 
                 # Получаем RSI и тренд с учетом таймфрейма бота
-                from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
                 rsi = get_rsi_from_coin_data(coin_rsi_data, timeframe=timeframe_to_use)
                 trend = get_trend_from_coin_data(coin_rsi_data, timeframe=timeframe_to_use)
                 price = coin_rsi_data.get('price', 0)

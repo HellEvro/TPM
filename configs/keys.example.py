@@ -1,6 +1,6 @@
-# Устарело: пример ключей перенесён в configs/keys.example.py
-# Скопируйте configs/keys.example.py -> configs/keys.py и заполните ключи
-
+# ШАБЛОН (только плейсхолдеры). Копируйте в configs/keys.py при первом запуске и подставьте свои ключи.
+# Рабочий файл с ключами — configs/keys.py; не перезаписывайте его из этого файла.
+# ==================== БЛОК 1: БИРЖИ ====================
 EXCHANGES = {
     'BYBIT': {
         'enabled': True,
@@ -26,8 +26,7 @@ EXCHANGES = {
         'limit_order_offset': 0.015
     }
 }
-
-# Telegram settings
+# ==================== БЛОК 2: TELEGRAM ====================
 TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
 TELEGRAM_CHAT_ID = "YOUR_TELEGRAM_CHAT_ID_HERE"
 

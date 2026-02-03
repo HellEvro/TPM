@@ -1116,20 +1116,20 @@ class BotsDatabase:
                     current_timeframe = row[0]
                 else:
                     # Если в БД нет, используем fallback
-                    from bot_engine.bot_config import SystemConfig
+                    from bot_engine.config_loader import SystemConfig
                     if hasattr(SystemConfig, 'SYSTEM_TIMEFRAME') and SystemConfig.SYSTEM_TIMEFRAME:
                         current_timeframe = SystemConfig.SYSTEM_TIMEFRAME
                     else:
                         # ✅ КРИТИЧНО: Используем TIMEFRAME из конфига вместо хардкода '6h'
-                        from bot_engine.bot_config import TIMEFRAME
+                        from bot_engine.config_loader import TIMEFRAME
                         current_timeframe = TIMEFRAME
             except:
                 # Если что-то пошло не так, используем fallback из конфига
-                from bot_engine.bot_config import TIMEFRAME
+                from bot_engine.config_loader import TIMEFRAME
                 current_timeframe = TIMEFRAME
             
             # Получаем ключи для RSI и тренда
-            from bot_engine.bot_config import get_rsi_key, get_trend_key
+            from bot_engine.config_loader import get_rsi_key, get_trend_key
             rsi_key = get_rsi_key(current_timeframe)
             trend_key = get_trend_key(current_timeframe)
             
@@ -3225,10 +3225,10 @@ class BotsDatabase:
             now = datetime.now().isoformat()
             # ✅ Текущий таймфрейм системы — до блокировки, чтобы не вызывать get_bots_database внутри lock
             try:
-                from bot_engine.bot_config import get_current_timeframe
+                from bot_engine.config_loader import get_current_timeframe
                 default_timeframe = get_current_timeframe()
             except Exception:
-                from bot_engine.bot_config import TIMEFRAME
+                from bot_engine.config_loader import TIMEFRAME
                 default_timeframe = TIMEFRAME
             
             with self.lock:
@@ -3393,7 +3393,7 @@ class BotsDatabase:
                             pass  # удалены все боты из БД (bots_data пустой)
                     
                     # ✅ УБРАНО: auto_bot_config больше НЕ сохраняется в БД
-                    # Настройки хранятся ТОЛЬКО в bot_engine/bot_config.py
+                    # Настройки хранятся ТОЛЬКО в configs/bot_config.py
                     # Это гарантирует, что настройки не перезаписываются при перезапуске
                     
                     conn.commit()
@@ -3535,7 +3535,7 @@ class BotsDatabase:
                     bots_data[symbol] = bot_dict
                 
                 # ✅ УБРАНО: auto_bot_config больше НЕ загружается из БД
-                # Настройки читаются ТОЛЬКО из bot_engine/bot_config.py
+                # Настройки читаются ТОЛЬКО из configs/bot_config.py
                 # Это гарантирует, что настройки не перезаписываются при перезапуске
                 
                 return {
@@ -3752,7 +3752,7 @@ class BotsDatabase:
                     cache_id = cursor.lastrowid
                     
                     # Получаем текущий таймфрейм для сохранения данных
-                    from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+                    from bot_engine.config_loader import get_current_timeframe, get_rsi_key, get_trend_key
                     current_timeframe = get_current_timeframe()
                     rsi_key = get_rsi_key(current_timeframe)
                     trend_key = get_trend_key(current_timeframe)
@@ -3781,7 +3781,7 @@ class BotsDatabase:
                     for symbol, coin_data in coins_data.items():
                         try:
                             # Извлекаем RSI и тренд с учетом текущего таймфрейма
-                            from bot_engine.bot_config import get_rsi_from_coin_data, get_trend_from_coin_data
+                            from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
                             current_rsi = get_rsi_from_coin_data(coin_data, current_timeframe)
                             current_trend = get_trend_from_coin_data(coin_data, current_timeframe)
                             
@@ -3912,7 +3912,7 @@ class BotsDatabase:
                     return None
                 
                 # Получаем текущий таймфрейм для загрузки правильных колонок
-                from bot_engine.bot_config import get_current_timeframe, get_rsi_key, get_trend_key
+                from bot_engine.config_loader import get_current_timeframe, get_rsi_key, get_trend_key
                 current_timeframe = get_current_timeframe()
                 rsi_key = get_rsi_key(current_timeframe)
                 trend_key = get_trend_key(current_timeframe)
