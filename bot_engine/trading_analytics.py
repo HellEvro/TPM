@@ -27,6 +27,25 @@ RECONCILE_TIME_TOLERANCE_SEC = 120
 # Допуск по PnL (абсолютный USDT) для совпадения
 RECONCILE_PNL_TOLERANCE = 0.5
 
+# Пороги для «неудачных» монет и настроек
+MIN_TRADES_FOR_UNSUCCESSFUL_COIN = 3       # минимум сделок по монете, чтобы считать её неудачной
+UNSUCCESSFUL_WIN_RATE_THRESHOLD_PCT = 45  # ниже этого Win Rate — монета считается неудачной
+BAD_RSI_WIN_RATE_THRESHOLD_PCT = 40       # диапазон RSI с Win Rate ниже — «неудачная настройка»
+MIN_TRADES_FOR_BAD_RSI_BUCKET = 2         # минимум сделок в диапазоне RSI для вывода
+
+# Диапазоны RSI для аналитики (вход в сделку)
+RSI_BUCKETS = [
+    (0, 25, "0-25 (сильный перепроданность)"),
+    (26, 30, "26-30"),
+    (31, 35, "31-35"),
+    (36, 40, "36-40"),
+    (41, 50, "41-50 (нейтрал)"),
+    (51, 60, "51-60"),
+    (61, 65, "61-65"),
+    (66, 70, "66-70"),
+    (71, 100, "71-100 (перекупленность)"),
+]
+
 
 @dataclass
 class TradeSummary:
@@ -304,6 +323,40 @@ def _compute_drawdown(trades: List[TradeSummary]) -> Dict[str, Any]:
     }
 
 
+def _get_entry_rsi(t: TradeSummary) -> Optional[float]:
+    """Извлекает RSI на входе из сырой записи сделки."""
+    if not t.raw:
+        return None
+    v = t.raw.get("entry_rsi") or t.raw.get("rsi")
+    if v is None:
+        return None
+    try:
+        f = float(v)
+        if 0 <= f <= 100:
+            return f
+    except (TypeError, ValueError):
+        pass
+    return None
+
+
+def _get_entry_trend(t: TradeSummary) -> Optional[str]:
+    """Извлекает тренд на входе из сырой записи сделки."""
+    if not t.raw:
+        return None
+    v = t.raw.get("entry_trend") or t.raw.get("trend")
+    if v is None or v == "":
+        return None
+    return str(v).strip().upper() or None
+
+
+def _rsi_bucket_label(rsi: float) -> str:
+    """Возвращает метку диапазона RSI для заданного значения."""
+    for low, high, label in RSI_BUCKETS:
+        if low <= rsi <= high:
+            return label
+    return "unknown"
+
+
 def analyze_bot_trades(
     bot_summaries: List[TradeSummary],
 ) -> Dict[str, Any]:
@@ -361,6 +414,98 @@ def analyze_bot_trades(
         else:
             by_bot[bid]["losses"] += 1
 
+    # По символам: разбивка по RSI на входе и по тренду на входе
+    by_symbol_rsi: Dict[str, Dict[str, Dict[str, Any]]] = defaultdict(
+        lambda: defaultdict(lambda: {"count": 0, "pnl": 0.0, "wins": 0, "losses": 0})
+    )
+    by_symbol_trend: Dict[str, Dict[str, Dict[str, Any]]] = defaultdict(
+        lambda: defaultdict(lambda: {"count": 0, "pnl": 0.0, "wins": 0, "losses": 0})
+    )
+    for t in closed:
+        rsi = _get_entry_rsi(t)
+        if rsi is not None:
+            bucket = _rsi_bucket_label(rsi)
+            by_symbol_rsi[t.symbol][bucket]["count"] += 1
+            by_symbol_rsi[t.symbol][bucket]["pnl"] += t.pnl
+            if t.pnl > 0:
+                by_symbol_rsi[t.symbol][bucket]["wins"] += 1
+            else:
+                by_symbol_rsi[t.symbol][bucket]["losses"] += 1
+        trend = _get_entry_trend(t) or "UNKNOWN"
+        by_symbol_trend[t.symbol][trend]["count"] += 1
+        by_symbol_trend[t.symbol][trend]["pnl"] += t.pnl
+        if t.pnl > 0:
+            by_symbol_trend[t.symbol][trend]["wins"] += 1
+        else:
+            by_symbol_trend[t.symbol][trend]["losses"] += 1
+
+    # Неудачные монеты: достаточно сделок и (отрицательный PnL или низкий Win Rate)
+    unsuccessful_coins: List[Dict[str, Any]] = []
+    for symbol, data in by_symbol.items():
+        count = data["count"]
+        if count < MIN_TRADES_FOR_UNSUCCESSFUL_COIN:
+            continue
+        pnl = data["pnl"]
+        wins = data["wins"]
+        wr = (wins / count * 100) if count else 0
+        reasons = []
+        if pnl < 0:
+            reasons.append("negative_pnl")
+        if wr < UNSUCCESSFUL_WIN_RATE_THRESHOLD_PCT:
+            reasons.append("low_win_rate")
+        if not reasons:
+            continue
+        unsuccessful_coins.append({
+            "symbol": symbol,
+            "trades_count": count,
+            "pnl_usdt": round(pnl, 2),
+            "win_rate_pct": round(wr, 2),
+            "wins": data["wins"],
+            "losses": data["losses"],
+            "reasons": reasons,
+        })
+    unsuccessful_coins.sort(key=lambda x: (x["pnl_usdt"], -x["win_rate_pct"]))
+
+    # Неудачные настройки по RSI и тренду для каждой неудачной монеты
+    unsuccessful_settings: List[Dict[str, Any]] = []
+    for uc in unsuccessful_coins:
+        symbol = uc["symbol"]
+        bad_rsi: List[Dict[str, Any]] = []
+        rsi_data = by_symbol_rsi.get(symbol, {})
+        for bucket, b in rsi_data.items():
+            if b["count"] < MIN_TRADES_FOR_BAD_RSI_BUCKET:
+                continue
+            wr = (b["wins"] / b["count"] * 100) if b["count"] else 0
+            if wr < BAD_RSI_WIN_RATE_THRESHOLD_PCT or b["pnl"] < 0:
+                bad_rsi.append({
+                    "rsi_range": bucket,
+                    "trades_count": b["count"],
+                    "pnl_usdt": round(b["pnl"], 2),
+                    "win_rate_pct": round(wr, 2),
+                })
+        bad_trends: List[Dict[str, Any]] = []
+        trend_data = by_symbol_trend.get(symbol, {})
+        for trend_name, b in trend_data.items():
+            if trend_name == "UNKNOWN" and b["count"] < MIN_TRADES_FOR_BAD_RSI_BUCKET:
+                continue
+            if b["count"] < MIN_TRADES_FOR_BAD_RSI_BUCKET:
+                continue
+            wr = (b["wins"] / b["count"] * 100) if b["count"] else 0
+            if wr < BAD_RSI_WIN_RATE_THRESHOLD_PCT or b["pnl"] < 0:
+                bad_trends.append({
+                    "trend": trend_name,
+                    "trades_count": b["count"],
+                    "pnl_usdt": round(b["pnl"], 2),
+                    "win_rate_pct": round(wr, 2),
+                })
+        unsuccessful_settings.append({
+            "symbol": symbol,
+            "bad_rsi_ranges": bad_rsi,
+            "bad_trends": bad_trends,
+            "rsi_summary": {k: dict(v) for k, v in rsi_data.items()} if rsi_data else {},
+            "trend_summary": {k: dict(v) for k, v in trend_data.items()} if trend_data else {},
+        })
+
     series = _compute_series(closed)
     drawdown = _compute_drawdown(closed)
 
@@ -410,6 +555,8 @@ def analyze_bot_trades(
         "drawdown": drawdown,
         "possible_errors_count": len(possible_errors),
         "possible_errors": possible_errors[:100],
+        "unsuccessful_coins": unsuccessful_coins,
+        "unsuccessful_settings": unsuccessful_settings,
     }
 
 
@@ -532,7 +679,7 @@ def run_full_analytics(
 def get_analytics_for_ai(report: Dict[str, Any]) -> Dict[str, Any]:
     """
     Извлекает из полного отчёта структурированные данные для AI модуля:
-    - проблемы (ошибки, расхождения, серии убытков)
+    - проблемы (ошибки, расхождения, серии убытков, неудачные монеты/настройки)
     - метрики по причинам закрытия и символам
     - рекомендации (текстовые тезисы)
     """
@@ -540,6 +687,29 @@ def get_analytics_for_ai(report: Dict[str, Any]) -> Dict[str, Any]:
     recon = report.get("reconciliation") or {}
     problems: List[str] = []
     recommendations: List[str] = []
+
+    # Неудачные монеты и настройки по RSI/тренду
+    unsuccessful_coins = bot.get("unsuccessful_coins", [])
+    unsuccessful_settings = bot.get("unsuccessful_settings", [])
+    if unsuccessful_coins:
+        problems.append(
+            f"Неудачные монеты (PnL < 0 или Win Rate < 45%): {[c['symbol'] for c in unsuccessful_coins]}. "
+            "Рекомендуется скорректировать настройки или исключить из списка."
+        )
+        recommendations.append(
+            "По неудачным монетам проверить bad_rsi_ranges и bad_trends в unsuccessful_settings: "
+            "избегать входов в указанных диапазонах RSI и при указанных трендах."
+        )
+    for us in unsuccessful_settings:
+        bad_rsi = us.get("bad_rsi_ranges", [])
+        bad_trends = us.get("bad_trends", [])
+        if bad_rsi or bad_trends:
+            rec_parts = [f"Монета {us.get('symbol')}:"]
+            if bad_rsi:
+                rec_parts.append("неудачные RSI-диапазоны " + ", ".join(r["rsi_range"] for r in bad_rsi))
+            if bad_trends:
+                rec_parts.append("неудачные тренды " + ", ".join(str(t["trend"]) for t in bad_trends))
+            recommendations.append(" ".join(rec_parts))
 
     if bot.get("possible_errors_count", 0) > 0:
         problems.append(
@@ -585,5 +755,7 @@ def get_analytics_for_ai(report: Dict[str, Any]) -> Dict[str, Any]:
             "max_drawdown_usdt": (bot.get("drawdown") or {}).get("max_drawdown_usdt"),
             "by_close_reason_counts": {k: v.get("count", 0) for k, v in by_reason.items()},
         },
+        "unsuccessful_coins": unsuccessful_coins,
+        "unsuccessful_settings": unsuccessful_settings,
         "generated_at": report.get("generated_at"),
     }

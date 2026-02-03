@@ -107,6 +107,34 @@ def print_report(report: dict) -> None:
                 print(f"  {src}: count={data.get('count', 0)}, pnl={data.get('pnl', 0):.2f}")
             print()
 
+        # Неудачные монеты
+        uc_list = bot.get("unsuccessful_coins", [])
+        if uc_list:
+            print("--- НЕУДАЧНЫЕ МОНЕТЫ ---")
+            print(f"  (монеты с PnL < 0 или Win Rate < 45%, минимум 3 сделки)")
+            for uc in uc_list:
+                print(f"  {uc.get('symbol')}: сделок={uc.get('trades_count')}, PnL={uc.get('pnl_usdt')} USDT, Win Rate={uc.get('win_rate_pct')}%, причины={uc.get('reasons', [])}")
+            print()
+
+        # Неудачные настройки по RSI и тренду для этих монет
+        us_list = bot.get("unsuccessful_settings", [])
+        if us_list:
+            print("--- НЕУДАЧНЫЕ НАСТРОЙКИ (по RSI и тренду) ---")
+            for us in us_list:
+                sym = us.get("symbol", "")
+                bad_rsi = us.get("bad_rsi_ranges", [])
+                bad_trends = us.get("bad_trends", [])
+                if not bad_rsi and not bad_trends:
+                    continue
+                print(f"  Монета {sym}:")
+                if bad_rsi:
+                    for r in bad_rsi:
+                        print(f"    RSI {r.get('rsi_range')}: сделок={r.get('trades_count')}, PnL={r.get('pnl_usdt')}, Win Rate={r.get('win_rate_pct')}%")
+                if bad_trends:
+                    for tr in bad_trends:
+                        print(f"    Тренд {tr.get('trend')}: сделок={tr.get('trades_count')}, PnL={tr.get('pnl_usdt')}, Win Rate={tr.get('win_rate_pct')}%")
+            print()
+
     if ex:
         print("--- АНАЛИТИКА СДЕЛОК С БИРЖИ ---")
         print(f"  Всего: {ex.get('total_trades', 0)}, PnL: {ex.get('total_pnl_usdt', 0)} USDT, Win Rate: {ex.get('win_rate_pct', 0)}%")
