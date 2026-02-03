@@ -2,6 +2,7 @@
 Модуль для безопасной записи конфигурации в bot_config.py.
 Сохранение: обновление каждого параметра в файле по отдельности (не перезапись всего блока).
 Загрузка: чтение файла и извлечение каждого параметра по строке с применением в конфиг.
+Миграция: перенос старых настроек из bot_engine/bot_config.py в configs/bot_config.py.
 """
 import ast
 import re
@@ -9,6 +10,8 @@ import os
 import shutil
 import logging
 import threading
+import importlib.util
+import json as _json
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger('ConfigWriter')
@@ -35,6 +38,75 @@ def _ensure_bot_config_exists(config_file: str) -> bool:
     except Exception as e:
         logger.error(f"[CONFIG_WRITER] ❌ Не удалось создать bot_config.py из примера: {e}")
         return False
+
+
+def migrate_old_bot_config_to_configs(project_root: Optional[str] = None) -> bool:
+    """
+    Переносит настройки из старого конфига (bot_engine/bot_config.py) в новый (configs/bot_config.py).
+    Вызывать при старте приложения, если configs/bot_config.py ещё не существует.
+    Возвращает True если миграция выполнена, False если не требовалась или не удалась.
+    """
+    if project_root is None:
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    configs_bot = os.path.join(project_root, 'configs', 'bot_config.py')
+    old_bot = os.path.join(project_root, 'bot_engine', 'bot_config.py')
+    example_bot = os.path.join(project_root, 'configs', 'bot_config.example.py')
+    data_json = os.path.join(project_root, 'data', 'auto_bot_config.json')
+
+    if os.path.exists(configs_bot):
+        return False
+
+    merged: Dict[str, Any] = {}
+
+    # 1) Загрузить старый конфиг из bot_engine/bot_config.py (DEFAULT_AUTO_BOT_CONFIG или AUTO_BOT_CONFIG)
+    if os.path.isfile(old_bot):
+        try:
+            spec = importlib.util.spec_from_file_location('_migrate_old_bot_config', old_bot)
+            if spec is None or spec.loader is None:
+                raise RuntimeError('spec_from_file_location failed')
+            old_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(old_module)
+            old_default = getattr(old_module, 'DEFAULT_AUTO_BOT_CONFIG', None)
+            old_user = getattr(old_module, 'AUTO_BOT_CONFIG', None)
+            if isinstance(old_default, dict):
+                merged = dict(old_default)
+            if isinstance(old_user, dict):
+                merged.update(old_user)
+            if merged:
+                logger.info("[CONFIG_WRITER] 📥 Загружен старый конфиг из bot_engine/bot_config.py")
+        except Exception as e:
+            logger.warning(f"[CONFIG_WRITER] ⚠️ Не удалось загрузить старый конфиг из bot_engine: {e}")
+
+    # 2) Наложить данные из data/auto_bot_config.json (если были)
+    if os.path.isfile(data_json):
+        try:
+            with open(data_json, 'r', encoding='utf-8') as f:
+                data_cfg = _json.load(f)
+            if isinstance(data_cfg, dict):
+                merged.update(data_cfg)
+                logger.info("[CONFIG_WRITER] 📥 Наложены настройки из data/auto_bot_config.json")
+        except Exception as e:
+            logger.warning(f"[CONFIG_WRITER] ⚠️ Не удалось прочитать data/auto_bot_config.json: {e}")
+
+    # 3) Создать configs/bot_config.py из примера
+    if not os.path.isfile(example_bot):
+        logger.error("[CONFIG_WRITER] ❌ configs/bot_config.example.py не найден, миграция отменена")
+        return False
+    try:
+        os.makedirs(os.path.dirname(configs_bot), exist_ok=True)
+        shutil.copy2(example_bot, configs_bot)
+        logger.info("[CONFIG_WRITER] ✅ Создан configs/bot_config.py из примера")
+    except Exception as e:
+        logger.error(f"[CONFIG_WRITER] ❌ Не удалось создать configs/bot_config.py: {e}")
+        return False
+
+    # 4) Записать перенесённые настройки в класс AutoBotConfig
+    if merged:
+        if save_auto_bot_config_current_to_py(merged):
+            logger.info("[CONFIG_WRITER] ✅ Миграция завершена: настройки перенесены в configs/bot_config.py")
+        else:
+            logger.warning("[CONFIG_WRITER] ⚠️ Миграция создала файл, но не удалось обновить AutoBotConfig")
+    return True
 
 
 def _format_python_value(value: Any) -> str:

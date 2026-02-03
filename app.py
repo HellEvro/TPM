@@ -75,6 +75,14 @@ if _OLD_KEYS.exists() and _KEYS_PATH.exists():
     except Exception:
         pass
 
+# Миграция: старый конфиг из bot_engine/bot_config.py → configs/bot_config.py (если нового ещё нет)
+try:
+    from bots_modules.config_writer import migrate_old_bot_config_to_configs
+    if migrate_old_bot_config_to_configs(str(_PROJECT_ROOT)):
+        sys.stderr.write("✅ Настройки ботов перенесены из bot_engine в configs/bot_config.py\n")
+except Exception as e:
+    sys.stderr.write(f"⚠️ Миграция конфига ботов: {e}\n")
+
 if not _CONFIG_PATH.exists():
     # Используем stderr, так как logger еще не настроен
     sys.stderr.write("\n" + "=" * 80 + "\n")
