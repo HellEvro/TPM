@@ -278,12 +278,16 @@ class AIBacktester:
                             'roi': trade.get('roi'),
                             'status': 'CLOSED',
                             'decision_source': trade.get('decision_source', 'SCRIPT'),
-                            'rsi': trade.get('rsi'),
+                            'rsi': trade.get('rsi') or trade.get('entry_rsi'),
+                            'entry_rsi': trade.get('entry_rsi'),
+                            'exit_rsi': trade.get('exit_rsi'),
                             'trend': trade.get('trend'),
                             'close_timestamp': trade.get('close_timestamp') or trade.get('exit_time'),
                             'close_reason': trade.get('close_reason'),
                             'is_successful': trade.get('is_successful', False),
-                            'is_simulated': False
+                            'is_simulated': False,
+                            'entry_data': trade.get('entry_data') or {'rsi': trade.get('entry_rsi')},
+                            'exit_market_data': trade.get('exit_market_data') or {'rsi': trade.get('exit_rsi')},
                         }
                         trades.append(converted_trade)
                     
@@ -665,7 +669,8 @@ class AIBacktester:
             balance = initial_balance
             positions = []
             closed_trades = []
-            
+            entered_count = 0  # сколько раз открыли позицию по стратегии (для диагностики)
+
             # Параметры стратегии (с проверкой на None)
             rsi_long_entry_raw = strategy_params.get(
                 'rsi_long_entry',
@@ -724,9 +729,8 @@ class AIBacktester:
             for trade in filtered_trades:
                 entry_data = trade.get('entry_data', {})
                 exit_market_data = trade.get('exit_market_data', {})
-                
-                # Безопасное получение RSI с проверкой на None и нечисловые значения
-                entry_rsi_raw = entry_data.get('rsi')
+                # RSI может быть в entry_data.rsi или в полях сделки (entry_rsi / rsi)
+                entry_rsi_raw = entry_data.get('rsi') or trade.get('entry_rsi') or trade.get('rsi')
                 try:
                     entry_rsi = float(entry_rsi_raw) if entry_rsi_raw is not None else 50.0
                     if not isinstance(entry_rsi, (int, float)) or entry_rsi < 0 or entry_rsi > 100:
@@ -734,7 +738,10 @@ class AIBacktester:
                 except (TypeError, ValueError):
                     entry_rsi = 50.0  # Значение по умолчанию при ошибке преобразования
                 
-                exit_rsi_raw = exit_market_data.get('rsi') if exit_market_data else None
+                exit_rsi_raw = (
+                    (exit_market_data.get('rsi') if exit_market_data else None)
+                    or trade.get('exit_rsi')
+                )
                 try:
                     exit_rsi = float(exit_rsi_raw) if exit_rsi_raw is not None else entry_rsi
                     if not isinstance(exit_rsi, (int, float)) or exit_rsi < 0 or exit_rsi > 100:
@@ -759,7 +766,8 @@ class AIBacktester:
                 
                 if not should_enter:
                     continue
-                
+
+                entered_count += 1
                 # Открываем позицию
                 position_size = balance * (position_size_pct / 100.0)
                 position = {
@@ -841,8 +849,29 @@ class AIBacktester:
             
             # Рассчитываем статистику
             if len(closed_trades) == 0:
-                return {'error': 'No trades executed'}
-            
+                # Возвращаем валидный результат без error, чтобы оптимизатор видел стратегии (0 сделок)
+                logger.warning(
+                    f"⚠️ По стратегии '{strategy_name}' не закрыто ни одной сделки "
+                    f"(открыто по условиям входа: {entered_count} из {len(filtered_trades)}). "
+                    "Возможные причины: в истории нет RSI в entry_data, или условия выхода не сработали."
+                )
+                return {
+                    'strategy_params': strategy_params,
+                    'period_days': period_days,
+                    'initial_balance': initial_balance,
+                    'final_balance': initial_balance,
+                    'total_return': 0.0,
+                    'total_pnl': 0.0,
+                    'total_trades': 0,
+                    'winning_trades': 0,
+                    'losing_trades': 0,
+                    'win_rate': 0.0,
+                    'avg_win': 0.0,
+                    'avg_loss': 0.0,
+                    'profit_factor': 0.0,
+                    'timestamp': datetime.now().isoformat(),
+                }
+
             total_pnl = sum(t['pnl'] for t in closed_trades)
             winning_trades = [t for t in closed_trades if t['pnl'] > 0]
             losing_trades = [t for t in closed_trades if t['pnl'] < 0]
