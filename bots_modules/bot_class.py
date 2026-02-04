@@ -1289,23 +1289,48 @@ class NewTradingBot:
                 return {'success': True, 'action': f"CLOSE_{self.position_side}", 'reason': protection_result['reason']}
             
             # 2. Проверяем условия закрытия по RSI (универсальная функция)
-            # КРИТИЧНО для 1m: не закрывать по RSI в первые N свечей — иначе бот выходит через 1–2 мин и сливает комиссиями
+            # Адаптивно: мин. свечи ИЛИ мин. минуты (по ТФ) ИЛИ ранний выход, если цена уже сдвинулась на X%
             if self.position_side in ['LONG', 'SHORT']:
                 min_candles = 0
+                min_minutes = 0
+                min_move_percent = 0.0
                 try:
                     with bots_data_lock:
-                        min_candles = int(bots_data.get('auto_bot_config', {}).get('rsi_exit_min_candles', 0) or 0)
+                        cfg = bots_data.get('auto_bot_config', {})
+                        min_candles = int(cfg.get('rsi_exit_min_candles', 0) or 0)
+                        min_minutes = int(cfg.get('rsi_exit_min_minutes', 0) or 0)
+                        min_move_percent = float(cfg.get('rsi_exit_min_move_percent', 0) or 0)
                 except Exception:
-                    min_candles = 0
-                if min_candles > 0 and self.position_start_time:
-                    from bot_engine.config_loader import get_current_timeframe
-                    tf = getattr(self, 'entry_timeframe', None) or get_current_timeframe()
-                    tf_sec = {'1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600, '2h': 7200, '4h': 14400, '6h': 21600}.get(tf, 60)
-                    age_sec = (datetime.now() - self.position_start_time).total_seconds()
-                    candles_in_position = age_sec / tf_sec if tf_sec else 0
-                    if candles_in_position < min_candles:
-                        pass  # не проверяем RSI-выход — рано
-                    else:
+                    min_candles = min_minutes = 0
+                    min_move_percent = 0.0
+                from bot_engine.config_loader import get_current_timeframe
+                tf = getattr(self, 'entry_timeframe', None) or get_current_timeframe()
+                tf_sec = {'1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600, '2h': 7200, '4h': 14400, '6h': 21600}.get(tf, 60)
+                age_sec = (datetime.now() - self.position_start_time).total_seconds() if self.position_start_time else 0
+                candles_in_position = age_sec / tf_sec if tf_sec else 0
+                # Эффективный минимум свечей: приоритет у минут (адаптивно по ТФ)
+                if min_minutes > 0:
+                    import math
+                    effective_min_candles = max(1, int(math.ceil(min_minutes * 60.0 / tf_sec)))
+                else:
+                    effective_min_candles = min_candles
+                allow_by_time = candles_in_position >= effective_min_candles if effective_min_candles > 0 else True
+                allow_by_move = False
+                if min_move_percent > 0 and self.entry_price and price and float(self.entry_price) > 0:
+                    try:
+                        entry_f = float(self.entry_price)
+                        price_f = float(price)
+                        if self.position_side == 'LONG':
+                            roi_pct = (price_f - entry_f) / entry_f * 100.0
+                        else:
+                            roi_pct = (entry_f - price_f) / entry_f * 100.0
+                        allow_by_move = abs(roi_pct) >= min_move_percent
+                    except (TypeError, ValueError, ZeroDivisionError):
+                        pass
+                allow_rsi_exit = allow_by_time or allow_by_move
+                if effective_min_candles > 0 and not allow_rsi_exit:
+                    pass  # не проверяем RSI-выход — рано (ни по времени, ни по движению)
+                else:
                         should_close, reason = self.should_close_position(rsi, price, self.position_side)
                         if should_close:
                             logger.info(f"[NEW_BOT_{self.symbol}] 🔴 Закрываем {self.position_side} по RSI")
@@ -1316,20 +1341,9 @@ class NewTradingBot:
                             else:
                                 logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: Не удалось закрыть {self.position_side} позицию на бирже!")
                                 return {'success': False, 'error': 'Failed to close position on exchange', 'action': f'CLOSE_{self.position_side}_FAILED', 'reason': reason}
-                else:
-                    should_close, reason = self.should_close_position(rsi, price, self.position_side)
-                    if should_close:
-                        logger.info(f"[NEW_BOT_{self.symbol}] 🔴 Закрываем {self.position_side} по RSI")
-                        close_success = self._close_position_on_exchange(reason)
-                        if close_success:
-                            logger.info(f"[NEW_BOT_{self.symbol}] ✅ {self.position_side} закрыта")
-                            return {'success': True, 'action': f'CLOSE_{self.position_side}', 'reason': reason}
                         else:
-                            logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: Не удалось закрыть {self.position_side} позицию на бирже!")
-                            return {'success': False, 'error': 'Failed to close position on exchange', 'action': f'CLOSE_{self.position_side}_FAILED', 'reason': reason}
-                    else:
-                        pass
-            
+                            pass
+
             return {'success': True, 'status': self.status, 'position_side': self.position_side}
             
         except Exception as e:

@@ -37,6 +37,9 @@ class DefaultAutoBotConfig:
     RSI_EXIT_LONG_AGAINST_TREND = 60        # Выход из LONG против тренда при RSI <=
     RSI_EXIT_SHORT_WITH_TREND = 35          # Выход из SHORT по тренду при RSI <=
     RSI_EXIT_SHORT_AGAINST_TREND = 40       # Выход из SHORT против тренда при RSI >=
+    RSI_EXIT_MIN_CANDLES = 0                # Минимум свечей до выхода по RSI (0=выкл.)
+    RSI_EXIT_MIN_MINUTES = 0                # Если > 0: мин. время в минутах (адаптивно по ТФ). Приоритет над MIN_CANDLES.
+    RSI_EXIT_MIN_MOVE_PERCENT = 0           # Если > 0: разрешить выход по RSI раньше, когда цена сдвинулась на этот % от входа.
 
     # --- Размер позиции и плечо ---
     DEFAULT_POSITION_SIZE = 5               # Базовый размер позиции (в единицах mode)
@@ -179,6 +182,9 @@ class AutoBotConfig:
     RSI_EXIT_LONG_AGAINST_TREND = 60        # Выход из LONG против тренда при RSI <=
     RSI_EXIT_SHORT_WITH_TREND = 35          # Выход из SHORT по тренду при RSI <=
     RSI_EXIT_SHORT_AGAINST_TREND = 40       # Выход из SHORT против тренда при RSI >=
+    RSI_EXIT_MIN_CANDLES = 0                # Минимум свечей до выхода по RSI (0=выкл.)
+    RSI_EXIT_MIN_MINUTES = 0                # Если > 0: мин. время в минутах (адаптивно по ТФ). Приоритет над MIN_CANDLES.
+    RSI_EXIT_MIN_MOVE_PERCENT = 0           # Если > 0: разрешить выход по RSI раньше, когда цена сдвинулась на этот % от входа.
 
     # --- Размер позиции и плечо ---
     DEFAULT_POSITION_SIZE = 5               # Базовый размер позиции (в единицах mode)

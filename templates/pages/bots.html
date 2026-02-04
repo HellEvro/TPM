@@ -1457,6 +1457,22 @@
                                 <input type="number" id="rsiExitMinCandlesGlobal" value="0" min="0" max="120" class="config-input" />
                                 <small class="config-help" data-translate="rsi_exit_min_candles_help">0 = выкл. Для 1m рекомендуется 5–10, чтобы не закрывать позицию в первые минуты</small>
                             </div>
+                            <div class="config-item">
+                                <label class="config-label">
+                                    <span class="label-icon">🕐</span>
+                                    <span class="label-text" data-translate="rsi_exit_min_minutes_label">Мин. минут до выхода по RSI (адаптивно по ТФ):</span>
+                                </label>
+                                <input type="number" id="rsiExitMinMinutesGlobal" value="0" min="0" max="120" class="config-input" />
+                                <small class="config-help" data-translate="rsi_exit_min_minutes_help">0 = выкл. Если задано — приоритет над «мин. свечей». На 1m: 5 мин = 5 свечей; на 5m: 5 мин = 1 свеча</small>
+                            </div>
+                            <div class="config-item">
+                                <label class="config-label">
+                                    <span class="label-icon">📊</span>
+                                    <span class="label-text" data-translate="rsi_exit_min_move_percent_label">Мин. % движения для раннего выхода по RSI:</span>
+                                </label>
+                                <input type="number" id="rsiExitMinMovePercentGlobal" value="0" min="0" max="20" step="0.1" class="config-input" />
+                                <small class="config-help" data-translate="rsi_exit_min_move_percent_help">0 = выкл. Если цена уже сдвинулась на этот % от входа — разрешить выход по RSI раньше мин. времени</small>
+                            </div>
                         </div>
                     </div>
                     

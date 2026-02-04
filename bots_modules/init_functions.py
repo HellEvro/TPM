@@ -539,6 +539,8 @@ def create_bot(symbol, config=None, exchange_obj=None):
         'rsi_exit_short_with_trend': auto_bot_config.get('rsi_exit_short_with_trend', 35),
         'rsi_exit_short_against_trend': auto_bot_config.get('rsi_exit_short_against_trend', 40),
         'rsi_exit_min_candles': auto_bot_config.get('rsi_exit_min_candles', 0),
+        'rsi_exit_min_minutes': auto_bot_config.get('rsi_exit_min_minutes', 0),
+        'rsi_exit_min_move_percent': auto_bot_config.get('rsi_exit_min_move_percent', 0),
         'max_loss_percent': auto_bot_config.get('max_loss_percent', 15.0),
         'trailing_stop_activation': auto_bot_config.get('trailing_stop_activation', 20.0),
         'trailing_stop_distance': auto_bot_config.get('trailing_stop_distance', 5.0),
