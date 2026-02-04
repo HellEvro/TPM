@@ -1289,19 +1289,46 @@ class NewTradingBot:
                 return {'success': True, 'action': f"CLOSE_{self.position_side}", 'reason': protection_result['reason']}
             
             # 2. Проверяем условия закрытия по RSI (универсальная функция)
+            # КРИТИЧНО для 1m: не закрывать по RSI в первые N свечей — иначе бот выходит через 1–2 мин и сливает комиссиями
             if self.position_side in ['LONG', 'SHORT']:
-                should_close, reason = self.should_close_position(rsi, price, self.position_side)
-                if should_close:
-                    logger.info(f"[NEW_BOT_{self.symbol}] 🔴 Закрываем {self.position_side} по RSI")
-                    close_success = self._close_position_on_exchange(reason)
-                    if close_success:
-                        logger.info(f"[NEW_BOT_{self.symbol}] ✅ {self.position_side} закрыта")
-                        return {'success': True, 'action': f'CLOSE_{self.position_side}', 'reason': reason}
+                min_candles = 0
+                try:
+                    with bots_data_lock:
+                        min_candles = int(bots_data.get('auto_bot_config', {}).get('rsi_exit_min_candles', 0) or 0)
+                except Exception:
+                    min_candles = 0
+                if min_candles > 0 and self.position_start_time:
+                    from bot_engine.config_loader import get_current_timeframe
+                    tf = getattr(self, 'entry_timeframe', None) or get_current_timeframe()
+                    tf_sec = {'1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600, '2h': 7200, '4h': 14400, '6h': 21600}.get(tf, 60)
+                    age_sec = (datetime.now() - self.position_start_time).total_seconds()
+                    candles_in_position = age_sec / tf_sec if tf_sec else 0
+                    if candles_in_position < min_candles:
+                        pass  # не проверяем RSI-выход — рано
                     else:
-                        logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: Не удалось закрыть {self.position_side} позицию на бирже!")
-                        return {'success': False, 'error': 'Failed to close position on exchange', 'action': f'CLOSE_{self.position_side}_FAILED', 'reason': reason}
+                        should_close, reason = self.should_close_position(rsi, price, self.position_side)
+                        if should_close:
+                            logger.info(f"[NEW_BOT_{self.symbol}] 🔴 Закрываем {self.position_side} по RSI")
+                            close_success = self._close_position_on_exchange(reason)
+                            if close_success:
+                                logger.info(f"[NEW_BOT_{self.symbol}] ✅ {self.position_side} закрыта")
+                                return {'success': True, 'action': f'CLOSE_{self.position_side}', 'reason': reason}
+                            else:
+                                logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: Не удалось закрыть {self.position_side} позицию на бирже!")
+                                return {'success': False, 'error': 'Failed to close position on exchange', 'action': f'CLOSE_{self.position_side}_FAILED', 'reason': reason}
                 else:
-                    pass
+                    should_close, reason = self.should_close_position(rsi, price, self.position_side)
+                    if should_close:
+                        logger.info(f"[NEW_BOT_{self.symbol}] 🔴 Закрываем {self.position_side} по RSI")
+                        close_success = self._close_position_on_exchange(reason)
+                        if close_success:
+                            logger.info(f"[NEW_BOT_{self.symbol}] ✅ {self.position_side} закрыта")
+                            return {'success': True, 'action': f'CLOSE_{self.position_side}', 'reason': reason}
+                        else:
+                            logger.error(f"[NEW_BOT_{self.symbol}] ❌ КРИТИЧЕСКАЯ ОШИБКА: Не удалось закрыть {self.position_side} позицию на бирже!")
+                            return {'success': False, 'error': 'Failed to close position on exchange', 'action': f'CLOSE_{self.position_side}_FAILED', 'reason': reason}
+                    else:
+                        pass
             
             return {'success': True, 'status': self.status, 'position_side': self.position_side}
             

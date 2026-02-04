@@ -1536,6 +1536,7 @@ CONFIG_NAMES = {
     'rsi_exit_long_against_trend': 'RSI выход LONG (против тренда)',
     'rsi_exit_short_with_trend': 'RSI выход SHORT (по тренду)',
     'rsi_exit_short_against_trend': 'RSI выход SHORT (против тренда)',
+    'rsi_exit_min_candles': 'Мин. свечей до выхода по RSI',
     'rsi_time_filter_enabled': 'RSI Time Filter (фильтр по времени)',
     'rsi_time_filter_candles': 'RSI Time Filter - количество свечей',
     'rsi_time_filter_lower': 'RSI Time Filter - нижний порог',

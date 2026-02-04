@@ -6667,6 +6667,13 @@ class BotsManager {
             console.log('[BotsManager] 🔴📈 RSI выход SHORT (против тренда):', rsiExitShortAgainstTrendEl.value);
         }
         
+        const rsiExitMinCandlesEl = document.getElementById('rsiExitMinCandlesGlobal');
+        if (rsiExitMinCandlesEl) {
+            const v = parseInt(autoBotConfig.rsi_exit_min_candles, 10);
+            rsiExitMinCandlesEl.value = (!isNaN(v) && v >= 0) ? v : 0;
+            console.log('[BotsManager] ⏱️ Мин. свечей до выхода по RSI:', rsiExitMinCandlesEl.value);
+        }
+        
         // Торговые настройки (перенесены в блок Торговые параметры)
         const tradingEnabledEl = document.getElementById('tradingEnabled');
         if (tradingEnabledEl) {
@@ -7324,6 +7331,7 @@ class BotsManager {
             'rsiExitLongAgainstTrendGlobal': 'rsi_exit_long_against_trend',
             'rsiExitShortWithTrendGlobal': 'rsi_exit_short_with_trend',
             'rsiExitShortAgainstTrendGlobal': 'rsi_exit_short_against_trend',
+            'rsiExitMinCandlesGlobal': 'rsi_exit_min_candles',
             'defaultPositionSize': 'default_position_size',
             'defaultPositionMode': 'default_position_mode',
             'leverage': 'leverage',
@@ -7761,6 +7769,7 @@ class BotsManager {
                 rsi_exit_long_against_trend: config.autoBot.rsi_exit_long_against_trend,
                 rsi_exit_short_with_trend: config.autoBot.rsi_exit_short_with_trend,
                 rsi_exit_short_against_trend: config.autoBot.rsi_exit_short_against_trend,
+                rsi_exit_min_candles: parseInt(config.autoBot.rsi_exit_min_candles, 10) || 0,
                 default_position_size: config.autoBot.default_position_size,
                 default_position_mode: config.autoBot.default_position_mode,
                 leverage: config.autoBot.leverage,
@@ -8308,6 +8317,7 @@ class BotsManager {
                     rsi_exit_long_against_trend: 60,
                     rsi_exit_short_with_trend: 35,
                     rsi_exit_short_against_trend: 40,
+                    rsi_exit_min_candles: 0,
                     default_position_size: 10,
                     default_position_mode: 'usdt',
                     check_interval: 180,

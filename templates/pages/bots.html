@@ -1449,6 +1449,14 @@
                                 <input type="number" id="rsiExitShortAgainstTrendGlobal" value="40" min="1" max="50" class="config-input" />
                                 <small class="config-help" data-translate="rsi_exit_short_against_trend_help">Выход когда вход был ПРОТИВ тренда (UP тренд) - выходим раньше, безопаснее</small>
                             </div>
+                            <div class="config-item">
+                                <label class="config-label">
+                                    <span class="label-icon">⏱️</span>
+                                    <span class="label-text" data-translate="rsi_exit_min_candles_label">Мин. свечей до выхода по RSI:</span>
+                                </label>
+                                <input type="number" id="rsiExitMinCandlesGlobal" value="0" min="0" max="120" class="config-input" />
+                                <small class="config-help" data-translate="rsi_exit_min_candles_help">0 = выкл. Для 1m рекомендуется 5–10, чтобы не закрывать позицию в первые минуты</small>
+                            </div>
                         </div>
                     </div>
                     
