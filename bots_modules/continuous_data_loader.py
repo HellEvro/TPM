@@ -119,7 +119,7 @@ class ContinuousDataLoader:
                 logger.info(f"⏱️ Таймфрейм: {current_timeframe}")
                 logger.info("=" * 80)
 
-                # ✅ Когда автобот ВЫКЛЮЧЕН: не ищем новые сделки, только отслеживание/закрытие существующих
+                # ✅ Когда автобот ВЫКЛЮЧЕН: не ищем новые сделки; этапы 3–6 пропускаем. Но свечи и RSI — ВСЕГДА (для UI).
                 from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
                 with bots_data_lock:
                     auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
@@ -127,19 +127,10 @@ class ContinuousDataLoader:
                         1 for b in (bots_data.get('bots') or {}).values()
                         if b.get('status') not in [BOT_STATUS.get('IDLE'), BOT_STATUS.get('PAUSED')]
                     )
-                if not auto_bot_enabled:
-                    if active_bots_count == 0:
-                        logger.info("⏹️ Автобот выключен, активных ботов нет — пропуск раунда (нет поиска сделок)")
-                        from bots_modules.imports_and_globals import coins_rsi_data
-                        coins_rsi_data['processing_cycle'] = False
-                        coins_rsi_data['data_version'] = coins_rsi_data.get('data_version', 0) + 1
-                        if shutdown_flag.wait(1):
-                            break
-                        continue
-                    # Есть активные боты — только свечи+RSI для отслеживания/закрытия, без трендов и фильтров
-                    logger.info(f"⏹️ Автобот выключен, активных ботов: {active_bots_count} — только обновление данных для позиций (без трендов/фильтров)")
+                if not auto_bot_enabled and active_bots_count == 0:
+                    logger.info("⏹️ Автобот выключен, активных ботов нет — загружаем только свечи и RSI для UI")
 
-                # ✅ Этап 1: Загружаем свечи всех монет (15-20 сек) - БЛОКИРУЮЩИЙ
+                # ✅ Этап 1: Загружаем свечи всех монет (15-20 сек) - БЛОКИРУЮЩИЙ (всегда для списка монет в UI)
                 success = self._load_candles()
                 if not success:
                     logger.error("❌ Не удалось загрузить свечи, пропускаем раунд")

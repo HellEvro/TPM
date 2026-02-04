@@ -950,7 +950,9 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
     # ✅ КРИТИЧНО: signal и rsi_zone только для СИСТЕМНОГО таймфрейма. Иначе при слиянии (1m + 6h)
     # последний ТФ перезаписывал бы signal — входы шли бы по 6h при системном 1m (убытки).
     from bot_engine.config_loader import get_current_timeframe
-    is_system_tf = (timeframe == get_current_timeframe())
+    _sys_tf = get_current_timeframe()
+    # Если конфиг ещё не загружен (_sys_tf None), считаем системным только 1m — иначе все монеты без signal
+    is_system_tf = (timeframe == _sys_tf) if _sys_tf else (timeframe == '1m')
 
     if is_system_tf:
         try:

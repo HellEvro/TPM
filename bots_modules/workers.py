@@ -16,7 +16,7 @@ logger = logging.getLogger('BotsService')
 try:
     from bots_modules.imports_and_globals import (
         shutdown_flag, system_initialized, bots_data_lock, bots_data,
-        process_state, mature_coins_storage, mature_coins_lock, exchange
+        process_state, mature_coins_storage, mature_coins_lock, get_exchange
     )
 except ImportError as e:
     print(f"Warning: Could not import globals in workers: {e}")
@@ -27,7 +27,8 @@ except ImportError as e:
     process_state = {}
     mature_coins_storage = {}
     mature_coins_lock = threading.Lock()
-    exchange = None
+    def get_exchange():
+        return None
 
 # Константы теперь в SystemConfig
 
@@ -79,7 +80,7 @@ except ImportError as e:
 def log_system_status(cycle_count, auto_bot_enabled, check_interval_seconds):
     """Логирует компактный статус системы с ключевой информацией"""
     try:
-        from bots_modules.imports_and_globals import mature_coins_storage, bots_data_lock
+        from bots_modules.imports_and_globals import mature_coins_storage, bots_data_lock, service_start_time
 
         with bots_data_lock:
             # Подсчитываем ботов
@@ -99,8 +100,14 @@ def log_system_status(cycle_count, auto_bot_enabled, check_interval_seconds):
             except:
                 ai_status = "❌ AI недоступен"
 
-            # Exchange
-            exchange_status = "✅ Подключена" if exchange else "❌ Не подключена"
+            # Exchange: актуальное состояние через get_exchange(); в первые 30 с — «подключение», не «не подключена»
+            exch = get_exchange()
+            if exch:
+                exchange_status = "✅ Подключена"
+            elif (time.time() - service_start_time) < 30:
+                exchange_status = "⏳ Подключение..."
+            else:
+                exchange_status = "❌ Не подключена"
 
             # Компактный статус
             logger.info("=" * 80)

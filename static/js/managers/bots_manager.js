@@ -797,6 +797,10 @@ class BotsManager {
                     this.logDebug('[BotsManager] 🔄 Данные обновились (version: ' + this.lastDataVersion + ' → ' + currentDataVersion + ')');
                     this.lastDataVersion = currentDataVersion;
                     
+                    // Сохраняем флаг загрузки и статистику для отображения при пустом списке
+                    this.lastUpdateInProgress = !!data.update_in_progress;
+                    this.lastRsiStats = data.stats || null;
+                    
                     // Преобразуем словарь в массив для совместимости с UI
                     this.logDebug('[BotsManager] 🔍 Данные от API:', data);
                     this.logDebug('[BotsManager] 🔍 Ключи coins:', Object.keys(data.coins));
@@ -910,11 +914,17 @@ class BotsManager {
         this.logDebug(`[BotsManager] 🎨 Отрисовка списка монет: ${this.coinsRsiData.length} монет`);
         
         if (this.coinsRsiData.length === 0) {
-            console.warn('[BotsManager] ⚠️ Нет данных RSI для отображения');
+            const inProgress = this.lastUpdateInProgress === true;
+            const stats = this.lastRsiStats || {};
+            const processed = (stats.successful_coins || 0) + (stats.failed_coins || 0);
+            const total = stats.total_coins || 0;
+            console.warn('[BotsManager] ⚠️ Нет данных RSI для отображения', inProgress ? '(идёт загрузка на сервере)' : '');
             coinsListElement.innerHTML = `
                 <div class="loading-state">
-                    <p>⏳ ${window.languageUtils.translate('loading_rsi_data')}</p>
-                    <small>${window.languageUtils.translate('first_load_warning')}</small>
+                    <p>⏳ ${inProgress ? (window.languageUtils.translate('loading_rsi_data') || 'Загрузка данных RSI...') : (window.languageUtils.translate('no_rsi_data') || 'Нет данных RSI')}</p>
+                    <small>${inProgress
+                        ? (window.languageUtils.translate('first_load_warning') || 'Первая загрузка может занять несколько минут. Не закрывайте вкладку.')
+                        : (total ? `Расчёт завершён: ${processed}/${total} монет. Если список пуст — проверьте логи bots.py.` : 'Запустите bots.py и дождитесь завершения расчёта RSI.')}</small>
                 </div>
             `;
             return;

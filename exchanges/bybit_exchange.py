@@ -1270,9 +1270,13 @@ class BybitExchange(BaseExchange):
                                     # Успешный ответ - выходим из цикла повторных попыток
                                     break
                             except Exception as api_error:
-                                # Перехватываем исключения от pybit (rate limit выбрасывает исключение)
+                                # Перехватываем исключения от pybit (rate limit: иногда KeyError из-за отсутствия заголовка x-bapi-limit-reset-timestamp)
                                 error_str = str(api_error).lower()
-                                if 'rate limit' in error_str or 'too many' in error_str or '10006' in error_str or 'x-bapi-limit-reset-timestamp' in error_str:
+                                is_rate_limit = (
+                                    isinstance(api_error, KeyError) and api_error.args and api_error.args[0] == 'x-bapi-limit-reset-timestamp'
+                                    or 'rate limit' in error_str or 'too many' in error_str or '10006' in error_str or 'x-bapi-limit-reset-timestamp' in error_str
+                                )
+                                if is_rate_limit:
                                     # Увеличиваем задержку, но не превышаем максимум
                                     delay = self.increase_request_delay(
                                         reason=f"Rate limit (исключение) для {symbol} ({interval_name})"
@@ -1486,9 +1490,13 @@ class BybitExchange(BaseExchange):
                             # Успешный ответ или другая ошибка - выходим из цикла
                             break
                     except Exception as api_error:
-                        # Перехватываем исключения от pybit (rate limit выбрасывает исключение)
+                        # Перехватываем исключения от pybit (rate limit: иногда KeyError из-за отсутствия заголовка x-bapi-limit-reset-timestamp)
                         error_str = str(api_error).lower()
-                        if 'rate limit' in error_str or 'too many' in error_str or '10006' in error_str or 'x-bapi-limit-reset-timestamp' in error_str:
+                        is_rate_limit = (
+                            isinstance(api_error, KeyError) and api_error.args and api_error.args[0] == 'x-bapi-limit-reset-timestamp'
+                            or 'rate limit' in error_str or 'too many' in error_str or '10006' in error_str or 'x-bapi-limit-reset-timestamp' in error_str
+                        )
+                        if is_rate_limit:
                             # Увеличиваем задержку, но не превышаем максимум
                             delay = self.increase_request_delay(
                                 reason=f"Rate limit (исключение) для {symbol}"
@@ -1619,6 +1627,12 @@ class BybitExchange(BaseExchange):
                     'error': f"Ошибка API: {response.get('retMsg', 'Неизвестная ошибка')}"
                 }
             
+        except KeyError as e:
+            if e.args and e.args[0] == 'x-bapi-limit-reset-timestamp':
+                delay = self.increase_request_delay(reason='Rate limit (KeyError заголовка)')
+                logger.warning(f"[BYBIT] Rate limit (отсутствует заголовок x-bapi-limit-reset-timestamp), задержка {delay:.1f}с")
+                return {'success': False, 'error': 'Rate limit (retry later)'}
+            raise
         except Exception as e:
             logger.error(f"[BYBIT] Ошибка получения данных графика: {e}")
             return {
