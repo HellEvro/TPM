@@ -424,20 +424,18 @@ except Exception:
     pass
 
 
-def _init_timeframe_from_bots_db():
-    """При старте ai.py подгружаем текущий таймфрейм из bots_data.db (тот же, что в UI/bots.py)."""
+def _init_timeframe_from_config():
+    """При старте ai.py подгружаем текущий таймфрейм из configs/bot_config.py (единый конфиг)."""
     try:
-        from bot_engine.bots_database import get_bots_database
-        from bot_engine.config_loader import set_current_timeframe
-        db = get_bots_database()
-        tf = db.load_timeframe()
+        from bot_engine.config_loader import set_current_timeframe, get_current_timeframe
+        tf = get_current_timeframe()
         if tf:
             set_current_timeframe(tf)
     except Exception:
         pass
 
 
-_init_timeframe_from_bots_db()
+_init_timeframe_from_config()
 
 try:
     from utils.memory_utils import force_collect_full

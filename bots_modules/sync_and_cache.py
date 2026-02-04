@@ -661,18 +661,8 @@ def save_system_config(config_data):
 
 
 def load_system_config():
-    """Перезагружает SystemConfig из configs/bot_config.py и применяет значения в память."""
+    """Перезагружает SystemConfig из configs/bot_config.py и применяет значения в память. Таймфрейм — только из конфига."""
     try:
-        # ✅ КРИТИЧНО: Сохраняем текущий таймфрейм из БД перед перезагрузкой модуля
-        # чтобы не потерять его при reload (приоритет БД над конфигом)
-        saved_timeframe_from_db = None
-        try:
-            from bot_engine.bots_database import get_bots_database
-            db = get_bots_database()
-            saved_timeframe_from_db = db.load_timeframe()
-        except:
-            pass
-        
         from bot_engine.config_loader import reload_config
         bot_config_module = reload_config()
         file_system_config = bot_config_module.SystemConfig
@@ -681,18 +671,12 @@ def load_system_config():
             if hasattr(file_system_config, attr):
                 setattr(SystemConfig, attr, getattr(file_system_config, attr))
 
-        # ✅ КРИТИЧНО: Восстанавливаем таймфрейм после перезагрузки модуля
-        # Приоритет: БД > SystemConfig.SYSTEM_TIMEFRAME из файла
+        # Таймфрейм читаем из конфига (после reload — из AutoBotConfig/SystemConfig в файле)
         try:
             from bot_engine.config_loader import set_current_timeframe, get_current_timeframe
-            if saved_timeframe_from_db:
-                # Если есть таймфрейм в БД - используем его (пользователь переключал через UI)
-                set_current_timeframe(saved_timeframe_from_db)
-            else:
-                # Если нет в БД - используем из конфига
-                config_timeframe = getattr(file_system_config, 'SYSTEM_TIMEFRAME', None)
-                if config_timeframe:
-                    set_current_timeframe(config_timeframe)
+            tf = get_current_timeframe() or getattr(file_system_config, 'SYSTEM_TIMEFRAME', None)
+            if tf:
+                set_current_timeframe(tf)
         except Exception as tf_err:
             logger.warning(f"[SYSTEM_CONFIG] ⚠️ Ошибка восстановления таймфрейма: {tf_err}")
 
@@ -764,15 +748,11 @@ def save_auto_bot_config(changed_data=None):
 
         if 'system_timeframe' in config_data:
             try:
-                from bot_engine.bots_database import get_bots_database
                 from bot_engine.config_loader import set_current_timeframe
-                db = get_bots_database()
-                new_timeframe = config_data['system_timeframe']
-                db.save_timeframe(new_timeframe)
-                set_current_timeframe(new_timeframe)
-                logger.info(f"[SAVE_CONFIG] ✅ Таймфрейм сохранен в БД: {new_timeframe}")
-            except Exception as tf_save_err:
-                logger.warning(f"[SAVE_CONFIG] ⚠️ Не удалось сохранить таймфрейм в БД: {tf_save_err}")
+                set_current_timeframe(config_data['system_timeframe'])
+                logger.info(f"[SAVE_CONFIG] ✅ Таймфрейм в памяти обновлён (файл уже сохранён): {config_data['system_timeframe']}")
+            except Exception as tf_err:
+                logger.warning(f"[SAVE_CONFIG] ⚠️ Не удалось обновить таймфрейм в памяти: {tf_err}")
 
         return True
 

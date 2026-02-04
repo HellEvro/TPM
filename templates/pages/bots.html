@@ -2606,6 +2606,25 @@
             <div class="analytics-result" id="analyticsResult">
                 <p class="analytics-placeholder" data-translate="analytics_placeholder">Нажмите «Запустить аналитику» для построения отчёта</p>
             </div>
+            <hr class="analytics-divider" />
+            <div class="analytics-rsi-audit">
+                <h3 data-translate="rsi_audit_title">🔍 Аудит RSI: вход и выход</h3>
+                <p class="analytics-rsi-desc" data-translate="rsi_audit_desc">Сверка сделок с биржи с текущим конфигом: LONG — вход корректен при RSI ≤ порог; SHORT — при RSI ≥ порог. Вне диапазона — ошибочные входы (искать причину в коде/логах).</p>
+                <div class="analytics-controls">
+                    <label class="analytics-option">
+                        <span>Макс. сделок:</span>
+                        <input type="number" id="rsiAuditLimit" value="500" min="50" max="2000" step="50" style="width: 80px;" />
+                    </label>
+                    <button type="button" class="btn btn-secondary" id="rsiAuditRunBtn">
+                        <span data-translate="rsi_audit_run">Запустить аудит RSI</span>
+                    </button>
+                </div>
+                <div class="analytics-loading" id="rsiAuditLoading" style="display: none;">
+                    <span class="analytics-spinner"></span>
+                    <span>Расчёт RSI по сделкам...</span>
+                </div>
+                <div class="analytics-rsi-result" id="rsiAuditResult"></div>
+            </div>
         </div>
     </div>
 

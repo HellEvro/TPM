@@ -658,72 +658,36 @@ def load_auto_bot_config():
             is_forced_reload = load_auto_bot_config._last_mtime == 0
             
             if current_mtime > load_auto_bot_config._last_mtime or is_forced_reload:
-                # ✅ КРИТИЧНО: Сохраняем таймфрейм из БД перед перезагрузкой
-                saved_timeframe_from_db = None
-                try:
-                    from bot_engine.bots_database import get_bots_database
-                    db = get_bots_database()
-                    saved_timeframe_from_db = db.load_timeframe()
-                except Exception as tf_save_err:
-                    logger.warning(f"[CONFIG] ⚠️ Не удалось сохранить таймфрейм из БД: {tf_save_err}")
-                
                 from bot_engine.config_loader import reload_config
                 reload_config()
-                # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после перезагрузки
-                if saved_timeframe_from_db:
-                    try:
-                        from bot_engine.config_loader import set_current_timeframe
-                        set_current_timeframe(saved_timeframe_from_db)
-                    except Exception as tf_restore_err:
-                        logger.warning(f"[CONFIG] ⚠️ Не удалось восстановить таймфрейм: {tf_restore_err}")
-                
+                # Таймфрейм после reload берётся из конфига (config_loader._get_default_timeframe)
+                try:
+                    from bot_engine.config_loader import set_current_timeframe, get_current_timeframe
+                    set_current_timeframe(get_current_timeframe())
+                except Exception:
+                    pass
                 # ✅ ВАЖНО: ВСЕГДА обновляем _last_mtime после перезагрузки модуля
                 # Это предотвращает бесконечную перезагрузку при принудительной перезагрузке
                 load_auto_bot_config._last_mtime = current_mtime
                 reloaded = True
         else:
-            # ✅ КРИТИЧНО: Сохраняем таймфрейм из БД перед перезагрузкой
-            saved_timeframe_from_db = None
-            try:
-                from bot_engine.bots_database import get_bots_database
-                db = get_bots_database()
-                saved_timeframe_from_db = db.load_timeframe()
-            except:
-                pass
-            
             from bot_engine.config_loader import reload_config
             reload_config()
             reloaded = True
-            
-            # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после перезагрузки
-            if saved_timeframe_from_db:
-                try:
-                    from bot_engine.config_loader import set_current_timeframe
-                    set_current_timeframe(saved_timeframe_from_db)
-                except:
-                    pass
-        
-        # ✅ КРИТИЧНО: Принудительно перезагружаем модуль ПЕРЕД импортом DEFAULT_AUTO_BOT_CONFIG
-        # Это гарантирует, что мы получим актуальное значение из файла, а не из кэша
-        # ✅ КРИТИЧНО: Сохраняем таймфрейм из БД перед перезагрузкой
-        saved_timeframe_from_db_final = None
-        try:
-            from bot_engine.bots_database import get_bots_database
-            db = get_bots_database()
-            saved_timeframe_from_db_final = db.load_timeframe()
-        except Exception as tf_final_err:
-            logger.warning(f"[CONFIG] ⚠️ Не удалось сохранить таймфрейм из БД (финальный): {tf_final_err}")
-        
+            try:
+                from bot_engine.config_loader import set_current_timeframe, get_current_timeframe
+                set_current_timeframe(get_current_timeframe())
+            except Exception:
+                pass
+
         from bot_engine.config_loader import reload_config
         reload_config()
-        # ✅ КРИТИЧНО: Восстанавливаем таймфрейм из БД после финальной перезагрузки
-        if saved_timeframe_from_db_final:
-            try:
-                from bot_engine.config_loader import set_current_timeframe
-                set_current_timeframe(saved_timeframe_from_db_final)
-            except Exception as tf_final_restore_err:
-                logger.warning(f"[CONFIG] ⚠️ Не удалось восстановить таймфрейм (финальный): {tf_final_restore_err}")
-        
+        try:
+            from bot_engine.config_loader import set_current_timeframe, get_current_timeframe
+            set_current_timeframe(get_current_timeframe())
+        except Exception:
+            pass
+
         from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG
         from bots_modules.config_writer import load_auto_bot_config_from_file
         # Загружаем из файла каждый параметр отдельно (не копируем весь модуль)

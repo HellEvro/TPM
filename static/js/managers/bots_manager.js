@@ -10532,7 +10532,7 @@ class BotsManager {
     }
 
     /**
-     * Инициализирует вкладку «Аналитика»: привязка кнопки и однократная привязка обработчиков
+     * Инициализирует вкладку «Аналитика»: привязка кнопок и однократная привязка обработчиков
      */
     initializeAnalyticsTab() {
         const runBtn = document.getElementById('analyticsRunBtn');
@@ -10540,6 +10540,82 @@ class BotsManager {
             runBtn.setAttribute('data-analytics-bound', 'true');
             runBtn.addEventListener('click', () => this.runTradingAnalytics());
         }
+        const rsiAuditBtn = document.getElementById('rsiAuditRunBtn');
+        if (rsiAuditBtn && !rsiAuditBtn.hasAttribute('data-rsi-audit-bound')) {
+            rsiAuditBtn.setAttribute('data-rsi-audit-bound', 'true');
+            rsiAuditBtn.addEventListener('click', () => this.runRsiAudit());
+        }
+    }
+
+    /**
+     * Запускает аудит RSI входа/выхода и отображает отчёт
+     */
+    async runRsiAudit() {
+        const loadingEl = document.getElementById('rsiAuditLoading');
+        const resultEl = document.getElementById('rsiAuditResult');
+        const limitEl = document.getElementById('rsiAuditLimit');
+        const limit = (limitEl && parseInt(limitEl.value, 10)) || 500;
+        if (loadingEl) loadingEl.style.display = 'flex';
+        if (resultEl) resultEl.innerHTML = '';
+        try {
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/analytics/rsi-audit?limit=${Math.min(2000, Math.max(50, limit))}`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Ошибка запроса');
+            if (!data.success || !data.report) throw new Error(data.error || 'Нет данных отчёта');
+            this.renderRsiAuditReport(data.report, resultEl);
+        } catch (err) {
+            if (resultEl) resultEl.innerHTML = `<div class="analytics-error">❌ ${(err && err.message) || String(err)}</div>`;
+            console.error('[BotsManager] Ошибка аудита RSI:', err);
+        } finally {
+            if (loadingEl) loadingEl.style.display = 'none';
+        }
+    }
+
+    /**
+     * Рендер отчёта аудита RSI: сводка, конфиг, таблица сделок (ошибочные входы/выходы подсвечены)
+     */
+    renderRsiAuditReport(report, container) {
+        if (!container) return;
+        const cfg = report.config || {};
+        const tf = report.timeframe || '1m';
+        const sum = report.summary || {};
+        const trades = report.trades || [];
+        let html = '<div class="rsi-audit-report">';
+        html += '<div class="rsi-audit-summary">';
+        html += '<h4>Сводка</h4>';
+        html += `<p><strong>Всего сделок:</strong> ${sum.total || 0}</p>`;
+        html += '<p><strong>Вход:</strong> ';
+        html += `✅ по порогу: ${sum.entry_ok || 0} · `;
+        html += `<span class="rsi-audit-error">❌ ошибочных (вне порога): ${sum.entry_error || 0}</span> · `;
+        html += `без RSI: ${sum.entry_no_rsi || 0}</p>`;
+        html += '<p><strong>Выход:</strong> ';
+        html += `✅ по порогу: ${sum.exit_ok || 0} · `;
+        html += `<span class="rsi-audit-error">❌ вне порога: ${sum.exit_error || 0}</span> · `;
+        html += `без RSI: ${sum.exit_no_rsi || 0}</p>';
+        html += '</div>';
+        html += '<div class="rsi-audit-config">';
+        html += '<h4>Текущий конфиг (эталон)</h4>';
+        html += `<p>Таймфрейм: <strong>${tf}</strong> · LONG: RSI ≤ ${cfg.rsi_long_threshold ?? 29} · SHORT: RSI ≥ ${cfg.rsi_short_threshold ?? 71}</p>`;
+        html += `<p>Выход LONG: RSI ≥ ${cfg.rsi_exit_long_with_trend ?? 65} (по тренду) / ${cfg.rsi_exit_long_against_trend ?? 60} (против) · Выход SHORT: RSI ≤ ${cfg.rsi_exit_short_with_trend ?? 35} / ${cfg.rsi_exit_short_against_trend ?? 40}</p>`;
+        html += '</div>';
+        html += '<div class="rsi-audit-table-wrap"><h4>Сделки</h4><table class="rsi-audit-table"><thead><tr>';
+        html += '<th>Символ</th><th>Направление</th><th>Вход (время)</th><th>RSI входа</th><th>Порог входа</th><th>Вход</th>';
+        html += '<th>Выход (время)</th><th>RSI выхода</th><th>Порог выхода</th><th>Выход</th><th>PnL</th></tr></thead><tbody>';
+        trades.forEach((t, i) => {
+            const entryStatus = t.entry_rsi == null ? '—' : (t.entry_ok ? '✅ OK' : '<span class="rsi-audit-error">❌ Ошибка</span>');
+            const exitStatus = t.exit_rsi == null ? '—' : (t.exit_ok ? '✅ OK' : '<span class="rsi-audit-error">❌ Ошибка</span>');
+            const rowClass = (t.entry_error || t.exit_error) ? 'rsi-audit-row-error' : '';
+            html += `<tr class="${rowClass}">`;
+            html += `<td>${t.symbol || ''}</td><td>${t.direction || ''}</td>`;
+            html += `<td>${t.entry_time_iso || ''}</td><td>${t.entry_rsi != null ? t.entry_rsi : '—'}</td><td>${t.entry_threshold != null ? t.entry_threshold : ''}</td><td>${entryStatus}</td>`;
+            html += `<td>${t.exit_time_iso || ''}</td><td>${t.exit_rsi != null ? t.exit_rsi : '—'}</td><td>${t.exit_threshold != null ? t.exit_threshold : ''}</td><td>${exitStatus}</td>`;
+            html += `<td>${t.pnl != null ? Number(t.pnl).toFixed(4) : ''}</td>`;
+            html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+        html += `<div class="rsi-audit-meta">Отчёт: ${report.generated_at || ''}</div>`;
+        html += '</div>';
+        container.innerHTML = html;
     }
 
     /**

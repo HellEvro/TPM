@@ -1333,7 +1333,7 @@ class NewTradingBot:
                 else:
                         should_close, reason = self.should_close_position(rsi, price, self.position_side)
                         if should_close:
-                            logger.info(f"[NEW_BOT_{self.symbol}] 🔴 Закрываем {self.position_side} по RSI")
+                            logger.info(f"[NEW_BOT_{self.symbol}] 🔴 Закрываем {self.position_side} по RSI (RSI={rsi}, reason={reason})")
                             close_success = self._close_position_on_exchange(reason)
                             if close_success:
                                 logger.info(f"[NEW_BOT_{self.symbol}] ✅ {self.position_side} закрыта")
@@ -2223,16 +2223,17 @@ class NewTradingBot:
             except Exception as e:
                 pass
             
-            # Если не нашли в истории, пытаемся из глобальных данных
+            # Если не нашли в истории, пытаемся из глобальных данных (по таймфрейму входа)
             if entry_rsi is None or entry_trend is None:
                 try:
+                    from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data, get_current_timeframe
+                    tf_entry = getattr(self, 'entry_timeframe', None) or get_current_timeframe()
                     with rsi_data_lock:
-                        rsi_info = coins_rsi_data.get(self.symbol, {})
-                        from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
+                        rsi_info = coins_rsi_data.get('coins', {}).get(self.symbol, {})
                         if entry_rsi is None:
-                            entry_rsi = get_rsi_from_coin_data(rsi_info)
+                            entry_rsi = get_rsi_from_coin_data(rsi_info, timeframe=tf_entry)
                         if entry_trend is None:
-                            entry_trend = get_trend_from_coin_data(rsi_info)
+                            entry_trend = get_trend_from_coin_data(rsi_info, timeframe=tf_entry)
                 except Exception:
                     pass
             
@@ -2250,15 +2251,16 @@ class NewTradingBot:
                 'position_leverage': getattr(self, 'leverage', None)
             }
             
-            # Получаем текущие рыночные данные при выходе
+            # Получаем текущие рыночные данные при выходе (по таймфрейму ВХОДА бота — 1m-бот по 1m RSI)
             exit_rsi = None
             exit_trend = None
             try:
+                from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data, get_current_timeframe
+                tf_exit = getattr(self, 'entry_timeframe', None) or get_current_timeframe()
                 with rsi_data_lock:
-                    rsi_info = coins_rsi_data.get(self.symbol, {})
-                    from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data
-                    exit_rsi = get_rsi_from_coin_data(rsi_info)
-                    exit_trend = get_trend_from_coin_data(rsi_info)
+                    rsi_info = coins_rsi_data.get('coins', {}).get(self.symbol, {})
+                    exit_rsi = get_rsi_from_coin_data(rsi_info, timeframe=tf_exit)
+                    exit_trend = get_trend_from_coin_data(rsi_info, timeframe=tf_exit)
             except Exception:
                 pass
             

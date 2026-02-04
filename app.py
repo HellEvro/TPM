@@ -76,6 +76,13 @@ try:
 except Exception as e:
     sys.stderr.write(f"⚠️ Миграция конфига ботов: {e}\n")
 
+# RSI-фикс: автопатч bot_engine/bot_config.py и configs/bot_config.py (устаревший fallback rsi6h → делегирование в config_loader)
+try:
+    from bot_engine import ensure_rsi_fix_applied
+    ensure_rsi_fix_applied()
+except Exception:
+    pass
+
 if not _CONFIG_PATH.exists():
     # Используем stderr, так как logger еще не настроен
     sys.stderr.write("\n" + "=" * 80 + "\n")

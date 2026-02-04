@@ -118,35 +118,15 @@ def get_timeframe_suffix(timeframe=None):
 
 
 def get_rsi_from_coin_data(coin_data, timeframe=None):
-    """
-    Получает значение RSI из данных монеты с учетом таймфрейма.
-    Поддерживает обратную совместимость с 'rsi6h' и 'rsi'.
-    """
-    if timeframe is None:
-        timeframe = get_current_timeframe()
-    rsi_key = get_rsi_key(timeframe)
-    rsi = coin_data.get(rsi_key)
-    if rsi is None and (timeframe is None or timeframe == '6h'):
-        rsi = coin_data.get('rsi6h')
-    if rsi is None and timeframe is None:
-        rsi = coin_data.get('rsi')
-    return rsi
+    """Единый источник истины: bot_engine.config_loader. Без fallback rsi6h — см. config_loader."""
+    from bot_engine.config_loader import get_rsi_from_coin_data as _get_rsi
+    return _get_rsi(coin_data, timeframe=timeframe)
 
 
 def get_trend_from_coin_data(coin_data, timeframe=None):
-    """
-    Получает значение тренда из данных монеты с учетом таймфрейма.
-    Поддерживает обратную совместимость с 'trend6h' и 'trend'.
-    """
-    if timeframe is None:
-        timeframe = get_current_timeframe()
-    trend_key = get_trend_key(timeframe)
-    trend = coin_data.get(trend_key)
-    if trend is None and (timeframe is None or timeframe == '6h'):
-        trend = coin_data.get('trend6h')
-    if trend is None and timeframe is None:
-        trend = coin_data.get('trend')
-    return trend if trend is not None else 'NEUTRAL'
+    """Единый источник истины: bot_engine.config_loader. Без fallback trend6h."""
+    from bot_engine.config_loader import get_trend_from_coin_data as _get_trend
+    return _get_trend(coin_data, timeframe=timeframe)
 
 
 # Статусы бота

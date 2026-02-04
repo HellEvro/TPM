@@ -28,8 +28,11 @@ def config_class_to_dict(cls):
 
 
 def _get_default_timeframe():
-    """Только из конфига. Без хардкода."""
+    """Единый источник: configs/bot_config.py. Сначала AutoBotConfig (рабочий), затем Default."""
     try:
+        auto = config_class_to_dict(AutoBotConfig).get('system_timeframe')
+        if auto is not None:
+            return auto
         return config_class_to_dict(DefaultAutoBotConfig).get('system_timeframe')
     except Exception:
         return None
@@ -58,7 +61,8 @@ TREND_MIN_CONFIRMATIONS = SystemConfig.TREND_MIN_CONFIRMATIONS
 TREND_REQUIRE_SLOPE = SystemConfig.TREND_REQUIRE_SLOPE
 TREND_REQUIRE_PRICE = SystemConfig.TREND_REQUIRE_PRICE
 TREND_REQUIRE_CANDLES = SystemConfig.TREND_REQUIRE_CANDLES
-TIMEFRAME = getattr(SystemConfig, 'SYSTEM_TIMEFRAME', None)  # только из конфига
+# Единый источник таймфрейма — AutoBotConfig (см. _get_default_timeframe); SystemConfig только fallback для старых путей
+TIMEFRAME = _get_default_timeframe() or getattr(SystemConfig, 'SYSTEM_TIMEFRAME', None)
 
 _current_timeframe = None
 
@@ -96,18 +100,21 @@ def get_timeframe_suffix(timeframe=None):
 
 
 def get_rsi_from_coin_data(coin_data, timeframe=None):
+    """
+    Возвращает RSI ТОЛЬКО по запрошенному таймфрейму (единый источник истины).
+    НЕ ДОБАВЛЯТЬ fallback на rsi6h/rsi: при работе на 1m подставлялся бы 6h RSI,
+    бот открывал SHORT при 6h RSI 85, хотя на 1m RSI 13 → минусы по балансу.
+    Если нужен RSI по другому ТФ — вызывать с явным timeframe=.
+    """
     tf = timeframe or get_current_timeframe()
     rsi = coin_data.get(get_rsi_key(tf))
-    if rsi is None:
-        rsi = coin_data.get('rsi6h') or coin_data.get('rsi')
     return rsi
 
 
 def get_trend_from_coin_data(coin_data, timeframe=None):
+    """Тренд только по запрошенному ТФ (без подстановки trend6h)."""
     tf = timeframe or get_current_timeframe()
     trend = coin_data.get(get_trend_key(tf))
-    if trend is None:
-        trend = coin_data.get('trend6h') or coin_data.get('trend')
     return trend if trend is not None else 'NEUTRAL'
 
 

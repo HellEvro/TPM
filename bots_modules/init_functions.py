@@ -134,39 +134,16 @@ def init_bot_service():
         # 2. Загружаем системные настройки
         load_system_config()
         
-        # 2.1. Загружаем сохраненный таймфрейм из БД (если есть)
+        # 2.1. Таймфрейм — только из configs/bot_config.py (AutoBotConfig.SYSTEM_TIMEFRAME), не из БД
         try:
-            from bot_engine.bots_database import get_bots_database
             from bot_engine.config_loader import set_current_timeframe, get_current_timeframe
-            db = get_bots_database()
-            saved_timeframe = db.load_timeframe()
-            
-            if saved_timeframe:
-                # Таймфрейм есть в БД - используем его
-                success = set_current_timeframe(saved_timeframe)
-                if success:
-                    logger.info(f"✅ Таймфрейм восстановлен из БД: {saved_timeframe}")
-                else:
-                    logger.warning(f"⚠️ Неподдерживаемый таймфрейм в БД: {saved_timeframe}, используем дефолтный из конфига")
-                    # Используем дефолтный из конфига
-                    current_tf = get_current_timeframe()
-                    set_current_timeframe(current_tf)
-                    db.save_timeframe(current_tf)
-            else:
-                # Таймфрейма нет в БД - используем дефолтный из конфига (SystemConfig.SYSTEM_TIMEFRAME)
-                current_tf = get_current_timeframe()
-                set_current_timeframe(current_tf)
-                db.save_timeframe(current_tf)
-                logger.info(f"✅ Текущий таймфрейм из конфига сохранен в БД: {current_tf}")
-            
-            # Логируем финальный таймфрейм
-            final_tf = get_current_timeframe()
-            logger.info(f"⏱️ Текущий таймфрейм системы: {final_tf}")
+            tf = get_current_timeframe()
+            if tf:
+                set_current_timeframe(tf)
+            logger.info(f"⏱️ Текущий таймфрейм системы (из конфига): {get_current_timeframe()}")
         except Exception as tf_err:
-            logger.warning(f"⚠️ Ошибка загрузки таймфрейма из БД: {tf_err}")
-            import traceback
-            pass
-        
+            logger.warning(f"⚠️ Ошибка инициализации таймфрейма из конфига: {tf_err}")
+
         # 3. Загружаем состояние процессов
         load_process_state()
         

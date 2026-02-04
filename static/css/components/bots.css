@@ -3452,6 +3452,87 @@ input:checked + .toggle-slider:before {
     color: var(--text-muted);
 }
 
+.analytics-divider {
+    margin: 24px 0;
+    border: none;
+    border-top: 1px solid var(--border-color);
+}
+
+.analytics-rsi-audit {
+    margin-top: 16px;
+    padding-top: 16px;
+}
+
+.analytics-rsi-audit h3 {
+    font-size: 18px;
+    margin: 0 0 8px 0;
+    color: var(--text-color);
+}
+
+.analytics-rsi-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0 0 12px 0;
+}
+
+.rsi-audit-report {
+    margin-top: 16px;
+    font-size: 14px;
+}
+
+.rsi-audit-summary,
+.rsi-audit-config {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border-left: 4px solid var(--blue-color, #4facfe);
+}
+
+.rsi-audit-summary h4,
+.rsi-audit-config h4 {
+    margin: 0 0 8px 0;
+    font-size: 15px;
+}
+
+.rsi-audit-error {
+    color: var(--danger-color, #e74c3c);
+    font-weight: 600;
+}
+
+.rsi-audit-table-wrap {
+    overflow-x: auto;
+    margin: 16px 0;
+}
+
+.rsi-audit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.rsi-audit-table th,
+.rsi-audit-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border: 1px solid var(--border-color);
+}
+
+.rsi-audit-table th {
+    background: var(--bg-secondary);
+    font-weight: 600;
+}
+
+.rsi-audit-row-error {
+    background: rgba(231, 76, 60, 0.12);
+}
+
+.rsi-audit-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 12px;
+}
+
 /* Фильтры истории */
 .history-filters {
     background: var(--bg-secondary);

@@ -1408,6 +1408,18 @@ class BybitExchange(BaseExchange):
                 # Убираем USDT если он уже есть в символе
                 clean_sym = symbol.replace('USDT', '') if symbol.endswith('USDT') else symbol
                 
+                # Для period 30d при 1m нужно ~43200 свечей; API даёт макс 1000 за запрос — подгружаем чанками
+                period_lower = (period or "").strip().lower()
+                want_30d = period_lower in ("30d", "30days")
+                # Интервал в минутах для расчёта нужного числа свечей за 30 дней
+                interval_minutes_map = {
+                    '1': 1, '3': 3, '5': 5, '15': 15, '30': 30,
+                    '60': 60, '240': 240, '360': 360, 'D': 24 * 60, 'W': 7 * 24 * 60
+                }
+                interval_mins = interval_minutes_map.get(interval, 60)
+                target_candles_30d = (30 * 24 * 60) // interval_mins if want_30d else 1000
+                target_candles_30d = min(target_candles_30d, 50000)  # разумный верхний предел
+                
                 # Повторные попытки при rate limit
                 max_retries = 3
                 retry_count = 0
@@ -1558,9 +1570,8 @@ class BybitExchange(BaseExchange):
                     }
                 
                 if response['retCode'] == 0:
-                    candles = []
-                    for k in response['result']['list']:
-                        candle = {
+                    def _kline_to_candle(k):
+                        return {
                             'time': int(k[0]),
                             'open': float(k[1]),
                             'high': float(k[2]),
@@ -1568,10 +1579,32 @@ class BybitExchange(BaseExchange):
                             'close': float(k[4]),
                             'volume': float(k[5])
                         }
-                        candles.append(candle)
-                    
-                    # Сортируем свечи от старых к новым
+                    candles = [_kline_to_candle(k) for k in response['result']['list']]
                     candles.sort(key=lambda x: x['time'])
+                    # Подгрузка чанками до 30 дней, если запрошен period 30d и нужного объёма больше 1000
+                    while (want_30d and len(candles) < target_candles_30d and
+                           len(response['result']['list']) == 1000):
+                        oldest_ts = candles[0]['time']
+                        end_ms = oldest_ts - 1
+                        time.sleep(max(0.15, getattr(self, 'current_request_delay', 0)))
+                        chunk_resp = self.client.get_kline(
+                            category="linear",
+                            symbol=f"{clean_sym}USDT",
+                            interval=interval,
+                            end=end_ms,
+                            limit=1000
+                        )
+                        if chunk_resp.get('retCode') != 0 or not chunk_resp.get('result', {}).get('list'):
+                            break
+                        chunk = [_kline_to_candle(k) for k in chunk_resp['result']['list']]
+                        if not chunk:
+                            break
+                        # Bybit возвращает от новых к старым; chunk — более старые свечи
+                        seen = {c['time'] for c in candles}
+                        new_only = [c for c in chunk if c['time'] not in seen]
+                        candles = new_only + candles
+                        candles.sort(key=lambda x: x['time'])
+                        response = chunk_resp
                     
                     self.reset_request_delay()
                     return {
@@ -1592,6 +1625,90 @@ class BybitExchange(BaseExchange):
                 'success': False,
                 'error': str(e)
             }
+
+    def get_chart_data_end_limit(self, symbol, timeframe, end_ms, limit=30):
+        """Загружает до limit свечей, заканчивающихся не позже end_ms. Для RSI(14) достаточно limit=20.
+        Один запрос к API, без чанков — для расчёта RSI в точке входа/выхода."""
+        timeframe_map = {
+            '1m': '1', '3m': '3', '5m': '5', '15m': '15', '30m': '30',
+            '1h': '60', '4h': '240', '6h': '360', '1d': 'D', '1w': 'W'
+        }
+        interval = timeframe_map.get(timeframe)
+        if not interval:
+            return {'success': False, 'error': f'Неподдерживаемый таймфрейм: {timeframe}', 'data': {'candles': []}}
+        if not symbol or str(symbol).strip().lower() == 'all':
+            return {'success': False, 'error': 'Symbol required', 'data': {'candles': []}}
+        clean_sym = symbol.replace('USDT', '') if symbol.endswith('USDT') else symbol
+        limit = max(15, min(int(limit), 1000))
+        try:
+            time.sleep(max(0.1, getattr(self, 'current_request_delay', 0)))
+            resp = self.client.get_kline(
+                category="linear",
+                symbol=f"{clean_sym}USDT",
+                interval=interval,
+                end=end_ms,
+                limit=limit
+            )
+            if not resp or resp.get('retCode') != 0 or not resp.get('result', {}).get('list'):
+                return {'success': False, 'error': resp.get('retMsg', 'No data') if resp else 'No response', 'data': {'candles': []}}
+            candles = []
+            for k in resp['result']['list']:
+                candles.append({
+                    'time': int(k[0]), 'open': float(k[1]), 'high': float(k[2]),
+                    'low': float(k[3]), 'close': float(k[4]), 'volume': float(k[5])
+                })
+            candles.sort(key=lambda x: x['time'])
+            return {'success': True, 'data': {'candles': candles}}
+        except Exception as e:
+            logger.error(f"[BYBIT] get_chart_data_end_limit: {e}")
+            return {'success': False, 'error': str(e), 'data': {'candles': []}}
+
+    def get_chart_data_range(self, symbol, timeframe, start_ms, end_ms):
+        """Загружает свечи за указанный диапазон [start_ms, end_ms] чанками по 1000 (для анализа сделок)."""
+        timeframe_map = {
+            '1m': '1', '3m': '3', '5m': '5', '15m': '15', '30m': '30',
+            '1h': '60', '4h': '240', '6h': '360', '1d': 'D', '1w': 'W'
+        }
+        interval = timeframe_map.get(timeframe)
+        if not interval:
+            return {'success': False, 'error': f'Неподдерживаемый таймфрейм: {timeframe}', 'data': {'candles': []}}
+        if not symbol or str(symbol).strip().lower() == 'all':
+            return {'success': False, 'error': 'Symbol required', 'data': {'candles': []}}
+        clean_sym = symbol.replace('USDT', '') if symbol.endswith('USDT') else symbol
+        all_candles = []
+        end = end_ms
+        try:
+            while True:
+                time.sleep(max(0.15, getattr(self, 'current_request_delay', 0)))
+                resp = self.client.get_kline(
+                    category="linear",
+                    symbol=f"{clean_sym}USDT",
+                    interval=interval,
+                    end=end,
+                    limit=1000
+                )
+                if not resp or resp.get('retCode') != 0 or not resp.get('result', {}).get('list'):
+                    break
+                chunk = []
+                for k in resp['result']['list']:
+                    chunk.append({
+                        'time': int(k[0]), 'open': float(k[1]), 'high': float(k[2]),
+                        'low': float(k[3]), 'close': float(k[4]), 'volume': float(k[5])
+                    })
+                if not chunk:
+                    break
+                seen = {c['time'] for c in all_candles}
+                new_only = [c for c in chunk if c['time'] not in seen]
+                all_candles = new_only + all_candles
+                all_candles.sort(key=lambda x: x['time'])
+                oldest = all_candles[0]['time']
+                if oldest <= start_ms:
+                    break
+                end = oldest - 1
+            return {'success': True, 'data': {'candles': all_candles}}
+        except Exception as e:
+            logger.error(f"[BYBIT] get_chart_data_range: {e}")
+            return {'success': False, 'error': str(e), 'data': {'candles': []}}
 
     def get_indicators(self, symbol, timeframe='1h'):
         """Получение значений индикаторов

@@ -64,6 +64,13 @@ if not os.path.exists(_bot_config_path):
         import sys
         sys.stderr.write(f"[WARNING] Файл configs/bot_config.example.py не найден, configs/bot_config.py не будет создан автоматически\n")
 
+# RSI-фикс: автопатч bot_engine/bot_config.py и configs/bot_config.py (устаревший fallback rsi6h → делегирование в config_loader)
+try:
+    from bot_engine import ensure_rsi_fix_applied
+    ensure_rsi_fix_applied()
+except Exception:
+    pass
+
 # Настройка git skip-worktree для игнорирования локальных изменений в bot_config.py
 # Это позволяет файлу оставаться в git, но локальные изменения не будут коммититься
 # И защищает от перезаписи при git pull - локальная версия всегда имеет приоритет
