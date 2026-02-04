@@ -718,9 +718,12 @@ def process_trading_signals_on_candle_close(candle_timestamp: int, exchange_obj=
         
         if not active_bots:
             logger.info("[TRADING] 📭 Нет активных ботов для обработки сигналов")
-            # Но все равно проверяем Auto Bot сигналы!
-            logger.info("[TRADING] 🤖 Проверяем Auto Bot сигналы (нет активных ботов)...")
-            process_auto_bot_signals(exchange_obj=exchange_obj)  # ВКЛЮЧЕНО!
+            # Проверяем Auto Bot сигналы только если автобот включён (иначе не ищем новые сделки)
+            with bots_data_lock:
+                auto_bot_enabled = bots_data['auto_bot_config']['enabled']
+            if auto_bot_enabled:
+                logger.info("[TRADING] 🤖 Проверяем Auto Bot сигналы (нет активных ботов)...")
+                process_auto_bot_signals(exchange_obj=exchange_obj)
             return
         
         logger.info(f"[TRADING] 🤖 Обработка сигналов для {len(active_bots)} активных ботов")

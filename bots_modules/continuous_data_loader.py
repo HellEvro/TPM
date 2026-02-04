@@ -119,6 +119,26 @@ class ContinuousDataLoader:
                 logger.info(f"⏱️ Таймфрейм: {current_timeframe}")
                 logger.info("=" * 80)
 
+                # ✅ Когда автобот ВЫКЛЮЧЕН: не ищем новые сделки, только отслеживание/закрытие существующих
+                from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
+                with bots_data_lock:
+                    auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
+                    active_bots_count = sum(
+                        1 for b in (bots_data.get('bots') or {}).values()
+                        if b.get('status') not in [BOT_STATUS.get('IDLE'), BOT_STATUS.get('PAUSED')]
+                    )
+                if not auto_bot_enabled:
+                    if active_bots_count == 0:
+                        logger.info("⏹️ Автобот выключен, активных ботов нет — пропуск раунда (нет поиска сделок)")
+                        from bots_modules.imports_and_globals import coins_rsi_data
+                        coins_rsi_data['processing_cycle'] = False
+                        coins_rsi_data['data_version'] = coins_rsi_data.get('data_version', 0) + 1
+                        if shutdown_flag.wait(1):
+                            break
+                        continue
+                    # Есть активные боты — только свечи+RSI для отслеживания/закрытия, без трендов и фильтров
+                    logger.info(f"⏹️ Автобот выключен, активных ботов: {active_bots_count} — только обновление данных для позиций (без трендов/фильтров)")
+
                 # ✅ Этап 1: Загружаем свечи всех монет (15-20 сек) - БЛОКИРУЮЩИЙ
                 success = self._load_candles()
                 if not success:
@@ -135,17 +155,19 @@ class ContinuousDataLoader:
                     time.sleep(30)
                     continue
 
-                # ✅ Этап 3: Рассчитываем зрелость (только для незрелых монет) (10-20 сек)
-                self._calculate_maturity()
+                # ✅ Этапы 3–6 только при включённом автоботе (поиск новых сделок)
+                if auto_bot_enabled:
+                    # ✅ Этап 3: Рассчитываем зрелость (только для незрелых монет) (10-20 сек)
+                    self._calculate_maturity()
 
-                # ✅ Этап 4: Определяем тренд для сигнальных монет (RSI ≤29 или ≥71) (5-10 сек)
-                self._analyze_trends()
+                    # ✅ Этап 4: Определяем тренд для сигнальных монет (RSI ≤29 или ≥71) (5-10 сек)
+                    self._analyze_trends()
 
-                # ✅ Этап 5: Обрабатываем лонг/шорт монеты фильтрами (5 сек)
-                filtered_coins = self._process_filters()
+                    # ✅ Этап 5: Обрабатываем лонг/шорт монеты фильтрами (5 сек)
+                    filtered_coins = self._process_filters()
 
-                # ✅ Этап 6: Передаем отфильтрованные монеты автоботу
-                self._set_filtered_coins_for_autobot(filtered_coins)
+                    # ✅ Этап 6: Передаем отфильтрованные монеты автоботу
+                    self._set_filtered_coins_for_autobot(filtered_coins)
 
                 cycle_duration = time.time() - cycle_start
                 self.last_update_time = datetime.now()
