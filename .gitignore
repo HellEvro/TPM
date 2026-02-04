@@ -150,6 +150,9 @@ celerybeat.pid
 # Environments
 # ===========================================
 .env
+# Папка config/ не используется приложением (конфиги только в configs/).
+# Если храните там .env для Postgres — не коммитим.
+config/.env
 .venv
 .venv_gpu
 env/

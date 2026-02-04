@@ -769,8 +769,8 @@ const TRANSLATIONS = {
         'divergence_lookback_help': 'Количество свечей для анализа дивергенций между ценой и RSI',
         
         // Защитные механизмы
-        'max_position_time_label': '⏰ Макс. время позиции (мин):',
-        'max_position_minutes_label': 'Макс. время позиции (мин):',
+        'max_position_time_label': '⏰ Макс. время позиции (сек):',
+        'max_position_seconds_label': 'Макс. время позиции (сек):',
         'max_position_time_help': '0 = отключено (бесконечно), принудительное закрытие через указанное время',
         'break_even_protection_help': 'Устанавливает стоп на уровне входа при достижении указанной прибыли от маржи',
         'break_even_protection_toggle': 'Защита безубыточности:',
@@ -1801,8 +1801,8 @@ const TRANSLATIONS = {
         'divergence_lookback_help': 'Number of candles for analyzing divergences between price and RSI',
         
         // Protective mechanisms
-        'max_position_time_label': '⏰ Max position time (min):',
-        'max_position_minutes_label': 'Max position time (min):',
+        'max_position_time_label': '⏰ Max position time (sec):',
+        'max_position_seconds_label': 'Max position time (sec):',
         'max_position_time_help': '0 = disabled (infinite), forced closing after specified time',
         'break_even_protection_help': 'Sets stop at entry level when specified profit from margin is reached',
         'break_even_protection_toggle': 'Break-even protection:',

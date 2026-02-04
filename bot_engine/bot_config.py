@@ -595,7 +595,7 @@ class AIConfig:
     AI_RETRAIN_HOUR = 3
 
     # Самообучение AI в реальном времени
-    AI_SELF_LEARNING_ENABLED = True      # Включить систему самообучения
+    AI_SELF_LEARNING_ENABLED = True
     AI_SELF_LEARNING_BUFFER_SIZE = 50    # Размер буфера для онлайн обучения (макс. сделок)
     # Инкрементальное переобучение: раз в N сделок ретрайн на последних сделках из БД
     AI_INCREMENTAL_RETRAIN_ENABLED = True   # Включить ретрайн по последним сделкам при заполнении буфера

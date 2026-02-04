@@ -52,7 +52,7 @@ def load_exchange():
     exchange_name = ACTIVE_EXCHANGE
     exchange_cfg = EXCHANGES.get(exchange_name, {})
     if not exchange_cfg or not exchange_cfg.get('enabled', True):
-        raise RuntimeError(f"Для {exchange_name} нет активных API ключей в config/keys.")
+        raise RuntimeError(f"Для {exchange_name} нет активных API ключей в configs/keys.py (или configs/app_config.py).")
     
     api_key = exchange_cfg.get('api_key')
     api_secret = exchange_cfg.get('api_secret')

@@ -30,6 +30,9 @@ class PrefixedLogger:
 
 logger = PrefixedLogger(logger, "🔄")
 
+# Таймаут этапа расчёта зрелости (сек). При большом числе монет и ТФ 1m 60с может не хватать.
+MATURITY_CALCULATION_TIMEOUT = 120
+
 class ContinuousDataLoader:
     def __init__(self, exchange_obj=None, update_interval=180):
         """
@@ -375,11 +378,11 @@ class ContinuousDataLoader:
             thread.daemon = True
             thread.start()
 
-            # Ждем максимум 60 секунд
-            thread.join(timeout=60)
+            # Ждем до MATURITY_CALCULATION_TIMEOUT секунд
+            thread.join(timeout=MATURITY_CALCULATION_TIMEOUT)
 
             if thread.is_alive():
-                logger.error("⚠️ Таймаут расчета зрелости (60с)")
+                logger.error(f"⚠️ Таймаут расчета зрелости ({MATURITY_CALCULATION_TIMEOUT}с)")
                 return
 
             if exception[0]:

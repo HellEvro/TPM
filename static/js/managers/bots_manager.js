@@ -3068,10 +3068,9 @@ class BotsManager {
         
         const maxHoursEl = document.getElementById('maxPositionHoursDup');
         if (maxHoursEl) {
-            const minutes = parseInt(maxHoursEl.value) || 0;
-            // Конвертируем минуты в секунды
-            const seconds = minutes * 60;
-            settings.max_position_hours = seconds;
+            const seconds = parseInt(maxHoursEl.value) || 0;
+            // В конфиге хранятся часы; передаём часы (секунды / 3600)
+            settings.max_position_hours = seconds / 3600;
         }
         
         const breakEvenEl = document.getElementById('breakEvenProtectionDup');
@@ -3681,8 +3680,8 @@ class BotsManager {
         
         const maxHoursEl = document.getElementById('maxPositionHoursDup');
         if (maxHoursEl && settings.max_position_hours !== undefined) {
-            // Конвертируем секунды в минуты
-            maxHoursEl.value = Math.round(settings.max_position_hours / 60);
+            // В конфиге часы; показываем в секундах
+            maxHoursEl.value = Math.round((settings.max_position_hours || 0) * 3600);
         }
         
         const breakEvenEl = document.getElementById('breakEvenProtectionDup');
@@ -4021,8 +4020,8 @@ class BotsManager {
 
         const maxHoursEl = document.getElementById('maxPositionHoursDup');
         if (maxHoursEl) {
-            const seconds = get('max_position_hours', fallback.max_position_hours);
-            maxHoursEl.value = Math.round((seconds || 0) / 60);
+            const hours = get('max_position_hours', fallback.max_position_hours);
+            maxHoursEl.value = Math.round((hours || 0) * 3600);
         }
 
         const breakEvenEl = document.getElementById('breakEvenProtectionDup');
@@ -6328,7 +6327,7 @@ class BotsManager {
         // Обновляем оставшееся время позиции
         const timeElement = botElement.querySelector('.bot-time-left');
         if (timeElement && bot.position_start_time && bot.max_position_hours > 0) {
-            const timeLeft = this.calculateTimeLeft(bot.position_start_time, bot.max_position_hours);
+            const timeLeft = this.calculateTimeLeft(bot.position_start_time, bot.max_position_hours, true);
             timeElement.textContent = `${this.getTranslation('time_label')} ${timeLeft}`;
             timeElement.style.color = timeLeft.includes('0:00') ? 'var(--red-color)' : 'var(--blue-color)';
         } else if (timeElement) {
@@ -6336,11 +6335,11 @@ class BotsManager {
             timeElement.style.color = 'var(--gray-color)';
         }
     }
-    calculateTimeLeft(startTime, maxHours) {
+    calculateTimeLeft(startTime, maxHours, maxHoursIsHours = true) {
         const start = new Date(startTime);
         const now = new Date();
         const elapsed = now - start;
-        const maxMs = maxHours * 60 * 60 * 1000;
+        const maxMs = (maxHoursIsHours ? maxHours * 3600 : maxHours) * 1000;
         const remaining = maxMs - elapsed;
         
         if (remaining <= 0) {
@@ -6727,8 +6726,9 @@ class BotsManager {
         
         const maxPositionHoursEl = document.getElementById('maxPositionHours');
         if (maxPositionHoursEl) {
-            maxPositionHoursEl.value = autoBotConfig.max_position_hours || 0;
-            console.log('[BotsManager] ⏰ Макс. время позиции (часов):', maxPositionHoursEl.value);
+            const hours = autoBotConfig.max_position_hours || 0;
+            maxPositionHoursEl.value = Math.round(hours * 3600);
+            console.log('[BotsManager] ⏰ Макс. время позиции (сек):', maxPositionHoursEl.value);
         }
         
         const breakEvenProtectionEl = document.getElementById('breakEvenProtection');
@@ -7657,6 +7657,10 @@ class BotsManager {
             // Применяем значение только если оно изменилось
             const originalValue = this.originalConfig?.autoBot?.[configKey];
             
+            // ✅ Макс. время позиции: в UI в секундах, в конфиге — в часах
+            if (configKey === 'max_position_hours' && typeof value === 'number') {
+                value = value / 3600;
+            }
             // ✅ КРИТИЧЕСКИ ВАЖНО: Специальная обработка для scope - всегда обновляем если значение изменилось
             if (configKey === 'scope') {
                 if (value !== undefined && value !== null) {
@@ -8588,10 +8592,8 @@ class BotsManager {
         
         const maxHoursDupEl = document.getElementById('maxPositionHoursDup');
         if (maxHoursDupEl) {
-            const seconds = config.max_position_hours || 0;
-            // Конвертируем секунды в минуты для отображения
-            const minutes = Math.round(seconds / 60);
-            maxHoursDupEl.value = minutes;
+            const hours = config.max_position_hours || 0;
+            maxHoursDupEl.value = Math.round(hours * 3600);
         }
         
         const breakEvenDupEl = document.getElementById('breakEvenProtectionDup');
@@ -9752,7 +9754,7 @@ class BotsManager {
             'max_loss_percent': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Max loss (%)' : 'Макс. убыток (%)',
             'trailing_stop_activation': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Trailing stop activation (%)' : 'Активация трейлинг-стопа (%)',
             'trailing_stop_distance': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Trailing stop distance (%)' : 'Расстояние трейлинг-стопа (%)',
-            'max_position_hours': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Max time in position (minutes)' : 'Макс. время в позиции (минуты)',
+            'max_position_hours': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Max time in position (sec)' : 'Макс. время в позиции (сек)',
             'break_even_protection': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Break-even protection' : 'Защита безубыточности',
             'break_even_trigger': window.languageUtils?.getCurrentLanguage() === 'en' ? 'Break-even trigger (%)' : 'Триггер безубыточности (%)',
             'avoid_down_trend': window.languageUtils?.getCurrentLanguage() === 'en' ? '🔻 Avoid downtrend (LONG)' : '🔻 Избегать нисходящий тренд (LONG)',

@@ -654,8 +654,8 @@
             </div>
 
                             <div class="setting-item">
-                                <label data-translate="max_position_time_label">⏰ Макс. время позиции (мин):</label>
-                                <input type="number" id="maxPositionHoursDup" min="0" max="10080" step="1" value="0" placeholder="0" />
+                                <label data-translate="max_position_time_label">⏰ Макс. время позиции (сек):</label>
+                                <input type="number" id="maxPositionHoursDup" min="0" max="604800" step="1" value="0" placeholder="0" title="0 = отключено" />
                             </div>
                 
                 <div class="setting-item">
@@ -1575,9 +1575,9 @@
                         <div class="config-item">
                             <label class="config-label">
                                 <span class="label-icon">⏰</span>
-                                <span class="label-text" data-translate="max_position_minutes_label">Макс. время позиции (мин):</span>
+                                <span class="label-text" data-translate="max_position_seconds_label">Макс. время позиции (сек):</span>
                             </label>
-                            <input type="number" id="maxPositionHours" min="0" max="10080" step="1" class="config-input" value="0" placeholder="0" />
+                            <input type="number" id="maxPositionHours" min="0" max="604800" step="1" class="config-input" value="0" placeholder="0" title="0 = отключено" />
                             <small class="config-help" data-translate="max_position_time_help">0 = отключено (бесконечно), принудительное закрытие через указанное время</small>
                         </div>
                         

@@ -134,10 +134,37 @@ def exchange_trades_to_summaries(
     return result
 
 
+def _recalc_pnl_from_prices(
+    entry_price: float,
+    exit_price: float,
+    direction: str,
+    position_size_usdt: Optional[float],
+    position_size_coins: Optional[float],
+) -> Optional[float]:
+    """Пересчитывает PnL в USDT из цен входа/выхода и размера позиции. Возвращает None если не хватает данных."""
+    if not entry_price or entry_price <= 0 or not exit_price:
+        return None
+    direction = (direction or "LONG").upper()
+    if direction not in ("LONG", "SHORT"):
+        return None
+    if direction == "LONG":
+        roi_fraction = (exit_price - entry_price) / entry_price
+    else:
+        roi_fraction = (entry_price - exit_price) / entry_price
+    position_value = position_size_usdt
+    if (position_value is None or position_value == 0) and position_size_coins and position_size_coins > 0:
+        position_value = position_size_coins * entry_price
+    if position_value is None or position_value == 0:
+        return None
+    return roi_fraction * position_value
+
+
 def bot_trades_to_summaries(
     raw_list: List[Dict[str, Any]],
 ) -> List[TradeSummary]:
-    """Преобразует записи bot_trades_history в список TradeSummary."""
+    """Преобразует записи bot_trades_history в список TradeSummary.
+    КРИТИЧНО: если в БД pnl отсутствует или 0 — пересчитывает PnL из entry/exit цен и размера позиции,
+    иначе отчёт показывает неверный общий минус (много сделок с pnl=0)."""
     result = []
     for t in raw_list:
         try:
@@ -148,15 +175,32 @@ def bot_trades_to_summaries(
                 ts_sec = _ts_to_seconds(t.get("exit_time"))
             if ts_sec is None:
                 continue
-            pnl = float(t.get("pnl") or 0)
             entry_price = float(t.get("entry_price") or 0)
             exit_price = float(t.get("exit_price") or 0)
             position_size = t.get("position_size_usdt")
             if position_size is not None:
                 position_size = float(position_size)
+            position_size_coins = t.get("position_size_coins")
+            if position_size_coins is not None:
+                position_size_coins = float(position_size_coins)
             direction = (t.get("direction") or "LONG").upper()
             if direction not in ("LONG", "SHORT"):
                 direction = "LONG"
+            # Берём сохранённый pnl; если нет или 0 — пересчитываем из цен
+            stored_pnl = t.get("pnl")
+            if stored_pnl is not None and stored_pnl != "":
+                try:
+                    pnl = float(stored_pnl)
+                except (TypeError, ValueError):
+                    pnl = 0.0
+            else:
+                pnl = 0.0
+            if (pnl == 0.0 or stored_pnl is None) and entry_price and exit_price:
+                recalc = _recalc_pnl_from_prices(
+                    entry_price, exit_price, direction, position_size, position_size_coins
+                )
+                if recalc is not None:
+                    pnl = recalc
             result.append(
                 TradeSummary(
                     symbol=symbol,
