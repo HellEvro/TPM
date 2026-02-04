@@ -2012,9 +2012,26 @@ class NewTradingBot:
             else:
                 error = close_result.get('error', 'Unknown error') if close_result else 'No response'
                 error_msg = close_result.get('message', error) if close_result else error
-                logger.error(f"[NEW_BOT_{self.symbol}] ❌ НЕ УДАЛОСЬ закрыть позицию на бирже!")
-                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Ошибка: {error_msg}")
-                logger.error(f"[NEW_BOT_{self.symbol}] ❌ Полный ответ: {close_result}")
+                msg_lower = str(error_msg).lower()
+                # 110017 + position is zero — позиция уже закрыта на бирже, синхронизируем состояние
+                if '110017' in str(error_msg) and ('position is zero' in msg_lower or 'current position is zero' in msg_lower):
+                    logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Позиция уже закрыта на бирже (110017), обновляем состояние бота")
+                    old_status = self.status
+                    self.update_status(BOT_STATUS['IDLE'])
+                    self.position_side = None
+                    self.entry_price = None
+                    self.unrealized_pnl = 0
+                    self.break_even_stop_price = None
+                    self.break_even_stop_set = False
+                    try:
+                        with bots_data_lock:
+                            if self.symbol in bots_data['bots']:
+                                bots_data['bots'][self.symbol] = self.to_dict()
+                    except Exception:
+                        pass
+                    return True
+                logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Закрытие на бирже не удалось: {error_msg}")
+                logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Полный ответ: {close_result}")
                 return False
                 
         except Exception as e:

@@ -1030,10 +1030,20 @@ class BybitExchange(BaseExchange):
                 order_params["price"] = str(round(limit_price, 6))
                 order_params["timeInForce"] = "GTC"
             
+            def _is_position_already_zero(msg):
+                """110017 с текстом про position is zero — позиция уже закрыта на бирже."""
+                if not msg:
+                    return False
+                m = str(msg).lower()
+                return ('110017' in str(msg) and ('position is zero' in m or 'current position is zero' in m or 'reduce-only' in m))
+
             try:
                 response = self.client.place_order(**order_params)
             except Exception as order_err:
                 err_msg = str(order_err)
+                if _is_position_already_zero(err_msg):
+                    logger.warning(f"[BYBIT] {symbol}: Позиция уже закрыта на бирже (110017 position is zero), синхронизируем состояние")
+                    return {'success': True, 'message': 'Позиция уже закрыта на бирже', 'close_price': float(ticker.get('last', 0))}
                 # При 110017 (orderQty truncated to zero) пробуем закрыть рыночным ордером
                 if '110017' in err_msg or 'truncated to zero' in err_msg.lower():
                     if order_type.upper() != "MARKET":
@@ -1058,7 +1068,11 @@ class BybitExchange(BaseExchange):
                                     'close_price': close_price
                                 }
                         except Exception as market_err:
-                            logger.error(f"[BYBIT] {symbol}: Market закрытие тоже не удалось: {market_err}")
+                            err_m = str(market_err)
+                            if _is_position_already_zero(err_m):
+                                logger.warning(f"[BYBIT] {symbol}: Позиция уже закрыта на бирже (110017), Market не требуется")
+                                return {'success': True, 'message': 'Позиция уже закрыта на бирже', 'close_price': float(ticker.get('last', 0))}
+                            logger.warning(f"[BYBIT] {symbol}: Market закрытие не удалось: {market_err}")
                             return {
                                 'success': False,
                                 'message': f"Закрытие не удалось (110017): объём {qty_str} не соответствует правилам контракта {symbol}. Закройте позицию вручную в интерфейсе Bybit."
@@ -1075,6 +1089,9 @@ class BybitExchange(BaseExchange):
                 }
             else:
                 ret_msg = response.get('retMsg', '')
+                if _is_position_already_zero(ret_msg):
+                    logger.warning(f"[BYBIT] {symbol}: Позиция уже закрыта на бирже (110017 position is zero)")
+                    return {'success': True, 'message': 'Позиция уже закрыта на бирже', 'close_price': float(ticker.get('last', 0))}
                 if '110017' in ret_msg or 'truncated to zero' in ret_msg.lower():
                     if order_type.upper() != "MARKET":
                         logger.warning(f"[BYBIT] {symbol}: Limit отклонён (110017), пробуем Market закрытие")
@@ -1097,8 +1114,15 @@ class BybitExchange(BaseExchange):
                                     'message': 'Позиция закрыта рыночным ордером (Limit отклонён)',
                                     'close_price': close_price
                                 }
+                            if _is_position_already_zero(response.get('retMsg', '')):
+                                logger.warning(f"[BYBIT] {symbol}: Позиция уже закрыта на бирже (110017)")
+                                return {'success': True, 'message': 'Позиция уже закрыта на бирже', 'close_price': float(ticker.get('last', 0))}
                         except Exception as market_err:
-                            logger.error(f"[BYBIT] {symbol}: Market закрытие не удалось: {market_err}")
+                            err_m = str(market_err)
+                            if _is_position_already_zero(err_m):
+                                logger.warning(f"[BYBIT] {symbol}: Позиция уже закрыта на бирже (110017), Market не требуется")
+                                return {'success': True, 'message': 'Позиция уже закрыта на бирже', 'close_price': float(ticker.get('last', 0))}
+                            logger.warning(f"[BYBIT] {symbol}: Market закрытие не удалось: {market_err}")
                 return {
                     'success': False,
                     'message': f"Не удалось разместить {order_type} ордер: {ret_msg}"
