@@ -2629,6 +2629,9 @@ def get_effective_signal(coin):
     # Проверяем RSI Time фильтр (только если фильтр включён — иначе не блокируем)
     rsi_time_filter_enabled = get_config_value(auto_config, 'rsi_time_filter_enabled')
     if rsi_time_filter_enabled and coin.get('blocked_by_rsi_time', False):
+        time_filter_info = coin.get('time_filter_info') or {}
+        reason = time_filter_info.get('reason', 'RSI временной фильтр')
+        logger.debug(f"⏰ {symbol}: RSI Time Filter блокирует вход — {reason}")
         return 'WAIT'
     
     # ✅ Проверяем защиту от повторных входов (только если включена — иначе не блокируем)

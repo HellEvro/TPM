@@ -698,6 +698,18 @@ def load_auto_bot_config():
         for key, value in file_config.items():
             merged_config[key] = value
         
+        # Ключи, которые ВСЕГДА должны быть в auto_bot_config (старые configs/bot_config.py могли их не содержать).
+        # Отсутствие ключа — ошибка конфига; подставляем дефолт при загрузке, чтобы ключ не отсутствовал.
+        _required_auto_bot_keys = {
+            'rsi_time_filter_enabled': True,
+            'rsi_time_filter_candles': 8,
+            'rsi_time_filter_lower': 35,
+            'rsi_time_filter_upper': 65,
+        }
+        for k, default_val in _required_auto_bot_keys.items():
+            if k not in merged_config:
+                merged_config[k] = default_val
+        
         # ✅ Логируем leverage только при первой загрузке или при изменении (не спамим)
         leverage_from_file = merged_config.get('leverage')
         # Логируем только если это первая загрузка ИЛИ значение действительно изменилось
