@@ -49,6 +49,19 @@ def _threshold_01(value):
     return (v / 100.0) if v > 1 else v
 
 
+def _normalize_symbol_for_scope(s):
+    """Приводит символ к единому виду для сравнения с whitelist/blacklist (без USDT)."""
+    if s is None:
+        return ''
+    s = str(s).strip()
+    if not s:
+        return ''
+    s_upper = s.upper()
+    if s_upper.endswith('USDT'):
+        return s_upper[:-4]
+    return s_upper
+
+
 def get_cached_ai_manager():
     """
     Получает закэшированный экземпляр AI Manager.
@@ -992,13 +1005,17 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
             result['has_existing_position'] = base_data.get('has_existing_position', False) if base_data else False
 
             # Scope: черный список ВСЕГДА исключает монету из торговли (при любом scope)
+            # Нормализация: символ и списки могут быть "BTC" или "BTCUSDT" — приводим к одному формату
             scope = auto_config.get('scope', 'all')
             whitelist = auto_config.get('whitelist', []) or []
             blacklist = auto_config.get('blacklist', []) or []
+            symbol_norm = _normalize_symbol_for_scope(symbol)
+            blacklist_norm = {_normalize_symbol_for_scope(x) for x in blacklist}
+            whitelist_norm = {_normalize_symbol_for_scope(x) for x in whitelist}
             is_blocked_by_scope = False
-            if symbol in blacklist:
+            if symbol_norm in blacklist_norm:
                 is_blocked_by_scope = True
-            elif scope == 'whitelist' and whitelist and symbol not in whitelist:
+            elif scope == 'whitelist' and whitelist_norm and symbol_norm not in whitelist_norm:
                 is_blocked_by_scope = True
             result['blocked_by_scope'] = is_blocked_by_scope
             if is_blocked_by_scope:
@@ -1174,16 +1191,19 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # ✅ ФИЛЬТР 1: Whitelist/Blacklist/Scope - Проверяем ДО загрузки данных с биржи
         # Черный список ВСЕГДА исключает монету из торговли при любой настройке scope.
         # При scope=whitelist и ПУСТОМ whitelist — не блокируем никого (торгуем все)
+        # Нормализация: символ и списки могут быть "BTC" или "BTCUSDT" — приводим к одному формату
         # ⚡ БЕЗ БЛОКИРОВКИ: конфиг не меняется во время выполнения, безопасно читать
         auto_config = bots_data.get('auto_bot_config', {})
         scope = auto_config.get('scope', 'all')
         whitelist = auto_config.get('whitelist', []) or []
         blacklist = auto_config.get('blacklist', []) or []
-        
+        symbol_norm = _normalize_symbol_for_scope(symbol)
+        blacklist_norm = {_normalize_symbol_for_scope(x) for x in blacklist}
+        whitelist_norm = {_normalize_symbol_for_scope(x) for x in whitelist}
         is_blocked_by_scope = False
-        if symbol in blacklist:
+        if symbol_norm in blacklist_norm:
             is_blocked_by_scope = True
-        elif scope == 'whitelist' and whitelist and symbol not in whitelist:
+        elif scope == 'whitelist' and whitelist_norm and symbol_norm not in whitelist_norm:
             is_blocked_by_scope = True
         
         # БЕЗ задержки - семафор и ThreadPool уже контролируют rate limit
