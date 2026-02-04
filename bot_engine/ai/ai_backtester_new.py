@@ -241,12 +241,15 @@ class AIBacktester:
             logger.error(traceback.format_exc())
             return {}
     
-    def _load_history_data(self) -> List[Dict]:
+    def _load_history_data(self, with_rsi_only: bool = False) -> List[Dict]:
         """
-        Загрузить историю трейдов
-        
+        Загрузить историю трейдов.
+
         ПРИОРИТЕТ: БД (если доступна), затем bot_history.json
-        history_data.json больше не используется, так как все данные в БД
+        history_data.json больше не используется, так как все данные в БД.
+
+        Args:
+            with_rsi_only: Если True, включать только сделки с заполненным RSI (для бэктеста).
         """
         trades = []
         
@@ -266,6 +269,10 @@ class AIBacktester:
                 if db_trades:
                     # Конвертируем формат БД в формат для обучения
                     for trade in db_trades:
+                        if with_rsi_only:
+                            rsi_val = trade.get('rsi') if trade.get('rsi') is not None else trade.get('entry_rsi')
+                            if rsi_val is None:
+                                continue
                         converted_trade = {
                             'id': f"db_{trade.get('symbol')}_{trade.get('timestamp', '')}",
                             'timestamp': trade.get('timestamp') or trade.get('entry_time'),
@@ -634,12 +641,12 @@ class AIBacktester:
         logger.info(f"📈 Бэктест стратегии '{strategy_name}' с параметрами: {strategy_params}")
         
         try:
-            # Загружаем исторические данные
-            trades = self._load_history_data()
+            # Загружаем исторические данные (только сделки с RSI — иначе бэктест не сможет оценить вход/выход)
+            trades = self._load_history_data(with_rsi_only=True)
             
-            logger.info(f"📊 Загружено {len(trades)} сделок из истории")
+            logger.info(f"📊 Загружено {len(trades)} сделок из истории (с RSI)")
             
-            # Если нет сделок, используем свечи для симуляции
+            # Если нет сделок с RSI или мало, используем свечи для симуляции
             if len(trades) < 10:
                 logger.info("⚠️ Недостаточно сделок для бэктеста, используем свечи для симуляции...")
                 return self._backtest_on_candles(strategy_params, period_days)
@@ -853,7 +860,7 @@ class AIBacktester:
                 logger.warning(
                     f"⚠️ По стратегии '{strategy_name}' не закрыто ни одной сделки "
                     f"(открыто по условиям входа: {entered_count} из {len(filtered_trades)}). "
-                    "Возможные причины: в истории нет RSI в entry_data, или условия выхода не сработали."
+                    "Возможные причины: в истории нет RSI (entry_data/entry_rsi), или условия выхода не сработали."
                 )
                 return {
                     'strategy_params': strategy_params,
