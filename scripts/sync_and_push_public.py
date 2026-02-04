@@ -32,8 +32,6 @@ def main():
 
     # 1) Синк файлов
     sync_script = ROOT / "scripts" / "sync_to_public.py"
-    if not sync_script.exists():
-        sync_script = ROOT / "sync_to_public.py"
     if sync_script.exists():
         print("Синхронизация в InfoBot_Public...")
         if run([sys.executable, str(sync_script)], cwd=str(ROOT)) != 0:

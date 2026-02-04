@@ -93,7 +93,7 @@ curl http://localhost:5001/api/ai/status
 
 | Задача | Команда |
 | --- | --- |
-| Обновить проект | `git pull && python sync_to_public.py` |
+| Обновить проект | `git pull && python scripts/sync_to_public.py` |
 | Запустить AI сервис | `python ai.py` |
 | Проверить статус AI | `python scripts/verify_ai_ready.py` |
 | Проверить лицензию | `python scripts/test_hwid_check.py` |

@@ -13,7 +13,7 @@
 | Bots Service | `bots.py` (порт 5001) + `bots_modules/*` | REST API, обработка сигналов, автосоздание/управление ботами. |
 | AI Launcher | `ai.py` (см. `docs/AI_README.md`) | Сбор данных, обучение моделей, Smart Risk, лицензирование, самообучение в реальном времени. |
 | Launcher GUI | `start_infobot_manager.*` | Устанавливает зависимости, запускает сервисы, проверяет лицензии. |
-| InfoBot_Public | `sync_to_public.py` | Собирает релизный пакет с необходимыми скриптами и защищёнными файлами. |
+| InfoBot_Public | `scripts/sync_to_public.py` | Собирает релизный пакет с необходимыми скриптами и защищёнными файлами. |
 
 > Детальное описание модулей и зависимостей — в `docs/ARCHITECTURE.md` и `docs/MODULES.md`.
 
@@ -68,7 +68,7 @@
 - **HWID лицензия:** `scripts/activate_premium.py` → `.lic` в корне. Проверка в `bot_engine/ai/license_checker.pyc`. Подробности — `docs/PREMIUM_STOP_ANALYSIS_ARCHITECTURE.md`, `docs/ML_MODELS_DISTRIBUTION.md`, `docs/HWID_FIX_REPORT.md`.  
 - **Whitelist / blacklist монет:** `docs/WHITELIST_BLACKLIST.md` описывает формат файлов и UI.  
 - **Stop/Risk premium:** Smart Risk доступен только при валидной лицензии (см. `docs/AI_README.md`).  
-- **Release sync:** `sync_to_public.py` исключает приватные каталоги (`license_generator`, `docs/ai_*`, backups) и собирает обязательные файлы (`README`, `start_infobot_manager.*`, `InfoBot_Public/bot_engine/ai/*.pyc`). 
+- **Release sync:** `scripts/sync_to_public.py` исключает приватные каталоги (`license_generator`, `docs/ai_*`, backups) и собирает обязательные файлы (`README`, `start_infobot_manager.*`, `InfoBot_Public/bot_engine/ai/*.pyc`). 
 
 ---
 

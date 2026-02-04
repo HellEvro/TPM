@@ -193,7 +193,7 @@ def main() -> None:
     
     # Шаг 1: Синхронизация в InfoBot_Public
     root_dir = Path(__file__).parent.parent
-    sync_script = root_dir / "sync_to_public.py"
+    sync_script = root_dir / "scripts" / "sync_to_public.py"
     if sync_script.exists():
         print("=" * 80, flush=True)
         print("СИНХРОНИЗАЦИЯ В ПУБЛИЧНУЮ ВЕРСИЮ", flush=True)

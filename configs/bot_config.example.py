@@ -376,22 +376,22 @@ class SystemConfig:
     MIN_RSI_LOW = 35                        # Минимальный RSI для зрелости
     MAX_RSI_HIGH = 65                       # Максимальный RSI для зрелости
     MIN_VOLATILITY_THRESHOLD = 0.05         # Минимальный порог волатильности (5%)
-
+    
     # Настройки API
     BOTS_SERVICE_PORT = 5001                # Порт сервиса ботов
     BOTS_SERVICE_HOST = '0.0.0.0'           # Хост сервиса ботов
     MAIN_APP_PORT = 5000                    # Порт основного приложения
     MAIN_APP_HOST = '127.0.0.1'             # Хост основного приложения
     REQUEST_TIMEOUT = 30                    # Таймаут запросов, сек
-
+    
     # Настройки UI
     AUTO_REFRESH_UI = True                  # Автообновление UI
     PRESERVE_FILTERS = True                 # Сохранять фильтры при обновлении
     TOAST_DURATION = 3000                   # Длительность уведомлений, мс
-
+    
     # Отладка
     DEBUG_MODE = False                      # Режим отладки
-
+    
     # ========================================================================
     # НАСТРОЙКИ УРОВНЕЙ ЛОГИРОВАНИЯ В КОНСОЛИ
     # ========================================================================
@@ -490,11 +490,11 @@ class ExchangeConfig:
 class AIConfig:
     """
     Настройки ИИ модулей
-
+    
     ИИ функции являются премиум дополнением и требуют лицензии.
     Для активации лицензии: python scripts/activate_premium.py
     """
-
+    
     # Общие настройки
     AI_ENABLED = True                       # Включить ИИ
     AI_CONFIDENCE_THRESHOLD = 0.65          # Минимальная уверенность для рекомендации ИИ (0.0–1.0)
@@ -527,11 +527,11 @@ class AIConfig:
     AI_RISK_MANAGEMENT_ENABLED = True       # Включить умный риск-менеджмент ИИ
     AI_RISK_MODEL_PATH = 'data/ai/models/risk_manager.h5'   # Путь к модели риска
     AI_RISK_UPDATE_INTERVAL = 300           # Интервал обновления модели риска, сек
-
+    
     # Кэширование предсказаний
     AI_CACHE_PREDICTIONS = True             # Кэшировать предсказания ИИ
     AI_CACHE_TTL = 300                      # Время жизни кэша, сек
-
+    
     # Логирование ИИ решений
     AI_LOG_PREDICTIONS = True               # Логировать предсказания
     AI_LOG_ANOMALIES = True                 # Логировать аномалии
@@ -539,7 +539,7 @@ class AIConfig:
 
     # Smart Money Concepts (Order Blocks, FVG, BOS/CHoCH)
     AI_SMC_ENABLED = True                   # Включить Smart Money Concepts
-
+    
     # ==========================================
     # АВТОМАТИЧЕСКОЕ ОБУЧЕНИЕ
     # ==========================================

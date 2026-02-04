@@ -64,7 +64,7 @@
 - **bot_engine/__init__.py:** автопатчинг конфига при импорте (73 строки) — вызов patch_bot_config при загрузке.
 - **bot_engine/bot_config.py:** удалён из репо (690 строк удалено).
 - **scripts/patch_bot_config.py:** новый скрипт (315 строк) — дополнение bot_config из example.
-- **sync_to_public.py:** исключение bot_config из синка.
+- **scripts/sync_to_public.py:** исключение bot_config из синка.
 
 **Почему ломало:** автопатч при импорте и удаление bot_config из репо меняли поведение при старте и при обновлении конфига; вместе с последующими коммитами это приводило к «конфиг не работает».
 
@@ -168,7 +168,7 @@
 - **.gitignore:** добавить `bot_engine/bot_config.py`.
 - **bot_engine/__init__.py:** при импорте вызывать автопатч (создание/дополнение bot_config из example).
 - **scripts/patch_bot_config.py:** скрипт, который только дополняет классы из example (без добавления функций верхнего уровня).
-- **sync_to_public.py:** исключить bot_config из синка.
+- **scripts/sync_to_public.py:** исключить bot_config из синка.
 - При необходимости: `git rm --cached bot_engine/bot_config.py` и коммит.
 
 ---

@@ -7,6 +7,10 @@ import shutil
 import sys
 from pathlib import Path
 
+# Корень проекта (родитель папки scripts)
+ROOT = Path(__file__).resolve().parent.parent
+PUBLIC = ROOT.parent / "InfoBot_Public"
+
 # Настройка кодировки для Windows консоли
 if os.name == 'nt':
     try:
@@ -19,11 +23,12 @@ if os.name == 'nt':
         except:
             pass
 
-ROOT = Path(__file__).parent
-PUBLIC = ROOT.parent / "InfoBot_Public"
-
 # ✅ ПРОСТАЯ ЛОГИКА: ОДИН СПИСОК ЧТО НЕ КОПИРУЕТСЯ, ВСЁ ОСТАЛЬНОЕ КОПИРУЕТСЯ
 EXCLUDE = [
+
+    # Внутренние планы и инструкции (не для публики)
+    "AI_IMPLEMENTATION_PLAN.md",
+    "IMPROVEMENTS_PROPOSAL.md",
 
     "README.md",
     "LICENSE.md",
@@ -36,8 +41,7 @@ EXCLUDE = [
     "CODE_OF_CONDUCT.md",
     "TODO.txt",
     "TODO.md",
-    "TODO.txt",
-    "TODO.md",
+    "sync_to_public.py",
     "scripts/sync_to_public.py",
     "git_commit_gui.*",
 
@@ -50,38 +54,37 @@ EXCLUDE = [
     ".vscode",
     "backups",
     "restored_cursor_sessions",  # Восстановленные сессии Cursor (большие файлы)
-    
+
     # Внутренние папки (не для публики)
     "license_generator",  # Исходники генерации лицензий
     "data",  # Данные пользователей
     "logs",  # Логи
-    
+
     # Внутренние подпапки scripts
     "scripts/fix",
     "scripts/check",
-    
+
     # Внутренние подпапки docs
     "docs/ai_development",
     "docs/ai_technical",
     "docs/ai_guides",
-    
-    # Конфиденциальные файлы
+
+    # Конфиденциальные файлы (реальные конфиги в configs/)
     "app/keys.py",
     "app/config.py",
     "configs/keys.py",
     "configs/app_config.py",
-    "configs/bot_config.py",  # создаётся из example локально
+    "configs/bot_config.py",  # Локальный конфиг пользователя, не перетирать при синке
     "app/current_language.txt",
     "app/telegram_states.json",
     "launcher/.infobot_manager_state.json",
-    
-    # Тестовые и служебные скрипты
+
+    # Тестовые и служебные скрипты (verify_pyc_files.py исключен через INCLUDE_ANYWAY)
     "scripts/test_*.py",
-    "scripts/verify_*.py",
-    
+
     # Скомпилированные файлы (кроме нужных)
     "*.pyc",
-    
+
     # Документация разработки
     "docs/AI_README.md",
     "docs/LICENSE_SYSTEM.md",
@@ -112,10 +115,10 @@ EXCLUDE = [
     "docs/SYSTEM_OVERVIEW.md",
     "docs/TZ_AI_Extended_Testing.md",
     "docs/HWID_*.md",  # Все файлы про HWID (внутренние отчеты)
-    
+
     # Служебные файлы
     ".cursorrules",
-    
+
     # Генерируемые файлы
     "data/async_state.json",
     "data/bot_history.json",
@@ -128,11 +131,18 @@ EXCLUDE = [
 
 # ✅ ИСКЛЮЧЕНИЯ: Файлы которые НУЖНЫ в публичной версии (даже если в EXCLUDE)
 INCLUDE_ANYWAY = [
+    # Старые .pyc файлы (обратная совместимость)
     "bot_engine/ai/license_checker.pyc",
     "bot_engine/ai/hardware_id_source.pyc",
     "bot_engine/ai/ai_manager.pyc",
     "bot_engine/ai/_ai_launcher.pyc",
     "scripts/hardware_id.pyc",
+    # Версионированные .pyc файлы для Python 3.12+ (ВСЕ файлы из директорий)
+    "bot_engine/ai/pyc_312/",
+    "bot_engine/ai/pyc_314/",
+    # Скрипт проверки .pyc файлов
+    "scripts/verify_pyc_files.py",
+    # Исходные Python файлы
     "bot_engine/ai/ai_trainer.py",
     "bot_engine/ai/ai_backtester_new.py",
     "bot_engine/ai/ai_strategy_optimizer.py",
@@ -148,31 +158,38 @@ INCLUDE_ANYWAY = [
 def should_exclude(path_str):
     """Проверяет нужно ли исключить путь - ПРОСТАЯ ЛОГИКА"""
     import fnmatch
-    
+
     normalized_path = path_str.replace('\\', '/')
-    
+
     # ✅ ПЕРВЫЙ ПРИОРИТЕТ: Если файл в INCLUDE_ANYWAY - НИКОГДА не исключаем
     for include_path in INCLUDE_ANYWAY:
         include_norm = include_path.replace('\\', '/')
-        if normalized_path == include_norm or normalized_path.endswith('/' + include_norm):
+        # Точное совпадение
+        if normalized_path == include_norm:
             return False
-    
+        # Если путь заканчивается на include_path
+        if normalized_path.endswith('/' + include_norm):
+            return False
+        # Если include_path заканчивается на /, проверяем что путь начинается с него
+        if include_norm.endswith('/') and normalized_path.startswith(include_norm):
+            return False
+
     # ✅ Проверяем список исключений
     for exc in EXCLUDE:
         exc_norm = exc.replace('\\', '/')
-        
+
         # Точное совпадение
         if normalized_path == exc_norm:
             return True
-        
+
         # Проверка через fnmatch для паттернов
         if fnmatch.fnmatch(normalized_path, exc_norm) or fnmatch.fnmatch(os.path.basename(normalized_path), exc_norm):
             return True
-        
+
         # Проверка, что путь начинается с исключаемой директории
         if normalized_path.startswith(exc_norm + '/') or normalized_path.startswith(exc_norm + '\\'):
             return True
-    
+
     # ✅ ВСЁ ОСТАЛЬНОЕ КОПИРУЕТСЯ
     return False
 
@@ -200,21 +217,21 @@ skipped = 0
 for root, dirs, files in os.walk(ROOT):
     # Исключаем директории из обхода
     dirs[:] = [d for d in dirs if not should_exclude(os.path.join(root, d).replace(str(ROOT) + os.sep, '').replace('\\', '/'))]
-    
+
     for file in files:
         src_file = Path(root) / file
         rel_path = src_file.relative_to(ROOT)
         rel_path_str = str(rel_path).replace('\\', '/')
-        
+
         # Пропускаем .git
         if '.git' in rel_path_str:
             continue
-        
+
         # Проверяем исключения
         if should_exclude(rel_path_str):
             skipped += 1
             continue
-        
+
         # Копируем файл
         dst_file = PUBLIC / rel_path
         if sync_file(src_file, dst_file):

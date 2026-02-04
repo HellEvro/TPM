@@ -41,7 +41,7 @@
 
 ## 5. Мини чеклист перед работой
 
-1. `git pull` и `python sync_to_public.py`.
+1. `git pull` и `python scripts/sync_to_public.py`.
 2. Проверка `python scripts/verify_ai_ready.py`.
 3. Просмотрите `logs/ai.log` → нет ли ошибок лицензии/данных.
 4. Ознакомьтесь с разделом Roadmap в `docs/AI_README.md`, чтобы понимать текущий приоритет (Pattern Recognition, мульти-биржи и т. д.).

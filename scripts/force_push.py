@@ -34,7 +34,7 @@ run(["git", "push", "origin", "main"])
 print("\n" + "=" * 80)
 print("ШАГ 4: Синхронизация в публичный репозиторий")
 print("=" * 80)
-run([sys.executable, "sync_to_public.py"])
+run([sys.executable, "scripts/sync_to_public.py"])
 
 public_dir = r"E:\Drive\TRADEBOT\InfoBot_Public"
 if os.path.exists(public_dir) and os.path.exists(os.path.join(public_dir, ".git")):
