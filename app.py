@@ -2130,7 +2130,7 @@ def get_symbol_chart(symbol):
             '1d': 24 * 60 * 60 * 1000, '3d': 3 * 24 * 60 * 60 * 1000,
             '1w': 7 * 24 * 60 * 60 * 1000, '1M': 30 * 24 * 60 * 60 * 1000
         }
-        candle_interval_ms = timeframe_ms.get(current_timeframe, 6 * 60 * 60 * 1000)  # По умолчанию 6h
+        candle_interval_ms = timeframe_ms.get(current_timeframe, 60 * 1000)  # По умолчанию 1m
         
         # Создаем временные метки на основе количества значений RSI
         # Каждое значение RSI соответствует одной свече текущего таймфрейма
@@ -2303,7 +2303,7 @@ def get_rsi_6h(symbol):
                 '1d': 24 * 60 * 60 * 1000, '3d': 3 * 24 * 60 * 60 * 1000,
                 '1w': 7 * 24 * 60 * 60 * 1000, '1M': 30 * 24 * 60 * 60 * 1000
             }
-            candle_interval_ms = timeframe_ms.get(current_timeframe, 6 * 60 * 60 * 1000)  # По умолчанию 6h
+            candle_interval_ms = timeframe_ms.get(current_timeframe, 60 * 1000)  # По умолчанию 1m
             
             # Создаем временные метки с шагом интервала свечи текущего таймфрейма
             timestamps = []

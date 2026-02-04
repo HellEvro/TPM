@@ -110,15 +110,21 @@ def run_exit_scam_filter(
     candles: List[Dict[str, Any]],
     config: Dict[str, Any],
 ) -> Tuple[bool, str]:
-    exit_scam_enabled = config.get('exit_scam_enabled', True)
+    from bot_engine.config_loader import get_config_value
+    exit_scam_enabled = get_config_value(config, 'exit_scam_enabled')
     if not exit_scam_enabled:
         return True, 'ExitScam отключен'
 
-    exit_scam_candles = int(config.get('exit_scam_candles', 10) or 10)
-    # Реальные % тела свечи: |C-O|/O*100. Конфиг как есть (25 = 25%, 100 = 100%).
-    single_candle_percent = float(config.get('exit_scam_single_candle_percent', 15.0) or 15.0)
-    multi_candle_count = int(config.get('exit_scam_multi_candle_count', 4) or 4)
-    multi_candle_percent = float(config.get('exit_scam_multi_candle_percent', 50.0) or 50.0)
+    exit_scam_candles = get_config_value(config, 'exit_scam_candles')
+    exit_scam_candles = int(exit_scam_candles) if exit_scam_candles is not None else None
+    single_candle_percent = get_config_value(config, 'exit_scam_single_candle_percent')
+    multi_candle_count = get_config_value(config, 'exit_scam_multi_candle_count')
+    multi_candle_percent = get_config_value(config, 'exit_scam_multi_candle_percent')
+    if exit_scam_candles is None or single_candle_percent is None or multi_candle_count is None or multi_candle_percent is None:
+        return False, 'ExitScam: в конфиге не заданы exit_scam_* параметры'
+    single_candle_percent = float(single_candle_percent)
+    multi_candle_count = int(multi_candle_count)
+    multi_candle_percent = float(multi_candle_percent)
 
     if len(candles) < exit_scam_candles:
         return False, f'Недостаточно свечей для ExitScam ({len(candles)}/{exit_scam_candles})'

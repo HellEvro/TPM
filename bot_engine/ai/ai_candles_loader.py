@@ -250,7 +250,7 @@ class AICandlesLoader:
                                         '1h': 60, '2h': 120, '4h': 240, '6h': 360, '8h': 480,
                                         '12h': 720, '1d': 1440, '3d': 4320, '1w': 10080, '1M': 43200
                                     }
-                                    interval = timeframe_to_interval.get(current_timeframe, 360)  # По умолчанию 6h
+                                    interval = timeframe_to_interval.get(current_timeframe, 1)  # По умолчанию 1m
                                     
                                     response = exchange.client.get_kline(
                                         category="linear",

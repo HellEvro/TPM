@@ -213,30 +213,35 @@ def check_exit_scam_filter(symbol, coin_data, config, exchange_obj, ensure_excha
         ensure_exchange_func: Функция проверки инициализации биржи
     """
     try:
-        exit_scam_enabled = config.get('exit_scam_enabled', True)
-        exit_scam_candles = config.get('exit_scam_candles', 10)
-        # Лимит как в конфиге: 0.5 = 0.5%, 15 = 15%. Без пересчёта по таймфрейму.
-        single_candle_percent = float(config.get('exit_scam_single_candle_percent', 15.0) or 15.0)
-        multi_candle_count = config.get('exit_scam_multi_candle_count', 4)
-        multi_candle_percent = float(config.get('exit_scam_multi_candle_percent', 50.0) or 50.0)
-
+        from .config_loader import get_config_value, get_current_timeframe
+        exit_scam_enabled = get_config_value(config, 'exit_scam_enabled')
+        exit_scam_candles = get_config_value(config, 'exit_scam_candles')
+        single_candle_percent = get_config_value(config, 'exit_scam_single_candle_percent')
+        multi_candle_count = get_config_value(config, 'exit_scam_multi_candle_count')
+        multi_candle_percent = get_config_value(config, 'exit_scam_multi_candle_percent')
+        single_candle_percent = float(single_candle_percent) if single_candle_percent is not None else None
+        multi_candle_percent = float(multi_candle_percent) if multi_candle_percent is not None else None
+        if single_candle_percent is None or multi_candle_percent is None:
+            return False
+        exit_scam_candles = int(exit_scam_candles) if exit_scam_candles is not None else None
+        multi_candle_count = int(multi_candle_count) if multi_candle_count is not None else None
+        if exit_scam_candles is None or multi_candle_count is None:
+            return False
         if not exit_scam_enabled:
             return True
 
         if not ensure_exchange_func():
             return False
 
-        try:
-            from .bot_config import get_current_timeframe, TIMEFRAME
-            timeframe = get_current_timeframe()
-        except Exception:
-            timeframe = TIMEFRAME
+        timeframe = get_current_timeframe()
+        if not timeframe:
+            return False
         chart_response = exchange_obj.get_chart_data(symbol, timeframe, '30d')
         if not chart_response or not chart_response.get('success'):
             return False
 
         candles = chart_response.get('data', {}).get('candles', [])
-        if len(candles) < exit_scam_candles:
+        if exit_scam_candles is None or len(candles) < exit_scam_candles:
             return False
 
         recent_candles = candles[-exit_scam_candles:]

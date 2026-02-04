@@ -38,7 +38,7 @@ class SmartRSIManager:
         try:
             self.current_timeframe = get_current_timeframe()
         except Exception:
-            self.current_timeframe = '6h'  # Fallback только если не удалось получить
+            self.current_timeframe = '1m'  # Fallback в соответствии с дефолтом SYSTEM_TIMEFRAME
 
         logger.info(f"[SMART_RSI] 🧠 Умный менеджер RSI инициализирован")
         logger.info(f"[SMART_RSI] 📊 Плановое обновление: каждые {self.monitoring_interval//60} минут")
@@ -53,7 +53,7 @@ class SmartRSIManager:
             '8h': 28800, '12h': 43200, '1d': 86400, '3d': 259200,
             '1w': 604800, '1M': 2592000  # ~30 дней
         }
-        return timeframe_map.get(timeframe, 21600)  # По умолчанию 6h
+        return timeframe_map.get(timeframe, 60)  # По умолчанию 1m
 
     def get_next_candle_close(self) -> int:
         """Возвращает timestamp следующего закрытия свечи для текущего таймфрейма"""

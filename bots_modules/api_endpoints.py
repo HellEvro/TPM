@@ -1036,13 +1036,15 @@ def create_bot_endpoint():
             bot_runtime_config['rsi_time_filter_enabled'] = False
         
         if enable_maturity_check_coin and not has_manual_position:
-            # Проверяем зрелость по каноническому ТФ 6h (хранилище или загрузка 6h свечей при верификации)
+            # Проверяем зрелость по текущему системному ТФ (хранилище или загрузка свечей при верификации)
             from bots_modules.filters import check_coin_maturity_stored_or_verify
             if not check_coin_maturity_stored_or_verify(symbol):
-                logger.warning(f" {symbol}: Монета не прошла проверку зрелости (ТФ 6h)")
+                from bot_engine.config_loader import get_current_timeframe
+                tf = get_current_timeframe()
+                logger.warning(f" {symbol}: Монета не прошла проверку зрелости (ТФ {tf})")
                 return jsonify({
                     'success': False,
-                    'error': f'Монета {symbol} не прошла проверку зрелости (проверка по таймфрейму 6h)'
+                    'error': f'Монета {symbol} не прошла проверку зрелости (проверка по таймфрейму {tf})'
                 }), 400
         elif has_manual_position:
             logger.info(f" ✋ {symbol}: Ручная позиция обнаружена - проверка зрелости пропущена")
@@ -1752,9 +1754,11 @@ def _build_full_export_config():
     system_cfg = get_system_config_snapshot()
     try:
         from bot_engine.config_loader import get_current_timeframe
-        tf = get_current_timeframe() or '1m'
+        tf = get_current_timeframe()
     except Exception:
-        tf = '1m'
+        raise RuntimeError("КРИТИЧЕСКАЯ ОШИБКА: таймфрейм не выбран или недоступен. Выберите таймфрейм в настройках.")
+    if not tf or not str(tf).strip():
+        raise RuntimeError("КРИТИЧЕСКАЯ ОШИБКА: таймфрейм не выбран или недоступен. Выберите таймфрейм в настройках.")
     system_cfg = dict(system_cfg) if system_cfg else {}
     system_cfg['timeframe'] = tf
     ai_cfg = {}
@@ -1801,7 +1805,7 @@ def export_full_config():
         return jsonify({
             'success': True,
             'config': full_config,
-            'timeframe': timeframe or '1m'
+            'timeframe': timeframe
         })
     except Exception as e:
         logger.exception("export-config")
@@ -2875,12 +2879,15 @@ def copy_individual_settings(symbol):
 
 
 def _get_candles_for_learn_exit_scam(symbol, timeframe=None):
-    """Берёт свечи только из кэша или БД для этой монеты (без запросов к бирже). Расчёт индивидуальный по своим данным."""
+    """Берёт свечи только из кэша или БД для этой монеты (без запросов к бирже). Расчёт по текущему ТФ.
+    timeframe должен быть передан или доступен из конфига — дефолта нет."""
     try:
         from bot_engine.config_loader import get_current_timeframe
         tf = timeframe or get_current_timeframe()
     except Exception:
-        tf = '6h'
+        raise RuntimeError("КРИТИЧЕСКАЯ ОШИБКА: таймфрейм не выбран или недоступен. Выберите таймфрейм в настройках.")
+    if not tf or not str(tf).strip():
+        raise RuntimeError("КРИТИЧЕСКАЯ ОШИБКА: таймфрейм не выбран или недоступен. Выберите таймфрейм в настройках.")
     candles = None
     with rsi_data_lock:
         candles_cache = coins_rsi_data.get('candles_cache', {})
@@ -2915,12 +2922,19 @@ def learn_exit_scam_for_coin(symbol):
         if aggressiveness not in ('normal', 'conservative', 'aggressive'):
             aggressiveness = 'normal'
         timeframe = payload.get('timeframe') or None
-
         try:
             from bot_engine.config_loader import get_current_timeframe
             effective_tf = timeframe or get_current_timeframe()
         except Exception:
-            effective_tf = '6h'
+            return jsonify({
+                'success': False,
+                'error': 'КРИТИЧЕСКАЯ ОШИБКА: таймфрейм не выбран или недоступен. Выберите таймфрейм в настройках.'
+            }), 500
+        if not effective_tf or not str(effective_tf).strip():
+            return jsonify({
+                'success': False,
+                'error': 'КРИТИЧЕСКАЯ ОШИБКА: таймфрейм не выбран или недоступен. Выберите таймфрейм в настройках.'
+            }), 500
         candles = _get_candles_for_learn_exit_scam(normalized_symbol, timeframe=timeframe)
         if not candles or len(candles) < 50:
             return jsonify({
@@ -2960,7 +2974,15 @@ def learn_exit_scam_for_all_coins():
             from bot_engine.config_loader import get_current_timeframe
             effective_tf = timeframe or get_current_timeframe()
         except Exception:
-            effective_tf = '6h'
+            return jsonify({
+                'success': False,
+                'error': 'КРИТИЧЕСКАЯ ОШИБКА: таймфрейм не выбран или недоступен. Выберите таймфрейм в настройках.'
+            }), 500
+        if not effective_tf or not str(effective_tf).strip():
+            return jsonify({
+                'success': False,
+                'error': 'КРИТИЧЕСКАЯ ОШИБКА: таймфрейм не выбран или недоступен. Выберите таймфрейм в настройках.'
+            }), 500
 
         with rsi_data_lock:
             symbols = list(coins_rsi_data.get('coins', {}).keys())
@@ -3233,17 +3255,25 @@ def auto_bot_config():
                 # ExitScam: лимиты как в конфиге (0.5 = 0.5%), без пересчёта по ТФ
                 try:
                     from bots_modules.filters import get_exit_scam_effective_limits
-                    single_pct = config.get('exit_scam_single_candle_percent', 15.0)
-                    multi_count = config.get('exit_scam_multi_candle_count', 4)
-                    multi_pct = config.get('exit_scam_multi_candle_percent', 50.0)
+                    from bot_engine.config_loader import get_config_value
+                    single_pct = get_config_value(config, 'exit_scam_single_candle_percent')
+                    multi_count = get_config_value(config, 'exit_scam_multi_candle_count')
+                    multi_pct = get_config_value(config, 'exit_scam_multi_candle_percent')
                     tf_name, eff_single, eff_multi = get_exit_scam_effective_limits(single_pct, multi_count, multi_pct)
                     config['exit_scam_timeframe'] = tf_name
                     config['exit_scam_effective_single_pct'] = round(float(eff_single), 2)
                     config['exit_scam_effective_multi_pct'] = round(float(eff_multi), 2)
                 except Exception:
-                    config['exit_scam_timeframe'] = '1m'
-                    config['exit_scam_effective_single_pct'] = config.get('exit_scam_single_candle_percent', 15.0)
-                    config['exit_scam_effective_multi_pct'] = config.get('exit_scam_multi_candle_percent', 50.0)
+                    from bot_engine.config_loader import get_current_timeframe
+                    _tf = get_current_timeframe()
+                    if not _tf or not str(_tf).strip():
+                        return jsonify({
+                            'success': False,
+                            'error': 'КРИТИЧЕСКАЯ ОШИБКА: таймфрейм не выбран или недоступен. Выберите таймфрейм в настройках.'
+                        }), 500
+                    config['exit_scam_timeframe'] = _tf
+                    config['exit_scam_effective_single_pct'] = get_config_value(config, 'exit_scam_single_candle_percent')
+                    config['exit_scam_effective_multi_pct'] = get_config_value(config, 'exit_scam_multi_candle_percent')
                 
                 return jsonify({
                     'success': True,

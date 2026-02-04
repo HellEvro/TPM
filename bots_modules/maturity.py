@@ -29,10 +29,15 @@ try:
 except ImportError:
     bots_data_lock = threading.Lock()
     bots_data = {}
-    # ✅ ВАЖНО: Fallback значения должны совпадать с DEFAULT_AUTO_BOT_CONFIG в configs/bot_config.py
-    MIN_CANDLES_FOR_MATURITY = 400  # Было 200, теперь 400
-    MIN_RSI_LOW = 35
-    MAX_RSI_HIGH = 65
+    try:
+        from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG
+        MIN_CANDLES_FOR_MATURITY = DEFAULT_AUTO_BOT_CONFIG.get('min_candles_for_maturity')
+        MIN_RSI_LOW = DEFAULT_AUTO_BOT_CONFIG.get('min_rsi_low')
+        MAX_RSI_HIGH = DEFAULT_AUTO_BOT_CONFIG.get('max_rsi_high')
+    except Exception:
+        MIN_CANDLES_FOR_MATURITY = None
+        MIN_RSI_LOW = None
+        MAX_RSI_HIGH = None
 
 # Импорт calculate_rsi_history из calculations
 try:
@@ -47,9 +52,13 @@ MATURE_COINS_FILE = 'data/mature_coins.json'
 MATURITY_CHECK_CACHE_FILE = 'data/maturity_check_cache.json'  # 🚀 Кэш последней проверки
 mature_coins_lock = threading.Lock()
 
-# ✅ Канонический таймфрейм для зрелости: считаем только по 6h, результат используем для всех ТФ
-# (не загружаем свечи по 3m/5m/15m и т.д. — снижает нагрузку и хранение)
-MATURITY_CANONICAL_TIMEFRAME = '6h'
+def get_maturity_timeframe():
+    """Таймфрейм для проверки зрелости = текущий системный ТФ (1m, 6h и т.д.)."""
+    try:
+        from bot_engine.config_loader import get_current_timeframe
+        return get_current_timeframe()
+    except Exception:
+        return '1m'
 
 # 🚀 Кэш последней проверки зрелости (загружается из файла)
 last_maturity_check = {'coins_count': 0, 'config_hash': None}
@@ -114,10 +123,11 @@ def load_mature_coins_storage(expected_coins_count=None):
                 current_min_rsi_low = config.get('min_rsi_low', MIN_RSI_LOW)
                 current_max_rsi_high = config.get('max_rsi_high', MAX_RSI_HIGH)
                 
-                # Проверяем канонический ТФ: зрелость считается только по 6h
-                db_timeframe = first_coin['maturity_data']['details'].get('timeframe') or MATURITY_CANONICAL_TIMEFRAME
-                if db_timeframe != MATURITY_CANONICAL_TIMEFRAME:
-                    logger.warning(f" ⚠️ В БД зрелость по ТФ {db_timeframe}, канонический {MATURITY_CANONICAL_TIMEFRAME} — пересчитываем")
+                # Зрелость считается по текущему системному ТФ; при смене ТФ — пересчёт
+                current_tf = get_maturity_timeframe()
+                db_timeframe = first_coin['maturity_data']['details'].get('timeframe')
+                if db_timeframe != current_tf:
+                    logger.warning(f" ⚠️ В БД зрелость по ТФ {db_timeframe}, текущий ТФ {current_tf} — пересчитываем")
                     need_recalculation = True
                     from bot_engine.storage import save_mature_coins as storage_save_mature
                     storage_save_mature({})
@@ -220,9 +230,10 @@ def is_coin_mature_stored(symbol):
     current_min_rsi_low = config.get('min_rsi_low', MIN_RSI_LOW)
     current_max_rsi_high = config.get('max_rsi_high', MAX_RSI_HIGH)
     
-    # Зрелость считается только по каноническому ТФ 6h; старые записи без timeframe считаем валидными
-    stored_timeframe = stored_details.get('timeframe') or MATURITY_CANONICAL_TIMEFRAME
-    if stored_timeframe != MATURITY_CANONICAL_TIMEFRAME:
+    # Зрелость по текущему системному ТФ; при смене ТФ запись невалидна
+    current_tf = get_maturity_timeframe()
+    stored_timeframe = stored_details.get('timeframe')
+    if stored_timeframe != current_tf:
         pass
         del mature_coins_storage[symbol]
         return False
@@ -379,7 +390,7 @@ def check_coin_maturity(symbol, candles):
         # Детальное логирование для отладки (отключено для уменьшения спама)
         # logger.info(f"[MATURITY_DEBUG] {symbol}: свечи={maturity_checks['sufficient_candles']} ({len(candles)}/{min_candles}), RSI_low={maturity_checks['rsi_reached_low']} (min={rsi_min:.1f}<=>{min_rsi_low}), RSI_high={maturity_checks['rsi_reached_high']} (max={rsi_max:.1f}>={max_rsi_high}), зрелая={is_mature}")
         
-        # Формируем детальную информацию с параметрами конфига (timeframe = канонический 6h)
+        # Детали с текущим таймфреймом (зрелость считается по нему)
         details = {
             'candles_count': len(candles),
             'min_required': min_candles,
@@ -387,7 +398,7 @@ def check_coin_maturity(symbol, candles):
             'config_max_rsi_high': max_rsi_high,
             'rsi_min': round(rsi_min, 1),
             'rsi_max': round(rsi_max, 1),
-            'timeframe': MATURITY_CANONICAL_TIMEFRAME,
+            'timeframe': get_maturity_timeframe(),
         }
         
         # Определяем причину незрелости (только для незрелых монет)
@@ -500,9 +511,9 @@ def calculate_all_coins_maturity():
                 if i == 1 or i % 10 == 0 or i == len(coins_to_check):
                     logger.info(f"📊 Прогресс: {i}/{len(coins_to_check)} монет ({round(i/len(coins_to_check)*100)}%)")
                 
-                # Получаем свечи для проверки зрелости только по каноническому ТФ 6h
-                # (результат используется для всех ТФ без повторной загрузки свечей)
-                chart_response = exchange.get_chart_data(symbol, MATURITY_CANONICAL_TIMEFRAME, '30d')
+                # Свечи для зрелости — по текущему системному ТФ (1m, 6h и т.д.)
+                maturity_tf = get_maturity_timeframe()
+                chart_response = exchange.get_chart_data(symbol, maturity_tf, '30d')
                 if not chart_response or not chart_response.get('success'):
                     pass
                     immature_count += 1

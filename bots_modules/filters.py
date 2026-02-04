@@ -272,32 +272,33 @@ def _legacy_check_rsi_time_filter(candles, rsi, signal, symbol=None, individual_
             individual_settings = get_individual_coin_settings(symbol)
         
         auto_config = bots_data.get('auto_bot_config', {})
-        
+        from bot_engine.config_loader import get_config_value
         # Используем индивидуальные настройки, если они есть, иначе глобальные
         rsi_time_filter_enabled = individual_settings.get('rsi_time_filter_enabled') if individual_settings else None
         if rsi_time_filter_enabled is None:
-            rsi_time_filter_enabled = auto_config.get('rsi_time_filter_enabled', True)
+            rsi_time_filter_enabled = get_config_value(auto_config, 'rsi_time_filter_enabled')
         
         rsi_time_filter_candles = individual_settings.get('rsi_time_filter_candles') if individual_settings else None
         if rsi_time_filter_candles is None:
-            rsi_time_filter_candles = auto_config.get('rsi_time_filter_candles', 8)
-        rsi_time_filter_candles = max(2, rsi_time_filter_candles)  # Минимум 2 свечи (защита от некорректных значений)
+            rsi_time_filter_candles = get_config_value(auto_config, 'rsi_time_filter_candles')
+        if rsi_time_filter_candles is not None:
+            rsi_time_filter_candles = max(2, int(rsi_time_filter_candles))
         
         rsi_time_filter_upper = individual_settings.get('rsi_time_filter_upper') if individual_settings else None
         if rsi_time_filter_upper is None:
-            rsi_time_filter_upper = auto_config.get('rsi_time_filter_upper', 65)  # Спокойная зона для SHORT
+            rsi_time_filter_upper = get_config_value(auto_config, 'rsi_time_filter_upper')
         
         rsi_time_filter_lower = individual_settings.get('rsi_time_filter_lower') if individual_settings else None
         if rsi_time_filter_lower is None:
-            rsi_time_filter_lower = auto_config.get('rsi_time_filter_lower', 35)  # Спокойная зона для LONG
+            rsi_time_filter_lower = get_config_value(auto_config, 'rsi_time_filter_lower')
         
         rsi_long_threshold = individual_settings.get('rsi_long_threshold') if individual_settings else None
         if rsi_long_threshold is None:
-            rsi_long_threshold = auto_config.get('rsi_long_threshold', 29)  # Экстремум для LONG
+            rsi_long_threshold = get_config_value(auto_config, 'rsi_long_threshold')
         
         rsi_short_threshold = individual_settings.get('rsi_short_threshold') if individual_settings else None
         if rsi_short_threshold is None:
-            rsi_short_threshold = auto_config.get('rsi_short_threshold', 71)  # Экстремум для SHORT
+            rsi_short_threshold = get_config_value(auto_config, 'rsi_short_threshold')
         
         # Если фильтр отключен - разрешаем сделку
         if not rsi_time_filter_enabled:
@@ -781,15 +782,18 @@ def _check_loss_reentry_protection_static(symbol, candles, loss_reentry_count, l
 
 def get_exit_scam_effective_limits(single_pct, multi_count, multi_pct):
     """
-    Возвращает (current_tf, single_pct, multi_pct). Лимиты как в конфиге: 0.5 = 0.5%, без пересчёта по ТФ.
+    Возвращает (current_tf, single_pct, multi_pct). Только из конфига — без хардкодов.
     """
-    try:
-        from bot_engine.config_loader import get_current_timeframe
-        current_tf = get_current_timeframe() or '1m'
-    except Exception:
-        current_tf = '1m'
-    single = float(single_pct or 15.0)
-    multi = float(multi_pct or 50.0)
+    from bot_engine.config_loader import get_current_timeframe, DEFAULT_AUTO_BOT_CONFIG
+    current_tf = get_current_timeframe()
+    single_val = single_pct if single_pct is not None else DEFAULT_AUTO_BOT_CONFIG.get('exit_scam_single_candle_percent')
+    multi_val = multi_pct if multi_pct is not None else DEFAULT_AUTO_BOT_CONFIG.get('exit_scam_multi_candle_percent')
+    if single_val is None:
+        raise RuntimeError("КРИТИЧЕСКАЯ ОШИБКА: в конфиге не задан exit_scam_single_candle_percent")
+    if multi_val is None:
+        raise RuntimeError("КРИТИЧЕСКАЯ ОШИБКА: в конфиге не задан exit_scam_multi_candle_percent")
+    single = float(single_val)
+    multi = float(multi_val)
     return (current_tf, single, multi)
 
 
@@ -945,15 +949,15 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
 
     # ✅ КРИТИЧНО: Считаем signal, rsi_zone и *_info для отображения причин на странице монеты (как в get_coin_rsi_data)
     try:
-        from bot_engine.config_loader import SystemConfig
+        from bot_engine.config_loader import SystemConfig, get_config_value
         from bots_modules.imports_and_globals import bots_data
 
         individual_settings = get_individual_coin_settings(symbol)
         auto_config = bots_data.get('auto_bot_config', {})
-        rsi_long_threshold = (individual_settings.get('rsi_long_threshold') if individual_settings else None) or auto_config.get('rsi_long_threshold', SystemConfig.RSI_OVERSOLD)
-        rsi_short_threshold = (individual_settings.get('rsi_short_threshold') if individual_settings else None) or auto_config.get('rsi_short_threshold', SystemConfig.RSI_OVERBOUGHT)
-        rsi_time_filter_lower = (individual_settings.get('rsi_time_filter_lower') if individual_settings else None) or auto_config.get('rsi_time_filter_lower', 35)
-        rsi_time_filter_upper = (individual_settings.get('rsi_time_filter_upper') if individual_settings else None) or auto_config.get('rsi_time_filter_upper', 65)
+        rsi_long_threshold = (individual_settings.get('rsi_long_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_long_threshold')
+        rsi_short_threshold = (individual_settings.get('rsi_short_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_short_threshold')
+        rsi_time_filter_lower = (individual_settings.get('rsi_time_filter_lower') if individual_settings else None) or get_config_value(auto_config, 'rsi_time_filter_lower')
+        rsi_time_filter_upper = (individual_settings.get('rsi_time_filter_upper') if individual_settings else None) or get_config_value(auto_config, 'rsi_time_filter_upper')
 
         rsi_zone = 'NEUTRAL'
         signal = 'WAIT'
@@ -1012,17 +1016,18 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
 
             if len(candles) >= 10:
                 try:
-                    exit_scam_enabled = auto_config.get('exit_scam_enabled', True)
-                    exit_scam_candles = auto_config.get('exit_scam_candles', 10)
-                    single_candle_percent = float(auto_config.get('exit_scam_single_candle_percent', 15.0) or 15.0)
-                    multi_candle_count = auto_config.get('exit_scam_multi_candle_count', 4)
-                    multi_candle_percent = float(auto_config.get('exit_scam_multi_candle_percent', 50.0) or 50.0)
+                    from bot_engine.config_loader import get_config_value
+                    exit_scam_enabled = get_config_value(auto_config, 'exit_scam_enabled')
+                    exit_scam_candles = get_config_value(auto_config, 'exit_scam_candles')
+                    single_candle_percent = get_config_value(auto_config, 'exit_scam_single_candle_percent')
+                    multi_candle_count = get_config_value(auto_config, 'exit_scam_multi_candle_count')
+                    multi_candle_percent = get_config_value(auto_config, 'exit_scam_multi_candle_percent')
                     _tf, limit_single, limit_multi = get_exit_scam_effective_limits(
                         single_candle_percent, multi_candle_count, multi_candle_percent
                     )
                     exit_scam_reason = 'ExitScam фильтр пройден'
                     exit_scam_allowed = True
-                    if exit_scam_enabled and len(candles) >= exit_scam_candles:
+                    if exit_scam_enabled and exit_scam_candles and len(candles) >= exit_scam_candles:
                         recent = candles[-exit_scam_candles:]
                         for c in recent:
                             o, cl = float(c.get('open', 0) or 0), float(c.get('close', 0) or 0)
@@ -1049,9 +1054,9 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
                 exit_scam_info = {'blocked': False, 'reason': 'Недостаточно свечей', 'filter_type': 'exit_scam'}
 
             try:
-                loss_reentry_protection_enabled = auto_config.get('loss_reentry_protection', True)
-                loss_reentry_count = auto_config.get('loss_reentry_count', 1)
-                loss_reentry_candles = auto_config.get('loss_reentry_candles', 3)
+                loss_reentry_protection_enabled = get_config_value(auto_config, 'loss_reentry_protection')
+                loss_reentry_count = get_config_value(auto_config, 'loss_reentry_count')
+                loss_reentry_candles = get_config_value(auto_config, 'loss_reentry_candles')
                 if loss_reentry_protection_enabled and len(candles) >= 10:
                     lr_result = _check_loss_reentry_protection_static(symbol, candles, loss_reentry_count, loss_reentry_candles, individual_settings)
                     if lr_result:
@@ -1336,15 +1341,16 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         # Это позволяет использовать индивидуальные пороги RSI для определения сигнала
         individual_settings = get_individual_coin_settings(symbol)
         
-        # Пороги RSI только из загруженного AUTO_BOT_CONFIG; если ключа нет — минимальный fallback числом
+        # Пороги RSI только из конфига (AUTO_BOT_CONFIG / DEFAULT)
+        from bot_engine.config_loader import get_config_value
         _auto = bots_data.get('auto_bot_config', {})
         rsi_long_threshold = individual_settings.get('rsi_long_threshold') if individual_settings else None
         if rsi_long_threshold is None:
-            rsi_long_threshold = _auto.get('rsi_long_threshold', 29)
+            rsi_long_threshold = get_config_value(_auto, 'rsi_long_threshold')
         
         rsi_short_threshold = individual_settings.get('rsi_short_threshold') if individual_settings else None
         if rsi_short_threshold is None:
-            rsi_short_threshold = _auto.get('rsi_short_threshold', 71)
+            rsi_short_threshold = get_config_value(_auto, 'rsi_short_threshold')
         
         # Определяем RSI зоны согласно техзаданию
         rsi_zone = 'NEUTRAL'
@@ -1486,16 +1492,15 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         time_filter_info = None
         loss_reentry_info = None  # ✅ Инициализируем ДО использования в result
         
-        # ✅ Получаем пороги для фильтров с учетом индивидуальных настроек
-        # Пороги RSI уже определены выше (с учетом индивидуальных настроек)
-        # Получаем пороги временного фильтра: сначала индивидуальные, затем глобальные
+        # ✅ Получаем пороги для фильтров с учетом индивидуальных настроек (только из конфига)
+        from bot_engine.config_loader import get_config_value
         rsi_time_filter_lower = individual_settings.get('rsi_time_filter_lower') if individual_settings else None
         if rsi_time_filter_lower is None:
-            rsi_time_filter_lower = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_lower', 35)  # Нижняя граница для LONG
+            rsi_time_filter_lower = get_config_value(bots_data.get('auto_bot_config', {}), 'rsi_time_filter_lower')
         
         rsi_time_filter_upper = individual_settings.get('rsi_time_filter_upper') if individual_settings else None
         if rsi_time_filter_upper is None:
-            rsi_time_filter_upper = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_upper', 65)  # Верхняя граница для SHORT
+            rsi_time_filter_upper = get_config_value(bots_data.get('auto_bot_config', {}), 'rsi_time_filter_upper')
         
         # Определяем потенциальный сигнал для проверки фильтров
         # ВАЖНО: Проверяем фильтры если RSI в зоне фильтра:
@@ -1616,17 +1621,18 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
                                     'exit_scam_multi_candle_percent']:
                             if key in individual_settings:
                                 auto_config[key] = individual_settings[key]
-                    exit_scam_enabled = auto_config.get('exit_scam_enabled', True)
-                    exit_scam_candles = auto_config.get('exit_scam_candles', 10)
-                    single_candle_percent = float(auto_config.get('exit_scam_single_candle_percent', 15.0) or 15.0)
-                    multi_candle_count = auto_config.get('exit_scam_multi_candle_count', 4)
-                    multi_candle_percent = float(auto_config.get('exit_scam_multi_candle_percent', 50.0) or 50.0)
+                    from bot_engine.config_loader import get_config_value
+                    exit_scam_enabled = get_config_value(auto_config, 'exit_scam_enabled')
+                    exit_scam_candles = get_config_value(auto_config, 'exit_scam_candles')
+                    single_candle_percent = get_config_value(auto_config, 'exit_scam_single_candle_percent')
+                    multi_candle_count = get_config_value(auto_config, 'exit_scam_multi_candle_count')
+                    multi_candle_percent = get_config_value(auto_config, 'exit_scam_multi_candle_percent')
                     _tf, limit_single, limit_multi = get_exit_scam_effective_limits(
                         single_candle_percent, multi_candle_count, multi_candle_percent
                     )
                     exit_scam_allowed = True
                     exit_scam_reason = 'ExitScam фильтр пройден'
-                    if exit_scam_enabled and len(candles) >= exit_scam_candles:
+                    if exit_scam_enabled and exit_scam_candles and len(candles) >= exit_scam_candles:
                         recent_candles = candles[-exit_scam_candles:]
                         for candle in recent_candles:
                             open_price = float(candle.get('open', 0) or 0)
@@ -2485,8 +2491,8 @@ def _recalculate_signal_with_trend(rsi, trend, symbol):
         # Пороги только из AUTO_BOT_CONFIG; fallback — число, без другого блока конфига
         auto_config = bots_data.get('auto_bot_config', {})
         individual_settings = get_individual_coin_settings(symbol)
-        rsi_long_threshold = (individual_settings.get('rsi_long_threshold') if individual_settings else None) or auto_config.get('rsi_long_threshold', 29)
-        rsi_short_threshold = (individual_settings.get('rsi_short_threshold') if individual_settings else None) or auto_config.get('rsi_short_threshold', 71)
+        rsi_long_threshold = (individual_settings.get('rsi_long_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_long_threshold')
+        rsi_short_threshold = (individual_settings.get('rsi_short_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_short_threshold')
         # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
         avoid_down_trend = auto_config.get('avoid_down_trend', False)
         avoid_up_trend = auto_config.get('avoid_up_trend', False)
@@ -2536,8 +2542,9 @@ def get_effective_signal(coin):
     # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
     avoid_down_trend = auto_config.get('avoid_down_trend', False)
     avoid_up_trend = auto_config.get('avoid_up_trend', False)
-    rsi_long_threshold = auto_config.get('rsi_long_threshold', 29)
-    rsi_short_threshold = auto_config.get('rsi_short_threshold', 71)
+    from bot_engine.config_loader import get_config_value
+    rsi_long_threshold = get_config_value(auto_config, 'rsi_long_threshold')
+    rsi_short_threshold = get_config_value(auto_config, 'rsi_short_threshold')
         
     # Получаем данные монеты с учетом текущего таймфрейма
     from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data, get_current_timeframe
@@ -2578,12 +2585,12 @@ def get_effective_signal(coin):
         return 'WAIT'
     
     # Проверяем RSI Time фильтр (только если фильтр включён — иначе не блокируем)
-    rsi_time_filter_enabled = auto_config.get('rsi_time_filter_enabled', True)
+    rsi_time_filter_enabled = get_config_value(auto_config, 'rsi_time_filter_enabled')
     if rsi_time_filter_enabled and coin.get('blocked_by_rsi_time', False):
         return 'WAIT'
     
     # ✅ Проверяем защиту от повторных входов (только если включена — иначе не блокируем)
-    loss_reentry_enabled = auto_config.get('loss_reentry_protection', True)
+    loss_reentry_enabled = get_config_value(auto_config, 'loss_reentry_protection')
     if loss_reentry_enabled and coin.get('blocked_by_loss_reentry', False):
         loss_reentry_info = coin.get('loss_reentry_info', {})
         reason = loss_reentry_info.get('reason', 'Защита от повторных входов') if loss_reentry_info else 'Защита от повторных входов'
@@ -2651,8 +2658,8 @@ def process_auto_bot_signals(exchange_obj=None):
         except Exception:
             pass
         max_concurrent = bots_data['auto_bot_config'].get('max_concurrent', 20)
-        rsi_long_threshold = bots_data['auto_bot_config'].get('rsi_long_threshold', 29)
-        rsi_short_threshold = bots_data['auto_bot_config'].get('rsi_short_threshold', 71)
+        rsi_long_threshold = get_config_value(bots_data['auto_bot_config'], 'rsi_long_threshold')
+        rsi_short_threshold = get_config_value(bots_data['auto_bot_config'], 'rsi_short_threshold')
         
         # Освобождаем слоты: боты без позиции, у которых монета уже вне зоны RSI — переводим в IDLE
         # (чтобы справа были боты для монет с текущим сигналом слева, а не «зависшие» вне зоны)
@@ -3076,10 +3083,11 @@ def analyze_trends_for_signal_coins():
         current_timeframe = get_current_timeframe()
         trend_key = get_trend_key(current_timeframe)
 
-        # Пороги только из AUTO_BOT_CONFIG; fallback — число
+        # Пороги только из конфига
+        from bot_engine.config_loader import get_config_value
         auto_config = bots_data.get('auto_bot_config', {})
-        rsi_long_th = auto_config.get('rsi_long_threshold', 29)
-        rsi_short_th = auto_config.get('rsi_short_threshold', 71)
+        rsi_long_th = get_config_value(auto_config, 'rsi_long_threshold')
+        rsi_short_th = get_config_value(auto_config, 'rsi_short_threshold')
         signal_coins = []
         for symbol, coin_data in coins_rsi_data['coins'].items():
             rsi = get_rsi_from_coin_data(coin_data)
@@ -3268,15 +3276,15 @@ def check_coin_maturity_stored_or_verify(symbol):
         if is_coin_mature_stored(symbol):
             return True
         
-        # Если нет в хранилище, выполняем проверку по каноническому ТФ 6h
-        # (зрелость всегда считается по 6h, результат используется для всех ТФ — без загрузки свечей по другим ТФ)
+        # Если нет в хранилище — проверка по текущему системному ТФ (1m, 6h и т.д.)
         exch = get_exchange()
         if not exch:
             logger.warning(f"{symbol}: Биржа не инициализирована")
             return False
         
-        from bots_modules.maturity import MATURITY_CANONICAL_TIMEFRAME
-        chart_response = exch.get_chart_data(symbol, MATURITY_CANONICAL_TIMEFRAME, '30d')
+        from bots_modules.maturity import get_maturity_timeframe
+        maturity_tf = get_maturity_timeframe()
+        chart_response = exch.get_chart_data(symbol, maturity_tf, '30d')
         if not chart_response or not chart_response.get('success'):
             logger.warning(f"{symbol}: Не удалось получить свечи")
             return False
@@ -3349,21 +3357,22 @@ def _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=None):
         if exit_scam_enabled is None:
             exit_scam_enabled = auto_config.get('exit_scam_enabled', True)
         
+        from bot_engine.config_loader import get_config_value
         exit_scam_candles = individual_settings.get('exit_scam_candles') if individual_settings else None
         if exit_scam_candles is None:
-            exit_scam_candles = auto_config.get('exit_scam_candles', 10)
+            exit_scam_candles = get_config_value(auto_config, 'exit_scam_candles')
         
         single_candle_percent = individual_settings.get('exit_scam_single_candle_percent') if individual_settings else None
         if single_candle_percent is None:
-            single_candle_percent = auto_config.get('exit_scam_single_candle_percent', 15.0)
-        single_candle_percent = float(single_candle_percent or 15.0)
+            single_candle_percent = get_config_value(auto_config, 'exit_scam_single_candle_percent')
+        single_candle_percent = float(single_candle_percent) if single_candle_percent is not None else None
         multi_candle_count = individual_settings.get('exit_scam_multi_candle_count') if individual_settings else None
         if multi_candle_count is None:
-            multi_candle_count = auto_config.get('exit_scam_multi_candle_count', 4)
+            multi_candle_count = get_config_value(auto_config, 'exit_scam_multi_candle_count')
         multi_candle_percent = individual_settings.get('exit_scam_multi_candle_percent') if individual_settings else None
         if multi_candle_percent is None:
-            multi_candle_percent = auto_config.get('exit_scam_multi_candle_percent', 50.0)
-        multi_candle_percent = float(multi_candle_percent or 50.0)
+            multi_candle_percent = get_config_value(auto_config, 'exit_scam_multi_candle_percent')
+        multi_candle_percent = float(multi_candle_percent) if multi_candle_percent is not None else None
         _tf, limit_single, limit_multi = get_exit_scam_effective_limits(
             single_candle_percent, multi_candle_count, multi_candle_percent
         )
@@ -3377,11 +3386,10 @@ def _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=None):
         exch = get_exchange()
         if not exch:
             return False
-        try:
-            from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
-            current_timeframe = get_current_timeframe()
-        except Exception:
-            current_timeframe = TIMEFRAME
+        from bot_engine.config_loader import get_current_timeframe
+        current_timeframe = get_current_timeframe()
+        if not current_timeframe:
+            return False
         chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
         if not chart_response or not chart_response.get('success'):
             return False
@@ -3704,10 +3712,11 @@ def create_new_bot(symbol, config=None, exchange_obj=None, register=True):
     try:
         from bots_modules.bot_class import NewTradingBot
         from bots_modules.imports_and_globals import get_exchange
+        from bot_engine.config_loader import get_config_value
         exchange_to_use = exchange_obj if exchange_obj else get_exchange()
         auto_bot_config = bots_data['auto_bot_config']
-        default_volume = auto_bot_config.get('default_position_size')
-        default_volume_mode = auto_bot_config.get('default_position_mode', 'usdt')
+        default_volume = get_config_value(auto_bot_config, 'default_position_size')
+        default_volume_mode = get_config_value(auto_bot_config, 'default_position_mode')
         bot_config = {
             'symbol': symbol,
             'status': BOT_STATUS['RUNNING'],
@@ -3715,7 +3724,7 @@ def create_new_bot(symbol, config=None, exchange_obj=None, register=True):
             'opened_by_autobot': True,
             'volume_mode': default_volume_mode,
             'volume_value': default_volume,
-            'leverage': auto_bot_config.get('leverage', 10)
+            'leverage': get_config_value(auto_bot_config, 'leverage')
         }
         individual_settings = get_individual_coin_settings(symbol)
         if individual_settings:
@@ -3726,7 +3735,7 @@ def create_new_bot(symbol, config=None, exchange_obj=None, register=True):
         if bot_config.get('volume_value') is None:
             bot_config['volume_value'] = default_volume
         if bot_config.get('leverage') is None:
-            bot_config['leverage'] = auto_bot_config.get('leverage', 10)
+            bot_config['leverage'] = get_config_value(auto_bot_config, 'leverage')
         new_bot = NewTradingBot(symbol, bot_config, exchange_to_use)
         if register:
             with bots_data_lock:
@@ -3744,18 +3753,18 @@ def check_auto_bot_filters(symbol):
 def test_exit_scam_filter(symbol):
     """Тестирует ExitScam фильтр для конкретной монеты"""
     try:
-        # Получаем настройки из конфига
-        # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
-        exit_scam_enabled = bots_data.get('auto_bot_config', {}).get('exit_scam_enabled', True)
-        exit_scam_candles = bots_data.get('auto_bot_config', {}).get('exit_scam_candles', 10)
-        single_candle_percent = float(bots_data.get('auto_bot_config', {}).get('exit_scam_single_candle_percent', 15.0) or 15.0)
-        multi_candle_count = bots_data.get('auto_bot_config', {}).get('exit_scam_multi_candle_count', 4)
-        multi_candle_percent = float(bots_data.get('auto_bot_config', {}).get('exit_scam_multi_candle_percent', 50.0) or 50.0)
+        from bot_engine.config_loader import get_config_value
+        auto_cfg = bots_data.get('auto_bot_config', {}) or {}
+        exit_scam_enabled = get_config_value(auto_cfg, 'exit_scam_enabled')
+        exit_scam_candles = get_config_value(auto_cfg, 'exit_scam_candles')
+        single_candle_percent = get_config_value(auto_cfg, 'exit_scam_single_candle_percent')
+        multi_candle_count = get_config_value(auto_cfg, 'exit_scam_multi_candle_count')
+        multi_candle_percent = get_config_value(auto_cfg, 'exit_scam_multi_candle_percent')
         current_tf, limit_single, limit_multi = get_exit_scam_effective_limits(
             single_candle_percent, multi_candle_count, multi_candle_percent
         )
         logger.info(f"🔍 Тестируем ExitScam фильтр для {symbol}")
-        logger.info(f"⚙️ Текущий ТФ: {current_tf}. Лимиты как в конфиге (без пересчёта): одна свеча {limit_single}%, суммарно {limit_multi}%")
+        logger.info(f"⚙️ Текущий ТФ: {current_tf}. Лимиты по ТФ: одна свеча {limit_single}%, суммарно {limit_multi}%")
         logger.info(f"⚙️ - Включен: {exit_scam_enabled}, анализ свечей: {exit_scam_candles}")
         
         if not exit_scam_enabled:
@@ -3864,7 +3873,7 @@ def test_rsi_time_filter(symbol):
             logger.error(f"{symbol}: Нет RSI данных")
             return
         
-        from bot_engine.config_loader import get_rsi_from_coin_data
+        from bot_engine.config_loader import get_rsi_from_coin_data, get_config_value
         current_rsi = get_rsi_from_coin_data(coin_data) or 0
         signal = coin_data.get('signal', 'WAIT')
         
@@ -3874,11 +3883,11 @@ def test_rsi_time_filter(symbol):
         
         rsi_long_threshold = individual_settings.get('rsi_long_threshold') if individual_settings else None
         if rsi_long_threshold is None:
-            rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', 29)
+            rsi_long_threshold = get_config_value(bots_data.get('auto_bot_config', {}), 'rsi_long_threshold')
         
         rsi_short_threshold = individual_settings.get('rsi_short_threshold') if individual_settings else None
         if rsi_short_threshold is None:
-            rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', 71)
+            rsi_short_threshold = get_config_value(bots_data.get('auto_bot_config', {}), 'rsi_short_threshold')
         
         original_signal = 'WAIT'
         if current_rsi <= rsi_long_threshold:
@@ -3911,10 +3920,10 @@ def test_rsi_time_filter(symbol):
             
             # Получаем пороги для подсветки
             # ⚡ БЕЗ БЛОКИРОВКИ: чтение словаря - атомарная операция
-            rsi_long_threshold = bots_data.get('auto_bot_config', {}).get('rsi_long_threshold', 29)
-            rsi_short_threshold = bots_data.get('auto_bot_config', {}).get('rsi_short_threshold', 71)
-            rsi_time_filter_upper = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_upper', 65)
-            rsi_time_filter_lower = bots_data.get('auto_bot_config', {}).get('rsi_time_filter_lower', 35)
+            rsi_long_threshold = get_config_value(bots_data.get('auto_bot_config', {}), 'rsi_long_threshold')
+            rsi_short_threshold = get_config_value(bots_data.get('auto_bot_config', {}), 'rsi_short_threshold')
+            rsi_time_filter_upper = get_config_value(bots_data.get('auto_bot_config', {}), 'rsi_time_filter_upper')
+            rsi_time_filter_lower = get_config_value(bots_data.get('auto_bot_config', {}), 'rsi_time_filter_lower')
             
             for i, rsi_val in enumerate(last_20_rsi):
                 # Индекс от конца истории

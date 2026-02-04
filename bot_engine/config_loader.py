@@ -28,10 +28,11 @@ def config_class_to_dict(cls):
 
 
 def _get_default_timeframe():
+    """Только из конфига. Без хардкода."""
     try:
-        return config_class_to_dict(DefaultAutoBotConfig).get('system_timeframe', '1m')
+        return config_class_to_dict(DefaultAutoBotConfig).get('system_timeframe')
     except Exception:
-        return '1m'
+        return None
 
 
 # Константы для indicators/AI
@@ -57,7 +58,7 @@ TREND_MIN_CONFIRMATIONS = SystemConfig.TREND_MIN_CONFIRMATIONS
 TREND_REQUIRE_SLOPE = SystemConfig.TREND_REQUIRE_SLOPE
 TREND_REQUIRE_PRICE = SystemConfig.TREND_REQUIRE_PRICE
 TREND_REQUIRE_CANDLES = SystemConfig.TREND_REQUIRE_CANDLES
-TIMEFRAME = getattr(SystemConfig, 'SYSTEM_TIMEFRAME', '1m')
+TIMEFRAME = getattr(SystemConfig, 'SYSTEM_TIMEFRAME', None)  # только из конфига
 
 _current_timeframe = None
 
@@ -132,6 +133,16 @@ class VolumeMode:
 DEFAULT_AUTO_BOT_CONFIG = config_class_to_dict(DefaultAutoBotConfig)
 AUTO_BOT_CONFIG = config_class_to_dict(AutoBotConfig)
 DEFAULT_BOT_CONFIG = config_class_to_dict(DefaultBotConfig)
+
+
+def get_config_value(config_dict, key):
+    """Значение только из конфига: config_dict[key] или DEFAULT_AUTO_BOT_CONFIG[key]. Без хардкодов."""
+    if not config_dict:
+        return DEFAULT_AUTO_BOT_CONFIG.get(key)
+    val = config_dict.get(key)
+    if val is not None:
+        return val
+    return DEFAULT_AUTO_BOT_CONFIG.get(key)
 
 
 def reload_config():

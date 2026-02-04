@@ -491,12 +491,13 @@ class NewTradingBot:
             with bots_data_lock:
                 auto_config = bots_data.get('auto_bot_config', {})
                 # Используем индивидуальные настройки из self.config если есть, иначе из auto_config
-                rsi_long_threshold = self.config.get('rsi_long_threshold') or auto_config.get('rsi_long_threshold', 29)
+                from bot_engine.config_loader import get_config_value
+                rsi_long_threshold = self.config.get('rsi_long_threshold') or get_config_value(auto_config, 'rsi_long_threshold')
                 # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
                 avoid_down_trend = self.config.get('avoid_down_trend') if 'avoid_down_trend' in self.config else auto_config.get('avoid_down_trend', False)
                 rsi_time_filter_enabled = self.config.get('rsi_time_filter_enabled') if 'rsi_time_filter_enabled' in self.config else auto_config.get('rsi_time_filter_enabled', True)
-                rsi_time_filter_candles = self.config.get('rsi_time_filter_candles') or auto_config.get('rsi_time_filter_candles', 8)
-                rsi_time_filter_lower = self.config.get('rsi_time_filter_lower') or auto_config.get('rsi_time_filter_lower', 35)
+                rsi_time_filter_candles = self.config.get('rsi_time_filter_candles') or get_config_value(auto_config, 'rsi_time_filter_candles')
+                rsi_time_filter_lower = self.config.get('rsi_time_filter_lower') or get_config_value(auto_config, 'rsi_time_filter_lower')
                 ai_override = auto_config.get('ai_override_original', True)
                 # AI включение: из auto_bot_config или AIConfig (UI «AI Модули» сохраняет в AIConfig)
                 try:
@@ -596,16 +597,16 @@ class NewTradingBot:
                 logger.warning(f"[NEW_BOT_{self.symbol}] 🚨 ДЕЛИСТИНГ! Не открываем SHORT - {delisting_info.get('reason', 'Delisting detected')}")
                 return False
             
-            # Получаем настройки из конфига (ВАЖНО: сначала индивидуальные настройки бота, потом глобальные)
+            # Получаем настройки из конфига (только из конфига)
             with bots_data_lock:
                 auto_config = bots_data.get('auto_bot_config', {})
-                # Используем индивидуальные настройки из self.config если есть, иначе из auto_config
-                rsi_short_threshold = self.config.get('rsi_short_threshold') or auto_config.get('rsi_short_threshold', 71)
+                from bot_engine.config_loader import get_config_value
+                rsi_short_threshold = self.config.get('rsi_short_threshold') or get_config_value(auto_config, 'rsi_short_threshold')
                 # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
                 avoid_up_trend = self.config.get('avoid_up_trend') if 'avoid_up_trend' in self.config else auto_config.get('avoid_up_trend', False)
                 rsi_time_filter_enabled = self.config.get('rsi_time_filter_enabled') if 'rsi_time_filter_enabled' in self.config else auto_config.get('rsi_time_filter_enabled', True)
-                rsi_time_filter_candles = self.config.get('rsi_time_filter_candles') or auto_config.get('rsi_time_filter_candles', 8)
-                rsi_time_filter_upper = auto_config.get('rsi_time_filter_upper', 65)
+                rsi_time_filter_candles = self.config.get('rsi_time_filter_candles') or get_config_value(auto_config, 'rsi_time_filter_candles')
+                rsi_time_filter_upper = get_config_value(auto_config, 'rsi_time_filter_upper')
                 ai_override = auto_config.get('ai_override_original', True)
                 try:
                     from bot_engine.config_live import get_ai_config_attr
@@ -757,32 +758,39 @@ class NewTradingBot:
             if last_close_timestamp:
                 try:
                     from datetime import datetime
+                    from bot_engine.config_loader import get_current_timeframe
                     current_timestamp = datetime.now().timestamp()
                     time_since_close = current_timestamp - float(last_close_timestamp)
-                    min_wait_seconds = 6 * 3600  # 1 свеча 6h минимум
+                    tf = get_current_timeframe()
+                    timeframe_to_seconds = {
+                        '1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800,
+                        '1h': 3600, '2h': 7200, '4h': 14400, '6h': 21600, '8h': 28800,
+                        '12h': 43200, '1d': 86400, '3d': 259200, '1w': 604800, '1M': 2592000
+                    }
+                    min_wait_seconds = timeframe_to_seconds.get(tf, 60)  # 1 свеча текущего ТФ
                     
                     if time_since_close < min_wait_seconds:
                         wait_remaining = min_wait_seconds - time_since_close
-                        wait_remaining_hours = wait_remaining / 3600
                         logger.warning(
-                            f"[NEW_BOT_{self.symbol}] 🚫🚫🚫 ЗАБЛОКИРОВАНО (1 свеча 6ч задержка): После закрытия позиции прошло только {time_since_close:.0f} секунд "
-                            f"(требуется {min_wait_seconds} сек = 1 свеча 6ч). Осталось ждать: {wait_remaining_hours:.1f} ч"
+                            f"[NEW_BOT_{self.symbol}] 🚫 ЗАБЛОКИРОВАНО (1 свеча {tf} задержка): После закрытия позиции прошло только {time_since_close:.0f} сек "
+                            f"(требуется {min_wait_seconds} сек). Осталось: {wait_remaining:.0f} сек"
                         )
                         return {
                             'allowed': False,
-                            'reason': f'Minimum 1 candle (6h) wait after position close (only {time_since_close:.0f}s passed, need {min_wait_seconds}s)'
+                            'reason': f'Minimum 1 candle ({tf}) wait after position close (only {time_since_close:.0f}s passed, need {min_wait_seconds}s)'
                         }
                     else:
-                        logger.info(f"[NEW_BOT_{self.symbol}] ✅ Прошло {time_since_close/3600:.2f} ч с последнего закрытия - продолжаем проверку фильтра")
+                        logger.info(f"[NEW_BOT_{self.symbol}] ✅ Прошло {time_since_close:.0f} сек с последнего закрытия - продолжаем проверку фильтра")
                 except Exception as timestamp_check_error:
                     logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Ошибка проверки timestamp закрытия: {timestamp_check_error}")
             
             # Получаем настройки (сначала из индивидуальных, потом из глобальных)
             loss_reentry_protection_enabled = self.config.get('loss_reentry_protection') if 'loss_reentry_protection' in self.config else auto_config.get('loss_reentry_protection', True)
-            loss_reentry_count = self.config.get('loss_reentry_count') or auto_config.get('loss_reentry_count', 1)
-            loss_reentry_candles = self.config.get('loss_reentry_candles') or auto_config.get('loss_reentry_candles', 3)
+            from bot_engine.config_loader import get_config_value
+            loss_reentry_count = self.config.get('loss_reentry_count') or get_config_value(auto_config, 'loss_reentry_count')
+            loss_reentry_candles = self.config.get('loss_reentry_candles') or get_config_value(auto_config, 'loss_reentry_candles')
             
-            # Если защита выключена - разрешаем вход (но только если прошла 1 свеча 6ч!)
+            # Если защита выключена - разрешаем вход (но только если прошла 1 свеча текущего ТФ!)
             if not loss_reentry_protection_enabled:
                 return {'allowed': True, 'reason': 'Protection disabled'}
             
@@ -928,9 +936,9 @@ class NewTradingBot:
                         '1h': 3600, '2h': 7200, '4h': 14400, '6h': 21600, '8h': 28800,
                         '12h': 43200, '1d': 86400, '3d': 259200, '1w': 604800, '1M': 2592000
                     }
-                    CANDLE_INTERVAL_SECONDS = timeframe_to_seconds.get(current_timeframe, 21600)  # По умолчанию 6h
+                    CANDLE_INTERVAL_SECONDS = timeframe_to_seconds.get(current_timeframe, 60)  # По умолчанию 1m
                 except:
-                    CANDLE_INTERVAL_SECONDS = 6 * 3600  # Fallback: 6 часов
+                    CANDLE_INTERVAL_SECONDS = 60  # Fallback: 1 минута
                 
                 # Находим последнюю свечу (самую новую) в переданных candles
                 if not candles or len(candles) == 0:
@@ -2420,7 +2428,8 @@ class NewTradingBot:
             auto_config = {}
 
         # ✅ КРИТИЧНО: Плечо — из настроек бота (индивидуальных) или из auto_bot_config
-        leverage = self.config.get('leverage') or getattr(self, 'leverage', None) or auto_config.get('leverage') or 10
+        from bot_engine.config_loader import get_config_value
+        leverage = self.config.get('leverage') or getattr(self, 'leverage', None) or get_config_value(auto_config, 'leverage')
 
         config = {
             'auto_managed': True,

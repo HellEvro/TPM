@@ -340,6 +340,11 @@ _individual_coin_settings_state = {
 # Импортирован как BOT_ENGINE_DEFAULT_CONFIG
 DEFAULT_AUTO_BOT_CONFIG = BOT_ENGINE_DEFAULT_CONFIG
 
+# Константы зрелости монет только из конфига (DEFAULT_AUTO_BOT_CONFIG)
+MIN_CANDLES_FOR_MATURITY = BOT_ENGINE_DEFAULT_CONFIG.get('min_candles_for_maturity')
+MIN_RSI_LOW = BOT_ENGINE_DEFAULT_CONFIG.get('min_rsi_low')
+MAX_RSI_HIGH = BOT_ENGINE_DEFAULT_CONFIG.get('max_rsi_high')
+
 # Состояние процессов системы
 process_state = {
     'smart_rsi_manager': {
