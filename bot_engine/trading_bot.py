@@ -579,8 +579,7 @@ class TradingBot:
                         existing_side = pos.get('side', 'UNKNOWN')
                         position_size = pos.get('size', 0)
                         
-                        self.logger.error(f" {self.symbol}: 🚫 КРИТИЧЕСКАЯ ОШИБКА! НА БИРЖЕ УЖЕ ЕСТЬ ПОЗИЦИЯ {existing_side} размер {position_size}!")
-                        self.logger.error(f" {self.symbol}: ❌ НЕ МОЖЕМ ОТКРЫТЬ ПОЗИЦИЮ {side} - ЗАЩИТА ОТ ДУБЛИРОВАНИЯ!")
+                        self.logger.warning(f" {self.symbol}: ⚠️ На бирже уже есть позиция {existing_side} размер {position_size} — защита от дублирования")
                         
                         return {
                             'success': False, 

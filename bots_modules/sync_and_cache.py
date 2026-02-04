@@ -2546,6 +2546,9 @@ def check_missing_stop_losses():
                             updates['stop_loss_price'] = desired_stop
                             updated_count += 1
                             logger.info(f" ✅ Стоп-лосс синхронизирован для {symbol}: {desired_stop:.6f}")
+                        elif sl_response and sl_response.get('zero_position'):
+                            # Позиция уже закрыта на бирже — не ошибка, синхронизация уберёт бота
+                            logger.info(f" 📌 {symbol}: позиция уже закрыта на бирже (zero position), будет синхронизирована")
                         else:
                             failed_count += 1
                             logger.error(f" ❌ Ошибка установки стоп-лосса для {symbol}: {sl_response}")
@@ -2575,6 +2578,8 @@ def check_missing_stop_losses():
                             updates['take_profit_price'] = desired_take
                             updated_count += 1
                             logger.info(f" ✅ Тейк-профит синхронизирован для {symbol}: {desired_take:.6f}")
+                        elif tp_response and tp_response.get('zero_position'):
+                            logger.info(f" 📌 {symbol}: позиция уже закрыта на бирже (zero position), будет синхронизирована")
                         else:
                             failed_count += 1
                             logger.error(f" ❌ Ошибка установки тейк-профита для {symbol}: {tp_response}")

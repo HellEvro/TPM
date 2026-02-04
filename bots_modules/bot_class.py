@@ -2538,8 +2538,8 @@ class NewTradingBot:
 
         if not result.get('success'):
             error_msg = result.get('message') or result.get('error') or 'Unknown error'
-            # Блокировка фильтрами - это нормальная работа системы, логируем как WARNING
-            if result.get('error') == 'filters_blocked' or 'заблокирован фильтрами' in error_msg:
+            # Блокировка фильтрами или защита от дублирования — нормальная работа, логируем как WARNING
+            if result.get('error') in ('filters_blocked', 'exchange_position_exists') or 'заблокирован фильтрами' in error_msg or 'уже есть позиция' in error_msg:
                 logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось открыть позицию {side}: {error_msg}")
             else:
                 logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось открыть позицию {side}: {error_msg}")

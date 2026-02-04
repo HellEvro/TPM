@@ -828,29 +828,29 @@ def check_exit_scam_filter(symbol, coin_data):
         if not auto_config.get('exit_scam_enabled', True):
             return True
         
-        exchange_obj = get_exchange()
-        if not exchange_obj:
-            return False
-
-        base_allowed = engine_check_exit_scam_filter(
-            symbol,
-            coin_data,
-            auto_config,
-            exchange_obj,
-            ensure_exchange_initialized,
-        )
-
-        if not base_allowed:
-            return False
-
-        # Проверка ExitScam по выбранному таймфрейму (настройки — в опциях)
         try:
             from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
             current_timeframe = get_current_timeframe()
         except Exception:
             current_timeframe = TIMEFRAME
-        chart_response = exchange_obj.get_chart_data(symbol, current_timeframe, '30d')
-        candles = chart_response.get('data', {}).get('candles', []) if chart_response and chart_response.get('success') else []
+        # Свечи из кэша (уже загружены для RSI) — без API и блокировок
+        candles_cache = coins_rsi_data.get('candles_cache', {})
+        candles = candles_cache.get(symbol, {}).get(current_timeframe, {}).get('candles', [])
+        coin_data_with_candles = dict(coin_data) if coin_data else {}
+        if candles:
+            coin_data_with_candles['_candles'] = candles
+        exchange_obj = get_exchange()
+        if not exchange_obj and not candles:
+            return False
+        base_allowed = engine_check_exit_scam_filter(
+            symbol,
+            coin_data_with_candles,
+            auto_config,
+            exchange_obj or None,
+            ensure_exchange_initialized,
+        )
+        if not base_allowed:
+            return False
         if candles:
             return _run_exit_scam_ai_detection(symbol, candles)
         return True
@@ -2929,7 +2929,7 @@ def process_auto_bot_signals(exchange_obj=None):
                 logger.info(f" ✅ {symbol}: позиция открыта, бот в списке")
             except Exception as e:
                 error_str = str(e)
-                if 'заблокирован фильтрами' in error_str or 'filters_blocked' in error_str:
+                if 'заблокирован фильтрами' in error_str or 'filters_blocked' in error_str or 'exchange_position_exists' in error_str or 'уже есть позиция' in error_str:
                     logger.warning(f" ⚠️ Ошибка входа для {symbol}: {e}")
                 else:
                     logger.error(f" ❌ Ошибка входа для {symbol}: {e}")
@@ -3085,9 +3085,10 @@ def check_new_autobot_filters(symbol, signal, coin_data):
             if not check_coin_maturity_stored_or_verify(symbol):
                 return False
         
-        # Дубль-проверка ExitScam (только если фильтр включён)
+        # Дубль-проверка ExitScam (только если фильтр включён); свечи из кэша — без API и блокировок
         if auto_config.get('exit_scam_enabled', True):
-            if not check_exit_scam_filter(symbol, coin_data):
+            exit_scam_ok = check_exit_scam_filter(symbol, coin_data)
+            if not exit_scam_ok:
                 logger.warning(f" {symbol}: ❌ БЛОКИРОВКА: Обнаружены резкие движения цены (ExitScam)")
                 return False
         
@@ -3158,15 +3159,14 @@ def analyze_trends_for_signal_coins():
             logger.warning(" ⚠️ Нет сигнальных монет для анализа тренда")
             return False
         
-        # Анализируем тренд для каждой сигнальной монеты
+        # Свечи уже в кэше после расчёта RSI — без API и блокировок
+        candles_cache = coins_rsi_data.get('candles_cache', {})
         analyzed_count = 0
         failed_count = 0
-        
         for i, symbol in enumerate(signal_coins, 1):
             try:
-                # Анализируем тренд
-                trend_analysis = analyze_trend_6h(symbol, exchange_obj=exchange)
-                
+                candles = candles_cache.get(symbol, {}).get(current_timeframe, {}).get('candles', [])
+                trend_analysis = analyze_trend_6h(symbol, exchange_obj=exchange, candles_data=candles if candles else None)
                 if trend_analysis:
                     # ✅ СОБИРАЕМ обновления во временном хранилище
                     if symbol in coins_rsi_data['coins']:
@@ -3204,12 +3204,11 @@ def analyze_trends_for_signal_coins():
                     logger.info(f" 📊 Прогресс: {i}/{len(signal_coins)} ({i*100//len(signal_coins)}%)")
                 
                 # Небольшая пауза между запросами
-                time.sleep(0.1)
-                
+                time.sleep(0.05)
             except Exception as e:
                 logger.error(f" ❌ {symbol}: {e}")
                 failed_count += 1
-        
+
         # ✅ АТОМАРНО применяем ВСЕ обновления одним махом!
         # Используем тот же trend_key, что и при расчете, независимо от смены таймфрейма в UI
         for symbol, updates in temp_updates.items():
@@ -3437,19 +3436,21 @@ def _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=None):
             pass
             return True
         
-        # Получаем свечи по выбранному таймфрейму (пороги скама — в опциях)
-        exch = get_exchange()
-        if not exch:
-            return False
         from bot_engine.config_loader import get_current_timeframe
         current_timeframe = get_current_timeframe()
         if not current_timeframe:
             return False
-        chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
-        if not chart_response or not chart_response.get('success'):
-            return False
-
-        candles = chart_response.get('data', {}).get('candles', [])
+        # Свечи из кэша (уже загружены для RSI) — без API
+        candles_cache = coins_rsi_data.get('candles_cache', {})
+        candles = candles_cache.get(symbol, {}).get(current_timeframe, {}).get('candles', [])
+        if not candles or len(candles) < exit_scam_candles:
+            exch = get_exchange()
+            if not exch:
+                return False
+            chart_response = exch.get_chart_data(symbol, current_timeframe, '30d')
+            if not chart_response or not chart_response.get('success'):
+                return False
+            candles = chart_response.get('data', {}).get('candles', [])
         if len(candles) < exit_scam_candles:
             return False
         

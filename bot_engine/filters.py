@@ -230,17 +230,19 @@ def check_exit_scam_filter(symbol, coin_data, config, exchange_obj, ensure_excha
         if not exit_scam_enabled:
             return True
 
-        if not ensure_exchange_func():
-            return False
-
         timeframe = get_current_timeframe()
         if not timeframe:
             return False
-        chart_response = exchange_obj.get_chart_data(symbol, timeframe, '30d')
-        if not chart_response or not chart_response.get('success'):
-            return False
 
-        candles = chart_response.get('data', {}).get('candles', [])
+        # Свечи из кэша (уже загружены для RSI) — без повторного API-запроса
+        candles = (coin_data or {}).get('_candles')
+        if not candles or len(candles) < exit_scam_candles:
+            if not ensure_exchange_func():
+                return False
+            chart_response = exchange_obj.get_chart_data(symbol, timeframe, '30d')
+            if not chart_response or not chart_response.get('success'):
+                return False
+            candles = chart_response.get('data', {}).get('candles', [])
         if exit_scam_candles is None or len(candles) < exit_scam_candles:
             return False
 

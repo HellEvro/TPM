@@ -219,7 +219,7 @@ def auto_bot_worker():
 
             if auto_bot_enabled and time_since_auto_bot_check >= check_interval_seconds:
                 from bots_modules.imports_and_globals import get_exchange, coins_rsi_data
-                # ✅ КРИТИЧНО: Не запускаем автобот, пока не завершена первая загрузка свечей и расчёт RSI
+                # ✅ Блокировка только до первой загрузки: после first_round_complete ожидание не используется
                 if not coins_rsi_data.get('first_round_complete'):
                     last_auto_bot_check = current_time
                     if cycle_count % 30 == 0:  # раз в ~30 сек
@@ -411,14 +411,14 @@ def positions_monitor_worker():
                     from bots_modules.imports_and_globals import bots_data, bots_data_lock, coins_rsi_data
                     from bots_modules.bot_class import NewTradingBot
 
-                    # ✅ КРИТИЧНО: Проверки по RSI (закрытие позиций) только после первой полной загрузки свечей + расчёта RSI
+                    # ✅ Блокировка только до первой загрузки: проверки по RSI — только после first_round_complete; далее не ждём
                     rsi_data_available = (
                         coins_rsi_data.get('first_round_complete') and
                         coins_rsi_data.get('coins') is not None and
                         len(coins_rsi_data.get('coins', {})) > 0
                     )
 
-                    # ✅ КРИТИЧНО: При первом запуске ждем загрузки RSI, потом работаем независимо
+                    # При первом запуске ждём загрузки RSI; после первой загрузки блокировка не используется
                     if first_startup:
                         if rsi_data_available:
                             first_startup = False

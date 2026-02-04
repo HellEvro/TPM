@@ -2827,6 +2827,9 @@ class BybitExchange(BaseExchange):
                         'message': f'Take Profit уже установлен: {take_profit_price:.6f}',
                         'take_profit': take_profit_price
                     }
+                # 10001 (zero position) — позиция уже закрыта на бирже
+                if "zero position" in error_str.lower():
+                    return {'success': False, 'message': 'Позиция уже закрыта на бирже (zero position)', 'zero_position': True}
                 # 10001: TP для Long должен быть выше base_price, для Short — ниже (цена ушла)
                 if "10001" in error_str or "should be higher than base_price" in error_str or "should be lower than base_price" in error_str:
                     pass
