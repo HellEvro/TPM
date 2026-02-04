@@ -707,6 +707,7 @@ def get_coins_with_rsi():
                             if ai_result.get('ai_used') and not ai_result.get('should_open'):
                                 effective_signal = 'WAIT'
                                 cleaned_coin['effective_signal'] = 'WAIT'
+                                cleaned_coin['signal_block_reason'] = ai_result.get('reason') or 'AI не рекомендует вход'
                     except Exception as ai_err:
                         pass
                 

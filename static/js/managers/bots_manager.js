@@ -2171,6 +2171,8 @@ class BotsManager {
             
             if (filterCheck.reasons.length > 0) {
                 activeStatusData.signal_block_reason = `Базовый сигнал ${baseSignal} заблокирован: ${filterCheck.reasons.join(', ')}`;
+            } else if (coin.signal_block_reason) {
+                activeStatusData.signal_block_reason = coin.signal_block_reason;
             } else {
                 activeStatusData.signal_block_reason = `Базовый сигнал ${baseSignal} изменен на WAIT (причина не определена)`;
             }

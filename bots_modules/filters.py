@@ -1054,6 +1054,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
                 exit_scam_info = {'blocked': False, 'reason': 'Недостаточно свечей', 'filter_type': 'exit_scam'}
 
             try:
+                from bot_engine.config_loader import get_config_value
                 loss_reentry_protection_enabled = get_config_value(auto_config, 'loss_reentry_protection')
                 loss_reentry_count = get_config_value(auto_config, 'loss_reentry_count')
                 loss_reentry_candles = get_config_value(auto_config, 'loss_reentry_candles')

@@ -402,8 +402,8 @@ class DynamicRiskManager:
         """
         from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG
         
-        base_size_value = DEFAULT_AUTO_BOT_CONFIG.get('default_position_size', 10.0)
-        base_size_mode = DEFAULT_AUTO_BOT_CONFIG.get('default_position_mode', 'usdt')
+        base_size_value = DEFAULT_AUTO_BOT_CONFIG.get('default_position_size')
+        base_size_mode = DEFAULT_AUTO_BOT_CONFIG.get('default_position_mode')
         if base_size_mode == 'percent' and balance_usdt:
             base_size = balance_usdt * (base_size_value / 100.0)
         else:

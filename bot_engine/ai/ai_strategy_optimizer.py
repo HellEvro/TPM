@@ -508,8 +508,10 @@ class AIStrategyOptimizer:
         rsi_short_entry = int(params.get('rsi_short_threshold', 71))
         rsi_long_exit = int(params.get('rsi_exit_long_with_trend', 65))
         rsi_short_exit = int(params.get('rsi_exit_short_with_trend', 35))
-        stop_loss = float(params.get('max_loss_percent', 15))
-        take_profit = float(params.get('take_profit_percent', 20))
+        from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG
+        _def = DEFAULT_AUTO_BOT_CONFIG
+        stop_loss = float(params.get('max_loss_percent') or _def.get('max_loss_percent'))
+        take_profit = float(params.get('take_profit_percent') or _def.get('take_profit_percent'))
         trailing_activation = float(params.get('trailing_stop_activation', 30))
         trailing_distance = float(params.get('trailing_stop_distance', 10))
         break_even_trigger = float(params.get('break_even_trigger', 50))
@@ -694,18 +696,21 @@ class AIStrategyOptimizer:
                 base_rsi_long_exit_against = RSI_EXIT_LONG_AGAINST_TREND
                 base_rsi_short_exit_with = RSI_EXIT_SHORT_WITH_TREND
                 base_rsi_short_exit_against = RSI_EXIT_SHORT_AGAINST_TREND
-                base_stop_loss = DEFAULT_AUTO_BOT_CONFIG.get('max_loss_percent', 15)
-                base_take_profit = DEFAULT_AUTO_BOT_CONFIG.get('take_profit_percent', 20)
+                base_stop_loss = DEFAULT_AUTO_BOT_CONFIG.get('max_loss_percent')
+                base_take_profit = DEFAULT_AUTO_BOT_CONFIG.get('take_profit_percent')
             except ImportError:
-                # Значения по умолчанию
-                base_rsi_long_entry = 29
-                base_rsi_short_entry = 71
+                from bot_engine.config_loader import DEFAULT_AUTO_BOT_CONFIG
+                _cfg = DEFAULT_AUTO_BOT_CONFIG
+                base_rsi_long_entry = _cfg.get('rsi_long_threshold') or 29
+                base_rsi_short_entry = _cfg.get('rsi_short_threshold') or 71
                 base_rsi_long_exit_with = 65
                 base_rsi_long_exit_against = 60
                 base_rsi_short_exit_with = 35
                 base_rsi_short_exit_against = 40
-                base_stop_loss = 15
-                base_take_profit = 20
+                base_stop_loss = _cfg.get('max_loss_percent')
+                base_take_profit = _cfg.get('take_profit_percent')
+                if base_stop_loss is None or base_take_profit is None:
+                    raise RuntimeError('В конфиге должны быть заданы max_loss_percent и take_profit_percent')
 
             parameter_ranges = {
                 'rsi_long_entry': self._build_range_from_genome('rsi_long_threshold'),
