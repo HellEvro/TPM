@@ -77,6 +77,43 @@ setup_global_connection_pool()
 if sys.stdout.encoding != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
 
+# --- Синхронизация времени с Bybit (устраняет ErrCode 10002 при рассинхроне локальных часов) ---
+_bybit_time_offset_ms = 0
+_original_pybit_generate_timestamp = None
+
+
+def _bybit_synced_timestamp():
+    """Возвращает метку времени в мс, скорректированную по серверу Bybit."""
+    return int(time.time() * 1000) + _bybit_time_offset_ms
+
+
+def sync_bybit_time_from_server(server_time_ms: int) -> bool:
+    """
+    Синхронизирует время с сервером Bybit: вычисляет offset и подменяет pybit.generate_timestamp.
+    server_time_ms: серверное время в миллисекундах (из response['time'] или get_server_time).
+    Возвращает True, если патч применён.
+    """
+    global _bybit_time_offset_ms, _original_pybit_generate_timestamp
+    if not server_time_ms:
+        return False
+    local_ms = int(time.time() * 1000)
+    _bybit_time_offset_ms = server_time_ms - local_ms
+    try:
+        import pybit._helpers as _helpers
+        if _original_pybit_generate_timestamp is None:
+            _original_pybit_generate_timestamp = _helpers.generate_timestamp
+        _helpers.generate_timestamp = _bybit_synced_timestamp
+        logger.info(
+            "🕐 [BYBIT] Синхронизация времени с сервером Bybit: offset=%d мс (локальные часы %s)",
+            _bybit_time_offset_ms,
+            "впереди" if _bybit_time_offset_ms < 0 else "позади"
+        )
+        return True
+    except Exception as e:
+        logger.warning("⚠️ [BYBIT] Не удалось применить синхронизацию времени pybit: %s", e)
+        return False
+
+
 def clean_symbol(symbol):
     """Удаляет 'USDT' из названия символа"""
     return symbol.replace('USDT', '')
@@ -95,6 +132,19 @@ class BybitExchange(BaseExchange):
             timeout=30,
             recv_window=20000
         )
+        # Синхронизация времени с Bybit при старте (снижает ErrCode 10002 при рассинхроне часов)
+        try:
+            r = self.client.get_server_time()
+            if isinstance(r, dict) and r.get('retCode') == 0:
+                server_ms = r.get('time')
+                if not server_ms and r.get('result'):
+                    ts = r.get('result', {}).get('timeSecond')
+                    if ts is not None:
+                        server_ms = int(ts) * 1000
+                if server_ms:
+                    sync_bybit_time_from_server(int(server_ms))
+        except Exception as e:
+            logger.debug("[BYBIT] Синхронизация времени при инициализации пропущена: %s", e)
         self.position_mode = position_mode
         self.limit_order_offset = limit_order_offset  # Отсутп цены для лимитного ордера в процентах
         self.daily_pnl = {}
@@ -1193,18 +1243,25 @@ class BybitExchange(BaseExchange):
                                     else:
                                         logger.error(f"❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
                                         break
-                                # Обработка ошибки timestamp (10002)
+                                # Обработка ошибки timestamp (10002): синхронизация с сервером Bybit + recv_window
                                 elif response.get('retCode') == 10002:
-                                    # Увеличиваем recv_window и повторяем запрос
+                                    server_ts = response.get('time')
+                                    if server_ts:
+                                        sync_bybit_time_from_server(int(server_ts))
                                     current_recv_window = getattr(self.client, 'recv_window', 20000)
                                     new_recv_window = min(current_recv_window + 2500, 60000)
                                     self.client.recv_window = new_recv_window
-                                    logger.error(f"❌ [BOTS] invalid request, please check your server timestamp or recv_window param. req_timestamp[{int(time.time() * 1000)}],server_timestamp[{response.get('time', int(time.time() * 1000))}],recv_window[{new_recv_window}] (ErrCode: 10002). Added 2.5 seconds to recv_window. Retrying...")
+                                    logger.error(
+                                        "❌ [BOTS] invalid request, please check your server timestamp or recv_window param. "
+                                        "req_timestamp[%s],server_timestamp[%s],recv_window[%s] (ErrCode: 10002). "
+                                        "Synced time + added 2.5s to recv_window. Retrying...",
+                                        int(time.time() * 1000), response.get('time', 0), new_recv_window
+                                    )
                                     time.sleep(1.0)
                                     retry_count += 1
                                     
                                     if retry_count < max_retries:
-                                        logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name}) с увеличенным recv_window...")
+                                        logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name}) с синхр. времени и recv_window...")
                                         continue
                                     else:
                                         logger.error(f"❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
@@ -1236,16 +1293,24 @@ class BybitExchange(BaseExchange):
                                         logger.error(f"❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
                                         break
                                 elif '10002' in error_str or 'timestamp' in error_str or 'recv_window' in error_str:
-                                    # Обработка ошибки timestamp
+                                    # Ошибка timestamp (исключение без response): синхронизируем по get_server_time
+                                    try:
+                                        r = self.client.get_server_time()
+                                        if isinstance(r, dict) and r.get('retCode') == 0:
+                                            server_ms = r.get('time') or (int(r.get('result', {}).get('timeSecond', 0)) * 1000)
+                                            if server_ms:
+                                                sync_bybit_time_from_server(int(server_ms))
+                                    except Exception:
+                                        pass
                                     current_recv_window = getattr(self.client, 'recv_window', 20000)
                                     new_recv_window = min(current_recv_window + 2500, 60000)
                                     self.client.recv_window = new_recv_window
-                                    logger.error(f"❌ [BOTS] invalid request, please check your server timestamp or recv_window param. (ErrCode: 10002). Added 2.5 seconds to recv_window. Retrying...")
+                                    logger.error("❌ [BOTS] invalid request (ErrCode: 10002). Synced time + recv_window. Retrying...")
                                     time.sleep(1.0)
                                     retry_count += 1
                                     
                                     if retry_count < max_retries:
-                                        logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name}) с увеличенным recv_window...")
+                                        logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} ({interval_name}) с синхр. времени и recv_window...")
                                         continue
                                     else:
                                         logger.error(f"❌ Превышено максимальное количество попыток для {symbol} ({interval_name})")
@@ -1381,18 +1446,23 @@ class BybitExchange(BaseExchange):
                                     'success': False,
                                     'error': 'Rate limit exceeded, maximum retries reached'
                                 }
-                        # Обработка ошибки timestamp (10002)
+                        # Обработка ошибки timestamp (10002): синхронизация с сервером Bybit + recv_window
                         elif response.get('retCode') == 10002:
-                            # Увеличиваем recv_window и повторяем запрос
+                            server_ts = response.get('time')
+                            if server_ts:
+                                sync_bybit_time_from_server(int(server_ts))
                             current_recv_window = getattr(self.client, 'recv_window', 20000)
                             new_recv_window = min(current_recv_window + 2500, 60000)  # Максимум 60 секунд
                             self.client.recv_window = new_recv_window
-                            logger.error(f"❌ [BOTS] invalid request, please check your server timestamp or recv_window param. req_timestamp[{int(time.time() * 1000)}],server_timestamp[{response.get('time', int(time.time() * 1000))}],recv_window[{new_recv_window}] (ErrCode: 10002). Added 2.5 seconds to recv_window. Retrying...")
+                            logger.error(
+                                "❌ [BOTS] invalid request (server timestamp/recv_window). req_ts[%s], server_ts[%s], recv_window[%s] (ErrCode: 10002). Synced + retry.",
+                                int(time.time() * 1000), response.get('time', 0), new_recv_window
+                            )
                             time.sleep(1.0)  # Небольшая задержка перед повтором
                             retry_count += 1
                             
                             if retry_count < max_retries:
-                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} с увеличенным recv_window...")
+                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} с синхр. времени и recv_window...")
                                 continue
                             else:
                                 logger.error(f"❌ Превышено максимальное количество попыток для {symbol}")
@@ -1430,16 +1500,24 @@ class BybitExchange(BaseExchange):
                                     'error': 'Rate limit exceeded, maximum retries reached'
                                 }
                         elif '10002' in error_str or 'timestamp' in error_str or 'recv_window' in error_str:
-                            # Обработка ошибки timestamp
+                            # Ошибка timestamp (исключение): синхронизируем по get_server_time
+                            try:
+                                r = self.client.get_server_time()
+                                if isinstance(r, dict) and r.get('retCode') == 0:
+                                    server_ms = r.get('time') or (int(r.get('result', {}).get('timeSecond', 0)) * 1000)
+                                    if server_ms:
+                                        sync_bybit_time_from_server(int(server_ms))
+                            except Exception:
+                                pass
                             current_recv_window = getattr(self.client, 'recv_window', 20000)
                             new_recv_window = min(current_recv_window + 2500, 60000)
                             self.client.recv_window = new_recv_window
-                            logger.error(f"❌ [BOTS] invalid request, please check your server timestamp or recv_window param. (ErrCode: 10002). Added 2.5 seconds to recv_window. Retrying...")
+                            logger.error("❌ [BOTS] invalid request (ErrCode: 10002). Synced time + recv_window. Retrying...")
                             time.sleep(1.0)
                             retry_count += 1
                             
                             if retry_count < max_retries:
-                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} с увеличенным recv_window...")
+                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} с синхр. времени и recv_window...")
                                 continue
                             else:
                                 logger.error(f"❌ Превышено максимальное количество попыток для {symbol}")
