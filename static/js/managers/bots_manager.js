@@ -10591,7 +10591,7 @@ class BotsManager {
         html += '<p><strong>Выход:</strong> ';
         html += `✅ по порогу: ${sum.exit_ok || 0} · `;
         html += `<span class="rsi-audit-error">❌ вне порога: ${sum.exit_error || 0}</span> · `;
-        html += `без RSI: ${sum.exit_no_rsi || 0}</p>';
+        html += `без RSI: ${sum.exit_no_rsi || 0}</p>`;
         html += '</div>';
         html += '<div class="rsi-audit-config">';
         html += '<h4>Текущий конфиг (эталон)</h4>';
