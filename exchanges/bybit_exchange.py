@@ -1161,14 +1161,15 @@ class BybitExchange(BaseExchange):
             return []
 
     @with_timeout(30)  # 30 секунд таймаут для получения данных графика
-    def get_chart_data(self, symbol, timeframe='1h', period='1w', bulk_mode=False):
+    def get_chart_data(self, symbol, timeframe='1h', period='1w', bulk_mode=False, bulk_limit=None):
         """Получение данных для графика
         
         Args:
             symbol (str): Символ торговой пары
             timeframe (str): Таймфрейм ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', 'all')
             period (str): Период ('1d', '1w', '1M')
-            bulk_mode (bool): Если True — без задержки, limit=100 (достаточно для RSI), без подгрузки чанков (массовая загрузка за <30с)
+            bulk_mode (bool): Если True — без задержки, без подгрузки чанков (массовая загрузка)
+            bulk_limit (int|None): В bulk_mode — сколько свечей запрашивать (например min_candles_for_maturity); None = 100
             
         Returns:
             dict: Данные для построения графика
@@ -1413,8 +1414,8 @@ class BybitExchange(BaseExchange):
                 # Убираем USDT если он уже есть в символе
                 clean_sym = symbol.replace('USDT', '') if symbol.endswith('USDT') else symbol
                 
-                # bulk_mode: один запрос 100 свечей (хватает для RSI 14), без чанков — укладываемся в <30с на 557 пар
-                kline_limit = 100 if bulk_mode else 1000
+                # bulk_mode: один запрос — bulk_limit свечей (например min_candles_for_maturity для зрелости), без чанков
+                kline_limit = min(bulk_limit or 100, 1000) if bulk_mode else 1000
                 period_lower = (period or "").strip().lower()
                 want_30d = False if bulk_mode else (period_lower in ("30d", "30days"))
                 interval_minutes_map = {

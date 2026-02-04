@@ -513,9 +513,14 @@ def get_coin_candles_only(symbol, exchange_obj=None, timeframe=None, bulk_mode=F
             except Exception:
                 timeframe = TIMEFRAME
         
-        # Получаем ТОЛЬКО свечи с указанным таймфреймом (bulk_mode только для Bybit)
+        # Получаем ТОЛЬКО свечи с указанным таймфреймом (bulk_mode только для Bybit; лимит = min_candles_for_maturity, но не меньше 100)
         if bulk_mode and getattr(exchange_to_use.__class__, '__name__', '') == 'BybitExchange':
-            chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '30d', bulk_mode=True)
+            try:
+                from bots_modules.imports_and_globals import MIN_CANDLES_FOR_MATURITY
+                bulk_limit = max(MIN_CANDLES_FOR_MATURITY or 400, 100)
+            except Exception:
+                bulk_limit = 400
+            chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '30d', bulk_mode=True, bulk_limit=bulk_limit)
         else:
             chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '30d')
         
