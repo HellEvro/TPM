@@ -2488,7 +2488,8 @@ def _recalculate_signal_with_trend(rsi, trend, symbol):
         if rsi is None:
             return 'WAIT'
 
-        # Пороги только из AUTO_BOT_CONFIG; fallback — число, без другого блока конфига
+        # Пороги только из конфига
+        from bot_engine.config_loader import get_config_value
         auto_config = bots_data.get('auto_bot_config', {})
         individual_settings = get_individual_coin_settings(symbol)
         rsi_long_threshold = (individual_settings.get('rsi_long_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_long_threshold')
@@ -2657,7 +2658,8 @@ def process_auto_bot_signals(exchange_obj=None):
             logger.info(f" 🤖 AI модули: мастер={ai_master}, аномалии={ai_anomaly}")
         except Exception:
             pass
-        max_concurrent = bots_data['auto_bot_config'].get('max_concurrent', 20)
+        from bot_engine.config_loader import get_config_value
+        max_concurrent = get_config_value(bots_data['auto_bot_config'], 'max_concurrent')
         rsi_long_threshold = get_config_value(bots_data['auto_bot_config'], 'rsi_long_threshold')
         rsi_short_threshold = get_config_value(bots_data['auto_bot_config'], 'rsi_short_threshold')
         
