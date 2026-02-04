@@ -1104,31 +1104,47 @@ def create_bot_endpoint():
                     if force_manual_entry and manual_direction:
                         direction = manual_direction
                         logger.info(f" 🚀 Принудительный вход в {direction} для {symbol} (ручной запуск)")
+                        # Предупреждение: ручной вход без проверки RSI — может быть «против» порогов
+                        try:
+                            from bot_engine.config_loader import get_rsi_from_coin_data, get_current_timeframe
+                            with rsi_data_lock:
+                                _cd = coins_rsi_data['coins'].get(symbol)
+                            _rsi = get_rsi_from_coin_data(_cd, timeframe=get_current_timeframe()) if _cd else None
+                            if _rsi is not None:
+                                with bots_data_lock:
+                                    _cfg = bots_data.get('auto_bot_config', {})
+                                    _long_th = bot_state.get('rsi_long_threshold') or _cfg.get('rsi_long_threshold', 29)
+                                    _short_th = bot_state.get('rsi_short_threshold') or _cfg.get('rsi_short_threshold', 71)
+                                if direction == 'LONG' and _rsi > _long_th:
+                                    logger.warning(f" ⚠️ Ручной LONG при RSI={_rsi:.1f} > порога {_long_th} — вход не по конфигу RSI")
+                                elif direction == 'SHORT' and _rsi < _short_th:
+                                    logger.warning(f" ⚠️ Ручной SHORT при RSI={_rsi:.1f} < порога {_short_th} — вход не по конфигу RSI")
+                        except Exception:
+                            pass
                     else:
-                        # Автовход — направление только по настройкам конфига (rsi_long_threshold, rsi_short_threshold)
+                        # Автовход — RSI строго по системному ТФ (get_rsi_from_coin_data), без fallback на 'rsi'
+                        from bot_engine.config_loader import get_rsi_from_coin_data, get_current_timeframe
                         with rsi_data_lock:
                             coin_data = coins_rsi_data['coins'].get(symbol)
-                            if coin_data and coin_data.get('signal') in ['ENTER_LONG', 'ENTER_SHORT']:
-                                signal = coin_data.get('signal')
-                                direction = 'LONG' if signal == 'ENTER_LONG' else 'SHORT'
-                                logger.info(f" 🚀 Вход по рынку для {symbol}: направление по сигналу (конфиг) → {direction}")
-                            elif coin_data:
-                                from bot_engine.config_loader import get_rsi_key, get_current_timeframe
-                                tf = get_current_timeframe()
-                                rsi_key = get_rsi_key(tf)
-                                rsi_val = coin_data.get(rsi_key) or coin_data.get('rsi')
-                                if rsi_val is not None:
-                                    rsi_val = float(rsi_val)
-                                    with bots_data_lock:
-                                        auto_config = bots_data.get('auto_bot_config', {})
-                                        rsi_long_threshold = bot_state.get('rsi_long_threshold') or auto_config.get('rsi_long_threshold', 29)
-                                        rsi_short_threshold = bot_state.get('rsi_short_threshold') or auto_config.get('rsi_short_threshold', 71)
-                                    if rsi_val <= rsi_long_threshold:
-                                        direction = 'LONG'
-                                        logger.info(f" 🚀 Вход по рынку для {symbol}: RSI={rsi_val:.1f} <= {rsi_long_threshold} (конфиг) → LONG")
-                                    elif rsi_val >= rsi_short_threshold:
-                                        direction = 'SHORT'
-                                        logger.info(f" 🚀 Вход по рынку для {symbol}: RSI={rsi_val:.1f} >= {rsi_short_threshold} (конфиг) → SHORT")
+                        tf = get_current_timeframe()
+                        rsi_val = get_rsi_from_coin_data(coin_data, timeframe=tf) if coin_data else None
+                        if rsi_val is not None:
+                            rsi_val = float(rsi_val)
+                            with bots_data_lock:
+                                auto_config = bots_data.get('auto_bot_config', {})
+                                rsi_long_threshold = bot_state.get('rsi_long_threshold') or auto_config.get('rsi_long_threshold', 29)
+                                rsi_short_threshold = bot_state.get('rsi_short_threshold') or auto_config.get('rsi_short_threshold', 71)
+                            # Направление только если RSI в пороге (сигнал из coin_data мог быть от другого ТФ до фикса в filters)
+                            if rsi_val <= rsi_long_threshold:
+                                direction = 'LONG'
+                                logger.info(f" 🚀 Вход по рынку для {symbol}: RSI={rsi_val:.1f} <= {rsi_long_threshold} (ТФ={tf}) → LONG")
+                            elif rsi_val >= rsi_short_threshold:
+                                direction = 'SHORT'
+                                logger.info(f" 🚀 Вход по рынку для {symbol}: RSI={rsi_val:.1f} >= {rsi_short_threshold} (ТФ={tf}) → SHORT")
+                            elif coin_data and coin_data.get('signal') in ['ENTER_LONG', 'ENTER_SHORT']:
+                                logger.warning(f" ⚠️ {symbol}: сигнал {coin_data.get('signal')}, но RSI={rsi_val:.1f} вне порогов (LONG<={rsi_long_threshold}, SHORT>={rsi_short_threshold}) — вход отменён")
+                        else:
+                            logger.info(f" ℹ️ {symbol}: нет RSI по ТФ {tf} — вход отменён")
                     
                     if direction:
                         trading_bot = RealTradingBot(symbol, get_exchange(), bot_state)
@@ -1658,35 +1674,22 @@ def timeframe_config():
             new_timeframe = data['timeframe']
             old_timeframe = get_current_timeframe()
             
-            # Устанавливаем новый таймфрейм
+            # Устанавливаем новый таймфрейм в память
             success = set_current_timeframe(new_timeframe)
             if not success:
                 return jsonify({
                     'success': False,
                     'error': f'Unsupported timeframe: {new_timeframe}'
                 }), 400
-            
-            # Сохраняем таймфрейм в БД для сохранения между перезапусками
+
+            # Единый конфиг: сохраняем таймфрейм в configs/bot_config.py (AutoBotConfig + SystemConfig)
             try:
-                from bot_engine.bots_database import get_bots_database
-                db = get_bots_database()
-                db.save_timeframe(new_timeframe)
-                logger.info(f"✅ Таймфрейм сохранен в БД: {new_timeframe}")
-            except Exception as save_db_err:
-                logger.warning(f"⚠️ Не удалось сохранить таймфрейм в БД: {save_db_err}")
-            
-            # Сохраняем таймфрейм в конфиг файл (bot_config.py)
-            # ⚠️ ВАЖНО: НЕ вызываем load_system_config() после сохранения, чтобы не сбросить таймфрейм
-            try:
-                from bots_modules.config_writer import save_system_config_to_py
-                from bot_engine.config_loader import SystemConfig
-                # Обновляем SystemConfig в памяти
-                SystemConfig.SYSTEM_TIMEFRAME = new_timeframe
-                # Сохраняем напрямую в файл БЕЗ перезагрузки модуля
+                from bots_modules.config_writer import save_auto_bot_config_current_to_py, save_system_config_to_py
+                save_auto_bot_config_current_to_py({'system_timeframe': new_timeframe})
                 save_system_config_to_py({'SYSTEM_TIMEFRAME': new_timeframe})
-                logger.info(f"✅ Таймфрейм сохранен в конфиг файл: {new_timeframe} (без перезагрузки модуля)")
+                logger.info(f"✅ Таймфрейм сохранён в конфиг: {new_timeframe}")
             except Exception as save_config_err:
-                logger.warning(f"⚠️ Не удалось сохранить таймфрейм в конфиг файл: {save_config_err}")
+                logger.warning(f"⚠️ Не удалось сохранить таймфрейм в конфиг: {save_config_err}")
             
             logger.info(f"🔄 Таймфрейм изменен: {old_timeframe} → {new_timeframe}")
             
@@ -2033,15 +2036,7 @@ def system_config():
         else:
             logger.info("ℹ️  System config: изменений не обнаружено")
         
-        # Сохраняем текущий таймфрейм из snapshot в БД до перезагрузки, чтобы load_system_config() не подставил старое значение
-        if saved_to_file and 'system_timeframe' in system_config_data:
-            try:
-                from bot_engine.bots_database import get_bots_database
-                db = get_bots_database()
-                db.save_timeframe(system_config_data['system_timeframe'])
-            except Exception as tf_save_err:
-                logger.warning(f"⚠️ Не удалось сохранить таймфрейм в БД перед перезагрузкой: {tf_save_err}")
-        # При перезагрузке конфига таймфрейм восстанавливается из БД (приоритет БД над файлом)
+        # Таймфрейм хранится только в конфиге; при перезагрузке берётся из файла
         if saved_to_file and (changes_count > 0 or system_changes_count > 0):
             load_system_config()
 
@@ -4892,6 +4887,28 @@ def get_trading_analytics():
         return jsonify({'success': True, 'report': report})
     except Exception as e:
         logger.exception("Ошибка аналитики торговли: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bots_app.route('/api/bots/analytics/rsi-audit', methods=['GET'])
+def get_rsi_audit():
+    """Аудит RSI входа/выхода: сделки с биржи, RSI в точке входа и выхода, сверка с текущим конфигом.
+    LONG: вход корректен при RSI <= порог; SHORT: при RSI >= порог. Вне диапазона — ошибочные входы."""
+    try:
+        exchange = get_exchange()
+        if not exchange:
+            return jsonify({'success': False, 'error': 'Биржа не инициализирована'}), 503
+        limit = request.args.get('limit', '500')
+        try:
+            limit = int(limit)
+        except (TypeError, ValueError):
+            limit = 500
+        limit = min(max(1, limit), 2000)
+        from bot_engine.rsi_audit import run_rsi_audit
+        report = run_rsi_audit(exchange, limit=limit, period='all')
+        return jsonify({'success': True, 'report': report})
+    except Exception as e:
+        logger.exception("Ошибка аудита RSI: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

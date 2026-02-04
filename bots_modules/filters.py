@@ -947,142 +947,149 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
         result['price'] = candles[-1]['close']
         result['last_update'] = datetime.now().isoformat()
 
-    # ✅ КРИТИЧНО: Считаем signal, rsi_zone и *_info для отображения причин на странице монеты (как в get_coin_rsi_data)
-    try:
-        from bot_engine.config_loader import SystemConfig, get_config_value
-        from bots_modules.imports_and_globals import bots_data
+    # ✅ КРИТИЧНО: signal и rsi_zone только для СИСТЕМНОГО таймфрейма. Иначе при слиянии (1m + 6h)
+    # последний ТФ перезаписывал бы signal — входы шли бы по 6h при системном 1m (убытки).
+    from bot_engine.config_loader import get_current_timeframe
+    is_system_tf = (timeframe == get_current_timeframe())
 
-        individual_settings = get_individual_coin_settings(symbol)
-        auto_config = bots_data.get('auto_bot_config', {})
-        rsi_long_threshold = (individual_settings.get('rsi_long_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_long_threshold')
-        rsi_short_threshold = (individual_settings.get('rsi_short_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_short_threshold')
-        rsi_time_filter_lower = (individual_settings.get('rsi_time_filter_lower') if individual_settings else None) or get_config_value(auto_config, 'rsi_time_filter_lower')
-        rsi_time_filter_upper = (individual_settings.get('rsi_time_filter_upper') if individual_settings else None) or get_config_value(auto_config, 'rsi_time_filter_upper')
+    if is_system_tf:
+        try:
+            from bot_engine.config_loader import SystemConfig, get_config_value
+            from bots_modules.imports_and_globals import bots_data
 
-        rsi_zone = 'NEUTRAL'
-        signal = 'WAIT'
-        if rsi is not None:
-            if rsi <= rsi_long_threshold:
-                rsi_zone = 'BUY_ZONE'
-                signal = 'ENTER_LONG'
-            elif rsi >= rsi_short_threshold:
-                rsi_zone = 'SELL_ZONE'
-                signal = 'ENTER_SHORT'
+            individual_settings = get_individual_coin_settings(symbol)
+            auto_config = bots_data.get('auto_bot_config', {})
+            rsi_long_threshold = (individual_settings.get('rsi_long_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_long_threshold')
+            rsi_short_threshold = (individual_settings.get('rsi_short_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_short_threshold')
+            rsi_time_filter_lower = (individual_settings.get('rsi_time_filter_lower') if individual_settings else None) or get_config_value(auto_config, 'rsi_time_filter_lower')
+            rsi_time_filter_upper = (individual_settings.get('rsi_time_filter_upper') if individual_settings else None) or get_config_value(auto_config, 'rsi_time_filter_upper')
 
-        result['rsi_zone'] = rsi_zone
-        result['signal'] = signal
-        result['change24h'] = result.get('change24h', 0)
-        result['is_mature'] = base_data.get('is_mature', True) if base_data else True
-        result['has_existing_position'] = base_data.get('has_existing_position', False) if base_data else False
-
-        # Scope: черный список ВСЕГДА исключает монету из торговли (при любом scope)
-        # При scope=whitelist и ПУСТОМ whitelist — не блокируем никого (торгуем все, как при scope=all)
-        scope = auto_config.get('scope', 'all')
-        whitelist = auto_config.get('whitelist', []) or []
-        blacklist = auto_config.get('blacklist', []) or []
-        is_blocked_by_scope = False
-        if symbol in blacklist:
-            is_blocked_by_scope = True
-        elif scope == 'whitelist' and whitelist and symbol not in whitelist:
-            is_blocked_by_scope = True
-        result['blocked_by_scope'] = is_blocked_by_scope
-        if is_blocked_by_scope:
-            signal = 'WAIT'
             rsi_zone = 'NEUTRAL'
-            result['signal'] = signal
+            signal = 'WAIT'
+            if rsi is not None:
+                if rsi <= rsi_long_threshold:
+                    rsi_zone = 'BUY_ZONE'
+                    signal = 'ENTER_LONG'
+                elif rsi >= rsi_short_threshold:
+                    rsi_zone = 'SELL_ZONE'
+                    signal = 'ENTER_SHORT'
+
             result['rsi_zone'] = rsi_zone
+            result['signal'] = signal
+            result['change24h'] = result.get('change24h', 0)
+            result['is_mature'] = base_data.get('is_mature', True) if base_data else True
+            result['has_existing_position'] = base_data.get('has_existing_position', False) if base_data else False
 
-        potential_signal = signal if signal in ('ENTER_LONG', 'ENTER_SHORT') else None
+            # Scope: черный список ВСЕГДА исключает монету из торговли (при любом scope)
+            scope = auto_config.get('scope', 'all')
+            whitelist = auto_config.get('whitelist', []) or []
+            blacklist = auto_config.get('blacklist', []) or []
+            is_blocked_by_scope = False
+            if symbol in blacklist:
+                is_blocked_by_scope = True
+            elif scope == 'whitelist' and whitelist and symbol not in whitelist:
+                is_blocked_by_scope = True
+            result['blocked_by_scope'] = is_blocked_by_scope
+            if is_blocked_by_scope:
+                signal = 'WAIT'
+                rsi_zone = 'NEUTRAL'
+                result['signal'] = signal
+                result['rsi_zone'] = rsi_zone
 
-        if potential_signal is None:
-            time_filter_info = {'blocked': False, 'reason': 'RSI вне зоны входа в сделку', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
-            exit_scam_info = {'blocked': False, 'reason': 'ExitScam: RSI вне зоны входа', 'filter_type': 'exit_scam'}
-            loss_reentry_info = {'blocked': False, 'reason': 'Защита от повторных входов: RSI вне зоны входа', 'filter_type': 'loss_reentry_protection'}
-        else:
-            time_filter_info = None
-            exit_scam_info = None
-            loss_reentry_info = None
-            if len(candles) >= 50:
-                try:
-                    time_filter_result = check_rsi_time_filter(candles, rsi, potential_signal, symbol=symbol, individual_settings=individual_settings)
-                    if time_filter_result:
-                        time_filter_info = {'blocked': not time_filter_result.get('allowed', True), 'reason': time_filter_result.get('reason', ''), 'filter_type': 'time_filter', 'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago'), 'calm_candles': time_filter_result.get('calm_candles')}
-                    else:
-                        time_filter_info = {'blocked': False, 'reason': 'Проверка не выполнена', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
-                except Exception as e:
-                    time_filter_info = {'blocked': False, 'reason': str(e), 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
+            potential_signal = signal if signal in ('ENTER_LONG', 'ENTER_SHORT') else None
+
+            if potential_signal is None:
+                time_filter_info = {'blocked': False, 'reason': 'RSI вне зоны входа в сделку', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
+                exit_scam_info = {'blocked': False, 'reason': 'ExitScam: RSI вне зоны входа', 'filter_type': 'exit_scam'}
+                loss_reentry_info = {'blocked': False, 'reason': 'Защита от повторных входов: RSI вне зоны входа', 'filter_type': 'loss_reentry_protection'}
             else:
-                time_filter_info = {'blocked': False, 'reason': 'Недостаточно свечей (нужно 50)', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
+                time_filter_info = None
+                exit_scam_info = None
+                loss_reentry_info = None
+                if len(candles) >= 50:
+                    try:
+                        time_filter_result = check_rsi_time_filter(candles, rsi, potential_signal, symbol=symbol, individual_settings=individual_settings)
+                        if time_filter_result:
+                            time_filter_info = {'blocked': not time_filter_result.get('allowed', True), 'reason': time_filter_result.get('reason', ''), 'filter_type': 'time_filter', 'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago'), 'calm_candles': time_filter_result.get('calm_candles')}
+                        else:
+                            time_filter_info = {'blocked': False, 'reason': 'Проверка не выполнена', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
+                    except Exception as e:
+                        time_filter_info = {'blocked': False, 'reason': str(e), 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
+                else:
+                    time_filter_info = {'blocked': False, 'reason': 'Недостаточно свечей (нужно 50)', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
 
-            if len(candles) >= 10:
+                if len(candles) >= 10:
+                    try:
+                        from bot_engine.config_loader import get_config_value
+                        exit_scam_enabled = get_config_value(auto_config, 'exit_scam_enabled')
+                        exit_scam_candles = get_config_value(auto_config, 'exit_scam_candles')
+                        single_candle_percent = get_config_value(auto_config, 'exit_scam_single_candle_percent')
+                        multi_candle_count = get_config_value(auto_config, 'exit_scam_multi_candle_count')
+                        multi_candle_percent = get_config_value(auto_config, 'exit_scam_multi_candle_percent')
+                        _tf, limit_single, limit_multi = get_exit_scam_effective_limits(
+                            single_candle_percent, multi_candle_count, multi_candle_percent
+                        )
+                        exit_scam_reason = 'ExitScam фильтр пройден'
+                        exit_scam_allowed = True
+                        if exit_scam_enabled and exit_scam_candles and len(candles) >= exit_scam_candles:
+                            recent = candles[-exit_scam_candles:]
+                            for c in recent:
+                                o, cl = float(c.get('open', 0) or 0), float(c.get('close', 0) or 0)
+                                if o <= 0:
+                                    continue
+                                ch = abs((cl - o) / o) * 100
+                                if ch > limit_single:
+                                    exit_scam_allowed = False
+                                    exit_scam_reason = f'Тело свечи {ch:.2f}% > лимит {limit_single}% (как в конфиге, тело = |C-O|/O×100%)'
+                                    break
+                            if exit_scam_allowed and len(recent) >= multi_candle_count:
+                                m = recent[-multi_candle_count:]
+                                o0 = float(m[0].get('open', 0) or 0)
+                                cl_last = float(m[-1].get('close', 0) or 0)
+                                if o0 > 0:
+                                    total_ch = abs((cl_last - o0) / o0) * 100
+                                    if total_ch > limit_multi:
+                                        exit_scam_allowed = False
+                                        exit_scam_reason = f'{multi_candle_count} свечей суммарно {total_ch:.1f}% > {limit_multi}%'
+                        exit_scam_info = {'blocked': not exit_scam_allowed, 'reason': exit_scam_reason, 'filter_type': 'exit_scam'}
+                    except Exception as e:
+                        exit_scam_info = {'blocked': False, 'reason': str(e), 'filter_type': 'exit_scam'}
+                else:
+                    exit_scam_info = {'blocked': False, 'reason': 'Недостаточно свечей', 'filter_type': 'exit_scam'}
+
                 try:
                     from bot_engine.config_loader import get_config_value
-                    exit_scam_enabled = get_config_value(auto_config, 'exit_scam_enabled')
-                    exit_scam_candles = get_config_value(auto_config, 'exit_scam_candles')
-                    single_candle_percent = get_config_value(auto_config, 'exit_scam_single_candle_percent')
-                    multi_candle_count = get_config_value(auto_config, 'exit_scam_multi_candle_count')
-                    multi_candle_percent = get_config_value(auto_config, 'exit_scam_multi_candle_percent')
-                    _tf, limit_single, limit_multi = get_exit_scam_effective_limits(
-                        single_candle_percent, multi_candle_count, multi_candle_percent
-                    )
-                    exit_scam_reason = 'ExitScam фильтр пройден'
-                    exit_scam_allowed = True
-                    if exit_scam_enabled and exit_scam_candles and len(candles) >= exit_scam_candles:
-                        recent = candles[-exit_scam_candles:]
-                        for c in recent:
-                            o, cl = float(c.get('open', 0) or 0), float(c.get('close', 0) or 0)
-                            if o <= 0:
-                                continue
-                            ch = abs((cl - o) / o) * 100
-                            if ch > limit_single:
-                                exit_scam_allowed = False
-                                exit_scam_reason = f'Тело свечи {ch:.2f}% > лимит {limit_single}% (как в конфиге, тело = |C-O|/O×100%)'
-                                break
-                        if exit_scam_allowed and len(recent) >= multi_candle_count:
-                            m = recent[-multi_candle_count:]
-                            o0 = float(m[0].get('open', 0) or 0)
-                            cl_last = float(m[-1].get('close', 0) or 0)
-                            if o0 > 0:
-                                total_ch = abs((cl_last - o0) / o0) * 100
-                                if total_ch > limit_multi:
-                                    exit_scam_allowed = False
-                                    exit_scam_reason = f'{multi_candle_count} свечей суммарно {total_ch:.1f}% > {limit_multi}%'
-                    exit_scam_info = {'blocked': not exit_scam_allowed, 'reason': exit_scam_reason, 'filter_type': 'exit_scam'}
-                except Exception as e:
-                    exit_scam_info = {'blocked': False, 'reason': str(e), 'filter_type': 'exit_scam'}
-            else:
-                exit_scam_info = {'blocked': False, 'reason': 'Недостаточно свечей', 'filter_type': 'exit_scam'}
-
-            try:
-                from bot_engine.config_loader import get_config_value
-                loss_reentry_protection_enabled = get_config_value(auto_config, 'loss_reentry_protection')
-                loss_reentry_count = get_config_value(auto_config, 'loss_reentry_count')
-                loss_reentry_candles = get_config_value(auto_config, 'loss_reentry_candles')
-                if loss_reentry_protection_enabled and len(candles) >= 10:
-                    lr_result = _check_loss_reentry_protection_static(symbol, candles, loss_reentry_count, loss_reentry_candles, individual_settings)
-                    if lr_result:
-                        loss_reentry_info = {'blocked': not lr_result.get('allowed', True), 'reason': lr_result.get('reason', ''), 'filter_type': 'loss_reentry_protection', 'candles_passed': lr_result.get('candles_passed'), 'required_candles': loss_reentry_candles, 'loss_count': loss_reentry_count}
+                    loss_reentry_protection_enabled = get_config_value(auto_config, 'loss_reentry_protection')
+                    loss_reentry_count = get_config_value(auto_config, 'loss_reentry_count')
+                    loss_reentry_candles = get_config_value(auto_config, 'loss_reentry_candles')
+                    if loss_reentry_protection_enabled and len(candles) >= 10:
+                        lr_result = _check_loss_reentry_protection_static(symbol, candles, loss_reentry_count, loss_reentry_candles, individual_settings)
+                        if lr_result:
+                            loss_reentry_info = {'blocked': not lr_result.get('allowed', True), 'reason': lr_result.get('reason', ''), 'filter_type': 'loss_reentry_protection', 'candles_passed': lr_result.get('candles_passed'), 'required_candles': loss_reentry_candles, 'loss_count': loss_reentry_count}
+                        else:
+                            loss_reentry_info = {'blocked': False, 'reason': 'Проверка не выполнена', 'filter_type': 'loss_reentry_protection'}
                     else:
-                        loss_reentry_info = {'blocked': False, 'reason': 'Проверка не выполнена', 'filter_type': 'loss_reentry_protection'}
-                else:
-                    loss_reentry_info = {'blocked': False, 'reason': 'Выключено или мало свечей', 'filter_type': 'loss_reentry_protection'}
-            except Exception as e:
-                loss_reentry_info = {'blocked': False, 'reason': str(e), 'filter_type': 'loss_reentry_protection'}
+                        loss_reentry_info = {'blocked': False, 'reason': 'Выключено или мало свечей', 'filter_type': 'loss_reentry_protection'}
+                except Exception as e:
+                    loss_reentry_info = {'blocked': False, 'reason': str(e), 'filter_type': 'loss_reentry_protection'}
 
-        result['time_filter_info'] = time_filter_info
-        result['exit_scam_info'] = exit_scam_info
-        result['loss_reentry_info'] = loss_reentry_info
-        result['blocked_by_exit_scam'] = exit_scam_info.get('blocked', False) if exit_scam_info else False
-        result['blocked_by_rsi_time'] = time_filter_info.get('blocked', False) if time_filter_info else False
-        result['blocked_by_loss_reentry'] = loss_reentry_info.get('blocked', False) if loss_reentry_info else False
-    except Exception as e:
+            result['time_filter_info'] = time_filter_info
+            result['exit_scam_info'] = exit_scam_info
+            result['loss_reentry_info'] = loss_reentry_info
+            result['blocked_by_exit_scam'] = exit_scam_info.get('blocked', False) if exit_scam_info else False
+            result['blocked_by_rsi_time'] = time_filter_info.get('blocked', False) if time_filter_info else False
+            result['blocked_by_loss_reentry'] = loss_reentry_info.get('blocked', False) if loss_reentry_info else False
+        except Exception as e:
+            pass
+            result['time_filter_info'] = {'blocked': False, 'reason': f'Ошибка: {e}', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
+            result['exit_scam_info'] = {'blocked': False, 'reason': str(e), 'filter_type': 'exit_scam'}
+            result['loss_reentry_info'] = {'blocked': False, 'reason': str(e), 'filter_type': 'loss_reentry_protection'}
+            result['blocked_by_exit_scam'] = False
+            result['blocked_by_rsi_time'] = False
+            result['blocked_by_loss_reentry'] = False
+    else:
+        # Не системный ТФ: только rsi_key/trend_key уже в result; не перезаписываем signal при слиянии
         pass
-        result['time_filter_info'] = {'blocked': False, 'reason': f'Ошибка: {e}', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
-        result['exit_scam_info'] = {'blocked': False, 'reason': str(e), 'filter_type': 'exit_scam'}
-        result['loss_reentry_info'] = {'blocked': False, 'reason': str(e), 'filter_type': 'loss_reentry_protection'}
-        result['blocked_by_exit_scam'] = False
-        result['blocked_by_rsi_time'] = False
-        result['blocked_by_loss_reentry'] = False
 
     return result
 
@@ -2551,8 +2558,10 @@ def get_effective_signal(coin):
     # Получаем данные монеты с учетом текущего таймфрейма
     from bot_engine.config_loader import get_rsi_from_coin_data, get_trend_from_coin_data, get_current_timeframe
     current_timeframe = get_current_timeframe()
-    # ✅ КРИТИЧНО: Явно передаём текущий ТФ, чтобы не было fallback на rsi6h/trend6h
-    rsi = get_rsi_from_coin_data(coin, timeframe=current_timeframe) or 50
+    # ✅ КРИТИЧНО: RSI только по текущему ТФ (без подстановки 50/6h). Если None — сигнал WAIT.
+    rsi = get_rsi_from_coin_data(coin, timeframe=current_timeframe)
+    if rsi is None:
+        return 'WAIT'
     trend = get_trend_from_coin_data(coin, timeframe=current_timeframe)
     
     # ✅ КРИТИЧНО: Проверяем зрелость монеты ПЕРВЫМ ДЕЛОМ
@@ -2610,15 +2619,18 @@ def get_effective_signal(coin):
             pass
         return 'WAIT'
     
+    # КРИТИЧНО: Сигнал должен соответствовать текущему RSI по порогам конфига (LONG ≤ порог, SHORT ≥ порог)
+    if signal == 'ENTER_LONG' and (rsi is None or rsi > rsi_long_threshold):
+        return 'WAIT'
+    if signal == 'ENTER_SHORT' and (rsi is None or rsi < rsi_short_threshold):
+        return 'WAIT'
+
     # УПРОЩЕННАЯ ПРОВЕРКА ТРЕНДОВ - только экстремальные случаи
     if signal == 'ENTER_SHORT' and avoid_up_trend and rsi >= rsi_short_threshold and trend == 'UP':
-        # Убрано избыточное логирование
         return 'WAIT'
-    
     if signal == 'ENTER_LONG' and avoid_down_trend and rsi <= rsi_long_threshold and trend == 'DOWN':
-        # Убрано избыточное логирование
         return 'WAIT'
-    
+
     # Все проверки пройдены
     return signal
 
@@ -2858,11 +2870,34 @@ def process_auto_bot_signals(exchange_obj=None):
                 logger.warning(f" ⚠️ {symbol}: Ошибка проверки позиций: {pos_error}")
                 # Продолжаем создание бота если проверка не удалась
             
-            # ✅ Монета УЖЕ в списке LONG/SHORT слева = все фильтры и AI пройдены при формировании potential_coins.
-            # Открываем позицию НЕЗАМЕДЛИТЕЛЬНО. AI уже проверен до списка — используем сохранённый результат для метаданных.
+            # ✅ Монета УЖЕ в списке LONG/SHORT = фильтры пройдены. Перед входом ещё раз проверяем RSI по текущему ТФ.
             signal = coin['signal']
             direction = 'LONG' if signal == 'ENTER_LONG' else 'SHORT'
             last_ai_result = coin.get('last_ai_result')
+
+            # КРИТИЧНО: Повторная проверка RSI перед открытием (строго по текущему ТФ, только закрытые свечи)
+            with rsi_data_lock:
+                coin_data_now = coins_rsi_data.get('coins', {}).get(symbol)
+            if not coin_data_now:
+                logger.warning(f" ⚠️ {symbol}: пропуск — нет актуальных RSI данных")
+                continue
+            from bot_engine.config_loader import get_config_value, get_rsi_key
+            rsi_key_used = get_rsi_key(current_timeframe)
+            rsi_now = get_rsi_from_coin_data(coin_data_now, timeframe=current_timeframe)
+            auto_cfg = bots_data.get('auto_bot_config', {})
+            long_th = get_config_value(auto_cfg, 'rsi_long_threshold')
+            short_th = get_config_value(auto_cfg, 'rsi_short_threshold')
+            # Без RSI не входим
+            if rsi_now is None:
+                logger.warning(f" ⚠️ {symbol}: пропуск — RSI по ТФ {current_timeframe} (ключ {rsi_key_used}) не рассчитан")
+                continue
+            if direction == 'LONG' and rsi_now > long_th:
+                logger.warning(f" ⚠️ {symbol}: пропуск LONG — RSI {rsi_now:.1f} > порога {long_th} (ТФ={current_timeframe})")
+                continue
+            if direction == 'SHORT' and rsi_now < short_th:
+                logger.warning(f" ⚠️ {symbol}: пропуск SHORT — RSI {rsi_now:.1f} < порога {short_th} (ТФ={current_timeframe})")
+                continue
+            logger.info(f" ✅ {symbol}: вход {direction} — RSI={rsi_now:.1f}, порог {'<=' if direction == 'LONG' else '>='} {long_th if direction == 'LONG' else short_th} (ТФ={current_timeframe})")
 
             # Создаём бота в памяти, входим по рынку, в список добавляем только после успешного входа
             try:
@@ -2985,13 +3020,19 @@ def process_trading_signals_for_all_bots(exchange_obj=None):
                     if position_side == 'LONG':
                         thr = exit_long_with if entry_trend == 'UP' else exit_long_against
                         external_signal = 'EXIT_LONG' if current_rsi >= thr else (rsi_data.get('signal') or 'WAIT')
+                        if external_signal == 'EXIT_LONG':
+                            logger.info(f" 🔴 {symbol}: РЕШЕНИЕ ВЫХОД LONG — RSI={current_rsi:.1f} >= {thr} (ТФ={timeframe_to_use}, entry_trend={entry_trend})")
                     elif position_side == 'SHORT':
                         thr = exit_short_with if entry_trend == 'DOWN' else exit_short_against
                         external_signal = 'EXIT_SHORT' if current_rsi <= thr else (rsi_data.get('signal') or 'WAIT')
+                        if external_signal == 'EXIT_SHORT':
+                            logger.info(f" 🔴 {symbol}: РЕШЕНИЕ ВЫХОД SHORT — RSI={current_rsi:.1f} <= {thr} (ТФ={timeframe_to_use}, entry_trend={entry_trend})")
                     else:
                         external_signal = rsi_data.get('signal') or 'WAIT'
                 else:
                     external_signal = rsi_data.get('signal') or 'WAIT'
+                    if position_side and current_rsi is None:
+                        logger.warning(f" ⚠️ {symbol}: RSI по ТФ {timeframe_to_use} нет — выход по RSI не проверяется")
                 
                 signal_result = trading_bot.update(
                     force_analysis=True, 
