@@ -455,10 +455,17 @@ def positions_monitor_worker():
                                 current_rsi = get_rsi_from_coin_data(rsi_data, timeframe=bot_entry_timeframe) if rsi_data else None
                                 current_price = rsi_data.get('price') if rsi_data else None
 
-                                # ✅ Боты в позиции: при отсутствии RSI в общем кэше — загружаем свечи и считаем RSI только для этого символа (не ждём полную загрузку всех монет)
+                                # ✅ Боты в позиции: при отсутствии RSI в общем кэше — загружаем только последние 20 свечей и считаем RSI (достаточно для RSI(14), без лишней нагрузки на API)
+                                # Таймфрейм свечей = таймфрейм бота (entry_timeframe).
                                 if current_rsi is None or current_price is None:
                                     try:
-                                        chart_response = exchange_obj.get_chart_data(symbol, bot_entry_timeframe, '30d')
+                                        try:
+                                            chart_response = exchange_obj.get_chart_data(
+                                                symbol, bot_entry_timeframe, '1w',
+                                                bulk_mode=True, bulk_limit=20
+                                            )
+                                        except TypeError:
+                                            chart_response = exchange_obj.get_chart_data(symbol, bot_entry_timeframe, '1w')
                                         if chart_response and chart_response.get('success'):
                                             candles = chart_response.get('data', {}).get('candles', [])
                                             if len(candles) >= 15:

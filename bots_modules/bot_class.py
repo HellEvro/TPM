@@ -1186,10 +1186,17 @@ class NewTradingBot:
             
             chart_response = None
             candles = []
-            # В позиции при отсутствии RSI в coin_data — считаем RSI по свечам, чтобы не пропустить выход по конфигу
+            # В позиции при отсутствии RSI в coin_data — считаем RSI по последним 20 свечам (достаточно для RSI(14), без лишней нагрузки на API)
+            # Таймфрейм свечей = таймфрейм бота (entry_timeframe → timeframe_to_use).
             if current_rsi is None and self.status in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
                 try:
-                    chart_response = self.exchange.get_chart_data(self.symbol, timeframe_to_use, '30d')
+                    try:
+                        chart_response = self.exchange.get_chart_data(
+                            self.symbol, timeframe_to_use, '1w',
+                            bulk_mode=True, bulk_limit=20
+                        )
+                    except TypeError:
+                        chart_response = self.exchange.get_chart_data(self.symbol, timeframe_to_use, '1w')
                     if chart_response and chart_response.get('success'):
                         candles = chart_response.get('data', {}).get('candles', [])
                         if len(candles) >= 15:
@@ -1207,7 +1214,7 @@ class NewTradingBot:
                 logger.warning(f"[NEW_BOT_{self.symbol}] ❌ Нет RSI данных")
                 return {'success': False, 'error': 'No RSI data'}
             
-            # ✅ Получаем свечи для анализа (если ещё не получили в fallback выше)
+            # ✅ Получаем свечи для анализа (если ещё не получили в fallback выше). Таймфрейм свечей = entry_timeframe бота.
             if not candles:
                 chart_response = self.exchange.get_chart_data(self.symbol, timeframe_to_use, '30d')
                 if not chart_response or not chart_response.get('success'):
