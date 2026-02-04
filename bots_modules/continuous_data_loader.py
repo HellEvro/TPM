@@ -72,7 +72,7 @@ class ContinuousDataLoader:
 
     def _continuous_loop(self):
         """🔄 Основной цикл обновления данных"""
-        logger.info("Входим в непрерывный цикл обновления...")
+        logger.info("🔄 Поток непрерывного загрузчика ЗАПУЩЕН (через 5 сек — первый раунд)")
 
         # ⚡ ТРЕЙСИНГ ОТКЛЮЧЕН - проблема решена (deadlock на bots_data_lock)
         # try:
@@ -92,6 +92,7 @@ class ContinuousDataLoader:
 
         # Небольшая задержка перед первым обновлением (даем системе запуститься)
         time.sleep(5)
+        logger.info("🔄 Начинаем первый раунд обновления данных...")
 
         # Импортируем shutdown_flag для корректной остановки
         from bots_modules.imports_and_globals import shutdown_flag
@@ -120,6 +121,7 @@ class ContinuousDataLoader:
                 logger.info("=" * 80)
 
                 # ✅ Когда автобот ВЫКЛЮЧЕН: не ищем новые сделки; этапы 3–6 пропускаем. Но свечи и RSI — ВСЕГДА (для UI).
+                logger.info("🔄 [РАУНД] Получаем флаг автобота (lock)...")
                 from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
                 with bots_data_lock:
                     auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
@@ -129,22 +131,32 @@ class ContinuousDataLoader:
                     )
                 if not auto_bot_enabled and active_bots_count == 0:
                     logger.info("⏹️ Автобот выключен, активных ботов нет — загружаем только свечи и RSI для UI")
+                logger.info("🔄 [РАУНД] Lock получен, запускаем этап 1 (свечи)...")
 
-                # ✅ Этап 1: Загружаем свечи всех монет (15-20 сек) - БЛОКИРУЮЩИЙ (всегда для списка монет в UI)
-                success = self._load_candles()
-                if not success:
-                    logger.error("❌ Не удалось загрузить свечи, пропускаем раунд")
-                    self.error_count += 1
-                    time.sleep(30)  # Пауза перед следующей попыткой
-                    continue
+                # ✅ Предзаполнение списка монет для UI: пока первый раунд не завершён, список не пустой
+                if not coins_rsi_data.get('coins') or len(coins_rsi_data.get('coins', {})) == 0:
+                    self._seed_coins_placeholder()
 
-                # ✅ Этап 2: Рассчитываем RSI для всех монет (30-40 сек) - БЛОКИРУЮЩИЙ
-                success = self._calculate_rsi()
-                if not success:
-                    logger.error("❌ Не удалось рассчитать RSI, пропускаем раунд")
+                # ✅ Этап 1: Загрузка НОВЫХ свечей с биржи. Без свечей работа системы бессмысленна.
+                success_candles = self._load_candles()
+                if not success_candles:
+                    logger.error("КРИТИЧНО: загрузка свечей с биржи не удалась. Без свечей RSI не считается. Проверьте биржу, сеть, rate limit.")
                     self.error_count += 1
                     time.sleep(30)
                     continue
+
+                # ✅ Этап 2: Расчёт RSI по загруженным свечам
+                success_rsi = self._calculate_rsi()
+                if not success_rsi:
+                    logger.error("КРИТИЧНО: расчёт RSI не выполнен. Данные для торговли отсутствуют. Проверьте логи, биржу и конфиг.")
+                    self.error_count += 1
+                    time.sleep(30)
+                    continue
+
+                # ✅ КРИТИЧНО: Первая загрузка (свечи + RSI) завершена — только теперь разрешаем работу автобота и проверок по RSI
+                if not coins_rsi_data.get('first_round_complete'):
+                    coins_rsi_data['first_round_complete'] = True
+                    logger.info("✅ ПЕРВАЯ ЗАГРУЗКА ЗАВЕРШЕНА: свечи + RSI готовы → запуск системы (автобот, мониторинг позиций)")
 
                 # ✅ Этапы 3–6 только при включённом автоботе (поиск новых сделок)
                 if auto_bot_enabled:
@@ -196,6 +208,53 @@ class ContinuousDataLoader:
                 time.sleep(30)  # Пауза перед следующей попыткой
 
         logger.info("🏁 Выход из непрерывного цикла")
+
+    def _seed_coins_placeholder(self):
+        """Заполняет список монет заглушками (RSI=50, WAIT), чтобы UI не был пустым до первого раунда."""
+        try:
+            from bots_modules.imports_and_globals import get_exchange, coins_rsi_data
+            from bot_engine.config_loader import get_current_timeframe, get_rsi_key, get_trend_key
+            exch = get_exchange()
+            if not exch:
+                return
+            try:
+                tf = get_current_timeframe()
+            except Exception:
+                tf = '1m'
+            rsi_key = get_rsi_key(tf)
+            trend_key = get_trend_key(tf)
+            pairs = exch.get_all_pairs()
+            if not pairs or not isinstance(pairs, list):
+                return
+            now = datetime.now().isoformat()
+            placeholders = {}
+            for symbol in pairs:
+                if not symbol or str(symbol).strip().upper() == 'ALL':
+                    continue
+                placeholders[symbol] = {
+                    'symbol': symbol,
+                    rsi_key: 50,
+                    trend_key: 'NEUTRAL',
+                    'rsi_zone': 'NEUTRAL',
+                    'signal': 'WAIT',
+                    'price': 0,
+                    'change24h': 0,
+                    'last_update': now,
+                    'rsi': 50,
+                    'trend': 'NEUTRAL',
+                    'rsi6h': 50,
+                    'trend6h': 'NEUTRAL',
+                    'is_mature': True,
+                    'has_existing_position': False,
+                    'enhanced_rsi': {'enabled': False},
+                }
+            if placeholders:
+                coins_rsi_data['coins'] = placeholders
+                coins_rsi_data['total_coins'] = len(placeholders)
+                coins_rsi_data['last_update'] = now
+                logger.info(f"📋 Предзаполнено {len(placeholders)} монет для UI (RSI обновится после первого раунда)")
+        except Exception as e:
+            logger.warning(f"⚠️ Не удалось предзаполнить список монет: {e}")
 
     def _load_candles(self):
         """📦 Загружает свечи всех монет"""

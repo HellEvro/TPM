@@ -486,13 +486,14 @@ def _maybe_auto_learn_exit_scam(symbol: str, candles: list) -> None:
     except Exception as e:
         logger.debug(f"ExitScam автоподбор для {symbol}: {e}")
 
-def get_coin_candles_only(symbol, exchange_obj=None, timeframe=None):
+def get_coin_candles_only(symbol, exchange_obj=None, timeframe=None, bulk_mode=False):
     """⚡ БЫСТРАЯ загрузка ТОЛЬКО свечей БЕЗ расчетов
     
     Args:
         symbol: Символ монеты
         exchange_obj: Объект биржи (опционально)
         timeframe: Таймфрейм для загрузки (если None - используется системный)
+        bulk_mode: Если True — для Bybit один запрос 100 свечей без задержки (массовая загрузка за <30с)
     """
     try:
         if shutdown_flag.is_set():
@@ -512,8 +513,11 @@ def get_coin_candles_only(symbol, exchange_obj=None, timeframe=None):
             except Exception:
                 timeframe = TIMEFRAME
         
-        # Получаем ТОЛЬКО свечи с указанным таймфреймом
-        chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '30d')
+        # Получаем ТОЛЬКО свечи с указанным таймфреймом (bulk_mode только для Bybit)
+        if bulk_mode and getattr(exchange_to_use.__class__, '__name__', '') == 'BybitExchange':
+            chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '30d', bulk_mode=True)
+        else:
+            chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '30d')
         
         if not chart_response or not chart_response.get('success'):
             return None
@@ -1873,34 +1877,14 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         return None
 
 def get_required_timeframes():
-    """Таймфреймы для загрузки свечей (системный + 6h для change_24h + entry_tf ботов)."""
-    timeframes = set()
+    """Таймфреймы для загрузки свечей: только текущий из конфига (тот что в работе). Один ТФ = быстрая загрузка."""
     try:
         from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
         system_tf = get_current_timeframe()
-        timeframes.add(system_tf)
+        return [system_tf] if system_tf else [TIMEFRAME]
     except Exception:
         from bot_engine.config_loader import TIMEFRAME
-        timeframes.add(TIMEFRAME)
-    timeframes.add('6h')  # Свечи 6h нужны для change_24h (4 свечи 6h = 24ч)
-    try:
-        from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
-        default_tf = get_current_timeframe()
-    except Exception:
-        from bot_engine.config_loader import TIMEFRAME
-        default_tf = TIMEFRAME
-    try:
-        from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
-        with bots_data_lock:
-            for symbol, bot_data in bots_data.get('bots', {}).items():
-                status = bot_data.get('status')
-                if status in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
-                    entry_tf = bot_data.get('entry_timeframe') or default_tf
-                    timeframes.add(entry_tf)
-    except Exception:
-        pass
-    result = sorted(list(timeframes))
-    return result
+        return [TIMEFRAME]
 
 
 def get_required_timeframes_for_rsi():
@@ -1939,9 +1923,10 @@ def load_all_coins_candles_fast():
     ✅ ОПТИМИЗАЦИЯ: Загружает свечи для всех требуемых таймфреймов (системный + entry_timeframe ботов в позиции)
     """
     try:
+        logger.info("📦 load_all_coins_candles_fast: ВХОД (загрузка начинается)")
         from bots_modules.imports_and_globals import get_exchange
         current_exchange = get_exchange()
-        
+        logger.info("📦 Биржа получена" if current_exchange else "📦 Биржа = None")
         if not current_exchange:
             logger.error("❌ Биржа не инициализирована")
             return False
@@ -1951,7 +1936,9 @@ def load_all_coins_candles_fast():
             return False
 
         # ✅ ОПТИМИЗАЦИЯ: Получаем все требуемые таймфреймы
+        logger.info("📦 Получаем требуемые таймфреймы (lock)...")
         required_timeframes = get_required_timeframes()
+        logger.info(f"📦 Таймфреймы: {required_timeframes}")
         if not required_timeframes:
             try:
                 from bot_engine.config_loader import get_current_timeframe
@@ -1962,8 +1949,17 @@ def load_all_coins_candles_fast():
         
         logger.info(f"📦 Загружаем свечи для таймфреймов: {required_timeframes}")
 
-        # Получаем список всех пар
-        pairs = current_exchange.get_all_pairs()
+        # Получаем список всех пар (с таймаутом 30 сек — чтобы не зависнуть на API)
+        logger.info("📦 Получаем список пар с биржи (get_all_pairs, таймаут 30с)...")
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            fut = ex.submit(current_exchange.get_all_pairs)
+            try:
+                pairs = fut.result(timeout=30)
+            except concurrent.futures.TimeoutError:
+                logger.error("❌ get_all_pairs: таймаут 30с — биржа не ответила. Проверьте сеть и API.")
+                return False
+        logger.info(f"📦 Получено пар: {len(pairs) if pairs else 0}")
         if not pairs:
             logger.error("❌ Не удалось получить список пар")
             return False
@@ -1974,13 +1970,15 @@ def load_all_coins_candles_fast():
         for timeframe in required_timeframes:
             logger.info(f"📦 Загружаем свечи для таймфрейма {timeframe}...")
             
-            # Загружаем ТОЛЬКО свечи пакетами (УСКОРЕННАЯ ВЕРСИЯ)
-            batch_size = 100
+            # bulk_mode: один запрос 100 свечей без задержки — агрессивный параллелизм для загрузки за ~10–30 с
+            # Без bulk_mode: 10 воркеров, батч 10, таймаут 45 с (осторожно по rate limit)
+            use_bulk = getattr(current_exchange.__class__, '__name__', '') == 'BybitExchange'
+            batch_size = 100 if use_bulk else 10
             candles_cache = {}
             
             import concurrent.futures
-            # ⚡ АДАПТИВНОЕ УПРАВЛЕНИЕ ВОРКЕРАМИ: начинаем с 20, временно уменьшаем при rate limit
-            current_max_workers = 20
+            current_max_workers = 80 if use_bulk else 10
+            batch_timeout = 15 if use_bulk else 45
             rate_limit_detected = False
             
             shutdown_requested = False
@@ -1994,75 +1992,81 @@ def load_all_coins_candles_fast():
                 batch_num = i//batch_size + 1
                 total_batches = (len(pairs) + batch_size - 1)//batch_size
                 
-                # ⚡ ВРЕМЕННОЕ УМЕНЬШЕНИЕ ВОРКЕРОВ: если в предыдущем батче был rate limit
                 if rate_limit_detected:
-                    current_max_workers = max(17, current_max_workers - 3)
-                    logger.warning(f"⚠️ Rate limit обнаружен в предыдущем батче. Временно уменьшаем воркеры до {current_max_workers}")
+                    current_max_workers = max(20 if use_bulk else 5, current_max_workers - (20 if use_bulk else 2))
+                    logger.warning(f"⚠️ Rate limit в предыдущем батче. Воркеры: {current_max_workers}")
                     rate_limit_detected = False
-                elif current_max_workers < 20:
-                    current_max_workers = 20
+                elif use_bulk and current_max_workers < 80:
+                    current_max_workers = 80
+                elif not use_bulk and current_max_workers < 10:
+                    current_max_workers = 10
                 
                 delay_before_batch = current_exchange.current_request_delay if hasattr(current_exchange, 'current_request_delay') else None
                 
+                # ✅ КРИТИЧНО: wait() ДОЛЖЕН быть ВНУТРИ with, иначе при выходе из with вызывается executor.shutdown(wait=True) и поток вечно ждёт все задачи, не дойдя до нашего wait(timeout=90)
                 with concurrent.futures.ThreadPoolExecutor(max_workers=current_max_workers) as executor:
-                    # ✅ Передаем timeframe в get_coin_candles_only
                     future_to_symbol = {
-                        executor.submit(get_coin_candles_only, symbol, current_exchange, timeframe): symbol
+                        executor.submit(get_coin_candles_only, symbol, current_exchange, timeframe, use_bulk): symbol
                         for symbol in batch
                     }
 
-                if shutdown_flag.is_set():
-                    shutdown_requested = True
-                    for future in future_to_symbol:
-                        future.cancel()
-                    break
-                
-                completed = 0
-                done, not_done = concurrent.futures.wait(
-                    future_to_symbol.keys(),
-                    timeout=90,
-                    return_when=concurrent.futures.ALL_COMPLETED
-                )
-
-                if shutdown_flag.is_set():
-                    shutdown_requested = True
-                    for future in future_to_symbol:
-                        future.cancel()
-                    break
-                
-                for future in done:
-                    symbol = future_to_symbol.get(future)
-                    try:
-                        result = future.result()
-                        if result:
-                            candles_cache[result['symbol']] = result
-                            completed += 1
-                    except Exception:
-                        pass
-                
-                if not_done:
-                    unfinished_symbols = [future_to_symbol.get(future) for future in not_done if future in future_to_symbol]
-                    logger.error(f"❌ Timeout: {len(unfinished_symbols)} (of {len(future_to_symbol)}) futures unfinished")
+                    if shutdown_flag.is_set():
+                        shutdown_requested = True
+                        for f in future_to_symbol:
+                            f.cancel()
+                        break
                     
-                    # Отменяем незавершенные задачи и фиксируем возможный rate limit
-                    for future in not_done:
+                    completed = 0
+                    # bulk_mode: 100 запросов без задержки — 15 с; иначе 45 с на батч 10
+                    done, not_done = concurrent.futures.wait(
+                        list(future_to_symbol.keys()),
+                        timeout=batch_timeout,
+                        return_when=concurrent.futures.ALL_COMPLETED
+                    )
+
+                    if shutdown_flag.is_set():
+                        shutdown_requested = True
+                        for f in future_to_symbol:
+                            f.cancel()
+                        break
+                    
+                    for future in done:
+                        symbol = future_to_symbol.get(future)
                         try:
-                            future.cancel()
+                            result = future.result()
+                            if result:
+                                candles_cache[result['symbol']] = result
+                                completed += 1
                         except Exception:
                             pass
-                    rate_limit_detected = True
-                
-                # Проверяем, увеличилась ли задержка после батча (признак rate limit)
-                delay_after_batch = current_exchange.current_request_delay if hasattr(current_exchange, 'current_request_delay') else None
-                if delay_before_batch is not None and delay_after_batch is not None:
-                    if delay_after_batch > delay_before_batch:
-                        # Задержка увеличилась - был rate limit
+                    
+                    # Прогресс загрузки свечей (видно в логе)
+                    loaded = len(candles_cache)
+                    total_pairs = len(pairs)
+                    pct = (loaded * 100) // total_pairs if total_pairs else 0
+                    logger.info(f"📦 Свечи {timeframe}: батч {batch_num}/{total_batches} — загружено {loaded}/{total_pairs} монет ({pct}%)")
+                    
+                    if not_done:
+                        unfinished_symbols = [future_to_symbol.get(f) for f in not_done if f in future_to_symbol]
+                        logger.error(f"❌ Timeout: {len(unfinished_symbols)} (of {len(future_to_symbol)}) futures unfinished")
+                        for f in not_done:
+                            try:
+                                f.cancel()
+                            except Exception:
+                                pass
                         rate_limit_detected = True
-                        logger.warning(f"⚠️ Rate limit обнаружен в батче {batch_num}/{total_batches}: задержка увеличилась {delay_before_batch:.3f}с → {delay_after_batch:.3f}с")
+                        import time
+                        time.sleep(1)
+                    
+                    delay_after_batch = current_exchange.current_request_delay if hasattr(current_exchange, 'current_request_delay') else None
+                    if delay_before_batch is not None and delay_after_batch is not None and delay_after_batch > delay_before_batch:
+                        rate_limit_detected = True
+                        logger.warning(f"⚠️ Rate limit в батче {batch_num}/{total_batches}: задержка {delay_before_batch:.3f}с → {delay_after_batch:.3f}с")
                 
-                # Уменьшили паузу между пакетами
                 import time
-                if shutdown_flag.wait(0.1):
+                # bulk_mode: минимальная пауза; без bulk — 0.08 с чтобы не бить 600 req/5s Bybit
+                time.sleep(0.02 if use_bulk else 0.08)
+                if shutdown_flag.wait(0.02):
                     shutdown_requested = True
                     break
 

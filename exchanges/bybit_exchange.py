@@ -1161,19 +1161,20 @@ class BybitExchange(BaseExchange):
             return []
 
     @with_timeout(30)  # 30 секунд таймаут для получения данных графика
-    def get_chart_data(self, symbol, timeframe='1h', period='1w'):
+    def get_chart_data(self, symbol, timeframe='1h', period='1w', bulk_mode=False):
         """Получение данных для графика
         
         Args:
             symbol (str): Символ торговой пары
             timeframe (str): Таймфрейм ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', 'all')
             period (str): Период ('1d', '1w', '1M')
+            bulk_mode (bool): Если True — без задержки, limit=100 (достаточно для RSI), без подгрузки чанков (массовая загрузка за <30с)
             
         Returns:
             dict: Данные для построения графика
         """
-        # Добавляем задержку для предотвращения rate limiting (динамическая задержка)
-        time.sleep(self.current_request_delay)
+        if not bulk_mode:
+            time.sleep(self.current_request_delay)
         
         try:
             # Символ "all" не является торговой парой — не вызываем API (Bybit вернёт Symbol Is Invalid)
@@ -1412,19 +1413,18 @@ class BybitExchange(BaseExchange):
                 # Убираем USDT если он уже есть в символе
                 clean_sym = symbol.replace('USDT', '') if symbol.endswith('USDT') else symbol
                 
-                # Для period 30d при 1m нужно ~43200 свечей; API даёт макс 1000 за запрос — подгружаем чанками
+                # bulk_mode: один запрос 100 свечей (хватает для RSI 14), без чанков — укладываемся в <30с на 557 пар
+                kline_limit = 100 if bulk_mode else 1000
                 period_lower = (period or "").strip().lower()
-                want_30d = period_lower in ("30d", "30days")
-                # Интервал в минутах для расчёта нужного числа свечей за 30 дней
+                want_30d = False if bulk_mode else (period_lower in ("30d", "30days"))
                 interval_minutes_map = {
                     '1': 1, '3': 3, '5': 5, '15': 15, '30': 30,
                     '60': 60, '240': 240, '360': 360, 'D': 24 * 60, 'W': 7 * 24 * 60
                 }
                 interval_mins = interval_minutes_map.get(interval, 60)
-                target_candles_30d = (30 * 24 * 60) // interval_mins if want_30d else 1000
-                target_candles_30d = min(target_candles_30d, 50000)  # разумный верхний предел
+                target_candles_30d = (30 * 24 * 60) // interval_mins if want_30d else kline_limit
+                target_candles_30d = min(target_candles_30d, 50000)
                 
-                # Повторные попытки при rate limit
                 max_retries = 3
                 retry_count = 0
                 response = None
@@ -1435,7 +1435,7 @@ class BybitExchange(BaseExchange):
                             category="linear",
                             symbol=f"{clean_sym}USDT",
                             interval=interval,
-                            limit=1000
+                            limit=kline_limit
                         )
                         
                         # Обработка rate limiting в ответе
