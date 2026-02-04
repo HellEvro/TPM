@@ -8440,8 +8440,8 @@ class BotsManager {
 
     /**
      * Импорт конфигурации из InfoBot_Config_<TF>.json (файл, выгруженный через «Экспорт»).
-     * Поддерживает оба формата: { autoBot, system, ai } и { config: { autoBot, system, ai } } (ответ API).
-     * Каждая настройка применяется отдельным запросом и по одной пишется в файл конфига (не заменой всего блока).
+     * Поддерживает форматы: { autoBot, system, ai } и { config: { autoBot, system, ai } }.
+     * Один запрос POST /api/bots/import-config — все блоки применяются и сохраняются в файл и БД.
      */
     async importConfig(file) {
         try {
@@ -8453,52 +8453,19 @@ class BotsManager {
             const hasSystem = config.system && typeof config.system === 'object';
             const hasAi = config.ai && typeof config.ai === 'object';
             if (!hasAutoBot && !hasSystem && !hasAi) throw new Error('В файле должны быть autoBot, system и/или ai');
-            if (!confirm('Применить загруженную конфигурацию? Каждая настройка будет применена по отдельности в файл.')) return;
+            if (!confirm('Применить загруженную конфигурацию? Настройки будут сохранены в файл и БД.')) return;
 
             const baseUrl = this.BOTS_SERVICE_URL;
-            const headers = { 'Content-Type': 'application/json' };
-
-            // Auto Bot: каждая настройка отдельным POST → в файл пишется только этот ключ
-            if (hasAutoBot) {
-                for (const [key, value] of Object.entries(config.autoBot)) {
-                    const res = await fetch(`${baseUrl}/api/bots/auto-bot`, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify({ [key]: value })
-                    });
-                    const result = await res.json();
-                    if (!result.success) throw new Error(`Auto Bot (${key}): ` + (result.error || 'ошибка'));
-                }
-            }
-
-            // System: каждая настройка отдельным POST
-            if (hasSystem) {
-                for (const [key, value] of Object.entries(config.system)) {
-                    const res = await fetch(`${baseUrl}/api/bots/system-config`, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify({ [key]: value })
-                    });
-                    const result = await res.json();
-                    if (!result.success) throw new Error(`System (${key}): ` + (result.error || 'ошибка'));
-                }
-            }
-
-            // AI: каждая настройка отдельным POST
-            if (hasAi) {
-                for (const [key, value] of Object.entries(config.ai)) {
-                    const res = await fetch(`${baseUrl}/api/ai/config`, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify({ [key]: value })
-                    });
-                    const result = await res.json();
-                    if (!result.success) throw new Error(`AI (${key}): ` + (result.error || 'ошибка'));
-                }
-            }
+            const res = await fetch(`${baseUrl}/api/bots/import-config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ config })
+            });
+            const result = await res.json();
+            if (!result.success) throw new Error(result.error || 'Ошибка импорта');
 
             await this.loadConfigurationData();
-            this.showNotification('✅ Конфигурация импортирована (все настройки применены по отдельности)', 'success');
+            this.showNotification('✅ Конфигурация импортирована и сохранена в файл', 'success');
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка импорта:', error);
             this.showNotification('❌ Ошибка импорта: ' + error.message, 'error');

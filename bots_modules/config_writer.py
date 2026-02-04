@@ -241,10 +241,18 @@ def _parse_attr_line(line: str) -> Optional[tuple]:
     return (attr_upper.lower(), value)
 
 
+# Обратная совместимость: старые имена ключей в файле/импорте -> текущие имена (lowercase).
+# При загрузке ключ из файла подменяется на текущий, чтобы старые конфиги работали.
+CONFIG_KEY_ALIASES: Dict[str, str] = {
+    # Пример: 'old_setting_name': 'new_setting_name',
+}
+
+
 def load_auto_bot_config_from_file(config_file: Optional[str] = None) -> Dict[str, Any]:
     """
     Загружает конфиг из файла, парсируя КАЖДУЮ строку класса AutoBotConfig отдельно.
     Возвращает словарь {ключ_в_нижнем_регистре: значение}. Не перезагружает модуль — только чтение файла.
+    Обратная совместимость: неизвестные строки пропускаются, старые ключи маппятся через CONFIG_KEY_ALIASES.
     """
     if config_file is None:
         _current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -262,7 +270,8 @@ def load_auto_bot_config_from_file(config_file: Optional[str] = None) -> Dict[st
         parsed = _parse_attr_line(lines[i])
         if parsed:
             key_lower, value = parsed
-            result[key_lower] = value
+            canonical_key = CONFIG_KEY_ALIASES.get(key_lower, key_lower)
+            result[canonical_key] = value
     return result
 
 
@@ -331,7 +340,8 @@ def save_auto_bot_config_current_to_py(config: Dict[str, Any]) -> bool:
     """
     Обновляет класс AutoBotConfig в configs/bot_config.py по каждой настройке отдельно:
     для каждого параметра из config находится строка в файле и заменяется только значение (комментарии сохраняются).
-    После записи перезагружает конфиг и обновляет AUTO_BOT_CONFIG в bot_engine.
+    Если в файле нет строки для ключа (устаревший файл или новый параметр) — строка добавляется в конец тела класса.
+    Остальные строки файла не трогаются. После записи перезагружает конфиг.
     """
     try:
         _current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -347,13 +357,23 @@ def save_auto_bot_config_current_to_py(config: Dict[str, Any]) -> bool:
             logger.error(f"[CONFIG_WRITER] ❌ Не найден класс AutoBotConfig в {config_file}")
             return False
         updated_lines = list(lines)
+        keys_not_found: list = []  # (attr_upper, value) для вставки
         for key, value in config.items():
             attr_upper = key.upper() if isinstance(key, str) else key
+            found = False
             for i in range(start_idx + 1, end_idx):
                 new_line = _update_attr_value_in_line(updated_lines[i], attr_upper, value)
                 if new_line is not None:
                     updated_lines[i] = new_line
+                    found = True
                     break
+            if not found:
+                keys_not_found.append((attr_upper, value))
+        # Добавляем отсутствующие ключи в конец тела класса (обратная совместимость: файл мог быть старым)
+        for attr_upper, value in keys_not_found:
+            new_line = f'    {attr_upper} = {_format_python_value(value)}  # настройка\n'
+            updated_lines.insert(end_idx, new_line)
+            end_idx += 1
         with _config_write_lock:
             with open(config_file, 'w', encoding='utf-8') as f:
                 f.writelines(updated_lines)
@@ -364,7 +384,7 @@ def save_auto_bot_config_current_to_py(config: Dict[str, Any]) -> bool:
             reload_config()
         except Exception as reload_err:
             logger.warning(f"[CONFIG_WRITER] ⚠️ Не удалось перезагрузить конфиг после сохранения: {reload_err}")
-        logger.info(f"[CONFIG_WRITER] ✅ AutoBotConfig сохранён в {config_file} (обновлены параметры по отдельности)")
+        logger.info(f"[CONFIG_WRITER] ✅ AutoBotConfig сохранён в {config_file} (по одной настройке в блок)")
         return True
     except Exception as e:
         logger.error(f"[CONFIG_WRITER] ❌ Ошибка сохранения AutoBotConfig: {e}")

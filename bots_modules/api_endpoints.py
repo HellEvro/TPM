@@ -1819,6 +1819,98 @@ def export_full_config():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@bots_app.route('/api/bots/import-config', methods=['POST'])
+def import_full_config():
+    """
+    Импорт конфига из JSON (формат экспорта: { autoBot, system?, ai? } или { config: { autoBot, ... } }).
+    Применяет все переданные блоки одним запросом и сохраняет в файл и БД.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({'success': False, 'error': 'Нет данных в теле запроса'}), 400
+        config = data.get('config') if isinstance(data.get('config'), dict) else data
+        auto_bot = config.get('autoBot') if isinstance(config.get('autoBot'), dict) else None
+        system_cfg = config.get('system') if isinstance(config.get('system'), dict) else None
+        ai_cfg = config.get('ai') if isinstance(config.get('ai'), dict) else None
+        if not auto_bot and not system_cfg and not ai_cfg:
+            return jsonify({'success': False, 'error': 'В теле должны быть autoBot, system и/или ai'}), 400
+
+        applied = {'autoBot': False, 'system': False, 'ai': False}
+        errors = []
+
+        if auto_bot:
+            try:
+                from bots_modules.config_writer import CONFIG_KEY_ALIASES
+                with bots_data_lock:
+                    # Мержим с текущим конфигом: только переданные ключи обновляются, остальные не трогаем.
+                    # Старые имена ключей из импорта маппятся на текущие (обратная совместимость).
+                    for key, value in auto_bot.items():
+                        canonical = CONFIG_KEY_ALIASES.get(key, key)
+                        bots_data['auto_bot_config'][canonical] = value
+                # Фильтры в БД
+                from bot_engine.bots_database import get_bots_database
+                db = get_bots_database()
+                w = auto_bot.get('whitelist')
+                b = auto_bot.get('blacklist')
+                s = auto_bot.get('scope')
+                if w is not None or b is not None or s is not None:
+                    db.save_coin_filters(whitelist=w, blacklist=b, scope=s)
+                save_auto_bot_config()
+                _patch_ai_config_after_auto_bot_save(auto_bot)
+                applied['autoBot'] = True
+                logger.info(f"[API] ✅ Импорт: Auto Bot применён ({len(auto_bot)} параметров), сохранён в файл и БД")
+            except Exception as e:
+                logger.exception("import-config autoBot")
+                errors.append(f"Auto Bot: {e}")
+
+        if system_cfg and not errors:
+            try:
+                from bots_modules.sync_and_cache import save_system_config, load_system_config
+                save_system_config(system_cfg)
+                load_system_config()
+                applied['system'] = True
+                logger.info(f"[API] ✅ Импорт: System применён ({len(system_cfg)} параметров)")
+            except Exception as e:
+                logger.warning(f"[API] Импорт system: {e}")
+                errors.append(f"System: {e}")
+
+        if ai_cfg and not errors:
+            try:
+                from bot_engine.config_loader import reload_config
+                from bot_engine.config_loader import AIConfig, RiskConfig
+                for key, value in ai_cfg.items():
+                    try:
+                        attr = key.upper() if isinstance(key, str) else key
+                        if hasattr(AIConfig, attr):
+                            setattr(AIConfig, attr, value)
+                        if hasattr(RiskConfig, attr):
+                            setattr(RiskConfig, attr, value)
+                    except Exception:
+                        pass
+                reload_config()
+                applied['ai'] = True
+                logger.info(f"[API] ✅ Импорт: AI применён ({len(ai_cfg)} параметров)")
+            except Exception as e:
+                logger.warning(f"[API] Импорт AI: {e}")
+                errors.append(f"AI: {e}")
+
+        if errors:
+            return jsonify({
+                'success': False,
+                'error': '; '.join(errors),
+                'applied': applied
+            }), 500
+        return jsonify({
+            'success': True,
+            'applied': applied,
+            'message': 'Конфигурация импортирована и сохранена в файл'
+        })
+    except Exception as e:
+        logger.exception("import-config")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @bots_app.route('/api/bots/system-config', methods=['GET', 'POST'])
 def system_config():
     """Получить или обновить системные настройки"""
