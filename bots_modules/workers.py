@@ -451,12 +451,23 @@ def positions_monitor_worker():
                                     bot_entry_timeframe = get_current_timeframe()
 
                                 rsi_data = coins_rsi_data.get('coins', {}).get(symbol)
-                                if not rsi_data:
-                                    continue
-
                                 from bot_engine.config_loader import get_rsi_from_coin_data
-                                current_rsi = get_rsi_from_coin_data(rsi_data, timeframe=bot_entry_timeframe)
-                                current_price = rsi_data.get('price')
+                                current_rsi = get_rsi_from_coin_data(rsi_data, timeframe=bot_entry_timeframe) if rsi_data else None
+                                current_price = rsi_data.get('price') if rsi_data else None
+
+                                # ✅ Боты в позиции: при отсутствии RSI в общем кэше — загружаем свечи и считаем RSI только для этого символа (не ждём полную загрузку всех монет)
+                                if current_rsi is None or current_price is None:
+                                    try:
+                                        chart_response = exchange_obj.get_chart_data(symbol, bot_entry_timeframe, '30d')
+                                        if chart_response and chart_response.get('success'):
+                                            candles = chart_response.get('data', {}).get('candles', [])
+                                            if len(candles) >= 15:
+                                                from bots_modules.calculations import calculate_rsi
+                                                closes = [float(c.get('close', 0)) for c in candles]
+                                                current_rsi = calculate_rsi(closes, 14)
+                                                current_price = candles[-1].get('close') if candles else None
+                                    except Exception as fetch_err:
+                                        logger.debug(f" Монитор позиций: RSI для {symbol} по свечам: {fetch_err}")
 
                                 if current_rsi is None or current_price is None:
                                     continue

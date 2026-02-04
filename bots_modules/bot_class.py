@@ -1075,9 +1075,20 @@ class NewTradingBot:
                 logger.error(f"[RSI_CHECK_{symbol}] ❌ Проверьте конфигурацию auto_bot_config в bots_data!")
                 return False, None
             
-            condition_result = condition_func(rsi, threshold)
+            # Приведение к float (конфиг/API могут отдать строку или int)
+            try:
+                rsi_f = float(rsi) if rsi is not None else None
+                thr_f = float(threshold)
+            except (TypeError, ValueError):
+                logger.error(f"[RSI_CHECK_{symbol}] ❌ RSI или порог не число: rsi={rsi!r}, {config_key}={threshold!r}")
+                return False, None
+            if rsi_f is None:
+                return False, None
+            
+            condition_result = condition_func(rsi_f, thr_f)
             
             if condition_result:
+                logger.info(f"[RSI_CHECK_{symbol}] ✅ Выход по RSI: {position_side} RSI={rsi_f:.1f} {condition_str} {thr_f} ({config_key})")
                 return True, 'RSI_EXIT'
             
             return False, None
@@ -1173,17 +1184,36 @@ class NewTradingBot:
                         # ✅ Используем таймфрейм бота для получения тренда
                         current_trend = get_trend_from_coin_data(coin_data, timeframe=timeframe_to_use)
             
+            chart_response = None
+            candles = []
+            # В позиции при отсутствии RSI в coin_data — считаем RSI по свечам, чтобы не пропустить выход по конфигу
+            if current_rsi is None and self.status in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
+                try:
+                    chart_response = self.exchange.get_chart_data(self.symbol, timeframe_to_use, '30d')
+                    if chart_response and chart_response.get('success'):
+                        candles = chart_response.get('data', {}).get('candles', [])
+                        if len(candles) >= 15:
+                            from bots_modules.calculations import calculate_rsi
+                            closes = [float(c.get('close', 0)) for c in candles]
+                            current_rsi = calculate_rsi(closes, 14)
+                            if current_price is None and candles:
+                                current_price = candles[-1].get('close')
+                            if current_rsi is not None:
+                                logger.debug(f"[NEW_BOT_{self.symbol}] RSI для выхода посчитан по свечам: {current_rsi:.1f}")
+                except Exception as e:
+                    logger.debug(f"[NEW_BOT_{self.symbol}] Fallback RSI по свечам: {e}")
+            
             if current_rsi is None or current_price is None:
                 logger.warning(f"[NEW_BOT_{self.symbol}] ❌ Нет RSI данных")
                 return {'success': False, 'error': 'No RSI data'}
             
-            # ✅ Получаем свечи для анализа с учетом таймфрейма бота
-            chart_response = self.exchange.get_chart_data(self.symbol, timeframe_to_use, '30d')
-            if not chart_response or not chart_response.get('success'):
-                logger.warning(f"[NEW_BOT_{self.symbol}] ❌ Не удалось получить свечи")
-                return {'success': False, 'error': 'No candles data'}
-            
-            candles = chart_response.get('data', {}).get('candles', [])
+            # ✅ Получаем свечи для анализа (если ещё не получили в fallback выше)
+            if not candles:
+                chart_response = self.exchange.get_chart_data(self.symbol, timeframe_to_use, '30d')
+                if not chart_response or not chart_response.get('success'):
+                    logger.warning(f"[NEW_BOT_{self.symbol}] ❌ Не удалось получить свечи")
+                    return {'success': False, 'error': 'No candles data'}
+                candles = chart_response.get('data', {}).get('candles', [])
             if not candles:
                 logger.warning(f"[NEW_BOT_{self.symbol}] ❌ Нет свечей")
                 return {'success': False, 'error': 'Empty candles'}
@@ -1329,7 +1359,11 @@ class NewTradingBot:
                         pass
                 allow_rsi_exit = allow_by_time or allow_by_move
                 if effective_min_candles > 0 and not allow_rsi_exit:
-                    pass  # не проверяем RSI-выход — рано (ни по времени, ни по движению)
+                    # Не проверяем RSI-выход — рано (ни по времени, ни по движению)
+                    logger.debug(
+                        f"[NEW_BOT_{self.symbol}] RSI выход отложен: в позиции {candles_in_position:.0f} свечей (ТФ={tf}), "
+                        f"нужно мин. {effective_min_candles} (rsi_exit_min_candles/min_minutes); движение={min_move_percent}%"
+                    )
                 else:
                         should_close, reason = self.should_close_position(rsi, price, self.position_side)
                         if should_close:
