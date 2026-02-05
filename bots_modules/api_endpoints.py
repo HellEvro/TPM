@@ -565,7 +565,10 @@ def refresh_manual_positions():
 
 @bots_app.route('/api/bots/coins-with-rsi', methods=['GET'])
 def get_coins_with_rsi():
-    """Получить все монеты с RSI 6H данными"""
+    """Получить все монеты с RSI данными (по текущему таймфрейму).
+    Единый источник RSI для отображения: списки монет, фильтры, «боты в работе», карточки ботов
+    и миниграфики — везде используются coins_rsi_data['coins'] (обновляется continuous_data_loader
+    и для позиций — sync_positions → _refresh_rsi_for_bots_in_position)."""
     # ⚡ ИНИЦИАЛИЗАЦИЯ: Инициализируем переменные до try блока для обработки ошибок
     cleaned_coins = {}
     manual_positions = []
@@ -1986,6 +1989,9 @@ def system_config():
                 if log_config_change('position_sync_interval', old_value, new_value):
                     SystemConfig.POSITION_SYNC_INTERVAL = new_value
                     system_changes_count += 1
+                # Единый период для всех RSI-зависимых данных в UI
+                if hasattr(SystemConfig, 'UI_REFRESH_INTERVAL'):
+                    SystemConfig.UI_REFRESH_INTERVAL = new_value
             
             if 'inactive_bot_cleanup_interval' in data:
                 old_value = SystemConfig.INACTIVE_BOT_CLEANUP_INTERVAL

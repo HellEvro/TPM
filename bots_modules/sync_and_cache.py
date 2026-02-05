@@ -475,7 +475,8 @@ def _compute_margin_based_trailing(side: str,
         return exchange
 
 def get_rsi_cache():
-    """Получить кэшированные RSI данные"""
+    """Получить кэшированные RSI данные (coins_rsi_data['coins']).
+    Единый источник для отображения RSI: боты (rsi_data), списки позиций, фильтры, миниграфики."""
     global coins_rsi_data
     with rsi_data_lock:
         return coins_rsi_data.get('coins', {})
@@ -1248,7 +1249,7 @@ def update_bots_cache_data():
                 logger.warning(" ⚠️ Таймаут достигнут, прерываем обновление")
                 break
             
-            # Добавляем RSI данные к боту (используем кэшированные данные)
+            # RSI для карточки бота — из того же источника, что списки монет и миниграфики (coins_rsi_data['coins'])
             try:
                 rsi_cache = get_rsi_cache()
                 if symbol in rsi_cache:

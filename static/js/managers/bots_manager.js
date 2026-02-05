@@ -6868,34 +6868,24 @@ class BotsManager {
             console.log('[BotsManager] 🐛 Режим отладки:', debugModeEl.checked);
         }
         
-        // Интервал обновления UI
-        const refreshIntervalEl = document.getElementById('refreshInterval');
-        if (refreshIntervalEl && systemConfig.refresh_interval !== undefined) {
-            refreshIntervalEl.value = systemConfig.refresh_interval;
-            this.refreshInterval = systemConfig.refresh_interval * 1000;
-            console.log('[BotsManager] 🔄 Интервал обновления UI установлен:', systemConfig.refresh_interval, 'сек (из API)');
-        } else if (refreshIntervalEl) {
-            refreshIntervalEl.value = 3; // Значение по умолчанию
-            this.refreshInterval = 3000; // 3 секунды по умолчанию
-            console.log('[BotsManager] 🔄 Интервал обновления UI установлен по умолчанию: 3 сек');
-        }
-        
         // ==========================================
         // ИНТЕРВАЛЫ СИНХРОНИЗАЦИИ И ОЧИСТКИ
         // ==========================================
-        
-        // Интервал синхронизации позиций
+        // Единый период обновления для всех RSI-зависимых данных в UI (боты, списки, фильтры, мониторинг) = position_sync_interval
         const positionSyncIntervalEl = document.getElementById('positionSyncInterval');
         console.log('[BotsManager] 🔍 Поиск элемента positionSyncInterval:', positionSyncIntervalEl);
         console.log('[BotsManager] 🔍 systemConfig.position_sync_interval:', systemConfig.position_sync_interval);
         if (positionSyncIntervalEl && systemConfig.position_sync_interval !== undefined) {
             positionSyncIntervalEl.value = systemConfig.position_sync_interval;
-            console.log('[BotsManager] 🔄 Position Sync интервал установлен:', systemConfig.position_sync_interval, 'сек (из API)');
+            this.refreshInterval = Math.max(1000, systemConfig.position_sync_interval * 1000);
+            console.log('[BotsManager] 🔄 Синхронизация позиций и период обновления UI (RSI, боты, мониторинг):', systemConfig.position_sync_interval, 'сек');
         } else if (positionSyncIntervalEl) {
-            positionSyncIntervalEl.value = 600; // 10 минут по умолчанию
-            console.log('[BotsManager] 🔄 Position Sync интервал установлен по умолчанию: 600 сек');
+            positionSyncIntervalEl.value = 600;
+            this.refreshInterval = 600 * 1000;
+            console.log('[BotsManager] 🔄 Position Sync и обновление UI по умолчанию: 600 сек');
         } else {
             console.error('[BotsManager] ❌ Элемент positionSyncInterval не найден!');
+            this.refreshInterval = 600 * 1000;
         }
         
         // Интервал очистки неактивных ботов
@@ -7392,7 +7382,6 @@ class BotsManager {
             'rsiUpdateInterval': 'rsi_update_interval',
             'autoSaveInterval': 'auto_save_interval',
             'debugMode': 'debug_mode',
-            'refreshInterval': 'refresh_interval',
             'positionSyncInterval': 'position_sync_interval',
             'inactiveBotCleanupInterval': 'inactive_bot_cleanup_interval',
             'inactiveBotTimeout': 'inactive_bot_timeout',
@@ -7624,6 +7613,11 @@ class BotsManager {
                 }
             }
         });
+        
+        // Период обновления RSI/UI везде берётся из «Синхронизация позиций»
+        if (systemConfig.position_sync_interval != null) {
+            systemConfig.refresh_interval = systemConfig.position_sync_interval;
+        }
         
         return {
             autoBot: autoBotConfig,

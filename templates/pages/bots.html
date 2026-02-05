@@ -1221,7 +1221,7 @@
                                        placeholder="600">
                                 <span class="input-unit" data-translate="seconds_unit">сек</span>
                             </div>
-                            <small class="config-help" data-translate="position_sync_interval_help">Рекомендуется: 600 сек (10 мин). Синхронизация позиций с биржей</small>
+                            <small class="config-help" data-translate="position_sync_interval_help">Каждые N сек: сверка с биржей, расчёт RSI по позициям, решение по стопам. Этот же интервал задаёт обновление в UI: списки ботов, RSI, позиции, фильтры, мониторинг. Рекомендуется: 600 сек (10 мин)</small>
                         </div>
                         
                         <div class="config-item">
@@ -1349,20 +1349,7 @@
                             <small class="config-help" data-translate="check_interval_help">Рекомендуется: 3 мин. Диапазон: 1-60 мин</small>
                         </div>
                         
-                        <div class="config-item">
-                            <label class="config-label">
-                                <span class="label-icon">🔄</span>
-                                <span class="label-text" data-translate="refresh_interval_label">Интервал обновления UI:</span>
-                            </label>
-                            <div class="config-input-with-unit">
-                                <input type="number" id="refreshInterval" class="config-input" 
-                                       min="3" max="300" step="1" 
-                                       placeholder="30">
-                                <span class="input-unit" data-translate="seconds_unit">сек</span>
-                            </div>
-                            <small class="config-help" data-translate="refresh_interval_help">Управляет обновлением блока с балансом, PnL, позициями и мониторингом ботов. Рекомендуется: 30 сек, минимум: 3 сек</small>
-                        </div>
-                        
+                        <!-- Период обновления RSI/ботов/позиций в UI берётся из «Синхронизация позиций» (position_sync_interval), отдельное поле убрано -->
                         <div class="config-item">
                             <label class="config-label">
                                 <span class="label-icon">🎛️</span>
