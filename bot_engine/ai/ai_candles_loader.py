@@ -54,6 +54,39 @@ class AICandlesLoader:
         }
         
         logger.info("✅ AICandlesLoader инициализирован")
+
+    def _get_candles_from_preloaded_cache(self, symbol: str) -> Optional[tuple]:
+        """
+        Берёт свечи прямо из уже загруженных данных (bots_data.db — кэш, который
+        заполняет процесс bots.py при загрузке свечей). Без запросов к API бота и к бирже.
+        Returns:
+            (candles_list, timeframe_str) или None.
+        """
+        try:
+            from bot_engine.storage import load_candles_cache
+            cache = load_candles_cache(symbol=symbol)
+            data = cache.get(symbol) if cache else None
+            if not data or not data.get("candles"):
+                return None
+            candles = data["candles"]
+            if not candles:
+                return None
+            tf = data.get("timeframe") or "6h"
+            # Нормализуем формат: [{'time', 'open', 'high', 'low', 'close', 'volume'}]
+            out = []
+            for c in candles:
+                if isinstance(c, dict):
+                    out.append({
+                        "time": int(c.get("time", c.get("timestamp", 0))),
+                        "open": float(c.get("open", 0)),
+                        "high": float(c.get("high", 0)),
+                        "low": float(c.get("low", 0)),
+                        "close": float(c.get("close", 0)),
+                        "volume": float(c.get("volume", 0)),
+                    })
+            return (out, tf) if out else None
+        except Exception:
+            return None
     
     def get_exchange(self):
         """Получить объект биржи"""
@@ -164,9 +197,28 @@ class AICandlesLoader:
             logger.info(f"📊 Используем период: {max_period} для биржи {exchange_type}")
             
             def load_symbol_candles(symbol):
-                """Загружает свечи для одного символа (инкрементально или полностью)"""
+                """Загружает свечи для одного символа. Сначала из уже загруженных данных (bots_data.db), без API и биржи."""
                 from bot_engine.config_loader import get_current_timeframe
                 try:
+                    current_timeframe = get_current_timeframe() or '6h'
+                    # 1) Приоритет: прямо из уже загруженных данных (кэш в bots_data.db от процесса bots.py)
+                    preloaded = self._get_candles_from_preloaded_cache(symbol)
+                    if preloaded:
+                        preloaded_candles, preloaded_tf = preloaded
+                        if preloaded_candles:
+                            return {
+                                'symbol': symbol,
+                                'candles': preloaded_candles,
+                                'count': len(preloaded_candles),
+                                'new_count': len(preloaded_candles),
+                                'timeframe': preloaded_tf,
+                                'loaded_at': datetime.now().isoformat(),
+                                'last_candle_time': max(c['time'] for c in preloaded_candles),
+                                'source': 'preloaded',
+                                'exchange_type': exchange_type,
+                                'requests_made': 0,
+                                'incremental': False,
+                            }
                     # Проверяем существующие свечи для этого символа
                     existing_symbol_data = existing_candles.get(symbol, {})
                     # УЛУЧШЕНИЕ: Проверяем разные форматы данных из БД

@@ -2543,12 +2543,16 @@ def get_candles_from_cache(symbol):
         timeframe = request.args.get('timeframe', get_current_timeframe())  # По умолчанию текущий таймфрейм
         period_days = request.args.get('period', None)  # Опционально, для совместимости
         
-        # ✅ СНАЧАЛА ПРОВЕРЯЕМ КЭШ В ПАМЯТИ, ПОТОМ БД
+        # ✅ СНАЧАЛА ПРОВЕРЯЕМ КЭШ В ПАМЯТИ (по таймфрейму: symbol[timeframe]['candles']), ПОТОМ БД
         candles_6h = None
         candles_cache = coins_rsi_data.get('candles_cache', {})
         if symbol in candles_cache:
             cached_data = candles_cache[symbol]
-            candles_6h = cached_data.get('candles')
+            if isinstance(cached_data, dict):
+                # Структура: symbol -> timeframe -> {'candles': [...]}
+                candles_6h = cached_data.get(timeframe, {}).get('candles') or cached_data.get('candles')
+            else:
+                candles_6h = None
         
         # Если нет в памяти, читаем из БД
         if not candles_6h:
@@ -2633,15 +2637,17 @@ def get_candles_from_cache(symbol):
             except:
                 pass
         
-        # Форматируем ответ в том же формате, что и get_chart_data
+        # Форматируем ответ (поддержка и 'time', и 'timestamp' из кэша)
         formatted_candles = []
         for candle in candles:
+            ts = int(candle.get('time', candle.get('timestamp', 0)))
             formatted_candles.append({
-                'timestamp': int(candle['timestamp']),
-                'open': str(candle['open']),
-                'high': str(candle['high']),
-                'low': str(candle['low']),
-                'close': str(candle['close']),
+                'timestamp': ts,
+                'time': ts,
+                'open': str(candle.get('open', 0)),
+                'high': str(candle.get('high', 0)),
+                'low': str(candle.get('low', 0)),
+                'close': str(candle.get('close', 0)),
                 'volume': str(candle.get('volume', 0))
             })
         
