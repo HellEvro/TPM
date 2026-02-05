@@ -586,12 +586,20 @@ class AICandlesLoader:
             # Итоговая статистика (кратко)
             logger.info(f"✅ Загрузка завершена: {loaded_count} монет, {total_candles} свечей, {failed_count} ошибок")
             
-            # Объединяем с существующими данными
+            # Объединяем с существующими данными (get_all_candles_dict возвращает {symbol: [candles]})
             if existing_candles:
                 logger.info(f"📊 Объединяем с существующими данными ({len(existing_candles)} монет)...")
                 for symbol, data in existing_candles.items():
                     if symbol not in candles_data:
-                        candles_data[symbol] = data
+                        candles_list = data if isinstance(data, list) else (data.get('candles', []) if isinstance(data, dict) else [])
+                        if candles_list:
+                            candles_data[symbol] = {
+                                'symbol': symbol,
+                                'candles': candles_list,
+                                'count': len(candles_list),
+                                'timeframe': get_current_timeframe() or '6h',
+                                'source': 'existing_db',
+                            }
             
             # Проверка данных (тихо)
             if not candles_data:
