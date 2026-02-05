@@ -143,7 +143,7 @@ else:
 # Конфигурация синхронизации времени Windows (значения по умолчанию)
 _TIME_SYNC_DEFAULTS = {
     'ENABLED': False,
-    'INTERVAL_MINUTES': 60,
+    'INTERVAL_MINUTES': 30,  # синхронизация раз в полчаса
     'SERVER': 'time.windows.com',
     'RUN_ON_START': True,
     'REQUIRE_ADMIN': True,
@@ -690,12 +690,12 @@ def time_sync_loop():
         )
         return
     
-    interval_minutes = time_sync_config.get('INTERVAL_MINUTES', 60)
+    interval_minutes = time_sync_config.get('INTERVAL_MINUTES', 30)
     try:
         interval_minutes = float(interval_minutes)
     except (TypeError, ValueError):
-        time_sync_logger.warning("[TimeSync] Некорректное значение INTERVAL_MINUTES, используется 60 минут")
-        interval_minutes = 60
+        time_sync_logger.warning("[TimeSync] Некорректное значение INTERVAL_MINUTES, используется 30 минут")
+        interval_minutes = 30
     
     interval_seconds = max(60, int(interval_minutes * 60))
     server = time_sync_config.get('SERVER', 'time.windows.com')
