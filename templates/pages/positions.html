@@ -85,6 +85,21 @@
         <div class="chart-container">
             <canvas id="pnlChart"></canvas>
         </div>
+        <div class="stats-account-block" style="margin-bottom: 15px;">
+            <div class="stats-flex-row">
+                <span data-translate="balance-label">Баланс</span>
+                <span id="positions-balance" class="stats-value"></span>
+            </div>
+            <div class="stats-flex-row">
+                <span data-translate="available-label">Остаток</span>
+                <span id="positions-available" class="stats-value"></span>
+            </div>
+            <div class="stats-flex-row">
+                <span data-translate="account-pnl-label">PnL</span>
+                <span id="positions-account-pnl" class="stats-value"></span>
+            </div>
+        </div>
+        <hr>
         <div>
             <div data-translate="total-pnl-label">Общая прибыль + убыток:</div>
             <div id="total-pnl" class="stats-value"></div>

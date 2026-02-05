@@ -404,6 +404,21 @@ class PositionsManager {
             }
 
             this.lastData = data;
+
+            // Баланс, остаток, PnL (из wallet_data и stats)
+            if (data.wallet_data) {
+                const w = data.wallet_data;
+                const balanceEl = document.getElementById('positions-balance');
+                const availableEl = document.getElementById('positions-available');
+                const pnlEl = document.getElementById('positions-account-pnl');
+                if (balanceEl) balanceEl.textContent = '$' + (parseFloat(w.total_balance) || 0).toFixed(2);
+                if (availableEl) availableEl.textContent = '$' + (parseFloat(w.available_balance) || 0).toFixed(2);
+                const pnlVal = (data.stats && data.stats.total_pnl != null) ? data.stats.total_pnl : (parseFloat(w.realized_pnl) || 0);
+                if (pnlEl) {
+                    pnlEl.textContent = (pnlVal >= 0 ? '$' : '$-') + Math.abs(pnlVal).toFixed(2);
+                    pnlEl.className = 'stats-value ' + (pnlVal >= 0 ? 'positive' : 'negative');
+                }
+            }
             
             // ВЖНО: Сначала обновяем статистику
             if (window.app?.statisticsManager) {

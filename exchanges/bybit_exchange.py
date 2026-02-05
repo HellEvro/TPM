@@ -158,6 +158,9 @@ class BybitExchange(BaseExchange):
         self.max_request_delay = 30.0  # Максимальная задержка между запросами при rate limit (30 с)
         self.rate_limit_error_count = 0  # Счетчик ошибок rate limit для агрессивного увеличения задержки
         self.last_rate_limit_time = 0  # Время последней ошибки rate limit
+        # Глобальная пауза API: при "5 minutes" или 403 не слать запросы до окончания паузы (снижает лавину ретраев)
+        self._api_cooldown_until = 0.0  # timestamp; если > time.time(), все потоки ждут перед запросом
+        self._API_COOLDOWN_FULL = 300  # 5 минут по требованию Bybit
         
         # Кэш для баланса кошелька (чтобы не спамить запросами при проблемах с сетью)
         self._wallet_balance_cache = None
@@ -223,6 +226,22 @@ class BybitExchange(BaseExchange):
             if time.time() - self.last_rate_limit_time > 30:
                 self.rate_limit_error_count = 0
 
+    def _set_api_cooldown(self, seconds=None, reason="API rate limit"):
+        """Включить глобальную паузу API (все потоки будут ждать перед следующим запросом)."""
+        seconds = seconds or self._API_COOLDOWN_FULL
+        self._api_cooldown_until = time.time() + seconds
+        logger.warning(f"⏳ Глобальная пауза API: {reason}. Пауза {seconds}с, новые запросы после её окончания.")
+
+    def _wait_api_cooldown(self):
+        """Если действует глобальная пауза — ждать её окончания, затем сбросить."""
+        now = time.time()
+        if self._api_cooldown_until <= now:
+            return
+        wait = self._api_cooldown_until - now
+        logger.warning(f"⏳ Ожидание окончания паузы API: {wait:.0f}с...")
+        time.sleep(wait)
+        self._api_cooldown_until = 0.0
+
     # Шаг плавного увеличения задержки при rate limit (вместо жёсткого множителя)
     DELAY_INCREMENT = 0.5
 
@@ -263,8 +282,9 @@ class BybitExchange(BaseExchange):
         try:
             retries = 3
             retry_delay = 5
-            
+
             for attempt in range(retries):
+                # Не ждём глобальную паузу: работа ботов (позиции, синк) не должна останавливаться.
                 try:
                     all_positions = []
                     cursor = None
@@ -402,9 +422,19 @@ class BybitExchange(BaseExchange):
                     return processed_positions, rapid_growth_positions
                     
                 except Exception as e:
+                    err_str = str(e).lower()
+                    is_403_or_block = (
+                        '403' in err_str or 'ip rate limit' in err_str or 'from the usa' in err_str
+                        or 'rate limit' in err_str or 'too many' in err_str or '10006' in err_str
+                    )
+                    if is_403_or_block:
+                        self._set_api_cooldown(self._API_COOLDOWN_FULL, "Bybit 403/IP rate limit или блок по региону")
+                        logger.warning(f"⏳ get_positions: пауза {self._API_COOLDOWN_FULL}с, затем повтор...")
+                        time.sleep(self._API_COOLDOWN_FULL)
                     if attempt < retries - 1:
-                        logger.warning("Attempt {} failed: {}, retrying in {} seconds...".format(attempt + 1, str(e), retry_delay))
-                        time.sleep(retry_delay)
+                        if not is_403_or_block:
+                            logger.warning("Attempt {} failed: {}, retrying in {} seconds...".format(attempt + 1, str(e), retry_delay))
+                            time.sleep(retry_delay)
                         continue
                     raise
                     
@@ -745,12 +775,13 @@ class BybitExchange(BaseExchange):
         retries = 3
         base_delay = 0.1
         last_error = None
-        
+
         for attempt in range(1, retries + 1):
+            # Не ждём глобальную паузу: тикеры для позиций нужны ботам без задержки.
             try:
                 # Добавляем задержку для предотвращения rate limiting + экспоненциальную паузу между ретраями
                 time.sleep(base_delay * attempt)
-                
+
                 response = self.client.get_tickers(
                     category="linear",
                     symbol=f"{symbol}USDT"
@@ -769,8 +800,14 @@ class BybitExchange(BaseExchange):
                 pass
             except Exception as e:
                 last_error = e
-                logger.warning(f"[BYBIT] ⚠️ Попытка {attempt}/{retries} получить тикер {symbol} не удалась: {e}")
-        
+                err_str = str(e).lower()
+                if '403' in err_str or 'ip rate limit' in err_str or 'from the usa' in err_str or 'rate limit' in err_str or '10006' in err_str:
+                    self._set_api_cooldown(self._API_COOLDOWN_FULL, "Bybit тикер: 403/rate limit")
+                    logger.warning(f"[BYBIT] ⚠️ Попытка {attempt}/{retries} получить тикер {symbol} не удалась (пауза API 5 мин): {e}")
+                    time.sleep(self._API_COOLDOWN_FULL)
+                else:
+                    logger.warning(f"[BYBIT] ⚠️ Попытка {attempt}/{retries} получить тикер {symbol} не удалась: {e}")
+
         if last_error:
             logger.error(f"[BYBIT] ❌ Не удалось получить тикер {symbol}: {last_error}")
         return None
@@ -1200,7 +1237,8 @@ class BybitExchange(BaseExchange):
         """
         if not bulk_mode:
             time.sleep(self.current_request_delay)
-        
+        # Глобальную паузу (_wait_api_cooldown) не вызываем здесь: боты не должны ждать. Пауза только в массовой загрузке RSI (filters.py).
+
         try:
             # Символ "all" не является торговой парой — не вызываем API (Bybit вернёт Symbol Is Invalid)
             if not symbol or str(symbol).strip().lower() == 'all':
@@ -1253,8 +1291,8 @@ class BybitExchange(BaseExchange):
                                     ret_msg = (response.get('retMsg') or '').lower()
                                     # Bybit при жёстком лимите: «Access too frequent. Please try again in 5 minutes»
                                     if '5 minutes' in ret_msg or 'access too frequent' in ret_msg:
-                                        cooldown = 30
-                                        self.current_request_delay = min(self.current_request_delay, cooldown)
+                                        cooldown = self._API_COOLDOWN_FULL  # 5 минут
+                                        self._set_api_cooldown(cooldown, "Bybit: повторить через 5 минут (10006)")
                                         logger.warning(f"⏳ [BOTS] API rate limit. Ждём {cooldown}с перед повтором для {symbol} ({interval_name})...")
                                         time.sleep(cooldown)
                                     else:
@@ -1307,17 +1345,22 @@ class BybitExchange(BaseExchange):
                                     or 'rate limit' in error_str or 'too many' in error_str or '10006' in error_str or 'x-bapi-limit-reset-timestamp' in error_str
                                 )
                                 if is_rate_limit:
-                                    # Увеличиваем задержку, но не превышаем максимум
-                                    delay = self.increase_request_delay(
-                                        reason=f"Rate limit (исключение) для {symbol} ({interval_name})"
+                                    hard_block = (
+                                        '5 minutes' in error_str or 'access too frequent' in error_str
+                                        or '403' in error_str or 'from the usa' in error_str or 'ip rate limit' in error_str
                                     )
-                                    
-                                    # Добавляем дополнительную задержку при rate limit (минимум 2 секунды)
-                                    additional_delay = max(2.0, delay * 0.5)
-                                    total_delay = delay + additional_delay
-                                    
-                                    logger.error(f"❌ [BOTS] Too many visits. Exceeded the API Rate Limit. (ErrCode: 10006). Hit the API rate limit on https://api.bybit.com/v5/market/kline?category=linear&interval={interval}&limit=1000&symbol={clean_sym}USDT. Sleeping then trying again.")
-                                    time.sleep(total_delay)
+                                    if hard_block:
+                                        self._set_api_cooldown(self._API_COOLDOWN_FULL, "Bybit kline: 5 мин или 403/IP блок")
+                                        logger.error(f"❌ [BOTS] Rate limit/403 (5 min блок). Пауза {self._API_COOLDOWN_FULL}с для {symbol} ({interval_name}).")
+                                        time.sleep(self._API_COOLDOWN_FULL)
+                                    else:
+                                        delay = self.increase_request_delay(
+                                            reason=f"Rate limit (исключение) для {symbol} ({interval_name})"
+                                        )
+                                        additional_delay = max(2.0, delay * 0.5)
+                                        total_delay = delay + additional_delay
+                                        logger.error(f"❌ [BOTS] Too many visits. Exceeded the API Rate Limit. (ErrCode: 10006). Hit the API rate limit on https://api.bybit.com/v5/market/kline?category=linear&interval={interval}&limit=1000&symbol={clean_sym}USDT. Sleeping then trying again.")
+                                        time.sleep(total_delay)
                                     retry_count += 1
                                     
                                     if retry_count < max_retries:
@@ -1469,28 +1512,22 @@ class BybitExchange(BaseExchange):
                         
                         # Обработка rate limiting в ответе
                         if response.get('retCode') == 10006:
-                            # Увеличиваем задержку, но не превышаем максимум
-                            delay = self.increase_request_delay(
-                                reason=f"Rate limit для {symbol}"
-                            )
-                            
-                            # Добавляем дополнительную задержку при rate limit (минимум 2 секунды)
-                            additional_delay = max(2.0, delay * 0.5)
-                            total_delay = delay + additional_delay
-                            
-                            logger.error(f"❌ [BOTS] Too many visits. Exceeded the API Rate Limit. (ErrCode: 10006). Hit the API rate limit on https://api.bybit.com/v5/market/kline?category=linear&interval={interval}&limit=1000&symbol={clean_sym}USDT. Sleeping then trying again.")
-                            time.sleep(total_delay)
-                            retry_count += 1
-                            
-                            if retry_count < max_retries:
-                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} после паузы {total_delay:.1f}с...")
-                                continue
+                            ret_msg = (response.get('retMsg') or '').lower()
+                            if '5 minutes' in ret_msg or 'access too frequent' in ret_msg:
+                                self._set_api_cooldown(self._API_COOLDOWN_FULL, "Bybit kline: 5 минут (10006)")
+                                logger.error(f"❌ [BOTS] Too many visits (5 min). Пауза {self._API_COOLDOWN_FULL}с для {symbol}.")
+                                time.sleep(self._API_COOLDOWN_FULL)
                             else:
-                                logger.error(f"❌ Превышено максимальное количество попыток для {symbol}")
-                                return {
-                                    'success': False,
-                                    'error': 'Rate limit exceeded, maximum retries reached'
-                                }
+                                delay = self.increase_request_delay(reason=f"Rate limit для {symbol}")
+                                additional_delay = max(2.0, delay * 0.5)
+                                total_delay = delay + additional_delay
+                                logger.error(f"❌ [BOTS] Too many visits. Exceeded the API Rate Limit. (ErrCode: 10006). Hit the API rate limit on https://api.bybit.com/v5/market/kline?category=linear&interval={interval}&limit=1000&symbol={clean_sym}USDT. Sleeping then trying again.")
+                                time.sleep(total_delay)
+                            retry_count += 1
+                            if retry_count < max_retries:
+                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} после паузы...")
+                                continue
+                            return {'success': False, 'error': 'Rate limit exceeded, maximum retries reached'}
                         # Обработка ошибки timestamp (10002): синхронизация с сервером Bybit + recv_window
                         elif response.get('retCode') == 10002:
                             server_ts = response.get('time')
@@ -1526,28 +1563,25 @@ class BybitExchange(BaseExchange):
                             or 'rate limit' in error_str or 'too many' in error_str or '10006' in error_str or 'x-bapi-limit-reset-timestamp' in error_str
                         )
                         if is_rate_limit:
-                            # Увеличиваем задержку, но не превышаем максимум
-                            delay = self.increase_request_delay(
-                                reason=f"Rate limit (исключение) для {symbol}"
+                            hard_block = (
+                                '5 minutes' in error_str or 'access too frequent' in error_str
+                                or '403' in error_str or 'from the usa' in error_str or 'ip rate limit' in error_str
                             )
-                            
-                            # Добавляем дополнительную задержку при rate limit (минимум 2 секунды)
-                            additional_delay = max(2.0, delay * 0.5)
-                            total_delay = delay + additional_delay
-                            
-                            logger.error(f"❌ [BOTS] Too many visits. Exceeded the API Rate Limit. (ErrCode: 10006). Hit the API rate limit on https://api.bybit.com/v5/market/kline?category=linear&interval={interval}&limit=1000&symbol={clean_sym}USDT. Sleeping then trying again.")
-                            time.sleep(total_delay)
-                            retry_count += 1
-                            
-                            if retry_count < max_retries:
-                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} после исключения и паузы {total_delay:.1f}с...")
-                                continue
+                            if hard_block:
+                                self._set_api_cooldown(self._API_COOLDOWN_FULL, "Bybit kline (исключение): 5 мин или 403")
+                                logger.error(f"❌ [BOTS] Rate limit/403 (5 min). Пауза {self._API_COOLDOWN_FULL}с для {symbol}.")
+                                time.sleep(self._API_COOLDOWN_FULL)
                             else:
-                                logger.error(f"❌ Превышено максимальное количество попыток для {symbol}")
-                                return {
-                                    'success': False,
-                                    'error': 'Rate limit exceeded, maximum retries reached'
-                                }
+                                delay = self.increase_request_delay(reason=f"Rate limit (исключение) для {symbol}")
+                                additional_delay = max(2.0, delay * 0.5)
+                                total_delay = delay + additional_delay
+                                logger.error(f"❌ [BOTS] Too many visits. Exceeded the API Rate Limit. (ErrCode: 10006). Hit the API rate limit on https://api.bybit.com/v5/market/kline?category=linear&interval={interval}&limit=1000&symbol={clean_sym}USDT. Sleeping then trying again.")
+                                time.sleep(total_delay)
+                            retry_count += 1
+                            if retry_count < max_retries:
+                                logger.info(f"🔄 Повторная попытка {retry_count}/{max_retries} для {symbol} после исключения...")
+                                continue
+                            return {'success': False, 'error': 'Rate limit exceeded, maximum retries reached'}
                         elif '10002' in error_str or 'timestamp' in error_str or 'recv_window' in error_str:
                             # Ошибка timestamp (исключение): синхронизируем по get_server_time
                             try:

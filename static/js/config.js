@@ -16,6 +16,9 @@ const TRANSLATIONS = {
         losingTrades: '- убыточных сделок',
         
         // Добавляем недостающие ключи для data-translate
+        'balance-label': 'Баланс',
+        'available-label': 'Остаток',
+        'account-pnl-label': 'PnL',
         'total-pnl-label': 'Общая прибыль + убыток:',
         'total-profit-label': 'Прибыль по позициям:',
         'total-loss-label': 'Убыток по позициям:',
@@ -1036,6 +1039,9 @@ const TRANSLATIONS = {
         losingTrades: '- losing trades',
         
         // Добавляем недостающие ключи для data-translate
+        'balance-label': 'Balance',
+        'available-label': 'Available',
+        'account-pnl-label': 'PnL',
         'total-pnl-label': 'Total Profit + Loss:',
         'total-profit-label': 'Profit by positions:',
         'total-loss-label': 'Loss by positions:',

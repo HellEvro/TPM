@@ -2013,6 +2013,10 @@ def load_all_coins_candles_fast():
                     shutdown_requested = True
                     break
 
+                # Глобальная пауза API только для массовой загрузки свечей. Боты не ждут.
+                if hasattr(current_exchange, '_wait_api_cooldown'):
+                    current_exchange._wait_api_cooldown()
+
                 batch = pairs[i:i + batch_size]
                 batch_num = i//batch_size + 1
                 total_batches = (len(pairs) + batch_size - 1)//batch_size
@@ -2341,6 +2345,10 @@ def load_all_coins_rsi():
                 if shutdown_flag.is_set():
                     shutdown_requested = True
                     break
+
+                # Глобальная пауза API только здесь (массовая загрузка RSI). Боты (позиции, синк, тикеры) её не ждут.
+                if hasattr(current_exchange, '_wait_api_cooldown'):
+                    current_exchange._wait_api_cooldown()
 
                 batch = pairs[i : i + batch_size]
                 batch_num = i // batch_size + 1
