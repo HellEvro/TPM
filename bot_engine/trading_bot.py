@@ -995,7 +995,9 @@ class TradingBot:
                     except Exception as add_err:
                         pass
                     self.logger.error(f" {self.symbol}: 🚫 ДЕЛИСТИНГ! Открытие позиции запрещено биржей (ErrCode: 30228)")
-                if '110007' in error_code or '110007' in error_message:
+                if error_code == 'MIN_NOTIONAL' or 'меньше минимального ордера' in error_message:
+                    self.logger.warning(f" {self.symbol}: 📏 {error_message}")
+                elif '110007' in error_code or '110007' in error_message:
                     self.logger.error(f" {self.symbol}: 💰 Недостаточно средств на счёте для открытия позиции (ErrCode: 110007)")
                     try:
                         from bots_modules.imports_and_globals import set_insufficient_funds

@@ -2567,20 +2567,29 @@ class BybitExchange(BaseExchange):
                 min_usdt_from_notional = min_notional_value if min_notional_value else 5.0
                 
                 if nominal_usdt < min_usdt_from_notional:
-                    # Если запрошенная сумма меньше минимума биржи — увеличивать ордер нельзя:
-                    # у пользователя может не хватать средств, получим 110007 (ab not enough for new order).
+                    # Запрошенная сумма меньше минимума биржи — проверяем, хватает ли на счёте на минимальный ордер.
                     if requested_qty_usdt is not None and requested_qty_usdt < min_usdt_from_notional:
-                        msg = (
-                            f"Размер позиции ({requested_qty_usdt:.2f} USDT) меньше минимального ордера по правилам биржи "
-                            f"({min_usdt_from_notional} USDT). Пополните счёт или уменьшите количество одновременных позиций."
-                        )
-                        logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: {msg}")
-                        return {
-                            'success': False,
-                            'message': msg,
-                            'error_code': '110007',
-                        }
-                    # Запрошенная сумма достаточна — увеличиваем до minNotional, иначе биржа отклонит
+                        available_usdt = None
+                        try:
+                            wb = self.get_wallet_balance()
+                            if wb and 'available_balance' in wb:
+                                available_usdt = float(wb['available_balance'])
+                        except Exception:
+                            pass
+                        if available_usdt is None or available_usdt < min_usdt_from_notional:
+                            msg = (
+                                f"Размер позиции ({requested_qty_usdt:.2f} USDT) меньше минимального ордера по правилам биржи "
+                                f"({min_usdt_from_notional} USDT). Пополните счёт или уменьшите количество одновременных позиций."
+                            )
+                            logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: {msg}")
+                            return {
+                                'success': False,
+                                'message': msg,
+                                'error_code': 'MIN_NOTIONAL',
+                            }
+                        logger.info(f"[BYBIT_BOT] 📊 {symbol}: Размер позиции {requested_qty_usdt:.2f} USDT < minNotionalValue={min_usdt_from_notional}, "
+                                    f"на счёте {available_usdt:.2f} USDT — увеличиваем до минимума и размещаем ордер.")
+                    # Увеличиваем до minNotional (запрошенная сумма достаточна или доступный баланс достаточен)
                     min_required_usdt = min_usdt_from_notional * 1.02
                     min_coins_for_notional = math.ceil(min_required_usdt / price_for_notional_check / qty_step) * qty_step
                     rounded_coins = min_coins_for_notional
