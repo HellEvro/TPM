@@ -16,7 +16,7 @@ class PositionsManager {
         this.minUpdateAllDataInterval = 10000;  // Минимум 10 сек между запусками
         this.chartUpdateInterval = 5 * 60 * 1000;  // 5 минут (не используется)
         // ✅ КРИТИЧНО: Загружаем интервал обновления из конфига (в секундах, конвертируем в мс)
-        this.updateInterval = 7 * 60 * 1000;  // Дефолт: 7 минут (420 секунд) - будет перезаписано из конфига
+        this.updateInterval = 60 * 1000;  // Дефолт до загрузки конфига (10 мин); затем из «Синхронизация позиций»
         this.updateIntervalTimer = null;  // Таймер обновления
         this.currentTheme = document.body.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
         this.initializeThemeListener();
@@ -95,13 +95,13 @@ class PositionsManager {
             const response = await fetch('/api/bots/system-config');
             if (response.ok) {
                 const data = await response.json();
-                // Интервал миниграфиков = Синхронизация позиций (position_sync_interval)
+                // Интервал RSI/миниграфиков = только из конфига «Синхронизация позиций»
                 const intervalSec = data.config?.position_sync_interval ?? data.config?.mini_chart_update_interval;
                 if (data.success && data.config && intervalSec !== undefined) {
-                    const newInterval = intervalSec * 1000;
+                    const newInterval = (Number(intervalSec) || 600) * 1000;
                     if (newInterval !== this.updateInterval) {
                         this.updateInterval = newInterval;
-                        console.log(`[PositionsManager] 📊 Интервал миниграфиков (＝ синхронизация позиций): ${intervalSec} сек (${this.updateInterval} мс)`);
+                        console.log(`[PositionsManager] 📊 Интервал RSI/миниграфиков (＝ Синхронизация позиций): ${intervalSec} сек`);
                         
                         // Перезапускаем таймер с новым интервалом
                         if (this.updateIntervalTimer) {
