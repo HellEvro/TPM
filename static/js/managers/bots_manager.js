@@ -6859,29 +6859,13 @@ class BotsManager {
             console.error('[BotsManager] ❌ Элемент autoSaveInterval не найден!');
         }
         
-        // ✅ КРИТИЧНО: Интервал обновления миниграфиков загружается из SystemConfig (bot_config.py)
-        const miniChartUpdateIntervalEl = document.getElementById('miniChartUpdateInterval');
-        if (miniChartUpdateIntervalEl && systemConfig.mini_chart_update_interval !== undefined) {
-            miniChartUpdateIntervalEl.value = systemConfig.mini_chart_update_interval;
-            console.log('[BotsManager] 📊 Интервал обновления миниграфиков установлен:', systemConfig.mini_chart_update_interval, 'сек (из SystemConfig)');
-        } else if (miniChartUpdateIntervalEl) {
-            console.warn('[BotsManager] ⚠️ Интервал обновления миниграфиков не найден в SystemConfig, оставляем поле пустым');
-        } else {
-            console.error('[BotsManager] ❌ Элемент miniChartUpdateInterval не найден!');
-        }
+        // Миниграфики = интервал «Синхронизация позиций» (настройка убрана из UI). Автообновление UI всегда вкл.
         
         // Режим отладки
         const debugModeEl = document.getElementById('debugMode');
         if (debugModeEl) {
             debugModeEl.checked = systemConfig.debug_mode || false;
             console.log('[BotsManager] 🐛 Режим отладки:', debugModeEl.checked);
-        }
-        
-        // Автообновление UI
-        const autoRefreshUIEl = document.getElementById('autoRefreshUI');
-        if (autoRefreshUIEl) {
-            autoRefreshUIEl.checked = systemConfig.auto_refresh_ui !== false;
-            console.log('[BotsManager] 🔄 Автообновление UI:', autoRefreshUIEl.checked);
         }
         
         // Интервал обновления UI
@@ -7407,9 +7391,7 @@ class BotsManager {
             'optimalEntryEnabled': 'ai_optimal_entry_enabled',
             'rsiUpdateInterval': 'rsi_update_interval',
             'autoSaveInterval': 'auto_save_interval',
-            'miniChartUpdateInterval': 'mini_chart_update_interval',
             'debugMode': 'debug_mode',
-            'autoRefreshUI': 'auto_refresh_ui',
             'refreshInterval': 'refresh_interval',
             'positionSyncInterval': 'position_sync_interval',
             'inactiveBotCleanupInterval': 'inactive_bot_cleanup_interval',
@@ -7558,9 +7540,7 @@ class BotsManager {
             'rsi_divergence_lookback',
             'rsi_update_interval',
             'auto_save_interval',
-            'mini_chart_update_interval',
             'debug_mode',
-            'auto_refresh_ui',
             'refresh_interval',
             'position_sync_interval',
             'inactive_bot_cleanup_interval',
@@ -9235,7 +9215,7 @@ class BotsManager {
             'enhanced_rsi_enabled', 'enhanced_rsi_require_volume_confirmation', 'enhanced_rsi_require_divergence_confirmation',
             'enhanced_rsi_use_stoch_rsi', 'rsi_extreme_zone_timeout', 'rsi_extreme_oversold', 'rsi_extreme_overbought',
             'rsi_volume_confirmation_multiplier', 'rsi_divergence_lookback', 'rsi_update_interval', 'auto_save_interval',
-            'mini_chart_update_interval', 'debug_mode', 'auto_refresh_ui', 'refresh_interval', 'position_sync_interval',
+            'debug_mode', 'refresh_interval', 'position_sync_interval',
             'inactive_bot_cleanup_interval', 'inactive_bot_timeout', 'stop_loss_setup_interval'
         ];
         const isSystem = configKey.startsWith('system_') || systemConfigKeys.includes(configKey);

@@ -1603,10 +1603,8 @@ CONFIG_NAMES = {
     'rsi_update_interval': 'Интервал обновления RSI (сек)',
     'auto_save_interval': 'Интервал автосохранения (сек)',
     'debug_mode': 'Режим отладки',
-    'auto_refresh_ui': 'Автообновление UI',
     'refresh_interval': 'Интервал обновления UI (сек)',
-    'mini_chart_update_interval': 'Интервал обновления миниграфиков RSI (сек)',
-    'position_sync_interval': 'Интервал синхронизации позиций (сек)',
+    'position_sync_interval': 'Интервал синхронизации позиций (сек)',  # также задаёт интервал обновления миниграфиков
     'inactive_bot_cleanup_interval': 'Интервал очистки неактивных ботов (сек)',
     'inactive_bot_timeout': 'Таймаут неактивного бота (сек)',
     'stop_loss_setup_interval': 'Интервал установки Stop Loss (сек)',
@@ -1965,13 +1963,7 @@ def system_config():
                     SystemConfig.DEBUG_MODE = new_value
                     changes_count += 1
             
-            if 'auto_refresh_ui' in data:
-                old_value = SystemConfig.AUTO_REFRESH_UI
-                new_value = bool(data['auto_refresh_ui'])
-                if log_config_change('auto_refresh_ui', old_value, new_value):
-                    SystemConfig.AUTO_REFRESH_UI = new_value
-                    changes_count += 1
-            
+            # auto_refresh_ui всегда True (настройка убрана из UI)
             if 'refresh_interval' in data:
                 old_value = SystemConfig.UI_REFRESH_INTERVAL
                 new_value = int(data['refresh_interval'])
@@ -1979,13 +1971,7 @@ def system_config():
                     SystemConfig.UI_REFRESH_INTERVAL = new_value
                     changes_count += 1
             
-            if 'mini_chart_update_interval' in data:
-                old_value = SystemConfig.MINI_CHART_UPDATE_INTERVAL
-                new_value = int(data['mini_chart_update_interval'])
-                if log_config_change('mini_chart_update_interval', old_value, new_value):
-                    SystemConfig.MINI_CHART_UPDATE_INTERVAL = new_value
-                    changes_count += 1
-            
+            # mini_chart_update_interval привязан к position_sync_interval (настройка убрана из UI)
             # Интервалы синхронизации и очистки
             if 'stop_loss_setup_interval' in data:
                 old_value = SystemConfig.STOP_LOSS_SETUP_INTERVAL
@@ -2460,11 +2446,14 @@ def refresh_rsi_for_coin(symbol):
 
 @bots_app.route('/api/bots/rsi-history/<symbol>', methods=['GET'])
 def get_rsi_history_for_chart(symbol):
-    """Получить историю RSI для графика из кэша (без запроса к бирже)"""
+    """Получить историю RSI для графика из кэша (без запроса к бирже).
+    current_rsi для миниграфиков берётся из coins_rsi_data['coins'][symbol] — тот же источник, что и для
+    ботов; для символов в позиции эти данные обновляются в sync_positions (_refresh_rsi_for_bots_in_position)."""
     try:
         from bots_modules.calculations import calculate_rsi_history
-        
-        # ✅ СНАЧАЛА ПРОВЕРЯЕМ КЭШ В ПАМЯТИ, ПОТОМ БД
+        from bot_engine.config_loader import get_rsi_from_coin_data
+
+        # ✅ СНАЧАЛА ПРОВЕРЯЕМ КЭШ В ПАМЯТИ, ПОТОМ БД (тот же источник, что и для ботов)
         # ✅ ОПТИМИЗАЦИЯ: Поддержка новой структуры кэша (несколько таймфреймов)
         candles = None
         candles_cache = coins_rsi_data.get('candles_cache', {})
@@ -2517,15 +2506,21 @@ def get_rsi_history_for_chart(symbol):
         # Берем последние 56 значений RSI
         rsi_values = rsi_history[-56:] if len(rsi_history) > 56 else rsi_history
         
-        # Получаем текущее значение RSI (последнее)
-        current_rsi = rsi_values[-1] if rsi_values else None
-        
+        # Текущее RSI для миниграфиков: из coins_rsi_data['coins'][symbol] (тот же источник, что и для ботов;
+        # для символов в позиции обновляется в sync_positions → _refresh_rsi_for_bots_in_position)
+        current_rsi = None
+        coin_data = coins_rsi_data.get('coins', {}).get(symbol)
+        if coin_data:
+            current_rsi = get_rsi_from_coin_data(coin_data, timeframe=current_timeframe)
+        if current_rsi is None and rsi_values:
+            current_rsi = rsi_values[-1]
+
         return jsonify({
             'success': True,
             'rsi_history': rsi_values,
             'current_rsi': round(current_rsi, 2) if current_rsi is not None else None,
             'candles_count': len(candles),
-            'source': 'cache'  # Указываем, что данные из кэша
+            'source': 'cache'  # candles_cache + coins (current_rsi из coins = тот же источник, что для ботов и миниграфиков)
         })
         
     except Exception as e:

@@ -2108,8 +2108,8 @@ def get_symbol_chart(symbol):
         current_timeframe = get_current_timeframe()
         chart_logger.info(f"[CHART] Getting RSI {current_timeframe} chart for {symbol} with theme {theme}")
         
-        # ✅ ИСПОЛЬЗУЕМ КЭШ ИЗ BOTS.PY вместо запроса к бирже
-        # Запрашиваем историю RSI через API bots.py (использует кэш свечей)
+        # ✅ Миниграфики используют ТЕ ЖЕ данные, что и боты: RSI и свечи из кэша bots.py
+        # (обновляются continuous_data_loader раз в 1–3 мин; текущее RSI — из coins_rsi_data)
         rsi_response = call_bots_service(f'/api/bots/rsi-history/{symbol}')
         
         if not rsi_response or not rsi_response.get('success'):

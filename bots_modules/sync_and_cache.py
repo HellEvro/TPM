@@ -95,9 +95,7 @@ SYSTEM_CONFIG_FIELD_MAP = {
     'rsi_update_interval': 'RSI_UPDATE_INTERVAL',
     'auto_save_interval': 'AUTO_SAVE_INTERVAL',
     'debug_mode': 'DEBUG_MODE',
-    'auto_refresh_ui': 'AUTO_REFRESH_UI',
     'refresh_interval': 'UI_REFRESH_INTERVAL',
-    'mini_chart_update_interval': 'MINI_CHART_UPDATE_INTERVAL',
     'position_sync_interval': 'POSITION_SYNC_INTERVAL',
     'inactive_bot_cleanup_interval': 'INACTIVE_BOT_CLEANUP_INTERVAL',
     'inactive_bot_timeout': 'INACTIVE_BOT_TIMEOUT',
@@ -324,6 +322,10 @@ def get_system_config_snapshot():
                 snapshot[key] = getattr(SystemConfig, attr, None)
         else:
             snapshot[key] = getattr(SystemConfig, attr, None)
+    # Миниграфики обновляются с тем же интервалом, что и синхронизация позиций
+    snapshot['mini_chart_update_interval'] = snapshot.get('position_sync_interval')
+    # Автообновление UI всегда включено (настройка убрана из интерфейса)
+    snapshot['auto_refresh_ui'] = True
     return snapshot
 
 
@@ -679,6 +681,9 @@ def load_system_config():
                 set_current_timeframe(tf)
         except Exception as tf_err:
             logger.warning(f"[SYSTEM_CONFIG] ⚠️ Ошибка восстановления таймфрейма: {tf_err}")
+
+        # Автообновление UI всегда включено (настройка убрана из интерфейса)
+        SystemConfig.AUTO_REFRESH_UI = True
 
         logger.info("[SYSTEM_CONFIG] ✅ Конфигурация перезагружена из configs/bot_config.py")
         return True
@@ -1783,19 +1788,77 @@ def compare_bot_and_exchange_positions():
         logger.error(f"[POSITION_SYNC] ❌ Ошибка сравнения позиций: {e}")
         return None
 
-def sync_positions_with_exchange():
-    """Умная синхронизация позиций ботов с реальными позициями на бирже"""
+def _refresh_rsi_for_bots_in_position(exchange_obj, exchange_positions):
+    """Для каждого бота в позиции: 20 свечей + текущая цена (последняя «свеча» = цена, без ожидания закрытия).
+    Обновляет coins_rsi_data['coins'][symbol] (rsi по таймфрейму + price). Этот же источник используется
+    для монитора позиций, проверки закрытия по RSI и для текущего RSI на миниграфиках (rsi-history API)."""
     try:
-        # ✅ Не логируем частые синхронизации (только результаты при изменениях)
-        
-        # Получаем позиции с биржи с retry логикой
+        from bot_engine.config_loader import get_current_timeframe, get_rsi_key
+        price_by_symbol = {p['symbol']: float(p.get('mark_price', 0) or 0) for p in (exchange_positions or [])}
+        with bots_data_lock:
+            bots_in_position = {
+                s: d for s, d in (bots_data.get('bots') or {}).items()
+                if d.get('status') in ['in_position_long', 'in_position_short']
+            }
+        if not bots_in_position:
+            return
+        for symbol, bot_data in bots_in_position.items():
+            try:
+                entry_timeframe = bot_data.get('entry_timeframe') or get_current_timeframe()
+                current_price = price_by_symbol.get(symbol)
+                if current_price is None or current_price <= 0:
+                    ticker = exchange_obj.get_ticker(symbol)
+                    if ticker:
+                        current_price = float(ticker.get('last') or ticker.get('lastPrice') or ticker.get('last_price') or 0)
+                if not current_price or current_price <= 0:
+                    continue
+                try:
+                    chart_response = exchange_obj.get_chart_data(symbol, entry_timeframe, '1w', bulk_mode=True, bulk_limit=20)
+                except TypeError:
+                    chart_response = exchange_obj.get_chart_data(symbol, entry_timeframe, '1w')
+                if not chart_response or not chart_response.get('success'):
+                    continue
+                candles = chart_response.get('data', {}).get('candles', [])
+                if len(candles) < 15:
+                    continue
+                # Последняя свеча — текущая цена (не ждём закрытия минутной/иной свечи)
+                closes = [float(c.get('close', 0)) for c in candles[:-1]]
+                closes.append(float(current_price))
+                from bots_modules.calculations import calculate_rsi
+                rsi = calculate_rsi(closes, 14)
+                if rsi is None:
+                    continue
+                rsi_key = get_rsi_key(entry_timeframe)
+                with rsi_data_lock:
+                    coin_data = dict(coins_rsi_data.get('coins', {}).get(symbol, {}))
+                    coin_data[rsi_key] = rsi
+                    coin_data['price'] = current_price
+                    if 'coins' not in coins_rsi_data:
+                        coins_rsi_data['coins'] = {}
+                    coins_rsi_data['coins'][symbol] = coin_data
+            except Exception as e:
+                logger.debug(f"[POSITION_SYNC] RSI для {symbol}: {e}")
+    except Exception as e:
+        logger.debug(f"[POSITION_SYNC] refresh_rsi: {e}")
+
+
+def sync_positions_with_exchange():
+    """Умная синхронизация позиций ботов с реальными позициями на бирже.
+    Сначала один раз получаем позиции с биржи, по ним обновляем RSI (20 свечей + текущая цена),
+    затем сверка списка и исправление сторон."""
+    try:
+        # 1) Один раз получаем позиции с биржи
         exchange_positions = get_exchange_positions()
-        
-        # Если не удалось получить позиции с биржи, НЕ сбрасываем ботов
         if exchange_positions is None:
             logger.warning("[POSITION_SYNC] ⚠️ Не удалось получить позиции с биржи - пропускаем синхронизацию")
             return False
-        
+
+        # 2) По текущей цене (mark_price из позиций) и 20 свечам обновляем RSI для ботов в позиции (последняя свеча = текущая цена)
+        current_exchange = get_exchange()
+        if current_exchange:
+            _refresh_rsi_for_bots_in_position(current_exchange, exchange_positions)
+
+        # 3) Сверка списка ботов с биржей (удаление ботов без позиции, исправление стороны)
         # Получаем ботов в позиции из системы
         with bots_data_lock:
             bot_positions = []

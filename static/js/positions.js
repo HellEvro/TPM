@@ -95,12 +95,13 @@ class PositionsManager {
             const response = await fetch('/api/bots/system-config');
             if (response.ok) {
                 const data = await response.json();
-                if (data.success && data.config && data.config.mini_chart_update_interval !== undefined) {
-                    // Конвертируем секунды в миллисекунды
-                    const newInterval = data.config.mini_chart_update_interval * 1000;
+                // Интервал миниграфиков = Синхронизация позиций (position_sync_interval)
+                const intervalSec = data.config?.position_sync_interval ?? data.config?.mini_chart_update_interval;
+                if (data.success && data.config && intervalSec !== undefined) {
+                    const newInterval = intervalSec * 1000;
                     if (newInterval !== this.updateInterval) {
                         this.updateInterval = newInterval;
-                        console.log(`[PositionsManager] 📊 Интервал обновления миниграфиков установлен: ${data.config.mini_chart_update_interval} сек (${this.updateInterval} мс) из SystemConfig`);
+                        console.log(`[PositionsManager] 📊 Интервал миниграфиков (＝ синхронизация позиций): ${intervalSec} сек (${this.updateInterval} мс)`);
                         
                         // Перезапускаем таймер с новым интервалом
                         if (this.updateIntervalTimer) {
@@ -110,7 +111,7 @@ class PositionsManager {
                         console.log(`[PositionsManager] 🔄 Таймер обновления перезапущен с интервалом: ${this.updateInterval / 1000} сек`);
                     }
                 } else {
-                    console.warn('[PositionsManager] ⚠️ mini_chart_update_interval не найден в SystemConfig, используем дефолт:', this.updateInterval / 1000, 'сек');
+                    console.warn('[PositionsManager] ⚠️ position_sync_interval не найден в SystemConfig, используем дефолт:', this.updateInterval / 1000, 'сек');
                 }
             } else {
                 console.warn('[PositionsManager] ⚠️ Не удалось загрузить SystemConfig, используем дефолт:', this.updateInterval / 1000, 'сек');

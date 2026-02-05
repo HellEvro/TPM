@@ -48,7 +48,7 @@ try:
         save_bots_state, update_process_state, save_auto_bot_config,
         update_bots_cache_data, check_missing_stop_losses,
         cleanup_inactive_bots, check_trading_rules_activation,
-        check_delisting_emergency_close
+        check_delisting_emergency_close, sync_positions_with_exchange
     )
     from bots_modules.maturity import save_mature_coins_storage
     from bots_modules.filters import process_auto_bot_signals, process_trading_signals_for_all_bots
@@ -75,6 +75,8 @@ except ImportError as e:
     def process_auto_bot_signals(exchange_obj=None):
         pass
     def process_trading_signals_for_all_bots(exchange_obj=None):
+        pass
+    def sync_positions_with_exchange():
         pass
 
 def log_system_status(cycle_count, auto_bot_enabled, check_interval_seconds):
@@ -245,8 +247,8 @@ def auto_bot_worker():
                     'interval_seconds': check_interval_seconds
                 })
 
-            # Примечание: Проверка закрытия позиций по RSI теперь происходит в positions_monitor_worker
-            # каждые refresh_interval секунд (3 секунды по умолчанию), что соответствует интервалу обновления позиций
+            # Примечание: Проверка закрытия по RSI и решения по стопам — в positions_monitor_worker и sync_positions_with_exchange()
+            # по интервалу «Синхронизация позиций» (POSITION_SYNC_INTERVAL): раз в N сек — свечи, RSI, закрыть/стопы
 
             # Обновляем статус позиций каждые BOT_STATUS_UPDATE_INTERVAL секунд (независимо от Auto Bot)
             current_time = time.time()
@@ -273,6 +275,15 @@ def auto_bot_worker():
                 check_trading_rules_activation()
                 last_inactive_cleanup = current_time
 
+            # ✅ Синхронизация позиций с биржей каждые POSITION_SYNC_INTERVAL секунд (настройка «Синхронизация позиций»)
+            time_since_position_sync = current_time - last_position_sync
+            if time_since_position_sync >= SystemConfig.POSITION_SYNC_INTERVAL:
+                try:
+                    sync_positions_with_exchange()
+                except Exception as sync_err:
+                    logger.debug(f" Синхронизация позиций: {sync_err}")
+                last_position_sync = current_time
+
             # ✅ ПРОВЕРКА ДЕЛИСТИНГА: Каждые 10 минут проверяем делистинг и закрываем позиции
             current_time = time.time()
             time_since_delisting_check = current_time - last_delisting_check
@@ -295,7 +306,8 @@ def positions_monitor_worker():
     📊 Мониторинг позиций на бирже и проверка закрытия по RSI
 
     Загружает все позиции с биржи и сохраняет в кэш для быстрого доступа.
-    КРИТИЧНО: Проверяет условия закрытия позиций по RSI каждые 3 секунды (согласно refresh_interval)!
+    Интервал расчёта RSI и решений (закрыть/стопы) = POSITION_SYNC_INTERVAL («Синхронизация позиций»).
+    Каждые N сек: для ботов в позиции — 20+ свечей → RSI → решение закрыть или нет; стопы/трейлинг — в sync_positions_with_exchange().
     """
     logger.info(" 🚀 Запуск мониторинга позиций...")
 
@@ -311,8 +323,8 @@ def positions_monitor_worker():
     first_startup = True
     rsi_data_loaded_once = False
 
-    # Время последней проверки закрытия позиций по RSI
-    last_rsi_close_check = time.time() - SystemConfig.UI_REFRESH_INTERVAL  # Сразу при первом запуске
+    # Время последней проверки закрытия позиций по RSI (интервал = «Синхронизация позиций», чтобы раз в 1–2 сек пересчитывать RSI и решения)
+    last_rsi_close_check = time.time() - SystemConfig.POSITION_SYNC_INTERVAL  # Сразу при первом запуске
 
     # Время начала ожидания инициализации биржи
     exchange_init_wait_start = time.time()
@@ -390,14 +402,12 @@ def positions_monitor_worker():
                 import traceback
                 traceback.print_exc()
 
-            # ✅ КРИТИЧНО: Проверяем условия закрытия позиций по RSI каждые refresh_interval секунд (из конфига)
+            # ✅ Интервал = «Синхронизация позиций» (POSITION_SYNC_INTERVAL): раз в 1–2 сек — свечи, RSI, решение закрыть/нет; стопы — в sync_positions_with_exchange()
             current_time = time.time()
             time_since_rsi_check = current_time - last_rsi_close_check
+            position_sync_interval = SystemConfig.POSITION_SYNC_INTERVAL
 
-            # Получаем интервал из конфига (не хардкод!)
-            refresh_interval = SystemConfig.UI_REFRESH_INTERVAL
-
-            if time_since_rsi_check >= refresh_interval:
+            if time_since_rsi_check >= position_sync_interval:
                 try:
                     # ✅ Перечитываем конфиг с диска — пороги RSI выхода из UI учитываются при закрытии
                     try:

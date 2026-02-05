@@ -731,7 +731,7 @@ const TRANSLATIONS = {
         
         // Системные настройки
         'position_sync_interval_label': 'Синхронизация позиций:',
-        'position_sync_interval_help': 'Рекомендуется: 600 сек (10 мин). Синхронизация позиций с биржей',
+        'position_sync_interval_help': 'Каждые N сек: сверка с биржей, загрузка 20+ свечей по позициям, расчёт RSI, решение закрыть/двигать стопы. Для быстрых решений: 1–3 сек; экономный режим: 600 сек (10 мин)',
         'inactive_bot_timeout_label': 'Таймаут неактивных ботов:',
         'inactive_bot_timeout_help': 'Рекомендуется: 600 сек (10 мин). Время ожидания перед удалением бота',
         'stop_loss_setup_interval_label': 'Настройка стоп-лоссов:',
@@ -1755,7 +1755,7 @@ const TRANSLATIONS = {
         
         // System settings
         'position_sync_interval_label': 'Position synchronization:',
-        'position_sync_interval_help': 'Recommended: 600 sec (10 min). Synchronization of positions with exchange',
+        'position_sync_interval_help': 'Every N sec: sync with exchange, load 20+ candles per position, calculate RSI, decide close/move stops. For fast decisions: 1–3 sec; economy: 600 sec (10 min)',
         'inactive_bot_timeout_label': 'Inactive bots timeout:',
         'inactive_bot_timeout_help': 'Recommended: 600 sec (10 min). Waiting time before deleting bot',
         'stop_loss_setup_interval_label': 'Stop-loss setup:',
