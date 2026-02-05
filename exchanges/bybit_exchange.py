@@ -223,31 +223,31 @@ class BybitExchange(BaseExchange):
             if time.time() - self.last_rate_limit_time > 30:
                 self.rate_limit_error_count = 0
 
-    def increase_request_delay(self, multiplier=2.0, reason='Rate limit'):
-        """Увеличивает задержку запросов с учетом максимального порога"""
+    # Шаг плавного увеличения задержки при rate limit (вместо жёсткого множителя)
+    DELAY_INCREMENT = 0.5
+
+    def increase_request_delay(self, multiplier=None, reason='Rate limit'):
+        """Увеличивает задержку запросов плавно на DELAY_INCREMENT (0.5 с) до максимума."""
         current_time = time.time()
-        
-        # Если прошло больше 60 секунд с последней ошибки - сбрасываем счетчик
+
         if current_time - self.last_rate_limit_time > 60:
             self.rate_limit_error_count = 0
-        
+
         self.rate_limit_error_count += 1
         self.last_rate_limit_time = current_time
-        
-        # Более агрессивное увеличение при множественных ошибках
-        if self.rate_limit_error_count >= 3:
-            multiplier = 3.0  # Увеличиваем множитель при частых ошибках
-        elif self.rate_limit_error_count >= 5:
-            multiplier = 5.0  # Еще более агрессивное увеличение
-        
+
         old_delay = self.current_request_delay
-        new_delay = min(self.current_request_delay * multiplier, self.max_request_delay)
+        new_delay = min(old_delay + self.DELAY_INCREMENT, self.max_request_delay)
         self.current_request_delay = new_delay
 
         if new_delay > old_delay:
-            logger.warning(f"⚠️ {reason}. Увеличиваем задержку: {old_delay:.3f}с → {new_delay:.3f}с (ошибок подряд: {self.rate_limit_error_count})")
+            logger.warning(
+                f"⚠️ {reason}. Задержка +{self.DELAY_INCREMENT}с: {old_delay:.3f}с → {new_delay:.3f}с (ошибок подряд: {self.rate_limit_error_count})"
+            )
         else:
-            logger.warning(f"⚠️ {reason}. Задержка уже максимальная: {new_delay:.3f}с (ошибок подряд: {self.rate_limit_error_count})")
+            logger.warning(
+                f"⚠️ {reason}. Задержка уже максимальная: {new_delay:.3f}с (ошибок подряд: {self.rate_limit_error_count})"
+            )
 
         return new_delay
     

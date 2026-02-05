@@ -2376,9 +2376,12 @@ def load_all_coins_rsi():
                             future.cancel()
                         break
 
+                    # Таймаут пакета: 100 символов при 50 воркерах и задержках API биржи могут не уложиться в 60 сек
+                    batch_timeout = 120
+                    result_timeout = 30
                     try:
                         for future in concurrent.futures.as_completed(
-                            future_to_symbol, timeout=60
+                            future_to_symbol, timeout=batch_timeout
                         ):
                             if shutdown_flag.is_set():
                                 shutdown_requested = True
@@ -2386,7 +2389,7 @@ def load_all_coins_rsi():
 
                             symbol = future_to_symbol[future]
                             try:
-                                result = future.result(timeout=20)
+                                result = future.result(timeout=result_timeout)
                                 if result:
                                     # ✅ ОПТИМИЗАЦИЯ: Объединяем данные для всех таймфреймов
                                     if result["symbol"] in temp_coins_data:
@@ -2407,14 +2410,17 @@ def load_all_coins_rsi():
                                 coins_rsi_data["failed_coins"] += 1
                                 batch_fail += 1
                     except concurrent.futures.TimeoutError:
-                        pending = list(future_to_symbol.values())
+                        pending = [
+                            s for s, f in future_to_symbol.items()
+                            if not f.done()
+                        ]
                         logger.error(
                             "⚠️ Timeout при загрузке RSI для пакета "
                             f"{batch_num} (ТФ={timeframe}) "
-                            f"(ожидали {len(pending)} символов, примеры: {pending[:5]})"
+                            f"(не завершено {len(pending)} из {len(batch)}, примеры: {pending[:5]})"
                         )
-                        coins_rsi_data["failed_coins"] += len(batch)
-                        batch_fail += len(batch)
+                        coins_rsi_data["failed_coins"] += len(pending)
+                        batch_fail += len(pending)
 
                 if shutdown_flag.is_set():
                     shutdown_requested = True
