@@ -2567,9 +2567,20 @@ class BybitExchange(BaseExchange):
                 min_usdt_from_notional = min_notional_value if min_notional_value else 5.0
                 
                 if nominal_usdt < min_usdt_from_notional:
-                    # Если получилось меньше minNotional - ВСЕГДА увеличиваем монеты
-                    # Иначе биржа отклонит ордер с ошибкой "Order does not meet minimum order value"
-                    # Добавляем запас 2% к минимуму, чтобы округление/сдвиг цены не привели к отклонению (ErrCode: 110094)
+                    # Если запрошенная сумма меньше минимума биржи — увеличивать ордер нельзя:
+                    # у пользователя может не хватать средств, получим 110007 (ab not enough for new order).
+                    if requested_qty_usdt is not None and requested_qty_usdt < min_usdt_from_notional:
+                        msg = (
+                            f"Размер позиции ({requested_qty_usdt:.2f} USDT) меньше минимального ордера по правилам биржи "
+                            f"({min_usdt_from_notional} USDT). Пополните счёт или уменьшите количество одновременных позиций."
+                        )
+                        logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: {msg}")
+                        return {
+                            'success': False,
+                            'message': msg,
+                            'error_code': '110007',
+                        }
+                    # Запрошенная сумма достаточна — увеличиваем до minNotional, иначе биржа отклонит
                     min_required_usdt = min_usdt_from_notional * 1.02
                     min_coins_for_notional = math.ceil(min_required_usdt / price_for_notional_check / qty_step) * qty_step
                     rounded_coins = min_coins_for_notional
