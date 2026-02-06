@@ -1439,6 +1439,9 @@ class BotsManager {
         }).length;
         const manualPositionCount = this.coinsRsiData.filter(coin => coin.manual_position === true).length;
         const unavailableCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'UNAVAILABLE').length;
+        const delistedCount = this.coinsRsiData.filter(coin =>
+            coin.trading_status === 'Closed' || coin.is_delisting || (this.delistedCoins && this.delistedCoins.includes(coin.symbol))
+        ).length;
         
         // Обновляем счетчики в HTML (фильтры)
         const allCountEl = document.getElementById('filterAllCount');
@@ -1471,6 +1474,7 @@ class BotsManager {
         const longCountEl = document.getElementById('filterLongCount');
         const shortCountEl = document.getElementById('filterShortCount');
         const manualCountEl = document.getElementById('manualCount');
+        const delistedCountEl = document.getElementById('delistedCoinsCount');
         
         
         // Обновляем счетчики фильтров
@@ -1483,6 +1487,7 @@ class BotsManager {
         if (longCountEl) longCountEl.textContent = longCount;
         if (shortCountEl) shortCountEl.textContent = shortCount;
         if (manualCountEl) manualCountEl.textContent = `(${manualPositionCount})`;
+        if (delistedCountEl) delistedCountEl.textContent = `(${delistedCount})`;
         
         // ✅ Логируем недоступные для торговли монеты
         if (unavailableCount > 0) {
@@ -1498,7 +1503,7 @@ class BotsManager {
             }
         }
         
-        this.logDebug(`[BotsManager] 📊 Счетчики фильтров: ALL=${allCount}, BUY=${buyZoneCount}, SELL=${sellZoneCount}, UP=${trendUpCount}, DOWN=${trendDownCount}, LONG=${longCount}, SHORT=${shortCount}, MANUAL=${manualPositionCount}, UNAVAILABLE=${unavailableCount}`);
+        this.logDebug(`[BotsManager] 📊 Счетчики фильтров: ALL=${allCount}, BUY=${buyZoneCount}, SELL=${sellZoneCount}, UP=${trendUpCount}, DOWN=${trendDownCount}, LONG=${longCount}, SHORT=${shortCount}, MANUAL=${manualPositionCount}, DELISTED=${delistedCount}, UNAVAILABLE=${unavailableCount}`);
     }
     selectCoin(symbol) {
         this.logDebug('[BotsManager] 🎯 Выбрана монета:', symbol);
@@ -2877,6 +2882,9 @@ class BotsManager {
                     break;
                 case 'mature-coins':
                     visible = item.classList.contains('mature-coin');
+                    break;
+                case 'delisted':
+                    visible = item.classList.contains('delisting-coin');
                     break;
                 case 'all':
                 default:
