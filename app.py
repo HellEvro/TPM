@@ -844,6 +844,17 @@ def background_update():
 
             positions, rapid_growth = current_exchange.get_positions()
             if not positions:
+                # Закрытые позиции не возвращаются биржей — очищаем список, чтобы не показывать устаревшие (например AXS после закрытия)
+                positions_data.update({
+                    'high_profitable': [], 'profitable': [], 'losing': [],
+                    'total_trades': 0, 'rapid_growth': [],
+                    'stats': {
+                        'total_trades': 0, 'high_profitable_count': 0, 'profitable_count': 0, 'losing_count': 0,
+                        'top_profitable': [], 'top_losing': [], 'total_pnl': 0, 'total_profit': 0, 'total_loss': 0
+                    },
+                    'last_update': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                })
+                save_positions_data(positions_data)
                 time.sleep(2)
                 continue
 
