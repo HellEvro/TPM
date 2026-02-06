@@ -14,6 +14,9 @@ from .bot_config import (
 from .indicators import SignalGenerator
 from .scaling_calculator import calculate_scaling_for_bot
 
+# Символы, по которым уже вывели предупреждение о делистинге (один раз за сессию)
+_delisting_warned_symbols = set()
+
 
 class TradingBot:
     """Торговый бот для одной монеты"""
@@ -549,7 +552,9 @@ class TradingBot:
                 
                 if self.symbol in delisted_coins:
                     delisting_info = delisted_coins[self.symbol]
-                    self.logger.error(f" {self.symbol}: 🚫 ДЕЛИСТИНГ! Не открываем {side} - {delisting_info.get('reason', 'Delisting detected')}")
+                    if self.symbol not in _delisting_warned_symbols:
+                        _delisting_warned_symbols.add(self.symbol)
+                        self.logger.warning(f" {self.symbol}: ⚠️ Делистинг — не открываем {side} ({delisting_info.get('reason', 'Delisting detected')}). Монета помечена в списке.")
                     return {'success': False, 'error': 'coin_delisted', 'message': f'Монета в делистинге: {delisting_info.get("reason", "Delisting detected")}'}
             except Exception as delisting_check_error:
                 pass
@@ -994,7 +999,9 @@ class TradingBot:
                         add_symbol_to_delisted(self.symbol, reason="No new positions during delisting (ErrCode: 30228)")
                     except Exception as add_err:
                         pass
-                    self.logger.error(f" {self.symbol}: 🚫 ДЕЛИСТИНГ! Открытие позиции запрещено биржей (ErrCode: 30228)")
+                    if self.symbol not in _delisting_warned_symbols:
+                        _delisting_warned_symbols.add(self.symbol)
+                        self.logger.warning(f" {self.symbol}: ⚠️ Делистинг — открытие позиции запрещено биржей (ErrCode: 30228). Монета добавлена в список.")
                 if error_code == 'MIN_NOTIONAL' or 'меньше минимального ордера' in error_message:
                     self.logger.warning(f" {self.symbol}: 📏 {error_message}")
                 elif '110007' in error_code or '110007' in error_message:
@@ -1493,8 +1500,9 @@ class TradingBot:
                         # ✅ ПРОВЕРКА: Обнаружен делистинг (ErrCode: 30228)
                         if '30228' in str(error_code) or '30228' in error_message or 'delisting' in error_message.lower() or 'No new positions during delisting' in error_message:
                             delisting_detected = True
-                            self.logger.error(f" {self.symbol}: 🚫 ДЕЛИСТИНГ! Монета находится в процессе удаления с биржи (ErrCode: 30228)")
-                            self.logger.error(f" {self.symbol}: ❌ Невозможно разместить ордера - биржа блокирует новые позиции для {self.symbol}")
+                            if self.symbol not in _delisting_warned_symbols:
+                                _delisting_warned_symbols.add(self.symbol)
+                                self.logger.warning(f" {self.symbol}: ⚠️ Делистинг — монета в процессе удаления с биржи (ErrCode: 30228). Монета добавлена в список.")
                             
                             # ✅ КРИТИЧНО: Автоматически добавляем монету в delisted.json
                             try:
@@ -1604,8 +1612,9 @@ class TradingBot:
                     # ✅ ПРОВЕРКА: Обнаружен делистинг (ErrCode: 30228)
                     if '30228' in str(error_code) or 'delisting' in error_message.lower() or 'No new positions during delisting' in error_message:
                         delisting_detected = True
-                        self.logger.error(f" {self.symbol}: 🚫 ДЕЛИСТИНГ! Монета находится в процессе удаления с биржи (ErrCode: 30228)")
-                        self.logger.error(f" {self.symbol}: ❌ Невозможно разместить ордера - биржа блокирует новые позиции для {self.symbol}")
+                        if self.symbol not in _delisting_warned_symbols:
+                            _delisting_warned_symbols.add(self.symbol)
+                            self.logger.warning(f" {self.symbol}: ⚠️ Делистинг — монета в процессе удаления с биржи (ErrCode: 30228). Монета добавлена в список.")
                         
                         # ✅ КРИТИЧНО: Автоматически добавляем монету в delisted.json
                         try:

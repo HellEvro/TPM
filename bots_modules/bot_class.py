@@ -2599,6 +2599,14 @@ class NewTradingBot:
             # Блокировка фильтрами или защита от дублирования — нормальная работа, логируем как WARNING
             if result.get('error') in ('filters_blocked', 'exchange_position_exists') or 'заблокирован фильтрами' in error_msg or 'уже есть позиция' in error_msg:
                 logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось открыть позицию {side}: {error_msg}")
+            elif result.get('error') == 'coin_delisted':
+                try:
+                    from bot_engine.trading_bot import _delisting_warned_symbols
+                    if self.symbol not in _delisting_warned_symbols:
+                        _delisting_warned_symbols.add(self.symbol)
+                        logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Монета в делистинге — не открываем позицию. Помечена в списке.")
+                except Exception:
+                    logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Не удалось открыть позицию {side}: {error_msg}")
             else:
                 logger.error(f"[NEW_BOT_{self.symbol}] ❌ Не удалось открыть позицию {side}: {error_msg}")
             raise RuntimeError(error_msg)

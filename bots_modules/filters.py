@@ -39,6 +39,8 @@ _ai_manager_cache = None
 _ai_available_cache = None
 _ai_cache_lock = threading.Lock()
 _delisted_cache = {'ts': 0.0, 'coins': {}}
+# Символы, по которым уже вывели предупреждение о неудачном входе из-за делистинга (один раз за сессию)
+_delisting_entry_warned_symbols = set()
 
 
 def _threshold_01(value):
@@ -2643,9 +2645,6 @@ def get_effective_signal(coin):
     # Проверяем RSI Time фильтр (только если фильтр включён — иначе не блокируем)
     rsi_time_filter_enabled = get_config_value(auto_config, 'rsi_time_filter_enabled')
     if rsi_time_filter_enabled and coin.get('blocked_by_rsi_time', False):
-        time_filter_info = coin.get('time_filter_info') or {}
-        reason = time_filter_info.get('reason', 'RSI временной фильтр')
-        logger.debug(f"⏰ {symbol}: RSI Time Filter блокирует вход — {reason}")
         return 'WAIT'
     
     # ✅ Проверяем защиту от повторных входов (только если включена — иначе не блокируем)
@@ -2967,6 +2966,10 @@ def process_auto_bot_signals(exchange_obj=None):
                 error_str = str(e)
                 if 'заблокирован фильтрами' in error_str or 'filters_blocked' in error_str or 'exchange_position_exists' in error_str or 'уже есть позиция' in error_str:
                     logger.warning(f" ⚠️ Ошибка входа для {symbol}: {e}")
+                elif 'делистинг' in error_str.lower() or 'coin_delisted' in error_str:
+                    if symbol not in _delisting_entry_warned_symbols:
+                        _delisting_entry_warned_symbols.add(symbol)
+                        logger.warning(f" ⚠️ {symbol}: монета в делистинге — вход не выполнен. Помечена в списке.")
                 else:
                     logger.error(f" ❌ Ошибка входа для {symbol}: {e}")
                 # Бот не был в списке — не добавляем и не переводим в IDLE

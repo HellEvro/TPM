@@ -948,7 +948,7 @@ class BotsManager {
             
             // ✅ Проверяем недоступность для торговли
             const isUnavailable = effectiveSignal === 'UNAVAILABLE';
-            const isDelisting = isUnavailable && (coin.trading_status === 'Closed' || coin.is_delisting);
+            const isDelisting = isUnavailable && (coin.trading_status === 'Closed' || coin.is_delisting || (this.delistedCoins && this.delistedCoins.includes(coin.symbol)));
             const isNewCoin = isUnavailable && coin.trading_status === 'Delivering';
             
             // Формируем классы
