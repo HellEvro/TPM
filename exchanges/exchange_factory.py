@@ -19,14 +19,16 @@ class ExchangeFactory:
             
             if exchange_name == 'BYBIT':
                 test_server = exchange_config.get('test_server', False)
+                margin_mode = exchange_config.get('margin_mode', 'auto')
                 exchange = BybitExchange(
                     api_key, 
                     api_secret, 
                     test_server=test_server,
                     position_mode=position_mode,
-                    limit_order_offset=limit_order_offset
+                    limit_order_offset=limit_order_offset,
+                    margin_mode=margin_mode
                 )
-                logger.info(f"Successfully connected to {exchange_name} ({position_mode} mode, offset: {limit_order_offset}%)")
+                logger.info(f"Successfully connected to {exchange_name} ({position_mode} mode, margin: {margin_mode}, offset: {limit_order_offset}%)")
                 return exchange
             elif exchange_name == 'BINANCE':
                 exchange = BinanceExchange(

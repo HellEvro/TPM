@@ -8,6 +8,7 @@ EXCHANGES = {
         'api_secret': "YOUR_BYBIT_SECRET_KEY_HERE",
         'test_server': False,
         'position_mode': 'Hedge',
+        'margin_mode': 'auto',  # auto | cross | isolated — режим маржи: auto=следовать бирже, cross/isolated=переключать при входе
         'limit_order_offset': 0.01
     },
     'BINANCE': {

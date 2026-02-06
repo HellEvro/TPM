@@ -622,7 +622,9 @@ def sync_time(silent=False):
     if sys.platform != 'win32':
         return False, "Синхронизация времени доступна только для Windows"
     
-    if not check_admin_rights():
+    time_sync_cfg = TIME_SYNC if 'TIME_SYNC' in globals() else {}
+    require_admin = time_sync_cfg.get('REQUIRE_ADMIN', True)
+    if require_admin and not check_admin_rights():
         return False, "Требуются права администратора для синхронизации времени"
     
     try:
@@ -682,13 +684,19 @@ def time_sync_loop():
         time_sync_logger.info("[TimeSync] Автоматическая синхронизация времени выключена настройками")
         return
     
-    # Проверяем права администратора
-    if time_sync_config.get('REQUIRE_ADMIN', True) and not check_admin_rights():
+    # Проверка прав администратора (при REQUIRE_ADMIN=True без прав планировщик не запускаем)
+    require_admin = time_sync_config.get('REQUIRE_ADMIN', True)
+    if require_admin and not check_admin_rights():
         time_sync_logger.warning(
             "[TimeSync] ⚠️ Требуются права администратора для синхронизации времени. "
             "Запустите приложение от имени администратора или установите REQUIRE_ADMIN=False"
         )
         return
+    if not require_admin and not check_admin_rights():
+        time_sync_logger.info(
+            "[TimeSync] Запуск без прав администратора (REQUIRE_ADMIN=False). "
+            "Синхронизация может не выполняться; при запуске от администратора будет работать."
+        )
     
     interval_minutes = time_sync_config.get('INTERVAL_MINUTES', 30)
     try:
@@ -707,9 +715,10 @@ def time_sync_loop():
         server
     )
     
-    # Первоначальная настройка службы времени
-    time_sync_logger.info("[TimeSync] Первоначальная настройка службы времени...")
-    configure_time_service(server=server, silent=True)
+    # Первоначальная настройка службы времени (только с правами админа)
+    if check_admin_rights():
+        time_sync_logger.info("[TimeSync] Первоначальная настройка службы времени...")
+        configure_time_service(server=server, silent=True)
     
     # Синхронизация при запуске (если включено)
     if time_sync_config.get('RUN_ON_START', True):

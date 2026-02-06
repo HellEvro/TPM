@@ -119,7 +119,7 @@ def clean_symbol(symbol):
     return symbol.replace('USDT', '')
 
 class BybitExchange(BaseExchange):
-    def __init__(self, api_key, api_secret, test_server=False, position_mode='Hedge', limit_order_offset=0.1):
+    def __init__(self, api_key, api_secret, test_server=False, position_mode='Hedge', limit_order_offset=0.1, margin_mode='auto'):
         super().__init__(api_key, api_secret)
         
         # Настраиваем пул соединений для requests и pybit
@@ -146,7 +146,9 @@ class BybitExchange(BaseExchange):
         except Exception as e:
             logger.debug("[BYBIT] Синхронизация времени при инициализации пропущена: %s", e)
         self.position_mode = position_mode
-        self.limit_order_offset = limit_order_offset  # Отсутп цены для лимитного ордера в процентах
+        self.limit_order_offset = limit_order_offset  # Отступ цены для лимитного ордера в процентах
+        # Режим маржи: 'auto' = следовать бирже, 'cross' = кросс-маржа, 'isolated' = изолированная
+        self.margin_mode = (margin_mode or 'auto').lower().strip()
         self.daily_pnl = {}
         self.last_reset_day = None
         self.max_profit_values = {}
@@ -174,6 +176,9 @@ class BybitExchange(BaseExchange):
         self._position_mode_cache = None
         self._position_mode_cache_time = 0
         self._position_mode_cache_ttl = 300  # Кэш на 5 минут (режим позиции меняется редко)
+        # Кэш режима маржи по символу: {symbol: (mode_str, timestamp)}
+        self._margin_mode_cache = {}
+        self._margin_mode_cache_ttl = 300  # 5 минут
     
     def _setup_connection_pool(self):
         """Настраивает пул соединений для requests и pybit"""
@@ -2367,6 +2372,107 @@ class BybitExchange(BaseExchange):
             mode = self.position_mode if hasattr(self, 'position_mode') else 'Hedge'
             return mode
 
+    def _get_margin_mode(self, symbol):
+        """
+        Определяет текущий режим маржи по символу на бирже: cross (0) или isolated (1).
+        Bybit API: tradeMode в позиции — 0: cross-margin, 1: isolated margin.
+        Возвращает: 'cross' | 'isolated'.
+        """
+        try:
+            current_time = time.time()
+            cache = getattr(self, '_margin_mode_cache', {})
+            cache_ttl = getattr(self, '_margin_mode_cache_ttl', 300)
+            if symbol in cache:
+                cached_mode, cached_time = cache[symbol]
+                if current_time - cached_time < cache_ttl:
+                    return cached_mode
+            try:
+                pos_response = self.client.get_positions(category="linear", symbol=f"{symbol}USDT")
+                if pos_response.get('retCode') == 0 and pos_response.get('result', {}).get('list'):
+                    pos_list = pos_response['result']['list']
+                    if pos_list:
+                        # Bybit возвращает запись по символу даже при size=0 (data regardless of position status)
+                        trade_mode = pos_list[0].get('tradeMode')
+                        if trade_mode is not None:
+                            mode = 'isolated' if trade_mode == 1 else 'cross'
+                            if not hasattr(self, '_margin_mode_cache'):
+                                self._margin_mode_cache = {}
+                            self._margin_mode_cache[symbol] = (mode, current_time)
+                            return mode
+            except Exception as e:
+                logger.debug(f"[BYBIT_BOT] _get_margin_mode get_positions: {e}")
+            # Fallback: из конфига или по умолчанию cross
+            desired = getattr(self, 'margin_mode', 'auto')
+            if desired in ('cross', 'isolated'):
+                if not hasattr(self, '_margin_mode_cache'):
+                    self._margin_mode_cache = {}
+                self._margin_mode_cache[symbol] = (desired, current_time)
+                return desired
+            if not hasattr(self, '_margin_mode_cache'):
+                self._margin_mode_cache = {}
+            self._margin_mode_cache[symbol] = ('cross', current_time)
+            return 'cross'
+        except Exception as e:
+            logger.warning(f"[BYBIT_BOT] ⚠️ Ошибка при получении режима маржи для {symbol}: {e}")
+            return 'cross'
+
+    def _ensure_margin_mode(self, symbol, leverage=None):
+        """
+        При желаемом margin_mode из конфига (cross/isolated) переключает режим маржи на бирже,
+        если текущий не совпадает. Переключение возможно только при нулевой позиции по символу.
+        leverage — текущее или желаемое плечо для вызова switch-isolated (обязательно при переключении).
+        """
+        desired = getattr(self, 'margin_mode', 'auto')
+        if desired == 'auto':
+            current = self._get_margin_mode(symbol)
+            logger.debug(f"[BYBIT_BOT] 📊 {symbol}: режим маржи на бирже: {current} (margin_mode=auto)")
+            return True
+        try:
+            current = self._get_margin_mode(symbol)
+            if current == desired:
+                return True
+            # Проверяем, что позиция по символу нулевая
+            pos_response = self.client.get_positions(category="linear", symbol=f"{symbol}USDT")
+            if pos_response.get('retCode') != 0 or not pos_response.get('result', {}).get('list'):
+                return True
+            for pos in pos_response['result']['list']:
+                if abs(float(pos.get('size', 0))) > 0:
+                    logger.warning(
+                        f"[BYBIT_BOT] ⚠️ {symbol}: переключение режима маржи невозможно — есть открытая позиция. "
+                        f"Текущий режим: {current}, желаемый: {desired}. Работаем в текущем режиме."
+                    )
+                    return True
+            # Плечо для switch-isolated обязательно
+            lev = leverage if leverage is not None else 10
+            try:
+                pos_list = pos_response['result']['list']
+                if pos_list and pos_list[0].get('leverage'):
+                    lev = int(float(pos_list[0]['leverage']))
+            except Exception:
+                pass
+            trade_mode = 1 if desired == 'isolated' else 0
+            if hasattr(self.client, 'switch_margin_mode'):
+                self.client.switch_margin_mode(
+                    category="linear",
+                    symbol=f"{symbol}USDT",
+                    tradeMode=trade_mode,
+                    buyLeverage=str(lev),
+                    sellLeverage=str(lev)
+                )
+            else:
+                raise AttributeError("switch_margin_mode not found on client")
+            logger.info(f"[BYBIT_BOT] ✅ {symbol}: режим маржи переключён на {desired} (плечо {lev}x)")
+            if symbol in getattr(self, '_margin_mode_cache', {}):
+                self._margin_mode_cache[symbol] = (desired, time.time())
+            return True
+        except Exception as e:
+            error_str = str(e)
+            if 'open position' in error_str.lower() or '110044' in error_str or 'position' in error_str.lower():
+                logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: не удалось переключить режим маржи (возможно, есть позиция): {e}")
+            else:
+                logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: ошибка переключения режима маржи: {e}")
+            return False
+
     @with_timeout(15)  # 15 секунд таймаут для размещения ордера
     def place_order(self, symbol, side, quantity, order_type='market', price=None,
                     take_profit=None, stop_loss=None, max_loss_percent=None, quantity_is_usdt=True,
@@ -2424,6 +2530,13 @@ class BybitExchange(BaseExchange):
                     'success': False,
                     'message': error_msg
                 }
+
+            # ✅ Распознаём режим маржи на бирже и при необходимости переключаем (cross/isolated)
+            try:
+                leverage_for_margin = int(leverage) if leverage else 10
+                self._ensure_margin_mode(symbol, leverage=leverage_for_margin)
+            except Exception as e:
+                logger.debug(f"[BYBIT_BOT] _ensure_margin_mode: {e}")
                          
             # ✅ Устанавливаем плечо перед входом в позицию (если указано в параметрах)
             # ⚠️ КРИТИЧНО: leverage передается как именованный параметр, а не через kwargs!

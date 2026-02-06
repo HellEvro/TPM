@@ -2751,10 +2751,9 @@ def process_auto_bot_signals(exchange_obj=None):
                            if bot['status'] not in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']])
         
         slots_free = max(0, max_concurrent - current_active)
-        logger.info(f" 📊 Лимит ботов: {current_active}/{max_concurrent} активных, слотов для новых: {slots_free}")
+        logger.info(f" 📊 Лимит ботов (в софте): {current_active}/{max_concurrent} активных, слотов для новых: {slots_free}")
         
         if current_active >= max_concurrent:
-            pass
             return
         
         logger.info(" 🔍 Проверка сигналов для создания новых ботов...")
