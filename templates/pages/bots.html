@@ -1208,6 +1208,21 @@
                             </label>
                         </div>
                         
+                        <div class="config-item">
+                            <label class="config-label">
+                                <span class="label-icon">📊</span>
+                                <span class="label-text" data-translate="bybit_margin_mode_label">Режим маржи Bybit:</span>
+                            </label>
+                            <div class="config-input-with-unit">
+                                <select id="bybitMarginMode" class="config-input" style="width: 100%; padding: 8px;">
+                                    <option value="auto" data-translate="margin_mode_auto">Авто (как на бирже)</option>
+                                    <option value="cross" data-translate="margin_mode_cross">Кросс-маржа</option>
+                                    <option value="isolated" data-translate="margin_mode_isolated">Изолированная</option>
+                                </select>
+                            </div>
+                            <small class="config-help" data-translate="bybit_margin_mode_help">Авто — не переключать; cross/isolated — переключать при входе (если позиция по символу закрыта)</small>
+                        </div>
+                        
                         <!-- Автообновление UI всегда включено (настройка убрана из интерфейса) -->
                         <!-- Новые интервалы синхронизации и очистки -->
                         <div class="config-item">

@@ -6868,6 +6868,16 @@ class BotsManager {
             console.log('[BotsManager] 🐛 Режим отладки:', debugModeEl.checked);
         }
         
+        // Режим маржи Bybit (auto / cross / isolated)
+        const bybitMarginModeEl = document.getElementById('bybitMarginMode');
+        if (bybitMarginModeEl && systemConfig.bybit_margin_mode !== undefined) {
+            const val = (systemConfig.bybit_margin_mode || 'auto').toLowerCase();
+            bybitMarginModeEl.value = ['auto', 'cross', 'isolated'].includes(val) ? val : 'auto';
+            console.log('[BotsManager] 📊 Режим маржи Bybit:', bybitMarginModeEl.value);
+        } else if (bybitMarginModeEl) {
+            bybitMarginModeEl.value = 'auto';
+        }
+        
         // ==========================================
         // ИНТЕРВАЛЫ СИНХРОНИЗАЦИИ И ОЧИСТКИ
         // ==========================================
@@ -7385,7 +7395,8 @@ class BotsManager {
             'positionSyncInterval': 'position_sync_interval',
             'inactiveBotCleanupInterval': 'inactive_bot_cleanup_interval',
             'inactiveBotTimeout': 'inactive_bot_timeout',
-            'stopLossSetupInterval': 'stop_loss_setup_interval'
+            'stopLossSetupInterval': 'stop_loss_setup_interval',
+            'bybitMarginMode': 'bybit_margin_mode'
         };
         
         // Используем прямое маппинг если есть
@@ -7743,6 +7754,11 @@ class BotsManager {
         try {
             const config = this.collectConfigurationData();
             const systemSettings = { ...config.system };
+            const bybitMarginEl = document.getElementById('bybitMarginMode');
+            if (bybitMarginEl) {
+                const v = (bybitMarginEl.value || 'auto').toLowerCase();
+                systemSettings.bybit_margin_mode = ['auto', 'cross', 'isolated'].includes(v) ? v : 'auto';
+            }
             
             await this.sendConfigUpdate('system-config', systemSettings, 'Системные настройки');
         } catch (error) {
@@ -9210,7 +9226,8 @@ class BotsManager {
             'enhanced_rsi_use_stoch_rsi', 'rsi_extreme_zone_timeout', 'rsi_extreme_oversold', 'rsi_extreme_overbought',
             'rsi_volume_confirmation_multiplier', 'rsi_divergence_lookback', 'rsi_update_interval', 'auto_save_interval',
             'debug_mode', 'refresh_interval', 'position_sync_interval',
-            'inactive_bot_cleanup_interval', 'inactive_bot_timeout', 'stop_loss_setup_interval'
+            'inactive_bot_cleanup_interval', 'inactive_bot_timeout', 'stop_loss_setup_interval',
+            'bybit_margin_mode'
         ];
         const isSystem = configKey.startsWith('system_') || systemConfigKeys.includes(configKey);
 

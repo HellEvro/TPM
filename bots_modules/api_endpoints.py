@@ -2106,7 +2106,15 @@ def system_config():
             log_config_change('trend_require_candles', old_value, new_value)
             SystemConfig.TREND_REQUIRE_CANDLES = new_value
             system_changes_count += 1
-        
+
+        if 'bybit_margin_mode' in data:
+            raw = (data.get('bybit_margin_mode') or 'auto').strip().lower()
+            new_value = raw if raw in ('auto', 'cross', 'isolated') else 'auto'
+            old_value = getattr(SystemConfig, 'BYBIT_MARGIN_MODE', 'auto')
+            if log_config_change('bybit_margin_mode', old_value, new_value):
+                SystemConfig.BYBIT_MARGIN_MODE = new_value
+                system_changes_count += 1
+
         system_config_data = get_system_config_snapshot()
         saved_to_file = save_system_config(system_config_data)
         

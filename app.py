@@ -1264,7 +1264,14 @@ def init_exchange():
     app_logger = logging.getLogger('app')
     try:
         app_logger.info(f"[INIT] Получение конфигурации для {ACTIVE_EXCHANGE}...")
-        exchange_config = EXCHANGES[ACTIVE_EXCHANGE]
+        exchange_config = dict(EXCHANGES[ACTIVE_EXCHANGE])
+        # Bybit: режим маржи из SystemConfig (UI) или из keys
+        if ACTIVE_EXCHANGE == 'BYBIT':
+            try:
+                from bot_engine.config_loader import SystemConfig
+                exchange_config['margin_mode'] = getattr(SystemConfig, 'BYBIT_MARGIN_MODE', None) or exchange_config.get('margin_mode', 'auto')
+            except Exception:
+                exchange_config['margin_mode'] = exchange_config.get('margin_mode', 'auto')
         # БЕЗОПАСНОСТЬ: НЕ выводим конфигурацию с ключами!
         safe_config = {k: ('***HIDDEN***' if k in ['api_key', 'api_secret', 'passphrase'] else v) 
                        for k, v in exchange_config.items()}
@@ -1275,7 +1282,8 @@ def init_exchange():
             ACTIVE_EXCHANGE,
             exchange_config['api_key'],
             exchange_config['api_secret'],
-            exchange_config.get('passphrase')  # Добавляем passphrase для OKX
+            exchange_config.get('passphrase'),  # Добавляем passphrase для OKX
+            exchange_config=exchange_config
         )
         
         app_logger.info(f"[INIT] ✅ Биржа {ACTIVE_EXCHANGE} успешно создана")
@@ -1312,12 +1320,19 @@ def switch_exchange():
         
         try:
             # Создаем новый экземпляр биржи для проверки подключения
-            exchange_config = EXCHANGES[exchange_name]
+            exchange_config = dict(EXCHANGES[exchange_name])
+            if exchange_name == 'BYBIT':
+                try:
+                    from bot_engine.config_loader import SystemConfig
+                    exchange_config['margin_mode'] = getattr(SystemConfig, 'BYBIT_MARGIN_MODE', None) or exchange_config.get('margin_mode', 'auto')
+                except Exception:
+                    exchange_config['margin_mode'] = exchange_config.get('margin_mode', 'auto')
             new_exchange = ExchangeFactory.create_exchange(
                 exchange_name,
                 exchange_config['api_key'],
                 exchange_config['api_secret'],
-                exchange_config.get('passphrase')  # Добавляем passphrase для OKX
+                exchange_config.get('passphrase'),  # Добавляем passphrase для OKX
+                exchange_config=exchange_config
             )
             
             # Пробуем получить позиции для проверки работоспособности

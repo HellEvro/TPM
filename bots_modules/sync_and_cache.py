@@ -114,7 +114,8 @@ SYSTEM_CONFIG_FIELD_MAP = {
     'trend_require_slope': 'TREND_REQUIRE_SLOPE',
     'trend_require_price': 'TREND_REQUIRE_PRICE',
     'trend_require_candles': 'TREND_REQUIRE_CANDLES',
-    'system_timeframe': 'SYSTEM_TIMEFRAME'  # Таймфрейм системы
+    'system_timeframe': 'SYSTEM_TIMEFRAME',  # Таймфрейм системы
+    'bybit_margin_mode': 'BYBIT_MARGIN_MODE'  # Bybit: auto | cross | isolated
 }
 
 

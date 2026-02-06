@@ -2149,13 +2149,25 @@ class BybitExchange(BaseExchange):
                 
             wallet_data = wallet_response['result']['list'][0]
             
-            # Получаем значения из правильных полей
-            total_balance = float(wallet_data['totalWalletBalance'])  # Общий баланс
-            available_balance = float(wallet_data['totalAvailableBalance'])  # Доступный баланс
+            def _safe_float(v, default=0.0):
+                if v is None or v == '':
+                    return default
+                try:
+                    return float(v)
+                except (TypeError, ValueError):
+                    return default
+            
+            # Получаем значения из правильных полей (API может вернуть пустую строку)
+            total_balance = _safe_float(wallet_data.get('totalWalletBalance'))
+            available_balance = _safe_float(wallet_data.get('totalAvailableBalance'))
             
             # Получаем реализованный PNL из данных кошелька
-            coin_data = wallet_data['coin'][0]  # Берем данные для USDT
-            realized_pnl = float(coin_data['cumRealisedPnl'])  # Используем накопленный реализованный PNL
+            coin_list = wallet_data.get('coin') or []
+            if coin_list:
+                coin_data = coin_list[0]
+                realized_pnl = _safe_float(coin_data.get('cumRealisedPnl'))
+            else:
+                realized_pnl = 0.0
             
             result = {
                 'total_balance': total_balance,
@@ -2210,12 +2222,20 @@ class BybitExchange(BaseExchange):
             
             account_data = wallet_response["result"]["list"][0]
             
+            def _safe_float(v, default=0.0):
+                if v is None or v == '':
+                    return default
+                try:
+                    return float(v)
+                except (TypeError, ValueError):
+                    return default
+            
             account_info = {
-                "total_equity": float(account_data.get("totalEquity", 0)),
-                "total_wallet_balance": float(account_data.get("totalWalletBalance", 0)),
-                "total_available_balance": float(account_data.get("totalAvailableBalance", 0)),
-                "total_unrealized_pnl": float(account_data.get("totalPerpUPL", 0)),
-                "total_margin_balance": float(account_data.get("totalMarginBalance", 0)),
+                "total_equity": _safe_float(account_data.get("totalEquity")),
+                "total_wallet_balance": _safe_float(account_data.get("totalWalletBalance")),
+                "total_available_balance": _safe_float(account_data.get("totalAvailableBalance")),
+                "total_unrealized_pnl": _safe_float(account_data.get("totalPerpUPL")),
+                "total_margin_balance": _safe_float(account_data.get("totalMarginBalance")),
                 "account_type": "UNIFIED"
             }
             

@@ -7,19 +7,19 @@ logger = logging.getLogger(__name__)
 
 class ExchangeFactory:
     @staticmethod
-    def create_exchange(exchange_name, api_key, api_secret, passphrase=None):
+    def create_exchange(exchange_name, api_key, api_secret, passphrase=None, exchange_config=None):
         logger.info(f"Initializing {exchange_name} exchange...")
         try:
             from app.config import EXCHANGES
             
-            # Получаем настройки из конфига
-            exchange_config = EXCHANGES.get(exchange_name, {})
-            position_mode = exchange_config.get('position_mode', 'Hedge')
-            limit_order_offset = exchange_config.get('limit_order_offset', 0.01)
+            # Получаем настройки из конфига (переданный exchange_config имеет приоритет)
+            cfg = exchange_config if exchange_config is not None else EXCHANGES.get(exchange_name, {})
+            position_mode = cfg.get('position_mode', 'Hedge')
+            limit_order_offset = cfg.get('limit_order_offset', 0.01)
             
             if exchange_name == 'BYBIT':
-                test_server = exchange_config.get('test_server', False)
-                margin_mode = exchange_config.get('margin_mode', 'auto')
+                test_server = cfg.get('test_server', False)
+                margin_mode = cfg.get('margin_mode', 'auto')
                 exchange = BybitExchange(
                     api_key, 
                     api_secret, 
