@@ -391,6 +391,51 @@ def save_auto_bot_config_current_to_py(config: Dict[str, Any]) -> bool:
         return False
 
 
+def patch_system_config_add_bybit_margin_mode(config_file: Optional[str] = None) -> bool:
+    """
+    Одноразовый патч для существующих пользователей: добавляет BYBIT_MARGIN_MODE в SystemConfig
+    в configs/bot_config.py, если этой строки ещё нет. После обновления кода у пользователей
+    настройка появится в конфиге и будет сохраняться из UI.
+    """
+    if config_file is None:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)
+        config_file = os.path.join(project_root, 'configs', 'bot_config.py')
+    if not os.path.exists(config_file):
+        return False
+    try:
+        with open(config_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+        if 'BYBIT_MARGIN_MODE' in content:
+            return True
+        lines = content.splitlines(keepends=True)
+        insert_idx = None
+        in_system_config = False
+        for i, line in enumerate(lines):
+            if 'class SystemConfig' in line or line.strip().startswith('class SystemConfig'):
+                in_system_config = True
+                continue
+            if in_system_config and line.strip().startswith('class ') and 'SystemConfig' not in line:
+                break
+            if in_system_config and 'TREND_REQUIRE_CANDLES' in line and '=' in line:
+                insert_idx = i + 1
+        if insert_idx is None:
+            logger.debug("[CONFIG_WRITER] Патч BYBIT_MARGIN_MODE: не найдена строка TREND_REQUIRE_CANDLES в SystemConfig")
+            return False
+        new_line = "    BYBIT_MARGIN_MODE = 'auto'  # Bybit: auto | cross | isolated\n"
+        lines.insert(insert_idx, new_line)
+        with _config_write_lock:
+            with open(config_file, 'w', encoding='utf-8') as f:
+                f.writelines(lines)
+                f.flush()
+                os.fsync(f.fileno())
+        logger.info("[CONFIG_WRITER] ✅ В конфиг добавлена настройка BYBIT_MARGIN_MODE (режим маржи Bybit)")
+        return True
+    except Exception as e:
+        logger.warning(f"[CONFIG_WRITER] Патч BYBIT_MARGIN_MODE не применён: {e}")
+        return False
+
+
 def save_system_config_to_py(config: Dict[str, Any]) -> bool:
     """
     Безопасно обновляет класс SystemConfig в bot_config.py.

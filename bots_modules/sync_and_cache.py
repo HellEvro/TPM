@@ -323,6 +323,8 @@ def get_system_config_snapshot():
                 snapshot[key] = getattr(SystemConfig, attr, None)
         else:
             snapshot[key] = getattr(SystemConfig, attr, None)
+    if snapshot.get('bybit_margin_mode') is None:
+        snapshot['bybit_margin_mode'] = 'auto'
     # Миниграфики обновляются с тем же интервалом, что и синхронизация позиций
     snapshot['mini_chart_update_interval'] = snapshot.get('position_sync_interval')
     # Автообновление UI всегда включено (настройка убрана из интерфейса)
@@ -667,6 +669,12 @@ def save_system_config(config_data):
 def load_system_config():
     """Перезагружает SystemConfig из configs/bot_config.py и применяет значения в память. Таймфрейм — только из конфига."""
     try:
+        # Патч для существующих пользователей: добавить BYBIT_MARGIN_MODE в конфиг, если его ещё нет
+        try:
+            from bots_modules.config_writer import patch_system_config_add_bybit_margin_mode
+            patch_system_config_add_bybit_margin_mode()
+        except Exception:
+            pass
         from bot_engine.config_loader import reload_config
         bot_config_module = reload_config()
         file_system_config = bot_config_module.SystemConfig

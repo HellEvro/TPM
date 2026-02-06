@@ -1092,15 +1092,15 @@ class TradingBot:
             elif self.volume_mode == VolumeMode.PERCENT_BALANCE or self.volume_mode == 'percent':
                 self.logger.info(f" {self.symbol}: Режим PERCENT_BALANCE (процент от депозита)")
                 deposit_balance = self._get_total_balance()
-                if deposit_balance:
+                if deposit_balance is not None and deposit_balance > 0:
                     usdt_amount = deposit_balance * (self.volume_value / 100)
                     self.logger.info(
                         f" {self.symbol}: Депозит {deposit_balance:.4f} USDT, {self.volume_value}% → {usdt_amount:.4f} USDT"
                     )
                     return usdt_amount
                 else:
-                    self.logger.warning(f" {self.symbol}: Не удалось получить общий баланс депозита")
-            
+                    self.logger.warning(f" {self.symbol}: Не удалось получить общий баланс депозита (balance={deposit_balance})")
+                    return None
             self.logger.warning(f" {self.symbol}: Неизвестный режим volume_mode: {self.volume_mode}")
             return None
             
@@ -1240,7 +1240,10 @@ class TradingBot:
         if not balance_data:
             return None
         try:
-            return float(balance_data.get('available_balance', 0))
+            v = balance_data.get('available_balance', 0)
+            if v is None or v == '':
+                return 0.0
+            return float(v)
         except (TypeError, ValueError):
             self.logger.error("Received invalid available_balance from exchange response")
             return None
@@ -1253,6 +1256,8 @@ class TradingBot:
         balance_value = balance_data.get('total_balance')
         if balance_value is None:
             balance_value = balance_data.get('available_balance')
+        if balance_value is None or balance_value == '':
+            return 0.0
         try:
             return float(balance_value)
         except (TypeError, ValueError):

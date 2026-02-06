@@ -2146,9 +2146,16 @@ class BybitExchange(BaseExchange):
             
             if wallet_response['retCode'] != 0:
                 raise Exception(f"Failed to get wallet balance: {wallet_response['retMsg']}")
-                
-            wallet_data = wallet_response['result']['list'][0]
-            
+
+            result_list = wallet_response.get('result', {}).get('list') or []
+            if not result_list:
+                return {
+                    'total_balance': 0.0,
+                    'available_balance': 0.0,
+                    'realized_pnl': 0.0
+                }
+            wallet_data = result_list[0]
+
             def _safe_float(v, default=0.0):
                 if v is None or v == '':
                     return default
@@ -2703,13 +2710,24 @@ class BybitExchange(BaseExchange):
                     # Запрошенная сумма меньше минимума биржи — проверяем, хватает ли на счёте на минимальный ордер.
                     if requested_qty_usdt is not None and requested_qty_usdt < min_usdt_from_notional:
                         available_usdt = None
+                        total_usdt = None
                         try:
                             wb = self.get_wallet_balance()
-                            if wb and 'available_balance' in wb:
-                                available_usdt = float(wb['available_balance'])
+                            if wb:
+                                v = wb.get('available_balance')
+                                available_usdt = float(v) if v not in (None, '') else None
+                                t = wb.get('total_balance')
+                                total_usdt = float(t) if t not in (None, '') else None
                         except Exception:
                             pass
-                        if available_usdt is None or available_usdt < min_usdt_from_notional:
+                        # Достаточно ли баланса: приоритет у available, если нет — считаем по total (биржевая маржа может резервировать часть)
+                        can_afford_min = False
+                        if available_usdt is not None and available_usdt >= min_usdt_from_notional:
+                            can_afford_min = True
+                        elif total_usdt is not None and total_usdt >= min_usdt_from_notional and (available_usdt is None or available_usdt >= 0):
+                            can_afford_min = True
+                            logger.info(f"[BYBIT_BOT] 📊 {symbol}: available не получен или мал, используем total_balance={total_usdt:.2f} USDT для проверки минимума")
+                        if not can_afford_min:
                             msg = (
                                 f"Размер позиции ({requested_qty_usdt:.2f} USDT) меньше минимального ордера по правилам биржи "
                                 f"({min_usdt_from_notional} USDT). Пополните счёт или уменьшите количество одновременных позиций."
@@ -2721,7 +2739,7 @@ class BybitExchange(BaseExchange):
                                 'error_code': 'MIN_NOTIONAL',
                             }
                         logger.info(f"[BYBIT_BOT] 📊 {symbol}: Размер позиции {requested_qty_usdt:.2f} USDT < minNotionalValue={min_usdt_from_notional}, "
-                                    f"на счёте {available_usdt:.2f} USDT — увеличиваем до минимума и размещаем ордер.")
+                                    f"на счёте {available_usdt or total_usdt or 0:.2f} USDT — увеличиваем до минимума и размещаем ордер.")
                     # Увеличиваем до minNotional (запрошенная сумма достаточна или доступный баланс достаточен)
                     min_required_usdt = min_usdt_from_notional * 1.02
                     min_coins_for_notional = math.ceil(min_required_usdt / price_for_notional_check / qty_step) * qty_step

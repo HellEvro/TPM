@@ -361,6 +361,9 @@ class SystemConfig:
     TREND_REQUIRE_PRICE = True              # Учитывать цену в тренде
     TREND_REQUIRE_CANDLES = True            # Учитывать свечи в тренде
 
+    # Bybit: режим маржи — auto (следовать бирже), cross, isolated
+    BYBIT_MARGIN_MODE = 'auto'
+
     # ========================================================================
     # КОНСТАНТЫ ДЛЯ INDICATORS И AI (fallback для индикаторов и ИИ; автобот использует AutoBotConfig)
     # ========================================================================
