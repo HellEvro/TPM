@@ -1158,11 +1158,18 @@ def create_bot_endpoint():
                                 bots_data['bots'][symbol] = trading_bot.to_dict()
                         else:
                             error_msg = (result or {}).get('error', 'unknown')
-                            logger.error(f" ❌ НЕ УДАЛОСЬ войти в {direction} позицию для {symbol}: {error_msg}")
+                            if 'MIN_NOTIONAL' in error_msg or '110007' in error_msg or 'меньше минимального ордера' in error_msg or 'Недостаточно доступного остатка' in error_msg:
+                                logger.warning(f" ⚠️ Не удалось войти в {direction} позицию для {symbol}: {error_msg}")
+                            else:
+                                logger.error(f" ❌ НЕ УДАЛОСЬ войти в {direction} позицию для {symbol}: {error_msg}")
                     else:
                         logger.info(f" ℹ️ {symbol}: RSI не в зоне порогов конфига — бот будет ждать условия в следующем цикле")
                 except Exception as e:
-                    logger.error(f" ❌ Ошибка входа в позицию: {e}")
+                    err_str = str(e)
+                    if 'MIN_NOTIONAL' in err_str or '110007' in err_str or 'меньше минимального ордера' in err_str or 'Недостаточно доступного остатка' in err_str:
+                        logger.warning(f" ⚠️ Ошибка входа в позицию: {e}")
+                    else:
+                        logger.error(f" ❌ Ошибка входа в позицию: {e}")
             
             # Запускаем асинхронно
             thread = threading.Thread(target=enter_position_async)

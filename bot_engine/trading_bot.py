@@ -1005,13 +1005,22 @@ class TradingBot:
                 if error_code == 'MIN_NOTIONAL' or 'меньше минимального ордера' in error_message:
                     self.logger.warning(f" {self.symbol}: 📏 {error_message}")
                 elif '110007' in error_code or '110007' in error_message:
-                    self.logger.error(f" {self.symbol}: 💰 Недостаточно средств на счёте для открытия позиции (ErrCode: 110007)")
+                    self.logger.warning(f" {self.symbol}: 💰 Недостаточно средств на счёте для открытия позиции (ErrCode: 110007)")
                     try:
                         from bots_modules.imports_and_globals import set_insufficient_funds
                         set_insufficient_funds(True)
                     except Exception:
                         pass
-                self.logger.error(f"Failed to enter position: {order_result}")
+                # MIN_NOTIONAL и недостаток средств — штатная ситуация, не ERROR
+                is_expected = (
+                    error_code == 'MIN_NOTIONAL' or '110007' in (error_code or '') or
+                    'меньше минимального ордера' in (error_message or '') or
+                    'Недостаточно доступного остатка' in (error_message or '')
+                )
+                if is_expected:
+                    self.logger.warning(f"Failed to enter position: {order_result}")
+                else:
+                    self.logger.error(f"Failed to enter position: {order_result}")
                 return {'success': False, 'error': error_message or order_result.get('error', 'order_failed')}
                 
         except Exception as e:
