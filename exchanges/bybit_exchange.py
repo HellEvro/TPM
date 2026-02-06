@@ -2707,7 +2707,7 @@ class BybitExchange(BaseExchange):
                 min_usdt_from_notional = min_notional_value if min_notional_value else 5.0
                 
                 if nominal_usdt < min_usdt_from_notional:
-                    # Запрошенная сумма меньше минимума биржи — проверяем, хватает ли на счёте на минимальный ордер.
+                    # Запрошенная сумма меньше минимума биржи — проверяем ОСТАТОК (available), не total: маржа уже в позициях.
                     if requested_qty_usdt is not None and requested_qty_usdt < min_usdt_from_notional:
                         available_usdt = None
                         total_usdt = None
@@ -2720,17 +2720,17 @@ class BybitExchange(BaseExchange):
                                 total_usdt = float(t) if t not in (None, '') else None
                         except Exception:
                             pass
-                        # Достаточно ли баланса: приоритет у available, если нет — считаем по total (биржевая маржа может резервировать часть)
-                        can_afford_min = False
-                        if available_usdt is not None and available_usdt >= min_usdt_from_notional:
-                            can_afford_min = True
-                        elif total_usdt is not None and total_usdt >= min_usdt_from_notional and (available_usdt is None or available_usdt >= 0):
-                            can_afford_min = True
-                            logger.info(f"[BYBIT_BOT] 📊 {symbol}: available не получен или мал, используем total_balance={total_usdt:.2f} USDT для проверки минимума")
+                        # Минимальная маржа для ордера = min_notional / плечо (бирже отдаём номинал, маржу считает биржа)
+                        leverage = float(current_leverage or 10)
+                        margin_needed = min_usdt_from_notional / leverage
+                        # Критично: проверяем только ОСТАТОК — при остатке 0 увеличение до минимума приведёт к 110007
+                        can_afford_min = available_usdt is not None and available_usdt >= margin_needed
                         if not can_afford_min:
+                            avail_str = f"{available_usdt:.2f}" if available_usdt is not None else "?"
                             msg = (
-                                f"Размер позиции ({requested_qty_usdt:.2f} USDT) меньше минимального ордера по правилам биржи "
-                                f"({min_usdt_from_notional} USDT). Пополните счёт или уменьшите количество одновременных позиций."
+                                f"Размер позиции ({requested_qty_usdt:.2f} USDT) меньше минимального ордера ({min_usdt_from_notional} USDT). "
+                                f"Недостаточно доступного остатка (остаток {avail_str} USDT, нужно ~{margin_needed:.2f} USDT маржи). "
+                                f"Пополните счёт или закройте часть позиций."
                             )
                             logger.warning(f"[BYBIT_BOT] ⚠️ {symbol}: {msg}")
                             return {
@@ -2739,8 +2739,8 @@ class BybitExchange(BaseExchange):
                                 'error_code': 'MIN_NOTIONAL',
                             }
                         logger.info(f"[BYBIT_BOT] 📊 {symbol}: Размер позиции {requested_qty_usdt:.2f} USDT < minNotionalValue={min_usdt_from_notional}, "
-                                    f"на счёте {available_usdt or total_usdt or 0:.2f} USDT — увеличиваем до минимума и размещаем ордер.")
-                    # Увеличиваем до minNotional (запрошенная сумма достаточна или доступный баланс достаточен)
+                                    f"остаток {available_usdt:.2f} USDT — увеличиваем до минимума и размещаем ордер.")
+                    # Увеличиваем до minNotional только если остаток достаточен (проверено выше)
                     min_required_usdt = min_usdt_from_notional * 1.02
                     min_coins_for_notional = math.ceil(min_required_usdt / price_for_notional_check / qty_step) * qty_step
                     rounded_coins = min_coins_for_notional

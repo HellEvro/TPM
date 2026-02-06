@@ -16,6 +16,8 @@ from __future__ import annotations
 import argparse
 import datetime
 import signal
+import socket
+import struct
 import subprocess
 import sys
 import time
@@ -67,6 +69,131 @@ def check_admin_rights() -> bool:
 
 # Альтернативные NTP-серверы, если time.windows.com недоступен
 FALLBACK_NTP_SERVERS = ["time.windows.com", "time.google.com", "pool.ntp.org"]
+
+# NTP epoch (1900-01-01) vs Unix epoch (1970-01-01)
+NTP_EPOCH_OFFSET = (datetime.datetime(1970, 1, 1) - datetime.datetime(1900, 1, 1)).total_seconds()
+
+
+def ntp_fetch_time(host: str, port: int = 123, timeout: float = 5.0) -> datetime.datetime | None:
+    """
+    Получает время с NTP-сервера по UDP (без внешних зависимостей).
+    Возвращает datetime в локальной временной зоне или None при ошибке.
+    """
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(timeout)
+        # NTP client packet: 48 bytes (mode 3 = client)
+        packet = bytearray(48)
+        packet[0] = 0x1B  # li=0, vn=3, mode=3
+        sock.sendto(packet, (host, port))
+        data = sock.recv(48)
+        sock.close()
+        if len(data) < 48:
+            return None
+        # Transmit timestamp at offset 40 (32-bit seconds, 32-bit fraction)
+        secs = struct.unpack("!I", data[40:44])[0]
+        frac = struct.unpack("!I", data[44:48])[0]
+        ntp_secs = secs + frac / 2**32
+        unix_secs = ntp_secs - NTP_EPOCH_OFFSET
+        utc = datetime.datetime.utcfromtimestamp(unix_secs)
+        # Переводим в локальное время (для установки в систему)
+        return utc.replace(tzinfo=datetime.timezone.utc).astimezone().replace(tzinfo=None)
+    except Exception:
+        return None
+
+
+def set_windows_time_direct(dt: datetime.datetime) -> tuple[bool, str]:
+    """
+    Устанавливает системное время Windows через API SetLocalTime.
+    Требует прав администратора (привилегия SeSystemtimePrivilege).
+    """
+    if sys.platform != "win32":
+        return False, "Только для Windows"
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        advapi32 = ctypes.windll.advapi32  # type: ignore[attr-defined]
+
+        class SYSTEMTIME(ctypes.Structure):
+            _fields_ = [
+                ("wYear", wintypes.WORD),
+                ("wMonth", wintypes.WORD),
+                ("wDayOfWeek", wintypes.WORD),
+                ("wDay", wintypes.WORD),
+                ("wHour", wintypes.WORD),
+                ("wMinute", wintypes.WORD),
+                ("wSecond", wintypes.WORD),
+                ("wMilliseconds", wintypes.WORD),
+            ]
+
+        st = SYSTEMTIME()
+        st.wYear = dt.year
+        st.wMonth = dt.month
+        st.wDayOfWeek = dt.weekday()
+        st.wDay = dt.day
+        st.wHour = dt.hour
+        st.wMinute = dt.minute
+        st.wSecond = dt.second
+        st.wMilliseconds = dt.microsecond // 1000
+
+        # Сначала пробуем без явного включения привилегии (у админа часто уже есть)
+        if kernel32.SetLocalTime(ctypes.byref(st)):
+            return True, "Время установлено (NTP + SetLocalTime)"
+
+        # Включаем SeSystemtimePrivilege и повторяем
+        TOKEN_ADJUST_PRIVILEGES = 0x0020
+        TOKEN_QUERY = 0x0008
+        SE_PRIVILEGE_ENABLED = 0x00000002
+
+        class LUID(ctypes.Structure):
+            _fields_ = [("LowPart", wintypes.DWORD), ("HighPart", ctypes.c_long)]
+
+        class LUID_AND_ATTRIBUTES(ctypes.Structure):
+            _fields_ = [("Luid", LUID), ("Attributes", wintypes.DWORD)]
+
+        class TOKEN_PRIVILEGES(ctypes.Structure):
+            _fields_ = [("PrivilegeCount", wintypes.DWORD), ("Privileges", LUID_AND_ATTRIBUTES)]
+
+        token = ctypes.c_void_p()
+        if not advapi32.OpenProcessToken(
+            kernel32.GetCurrentProcess(),
+            TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+            ctypes.byref(token),
+        ):
+            return False, "OpenProcessToken не удался"
+
+        tp = TOKEN_PRIVILEGES()
+        tp.PrivilegeCount = 1
+        tp.Privileges.Attributes = SE_PRIVILEGE_ENABLED
+        if not advapi32.LookupPrivilegeValueW(None, "SeSystemtimePrivilege", ctypes.byref(tp.Privileges.Luid)):
+            kernel32.CloseHandle(token)
+            return False, "LookupPrivilegeValue не удался"
+        if not advapi32.AdjustTokenPrivileges(token, False, ctypes.byref(tp), 0, None, None):
+            kernel32.CloseHandle(token)
+            return False, "AdjustTokenPrivileges не удался"
+
+        ok = kernel32.SetLocalTime(ctypes.byref(st))
+        kernel32.CloseHandle(token)
+        return (True, "Время установлено (NTP + SetLocalTime)") if ok else (False, "SetLocalTime не удался")
+    except Exception as e:
+        return False, str(e)
+
+
+def sync_time_ntp_fallback(ntp_server: str, silent: bool = False) -> tuple[bool, str]:
+    """
+    Резервная синхронизация: получить время по NTP, установить через SetLocalTime.
+    Не зависит от службы w32time. Требует прав администратора.
+    """
+    if not check_admin_rights():
+        return False, "Требуются права администратора"
+    dt = ntp_fetch_time(ntp_server)
+    if dt is None:
+        return False, f"Не удалось получить время с {ntp_server}"
+    if not silent:
+        print(f"[TimeSync] Время с NTP ({ntp_server}): {dt}")
+    return set_windows_time_direct(dt)
 
 
 def query_time_service_diagnostics() -> str:
@@ -259,6 +386,13 @@ def sync_time_once(
                     )
                     if r3.returncode == 0:
                         return True, f"Время синхронизировано (сервер {fallback})"
+            # Резерв: не полагаемся на w32time — получаем время по NTP и ставим через SetLocalTime
+            if not silent:
+                print("[TimeSync] Пробуем резервный способ (NTP + SetLocalTime)...")
+            for ntp_host in [server] + [s for s in FALLBACK_NTP_SERVERS if s != server]:
+                ok_ntp, msg_ntp = sync_time_ntp_fallback(ntp_host, silent=True)
+                if ok_ntp:
+                    return True, msg_ntp + f" (сервер {ntp_host})"
         err_msg = (r.stderr or "").strip() or f"Код выхода w32tm: {r.returncode}"
         if not silent:
             print("\n[Диагностика службы времени]")
