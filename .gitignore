@@ -233,6 +233,8 @@ data/ai/*
 !data/ai/models/
 !data/ai/models/**
 
+data/.pending_restore_bots
+data/.pending_restore_ai
 data/process_state.json
 data/candles_cache.json
 # Большие файлы данных AI (не коммитим в Git)
