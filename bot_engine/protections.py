@@ -262,6 +262,11 @@ def evaluate_protections(
 
     state.max_profit_percent = max(state.max_profit_percent or 0.0, profit_percent)
 
+    # Выход по достижении заданного процента прибыли (take_profit_percent в конфиге)
+    take_profit_percent = _safe_float(config.get('take_profit_percent'), 0.0) or 0.0
+    if take_profit_percent > 0 and profit_percent >= take_profit_percent:
+        return ProtectionDecision(True, f'TAKE_PROFIT_{profit_percent:.2f}%', state, profit_percent)
+
     max_position_hours = _safe_float(config.get('max_position_hours'), 0.0) or 0.0
     if max_position_hours > 0 and state.entry_time:
         held_hours = (now_ts - state.entry_time) / 3600.0
