@@ -55,6 +55,7 @@ class DefaultAutoBotConfig:
     USE_TEST_SERVER = False                 # Использовать тестовый сервер биржи
     MAX_LOSS_PERCENT = 15                   # Максимальный убыток в % (стоп-лосс)
     TAKE_PROFIT_PERCENT = 5.0                # Закрывать позицию при достижении этого % прибыли по монете (0 = отключено)
+    CLOSE_AT_PROFIT_ENABLED = True          # Включить выход по достижении % прибыли (выключатель)
     TRAILING_STOP_ACTIVATION = 10           # % прибыли для активации трейлинг-стопа
     TRAILING_STOP_DISTANCE = 5              # Дистанция трейлинг-стопа от макс. цены, %
     TRAILING_TAKE_DISTANCE = 0.5            # Резервный трейлинг-тейк, %
@@ -200,6 +201,7 @@ class AutoBotConfig:
     USE_TEST_SERVER = False                 # Использовать тестовый сервер биржи
     MAX_LOSS_PERCENT = 15                   # Максимальный убыток в % (стоп-лосс)
     TAKE_PROFIT_PERCENT = 5.0                # Закрывать позицию при достижении этого % прибыли по монете (0 = отключено)
+    CLOSE_AT_PROFIT_ENABLED = True          # Включить выход по достижении % прибыли (выключатель)
     TRAILING_STOP_ACTIVATION = 10           # % прибыли для активации трейлинг-стопа
     TRAILING_STOP_DISTANCE = 5              # Дистанция трейлинг-стопа от макс. цены, %
     TRAILING_TAKE_DISTANCE = 0.5            # Резервный трейлинг-тейк, %
