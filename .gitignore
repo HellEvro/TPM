@@ -423,6 +423,7 @@ InfoBot_Public/
 
 # UI state
 launcher/.infobot_manager_state.json
+launcher/.patches_applied.json
 
 # Process files
 *.pid
