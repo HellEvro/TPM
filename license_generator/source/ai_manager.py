@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional
-from bot_engine.bot_config import AIConfig
+from bot_engine.config_loader import AIConfig
 from cryptography.fernet import Fernet
 from base64 import urlsafe_b64encode
 import hmac
