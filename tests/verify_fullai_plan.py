@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Проверки ПРИИ (блок 10 плана).
-- 10.1: включение ПРИИ не меняет пользовательский конфиг и individual_coin_settings.
-- 10.2: выключение ПРИИ возвращает использование пользовательского конфига и individual_coin_settings.
-- 10.3: таймфрейм нигде не берётся из конфига ПРИИ или таблицы ПРИИ.
-Запуск: из корня проекта python -m tests.verify_prii_plan (или pytest tests/verify_prii_plan.py -v).
+Проверки FullAI (блок 10 плана).
+- 10.1: включение FullAI не меняет пользовательский конфиг и individual_coin_settings.
+- 10.2: выключение FullAI возвращает использование пользовательского конфига и individual_coin_settings.
+- 10.3: таймфрейм нигде не берётся из конфига FullAI или таблицы FullAI.
+Запуск: из корня проекта python -m tests.verify_fullai_plan (или pytest tests/verify_fullai_plan.py -v).
 """
 import os
 import sys
@@ -27,16 +27,16 @@ def test_10_3_timeframe_always_from_user_config():
     effective = get_effective_auto_bot_config()
     eff_tf = effective.get('system_timeframe') or effective.get('timeframe')
     assert eff_tf == user_tf, "Таймфрейм в эффективном конфиге должен совпадать с пользовательским"
-    # Конфиг ПРИИ не должен содержать таймфрейм как источник истины — он подмешивается из user
+    # Конфиг FullAI не должен содержать таймфрейм как источник истины — он подмешивается из user
     with bots_data_lock:
-        prii = bots_data.get('full_ai_config') or {}
-    if prii:
+        fullai_cfg = bots_data.get('full_ai_config') or {}
+    if fullai_cfg:
         for key in ('system_timeframe', 'timeframe', 'SYSTEM_TIMEFRAME'):
             assert effective.get(key) == user.get(key), f"Таймфрейм {key} должен быть из user_cfg"
 
 
 def test_10_1_10_2_effective_switches_by_full_ai_control():
-    """При full_ai_control=False эффективный конфиг — пользовательский; при True — ПРИИ (но ТФ из user)."""
+    """При full_ai_control=False эффективный конфиг — пользовательский; при True — FullAI (но ТФ из user)."""
     from bots_modules.imports_and_globals import (
         get_effective_auto_bot_config,
         get_effective_coin_settings,
@@ -59,4 +59,4 @@ if __name__ == '__main__':
     test_10_3_timeframe_always_from_user_config()
     print("10.3: timeframe always from user config — OK")
     test_10_1_10_2_effective_switches_by_full_ai_control()
-    print("All PRII plan checks passed.")
+    print("All FullAI plan checks passed.")
