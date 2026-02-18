@@ -22,22 +22,9 @@ def compile_hardware_id():
         print(f"[ERROR] Source file not found: {source_file}")
         return False
     
-    # Определяем целевую директорию на основе версии Python
     base_dir = Path('bot_engine/ai')
-    python_version = sys.version_info[:2]
-    
-    if python_version >= (3, 14):
-        target_dir = base_dir / 'pyc_314'
-        version_name = "3.14"
-    elif python_version == (3, 12):
-        target_dir = base_dir / 'pyc_312'
-        version_name = "3.12"
-    else:
-        target_dir = base_dir
-        version_name = f"{python_version[0]}.{python_version[1]}"
-    
+    target_dir = base_dir
     target_dir.mkdir(parents=True, exist_ok=True)
-    print(f"[INFO] Компиляция для Python {version_name}")
     print(f"[INFO] Целевая директория: {target_dir}")
     
     # Временный файл для компиляции (нужен для правильного пути модуля)

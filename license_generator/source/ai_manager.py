@@ -39,6 +39,7 @@ class AIManager:
         # Проверяем лицензию
         self._license_valid = False
         self._license_info = None
+        self._license_error = None  # причина невалидности (для UI)
         self._check_license()
         
         # Загружаем модули
@@ -49,12 +50,24 @@ class AIManager:
         if not AIConfig.AI_ENABLED:
             return
         
-        # Проверяем .lic файл в корне
-        root = Path(__file__).parent.parent.parent
-        lic_files = [f for f in os.listdir(root) if f.endswith('.lic')]
-        
+        # Корень проекта: ищем вверх от __file__ (работает и из pyc_312/, и из source)
+        root = Path(__file__).resolve().parent
+        for _ in range(10):
+            if (root / "bot_engine").is_dir() and ((root / "app.py").exists() or (root / "configs").is_dir()):
+                break
+            parent = root.parent
+            if parent == root:
+                break
+            root = parent
+        try:
+            lic_files = [f for f in os.listdir(root) if f.endswith('.lic')]
+        except OSError as e:
+            self._license_error = f"Не удалось прочитать папку с лицензией: {e}"
+            logger.warning(f"[AI] {self._license_error}")
+            return
         if not lic_files:
-            self._license_valid = False
+            self._license_error = f"Файл .lic не найден. Положите ваш .lic файл в корень проекта: {root}"
+            logger.warning(f"[AI] {self._license_error}")
             return
         
         # Расшифровка и проверка лицензии
@@ -82,6 +95,7 @@ class AIManager:
             
             if not hmac.compare_digest(ld.get('signature', ''), es):
                 self._license_valid = False
+                self._license_error = "Неверная подпись лицензии (файл повреждён или от другого продукта)."
                 logger.warning("[AI] Invalid license signature")
                 return
             
@@ -89,6 +103,7 @@ class AIManager:
             ea = datetime.fromisoformat(ld['expires_at'])
             if datetime.now() > ea:
                 self._license_valid = False
+                self._license_error = f"Лицензия просрочена (действовала до {ld['expires_at']})."
                 logger.warning("[AI] License expired")
                 return
             
@@ -96,7 +111,7 @@ class AIManager:
             if ld.get('hardware_id'):
                 try:
                     import importlib.util
-                    spec = importlib.util.spec_from_file_location("hardware_id", Path(__file__).parent.parent.parent / "scripts" / "hardware_id.pyc")
+                    spec = importlib.util.spec_from_file_location("hardware_id", root / "scripts" / "hardware_id.pyc")
                     hardware_id = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(hardware_id)
                     get_short_hardware_id = hardware_id.get_short_hardware_id
@@ -105,11 +120,13 @@ class AIManager:
                     
                     if current_hw_id[:16].upper() != license_hw_id[:16].upper():
                         self._license_valid = False
+                        self._license_error = f"Лицензия привязана к другому ПК (текущий: …{current_hw_id[-8:]}, в лицензии: …{license_hw_id[-8:]})."
                         logger.warning(f"[AI] License is bound to different hardware (current: {current_hw_id[:16]}, license: {license_hw_id[:16]})")
                         return
                 except Exception as e:
                     logger.error(f"[AI] Failed to check hardware ID: {e}")
                     self._license_valid = False
+                    self._license_error = f"Ошибка проверки привязки к ПК: {e}"
                     return
             
             # Лицензия валидна
@@ -128,6 +145,7 @@ class AIManager:
             
         except Exception as e:
             self._license_valid = False
+            self._license_error = f"Ошибка чтения лицензии: {e}"
             logger.warning(f"[AI] License check failed: {e}")
     
     def load_modules(self):
@@ -433,14 +451,17 @@ class AIManager:
         Returns:
             Словарь со статусом всех компонентов
         """
+        license_data = {
+            'valid': self._license_valid,
+            'type': self._license_info.get('type') if self._license_info else None,
+            'expires_at': self._license_info.get('expires_at') if self._license_info else None
+        }
+        if not self._license_valid and getattr(self, '_license_error', None):
+            license_data['reason'] = self._license_error
         return {
             'enabled': AIConfig.AI_ENABLED,
             'available': self.is_available(),
-            'license': {
-                'valid': self._license_valid,
-                'type': self._license_info.get('type') if self._license_info else None,
-                'expires_at': self._license_info.get('expires_at') if self._license_info else None
-            },
+            'license': license_data,
             'modules': {
                 'anomaly_detector': self.anomaly_detector is not None,
                 'lstm_predictor': self.lstm_predictor is not None,

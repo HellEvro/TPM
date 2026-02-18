@@ -24,24 +24,11 @@ def build_launcher() -> None:
     if not SOURCE_PATH.exists():
         raise FileNotFoundError(f'Не найден исходник: {SOURCE_PATH}')
 
-    import sys
-    python_version = sys.version_info[:2]
-    
-    # Определяем целевую директорию на основе версии Python
-    # Используем только Python 3.14+ (pyc_314)
     base_dir = Path('bot_engine/ai')
-    if python_version >= (3, 14):
-        target_dir = base_dir / 'pyc_314'
-        version_name = "3.14"
-    else:
-        # Для версий ниже 3.14 используем основную директорию (fallback)
-        target_dir = base_dir
-        version_name = f"{python_version[0]}.{python_version[1]}"
-    
+    target_dir = base_dir
     target_dir.mkdir(parents=True, exist_ok=True)
     TARGET_COMPILED = target_dir / '_ai_launcher.pyc'
     
-    print(f"[INFO] Компиляция через Python {version_name}")
     print(f"[INFO] Целевая директория: {target_dir}")
     
     py_compile.compile(
@@ -148,151 +135,48 @@ def build_launcher() -> None:
 
     TARGET_WRAPPER.write_text(wrapper, encoding='utf-8')
 
-    # НЕ перезаписываем _infobot_ai_protected.py - он уже содержит логику версионирования
-    # Просто проверяем, что файл существует и содержит правильную логику
-    if STUB_PATH.exists():
-        stub_content = STUB_PATH.read_text(encoding='utf-8')
-        if '_get_versioned_pyc_path' not in stub_content:
-            # Если файл не содержит логику версионирования, обновляем его
-            stub = textwrap.dedent(
-                '''\
-                #!/usr/bin/env python3
-                # -*- кодировка: utf-8 -*-
-                """
-                Loader stub для защищённого AI лаунчера.
-                Подгружает bot_engine/ai/_ai_launcher.pyc и регистрирует его как модуль.
-                Поддерживает версионированные .pyc файлы для Python 3.12+ (pyc_312 для 3.12, pyc_314 для 3.14+).
-                """
+    _stub_content = textwrap.dedent('''\
+        #!/usr/bin/env python3
+        # -*- кодировка: utf-8 -*-
+        """
+        Loader stub для защищённого AI лаунчера.
+        Подгружает bot_engine/ai/_ai_launcher.pyc и регистрирует его как модуль.
+        """
 
-                import importlib.machinery
-                import sys
-                from pathlib import Path
+        import importlib.machinery
+        import sys
+        from pathlib import Path
 
-                def _get_versioned_pyc_path():
-                    """Определяет путь к версионированному _ai_launcher.pyc на основе текущей версии Python."""
-                    base_dir = Path(__file__).resolve().parent
-                    python_version = sys.version_info[:2]
-                    
-                    # Определяем версию Python и соответствующую директорию
-                    if python_version >= (3, 14):
-                        version_dir = base_dir / 'pyc_314'
-                    # Python 3.12 больше не поддерживается
-                    else:
-                        version_dir = base_dir
-                    
-                    # Путь к версионированному .pyc файлу
-                    versioned_path = version_dir / "_ai_launcher.pyc"
-                    
-                    # Если версионированный файл не найден, пробуем основную директорию
-                    if not versioned_path.exists():
-                        fallback_path = base_dir / "_ai_launcher.pyc"
-                        if fallback_path.exists():
-                            return fallback_path
-                        return None
-                    
-                    return versioned_path
+        def _get_launcher_pyc_path():
+            """Путь к _ai_launcher.pyc в bot_engine/ai/."""
+            base_dir = Path(__file__).resolve().parent
+            return base_dir / "_ai_launcher.pyc"
 
-                _compiled_path = _get_versioned_pyc_path()
+        _compiled_path = _get_launcher_pyc_path()
 
-                if _compiled_path is None:
-                    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
-                    raise RuntimeError(
-                        f"Не найден защищённый AI модуль для Python {python_version}.\\n"
-                        f"Версионированный файл отсутствует в директории pyc_{sys.version_info.major}{sys.version_info.minor}/.\\n"
-                        f"Обратитесь к разработчику для получения правильной версии модулей."
-                    )
-
-                try:
-                    _loader = importlib.machinery.SourcelessFileLoader(__name__, str(_compiled_path))
-                    _loader.exec_module(sys.modules[__name__])
-                except Exception as e:
-                    err_msg = str(e).lower()
-                    if "bad magic number" in err_msg or "bad magic" in err_msg:
-                        python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
-                        raise RuntimeError(
-                            f"_ai_launcher.pyc несовместим с Python {python_version}.\\n"
-                            f"Модуль был скомпилирован под другую версию Python.\\n"
-                            f"Обратитесь к разработчику для получения правильной версии модулей."
-                        )
-                    raise
-                '''
+        if _compiled_path is None or not _compiled_path.exists():
+            raise RuntimeError(
+                "Не найден защищённый AI модуль (_ai_launcher.pyc).\\n"
+                "Выполните: python -m license_generator.compile_all"
             )
-            STUB_PATH.write_text(stub, encoding='utf-8')
-            print(f'[OK] Обновлен _infobot_ai_protected.py с логикой версионирования')
-        else:
-            print(f'[INFO] _infobot_ai_protected.py уже содержит логику версионирования, пропускаем обновление')
-    else:
-        # Если файл не существует, создаем его с логикой версионирования
-        stub = textwrap.dedent(
-            '''\
-            #!/usr/bin/env python3
-            # -*- кодировка: utf-8 -*-
-            """
-            Loader stub для защищённого AI лаунчера.
-            Подгружает bot_engine/ai/_ai_launcher.pyc и регистрирует его как модуль.
-            Поддерживает версионированные .pyc файлы для Python 3.14 и 3.12.
-            """
 
-            import importlib.machinery
-            import sys
-            from pathlib import Path
-
-            def _get_versioned_pyc_path():
-                """Определяет путь к версионированному _ai_launcher.pyc на основе текущей версии Python."""
-                base_dir = Path(__file__).resolve().parent
-                python_version = sys.version_info[:2]
-                
-                # Определяем версию Python и соответствующую директорию
-                # Поддерживаем Python 3.12+ (pyc_312 для 3.12, pyc_314 для 3.14+)
-                if python_version >= (3, 14):
-                    version_dir = base_dir / 'pyc_314'
-                elif python_version == (3, 12):
-                    version_dir = base_dir / 'pyc_312'
-                else:
-                    # Для других версий используем основную директорию (fallback)
-                    version_dir = base_dir
-                
-                # Путь к версионированному .pyc файлу
-                versioned_path = version_dir / "_ai_launcher.pyc"
-                
-                # Если версионированный файл не найден, пробуем основную директорию
-                if not versioned_path.exists():
-                    fallback_path = base_dir / "_ai_launcher.pyc"
-                    if fallback_path.exists():
-                        return fallback_path
-                    return None
-                
-                return versioned_path
-
-            _compiled_path = _get_versioned_pyc_path()
-
-            if _compiled_path is None:
-                python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+        try:
+            _loader = importlib.machinery.SourcelessFileLoader(__name__, str(_compiled_path))
+            _loader.exec_module(sys.modules[__name__])
+        except Exception as e:
+            err_msg = str(e).lower()
+            if "bad magic number" in err_msg or "bad magic" in err_msg:
                 raise RuntimeError(
-                    f"Не найден защищённый AI модуль для Python {python_version}.\\n"
-                    f"Версионированный файл отсутствует в директории pyc_{sys.version_info.major}{sys.version_info.minor}/.\\n"
-                    f"Обратитесь к разработчику для получения правильной версии модулей."
+                    "_ai_launcher.pyc несовместим с текущей версией Python.\\n"
+                    "Пересоберите: python -m license_generator.compile_all"
                 )
+            raise
+    ''')
+    if not STUB_PATH.exists() or '_get_launcher_pyc_path' not in STUB_PATH.read_text(encoding='utf-8'):
+        STUB_PATH.write_text(_stub_content, encoding='utf-8')
+        print('[OK] Обновлен _infobot_ai_protected.py')
 
-            try:
-                _loader = importlib.machinery.SourcelessFileLoader(__name__, str(_compiled_path))
-                _loader.exec_module(sys.modules[__name__])
-            except Exception as e:
-                err_msg = str(e).lower()
-                if "bad magic number" in err_msg or "bad magic" in err_msg:
-                    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
-                    raise RuntimeError(
-                        f"_ai_launcher.pyc несовместим с Python {python_version}.\\n"
-                        f"Модуль был скомпилирован под другую версию Python.\\n"
-                        f"Обратитесь к разработчику для получения правильной версии модулей."
-                    )
-                raise
-            '''
-        )
-        STUB_PATH.write_text(stub, encoding='utf-8')
-        print(f'[OK] Создан _infobot_ai_protected.py с логикой версионирования')
-
-    print(f'[OK] Скомпилирован _ai_launcher.pyc для Python {version_name}, обновлены ai.py и loader')
+    print('[OK] Скомпилирован _ai_launcher.pyc, обновлены ai.py и loader')
 
 
 if __name__ == '__main__':

@@ -131,15 +131,12 @@ EXCLUDE = [
 
 # ✅ ИСКЛЮЧЕНИЯ: Файлы которые НУЖНЫ в публичной версии (даже если в EXCLUDE)
 INCLUDE_ANYWAY = [
-    # Старые .pyc файлы (обратная совместимость)
+    # .pyc модули лицензирования (bot_engine/ai/)
     "bot_engine/ai/license_checker.pyc",
     "bot_engine/ai/hardware_id_source.pyc",
     "bot_engine/ai/ai_manager.pyc",
     "bot_engine/ai/_ai_launcher.pyc",
     "scripts/hardware_id.pyc",
-    # Версионированные .pyc файлы для Python 3.12+ (ВСЕ файлы из директорий)
-    "bot_engine/ai/pyc_312/",
-    "bot_engine/ai/pyc_314/",
     # Скрипт проверки .pyc файлов
     "scripts/verify_pyc_files.py",
     # Исходные Python файлы
