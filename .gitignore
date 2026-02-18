@@ -274,6 +274,8 @@ configs/bot_config.py
 # Auto Bot настройки только в configs/bot_config.py (AUTO_BOT_CONFIG/DEFAULT_AUTO_BOT_CONFIG), JSON в configs/ не используется
 configs/auto_bot_config.json
 configs/default_auto_bot_config.json
+# Full AI (ПРИИ) — рабочий конфиг, только локально; пример: configs/fullai_config.example.json
+configs/fullai_config.json
 # bot_engine/config_loader.py — точка входа для импорта конфигов (код), в репозитории
 
 *.json.backup
