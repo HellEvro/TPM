@@ -500,6 +500,7 @@ data/async_state.json
 data/rsi_cache.json
 data/bots_data.db
 data/app_data.db
+data/fullai_analytics.db
 data/ai_data.db
 data/ai_data.db-shm
 data/ai_data.db-wal
