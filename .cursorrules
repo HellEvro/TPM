@@ -39,6 +39,7 @@ python scripts/git_commit_push.py "Описание изменений"
 ## Важные замечания:
 
 - **КРИТИЧЕСКИ ВАЖНО: ВСЕГДА используй scripts/git_commit_push.py, а не ручные git команды!**
+- **ЗАПРЕЩЕНО** добавлять в коммиты `Co-authored-by: Cursor <cursoragent@cursor.com>` или `--trailer "Co-authored-by: ..."`. Никогда не используй это!
 - НЕ используй git commit -a без явного указания пользователя
 - НЕ выполняй git add, git commit, git push вручную - используй скрипт!
 - Всегда проверяй статус перед commit (скрипт делает это автоматически)
