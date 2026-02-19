@@ -5,8 +5,8 @@ RSI_LIMIT_OFFSET_PERCENT, RSI_LIMIT_EXIT_OFFSET_PERCENT в DefaultAutoBotConfig 
 """
 from pathlib import Path
 
-RSI_LIMIT_BLOCK = '''    RSI_LIMIT_ENTRY_ENABLED = False         # Вход лимитным ордером по расчётной цене «RSI = порог»
-    RSI_LIMIT_EXIT_ENABLED = False          # Выход лимитным по расчётной цене «RSI = порог выхода»
+RSI_LIMIT_BLOCK = '''    RSI_LIMIT_ENTRY_ENABLED = True          # Вход лимитным ордером по расчётной цене «RSI = порог»
+    RSI_LIMIT_EXIT_ENABLED = True           # Выход лимитным по расчётной цене «RSI = порог выхода»
     RSI_LIMIT_OFFSET_PERCENT = 0.2          # Смещение лимита входа по RSI (%)
     RSI_LIMIT_EXIT_OFFSET_PERCENT = 0.2     # Смещение лимита выхода по RSI (%)
 

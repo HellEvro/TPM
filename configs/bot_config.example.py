@@ -40,8 +40,8 @@ class DefaultAutoBotConfig:
     RSI_EXIT_MIN_CANDLES = 0                # Минимум свечей до выхода по RSI (0=выкл.)
     RSI_EXIT_MIN_MINUTES = 0                # Если > 0: мин. время в минутах (адаптивно по ТФ). Приоритет над MIN_CANDLES.
     RSI_EXIT_MIN_MOVE_PERCENT = 0           # Если > 0: разрешить выход по RSI раньше, когда цена сдвинулась на этот % от входа.
-    RSI_LIMIT_ENTRY_ENABLED = False         # Вход лимитным ордером по расчётной цене «RSI = порог»
-    RSI_LIMIT_EXIT_ENABLED = False          # Выход лимитным по расчётной цене «RSI = порог выхода»
+    RSI_LIMIT_ENTRY_ENABLED = True          # Вход лимитным ордером по расчётной цене «RSI = порог»
+    RSI_LIMIT_EXIT_ENABLED = True           # Выход лимитным по расчётной цене «RSI = порог выхода»
     RSI_LIMIT_OFFSET_PERCENT = 0.2          # Смещение лимита входа по RSI (%)
     RSI_LIMIT_EXIT_OFFSET_PERCENT = 0.2     # Смещение лимита выхода по RSI (%)
 
@@ -198,8 +198,8 @@ class AutoBotConfig:
     RSI_EXIT_MIN_MINUTES = 0                # Если > 0: мин. время в минутах (адаптивно по ТФ). Приоритет над MIN_CANDLES.
     RSI_EXIT_MIN_MOVE_PERCENT = 0           # Если > 0: разрешить выход по RSI раньше, когда цена сдвинулась на этот % от входа.
     # Лимитные ордера по RSI: бот рассчитывает цену, при которой RSI = порог, и выставляет лимитник (меньше «ошибок» входа/выхода по аудиту)
-    RSI_LIMIT_ENTRY_ENABLED = False         # Вход лимитным ордером по расчётной цене «RSI = порог»
-    RSI_LIMIT_EXIT_ENABLED = False          # Выход лимитным по расчётной цене «RSI = порог выхода»
+    RSI_LIMIT_ENTRY_ENABLED = True          # Вход лимитным ордером по расчётной цене «RSI = порог»
+    RSI_LIMIT_EXIT_ENABLED = True           # Выход лимитным по расчётной цене «RSI = порог выхода»
     RSI_LIMIT_OFFSET_PERCENT = 0.2          # Смещение лимита входа по RSI (%)
     RSI_LIMIT_EXIT_OFFSET_PERCENT = 0.2     # Смещение лимита выхода по RSI (%)
 
