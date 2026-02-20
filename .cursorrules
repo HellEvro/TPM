@@ -1,5 +1,9 @@
 # Cursor Rules для InfoBot
 
+## BotsManager: не редактировать bots_manager.js
+
+**Файл `static/js/managers/bots_manager.js` не редактировать.** Логика BotsManager разнесена по модулям в папке `static/js/managers/bots_manager/` (00_core.js … 16_timeframe.js, index.js). Все изменения вносить в нужный модуль в этой папке. Подробности — в `docs/BOTS_MANAGER_REFACTOR_PLAN.md`.
+
 ## КРИТИЧЕСКИ ВАЖНО: Не трогать старый рабочий код (legacy)
 
 **Не менять код расчётов и систем, которые работают вне модуля ai.py** — в `bots.py`, `app.py` и связанных с ними модулях:
