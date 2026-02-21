@@ -1641,15 +1641,56 @@ def close_position_for_bot(symbol, position_side, reason='Manual close'):
             side_for_exchange = 'Long' if position_side in ['LONG', 'Long'] else 'Short' if position_side in ['SHORT', 'Short'] else position_side
             
             for pos in positions_list:
-                if pos.get('symbol', '').replace('USDT', '') == symbol:
-                    pos_side = 'Long' if pos.get('side') == 'Buy' else 'Short'
-                    if pos_side == side_for_exchange and abs(float(pos.get('size', 0))) > 0:
-                        position_size = abs(float(pos.get('size', 0)))
-                        logger.info(f" {symbol}: Найден размер позиции на бирже: {position_size}")
-                        break
+                pos_sym = pos.get('symbol', '').replace('USDT', '')
+                if pos_sym != symbol:
+                    continue
+                raw_side = pos.get('side', '')
+                pos_side = 'Long' if raw_side in ('Buy', 'Long') else 'Short' if raw_side in ('Sell', 'Short') else None
+                if pos_side == side_for_exchange and abs(float(pos.get('size', 0))) > 0:
+                    position_size = abs(float(pos.get('size', 0)))
+                    logger.info(f" {symbol}: Найден размер позиции на бирже: {position_size}")
+                    break
         except Exception as e:
             logger.error(f" {symbol}: ⚠️ Ошибка получения размера позиции с биржи: {e}")
-        
+
+        # Fallback 1: из bots_data (position_size_coins — монеты; volume_value/position_size — USDT)
+        if not position_size:
+            try:
+                with bots_data_lock:
+                    bot_data = bots_data.get('bots', {}).get(symbol, {})
+                if bot_data and (bot_data.get('position_side') or '').upper() == (position_side or '').upper():
+                    ps_coins = bot_data.get('position_size_coins')
+                    ps_usdt = bot_data.get('position_size') or bot_data.get('volume_value')
+                    entry_pr = float(bot_data.get('entry_price') or 0)
+                    if ps_coins and float(ps_coins) > 0:
+                        position_size = abs(float(ps_coins))
+                        logger.info(f" {symbol}: Размер из bots_data.position_size_coins: {position_size}")
+                    elif ps_usdt and entry_pr > 0:
+                        position_size = abs(float(ps_usdt)) / entry_pr
+                        if position_size > 0:
+                            logger.info(f" {symbol}: Размер из bots_data (volume_value/entry_price): {position_size}")
+            except Exception:
+                pass
+
+        # Fallback 2: прямой запрос Bybit API по символу
+        if not position_size and hasattr(exch, 'client'):
+            try:
+                resp = exch.client.get_positions(category="linear", symbol=f"{symbol}USDT", limit=1)
+                if resp.get('retCode') == 0:
+                    for p in (resp.get('result') or {}).get('list', []):
+                        sz = abs(float(p.get('size', 0) or 0))
+                        if sz <= 0:
+                            continue
+                        rs = p.get('side', '')
+                        is_long = rs in ('Buy', 'Long')
+                        need_long = (position_side or '').upper() == 'LONG'
+                        if is_long == need_long:
+                            position_size = sz
+                            logger.info(f" {symbol}: Размер из прямого API Bybit: {position_size}")
+                            break
+            except Exception:
+                pass
+
         if not position_size:
             logger.error(f" {symbol}: ❌ Не удалось определить размер позиции")
             return {'success': False, 'error': 'Position size not found on exchange'}

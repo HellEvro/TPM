@@ -770,7 +770,21 @@ def background_update():
 
             positions, rapid_growth = current_exchange.get_positions()
             if not positions:
-                # Закрытые позиции не возвращаются биржей — очищаем список, чтобы не показывать устаревшие (например AXS после закрытия)
+                # Fallback: app и bots в разных процессах — пробуем взять позиции с Bots
+                try:
+                    resp = requests.get('http://127.0.0.1:5001/api/bots/positions-for-app', timeout=5)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if data.get('success') and data.get('total_trades', 0) > 0:
+                            positions = (data.get('high_profitable', []) + data.get('profitable', []) +
+                                        data.get('losing', []))
+                            rapid_growth = data.get('rapid_growth', [])
+                            if positions:
+                                logging.getLogger('app').info(f"[POSITIONS] Fallback: {len(positions)} позиций с Bots")
+                except Exception:
+                    pass
+            if not positions:
+                # Закрытые позиции не возвращаются биржей — очищаем список
                 positions_data.update({
                     'high_profitable': [], 'profitable': [], 'losing': [],
                     'total_trades': 0, 'rapid_growth': [],
@@ -1006,6 +1020,29 @@ def get_positions():
                 })
     except Exception:
         pass
+
+    # Fallback: если позиций нет — пробуем взять с Bots-сервиса (app и bots в разных процессах)
+    if not all_positions and not virtual_positions:
+        try:
+            bots_url = getattr(request, 'headers', None) and request.headers.get('X-Bots-Service-URL') or 'http://127.0.0.1:5001'
+            resp = requests.get(f'{bots_url}/api/bots/positions-for-app', timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get('success') and data.get('total_trades', 0) > 0:
+                    api_logger = logging.getLogger('app')
+                    api_logger.info(f"[POSITIONS] Fallback: {data['total_trades']} позиций с Bots-сервиса")
+                    hp, pf, ls = data.get('high_profitable', []), data.get('profitable', []), data.get('losing', [])
+                    all_positions = hp + pf + ls
+                    positions_data['high_profitable'] = hp
+                    positions_data['profitable'] = pf
+                    positions_data['losing'] = ls
+                    positions_data['stats'] = data.get('stats', {})
+                    positions_data['rapid_growth'] = data.get('rapid_growth', [])
+                    positions_data['total_trades'] = data.get('total_trades', 0)
+                    positions_data['last_update'] = time.strftime('%Y-%m-%d %H:%M:%S')
+                    save_positions_data(positions_data)
+        except Exception as fb_err:
+            logging.getLogger('app').debug(f"[POSITIONS] Fallback Bots: {fb_err}")
 
     if not all_positions and not virtual_positions:
         try:

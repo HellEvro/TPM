@@ -421,6 +421,67 @@ def get_account_info():
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response, 500
 
+
+@bots_app.route('/api/bots/positions-for-app', methods=['GET'])
+def get_positions_for_app():
+    """
+    Позиции с биржи в формате app.py (Positions).
+    Fallback, когда app.py не видит позиции (разные процессы).
+    """
+    try:
+        if not ensure_exchange_initialized():
+            return jsonify({'success': False, 'error': 'Exchange not initialized'}), 500
+        exch = get_exchange()
+        if not exch:
+            return jsonify({'success': False, 'error': 'Exchange not initialized'}), 500
+        positions, rapid_growth = exch.get_positions()
+        if not positions:
+            return jsonify({
+                'success': True,
+                'high_profitable': [], 'profitable': [], 'losing': [],
+                'stats': {'total_trades': 0, 'high_profitable_count': 0, 'profitable_count': 0,
+                          'losing_count': 0, 'top_profitable': [], 'top_losing': [],
+                          'total_pnl': 0, 'total_profit': 0, 'total_loss': 0},
+                'rapid_growth': [], 'total_trades': 0
+            })
+        pnl_threshold = getattr(SystemConfig, 'PNL_THRESHOLD', None) or 10
+        high_p, prof, los = [], [], []
+        total_profit = total_loss = 0
+        for pos in positions:
+            pnl = float(pos.get('pnl', 0))
+            if pnl > 0:
+                (high_p if pnl >= pnl_threshold else prof).append(pos)
+                total_profit += pnl
+            elif pnl < 0:
+                los.append(pos)
+                total_loss += pnl
+        high_p.sort(key=lambda x: x.get('pnl', 0), reverse=True)
+        prof.sort(key=lambda x: x.get('pnl', 0), reverse=True)
+        los.sort(key=lambda x: x.get('pnl', 0))
+        all_prof = high_p + prof
+        all_prof.sort(key=lambda x: x.get('pnl', 0), reverse=True)
+        return jsonify({
+            'success': True,
+            'high_profitable': high_p, 'profitable': prof, 'losing': los,
+            'stats': {
+                'total_trades': len(positions),
+                'high_profitable_count': len(high_p),
+                'profitable_count': len(high_p) + len(prof),
+                'losing_count': len(los),
+                'top_profitable': all_prof[:3],
+                'top_losing': los[:3],
+                'total_pnl': total_profit + total_loss,
+                'total_profit': total_profit,
+                'total_loss': total_loss
+            },
+            'rapid_growth': rapid_growth or [],
+            'total_trades': len(positions)
+        })
+    except Exception as e:
+        logger.error(f"[POSITIONS_FOR_APP] {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @bots_app.route('/api/bots/manual-positions/refresh', methods=['POST'])
 def refresh_manual_positions():
     """Обновить список монет с ручными позициями на бирже (позиции БЕЗ ботов)"""
