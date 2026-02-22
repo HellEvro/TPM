@@ -1998,7 +1998,7 @@ def get_candles_from_file(symbol, timeframe=None, period_days=None):
         logging.getLogger('app').error(f"❌ Ошибка чтения свечей из файла для {symbol}: {e}\n{traceback.format_exc()}")
         return {'success': False, 'error': str(e)}
 
-def call_bots_service(endpoint, method='GET', data=None, timeout=10):
+def call_bots_service(endpoint, method='GET', data=None, timeout=10, params=None):
     """Универсальная функция для вызова API сервиса ботов"""
     # Определяем URL сервиса ботов динамически (доступен в обработчиках Flask)
     bots_service_url = request.headers.get('X-Bots-Service-URL', 'http://127.0.0.1:5001')
@@ -2007,7 +2007,7 @@ def call_bots_service(endpoint, method='GET', data=None, timeout=10):
         url = f"{bots_service_url}{endpoint}"
         
         if method == 'GET':
-            response = requests.get(url, timeout=timeout)
+            response = requests.get(url, timeout=timeout, params=params)
         elif method == 'POST':
             response = requests.post(url, json=data, timeout=timeout)
         else:
@@ -2277,6 +2277,68 @@ def system_config():
     else:
         data = request.get_json()
         result = call_bots_service('/api/bots/system-config', method='POST', data=data, timeout=cfg_timeout)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+# Прокси для FullAI и аналитики (страница Аналитика → FullAI)
+@app.route('/api/bots/fullai-config', methods=['GET', 'POST'])
+def fullai_config_proxy():
+    if request.method == 'GET':
+        result = call_bots_service('/api/bots/fullai-config', method='GET', params=request.args)
+    else:
+        data = request.get_json()
+        result = call_bots_service('/api/bots/fullai-config', method='POST', data=data)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/bots/analytics', methods=['GET'])
+def analytics_proxy():
+    result = call_bots_service('/api/bots/analytics', method='GET', timeout=30, params=request.args)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/bots/analytics/fullai', methods=['GET'])
+def analytics_fullai_proxy():
+    result = call_bots_service('/api/bots/analytics/fullai', method='GET', timeout=90, params=request.args)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/bots/analytics/rsi-audit', methods=['GET'])
+def analytics_rsi_audit_proxy():
+    result = call_bots_service('/api/bots/analytics/rsi-audit', method='GET', params=request.args)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/bots/analytics/sync-from-exchange', methods=['POST'])
+def analytics_sync_proxy():
+    result = call_bots_service('/api/bots/analytics/sync-from-exchange', method='POST', timeout=60)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/bots/analytics/ai-reanalyze', methods=['POST'])
+def analytics_ai_reanalyze_proxy():
+    data = request.get_json()
+    result = call_bots_service('/api/bots/analytics/ai-reanalyze', method='POST', data=data, timeout=30)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/bots/analytics/ai-reanalyze/result', methods=['GET'])
+def analytics_ai_reanalyze_result_proxy():
+    result = call_bots_service('/api/bots/analytics/ai-reanalyze/result', method='GET', params=request.args)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/bots/analytics/ai-context', methods=['GET'])
+def analytics_ai_context_proxy():
+    result = call_bots_service('/api/bots/analytics/ai-context', method='GET', params=request.args)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 

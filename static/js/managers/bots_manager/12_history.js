@@ -99,7 +99,16 @@
             const timeoutId = setTimeout(() => controller.abort(), 90000);
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/analytics/fullai?${params}`, { cache: 'no-store', signal: controller.signal });
             clearTimeout(timeoutId);
-            return response.json();
+            const ct = response.headers.get('content-type') || '';
+            const text = await response.text();
+            if (!ct.includes('application/json')) {
+                throw new Error(response.ok ? 'Ответ не JSON' : `Ошибка ${response.status}: ${text.slice(0, 200)}`);
+            }
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                throw new Error(`Сервер вернул не JSON (${response.status}): ${text.slice(0, 150)}`);
+            }
         };
         try {
             let data = await fetchData();
