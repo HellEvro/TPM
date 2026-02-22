@@ -421,6 +421,97 @@ def get_account_info():
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response, 500
 
+@bots_app.route('/api/positions', methods=['GET'])
+def api_positions():
+    """
+    Позиции для Trading Positions Monitor. Когда UI открыт с Bots (5001),
+    /api/positions должен отдавать ВСЕ позиции с биржи (включая ручные).
+    """
+    try:
+        result = _get_positions_for_app_impl()
+        if isinstance(result, tuple):
+            resp, code = result
+            return resp, code
+        return result
+    except Exception as e:
+        logger.error(f"[API_POSITIONS] {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def _get_positions_for_app_impl():
+    """Общая логика: позиции с биржи (все, включая ручные) в формате для Monitor."""
+    if not ensure_exchange_initialized():
+        return jsonify({'success': False, 'error': 'Exchange not initialized'}), 500
+    exch = get_exchange()
+    if not exch:
+        return jsonify({'success': False, 'error': 'Exchange not initialized'}), 500
+    positions, rapid_growth = exch.get_positions()
+    default_pnl = getattr(SystemConfig, 'PNL_THRESHOLD', None) or 10
+    pnl_threshold = float(request.args.get('pnl_threshold', default_pnl))
+    if not positions:
+        wallet = {}
+        try:
+            wallet = exch.get_wallet_balance()
+        except Exception:
+            pass
+        return jsonify({
+            'success': True,
+            'high_profitable': [], 'profitable': [], 'losing': [],
+            'stats': {'total_trades': 0, 'high_profitable_count': 0, 'profitable_count': 0,
+                      'losing_count': 0, 'top_profitable': [], 'top_losing': [],
+                      'total_pnl': 0, 'total_profit': 0, 'total_loss': 0},
+            'rapid_growth': [], 'total_trades': 0,
+            'wallet_data': {
+                'total_balance': wallet.get('total_balance', 0),
+                'available_balance': wallet.get('available_balance', 0),
+                'realized_pnl': wallet.get('realized_pnl', 0)
+            }
+        })
+    high_p, prof, los = [], [], []
+    total_profit = total_loss = 0
+    for pos in positions:
+        pnl = float(pos.get('pnl', 0))
+        if pnl > 0:
+            (high_p if pnl >= pnl_threshold else prof).append(pos)
+            total_profit += pnl
+        elif pnl < 0:
+            los.append(pos)
+            total_loss += pnl
+    high_p.sort(key=lambda x: x.get('pnl', 0), reverse=True)
+    prof.sort(key=lambda x: x.get('pnl', 0), reverse=True)
+    los.sort(key=lambda x: x.get('pnl', 0))
+    all_prof = high_p + prof
+    all_prof.sort(key=lambda x: x.get('pnl', 0), reverse=True)
+    wallet = {}
+    try:
+        wallet = exch.get_wallet_balance()
+    except Exception:
+        pass
+    return jsonify({
+        'success': True,
+        'high_profitable': high_p, 'profitable': prof, 'losing': los,
+        'positions': positions,
+        'rapid_growth': rapid_growth or [],
+        'stats': {
+            'total_trades': len(positions),
+            'high_profitable_count': len(high_p),
+            'profitable_count': len(high_p) + len(prof),
+            'losing_count': len(los),
+            'top_profitable': all_prof[:3],
+            'top_losing': los[:3],
+            'total_pnl': total_profit + total_loss,
+            'total_profit': total_profit,
+            'total_loss': total_loss
+        },
+        'total_trades': len(positions),
+        'wallet_data': {
+            'total_balance': wallet.get('total_balance', 0),
+            'available_balance': wallet.get('available_balance', 0),
+            'realized_pnl': wallet.get('realized_pnl', 0)
+        }
+    })
+
+
 @bots_app.route('/api/bots/positions-for-app', methods=['GET'])
 def get_positions_for_app():
     """
@@ -428,56 +519,10 @@ def get_positions_for_app():
     Fallback, когда app.py не видит позиции (разные процессы).
     """
     try:
-        if not ensure_exchange_initialized():
-            return jsonify({'success': False, 'error': 'Exchange not initialized'}), 500
-        exch = get_exchange()
-        if not exch:
-            return jsonify({'success': False, 'error': 'Exchange not initialized'}), 500
-        positions, rapid_growth = exch.get_positions()
-        if not positions:
-            return jsonify({
-                'success': True,
-                'positions': [], 'rapid_growth': [],
-                'high_profitable': [], 'profitable': [], 'losing': [],
-                'stats': {'total_trades': 0, 'high_profitable_count': 0, 'profitable_count': 0,
-                          'losing_count': 0, 'top_profitable': [], 'top_losing': [],
-                          'total_pnl': 0, 'total_profit': 0, 'total_loss': 0},
-                'rapid_growth': [], 'total_trades': 0
-            })
-        pnl_threshold = getattr(SystemConfig, 'PNL_THRESHOLD', None) or 10
-        high_p, prof, los = [], [], []
-        total_profit = total_loss = 0
-        for pos in positions:
-            pnl = float(pos.get('pnl', 0))
-            if pnl > 0:
-                (high_p if pnl >= pnl_threshold else prof).append(pos)
-                total_profit += pnl
-            elif pnl < 0:
-                los.append(pos)
-                total_loss += pnl
-        high_p.sort(key=lambda x: x.get('pnl', 0), reverse=True)
-        prof.sort(key=lambda x: x.get('pnl', 0), reverse=True)
-        los.sort(key=lambda x: x.get('pnl', 0))
-        all_prof = high_p + prof
-        all_prof.sort(key=lambda x: x.get('pnl', 0), reverse=True)
-        return jsonify({
-            'success': True,
-            'positions': positions,
-            'rapid_growth': rapid_growth or [],
-            'high_profitable': high_p, 'profitable': prof, 'losing': los,
-            'stats': {
-                'total_trades': len(positions),
-                'high_profitable_count': len(high_p),
-                'profitable_count': len(high_p) + len(prof),
-                'losing_count': len(los),
-                'top_profitable': all_prof[:3],
-                'top_losing': los[:3],
-                'total_pnl': total_profit + total_loss,
-                'total_profit': total_profit,
-                'total_loss': total_loss
-            },
-            'total_trades': len(positions)
-        })
+        result = _get_positions_for_app_impl()
+        if isinstance(result, tuple):
+            return result
+        return result
     except Exception as e:
         logger.error(f"[POSITIONS_FOR_APP] {e}")
         return jsonify({'success': False, 'error': str(e)}), 500

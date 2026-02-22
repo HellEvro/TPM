@@ -28,6 +28,7 @@ def _get_ai_param_recommendation(
     current: Dict[str, Any],
     evals: List[Dict],
     fullai_global: Dict[str, Any],
+    symbol_trades: Optional[List[Dict]] = None,
 ) -> Optional[Tuple[Dict[str, Any], str]]:
     """
     Спрашивает ИИ (обученные модели), как изменить параметры на основе исходов сделок.
@@ -39,7 +40,9 @@ def _get_ai_param_recommendation(
         from bot_engine.config_loader import AIConfig
         if getattr(AIConfig, 'AI_PARAMETER_QUALITY_ENABLED', True):
             from bot_engine.ai.parameter_quality_predictor import ParameterQualityPredictor
-            predictor = ParameterQualityPredictor()
+            if not hasattr(_get_ai_param_recommendation, '_param_predictor_cache'):
+                _get_ai_param_recommendation._param_predictor_cache = ParameterQualityPredictor()
+            predictor = _get_ai_param_recommendation._param_predictor_cache
             if predictor.is_trained and predictor.model:
                 base_rsi = {
                     'oversold': current.get('rsi_long_threshold') or fullai_global.get('rsi_long_threshold') or 29,
@@ -77,14 +80,28 @@ def _get_ai_param_recommendation(
     except Exception as e:
         logger.debug("[FullAI learner] ParameterQualityPredictor не применим: %s", e)
 
-    # 2) AIContinuousLearning: база знаний по сделкам, оптимальные параметры по символу
+    # 2) AIContinuousLearning: база знаний по сделкам (кешируем — не создавать каждый раз)
     try:
         from bot_engine.config_loader import AIConfig
         if getattr(AIConfig, 'AI_PARAMETER_QUALITY_ENABLED', True):
             from bot_engine.ai.ai_continuous_learning import AIContinuousLearning
-            cl = AIContinuousLearning()
-            raw_trades = [{'symbol': e.get('symbol'), 'pnl': e.get('roi', 0) * 0.01, 'success': e.get('success')} for e in evals]
-            # Вызываем обучение только при достаточном числе сделок (≥10), иначе learn_from_real_trades только спамит логи
+            if not hasattr(_get_ai_param_recommendation, '_cl_cache'):
+                _get_ai_param_recommendation._cl_cache = AIContinuousLearning()
+            cl = _get_ai_param_recommendation._cl_cache
+            trades_for_cl = symbol_trades if symbol_trades else []
+            raw_trades = [
+                {
+                    'symbol': t.get('symbol', ''),
+                    'pnl': float(t.get('pnl') or 0),
+                    'success': bool(t.get('is_successful', (float(t.get('pnl') or 0)) > 0)),
+                    'entry_data': {
+                        'rsi': t.get('entry_rsi'),
+                        'trend': (t.get('entry_trend') or 'NEUTRAL').upper(),
+                    },
+                    'exit_reason': (t.get('close_reason') or 'UNKNOWN').strip() or 'UNKNOWN',
+                }
+                for t in trades_for_cl
+            ]
             if raw_trades and len(raw_trades) >= 10:
                 cl.learn_from_real_trades(raw_trades)
             optimal = cl.get_optimal_parameters_for_symbol(symbol)
@@ -275,11 +292,12 @@ def run_fullai_trades_analysis(
                 continue
             if sym not in by_symbol:
                 by_symbol[sym] = []
-            by_symbol[sym].append(_evaluate_trade(t))
+            by_symbol[sym].append(t)  # полная сделка для AIContinuousLearning
         updated = []
         changes_list: List[Dict[str, Any]] = []  # [{symbol, param, old, new, reason}, ...]
         insights = _build_insights(trading_ai, len(trades))
-        for symbol, evals in by_symbol.items():
+        for symbol, symbol_trades in by_symbol.items():
+            evals = [_evaluate_trade(t) for t in symbol_trades]
             if len(evals) < min_trades_per_symbol:
                 continue
             wins = sum(1 for e in evals if e.get('success'))
@@ -301,7 +319,7 @@ def run_fullai_trades_analysis(
             bad_rsi = us_settings.get('bad_rsi_ranges') or []
 
             # Сначала пробуем ИИ: сам понимает параметры и учится на сделках
-            ai_result = _get_ai_param_recommendation(symbol, current, evals, fullai_global)
+            ai_result = _get_ai_param_recommendation(symbol, current, evals, fullai_global, symbol_trades=symbol_trades)
             if ai_result is not None:
                 new_params, reason_text = ai_result
                 changed = True

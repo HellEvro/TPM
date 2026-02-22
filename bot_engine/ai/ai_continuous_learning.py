@@ -471,26 +471,32 @@ class AIContinuousLearning:
         successful = analysis.get('successful_patterns', {})
         failed = analysis.get('failed_patterns', {})
         
-        # Урок о RSI
+        # Урок о RSI: при наличии и успешных, и неудачных — сравнение
         if successful.get('avg_rsi') and failed.get('avg_rsi'):
             successful_rsi = successful['avg_rsi']
             failed_rsi = failed['avg_rsi']
-            
             if abs(successful_rsi - failed_rsi) > 5:
                 lessons.append({
                     'type': 'rsi_lesson',
                     'message': f'Успешные сделки при RSI {successful_rsi:.1f}, неуспешные при {failed_rsi:.1f}',
                     'action': 'adjust_rsi_thresholds'
                 })
+        # Только неудачные сделки: избегать среднего RSI неудач
+        elif failed.get('avg_rsi'):
+            failed_rsi = failed['avg_rsi']
+            lessons.append({
+                'type': 'rsi_avoid_lesson',
+                'message': f'Все неудачные сделки при среднем RSI {failed_rsi:.1f} — сдвигать пороги входа',
+                'action': 'avoid_rsi_range',
+                'avoid_rsi': failed_rsi
+            })
         
-        # Урок о трендах
+        # Урок о трендах: при наличии обоих
         successful_trends = successful.get('trend_conditions', {})
         failed_trends = failed.get('trend_conditions', {})
-        
         if successful_trends and failed_trends:
             best_trend = max(successful_trends.items(), key=lambda x: x[1])[0] if successful_trends else None
             worst_trend = max(failed_trends.items(), key=lambda x: x[1])[0] if failed_trends else None
-            
             if best_trend and worst_trend and best_trend != worst_trend:
                 lessons.append({
                     'type': 'trend_lesson',
@@ -498,6 +504,15 @@ class AIContinuousLearning:
                     'action': 'prefer_trend',
                     'preferred_trend': best_trend
                 })
+        # Только неудачные: избегать наиболее частого тренда неудач
+        elif failed_trends:
+            worst_trend = max(failed_trends.items(), key=lambda x: x[1])[0]
+            lessons.append({
+                'type': 'trend_avoid_lesson',
+                'message': f'Неудачные сделки чаще при тренде {worst_trend}',
+                'action': 'avoid_trend',
+                'avoid_trend': worst_trend
+            })
         
         return lessons
     
@@ -517,14 +532,25 @@ class AIContinuousLearning:
                 })
 
             elif lesson_type == 'trend_lesson':
-                # Сохраняем рекомендацию по тренду
                 improvements.append({
                     'type': 'trend_preference',
                     'lesson': lesson,
                     'applied_at': datetime.now().isoformat()
                 })
+            elif lesson_type == 'rsi_avoid_lesson':
+                improvements.append({
+                    'type': 'rsi_avoidance',
+                    'lesson': lesson,
+                    'applied_at': datetime.now().isoformat()
+                })
+            elif lesson_type == 'trend_avoid_lesson':
+                improvements.append({
+                    'type': 'trend_avoidance',
+                    'lesson': lesson,
+                    'applied_at': datetime.now().isoformat()
+                })
 
-        # НОВОЕ: Применяем улучшения к ML моделям
+        # Применяем улучшения к ML моделям
         if improvements:
             try:
                 self._apply_learning_to_models(improvements)
