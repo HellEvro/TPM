@@ -2075,7 +2075,7 @@ def call_bots_service(endpoint, method='GET', data=None, timeout=10, params=None
 @app.route('/api/bots/list', methods=['GET'])
 def get_bots_list():
     """Получение списка всех ботов (прокси к сервису ботов)"""
-    result = call_bots_service('/api/bots/list')
+    result = call_bots_service('/api/bots/list', timeout=30)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
@@ -2159,6 +2159,42 @@ def auto_bot_proxy():
 def get_account_info():
     """Получить информацию об аккаунте (прокси к сервису ботов)"""
     result = call_bots_service('/api/bots/account-info')
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+@app.route('/api/bots/active-detailed', methods=['GET'])
+def get_active_detailed_proxy():
+    """Детальная информация об активных ботах (правая панель)"""
+    result = call_bots_service('/api/bots/active-detailed', timeout=30, params=request.args)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+@app.route('/api/bots/delisted-coins', methods=['GET'])
+def get_delisted_coins_proxy():
+    """Делистинговые монеты для фильтра"""
+    result = call_bots_service('/api/bots/delisted-coins', params=request.args)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+@app.route('/api/bots/history', methods=['GET'])
+def get_bots_history_proxy():
+    """История действий ботов (таб История)"""
+    result = call_bots_service('/api/bots/history', params=request.args, timeout=30)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+@app.route('/api/bots/history/clear', methods=['POST'])
+def bots_history_clear_proxy():
+    """Очистка истории ботов"""
+    result = call_bots_service('/api/bots/history/clear', method='POST', timeout=30)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+@app.route('/api/bots/history/demo', methods=['POST'])
+def bots_history_demo_proxy():
+    """Создание демо-данных истории"""
+    data = request.get_json()
+    result = call_bots_service('/api/bots/history/demo', method='POST', data=data, timeout=30)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
