@@ -1964,7 +1964,9 @@ def sync_positions_with_exchange():
                     has_active_orders = check_active_orders(symbol)
 
                     if not has_active_orders:
-                        # ✅ КРИТИЧНО: УДАЛЯЕМ бота, а не переводим в IDLE - позиции нет на бирже!
+                        # ✅ КРИТИЧНО: Сначала отменяем все лимитки бота, иначе они сработают → ручная позиция!
+                        cancel_all_orders_for_symbol_on_bot_delete(symbol)
+                        # УДАЛЯЕМ бота — позиции нет на бирже
                         with bots_data_lock:
                             if symbol in bots_data['bots']:
                                 del bots_data['bots'][symbol]
@@ -2033,6 +2035,40 @@ def check_active_orders(symbol):
     except Exception as e:
         logger.error(f"[ORDER_CHECK] ❌ Ошибка проверки ордеров для {symbol}: {e}")
         return False
+
+
+def cancel_all_orders_for_symbol_on_bot_delete(symbol):
+    """
+    Отменяет ВСЕ лимитные ордера для символа при удалении бота.
+    КРИТИЧНО: иначе лимитки остаются на бирже → при срабатывании = ручная позиция без бота!
+    """
+    try:
+        if not ensure_exchange_initialized():
+            return 0
+        exch = get_exchange()
+        if not exch or not hasattr(exch, 'get_open_orders') or not hasattr(exch, 'cancel_order'):
+            return 0
+        orders = exch.get_open_orders(symbol)
+        if not orders:
+            return 0
+        cancelled = 0
+        for order in orders:
+            order_id = order.get('order_id') or order.get('orderId') or order.get('id')
+            if not order_id:
+                continue
+            try:
+                result = exch.cancel_order(symbol, str(order_id))
+                if result and result.get('success'):
+                    cancelled += 1
+                    logger.info(f"[BOT_DELETE] ✅ Отменён ордер {order_id} для {symbol}")
+            except Exception as e:
+                logger.warning(f"[BOT_DELETE] ⚠️ Не удалось отменить ордер {order_id}: {e}")
+        if cancelled > 0:
+            logger.info(f"[BOT_DELETE] ✅ Отменено {cancelled} ордеров для {symbol} при удалении бота")
+        return cancelled
+    except Exception as e:
+        logger.error(f"[BOT_DELETE] ❌ Ошибка отмены ордеров для {symbol}: {e}")
+        return 0
 
 def cleanup_inactive_bots():
     """Удаляет ботов, которые не имеют реальных позиций на бирже в течение SystemConfig.INACTIVE_BOT_TIMEOUT секунд"""
@@ -2186,6 +2222,8 @@ def cleanup_inactive_bots():
                     logger.error(f" ❌ Ошибка удаления позиции из реестра для бота {symbol}: {registry_error}")
                     # Не блокируем удаление бота из-за ошибки реестра
                 
+                # ✅ КРИТИЧНО: Отменяем лимитки бота, иначе они останутся и сработают → ручная позиция!
+                cancel_all_orders_for_symbol_on_bot_delete(symbol)
                 del bots_data['bots'][symbol]
                 removed_count += 1
         
@@ -2529,6 +2567,7 @@ def check_missing_stop_losses():
                                 if order_id:
                                     unregister_bot_position(order_id)
                                     logger.info(f" ✅ Позиция {symbol} (order_id={order_id}) удалена из реестра")
+                                cancel_all_orders_for_symbol_on_bot_delete(symbol)
                                 bot_removed = False
                                 with bots_data_lock:
                                     if symbol in bots_data['bots']:
@@ -2835,8 +2874,7 @@ def check_startup_position_conflicts():
                             if bot_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
                                 # КОНФЛИКТ: бот думает что в позиции, но позиции нет на бирже
                                 logger.warning(f" 🚨 {symbol}: КОНФЛИКТ! Бот показывает позицию, но на бирже её нет!")
-                                
-                                # ✅ КРИТИЧНО: УДАЛЯЕМ бота, а не переводим в IDLE - позиции нет на бирже!
+                                cancel_all_orders_for_symbol_on_bot_delete(bot_key)
                                 with bots_data_lock:
                                     if bot_key in bots_data['bots']:
                                         del bots_data['bots'][bot_key]

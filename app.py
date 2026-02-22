@@ -770,8 +770,8 @@ def background_update():
                      current_time - last_stats_time >= TELEGRAM_NOTIFY['STATISTICS_INTERVAL'])
                 )
 
-            positions, rapid_growth = current_exchange.get_positions()
-            # Fallback: app и Bots — разные процессы; если app не видит позиции, пробуем Bots API
+            positions, rapid_growth = current_exchange.get_positions()  # Прямо с биржи, БЕЗ Bots
+            # Fallback на Bots только если биржа вернула пусто (app и Bots в разных процессах)
             if not positions and not DEMO_MODE:
                 try:
                     bots_url = getattr(background_update, '_bots_fallback_url', None)
@@ -1019,18 +1019,24 @@ def _update_positions_data_from_list(positions, rapid_growth, pnl_threshold):
 
 @app.route('/get_positions')
 def get_positions():
+    """
+    Позиции с биржи. app.py работает НЕЗАВИСИМО от Bots.
+    Источник: current_exchange.get_positions() — прямой запрос к Bybit/Binance/OKX.
+    Bots — только опциональный fallback (если app и Bots в разных процессах).
+    """
     pnl_threshold = float(request.args.get('pnl_threshold', DEFAULTS.PNL_THRESHOLD))
     force_refresh = request.args.get('force_refresh', '0') == '1'
 
     all_available_pairs = []  # Больше не используется
 
-    # force_refresh: принудительно получаем свежие позиции с биржи или Bots
+    # force_refresh: ПРИОРИТЕТ 1 — напрямую с биржи (current_exchange), БЕЗ Bots
     if force_refresh:
         try:
             if not DEMO_MODE and current_exchange and hasattr(current_exchange, 'get_positions'):
                 pos_list, rapid = current_exchange.get_positions()
                 if pos_list:
                     _update_positions_data_from_list(pos_list, rapid, pnl_threshold)
+            # ПРИОРИТЕТ 2 — fallback на Bots только если биржа вернула пусто (опционально)
             if not positions_data.get('total_trades', 0) and not DEMO_MODE:
                 resp = requests.get(f'http://127.0.0.1:5001/api/bots/positions-for-app?pnl_threshold={pnl_threshold}', timeout=10)
                 if resp.status_code == 200:
@@ -1091,7 +1097,7 @@ def get_positions():
     except Exception:
         pass
 
-    # Fallback: если позиций нет — пробуем взять с Bots-сервиса (app и bots в разных процессах)
+    # Fallback: только если биржа вернула пусто — опционально Bots (app и bots в разных процессах)
     if not all_positions and not virtual_positions:
         try:
             bots_url = getattr(request, 'headers', None) and request.headers.get('X-Bots-Service-URL') or 'http://127.0.0.1:5001'
@@ -2058,10 +2064,21 @@ def get_bots_pairs():
 
 @app.route('/api/status', methods=['GET'])
 def api_status_proxy():
-    """Прокси /api/status для проверки сервиса ботов (фронт при порте 5000 дергает этот URL)."""
+    """
+    Статус приложения. app.py — основной сервис, работает БЕЗ Bots.
+    Bots — опциональный fallback для позиций; вкладка «Боты» требует Bots.
+    """
     result = call_bots_service('/api/status', timeout=5)
-    status_code = result.get('status_code', 200 if result.get('status') == 'online' else 503)
-    return jsonify(result), status_code
+    if result.get('success') and result.get('status') == 'online':
+        result['bots_available'] = True
+        return jsonify(result), 200
+    # Bots недоступен — app.py работает, позиции с биржи отображаются через current_exchange
+    return jsonify({
+        'status': 'online',
+        'bots_available': False,
+        'message': 'app.py работает. Позиции с биржи отображаются. Bots (вкладка «Боты») недоступен.',
+        'error': result.get('error')
+    }), 200
 
 
 @app.route('/api/bots/health', methods=['GET'])

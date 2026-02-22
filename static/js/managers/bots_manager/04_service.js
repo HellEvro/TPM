@@ -58,14 +58,15 @@
             if (response.ok) {
                 const data = await response.json();
                 console.log('[BotsManager] 📊 Ответ сервиса:', data);
-                this.serviceOnline = data.status === 'online';
+                // bots_available: false — app.py работает, но Bots на 5001 не запущен
+                this.serviceOnline = data.status === 'online' && data.bots_available !== false;
                 
                 if (this.serviceOnline) {
                     console.log('[BotsManager] ✅ Сервис ботов онлайн');
                     this.updateServiceStatus('online', 'Сервис ботов онлайн');
                     await this.loadCoinsRsiData();
                 } else {
-                    console.warn('[BotsManager] ⚠️ Сервис ботов недоступен (статус не online)');
+                    console.warn('[BotsManager] ⚠️ Сервис ботов недоступен (app.py работает, позиции отображаются)');
                     this.updateServiceStatus('offline', window.languageUtils?.translate?.('bot_service_unavailable') || 'Сервис ботов недоступен');
                 }
             } else {
