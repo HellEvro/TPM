@@ -80,12 +80,16 @@ const storageUtils = {
 const apiUtils = {
     async fetchData(url, params = {}) {
         try {
-            console.log(`Fetching data from ${url}`, params);
             const queryString = new URLSearchParams(params).toString();
             const fullUrl = queryString ? `${url}?${queryString}` : url;
-            const response = await fetch(fullUrl);
+            // Явный origin + cache-bust — гарантия свежих данных с app.py (не кэш/прокси)
+            const absUrl = url.startsWith('/') ? (window.location.origin + fullUrl) : fullUrl;
+            const response = await fetch(absUrl, { cache: 'no-store', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             const data = await response.json();
-            console.log(`Received data from ${url}:`, data);
+            if (url.includes('get_positions') && data) {
+                const total = (data.high_profitable?.length || 0) + (data.profitable?.length || 0) + (data.losing?.length || 0);
+                console.log(`[API] /get_positions: получено ${total} позиций (hp:${data.high_profitable?.length || 0} p:${data.profitable?.length || 0} l:${data.losing?.length || 0})`);
+            }
             return data;
         } catch (error) {
             console.error('API Error:', error);

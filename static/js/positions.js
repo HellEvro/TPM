@@ -29,6 +29,7 @@ class PositionsManager {
         this.searchQuery = '';
         this.initializeSearch();
         this._initialLoadDone = false;  // Для принудительного обновления с биржи при первой загрузке
+        this.botsAvailableForCharts = true;  // false = bots.py недоступен → позиции без миниграфиков
     }
 
     initializeFilters() {
@@ -95,6 +96,12 @@ class PositionsManager {
         // Загружает интервал обновления миниграфиков из SystemConfig (bot_config.py)
         try {
             const response = await fetch('/api/bots/system-config');
+            if (response.status === 503 || response.status === 0) {
+                this.botsAvailableForCharts = false;
+                console.log('[PositionsManager] ⚠️ Bots недоступен — миниграфики RSI отключены, позиции отображаются без них');
+                if (this.lastData) this.updatePositionsDisplay();
+                return;
+            }
             if (response.ok) {
                 const data = await response.json();
                 // Интервал RSI/миниграфиков = только из конфига «Синхронизация позиций»
@@ -116,11 +123,14 @@ class PositionsManager {
                     console.warn('[PositionsManager] ⚠️ position_sync_interval не найден в SystemConfig, используем дефолт:', this.updateInterval / 1000, 'сек');
                 }
             } else {
-                console.warn('[PositionsManager] ⚠️ Не удалось загрузить SystemConfig, используем дефолт:', this.updateInterval / 1000, 'сек');
+                this.botsAvailableForCharts = false;
+                console.warn('[PositionsManager] ⚠️ Bots недоступен — позиции без миниграфиков');
+                if (this.lastData) this.updatePositionsDisplay();
             }
         } catch (error) {
-            console.error('[PositionsManager] ❌ Ошибка загрузки интервала обновления миниграфиков:', error);
-            console.warn('[PositionsManager] ⚠️ Используем дефолт:', this.updateInterval / 1000, 'сек');
+            this.botsAvailableForCharts = false;
+            console.warn('[PositionsManager] ⚠️ Bots недоступен — позиции без миниграфиков:', error?.message || error);
+            if (this.lastData) this.updatePositionsDisplay();
         }
     }
 
@@ -271,6 +281,7 @@ class PositionsManager {
 
     async updateAllData() {
         if (this.reduceLoad) return; // Не обновляем данные если включено снижение нагрузки
+        if (!this.botsAvailableForCharts) return; // Bots недоступен — миниграфики не загружаем, позиции уже показаны
         if (!this.lastData) return;
         if (this.isUpdatingData) {
             console.log('[PositionsManager] updateAllData skipped: previous run still in progress');
@@ -406,17 +417,10 @@ class PositionsManager {
             }
 
             console.log('PositionsManager: Received positions data:', data);
-            console.log('Full position data:', {
-                high_profitable: data.high_profitable?.[0],
-                profitable: data.profitable?.[0],
-                losing: data.losing?.[0]
-            });
-            
-            // Проверяем структуру данных
-            if (!data.high_profitable || !data.profitable || !data.losing) {
-                console.error('PositionsManager: Invalid data structure:', data);
-                return;
-            }
+            // Нормализуем undefined → [] (API может не вернуть ключи для пустых категорий)
+            data.high_profitable = Array.isArray(data.high_profitable) ? data.high_profitable : [];
+            data.profitable = Array.isArray(data.profitable) ? data.profitable : [];
+            data.losing = Array.isArray(data.losing) ? data.losing : [];
 
             this.lastData = data;
 
@@ -541,7 +545,7 @@ class PositionsManager {
                             <a href="${createTickerLink(pos.symbol, window.app?.exchangeManager?.getSelectedExchange())}" 
                                target="_blank">${pos.symbol}</a>${virtualBadge}
                         </div>
-                        ${!this.reduceLoad ? `
+                        ${(!this.reduceLoad && this.botsAvailableForCharts) ? `
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <img class="mini-chart" 
                                  data-symbol="${pos.symbol}" 

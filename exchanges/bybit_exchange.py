@@ -168,7 +168,7 @@ class BybitExchange(BaseExchange):
         # Кэш для баланса кошелька (чтобы не спамить запросами при проблемах с сетью)
         self._wallet_balance_cache = None
         self._wallet_balance_cache_time = 0
-        self._wallet_balance_cache_ttl = 30  # Кэш на 30 секунд при успешных запросах
+        self._wallet_balance_cache_ttl = 10  # Кэш на 10 секунд (свежие данные для UI)
         self._wallet_balance_cache_ttl_error = 300  # Кэш на 5 минут при сетевых ошибках
         self._last_network_error_time = 0
         self._network_error_count = 0
@@ -2223,6 +2223,11 @@ class BybitExchange(BaseExchange):
             logger.debug(f"[BYBIT_BOT] get_account_info: {e}")
             return None
 
+    def invalidate_wallet_cache(self):
+        """Сбрасывает кэш баланса для следующего запроса (актуальные данные в UI)"""
+        self._wallet_balance_cache = None
+        self._wallet_balance_cache_time = 0
+
     def get_wallet_balance(self):
         """Получает общий баланс кошелька и реализованный PNL (с кэшированием)"""
         import time
@@ -2261,37 +2266,44 @@ class BybitExchange(BaseExchange):
                 except (TypeError, ValueError):
                     return default
             
-            # Получаем значения из правильных полей (API может вернуть пустую строку)
-            total_balance = _safe_float(wallet_data.get('totalWalletBalance'))
+            # Получаем значения из полей Bybit API v5 (актуально 2025)
+            # totalMarginBalance = «Баланс маржи» в UI Bybit = totalWalletBalance + totalPerpUPL
+            # totalAvailableBalance = «Доступный Баланс» в UI (Cross/Portfolio margin)
+            total_wallet = _safe_float(wallet_data.get('totalWalletBalance'))
+            total_margin = _safe_float(wallet_data.get('totalMarginBalance'))
+            total_equity = _safe_float(wallet_data.get('totalEquity'))
+            total_balance = total_margin if total_margin > 0 else (total_equity if total_equity > 0 else total_wallet)
             available_balance = _safe_float(wallet_data.get('totalAvailableBalance'))
             
-            # Режим маржи: при ISOLATED_MARGIN поле totalAvailableBalance не применимо (Bybit docs)
-            # — считаем доступный остаток по монете USDT
             margin_mode = self._get_account_margin_mode()
-            use_isolated_calculation = (margin_mode == 'ISOLATED_MARGIN')
+            is_isolated = (margin_mode == 'ISOLATED_MARGIN')
             
             coin_list = wallet_data.get('coin') or []
             realized_pnl = 0.0
+            # Bybit docs: для ISOLATED — totalAvailableBalance не применим, считаем по USDT.
+            # Для Cross/Portfolio — используем totalAvailableBalance, не трогаем.
             if coin_list:
-                coin_data = coin_list[0]
-                realized_pnl = _safe_float(coin_data.get('cumRealisedPnl'))
-                # Изолированная маржа: всегда считаем остаток по USDT. Иначе — fallback если totalAvailableBalance = 0
-                if use_isolated_calculation or (available_balance <= 0 and total_balance > 0):
-                    for c in coin_list:
-                        if (c.get('coin') or '').upper() == 'USDT':
+                for c in coin_list:
+                    if (c.get('coin') or '').upper() == 'USDT':
+                        realized_pnl = _safe_float(c.get('cumRealisedPnl'))
+                        avail_withdraw = _safe_float(c.get('availableToWithdraw'), -1)
+                        if is_isolated:
                             wb = _safe_float(c.get('walletBalance'))
                             pos_im = _safe_float(c.get('totalPositionIM'))
                             order_im = _safe_float(c.get('totalOrderIM'))
                             locked = _safe_float(c.get('locked'))
                             bonus = _safe_float(c.get('bonus'))
-                            available_balance = max(0.0, wb - pos_im - order_im - locked - bonus)
-                            if use_isolated_calculation:
-                                logger.debug(f"[BYBIT_BOT] Остаток по USDT (режим изолированной маржи): {available_balance:.2f} USDT")
-                            else:
-                                logger.debug(f"[BYBIT_BOT] Остаток по USDT (fallback, totalAvailableBalance=0): {available_balance:.2f} USDT")
-                            break
-            else:
-                realized_pnl = 0.0
+                            avail_calc = max(0.0, wb - pos_im - order_im - locked - bonus)
+                            available_balance = avail_withdraw if avail_withdraw >= 0 else avail_calc
+                        elif avail_withdraw >= 0:
+                            # Cross: availableToWithdraw = «Доступный Баланс» в UI Bybit
+                            available_balance = avail_withdraw
+                        elif available_balance <= 0 and total_balance > 0:
+                            wb = _safe_float(c.get('walletBalance'))
+                            pos_im = _safe_float(c.get('totalPositionIM'))
+                            order_im = _safe_float(c.get('totalOrderIM'))
+                            available_balance = max(0.0, wb - pos_im - order_im)
+                        break
             
             result = {
                 'total_balance': total_balance,

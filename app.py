@@ -770,19 +770,23 @@ def background_update():
 
             positions, rapid_growth = current_exchange.get_positions()
             if not positions:
-                # Закрытые позиции не возвращаются биржей — очищаем список, чтобы не показывать устаревшие (например AXS после закрытия)
-                positions_data.update({
-                    'high_profitable': [], 'profitable': [], 'losing': [],
-                    'total_trades': 0, 'rapid_growth': [],
-                    'stats': {
-                        'total_trades': 0, 'high_profitable_count': 0, 'profitable_count': 0, 'losing_count': 0,
-                        'top_profitable': [], 'top_losing': [], 'total_pnl': 0, 'total_profit': 0, 'total_loss': 0
-                    },
-                    'last_update': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                })
-                save_positions_data(positions_data)
+                empty_count = getattr(background_update, '_empty_positions_count', 0) + 1
+                background_update._empty_positions_count = empty_count
+                if empty_count >= 3:  # 3 подряд пустых — защита от сбоев API
+                    # Закрытые позиции не возвращаются биржей — очищаем список
+                    positions_data.update({
+                        'high_profitable': [], 'profitable': [], 'losing': [],
+                        'total_trades': 0, 'rapid_growth': [],
+                        'stats': {
+                            'total_trades': 0, 'high_profitable_count': 0, 'profitable_count': 0, 'losing_count': 0,
+                            'top_profitable': [], 'top_losing': [], 'total_pnl': 0, 'total_profit': 0, 'total_loss': 0
+                        },
+                        'last_update': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    })
+                    save_positions_data(positions_data)
                 time.sleep(2)
                 continue
+            background_update._empty_positions_count = 0
 
             # Добавляем проверку каждой позиции для уведомлений
             for position in positions:
@@ -999,38 +1003,69 @@ def _update_positions_data_from_list(positions, rapid_growth, pnl_threshold):
 
 @app.route('/get_positions')
 def get_positions():
+    global positions_data
     pnl_threshold = float(request.args.get('pnl_threshold', DEFAULTS.PNL_THRESHOLD))
     force_refresh = request.args.get('force_refresh', '0') == '1'
-
+    pos_log = logging.getLogger('app')
     all_available_pairs = []  # Больше не используется
 
-    # force_refresh: принудительно с биржи (current_exchange), БЕЗ Bots
+    # force_refresh: принудительно с биржи, обновляем и память, и БД
     if force_refresh:
         try:
             if not DEMO_MODE and current_exchange and hasattr(current_exchange, 'get_positions'):
                 pos_list, rapid = current_exchange.get_positions()
+                if not pos_list:
+                    time.sleep(2)  # API может отвечать с задержкой
+                    pos_list, rapid = current_exchange.get_positions()
                 if pos_list:
                     _update_positions_data_from_list(pos_list, rapid, pnl_threshold)
+                    pos_log.info(f"[POSITIONS] force_refresh: {len(pos_list)} позиций с биржи")
+                else:
+                    pos_log.warning("[POSITIONS] force_refresh: биржа вернула пустой список (после retry)")
         except Exception as e:
-            logging.getLogger('app').debug(f"[POSITIONS] force_refresh: {e}")
+            pos_log.warning(f"[POSITIONS] force_refresh ошибка: {e}")
 
-    all_positions = (positions_data['high_profitable'] +
-                    positions_data['profitable'] +
-                    positions_data['losing'])
-
-    # Если позиции пусты — возможно первый запрос до завершения background refresh; пробуем с биржи
+    # Источник 1: память (background обновляет каждые ~2 сек)
+    hp_mem = positions_data.get('high_profitable') or []
+    pf_mem = positions_data.get('profitable') or []
+    ls_mem = positions_data.get('losing') or []
+    all_positions = (hp_mem if isinstance(hp_mem, list) else []) + (pf_mem if isinstance(pf_mem, list) else []) + (ls_mem if isinstance(ls_mem, list) else [])
+    source = 'memory'
+    # Источник 2: БД (если память пуста)
+    if not all_positions:
+        fresh = load_positions_data()
+        hp = fresh.get('high_profitable') or []
+        pf = fresh.get('profitable') or []
+        ls = fresh.get('losing') or []
+        if not isinstance(hp, list): hp = []
+        if not isinstance(pf, list): pf = []
+        if not isinstance(ls, list): ls = []
+        all_positions = hp + pf + ls
+        if all_positions:
+            source = 'db'
+            positions_data['high_profitable'] = hp
+            positions_data['profitable'] = pf
+            positions_data['losing'] = ls
+            positions_data['stats'] = fresh.get('stats', positions_data.get('stats', {}))
+            positions_data['rapid_growth'] = fresh.get('rapid_growth', [])
+            positions_data['last_update'] = fresh.get('last_update', '')
+    if all_positions:
+        pos_log.info(f"[POSITIONS] GET /get_positions ← {source}: {len(all_positions)} позиций")
+    # Источник 3: биржа (если память и БД пусты)
     if not all_positions and not DEMO_MODE and current_exchange and hasattr(current_exchange, 'get_positions'):
         try:
             pos_list, rapid = current_exchange.get_positions()
+            if not pos_list:
+                time.sleep(2)
+                pos_list, rapid = current_exchange.get_positions()
             if pos_list:
                 _update_positions_data_from_list(pos_list, rapid, pnl_threshold)
-                all_positions = (positions_data['high_profitable'] +
-                                positions_data['profitable'] +
-                                positions_data['losing'])
-                api_logger = logging.getLogger('app')
-                api_logger.info(f"[POSITIONS] Синхронное обновление: {len(all_positions)} позиций с биржи")
+                fresh2 = load_positions_data()
+                hp, pf, ls = fresh2.get('high_profitable', []), fresh2.get('profitable', []), fresh2.get('losing', [])
+                all_positions = (hp or []) + (pf or []) + (ls or [])
+                pos_log.info(f"[POSITIONS] Синхронно с биржи: {len(all_positions)} позиций")
         except Exception as e:
-            logging.getLogger('app').debug(f"[POSITIONS] sync refresh: {e}")
+            pos_log.warning(f"[POSITIONS] Ошибка sync refresh: {e}")
 
     # Виртуальные позиции ПРИИ — получаем до проверки «пусто», чтобы показывать только виртуальные
     virtual_positions = []
@@ -1075,7 +1110,10 @@ def get_positions():
         pass
 
     if not all_positions and not virtual_positions:
+        pos_log.info("[POSITIONS] Возврат пустого ответа (нет позиций)")
         try:
+            if hasattr(current_exchange, 'invalidate_wallet_cache'):
+                current_exchange.invalidate_wallet_cache()
             wallet_data = current_exchange.get_wallet_balance()
         except Exception as e:
             api_logger = logging.getLogger('app')
@@ -1085,7 +1123,7 @@ def get_positions():
                 'available_balance': 0,
                 'realized_pnl': 0
             }
-        return jsonify({
+        resp = jsonify({
             'high_profitable': [],
             'profitable': [],
             'losing': [],
@@ -1110,6 +1148,8 @@ def get_positions():
                 'realized_pnl': wallet_data['realized_pnl']
             }
         })
+        resp.headers['X-Positions-Count'] = '0'
+        return resp
 
     all_positions_with_virtual = all_positions + virtual_positions
     active_position_symbols = set(p['symbol'] for p in all_positions_with_virtual)
@@ -1175,8 +1215,10 @@ def get_positions():
         'total_trades': len(all_positions),
     }
     
-    # Получаем данные аккаунта
+    # Получаем данные аккаунта — всегда свежий баланс с биржи (сброс кэша)
     try:
+        if hasattr(current_exchange, 'invalidate_wallet_cache'):
+            current_exchange.invalidate_wallet_cache()
         wallet_data = current_exchange.get_wallet_balance()
     except Exception as e:
         api_logger = logging.getLogger('app')
@@ -1191,7 +1233,7 @@ def get_positions():
     if total_returned > 0:
         logging.getLogger('app').info(f"[POSITIONS] GET /get_positions → {total_returned} позиций (hp:{len(high_profitable)} p:{len(profitable)} l:{len(losing)})")
 
-    return jsonify({
+    resp = jsonify({
         'high_profitable': high_profitable,
         'profitable': profitable,
         'losing': losing,
@@ -1206,6 +1248,57 @@ def get_positions():
             'realized_pnl': wallet_data['realized_pnl']
         }
     })
+    resp.headers['X-Positions-Count'] = str(total_returned)
+    return resp
+
+@app.route('/api/debug/positions')
+def debug_positions():
+    """Диагностика: что в памяти, в БД, биржа и путь к БД"""
+    mem_hp = len(positions_data.get('high_profitable') or [])
+    mem_pf = len(positions_data.get('profitable') or [])
+    mem_ls = len(positions_data.get('losing') or [])
+    fresh = load_positions_data()
+    db_hp = len(fresh.get('high_profitable') or [])
+    db_pf = len(fresh.get('profitable') or [])
+    db_ls = len(fresh.get('losing') or [])
+    db_path = ''
+    try:
+        db_path = get_app_db().db_path
+    except Exception:
+        pass
+    exchange_count = 0
+    exchange_sample = []
+    try:
+        if current_exchange and hasattr(current_exchange, 'get_positions'):
+            pos_list, _ = current_exchange.get_positions()
+            exchange_count = len(pos_list or [])
+            exchange_sample = [p.get('symbol', '?') for p in (pos_list or [])[:10]]
+    except Exception as e:
+        exchange_sample = [f'error: {str(e)}']
+    return jsonify({
+        'memory': {'high_profitable': mem_hp, 'profitable': mem_pf, 'losing': mem_ls, 'total': mem_hp + mem_pf + mem_ls},
+        'db': {'high_profitable': db_hp, 'profitable': db_pf, 'losing': db_ls, 'total': db_hp + db_pf + db_ls},
+        'exchange': {'count': exchange_count, 'sample': exchange_sample},
+        'db_path': db_path,
+    })
+
+@app.route('/api/debug/wallet')
+def debug_wallet():
+    """Диагностика: сырой ответ get_wallet_balance и margin_mode"""
+    try:
+        if not current_exchange:
+            return jsonify({'error': 'Exchange not initialized'})
+        wallet = current_exchange.get_wallet_balance()
+        margin_mode = None
+        if hasattr(current_exchange, '_get_account_margin_mode'):
+            margin_mode = current_exchange._get_account_margin_mode()
+        return jsonify({
+            'wallet': wallet,
+            'margin_mode': margin_mode,
+            'demo_mode': DEMO_MODE,
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 @app.route('/api/positions')
 def api_positions():
@@ -2579,7 +2672,7 @@ if __name__ == '__main__':
                     'stats': {
                         'total_trades': len(positions),
                         'high_profitable_count': len(high_profitable),
-                        'profitable_count': len(profitable),
+                        'profitable_count': len(high_profitable) + len(profitable),
                         'losing_count': len(losing)
                     }
                 })
