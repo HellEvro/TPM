@@ -22,6 +22,7 @@ class App {
             
             console.log('[APP] Creating PositionsManager...');
             this.positionsManager = new PositionsManager();
+            window.positionsManager = this.positionsManager;
             console.log('[APP] ✅ PositionsManager created');
             
             console.log('[APP] Creating ExchangeManager...');

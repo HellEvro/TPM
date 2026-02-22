@@ -721,11 +721,12 @@ def save_bots_state():
     """Сохраняет состояние всех ботов в БД"""
     try:
         # ✅ ИСПРАВЛЕНИЕ: Используем таймаут для блокировки чтобы не висеть при остановке.
-        # При первом раунде загрузки данных (свечи, RSI, фильтры) lock может быть занят долго — даём 15 сек.
+        # При первом раунде загрузки данных (свечи, RSI, фильтры) lock может быть занят долго — даём 45 сек.
         import threading
         
         requester = threading.current_thread().name
-        acquired = bots_data_lock.acquire(timeout=15.0)
+        lock_timeout = 45.0
+        acquired = bots_data_lock.acquire(timeout=lock_timeout)
         if not acquired:
             # Логируем не чаще 1 раза в 2 минуты, чтобы не спамить при длительной загрузке
             import time as _t
@@ -735,7 +736,7 @@ def save_bots_state():
                 save_bots_state._last_lock_warn = now_sec
                 active_threads = [t.name for t in threading.enumerate()[:10]]
                 logger.warning(
-                    "[SAVE_STATE] ⚠️ Не удалось получить блокировку за 15 сек - пропускаем сохранение "
+                    f"[SAVE_STATE] ⚠️ Не удалось получить блокировку за {int(lock_timeout)} сек - пропускаем сохранение "
                     f"(thread={requester}, active_threads={active_threads})"
                 )
             return False

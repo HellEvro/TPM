@@ -18,13 +18,22 @@
             const stats = this.lastRsiStats || {};
             const processed = (stats.successful_coins || 0) + (stats.failed_coins || 0);
             const total = stats.total_coins || 0;
-            console.warn('[BotsManager] ⚠️ Нет данных RSI для отображения', inProgress ? '(идёт загрузка на сервере)' : '');
+            const serviceOnline = this.serviceOnline === true;
+            console.warn('[BotsManager] ⚠️ Нет данных RSI для отображения', inProgress ? '(идёт загрузка на сервере)' : (serviceOnline ? '(сервис онлайн, ожидание первого раунда)' : ''));
+            let hintText;
+            if (inProgress) {
+                hintText = window.languageUtils.translate('first_load_warning') || 'Первая загрузка может занять 1–2 минуты. Не закрывайте вкладку.';
+            } else if (total) {
+                hintText = `Расчёт завершён: ${processed}/${total} монет. Если список пуст — проверьте логи bots.py.`;
+            } else if (serviceOnline) {
+                hintText = window.languageUtils.translate('rsi_first_round_wait') || 'Идёт первый расчёт RSI (1–2 мин). Bots.py запущен, ожидайте.';
+            } else {
+                hintText = window.languageUtils.translate('start_bots_for_rsi') || 'Запустите bots.py и дождитесь завершения расчёта RSI.';
+            }
             coinsListElement.innerHTML = `
                 <div class="loading-state">
-                    <p>⏳ ${inProgress ? (window.languageUtils.translate('loading_rsi_data') || 'Загрузка данных RSI...') : (window.languageUtils.translate('no_rsi_data') || 'Нет данных RSI')}</p>
-                    <small>${inProgress
-                        ? (window.languageUtils.translate('first_load_warning') || 'Первая загрузка может занять несколько минут. Не закрывайте вкладку.')
-                        : (total ? `Расчёт завершён: ${processed}/${total} монет. Если список пуст — проверьте логи bots.py.` : 'Запустите bots.py и дождитесь завершения расчёта RSI.')}</small>
+                    <p>⏳ ${inProgress ? (window.languageUtils.translate('loading_rsi_data') || 'Загрузка данных RSI...') : (serviceOnline ? (window.languageUtils.translate('rsi_calculating') || 'Расчёт RSI...') : (window.languageUtils.translate('no_rsi_data') || 'Нет данных RSI'))}</p>
+                    <small>${hintText}</small>
                 </div>
             `;
             return;

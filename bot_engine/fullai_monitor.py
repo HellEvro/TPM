@@ -165,7 +165,7 @@ def _check_position_and_decide(symbol: str) -> None:
             return
 
         reason = decision.get('reason') or 'FullAI_EXIT'
-        logger.info("[FullAI Monitor] %s: закрытие — %s", symbol, reason)
+        logger.info(f"[FullAI Monitor] {symbol}: закрытие — {reason}")
         closed = False
         if not isinstance(bot, dict):
             close_fn = getattr(bot, '_close_position_on_exchange', None)

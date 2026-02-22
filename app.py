@@ -1032,7 +1032,7 @@ def get_positions():
                 if pos_list:
                     _update_positions_data_from_list(pos_list, rapid, pnl_threshold)
             if not positions_data.get('total_trades', 0) and not DEMO_MODE:
-                resp = requests.get('http://127.0.0.1:5001/api/bots/positions-for-app', timeout=5)
+                resp = requests.get(f'http://127.0.0.1:5001/api/bots/positions-for-app?pnl_threshold={pnl_threshold}', timeout=10)
                 if resp.status_code == 200:
                     data = resp.json()
                     if data.get('success') and data.get('total_trades', 0) > 0:
@@ -1095,7 +1095,7 @@ def get_positions():
     if not all_positions and not virtual_positions:
         try:
             bots_url = getattr(request, 'headers', None) and request.headers.get('X-Bots-Service-URL') or 'http://127.0.0.1:5001'
-            resp = requests.get(f'{bots_url}/api/bots/positions-for-app', timeout=5)
+            resp = requests.get(f'{bots_url}/api/bots/positions-for-app?pnl_threshold={pnl_threshold}', timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
                 if data.get('success') and data.get('total_trades', 0) > 0:

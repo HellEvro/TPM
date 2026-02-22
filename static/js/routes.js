@@ -5,8 +5,10 @@ class Routes {
             'positions': {
                 get title() { return (window.languageUtils && window.languageUtils.translate('positions')) || 'Позиции'; },
                 init: () => {
-                    // Инициализация страницы позиций
-                    if (!window.positionsManager) {
+                    // Инициализация страницы позиций — используем app.positionsManager
+                    if (!window.positionsManager && window.app?.positionsManager) {
+                        window.positionsManager = window.app.positionsManager;
+                    } else if (!window.positionsManager) {
                         window.positionsManager = new PositionsManager();
                     }
                 }

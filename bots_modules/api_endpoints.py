@@ -421,17 +421,44 @@ def get_account_info():
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response, 500
 
+def _positions_to_app_format(data: dict) -> dict:
+    """Преобразует ответ Bots в формат app.py для Monitor (high_profitable, profitable, losing, stats, wallet_data)."""
+    growth_mult = 3.0
+    try:
+        from configs.app_config import GROWTH_MULTIPLIER
+        growth_mult = float(GROWTH_MULTIPLIER)
+    except Exception:
+        pass
+    return {
+        'high_profitable': data.get('high_profitable', []),
+        'profitable': data.get('profitable', []),
+        'losing': data.get('losing', []),
+        'stats': data.get('stats', {}),
+        'rapid_growth': data.get('rapid_growth', []),
+        'last_update': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'growth_multiplier': growth_mult,
+        'all_pairs': [],
+        'wallet_data': data.get('wallet_data', {})
+    }
+
+
+@bots_app.route('/get_positions', methods=['GET'])
 @bots_app.route('/api/positions', methods=['GET'])
 def api_positions():
     """
-    Позиции для Trading Positions Monitor. Когда UI открыт с Bots (5001),
-    /api/positions должен отдавать ВСЕ позиции с биржи (включая ручные).
+    Позиции для Trading Positions Monitor. Отдаёт ВСЕ позиции с биржи (включая ручные).
+    /get_positions — для совместимости с фронтом (когда UI открыт с Bots 5001).
     """
     try:
         result = _get_positions_for_app_impl()
         if isinstance(result, tuple):
             resp, code = result
             return resp, code
+        data = result.get_json() if hasattr(result, 'get_json') else {}
+        # /get_positions — формат app.py (без success, с growth_multiplier, all_pairs)
+        if request.path == '/get_positions':
+            out = _positions_to_app_format(data)
+            return jsonify(out)
         return result
     except Exception as e:
         logger.error(f"[API_POSITIONS] {e}")
@@ -888,12 +915,15 @@ def get_coins_with_rsi():
         except Exception as e:
             logger.error(f" Ошибка получения ручных позиций: {str(e)}")
         
+        # update_in_progress = во время load_all_coins_rsi; processing_cycle = весь раунд (свечи + RSI)
+        update_in_progress = coins_rsi_data.get('update_in_progress', False)
+        processing_cycle = coins_rsi_data.get('processing_cycle', False)
         result = {
             'success': True,
             'coins': cleaned_coins,
             'total': len(cleaned_coins),
             'last_update': coins_rsi_data['last_update'],
-            'update_in_progress': coins_rsi_data['update_in_progress'],
+            'update_in_progress': update_in_progress or processing_cycle,
             'data_version': coins_rsi_data.get('data_version', 0),  # ✅ Версия данных для оптимизации UI
             'manual_positions': manual_positions,  # Добавляем список ручных позиций
             'cache_info': {

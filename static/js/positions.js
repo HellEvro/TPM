@@ -28,6 +28,7 @@ class PositionsManager {
         this.initializeClearButton();
         this.searchQuery = '';
         this.initializeSearch();
+        this._initialLoadDone = false;  // Для принудительного обновления с биржи при первой загрузке
     }
 
     initializeFilters() {
@@ -381,10 +382,13 @@ class PositionsManager {
 
     async updateData() {
         try {
-            console.log('PositionsManager: Fetching positions data...');
-            const data = await apiUtils.fetchData(API_ENDPOINTS.GET_POSITIONS, {
-                pnl_threshold: this.pnlThreshold
-            });
+            const params = { pnl_threshold: this.pnlThreshold };
+            if (!this._initialLoadDone) {
+                params.force_refresh = 1;  // При первой загрузке — принудительно с биржи/Bots
+                this._initialLoadDone = true;
+            }
+            console.log('PositionsManager: Fetching positions data...', params);
+            const data = await apiUtils.fetchData(API_ENDPOINTS.GET_POSITIONS, params);
             
             if (!data) {
                 console.warn('PositionsManager: No positions data received');

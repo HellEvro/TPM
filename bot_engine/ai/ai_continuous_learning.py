@@ -23,6 +23,21 @@ from collections import defaultdict
 
 logger = logging.getLogger('AI.ContinuousLearning')
 
+_instance: Optional['AIContinuousLearning'] = None
+_instance_lock = __import__('threading').Lock()
+
+
+def get_ai_continuous_learning_instance() -> 'AIContinuousLearning':
+    """Синглтон AIContinuousLearning — избегаем спама инициализации и повторной загрузки БД."""
+    global _instance
+    if _instance is not None:
+        return _instance
+    with _instance_lock:
+        if _instance is not None:
+            return _instance
+        _instance = AIContinuousLearning()
+        return _instance
+
 
 class AIContinuousLearning:
     """
@@ -53,8 +68,6 @@ class AIContinuousLearning:
         
         # Загружаем базу знаний из БД
         self.knowledge_base = self._load_knowledge_base()
-        
-        logger.debug("✅ AIContinuousLearning инициализирован")
     
     def _load_knowledge_base(self) -> Dict:
         """Загрузить базу знаний о торговле из БД"""
