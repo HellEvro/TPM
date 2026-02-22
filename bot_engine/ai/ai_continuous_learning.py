@@ -197,8 +197,8 @@ class AIContinuousLearning:
         logger.info("=" * 80)
         
         try:
-            successful_trades = [t for t in trades if t.get('pnl', 0) > 0]
-            failed_trades = [t for t in trades if t.get('pnl', 0) <= 0]
+            successful_trades = [t for t in trades if (t.get('pnl') or 0) > 0]
+            failed_trades = [t for t in trades if (t.get('pnl') or 0) <= 0]
             
             logger.info(f"   📊 Всего сделок: {len(trades)}")
             logger.info(f"   ✅ Успешных: {len(successful_trades)}")
@@ -262,7 +262,7 @@ class AIContinuousLearning:
             # RSI анализ
             entry_data = trade.get('entry_data', {})
             rsi = entry_data.get('rsi')
-            if rsi:
+            if rsi is not None:
                 rsi_values.append(rsi)
                 # Группируем по диапазонам
                 if rsi <= 25:
@@ -286,9 +286,9 @@ class AIContinuousLearning:
             exit_reasons.append(exit_reason)
             patterns['exit_reasons'][exit_reason] += 1
             
-            # PnL
-            pnl = trade.get('pnl', 0)
-            pnl_values.append(pnl)
+            # PnL (может быть None — подставляем 0)
+            pnl = trade.get('pnl')
+            pnl_values.append(float(pnl) if pnl is not None else 0.0)
         
         if rsi_values:
             patterns['avg_rsi'] = np.mean(rsi_values)
@@ -315,32 +315,38 @@ class AIContinuousLearning:
             return insights
         
         # Анализ лучших и худших сделок
-        sorted_trades = sorted(trades, key=lambda x: x.get('pnl', 0), reverse=True)
+        sorted_trades = sorted(trades, key=lambda x: float(x.get('pnl') or 0), reverse=True)
         
         if len(sorted_trades) >= 5:
             best_trades = sorted_trades[:5]
             worst_trades = sorted_trades[-5:]
             
-            # Инсайт о лучших сделках
-            best_rsi_avg = np.mean([t.get('entry_data', {}).get('rsi', 50) for t in best_trades])
-            best_trends = [t.get('entry_data', {}).get('trend', 'NEUTRAL') for t in best_trades]
+            # Инсайт о лучших сделках (rsi/pnl могут быть None — подставляем 50/0)
+            best_rsi_vals = [t.get('entry_data', {}) or {} for t in best_trades]
+            best_rsi_vals = [float(v) if v is not None else 50.0 for v in [x.get('rsi') for x in best_rsi_vals]]
+            best_rsi_avg = np.mean(best_rsi_vals) if best_rsi_vals else 50.0
+            best_trends = [(t.get('entry_data', {}) or {}).get('trend') or 'NEUTRAL' for t in best_trades]
+            best_pnl_vals = [float(x) if x is not None else 0.0 for x in [t.get('pnl') for t in best_trades]]
             
             insights.append({
                 'type': 'best_trades_pattern',
                 'description': f'Лучшие сделки при среднем RSI {best_rsi_avg:.1f}',
-                'trends': dict([(t, best_trends.count(t)) for t in set(best_trends)]),
-                'avg_pnl': np.mean([t.get('pnl', 0) for t in best_trades])
+                'trends': dict([(tr, best_trends.count(tr)) for tr in set(best_trends)]),
+                'avg_pnl': np.mean(best_pnl_vals) if best_pnl_vals else 0.0
             })
             
             # Инсайт о худших сделках (чего избегать)
-            worst_rsi_avg = np.mean([t.get('entry_data', {}).get('rsi', 50) for t in worst_trades])
-            worst_trends = [t.get('entry_data', {}).get('trend', 'NEUTRAL') for t in worst_trades]
+            worst_rsi_vals = [t.get('entry_data', {}) or {} for t in worst_trades]
+            worst_rsi_vals = [float(v) if v is not None else 50.0 for v in [x.get('rsi') for x in worst_rsi_vals]]
+            worst_rsi_avg = np.mean(worst_rsi_vals) if worst_rsi_vals else 50.0
+            worst_trends = [(t.get('entry_data', {}) or {}).get('trend') or 'NEUTRAL' for t in worst_trades]
+            worst_pnl_vals = [float(x) if x is not None else 0.0 for x in [t.get('pnl') for t in worst_trades]]
             
             insights.append({
                 'type': 'worst_trades_pattern',
                 'description': f'Худшие сделки при среднем RSI {worst_rsi_avg:.1f}',
-                'trends': dict([(t, worst_trends.count(t)) for t in set(worst_trends)]),
-                'avg_pnl': np.mean([t.get('pnl', 0) for t in worst_trades]),
+                'trends': dict([(tr, worst_trends.count(tr)) for tr in set(worst_trends)]),
+                'avg_pnl': np.mean(worst_pnl_vals) if worst_pnl_vals else 0.0,
                 'avoid': True
             })
         
@@ -696,7 +702,7 @@ class AIContinuousLearning:
             Словарь с метриками производительности AI
         """
         try:
-            logger.info("📊 Оценка производительности AI...")
+            logger.debug("📊 Оценка производительности AI...")
 
             # Разделяем сделки с AI и без AI
             ai_trades = [t for t in trades if t.get('ai_used', False)]
@@ -764,10 +770,7 @@ class AIContinuousLearning:
                 metrics['ai_performance_score'] = ai_score  # 0-3 шкала
                 metrics['ai_performance_rating'] = self._get_performance_rating(ai_score)
 
-                logger.info("📊 Оценка AI:")
-                logger.info(f"   Win Rate AI: {metrics['ai_win_rate']:.1%} vs Без AI: {metrics['non_ai_win_rate']:.1%} (разница: {win_rate_diff:.1%})")
-                logger.info(f"   Avg PnL AI: ${metrics['ai_avg_pnl']:.2f} vs Без AI: ${metrics['non_ai_avg_pnl']:.2f} (разница: ${avg_pnl_diff:.2f})")
-                logger.info(f"   Рейтинг AI: {metrics['ai_performance_rating']} (балл: {ai_score}/3)")
+                logger.debug("📊 Оценка AI: Win Rate, Avg PnL, рейтинг (детали в DEBUG)")
 
             # Сохраняем метрики в knowledge base
             self.knowledge_base['performance_metrics'] = self.knowledge_base.get('performance_metrics', [])

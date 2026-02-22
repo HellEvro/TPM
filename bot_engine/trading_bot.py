@@ -778,8 +778,16 @@ class TradingBot:
                                         stop_loss=stop_loss
                                     )
                                     if order_result.get('success'):
+                                        order_id = order_result.get('order_id')
+                                        try:
+                                            from bot_engine.bots_database import get_bots_database
+                                            db = get_bots_database()
+                                            if db and order_id:
+                                                db.save_pending_limit_order(order_id, self.symbol, side, limit_price, quantity, 'entry_rsi', None)
+                                        except Exception as _db_err:
+                                            pass
                                         self.logger.info(f" {self.symbol}: Лимитный вход по RSI размещён @ {limit_price} (порог RSI={threshold}) + TP/SL заранее")
-                                        return {'success': True, 'message': 'limit_order_placed', 'order_id': order_result.get('order_id'), 'price': limit_price}
+                                        return {'success': True, 'message': 'limit_order_placed', 'order_id': order_id, 'price': limit_price}
                                     self.logger.warning(f" {self.symbol}: Не удалось разместить лимит по RSI: {order_result.get('message', '')}")
                         else:
                             self.logger.debug(f" {self.symbol}: Недостаточно свечей для расчёта цены по RSI, вход по рынку")
@@ -1671,6 +1679,17 @@ class TradingBot:
                     }
                     placed_orders.append(order_info)
                     self.limit_orders.append(order_info)
+                    # Записываем в БД (лимитные ордера в ожидании)
+                    try:
+                        from bot_engine.bots_database import get_bots_database
+                        db = get_bots_database()
+                        if db and order_id:
+                            db.save_pending_limit_order(
+                                order_id, self.symbol, side, limit_price, margin_amount,
+                                'entry_step', percent_step
+                            )
+                    except Exception:
+                        pass
                     self.logger.info(f" {self.symbol}: ✅ Лимитный ордер #{i+1} размещен: {margin_amount} USDT @ {limit_price:.6f} ({percent_step}%) + TP/SL заранее")
                     # Логируем в историю
                     try:
@@ -1938,6 +1957,13 @@ class TradingBot:
                     # Ордер был удален вручную на бирже
                     self.limit_orders.remove(order_info)
                     removed_count += 1
+                    try:
+                        from bot_engine.bots_database import get_bots_database
+                        db = get_bots_database()
+                        if db:
+                            db.remove_pending_limit_order(order_id)
+                    except Exception:
+                        pass
                     self.logger.warning(f" {self.symbol}: ⚠️ Лимитный ордер {order_id} был удален вручную на бирже, удаляем из списка")
             
             if removed_count > 0:
@@ -1969,6 +1995,13 @@ class TradingBot:
                     )
                     if cancel_result and cancel_result.get('success'):
                         cancelled_count += 1
+                        try:
+                            from bot_engine.bots_database import get_bots_database
+                            db = get_bots_database()
+                            if db:
+                                db.remove_pending_limit_order(str(order_id))
+                        except Exception:
+                            pass
                         self.logger.info(f" {self.symbol}: ✅ Лимитный ордер {order_id} отменен")
                     else:
                         self.logger.warning(f" {self.symbol}: ⚠️ Не удалось отменить ордер {order_id}")
@@ -1980,11 +2013,18 @@ class TradingBot:
             except Exception as e:
                 self.logger.error(f" {self.symbol}: ❌ Ошибка отмены ордера {order_info.get('order_id')}: {e}")
         
-        # Очищаем список лимитных ордеров
+        # Очищаем список лимитных ордеров и БД
         total_orders = len(self.limit_orders)
         self.limit_orders = []
         self.limit_orders_entry_price = None
-        self.last_limit_orders_count = 0  # Сбрасываем счетчик при отмене всех ордеров
+        self.last_limit_orders_count = 0
+        try:
+            from bot_engine.bots_database import get_bots_database
+            db = get_bots_database()
+            if db:
+                db.remove_pending_limit_orders_for_symbol(self.symbol)
+        except Exception:
+            pass
         self.logger.info(f" {self.symbol}: ✅ Отменено лимитных ордеров: {cancelled_count}/{total_orders}")
     
     def _check_and_update_limit_orders_fills(self) -> None:
@@ -2125,6 +2165,13 @@ class TradingBot:
                         self.limit_orders.remove(order_info)
                         orders_removed_count += 1
                         order_id = order_info.get('order_id', 'unknown')
+                        try:
+                            from bot_engine.bots_database import get_bots_database
+                            db = get_bots_database()
+                            if db and order_id:
+                                db.remove_pending_limit_order(str(order_id))
+                        except Exception:
+                            pass
                         self.logger.info(f" {self.symbol}: ✅ Лимитный ордер сработал: {order_info.get('quantity', 0)} USDT @ {order_info.get('price', 0):.6f} (ID: {order_id})")
                 
                 # КРИТИЧНО: Пересчитываем стоп-лосс ТОЛЬКО если действительно сработал новый ордер

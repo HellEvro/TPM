@@ -1403,6 +1403,23 @@ class BotsDatabase:
                 )
             """)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_fullai_leaderboard_symbol ON fullai_param_leaderboard(symbol)")
+
+            # ==================== ТАБЛИЦА: ЛИМИТНЫЕ ОРДЕРА БОТОВ В ОЖИДАНИИ ====================
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bot_pending_limit_orders (
+                    order_id TEXT PRIMARY KEY,
+                    symbol TEXT NOT NULL,
+                    side TEXT NOT NULL,
+                    price REAL NOT NULL,
+                    quantity REAL NOT NULL,
+                    order_type TEXT NOT NULL DEFAULT 'entry',
+                    percent_step REAL,
+                    placed_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_pending_limit_orders_symbol ON bot_pending_limit_orders(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_pending_limit_orders_placed ON bot_pending_limit_orders(placed_at)")
             
             # ==================== ТАБЛИЦА: КЭШ СВЕЧЕЙ (НОРМАЛИЗОВАННАЯ) ====================
             # Метаданные кэша свечей
@@ -4216,6 +4233,87 @@ class BotsDatabase:
             import traceback
             pass
             return None
+
+    # ==================== ЛИМИТНЫЕ ОРДЕРА В ОЖИДАНИИ ====================
+
+    def save_pending_limit_order(self, order_id: str, symbol: str, side: str, price: float, quantity: float,
+                                 order_type: str = 'entry', percent_step: float = None) -> bool:
+        """Записать лимитный ордер бота в таблицу (в ожидании исполнения)"""
+        try:
+            if not order_id or not symbol:
+                return False
+            now = datetime.now().isoformat()
+            with self.lock:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO bot_pending_limit_orders
+                        (order_id, symbol, side, price, quantity, order_type, percent_step, placed_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (str(order_id), symbol, side, float(price), float(quantity), order_type,
+                          percent_step, now, now))
+                    conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения лимитного ордера {order_id}: {e}")
+            return False
+
+    def remove_pending_limit_order(self, order_id: str) -> bool:
+        """Удалить лимитный ордер из таблицы (исполнен или отменён)"""
+        try:
+            if not order_id:
+                return False
+            with self.lock:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM bot_pending_limit_orders WHERE order_id = ?", (str(order_id),))
+                    conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"❌ Ошибка удаления лимитного ордера {order_id}: {e}")
+            return False
+
+    def remove_pending_limit_orders_for_symbol(self, symbol: str) -> int:
+        """Удалить все лимитные ордера для символа. Возвращает количество удалённых."""
+        try:
+            if not symbol:
+                return 0
+            with self.lock:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM bot_pending_limit_orders WHERE symbol = ?", (symbol,))
+                    deleted = cursor.rowcount
+                    conn.commit()
+            return deleted
+        except Exception as e:
+            logger.error(f"❌ Ошибка удаления лимитных ордеров для {symbol}: {e}")
+            return 0
+
+    def load_pending_limit_orders(self, symbol: str = None) -> List[Dict]:
+        """Загрузить лимитные ордера в ожидании. Если symbol — только для символа."""
+        try:
+            with self.lock:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    if symbol:
+                        cursor.execute("""
+                            SELECT order_id, symbol, side, price, quantity, order_type, percent_step, placed_at
+                            FROM bot_pending_limit_orders WHERE symbol = ? ORDER BY placed_at
+                        """, (symbol,))
+                    else:
+                        cursor.execute("""
+                            SELECT order_id, symbol, side, price, quantity, order_type, percent_step, placed_at
+                            FROM bot_pending_limit_orders ORDER BY symbol, placed_at
+                        """)
+                    rows = cursor.fetchall()
+            return [
+                {'order_id': r[0], 'symbol': r[1], 'side': r[2], 'price': r[3], 'quantity': r[4],
+                 'order_type': r[5], 'percent_step': r[6], 'placed_at': r[7]}
+                for r in rows
+            ]
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки лимитных ордеров: {e}")
+            return []
     
     def clear_rsi_cache(self) -> bool:
         """Очищает RSI кэш"""

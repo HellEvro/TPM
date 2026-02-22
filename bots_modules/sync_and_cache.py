@@ -1438,9 +1438,10 @@ def update_bots_cache_data():
                 'last_update': current_time
             })
         
-        # ✅ СИНХРОНИЗАЦИЯ: Проверяем закрытые позиции на бирже
+        # ✅ СИНХРОНИЗАЦИЯ: Проверяем закрытые позиции на бирже (ТОЛЬКО после first_round_complete)
         try:
-            sync_bots_with_exchange()
+            if coins_rsi_data.get('first_round_complete'):
+                sync_bots_with_exchange()
         except Exception as e:
             logger.error(f" ❌ Ошибка синхронизации с биржей: {e}")
         
@@ -1879,6 +1880,9 @@ def sync_positions_with_exchange():
     Сначала один раз получаем позиции с биржи, по ним обновляем RSI (20 свечей + текущая цена),
     затем сверка списка и исправление сторон."""
     try:
+        # ✅ КРИТИЧНО: Не синхронизируем до первой загрузки RSI — иначе удаляем ботов без данных
+        if not coins_rsi_data.get('first_round_complete'):
+            return False
         # 1) Один раз получаем позиции с биржи
         exchange_positions = get_exchange_positions()
         if exchange_positions is None:
@@ -2065,6 +2069,16 @@ def cancel_all_orders_for_symbol_on_bot_delete(symbol):
                 logger.warning(f"[BOT_DELETE] ⚠️ Не удалось отменить ордер {order_id}: {e}")
         if cancelled > 0:
             logger.info(f"[BOT_DELETE] ✅ Отменено {cancelled} ордеров для {symbol} при удалении бота")
+        # Удаляем из БД (лимитные ордера в ожидании)
+        try:
+            from bot_engine.bots_database import get_bots_database
+            db = get_bots_database()
+            if db:
+                removed = db.remove_pending_limit_orders_for_symbol(symbol)
+                if removed > 0:
+                    logger.info(f"[BOT_DELETE] ✅ Удалено {removed} записей лимитных ордеров из БД для {symbol}")
+        except Exception:
+            pass
         return cancelled
     except Exception as e:
         logger.error(f"[BOT_DELETE] ❌ Ошибка отмены ордеров для {symbol}: {e}")
@@ -2535,6 +2549,19 @@ def check_missing_stop_losses():
                                 break
                         
                         if not direct_check:
+                            # ✅ НЕ удаляем бота RUNNING с pending limit orders (RSI limit или step-based) — ждём исполнения
+                            bot_status = bot_snapshot.get('status')
+                            has_position = bot_snapshot.get('position_side') or bot_snapshot.get('entry_price')
+                            if (bot_status == BOT_STATUS.get('RUNNING') and not has_position and
+                                    hasattr(current_exchange, 'get_open_orders') and hasattr(current_exchange, 'cancel_order')):
+                                try:
+                                    open_orders = current_exchange.get_open_orders(symbol)
+                                    limit_orders = [o for o in (open_orders or []) if (o.get('order_type') or o.get('orderType', '')).lower() == 'limit']
+                                    if limit_orders:
+                                        logger.info(f" ⏳ Бот {symbol} RUNNING, лимитные ордера на бирже ({len(limit_orders)} шт.) — ждём исполнения, не удаляем")
+                                        continue
+                                except Exception as _ord_err:
+                                    pass
                             # Символ не найден с size > 0: либо позиция закрыта, либо её нет на бирже
                             # Проверяем, есть ли символ в сыром списке с size=0 (закрытая позиция)
                             symbol_on_exchange_with_zero = False
@@ -2814,6 +2841,7 @@ def check_startup_position_conflicts():
         
         conflicts_found = 0
         bots_paused = 0
+        limit_fills_updated = 0
         
         with bots_data_lock:
             for bot_key, bot_data in bots_data['bots'].items():
@@ -2856,17 +2884,20 @@ def check_startup_position_conflicts():
                         if has_position:
                             # Есть позиция на бирже
                             if bot_status in [BOT_STATUS['RUNNING']]:
-                                # КОНФЛИКТ: бот активен, но позиция уже есть на бирже
-                                logger.warning(f" 🚨 {symbol}: КОНФЛИКТ! Бот {bot_status}, но позиция {side} уже есть на бирже!")
-                                
-                                # Принудительно останавливаем бота
-                                bot_data['status'] = BOT_STATUS['PAUSED']
+                                # ✅ НЕ конфликт! Лимитный ордер заполнился — обновляем бота в IN_POSITION
+                                # (бот RUNNING без позиции = ожидал лимитку, она сработала)
+                                new_status = BOT_STATUS['IN_POSITION_LONG'] if side == 'LONG' else BOT_STATUS['IN_POSITION_SHORT']
+                                entry_price = float(pos.get('avgPrice', 0) or 0)
+                                size = float(pos.get('size', 0) or 0)
+                                bot_data['status'] = new_status
+                                bot_data['position_side'] = side
+                                bot_data['entry_price'] = entry_price
+                                bot_data['position_size_coins'] = abs(size)
                                 bot_data['last_update'] = datetime.now().isoformat()
-                                
-                                conflicts_found += 1
-                                bots_paused += 1
-                                
-                                logger.warning(f" 🔴 {symbol}: Бот принудительно остановлен (PAUSED)")
+                                if entry_price and size:
+                                    bot_data['position_size'] = entry_price * abs(size)
+                                limit_fills_updated += 1
+                                logger.info(f" ✅ {symbol}: Лимитный ордер исполнен, бот обновлён → {new_status} (entry={entry_price}, size={size})")
                                 
                             elif bot_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
                                 # Корректное состояние - бот в позиции
@@ -2890,9 +2921,11 @@ def check_startup_position_conflicts():
                 except Exception as e:
                     logger.error(f" ❌ Ошибка проверки {symbol}: {e}")
         
-        if conflicts_found > 0:
-            logger.warning(f" 🚨 Найдено {conflicts_found} конфликтов, остановлено {bots_paused} ботов")
-            # Сохраняем обновленное состояние
+        if conflicts_found > 0 or limit_fills_updated > 0:
+            if conflicts_found > 0:
+                logger.warning(f" 🚨 Найдено {conflicts_found} конфликтов, остановлено {bots_paused} ботов")
+            if limit_fills_updated > 0:
+                logger.info(f" ✅ Обновлено {limit_fills_updated} ботов (лимитные ордера исполнены)")
             save_bots_state()
 
             # ✅ ДОПОЛНИТЕЛЬНО: синхронизируем реестр позиций ботов (bot_positions_registry)
@@ -3117,9 +3150,35 @@ def sync_bots_with_exchange():
                             # logger.info(f"[SYNC_EXCHANGE] 📊 {symbol}: Вход=${entry_price:.4f} | Текущая=${current_price:.4f} | Размер={position_size}")
                             
                         else:
-                            # Нет позиции на бирже - проверяем статус инструмента
+                            # Нет позиции на бирже
                             old_status = bot_data.get('status', 'UNKNOWN')
-                            
+
+                            # ✅ МОНИТОРИНГ ЛИМИТНЫХ ОРДЕРОВ: RUNNING без позиции — проверяем, есть ли лимитки на бирже
+                            # Если пользователь закрыл лимитку вручную — переводим бота в IDLE
+                            if old_status == BOT_STATUS.get('RUNNING'):
+                                has_position = bot_data.get('position_side') or bot_data.get('entry_price')
+                                if not has_position and current_exchange and hasattr(current_exchange, 'get_open_orders'):
+                                    try:
+                                        open_orders = current_exchange.get_open_orders(symbol)
+                                        limit_orders = [
+                                            o for o in (open_orders or [])
+                                            if (o.get('order_type') or o.get('orderType', '')).lower() == 'limit'
+                                        ]
+                                        if not limit_orders:
+                                            need_save = False
+                                            with bots_data_lock:
+                                                if symbol in bots_data['bots']:
+                                                    bots_data['bots'][symbol]['status'] = BOT_STATUS['IDLE']
+                                                    bots_data['bots'][symbol]['limit_orders'] = []
+                                                    bots_data['bots'][symbol]['limit_orders_entry_price'] = None
+                                                    logger.info(f"[SYNC_EXCHANGE] 🔄 {symbol}: Лимитка отменена вручную — бот переведён в IDLE")
+                                                    need_save = True
+                                            if need_save:
+                                                save_bots_state()
+                                    except Exception as _ord_err:
+                                        pass
+                                continue
+
                             # ✅ КРИТИЧНО: Обрабатываем ТОЛЬКО ботов, которые были в позиции!
                             if old_status not in [
                                 BOT_STATUS.get('IN_POSITION_LONG'),

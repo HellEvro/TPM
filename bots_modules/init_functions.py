@@ -80,7 +80,7 @@ try:
     from bots_modules.sync_and_cache import (
         save_default_config, load_system_config,
         load_bots_state, save_bots_state, load_process_state, check_startup_position_conflicts,
-        sync_bots_with_exchange, update_process_state, save_auto_bot_config
+        sync_bots_with_exchange, update_process_state, save_auto_bot_config, load_rsi_cache
     )
 except ImportError as e:
     print(f"Warning: Could not import functions in init_functions: {e}")
@@ -105,6 +105,8 @@ except ImportError as e:
         pass
     def save_auto_bot_config():
         pass
+    def load_rsi_cache():
+        return False
     def load_all_coins_rsi(exchange_obj=None):
         pass
     def update_process_state(name, data):
@@ -286,6 +288,22 @@ def init_bot_service():
             import threading
             def startup_sync():
                 try:
+                    # ✅ КРИТИЧНО: Ждём first_round_complete (свечи + RSI) — до этого НИЧЕГО не делаем!
+                    from bots_modules.imports_and_globals import coins_rsi_data
+                    wait_start = time.time()
+                    max_wait = 300  # 5 мин максимум
+                    last_log = 0
+                    while not coins_rsi_data.get('first_round_complete') and (time.time() - wait_start) < max_wait:
+                        elapsed = int(time.time() - wait_start)
+                        if elapsed >= last_log + 15:
+                            logger.info(" ⏳ Стартовая синхронизация ждёт загрузки свечей и RSI...")
+                            last_log = elapsed
+                        time.sleep(2)
+                    if not coins_rsi_data.get('first_round_complete'):
+                        logger.warning(" ⚠️ first_round_complete не достигнут за 5 мин — синхронизация запускается принудительно")
+                    else:
+                        logger.info(" ✅ RSI готов — запускаем стартовую синхронизацию")
+
                     logger.info(" 🔄 Запуск стартовой синхронизации в фоне...")
                     sync_bots_with_exchange()
                     check_startup_position_conflicts()
@@ -305,7 +323,7 @@ def init_bot_service():
             
             sync_thread = threading.Thread(target=startup_sync, daemon=True, name="StartupSync")
             sync_thread.start()
-            logger.info(" 🧵 Стартовая синхронизация запущена в фоне")
+            logger.info(" 🧵 Стартовая синхронизация запущена в фоне (ждёт RSI)")
         else:
             logger.error(" ❌ Не удалось инициализировать биржу")
             update_process_state('exchange_connection', {
@@ -313,6 +331,15 @@ def init_bot_service():
                 'last_error': 'Initialization failed'
             })
         
+        # 7.5 📊 Предзагрузка RSI-кэша из БД (чтобы RSI отображался сразу после перезапуска)
+        try:
+            if load_rsi_cache():
+                logger.info(" ✅ RSI кэш загружен из БД (данные доступны до первого раунда)")
+            else:
+                logger.info(" ℹ️ RSI кэш пуст, будет заполнен при первом раунде загрузчика")
+        except Exception as rsi_cache_err:
+            logger.warning(f" ⚠️ Не удалось загрузить RSI кэш: {rsi_cache_err}")
+
         # 8. 🔄 ЗАПУСК НЕПРЕРЫВНОГО ЗАГРУЗЧИКА ДАННЫХ
         # Воркер будет постоянно обновлять все данные по кругу
         # Все остальные модули будут просто читать актуальные данные из хранилища

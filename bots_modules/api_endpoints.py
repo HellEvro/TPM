@@ -3840,11 +3840,21 @@ def auto_bot_config():
                     config['log_patterns'] = getattr(AIConfig, 'AI_LOG_PATTERNS', config.get('log_patterns', False))
                 except Exception as _ai_merge_err:
                     logger.debug(f" AI-merge в auto-bot: {_ai_merge_err}")
-                # ✅ FullAI: источник истины для UI — класс AutoBotConfig из bot_config.py (после reload в load_auto_bot_config)
+                # ✅ FullAI: источник истины для UI — AutoBotConfig из bot_config.py; fallback — fullai_config (БД)
+                # Чтобы после перезапуска/перезагрузки страницы сразу показывался включённый FullAI
                 try:
                     from bot_engine.config_loader import AutoBotConfig
                     if getattr(AutoBotConfig, 'FULL_AI_CONTROL', None) is not None:
                         config['full_ai_control'] = bool(AutoBotConfig.FULL_AI_CONTROL)
+                    # Fallback: если в fullai_config (БД) включён — используем (на случай рассинхрона)
+                    if not config.get('full_ai_control'):
+                        try:
+                            from bots_modules.imports_and_globals import load_full_ai_config_from_db
+                            fc = load_full_ai_config_from_db()
+                            if fc and fc.get('full_ai_control'):
+                                config['full_ai_control'] = True
+                        except Exception:
+                            pass
                     if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_ENABLED', None) is not None:
                         config['fullai_adaptive_enabled'] = bool(AutoBotConfig.FULLAI_ADAPTIVE_ENABLED)
                     if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_DEAD_CANDLES', None) is not None:

@@ -2042,7 +2042,6 @@ def load_all_coins_candles_fast():
                 if b.get('status') not in [BOT_STATUS.get('IDLE'), BOT_STATUS.get('PAUSED')]
             )
             if current_active >= max_concurrent and max_concurrent > 0:
-                reduced_mode = True
                 for symbol, bot_data in bots.items():
                     status = bot_data.get('status')
                     if status in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
@@ -2051,16 +2050,13 @@ def load_all_coins_candles_fast():
                             bot_symbols_to_tf[symbol] = []
                         if entry_tf not in bot_symbols_to_tf[symbol]:
                             bot_symbols_to_tf[symbol].append(entry_tf)
-                if not bot_symbols_to_tf:
+                if bot_symbols_to_tf:
+                    reduced_mode = True
+                    # ✅ При пустом bot_symbols_to_tf не возвращаем False — работаем в full mode (как для RSI)
                     logger.info(
-                        f"⏸️ Свечи: пропуск — лимит ({current_active}/{max_concurrent}), "
-                        "нет ботов в позиции."
+                        f"📦 Свечи: режим «только с ботами» — лимит ({current_active}/{max_concurrent}). "
+                        f"Загружаем только {len(bot_symbols_to_tf)} монет."
                     )
-                    return False
-                logger.info(
-                    f"📦 Свечи: режим «только с ботами» — лимит ({current_active}/{max_concurrent}). "
-                    f"Загружаем только {len(bot_symbols_to_tf)} монет."
-                )
         except Exception as _e:
             pass
 
@@ -2413,7 +2409,6 @@ def load_all_coins_rsi():
             if b.get('status') not in [BOT_STATUS.get('IDLE'), BOT_STATUS.get('PAUSED')]
         )
         if current_active >= max_concurrent and max_concurrent > 0:
-            reduced_mode = True
             for symbol, bot_data in bots.items():
                 status = bot_data.get('status')
                 if status in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
@@ -2422,16 +2417,13 @@ def load_all_coins_rsi():
                         position_symbols_to_tf[symbol] = []
                     if entry_tf not in position_symbols_to_tf[symbol]:
                         position_symbols_to_tf[symbol].append(entry_tf)
-            if not position_symbols_to_tf:
+            if position_symbols_to_tf:
+                reduced_mode = True
+                # ✅ ИСПРАВЛЕНИЕ: При пустом position_symbols_to_tf не возвращаем False — работаем в full mode.
                 logger.info(
-                    f"⏸️ RSI: пропуск — лимит ботов ({current_active}/{max_concurrent}), "
-                    "но нет ботов в позиции для обновления RSI."
+                    f"📊 RSI: режим «только позиции» — лимит ({current_active}/{max_concurrent}). "
+                    f"Загружаем только {len(position_symbols_to_tf)} монет с позициями."
                 )
-                return False
-            logger.info(
-                f"📊 RSI: режим «только позиции» — лимит ({current_active}/{max_concurrent}). "
-                f"Загружаем только {len(position_symbols_to_tf)} монет с позициями."
-            )
     except Exception as _e:
         pass  # при ошибке — продолжаем как обычно (full mode)
 
