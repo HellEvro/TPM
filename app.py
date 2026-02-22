@@ -181,10 +181,8 @@ from bot_engine.backup_service import run_backup_scheduler_loop
 def check_api_keys():
     """Проверяет наличие настроенных API ключей.
     Ключи загружаются из configs/keys.py (через configs.app_config).
-    НЕ требуется app/keys.py — проверяем EXCHANGES из конфига.
     """
     try:
-        # EXCHANGES загружается из configs.keys (через configs.app_config)
         active_exchange = EXCHANGES.get(ACTIVE_EXCHANGE, {})
         if not active_exchange:
             return False
@@ -770,27 +768,9 @@ def background_update():
                      current_time - last_stats_time >= TELEGRAM_NOTIFY['STATISTICS_INTERVAL'])
                 )
 
-            positions, rapid_growth = current_exchange.get_positions()  # Прямо с биржи, БЕЗ Bots
-            # Fallback на Bots только если биржа вернула пусто (app и Bots в разных процессах)
-            if not positions and not DEMO_MODE:
-                try:
-                    bots_url = getattr(background_update, '_bots_fallback_url', None)
-                    if bots_url is None:
-                        background_update._bots_fallback_url = 'http://127.0.0.1:5001'
-                    r = requests.get(f'{background_update._bots_fallback_url}/api/bots/positions-for-app', timeout=5)
-                    if r.status_code == 200:
-                        data = r.json()
-                        positions = data.get('positions', [])
-                        rapid_growth = data.get('rapid_growth', [])
-                        if not positions and data.get('success') and data.get('total_trades', 0) > 0:
-                            positions = (data.get('high_profitable', []) + data.get('profitable', []) +
-                                        data.get('losing', []))
-                        if positions:
-                            logging.getLogger('app').info(f"[APP] Fallback: {len(positions)} позиций с Bots API")
-                except Exception:
-                    pass
+            positions, rapid_growth = current_exchange.get_positions()
             if not positions:
-                # Закрытые позиции не возвращаются биржей — очищаем список
+                # Закрытые позиции не возвращаются биржей — очищаем список, чтобы не показывать устаревшие (например AXS после закрытия)
                 positions_data.update({
                     'high_profitable': [], 'profitable': [], 'losing': [],
                     'total_trades': 0, 'rapid_growth': [],
@@ -975,82 +955,12 @@ def analyze_pairs_parallel(pairs, max_workers=10):
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         return list(filter(None, executor.map(analyze_symbol, pairs)))
 
-def _update_positions_data_from_list(positions, rapid_growth, pnl_threshold):
-    """Обновляет positions_data из списка позиций (для force_refresh)."""
-    global positions_data
-    pnl_threshold = float(pnl_threshold) if pnl_threshold else DEFAULTS.PNL_THRESHOLD
-    high_profitable = []
-    profitable = []
-    losing = []
-    total_profit = total_loss = 0
-    for p in positions:
-        pnl = float(p.get('pnl', 0))
-        if pnl > 0:
-            (high_profitable if pnl >= pnl_threshold else profitable).append(p)
-            total_profit += pnl
-        elif pnl < 0:
-            losing.append(p)
-            total_loss += pnl
-    high_profitable.sort(key=lambda x: x.get('pnl', 0), reverse=True)
-    profitable.sort(key=lambda x: x.get('pnl', 0), reverse=True)
-    losing.sort(key=lambda x: x.get('pnl', 0))
-    all_prof = high_profitable + profitable
-    all_prof.sort(key=lambda x: x.get('pnl', 0), reverse=True)
-    positions_data.update({
-        'high_profitable': high_profitable,
-        'profitable': profitable,
-        'losing': losing,
-        'rapid_growth': rapid_growth or [],
-        'total_trades': len(positions),
-        'stats': {
-            'total_pnl': total_profit + total_loss,
-            'total_profit': total_profit,
-            'total_loss': total_loss,
-            'high_profitable_count': len(high_profitable),
-            'profitable_count': len(high_profitable) + len(profitable),
-            'losing_count': len(losing),
-            'top_profitable': all_prof[:3],
-            'top_losing': losing[:3],
-            'total_trades': len(positions),
-        },
-        'last_update': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    })
-    save_positions_data(positions_data)
-
 @app.route('/get_positions')
 def get_positions():
-    """
-    Позиции с биржи. app.py работает НЕЗАВИСИМО от Bots.
-    Источник: current_exchange.get_positions() — прямой запрос к Bybit/Binance/OKX.
-    Bots — только опциональный fallback (если app и Bots в разных процессах).
-    """
     pnl_threshold = float(request.args.get('pnl_threshold', DEFAULTS.PNL_THRESHOLD))
-    force_refresh = request.args.get('force_refresh', '0') == '1'
-
+    
     all_available_pairs = []  # Больше не используется
-
-    # force_refresh: ПРИОРИТЕТ 1 — напрямую с биржи (current_exchange), БЕЗ Bots
-    if force_refresh:
-        try:
-            if not DEMO_MODE and current_exchange and hasattr(current_exchange, 'get_positions'):
-                pos_list, rapid = current_exchange.get_positions()
-                if pos_list:
-                    _update_positions_data_from_list(pos_list, rapid, pnl_threshold)
-            # ПРИОРИТЕТ 2 — fallback на Bots только если биржа вернула пусто (опционально)
-            if not positions_data.get('total_trades', 0) and not DEMO_MODE:
-                resp = requests.get(f'http://127.0.0.1:5001/api/bots/positions-for-app?pnl_threshold={pnl_threshold}', timeout=10)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    if data.get('success') and data.get('total_trades', 0) > 0:
-                        hp = data.get('high_profitable', [])
-                        pf = data.get('profitable', [])
-                        ls = data.get('losing', [])
-                        raw = data.get('positions') or (hp + pf + ls)
-                        if raw:
-                            _update_positions_data_from_list(raw, data.get('rapid_growth', []), pnl_threshold)
-        except Exception as e:
-            logging.getLogger('app').debug(f"[POSITIONS] force_refresh: {e}")
-
+    
     all_positions = (positions_data['high_profitable'] +
                     positions_data['profitable'] +
                     positions_data['losing'])
@@ -1096,29 +1006,6 @@ def get_positions():
                 })
     except Exception:
         pass
-
-    # Fallback: только если биржа вернула пусто — опционально Bots (app и bots в разных процессах)
-    if not all_positions and not virtual_positions:
-        try:
-            bots_url = getattr(request, 'headers', None) and request.headers.get('X-Bots-Service-URL') or 'http://127.0.0.1:5001'
-            resp = requests.get(f'{bots_url}/api/bots/positions-for-app?pnl_threshold={pnl_threshold}', timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get('success') and data.get('total_trades', 0) > 0:
-                    api_logger = logging.getLogger('app')
-                    api_logger.info(f"[POSITIONS] Fallback: {data['total_trades']} позиций с Bots-сервиса")
-                    hp, pf, ls = data.get('high_profitable', []), data.get('profitable', []), data.get('losing', [])
-                    all_positions = hp + pf + ls
-                    positions_data['high_profitable'] = hp
-                    positions_data['profitable'] = pf
-                    positions_data['losing'] = ls
-                    positions_data['stats'] = data.get('stats', {})
-                    positions_data['rapid_growth'] = data.get('rapid_growth', [])
-                    positions_data['total_trades'] = data.get('total_trades', 0)
-                    positions_data['last_update'] = time.strftime('%Y-%m-%d %H:%M:%S')
-                    save_positions_data(positions_data)
-        except Exception as fb_err:
-            logging.getLogger('app').debug(f"[POSITIONS] Fallback Bots: {fb_err}")
 
     if not all_positions and not virtual_positions:
         try:
@@ -1251,7 +1138,7 @@ def get_positions():
 
 @app.route('/api/positions')
 def api_positions():
-    """API endpoint for positions - redirects to get_positions. ?force_refresh=1 — принудительное обновление с биржи/Bots."""
+    """API endpoint for positions - redirects to get_positions"""
     return get_positions()
 
 @app.route('/api/balance')
@@ -2064,21 +1951,10 @@ def get_bots_pairs():
 
 @app.route('/api/status', methods=['GET'])
 def api_status_proxy():
-    """
-    Статус приложения. app.py — основной сервис, работает БЕЗ Bots.
-    Bots — опциональный fallback для позиций; вкладка «Боты» требует Bots.
-    """
+    """Прокси /api/status для проверки сервиса ботов (фронт при порте 5000 дергает этот URL)."""
     result = call_bots_service('/api/status', timeout=5)
-    if result.get('success') and result.get('status') == 'online':
-        result['bots_available'] = True
-        return jsonify(result), 200
-    # Bots недоступен — app.py работает, позиции с биржи отображаются через current_exchange
-    return jsonify({
-        'status': 'online',
-        'bots_available': False,
-        'message': 'app.py работает. Позиции с биржи отображаются. Bots (вкладка «Боты») недоступен.',
-        'error': result.get('error')
-    }), 200
+    status_code = result.get('status_code', 200 if result.get('status') == 'online' else 503)
+    return jsonify(result), status_code
 
 
 @app.route('/api/bots/health', methods=['GET'])
@@ -2134,54 +2010,6 @@ def sync_positions():
 def get_coins_with_rsi():
     """Получить монеты с RSI данными (прокси к сервису ботов)"""
     result = call_bots_service('/api/bots/coins-with-rsi')
-    status_code = result.get('status_code', 200 if result.get('success') else 500)
-    return jsonify(result), status_code
-
-@app.route('/api/bots/mature-coins-list', methods=['GET'])
-def get_mature_coins_list():
-    """Список зрелых монет (прокси к сервису ботов)"""
-    result = call_bots_service('/api/bots/mature-coins-list')
-    status_code = result.get('status_code', 200 if result.get('success') else 500)
-    return jsonify(result), status_code
-
-@app.route('/api/bots/delisted-coins', methods=['GET'])
-def get_delisted_coins():
-    """Делистинговые монеты (прокси к сервису ботов)"""
-    result = call_bots_service('/api/bots/delisted-coins')
-    status_code = result.get('status_code', 200 if result.get('success') else 500)
-    return jsonify(result), status_code
-
-@app.route('/api/bots/history', methods=['GET'])
-def get_bots_history():
-    """История действий ботов (прокси к сервису ботов)"""
-    endpoint = '/api/bots/history'
-    if request.query_string:
-        endpoint += '?' + request.query_string.decode('utf-8')
-    result = call_bots_service(endpoint, timeout=15)
-    status_code = result.get('status_code', 200 if result.get('success') else 500)
-    return jsonify(result), status_code
-
-@app.route('/api/bots/statistics', methods=['GET'])
-def get_bots_statistics():
-    """Статистика ботов (прокси к сервису ботов)"""
-    endpoint = '/api/bots/statistics'
-    if request.query_string:
-        endpoint += '?' + request.query_string.decode('utf-8')
-    result = call_bots_service(endpoint, timeout=15)
-    status_code = result.get('status_code', 200 if result.get('success') else 500)
-    return jsonify(result), status_code
-
-@app.route('/api/bots/history/clear', methods=['POST'])
-def clear_bots_history():
-    """Очистка истории (прокси к сервису ботов)"""
-    result = call_bots_service('/api/bots/history/clear', method='POST', data={})
-    status_code = result.get('status_code', 200 if result.get('success') else 500)
-    return jsonify(result), status_code
-
-@app.route('/api/bots/history/demo', methods=['POST'])
-def demo_bots_history():
-    """Демо-данные истории (прокси к сервису ботов)"""
-    result = call_bots_service('/api/bots/history/demo', method='POST', data={})
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
@@ -2257,18 +2085,6 @@ def export_config():
     return jsonify(result), status_code
 
 
-@app.route('/api/bots/timeframe', methods=['GET', 'POST'])
-def bots_timeframe():
-    """Прокси смены таймфрейма — критично для RSI Time фильтра (свечи 1m vs 6h)."""
-    if request.method == 'GET':
-        result = call_bots_service('/api/bots/timeframe', method='GET')
-    else:
-        data = request.get_json()
-        result = call_bots_service('/api/bots/timeframe', method='POST', data=data)
-    status_code = result.get('status_code', 200 if result.get('success') else 500)
-    return jsonify(result), status_code
-
-
 @app.route('/api/bots/system-config', methods=['GET', 'POST'])
 def system_config():
     """Системные настройки (прокси к сервису ботов)"""
@@ -2290,43 +2106,6 @@ def ai_config():
     else:
         data = request.get_json()
         result = call_bots_service('/api/ai/config', method='POST', data=data)
-    status_code = result.get('status_code', 200 if result.get('success') else 500)
-    return jsonify(result), status_code
-
-
-@app.route('/api/bots/refresh-rsi-all', methods=['POST'])
-def refresh_rsi_all():
-    """Полное обновление RSI всех монет (прокси к сервису ботов)"""
-    result = call_bots_service('/api/bots/refresh-rsi-all', method='POST', data={}, timeout=120)
-    status_code = result.get('status_code', 200 if result.get('success') else 500)
-    return jsonify(result), status_code
-
-@app.route('/api/bots/analytics', methods=['GET'])
-@app.route('/api/bots/analytics/<path:subpath>', methods=['GET', 'POST'])
-def bots_analytics_proxy(subpath=''):
-    """Прокси для аналитики: /api/bots/analytics, /api/bots/analytics/fullai, rsi-audit, sync-from-exchange, ai-reanalyze и т.д."""
-    endpoint = '/api/bots/analytics'
-    if subpath:
-        endpoint += '/' + subpath
-    if request.query_string:
-        endpoint += '?' + request.query_string.decode('utf-8')
-    data = request.get_json(silent=True) if request.method == 'POST' else None
-    timeout = 30 if 'ai-reanalyze' in subpath else 15
-    result = call_bots_service(endpoint, method=request.method, data=data, timeout=timeout)
-    status_code = result.get('status_code', 200 if result.get('success') else 500)
-    return jsonify(result), status_code
-
-
-@app.route('/api/bots/<path:subpath>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
-def bots_generic_proxy(subpath):
-    """Универсальный прокси для /api/bots/* — все запросы, не перехваченные выше, идут в сервис ботов.
-    Покрывает: stop, pause, resume, delete, active-detailed, fullai-config, import-config, trades и др."""
-    endpoint = f'/api/bots/{subpath}'
-    if request.query_string:
-        endpoint += '?' + request.query_string.decode('utf-8')
-    data = request.get_json(silent=True) if request.method in ('POST', 'PUT', 'PATCH') else None
-    timeout = 120 if 'refresh-rsi' in subpath or 'import-config' in subpath else 30
-    result = call_bots_service(endpoint, method=request.method, data=data, timeout=timeout)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
@@ -2707,17 +2486,6 @@ if __name__ == '__main__':
         try:
             app_logger.info("[APP] 🔄 Принудительное обновление positions_data при запуске...")
             positions, rapid_growth = current_exchange.get_positions()
-            if not positions and not DEMO_MODE:
-                try:
-                    r = requests.get('http://127.0.0.1:5001/api/bots/positions-for-app', timeout=5)
-                    if r.status_code == 200:
-                        data = r.json()
-                        positions = data.get('positions', [])
-                        rapid_growth = data.get('rapid_growth', [])
-                        if positions:
-                            app_logger.info(f"[APP] Fallback: {len(positions)} позиций с Bots API")
-                except Exception:
-                    pass
             if positions:
                 positions_data['total_trades'] = len(positions)
                 positions_data['rapid_growth'] = rapid_growth
