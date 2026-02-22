@@ -2249,6 +2249,18 @@ def export_config():
     return jsonify(result), status_code
 
 
+@app.route('/api/bots/timeframe', methods=['GET', 'POST'])
+def bots_timeframe():
+    """Получить или установить таймфрейм системы (прокси к сервису ботов)"""
+    if request.method == 'GET':
+        result = call_bots_service('/api/bots/timeframe')
+    else:
+        data = request.get_json() or {}
+        result = call_bots_service('/api/bots/timeframe', method='POST', data=data, timeout=30)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
 @app.route('/api/bots/system-config', methods=['GET', 'POST'])
 def system_config():
     """Системные настройки (прокси к сервису ботов)"""
