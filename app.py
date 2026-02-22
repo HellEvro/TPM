@@ -1018,6 +1018,20 @@ def get_positions():
                     positions_data['profitable'] +
                     positions_data['losing'])
 
+    # Если позиции пусты — возможно первый запрос до завершения background refresh; пробуем с биржи
+    if not all_positions and not DEMO_MODE and current_exchange and hasattr(current_exchange, 'get_positions'):
+        try:
+            pos_list, rapid = current_exchange.get_positions()
+            if pos_list:
+                _update_positions_data_from_list(pos_list, rapid, pnl_threshold)
+                all_positions = (positions_data['high_profitable'] +
+                                positions_data['profitable'] +
+                                positions_data['losing'])
+                api_logger = logging.getLogger('app')
+                api_logger.info(f"[POSITIONS] Синхронное обновление: {len(all_positions)} позиций с биржи")
+        except Exception as e:
+            logging.getLogger('app').debug(f"[POSITIONS] sync refresh: {e}")
+
     # Виртуальные позиции ПРИИ — получаем до проверки «пусто», чтобы показывать только виртуальные
     virtual_positions = []
     try:
@@ -1173,6 +1187,10 @@ def get_positions():
             'realized_pnl': 0
         }
     
+    total_returned = len(high_profitable) + len(profitable) + len(losing)
+    if total_returned > 0:
+        logging.getLogger('app').info(f"[POSITIONS] GET /get_positions → {total_returned} позиций (hp:{len(high_profitable)} p:{len(profitable)} l:{len(losing)})")
+
     return jsonify({
         'high_profitable': high_profitable,
         'profitable': profitable,
