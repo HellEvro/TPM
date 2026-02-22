@@ -1,5 +1,6 @@
-# ✅ Документация приведена в порядок (ноябрь 2025)
+# ✅ Документация приведена в порядок
 
+**Последнее обновление:** февраль 2025  
 **Контекст:** предыдущая версия содержала >30 AI файлов (guides, technical, development), большинство дублировали друг друга и ссылались на устаревшие тесты. Структура обновлена и упрощена.
 
 ---
@@ -24,7 +25,8 @@ docs/
 ├── INSTALL.md                   # Расширенная установка
 ├── AI_README.md                 # AI модули, лаунчер, лицензии, тесты
 ├── AI_UI_CONFIGURATION.md       # Параметры UI / Smart Risk
-├── ARCHITECTURE.md              # Структура сервисов
+├── ARCHITECTURE.md              # Структура сервисов, прокси app→bots
+├── PRESS_RELEASE_2025-02.md     # Пресс-релиз обновлений (прокси, Bybit, RSI)
 ├── BOT_SIGNAL_PROCESSING_FLOW.md
 ├── BOT_HISTORY.md
 ├── MODULES.md
@@ -50,6 +52,7 @@ docs/
 | Настроить UI / Smart Risk | `docs/AI_UI_CONFIGURATION.md` |
 | Изучить архитектуру | `docs/ARCHITECTURE.md`, `docs/MODULES.md` |
 | Посмотреть историю сигналов | `docs/BOT_HISTORY.md`, `docs/BOT_SIGNAL_PROCESSING_FLOW.md` |
+| Обновления для пользователей | `docs/PRESS_RELEASE_2025-02.md` |
 
 ---
 

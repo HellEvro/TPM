@@ -615,7 +615,25 @@ def check_coin_maturity(symbol, candles):
 - `GET /api/bots/active-detailed` - Детальная информация об активных ботах
 - `GET /api/bots/process-state` - Состояние процессов
 
-#### 16.4. Фильтры зрелости
+#### 16.4. История и фильтры
+- `GET /api/bots/history` - История действий ботов (таб «История»)
+- `POST /api/bots/history/clear` - Очистка истории
+- `POST /api/bots/history/demo` - Создание демо-данных
+- `GET /api/bots/delisted-coins` - Делистинговые монеты (фильтр UI)
+
+#### 16.5. FullAI и аналитика (прокси в app.py)
+- `GET/POST /api/bots/fullai-config` - Конфигурация FullAI
+- `GET /api/bots/analytics` - Общая аналитика
+- `GET /api/bots/analytics/fullai` - FullAI Analytics
+- `GET /api/bots/analytics/rsi-audit` - RSI аудит
+- `GET /api/bots/analytics/ai-context` - Контекст для ИИ
+- `POST /api/bots/analytics/ai-reanalyze` - AI переанализ
+- `GET /api/bots/analytics/ai-reanalyze/result` - Результат переанализа
+- `POST /api/bots/analytics/sync-from-exchange` - Синхронизация с биржей
+
+> Все эндпоинты доступны через app.py (порт 5000) — см. `docs/ARCHITECTURE.md`, `docs/PRESS_RELEASE_2025-02.md`.
+
+#### 16.6. Фильтры зрелости
 - **Интеграция в `get_coin_rsi_data()`**: проверка зрелости перед возвратом данных
 - **Интеграция в `create_bot_endpoint()`**: проверка зрелости перед созданием бота
 - **Настройки в конфигурации**: глобальные параметры фильтрации зрелости

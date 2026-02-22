@@ -222,18 +222,30 @@ bots.py
 
 ## 🌐 API архитектура
 
-### REST API (порт 5001)
+### Прокси app.py → bots.py (порт 5000 → 5001)
+
+При доступе к UI через `app.py` (порт 5000) фронтенд использует `BOTS_SERVICE_URL = window.location.origin`, поэтому запросы к `/api/bots/*` идут в app.py. **app.py проксирует** их в bots.py (порт 5001) через `call_bots_service()`.
+
+**Ключевые прокси (февраль 2025):**
+- `GET /api/bots/list` (timeout 30 сек), `GET /api/bots/active-detailed`, `GET /api/bots/delisted-coins`
+- `GET /api/bots/history`, `POST /api/bots/history/clear`, `POST /api/bots/history/demo`
+- `GET/POST /api/bots/fullai-config`
+- `GET /api/bots/analytics`, `/api/bots/analytics/fullai`, `/api/bots/analytics/rsi-audit`, `ai-context`, `ai-reanalyze`, `sync-from-exchange`
+
+Полный список маршрутов — в `app.py` (поиск `@app.route('/api/bots`).
+
+### REST API (порт 5001, bots.py)
 ```
 GET  /api/status              ← Статус сервиса
-GET  /api/bots                ← Список ботов
+GET  /api/bots/list           ← Список ботов
 POST /api/bots/create         ← Создать бота
-POST /api/bots/{id}/start     ← Запустить бота
-POST /api/bots/{id}/stop      ← Остановить бота
-DELETE /api/bots/{id}         ← Удалить бота
-...и еще 54 endpoints
+POST /api/bots/control        ← Управление ботом (start/stop/pause)
+GET  /api/bots/active-detailed ← Детали активных ботов
+GET  /api/bots/history        ← История действий
+...и остальные endpoints в bots_modules/api_endpoints.py
 ```
 
-Полный список: [API_REFERENCE.md](API_REFERENCE.md)
+Полный список: `bots_modules/api_endpoints.py`, `docs/Bots_TZ.md`
 
 ---
 
@@ -527,7 +539,7 @@ thread.start()  # Автоматически останавливается пр
 
 Для более подробной информации:
 - **Модули:** [MODULES.md](MODULES.md)
-- **Настройка:** [CONFIGURATION.md](CONFIGURATION.md)
-- **API:** [API_REFERENCE.md](API_REFERENCE.md)
-- **Разработка:** [DEVELOPMENT.md](DEVELOPMENT.md)
+- **Системный обзор:** [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md)
+- **API ботов:** [Bots_TZ.md](Bots_TZ.md) (раздел API), `bots_modules/api_endpoints.py`
+- **История:** [CHANGELOG.md](CHANGELOG.md)
 

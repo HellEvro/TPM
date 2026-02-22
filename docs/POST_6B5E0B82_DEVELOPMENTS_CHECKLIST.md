@@ -97,6 +97,7 @@
 |---|--------|-------------|
 | 7.1 | 05afae89 | Прокси: mature-coins-list, delisted-coins, history, statistics, refresh-rsi-all |
 | 7.2 | 7043cce9 | Прокси: аналитика FullAI, смена таймфрейма |
+| 7.10 | фев 2025 | Прокси: active-detailed, delisted-coins, history, history/clear, history/demo, fullai-config, analytics, analytics/fullai, rsi-audit, ai-context, ai-reanalyze, sync-from-exchange. Таймаут list 30 сек. |
 | 7.3 | 5eccb232 | Таймаут RSI пакета 200→360 сек |
 | 7.4 | 27a0f0fe | ПРИИ: rsi_limit_entry_enabled в TradingBot |
 | 7.5 | bb7774c1 | Цвет PnL при минусе (красный) |

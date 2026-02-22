@@ -66,6 +66,8 @@
 
 ## 🔌 API Endpoints
 
+> При работе через app.py (порт 5000) все запросы к `/api/bots/*` проксируются в bots.py. См. `docs/ARCHITECTURE.md`.
+
 ### 1. Получить историю действий
 ```http
 GET /api/bots/history?symbol=BTCUSDT&action_type=BOT_START&limit=100

@@ -17,7 +17,7 @@
 | `sync_and_cache.py` | 1750 | Кэш, синхронизация, состояние |
 | `workers.py` | 250 | Фоновые воркеры |
 | `init_functions.py` | 646 | Инициализация системы |
-| `api_endpoints.py` | 2620 | Flask API (60+ endpoints) |
+| `api_endpoints.py` | 6000+ | Flask API (60+ endpoints); проксируются через app.py при доступе с порта 5000 |
 
 ---
 
