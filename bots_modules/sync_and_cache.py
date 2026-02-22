@@ -2610,6 +2610,8 @@ def check_missing_stop_losses():
                             unregister_bot_position(order_id)
                             logger.info(f" ✅ Позиция {symbol} (order_id={order_id}) удалена из реестра")
                         
+                        # ✅ КРИТИЧНО: Отменяем лимитки ДО удаления бота
+                        cancel_all_orders_for_symbol_on_bot_delete(symbol)
                         # Удаляем бота из системы
                         bot_removed = False
                         with bots_data_lock:
@@ -3421,6 +3423,8 @@ def sync_bots_with_exchange():
                             except Exception as timestamp_error:
                                 logger.warning(f"[SYNC_EXCHANGE] ⚠️ Ошибка сохранения timestamp закрытия для {symbol}: {timestamp_error}")
                             
+                            # ✅ КРИТИЧНО: Отменяем лимитки ДО удаления бота
+                            cancel_all_orders_for_symbol_on_bot_delete(symbol)
                             # Удаляем бота из системы (с блокировкой!)
                             with bots_data_lock:
                                 if symbol in bots_data['bots']:

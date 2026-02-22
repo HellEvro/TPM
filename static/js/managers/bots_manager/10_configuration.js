@@ -1483,6 +1483,14 @@
                     }
                     return parseFloat(config.autoBot.rsi_limit_exit_offset_percent) || 0.2;
                 })(),
+                limit_order_entry_cancel_seconds: (() => {
+                    const el = document.getElementById('limitOrderEntryCancelSeconds');
+                    return el ? Math.max(0, parseInt(el.value, 10) || 0) : (config.autoBot.limit_order_entry_cancel_seconds ?? 10);
+                })(),
+                limit_order_exit_cancel_seconds: (() => {
+                    const el = document.getElementById('limitOrderExitCancelSeconds');
+                    return el ? Math.max(0, parseInt(el.value, 10) || 0) : (config.autoBot.limit_order_exit_cancel_seconds ?? 10);
+                })(),
                 default_position_size: config.autoBot.default_position_size,
                 default_position_mode: config.autoBot.default_position_mode,
                 leverage: config.autoBot.leverage,

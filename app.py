@@ -2170,6 +2170,13 @@ def sync_positions():
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
+@app.route('/api/bots/manual-positions/refresh', methods=['POST'])
+def refresh_manual_positions():
+    """Обновить ручные позиции (прокси к сервису ботов)"""
+    result = call_bots_service('/api/bots/manual-positions/refresh', method='POST')
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
 @app.route('/api/bots/coins-with-rsi', methods=['GET'])
 def get_coins_with_rsi():
     """Получить монеты с RSI данными (прокси к сервису ботов)"""

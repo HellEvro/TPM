@@ -1788,16 +1788,38 @@ class TradingBot:
     
     def _check_and_cancel_limit_orders_if_needed(self, analysis: Dict) -> None:
         """
-        Проверяет RSI и отменяет лимитные ордера при выходе за зону набора позиций
-        
-        Для LONG: отменяем если RSI > rsi_time_filter_lower (35)
-        Для SHORT: отменяем если RSI < rsi_time_filter_upper (65)
+        Проверяет таймаут и RSI — отменяет лимитные ордера при:
+        1) истечении limit_order_entry_cancel_seconds
+        2) выходе RSI за зону набора: LONG если RSI > rsi_time_filter_lower, SHORT если RSI < rsi_time_filter_upper
         """
         if not self.limit_orders:
             return
         
         try:
-            # Получаем текущий RSI
+            # 1) Проверка таймаута: отменяем если ордера висят дольше limit_order_entry_cancel_seconds
+            import time
+            try:
+                from bots import bots_data, bots_data_lock
+                with bots_data_lock:
+                    auto_config = bots_data.get('auto_bot_config', {})
+                cancel_sec = int(auto_config.get('limit_order_entry_cancel_seconds', 0) or 0)
+            except Exception:
+                cancel_sec = 0
+            if cancel_sec > 0 and hasattr(self.exchange, 'get_open_orders'):
+                open_orders = self.exchange.get_open_orders(self.symbol)
+                now_ms = int(time.time() * 1000)
+                cancel_threshold_ms = cancel_sec * 1000
+                for order in open_orders:
+                    created_ms = order.get('createdTime') or order.get('created_time_ms', 0)
+                    try:
+                        created_ms = int(created_ms)
+                    except (TypeError, ValueError):
+                        continue
+                    if created_ms > 0 and (now_ms - created_ms) >= cancel_threshold_ms:
+                        self.logger.info(f" {self.symbol}: ⏱️ Лимитные ордера входа отменены по таймауту ({cancel_sec} сек)")
+                        self._cancel_all_limit_orders()
+                        return
+            # 2) Получаем текущий RSI для проверки зоны
             current_rsi = analysis.get('rsi')
             if current_rsi is None:
                 return

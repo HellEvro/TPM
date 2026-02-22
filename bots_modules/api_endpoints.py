@@ -1504,6 +1504,13 @@ def stop_bot_endpoint():
         if position_to_close:
             logger.info(f" {symbol}: ⚠️ Позиция {position_to_close} осталась открытой на бирже (закроется автоматически)")
         
+        # ✅ КРИТИЧНО: Отменяем все лимитные ордера при остановке (иначе лимитки сработают → новые позиции у «остановленного» бота)
+        try:
+            from bots_modules.sync_and_cache import cancel_all_orders_for_symbol_on_bot_delete
+            cancel_all_orders_for_symbol_on_bot_delete(symbol)
+        except Exception as cancel_err:
+            logger.warning(f"⚠️ При остановке бота {symbol} не удалось отменить ордера: {cancel_err}")
+        
         # Логируем остановку бота в историю
         # log_bot_stop(symbol, reason)  # TODO: Функция не определена
         
@@ -1566,6 +1573,13 @@ def pause_bot_endpoint():
         if position_to_close:
             logger.info(f" {symbol}: ⚠️ Позиция {position_to_close} осталась открытой на бирже (закроется автоматически)")
         
+        # ✅ КРИТИЧНО: Отменяем лимитные ордера при приостановке (иначе лимитки сработают → новые позиции)
+        try:
+            from bots_modules.sync_and_cache import cancel_all_orders_for_symbol_on_bot_delete
+            cancel_all_orders_for_symbol_on_bot_delete(symbol)
+        except Exception as cancel_err:
+            logger.warning(f"⚠️ При приостановке бота {symbol} не удалось отменить ордера: {cancel_err}")
+        
         return jsonify({
             'success': True,
             'message': f'Бот для {symbol} приостановлен'
@@ -1606,6 +1620,13 @@ def delete_bot_endpoint():
         if symbol not in bots_data['bots']:
             logger.error(f"❌ Бот {symbol} не найден в bots_data")
             return jsonify({'success': False, 'error': 'Bot not found'}), 404
+        
+        # ✅ КРИТИЧНО: Отменяем все лимитные ордера ДО удаления бота (иначе лимитки остаются на бирже → ручные позиции)
+        try:
+            from bots_modules.sync_and_cache import cancel_all_orders_for_symbol_on_bot_delete
+            cancel_all_orders_for_symbol_on_bot_delete(symbol)
+        except Exception as cancel_err:
+            logger.warning(f"⚠️ При удалении бота {symbol} не удалось отменить ордера: {cancel_err}")
         
         # ✅ ТУПО УДАЛЯЕМ БОТА ИЗ ФАЙЛА!
         del bots_data['bots'][symbol]

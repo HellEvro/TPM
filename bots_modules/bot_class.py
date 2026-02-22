@@ -1323,12 +1323,72 @@ class NewTradingBot:
         """Проверяет, нужно ли закрывать SHORT позицию (обертка для совместимости)"""
         return self.should_close_position(rsi, current_price, 'SHORT')
     
+    def _check_and_cancel_pending_limit_orders_by_timer(self):
+        """
+        Проверяет таймаут лимитных ордеров входа (RSI limit или step-based).
+        Если limit_order_entry_cancel_seconds > 0 и ордер висит дольше — отменяет и переводит бота в IDLE.
+        Возвращает dict для раннего return из update() при отмене, иначе None.
+        """
+        try:
+            with bots_data_lock:
+                auto_config = bots_data.get('auto_bot_config', {})
+            cancel_sec = int(auto_config.get('limit_order_entry_cancel_seconds', 0) or 0)
+            if cancel_sec <= 0:
+                return None
+            
+            if not hasattr(self.exchange, 'get_open_orders') or not hasattr(self.exchange, 'cancel_order'):
+                return None
+            
+            open_orders = self.exchange.get_open_orders(self.symbol)
+            if not open_orders:
+                return None
+            
+            limit_orders = [o for o in open_orders if (o.get('order_type') or o.get('orderType', '')).lower() == 'limit']
+            if not limit_orders:
+                return None
+            
+            now_ms = int(time.time() * 1000)
+            cancel_threshold_ms = cancel_sec * 1000
+            any_expired = False
+            for order in limit_orders:
+                created_ms = order.get('createdTime') or order.get('created_time_ms', 0)
+                try:
+                    created_ms = int(created_ms)
+                except (TypeError, ValueError):
+                    created_ms = 0
+                if created_ms > 0 and (now_ms - created_ms) >= cancel_threshold_ms:
+                    any_expired = True
+                    break
+            
+            if not any_expired:
+                return None
+            
+            from bots_modules.sync_and_cache import cancel_all_orders_for_symbol_on_bot_delete
+            cancelled = cancel_all_orders_for_symbol_on_bot_delete(self.symbol)
+            if cancelled > 0:
+                logger.info(f"[NEW_BOT_{self.symbol}] ⏱️ Лимитные ордера входа отменены по таймауту ({cancel_sec} сек), бот → IDLE")
+                with bots_data_lock:
+                    if self.symbol in bots_data.get('bots', {}):
+                        bots_data['bots'][self.symbol]['status'] = BOT_STATUS['IDLE']
+                from bots_modules.sync_and_cache import save_bots_state
+                save_bots_state()
+                return {'success': True, 'status': BOT_STATUS['IDLE'], 'message': 'limit_orders_cancelled_by_timer'}
+        except Exception as e:
+            logger.warning(f"[NEW_BOT_{self.symbol}] Ошибка проверки таймаута лимитных ордеров: {e}")
+        return None
+    
     def update(self, force_analysis=False, external_signal=None, external_trend=None):
         """Основной метод обновления бота"""
         try:
             if not self.exchange:
                 logger.warning(f"[NEW_BOT_{self.symbol}] ❌ Биржа не инициализирована")
                 return {'success': False, 'error': 'Exchange not initialized'}
+            
+            # ✅ КРИТИЧНО: Проверка таймаута лимитных ордеров — отменяем и переводим в IDLE при истечении
+            if self.status == BOT_STATUS.get('RUNNING') and not self.position_side and not getattr(self, 'entry_price', None):
+                cancel_result = self._check_and_cancel_pending_limit_orders_by_timer()
+                if cancel_result:
+                    return cancel_result
             
             # Получаем текущие данные
             current_price = None

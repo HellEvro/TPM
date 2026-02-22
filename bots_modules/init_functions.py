@@ -253,6 +253,13 @@ def init_bot_service():
                                 logger.error(f" ❌ Ошибка удаления позиции из реестра для бота {symbol}: {registry_error}")
                                 # Не блокируем удаление бота из-за ошибки реестра
                             
+                            # ✅ КРИТИЧНО: Отменяем лимитки перед удалением некорректного бота
+                            try:
+                                from bots_modules.sync_and_cache import cancel_all_orders_for_symbol_on_bot_delete
+                                cancel_all_orders_for_symbol_on_bot_delete(symbol)
+                            except Exception as cancel_err:
+                                logger.warning(f"⚠️ Не удалось отменить ордера для {symbol}: {cancel_err}")
+                            
                             del bots_data['bots'][symbol]
                 logger.info(f" 🗑️ Удалено {len(bots_to_remove)} некорректных ботов")
             
