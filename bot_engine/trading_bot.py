@@ -2210,12 +2210,33 @@ class TradingBot:
                             auto_config = bots_data.get('auto_bot_config', {})
                             loss_percent = auto_config.get('max_loss_percent', 15.0)
                         
-                        # Обновляем стоп-лосс от новой средней цены
+                        # Обновляем стоп-лосс и тейк-профит от новой средней цены
+                        # (лимитки размещаются без SL/TP — Bybit валидирует по LastPrice; ставим после исполнения)
                         stop_result = self._place_stop_loss(side, real_avg_price, loss_percent)
                         if stop_result.get('success'):
                             self.logger.info(f" {self.symbol}: ✅ Стоп-лосс обновлен: {stop_result.get('stop_price'):.6f} (от средней цены {real_avg_price:.6f})")
                         else:
                             self.logger.warning(f" {self.symbol}: ⚠️ Не удалось обновить стоп-лосс: {stop_result.get('error')}")
+                        # Устанавливаем тейк-профит
+                        try:
+                            from bots_modules.imports_and_globals import bots_data, bots_data_lock
+                            with bots_data_lock:
+                                auto_config = bots_data.get('auto_bot_config', {})
+                                tp_percent = auto_config.get('take_profit_percent', 20.0)
+                            if side == 'LONG':
+                                tp_price = real_avg_price * (1 + tp_percent / 100.0)
+                            else:
+                                tp_price = real_avg_price * (1 - tp_percent / 100.0)
+                            if hasattr(self.exchange, 'update_take_profit'):
+                                tp_result = self.exchange.update_take_profit(
+                                    symbol=self.symbol, take_profit_price=tp_price, position_side=side
+                                )
+                                if tp_result and tp_result.get('success'):
+                                    self.logger.info(f" {self.symbol}: ✅ Тейк-профит установлен @ {tp_price:.6f} ({tp_percent}%)")
+                                elif tp_result:
+                                    self.logger.warning(f" {self.symbol}: ⚠️ Не удалось установить тейк-профит")
+                        except Exception as tp_err:
+                            self.logger.warning(f" {self.symbol}: ⚠️ Ошибка установки тейк-профита: {tp_err}")
                     except Exception as e:
                         self.logger.error(f" {self.symbol}: ❌ Ошибка обновления стоп-лосса: {e}")
                     

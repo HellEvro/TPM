@@ -2938,15 +2938,15 @@ class BybitExchange(BaseExchange):
                     order_params["price"] = str(round(price, 6))  # 6 знаков для поддержки дешевых монет
                     order_params["timeInForce"] = "GTC"
             
-            # 🎯 Добавляем Take Profit если указан
-            if take_profit is not None and take_profit > 0:
-                # Bybit API: takeProfit принимает абсолютную цену (НЕ процент!)
-                order_params["takeProfit"] = str(round(take_profit, 6))
-            
-            # 🛑 Добавляем Stop Loss если указан
-            if stop_loss is not None and stop_loss > 0:
-                # Bybit API: stopLoss принимает абсолютную цену (НЕ процент!)
-                order_params["stopLoss"] = str(round(stop_loss, 6))
+            # 🎯 Добавляем Take Profit и Stop Loss ТОЛЬКО для market ордеров
+            # ⚠️ Bybit: для limit ордеров SL/TP валидируются по LastPrice, а не по цене лимитки.
+            # При limit buy 0.21 и LastPrice 0.16 — SL 0.204 (2% ниже лимитки) > 0.16 → ErrCode 10001.
+            # Решение: limit без SL/TP; ставим их после исполнения через set_trading_stop.
+            if order_type.lower() != 'limit':
+                if take_profit is not None and take_profit > 0:
+                    order_params["takeProfit"] = str(round(take_profit, 6))
+                if stop_loss is not None and stop_loss > 0:
+                    order_params["stopLoss"] = str(round(stop_loss, 6))
             
             # Размещаем ордер
             try:
@@ -3529,12 +3529,21 @@ class BybitExchange(BaseExchange):
             if response.get('retCode') == 0:
                 logger.info(f"[BYBIT] ✅ Ордер {order_id} отменён ({symbol})")
                 return {'success': True, 'message': f'Ордер {order_id} отменён'}
+            ret_code = response.get('retCode')
             msg = response.get('retMsg', 'unknown error')
+            # 110001 = order not exists or too late to cancel — ордер уже исполнен/отменён, цель достигнута
+            if ret_code == 110001:
+                logger.debug(f"[BYBIT] Ордер {order_id} уже не существует (исполнен/отменён)")
+                return {'success': True, 'message': f'Ордер {order_id} уже не активен'}
             logger.warning(f"[BYBIT] ⚠️ Не удалось отменить ордер {order_id}: {msg}")
             return {'success': False, 'message': msg}
         except Exception as e:
+            err_str = str(e)
+            if '110001' in err_str or 'order not exists' in err_str.lower():
+                logger.debug(f"[BYBIT] Ордер {order_id} уже не существует (exception): {err_str}")
+                return {'success': True, 'message': f'Ордер {order_id} уже не активен'}
             logger.error(f"[BYBIT] ❌ Ошибка отмены ордера {order_id}: {e}")
-            return {'success': False, 'message': str(e)}
+            return {'success': False, 'message': err_str}
 
     def set_leverage(self, symbol, leverage):
         """

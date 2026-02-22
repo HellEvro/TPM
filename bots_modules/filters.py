@@ -2674,6 +2674,13 @@ def load_all_coins_rsi():
                 coins_rsi_data["coins"] = existing
         elif reduced_mode and not temp_coins_data:
             pass  # Ничего не загрузили (нет позиций) — оставляем coins как есть
+        elif not temp_coins_data:
+            # ⚠️ Полный режим, но temp пуст (все монеты не рассчитались) — НЕ стираем coins
+            logger.warning(
+                "⚠️ RSI: расчёт вернул 0 монет — сохраняем имеющиеся данные. "
+                "Проверьте биржу, свечи и rate limit."
+            )
+            pass
         else:
             coins_rsi_data["coins"] = temp_coins_data
         coins_rsi_data["last_update"] = datetime.now().isoformat()
