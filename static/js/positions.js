@@ -380,19 +380,29 @@ class PositionsManager {
         }
     }
 
-    async updateData() {
+    async updateData(forceRefresh = false) {
         try {
             const params = { pnl_threshold: this.pnlThreshold };
-            if (!this._initialLoadDone) {
-                params.force_refresh = 1;  // При первой загрузке — принудительно с биржи/Bots
+            if (!this._initialLoadDone || forceRefresh) {
+                params.force_refresh = 1;  // При первой загрузке или ручном обновлении — принудительно с биржи/Bots
                 this._initialLoadDone = true;
             }
             console.log('PositionsManager: Fetching positions data...', params);
-            const data = await apiUtils.fetchData(API_ENDPOINTS.GET_POSITIONS, params);
+            let data = await apiUtils.fetchData(API_ENDPOINTS.GET_POSITIONS, params);
             
             if (!data) {
                 console.warn('PositionsManager: No positions data received');
                 return;
+            }
+
+            // Если позиций нет, но есть баланс — повторяем с force_refresh (возможен устаревший кэш)
+            const totalCount = (data.high_profitable?.length || 0) + (data.profitable?.length || 0) + (data.losing?.length || 0);
+            const hasBalance = data.wallet_data && parseFloat(data.wallet_data.total_balance || 0) > 0;
+            if (totalCount === 0 && hasBalance && !params.force_refresh) {
+                console.log('PositionsManager: Empty positions with balance, retrying with force_refresh...');
+                const retryParams = { ...params, force_refresh: 1 };
+                data = await apiUtils.fetchData(API_ENDPOINTS.GET_POSITIONS, retryParams);
+                if (!data) return;
             }
 
             console.log('PositionsManager: Received positions data:', data);

@@ -1920,12 +1920,17 @@ def sync_positions_with_exchange():
         synced_count = 0
         errors_count = 0
         
-        # Grace period 90 сек: не удаляем бота, только что открывшего позицию (рассинхрон API)
-        _GRACE_SEC = 90
+        # Grace period 180 сек: не удаляем бота, только что открывшего позицию (рассинхрон API/Bybit)
+        _GRACE_SEC = 180
+        def _normalize_sym(s):
+            s = (s or '').replace('USDT', '').strip().upper()
+            return s if s else ''
 
         # Обрабатываем ботов без позиций на бирже
+        exchange_symbols_normalized = {_normalize_sym(s): s for s in exchange_dict.keys()}
         for symbol, bot_data in bot_dict.items():
-            if symbol not in exchange_dict:
+            sym_norm = _normalize_sym(symbol)
+            if sym_norm not in exchange_symbols_normalized:
                 logger.warning(f"[POSITION_SYNC] ⚠️ Бот {symbol} без позиции на бирже (статус: {bot_data['status']})")
 
                 # Только position_start_time или entry_timestamp — НЕ last_update!
@@ -1941,10 +1946,14 @@ def sync_positions_with_exchange():
                             dt = datetime.fromisoformat(str(entry_ts_raw).replace('Z', '+00:00'))
                             entry_sec = dt.timestamp()
                         elif isinstance(entry_ts_raw, (int, float)):
-                            entry_sec = entry_ts_raw / 1000 if entry_ts_raw > 1e12 else entry_ts_raw
+                            entry_sec = float(entry_ts_raw) / 1000 if float(entry_ts_raw) > 1e12 else float(entry_ts_raw)
                     except Exception:
                         pass
-                age_sec = (time.time() - entry_sec) if entry_sec else 999
+                # ✅ КРИТИЧНО: Если нет position_start_time или парсинг не удался — НЕ УДАЛЯЕМ (fail-safe)
+                if not entry_ts_raw or entry_sec <= 0:
+                    logger.info(f"[POSITION_SYNC] ⏳ Бот {symbol}: нет position_start_time — не удаляем (безопасность)")
+                    continue
+                age_sec = time.time() - entry_sec
                 if age_sec < _GRACE_SEC:
                     logger.info(f"[POSITION_SYNC] ⏳ Бот {symbol} недавно открыт ({age_sec:.0f}с) — ждём позицию на бирже")
                     continue
