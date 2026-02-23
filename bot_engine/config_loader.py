@@ -18,6 +18,15 @@ from configs.bot_config import (
 )
 
 
+def _patch_system_config():
+    """Патч обратной совместимости: добавляет новые атрибуты в SystemConfig, если их нет."""
+    if not hasattr(SystemConfig, 'LOW_RESOURCE_MODE'):
+        SystemConfig.LOW_RESOURCE_MODE = False
+
+
+_patch_system_config()
+
+
 def config_class_to_dict(cls):
     """Класс конфига → словарь (ключи lower) для config.get('enabled') и т.д."""
     return {

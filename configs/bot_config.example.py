@@ -424,6 +424,11 @@ class SystemConfig:
     CONSOLE_LOG_LEVELS = []                 # Список уровней для вывода в консоль
 
     # ========================================================================
+    # РЕЖИМ НИЗКОЙ НАГРУЗКИ (для слабых ПК)
+    # ========================================================================
+    LOW_RESOURCE_MODE = False               # True = уменьшить параллелизм загрузки свечей (batch 25, 3 воркера). Рекомендуется при зависании bots.py
+
+    # ========================================================================
     # ОГРАНИЧЕНИЕ ОЗУ ДЛЯ AI (ai.py)
     # ========================================================================
     AI_MEMORY_PCT = 30                      # Макс. % ОЗУ для ИИ
@@ -463,6 +468,8 @@ class SystemConfig:
 
 def _patch_system_config_ai_memory():
     """Патч обратной совместимости для старых копий конфига."""
+    if not hasattr(SystemConfig, 'LOW_RESOURCE_MODE'):
+        SystemConfig.LOW_RESOURCE_MODE = False
     if not hasattr(SystemConfig, 'AI_MEMORY_PCT'):
         SystemConfig.AI_MEMORY_PCT = 30
     if not hasattr(SystemConfig, 'AI_MEMORY_LIMIT_MB'):

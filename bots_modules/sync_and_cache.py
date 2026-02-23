@@ -3387,6 +3387,26 @@ def sync_bots_with_exchange():
                                                 entry_time_str = datetime.now().isoformat()
                                                 entry_timestamp = datetime.now().timestamp() * 1000
 
+                                            # entry_rsi: из last_rsi бота; exit_rsi: из coins_rsi_data на момент закрытия
+                                            _entry_rsi = None
+                                            _exit_rsi = None
+                                            try:
+                                                _lr = bot_data.get("last_rsi")
+                                                if _lr is not None and _lr != "":
+                                                    _entry_rsi = float(_lr)
+                                            except (TypeError, ValueError):
+                                                pass
+                                            try:
+                                                from bot_engine.config_loader import get_rsi_from_coin_data, get_current_timeframe
+                                                _tf = bot_data.get("entry_timeframe") or get_current_timeframe()
+                                                with rsi_data_lock:
+                                                    _coins = coins_rsi_data.get("coins", {})
+                                                    _rsi_info = _coins.get(symbol) or _coins.get(symbol + "USDT")
+                                                    if _rsi_info:
+                                                        _exit_rsi = get_rsi_from_coin_data(_rsi_info, timeframe=_tf)
+                                            except Exception:
+                                                pass
+
                                             trade_data = {
                                                 "bot_id": bot_id,
                                                 "symbol": symbol,
@@ -3408,8 +3428,8 @@ def sync_bots_with_exchange():
                                                 ),
                                                 "ai_decision_id": bot_data.get("ai_decision_id"),
                                                 "ai_confidence": bot_data.get("ai_confidence"),
-                                                "entry_rsi": None,  # TODO: получить из entry_data если есть
-                                                "exit_rsi": None,
+                                                "entry_rsi": _entry_rsi,
+                                                "exit_rsi": _exit_rsi,
                                                 "entry_trend": entry_data.get("trend"),
                                                 "exit_trend": None,
                                                 "entry_volatility": entry_data.get("volatility"),

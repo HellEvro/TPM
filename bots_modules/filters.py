@@ -2001,6 +2001,29 @@ def get_required_timeframes_for_rsi():
     return result
 
 
+def _is_low_resource_mode():
+    """Проверяет, нужен ли режим низкой нагрузки (для слабых ПК)."""
+    try:
+        if os.environ.get('INFOBOT_LOW_RESOURCE', '').strip().lower() in ('1', 'true', 'yes'):
+            return True
+        from bot_engine.config_loader import SystemConfig
+        if getattr(SystemConfig, 'LOW_RESOURCE_MODE', False):
+            return True
+        limit_mb = getattr(SystemConfig, 'AI_MEMORY_LIMIT_MB', 0) or 0
+        if limit_mb > 0 and limit_mb <= 4096:
+            return True
+        try:
+            from utils.process_limits import get_total_ram_mb
+            total = get_total_ram_mb()
+            if total and total < 8192:  # < 8 GB
+                return True
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return False
+
+
 def load_all_coins_candles_fast():
     """⚡ БЫСТРАЯ загрузка ТОЛЬКО свечей для всех монет БЕЗ расчетов
 
@@ -2104,14 +2127,23 @@ def load_all_coins_candles_fast():
 
             # bulk_mode: один запрос 100 свечей без задержки — агрессивный параллелизм для загрузки за ~10–30 с
             # Без bulk_mode: 10 воркеров, батч 10, таймаут 45 с (осторожно по rate limit)
+            # Режим низкой нагрузки (слабые ПК): batch 25, 3 воркера, таймаут 60 с — меньше блокировок
             use_bulk = getattr(current_exchange.__class__, '__name__', '') == 'BybitExchange'
-            batch_size = 100 if use_bulk else 10
+            low_resource = _is_low_resource_mode()
+            if low_resource:
+                batch_size = 25
+                base_max_workers = 3
+                batch_timeout = 60
+                logger.info("📦 Режим низкой нагрузки: batch=25, workers=3 (слабый ПК)")
+            else:
+                batch_size = 100 if use_bulk else 10
+                base_max_workers = min(10, batch_size)
+                batch_timeout = 15 if use_bulk else 45
             candles_cache = {}
             
             import concurrent.futures
             # Bybit kline: 10 req/s — ограничиваем воркеры, семафор внутри get_coin_candles_only
-            current_max_workers = min(10, batch_size) if use_bulk else min(10, batch_size)
-            batch_timeout = 15 if use_bulk else 45
+            current_max_workers = base_max_workers
             rate_limit_detected = False
             
             shutdown_requested = False
@@ -2130,11 +2162,11 @@ def load_all_coins_candles_fast():
                 total_batches = (len(pairs_for_tf) + batch_size - 1)//batch_size
                 
                 if rate_limit_detected:
-                    current_max_workers = max(5, current_max_workers - 2)
+                    current_max_workers = max(2, current_max_workers - 2) if not low_resource else max(2, current_max_workers - 1)
                     logger.warning(f"⚠️ Rate limit в предыдущем батче. Воркеры: {current_max_workers}")
                     rate_limit_detected = False
                 else:
-                    current_max_workers = min(10, batch_size)
+                    current_max_workers = base_max_workers
                 
                 delay_before_batch = current_exchange.current_request_delay if hasattr(current_exchange, 'current_request_delay') else None
                 
@@ -2151,13 +2183,23 @@ def load_all_coins_candles_fast():
                             f.cancel()
                         break
                     
-                    completed = 0
-                    # bulk_mode: 100 запросов без задержки — 15 с; иначе 45 с на батч 10
-                    done, not_done = concurrent.futures.wait(
-                        list(future_to_symbol.keys()),
-                        timeout=batch_timeout,
-                        return_when=concurrent.futures.ALL_COMPLETED
-                    )
+                    # Лог в начале батча — пользователь видит прогресс, не кажется что зависло
+                    logger.info(f"📦 Свечи {timeframe}: батч {batch_num}/{total_batches} — загрузка {len(batch)} монет...")
+                    # Ждём завершения с проверкой shutdown каждые 2 сек — Ctrl+C срабатывает быстрее
+                    all_futs = list(future_to_symbol.keys())
+                    remaining_futures = set(all_futs)
+                    done = set()
+                    deadline = time.time() + batch_timeout
+                    wait_chunk = 2
+                    while remaining_futures and time.time() < deadline:
+                        if shutdown_flag.is_set():
+                            break
+                        partial_done, remaining_futures = concurrent.futures.wait(
+                            remaining_futures, timeout=wait_chunk,
+                            return_when=concurrent.futures.ALL_COMPLETED
+                        )
+                        done |= partial_done
+                    not_done = remaining_futures
 
                     if shutdown_flag.is_set():
                         shutdown_requested = True
@@ -2166,12 +2208,10 @@ def load_all_coins_candles_fast():
                         break
                     
                     for future in done:
-                        symbol = future_to_symbol.get(future)
                         try:
                             result = future.result()
                             if result:
                                 candles_cache[result['symbol']] = result
-                                completed += 1
                         except Exception:
                             pass
                     
