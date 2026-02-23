@@ -2223,7 +2223,7 @@ def bots_history_demo_proxy():
 def sync_positions():
     """Синхронизировать позиции (прокси к сервису ботов, работает с GET и POST)"""
     method = request.method
-    result = call_bots_service('/api/bots/sync-positions', method=method)
+    result = call_bots_service('/api/bots/sync-positions', method=method, timeout=60)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
@@ -2237,7 +2237,7 @@ def refresh_manual_positions():
 @app.route('/api/bots/coins-with-rsi', methods=['GET'])
 def get_coins_with_rsi():
     """Получить монеты с RSI данными (прокси к сервису ботов)"""
-    result = call_bots_service('/api/bots/coins-with-rsi')
+    result = call_bots_service('/api/bots/coins-with-rsi', timeout=90)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
