@@ -718,6 +718,36 @@ def get_ai_entry_decision(
     min_conf = _confidence_01(prii_config.get('ai_min_confidence', 0.7))
     result = {'allowed': False, 'confidence': 0.0, 'reason': 'AI not available'}
     try:
+        # FullAI LLM (GLM-4.7 flash): при fullai_llm_enabled и API ключе — решение принимает LLM
+        try:
+            from bot_engine.ai.fullai_llm import is_llm_available, get_llm_entry_decision
+            if is_llm_available(prii_config):
+                llm_decision = get_llm_entry_decision(
+                    symbol, direction, candles, current_price, prii_config, rsi=rsi, trend=trend
+                )
+                if llm_decision is not None:
+                    result['allowed'] = bool(llm_decision.get('allowed', False))
+                    result['confidence'] = float(llm_decision.get('confidence', 0.5))
+                    result['reason'] = str(llm_decision.get('reason', 'GLM'))
+                    if result['confidence'] < min_conf and result['allowed']:
+                        result['allowed'] = False
+                        result['reason'] = result['reason'] + f" | Уверенность {result['confidence']:.2%} < порога {min_conf:.2%}"
+                    try:
+                        from bot_engine.ai_analytics import apply_analytics_to_entry_decision
+                        result['allowed'], result['confidence'], result['reason'] = apply_analytics_to_entry_decision(
+                            symbol, direction, rsi, trend,
+                            base_allowed=result['allowed'], base_confidence=result['confidence'], base_reason=result['reason'],
+                            full_ai_mode=True,
+                        )
+                        if result['confidence'] < min_conf and result['allowed']:
+                            result['allowed'] = False
+                            result['reason'] = result['reason'] + f" | Уверенность {result['confidence']:.2%} < порога {min_conf:.2%}"
+                    except Exception as _ax2:
+                        logger.debug("apply_analytics (LLM): %s", _ax2)
+                    return result
+        except Exception as llm_err:
+            logger.debug("FullAI LLM entry: %s", llm_err)
+
         # FullAI: при недоступности AI Premium — НЕ блокируем вход, используем RSI-сигналы (FullAI работает без AI Premium)
         from bot_engine.ai import get_ai_manager
         ai_manager = get_ai_manager()
@@ -861,9 +891,26 @@ def get_ai_exit_decision(
         # Используем data_context (свечи из БД, индикаторы) если передан
         if not candles and data_context:
             candles = data_context.get('candles') or []
-        # Опционально: вызов AIManager для anomaly (FullAI работает без AI Premium — TP/SL выше уже сработали)
-        # Троттлинг: AI-анализ (LSTM, паттерны) не чаще 1 раза в 60 сек на символ — избегаем спама в логах и подвисаний
+        # FullAI LLM (GLM): опционально решение о закрытии от LLM (с троттлингом 60 сек)
         _ai_exit_throttle_sec = 60
+        try:
+            from bot_engine.ai.fullai_llm import is_llm_available, get_llm_exit_decision
+            if is_llm_available(prii_config) and candles and len(candles) >= 5:
+                _now = time.time()
+                _last = getattr(get_ai_exit_decision, '_last_analyze', {}).get(symbol, 0)
+                if _now - _last >= _ai_exit_throttle_sec:
+                    if not hasattr(get_ai_exit_decision, '_last_analyze'):
+                        get_ai_exit_decision._last_analyze = {}
+                    get_ai_exit_decision._last_analyze[symbol] = _now
+                    llm_exit = get_llm_exit_decision(symbol, position, candles, pnl_percent, prii_config, data_context)
+                    if llm_exit and llm_exit.get('close_now'):
+                        result['close_now'] = True
+                        result['reason'] = llm_exit.get('reason', 'GLM exit')
+                        result['confidence'] = float(llm_exit.get('confidence', 0.9))
+                        return result
+        except Exception as llm_ex_err:
+            logger.debug("FullAI LLM exit: %s", llm_ex_err)
+        # Опционально: вызов AIManager для anomaly (FullAI работает без AI Premium — TP/SL выше уже сработали)
         try:
             from bot_engine.ai import get_ai_manager
             ai_manager = get_ai_manager()

@@ -10,6 +10,7 @@
 """
 
 import logging
+import os
 import time
 import threading
 import concurrent.futures
@@ -2549,8 +2550,13 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             # ✅ ПАРАЛЛЕЛЬНАЯ загрузка с текстовым прогрессом (работает в лог-файле)
             batch_size = 100
             total_batches = (len(pairs_for_tf) + batch_size - 1) // batch_size
-            # Bybit kline 10 req/s — ограничиваем воркеры
+            # Bybit kline 10 req/s — ограничиваем воркеры. На Windows меньше потоков — меньше конфликтов с сокетами/антивирусом
             rsi_max_workers = min(10, batch_size)
+            if os.name == "nt":
+                rsi_max_workers = min(4, rsi_max_workers)
+                logger.info(
+                    f"📊 RSI (Windows): воркеры уменьшены до {rsi_max_workers} для стабильности"
+                )
 
             for i in range(0, len(pairs_for_tf), batch_size):
                 if shutdown_flag.is_set():
@@ -2628,6 +2634,14 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                                 logger.error(f"❌ {symbol}: {e}")
                                 coins_rsi_data["failed_coins"] += 1
                                 batch_fail += 1
+                            # Прогресс внутри батча (каждые 25) — видно, что RSI считается, особенно на медленных/Windows
+                            done_in_batch = batch_success + batch_fail
+                            if done_in_batch > 0 and done_in_batch % 25 == 0:
+                                elapsed = time.time() - batch_start
+                                logger.info(
+                                    f"📊 RSI Batch {batch_num}/{total_batches} (ТФ={timeframe}): "
+                                    f"в батче {done_in_batch}/{len(batch)} за {elapsed:.1f}s"
+                                )
                     except concurrent.futures.TimeoutError:
                         pending = [
                             symbol for future, symbol in future_to_symbol.items()

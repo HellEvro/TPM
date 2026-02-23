@@ -9,5 +9,8 @@
   "fullai_adaptive_virtual_success_count": 3,
   "fullai_adaptive_real_loss_to_retry": 1,
   "fullai_adaptive_virtual_round_size": 3,
-  "fullai_adaptive_virtual_max_failures": 0
+  "fullai_adaptive_virtual_max_failures": 0,
+  "fullai_llm_enabled": false,
+  "fullai_llm_api_key": "",
+  "fullai_llm_model": "glm-4-flash"
 }
