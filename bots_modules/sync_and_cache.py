@@ -3114,7 +3114,14 @@ def sync_bots_with_exchange():
                 cursor = next_page_cursor
             
             # ✅ Не логируем общее количество (избыточно)
-            
+
+            # ✅ Обновляем RSI для ботов в позиции ДО проверки закрытий — чтобы при сохранении истории был exit_rsi
+            positions_list = [
+                {'symbol': sym, 'mark_price': data.get('mark_price', 0)}
+                for sym, data in exchange_positions.items()
+            ]
+            _refresh_rsi_for_bots_in_position(current_exchange, positions_list)
+
             # ✅ УПРОЩЕНО: Получаем список ботов один раз и проверяем напрямую
             with bots_data_lock:
                 bot_items = list(bots_data['bots'].items())  # Копия для безопасной итерации

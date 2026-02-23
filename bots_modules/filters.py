@@ -43,6 +43,9 @@ _delisted_cache = {'ts': 0.0, 'coins': {}}
 # Символы, по которым уже вывели предупреждение о неудачном входе из-за делистинга (один раз за сессию)
 _delisting_entry_warned_symbols = set()
 
+# DEBUG: символы для трассировки зависаний RSI (заполняется при timeout)
+_debug_rsi_symbols = {'BABY', 'BAND', 'BEAM', 'ATH', 'BBEL'}
+
 
 def _threshold_01(value):
     """Порог в шкале 0–1: конфиг как есть; если > 1 — считаем 0–100 и делим на 100 один раз."""
@@ -974,6 +977,10 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
     if not candles or len(candles) < 15:
         return None
 
+    _dbg = symbol in _debug_rsi_symbols
+    if _dbg:
+        logger.info(f"[DEBUG_RSI] {symbol}: candles ok, len={len(candles)}")
+
     from bot_engine.config_loader import get_rsi_key, get_trend_key
     rsi_key = get_rsi_key(timeframe)
     trend_key = get_trend_key(timeframe)
@@ -982,6 +989,8 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
 
     if rsi is None:
         return None
+    if _dbg:
+        logger.info(f"[DEBUG_RSI] {symbol}: rsi ok")
 
     trend = None
     try:
@@ -993,6 +1002,8 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
             trend = trend_analysis['trend']
     except Exception as e:
         pass
+    if _dbg:
+        logger.info(f"[DEBUG_RSI] {symbol}: trend ok")
     base_data = coins_rsi_data.get('coins', {}).get(symbol, {})
     
     # Объединяем с новыми данными для указанного таймфрейма
@@ -1011,6 +1022,8 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
     is_system_tf = (timeframe == _sys_tf) if _sys_tf else (timeframe == '1m')
 
     if is_system_tf:
+        if _dbg:
+            logger.info(f"[DEBUG_RSI] {symbol}: before maturity block")
         try:
             from bot_engine.config_loader import SystemConfig, get_config_value
             from bots_modules.imports_and_globals import bots_data
@@ -1064,6 +1077,8 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
             else:
                 result['is_mature'] = True
                 result['maturity_reason'] = None
+            if _dbg:
+                logger.info(f"[DEBUG_RSI] {symbol}: maturity done")
             result['has_existing_position'] = base_data.get('has_existing_position', False) if base_data else False
 
             # Scope: черный список ВСЕГДА исключает монету из торговли (при любом scope)
@@ -1089,10 +1104,14 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
             potential_signal = signal if signal in ('ENTER_LONG', 'ENTER_SHORT') else None
 
             if potential_signal is None:
+                if _dbg:
+                    logger.info(f"[DEBUG_RSI] {symbol}: skip filters (no signal)")
                 time_filter_info = {'blocked': False, 'reason': 'RSI вне зоны входа в сделку', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
                 exit_scam_info = {'blocked': False, 'reason': 'ExitScam: RSI вне зоны входа', 'filter_type': 'exit_scam'}
                 loss_reentry_info = {'blocked': False, 'reason': 'Защита от повторных входов: RSI вне зоны входа', 'filter_type': 'loss_reentry_protection'}
             else:
+                if _dbg:
+                    logger.info(f"[DEBUG_RSI] {symbol}: before time_filter")
                 time_filter_info = None
                 exit_scam_info = None
                 loss_reentry_info = None
@@ -1169,6 +1188,8 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
             result['blocked_by_exit_scam'] = exit_scam_info.get('blocked', False) if exit_scam_info else False
             result['blocked_by_rsi_time'] = time_filter_info.get('blocked', False) if time_filter_info else False
             result['blocked_by_loss_reentry'] = loss_reentry_info.get('blocked', False) if loss_reentry_info else False
+            if _dbg:
+                logger.info(f"[DEBUG_RSI] {symbol}: filters done, returning")
         except Exception as e:
             pass
             result['time_filter_info'] = {'blocked': False, 'reason': f'Ошибка: {e}', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
@@ -2678,11 +2699,13 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                     # Не завершённые по таймауту — считаем ошибками
                     if remaining:
                         pending = [future_to_symbol.get(f, '?') for f in remaining if f in future_to_symbol]
+                        _debug_rsi_symbols.update(s for s in pending if isinstance(s, str) and s != '?')
                         logger.error(
                             "⚠️ Timeout при загрузке RSI для пакета "
                             f"{batch_num} (ТФ={timeframe}) "
                             f"(не завершено {len(pending)} из {len(batch)}, примеры: {pending[:5]})"
                         )
+                        logger.info(f"[DEBUG_RSI] Добавлены в трассировку: {list(_debug_rsi_symbols)}")
                         coins_rsi_data["failed_coins"] += len(remaining)
                         batch_fail += len(remaining)
 
