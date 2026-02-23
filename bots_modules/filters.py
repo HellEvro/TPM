@@ -2065,14 +2065,21 @@ def load_all_coins_candles_fast():
             return False
 
         # ✅ Режим при лимите ботов: только монеты с активными ботами
+        # ⚠️ Используем timeout 5с — при дедлоке/конкуренции не блокируем загрузку свечей
         reduced_mode = False
         bot_symbols_to_tf: dict[str, list[str]] = {}
+        bots, auto_config = {}, {}
         try:
             from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
             from bot_engine.config_loader import get_config_value, get_current_timeframe, TIMEFRAME
-            with bots_data_lock:
-                bots = bots_data.get('bots', {})
-                auto_config = bots_data.get('auto_bot_config', {})
+            if bots_data_lock.acquire(timeout=5):
+                try:
+                    bots = (bots_data.get('bots') or {}).copy()
+                    auto_config = (bots_data.get('auto_bot_config') or {}).copy()
+                finally:
+                    bots_data_lock.release()
+            else:
+                logger.warning("⚠️ bots_data_lock timeout 5с — загружаем свечи в full mode")
             max_concurrent = get_config_value(auto_config, 'max_concurrent')
             try:
                 default_tf = get_current_timeframe() or TIMEFRAME

@@ -266,6 +266,7 @@ def register_ai_endpoints(app):
                 try:
                     from bots_modules.imports_and_globals import bots_data, bots_data_lock
                     from bots_modules.sync_and_cache import save_auto_bot_config
+                    need_save = False
                     with bots_data_lock:
                         ac = bots_data.get('auto_bot_config')
                         if ac is None:
@@ -273,8 +274,10 @@ def register_ai_endpoints(app):
                         if ac.get('full_ai_control') or ac.get('ai_enabled'):
                             ac['full_ai_control'] = False
                             ac['ai_enabled'] = False
-                            save_auto_bot_config()
-                            logger.info("[AI_CONFIG] ai_enabled=False → full_ai_control и ai_enabled сброшены в auto_bot_config")
+                            need_save = True
+                    if need_save:
+                        save_auto_bot_config()
+                        logger.info("[AI_CONFIG] ai_enabled=False → full_ai_control и ai_enabled сброшены в auto_bot_config")
                 except Exception as e:
                     logger.debug("[AI_CONFIG] Синхронизация auto_bot_config при выкл AI: %s", e)
 
@@ -480,14 +483,17 @@ def register_ai_endpoints(app):
                 try:
                     from bots_modules.imports_and_globals import bots_data, bots_data_lock
                     from bots_modules.sync_and_cache import save_auto_bot_config
+                    need_save = False
                     with bots_data_lock:
                         ac = bots_data.get('auto_bot_config') or {}
                         if ac.get('full_ai_control') or ac.get('ai_enabled'):
                             ac['full_ai_control'] = False
                             ac['ai_enabled'] = False
                             bots_data['auto_bot_config'] = ac
-                            save_auto_bot_config()
-                            logger.info("[AI_CONFIG] ai_enabled=False → full_ai_control и ai_enabled сброшены в auto_bot_config")
+                            need_save = True
+                    if need_save:
+                        save_auto_bot_config()
+                        logger.info("[AI_CONFIG] ai_enabled=False → full_ai_control и ai_enabled сброшены в auto_bot_config")
                 except Exception as _e:
                     logger.debug("[AI_CONFIG] Сброс full_ai_control при выкл AI: %s", _e)
 

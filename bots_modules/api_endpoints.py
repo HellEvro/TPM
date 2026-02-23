@@ -6186,6 +6186,13 @@ def _json_safe(obj):
 def get_ai_self_learning_performance():
     """Получить метрики производительности AI (доступно с любой лицензией)"""
     try:
+        # ⚠️ Не триггерим тяжёлую инициализацию AITrainer во время первой загрузки свечей/RSI
+        if not coins_rsi_data.get('first_round_complete'):
+            return jsonify({
+                'success': True,
+                'performance': {'info': 'Ожидание первой загрузки данных (свечи + RSI)'},
+                'trends': {}
+            })
         try:
             from bot_engine.ai.ai_self_learning import get_self_learning_system
             self_learning = get_self_learning_system()
