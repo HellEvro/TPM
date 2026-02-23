@@ -915,6 +915,40 @@ def get_coins_with_rsi():
         except Exception as e:
             logger.error(f" Ошибка получения ручных позиций: {str(e)}")
         
+        # ✅ Ручные позиции с биржи всегда показываем в списке: добавляем в ответ монеты,
+        # которых ещё нет в кэше RSI (критическая информация для торговли — без кэша по позициям)
+        try:
+            from bot_engine.config_loader import get_current_timeframe, get_rsi_key, get_trend_key
+            tf = get_current_timeframe()
+            rsi_key = get_rsi_key(tf)
+            trend_key = get_trend_key(tf)
+            for sym in manual_positions:
+                if sym not in cleaned_coins:
+                    cleaned_coins[sym] = {
+                        'symbol': sym,
+                        rsi_key: 50,
+                        trend_key: 'NEUTRAL',
+                        'rsi_zone': 'neutral',
+                        'signal': 'WAIT',
+                        'price': None,
+                        'change24h': None,
+                        'last_update': None,
+                        'has_existing_position': True,
+                        'is_mature': True,
+                        'blocked_by_scope': False,
+                        'blocked_by_exit_scam': False,
+                        'blocked_by_rsi_time': False,
+                        'blocked_by_loss_reentry': False,
+                        'trading_status': 'Trading',
+                        'is_delisting': False,
+                        'rsi6h': 50,
+                        'trend6h': 'NEUTRAL',
+                        'rsi': 50,
+                        'trend': 'NEUTRAL',
+                    }
+        except Exception as e:
+            logger.warning(f"⚠️ Добавление ручных позиций в ответ: {e}")
+        
         # update_in_progress = во время load_all_coins_rsi; processing_cycle = весь раунд (свечи + RSI)
         update_in_progress = coins_rsi_data.get('update_in_progress', False)
         processing_cycle = coins_rsi_data.get('processing_cycle', False)

@@ -3159,12 +3159,22 @@ def process_auto_bot_signals(exchange_obj=None):
                 logger.info(f" ⚠️ {symbol}: Бот уже существует (статус: {bots_data['bots'][symbol].get('status')})")
                 continue
             
-            # ✅ ПРОВЕРКА ПОЗИЦИЙ: Есть ли ручная позиция на бирже?
+            # ✅ ПРОВЕРКА ПОЗИЦИЙ: Есть ли ручная позиция на бирже? Всегда с биржи, без кэша.
             try:
-                from bots_modules.workers import positions_cache
-                
-                # Проверяем есть ли позиция для этой монеты
-                if symbol in positions_cache['symbols_with_positions']:
+                exch = exchange_obj if exchange_obj is not None else get_exchange()
+                symbols_with_positions = set()
+                if exch:
+                    positions_result = exch.get_positions()
+                    if isinstance(positions_result, tuple):
+                        positions_list = positions_result[0] if positions_result else []
+                    else:
+                        positions_list = positions_result if positions_result else []
+                    for pos in positions_list:
+                        if abs(float(pos.get('size', 0))) > 0:
+                            sym = (pos.get('symbol') or '').replace('USDT', '')
+                            if sym:
+                                symbols_with_positions.add(sym)
+                if symbol in symbols_with_positions:
                     # Позиция есть! Проверяем, есть ли активный бот для неё
                     has_active_bot = False
                     if symbol in bots_data['bots']:

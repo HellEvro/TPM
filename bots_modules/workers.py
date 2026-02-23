@@ -303,15 +303,13 @@ def auto_bot_worker():
 
 def positions_monitor_worker():
     """
-    📊 Мониторинг позиций на бирже и проверка закрытия по RSI
-
-    Загружает все позиции с биржи и сохраняет в кэш для быстрого доступа.
-    Интервал расчёта RSI и решений (закрыть/стопы) = POSITION_SYNC_INTERVAL («Синхронизация позиций»).
-    Каждые N сек: для ботов в позиции — 20+ свечей → RSI → решение закрыть или нет; стопы/трейлинг — в sync_positions_with_exchange().
+    Мониторинг позиций на бирже и проверка закрытия по RSI.
+    Позиции не кэшируются, при необходимости запрашиваются с биржи (get_exchange_positions()).
+    Интервал = POSITION_SYNC_INTERVAL (Синхронизация позиций).
     """
     logger.info(" 🚀 Запуск мониторинга позиций...")
 
-    # Создаем глобальный кэш позиций
+    # Позиции НЕ кэшируются — при каждой проверке sync_positions_with_exchange() вызывает get_exchange_positions()
     global positions_cache
     positions_cache = {
         'positions': [],
@@ -363,9 +361,8 @@ def positions_monitor_worker():
                 exchange_init_warning_shown = False
             exchange_init_wait_start = time.time()  # Сбрасываем таймер
 
-            # Загружаем позиции с биржи
+            # Загружаем позиции с биржи (только для лога; критическая логика всегда запрашивает позиции сама)
             try:
-                # Логируем только каждые 30 секунд чтобы не спамить
                 should_log = (int(time.time()) % 30 == 0)
                 if should_log:
                     logger.info(f" 🔄 Загружаем позиции с биржи...")
@@ -376,26 +373,11 @@ def positions_monitor_worker():
                 else:
                     positions_list = exchange_positions if exchange_positions else []
 
-                # Обновляем кэш
-                symbols_with_positions = set()
-                active_positions_log = []
-                for pos in positions_list:
-                    if abs(float(pos.get('size', 0))) > 0:
-                        symbol = pos.get('symbol', '').replace('USDT', '')
-                        symbols_with_positions.add(symbol)
-                        if should_log:
-                            active_positions_log.append(f"{symbol} (размер: {pos.get('size')})")
-
-                positions_cache['positions'] = positions_list
-                positions_cache['last_update'] = datetime.now().isoformat()
-                positions_cache['symbols_with_positions'] = symbols_with_positions
-
-                # Логируем только каждые 30 секунд
                 if should_log:
+                    symbols_with_positions = {pos.get('symbol', '').replace('USDT', '') for pos in positions_list if abs(float(pos.get('size', 0))) > 0}
                     logger.info(f" 📊 Получено {len(positions_list)} позиций с биржи")
-                    if active_positions_log:
-                        logger.info(f" 📈 Активные позиции: {', '.join(active_positions_log)}")
-                    logger.info(f" ✅ Обновлено: {len(positions_list)} позиций, активных: {len(symbols_with_positions)}")
+                    if symbols_with_positions:
+                        logger.info(f" 📈 Активные позиции: {', '.join(sorted(symbols_with_positions))}")
 
             except Exception as e:
                 logger.error(f" ❌ Ошибка загрузки позиций: {e}")

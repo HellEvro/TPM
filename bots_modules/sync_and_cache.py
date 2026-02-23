@@ -1921,6 +1921,16 @@ def sync_positions_with_exchange():
         exchange_dict = {pos['symbol']: pos for pos in exchange_positions}
         bot_dict = {pos['symbol']: pos for pos in bot_positions}
         
+        # ✅ Защита от неполного ответа API (Resetting dropped connection, таймаут):
+        # если позиций с биржи сильно меньше, чем ботов — не удаляем в этом цикле (вероятен глитч API)
+        # Допускаем удаление не более одного бота за цикл по разнице количества
+        if len(bot_positions) > 0 and len(exchange_positions) < len(bot_positions) - 1:
+            logger.warning(
+                f"[POSITION_SYNC] ⚠️ Позиций с биржи ({len(exchange_positions)}), ботов в позиции ({len(bot_positions)}). "
+                "Возможен неполный ответ API — удаление ботов пропущено в этом цикле."
+            )
+            return False
+        
         synced_count = 0
         errors_count = 0
         
