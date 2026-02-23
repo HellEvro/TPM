@@ -1051,7 +1051,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
                             maturity_candles = tc[maturity_tf].get('candles')
                     if maturity_candles and len(maturity_candles) >= 15:
                         from bots_modules.maturity import check_coin_maturity_with_storage
-                        mr = check_coin_maturity_with_storage(symbol, maturity_candles)
+                        mr = check_coin_maturity_with_storage(symbol, maturity_candles, config=auto_config)
                         result['is_mature'] = mr.get('is_mature', True)
                         result['maturity_reason'] = mr.get('reason') if not mr.get('is_mature') else None
                     else:
@@ -2532,10 +2532,9 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             else:
                 pairs_for_tf = pairs
 
-            batch_size = 100
+            batch_size = 25  # Малый батч для слабых ПК — меньше таймаутов, меньше lock contention
             total_batches = (len(pairs_for_tf) + batch_size - 1) // batch_size
-            # Bybit kline 10 req/s — ограничиваем воркеры
-            rsi_max_workers = min(10, batch_size)
+            rsi_max_workers = 4  # Меньше воркеров = меньше конкуренции за bots_data_lock
 
             for i in range(0, len(pairs_for_tf), batch_size):
                 if shutdown_flag.is_set():
@@ -2570,9 +2569,9 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             future.cancel()
                         break
 
-                    # Таймаут пакета: 30 с — при 100 символах и analyze_trend может не хватать 15 с
-                    batch_timeout = 30
-                    result_timeout = 5
+                    # Таймаут 90с/25с — для слабых ПК (нет GPU, медленный CPU)
+                    batch_timeout = 90
+                    result_timeout = 25
                     try:
                         for future in concurrent.futures.as_completed(
                             future_to_symbol, timeout=batch_timeout

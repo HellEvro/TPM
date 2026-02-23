@@ -291,7 +291,7 @@ def init_bot_service():
                     # ✅ КРИТИЧНО: Ждём first_round_complete (свечи + RSI) — до этого НИЧЕГО не делаем!
                     from bots_modules.imports_and_globals import coins_rsi_data
                     wait_start = time.time()
-                    max_wait = 300  # 5 мин максимум
+                    max_wait = 120  # 2 мин макс
                     last_log = 0
                     while not coins_rsi_data.get('first_round_complete') and (time.time() - wait_start) < max_wait:
                         elapsed = int(time.time() - wait_start)
@@ -300,7 +300,7 @@ def init_bot_service():
                             last_log = elapsed
                         time.sleep(2)
                     if not coins_rsi_data.get('first_round_complete'):
-                        logger.warning(" ⚠️ first_round_complete не достигнут за 5 мин — синхронизация запускается принудительно")
+                        logger.warning(" ⚠️ first_round_complete не достигнут за 2 мин — синхронизация запускается принудительно")
                     else:
                         logger.info(" ✅ RSI готов — запускаем стартовую синхронизацию")
 

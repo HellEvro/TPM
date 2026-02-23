@@ -313,18 +313,15 @@ def remove_mature_coin_from_storage(symbol):
 #     """Обновляет данные об оптимальных EMA из внешнего источника"""
 #     return False
 
-def check_coin_maturity_with_storage(symbol, candles):
-    """Проверяет зрелость монеты с использованием постоянного хранилища"""
-    # Сначала проверяем постоянное хранилище
+def check_coin_maturity_with_storage(symbol, candles, config=None):
+    """Проверяет зрелость монеты с использованием постоянного хранилища.
+    config: при передаче — не берём bots_data_lock (для RSI воркеров)."""
     if is_coin_mature_stored(symbol):
-        # Убрано избыточное логирование
         return {
             'is_mature': True,
             'details': {'stored': True, 'from_storage': True}
         }
-    
-    # Если не в хранилище, выполняем полную проверку
-    maturity_result = check_coin_maturity(symbol, candles)
+    maturity_result = check_coin_maturity(symbol, candles, config=config)
     
     # Если монета зрелая, добавляем в постоянное хранилище (с автосохранением)
     if maturity_result['is_mature']:
@@ -332,18 +329,13 @@ def check_coin_maturity_with_storage(symbol, candles):
     
     return maturity_result
 
-def check_coin_maturity(symbol, candles):
+def check_coin_maturity(symbol, candles, config=None):
     """Проверяет зрелость монеты для торговли.
-    
-    Критерий (БЕЗ лишних проверок): за min_candles свечей (из конфига) RSI хотя бы раз достигал:
-    - ≤ min_rsi_low (35) И ≥ max_rsi_high (65).
-    Только 3 условия: достаточно свечей + rsi_min ≤ 35 + rsi_max ≥ 65.
-    """
+    config: при передаче — не берём bots_data_lock (снижает конкуренцию в RSI воркерах)."""
     try:
-        # Получаем настройки из конфига (min_candles_for_maturity = 400 в конфиге)
-        with bots_data_lock:
-            config = bots_data.get('auto_bot_config', {})
-        
+        if config is None:
+            with bots_data_lock:
+                config = bots_data.get('auto_bot_config', {})
         min_candles = config.get('min_candles_for_maturity') or MIN_CANDLES_FOR_MATURITY or 400
         min_rsi_low = config.get('min_rsi_low') or MIN_RSI_LOW or 35
         max_rsi_high = config.get('max_rsi_high') or MAX_RSI_HIGH or 65
