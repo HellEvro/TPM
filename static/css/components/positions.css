@@ -259,6 +259,17 @@
     border-radius: 2px;
 }
 
+.mini-chart-placeholder {
+    font-size: 10px;
+    opacity: 0.85;
+    color: var(--text-color);
+    white-space: nowrap;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-left: 4px;
+}
+
 .ticker {
     flex: 1;
     display: flex;

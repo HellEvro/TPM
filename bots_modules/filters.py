@@ -921,24 +921,24 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
     Returns:
         dict: Данные монеты с RSI и трендом для указанного таймфрейма
     """
-    logger.info(f"🔄 [D W01] get_coin_rsi_data_for_timeframe ВХОД symbol={symbol} timeframe={timeframe}")
+    logger.debug(f"🔄 [D W01] get_coin_rsi_data_for_timeframe ВХОД symbol={symbol} timeframe={timeframe}")
     if not symbol or str(symbol).strip().lower() == 'all':
-        logger.info("🔄 [D W02] symbol пустой или 'all' -> return None")
+        logger.debug("🔄 [D W02] symbol пустой или 'all' -> return None")
         return None
-    logger.info("🔄 [D W03] import coins_rsi_data")
+    logger.debug("🔄 [D W03] import coins_rsi_data")
     from bots_modules.imports_and_globals import coins_rsi_data
 
-    logger.info("🔄 [D W04] проверка timeframe")
+    logger.debug("🔄 [D W04] проверка timeframe")
     if timeframe is None:
         from bot_engine.config_loader import get_current_timeframe
         timeframe = get_current_timeframe()
-    logger.info(f"🔄 [D W05] timeframe={timeframe}")
+    logger.debug(f"🔄 [D W05] timeframe={timeframe}")
 
     candles = None
-    logger.info("🔄 [D W06] candles_cache = coins_rsi_data.get('candles_cache')")
+    logger.debug("🔄 [D W06] candles_cache = coins_rsi_data.get('candles_cache')")
     candles_cache = coins_rsi_data.get('candles_cache', {})
 
-    logger.info("🔄 [D W07] проверка symbol in candles_cache")
+    logger.debug("🔄 [D W07] проверка symbol in candles_cache")
     if symbol in candles_cache:
         symbol_cache = candles_cache[symbol]
         # Новая структура: {timeframe: {candles: [...], ...}}
@@ -950,10 +950,10 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
             cached_timeframe = symbol_cache.get('timeframe')
             if cached_timeframe == timeframe:
                 candles = symbol_cache.get('candles')
-    logger.info(f"🔄 [D W08] после проверки кэша: candles={'есть' if candles else 'нет'}")
+    logger.debug(f"🔄 [D W08] после проверки кэша: candles={'есть' if candles else 'нет'}")
 
     if not candles:
-        logger.info("🔄 [D W09] нет в кэше — get_exchange, семафор, get_chart_data")
+        logger.debug("🔄 [D W09] нет в кэше — get_exchange, семафор, get_chart_data")
         from bots_modules.imports_and_globals import get_exchange
         exchange_to_use = exchange_obj if exchange_obj is not None else get_exchange()
         if exchange_to_use:
@@ -965,7 +965,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
                     _exchange_api_semaphore = threading.Semaphore(8)
                 with _exchange_api_semaphore:
                     chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '30d')
-                logger.info("🔄 [D W10] get_chart_data вернулся")
+                logger.debug("🔄 [D W10] get_chart_data вернулся")
                 if chart_response and chart_response.get('success'):
                     candles = chart_response['data']['candles']
                     # Сохраняем в кэш
@@ -979,26 +979,26 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
                     }
                     coins_rsi_data['candles_cache'] = candles_cache
             except Exception as e:
-                logger.info(f"🔄 [D W11] get_chart_data Exception: {e} -> return None")
+                logger.debug(f"🔄 [D W11] get_chart_data Exception: {e} -> return None")
                 return None
 
-    logger.info("🔄 [D W12] проверка len(candles) >= 15")
+    logger.debug("🔄 [D W12] проверка len(candles) >= 15")
     if not candles or len(candles) < 15:
         return None
 
-    logger.info("🔄 [D W13] get_rsi_key, get_trend_key, calculate_rsi")
+    logger.debug("🔄 [D W13] get_rsi_key, get_trend_key, calculate_rsi")
     from bot_engine.config_loader import get_rsi_key, get_trend_key
     rsi_key = get_rsi_key(timeframe)
     trend_key = get_trend_key(timeframe)
     
     closes = [candle['close'] for candle in candles]
     rsi = calculate_rsi(closes, 14)
-    logger.info(f"🔄 [D W14] rsi={rsi}")
+    logger.debug(f"🔄 [D W14] rsi={rsi}")
 
     if rsi is None:
         return None
 
-    logger.info("🔄 [D W15] analyze_trend(symbol, ..., config=_auto_config)")
+    logger.debug("🔄 [D W15] analyze_trend(symbol, ..., config=_auto_config)")
     trend = None
     try:
         from bots_modules.calculations import analyze_trend
@@ -1008,10 +1008,10 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
         if trend_analysis:
             trend = trend_analysis['trend']
     except Exception as e:
-        logger.info(f"🔄 [D W16] analyze_trend Exception: {e}")
-    logger.info(f"🔄 [D W17] trend={trend}")
+        logger.debug(f"🔄 [D W16] analyze_trend Exception: {e}")
+    logger.debug(f"🔄 [D W17] trend={trend}")
 
-    logger.info("🔄 [D W18] base_data, result = base_data.copy()")
+    logger.debug("🔄 [D W18] base_data, result = base_data.copy()")
     base_data = coins_rsi_data.get('coins', {}).get(symbol, {})
     
     # Объединяем с новыми данными для указанного таймфрейма
@@ -1020,19 +1020,19 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
     result[rsi_key] = rsi
     if trend:
         result[trend_key] = trend
-    logger.info("🔄 [D W19] result заполнен rsi_key, trend_key")
+    logger.debug("🔄 [D W19] result заполнен rsi_key, trend_key")
 
     if candles:
         result['price'] = candles[-1]['close']
         result['last_update'] = datetime.now().isoformat()
 
-    logger.info("🔄 [D W20] get_current_timeframe, is_system_tf")
+    logger.debug("🔄 [D W20] get_current_timeframe, is_system_tf")
     from bot_engine.config_loader import get_current_timeframe
     _sys_tf = get_current_timeframe()
     is_system_tf = (timeframe == _sys_tf) if _sys_tf else (timeframe == '1m')
 
     if is_system_tf:
-        logger.info("🔄 [D W21] is_system_tf: signal, rsi_zone, thresholds")
+        logger.debug("🔄 [D W21] is_system_tf: signal, rsi_zone, thresholds")
         try:
             from bot_engine.config_loader import SystemConfig, get_config_value
             from bots_modules.imports_and_globals import bots_data
@@ -1062,7 +1062,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
             result['rsi_zone'] = rsi_zone
             result['signal'] = signal
             result['change24h'] = result.get('change24h', 0)
-            logger.info("🔄 [D W22] enable_maturity_check")
+            logger.debug("🔄 [D W22] enable_maturity_check")
             if auto_config.get('enable_maturity_check', True):
                 try:
                     from bots_modules.maturity import get_maturity_timeframe
@@ -1088,7 +1088,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
                 result['is_mature'] = True
                 result['maturity_reason'] = None
             result['has_existing_position'] = base_data.get('has_existing_position', False) if base_data else False
-            logger.info("🔄 [D W23] scope, blacklist, whitelist")
+            logger.debug("🔄 [D W23] scope, blacklist, whitelist")
 
             # Scope: черный список ВСЕГДА исключает монету из торговли (при любом scope)
             # Нормализация: символ и списки могут быть "BTC" или "BTCUSDT" — приводим к одному формату
@@ -1204,7 +1204,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
     else:
         pass
 
-    logger.info(f"🔄 [D W24] get_coin_rsi_data_for_timeframe ВЫХОД symbol={symbol} -> return result")
+    logger.debug(f"🔄 [D W24] get_coin_rsi_data_for_timeframe ВЫХОД symbol={symbol} -> return result")
     return result
 
 

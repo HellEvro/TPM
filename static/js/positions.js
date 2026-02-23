@@ -545,8 +545,12 @@ class PositionsManager {
                             <a href="${createTickerLink(pos.symbol, window.app?.exchangeManager?.getSelectedExchange())}" 
                                target="_blank">${pos.symbol}</a>${virtualBadge}
                         </div>
-                        ${(!this.reduceLoad && this.botsAvailableForCharts) ? `
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="mini-chart-area" style="display: flex; align-items: center; gap: 8px;">
+                        ${(this.reduceLoad || !this.botsAvailableForCharts)
+                            ? `<span class="mini-chart-placeholder" title="${this.reduceLoad ? (languageUtils.translate('miniChartsDisabledReduceLoad') || 'Миниграфики отключены: снижение нагрузки') : (languageUtils.translate('miniChartsDisabledBots') || 'Миниграфики недоступны: сервис ботов не отвечает')}">
+                                ${this.reduceLoad ? '📉' : '⚠️'} ${this.reduceLoad ? (languageUtils.translate('reduceLoad') || 'Снижение нагрузки') : (languageUtils.translate('botsUnavailable') || 'Боты недоступны')}
+                               </span>`
+                            : `
                             <img class="mini-chart" 
                                  data-symbol="${pos.symbol}" 
                                  src="${this.chartCache.has(cacheKey) ? 
@@ -561,8 +565,8 @@ class PositionsManager {
                                 <span style="font-size: 11px; font-weight: 400; opacity: 0.7;">RSI</span>
                                 <span style="font-size: 11px; font-weight: 400;">${this.rsiCache.has(pos.symbol) ? this.rsiCache.get(pos.symbol).toFixed(2) : '-'}</span>
                             </span>
+                        `}
                         </div>
-                        ` : ''}
                     </div>
                     <div class="${!isVirtual && pos.pnl > 1000 ? CSS_CLASSES.HIGH_PNL : ''}">
                         ${pnlDisplay}
