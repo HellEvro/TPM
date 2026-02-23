@@ -99,23 +99,24 @@ class ContinuousDataLoader:
 
         while self.is_running and not shutdown_flag.is_set():
             try:
+                logger.info("🔄 [D L001] цикл: начало while")
                 cycle_start = time.time()
+                logger.info("🔄 [D L002] cycle_start записан")
                 self.update_count += 1
+                logger.info(f"🔄 [D L003] update_count={self.update_count}")
 
-                # ✅ Блокировка только для первой загрузки: автобот и мониторинг позиций ждут first_round_complete;
-                # после первой загрузки они не блокируются — читают актуальные данные из кэша. Здесь блокируется только поток загрузчика.
                 from bots_modules.imports_and_globals import coins_rsi_data
-                coins_rsi_data['processing_cycle'] = True  # Флаг для UI (опционально)
+                logger.info("🔄 [D L004] импорт coins_rsi_data")
+                coins_rsi_data['processing_cycle'] = True
+                logger.info("🔄 [D L005] processing_cycle=True")
                 logger.info("Начинаем обработку данных")
 
-                # Синхронизация времени Bybit выполняется в app.py (периодически), здесь не дублируем
-
-                # Получаем текущий таймфрейм для логирования
                 try:
                     from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
                     current_timeframe = get_current_timeframe()
                 except Exception:
                     current_timeframe = TIMEFRAME
+                logger.info(f"🔄 [D L006] current_timeframe={current_timeframe}")
 
                 logger.info("=" * 80)
                 logger.info(f"РАУНД #{self.update_count} НАЧАТ")
@@ -123,29 +124,35 @@ class ContinuousDataLoader:
                 logger.info(f"⏱️ Таймфрейм: {current_timeframe}")
                 logger.info("=" * 80)
 
-                # ✅ Читаем конфиг БЕЗ lock: в Python чтение dict под GIL атомарно, для выбора reduced_mode/ТФ этого достаточно.
-                # Lock здесь вызывал голодание — загрузчик не успевал получить lock за 15 с, раунды пропускались.
                 logger.info("🔄 [РАУНД] Читаем конфиг автобота (без lock)...")
                 from bots_modules.imports_and_globals import bots_data, BOT_STATUS
+                logger.info("🔄 [D L007] импорт bots_data, BOT_STATUS")
                 from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
                 try:
                     from bots_modules.imports_and_globals import get_config_value
                 except Exception:
                     get_config_value = lambda c, k: (c or {}).get(k)
+                logger.info("🔄 [D L008] get_config_value готов")
                 auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
+                logger.info(f"🔄 [D L009] auto_bot_enabled={auto_bot_enabled}")
                 bots = bots_data.get('bots', {}) or {}
+                logger.info(f"🔄 [D L010] bots: {len(bots)} шт")
                 auto_config = bots_data.get('auto_bot_config', {}) or {}
+                logger.info("🔄 [D L011] auto_config прочитан")
                 active_bots_count = sum(
                     1 for b in bots.values()
                     if b.get('status') not in [BOT_STATUS.get('IDLE'), BOT_STATUS.get('PAUSED')]
                 )
+                logger.info(f"🔄 [D L012] active_bots_count={active_bots_count}")
                 try:
                     default_tf = get_current_timeframe() or TIMEFRAME
                 except Exception:
                     default_tf = TIMEFRAME
+                logger.info(f"🔄 [D L013] default_tf={default_tf}")
                 required_timeframes_set = {default_tf}
                 position_symbols_to_tf = {}
                 max_concurrent = int(get_config_value(auto_config, 'max_concurrent') or 0)
+                logger.info(f"🔄 [D L014] max_concurrent={max_concurrent}")
                 if active_bots_count >= max_concurrent and max_concurrent > 0:
                     for _sym, bot_data in bots.items():
                         if bot_data.get('status') in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
@@ -155,46 +162,47 @@ class ContinuousDataLoader:
                                 position_symbols_to_tf[_sym] = []
                             if entry_tf not in position_symbols_to_tf[_sym]:
                                 position_symbols_to_tf[_sym].append(entry_tf)
+                logger.info("🔄 [D L015] position_symbols_to_tf заполнен")
                 required_timeframes = sorted(required_timeframes_set)
                 reduced_mode = bool(position_symbols_to_tf)
+                logger.info(f"🔄 [D L016] reduced_mode={reduced_mode}, required_timeframes={required_timeframes}")
                 if not auto_bot_enabled and active_bots_count == 0:
                     logger.info("⏹️ Автобот выключен, активных ботов нет — загружаем только свечи и RSI для UI")
                 logger.info("🔄 [РАУНД] Запускаем этап 1 (свечи)...")
 
-                # ✅ Предзаполнение списка монет для UI: пока первый раунд не завершён, список не пустой
                 if not coins_rsi_data.get('coins') or len(coins_rsi_data.get('coins', {})) == 0:
                     self._seed_coins_placeholder()
+                logger.info("🔄 [D L017] предзаполнение монет (если нужно) сделано")
 
-                # ✅ Этап 1: Загрузка НОВЫХ свечей с биржи. Без свечей работа системы бессмысленна.
+                logger.info("🔄 [D L018] вызов _load_candles() (этап 1/6)")
                 success_candles = self._load_candles()
+                logger.info(f"🔄 [D L019] _load_candles вернул success_candles={success_candles}")
                 if not success_candles:
                     logger.warning(
                         "⚠️ Загрузка свечей с биржи не удалась. "
                         "Пробуем расчёт RSI без кэша (каждый символ подгрузит свечи сам — будет медленнее)."
                     )
                     self.error_count += 1
-                    # Не делаем continue — всё равно запускаем _calculate_rsi (get_coin_rsi_data_for_timeframe
-                    # подгружает свечи с биржи при отсутствии в кэше). После рестарта это позволяет восстановить RSI.
 
-                # ✅ Этап 2: Расчёт RSI по загруженным свечам (или с подгрузкой по символу, если кэш пуст)
+                logger.info("🔄 [D L020] вызов _calculate_rsi() (этап 2/6)")
                 success_rsi = self._calculate_rsi(
                     required_timeframes=required_timeframes,
                     reduced_mode=reduced_mode,
                     position_symbols_to_tf=position_symbols_to_tf if reduced_mode else None,
                 )
+                logger.info(f"🔄 [D L021] _calculate_rsi вернул success_rsi={success_rsi}")
                 if not success_rsi:
                     logger.error("КРИТИЧНО: расчёт RSI не выполнен. Данные для торговли отсутствуют. Проверьте логи, биржу и конфиг.")
                     self.error_count += 1
                     time.sleep(30)
                     continue
 
-                # ✅ КРИТИЧНО: Первая загрузка (свечи + RSI) завершена — только до этого момента другие системы ждут;
-                # далее блокировка не используется: автобот и мониторинг уже работают по данным из кэша.
+                logger.info("🔄 [D L022] проверка first_round_complete")
                 if not coins_rsi_data.get('first_round_complete'):
                     coins_rsi_data['first_round_complete'] = True
                     logger.info("✅ ПЕРВАЯ ЗАГРУЗКА ЗАВЕРШЕНА: свечи + RSI готовы → запуск системы (автобот, мониторинг позиций)")
+                logger.info("🔄 [D L023] этапы 3–6 (если автобот вкл)")
 
-                # ✅ Этапы 3–6 крутятся параллельно в фоне; следующий цикл (1→2) не ждёт их.
                 if auto_bot_enabled:
                     def _run_stages_3_to_6():
                         try:
@@ -207,7 +215,7 @@ class ContinuousDataLoader:
                     t = threading.Thread(target=_run_stages_3_to_6, daemon=True)
                     t.start()
                     logger.info("🔄 Этапы 3–6 запущены в фоне, не ждём — сразу следующий раунд (1→2)")
-
+                logger.info("🔄 [D L024] cycle_duration")
                 cycle_duration = time.time() - cycle_start
                 self.last_update_time = datetime.now()
 
@@ -379,21 +387,12 @@ class ContinuousDataLoader:
     def _calculate_rsi(self, required_timeframes=None, reduced_mode=None, position_symbols_to_tf=None):
         """📊 Рассчитывает RSI для всех монет. Данные из загрузчика передаются без блокировки в load_all_coins_rsi."""
         try:
+            logger.info("🔄 [D L025] _calculate_rsi: вход")
             logger.info("📊 Этап 2/6: Рассчитываем RSI...")
             start = time.time()
-
-            # ⚡ ТРЕЙСИНГ ОТКЛЮЧЕН - проблема решена (deadlock на bots_data_lock)
-            # try:
-            #     from trace_debug import enable_trace
-            #     enable_trace()
-            #     logger.info("🔍 [CONTINUOUS] Трейсинг включен для load_all_coins_rsi()")
-            # except Exception as trace_error:
-            #     logger.warning(f"⚠️ [CONTINUOUS] Не удалось включить трейсинг: {trace_error}")
-
-            # ⚡ УПРОЩЕНИЕ: Запускаем напрямую без threading timeout
-            # Threading timeout может вызывать проблемы в Windows
-            logger.info("Вызываем load_all_coins_rsi()...")
+            logger.info("🔄 [D L026] _calculate_rsi: импорт load_all_coins_rsi")
             from bots_modules.filters import load_all_coins_rsi
+            logger.info("🔄 [D L027] _calculate_rsi: вызов load_all_coins_rsi()")
             success = load_all_coins_rsi(
                 required_timeframes=required_timeframes,
                 reduced_mode=reduced_mode,

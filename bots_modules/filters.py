@@ -921,19 +921,24 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
     Returns:
         dict: Данные монеты с RSI и трендом для указанного таймфрейма
     """
+    logger.info(f"🔄 [D W01] get_coin_rsi_data_for_timeframe ВХОД symbol={symbol} timeframe={timeframe}")
     if not symbol or str(symbol).strip().lower() == 'all':
+        logger.info("🔄 [D W02] symbol пустой или 'all' -> return None")
         return None
+    logger.info("🔄 [D W03] import coins_rsi_data")
     from bots_modules.imports_and_globals import coins_rsi_data
-    
+
+    logger.info("🔄 [D W04] проверка timeframe")
     if timeframe is None:
         from bot_engine.config_loader import get_current_timeframe
         timeframe = get_current_timeframe()
-    
-    # Получаем свечи для указанного таймфрейма
+    logger.info(f"🔄 [D W05] timeframe={timeframe}")
+
     candles = None
+    logger.info("🔄 [D W06] candles_cache = coins_rsi_data.get('candles_cache')")
     candles_cache = coins_rsi_data.get('candles_cache', {})
-    
-    # ✅ Проверяем новую структуру кэша (поддержка нескольких таймфреймов)
+
+    logger.info("🔄 [D W07] проверка symbol in candles_cache")
     if symbol in candles_cache:
         symbol_cache = candles_cache[symbol]
         # Новая структура: {timeframe: {candles: [...], ...}}
@@ -945,9 +950,10 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
             cached_timeframe = symbol_cache.get('timeframe')
             if cached_timeframe == timeframe:
                 candles = symbol_cache.get('candles')
-    
-    # Если нет в кэше - загружаем с биржи (с семафором)
+    logger.info(f"🔄 [D W08] после проверки кэша: candles={'есть' if candles else 'нет'}")
+
     if not candles:
+        logger.info("🔄 [D W09] нет в кэше — get_exchange, семафор, get_chart_data")
         from bots_modules.imports_and_globals import get_exchange
         exchange_to_use = exchange_obj if exchange_obj is not None else get_exchange()
         if exchange_to_use:
@@ -959,6 +965,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
                     _exchange_api_semaphore = threading.Semaphore(8)
                 with _exchange_api_semaphore:
                     chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '30d')
+                logger.info("🔄 [D W10] get_chart_data вернулся")
                 if chart_response and chart_response.get('success'):
                     candles = chart_response['data']['candles']
                     # Сохраняем в кэш
@@ -972,24 +979,26 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
                     }
                     coins_rsi_data['candles_cache'] = candles_cache
             except Exception as e:
-                pass
+                logger.info(f"🔄 [D W11] get_chart_data Exception: {e} -> return None")
                 return None
-    
+
+    logger.info("🔄 [D W12] проверка len(candles) >= 15")
     if not candles or len(candles) < 15:
         return None
-    
-    # Рассчитываем RSI и тренд для указанного таймфрейма
+
+    logger.info("🔄 [D W13] get_rsi_key, get_trend_key, calculate_rsi")
     from bot_engine.config_loader import get_rsi_key, get_trend_key
     rsi_key = get_rsi_key(timeframe)
     trend_key = get_trend_key(timeframe)
     
     closes = [candle['close'] for candle in candles]
     rsi = calculate_rsi(closes, 14)
-    
+    logger.info(f"🔄 [D W14] rsi={rsi}")
+
     if rsi is None:
         return None
-    
-    # Рассчитываем тренд (передаём config при батче — без lock)
+
+    logger.info("🔄 [D W15] analyze_trend(symbol, ..., config=_auto_config)")
     trend = None
     try:
         from bots_modules.calculations import analyze_trend
@@ -999,9 +1008,10 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
         if trend_analysis:
             trend = trend_analysis['trend']
     except Exception as e:
-        pass
-    
-    # Получаем базовые данные монеты (если уже есть)
+        logger.info(f"🔄 [D W16] analyze_trend Exception: {e}")
+    logger.info(f"🔄 [D W17] trend={trend}")
+
+    logger.info("🔄 [D W18] base_data, result = base_data.copy()")
     base_data = coins_rsi_data.get('coins', {}).get(symbol, {})
     
     # Объединяем с новыми данными для указанного таймфрейма
@@ -1010,20 +1020,19 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
     result[rsi_key] = rsi
     if trend:
         result[trend_key] = trend
-    
-    # Обновляем цену и другие общие данные
+    logger.info("🔄 [D W19] result заполнен rsi_key, trend_key")
+
     if candles:
         result['price'] = candles[-1]['close']
         result['last_update'] = datetime.now().isoformat()
 
-    # ✅ КРИТИЧНО: signal и rsi_zone только для СИСТЕМНОГО таймфрейма. Иначе при слиянии (1m + 6h)
-    # последний ТФ перезаписывал бы signal — входы шли бы по 6h при системном 1m (убытки).
+    logger.info("🔄 [D W20] get_current_timeframe, is_system_tf")
     from bot_engine.config_loader import get_current_timeframe
     _sys_tf = get_current_timeframe()
-    # Если конфиг ещё не загружен (_sys_tf None), считаем системным только 1m — иначе все монеты без signal
     is_system_tf = (timeframe == _sys_tf) if _sys_tf else (timeframe == '1m')
 
     if is_system_tf:
+        logger.info("🔄 [D W21] is_system_tf: signal, rsi_zone, thresholds")
         try:
             from bot_engine.config_loader import SystemConfig, get_config_value
             from bots_modules.imports_and_globals import bots_data
@@ -1053,7 +1062,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
             result['rsi_zone'] = rsi_zone
             result['signal'] = signal
             result['change24h'] = result.get('change24h', 0)
-            # ✅ Зрелость: проверяем через storage или по свечам (для UI — maturity_reason)
+            logger.info("🔄 [D W22] enable_maturity_check")
             if auto_config.get('enable_maturity_check', True):
                 try:
                     from bots_modules.maturity import get_maturity_timeframe
@@ -1079,6 +1088,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
                 result['is_mature'] = True
                 result['maturity_reason'] = None
             result['has_existing_position'] = base_data.get('has_existing_position', False) if base_data else False
+            logger.info("🔄 [D W23] scope, blacklist, whitelist")
 
             # Scope: черный список ВСЕГДА исключает монету из торговли (при любом scope)
             # Нормализация: символ и списки могут быть "BTC" или "BTCUSDT" — приводим к одному формату
@@ -1192,9 +1202,9 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
             result['blocked_by_rsi_time'] = False
             result['blocked_by_loss_reentry'] = False
     else:
-        # Не системный ТФ: только rsi_key/trend_key уже в result; не перезаписываем signal при слиянии
         pass
 
+    logger.info(f"🔄 [D W24] get_coin_rsi_data_for_timeframe ВЫХОД symbol={symbol} -> return result")
     return result
 
 
@@ -2406,10 +2416,12 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
     Когда вызывается из continuous_data_loader, передаются required_timeframes, reduced_mode, position_symbols_to_tf —
     тогда блокировка bots_data_lock НЕ берётся (снижает конкуренцию и зависания).
     """
+    logger.info("🔄 [D L101] load_all_coins_rsi: ВХОД в функцию")
     global coins_rsi_data
-
+    logger.info("🔄 [D L102] global coins_rsi_data")
     operation_start = time.time()
     logger.info("📊 RSI: запускаем полное обновление")
+    logger.info("🔄 [D L103] operation_start записан")
 
     # ✅ Когда загрузчик передал все данные — не берём lock вообще
     caller_provided = (
@@ -2417,12 +2429,15 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
         and reduced_mode is not None
         and (not reduced_mode or (position_symbols_to_tf is not None))
     )
+    logger.info(f"🔄 [D L104] caller_provided={caller_provided}")
     if not caller_provided:
+        logger.info("🔄 [D L104a] caller_provided=False: входим в блок с bots_data_lock")
         reduced_mode = False
         position_symbols_to_tf = {}
         try:
             from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
             from bot_engine.config_loader import get_config_value, get_current_timeframe, TIMEFRAME
+            logger.info("🔄 [D L104b] перед with bots_data_lock")
             with bots_data_lock:
                 bots = bots_data.get('bots', {})
                 auto_config = bots_data.get('auto_bot_config', {})
@@ -2468,6 +2483,7 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             logger.info("Обновление RSI уже выполняется...")
             return False
 
+    logger.info("🔄 [D L105] update_in_progress=True")
     coins_rsi_data["update_in_progress"] = True
     coins_rsi_data["rsi_update_started_at"] = time.time()
 
@@ -2476,7 +2492,9 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
         coins_rsi_data["update_in_progress"] = False
         return False
 
+    logger.info("🔄 [D L106] вход в try (required_timeframes, pairs)")
     try:
+        logger.info("🔄 [D L107] проверка caller_provided и reduced_mode")
         if not caller_provided:
             if reduced_mode:
                 required_timeframes = sorted(set(tf for tfs in position_symbols_to_tf.values() for tf in tfs))
@@ -2501,16 +2519,17 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                 required_timeframes = [TIMEFRAME]
 
         logger.info(f"📊 RSI: рассчитываем для таймфреймов: {required_timeframes}")
+        logger.info("🔄 [D L108] required_timeframes заданы")
 
         # При reduced_mode пары уже заданы (из загрузчика или из lock-блока выше)
+        logger.info("🔄 [D L109] проверка reduced_mode для pairs")
         if reduced_mode and position_symbols_to_tf:
             pairs = list(position_symbols_to_tf.keys())
 
-        # ✅ КРИТИЧНО: Создаем ВРЕМЕННОЕ хранилище для всех монет
-        # Обновляем coins_rsi_data ТОЛЬКО после завершения всех проверок!
+        logger.info("🔄 [D L110] temp_coins_data={}")
         temp_coins_data: dict[str, dict] = {}
 
-        # Получаем актуальную ссылку на биржу
+        logger.info("🔄 [D L111] get_exchange()")
         try:
             from bots_modules.imports_and_globals import get_exchange
 
@@ -2519,11 +2538,13 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             logger.error(f"❌ Ошибка получения биржи: {e}")
             current_exchange = None
 
+        logger.info("🔄 [D L112] current_exchange получен")
         if not current_exchange:
             logger.error("❌ Биржа не инициализирована")
             coins_rsi_data["update_in_progress"] = False
             return False
 
+        logger.info("🔄 [D L113] получаем список пар (если не reduced_mode)")
         if not reduced_mode:
             logger.info("📊 RSI: получаем список пар с биржи...")
             pairs = current_exchange.get_all_pairs()
@@ -2541,24 +2562,32 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
         _cc = coins_rsi_data.get("candles_cache") or {}
         _cc_size = len(_cc) if isinstance(_cc, dict) else 0
         logger.info(f"📊 RSI: в кэше свечей монет: {_cc_size} (ожидаем {len(pairs)} после этапа 1)")
+        logger.info("🔄 [D L114] перед предзагрузкой конфига (без lock)")
 
-        # ⚡ БЕЗ БЛОКИРОВКИ: обновляем счетчики (в reduced_mode total_coins не трогаем)
+        logger.info("🔄 [D L115] обновляем счётчики total_coins, successful_coins, failed_coins")
         if not reduced_mode:
             coins_rsi_data["total_coins"] = len(pairs)
         coins_rsi_data["successful_coins"] = 0
         coins_rsi_data["failed_coins"] = 0
 
         shutdown_requested = False
+        logger.info("🔄 [D L116] shutdown_requested=False")
 
-        # ✅ Один раз читаем конфиг и настройки монет под lock — воркеры не трогают lock (устраняет зависание при 10 потоках)
+        logger.info("🔄 [D L117] import copy, bots_data")
         import copy as _copy
-        from bots_modules.imports_and_globals import bots_data_lock, bots_data
-        with bots_data_lock:
-            _prefetched_auto_config = _copy.deepcopy(bots_data.get("auto_bot_config") or {})
-            _prefetched_individual_cache = _copy.deepcopy(bots_data.get("individual_coin_settings") or {})
+        from bots_modules.imports_and_globals import bots_data
+        logger.info("🔄 [D L118] читаем _ref_auto (без lock)")
+        _ref_auto = bots_data.get("auto_bot_config") or {}
+        logger.info("🔄 [D L119] читаем _ref_ind (без lock)")
+        _ref_ind = bots_data.get("individual_coin_settings") or {}
+        logger.info("🔄 [D L120] deepcopy _ref_auto")
+        _prefetched_auto_config = _copy.deepcopy(_ref_auto)
+        logger.info("🔄 [D L121] deepcopy _ref_ind")
+        _prefetched_individual_cache = _copy.deepcopy(_ref_ind)
+        logger.info("🔄 [D L122] предзагрузка готова, for timeframe in required_timeframes")
 
-        # ✅ ОПТИМИЗАЦИЯ: Рассчитываем RSI для каждого требуемого таймфрейма
         for timeframe in required_timeframes:
+            logger.info(f"🔄 [D L123] for timeframe={timeframe}")
             # В reduced_mode загружаем только символы, у которых этот ТФ — entry_timeframe
             if reduced_mode:
                 pairs_for_tf = [s for s in pairs if timeframe in position_symbols_to_tf.get(s, [])]
@@ -2567,26 +2596,29 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             else:
                 pairs_for_tf = pairs
 
+            logger.info(f"🔄 [D L124] pairs_for_tf: {len(pairs_for_tf)} монет")
             logger.info(f"📊 Рассчитываем RSI для таймфрейма {timeframe}... ({len(pairs_for_tf)} монет)")
 
-            # ✅ ПАРАЛЛЕЛЬНАЯ загрузка с текстовым прогрессом (работает в лог-файле)
+            logger.info("🔄 [D L125] batch_size=100, total_batches, rsi_max_workers")
             batch_size = 100
             total_batches = (len(pairs_for_tf) + batch_size - 1) // batch_size
             # Bybit kline 10 req/s — ограничиваем воркеры
             rsi_max_workers = min(10, batch_size)
 
             for i in range(0, len(pairs_for_tf), batch_size):
+                logger.info(f"🔄 [D L126] for i={i}, batch итерация")
                 if shutdown_flag.is_set():
                     shutdown_requested = True
                     break
 
-                # Глобальная пауза API только здесь (массовая загрузка RSI). Боты (позиции, синк, тикеры) её не ждут.
                 if hasattr(current_exchange, '_wait_api_cooldown'):
                     current_exchange._wait_api_cooldown()
+                logger.info("🔄 [D L127] _wait_api_cooldown (если есть)")
 
                 batch = pairs_for_tf[i : i + batch_size]
                 batch_num = i // batch_size + 1
                 batch_start = time.time()
+                logger.info(f"🔄 [D L128] batch_num={batch_num}, len(batch)={len(batch)}")
                 request_delay = getattr(
                     current_exchange, "current_request_delay", 0
                 ) or 0
@@ -2595,13 +2627,13 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                     f"📦 RSI Batch {batch_num}/{total_batches} (ТФ={timeframe}): "
                     f"size={len(batch)}, workers={rsi_max_workers}, delay={request_delay:.2f}s"
                 )
+                logger.info(f"🔄 [D L129] ThreadPoolExecutor(max_workers={rsi_max_workers})")
 
                 batch_success = 0
                 batch_fail = 0
 
-                # Параллельная обработка пакета (ограничено Bybit 10 req/s для kline)
+                logger.info("🔄 [D L130] with ThreadPoolExecutor, executor.submit для каждого symbol")
                 with ThreadPoolExecutor(max_workers=rsi_max_workers) as executor:
-                    # ✅ Передаем предзагруженные конфиг и настройки — воркеры не берут bots_data_lock
                     future_to_symbol = {
                         executor.submit(
                             get_coin_rsi_data_for_timeframe,
@@ -2623,10 +2655,12 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                     # Таймаут пакета: макс 15 с — иначе это баг, а не работа
                     batch_timeout = 15
                     result_timeout = 5
+                    logger.info("🔄 [D L132] as_completed(timeout=15), входим в цикл по future")
                     try:
                         for future in concurrent.futures.as_completed(
                             future_to_symbol, timeout=batch_timeout
                         ):
+                            logger.info("🔄 [D L133] as_completed выдал один future (или таймаут)")
                             if shutdown_flag.is_set():
                                 shutdown_requested = True
                                 break
@@ -2653,6 +2687,8 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                                 logger.error(f"❌ {symbol}: {e}")
                                 coins_rsi_data["failed_coins"] += 1
                                 batch_fail += 1
+                            if batch_success + batch_fail == 1:
+                                logger.info("🔄 [D L134] RSI: первый символ в батче обработан")
                             # Прогресс внутри батча (каждые 25) — видно, что RSI считается, особенно на медленных/Windows
                             done_in_batch = batch_success + batch_fail
                             if done_in_batch > 0 and done_in_batch % 25 == 0:
@@ -2662,6 +2698,7 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                                     f"в батче {done_in_batch}/{len(batch)} за {elapsed:.1f}s"
                                 )
                     except concurrent.futures.TimeoutError:
+                        logger.info("🔄 [D L135] TimeoutError в as_completed")
                         pending = [
                             symbol for future, symbol in future_to_symbol.items()
                             if not future.done()
@@ -2680,6 +2717,7 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                         future.cancel()
                     break
 
+                logger.info("🔄 [D L136] батч завершён, логируем batch_success/batch_fail")
                 logger.info(
                     f"📦 RSI Batch {batch_num}/{total_batches} (ТФ={timeframe}) "
                     f"завершен: {batch_success} успехов / {batch_fail} ошибок за "
@@ -2701,16 +2739,19 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             if shutdown_requested:
                 break
 
+            logger.info("🔄 [D L137] конец цикла по ТФ, RSI рассчитан для таймфрейма")
             logger.info(
                 "✅ RSI рассчитан для таймфрейма "
                 f"{timeframe}: {len(list(temp_coins_data.keys()))} монет с данными"
             )
 
+        logger.info("🔄 [D L138] выход из for timeframe, проверка shutdown_requested")
         if shutdown_requested:
             logger.warning("⏹️ Расчет RSI прерван из-за остановки системы")
             coins_rsi_data["update_in_progress"] = False
             return False
 
+        logger.info("🔄 [D L139] перед атомарным обновлением coins_rsi_data")
         # ✅ КРИТИЧНО: АТОМАРНОЕ обновление
         # reduced_mode: мержим только обновлённые монеты (позиции), не затираем остальные
         # full mode: полная замена
@@ -2737,6 +2778,7 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             coins_rsi_data["coins"] = temp_coins_data
         coins_rsi_data["last_update"] = datetime.now().isoformat()
         coins_rsi_data["update_in_progress"] = False
+        logger.info("🔄 [D L140] coins_rsi_data обновлён, update_in_progress=False")
 
         logger.info(
             f"✅ RSI рассчитан для всех таймфреймов: {len(temp_coins_data)} монет"
@@ -2786,11 +2828,12 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
         return True
 
     except Exception as e:
+        logger.info("🔄 [D L141] load_all_coins_rsi: except Exception")
         logger.error(f"Ошибка загрузки RSI данных: {str(e)}")
-        # ⚡ БЕЗ БЛОКИРОВКИ: атомарная операция
         coins_rsi_data["update_in_progress"] = False
         return False
     finally:
+        logger.info("🔄 [D L142] load_all_coins_rsi: finally")
         elapsed = time.time() - operation_start
         logger.info(f"📊 RSI: полное обновление завершено за {elapsed:.1f}s")
         # Гарантированно сбрасываем флаг обновления
