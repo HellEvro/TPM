@@ -276,7 +276,7 @@ def calculate_ema(prices, period):
 
     return ema
 
-def analyze_trend(symbol, exchange_obj=None, candles_data=None, timeframe=None):
+def analyze_trend(symbol, exchange_obj=None, candles_data=None, timeframe=None, config=None):
     """
     Анализирует тренд на основе ПРОСТОГО АНАЛИЗА ЦЕНЫ (без EMA)
 
@@ -291,6 +291,7 @@ def analyze_trend(symbol, exchange_obj=None, candles_data=None, timeframe=None):
         exchange_obj: Объект биржи (опционально)
         candles_data: Данные свечей (опционально, если None - загружаются с биржи)
         timeframe: Таймфрейм для анализа (если None - используется текущий таймфрейм)
+        config: Опционально переданный конфиг (избегает get_auto_bot_config и блокировки в батче RSI)
     """
     try:
         # Получаем текущий таймфрейм
@@ -305,8 +306,9 @@ def analyze_trend(symbol, exchange_obj=None, candles_data=None, timeframe=None):
             logger.error(f"[TREND] ❌ Биржа не доступна для анализа тренда {symbol}")
             return None
 
-        # ✅ Получаем параметры анализа тренда из конфига
-        config = get_auto_bot_config()
+        # ✅ Параметры из переданного конфига или get_auto_bot_config (в батче RSI передаём config, чтобы не брать lock)
+        if config is None:
+            config = get_auto_bot_config()
         period = config.get('trend_analysis_period', 30)  # Количество свечей (20-50)
         price_threshold = config.get('trend_price_change_threshold', 7)  # Порог изменения цены (3-15%)
         candles_threshold = config.get('trend_candles_threshold', 70)  # Порог процента свечей (50-80%)

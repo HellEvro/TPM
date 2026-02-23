@@ -906,13 +906,17 @@ def check_exit_scam_filter(symbol, coin_data):
         logger.error(f"{symbol}: Ошибка проверки exit-scam (core): {exc}")
         return _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=individual_settings)
 
-def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
-    """✅ ОПТИМИЗАЦИЯ: Получает RSI данные для одной монеты для указанного таймфрейма
+def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _auto_config=None, _individual_settings_cache=None):
+    """✅ ОПТИМИЗАЦИЯ: Получает RSI данные для одной монеты для указанного таймфрейма.
+    _auto_config и _individual_settings_cache передаются из load_all_coins_rsi при батчевом расчёте,
+    чтобы воркеры не брали bots_data_lock (устраняет зависание при 10 потоках).
     
     Args:
         symbol: Символ монеты
         exchange_obj: Объект биржи (опционально)
         timeframe: Таймфрейм для расчета (если None - используется системный)
+        _auto_config: Опционально предзагруженный auto_bot_config (без lock)
+        _individual_settings_cache: Опционально dict {normalized_symbol: settings} (без lock)
     
     Returns:
         dict: Данные монеты с RSI и трендом для указанного таймфрейма
@@ -985,11 +989,13 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
     if rsi is None:
         return None
     
-    # Рассчитываем тренд
+    # Рассчитываем тренд (передаём config при батче — без lock)
     trend = None
     try:
         from bots_modules.calculations import analyze_trend
-        trend_analysis = analyze_trend(symbol, exchange_obj=exchange_obj, candles_data=candles, timeframe=timeframe)
+        trend_analysis = analyze_trend(
+            symbol, exchange_obj=exchange_obj, candles_data=candles, timeframe=timeframe, config=_auto_config
+        )
         if trend_analysis:
             trend = trend_analysis['trend']
     except Exception as e:
@@ -1022,8 +1028,13 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None):
             from bot_engine.config_loader import SystemConfig, get_config_value
             from bots_modules.imports_and_globals import bots_data
 
-            individual_settings = get_individual_coin_settings(symbol)
-            auto_config = bots_data.get('auto_bot_config', {})
+            # В батче RSI используем переданный кэш — без bots_data_lock (устраняет зависание)
+            if _individual_settings_cache is not None:
+                _norm = (symbol or '').strip().upper()
+                individual_settings = _individual_settings_cache.get(_norm)
+            else:
+                individual_settings = get_individual_coin_settings(symbol)
+            auto_config = _auto_config if _auto_config is not None else bots_data.get('auto_bot_config', {})
             rsi_long_threshold = (individual_settings.get('rsi_long_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_long_threshold')
             rsi_short_threshold = (individual_settings.get('rsi_short_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_short_threshold')
             rsi_time_filter_lower = (individual_settings.get('rsi_time_filter_lower') if individual_settings else None) or get_config_value(auto_config, 'rsi_time_filter_lower')
@@ -2539,6 +2550,13 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
 
         shutdown_requested = False
 
+        # ✅ Один раз читаем конфиг и настройки монет под lock — воркеры не трогают lock (устраняет зависание при 10 потоках)
+        import copy as _copy
+        from bots_modules.imports_and_globals import bots_data_lock, bots_data
+        with bots_data_lock:
+            _prefetched_auto_config = _copy.deepcopy(bots_data.get("auto_bot_config") or {})
+            _prefetched_individual_cache = _copy.deepcopy(bots_data.get("individual_coin_settings") or {})
+
         # ✅ ОПТИМИЗАЦИЯ: Рассчитываем RSI для каждого требуемого таймфрейма
         for timeframe in required_timeframes:
             # В reduced_mode загружаем только символы, у которых этот ТФ — entry_timeframe
@@ -2583,13 +2601,15 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
 
                 # Параллельная обработка пакета (ограничено Bybit 10 req/s для kline)
                 with ThreadPoolExecutor(max_workers=rsi_max_workers) as executor:
-                    # ✅ Передаем timeframe в get_coin_rsi_data_for_timeframe
+                    # ✅ Передаем предзагруженные конфиг и настройки — воркеры не берут bots_data_lock
                     future_to_symbol = {
                         executor.submit(
                             get_coin_rsi_data_for_timeframe,
                             symbol,
                             current_exchange,
                             timeframe,
+                            _auto_config=_prefetched_auto_config,
+                            _individual_settings_cache=_prefetched_individual_cache,
                         ): symbol
                         for symbol in batch
                     }
@@ -2600,9 +2620,9 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             future.cancel()
                         break
 
-                    # Таймаут пакета: 100 символов при задержках API/rate limit — до 6 мин
-                    batch_timeout = 360
-                    result_timeout = 30
+                    # Таймаут пакета: макс 15 с — иначе это баг, а не работа
+                    batch_timeout = 15
+                    result_timeout = 5
                     try:
                         for future in concurrent.futures.as_completed(
                             future_to_symbol, timeout=batch_timeout
