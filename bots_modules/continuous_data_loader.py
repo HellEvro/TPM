@@ -123,55 +123,43 @@ class ContinuousDataLoader:
                 logger.info(f"⏱️ Таймфрейм: {current_timeframe}")
                 logger.info("=" * 80)
 
-                # ✅ Когда автобот ВЫКЛЮЧЕН: не ищем новые сделки; этапы 3–6 пропускаем. Но свечи и RSI — ВСЕГДА (для UI).
-                logger.info("🔄 [РАУНД] Получаем флаг автобота и данные для RSI без блокировки в load_all_coins_rsi (lock)...")
-                from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
+                # ✅ Читаем конфиг БЕЗ lock: в Python чтение dict под GIL атомарно, для выбора reduced_mode/ТФ этого достаточно.
+                # Lock здесь вызывал голодание — загрузчик не успевал получить lock за 15 с, раунды пропускались.
+                logger.info("🔄 [РАУНД] Читаем конфиг автобота (без lock)...")
+                from bots_modules.imports_and_globals import bots_data, BOT_STATUS
                 from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
                 try:
                     from bots_modules.imports_and_globals import get_config_value
                 except Exception:
                     get_config_value = lambda c, k: (c or {}).get(k)
-                logger.info("🔄 [РАУНД] Пытаемся получить lock (timeout 15 с, только для чтения конфига)...")
-                lock_acquired = bots_data_lock.acquire(timeout=15)
-                if not lock_acquired:
-                    logger.warning(
-                        "⚠️ [РАУНД] Не удалось получить lock за 15 сек — пропускаем раунд "
-                        "(свечи/RSI не загрузятся в этом цикле). Следующая попытка через интервал загрузчика."
-                    )
-                    self.error_count += 1
-                    continue
+                auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
+                bots = bots_data.get('bots', {}) or {}
+                auto_config = bots_data.get('auto_bot_config', {}) or {}
+                active_bots_count = sum(
+                    1 for b in bots.values()
+                    if b.get('status') not in [BOT_STATUS.get('IDLE'), BOT_STATUS.get('PAUSED')]
+                )
                 try:
-                    logger.info("🔄 [РАУНД] Lock получен, читаем конфиг автобота...")
-                    auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
-                    bots = bots_data.get('bots', {}) or {}
-                    auto_config = bots_data.get('auto_bot_config', {}) or {}
-                    active_bots_count = sum(
-                        1 for b in bots.values()
-                        if b.get('status') not in [BOT_STATUS.get('IDLE'), BOT_STATUS.get('PAUSED')]
-                    )
-                    try:
-                        default_tf = get_current_timeframe() or TIMEFRAME
-                    except Exception:
-                        default_tf = TIMEFRAME
-                    required_timeframes_set = {default_tf}
-                    position_symbols_to_tf = {}
-                    max_concurrent = int(get_config_value(auto_config, 'max_concurrent') or 0)
-                    if active_bots_count >= max_concurrent and max_concurrent > 0:
-                        for _sym, bot_data in bots.items():
-                            if bot_data.get('status') in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
-                                entry_tf = bot_data.get('entry_timeframe') or default_tf
-                                required_timeframes_set.add(entry_tf)
-                                if _sym not in position_symbols_to_tf:
-                                    position_symbols_to_tf[_sym] = []
-                                if entry_tf not in position_symbols_to_tf[_sym]:
-                                    position_symbols_to_tf[_sym].append(entry_tf)
-                    required_timeframes = sorted(required_timeframes_set)
-                    reduced_mode = bool(position_symbols_to_tf)
-                finally:
-                    bots_data_lock.release()
+                    default_tf = get_current_timeframe() or TIMEFRAME
+                except Exception:
+                    default_tf = TIMEFRAME
+                required_timeframes_set = {default_tf}
+                position_symbols_to_tf = {}
+                max_concurrent = int(get_config_value(auto_config, 'max_concurrent') or 0)
+                if active_bots_count >= max_concurrent and max_concurrent > 0:
+                    for _sym, bot_data in bots.items():
+                        if bot_data.get('status') in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
+                            entry_tf = bot_data.get('entry_timeframe') or default_tf
+                            required_timeframes_set.add(entry_tf)
+                            if _sym not in position_symbols_to_tf:
+                                position_symbols_to_tf[_sym] = []
+                            if entry_tf not in position_symbols_to_tf[_sym]:
+                                position_symbols_to_tf[_sym].append(entry_tf)
+                required_timeframes = sorted(required_timeframes_set)
+                reduced_mode = bool(position_symbols_to_tf)
                 if not auto_bot_enabled and active_bots_count == 0:
                     logger.info("⏹️ Автобот выключен, активных ботов нет — загружаем только свечи и RSI для UI")
-                logger.info("🔄 [РАУНД] Lock получен, запускаем этап 1 (свечи)...")
+                logger.info("🔄 [РАУНД] Запускаем этап 1 (свечи)...")
 
                 # ✅ Предзаполнение списка монет для UI: пока первый раунд не завершён, список не пустой
                 if not coins_rsi_data.get('coins') or len(coins_rsi_data.get('coins', {})) == 0:
