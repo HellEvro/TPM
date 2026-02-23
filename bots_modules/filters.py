@@ -2659,8 +2659,8 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             future.cancel()
                         break
 
-                    # Локальный расчёт — 20с на батч; зависшие символы не блокируют раунд
-                    batch_timeout = 20
+                    # Локальный расчёт — 40с на батч (20с мало при параллельной инициализации AI)
+                    batch_timeout = 40
                     result_timeout = 5
                     all_futs = list(future_to_symbol.keys())
                     remaining = set(all_futs)
