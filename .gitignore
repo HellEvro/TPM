@@ -294,6 +294,9 @@ cache/
 temp/
 tmp/
 
+# Report files in root
+/report*
+
 # Database files
 # *.db
 #*.sqlite
