@@ -104,6 +104,7 @@ class ContinuousDataLoader:
 
                 from bots_modules.imports_and_globals import coins_rsi_data
                 coins_rsi_data['processing_cycle'] = True
+                coins_rsi_data['candles_load_complete'] = False  # RSI только после полной загрузки свечей
 
                 try:
                     from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
@@ -155,6 +156,7 @@ class ContinuousDataLoader:
                     self._seed_coins_placeholder()
 
                 success_candles = self._load_candles()
+                coins_rsi_data['candles_load_complete'] = True  # Этап свечей завершён (успех или нет) — можно запускать RSI
                 if not success_candles:
                     logger.warning(
                         "⚠️ Загрузка свечей с биржи не удалась. "
@@ -162,6 +164,7 @@ class ContinuousDataLoader:
                     )
                     self.error_count += 1
 
+                logger.info("✅ ЭТАП 1 (свечи) ЗАВЕРШЁН. Запуск ЭТАП 2 (расчёт RSI)...")
                 success_rsi = self._calculate_rsi(
                     required_timeframes=required_timeframes,
                     reduced_mode=reduced_mode,

@@ -2125,20 +2125,11 @@ def load_all_coins_candles_fast():
             else:
                 pairs_for_tf = pairs
 
-            # bulk_mode: один запрос 100 свечей без задержки — агрессивный параллелизм для загрузки за ~10–30 с
-            # Без bulk_mode: 10 воркеров, батч 10, таймаут 45 с (осторожно по rate limit)
-            # Режим низкой нагрузки (слабые ПК): batch 25, 3 воркера, таймаут 60 с — меньше блокировок
+            # bulk_mode: 100 свечей, 10 воркеров — загрузка за ~30–60 с (НЕ ограничиваем для слабых ПК — узкое место RSI)
             use_bulk = getattr(current_exchange.__class__, '__name__', '') == 'BybitExchange'
-            low_resource = _is_low_resource_mode()
-            if low_resource:
-                batch_size = 25
-                base_max_workers = 3
-                batch_timeout = 60
-                logger.info("📦 Режим низкой нагрузки: batch=25, workers=3 (слабый ПК)")
-            else:
-                batch_size = 100 if use_bulk else 10
-                base_max_workers = min(10, batch_size)
-                batch_timeout = 15 if use_bulk else 45
+            batch_size = 100 if use_bulk else 10
+            base_max_workers = min(10, batch_size)
+            batch_timeout = 15 if use_bulk else 45
             candles_cache = {}
             
             import concurrent.futures
@@ -2162,7 +2153,7 @@ def load_all_coins_candles_fast():
                 total_batches = (len(pairs_for_tf) + batch_size - 1)//batch_size
                 
                 if rate_limit_detected:
-                    current_max_workers = max(2, current_max_workers - 2) if not low_resource else max(2, current_max_workers - 1)
+                    current_max_workers = max(2, current_max_workers - 2)
                     logger.warning(f"⚠️ Rate limit в предыдущем батче. Воркеры: {current_max_workers}")
                     rate_limit_detected = False
                 else:
@@ -2477,6 +2468,14 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                     )
         except Exception as _e:
             pass
+
+    # ✅ RSI ТОЛЬКО ПОСЛЕ загрузки свечей: при processing_cycle ждём candles_load_complete
+    if coins_rsi_data.get("processing_cycle") and not coins_rsi_data.get("candles_load_complete"):
+        logger.warning(
+            "⏳ RSI: пропуск — загрузка свечей ещё не завершена. "
+            "Расчёт RSI выполнится строго после Этапа 1 (свечи)."
+        )
+        return False
 
     # ⚡ Таймаут зависшего обновления
     RSI_UPDATE_STALE_SEC = 300

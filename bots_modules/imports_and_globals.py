@@ -608,6 +608,8 @@ coins_rsi_data = {
     'ui_update_paused': False,  # ✅ Флаг паузы UI обновлений
     'candles_cache': {},  # ✅ Кэш свечей для быстрого доступа при расчете RSI
     'last_candles_update': None,  # ✅ Время последнего обновления свечей
+    # ✅ RSI только после свечей: load_all_coins_candles_fast устанавливает True по завершении
+    'candles_load_complete': False,
     # ✅ Блокировка систем только до первой загрузки: после first_round_complete автобот и мониторинг не ждут загрузчик
     'first_round_complete': False,  # True после первой полной загрузки свечей + RSI; до этого автобот и проверки по RSI не запускаются
 }

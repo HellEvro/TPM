@@ -468,6 +468,87 @@ def main():
             w(f"  {verdict}")
             w("")
 
+    # ==================== РАСЧЁТЫ И ВЫВОДЫ ====================
+    w("=" * 80)
+    w("РАСЧЁТЫ И ВЫВОДЫ")
+    w("=" * 80)
+
+    trades_with_rsi = [t for t in trades if t.get("exit_rsi") is not None]
+    trades_without_rsi = [t for t in trades if t.get("exit_rsi") is None]
+    total_pnl = sum(float(t.get("pnl") or 0) for t in trades)
+    pnl_with_rsi = sum(float(t.get("pnl") or 0) for t in trades_with_rsi)
+    winners = [t for t in trades_with_rsi if float(t.get("pnl") or 0) > 0]
+    losers = [t for t in trades_with_rsi if float(t.get("pnl") or 0) < 0]
+    win_rate = (len(winners) / len(trades_with_rsi) * 100) if trades_with_rsi else 0
+
+    w("")
+    w("1. СВОДКА ПО СДЕЛКАМ С RSI (расчёт по свечам):")
+    w(f"   Всего сделок с RSI: {len(trades_with_rsi)}")
+    w(f"   Без RSI (не проверить): {len(trades_without_rsi)}")
+    w(f"   Прибыльных: {len(winners)}  Убыточных: {len(losers)}")
+    w(f"   Win Rate: {win_rate:.1f}%")
+    w(f"   Суммарный PnL (с RSI): {pnl_with_rsi:.2f} USDT")
+    w(f"   Суммарный PnL (все): {total_pnl:.2f} USDT")
+    w("")
+
+    # Entry RSI по диапазонам
+    long_ok = [t for t in trades_with_rsi if (t.get("direction") or "").upper() == "LONG" and t.get("entry_rsi") is not None]
+    short_ok = [t for t in trades_with_rsi if (t.get("direction") or "").upper() == "SHORT" and t.get("entry_rsi") is not None]
+    buckets = [(0, 30, "0-30 перепродан"), (31, 35, "31-35"), (36, 50, "36-50 нейтрал"), (51, 65, "51-65"), (66, 100, "66-100 перекуплен")]
+    w("2. РАСПРЕДЕЛЕНИЕ ВХОДОВ ПО ENTRY_RSI:")
+    for lo, hi, lbl in buckets:
+        long_cnt = sum(1 for t in long_ok if lo <= float(t.get("entry_rsi", 0)) <= hi)
+        short_cnt = sum(1 for t in short_ok if lo <= float(t.get("entry_rsi", 0)) <= hi)
+        if long_cnt or short_cnt:
+            w(f"   {lbl}: LONG={long_cnt}, SHORT={short_cnt}")
+    w("")
+
+    # Закрыты не по RSI (упустили выход?)
+    closed_exchange = [t for t in trades_with_rsi if "EXCHANGE" in (t.get("close_reason") or "")]
+    closed_sl = [t for t in trades_with_rsi if "SL" in (t.get("close_reason") or "").upper() or "STOP" in (t.get("close_reason") or "").upper()]
+    closed_tp = [t for t in trades_with_rsi if "TP" in (t.get("close_reason") or "").upper() or "LIMIT" in (t.get("close_reason") or "").upper()]
+    closed_rsi = [t for t in trades_with_rsi if "RSI" in (t.get("close_reason") or "").upper()]
+    w("3. ПРИЧИНЫ ЗАКРЫТИЯ (сделки с RSI):")
+    w(f"   По RSI (по порогу): {len(closed_rsi)}")
+    w(f"   Закрыто на бирже/Sync: {len(closed_exchange)}")
+    w(f"   Stop Loss: {len(closed_sl)}")
+    w(f"   Take Profit: {len(closed_tp)}")
+    w("")
+
+    # Худшие монеты по Win Rate
+    from collections import defaultdict
+    by_symbol = defaultdict(list)
+    for t in trades_with_rsi:
+        by_symbol[t.get("symbol") or "?"].append(t)
+    bad_coins = []
+    for sym, lst in by_symbol.items():
+        if len(lst) < 3:
+            continue
+        wr = sum(1 for t in lst if float(t.get("pnl") or 0) > 0) / len(lst) * 100
+        pnl_s = sum(float(t.get("pnl") or 0) for t in lst)
+        if wr < 45 or pnl_s < -0.5:
+            bad_coins.append((sym, len(lst), wr, pnl_s))
+    bad_coins.sort(key=lambda x: (x[2], x[3]))
+    w("4. ПРОБЛЕМНЫЕ МОНЕТЫ (Win Rate < 45% или PnL < -0.5 USDT, мин. 3 сделки):")
+    for sym, cnt, wr, pnl_s in bad_coins[:15]:
+        w(f"   {sym}: сделок={cnt}, Win Rate={wr:.0f}%, PnL={pnl_s:.2f} USDT")
+    if not bad_coins:
+        w("   Не найдено.")
+    w("")
+
+    w("5. ВЫВОДЫ:")
+    if win_rate < 45:
+        w("   ⚠️ Низкий Win Rate — пересмотреть пороги входа (RSI) и TP/SL.")
+    if len(trades_without_rsi) > len(trades_with_rsi):
+        w("   ⚠️ Большинство сделок без RSI — включить --force-exchange или сохранять exit_rsi при закрытии.")
+    if len(closed_exchange) > len(closed_rsi):
+        w("   ⚠️ Много закрытий на бирже (Sync) — позиции сбрасываются до достижения RSI-порога; проверить причины.")
+    if not bad_coins:
+        w("   ✅ Явных проблемных монет не выявлено.")
+    else:
+        w(f"   Рекомендуется добавить в BLACKLIST: {', '.join(b[0] for b in bad_coins[:5])}")
+    w("")
+
     w("=" * 80)
     w("ИТОГ")
     w("=" * 80)
