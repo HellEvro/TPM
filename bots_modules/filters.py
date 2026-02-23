@@ -2526,6 +2526,10 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             f"📊 RSI: {'редукция' if reduced_mode else 'полная загрузка'} — "
             f"{len(pairs)} пар, ТФ: {required_timeframes}"
         )
+        # Диагностика: на проблемных машинах (Win11, антивирус) проверяем, что кэш свечей виден — иначе RSI пойдёт в API по каждому символу
+        _cc = coins_rsi_data.get("candles_cache") or {}
+        _cc_size = len(_cc) if isinstance(_cc, dict) else 0
+        logger.info(f"📊 RSI: в кэше свечей монет: {_cc_size} (ожидаем {len(pairs)} после этапа 1)")
 
         # ⚡ БЕЗ БЛОКИРОВКИ: обновляем счетчики (в reduced_mode total_coins не трогаем)
         if not reduced_mode:
@@ -2601,9 +2605,9 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             future.cancel()
                         break
 
-                    # Таймаут пакета: 100 символов при задержках API/rate limit — увеличиваем до 6 мин
-                    batch_timeout = 360
-                    result_timeout = 30
+                    # Таймаут пакета: 100 символов при задержках API/rate limit — до 6 мин. На Windows меньше, чтобы не висеть 6 мин при зависших сокетах
+                    batch_timeout = 90 if os.name == "nt" else 360
+                    result_timeout = 25 if os.name == "nt" else 30
                     try:
                         for future in concurrent.futures.as_completed(
                             future_to_symbol, timeout=batch_timeout
