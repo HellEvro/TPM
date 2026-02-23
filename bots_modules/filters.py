@@ -909,7 +909,7 @@ def check_exit_scam_filter(symbol, coin_data):
         logger.error(f"{symbol}: Ошибка проверки exit-scam (core): {exc}")
         return _legacy_check_exit_scam_filter(symbol, coin_data, individual_settings=individual_settings)
 
-def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _auto_config=None, _individual_settings_cache=None):
+def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _auto_config=None, _individual_settings_cache=None, _skip_api_if_no_cache=False):
     """✅ ОПТИМИЗАЦИЯ: Получает RSI данные для одной монеты для указанного таймфрейма.
     _auto_config и _individual_settings_cache передаются из load_all_coins_rsi при батчевом расчёте,
     чтобы воркеры не брали bots_data_lock (устраняет зависание при 10 потоках).
@@ -948,6 +948,8 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
                 candles = symbol_cache.get('candles')
 
     if not candles:
+        if _skip_api_if_no_cache:
+            return None  # Fallback: не лезем в API (caller_provided = свечи уже загружены)
         from bots_modules.imports_and_globals import get_exchange
         exchange_to_use = exchange_obj if exchange_obj is not None else get_exchange()
         if exchange_to_use:
@@ -2146,11 +2148,11 @@ def load_all_coins_candles_fast():
             else:
                 pairs_for_tf = pairs
 
-            # bulk_mode: 200 свечей. Bybit 10 req/s — 6 воркеров чтобы не бить rate limit
+            # bulk_mode: 200 свечей, 6 воркеров. 200/6 * ~2с = 67с минимум; при rate limit дольше
             use_bulk = getattr(current_exchange.__class__, '__name__', '') == 'BybitExchange'
             batch_size = 200 if use_bulk else 10
             base_max_workers = 6 if use_bulk else min(6, batch_size)
-            batch_timeout = 15 if use_bulk else 45
+            batch_timeout = 300 if use_bulk else 120  # Все символы биржи должны получить свечи — ждём до 5 мин
             candles_cache = {}
             
             import concurrent.futures
@@ -2594,6 +2596,18 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             else:
                 pairs_for_tf = pairs
 
+            # caller_provided = из continuous loader (свечи УЖЕ загружены) — считаем RSI ТОЛЬКО по тем, что в кэше!
+            # Иначе пытаемся дергать API для проваливших при загрузке свечей → зависание
+            if caller_provided:
+                candles_cache = coins_rsi_data.get('candles_cache', {}) or {}
+                pairs_in_cache = [s for s in pairs_for_tf if s in candles_cache]
+                skipped = len(pairs_for_tf) - len(pairs_in_cache)
+                if skipped:
+                    logger.info(f"📊 RSI: {skipped} символов без свечей в кэше (провалились при загрузке) — пропуск")
+                pairs_for_tf = pairs_in_cache
+                if not pairs_for_tf:
+                    continue
+
             # RSI — локальный расчёт. N100: 4 воркера, малый батч; иначе — крупнее
             _cpu_count = os.cpu_count() or 4
             if _cpu_count <= 4:  # N100 — меньше конкуренции, быстрее отсечка зависших
@@ -2634,6 +2648,7 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             timeframe,
                             _auto_config=_prefetched_auto_config,
                             _individual_settings_cache=_prefetched_individual_cache,
+                            _skip_api_if_no_cache=caller_provided,
                         ): symbol
                         for symbol in batch
                     }
