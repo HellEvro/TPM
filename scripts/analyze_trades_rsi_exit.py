@@ -11,6 +11,8 @@
     python scripts/analyze_trades_rsi_exit.py --from-exchange
     python scripts/analyze_trades_rsi_exit.py --symbol 1000XECUSDT --from-exchange
     python scripts/analyze_trades_rsi_exit.py --limit 200 --output report.txt
+    python scripts/analyze_trades_rsi_exit.py --limit 1000 --force-exchange  # пересчёт RSI по свечам биржи
+    python scripts/analyze_trades_rsi_exit.py --limit 1000 --force-exchange --save-to-db  # + сохранить в БД
 """
 
 import argparse
@@ -91,13 +93,92 @@ def _rsi_at_entry_last_closed(candles, entry_ts_ms, interval_ms, period=14):
     return round(hist[-1], 2) if hist else None
 
 
-def _fill_rsi_from_db_candles(trade, timeframe, interval_ms):
-    """Если entry_rsi или exit_rsi нет — загружает свечи из БД и считает RSI."""
+def _get_exchange_cached():
+    """Ленивая инициализация биржи для загрузки свечей."""
+    if not hasattr(_get_exchange_cached, "_exchange"):
+        try:
+            from app.config import EXCHANGES, ACTIVE_EXCHANGE
+        except ImportError:
+            try:
+                from configs.app_config import EXCHANGES, ACTIVE_EXCHANGE
+            except ImportError:
+                _get_exchange_cached._exchange = None
+                return None
+        name = ACTIVE_EXCHANGE
+        cfg = EXCHANGES.get(name, {})
+        if not cfg or not cfg.get("enabled", True):
+            _get_exchange_cached._exchange = None
+            return None
+        key = cfg.get("api_key")
+        secret = cfg.get("api_secret")
+        passphrase = cfg.get("passphrase")
+        if not key or not secret:
+            _get_exchange_cached._exchange = None
+            return None
+        try:
+            from exchanges.exchange_factory import ExchangeFactory
+            _get_exchange_cached._exchange = ExchangeFactory.create_exchange(name, key, secret, passphrase)
+        except Exception:
+            _get_exchange_cached._exchange = None
+    return getattr(_get_exchange_cached, "_exchange", None)
+
+
+def _get_candles_from_exchange(symbol, timeframe, entry_ms, exit_ms, interval_ms):
+    """Загружает свечи с биржи для расчёта RSI (20 до входа + между входом и выходом)."""
+    import time
+    cache = getattr(_get_candles_from_exchange, "_cache", None)
+    if cache is None:
+        _get_candles_from_exchange._cache = {}
+        cache = _get_candles_from_exchange._cache
+    sym = symbol if "USDT" in symbol.upper() else symbol + "USDT"
+    bucket = (sym, timeframe, exit_ms // (interval_ms or 300_000))
+    if bucket in cache:
+        return cache[bucket]
+    exchange = _get_exchange_cached()
+    if not exchange or not hasattr(exchange, "get_chart_data_end_limit"):
+        return None
+    span_ms = max(0, exit_ms - entry_ms)
+    span_candles = int(span_ms / (interval_ms or 300_000)) + 2
+    limit = min(100, 20 + span_candles)
+    limit = max(limit, 15)
+    end_ms = exit_ms + (interval_ms or 300_000)
+    try:
+        time.sleep(0.05)
+        resp = exchange.get_chart_data_end_limit(sym, timeframe, end_ms, limit=limit)
+        if not resp or not resp.get("success"):
+            return None
+        candles = (resp.get("data") or {}).get("candles") or []
+        result = sorted(candles, key=lambda c: c.get("time", 0)) if candles else None
+        if result and len(cache) < 500:
+            cache[bucket] = result
+        return result
+    except Exception:
+        return None
+
+
+def _fill_rsi_from_candles(trade, candles, entry_ms, exit_ms, interval):
+    """Считает entry_rsi/exit_rsi по свечам и обновляет trade."""
+    entry_rsi = trade.get("entry_rsi")
+    exit_rsi = trade.get("exit_rsi")
+    if entry_rsi is None:
+        er = _rsi_at_entry_last_closed(candles, entry_ms, interval)
+        if er is not None:
+            trade["entry_rsi"] = er
+    if exit_rsi is None:
+        xr = _rsi_at_timestamp(candles, exit_ms, interval)
+        if xr is not None:
+            trade["exit_rsi"] = xr
+
+
+def _fill_rsi_from_db_candles(trade, timeframe, interval_ms, force_exchange=False):
+    """Если entry_rsi или exit_rsi нет — загружает свечи из БД, при неудаче — с биржи, считает RSI.
+    При force_exchange=True — сначала биржа (для массового пересчёта когда БД пуста)."""
     entry_rsi = trade.get("entry_rsi")
     exit_rsi = trade.get("exit_rsi")
     if entry_rsi is not None and exit_rsi is not None:
         return trade
-    symbol = (trade.get("symbol") or "").replace("USDT", "")
+    symbol_raw = trade.get("symbol") or ""
+    symbol = symbol_raw.replace("USDT", "").strip() or symbol_raw
     entry_ts = trade.get("entry_timestamp") or trade.get("entry_timestamp_ms")
     exit_ts = trade.get("exit_timestamp") or trade.get("exit_timestamp_ms")
     if not entry_ts or not exit_ts:
@@ -106,29 +187,53 @@ def _fill_rsi_from_db_candles(trade, timeframe, interval_ms):
     exit_ms = _ts_to_ms(exit_ts)
     if entry_ms is None or exit_ms is None:
         return trade
-    try:
-        from bot_engine.bots_database import get_bots_database
-        db = get_bots_database()
-        candles_data = db.get_candles_for_symbol(symbol)
-        if not candles_data:
-            candles_data = db.get_candles_for_symbol(symbol + "USDT")
-        if not candles_data:
-            return trade
-        candles = candles_data.get("candles") or candles_data.get("data") or []
-        if not candles or len(candles) < 16:
-            return trade
-        tf_candles = candles_data.get("timeframe") or timeframe
-        interval = interval_ms or TF_MS.get(tf_candles, TF_MS.get("5m", 300_000))
-        if entry_rsi is None:
-            entry_rsi = _rsi_at_entry_last_closed(candles, entry_ms, interval)
-            if entry_rsi is not None:
-                trade["entry_rsi"] = entry_rsi
-        if exit_rsi is None:
-            exit_rsi = _rsi_at_timestamp(candles, exit_ms, interval)
-            if exit_rsi is not None:
-                trade["exit_rsi"] = exit_rsi
-    except Exception:
-        pass
+    interval = interval_ms or TF_MS.get(timeframe, 300_000)
+    candles = None
+
+    def _try_exchange():
+        return _get_candles_from_exchange(symbol, timeframe, entry_ms, exit_ms, interval)
+
+    def _try_db():
+        c = None
+        try:
+            from bot_engine.bots_database import get_bots_database
+            db = get_bots_database()
+            candles_data = db.get_candles_for_symbol(symbol) or db.get_candles_for_symbol(symbol + "USDT")
+            if candles_data:
+                c = candles_data.get("candles") or candles_data.get("data") or []
+        except Exception:
+            pass
+        return c if (c and len(c) >= 16) else None
+
+    def _try_ai_db():
+        try:
+            from bot_engine.ai.ai_database import get_ai_database
+            ai_db = get_ai_database()
+            if ai_db and symbol:
+                start_ts = int((entry_ms - 20 * interval) / 1000)
+                end_ts = int((exit_ms + interval) / 1000)
+                for sym in (symbol, symbol + "USDT"):
+                    cand = ai_db.get_candles(sym, timeframe=timeframe, start_time=start_ts, end_time=end_ts, limit=100)
+                    if cand and len(cand) >= 16:
+                        if cand[0].get("time", 0) < 1e12:
+                            for c in cand:
+                                c["time"] = int(c.get("time", 0) * 1000)
+                        return cand
+        except Exception:
+            pass
+        return None
+
+    if force_exchange and symbol:
+        candles = _try_exchange()
+    if not candles or len(candles) < 16:
+        candles = candles if (candles and len(candles) >= 16) else _try_db()
+    if not candles or len(candles) < 16:
+        candles = _try_ai_db()
+    if (not candles or len(candles) < 16) and symbol:
+        candles = _try_exchange()
+
+    if candles and len(candles) >= 16:
+        _fill_rsi_from_candles(trade, candles, entry_ms, exit_ms, interval)
     return trade
 
 
@@ -210,6 +315,8 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="Подробный вывод по каждой сделке")
     parser.add_argument("--from-exchange", action="store_true", help="Брать сделки с биржи (get_closed_pnl), а не из БД")
     parser.add_argument("--period", type=str, default="all", help="Период для биржи: all, day, week, month (при --from-exchange)")
+    parser.add_argument("--force-exchange", action="store_true", help="Сначала грузить свечи с биржи (массовый пересчёт RSI)")
+    parser.add_argument("--save-to-db", action="store_true", help="Сохранить рассчитанные entry_rsi/exit_rsi в bot_trades_history")
     args = parser.parse_args()
 
     # Загрузка конфига
@@ -277,18 +384,41 @@ def main():
     w(f"Всего закрытых сделок: {len(trades)}")
     w("")
 
-    # Если RSI нет — считаем по свечам из БД
+    # Если RSI нет — считаем по свечам (БД / ai_data / биржа)
     interval_ms = TF_MS.get(timeframe, 300_000)
+    force_exchange = getattr(args, "force_exchange", False)
     filled = 0
     for t in trades:
         before_e = t.get("entry_rsi") is not None
         before_x = t.get("exit_rsi") is not None
-        _fill_rsi_from_db_candles(t, timeframe, interval_ms)
+        _fill_rsi_from_db_candles(t, timeframe, interval_ms, force_exchange=force_exchange)
         if (not before_e and t.get("entry_rsi") is not None) or (not before_x and t.get("exit_rsi") is not None):
             filled += 1
     if filled > 0:
-        w(f"✅ RSI рассчитан по свечам из БД для {filled} сделок")
+        src = "с биржи" if force_exchange else "из БД/ai_data/биржи"
+        w(f"✅ RSI рассчитан ({src}) для {filled} сделок")
         w("")
+
+    # Сохранение RSI в БД (только для сделок из БД с id)
+    if getattr(args, "save_to_db", False) and filled > 0:
+        try:
+            from bot_engine.bots_database import get_bots_database
+            db = get_bots_database()
+            saved = 0
+            for t in trades:
+                tid = t.get("id")
+                if tid is None:
+                    continue
+                er = t.get("entry_rsi")
+                ex = t.get("exit_rsi")
+                if er is not None or ex is not None:
+                    if db.update_bot_trade_rsi(int(tid), er, ex):
+                        saved += 1
+            w(f"💾 Сохранено RSI в БД для {saved} сделок")
+            w("")
+        except Exception as e:
+            w(f"⚠️ Ошибка сохранения RSI в БД: {e}")
+            w("")
 
     errors_no_exit_rsi = 0
     errors_should_close_earlier = 0

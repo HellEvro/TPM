@@ -2577,6 +2577,9 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             batch_size = 25  # Малый батч для слабых ПК — меньше таймаутов, меньше lock contention
             total_batches = (len(pairs_for_tf) + batch_size - 1) // batch_size
             rsi_max_workers = 4  # Меньше воркеров = меньше конкуренции за bots_data_lock
+            if _is_low_resource_mode():
+                rsi_max_workers = 2
+                logger.info("📊 RSI: режим низкой нагрузки — 2 воркера (слабый ПК)")
 
             for i in range(0, len(pairs_for_tf), batch_size):
                 if shutdown_flag.is_set():
@@ -2591,6 +2594,11 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                 batch_start = time.time()
                 batch_success = 0
                 batch_fail = 0
+
+                # Лог в начале батча — видно, что RSI считается, не кажется что зависло
+                loaded_so_far = len(temp_coins_data)
+                pct = (loaded_so_far * 100) // len(pairs_for_tf) if pairs_for_tf else 0
+                logger.info(f"📊 RSI {timeframe}: батч {batch_num}/{total_batches} — расчёт {len(batch)} монет ({loaded_so_far}/{len(pairs_for_tf)}, {pct}%)")
 
                 with ThreadPoolExecutor(max_workers=rsi_max_workers) as executor:
                     future_to_symbol = {
@@ -2611,18 +2619,32 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             future.cancel()
                         break
 
-                    # Таймаут 90с/25с — для слабых ПК (нет GPU, медленный CPU)
+                    # Таймаут 90с — для слабых ПК; ждём по 3с с проверкой shutdown (Ctrl+C срабатывает быстрее)
                     batch_timeout = 90
                     result_timeout = 25
+                    all_futs = list(future_to_symbol.keys())
+                    remaining = set(all_futs)
+                    done_set = set()
+                    deadline = time.time() + batch_timeout
+                    wait_chunk = 3
                     try:
-                        for future in concurrent.futures.as_completed(
-                            future_to_symbol, timeout=batch_timeout
-                        ):
+                        while remaining and time.time() < deadline:
+                            if shutdown_flag.is_set():
+                                shutdown_requested = True
+                                break
+                            partial_done, remaining = concurrent.futures.wait(
+                                remaining, timeout=wait_chunk,
+                                return_when=concurrent.futures.ALL_COMPLETED
+                            )
+                            done_set |= partial_done
+                        for future in done_set:
                             if shutdown_flag.is_set():
                                 shutdown_requested = True
                                 break
 
-                            symbol = future_to_symbol[future]
+                            symbol = future_to_symbol.get(future)
+                            if symbol is None:
+                                continue
                             try:
                                 result = future.result(timeout=result_timeout)
                                 if result:
@@ -2644,18 +2666,17 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                                 logger.error(f"❌ {symbol}: {e}")
                                 coins_rsi_data["failed_coins"] += 1
                                 batch_fail += 1
-                    except concurrent.futures.TimeoutError:
-                        pending = [
-                            symbol for future, symbol in future_to_symbol.items()
-                            if not future.done()
-                        ]
-                        logger.error(
-                            "⚠️ Timeout при загрузке RSI для пакета "
-                            f"{batch_num} (ТФ={timeframe}) "
-                            f"(не завершено {len(pending)} из {len(batch)}, примеры: {pending[:5]})"
-                        )
-                        coins_rsi_data["failed_coins"] += len(pending)
-                        batch_fail += len(pending)
+
+                        # Не завершённые по таймауту — считаем ошибками
+                        if remaining:
+                            pending = [future_to_symbol.get(f, '?') for f in remaining if f in future_to_symbol]
+                            logger.error(
+                                "⚠️ Timeout при загрузке RSI для пакета "
+                                f"{batch_num} (ТФ={timeframe}) "
+                                f"(не завершено {len(pending)} из {len(batch)}, примеры: {pending[:5]})"
+                            )
+                            coins_rsi_data["failed_coins"] += len(remaining)
+                            batch_fail += len(remaining)
 
                 if shutdown_flag.is_set():
                     shutdown_requested = True
@@ -2665,6 +2686,11 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
 
                 if shutdown_requested:
                     break
+
+                # Прогресс после каждого батча
+                loaded_now = len(temp_coins_data)
+                pct_now = (loaded_now * 100) // len(pairs_for_tf) if pairs_for_tf else 0
+                logger.info(f"📊 RSI {timeframe}: батч {batch_num}/{total_batches} — {loaded_now}/{len(pairs_for_tf)} монет ({pct_now}%)")
 
             if shutdown_requested:
                 break

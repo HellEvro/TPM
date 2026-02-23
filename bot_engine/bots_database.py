@@ -6368,6 +6368,30 @@ class BotsDatabase:
             logger.warning("Ошибка обновления сделки из биржи (id=%s): %s", trade_id, e)
             return False
 
+    def update_bot_trade_rsi(
+        self,
+        trade_id: int,
+        entry_rsi: Optional[float],
+        exit_rsi: Optional[float],
+    ) -> bool:
+        """Обновляет entry_rsi и exit_rsi в bot_trades_history (для пересчёта по свечам)."""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """UPDATE bot_trades_history SET
+                        entry_rsi = COALESCE(?, entry_rsi),
+                        exit_rsi = COALESCE(?, exit_rsi),
+                        updated_at = ?
+                    WHERE id = ?""",
+                    (entry_rsi, exit_rsi, datetime.now().isoformat(), trade_id),
+                )
+                conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.warning("Ошибка обновления RSI сделки (id=%s): %s", trade_id, e)
+            return False
+
     def get_bot_trades_history(self, 
                               bot_id: Optional[str] = None,
                               symbol: Optional[str] = None,
