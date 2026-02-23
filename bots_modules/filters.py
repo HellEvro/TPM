@@ -2229,7 +2229,6 @@ def load_all_coins_candles_fast():
                             except Exception:
                                 pass
                         rate_limit_detected = True
-                        import time
                         time.sleep(1)
                     
                     delay_after_batch = current_exchange.current_request_delay if hasattr(current_exchange, 'current_request_delay') else None
@@ -2237,7 +2236,6 @@ def load_all_coins_candles_fast():
                         rate_limit_detected = True
                         logger.warning(f"⚠️ Rate limit в батче {batch_num}/{total_batches}: задержка {delay_before_batch:.3f}с → {delay_after_batch:.3f}с")
                 
-                import time
                 # bulk_mode: минимальная пауза; без bulk — 0.08 с чтобы не бить 600 req/5s Bybit
                 time.sleep(0.02 if use_bulk else 0.08)
                 if shutdown_flag.wait(0.02):

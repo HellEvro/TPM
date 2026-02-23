@@ -4,6 +4,8 @@
 Аудит сделок по RSI: загружает сделки из БД (bot_trades_history) ИЛИ с биржи (get_closed_pnl),
 сравнивает момент входа/выхода с порогами RSI из конфига и выявляет расхождения.
 
+Если в сделке нет entry_rsi/exit_rsi — рассчитывает их по свечам из БД (candles_cache).
+
 Запуск:
     python scripts/analyze_trades_rsi_exit.py
     python scripts/analyze_trades_rsi_exit.py --from-exchange
@@ -20,6 +22,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# Интервал свечи в мс по таймфрейму
+TF_MS = {
+    "1m": 60_000, "3m": 180_000, "5m": 300_000, "15m": 900_000,
+    "30m": 1_800_000, "1h": 3_600_000, "2h": 7_200_000, "4h": 14_400_000,
+    "6h": 21_600_000, "8h": 28_800_000, "12h": 43_200_000,
+    "1d": 86_400_000, "1w": 604_800_000,
+}
+
 
 def _ts_ms_to_iso(ts_ms):
     if ts_ms is None:
@@ -29,6 +39,97 @@ def _ts_ms_to_iso(ts_ms):
         return datetime.fromtimestamp(s, tz=timezone.utc).isoformat()
     except Exception:
         return None
+
+
+def _ts_to_ms(ts):
+    """Приводит timestamp к миллисекундам."""
+    if ts is None:
+        return None
+    try:
+        t = float(ts)
+        if t < 1e12:
+            t *= 1000
+        return int(t)
+    except (TypeError, ValueError):
+        return None
+
+
+def _rsi_at_timestamp(candles, ts_ms, interval_ms, period=14):
+    """RSI на момент ts_ms: последняя свеча с time <= ts_ms, RSI по истории до неё."""
+    from bot_engine.utils.rsi_utils import calculate_rsi_history
+    if not candles or len(candles) < period + 1:
+        return None
+    idx = -1
+    for i, c in enumerate(candles):
+        if c.get("time", 0) <= ts_ms:
+            idx = i
+        else:
+            break
+    if idx < period:
+        return None
+    closes = [float(c["close"]) for c in candles[: idx + 1]]
+    hist = calculate_rsi_history(closes, period=period)
+    return round(hist[-1], 2) if hist else None
+
+
+def _rsi_at_entry_last_closed(candles, entry_ts_ms, interval_ms, period=14):
+    """RSI на вход: по последней уже закрытой свече до entry_ts_ms."""
+    from bot_engine.utils.rsi_utils import calculate_rsi_history
+    if not candles or len(candles) < period + 1:
+        return None
+    idx = -1
+    for i, c in enumerate(candles):
+        candle_end = c.get("time", 0) + interval_ms
+        if candle_end <= entry_ts_ms:
+            idx = i
+        else:
+            break
+    if idx < period:
+        return None
+    closes = [float(c["close"]) for c in candles[: idx + 1]]
+    hist = calculate_rsi_history(closes, period=period)
+    return round(hist[-1], 2) if hist else None
+
+
+def _fill_rsi_from_db_candles(trade, timeframe, interval_ms):
+    """Если entry_rsi или exit_rsi нет — загружает свечи из БД и считает RSI."""
+    entry_rsi = trade.get("entry_rsi")
+    exit_rsi = trade.get("exit_rsi")
+    if entry_rsi is not None and exit_rsi is not None:
+        return trade
+    symbol = (trade.get("symbol") or "").replace("USDT", "")
+    entry_ts = trade.get("entry_timestamp") or trade.get("entry_timestamp_ms")
+    exit_ts = trade.get("exit_timestamp") or trade.get("exit_timestamp_ms")
+    if not entry_ts or not exit_ts:
+        return trade
+    entry_ms = _ts_to_ms(entry_ts)
+    exit_ms = _ts_to_ms(exit_ts)
+    if entry_ms is None or exit_ms is None:
+        return trade
+    try:
+        from bot_engine.bots_database import get_bots_database
+        db = get_bots_database()
+        candles_data = db.get_candles_for_symbol(symbol)
+        if not candles_data:
+            candles_data = db.get_candles_for_symbol(symbol + "USDT")
+        if not candles_data:
+            return trade
+        candles = candles_data.get("candles") or candles_data.get("data") or []
+        if not candles or len(candles) < 16:
+            return trade
+        tf_candles = candles_data.get("timeframe") or timeframe
+        interval = interval_ms or TF_MS.get(tf_candles, TF_MS.get("5m", 300_000))
+        if entry_rsi is None:
+            entry_rsi = _rsi_at_entry_last_closed(candles, entry_ms, interval)
+            if entry_rsi is not None:
+                trade["entry_rsi"] = entry_rsi
+        if exit_rsi is None:
+            exit_rsi = _rsi_at_timestamp(candles, exit_ms, interval)
+            if exit_rsi is not None:
+                trade["exit_rsi"] = exit_rsi
+    except Exception:
+        pass
+    return trade
 
 
 def _infer_direction(side, entry_price, exit_price, pnl):
@@ -84,6 +185,8 @@ def load_trades_from_exchange(symbol_filter=None, limit=None, period="all"):
             "direction": direction,
             "entry_time": _ts_ms_to_iso(entry_ts) or r.get("created_time", ""),
             "exit_time": _ts_ms_to_iso(close_ts) or r.get("close_time", ""),
+            "entry_timestamp": entry_ts,
+            "exit_timestamp": close_ts,
             "entry_price": entry_price,
             "exit_price": exit_price,
             "entry_rsi": None,
@@ -173,6 +276,19 @@ def main():
     w(f"Пороги выхода SHORT: with_trend <={exit_short_with}, against_trend <={exit_short_against}")
     w(f"Всего закрытых сделок: {len(trades)}")
     w("")
+
+    # Если RSI нет — считаем по свечам из БД
+    interval_ms = TF_MS.get(timeframe, 300_000)
+    filled = 0
+    for t in trades:
+        before_e = t.get("entry_rsi") is not None
+        before_x = t.get("exit_rsi") is not None
+        _fill_rsi_from_db_candles(t, timeframe, interval_ms)
+        if (not before_e and t.get("entry_rsi") is not None) or (not before_x and t.get("exit_rsi") is not None):
+            filled += 1
+    if filled > 0:
+        w(f"✅ RSI рассчитан по свечам из БД для {filled} сделок")
+        w("")
 
     errors_no_exit_rsi = 0
     errors_should_close_earlier = 0
