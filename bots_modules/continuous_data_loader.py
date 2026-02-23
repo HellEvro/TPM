@@ -131,7 +131,17 @@ class ContinuousDataLoader:
                     from bots_modules.imports_and_globals import get_config_value
                 except Exception:
                     get_config_value = lambda c, k: (c or {}).get(k)
-                with bots_data_lock:
+                logger.info("🔄 [РАУНД] Пытаемся получить lock (timeout 15 с, только для чтения конфига)...")
+                lock_acquired = bots_data_lock.acquire(timeout=15)
+                if not lock_acquired:
+                    logger.warning(
+                        "⚠️ [РАУНД] Не удалось получить lock за 15 сек — пропускаем раунд "
+                        "(свечи/RSI не загрузятся в этом цикле). Следующая попытка через интервал загрузчика."
+                    )
+                    self.error_count += 1
+                    continue
+                try:
+                    logger.info("🔄 [РАУНД] Lock получен, читаем конфиг автобота...")
                     auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
                     bots = bots_data.get('bots', {}) or {}
                     auto_config = bots_data.get('auto_bot_config', {}) or {}
@@ -157,6 +167,8 @@ class ContinuousDataLoader:
                                     position_symbols_to_tf[_sym].append(entry_tf)
                     required_timeframes = sorted(required_timeframes_set)
                     reduced_mode = bool(position_symbols_to_tf)
+                finally:
+                    bots_data_lock.release()
                 if not auto_bot_enabled and active_bots_count == 0:
                     logger.info("⏹️ Автобот выключен, активных ботов нет — загружаем только свечи и RSI для UI")
                 logger.info("🔄 [РАУНД] Lock получен, запускаем этап 1 (свечи)...")
