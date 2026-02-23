@@ -122,14 +122,25 @@ class ContinuousDataLoader:
                 logger.info("=" * 80)
 
                 # ✅ Когда автобот ВЫКЛЮЧЕН: не ищем новые сделки; этапы 3–6 пропускаем. Но свечи и RSI — ВСЕГДА (для UI).
-                logger.info("🔄 [РАУНД] Получаем флаг автобота (lock)...")
+                logger.info("🔄 [РАУНД] Получаем флаг автобота и таймфреймы для RSI (lock)...")
                 from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
+                from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
                 with bots_data_lock:
                     auto_bot_enabled = bots_data.get('auto_bot_config', {}).get('enabled', False)
                     active_bots_count = sum(
                         1 for b in (bots_data.get('bots') or {}).values()
                         if b.get('status') not in [BOT_STATUS.get('IDLE'), BOT_STATUS.get('PAUSED')]
                     )
+                    # Таймфреймы для RSI в том же блоке — не держать lock в load_all_coins_rsi
+                    try:
+                        default_tf = get_current_timeframe() or TIMEFRAME
+                    except Exception:
+                        default_tf = TIMEFRAME
+                    required_timeframes_set = {default_tf}
+                    for _sym, bot_data in (bots_data.get('bots') or {}).items():
+                        if bot_data.get('status') in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
+                            required_timeframes_set.add(bot_data.get('entry_timeframe') or default_tf)
+                    required_timeframes = sorted(required_timeframes_set)
                 if not auto_bot_enabled and active_bots_count == 0:
                     logger.info("⏹️ Автобот выключен, активных ботов нет — загружаем только свечи и RSI для UI")
                 logger.info("🔄 [РАУНД] Lock получен, запускаем этап 1 (свечи)...")
@@ -150,7 +161,7 @@ class ContinuousDataLoader:
                     # подгружает свечи с биржи при отсутствии в кэше). После рестарта это позволяет восстановить RSI.
 
                 # ✅ Этап 2: Расчёт RSI по загруженным свечам (или с подгрузкой по символу, если кэш пуст)
-                success_rsi = self._calculate_rsi()
+                success_rsi = self._calculate_rsi(required_timeframes=required_timeframes)
                 if not success_rsi:
                     logger.error("КРИТИЧНО: расчёт RSI не выполнен. Данные для торговли отсутствуют. Проверьте логи, биржу и конфиг.")
                     self.error_count += 1
@@ -345,8 +356,8 @@ class ContinuousDataLoader:
             logger.error(f"❌ Traceback: {traceback.format_exc()}")
             return False
 
-    def _calculate_rsi(self):
-        """📊 Рассчитывает RSI для всех монет"""
+    def _calculate_rsi(self, required_timeframes=None):
+        """📊 Рассчитывает RSI для всех монет. required_timeframes задаётся из загрузчика (без лишней блокировки)."""
         try:
             logger.info("📊 Этап 2/6: Рассчитываем RSI...")
             start = time.time()
@@ -363,7 +374,7 @@ class ContinuousDataLoader:
             # Threading timeout может вызывать проблемы в Windows
             logger.info("Вызываем load_all_coins_rsi()...")
             from bots_modules.filters import load_all_coins_rsi
-            success = load_all_coins_rsi()
+            success = load_all_coins_rsi(required_timeframes=required_timeframes)
             logger.info(f"📊 load_all_coins_rsi() вернула: {success}")
 
             duration = time.time() - start

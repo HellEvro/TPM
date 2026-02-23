@@ -692,7 +692,7 @@ if __name__ == '__main__':
         # optimal_ema_worker = start_optimal_ema_worker(update_interval=21600) # 6 часов
         logger.info("ℹ️ Optimal EMA Worker отключен (не используется)")
 
-        auto_save_thread = threading.Thread(target=auto_save_worker, daemon=True)
+        auto_save_thread = threading.Thread(target=auto_save_worker, daemon=True, name="auto_save_worker")
         auto_save_thread.start()
         logger.info("Auto Save Worker запущен")
 

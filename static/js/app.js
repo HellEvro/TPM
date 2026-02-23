@@ -354,10 +354,8 @@ class App {
 
         const update = async () => {
             if (isUpdating) {
-                console.log('Update already in progress, skipping...');
                 return;
             }
-
             try {
                 isUpdating = true;
                 await this.updateData();
@@ -368,12 +366,10 @@ class App {
             }
         };
 
-        // Первоначальная загрузка
-        update().then(() => {
-            // Запускаем регулярное обновление
-            setInterval(update, UPDATE_INTERVAL);
-            console.log(`Data updates started with interval ${UPDATE_INTERVAL}ms`);
-        });
+        // Запускаем интервал сразу, чтобы страница Позиции обновлялась без перезагрузки даже при долгом первом запросе
+        setInterval(update, UPDATE_INTERVAL);
+        console.log(`Data updates started with interval ${UPDATE_INTERVAL}ms`);
+        update();
     }
 
     async updateData() {

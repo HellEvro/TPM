@@ -2373,16 +2373,15 @@ def load_all_coins_candles_fast():
         logger.error(f"❌ Ошибка: {e}")
         return False
 
-def load_all_coins_rsi():
+def load_all_coins_rsi(required_timeframes=None):
     """✅ ОПТИМИЗАЦИЯ: Загружает RSI для всех доступных монет для всех требуемых таймфреймов
 
     Рассчитывает RSI для:
     - Системного таймфрейма (для новых входов)
     - Всех entry_timeframe из ботов в позиции
 
-    При достижении max_concurrent ботов — режим «только позиции»: загружаем RSI только
-    для монет с открытыми позициями и только для их entry_timeframe (для решения о выходе).
-    Системный ТФ и остальные монеты не опрашиваются — снижает нагрузку на API в разы.
+    required_timeframes: если передан (из continuous_data_loader), не вызываем get_required_timeframes_for_rsi()
+    и не берём bots_data_lock повторно — снижает конкуренцию за блокировку.
     """
     global coins_rsi_data
 
@@ -2457,7 +2456,8 @@ def load_all_coins_rsi():
             required_timeframes = sorted(set(tf for tfs in position_symbols_to_tf.values() for tf in tfs))
             pairs = list(position_symbols_to_tf.keys())
         else:
-            required_timeframes = get_required_timeframes_for_rsi()
+            if required_timeframes is None or len(required_timeframes) == 0:
+                required_timeframes = get_required_timeframes_for_rsi()
             if not required_timeframes:
                 try:
                     from bot_engine.config_loader import get_current_timeframe
@@ -2495,6 +2495,7 @@ def load_all_coins_rsi():
             return False
 
         if not reduced_mode:
+            logger.info("📊 RSI: получаем список пар с биржи...")
             pairs = current_exchange.get_all_pairs()
             if not pairs or not isinstance(pairs, list):
                 logger.error("❌ Не удалось получить список пар с биржи")
