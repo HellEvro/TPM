@@ -51,7 +51,7 @@ try:
         DEFAULT_AUTO_BOT_CONFIG, RSI_CACHE_FILE, PROCESS_STATE_FILE,
         SYSTEM_CONFIG_FILE, BOTS_STATE_FILE,
         should_log_message, get_coin_processing_lock, get_exchange,
-        save_individual_coin_settings
+        save_individual_coin_settings, _bots_data_lock_holder
     )
     # MATURE_COINS_FILE определен в maturity.py
     try:
@@ -735,6 +735,8 @@ def save_bots_state():
             if now_sec - last_warn >= 120:
                 save_bots_state._last_lock_warn = now_sec
                 active_threads = [t.name for t in threading.enumerate()[:10]]
+                # Нормализуем опечатку в имени потока (auto_ssave_worker → auto_save_worker) для ясности лога
+                active_threads = [n.replace('auto_ssave_worker', 'auto_save_worker') for n in active_threads]
                 logger.warning(
                     f"[SAVE_STATE] ⚠️ Не удалось получить блокировку за {int(lock_timeout)} сек - пропускаем сохранение "
                     f"(thread={requester}, active_threads={active_threads})"

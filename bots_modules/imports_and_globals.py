@@ -627,7 +627,36 @@ bots_data = {
 
 # Блокировки для данных
 rsi_data_lock = threading.Lock()
-bots_data_lock = threading.Lock()
+
+# Отслеживание владельца bots_data_lock (для диагностики зависаний автосохранения)
+_bots_data_lock_holder = [None]  # [ (thread_name, acquired_at_ts) or None ]
+
+class _TrackedLock:
+    """Обёртка над threading.Lock: при acquire/release обновляет _bots_data_lock_holder для диагностики."""
+    def __init__(self):
+        self._lock = threading.Lock()
+
+    def acquire(self, blocking=True, timeout=-1):
+        ok = self._lock.acquire(blocking=blocking, timeout=timeout)
+        if ok:
+            _bots_data_lock_holder[0] = (threading.current_thread().name, time.time())
+        return ok
+
+    def release(self):
+        _bots_data_lock_holder[0] = None
+        self._lock.release()
+
+    def __enter__(self):
+        self._lock.acquire()
+        _bots_data_lock_holder[0] = (threading.current_thread().name, time.time())
+        return self
+
+    def __exit__(self, *args):
+        _bots_data_lock_holder[0] = None
+        self._lock.release()
+        return False
+
+bots_data_lock = _TrackedLock()
 
 # Загружаем сохраненную конфигурацию Auto Bot
 def load_auto_bot_config():
