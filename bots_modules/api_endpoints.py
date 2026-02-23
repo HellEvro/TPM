@@ -957,6 +957,7 @@ def get_coins_with_rsi():
             'coins': cleaned_coins,
             'total': len(cleaned_coins),
             'last_update': coins_rsi_data['last_update'],
+            'response_time': datetime.now().isoformat(),  # Время ответа — для индикатора «Обновлено» (обновляется при каждом запросе)
             'update_in_progress': update_in_progress or processing_cycle,
             'data_version': coins_rsi_data.get('data_version', 0),  # ✅ Версия данных для оптимизации UI
             'manual_positions': manual_positions,  # Добавляем список ручных позиций

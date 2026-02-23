@@ -152,13 +152,8 @@
             const data = await response.json();
             
             if (data.success) {
-                    // ✅ ОПТИМИЗАЦИЯ (из trash): проверка версии — обновляем UI только при изменениях
+                    // Всегда обновляем UI по ответу сервера — RSI и цены меняются, пользователь должен видеть актуальные данные
                     const currentDataVersion = data.data_version || 0;
-                    if (!forceUpdate && currentDataVersion === this.lastDataVersion && this.coinsRsiData.length > 0) {
-                        this.logDebug('[BotsManager] ⏭️ Данные не изменились (version=' + currentDataVersion + '), пропускаем обновление UI');
-                        return;
-                    }
-                    this.logDebug('[BotsManager] 🔄 Данные обновились (version: ' + this.lastDataVersion + ' → ' + currentDataVersion + ')');
                     this.lastDataVersion = currentDataVersion;
                     
                     // Сохраняем флаг загрузки и статистику для отображения при пустом списке
@@ -217,18 +212,24 @@
                         this.updateClearButtonVisibility(actualSearchTerm);
                     }
                     
-                    // Обновляем статус
-                    this.updateServiceStatus('online', `${window.languageUtils.translate('updated')}: ${data.last_update ? new Date(data.last_update).toLocaleTimeString() : window.languageUtils.translate('unknown')}`);
+                    // Обновляем статус: время последней загрузки и интервал из конфига («Синхронизация позиций»)
+                    const updatedAt = data.response_time || data.last_update;
+                    const intervalSec = Math.round(this.refreshInterval / 1000);
+                    const timeStr = updatedAt ? new Date(updatedAt).toLocaleTimeString() : (window.languageUtils.translate('unknown') || '—');
+                    this.updateServiceStatus('online', `${window.languageUtils.translate('updated')}: ${timeStr} (каждые ${intervalSec} сек)`);
                 } else {
-                    throw new Error(data.error || 'Ошибка загрузки данных');
+                    const errMsg = data.error || data.message || 'Ошибка загрузки данных';
+                    throw new Error(errMsg);
                 }
             } else {
-                throw new Error(`HTTP ${response.status}`);
+                const statusText = response.statusText || '';
+                throw new Error(`HTTP ${response.status}${statusText ? ': ' + statusText : ''}`);
             }
             
         } catch (error) {
+            const message = (error && error.message) ? error.message : 'Ошибка загрузки данных';
             console.error('[BotsManager] ❌ Ошибка загрузки RSI данных:', error);
-            this.updateServiceStatus('offline', 'Ошибка загрузки данных');
+            this.updateServiceStatus('offline', message);
         }
     },
             async loadDelistedCoins() {

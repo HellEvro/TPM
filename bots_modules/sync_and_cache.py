@@ -2841,7 +2841,9 @@ def check_missing_stop_losses():
         return False
 
 def check_startup_position_conflicts():
-    """Проверяет конфликты позиций при запуске системы и принудительно останавливает проблемные боты"""
+    """Проверяет конфликты позиций при запуске системы и принудительно останавливает проблемные боты.
+    ⚡ Сетевые вызовы (get_positions, cancel_all_orders) выполняются ВНЕ блокировки, чтобы auto_save_worker
+    и другие потоки могли получить bots_data_lock."""
     try:
         if not ensure_exchange_initialized():
             logger.warning(" ⚠️ Биржа не инициализирована, пропускаем проверку конфликтов")
@@ -2850,90 +2852,97 @@ def check_startup_position_conflicts():
         logger.info(" 🔍 Проверка конфликтов...")
         
         conflicts_found = 0
-        bots_paused = 0
         limit_fills_updated = 0
         
+        # 1) Под блокировкой только собираем список ботов для проверки (без сетевых вызовов)
         with bots_data_lock:
+            to_check = []
             for bot_key, bot_data in bots_data['bots'].items():
-                try:
-                    bot_status = bot_data.get('status')
-                    # Чистый символ для API (бот может быть ключом symbol или symbol_side, например BTCUSDT_LONG)
-                    api_symbol = bot_data.get('symbol') or (bot_key.rsplit('_', 1)[0] if ('_LONG' in bot_key or '_SHORT' in bot_key) else bot_key)
-                    symbol = api_symbol  # для логов и target_symbol ниже
-
-                    # Проверяем только активные боты (не idle/paused)
-                    if bot_status in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']]:
-                        continue
-                    # Символ для Bybit: если уже с USDT — как есть, иначе добавить USDT
-                    symbol_for_api = api_symbol if (api_symbol and 'USDT' in api_symbol) else f"{api_symbol}USDT"
-
-                    # Проверяем позицию на бирже
-                    from bots_modules.imports_and_globals import get_exchange
-                    current_exchange = get_exchange() or exchange
-                    positions_response = current_exchange.client.get_positions(
-                        category="linear",
-                        symbol=symbol_for_api
-                    )
-                    
-                    if positions_response.get('retCode') == 0:
-                        positions = positions_response['result']['list']
-                        has_position = False
-                        
-                        # Фильтруем позиции только для нужного символа
-                        target_symbol = symbol_for_api
-                        for pos in positions:
-                            pos_symbol = pos.get('symbol', '')
-                            if pos_symbol == target_symbol:  # Проверяем только нужный символ
-                                size = float(pos.get('size', 0))
-                                if abs(size) > 0:  # Есть активная позиция
-                                    has_position = True
-                                    side = 'LONG' if pos.get('side') == 'Buy' else 'SHORT'
-                                    break
-                        
-                        # Проверяем конфликт
-                        if has_position:
-                            # Есть позиция на бирже
-                            if bot_status in [BOT_STATUS['RUNNING']]:
-                                # ✅ НЕ конфликт! Лимитный ордер заполнился — обновляем бота в IN_POSITION
-                                # (бот RUNNING без позиции = ожидал лимитку, она сработала)
-                                new_status = BOT_STATUS['IN_POSITION_LONG'] if side == 'LONG' else BOT_STATUS['IN_POSITION_SHORT']
-                                entry_price = float(pos.get('avgPrice', 0) or 0)
-                                size = float(pos.get('size', 0) or 0)
-                                bot_data['status'] = new_status
-                                bot_data['position_side'] = side
-                                bot_data['entry_price'] = entry_price
-                                bot_data['position_size_coins'] = abs(size)
-                                bot_data['last_update'] = datetime.now().isoformat()
-                                if entry_price and size:
-                                    bot_data['position_size'] = entry_price * abs(size)
-                                limit_fills_updated += 1
-                                logger.info(f" ✅ {symbol}: Лимитный ордер исполнен, бот обновлён → {new_status} (entry={entry_price}, size={size})")
-                                
-                            elif bot_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
-                                # Корректное состояние - бот в позиции
-                                pass
-                        else:
-                            # Нет позиции на бирже
-                            if bot_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
-                                # КОНФЛИКТ: бот думает что в позиции, но позиции нет на бирже
-                                logger.warning(f" 🚨 {symbol}: КОНФЛИКТ! Бот показывает позицию, но на бирже её нет!")
-                                cancel_all_orders_for_symbol_on_bot_delete(bot_key)
-                                with bots_data_lock:
-                                    if bot_key in bots_data['bots']:
-                                        del bots_data['bots'][bot_key]
-                                
-                                conflicts_found += 1
-                                
-                                logger.warning(f" 🗑️ {symbol}: Бот удален - позиции нет на бирже")
-                    else:
-                        logger.warning(f" ❌ {symbol}: Ошибка получения позиций: {positions_response.get('retMsg', 'Unknown error')}")
-                        
-                except Exception as e:
-                    logger.error(f" ❌ Ошибка проверки {symbol}: {e}")
+                bot_status = bot_data.get('status')
+                if bot_status in [BOT_STATUS['IDLE'], BOT_STATUS['PAUSED']]:
+                    continue
+                api_symbol = bot_data.get('symbol') or (bot_key.rsplit('_', 1)[0] if ('_LONG' in bot_key or '_SHORT' in bot_key) else bot_key)
+                symbol_for_api = api_symbol if (api_symbol and 'USDT' in api_symbol) else f"{api_symbol}USDT"
+                to_check.append((bot_key, api_symbol, symbol_for_api, bot_status))
+        
+        if not to_check:
+            logger.info(" ✅ Конфликтов позиций не найдено (нет активных ботов)")
+            return False
+        
+        # 2) ВНЕ блокировки: сетевые вызовы для каждого бота
+        from bots_modules.imports_and_globals import get_exchange
+        current_exchange = get_exchange() or exchange
+        actions_delete = []   # (bot_key, symbol) для удаления
+        actions_update = []   # (bot_key, symbol, new_status, entry_price, size, side) для обновления лимитки
+        
+        for bot_key, symbol, symbol_for_api, bot_status in to_check:
+            try:
+                positions_response = current_exchange.client.get_positions(
+                    category="linear",
+                    symbol=symbol_for_api
+                )
+                
+                if positions_response.get('retCode') != 0:
+                    logger.warning(f" ❌ {symbol}: Ошибка получения позиций: {positions_response.get('retMsg', 'Unknown error')}")
+                    continue
+                
+                positions = positions_response['result']['list']
+                has_position = False
+                side = None
+                pos = None
+                for p in positions:
+                    if p.get('symbol') == symbol_for_api:
+                        size = float(p.get('size', 0))
+                        if abs(size) > 0:
+                            has_position = True
+                            side = 'LONG' if p.get('side') == 'Buy' else 'SHORT'
+                            pos = p
+                            break
+                
+                if has_position:
+                    if bot_status in [BOT_STATUS['RUNNING']]:
+                        entry_price = float(pos.get('avgPrice', 0) or 0)
+                        size = float(pos.get('size', 0) or 0)
+                        new_status = BOT_STATUS['IN_POSITION_LONG'] if side == 'LONG' else BOT_STATUS['IN_POSITION_SHORT']
+                        actions_update.append((bot_key, symbol, new_status, entry_price, size, side))
+                else:
+                    if bot_status in [BOT_STATUS['IN_POSITION_LONG'], BOT_STATUS['IN_POSITION_SHORT']]:
+                        actions_delete.append((bot_key, symbol))
+            except Exception as e:
+                logger.error(f" ❌ Ошибка проверки {symbol}: {e}")
+        
+        # 3) Применяем удаления (сначала отмена ордеров, затем del под lock)
+        for bot_key, symbol in actions_delete:
+            logger.warning(f" 🚨 {symbol}: КОНФЛИКТ! Бот показывает позицию, но на бирже её нет!")
+            try:
+                cancel_all_orders_for_symbol_on_bot_delete(bot_key)
+            except Exception as e:
+                logger.warning(f" ⚠️ Ошибка отмены ордеров для {symbol}: {e}")
+            with bots_data_lock:
+                if bot_key in bots_data['bots']:
+                    del bots_data['bots'][bot_key]
+            conflicts_found += 1
+            logger.warning(f" 🗑️ {symbol}: Бот удален - позиции нет на бирже")
+        
+        # 4) Применяем обновления (лимитка исполнена → обновляем бота в IN_POSITION)
+        for bot_key, symbol, new_status, entry_price, size, side in actions_update:
+            with bots_data_lock:
+                bot_data = bots_data['bots'].get(bot_key)
+                if not bot_data:
+                    continue
+                bot_data['status'] = new_status
+                bot_data['position_side'] = side
+                bot_data['entry_price'] = entry_price
+                bot_data['position_size_coins'] = abs(size)
+                bot_data['last_update'] = datetime.now().isoformat()
+                if entry_price and size:
+                    bot_data['position_size'] = entry_price * abs(size)
+            limit_fills_updated += 1
+            logger.info(f" ✅ {symbol}: Лимитный ордер исполнен, бот обновлён → {new_status} (entry={entry_price}, size={size})")
         
         if conflicts_found > 0 or limit_fills_updated > 0:
             if conflicts_found > 0:
-                logger.warning(f" 🚨 Найдено {conflicts_found} конфликтов, остановлено {bots_paused} ботов")
+                logger.warning(f" 🚨 Найдено {conflicts_found} конфликтов")
             if limit_fills_updated > 0:
                 logger.info(f" ✅ Обновлено {limit_fills_updated} ботов (лимитные ордера исполнены)")
             save_bots_state()
