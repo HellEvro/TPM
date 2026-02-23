@@ -2620,23 +2620,28 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             future.cancel()
                         break
 
-                    # Таймаут 120с — для медленных символов (AIN и др.); ждём по 3с с проверкой shutdown
-                    batch_timeout = 120
-                    result_timeout = 25
+                    # Локальный расчёт — 45с макс на батч; один зависший символ не блокирует остальных
+                    batch_timeout = 45
+                    result_timeout = 10
                     all_futs = list(future_to_symbol.keys())
                     remaining = set(all_futs)
                     done_set = set()
                     deadline = time.time() + batch_timeout
-                    wait_chunk = 3
+                    wait_chunk = 2
+                    last_progress_log = time.time()
                     while remaining and time.time() < deadline:
                         if shutdown_flag.is_set():
                             shutdown_requested = True
                             break
                         partial_done, remaining = concurrent.futures.wait(
                             remaining, timeout=wait_chunk,
-                            return_when=concurrent.futures.ALL_COMPLETED
+                            return_when=concurrent.futures.FIRST_COMPLETED
                         )
                         done_set |= partial_done
+                        # Лог прогресса каждые 10 сек — видно что не зависло
+                        if time.time() - last_progress_log >= 10:
+                            logger.info(f"📊 RSI батч {batch_num}: готово {len(done_set)}/{len(batch)}, осталось {len(remaining)}")
+                            last_progress_log = time.time()
                     for future in done_set:
                         if shutdown_flag.is_set():
                             shutdown_requested = True
