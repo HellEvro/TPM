@@ -2125,10 +2125,10 @@ def load_all_coins_candles_fast():
             else:
                 pairs_for_tf = pairs
 
-            # bulk_mode: 200 свечей за раз — 552 монет = 3 батча (как RSI)
+            # bulk_mode: 200 свечей. Bybit 10 req/s — 6 воркеров чтобы не бить rate limit
             use_bulk = getattr(current_exchange.__class__, '__name__', '') == 'BybitExchange'
             batch_size = 200 if use_bulk else 10
-            base_max_workers = min(10, batch_size)
+            base_max_workers = 6 if use_bulk else min(6, batch_size)
             batch_timeout = 15 if use_bulk else 45
             candles_cache = {}
             
@@ -2573,17 +2573,19 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             else:
                 pairs_for_tf = pairs
 
-            # RSI — локальный расчёт по кэшу. Воркеры = ядра (N100=4, иначе GIL+оверлоад)
-            batch_size = 200
-            total_batches = (len(pairs_for_tf) + batch_size - 1) // batch_size
+            # RSI — локальный расчёт. N100: 4 воркера, малый батч; иначе — крупнее
             _cpu_count = os.cpu_count() or 4
-            if _cpu_count <= 4:  # N100, Celeron — не перегружать
+            if _cpu_count <= 4:  # N100 — меньше конкуренции, быстрее отсечка зависших
+                batch_size = 100
                 rsi_max_workers = max(4, _cpu_count)
             else:
+                batch_size = 200
                 rsi_max_workers = min(64, max(16, _cpu_count * 2))
             if _is_low_resource_mode():
-                rsi_max_workers = min(rsi_max_workers, 8)
-                logger.info(f"📊 RSI: low_resource — {rsi_max_workers} воркеров")
+                rsi_max_workers = min(rsi_max_workers, 6)
+                batch_size = min(batch_size, 100)
+                logger.info(f"📊 RSI: low_resource — {rsi_max_workers} воркеров, батч {batch_size}")
+            total_batches = (len(pairs_for_tf) + batch_size - 1) // batch_size
 
             for i in range(0, len(pairs_for_tf), batch_size):
                 if shutdown_flag.is_set():
@@ -2621,9 +2623,9 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             future.cancel()
                         break
 
-                    # Локальный расчёт — 45с макс на батч
-                    batch_timeout = 45
-                    result_timeout = 10
+                    # Локальный расчёт — 20с на батч; зависшие символы не блокируют раунд
+                    batch_timeout = 20
+                    result_timeout = 5
                     all_futs = list(future_to_symbol.keys())
                     remaining = set(all_futs)
                     done_set = set()
