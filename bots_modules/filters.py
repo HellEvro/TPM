@@ -2573,13 +2573,16 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             else:
                 pairs_for_tf = pairs
 
-            # RSI — локальный расчёт по кэшу, БЕЗ API! Максимальная скорость
-            batch_size = 200  # 552 монет = 3 батча
+            # RSI — локальный расчёт по кэшу. Воркеры = ядра (N100=4, иначе GIL+оверлоад)
+            batch_size = 200
             total_batches = (len(pairs_for_tf) + batch_size - 1) // batch_size
-            _cpu_count = (os.cpu_count() or 8)
-            rsi_max_workers = min(64, max(32, _cpu_count * 3))
+            _cpu_count = os.cpu_count() or 4
+            if _cpu_count <= 4:  # N100, Celeron — не перегружать
+                rsi_max_workers = max(4, _cpu_count)
+            else:
+                rsi_max_workers = min(64, max(16, _cpu_count * 2))
             if _is_low_resource_mode():
-                rsi_max_workers = 24
+                rsi_max_workers = min(rsi_max_workers, 8)
                 logger.info(f"📊 RSI: low_resource — {rsi_max_workers} воркеров")
 
             for i in range(0, len(pairs_for_tf), batch_size):
