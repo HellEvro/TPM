@@ -2576,10 +2576,10 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
 
             batch_size = 25  # Малый батч для слабых ПК — меньше таймаутов, меньше lock contention
             total_batches = (len(pairs_for_tf) + batch_size - 1) // batch_size
-            rsi_max_workers = 4  # Меньше воркеров = меньше конкуренции за bots_data_lock
+            rsi_max_workers = 6  # Баланс скорость/нагрузка
             if _is_low_resource_mode():
-                rsi_max_workers = 2
-                logger.info("📊 RSI: режим низкой нагрузки — 2 воркера (слабый ПК)")
+                rsi_max_workers = 6  # Не снижаем — RSI должен считаться быстрее
+                logger.info("📊 RSI: режим низкой нагрузки — 6 воркеров")
 
             for i in range(0, len(pairs_for_tf), batch_size):
                 if shutdown_flag.is_set():
