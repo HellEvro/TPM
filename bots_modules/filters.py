@@ -2573,12 +2573,14 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             else:
                 pairs_for_tf = pairs
 
-            batch_size = 25  # Малый батч для слабых ПК — меньше таймаутов, меньше lock contention
+            # RSI — локальный расчёт по кэшу свечей, БЕЗ API! Можно максимально ускорить
+            batch_size = 100  # Крупные батчи — меньше накладных расходов
             total_batches = (len(pairs_for_tf) + batch_size - 1) // batch_size
-            rsi_max_workers = 6  # Баланс скорость/нагрузка
+            _cpu_count = (os.cpu_count() or 8)
+            rsi_max_workers = min(32, max(16, _cpu_count * 2))  # Используем ядра, без API лимитов
             if _is_low_resource_mode():
-                rsi_max_workers = 6  # Не снижаем — RSI должен считаться быстрее
-                logger.info("📊 RSI: режим низкой нагрузки — 6 воркеров")
+                rsi_max_workers = 12  # Слабый ПК — всё равно ускоряем (локально, не API)
+                logger.info(f"📊 RSI: режим низкой нагрузки — {rsi_max_workers} воркеров (локально)")
 
             for i in range(0, len(pairs_for_tf), batch_size):
                 if shutdown_flag.is_set():
