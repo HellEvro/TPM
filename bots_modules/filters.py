@@ -2125,9 +2125,9 @@ def load_all_coins_candles_fast():
             else:
                 pairs_for_tf = pairs
 
-            # bulk_mode: 100 свечей, 10 воркеров — загрузка за ~30–60 с (НЕ ограничиваем для слабых ПК — узкое место RSI)
+            # bulk_mode: 200 свечей за раз — 552 монет = 3 батча (как RSI)
             use_bulk = getattr(current_exchange.__class__, '__name__', '') == 'BybitExchange'
-            batch_size = 100 if use_bulk else 10
+            batch_size = 200 if use_bulk else 10
             base_max_workers = min(10, batch_size)
             batch_timeout = 15 if use_bulk else 45
             candles_cache = {}
