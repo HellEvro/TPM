@@ -2373,60 +2373,62 @@ def load_all_coins_candles_fast():
         logger.error(f"❌ Ошибка: {e}")
         return False
 
-def load_all_coins_rsi(required_timeframes=None):
+def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_symbols_to_tf=None):
     """✅ ОПТИМИЗАЦИЯ: Загружает RSI для всех доступных монет для всех требуемых таймфреймов
 
-    Рассчитывает RSI для:
-    - Системного таймфрейма (для новых входов)
-    - Всех entry_timeframe из ботов в позиции
-
-    required_timeframes: если передан (из continuous_data_loader), не вызываем get_required_timeframes_for_rsi()
-    и не берём bots_data_lock повторно — снижает конкуренцию за блокировку.
+    Рассчитывает RSI для системного ТФ и entry_tf ботов в позиции.
+    Когда вызывается из continuous_data_loader, передаются required_timeframes, reduced_mode, position_symbols_to_tf —
+    тогда блокировка bots_data_lock НЕ берётся (снижает конкуренцию и зависания).
     """
     global coins_rsi_data
 
     operation_start = time.time()
     logger.info("📊 RSI: запускаем полное обновление")
 
-    # ✅ Оптимизация: при лимите ботов — режим «только позиции» (reduced_mode)
-    reduced_mode = False
-    position_symbols_to_tf: dict[str, list[str]] = {}  # symbol -> [entry_tf, ...]
-    try:
-        from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
-        from bot_engine.config_loader import get_config_value, get_current_timeframe, TIMEFRAME
-        with bots_data_lock:
-            bots = bots_data.get('bots', {})
-            auto_config = bots_data.get('auto_bot_config', {})
-        max_concurrent = get_config_value(auto_config, 'max_concurrent')
-        default_tf = None
+    # ✅ Когда загрузчик передал все данные — не берём lock вообще
+    caller_provided = (
+        required_timeframes is not None
+        and reduced_mode is not None
+        and (not reduced_mode or (position_symbols_to_tf is not None))
+    )
+    if not caller_provided:
+        reduced_mode = False
+        position_symbols_to_tf = {}
         try:
-            default_tf = get_current_timeframe() or TIMEFRAME
-        except Exception:
-            default_tf = TIMEFRAME
-        current_active = sum(
-            1 for b in bots.values()
-            if b.get('status') not in [BOT_STATUS.get('IDLE'), BOT_STATUS.get('PAUSED')]
-        )
-        if current_active >= max_concurrent and max_concurrent > 0:
-            for symbol, bot_data in bots.items():
-                status = bot_data.get('status')
-                if status in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
-                    entry_tf = bot_data.get('entry_timeframe') or default_tf
-                    if symbol not in position_symbols_to_tf:
-                        position_symbols_to_tf[symbol] = []
-                    if entry_tf not in position_symbols_to_tf[symbol]:
-                        position_symbols_to_tf[symbol].append(entry_tf)
-            if position_symbols_to_tf:
-                reduced_mode = True
-                # ✅ ИСПРАВЛЕНИЕ: При пустом position_symbols_to_tf не возвращаем False — работаем в full mode.
-                logger.info(
-                    f"📊 RSI: режим «только позиции» — лимит ({current_active}/{max_concurrent}). "
-                    f"Загружаем только {len(position_symbols_to_tf)} монет с позициями."
-                )
-    except Exception as _e:
-        pass  # при ошибке — продолжаем как обычно (full mode)
+            from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
+            from bot_engine.config_loader import get_config_value, get_current_timeframe, TIMEFRAME
+            with bots_data_lock:
+                bots = bots_data.get('bots', {})
+                auto_config = bots_data.get('auto_bot_config', {})
+            max_concurrent = get_config_value(auto_config, 'max_concurrent')
+            default_tf = None
+            try:
+                default_tf = get_current_timeframe() or TIMEFRAME
+            except Exception:
+                default_tf = TIMEFRAME
+            current_active = sum(
+                1 for b in bots.values()
+                if b.get('status') not in [BOT_STATUS.get('IDLE'), BOT_STATUS.get('PAUSED')]
+            )
+            if current_active >= max_concurrent and max_concurrent > 0:
+                for symbol, bot_data in bots.items():
+                    status = bot_data.get('status')
+                    if status in [BOT_STATUS.get('IN_POSITION_LONG'), BOT_STATUS.get('IN_POSITION_SHORT')]:
+                        entry_tf = bot_data.get('entry_timeframe') or default_tf
+                        if symbol not in position_symbols_to_tf:
+                            position_symbols_to_tf[symbol] = []
+                        if entry_tf not in position_symbols_to_tf[symbol]:
+                            position_symbols_to_tf[symbol].append(entry_tf)
+                if position_symbols_to_tf:
+                    reduced_mode = True
+                    logger.info(
+                        f"📊 RSI: режим «только позиции» — лимит ({current_active}/{max_concurrent}). "
+                        f"Загружаем только {len(position_symbols_to_tf)} монет с позициями."
+                    )
+        except Exception as _e:
+            pass
 
-    # ⚡ Таймаут зависшего обновления: если update_in_progress > 5 мин — сбрасываем и запускаем заново
+    # ⚡ Таймаут зависшего обновления
     RSI_UPDATE_STALE_SEC = 300
     if coins_rsi_data.get("update_in_progress"):
         started_at = coins_rsi_data.get("rsi_update_started_at") or 0
@@ -2440,10 +2442,8 @@ def load_all_coins_rsi(required_timeframes=None):
             logger.info("Обновление RSI уже выполняется...")
             return False
 
-    # ⚡ УСТАНАВЛИВАЕМ флаг БЕЗ блокировки
     coins_rsi_data["update_in_progress"] = True
     coins_rsi_data["rsi_update_started_at"] = time.time()
-    # ✅ UI блокировка уже установлена в continuous_data_loader
 
     if shutdown_flag.is_set():
         logger.warning("⏹️ Обновление RSI отменено: система завершает работу")
@@ -2451,20 +2451,20 @@ def load_all_coins_rsi(required_timeframes=None):
         return False
 
     try:
-        # ✅ В reduced_mode: только entry_tf позиций; иначе системный ТФ + entry_tf ботов
-        if reduced_mode:
-            required_timeframes = sorted(set(tf for tfs in position_symbols_to_tf.values() for tf in tfs))
-            pairs = list(position_symbols_to_tf.keys())
-        else:
-            if required_timeframes is None or len(required_timeframes) == 0:
-                required_timeframes = get_required_timeframes_for_rsi()
-            if not required_timeframes:
-                try:
-                    from bot_engine.config_loader import get_current_timeframe
-                    required_timeframes = [get_current_timeframe()]
-                except Exception:
-                    from bot_engine.config_loader import TIMEFRAME
-                    required_timeframes = [TIMEFRAME]
+        if not caller_provided:
+            if reduced_mode:
+                required_timeframes = sorted(set(tf for tfs in position_symbols_to_tf.values() for tf in tfs))
+                pairs = list(position_symbols_to_tf.keys())
+            else:
+                if required_timeframes is None or len(required_timeframes) == 0:
+                    required_timeframes = get_required_timeframes_for_rsi()
+                if not required_timeframes:
+                    try:
+                        from bot_engine.config_loader import get_current_timeframe
+                        required_timeframes = [get_current_timeframe()]
+                    except Exception:
+                        from bot_engine.config_loader import TIMEFRAME
+                        required_timeframes = [TIMEFRAME]
 
         if not required_timeframes:
             try:
@@ -2475,6 +2475,10 @@ def load_all_coins_rsi(required_timeframes=None):
                 required_timeframes = [TIMEFRAME]
 
         logger.info(f"📊 RSI: рассчитываем для таймфреймов: {required_timeframes}")
+
+        # При reduced_mode пары уже заданы (из загрузчика или из lock-блока выше)
+        if reduced_mode and position_symbols_to_tf:
+            pairs = list(position_symbols_to_tf.keys())
 
         # ✅ КРИТИЧНО: Создаем ВРЕМЕННОЕ хранилище для всех монет
         # Обновляем coins_rsi_data ТОЛЬКО после завершения всех проверок!
