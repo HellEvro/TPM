@@ -2627,56 +2627,55 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                     done_set = set()
                     deadline = time.time() + batch_timeout
                     wait_chunk = 3
-                    try:
-                        while remaining and time.time() < deadline:
-                            if shutdown_flag.is_set():
-                                shutdown_requested = True
-                                break
-                            partial_done, remaining = concurrent.futures.wait(
-                                remaining, timeout=wait_chunk,
-                                return_when=concurrent.futures.ALL_COMPLETED
-                            )
-                            done_set |= partial_done
-                        for future in done_set:
-                            if shutdown_flag.is_set():
-                                shutdown_requested = True
-                                break
+                    while remaining and time.time() < deadline:
+                        if shutdown_flag.is_set():
+                            shutdown_requested = True
+                            break
+                        partial_done, remaining = concurrent.futures.wait(
+                            remaining, timeout=wait_chunk,
+                            return_when=concurrent.futures.ALL_COMPLETED
+                        )
+                        done_set |= partial_done
+                    for future in done_set:
+                        if shutdown_flag.is_set():
+                            shutdown_requested = True
+                            break
 
-                            symbol = future_to_symbol.get(future)
-                            if symbol is None:
-                                continue
-                            try:
-                                result = future.result(timeout=result_timeout)
-                                if result:
-                                    # ✅ ОПТИМИЗАЦИЯ: Объединяем данные для всех таймфреймов
-                                    if result["symbol"] in temp_coins_data:
-                                        # Объединяем с существующими данными
-                                        temp_coins_data[result["symbol"]].update(
-                                            result
-                                        )
-                                    else:
-                                        temp_coins_data[result["symbol"]] = result
-
-                                    coins_rsi_data["successful_coins"] += 1
-                                    batch_success += 1
+                        symbol = future_to_symbol.get(future)
+                        if symbol is None:
+                            continue
+                        try:
+                            result = future.result(timeout=result_timeout)
+                            if result:
+                                # ✅ ОПТИМИЗАЦИЯ: Объединяем данные для всех таймфреймов
+                                if result["symbol"] in temp_coins_data:
+                                    # Объединяем с существующими данными
+                                    temp_coins_data[result["symbol"]].update(
+                                        result
+                                    )
                                 else:
-                                    coins_rsi_data["failed_coins"] += 1
-                                    batch_fail += 1
-                            except Exception as e:
-                                logger.error(f"❌ {symbol}: {e}")
+                                    temp_coins_data[result["symbol"]] = result
+
+                                coins_rsi_data["successful_coins"] += 1
+                                batch_success += 1
+                            else:
                                 coins_rsi_data["failed_coins"] += 1
                                 batch_fail += 1
+                        except Exception as e:
+                            logger.error(f"❌ {symbol}: {e}")
+                            coins_rsi_data["failed_coins"] += 1
+                            batch_fail += 1
 
-                        # Не завершённые по таймауту — считаем ошибками
-                        if remaining:
-                            pending = [future_to_symbol.get(f, '?') for f in remaining if f in future_to_symbol]
-                            logger.error(
-                                "⚠️ Timeout при загрузке RSI для пакета "
-                                f"{batch_num} (ТФ={timeframe}) "
-                                f"(не завершено {len(pending)} из {len(batch)}, примеры: {pending[:5]})"
-                            )
-                            coins_rsi_data["failed_coins"] += len(remaining)
-                            batch_fail += len(remaining)
+                    # Не завершённые по таймауту — считаем ошибками
+                    if remaining:
+                        pending = [future_to_symbol.get(f, '?') for f in remaining if f in future_to_symbol]
+                        logger.error(
+                            "⚠️ Timeout при загрузке RSI для пакета "
+                            f"{batch_num} (ТФ={timeframe}) "
+                            f"(не завершено {len(pending)} из {len(batch)}, примеры: {pending[:5]})"
+                        )
+                        coins_rsi_data["failed_coins"] += len(remaining)
+                        batch_fail += len(remaining)
 
                 if shutdown_flag.is_set():
                     shutdown_requested = True
