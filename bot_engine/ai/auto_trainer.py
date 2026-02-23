@@ -325,7 +325,9 @@ class AutoTrainer:
         self.running = False
         
         if self.thread:
-            self.thread.join(timeout=5)
+            self.thread.join(timeout=2)
+            if self.thread.is_alive():
+                logger.warning("[AutoTrainer] Поток не завершился за 2с — выходим (daemon)")
         
         logger.warning("[AutoTrainer] ✅ Остановлен")
     

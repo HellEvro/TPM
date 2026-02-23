@@ -80,6 +80,7 @@ if sys.stdout.encoding != 'utf-8':
 # --- Синхронизация времени с Bybit (устраняет ErrCode 10002 при рассинхроне локальных часов) ---
 _bybit_time_offset_ms = 0
 _original_pybit_generate_timestamp = None
+_bybit_last_sync_time = 0.0  # время последней синхронизации (time.time())
 
 
 def _bybit_synced_timestamp():
@@ -93,25 +94,51 @@ def sync_bybit_time_from_server(server_time_ms: int) -> bool:
     server_time_ms: серверное время в миллисекундах (из response['time'] или get_server_time).
     Возвращает True, если патч применён.
     """
-    global _bybit_time_offset_ms, _original_pybit_generate_timestamp
+    global _bybit_time_offset_ms, _original_pybit_generate_timestamp, _bybit_last_sync_time
     if not server_time_ms:
         return False
     local_ms = int(time.time() * 1000)
     _bybit_time_offset_ms = server_time_ms - local_ms
+    _bybit_last_sync_time = time.time()
     try:
         import pybit._helpers as _helpers
         if _original_pybit_generate_timestamp is None:
             _original_pybit_generate_timestamp = _helpers.generate_timestamp
         _helpers.generate_timestamp = _bybit_synced_timestamp
+        clock_dir = "впереди" if _bybit_time_offset_ms < 0 else "позади"
         logger.info(
-            "🕐 [BYBIT] Синхронизация времени с сервером Bybit: offset=%d мс (локальные часы %s)",
-            _bybit_time_offset_ms,
-            "впереди" if _bybit_time_offset_ms < 0 else "позади"
+            "🕐 [BYBIT] Синхронизация времени с сервером Bybit: offset=%s мс (локальные часы %s)"
+            % (_bybit_time_offset_ms, clock_dir)
         )
         return True
     except Exception as e:
         logger.warning("⚠️ [BYBIT] Не удалось применить синхронизацию времени pybit: %s", e)
         return False
+
+
+def ensure_bybit_time_synced(client, max_age_sec: float = 300.0) -> bool:
+    """
+    Периодическая синхронизация времени с Bybit: если прошло больше max_age_sec с последней синхронизации,
+    запрашиваем серверное время и обновляем offset. Устраняет 10002 при дрейфе системных часов.
+    client: self.client (HTTP из pybit).
+    """
+    global _bybit_last_sync_time
+    now = time.time()
+    if now - _bybit_last_sync_time <= max_age_sec:
+        return True
+    try:
+        r = client.get_server_time()
+        if isinstance(r, dict) and r.get('retCode') == 0:
+            server_ms = r.get('time')
+            if not server_ms and r.get('result'):
+                ts = r.get('result', {}).get('timeSecond')
+                if ts is not None:
+                    server_ms = int(ts) * 1000
+            if server_ms:
+                return sync_bybit_time_from_server(int(server_ms))
+    except Exception as e:
+        logger.debug("[BYBIT] Периодическая синхронизация времени пропущена: %s", e)
+    return False
 
 
 def clean_symbol(symbol):
@@ -125,6 +152,7 @@ class BybitExchange(BaseExchange):
         # Настраиваем пул соединений для requests и pybit
         self._setup_connection_pool()
         
+        # recv_window в норме 20 сек; 10002 устраняем периодической синхронизацией времени с сервером, а не расширением окна
         self.client = HTTP(
             api_key=api_key,
             api_secret=api_secret,
@@ -133,18 +161,7 @@ class BybitExchange(BaseExchange):
             recv_window=20000
         )
         # Синхронизация времени с Bybit при старте (снижает ErrCode 10002 при рассинхроне часов)
-        try:
-            r = self.client.get_server_time()
-            if isinstance(r, dict) and r.get('retCode') == 0:
-                server_ms = r.get('time')
-                if not server_ms and r.get('result'):
-                    ts = r.get('result', {}).get('timeSecond')
-                    if ts is not None:
-                        server_ms = int(ts) * 1000
-                if server_ms:
-                    sync_bybit_time_from_server(int(server_ms))
-        except Exception as e:
-            logger.debug("[BYBIT] Синхронизация времени при инициализации пропущена: %s", e)
+        ensure_bybit_time_synced(self.client, max_age_sec=0)  # 0 = принудительно при первом запуске
         self.position_mode = position_mode
         self.limit_order_offset = limit_order_offset  # Отступ цены для лимитного ордера в процентах
         # Режим маржи: 'auto' = следовать бирже, 'cross' = кросс-маржа, 'isolated' = изолированная
@@ -226,6 +243,10 @@ class BybitExchange(BaseExchange):
             
         except Exception as e:
             logging.warning(f"⚠️ Не удалось настроить пул соединений: {e}")
+
+    def ensure_time_synced(self, max_age_sec: float = 300.0) -> bool:
+        """Периодическая синхронизация времени с Bybit (раз в max_age_sec). Устраняет 10002 при дрейфе часов."""
+        return ensure_bybit_time_synced(self.client, max_age_sec=max_age_sec)
 
     def reset_request_delay(self):
         """Сбрасывает текущую задержку запросов к базовому значению.

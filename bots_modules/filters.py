@@ -2226,6 +2226,20 @@ def load_all_coins_candles_fast():
         
         logger.info(f"✅ Загрузка завершена: {len(merged_candles_cache)} монет для {len(required_timeframes)} таймфреймов")
 
+        # Ограничение размера кэша в памяти (снижение потребления ОЗУ при 552 монетах × 30d)
+        CANDLES_CACHE_MAX_PER_SYMBOL = 1000  # храним последние N свечей на символ/ТФ
+        def _trim_candles(cache_dict):
+            for sym, tf_data in cache_dict.items():
+                if not isinstance(tf_data, dict):
+                    continue
+                for tf, data in tf_data.items():
+                    if isinstance(data, dict) and isinstance(data.get('candles'), list):
+                        cand = data['candles']
+                        if len(cand) > CANDLES_CACHE_MAX_PER_SYMBOL:
+                            data['candles'] = cand[-CANDLES_CACHE_MAX_PER_SYMBOL:]
+            return cache_dict
+        merged_candles_cache = _trim_candles(merged_candles_cache)
+
         # reduced_mode: мержим только обновлённые монеты, не затираем остальные
         try:
             logger.info(f"💾 Сохраняем кэш в глобальное хранилище...")
@@ -2236,7 +2250,7 @@ def load_all_coins_candles_fast():
                         if sym not in existing:
                             existing[sym] = {}
                         existing[sym].update(tf_data)
-                    coins_rsi_data['candles_cache'] = existing
+                    coins_rsi_data['candles_cache'] = _trim_candles(existing)
             elif reduced_mode and not merged_candles_cache:
                 pass  # Нет позиций — кэш свечей не трогаем
             else:

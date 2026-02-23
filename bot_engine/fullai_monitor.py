@@ -34,7 +34,8 @@ def start_fullai_monitor() -> bool:
     _monitor_stop.clear()
     _monitor_thread = threading.Thread(target=_monitor_loop, daemon=True)
     _monitor_thread.start()
-    logger.info("[FullAI Monitor] Запущен — проверка позиций каждые %.0f сек", _get_monitor_interval())
+    interval = _get_monitor_interval()
+    logger.info("[FullAI Monitor] Запущен — проверка позиций каждые %s сек" % (interval,))
     return True
 
 
