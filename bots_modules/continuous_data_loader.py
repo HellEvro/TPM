@@ -108,15 +108,7 @@ class ContinuousDataLoader:
                 coins_rsi_data['processing_cycle'] = True  # Флаг для UI (опционально)
                 logger.info("Начинаем обработку данных")
 
-                # Периодическая синхронизация времени с Bybit (раз в 5 мин) — устраняет 10002, не расширяя recv_window
-                try:
-                    from bots_modules.imports_and_globals import get_exchange
-                    from exchanges.bybit_exchange import BybitExchange
-                    exch = get_exchange()
-                    if isinstance(exch, BybitExchange):
-                        exch.ensure_time_synced(max_age_sec=300)
-                except Exception as _sync_err:
-                    pass
+                # Синхронизация времени Bybit выполняется в app.py (периодически), здесь не дублируем
 
                 # Получаем текущий таймфрейм для логирования
                 try:

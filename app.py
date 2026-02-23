@@ -1542,6 +1542,27 @@ else:
     else:
         app_logger.info(f"[INIT] ✅ Биржа {ACTIVE_EXCHANGE} успешно инициализирована")
 
+# Периодическая синхронизация времени с Bybit (раз в 5 мин) — устраняет ErrCode 10002. Ведётся в app.py, не в bots.py.
+def _bybit_time_sync_loop():
+    """Фоновый поток: раз в 5 мин синхронизирует время с сервером Bybit для текущей биржи."""
+    try:
+        from exchanges.bybit_exchange import BybitExchange
+    except Exception:
+        return
+    interval_sec = 300
+    while True:
+        time.sleep(interval_sec)
+        try:
+            ex = current_exchange
+            if ex is not None and isinstance(ex, BybitExchange):
+                ex.ensure_time_synced(max_age_sec=interval_sec)
+        except Exception:
+            pass
+
+_bybit_sync_thread = threading.Thread(target=_bybit_time_sync_loop, daemon=True, name="BybitTimeSync")
+_bybit_sync_thread.start()
+app_logger.info("[INIT] Поток синхронизации времени Bybit запущен (каждые 5 мин)")
+
 # Убираем инициализацию менеджера ботов - теперь он в отдельном сервисе
 # bot_manager = BotManager(exchange)
 
