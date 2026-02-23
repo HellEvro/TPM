@@ -2175,7 +2175,11 @@ def load_all_coins_candles_fast():
                         except Exception:
                             pass
                     
-                    # Прогресс загрузки свечей (видно в логе)
+                    loaded = len(candles_cache)
+                    total_pairs = len(pairs_for_tf)
+                    pct = (loaded * 100) // total_pairs if total_pairs else 0
+                    logger.info(f"📦 Свечи {timeframe}: батч {batch_num}/{total_batches} — {loaded}/{total_pairs} монет ({pct}%)")
+                    
                     if not_done:
                         unfinished_symbols = [future_to_symbol.get(f) for f in not_done if f in future_to_symbol]
                         logger.error(f"❌ Timeout: {len(unfinished_symbols)} (of {len(future_to_symbol)}) futures unfinished")
