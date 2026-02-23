@@ -2619,8 +2619,8 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             future.cancel()
                         break
 
-                    # Таймаут 90с — для слабых ПК; ждём по 3с с проверкой shutdown (Ctrl+C срабатывает быстрее)
-                    batch_timeout = 90
+                    # Таймаут 120с — для медленных символов (AIN и др.); ждём по 3с с проверкой shutdown
+                    batch_timeout = 120
                     result_timeout = 25
                     all_futs = list(future_to_symbol.keys())
                     remaining = set(all_futs)
