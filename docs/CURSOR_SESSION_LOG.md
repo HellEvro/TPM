@@ -21,6 +21,8 @@
 | 8 | `static/js/vendor/chart.umd.min.js` | Добавлена локальная копия Chart.js 4.4.9. |
 | 9 | `static/js/positions.js` | При 0 позициях `updateAllData` выходит без логов и без обновления throttle; убран спам «updateAllData skipped: throttle» и «Starting data update for 0 symbols». |
 | 10 | `static/js/managers/bots_manager/04_service.js` | После загрузки списка монет добавлен лог «Загружено N монет с RSI» (всегда виден), чтобы в консоли было понятно, что данные пришли. |
+| 11 | `bots_modules/api_endpoints.py` | **coins-with-rsi:** чтение `coins_rsi_data['coins']` под `rsi_data_lock` (снапшот), чтобы не читать во время записи из load_all_coins_rsi/analyze_trends. Добавлен диагностический лог: версия, кол-во монет, кол-во с RSI≠50, примеры (symbol, rsi6h, signal). |
+| 12 | `bots_modules/filters.py` | В `load_all_coins_rsi` в full mode запись `coins_rsi_data["coins"] = temp_coins_data` выполняется под `rsi_data_lock` для согласованности с API. |
 
 ### Результаты проверки
 - Этапы 3–4 стартуют; этап 4 раньше держал bots_data_lock ~15+ с → таймаут у основного цикла.

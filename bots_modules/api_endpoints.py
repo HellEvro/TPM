@@ -738,9 +738,10 @@ def get_coins_with_rsi():
             except:
                 cache_age = None
         
-        # ⚡ ОПТИМИЗАЦИЯ ПАМЯТИ: Минимизируем копирование данных
-        # Очищаем данные от несериализуемых объектов
-        coins_items = list(coins_rsi_data['coins'].items())  # Создаем список один раз
+        # ⚡ Читаем coins под блокировкой — чтобы не получить половинное обновление при записи из load_all_coins_rsi / analyze_trends
+        with rsi_data_lock:
+            coins_items = list(coins_rsi_data['coins'].items())
+        # Очищаем данные от несериализуемых объектов  # Создаем список один раз
         for symbol, coin_data in coins_items:
             # ✅ ИСПРАВЛЕНИЕ: НЕ фильтруем монеты по зрелости для UI!
             # Фильтр зрелости применяется в get_coin_rsi_data() через изменение сигнала на WAIT
@@ -875,6 +876,15 @@ def get_coins_with_rsi():
             except Exception as e:
                 logger.warning(f"⚠️ Ошибка обработки монеты {symbol}: {e}, пропускаем")
                 continue
+        
+        # Диагностика: что реально уходит в UI (чтобы понять «везде 50»)
+        try:
+            sample = list(cleaned_coins.items())[:5]
+            sample_rsi = [(s, c.get('rsi6h'), c.get('signal')) for s, c in sample]
+            non_50 = sum(1 for c in cleaned_coins.values() if c.get('rsi6h') is not None and c.get('rsi6h') != 50)
+            logger.info(f"coins-with-rsi: версия={coins_rsi_data.get('data_version')}, монет={len(cleaned_coins)}, с RSI≠50: {non_50}, примеры: {sample_rsi}")
+        except Exception as _e:
+            pass
         
         # Получаем список монет с ручными позициями на бирже (позиции БЕЗ ботов)
         try:

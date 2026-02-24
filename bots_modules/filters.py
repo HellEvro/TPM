@@ -2809,7 +2809,8 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             )
             pass
         else:
-            coins_rsi_data["coins"] = temp_coins_data
+            with rsi_data_lock:
+                coins_rsi_data["coins"] = temp_coins_data
         coins_rsi_data["last_update"] = datetime.now().isoformat()
         coins_rsi_data["update_in_progress"] = False
 
