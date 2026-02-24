@@ -1951,9 +1951,20 @@ class InfoBotManager(tk.Tk):
                 )
                 return
             try:
-                self._stream_command("git clean", ["git", "clean", "-fd"])
+                # Не удалять ключи и конфиги пользователя — иначе после обновления ключи обнуляются
+                self._stream_command(
+                    "git clean",
+                    [
+                        "git", "clean", "-fd",
+                        "-e", "configs/keys.py",
+                        "-e", "configs/app_config.py",
+                        "-e", "configs/bot_config.py",
+                    ],
+                )
             except subprocess.CalledProcessError:
                 pass
+            # После clean пересоздать app/config.py (заглушку) и недостающие configs — без перезаписи ключей
+            self._ensure_required_app_files()
         except subprocess.CalledProcessError:
             pass
         finally:
