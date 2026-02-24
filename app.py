@@ -2166,8 +2166,8 @@ def create_bot():
 
 @app.route('/api/bots/auto-bot', methods=['GET', 'POST'])
 def auto_bot_proxy():
-    """Получить конфиг Auto Bot (GET) или обновить (POST) — прокси к сервису ботов."""
-    cfg_timeout = 60  # Таймаут: сохранение конфига может быть долгим
+    """Получить конфиг Auto Bot (GET) или обновить (POST) — прокси к сервису ботов. Таймаут 90с при старте bots.py."""
+    cfg_timeout = 90  # При старте bots.py (свечи, RSI, locks) ответ может занять до ~60с
     if request.method == 'GET':
         result = call_bots_service('/api/bots/auto-bot', method='GET', timeout=cfg_timeout)
     else:

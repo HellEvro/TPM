@@ -2405,10 +2405,8 @@
                     const autoBotEnabled = data.config.enabled;
                     console.log('[BotsManager] 🤖 Текущее состояние Auto Bot с сервера:', autoBotEnabled ? 'ВКЛ' : 'ВЫКЛ');
                     
-                    // Устанавливаем состояние переключателя
                     globalAutoBotToggleEl.checked = autoBotEnabled;
                     
-                    // Обновляем визуальное состояние
                     const toggleLabel = globalAutoBotToggleEl.closest('.auto-bot-toggle')?.querySelector('.toggle-label');
                     if (toggleLabel) {
                         toggleLabel.textContent = autoBotEnabled ? '🤖 Auto Bot (ВКЛ)' : '🤖 Auto Bot (ВЫКЛ)';
@@ -2416,7 +2414,12 @@
                     
                     console.log('[BotsManager] ✅ Переключатель Auto Bot инициализирован с состоянием:', autoBotEnabled);
                 } else {
-                    console.error('[BotsManager] ❌ Ошибка загрузки состояния Auto Bot:', data.message);
+                    if (response.status === 504) {
+                        this.logDebug('[BotsManager] ⏳ Auto Bot: таймаут при загрузке (сервер занят), оставляем ВЫКЛ');
+                        return;
+                    }
+                    const msg = data.error || data.message || 'Неизвестная ошибка';
+                    console.error('[BotsManager] ❌ Ошибка загрузки состояния Auto Bot:', msg);
                 }
             } catch (error) {
                 console.error('[BotsManager] ❌ Ошибка запроса состояния Auto Bot:', error);

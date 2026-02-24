@@ -11,7 +11,9 @@
 ### Изменения в этой сессии
 | № | Файл | Изменение |
 |---|------|-----------|
-| 1 | `static/js/managers/bots_manager/04_service.js` | MAX_RETRIES 1 → 2 для checkBotsService (слабый ПК: меньше мигания «Сервис недоступен»). |
+| 1 | `app.py` | Таймаут прокси `/api/bots/auto-bot` увеличен до 90 с (при старте bots.py ответ может занять до ~60 с). |
+| 2 | `static/js/managers/bots_manager/10_configuration.js` | При 504 на загрузке Auto Bot: logDebug «таймаут», не error; сообщение об ошибке: data.error \|\| data.message. |
+| 3 | `static/js/managers/bots_manager/04_service.js` | MAX_RETRIES 1 → 2 для checkBotsService (слабый ПК: меньше мигания «Сервис недоступен»). |
 | 2 | `bots_modules/filters.py` | `analyze_trends_for_signal_coins`: переставлен порядок locks — сначала rsi_data_lock (снапшот), затем кратко bots_data_lock (только ics). Устранена длительная блокировка bots_data_lock при итерации по 552 символам — причина таймаута load_all_coins_candles_fast. |
 | 3 | `app.py` | Добавлены прокси для `/api/bots/mature-coins-list` и `/api/bots/statistics` — при открытии UI через порт 5000 эти запросы возвращали 404 и HTML вместо JSON. |
 | 4 | `static/js/managers/bots_manager/04_service.js` | После обновления списка монет повторно вызывается `applyRsiFilter(this.currentRsiFilter)`, чтобы при обновлении RSI/применении фильтров отображалась правильная выборка. |
