@@ -553,12 +553,12 @@
         const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
         const rsiKey = `rsi${currentTimeframe}`;
         const buyZoneCount = this.coinsRsiData.filter(coin => {
-            const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi;
-            return rsi && rsi <= this.rsiLongThreshold;
+            const rsi = coin[rsiKey] ?? coin.rsi6h ?? coin.rsi;
+            return rsi != null && rsi !== '' && Number(rsi) <= this.rsiLongThreshold;
         }).length;
         const sellZoneCount = this.coinsRsiData.filter(coin => {
-            const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi;
-            return rsi && rsi >= this.rsiShortThreshold;
+            const rsi = coin[rsiKey] ?? coin.rsi6h ?? coin.rsi;
+            return rsi != null && rsi !== '' && Number(rsi) >= this.rsiShortThreshold;
         }).length;
         // Используем тот же currentTimeframe для подсчета трендов
         const trendKey = `trend${currentTimeframe}`;

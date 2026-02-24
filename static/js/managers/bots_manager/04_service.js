@@ -196,6 +196,10 @@
                     // Обновляем интерфейс
                     this.renderCoinsList();
                     this.updateCoinsCounter();
+                    // Повторно применяем текущий фильтр к новому списку (чтобы после обновления RSI/фильтров отображалась правильная выборка)
+                    if (this.currentRsiFilter && this.currentRsiFilter !== 'all') {
+                        this.applyRsiFilter(this.currentRsiFilter);
+                    }
                     
                     // Обновляем информацию о выбранной монете
                     if (this.selectedCoin) {
