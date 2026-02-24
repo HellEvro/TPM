@@ -2192,6 +2192,14 @@ class InfoBotManager(tk.Tk):
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(stub_content, encoding="utf-8")
+            # Сбросить кэш Python, чтобы не подхватить старый .pyc с app.keys
+            pycache = target.parent / "__pycache__"
+            if pycache.is_dir():
+                for f in pycache.glob("config*.pyc"):
+                    try:
+                        f.unlink()
+                    except OSError:
+                        pass
             if not silent:
                 self.log("Создан/обновлён app/config.py (заглушка)", channel="system")
             return True

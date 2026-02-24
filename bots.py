@@ -213,6 +213,27 @@ if not os.path.exists('configs/app_config.py') and not os.path.exists('app/confi
     sys.stderr.write("   📖 Подробнее: docs/INSTALL.md\n\n" + "="*80 + "\n\n")
     sys.exit(1)
 
+# Исправить app/config.py если там старый импорт app.keys (только configs) — до любого import app.config
+_app_config_py = os.path.join(_root, 'app', 'config.py')
+if os.path.isfile(_app_config_py):
+    try:
+        with open(_app_config_py, 'r', encoding='utf-8') as _f:
+            _cur = _f.read()
+        if '.keys' in _cur or 'from configs.app_config import' not in _cur:
+            _stub = '# Реальный конфиг в configs/app_config.py\nfrom configs.app_config import *  # noqa: F401, F403\n'
+            with open(_app_config_py, 'w', encoding='utf-8') as _f:
+                _f.write(_stub)
+            _pycache = os.path.join(_root, 'app', '__pycache__')
+            if os.path.isdir(_pycache):
+                for _name in os.listdir(_pycache):
+                    if _name.startswith('config') and _name.endswith('.pyc'):
+                        try:
+                            os.unlink(os.path.join(_pycache, _name))
+                        except OSError:
+                            pass
+    except (OSError, IOError):
+        pass
+
 import signal
 import threading
 import time

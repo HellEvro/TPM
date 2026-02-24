@@ -124,6 +124,23 @@ if not _CONFIG_PATH.exists():
         sys.stderr.write("\n📖 Подробная инструкция: docs/INSTALL.md\n\n")
         sys.exit(1)
 
+# Исправить app/config.py если там остался старый импорт app.keys (только configs)
+_STUB_CONFIG = '# Реальный конфиг в configs/app_config.py\nfrom configs.app_config import *  # noqa: F401, F403\n'
+if _CONFIG_PATH.exists():
+    try:
+        _cur = _CONFIG_PATH.read_text(encoding='utf-8')
+        if '.keys' in _cur or 'from configs.app_config import' not in _cur:
+            _CONFIG_PATH.write_text(_STUB_CONFIG, encoding='utf-8')
+            _pycache = _CONFIG_PATH.parent / '__pycache__'
+            if _pycache.is_dir():
+                for _f in _pycache.glob('config*.pyc'):
+                    try:
+                        _f.unlink()
+                    except OSError:
+                        pass
+    except OSError:
+        pass
+
 from app.config import *
 
 # Импортируем БД для app.py
