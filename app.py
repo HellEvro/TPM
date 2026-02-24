@@ -2031,6 +2031,8 @@ def call_bots_service(endpoint, method='GET', data=None, timeout=10, params=None
             response = requests.get(url, timeout=timeout, params=params)
         elif method == 'POST':
             response = requests.post(url, json=data, timeout=timeout)
+        elif method == 'DELETE':
+            response = requests.delete(url, timeout=timeout)
         else:
             return {'success': False, 'error': f'Unsupported method: {method}'}
         
@@ -2145,7 +2147,7 @@ def api_status_proxy():
 @app.route('/api/bots/health', methods=['GET'])
 def get_bots_health():
     """Проверка состояния сервиса ботов"""
-    result = call_bots_service('/health', timeout=5)
+    result = call_bots_service('/api/bots/health', timeout=5)
     status_code = result.get('status_code', 200 if result.get('status') == 'ok' else 503)
     return jsonify(result), status_code
 
@@ -2312,11 +2314,28 @@ def reset_exit_scam_all():
     return jsonify(result), status_code
 
 
+@app.route('/api/bots/individual-settings/reset-all', methods=['DELETE'])
+def reset_all_individual_settings_proxy():
+    """Прокси: сброс всех индивидуальных настроек к глобальным (DELETE)"""
+    result = call_bots_service('/api/bots/individual-settings/reset-all', method='DELETE')
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
 @app.route('/api/bots/start', methods=['POST'])
 def start_bot():
     """Запустить бота (прокси к сервису ботов)"""
     data = request.get_json()
     result = call_bots_service('/api/bots/start', method='POST', data=data)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/bots/resume', methods=['POST'])
+def resume_bot():
+    """Возобновить бота (прокси к сервису ботов)"""
+    data = request.get_json()
+    result = call_bots_service('/api/bots/resume', method='POST', data=data)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
@@ -2424,6 +2443,70 @@ def ai_config():
     else:
         data = request.get_json()
         result = call_bots_service('/api/ai/config', method='POST', data=data)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/ai/decisions', methods=['GET'])
+def ai_decisions():
+    """Решения AI (прокси к сервису ботов)"""
+    result = call_bots_service('/api/ai/decisions', method='GET', params=request.args, timeout=30)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/ai/performance', methods=['GET'])
+def ai_performance():
+    """Метрики производительности AI (прокси к сервису ботов)"""
+    result = call_bots_service('/api/ai/performance', method='GET', params=request.args, timeout=30)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/ai/training-history', methods=['GET'])
+def ai_training_history():
+    """История обучения AI (прокси к сервису ботов)"""
+    result = call_bots_service('/api/ai/training-history', method='GET', params=request.args, timeout=30)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/ai/stats', methods=['GET'])
+def ai_stats():
+    """Статистика AI (прокси к сервису ботов)"""
+    result = call_bots_service('/api/ai/stats', method='GET', params=request.args, timeout=30)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/ai/optimizer/results', methods=['GET'])
+def ai_optimizer_results():
+    """Результаты оптимизатора AI (прокси к сервису ботов)"""
+    result = call_bots_service('/api/ai/optimizer/results', method='GET', params=request.args, timeout=30)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/ai/health', methods=['GET'])
+def ai_health():
+    """Состояние здоровья AI моделей (прокси к сервису ботов)"""
+    result = call_bots_service('/api/ai/health', method='GET', timeout=15)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/ai/self-learning/stats', methods=['GET'])
+def ai_self_learning_stats():
+    """Статистика самообучения AI (прокси к сервису ботов)"""
+    result = call_bots_service('/api/ai/self-learning/stats', method='GET', params=request.args, timeout=30)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+
+@app.route('/api/ai/self-learning/performance', methods=['GET'])
+def ai_self_learning_performance():
+    """Метрики самообучения AI (прокси к сервису ботов)"""
+    result = call_bots_service('/api/ai/self-learning/performance', method='GET', params=request.args, timeout=30)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 

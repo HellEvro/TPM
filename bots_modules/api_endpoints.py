@@ -1643,6 +1643,31 @@ def pause_bot_endpoint():
         logger.error(f" Ошибка приостановки бота: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@bots_app.route('/api/bots/resume', methods=['POST'])
+def resume_bot_endpoint():
+    """Возобновить приостановленного бота (то же поведение, что и start для PAUSED/IDLE)"""
+    try:
+        data = request.get_json()
+        if not data or not data.get('symbol'):
+            return jsonify({'success': False, 'error': 'Symbol required'}), 400
+        symbol = data['symbol']
+        with bots_data_lock:
+            if symbol not in bots_data['bots']:
+                return jsonify({'success': False, 'error': 'Bot not found'}), 404
+            bot_data = bots_data['bots'][symbol]
+            if bot_data['status'] in [BOT_STATUS['PAUSED'], BOT_STATUS['IDLE']]:
+                bot_data['status'] = BOT_STATUS['RUNNING']
+                logger.info(f" {symbol}: Бот возобновлен (resume)")
+            else:
+                logger.info(f" {symbol}: Бот уже активен")
+        return jsonify({
+            'success': True,
+            'message': f'Бот для {symbol} возобновлен'
+        })
+    except Exception as e:
+        logger.error(f" Ошибка возобновления бота: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @bots_app.route('/api/bots/delete', methods=['POST'])
 def delete_bot_endpoint():
     """Удалить бота"""

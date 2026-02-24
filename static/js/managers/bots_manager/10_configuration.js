@@ -63,7 +63,9 @@
                 console.log('[BotsManager] Auto Bot config:', autoBotData.config);
                 console.log('[BotsManager] System config:', systemData.config);
             } else {
-                const errorMsg = !autoBotData.success ? autoBotData.message : systemData.message;
+                const errorMsg = !autoBotData.success
+                    ? (autoBotData.error || autoBotData.message || (autoBotResponse.status === 503 ? 'Сервис ботов не запущен. Запустите: python bots.py' : 'Ошибка загрузки Auto Bot'))
+                    : (systemData.error || systemData.message || 'Ошибка загрузки системных настроек');
                 console.error('[BotsManager] ❌ Ошибка загрузки конфигурации:', errorMsg);
             }
             
