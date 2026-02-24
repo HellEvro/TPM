@@ -110,7 +110,7 @@
 
 ## 8. КРИТИЧЕСКАЯ ЛОГИКА (отдельно)
 
-**check_api_keys в app.py:** Сейчас проверяет `app/keys.py`. Ключи — в `configs/keys.py`. Если app/keys.py нет → DEMO режим → пустые позиции. **Нужно:** проверять EXCHANGES из конфига (configs), не требовать app/keys.py.
+**check_api_keys:** Проверяет EXCHANGES из configs (configs/keys.py через configs/app_config.py). Ключи только в configs/.
 
 ---
 

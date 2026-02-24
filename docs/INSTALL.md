@@ -30,7 +30,7 @@
 2. **Установка зависимостей напрямую** — необязательно (`pip install -r requirements.txt` в системный Python 3.12+)
 3. **Обновления из Git** — кнопка выполняет `git fetch` → `git pull --ff-only` → `git reset --hard origin/main` и показывает последние коммиты
 4. **Лицензия и ключи (опционально)** — Hardware ID, импорт `.lic`
-5. **Запуск сервисов** — `app.py`, `bots.py`, `ai.py` + быстрый доступ к `app/config.py` и `app/keys.py` прямо в этом блоке
+5. **Запуск сервисов** — `app.py`, `bots.py`, `ai.py` + быстрый доступ к `configs/keys.py` и `configs/app_config.py` прямо в этом блоке
 6. **Документация и файлы** — быстрый доступ к конфигам и журналам
 7. **Логи** — вывод всех команд в отдельных вкладках
 8. Автоматическая инициализация Git (`git init` + `git remote add origin git@github.com:HellEvro/TPM_Public.git`), если репозиторий был скачан архивом

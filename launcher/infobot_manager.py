@@ -2166,13 +2166,13 @@ class InfoBotManager(tk.Tk):
                 pass
 
     def _ensure_required_app_files(self) -> None:
-        # app/config.py — заглушка из configs; создаём или исправляем (если остался старый from .keys)
+        # app/config.py — заглушка, реэкспорт из configs
         self._create_app_config_stub(silent=True)
         # configs/app_config.py и configs/keys.py — основные конфиги
         if not (PROJECT_ROOT / "configs" / "app_config.py").exists():
             self._create_config_file_from_example(silent=True)
 
-        # Создаём configs/keys.py из примера только если его ещё НЕТ (не перезаписывать ключи пользователя!)
+        # configs/keys.py — создаём из примера ТОЛЬКО если файла нет. Если есть — НЕ ТРОГАЕМ.
         configs_keys = PROJECT_ROOT / "configs" / "keys.py"
         if not configs_keys.exists():
             self._create_keys_file_from_example(silent=True)
@@ -2183,7 +2183,7 @@ class InfoBotManager(tk.Tk):
             self._create_bot_config_file_from_example(silent=True)
 
     def _create_app_config_stub(self, silent: bool = False) -> bool:
-        """Создаёт или перезаписывает app/config.py заглушкой (from configs.app_config). Без app.keys."""
+        """Создаёт или перезаписывает app/config.py заглушкой (from configs.app_config)."""
         target = PROJECT_ROOT / "app" / "config.py"
         stub_content = (
             "# Реальный конфиг в configs/app_config.py\n"
@@ -2229,10 +2229,10 @@ class InfoBotManager(tk.Tk):
             return False
 
     def _create_keys_file_from_example(self, silent: bool = False) -> bool:
-        """Создаёт configs/keys.py из примера только если файла ещё нет. Вызывать только когда target не существует — не перезаписывать ключи пользователя."""
+        """Создаёт configs/keys.py из примера ТОЛЬКО если файла ещё нет. Если файл есть — НЕ ТРОГАЕМ."""
         target = PROJECT_ROOT / "configs" / "keys.py"
         if target.exists():
-            return False  # Никогда не перезаписывать существующий файл с ключами
+            return False  # Существующий файл с ключами — никогда не перезаписывать
         example = PROJECT_ROOT / "configs" / "keys.example.py"
         if not example.exists():
             message = "Файл configs/keys.example.py не найден. Скопируйте шаблон ключей вручную."
@@ -2243,6 +2243,8 @@ class InfoBotManager(tk.Tk):
             return False
 
         try:
+            if target.exists():
+                return False  # Защита: существующий keys.py не трогаем
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(example, target)
             self.log("Создан configs/keys.py из примера", channel="system")

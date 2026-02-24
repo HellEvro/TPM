@@ -55,18 +55,12 @@ if not _APP_CONFIG_PATH.exists() and _APP_CONFIG_EXAMPLE_PATH.exists():
     shutil.copyfile(_APP_CONFIG_EXAMPLE_PATH, _APP_CONFIG_PATH)
     sys.stderr.write("✅ Создан configs/app_config.py из примера\n")
 
-# Миграция: app/keys.py → configs/keys.py (если configs/keys.py ещё нет)
-try:
-    from bots_modules.config_writer import migrate_old_keys_to_configs
-    if migrate_old_keys_to_configs(str(_PROJECT_ROOT)):
-        sys.stderr.write("✅ Ключи перенесены из app/ в configs/keys.py\n")
-except Exception as e:
-    sys.stderr.write(f"⚠️ Миграция ключей: {e}\n")
-# Если configs/keys.py всё ещё нет — создать из примера (на случай сбоя миграции)
+# configs/keys.py — создать из примера ТОЛЬКО если файла ещё НЕТ. Существующий НЕ ТРОГАТЬ.
 if not _KEYS_PATH.exists() and _KEYS_EXAMPLE_PATH.exists():
     import shutil
-    shutil.copyfile(_KEYS_EXAMPLE_PATH, _KEYS_PATH)
-    sys.stderr.write("✅ Создан configs/keys.py из примера (заполните ключи)\n")
+    if not _KEYS_PATH.exists():  # повторная проверка: не перезаписывать
+        shutil.copyfile(_KEYS_EXAMPLE_PATH, _KEYS_PATH)
+        sys.stderr.write("✅ Создан configs/keys.py из примера (заполните ключи)\n")
 
 # Миграция: создание configs/bot_config.py из примера при отсутствии (конфиги только в configs/)
 try:
@@ -106,9 +100,11 @@ if not _CONFIG_PATH.exists():
         if not _APP_CONFIG_PATH.exists() and _APP_CONFIG_EXAMPLE_PATH.exists():
             import shutil
             shutil.copyfile(_APP_CONFIG_EXAMPLE_PATH, _APP_CONFIG_PATH)
+        # configs/keys.py — только если НЕТ. Существующий файл с ключами НЕ ТРОГАТЬ.
         if not _KEYS_PATH.exists() and _KEYS_EXAMPLE_PATH.exists():
             import shutil
-            shutil.copyfile(_KEYS_EXAMPLE_PATH, _KEYS_PATH)
+            if not _KEYS_PATH.exists():
+                shutil.copyfile(_KEYS_EXAMPLE_PATH, _KEYS_PATH)
         # Заглушка app/config.py
         _CONFIG_PATH.write_text('# Реальный конфиг в configs/app_config.py\nfrom configs.app_config import *  # noqa: F401, F403\n', encoding='utf-8')
         sys.stderr.write("✅ Создан app/config.py (заглушка) и configs/ при необходимости.\n")

@@ -7,7 +7,7 @@
 - Проверять и подтягивать обновления из Git
 - Получать Hardware ID и инструкции по лицензии (`scripts/activate_premium.py`)
 - Запускать и останавливать основные сервисы: `app.py`, `bots.py`, `ai.py`
-- Открывать ключевые файлы (`app/config.py`, `app/keys.py`) и журналы
+- Открывать ключевые файлы (`configs/keys.py`, `configs/app_config.py`) и журналы
 
 ## Запуск
 

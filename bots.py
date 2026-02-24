@@ -232,7 +232,7 @@ from bots_modules.imports_and_globals import check_and_stop_existing_bots_proces
 def check_api_keys():
     """Проверяет наличие настроенных API ключей"""
     try:
-        if not os.path.exists('configs/keys.py') and not os.path.exists('app/keys.py'):
+        if not os.path.exists('configs/keys.py'):
             return False
 
         from app.config import EXCHANGES, ACTIVE_EXCHANGE

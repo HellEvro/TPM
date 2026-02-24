@@ -28,7 +28,7 @@
    - macOS/Linux: `chmod +x start_infobot_manager.sh && ./start_infobot_manager.sh`.
 3. **Следуйте шагам GUI**:
    - установка/обновление `.venv` и зависимостей (PyTorch, scikit-learn, Flask, ccxt, ...);
-   - копирование `app/config.example.py` → `app/config.py`, `app/keys.example.py` → `app/keys.py`;
+   - копирование `configs/keys.example.py` → `configs/keys.py`, `configs/app_config.example.py` → `configs/app_config.py` (при первом запуске лаунчер создаёт их сам при необходимости);
    - проверка Git/branch, подтягивание `InfoBot_Public`;
    - получение HWID, применение `.lic` (кнопка запускает `scripts/activate_premium.py`);
    - автозапуск `app.py`, `bots.py`, `ai.py --mode all` с мониторингом логов.

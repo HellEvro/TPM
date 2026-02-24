@@ -1,6 +1,6 @@
 """
 Патч 013: лаунчер — не удалять configs при git clean и пересоздавать app/config.py после обновления.
-Исправляет обнуление configs/keys.py и configs/app_config.py после пулла и ошибку «No module named 'app.keys'».
+Сохраняет configs при git clean; пересоздаёт заглушку app/config.py после обновления.
 """
 from pathlib import Path
 
