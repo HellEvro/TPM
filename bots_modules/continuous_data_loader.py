@@ -180,23 +180,24 @@ class ContinuousDataLoader:
                     coins_rsi_data['first_round_complete'] = True
                     logger.info("✅ ПЕРВАЯ ЗАГРУЗКА ЗАВЕРШЕНА: свечи + RSI готовы → запуск системы (автобот, мониторинг позиций)")
 
+                # Этапы 3–6 выполняются ПОСЛЕ 1–2, последовательно, только после полного завершения 1–2
                 if auto_bot_enabled:
-                    def _run_stages_3_to_6():
-                        try:
-                            self._calculate_maturity()
-                            self._analyze_trends()
-                            filtered_coins = self._process_filters()
-                            self._set_filtered_coins_for_autobot(filtered_coins)
-                        except Exception as e:
-                            logger.error(f"❌ Ошибка в фоновых этапах 3–6: {e}")
-                    t = threading.Thread(target=_run_stages_3_to_6, daemon=True)
-                    t.start()
+                    try:
+                        logger.info("🔄 Запуск этапов 3–6 (после 1–2)...")
+                        self._calculate_maturity()
+                        self._analyze_trends()
+                        filtered_coins = self._process_filters()
+                        self._set_filtered_coins_for_autobot(filtered_coins)
+                        logger.info("✅ Этапы 3–6 завершены")
+                    except Exception as e:
+                        logger.error(f"❌ Ошибка в этапах 3–6: {e}")
+
                 cycle_duration = time.time() - cycle_start
                 self.last_update_time = datetime.now()
 
                 logger.info("=" * 80)
-                logger.info(f"✅ РАУНД #{self.update_count} ЗАВЕРШЕН (этап 2 — RSI готов)")
-                logger.info(f"⏱️ Длительность этапов 1–2: {cycle_duration:.1f}с")
+                logger.info(f"✅ РАУНД #{self.update_count} ЗАВЕРШЕН (этапы 1–6)")
+                logger.info(f"⏱️ Длительность цикла: {cycle_duration:.1f}с")
                 logger.info(f"📊 Статистика: обновлений={self.update_count}, ошибок={self.error_count}")
                 logger.info("=" * 80)
 
@@ -206,8 +207,8 @@ class ContinuousDataLoader:
                 coins_rsi_data['data_version'] += 1  # Увеличиваем версию данных
                 logger.info(f"✅ Обработка завершена (версия данных: {coins_rsi_data['data_version']})")
 
-                # 🚀 Сразу после этапа 2 запускаем следующий раунд (1 → 2), не дожидаясь этапов 3–6.
-                logger.info(f"🚀 RSI готов — сразу запускаем следующий раунд (загрузка свечей)...")
+                # 🚀 После полного цикла 1–6 запускаем следующий раунд (1 → 2 → 3–6)
+                logger.info(f"🚀 Цикл 1–6 завершён — запускаем следующий раунд (загрузка свечей)...")
 
                 # Минимальная пауза 0.05 сек только чтобы не крутить CPU впустую; при необходимости выхода — выходим
                 if shutdown_flag.wait(0.05):

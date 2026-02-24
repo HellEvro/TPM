@@ -659,17 +659,19 @@ def _run_exit_scam_ai_detection(symbol, candles):
     return True
 
 
-def _check_loss_reentry_protection_static(symbol, candles, loss_reentry_count, loss_reentry_candles, individual_settings=None):
+def _check_loss_reentry_protection_static(symbol, candles, loss_reentry_count, loss_reentry_candles, individual_settings=None, skip_app_db_fallback=False):
     """
     Статическая функция проверки защиты от повторных входов после убыточных закрытий
-    
+
     Args:
         symbol: Символ монеты
         candles: Список свечей для подсчета прошедших свечей
         loss_reentry_count: Количество убыточных сделок для проверки (N)
         loss_reentry_candles: Количество свечей для ожидания (X)
         individual_settings: Индивидуальные настройки монеты (опционально)
-    
+        skip_app_db_fallback: Если True — не вызывать load_closed_pnl_history(period='all'),
+            устраняет зависание RSI-батча при параллельных воркерах (SQLite блокировки).
+
     Returns:
         dict: {'allowed': bool, 'reason': str, 'candles_passed': int}
     """
@@ -694,7 +696,8 @@ def _check_loss_reentry_protection_static(symbol, candles, loss_reentry_count, l
         )
         
         # ✅ КРИТИЧНО: Дополняем из closed_pnl_history (сделки с биржи/UI), иначе защита не видит закрытия не из бота
-        if not closed_trades or len(closed_trades) < n_count:
+        # skip_app_db_fallback=True в RSI-батче — load_closed_pnl_history(period='all') блокирует SQLite при параллелизме
+        if (not closed_trades or len(closed_trades) < n_count) and not skip_app_db_fallback:
             try:
                 from app.app_database import get_app_database
                 app_db = get_app_database()
@@ -1105,12 +1108,22 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
 
             potential_signal = signal if signal in ('ENTER_LONG', 'ENTER_SHORT') else None
 
+            # В batch RSI (_skip_api_if_no_cache) НЕ считаем тяжёлые фильтры — только при входе в should_open_long/short
+            _defer_filters = _skip_api_if_no_cache
+            _deferred = {'blocked': False, 'reason': 'Проверка при входе в сделку', 'filter_type': ''}
+
             if potential_signal is None:
                 if _dbg:
                     logger.info(f"[DEBUG_RSI] {symbol}: skip filters (no signal)")
                 time_filter_info = {'blocked': False, 'reason': 'RSI вне зоны входа в сделку', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
                 exit_scam_info = {'blocked': False, 'reason': 'ExitScam: RSI вне зоны входа', 'filter_type': 'exit_scam'}
                 loss_reentry_info = {'blocked': False, 'reason': 'Защита от повторных входов: RSI вне зоны входа', 'filter_type': 'loss_reentry_protection'}
+            elif _defer_filters:
+                if _dbg:
+                    logger.info(f"[DEBUG_RSI] {symbol}: defer filters (batch mode)")
+                time_filter_info = {**_deferred, 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
+                exit_scam_info = {**_deferred, 'filter_type': 'exit_scam'}
+                loss_reentry_info = {**_deferred, 'filter_type': 'loss_reentry_protection'}
             else:
                 if _dbg:
                     logger.info(f"[DEBUG_RSI] {symbol}: before time_filter")
@@ -1174,7 +1187,10 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
                     loss_reentry_count = get_config_value(auto_config, 'loss_reentry_count')
                     loss_reentry_candles = get_config_value(auto_config, 'loss_reentry_candles')
                     if loss_reentry_protection_enabled and len(candles) >= 10:
-                        lr_result = _check_loss_reentry_protection_static(symbol, candles, loss_reentry_count, loss_reentry_candles, individual_settings)
+                        lr_result = _check_loss_reentry_protection_static(
+                            symbol, candles, loss_reentry_count, loss_reentry_candles, individual_settings,
+                            skip_app_db_fallback=_skip_api_if_no_cache
+                        )
                         if lr_result:
                             loss_reentry_info = {'blocked': not lr_result.get('allowed', True), 'reason': lr_result.get('reason', ''), 'filter_type': 'loss_reentry_protection', 'candles_passed': lr_result.get('candles_passed'), 'required_candles': loss_reentry_candles, 'loss_count': loss_reentry_count}
                         else:
@@ -2615,7 +2631,7 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                 if not pairs_for_tf:
                     continue
 
-            # RSI — локальный расчёт. RSI_AGGRESSIVE_LOW_RESOURCE = 2 воркера, батч 25 (фикс таймаута на слабых ПК)
+            # RSI — локальный расчёт. RSI_AGGRESSIVE_LOW_RESOURCE = 2 воркера, батч 200 (фильтры отложены — быстрый расчёт)
             _cpu_count = os.cpu_count() or 4
             _aggressive_rsi = False
             try:
@@ -2625,7 +2641,7 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                 pass
             if _aggressive_rsi:
                 rsi_max_workers = 2
-                batch_size = 25   # меньше батч = меньше «проблемных» символов в одном ожидании
+                batch_size = 200
                 logger.info(f"📊 RSI: aggressive — {rsi_max_workers} воркера, батч {batch_size}, timeout 90с")
             elif _cpu_count <= 4:
                 batch_size = 100

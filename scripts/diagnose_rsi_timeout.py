@@ -5,7 +5,7 @@
 
 Запуск: python scripts/diagnose_rsi_timeout.py
 
-Симулирует батч RSI как в production: 2 воркера, батч 25, timeout 90с.
+Симулирует батч RSI как в production: 2 воркера, батч 200, timeout 90с.
 Проверяет, успевает ли батч завершиться без таймаута.
 """
 import os
@@ -25,9 +25,9 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 os.chdir(_PROJECT_ROOT)
 
-# Тестовые настройки — как aggressive (2 воркера, батч 25, timeout 90)
+# Тестовые настройки — как aggressive (2 воркера, батч 200, timeout 90)
 RSI_WORKERS = 2
-RSI_BATCH_SIZE = 25
+RSI_BATCH_SIZE = 200
 RSI_BATCH_TIMEOUT = 90
 
 PROBLEM_SYMBOLS = ['BANK', 'BERA', 'BB', 'ATH', 'BARD', 'BABY', 'BAND', 'BEAM']
@@ -152,7 +152,7 @@ def run_diagnostic():
     print("=" * 70)
     print(f"Время: {(time.time() - t0):.1f}с")
     if timeout_count > 0:
-        print("→ Включи RSI_AGGRESSIVE_LOW_RESOURCE = True в bot_config (2 воркера, батч 25, timeout 90с)")
+        print("→ Включи RSI_AGGRESSIVE_LOW_RESOURCE = True в bot_config (2 воркера, батч 200, timeout 90с)")
 
 if __name__ == '__main__':
     run_diagnostic()
