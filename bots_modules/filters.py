@@ -2869,8 +2869,8 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
             logger.warning("⚠️ Принудительный сброс флага update_in_progress")
             coins_rsi_data["update_in_progress"] = False
 
-def _recalculate_signal_with_trend(rsi, trend, symbol):
-    """Пересчитывает сигнал с учетом нового тренда"""
+def _recalculate_signal_with_trend(rsi, trend, symbol, individual_settings=None):
+    """Пересчитывает сигнал с учетом нового тренда. individual_settings — опционально, чтобы избежать повторных lock."""
     try:
         # ✅ Защита: при отсутствии RSI возвращаем WAIT (нельзя сравнивать None с int)
         if rsi is None:
@@ -2879,7 +2879,8 @@ def _recalculate_signal_with_trend(rsi, trend, symbol):
         # Пороги только из конфига
         from bot_engine.config_loader import get_config_value
         auto_config = bots_data.get('auto_bot_config', {})
-        individual_settings = get_individual_coin_settings(symbol)
+        if individual_settings is None:
+            individual_settings = get_individual_coin_settings(symbol)
         rsi_long_threshold = (individual_settings.get('rsi_long_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_long_threshold')
         rsi_short_threshold = (individual_settings.get('rsi_short_threshold') if individual_settings else None) or get_config_value(auto_config, 'rsi_short_threshold')
         # ✅ ИСПРАВЛЕНО: Используем False по умолчанию (как в bot_config.py), а не True
@@ -3574,6 +3575,8 @@ def analyze_trends_for_signal_coins():
             rsi_data_lock,
             coins_rsi_data,
             bots_data,
+            bots_data_lock,
+            _normalize_symbol,
             get_exchange,
             get_auto_bot_config,
         )
@@ -3613,10 +3616,23 @@ def analyze_trends_for_signal_coins():
         auto_config = bots_data.get('auto_bot_config', {})
         rsi_long_th = get_config_value(auto_config, 'rsi_long_threshold')
         rsi_short_th = get_config_value(auto_config, 'rsi_short_threshold')
+        # ✅ Загружаем индивидуальные настройки ОДИН раз для всех монет (минус 100+ lock acquisitions)
+        _individual_settings_cache = {}
+        with bots_data_lock:
+            ics = bots_data.get('individual_coin_settings', {}) or {}
+            for sym in coins_rsi_data['coins']:
+                ns = _normalize_symbol(sym)
+                if ns in ics:
+                    _individual_settings_cache[sym] = ics[ns].copy()
+        from copy import deepcopy
+        _individual_settings_cache = {k: deepcopy(v) for k, v in _individual_settings_cache.items()}
+        def _get_ind(s):
+            return _individual_settings_cache.get(s) or _individual_settings_cache.get(_normalize_symbol(s))
+
         signal_coins = []
         for symbol, coin_data in coins_rsi_data['coins'].items():
             rsi = get_rsi_from_coin_data(coin_data)
-            ind = get_individual_coin_settings(symbol)
+            ind = _get_ind(symbol)
             long_th = (ind.get('rsi_long_threshold') if ind else None) or rsi_long_th
             short_th = (ind.get('rsi_short_threshold') if ind else None) or rsi_short_th
             if rsi is not None and (rsi <= long_th or rsi >= short_th):
@@ -3654,7 +3670,7 @@ def analyze_trends_for_signal_coins():
                         if blocked_by_exit_scam or blocked_by_rsi_time:
                             new_signal = 'WAIT'  # Оставляем WAIT
                         else:
-                            new_signal = _recalculate_signal_with_trend(rsi, new_trend, symbol)
+                            new_signal = _recalculate_signal_with_trend(rsi, new_trend, symbol, individual_settings=_get_ind(symbol))
                         
                         # Сохраняем обновления во временном хранилище
                         temp_updates[symbol] = {
@@ -3672,8 +3688,8 @@ def analyze_trends_for_signal_coins():
                 if i % 5 == 0 or i == len(signal_coins):
                     logger.info(f" 📊 Прогресс: {i}/{len(signal_coins)} ({i*100//len(signal_coins)}%)")
                 
-                # Небольшая пауза между запросами
-                time.sleep(0.05)
+                # Минимальная пауза (свечи из кэша — API не вызывается)
+                time.sleep(0.01)
             except Exception as e:
                 logger.error(f" ❌ {symbol}: {e}")
                 failed_count += 1
