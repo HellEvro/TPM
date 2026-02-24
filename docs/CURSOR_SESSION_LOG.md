@@ -16,6 +16,7 @@
 | 3 | `app.py` | Добавлены прокси для `/api/bots/mature-coins-list` и `/api/bots/statistics` — при открытии UI через порт 5000 эти запросы возвращали 404 и HTML вместо JSON. |
 | 4 | `static/js/managers/bots_manager/04_service.js` | После обновления списка монет повторно вызывается `applyRsiFilter(this.currentRsiFilter)`, чтобы при обновлении RSI/применении фильтров отображалась правильная выборка. |
 | 5 | `static/js/managers/bots_manager/05_coins_display.js` | В `updateSignalCounters` подсчёт зон RSI (≤29, ≥71) исправлен: используется `rsi != null` вместо `rsi &&`, чтобы учитывать RSI=0 и не терять обновления счётчиков. |
+| 6 | `static/js/managers/bots_manager/00_core.js` | **Восстановлен порядок init() как в оригинале** (trash/bots_manager.js): сначала `startPeriodicUpdate()`, затем загрузка конфига в фоне. Раньше был `await loadConfigurationData()` до `startPeriodicUpdate()` — при долгой/ошибочной загрузке конфига периодическое обновление не стартовало, данные не обновлялись. |
 
 ### Результаты проверки
 - Этапы 3–4 стартуют; этап 4 раньше держал bots_data_lock ~15+ с → таймаут у основного цикла.

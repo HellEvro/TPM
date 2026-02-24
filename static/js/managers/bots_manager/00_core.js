@@ -139,10 +139,11 @@ class BotsManager {
                 }
             }
             
-            // Сначала загружаем конфиг (в т.ч. position_sync_interval для интервала обновления списка монет слева)
-            await this.loadConfigurationData();
-            // Запускаем периодическое обновление с интервалом из конфига
+            // Запускаем периодическое обновление сразу (как в оригинальном bots_manager.js) —
+            // не ждём загрузки конфига, иначе при долгой/ошибочной загрузке конфига данные не обновляются
             this.startPeriodicUpdate();
+            // Загружаем конфиг в фоне (при первом ответе выставится position_sync_interval и вызовется restartPeriodicUpdate)
+            this.loadConfigurationData();
             // Повторная загрузка конфига через 2 сек (для актуализации после инициализации сервиса)
             setTimeout(() => this.loadConfigurationData(), 2000);
             
