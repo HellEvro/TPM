@@ -2448,16 +2448,17 @@
                     console.log('[BotsManager] ✅ Переключатель Auto Bot инициализирован с состоянием:', autoBotEnabled);
                 } else {
                     if (result.status === 504 || result.status === 503) {
-                        this.logDebug('[BotsManager] ⏳ Auto Bot: сервер занят после повторов, оставляем ВЫКЛ');
-                        return;
+                        this.logDebug('[BotsManager] ⏳ Auto Bot: сервер занят после повторов, переключатель в ВЫКЛ; клик включит при появлении сервиса.');
+                    } else {
+                        const msg = (result.data && (result.data.error || result.data.message)) || 'Неизвестная ошибка';
+                        console.error('[BotsManager] ❌ Ошибка загрузки состояния Auto Bot:', msg);
                     }
-                    const msg = (result.data && (result.data.error || result.data.message)) || 'Неизвестная ошибка';
-                    console.error('[BotsManager] ❌ Ошибка загрузки состояния Auto Bot:', msg);
                 }
             } catch (error) {
                 console.error('[BotsManager] ❌ Ошибка запроса состояния Auto Bot:', error);
             }
             
+            // КРИТИЧЕСКИ ВАЖНО: Всегда вешаем обработчик клика — иначе при 503/ошибке при загрузке переключатель не будет работать
             globalAutoBotToggleEl.addEventListener('change', async (e) => {
                 const isEnabled = e.target.checked;
                 console.log(`[BotsManager] 🤖 ИЗМЕНЕНИЕ ПЕРЕКЛЮЧАТЕЛЯ: ${isEnabled}`);
@@ -2518,10 +2519,17 @@
                         
                         console.log(`[BotsManager] ✅ Auto Bot ${isEnabled ? 'включен' : 'выключен'} и сохранен`);
                 } else {
-                        console.error('[BotsManager] ❌ Ошибка сохранения Auto Bot:', result.message);
-                        // НЕ возвращаем переключатель в исходное состояние при ошибке API
-                        // Пользователь может попробовать снова
-                        this.showNotification('❌ Ошибка сохранения: ' + result.message, 'error');
+                        const msg = response.status === 503
+                            ? (window.languageUtils?.translate?.('bot_service_unavailable') || 'Сервис ботов недоступен. Запустите bots.py.')
+                            : (result.error || result.message || 'Ошибка сохранения');
+                        console.error('[BotsManager] ❌ Ошибка сохранения Auto Bot:', msg);
+                        if (response.status === 503) {
+                            this._service503Until = Date.now() + 30000;
+                            this.serviceOnline = false;
+                            globalAutoBotToggleEl.checked = false;
+                            if (toggleLabel) toggleLabel.textContent = '🤖 Auto Bot (ВЫКЛ)';
+                        }
+                        this.showNotification('❌ ' + msg, 'error');
                     }
                     
                 } catch (error) {
