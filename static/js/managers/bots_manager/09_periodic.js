@@ -105,7 +105,10 @@
                 // КРИТИЧЕСКИ ВАЖНО: Всегда обновляем состояние автобота и ботов
                 this.loadActiveBotsData();
         } else {
-                this.checkBotsService();
+                // При 503 не дергаем проверку каждые 5 сек — ждём окончания бэкоффа (30 сек)
+                if (!this._is503Backoff()) {
+                    this.checkBotsService();
+                }
             }
         }, this.refreshInterval);
         

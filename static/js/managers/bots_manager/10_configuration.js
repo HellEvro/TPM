@@ -34,11 +34,21 @@
     },
             async loadConfigurationData() {
         this.logDebug('[BotsManager] 📋 Загрузка конфигурации...');
-        
+        if (this._is503Backoff()) {
+            this.logDebug('[BotsManager] ⏳ Загрузка конфигурации пропущена (503 бэкофф)');
+            return;
+        }
         try {
             this.logDebug('[BotsManager] 🌐 Запрос Auto Bot конфигурации...');
             // Загружаем конфигурацию Auto Bot
             const autoBotResponse = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/auto-bot`);
+            if (autoBotResponse.status === 503) {
+                this._service503Until = Date.now() + 30000;
+                this.serviceOnline = false;
+                this.updateServiceStatus('offline', 'Сервис ботов недоступен (503). Повтор через 30 сек.');
+                console.warn('[BotsManager] ⚠️ Сервис ботов недоступен (503). Повтор через 30 сек.');
+                return;
+            }
             this.logDebug('[BotsManager] 📡 Auto Bot response status:', autoBotResponse.status);
             const autoBotData = await autoBotResponse.json();
             this.logDebug('[BotsManager] 🤖 Auto Bot data:', autoBotData);
@@ -46,6 +56,13 @@
             this.logDebug('[BotsManager] 🌐 Запрос системных настроек...');
             // Загружаем системные настройки
             const systemResponse = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/system-config`);
+            if (systemResponse.status === 503) {
+                this._service503Until = Date.now() + 30000;
+                this.serviceOnline = false;
+                this.updateServiceStatus('offline', 'Сервис ботов недоступен (503). Повтор через 30 сек.');
+                console.warn('[BotsManager] ⚠️ Сервис ботов недоступен (503). Повтор через 30 сек.');
+                return;
+            }
             this.logDebug('[BotsManager] 📡 System response status:', systemResponse.status);
             const systemData = await systemResponse.json();
             this.logDebug('[BotsManager] ⚙️ System data:', systemData);

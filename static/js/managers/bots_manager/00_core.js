@@ -68,6 +68,9 @@ class BotsManager {
         // Текущий таймфрейм системы (загружается из API)
         this.currentTimeframe = '6h'; // Дефолтное значение, будет обновлено при загрузке
         
+        // При 503 не слать повторные запросы к auto-bot/active-detailed 30 сек
+        this._service503Until = 0;
+        
         // Инициализация при создании
         this.init();
     }

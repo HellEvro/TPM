@@ -61,6 +61,7 @@
                 console.log('[BotsManager] 📊 Ответ сервиса:', data);
                 // bots_available: false — app.py работает, но Bots на 5001 не запущен
                 this.serviceOnline = data.status === 'online' && data.bots_available !== false;
+                this._service503Until = 0; // Сброс бэкоффа при успешном ответе
                 
                 if (this.serviceOnline) {
                     console.log('[BotsManager] ✅ Сервис ботов онлайн');
@@ -72,6 +73,9 @@
                 }
             } else {
                 console.error('[BotsManager] ❌ HTTP ошибка:', response.status, response.statusText);
+                this._service503Until = response.status === 503 ? Date.now() + 30000 : 0;
+                this.serviceOnline = false;
+                this.updateServiceStatus('offline', 'Сервис ботов недоступен');
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
@@ -96,6 +100,9 @@
             this.updateServiceStatus('offline', 'Сервис ботов недоступен');
             this.showServiceUnavailable();
         }
+    },
+        _is503Backoff() {
+        return this._service503Until && Date.now() < this._service503Until;
     },
             updateServiceStatus(status, message) {
         if (this._lastServiceStatus.status === status && this._lastServiceStatus.message === message) {

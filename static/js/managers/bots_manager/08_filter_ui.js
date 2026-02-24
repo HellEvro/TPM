@@ -5,13 +5,26 @@
     if (typeof BotsManager === 'undefined') return;
     Object.assign(BotsManager.prototype, {
             async loadFiltersData() {
-        console.log('[BotsManager] 🔧 Загрузка данных фильтров...');
-        
         if (!this.serviceOnline) return;
+        // При 503 не слать запросы 30 сек — убираем спам в консоли и нагрузку
+        if (this._is503Backoff()) {
+            this.logDebug('[BotsManager] ⏳ Загрузка фильтров пропущена (503 бэкофф)');
+            return;
+        }
+        this.logDebug('[BotsManager] 🔧 Загрузка данных фильтров...');
         
         try {
             // Получаем конфигурацию Auto Bot с фильтрами
             const response = await fetch(`${this.apiUrl}/auto-bot`);
+            
+            if (response.status === 503) {
+                this._service503Until = Date.now() + 30000;
+                this.serviceOnline = false;
+                this.updateServiceStatus('offline', 'Сервис ботов недоступен (503). Повтор через 30 сек.');
+                console.warn('[BotsManager] ⚠️ Сервис ботов недоступен (503). Повтор через 30 сек.');
+                return;
+            }
+            
             const data = await response.json();
             
             if (data.success && data.config) {

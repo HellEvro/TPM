@@ -237,49 +237,27 @@ class ContinuousDataLoader:
         logger.info("🏁 Выход из непрерывного цикла")
 
     def _seed_coins_placeholder(self):
-        """Заполняет список монет заглушками (RSI=50, WAIT), чтобы UI не был пустым до первого раунда."""
+        """Устанавливает total_coins по числу пар с биржи (без записи в coins — они заполнятся после расчёта RSI)."""
         try:
             from bots_modules.imports_and_globals import get_exchange, coins_rsi_data
-            from bot_engine.config_loader import get_current_timeframe, get_rsi_key, get_trend_key
+            from bot_engine.config_loader import get_current_timeframe, TIMEFRAME
             exch = get_exchange()
             if not exch:
                 return
             try:
                 tf = get_current_timeframe()
             except Exception:
-                tf = '1m'
-            rsi_key = get_rsi_key(tf)
-            trend_key = get_trend_key(tf)
+                tf = TIMEFRAME
             pairs = exch.get_all_pairs()
             if not pairs or not isinstance(pairs, list):
                 return
-            now = datetime.now().isoformat()
-            placeholders = {}
-            for symbol in pairs:
-                if not symbol or str(symbol).strip().upper() == 'ALL':
-                    continue
-                placeholders[symbol] = {
-                    'symbol': symbol,
-                    rsi_key: 50,
-                    trend_key: 'NEUTRAL',
-                    'rsi_zone': 'NEUTRAL',
-                    'signal': 'WAIT',
-                    'price': 0,
-                    'change24h': 0,
-                    'last_update': now,
-                    'rsi': 50,
-                    'trend': 'NEUTRAL',
-                    'rsi6h': 50,
-                    'trend6h': 'NEUTRAL',
-                    'is_mature': True,
-                    'has_existing_position': False,
-                    'enhanced_rsi': {'enabled': False},
-                }
-            if placeholders:
-                coins_rsi_data['coins'] = placeholders
-                coins_rsi_data['total_coins'] = len(placeholders)
-                coins_rsi_data['last_update'] = now
-                logger.info(f"📋 Предзаполнено {len(placeholders)} монет для UI (RSI обновится после первого раунда)")
+            valid = [s for s in pairs if s and str(s).strip().upper() != 'ALL']
+            if not valid:
+                return
+            coins_rsi_data['total_coins'] = len(valid)
+            logger.info(
+                f"📋 Готово {len(valid)} символов для первого раунда RSI (ТФ: {tf}, coins заполнятся после расчёта)"
+            )
         except Exception as e:
             logger.warning(f"⚠️ Не удалось предзаполнить список монет: {e}")
 
@@ -291,11 +269,17 @@ class ContinuousDataLoader:
             from bots_modules.filters import load_all_coins_candles_fast
             success = load_all_coins_candles_fast()
             duration = time.time() - start
+            n = 0
+            try:
+                from bots_modules.imports_and_globals import coins_rsi_data
+                n = len(coins_rsi_data.get('candles_cache') or coins_rsi_data.get('coins') or {})
+            except Exception:
+                pass
             if success:
-                logger.info(f"✅ Свечи загружены за {duration:.1f}с")
+                logger.info(f"✅ Этап 1/7: Свечи: {n} монет за {duration:.1f}с")
                 return True
             else:
-                logger.error(f"❌ Не удалось загрузить свечи")
+                logger.error(f"❌ Этап 1/7: Не удалось загрузить свечи")
                 return False
 
         except Exception as e:
@@ -377,11 +361,17 @@ class ContinuousDataLoader:
             )
 
             duration = time.time() - start
+            n = 0
+            try:
+                from bots_modules.imports_and_globals import coins_rsi_data
+                n = len(coins_rsi_data.get('coins') or {})
+            except Exception:
+                pass
             if success:
-                logger.info(f"✅ RSI рассчитан за {duration:.1f}с")
+                logger.info(f"✅ Этап 2/7: RSI: {n} монет за {duration:.1f}с")
                 return True
             else:
-                logger.error(f"❌ Не удалось рассчитать RSI")
+                logger.error(f"❌ Этап 2/7: Не удалось рассчитать RSI")
                 return False
 
         except Exception as e:
@@ -468,17 +458,17 @@ class ContinuousDataLoader:
             thread.join(timeout=MATURITY_CALCULATION_TIMEOUT)
 
             if thread.is_alive():
-                logger.error(f"⚠️ Таймаут расчета зрелости ({MATURITY_CALCULATION_TIMEOUT}с)")
+                logger.error(f"✅ Этап 3/7: Таймаут зрелости ({MATURITY_CALCULATION_TIMEOUT}с)")
                 return
 
             if exception[0]:
                 raise exception[0]
 
             duration = time.time() - start
-            logger.info(f"✅ Зрелость рассчитана за {duration:.1f}с")
+            logger.info(f"✅ Этап 3/7: Зрелость за {duration:.1f}с")
 
         except Exception as e:
-            logger.error(f"⚠️ Ошибка расчета зрелости: {e}")
+            logger.error(f"✅ Этап 3/7: Ошибка зрелости — {e}")
             # Не критично, продолжаем
 
     def _analyze_trends(self):
@@ -491,10 +481,10 @@ class ContinuousDataLoader:
             analyze_trends_for_signal_coins()
 
             duration = time.time() - start
-            logger.info(f"✅ Тренды проанализированы за {duration:.1f}с")
+            logger.info(f"✅ Этап 4/7: Тренды за {duration:.1f}с")
 
         except Exception as e:
-            logger.error(f"⚠️ Ошибка анализа трендов: {e}")
+            logger.error(f"✅ Этап 4/7: Ошибка трендов — {e}")
 
     def _apply_heavy_filters(self):
         """🔍 Этап 5/7: Применяет тяжёлые фильтры (time_filter, exit_scam, loss_reentry) — для UI и автобота"""
@@ -504,9 +494,9 @@ class ContinuousDataLoader:
             from bots_modules.filters import apply_heavy_filters_to_coins
             apply_heavy_filters_to_coins()
             duration = time.time() - start
-            logger.info(f"✅ Тяжёлые фильтры применены за {duration:.1f}с")
+            logger.info(f"✅ Этап 5/7: Тяжёлые фильтры за {duration:.1f}с")
         except Exception as e:
-            logger.error(f"⚠️ Ошибка применения тяжёлых фильтров: {e}")
+            logger.error(f"✅ Этап 5/7: Ошибка тяжёлых фильтров — {e}")
 
     def _process_filters(self):
         """🔍 Этап 6/7: Обрабатывает лонг/шорт монеты фильтрами"""
@@ -516,10 +506,10 @@ class ContinuousDataLoader:
             from bots_modules.filters import process_long_short_coins_with_filters
             filtered_coins = process_long_short_coins_with_filters()
             duration = time.time() - start
-            logger.info(f"✅ Этап 6/7 завершён за {duration:.1f}с, монет для автобота: {len(filtered_coins)}")
+            logger.info(f"✅ Этап 6/7: {len(filtered_coins)} монет для автобота за {duration:.1f}с")
             return filtered_coins
         except Exception as e:
-            logger.error(f"⚠️ Ошибка обработки фильтрами: {e}")
+            logger.error(f"✅ Этап 6/7: Ошибка фильтров — {e}")
             return []
 
     def _set_filtered_coins_for_autobot(self, filtered_coins):
@@ -532,10 +522,10 @@ class ContinuousDataLoader:
             set_filtered_coins_for_autobot(filtered_coins)
 
             duration = time.time() - start
-            logger.info(f"✅ Монеты переданы за {duration:.3f}с")
+            logger.info(f"✅ Этап 7/7: Передано автоботу {len(filtered_coins)} монет за {duration:.2f}с")
 
         except Exception as e:
-            logger.error(f"⚠️ Ошибка передачи монет автоботу: {e}")
+            logger.error(f"✅ Этап 7/7: Ошибка передачи автоботу — {e}")
 
     def get_status(self):
         """📊 Возвращает статус воркера"""
