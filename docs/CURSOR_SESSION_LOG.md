@@ -13,6 +13,7 @@
 |---|------|-----------|
 | 1 | `static/js/managers/bots_manager/04_service.js` | MAX_RETRIES 1 → 2 для checkBotsService (слабый ПК: меньше мигания «Сервис недоступен»). |
 | 2 | `bots_modules/filters.py` | `analyze_trends_for_signal_coins`: переставлен порядок locks — сначала rsi_data_lock (снапшот), затем кратко bots_data_lock (только ics). Устранена длительная блокировка bots_data_lock при итерации по 552 символам — причина таймаута load_all_coins_candles_fast. |
+| 3 | `app.py` | Добавлены прокси для `/api/bots/mature-coins-list` и `/api/bots/statistics` — при открытии UI через порт 5000 эти запросы возвращали 404 и HTML вместо JSON. |
 
 ### Результаты проверки
 - Этапы 3–4 стартуют; этап 4 раньше держал bots_data_lock ~15+ с → таймаут у основного цикла.

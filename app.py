@@ -2199,6 +2199,20 @@ def get_delisted_coins_proxy():
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
+@app.route('/api/bots/mature-coins-list', methods=['GET'])
+def get_mature_coins_list_proxy():
+    """Список зрелых монет (счётчик в UI)"""
+    result = call_bots_service('/api/bots/mature-coins-list', params=request.args)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
+@app.route('/api/bots/statistics', methods=['GET'])
+def get_bots_statistics_proxy():
+    """Статистика ботов (вкладка История / AI Training)"""
+    result = call_bots_service('/api/bots/statistics', params=request.args, timeout=30)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
 @app.route('/api/bots/history', methods=['GET'])
 def get_bots_history_proxy():
     """История действий ботов (таб История)"""
