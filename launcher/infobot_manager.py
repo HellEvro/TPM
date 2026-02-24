@@ -2155,8 +2155,12 @@ class InfoBotManager(tk.Tk):
                 pass
 
     def _ensure_required_app_files(self) -> None:
-        config_path = PROJECT_ROOT / "app" / "config.py"
-        if not config_path.exists():
+        # app/config.py — заглушка, реэкспорт из configs; без неё «from app.config» даёт ошибку
+        app_config_py = PROJECT_ROOT / "app" / "config.py"
+        if not app_config_py.exists():
+            self._create_app_config_stub(silent=True)
+        # configs/app_config.py и configs/keys.py — основные конфиги
+        if not (PROJECT_ROOT / "configs" / "app_config.py").exists():
             self._create_config_file_from_example(silent=True)
 
         keys_path = PROJECT_ROOT / "app" / "keys.py"
@@ -2167,6 +2171,31 @@ class InfoBotManager(tk.Tk):
         bot_config_path = PROJECT_ROOT / "bot_engine" / "bot_config.py"
         if not bot_config_path.exists():
             self._create_bot_config_file_from_example(silent=True)
+
+    def _create_app_config_stub(self, silent: bool = False) -> bool:
+        """Создаёт app/config.py (заглушка из configs). Нужен для «from app.config import», без app.keys."""
+        target = PROJECT_ROOT / "app" / "config.py"
+        example = PROJECT_ROOT / "app" / "config.example.py"
+        stub_content = (
+            "# Реальный конфиг в configs/app_config.py\n"
+            "from configs.app_config import *  # noqa: F401, F403\n"
+        )
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if example.exists():
+                shutil.copy2(example, target)
+                self.log("Создан app/config.py из примера (заглушка)", channel="system")
+            else:
+                target.write_text(stub_content, encoding="utf-8")
+                self.log("Создан app/config.py (заглушка)", channel="system")
+            return True
+        except OSError as exc:
+            msg = f"Не удалось создать app/config.py: {exc}"
+            if silent:
+                self.log(msg, channel="system")
+            else:
+                messagebox.showerror("Ошибка", msg)
+            return False
 
     def _create_config_file_from_example(self, silent: bool = False) -> bool:
         target = PROJECT_ROOT / "configs" / "app_config.py"
