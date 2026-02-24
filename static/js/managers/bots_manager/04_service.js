@@ -76,6 +76,7 @@
                 this._service503Until = response.status === 503 ? Date.now() + 30000 : 0;
                 this.serviceOnline = false;
                 this.updateServiceStatus('offline', 'Сервис ботов недоступен');
+                this.updateCoinsCounter(); // чтобы счётчики (Все, Зрелые и т.д.) не показывали устаревшие значения
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
@@ -98,6 +99,7 @@
             }
             this.serviceOnline = false;
             this.updateServiceStatus('offline', 'Сервис ботов недоступен');
+            this.updateCoinsCounter(); // чтобы счётчики не показывали устаревшие значения при ошибке сети/таймауте
             this.showServiceUnavailable();
         }
     },

@@ -22,6 +22,7 @@
                 this.serviceOnline = false;
                 this.updateServiceStatus('offline', 'Сервис ботов недоступен (503). Повтор через 30 сек.');
                 console.warn('[BotsManager] ⚠️ Сервис ботов недоступен (503). Повтор через 30 сек.');
+                this.updateCoinsCounter(); // сброс счётчиков при 503
                 return;
             }
             

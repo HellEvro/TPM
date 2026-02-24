@@ -622,6 +622,17 @@
         if (manualCountEl) manualCountEl.textContent = `(${manualPositionCount})`;
         if (delistedCountEl) delistedCountEl.textContent = `(${delistedCount})`;
         
+        // Когда списка монет нет (503 или первый запуск) — сбрасываем счётчик зрелых, чтобы не показывать устаревшее значение
+        const matureCountEl = document.getElementById('matureCoinsCount');
+        if (matureCountEl) {
+            if (allCount === 0) {
+                matureCountEl.textContent = '(0)';
+            } else {
+                const matureCount = this.coinsRsiData.filter(coin => coin.is_mature === true).length;
+                matureCountEl.textContent = `(${matureCount})`;
+            }
+        }
+        
         // ✅ Логируем недоступные для торговли монеты
         if (unavailableCount > 0) {
             const unavailableCoins = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'UNAVAILABLE');
