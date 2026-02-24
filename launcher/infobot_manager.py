@@ -2163,8 +2163,9 @@ class InfoBotManager(tk.Tk):
         if not (PROJECT_ROOT / "configs" / "app_config.py").exists():
             self._create_config_file_from_example(silent=True)
 
-        keys_path = PROJECT_ROOT / "app" / "keys.py"
-        if not keys_path.exists():
+        # Создаём configs/keys.py из примера только если его ещё НЕТ (не перезаписывать ключи пользователя!)
+        configs_keys = PROJECT_ROOT / "configs" / "keys.py"
+        if not configs_keys.exists():
             self._create_keys_file_from_example(silent=True)
         
         # ✅ Восстанавливаем bot_config.py из example, если он отсутствует
@@ -2223,7 +2224,10 @@ class InfoBotManager(tk.Tk):
             return False
 
     def _create_keys_file_from_example(self, silent: bool = False) -> bool:
+        """Создаёт configs/keys.py из примера только если файла ещё нет. Вызывать только когда target не существует — не перезаписывать ключи пользователя."""
         target = PROJECT_ROOT / "configs" / "keys.py"
+        if target.exists():
+            return False  # Никогда не перезаписывать существующий файл с ключами
         example = PROJECT_ROOT / "configs" / "keys.example.py"
         if not example.exists():
             message = "Файл configs/keys.example.py не найден. Скопируйте шаблон ключей вручную."
