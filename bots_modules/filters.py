@@ -3586,7 +3586,6 @@ def analyze_trends_for_signal_coins():
             get_trend_key,
             get_current_timeframe,
         )
-        
         # Проверяем флаг trend_detection_enabled
         config = get_auto_bot_config()
         trend_detection_enabled = config.get('trend_detection_enabled', True)
@@ -3617,23 +3616,24 @@ def analyze_trends_for_signal_coins():
         auto_config = bots_data.get('auto_bot_config', {})
         rsi_long_th = get_config_value(auto_config, 'rsi_long_threshold')
         rsi_short_th = get_config_value(auto_config, 'rsi_short_threshold')
-        # ✅ Загружаем индивидуальные настройки ОДИН раз для всех монет (минус 100+ lock acquisitions)
-        _individual_settings_cache = {}
-        with bots_data_lock:
-            ics = bots_data.get('individual_coin_settings', {}) or {}
-            for sym in coins_rsi_data['coins']:
-                ns = _normalize_symbol(sym)
-                if ns in ics:
-                    _individual_settings_cache[sym] = ics[ns].copy()
-        from copy import deepcopy
-        _individual_settings_cache = {k: deepcopy(v) for k, v in _individual_settings_cache.items()}
-        def _get_ind(s):
-            return _individual_settings_cache.get(s) or _individual_settings_cache.get(_normalize_symbol(s))
-
-        # ✅ Снапшот символов и кэша — избегаем RuntimeError при изменении dict во время итерации (основной цикл обновляет coins)
+        # ✅ Снапшот символов и кэша под rsi_data_lock — избегаем RuntimeError при изменении dict (основной цикл обновляет coins)
         with rsi_data_lock:
             all_symbols = list((coins_rsi_data.get('coins') or {}).keys())
             candles_cache = dict(coins_rsi_data.get('candles_cache') or {})
+
+        # ✅ Индивидуальные настройки — кратко bots_data_lock (сокращаем конкуренцию с load_all_coins_candles_fast)
+        ics = {}
+        with bots_data_lock:
+            ics = (bots_data.get('individual_coin_settings') or {}).copy()
+        from copy import deepcopy
+        _individual_settings_cache = {}
+        for sym in all_symbols:
+            ns = _normalize_symbol(sym)
+            if ns in ics:
+                _individual_settings_cache[sym] = ics[ns].copy()
+        _individual_settings_cache = {k: deepcopy(v) for k, v in _individual_settings_cache.items()}
+        def _get_ind(s):
+            return _individual_settings_cache.get(s) or _individual_settings_cache.get(_normalize_symbol(s))
 
         signal_coins = []
         for symbol in all_symbols:

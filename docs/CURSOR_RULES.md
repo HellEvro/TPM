@@ -16,7 +16,18 @@
 
 ---
 
-## 2.5. Лог сессий Cursor
+## 2.5. Изменения конфига — только через патчи
+
+**Папка:** `patches/patches/` (см. `patches/README.md`)
+
+- **Все изменения в конфигах** (`configs/bot_config.py`, `configs/bot_config.example.py`, `static/js/config.js` и др.) **обязательно** оформлять патчами
+- Не править конфиги напрямую — создавать новый файл `patches/patches/NNN_описание.py` с функцией `apply(project_root: Path) -> bool`
+- Патчи выполняются при запуске лаунчера и `bots.py`; каждый патч применяется один раз
+- Примеры: `001_bot_config_missing_classes.py`, `012_rsi_aggressive_low_resource.py`
+
+---
+
+## 2.6. Лог сессий Cursor
 
 **Файл:** `docs/CURSOR_SESSION_LOG.md`
 

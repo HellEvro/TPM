@@ -38,7 +38,7 @@
         this.initializeQuickLaunchButtons();
     },
             async checkBotsService(retryCount = 0) {
-        const MAX_RETRIES = 1;
+        const MAX_RETRIES = 2;  // Увеличено для слабого ПК: при пиковой нагрузке (RSI, этапы 3–7) сервис может отвечать медленнее
         console.log('[BotsManager] 🔍 Проверка сервиса ботов...' + (retryCount > 0 ? ` (повтор ${retryCount}/${MAX_RETRIES})` : ''));
         console.log('[BotsManager] 🔗 URL:', `${this.BOTS_SERVICE_URL}/api/status`);
         
