@@ -2395,14 +2395,28 @@
             console.log('[BotsManager] 🔧 Устанавливаем обработчик события...');
             globalAutoBotToggleEl.setAttribute('data-initialized', 'true');
             
-            // КРИТИЧЕСКИ ВАЖНО: Загружаем текущее состояние Auto Bot с сервера
-            try {
-                console.log('[BotsManager] 🔄 Загрузка текущего состояния Auto Bot...');
+            // КРИТИЧЕСКИ ВАЖНО: Загружаем текущее состояние Auto Bot с сервера (при 503 — повтор до 2 раз через 5 сек)
+            const fetchAutoBotState = async (attempt = 0) => {
+                const MAX_RETRIES = 2;
+                const RETRY_DELAY_MS = 5000;
                 const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/auto-bot`);
                 const data = await response.json();
-                
                 if (data.success && data.config) {
-                    const autoBotEnabled = data.config.enabled;
+                    return { ok: true, config: data.config };
+                }
+                if ((response.status === 504 || response.status === 503) && attempt < MAX_RETRIES) {
+                    this.logDebug(`[BotsManager] ⏳ Auto Bot: сервер занят (${response.status}), повтор через ${RETRY_DELAY_MS / 1000} сек (${attempt + 1}/${MAX_RETRIES})`);
+                    await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+                    return fetchAutoBotState(attempt + 1);
+                }
+                return { ok: false, status: response.status, data };
+            };
+            try {
+                console.log('[BotsManager] 🔄 Загрузка текущего состояния Auto Bot...');
+                const result = await fetchAutoBotState();
+                
+                if (result.ok && result.config) {
+                    const autoBotEnabled = result.config.enabled;
                     console.log('[BotsManager] 🤖 Текущее состояние Auto Bot с сервера:', autoBotEnabled ? 'ВКЛ' : 'ВЫКЛ');
                     
                     globalAutoBotToggleEl.checked = autoBotEnabled;
@@ -2414,11 +2428,11 @@
                     
                     console.log('[BotsManager] ✅ Переключатель Auto Bot инициализирован с состоянием:', autoBotEnabled);
                 } else {
-                    if (response.status === 504) {
-                        this.logDebug('[BotsManager] ⏳ Auto Bot: таймаут при загрузке (сервер занят), оставляем ВЫКЛ');
+                    if (result.status === 504 || result.status === 503) {
+                        this.logDebug('[BotsManager] ⏳ Auto Bot: сервер занят после повторов, оставляем ВЫКЛ');
                         return;
                     }
-                    const msg = data.error || data.message || 'Неизвестная ошибка';
+                    const msg = (result.data && (result.data.error || result.data.message)) || 'Неизвестная ошибка';
                     console.error('[BotsManager] ❌ Ошибка загрузки состояния Auto Bot:', msg);
                 }
             } catch (error) {

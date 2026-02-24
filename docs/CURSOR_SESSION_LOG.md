@@ -13,7 +13,14 @@
 |---|------|-----------|
 | 1 | `app.py` | Таймаут прокси `/api/bots/auto-bot` увеличен до 90 с (при старте bots.py ответ может занять до ~60 с). |
 | 2 | `static/js/managers/bots_manager/10_configuration.js` | При 504 на загрузке Auto Bot: logDebug «таймаут», не error; сообщение об ошибке: data.error \|\| data.message. |
-| 3 | `static/js/managers/bots_manager/04_service.js` | MAX_RETRIES 1 → 2 для checkBotsService (слабый ПК: меньше мигания «Сервис недоступен»). |
+| 3 | **Корневая причина 504:** GET auto-bot при каждом запросе вызывал load_auto_bot_config() (reload конфига, файл, БД) — при нагрузке загрузчика API не успевал. |
+| 4 | `bots_modules/api_endpoints.py` | **GET /api/bots/auto-bot:** без `?refresh=1` ответ из памяти (acquire bots_data_lock timeout 5с); при refresh — load_auto_bot_config(). При таймауте lock → 503. |
+| 5 | `bots_modules/api_endpoints.py` | **GET /api/bots/active-detailed:** bots_data_lock.acquire(timeout=5), rsi_data_lock.acquire(timeout=3); при неудаче → 503 (retry_after), без длительного ожидания. |
+| 6 | `static/js/.../10_configuration.js`, `07_bot_controls.js` | Обработка 503 как «сервер занят» (как 504): не логировать ошибку, пропускать тик / оставлять переключатель ВЫКЛ. |
+| 7 | `static/js/managers/bots_manager/04_service.js` | MAX_RETRIES 1 → 2 для checkBotsService (слабый ПК: меньше мигания «Сервис недоступен»). |
+| 8 | `static/js/.../10_configuration.js` | GET auto-bot при 503: до 2 повторов через 5 сек; после успеха переключатель обновляется. |
+| 9 | `bots_modules/api_endpoints.py` | Таймауты lock: auto-bot 10с, active-detailed 10/6с; coins-with-rsi try lock 10с, при неудаче 503. |
+| 10 | `static/js/.../04_service.js` | При 503 на coins-with-rsi — не переводить в офлайн, повтор при следующем тике. |
 | 2 | `bots_modules/filters.py` | `analyze_trends_for_signal_coins`: переставлен порядок locks — сначала rsi_data_lock (снапшот), затем кратко bots_data_lock (только ics). Устранена длительная блокировка bots_data_lock при итерации по 552 символам — причина таймаута load_all_coins_candles_fast. |
 | 3 | `app.py` | Добавлены прокси для `/api/bots/mature-coins-list` и `/api/bots/statistics` — при открытии UI через порт 5000 эти запросы возвращали 404 и HTML вместо JSON. |
 | 4 | `static/js/managers/bots_manager/04_service.js` | После обновления списка монет повторно вызывается `applyRsiFilter(this.currentRsiFilter)`, чтобы при обновлении RSI/применении фильтров отображалась правильная выборка. |

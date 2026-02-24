@@ -739,8 +739,17 @@ def get_coins_with_rsi():
                 cache_age = None
         
         # ⚡ Читаем coins под блокировкой — чтобы не получить половинное обновление при записи из load_all_coins_rsi / analyze_trends
-        with rsi_data_lock:
+        if not rsi_data_lock.acquire(timeout=10):
+            return jsonify({
+                'success': False,
+                'error': 'Сервер занят (обновление RSI). Повторите через несколько секунд.',
+                'coins': {},
+                'retry_after': 5
+            }), 503
+        try:
             coins_items = list(coins_rsi_data['coins'].items())
+        finally:
+            rsi_data_lock.release()
         # Очищаем данные от несериализуемых объектов  # Создаем список один раз
         for symbol, coin_data in coins_items:
             # ✅ ИСПРАВЛЕНИЕ: НЕ фильтруем монеты по зрелости для UI!
@@ -3825,14 +3834,23 @@ def auto_bot_config():
             logger.info(" 📝 POST /api/bots/auto-bot — изменение конфигурации")
         
         if request.method == 'GET':
-            # ✅ КРИТИЧНО: При каждом GET принудительно перечитываем конфиг из файла (источник истины),
-            # иначе UI получает кэш и после сохранения другой секции «AI подтверждение» возвращается к старому значению
-            from bots_modules.imports_and_globals import load_auto_bot_config
-            if hasattr(load_auto_bot_config, '_last_mtime'):
-                load_auto_bot_config._last_mtime = 0
-            load_auto_bot_config()
+            # ✅ При ?refresh=1 перечитываем конфиг из файла (источник истины).
+            # Без refresh — быстрый ответ из памяти, чтобы не блокировать API при нагрузке (загрузка свечей/RSI).
+            do_refresh = request.args.get('refresh', '').lower() in ('1', 'true', 'yes')
+            if do_refresh:
+                from bots_modules.imports_and_globals import load_auto_bot_config
+                if hasattr(load_auto_bot_config, '_last_mtime'):
+                    load_auto_bot_config._last_mtime = 0
+                load_auto_bot_config()
             
-            with bots_data_lock:
+            # Краткий захват блокировки (таймаут 10с) — при нагрузке загрузчик может держать lock долго
+            if not bots_data_lock.acquire(timeout=10):
+                return jsonify({
+                    'success': False,
+                    'error': 'Сервер занят (загрузка данных). Повторите через несколько секунд.',
+                    'retry_after': 5
+                }), 503
+            try:
                 config = bots_data['auto_bot_config'].copy()
                 
                 # ✅ Логируем ключевые значения на уровне INFO для отладки (после перезагрузки страницы)
@@ -3959,6 +3977,8 @@ def auto_bot_config():
                     'success': True,
                     'config': config
                 })
+            finally:
+                bots_data_lock.release()
         
         elif request.method == 'POST':
             # Добавляем логирование для отладки
@@ -5052,42 +5072,45 @@ def run_bots_service():
 
 @bots_app.route('/api/bots/active-detailed', methods=['GET'])
 def get_active_bots_detailed():
-    """Получает детальную информацию о активных ботах для мониторинга"""
+    """Получает детальную информацию о активных ботах для мониторинга. При занятости сервера — 503 с retry_after."""
     try:
-        with bots_data_lock:
+        if not bots_data_lock.acquire(timeout=10):
+            return jsonify({
+                'success': False,
+                'error': 'Сервер занят (загрузка данных). Повторите через несколько секунд.',
+                'bots': [], 'total': 0, 'retry_after': 5
+            }), 503
+        if not rsi_data_lock.acquire(timeout=6):
+            bots_data_lock.release()
+            return jsonify({
+                'success': False,
+                'error': 'Сервер занят (обновление RSI). Повторите через несколько секунд.',
+                'bots': [], 'total': 0, 'retry_after': 5
+            }), 503
+        try:
             active_bots = []
             for symbol, bot_data in bots_data['bots'].items():
                 if bot_data.get('status') in ['in_position_long', 'in_position_short']:
-                    # Получаем текущую цену из RSI данных
                     current_price = None
-                    with rsi_data_lock:
-                        coin_data = coins_rsi_data['coins'].get(symbol)
-                        if coin_data:
-                            current_price = coin_data.get('price')
-                    
-                    # Определяем направление позиции
+                    coin_data = coins_rsi_data['coins'].get(symbol)
+                    if coin_data:
+                        current_price = coin_data.get('price')
                     position_side = None
                     if bot_data.get('status') in ['in_position_long']:
                         position_side = 'Long'
                     elif bot_data.get('status') in ['in_position_short']:
                         position_side = 'Short'
-                    
-                    # Получаем настройки бота
                     config = bot_data.get('config', {})
-                    
-                    # Рассчитываем потенциальный убыток по стоп-лоссу
                     stop_loss_pnl = 0
                     if current_price and position_side and bot_data.get('entry_price'):
                         entry_price = bot_data.get('entry_price')
                         max_loss_percent = config.get('max_loss_percent', 15.0)
-                        
                         if position_side == 'Long':
                             stop_loss_price = entry_price * (1 - max_loss_percent / 100)
                             stop_loss_pnl = (stop_loss_price - entry_price) / entry_price * 100
-                        else:  # Short
+                        else:
                             stop_loss_price = entry_price * (1 + max_loss_percent / 100)
                             stop_loss_pnl = (entry_price - stop_loss_price) / entry_price * 100
-                    
                     active_bots.append({
                         'symbol': symbol,
                         'status': bot_data.get('status', 'unknown'),
@@ -5104,12 +5127,14 @@ def get_active_bots_detailed():
                         'created_at': bot_data.get('created_at'),
                         'last_update': bot_data.get('last_update')
                     })
-            
             return jsonify({
                 'success': True,
                 'bots': active_bots,
                 'total': len(active_bots)
             })
+        finally:
+            rsi_data_lock.release()
+            bots_data_lock.release()
             
     except Exception as e:
         logger.error(f" ❌ Ошибка получения детальной информации о ботах: {e}")

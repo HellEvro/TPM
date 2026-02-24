@@ -154,6 +154,10 @@
         try {
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/coins-with-rsi`);
             
+            if (response.status === 503) {
+                this.logDebug('[BotsManager] ⏳ coins-with-rsi: сервер занят (503), повтор при следующем тике');
+                return;
+            }
             if (response.ok) {
             const data = await response.json();
             

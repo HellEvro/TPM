@@ -1026,8 +1026,8 @@
             
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/active-detailed`);
             if (!response.ok) {
-                if (response.status === 504) {
-                    this.logDebug('[BotsManager] ⏳ active-detailed: таймаут (сервер занят), пропускаем тик');
+                if (response.status === 504 || response.status === 503) {
+                    this.logDebug('[BotsManager] ⏳ active-detailed: сервер занят (504/503), пропускаем тик');
                     return;
                 }
                 throw new Error(`HTTP ${response.status}`);
@@ -1040,8 +1040,8 @@
             }
             
         } catch (error) {
-            if (error.message && error.message.includes('504')) {
-                this.logDebug('[BotsManager] ⏳ active-detailed: таймаут, следующий тик через 5 сек');
+            if (error.message && (error.message.includes('504') || error.message.includes('503'))) {
+                this.logDebug('[BotsManager] ⏳ active-detailed: сервер занят, следующий тик через 5 сек');
                 return;
             }
             console.error('[BotsManager] ❌ Ошибка обновления детальной информации о ботах:', error);
