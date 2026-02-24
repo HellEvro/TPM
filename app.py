@@ -2187,8 +2187,8 @@ def get_account_info():
 
 @app.route('/api/bots/active-detailed', methods=['GET'])
 def get_active_detailed_proxy():
-    """Детальная информация об активных ботах (правая панель)"""
-    result = call_bots_service('/api/bots/active-detailed', timeout=30, params=request.args)
+    """Детальная информация об активных ботах (правая панель). Таймаут 60с — при нагрузке (RSI, этапы 3–7) bots.py может отвечать дольше."""
+    result = call_bots_service('/api/bots/active-detailed', timeout=60, params=request.args)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
