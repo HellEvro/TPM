@@ -2615,7 +2615,7 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                 if not pairs_for_tf:
                     continue
 
-            # RSI — локальный расчёт. RSI_AGGRESSIVE_LOW_RESOURCE = 2 воркера, батч 50 (фикс таймаута на слабых ПК)
+            # RSI — локальный расчёт. RSI_AGGRESSIVE_LOW_RESOURCE = 2 воркера, батч 25 (фикс таймаута на слабых ПК)
             _cpu_count = os.cpu_count() or 4
             _aggressive_rsi = False
             try:
@@ -2625,7 +2625,7 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                 pass
             if _aggressive_rsi:
                 rsi_max_workers = 2
-                batch_size = 50
+                batch_size = 25   # меньше батч = меньше «проблемных» символов в одном ожидании
                 logger.info(f"📊 RSI: aggressive — {rsi_max_workers} воркера, батч {batch_size}, timeout 90с")
             elif _cpu_count <= 4:
                 batch_size = 100

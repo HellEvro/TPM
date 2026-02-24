@@ -1,10 +1,10 @@
 """
 Патч 012: RSI_AGGRESSIVE_LOW_RESOURCE = True в SystemConfig.
-Фикс таймаута RSI на слабых ПК: 2 воркера, батч 50, timeout 90с.
+Фикс таймаута RSI на слабых ПК: 2 воркера, батч 25, timeout 90с.
 """
 from pathlib import Path
 
-RSI_LINE = "    RSI_AGGRESSIVE_LOW_RESOURCE = True   # 2 воркера RSI, батч 50, timeout 90с (фикс таймаута на слабых ПК)\n"
+RSI_LINE = "    RSI_AGGRESSIVE_LOW_RESOURCE = True   # 2 воркера RSI, батч 25, timeout 90с (фикс таймаута на слабых ПК)\n"
 
 
 def _apply_to_file(path: Path, use_true: bool = True) -> bool:
