@@ -176,11 +176,7 @@ class ContinuousDataLoader:
                     time.sleep(30)
                     continue
 
-                if not coins_rsi_data.get('first_round_complete'):
-                    coins_rsi_data['first_round_complete'] = True
-                    logger.info("✅ ПЕРВАЯ ЗАГРУЗКА ЗАВЕРШЕНА: свечи + RSI готовы → запуск системы (автобот, мониторинг позиций)")
-
-                # Этапы 3–7 выполняются ПОСЛЕ 1–2, последовательно
+                # Этапы 3–7 выполняются ПОСЛЕ 1–2, последовательно (до first_round_complete — иначе startup_sync конкурирует за bots_data_lock)
                 if auto_bot_enabled:
                     try:
                         logger.info("🔄 Запуск этапов 3–7 (после 1–2)...")
@@ -201,6 +197,11 @@ class ContinuousDataLoader:
                 logger.info(f"⏱️ Длительность цикла: {cycle_duration:.1f}с")
                 logger.info(f"📊 Статистика: обновлений={self.update_count}, ошибок={self.error_count}")
                 logger.info("=" * 80)
+
+                # ✅ first_round_complete — только после этапов 1–7 (стартовая синхронизация не конкурирует за bots_data_lock)
+                if not coins_rsi_data.get('first_round_complete'):
+                    coins_rsi_data['first_round_complete'] = True
+                    logger.info("✅ ПЕРВАЯ ЗАГРУЗКА ЗАВЕРШЕНА: этапы 1–7 готовы → запуск стартовой синхронизации")
 
                 # ✅ ЗАВЕРШАЕМ ОБРАБОТКУ - увеличиваем версию данных
                 from bots_modules.imports_and_globals import coins_rsi_data
