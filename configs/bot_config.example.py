@@ -427,6 +427,7 @@ class SystemConfig:
     # РЕЖИМ НИЗКОЙ НАГРУЗКИ (для слабых ПК)
     # ========================================================================
     LOW_RESOURCE_MODE = False               # True = уменьшить параллелизм загрузки свечей (batch 25, 3 воркера). Рекомендуется при зависании bots.py
+    RSI_AGGRESSIVE_LOW_RESOURCE = False     # True = 2 воркера RSI, батч 50, timeout 90с (фикс таймаута RSI на слабых ПК)
 
     # ========================================================================
     # ОГРАНИЧЕНИЕ ОЗУ ДЛЯ AI (ai.py)
@@ -470,6 +471,8 @@ def _patch_system_config_ai_memory():
     """Патч обратной совместимости для старых копий конфига."""
     if not hasattr(SystemConfig, 'LOW_RESOURCE_MODE'):
         SystemConfig.LOW_RESOURCE_MODE = False
+    if not hasattr(SystemConfig, 'RSI_AGGRESSIVE_LOW_RESOURCE'):
+        SystemConfig.RSI_AGGRESSIVE_LOW_RESOURCE = False
     if not hasattr(SystemConfig, 'AI_MEMORY_PCT'):
         SystemConfig.AI_MEMORY_PCT = 30
     if not hasattr(SystemConfig, 'AI_MEMORY_LIMIT_MB'):

@@ -24,6 +24,10 @@ def _patch_system_config():
         SystemConfig.LOW_RESOURCE_MODE = False
     if not hasattr(SystemConfig, 'RSI_AGGRESSIVE_LOW_RESOURCE'):
         SystemConfig.RSI_AGGRESSIVE_LOW_RESOURCE = False
+    # Слабый ПК (AI_MEMORY_LIMIT_MB <= 4096) → принудительно включить RSI aggressive (2 воркера, батч 50, timeout 90с)
+    limit_mb = getattr(SystemConfig, 'AI_MEMORY_LIMIT_MB', 0) or 0
+    if limit_mb > 0 and limit_mb <= 4096:
+        SystemConfig.RSI_AGGRESSIVE_LOW_RESOURCE = True
 
 
 _patch_system_config()
