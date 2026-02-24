@@ -233,6 +233,17 @@ class ContinuousDataLoader:
                 logger.info(f"✅ Обработка завершена (после ошибки, версия данных: {coins_rsi_data['data_version']})")
 
                 time.sleep(30)  # Пауза перед следующей попыткой
+            except BaseException as be:
+                # Не даём потоку завершиться при любом необработанном исключении — логируем и продолжаем цикл
+                logger.error(f"❌ Критическая ошибка загрузчика (поток продолжает работу): {be}")
+                self.error_count += 1
+                try:
+                    from bots_modules.imports_and_globals import coins_rsi_data
+                    coins_rsi_data['processing_cycle'] = False
+                    coins_rsi_data['data_version'] += 1
+                except Exception:
+                    pass
+                time.sleep(30)
 
         logger.info("🏁 Выход из непрерывного цикла")
 

@@ -607,12 +607,16 @@ def run_bots_service():
             try:
                 _gc_ticks = 0
                 while server_thread.is_alive() and not graceful_shutdown:
-                    time.sleep(0.1)
-                    _gc_ticks += 1
-                    if _gc_ticks >= 600:
-                        from utils.memory_utils import force_collect_full
-                        force_collect_full()
-                        _gc_ticks = 0
+                    try:
+                        time.sleep(0.1)
+                        _gc_ticks += 1
+                        if _gc_ticks >= 600:
+                            from utils.memory_utils import force_collect_full
+                            force_collect_full()
+                            _gc_ticks = 0
+                    except Exception as loop_err:
+                        import logging
+                        logging.getLogger('BotsService').error(f"Ошибка в главном цикле (продолжаем работу): {loop_err}")
             except KeyboardInterrupt:
                 logger.info("\n🛑 Получен KeyboardInterrupt, останавливаем сервер...")
                 graceful_shutdown = True

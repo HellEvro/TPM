@@ -298,6 +298,10 @@ def auto_bot_worker():
                 'last_error': str(e),
                 'last_check': datetime.now().isoformat()
             })
+        except BaseException as be:
+            # Критично: не даём потоку завершиться (SystemExit, KeyboardInterrupt и т.д. — логируем и продолжаем)
+            logger.error(f" ❌ Критическая ошибка Auto Bot Worker (поток продолжает работу): {be}")
+            update_process_state('auto_bot_worker', {'last_error': str(be), 'last_check': datetime.now().isoformat()})
 
     logger.warning(" 🛑 Auto Bot Worker остановлен")
 
@@ -520,6 +524,9 @@ def positions_monitor_worker():
 
         except Exception as e:
             logger.error(f" ❌ Критическая ошибка: {e}")
+            time.sleep(10)
+        except BaseException as be:
+            logger.error(f" ❌ Критическая ошибка мониторинга позиций (поток продолжает работу): {be}")
             time.sleep(10)
 
     logger.warning(" 🛑 Мониторинг позиций остановлен")

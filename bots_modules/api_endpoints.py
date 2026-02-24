@@ -3906,7 +3906,6 @@ def auto_bot_config():
         
         if request.method == 'GET':
             # ✅ При ?refresh=1 перечитываем конфиг из файла (источник истины).
-            # Без refresh — быстрый ответ из памяти, чтобы не блокировать API при нагрузке (загрузка свечей/RSI).
             do_refresh = request.args.get('refresh', '').lower() in ('1', 'true', 'yes')
             if do_refresh:
                 from bots_modules.imports_and_globals import load_auto_bot_config
@@ -3914,8 +3913,8 @@ def auto_bot_config():
                     load_auto_bot_config._last_mtime = 0
                 load_auto_bot_config()
             
-            # Ожидание блокировки до 30с — при нагрузке (RSI, загрузчик) lock может держаться долго; иначе фронт получает 503
-            if not bots_data_lock.acquire(timeout=30):
+            # Держим lock только на время копирования — иначе при нагрузке (RSI, загрузчик) API отдаёт 503
+            if not bots_data_lock.acquire(timeout=5):
                 return jsonify({
                     'success': False,
                     'error': 'Сервер занят (загрузка данных). Повторите через несколько секунд.',
@@ -3923,133 +3922,112 @@ def auto_bot_config():
                 }), 503
             try:
                 config = bots_data['auto_bot_config'].copy()
-                
-                # ✅ Логируем ключевые значения на уровне INFO для отладки (после перезагрузки страницы)
-                # Добавляем timestamp для отслеживания, что данные действительно свежие
-                # Логирование конфигурации убрано для уменьшения спама (переведено в DEBUG если нужно)
-                avoid_down_trend_val = config.get('avoid_down_trend')
-                avoid_up_trend_val = config.get('avoid_up_trend')
-                
-                # ✅ Flask jsonify автоматически преобразует Python bool в JSON boolean
-                # Проверяем, что ключевые булевы значения действительно булевы
-                # (на случай если они пришли как строки из какого-то другого источника)
-                # ❌ КРИТИЧЕСКИ ВАЖНО: НЕ используем bool("False") - это вернет True!
-                # Вместо этого проверяем тип и преобразуем правильно
-                if 'avoid_down_trend' in config and not isinstance(config['avoid_down_trend'], bool):
-                    val = config['avoid_down_trend']
-                    logger.warning(f" ⚠️ avoid_down_trend не булево: {type(val).__name__} = {val}, преобразуем правильно")
-                    if isinstance(val, str):
-                        # Строка "False", "false", "0" -> False, иначе True
-                        config['avoid_down_trend'] = val.lower() in ('true', '1', 'yes', 'on')
-                    elif isinstance(val, (int, float)):
-                        # Число 0 -> False, иначе True
-                        config['avoid_down_trend'] = bool(val)
-                    else:
-                        # Другие типы -> False по умолчанию
-                        config['avoid_down_trend'] = False
-                    logger.warning(f" ✅ avoid_down_trend преобразовано в: {config['avoid_down_trend']} (тип: {type(config['avoid_down_trend']).__name__})")
-                
-                if 'avoid_up_trend' in config and not isinstance(config['avoid_up_trend'], bool):
-                    val = config['avoid_up_trend']
-                    logger.warning(f" ⚠️ avoid_up_trend не булево: {type(val).__name__} = {val}, преобразуем правильно")
-                    if isinstance(val, str):
-                        # Строка "False", "false", "0" -> False, иначе True
-                        config['avoid_up_trend'] = val.lower() in ('true', '1', 'yes', 'on')
-                    elif isinstance(val, (int, float)):
-                        # Число 0 -> False, иначе True
-                        config['avoid_up_trend'] = bool(val)
-                    else:
-                        # Другие типы -> False по умолчанию
-                        config['avoid_up_trend'] = False
-                    logger.warning(f" ✅ avoid_up_trend преобразовано в: {config['avoid_up_trend']} (тип: {type(config['avoid_up_trend']).__name__})")
-                
-                # ✅ Синхронизация AI-настроек: они сохраняются в RiskConfig/AIConfig (POST /api/ai/config),
-                # а DEFAULT_AUTO_BOT_CONFIG в файле не обновляется — подмешиваем актуальные значения из bot_config
-                try:
-                    from bot_engine.config_loader import RiskConfig, AIConfig
-                    config['ai_optimal_entry_enabled'] = getattr(RiskConfig, 'AI_OPTIMAL_ENTRY_ENABLED', config.get('ai_optimal_entry_enabled', False))
-                    config['self_learning_enabled'] = getattr(AIConfig, 'AI_SELF_LEARNING_ENABLED', config.get('self_learning_enabled', False))
-                    config['log_predictions'] = getattr(AIConfig, 'AI_LOG_PREDICTIONS', config.get('log_predictions', False))
-                    config['log_anomalies'] = getattr(AIConfig, 'AI_LOG_ANOMALIES', config.get('log_anomalies', False))
-                    config['log_patterns'] = getattr(AIConfig, 'AI_LOG_PATTERNS', config.get('log_patterns', False))
-                except Exception as _ai_merge_err:
-                    logger.debug(f" AI-merge в auto-bot: {_ai_merge_err}")
-                # ✅ FullAI: источник истины для UI — AutoBotConfig из bot_config.py; fallback — fullai_config (БД)
-                # Чтобы после перезапуска/перезагрузки страницы сразу показывался включённый FullAI
-                try:
-                    from bot_engine.config_loader import AutoBotConfig
-                    if getattr(AutoBotConfig, 'FULL_AI_CONTROL', None) is not None:
-                        config['full_ai_control'] = bool(AutoBotConfig.FULL_AI_CONTROL)
-                    # Fallback: если в fullai_config (БД) включён — используем (на случай рассинхрона)
-                    if not config.get('full_ai_control'):
-                        try:
-                            from bots_modules.imports_and_globals import load_full_ai_config_from_db
-                            fc = load_full_ai_config_from_db()
-                            if fc and fc.get('full_ai_control'):
-                                config['full_ai_control'] = True
-                        except Exception:
-                            pass
-                    if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_ENABLED', None) is not None:
-                        config['fullai_adaptive_enabled'] = bool(AutoBotConfig.FULLAI_ADAPTIVE_ENABLED)
-                    if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_DEAD_CANDLES', None) is not None:
-                        config['fullai_adaptive_dead_candles'] = int(AutoBotConfig.FULLAI_ADAPTIVE_DEAD_CANDLES)
-                    if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_VIRTUAL_SUCCESS', None) is not None:
-                        config['fullai_adaptive_virtual_success_count'] = int(AutoBotConfig.FULLAI_ADAPTIVE_VIRTUAL_SUCCESS)
-                    if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_REAL_LOSS', None) is not None:
-                        config['fullai_adaptive_real_loss_to_retry'] = int(AutoBotConfig.FULLAI_ADAPTIVE_REAL_LOSS)
-                    if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_ROUND_SIZE', None) is not None:
-                        config['fullai_adaptive_virtual_round_size'] = int(AutoBotConfig.FULLAI_ADAPTIVE_ROUND_SIZE)
-                    if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_MAX_FAILURES', None) is not None:
-                        config['fullai_adaptive_virtual_max_failures'] = int(AutoBotConfig.FULLAI_ADAPTIVE_MAX_FAILURES)
-                except Exception as _fullai_merge_err:
-                    logger.debug("FullAI merge в auto-bot: %s", _fullai_merge_err)
-                
-                # ✅ Фильтры уже загружены в load_auto_bot_config() выше и находятся в bots_data['auto_bot_config']
-                # Не нужно повторно загружать их из БД - используем уже загруженные значения
-                # Если фильтров нет в config (на всякий случай), устанавливаем значения по умолчанию
-                if 'whitelist' not in config:
-                    config['whitelist'] = []
-                if 'blacklist' not in config:
-                    config['blacklist'] = []
-                if 'scope' not in config:
-                    config['scope'] = 'all'
-                
-                # ExitScam: лимиты как в конфиге (0.5 = 0.5%), без пересчёта по ТФ
-                try:
-                    from bots_modules.filters import get_exit_scam_effective_limits
-                    from bot_engine.config_loader import get_config_value
-                    single_pct = get_config_value(config, 'exit_scam_single_candle_percent')
-                    multi_count = get_config_value(config, 'exit_scam_multi_candle_count')
-                    multi_pct = get_config_value(config, 'exit_scam_multi_candle_percent')
-                    tf_name, eff_single, eff_multi = get_exit_scam_effective_limits(single_pct, multi_count, multi_pct)
-                    config['exit_scam_timeframe'] = tf_name
-                    config['exit_scam_effective_single_pct'] = round(float(eff_single), 2)
-                    config['exit_scam_effective_multi_pct'] = round(float(eff_multi), 2)
-                except Exception:
-                    from bot_engine.config_loader import get_current_timeframe
-                    _tf = get_current_timeframe()
-                    if not _tf or not str(_tf).strip():
-                        return jsonify({
-                            'success': False,
-                            'error': 'КРИТИЧЕСКАЯ ОШИБКА: таймфрейм не выбран или недоступен. Выберите таймфрейм в настройках.'
-                        }), 500
-                    config['exit_scam_timeframe'] = _tf
-                    config['exit_scam_effective_single_pct'] = get_config_value(config, 'exit_scam_single_candle_percent')
-                    config['exit_scam_effective_multi_pct'] = get_config_value(config, 'exit_scam_multi_candle_percent')
-                
-                # Для UI: доступность переключателя «Полный Режим ИИ» только при ИИ и валидной лицензии
-                try:
-                    from bot_engine.ai import get_ai_manager
-                    config['ai_license_valid'] = get_ai_manager().is_available()
-                except Exception:
-                    config['ai_license_valid'] = False
-                
-                return jsonify({
-                    'success': True,
-                    'config': config
-                })
             finally:
                 bots_data_lock.release()
+            
+            # Вся обработка БЕЗ блокировки — не блокируем другие запросы
+            avoid_down_trend_val = config.get('avoid_down_trend')
+            avoid_up_trend_val = config.get('avoid_up_trend')
+            
+            # ✅ Flask jsonify автоматически преобразует Python bool в JSON boolean
+            if 'avoid_down_trend' in config and not isinstance(config['avoid_down_trend'], bool):
+                val = config['avoid_down_trend']
+                logger.warning(f" ⚠️ avoid_down_trend не булево: {type(val).__name__} = {val}, преобразуем правильно")
+                if isinstance(val, str):
+                    config['avoid_down_trend'] = val.lower() in ('true', '1', 'yes', 'on')
+                elif isinstance(val, (int, float)):
+                    config['avoid_down_trend'] = bool(val)
+                else:
+                    config['avoid_down_trend'] = False
+                logger.warning(f" ✅ avoid_down_trend преобразовано в: {config['avoid_down_trend']} (тип: {type(config['avoid_down_trend']).__name__})")
+            
+            if 'avoid_up_trend' in config and not isinstance(config['avoid_up_trend'], bool):
+                val = config['avoid_up_trend']
+                logger.warning(f" ⚠️ avoid_up_trend не булево: {type(val).__name__} = {val}, преобразуем правильно")
+                if isinstance(val, str):
+                    config['avoid_up_trend'] = val.lower() in ('true', '1', 'yes', 'on')
+                elif isinstance(val, (int, float)):
+                    config['avoid_up_trend'] = bool(val)
+                else:
+                    config['avoid_up_trend'] = False
+                logger.warning(f" ✅ avoid_up_trend преобразовано в: {config['avoid_up_trend']} (тип: {type(config['avoid_up_trend']).__name__})")
+            
+            # ✅ Синхронизация AI-настроек
+            try:
+                from bot_engine.config_loader import RiskConfig, AIConfig
+                config['ai_optimal_entry_enabled'] = getattr(RiskConfig, 'AI_OPTIMAL_ENTRY_ENABLED', config.get('ai_optimal_entry_enabled', False))
+                config['self_learning_enabled'] = getattr(AIConfig, 'AI_SELF_LEARNING_ENABLED', config.get('self_learning_enabled', False))
+                config['log_predictions'] = getattr(AIConfig, 'AI_LOG_PREDICTIONS', config.get('log_predictions', False))
+                config['log_anomalies'] = getattr(AIConfig, 'AI_LOG_ANOMALIES', config.get('log_anomalies', False))
+                config['log_patterns'] = getattr(AIConfig, 'AI_LOG_PATTERNS', config.get('log_patterns', False))
+            except Exception as _ai_merge_err:
+                logger.debug(f" AI-merge в auto-bot: {_ai_merge_err}")
+            try:
+                from bot_engine.config_loader import AutoBotConfig
+                if getattr(AutoBotConfig, 'FULL_AI_CONTROL', None) is not None:
+                    config['full_ai_control'] = bool(AutoBotConfig.FULL_AI_CONTROL)
+                if not config.get('full_ai_control'):
+                    try:
+                        from bots_modules.imports_and_globals import load_full_ai_config_from_db
+                        fc = load_full_ai_config_from_db()
+                        if fc and fc.get('full_ai_control'):
+                            config['full_ai_control'] = True
+                    except Exception:
+                        pass
+                if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_ENABLED', None) is not None:
+                    config['fullai_adaptive_enabled'] = bool(AutoBotConfig.FULLAI_ADAPTIVE_ENABLED)
+                if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_DEAD_CANDLES', None) is not None:
+                    config['fullai_adaptive_dead_candles'] = int(AutoBotConfig.FULLAI_ADAPTIVE_DEAD_CANDLES)
+                if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_VIRTUAL_SUCCESS', None) is not None:
+                    config['fullai_adaptive_virtual_success_count'] = int(AutoBotConfig.FULLAI_ADAPTIVE_VIRTUAL_SUCCESS)
+                if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_REAL_LOSS', None) is not None:
+                    config['fullai_adaptive_real_loss_to_retry'] = int(AutoBotConfig.FULLAI_ADAPTIVE_REAL_LOSS)
+                if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_ROUND_SIZE', None) is not None:
+                    config['fullai_adaptive_virtual_round_size'] = int(AutoBotConfig.FULLAI_ADAPTIVE_ROUND_SIZE)
+                if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_MAX_FAILURES', None) is not None:
+                    config['fullai_adaptive_virtual_max_failures'] = int(AutoBotConfig.FULLAI_ADAPTIVE_MAX_FAILURES)
+            except Exception as _fullai_merge_err:
+                logger.debug("FullAI merge в auto-bot: %s", _fullai_merge_err)
+            
+            if 'whitelist' not in config:
+                config['whitelist'] = []
+            if 'blacklist' not in config:
+                config['blacklist'] = []
+            if 'scope' not in config:
+                config['scope'] = 'all'
+            
+            try:
+                from bots_modules.filters import get_exit_scam_effective_limits
+                from bot_engine.config_loader import get_config_value
+                single_pct = get_config_value(config, 'exit_scam_single_candle_percent')
+                multi_count = get_config_value(config, 'exit_scam_multi_candle_count')
+                multi_pct = get_config_value(config, 'exit_scam_multi_candle_percent')
+                tf_name, eff_single, eff_multi = get_exit_scam_effective_limits(single_pct, multi_count, multi_pct)
+                config['exit_scam_timeframe'] = tf_name
+                config['exit_scam_effective_single_pct'] = round(float(eff_single), 2)
+                config['exit_scam_effective_multi_pct'] = round(float(eff_multi), 2)
+            except Exception:
+                from bot_engine.config_loader import get_current_timeframe, get_config_value
+                _tf = get_current_timeframe()
+                if not _tf or not str(_tf).strip():
+                    return jsonify({
+                        'success': False,
+                        'error': 'КРИТИЧЕСКАЯ ОШИБКА: таймфрейм не выбран или недоступен. Выберите таймфрейм в настройках.'
+                    }), 500
+                config['exit_scam_timeframe'] = _tf
+                config['exit_scam_effective_single_pct'] = get_config_value(config, 'exit_scam_single_candle_percent')
+                config['exit_scam_effective_multi_pct'] = get_config_value(config, 'exit_scam_multi_candle_percent')
+            
+            try:
+                from bot_engine.ai import get_ai_manager
+                config['ai_license_valid'] = get_ai_manager().is_available()
+            except Exception:
+                config['ai_license_valid'] = False
+            
+            return jsonify({
+                'success': True,
+                'config': config
+            })
         
         elif request.method == 'POST':
             # Добавляем логирование для отладки
