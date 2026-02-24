@@ -180,15 +180,16 @@ class ContinuousDataLoader:
                     coins_rsi_data['first_round_complete'] = True
                     logger.info("✅ ПЕРВАЯ ЗАГРУЗКА ЗАВЕРШЕНА: свечи + RSI готовы → запуск системы (автобот, мониторинг позиций)")
 
-                # Этапы 3–6 выполняются ПОСЛЕ 1–2, последовательно, только после полного завершения 1–2
+                # Этапы 3–7 выполняются ПОСЛЕ 1–2, последовательно
                 if auto_bot_enabled:
                     try:
-                        logger.info("🔄 Запуск этапов 3–6 (после 1–2)...")
-                        self._calculate_maturity()
-                        self._analyze_trends()
-                        filtered_coins = self._process_filters()
-                        self._set_filtered_coins_for_autobot(filtered_coins)
-                        logger.info("✅ Этапы 3–6 завершены")
+                        logger.info("🔄 Запуск этапов 3–7 (после 1–2)...")
+                        self._calculate_maturity()           # 3
+                        self._analyze_trends()               # 4
+                        self._apply_heavy_filters()          # 5 — time_filter, exit_scam, loss_reentry (для UI и автобота)
+                        filtered_coins = self._process_filters()  # 6
+                        self._set_filtered_coins_for_autobot(filtered_coins)  # 7
+                        logger.info("✅ Этапы 3–7 завершены")
                     except Exception as e:
                         logger.error(f"❌ Ошибка в этапах 3–6: {e}")
 
@@ -196,7 +197,7 @@ class ContinuousDataLoader:
                 self.last_update_time = datetime.now()
 
                 logger.info("=" * 80)
-                logger.info(f"✅ РАУНД #{self.update_count} ЗАВЕРШЕН (этапы 1–6)")
+                logger.info(f"✅ РАУНД #{self.update_count} ЗАВЕРШЕН (этапы 1–7)")
                 logger.info(f"⏱️ Длительность цикла: {cycle_duration:.1f}с")
                 logger.info(f"📊 Статистика: обновлений={self.update_count}, ошибок={self.error_count}")
                 logger.info("=" * 80)
@@ -208,7 +209,7 @@ class ContinuousDataLoader:
                 logger.info(f"✅ Обработка завершена (версия данных: {coins_rsi_data['data_version']})")
 
                 # 🚀 После полного цикла 1–6 запускаем следующий раунд (1 → 2 → 3–6)
-                logger.info(f"🚀 Цикл 1–6 завершён — запускаем следующий раунд (загрузка свечей)...")
+                logger.info(f"🚀 Цикл 1–7 завершён — запускаем следующий раунд (загрузка свечей)...")
 
                 # Минимальная пауза 0.05 сек только чтобы не крутить CPU впустую; при необходимости выхода — выходим
                 if shutdown_flag.wait(0.05):
@@ -278,7 +279,7 @@ class ContinuousDataLoader:
     def _load_candles(self):
         """📦 Загружает свечи всех монет"""
         try:
-            logger.info("📦 Этап 1/6: Загружаем свечи...")
+            logger.info("📦 Этап 1/7: Загружаем свечи...")
             start = time.time()
             from bots_modules.filters import load_all_coins_candles_fast
             success = load_all_coins_candles_fast()
@@ -299,7 +300,7 @@ class ContinuousDataLoader:
     def _load_candles_non_blocking(self):
         """📦 Загружает свечи всех монет в отдельном потоке (НЕБЛОКИРУЮЩИЙ)"""
         try:
-            logger.info("📦 Этап 1/6: Загружаем свечи (неблокирующий)...")
+            logger.info("📦 Этап 1/7: Загружаем свечи (неблокирующий)...")
             start = time.time()
 
             # Проверяем, есть ли уже свечи в кэше с ПРАВИЛЬНЫМ таймфреймом
@@ -359,7 +360,7 @@ class ContinuousDataLoader:
     def _calculate_rsi(self, required_timeframes=None, reduced_mode=None, position_symbols_to_tf=None):
         """📊 Рассчитывает RSI для всех монет. Данные из загрузчика передаются без блокировки в load_all_coins_rsi."""
         try:
-            logger.info("📊 Этап 2/6: Рассчитываем RSI...")
+            logger.info("📊 Этап 2/7: Рассчитываем RSI...")
             start = time.time()
             from bots_modules.filters import load_all_coins_rsi
             success = load_all_coins_rsi(
@@ -385,7 +386,7 @@ class ContinuousDataLoader:
     def _calculate_rsi_non_blocking(self):
         """📊 Рассчитывает RSI для всех монет в отдельном потоке (НЕБЛОКИРУЮЩИЙ)"""
         try:
-            logger.info("📊 Этап 2/6: Рассчитываем RSI (неблокирующий)...")
+            logger.info("📊 Этап 2/7: Рассчитываем RSI (неблокирующий)...")
             start = time.time()
 
             # Проверяем, есть ли уже RSI данные в кэше
@@ -434,7 +435,7 @@ class ContinuousDataLoader:
     def _calculate_maturity(self):
         """🧮 Рассчитывает зрелость монет (только незрелые)"""
         try:
-            logger.info("🧮 Этап 3/6: Рассчитываем зрелость...")
+            logger.info("🧮 Этап 3/7: Рассчитываем зрелость...")
             start = time.time()
 
             # Простой таймаут через threading (работает в Windows)
@@ -476,7 +477,7 @@ class ContinuousDataLoader:
     def _analyze_trends(self):
         """📈 Определяет тренд для сигнальных монет"""
         try:
-            logger.info("📈 Этап 4/6: Анализируем тренды...")
+            logger.info("📈 Этап 4/7: Анализируем тренды...")
             start = time.time()
 
             from bots_modules.filters import analyze_trends_for_signal_coins
@@ -487,28 +488,34 @@ class ContinuousDataLoader:
 
         except Exception as e:
             logger.error(f"⚠️ Ошибка анализа трендов: {e}")
-            # Не критично, продолжаем
 
-    def _process_filters(self):
-        """🔍 Обрабатывает лонг/шорт монеты фильтрами"""
+    def _apply_heavy_filters(self):
+        """🔍 Этап 5/7: Применяет тяжёлые фильтры (time_filter, exit_scam, loss_reentry) — для UI и автобота"""
         try:
             start = time.time()
+            from bots_modules.filters import apply_heavy_filters_to_coins
+            apply_heavy_filters_to_coins()
+            duration = time.time() - start
+            logger.info(f"✅ Тяжёлые фильтры применены за {duration:.1f}с")
+        except Exception as e:
+            logger.error(f"⚠️ Ошибка применения тяжёлых фильтров: {e}")
 
+    def _process_filters(self):
+        """🔍 Этап 6/7: Обрабатывает лонг/шорт монеты фильтрами"""
+        try:
+            start = time.time()
             from bots_modules.filters import process_long_short_coins_with_filters
             filtered_coins = process_long_short_coins_with_filters()
-
             duration = time.time() - start
-            pass
             return filtered_coins
-
         except Exception as e:
             logger.error(f"⚠️ Ошибка обработки фильтрами: {e}")
             return []
 
     def _set_filtered_coins_for_autobot(self, filtered_coins):
-        """✅ Передает отфильтрованные монеты автоботу"""
+        """✅ Этап 7/7: Передаёт отфильтрованные монеты автоботу"""
         try:
-            logger.info("✅ Этап 6/6: Передаем монеты автоботу...")
+            logger.info("✅ Этап 7/7: Передаем монеты автоботу...")
             start = time.time()
 
             from bots_modules.filters import set_filtered_coins_for_autobot

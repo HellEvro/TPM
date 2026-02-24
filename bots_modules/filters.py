@@ -3697,6 +3697,151 @@ def analyze_trends_for_signal_coins():
         logger.error(f" ❌ Ошибка анализа трендов: {e}")
         return False
 
+
+def apply_heavy_filters_to_coins():
+    """
+    Этап 5: Применяет тяжёлые фильтры (time_filter, exit_scam, loss_reentry) к монетам с сигналом.
+    Обновляет coin_data in-place — UI и process_long_short_coins_with_filters видят актуальные blocked_by_*.
+    RSI-батч (этап 2) оставляет заглушки — здесь заполняем реальные значения.
+    """
+    try:
+        from bots_modules.imports_and_globals import coins_rsi_data
+        from bot_engine.config_loader import get_current_timeframe, get_rsi_key, get_config_value
+
+        coins = coins_rsi_data.get('coins', {}) or {}
+        candles_cache = coins_rsi_data.get('candles_cache', {}) or {}
+        try:
+            tf = get_current_timeframe()
+        except Exception:
+            tf = '6h'
+        rsi_key = get_rsi_key(tf)
+        try:
+            with bots_data_lock:
+                auto_config = (bots_data.get('auto_bot_config') or {}).copy()
+        except Exception:
+            auto_config = {}
+
+        to_process = [
+            (s, c) for s, c in coins.items()
+            if c.get('signal') in ('ENTER_LONG', 'ENTER_SHORT')
+        ]
+        if not to_process:
+            return True
+
+        logger.info(f" 🔍 Этап 5/7: Применяем тяжёлые фильтры к {len(to_process)} монет...")
+        updated = 0
+        for symbol, coin_data in to_process:
+            try:
+                candles = None
+                sc = candles_cache.get(symbol, {})
+                if isinstance(sc, dict):
+                    if tf in sc:
+                        tc = sc[tf]
+                        candles = tc.get('candles') if isinstance(tc, dict) else None
+                    elif sc.get('timeframe') == tf and 'candles' in sc:
+                        candles = sc.get('candles')
+                if not candles or len(candles) < 50:
+                    continue
+                rsi = coin_data.get(rsi_key) or coin_data.get('rsi')
+                if rsi is None:
+                    continue
+                potential_signal = coin_data.get('signal')
+                individual_settings = get_individual_coin_settings(symbol)
+
+                # Time filter
+                try:
+                    time_filter_result = check_rsi_time_filter(candles, rsi, potential_signal, symbol=symbol, individual_settings=individual_settings)
+                    if time_filter_result:
+                        time_filter_info = {
+                            'blocked': not time_filter_result.get('allowed', True),
+                            'reason': time_filter_result.get('reason', ''),
+                            'filter_type': 'time_filter',
+                            'last_extreme_candles_ago': time_filter_result.get('last_extreme_candles_ago'),
+                            'calm_candles': time_filter_result.get('calm_candles')
+                        }
+                    else:
+                        time_filter_info = {'blocked': False, 'reason': 'Проверка не выполнена', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
+                except Exception as e:
+                    time_filter_info = {'blocked': False, 'reason': str(e), 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
+
+                # Exit scam
+                exit_scam_info = {'blocked': False, 'reason': 'Недостаточно свечей', 'filter_type': 'exit_scam'}
+                if len(candles) >= 10:
+                    try:
+                        exit_scam_enabled = get_config_value(auto_config, 'exit_scam_enabled')
+                        exit_scam_candles = get_config_value(auto_config, 'exit_scam_candles')
+                        single_pct = get_config_value(auto_config, 'exit_scam_single_candle_percent')
+                        multi_count = get_config_value(auto_config, 'exit_scam_multi_candle_count')
+                        multi_pct = get_config_value(auto_config, 'exit_scam_multi_candle_percent')
+                        _, limit_single, limit_multi = get_exit_scam_effective_limits(single_pct, multi_count, multi_pct)
+                        exit_scam_reason = 'ExitScam фильтр пройден'
+                        exit_scam_allowed = True
+                        if exit_scam_enabled and exit_scam_candles and len(candles) >= exit_scam_candles:
+                            recent = candles[-exit_scam_candles:]
+                            for c in recent:
+                                o, cl = float(c.get('open', 0) or 0), float(c.get('close', 0) or 0)
+                                if o <= 0:
+                                    continue
+                                ch = abs((cl - o) / o) * 100
+                                if ch > limit_single:
+                                    exit_scam_allowed = False
+                                    exit_scam_reason = f'Тело свечи {ch:.2f}% > лимит {limit_single}%'
+                                    break
+                            if exit_scam_allowed and len(recent) >= multi_count:
+                                m = recent[-multi_count:]
+                                o0 = float(m[0].get('open', 0) or 0)
+                                cl_last = float(m[-1].get('close', 0) or 0)
+                                if o0 > 0 and abs((cl_last - o0) / o0) * 100 > limit_multi:
+                                    exit_scam_allowed = False
+                                    exit_scam_reason = f'{multi_count} свечей суммарно > {limit_multi}%'
+                        exit_scam_info = {'blocked': not exit_scam_allowed, 'reason': exit_scam_reason, 'filter_type': 'exit_scam'}
+                    except Exception as e:
+                        exit_scam_info = {'blocked': False, 'reason': str(e), 'filter_type': 'exit_scam'}
+
+                # Loss reentry (skip_app_db_fallback=False — этап 5 в главном потоке, можно полный расчёт)
+                loss_reentry_info = {'blocked': False, 'reason': 'Выключено', 'filter_type': 'loss_reentry_protection'}
+                try:
+                    lr_enabled = get_config_value(auto_config, 'loss_reentry_protection')
+                    lr_count = get_config_value(auto_config, 'loss_reentry_count')
+                    lr_candles = get_config_value(auto_config, 'loss_reentry_candles')
+                    if lr_enabled and len(candles) >= 10:
+                        lr_result = _check_loss_reentry_protection_static(
+                            symbol, candles, lr_count, lr_candles, individual_settings,
+                            skip_app_db_fallback=False
+                        )
+                        if lr_result:
+                            loss_reentry_info = {
+                                'blocked': not lr_result.get('allowed', True),
+                                'reason': lr_result.get('reason', ''),
+                                'filter_type': 'loss_reentry_protection',
+                                'candles_passed': lr_result.get('candles_passed'),
+                                'required_candles': lr_candles,
+                                'loss_count': lr_count
+                            }
+                        else:
+                            loss_reentry_info = {'blocked': False, 'reason': 'фильтр не применим', 'filter_type': 'loss_reentry_protection'}
+                    else:
+                        loss_reentry_info = {'blocked': False, 'reason': 'Выключено или мало свечей', 'filter_type': 'loss_reentry_protection'}
+                except Exception as e:
+                    loss_reentry_info = {'blocked': False, 'reason': str(e), 'filter_type': 'loss_reentry_protection'}
+
+                coin_data['time_filter_info'] = time_filter_info
+                coin_data['exit_scam_info'] = exit_scam_info
+                coin_data['loss_reentry_info'] = loss_reentry_info
+                coin_data['blocked_by_exit_scam'] = exit_scam_info.get('blocked', False)
+                coin_data['blocked_by_rsi_time'] = time_filter_info.get('blocked', False)
+                coin_data['blocked_by_loss_reentry'] = loss_reentry_info.get('blocked', False)
+                updated += 1
+            except Exception as e:
+                logger.debug(f" {symbol}: ошибка применения фильтров: {e}")
+
+        logger.info(f" ✅ Тяжёлые фильтры применены к {updated} монет")
+        return True
+    except Exception as e:
+        logger.error(f" ❌ Ошибка применения тяжёлых фильтров: {e}")
+        return False
+
+
 def process_long_short_coins_with_filters():
     """🔍 Обрабатывает лонг/шорт монеты всеми фильтрами"""
     try:
