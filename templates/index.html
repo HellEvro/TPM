@@ -17,8 +17,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/simple-mobile.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/toast.css') }}">
     
-    <!-- Сначала подключаем внешние библиотеки -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Сначала подключаем внешние библиотеки (локально — чтобы не блокировал Tracking Prevention в браузере) -->
+    <script src="{{ url_for('static', filename='js/vendor/chart.umd.min.js') }}"></script>
     
     <!-- Затем подключаем наши модули в правильном порядке -->
     <script src="{{ url_for('static', filename='js/config.js') }}"></script>

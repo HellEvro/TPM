@@ -171,6 +171,9 @@
                     this.logDebug('[BotsManager] 🔍 Ключи coins:', Object.keys(data.coins));
                     this.coinsRsiData = Object.values(data.coins);
                     
+                    // Лог уровня info: видно без включения debug (чтобы понимать, что данные пришли)
+                    console.log('[BotsManager] ✅ Загружено', this.coinsRsiData.length, 'монет с RSI');
+                    
                     // Получаем список ручных позиций
                     const manualPositions = data.manual_positions || [];
                     this.logDebug(`[BotsManager] ✋ Ручные позиции получены:`, manualPositions);

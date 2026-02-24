@@ -17,6 +17,10 @@
 | 4 | `static/js/managers/bots_manager/04_service.js` | После обновления списка монет повторно вызывается `applyRsiFilter(this.currentRsiFilter)`, чтобы при обновлении RSI/применении фильтров отображалась правильная выборка. |
 | 5 | `static/js/managers/bots_manager/05_coins_display.js` | В `updateSignalCounters` подсчёт зон RSI (≤29, ≥71) исправлен: используется `rsi != null` вместо `rsi &&`, чтобы учитывать RSI=0 и не терять обновления счётчиков. |
 | 6 | `static/js/managers/bots_manager/00_core.js` | **Восстановлен порядок init() как в оригинале** (trash/bots_manager.js): сначала `startPeriodicUpdate()`, затем загрузка конфига в фоне. Раньше был `await loadConfigurationData()` до `startPeriodicUpdate()` — при долгой/ошибочной загрузке конфига периодическое обновление не стартовало, данные не обновлялись. |
+| 7 | `templates/index.html` | Chart.js подключается локально (`static/js/vendor/chart.umd.min.js`) вместо CDN — устраняет предупреждения «Tracking Prevention blocked access to storage» в браузере. |
+| 8 | `static/js/vendor/chart.umd.min.js` | Добавлена локальная копия Chart.js 4.4.9. |
+| 9 | `static/js/positions.js` | При 0 позициях `updateAllData` выходит без логов и без обновления throttle; убран спам «updateAllData skipped: throttle» и «Starting data update for 0 symbols». |
+| 10 | `static/js/managers/bots_manager/04_service.js` | После загрузки списка монет добавлен лог «Загружено N монет с RSI» (всегда виден), чтобы в консоли было понятно, что данные пришли. |
 
 ### Результаты проверки
 - Этапы 3–4 стартуют; этап 4 раньше держал bots_data_lock ~15+ с → таймаут у основного цикла.

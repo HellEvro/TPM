@@ -289,24 +289,26 @@ class PositionsManager {
         }
         const now = Date.now();
         if (now - this.lastUpdateAllDataStart < this.minUpdateAllDataInterval) {
-            console.log('[PositionsManager] updateAllData skipped: throttle (min interval)', this.minUpdateAllDataInterval / 1000, 's');
+            return;
+        }
+        const symbols = new Set();
+        // Собираем все уникальные символы с проверкой на undefined
+        Object.values(this.lastData).forEach(positions => {
+            if (Array.isArray(positions)) {
+                positions.forEach(pos => {
+                    if (pos && pos.symbol && pos.symbol !== 'undefined') {
+                        symbols.add(pos.symbol);
+                    }
+                });
+            }
+        });
+        // Не спамим в консоль при 0 позициях и не тратим тик на пустой цикл
+        if (symbols.size === 0) {
             return;
         }
         this.lastUpdateAllDataStart = now;
         this.isUpdatingData = true;
         try {
-            const symbols = new Set();
-            // Собираем все уникальные символы с проверкой на undefined
-            Object.values(this.lastData).forEach(positions => {
-                if (Array.isArray(positions)) {
-                    positions.forEach(pos => {
-                        if (pos && pos.symbol && pos.symbol !== 'undefined') {
-                            symbols.add(pos.symbol);
-                        }
-                    });
-                }
-            });
-
             console.log(`Starting data update for ${symbols.size} symbols:`, [...symbols]);
 
             // Обновляем данные для каждого символа последовательно (с паузой между запросами)
