@@ -180,18 +180,25 @@ class ContinuousDataLoader:
                     coins_rsi_data['first_round_complete'] = True
                     logger.info("✅ ПЕРВАЯ ЗАГРУЗКА ЗАВЕРШЕНА: свечи + RSI готовы → запуск системы")
 
-                # Этапы 3–7 в ФОНЕ — не блокируем следующий раунд 1→2 (как было 4 дня назад)
-                if auto_bot_enabled:
-                    def _run_stages_3_to_7():
-                        try:
-                            self._calculate_maturity()
-                            self._analyze_trends()
-                            self._apply_heavy_filters()
-                            filtered_coins = self._process_filters()
+                # Этапы 3–7 в ФОНЕ — не блокируем следующий раунд 1→2
+                # Этапы 3–6 выполняются ВСЕГДА (зрелость, тренды, фильтры нужны для UI).
+                # Этап 7 (передача автоботу) — только при включённом автоботе.
+                def _run_stages_3_to_7():
+                    import traceback
+                    try:
+                        self._calculate_maturity()
+                        self._analyze_trends()
+                        self._apply_heavy_filters()
+                        filtered_coins = self._process_filters()
+                        if auto_bot_enabled:
                             self._set_filtered_coins_for_autobot(filtered_coins)
-                        except Exception as e:
-                            logger.error(f"❌ Ошибка в этапах 3–7: {e}")
-                    threading.Thread(target=_run_stages_3_to_7, daemon=True, name="Stages3to7").start()
+                        else:
+                            logger.info("⏹️ Этап 7 пропущен (автобот выключен)")
+                        logger.info("✅ ЭТАПЫ 3–7 ЗАВЕРШЕНЫ УСПЕШНО")
+                    except Exception as e:
+                        logger.error(f"❌ Ошибка в этапах 3–7: {e}")
+                        logger.error(f"❌ Traceback: {traceback.format_exc()}")
+                threading.Thread(target=_run_stages_3_to_7, daemon=True, name="Stages3to7").start()
 
                 cycle_duration = time.time() - cycle_start
                 self.last_update_time = datetime.now()
@@ -492,6 +499,7 @@ class ContinuousDataLoader:
     def _apply_heavy_filters(self):
         """🔍 Этап 5/7: Применяет тяжёлые фильтры (time_filter, exit_scam, loss_reentry) — для UI и автобота"""
         try:
+            logger.info("🔍 Этап 5/7: Начинаем тяжёлые фильтры...")
             start = time.time()
             from bots_modules.filters import apply_heavy_filters_to_coins
             apply_heavy_filters_to_coins()
@@ -503,10 +511,12 @@ class ContinuousDataLoader:
     def _process_filters(self):
         """🔍 Этап 6/7: Обрабатывает лонг/шорт монеты фильтрами"""
         try:
+            logger.info("🔍 Этап 6/7: Обрабатываем фильтры...")
             start = time.time()
             from bots_modules.filters import process_long_short_coins_with_filters
             filtered_coins = process_long_short_coins_with_filters()
             duration = time.time() - start
+            logger.info(f"✅ Этап 6/7 завершён за {duration:.1f}с, монет для автобота: {len(filtered_coins)}")
             return filtered_coins
         except Exception as e:
             logger.error(f"⚠️ Ошибка обработки фильтрами: {e}")

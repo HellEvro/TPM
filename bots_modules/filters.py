@@ -3630,8 +3630,16 @@ def analyze_trends_for_signal_coins():
         def _get_ind(s):
             return _individual_settings_cache.get(s) or _individual_settings_cache.get(_normalize_symbol(s))
 
+        # ✅ Снапшот символов и кэша — избегаем RuntimeError при изменении dict во время итерации (основной цикл обновляет coins)
+        with rsi_data_lock:
+            all_symbols = list((coins_rsi_data.get('coins') or {}).keys())
+            candles_cache = dict(coins_rsi_data.get('candles_cache') or {})
+
         signal_coins = []
-        for symbol, coin_data in coins_rsi_data['coins'].items():
+        for symbol in all_symbols:
+            coin_data = coins_rsi_data.get('coins', {}).get(symbol)
+            if not coin_data:
+                continue
             rsi = get_rsi_from_coin_data(coin_data)
             ind = _get_ind(symbol)
             long_th = (ind.get('rsi_long_threshold') if ind else None) or rsi_long_th
@@ -3644,9 +3652,7 @@ def analyze_trends_for_signal_coins():
         if not signal_coins:
             logger.warning(" ⚠️ Нет сигнальных монет для анализа тренда")
             return False
-        
-        # Свечи уже в кэше после расчёта RSI — без API и блокировок
-        candles_cache = coins_rsi_data.get('candles_cache', {})
+
         analyzed_count = 0
         failed_count = 0
         for i, symbol in enumerate(signal_coins, 1):
@@ -3696,17 +3702,17 @@ def analyze_trends_for_signal_coins():
                 logger.error(f" ❌ {symbol}: {e}")
                 failed_count += 1
 
-        # ✅ АТОМАРНО применяем ВСЕ обновления одним махом!
-        # Используем тот же trend_key, что и при расчете, независимо от смены таймфрейма в UI
-        for symbol, updates in temp_updates.items():
-            # Защитно вытаскиваем значение тренда из updates, чтобы избежать KeyError,
-            # если по какой‑то причине ключа нет
-            new_trend_value = updates.get(trend_key)
-            if new_trend_value is not None:
-                coins_rsi_data['coins'][symbol][trend_key] = new_trend_value  # Динамический ключ
-            coins_rsi_data['coins'][symbol]['trend_analysis'] = updates['trend_analysis']
-            coins_rsi_data['coins'][symbol]['signal'] = updates['signal']
-        
+        # ✅ АТОМАРНО применяем ВСЕ обновления одним махом (с блокировкой — избегаем гонки с основным циклом)
+        with rsi_data_lock:
+            for symbol, updates in temp_updates.items():
+                if symbol not in (coins_rsi_data.get('coins') or {}):
+                    continue
+                new_trend_value = updates.get(trend_key)
+                if new_trend_value is not None:
+                    coins_rsi_data['coins'][symbol][trend_key] = new_trend_value
+                coins_rsi_data['coins'][symbol]['trend_analysis'] = updates['trend_analysis']
+                coins_rsi_data['coins'][symbol]['signal'] = updates['signal']
+
         logger.info(f" ✅ {analyzed_count} проанализировано | {len(temp_updates)} обновлений")
         
         return True
