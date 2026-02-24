@@ -22,6 +22,8 @@ def _patch_system_config():
     """Патч обратной совместимости: добавляет новые атрибуты в SystemConfig, если их нет."""
     if not hasattr(SystemConfig, 'LOW_RESOURCE_MODE'):
         SystemConfig.LOW_RESOURCE_MODE = False
+    if not hasattr(SystemConfig, 'RSI_AGGRESSIVE_LOW_RESOURCE'):
+        SystemConfig.RSI_AGGRESSIVE_LOW_RESOURCE = False
 
 
 _patch_system_config()

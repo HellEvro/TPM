@@ -2624,9 +2624,19 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                 batch_size = 200
                 rsi_max_workers = min(64, max(16, _cpu_count * 2))
             if _is_low_resource_mode():
-                rsi_max_workers = min(rsi_max_workers, 6)
-                batch_size = min(batch_size, 100)
-                logger.info(f"📊 RSI: low_resource — {rsi_max_workers} воркеров, батч {batch_size}")
+                try:
+                    from bot_engine.config_loader import SystemConfig
+                    aggressive = getattr(SystemConfig, 'RSI_AGGRESSIVE_LOW_RESOURCE', False)
+                except Exception:
+                    aggressive = False
+                if aggressive:
+                    rsi_max_workers = 2
+                    batch_size = 50
+                    logger.info(f"📊 RSI: low_resource (aggressive) — {rsi_max_workers} воркеров, батч {batch_size}")
+                else:
+                    rsi_max_workers = min(rsi_max_workers, 6)
+                    batch_size = min(batch_size, 100)
+                    logger.info(f"📊 RSI: low_resource — {rsi_max_workers} воркеров, батч {batch_size}")
             total_batches = (len(pairs_for_tf) + batch_size - 1) // batch_size
 
             for i in range(0, len(pairs_for_tf), batch_size):
@@ -2666,8 +2676,14 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             future.cancel()
                         break
 
-                    # Локальный расчёт — 40с на батч (20с мало при параллельной инициализации AI)
-                    batch_timeout = 40
+                    # aggressive low_resource: 90с; иначе 40с
+                    _aggressive = False
+                    try:
+                        from bot_engine.config_loader import SystemConfig
+                        _aggressive = getattr(SystemConfig, 'RSI_AGGRESSIVE_LOW_RESOURCE', False) and _is_low_resource_mode()
+                    except Exception:
+                        pass
+                    batch_timeout = 90 if _aggressive else 40
                     result_timeout = 5
                     all_futs = list(future_to_symbol.keys())
                     remaining = set(all_futs)

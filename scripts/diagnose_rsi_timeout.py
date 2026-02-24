@@ -5,12 +5,13 @@
 
 Запуск: python scripts/diagnose_rsi_timeout.py
 
-Трассирует полный путь get_coin_rsi_data_for_timeframe для проблемных символов,
-замеряет время каждого этапа и выявляет узкие места (maturity API, trend, time_filter).
+Симулирует батч RSI как в production: 2 воркера, батч 50, timeout 90с.
+Проверяет, успевает ли батч завершиться без таймаута.
 """
 import os
 import sys
 import time
+import concurrent.futures
 
 if os.name == 'nt':
     try:
@@ -24,14 +25,12 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 os.chdir(_PROJECT_ROOT)
 
-PROBLEM_SYMBOLS = ['BANK', 'BERA', 'BB', 'ATH', 'BARD', 'BABY', 'BAND', 'BEAM']
-TRACE = {}  # symbol -> {step: ms}
+# Тестовые настройки — как aggressive low_resource (2 воркера, батч 50, timeout 90)
+RSI_WORKERS = 2
+RSI_BATCH_SIZE = 50
+RSI_BATCH_TIMEOUT = 90
 
-def _trace(symbol, step, ms, extra=''):
-    if symbol not in TRACE:
-        TRACE[symbol] = {}
-    TRACE[symbol][step] = ms
-    print(f"    [{step}] {ms:.0f}ms {extra}")
+PROBLEM_SYMBOLS = ['BANK', 'BERA', 'BB', 'ATH', 'BARD', 'BABY', 'BAND', 'BEAM']
 
 def run_diagnostic():
     print("=" * 70)
@@ -68,117 +67,92 @@ def run_diagnostic():
         return
 
     from bots_modules.filters import get_coin_candles_only
-    for sym in PROBLEM_SYMBOLS:
+    symbols_to_load = PROBLEM_SYMBOLS
+    if len(candles_cache) < RSI_BATCH_SIZE:
+        try:
+            all_pairs = exch.get_all_pairs()
+            if all_pairs and len(all_pairs) >= RSI_BATCH_SIZE:
+                symbols_to_load = [s for s in all_pairs[:RSI_BATCH_SIZE] if s and str(s).upper() != 'ALL']
+                print(f"Загружаем свечи для {len(symbols_to_load)} символов (симуляция батча)...")
+        except Exception as e:
+            print(f"get_all_pairs: {e}, используем {len(PROBLEM_SYMBOLS)} символов")
+    for sym in symbols_to_load:
         if sym not in candles_cache or tf not in candles_cache.get(sym, {}):
             t = time.time()
             r = get_coin_candles_only(sym, exch, tf, bulk_mode=True, bulk_limit=400)
             ms = (time.time() - t) * 1000
-            print(f"Загрузка {sym}: {ms:.0f}ms, candles={len(r.get('candles', [])) if r else 0}")
+            if len(symbols_to_load) <= 12:
+                print(f"Загрузка {sym}: {ms:.0f}ms, candles={len(r.get('candles', [])) if r else 0}")
             if r and r.get('candles'):
                 if sym not in candles_cache:
                     candles_cache[sym] = {}
                 candles_cache[sym][tf] = {'candles': r['candles'], 'timeframe': tf}
     coins_rsi_data['candles_cache'] = candles_cache
-    print()
+    print(f"В кэше: {len([s for s in candles_cache if tf in candles_cache.get(s, {})])} символов\n")
 
-    # 2. Трассировка через monkey-patch
     import bots_modules.filters as filters_mod
-    from bots_modules.maturity import check_coin_maturity_with_storage
-
-    _orig_check_stored = filters_mod.check_coin_maturity_stored_or_verify
-    _orig_analyze = None
-    try:
-        from bots_modules import calculations
-        _orig_analyze = calculations.analyze_trend
-    except Exception:
-        pass
-
-    def traced_check_stored(symbol):
-        t = time.time()
-        try:
-            res = _orig_check_stored(symbol)
-            ms = (time.time() - t) * 1000
-            if symbol in TRACE:
-                TRACE[symbol]['maturity_api'] = ms
-                print(f"    [maturity_api] {ms:.0f}ms {symbol} → stored_or_verify (API!)")
-            return res
-        except Exception as e:
-            if symbol in TRACE:
-                TRACE[symbol]['maturity_api_err'] = str(e)
-            raise
-
-    filters_mod.check_coin_maturity_stored_or_verify = traced_check_stored
-
-    if _orig_analyze:
-        def traced_analyze(symbol, exchange_obj=None, candles_data=None, timeframe=None, config=None):
-            t = time.time()
-            res = _orig_analyze(symbol, exchange_obj, candles_data, timeframe, config)
-            ms = (time.time() - t) * 1000
-            if symbol in TRACE:
-                TRACE[symbol]['analyze_trend'] = ms
-                from_api = "API" if candles_data is None else "cache"
-                print(f"    [analyze_trend] {ms:.0f}ms {symbol} ({from_api})")
-            return res
-        calculations.analyze_trend = traced_analyze
 
     copy_auto = (bots_data.get('auto_bot_config') or {}).copy()
     copy_ind = (bots_data.get('individual_coin_settings') or {}).copy()
 
-    # 3. Прогон каждого символа с пошаговой трассировкой
-    for symbol in PROBLEM_SYMBOLS:
-        if symbol not in candles_cache or tf not in candles_cache.get(symbol, {}):
-            continue
-        TRACE[symbol] = {}
-        print(f"\n--- {symbol} ---")
-        t_start = time.time()
-        try:
-            result = filters_mod.get_coin_rsi_data_for_timeframe(
-                symbol, exch, tf,
-                _auto_config=copy_auto,
-                _individual_settings_cache=copy_ind,
-                _skip_api_if_no_cache=True
+    # 3. ПАРАЛЛЕЛЬНЫЙ батч как в production (2 воркера, timeout 90с)
+    symbols_to_test = [s for s in candles_cache if tf in candles_cache.get(s, {})][:RSI_BATCH_SIZE]
+
+    print(f"\n{'=' * 70}")
+    print(f"🔥 ТЕСТ БАТЧА: {RSI_WORKERS} воркеров, {len(symbols_to_test)} символов, timeout {RSI_BATCH_TIMEOUT}с")
+    print("=" * 70)
+
+    done_set = set()
+    remaining = set()
+    deadline = time.time() + RSI_BATCH_TIMEOUT
+
+    def _process(sym):
+        return filters_mod.get_coin_rsi_data_for_timeframe(
+            sym, exch, tf,
+            _auto_config=copy_auto,
+            _individual_settings_cache=copy_ind,
+            _skip_api_if_no_cache=True
+        )
+
+    batch_start = time.time()
+    last_log = batch_start
+    with concurrent.futures.ThreadPoolExecutor(max_workers=RSI_WORKERS) as ex:
+        future_to_sym = {ex.submit(_process, s): s for s in symbols_to_test}
+        remaining = set(future_to_sym.keys())
+        while remaining and time.time() < deadline:
+            partial_done, remaining = concurrent.futures.wait(
+                remaining, timeout=1, return_when=concurrent.futures.FIRST_COMPLETED
             )
-            total = (time.time() - t_start) * 1000
-            TRACE[symbol]['total'] = total
-            TRACE[symbol]['ok'] = result is not None
-            print(f"  ИТОГО: {total:.0f}ms, ok={result is not None}")
-        except Exception as e:
-            total = (time.time() - t_start) * 1000
-            TRACE[symbol]['total'] = total
-            TRACE[symbol]['error'] = str(e)
-            print(f"  ИТОГО: {total:.0f}ms, ОШИБКА: {e}")
+            done_set |= partial_done
+            now = time.time()
+            if now - last_log >= 5:
+                print(f"   Готово {len(done_set)}/{len(symbols_to_test)}, осталось {len(remaining)} ({now - batch_start:.0f}с)")
+                last_log = now
+
+    batch_elapsed = time.time() - batch_start
+    ok_count = 0
+    for fut in done_set:
+        try:
+            if fut.result(timeout=1):
+                ok_count += 1
+        except Exception:
+            pass
+
+    timeout_count = len(remaining)
+    print(f"\nРезультат: {ok_count} ok, {timeout_count} timeout за {batch_elapsed:.1f}с")
+    if remaining:
+        pending_syms = [future_to_sym[f] for f in remaining if f in future_to_sym]
+        print(f"⚠️ TIMEOUT: не завершено {timeout_count} — {pending_syms[:8]}")
+    else:
+        print("✅ Батч завершён без таймаута")
 
     # 4. Итоговый отчёт
     print("\n" + "=" * 70)
-    print("📊 ИТОГОВЫЙ ОТЧЁТ")
+    print("📊 ИТОГ")
     print("=" * 70)
-
-    slow_total = [(s, TRACE[s]['total']) for s in TRACE if TRACE[s].get('total', 0) > 2000]
-    api_calls = [(s, TRACE[s]['maturity_api']) for s in TRACE if 'maturity_api' in TRACE[s]]
-    trend_slow = [(s, TRACE[s]['analyze_trend']) for s in TRACE if TRACE[s].get('analyze_trend', 0) > 500]
-
-    if api_calls:
-        print("\n⚠️ MATURITY API (check_coin_maturity_stored_or_verify → get_coin_candles_only):")
-        for s, ms in sorted(api_calls, key=lambda x: -x[1]):
-            print(f"   {s}: {ms:.0f}ms — символ НЕ в is_coin_mature_stored, загружаются свечи {maturity_tf}")
-        print("   → Узкое место: API вызов для незрелых монет при maturity_tf != timeframe")
-
-    if trend_slow:
-        print("\n⚠️ Анализ тренда (analyze_trend) > 500ms:")
-        for s, ms in trend_slow:
-            print(f"   {s}: {ms:.0f}ms")
-
-    if slow_total:
-        print("\n⚠️ Медленные символы (total > 2s):")
-        for s, ms in sorted(slow_total, key=lambda x: -x[1]):
-            print(f"   {s}: {ms:.0f}ms")
-
-    print("\n📌 РЕКОМЕНДАЦИИ:")
-    if api_calls:
-        print("   1. maturity_tf = timeframe (6h) в конфиге — свечи уже в кэше, без API")
-    print("   2. Либо увеличить batch_timeout RSI (сейчас 40с)")
-    print("   3. Либо уменьшить batch_size до 50 на слабых ПК")
-    print(f"\nВремя диагностики: {(time.time() - t0):.1f}с")
+    print(f"Время: {(time.time() - t0):.1f}с")
+    if timeout_count > 0:
+        print("→ Включи RSI_AGGRESSIVE_LOW_RESOURCE = True в bot_config (2 воркера, батч 50, timeout 90с)")
 
 if __name__ == '__main__':
     run_diagnostic()
