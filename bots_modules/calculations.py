@@ -314,7 +314,7 @@ def analyze_trend(symbol, exchange_obj=None, candles_data=None, timeframe=None, 
         candles_threshold = config.get('trend_candles_threshold', 70)  # Порог процента свечей (50-80%)
 
         if candles_data is None:
-            # Определяем период для загрузки свечей (примерно 30 дней для большинства таймфреймов)
+            # API только когда явно None. Пустой список [] — из кэша, return None без запроса.
             chart_response = exchange_to_use.get_chart_data(symbol, timeframe, '30d')
             if not chart_response or not chart_response.get('success'):
                 return None

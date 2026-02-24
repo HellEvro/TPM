@@ -37,13 +37,14 @@
         // Обработчики для кнопок быстрого запуска
         this.initializeQuickLaunchButtons();
     },
-            async checkBotsService() {
-        console.log('[BotsManager] 🔍 Проверка сервиса ботов...');
+            async checkBotsService(retryCount = 0) {
+        const MAX_RETRIES = 1;
+        console.log('[BotsManager] 🔍 Проверка сервиса ботов...' + (retryCount > 0 ? ` (повтор ${retryCount}/${MAX_RETRIES})` : ''));
         console.log('[BotsManager] 🔗 URL:', `${this.BOTS_SERVICE_URL}/api/status`);
         
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
             
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/status`, {
                 method: 'GET',
@@ -75,8 +76,13 @@
             }
             
         } catch (error) {
+            if (retryCount < MAX_RETRIES) {
+                console.warn('[BotsManager] ⚠️ Повторная попытка через 2 сек (при пиковой нагрузке сервис может отвечать медленнее)...');
+                await new Promise(r => setTimeout(r, 2000));
+                return this.checkBotsService(retryCount + 1);
+            }
             if (error.name === 'AbortError') {
-                console.error('[BotsManager] ❌ Таймаут при проверке сервиса ботов (5 секунд)');
+                console.error('[BotsManager] ❌ Таймаут при проверке сервиса ботов (15 секунд)');
             } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
                 console.error('[BotsManager] ❌ Ошибка сети при проверке сервиса ботов. Проверьте:');
                 console.error('[BotsManager]   1. Запущен ли bots.py?');

@@ -2088,14 +2088,14 @@ def load_all_coins_candles_fast():
         try:
             from bots_modules.imports_and_globals import bots_data, bots_data_lock, BOT_STATUS
             from bot_engine.config_loader import get_config_value, get_current_timeframe, TIMEFRAME
-            if bots_data_lock.acquire(timeout=5):
+            if bots_data_lock.acquire(timeout=15):
                 try:
                     bots = (bots_data.get('bots') or {}).copy()
                     auto_config = (bots_data.get('auto_bot_config') or {}).copy()
                 finally:
                     bots_data_lock.release()
             else:
-                logger.warning("⚠️ bots_data_lock timeout 5с — загружаем свечи в full mode")
+                logger.warning("⚠️ bots_data_lock timeout 15с — загружаем свечи в full mode")
             max_concurrent = get_config_value(auto_config, 'max_concurrent')
             try:
                 default_tf = get_current_timeframe() or TIMEFRAME
@@ -2317,6 +2317,7 @@ def load_all_coins_candles_fast():
 
         # reduced_mode: мержим только обновлённые монеты, не затираем остальные
         try:
+            from bots_modules.imports_and_globals import rsi_data_lock, coins_rsi_data
             logger.info(f"💾 Сохраняем кэш в глобальное хранилище...")
             if reduced_mode and merged_candles_cache:
                 with rsi_data_lock:
@@ -3651,7 +3652,8 @@ def analyze_trends_for_signal_coins():
         for i, symbol in enumerate(signal_coins, 1):
             try:
                 candles = candles_cache.get(symbol, {}).get(current_timeframe, {}).get('candles', [])
-                trend_analysis = analyze_trend_6h(symbol, exchange_obj=exchange, candles_data=candles if candles else None)
+                # ⚠️ НЕ передаём None — иначе analyze_trend пойдёт в API (get_chart_data). Пустой список → return None без запроса.
+                trend_analysis = analyze_trend_6h(symbol, exchange_obj=exchange, candles_data=candles)
                 if trend_analysis:
                     # ✅ СОБИРАЕМ обновления во временном хранилище
                     if symbol in coins_rsi_data['coins']:

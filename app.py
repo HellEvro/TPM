@@ -2137,7 +2137,7 @@ def get_bots_pairs():
 @app.route('/api/status', methods=['GET'])
 def api_status_proxy():
     """Прокси /api/status для проверки сервиса ботов (фронт при порте 5000 дергает этот URL)."""
-    result = call_bots_service('/api/status', timeout=5)
+    result = call_bots_service('/api/status', timeout=15)
     status_code = result.get('status_code', 200 if result.get('status') == 'online' else 503)
     return jsonify(result), status_code
 
@@ -2172,6 +2172,8 @@ def auto_bot_proxy():
         result = call_bots_service('/api/bots/auto-bot', method='GET', timeout=cfg_timeout)
     else:
         data = request.get_json()
+        enabled = data.get('enabled') if isinstance(data, dict) else None
+        logging.getLogger('app').info(f"[app.py] 📥 POST /api/bots/auto-bot получен (enabled={enabled}) → проксируем на bots.py:5001")
         result = call_bots_service('/api/bots/auto-bot', method='POST', data=data, timeout=cfg_timeout)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
