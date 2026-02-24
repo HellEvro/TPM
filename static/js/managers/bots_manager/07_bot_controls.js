@@ -952,10 +952,10 @@
             const configData = await configResponse.json();
             
             if (botsData.success) {
-                console.log(`[DEBUG] loadActiveBotsData: получены данные ботов:`, botsData.bots);
+                this.logDebug('[BotsManager] loadActiveBotsData: получены данные ботов:', botsData.bots);
                 this.activeBots = botsData.bots;
                 this.activeVirtualPositions = Array.isArray(botsData.virtual_positions) ? botsData.virtual_positions : [];
-                console.log(`[DEBUG] loadActiveBotsData: this.activeBots установлен:`, this.activeBots, 'virtual:', this.activeVirtualPositions?.length);
+                this.logDebug('[BotsManager] loadActiveBotsData: activeBots установлен, virtual:', this.activeVirtualPositions?.length);
                 this.renderActiveBotsDetails();
                 
                 // Обновляем индикаторы активных ботов в списке монет
@@ -964,7 +964,7 @@
                 // Обновляем видимость массовых операций
                 this.updateBulkControlsVisibility(botsData.bots);
             } else {
-                console.log(`[DEBUG] loadActiveBotsData: ошибка загрузки ботов:`, botsData);
+                this.logDebug('[BotsManager] loadActiveBotsData: ошибка загрузки ботов:', botsData);
             }
             
             // КРИТИЧЕСКИ ВАЖНО: Синхронизируем состояние автобота ТОЛЬКО если переключатель не был изменен пользователем

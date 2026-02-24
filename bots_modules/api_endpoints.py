@@ -1120,6 +1120,52 @@ def get_bots_list():
                 bot['bot_status'] = 'Приостановлен'
             else:
                 bot['bot_status'] = 'Неизвестно'
+            
+            # position_side для фронта (LONG/SHORT) — иначе карточка и сделки не показывают позицию
+            if bot_status == 'in_position_long':
+                bot['position_side'] = 'LONG'
+            elif bot_status == 'in_position_short':
+                bot['position_side'] = 'SHORT'
+            else:
+                bot['position_side'] = None
+        
+        # RSI и текущая цена для карточек ботов — один раз читаем кэш под блокировкой
+        try:
+            from bot_engine.config_loader import get_current_timeframe, get_rsi_key, get_trend_key
+            tf = get_current_timeframe()
+            rsi_key = get_rsi_key(tf)
+            trend_key = get_trend_key(tf)
+            symbols_with_bots = [b.get('symbol') for b in bots_list if b.get('symbol')]
+            with rsi_data_lock:
+                coins = (coins_rsi_data.get('coins') or {})
+                rsi_for_bots = {s: coins.get(s) for s in symbols_with_bots}
+            for bot in bots_list:
+                sym = bot.get('symbol')
+                coin_data = rsi_for_bots.get(sym) if sym else None
+                if coin_data:
+                    bot['current_price'] = coin_data.get('price')
+                    bot['rsi6h'] = coin_data.get('rsi6h') or coin_data.get(rsi_key)
+                    bot['trend6h'] = coin_data.get('trend6h') or coin_data.get(trend_key)
+                    bot[rsi_key] = coin_data.get(rsi_key)
+                    bot[trend_key] = coin_data.get(trend_key)
+                    bot['rsi_data'] = {
+                        'rsi6h': bot['rsi6h'],
+                        'trend6h': bot['trend6h'],
+                        'rsi': coin_data.get('rsi') or coin_data.get(rsi_key),
+                        'trend': coin_data.get('trend') or coin_data.get(trend_key),
+                        rsi_key: coin_data.get(rsi_key),
+                        trend_key: coin_data.get(trend_key)
+                    }
+                else:
+                    bot['current_price'] = None
+                    bot['rsi_data'] = None
+        except Exception as e:
+            logger.debug("rsi_data для списка ботов: %s", e)
+            for bot in bots_list:
+                if 'current_price' not in bot:
+                    bot['current_price'] = None
+                if 'rsi_data' not in bot:
+                    bot['rsi_data'] = None
         
         # Подсчитываем статистику (idle боты считаются активными для UI)
         active_bots = sum(1 for bot in bots_list if bot.get('status') not in ['paused'])

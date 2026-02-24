@@ -143,14 +143,29 @@
             </div>
         `;
         
-        // Добавляем RSI данные если есть
-        if (bot.rsi_data) {
+        // Добавляем RSI данные если есть (из бота или из списка монет с RSI)
+        let rsiDataForDisplay = bot.rsi_data;
+        if (!rsiDataForDisplay && this.coinsRsiData && this.coinsRsiData.length) {
+            const coin = this.coinsRsiData.find(c => c.symbol === bot.symbol);
+            if (coin) {
+                const tf = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
+                rsiDataForDisplay = {
+                    [`rsi${tf}`]: coin[`rsi${tf}`] ?? coin.rsi6h ?? coin.rsi,
+                    [`trend${tf}`]: coin[`trend${tf}`] || coin.trend6h || coin.trend,
+                    rsi6h: coin.rsi6h ?? coin.rsi,
+                    trend6h: coin.trend6h || coin.trend,
+                    rsi: coin.rsi,
+                    trend: coin.trend
+                };
+            }
+        }
+        if (rsiDataForDisplay) {
             // Получаем RSI и тренд с учетом текущего таймфрейма
             const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
             const rsiKey = `rsi${currentTimeframe}`;
             const trendKey = `trend${currentTimeframe}`;
-            const rsi = bot.rsi_data[rsiKey] || bot.rsi_data.rsi6h || bot.rsi_data.rsi || 50;
-            const trend = bot.rsi_data[trendKey] || bot.rsi_data.trend6h || bot.rsi_data.trend || 'NEUTRAL';
+            const rsi = rsiDataForDisplay[rsiKey] || rsiDataForDisplay.rsi6h || rsiDataForDisplay.rsi || 50;
+            const trend = rsiDataForDisplay[trendKey] || rsiDataForDisplay.trend6h || rsiDataForDisplay.trend || 'NEUTRAL';
             
             if (rsi) {
                 let rsiColor = 'var(--text-muted)';
@@ -246,67 +261,51 @@
         return timeInfoHtml;
     },
             renderTradesInfo(coinSymbol) {
-        console.log(`[DEBUG] renderTradesInfo для ${coinSymbol}`);
-        console.log(`[DEBUG] this.activeBots:`, this.activeBots);
-        console.log(`[DEBUG] this.selectedCoin:`, this.selectedCoin);
-        
         const tradesSection = document.getElementById('tradesInfoSection');
         const tradesContainer = document.getElementById('tradesContainer');
         
-        console.log(`[DEBUG] tradesSection:`, tradesSection);
-        console.log(`[DEBUG] tradesContainer:`, tradesContainer);
+        if (!tradesSection || !tradesContainer) return;
         
-        if (!tradesSection || !tradesContainer) {
-            console.log(`[DEBUG] Не найдены элементы tradesSection или tradesContainer`);
-            return;
-        }
-        
-        // Находим бота для этой монеты
         const bot = this.activeBots.find(b => b.symbol === coinSymbol);
         
-        console.log(`[DEBUG] Найденный бот для ${coinSymbol}:`, bot);
-        
         if (!bot) {
-            console.log(`[DEBUG] Бот не найден для ${coinSymbol}`);
             tradesSection.style.display = 'none';
             return;
         }
         
-        // Показываем секцию сделок
-        console.log(`[DEBUG] Показываем секцию сделок для ${coinSymbol}`);
         tradesSection.style.display = 'block';
-        
-        // Получаем информацию о сделках
         const trades = this.getBotTrades(bot);
         
-        console.log(`[DEBUG] Полученные сделки для ${coinSymbol}:`, trades);
-        
         if (trades.length === 0) {
-            console.log(`[DEBUG] Нет активных сделок для ${coinSymbol}`);
             tradesContainer.innerHTML = '<div class="no-trades">Нет активных сделок</div>';
             return;
         }
         
-        // Рендерим сделки
-        const tradesHtml = trades.map(trade => this.renderTradeItem(trade)).join('');
-        console.log(`[DEBUG] HTML для сделок ${coinSymbol}:`, tradesHtml);
-        tradesContainer.innerHTML = tradesHtml;
+        tradesContainer.innerHTML = trades.map(trade => this.renderTradeItem(trade)).join('');
     },
             getBotTrades(bot) {
-        console.log(`[DEBUG] getBotTrades для ${bot.symbol}:`, {
-            position_side: bot.position_side,
-            entry_price: bot.entry_price,
-            position_size: bot.position_size,
-            exchange_position: bot.exchange_position
-        });
+        // Фолбек: position_side из status, если бэкенд не прислал (старый кэш / другой эндпоинт)
+        const position_side = bot.position_side || (bot.status === 'in_position_long' ? 'LONG' : bot.status === 'in_position_short' ? 'SHORT' : null);
+        // RSI: из бота или из списка монет с RSI
+        let rsiData = bot.rsi_data;
+        if (!rsiData && this.coinsRsiData && this.coinsRsiData.length) {
+            const coin = this.coinsRsiData.find(c => c.symbol === bot.symbol);
+            if (coin) {
+                const tf = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
+                const rk = `rsi${tf}`;
+                const tk = `trend${tf}`;
+                rsiData = { rsi6h: coin[rk] ?? coin.rsi6h ?? coin.rsi, trend6h: coin[tk] || coin.trend6h || coin.trend };
+            }
+        }
+        const currentRsi = (rsiData && (rsiData.rsi6h ?? rsiData.rsi)) != null ? (rsiData.rsi6h ?? rsiData.rsi) : 50;
         
+        this.logDebug(`[BotsManager] getBotTrades ${bot.symbol}: position_side=${position_side}, rsi=${currentRsi}`);
+        
+        const currentTrend = (rsiData && (rsiData.trend6h || rsiData.trend)) || bot.trend6h || bot.trend || 'NEUTRAL';
         const trades = [];
         
-        // Определяем currentRsi в начале функции для использования во всех блоках
-        const currentRsi = bot.rsi_data?.rsi6h || 50;
-        
         // Проверяем, есть ли позиция LONG
-        if (bot.position_side === 'LONG' && bot.entry_price) {
+        if (position_side === 'LONG' && bot.entry_price) {
             console.log(`[DEBUG] Создаем LONG позицию для ${bot.symbol}`);
             
             // Используем данные с биржи для стоп-лосса и тейк-профита
@@ -357,24 +356,16 @@
                 volumeMode: 'USDT',
                 startTime: bot.created_at,
                 rsi: currentRsi,
-                // Получаем тренд с учетом текущего таймфрейма
-                trend: (() => {
-                    const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
-                    const trendKey = `trend${currentTimeframe}`;
-                    return bot[trendKey] || bot.trend6h || bot.trend || 'NEUTRAL';
-                })(),
+                trend: currentTrend,
                 workTime: bot.work_time || '0м',
                 lastUpdate: bot.last_update || 'Неизвестно'
             });
         } else {
-            console.log(`[DEBUG] Нет LONG позиции для ${bot.symbol}:`, {
-                position_side: bot.position_side,
-                entry_price: bot.entry_price
-            });
+            this.logDebug(`[BotsManager] Нет LONG позиции для ${bot.symbol}`);
         }
         
         // Проверяем, есть ли позиция SHORT (для кросс-сделок)
-        if (bot.position_side === 'SHORT' && bot.entry_price) {
+        if (position_side === 'SHORT' && bot.entry_price) {
             // Используем данные с биржи для стоп-лосса и тейк-профита
             const stopLossPrice = bot.exchange_position?.stop_loss || bot.entry_price * 1.05; // Используем данные с биржи или 5% от входа
             const takeProfitPrice = bot.exchange_position?.take_profit || null; // Используем данные с биржи
@@ -416,15 +407,12 @@
                 volumeMode: 'USDT',
                 startTime: bot.created_at,
                 rsi: currentRsi,
-                // Получаем тренд с учетом текущего таймфрейма
-                trend: (() => {
-                    const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
-                    const trendKey = `trend${currentTimeframe}`;
-                    return bot[trendKey] || bot.trend6h || bot.trend || 'NEUTRAL';
-                })(),
+                trend: currentTrend,
                 workTime: bot.work_time || '0м',
                 lastUpdate: bot.last_update || 'Неизвестно'
             });
+        } else {
+            this.logDebug(`[BotsManager] Нет SHORT позиции для ${bot.symbol}`);
         }
         
         return trades;
