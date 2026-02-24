@@ -3914,8 +3914,8 @@ def auto_bot_config():
                     load_auto_bot_config._last_mtime = 0
                 load_auto_bot_config()
             
-            # Краткий захват блокировки (таймаут 10с) — при нагрузке загрузчик может держать lock долго
-            if not bots_data_lock.acquire(timeout=10):
+            # Ожидание блокировки до 30с — при нагрузке (RSI, загрузчик) lock может держаться долго; иначе фронт получает 503
+            if not bots_data_lock.acquire(timeout=30):
                 return jsonify({
                     'success': False,
                     'error': 'Сервер занят (загрузка данных). Повторите через несколько секунд.',

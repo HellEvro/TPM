@@ -50,7 +50,13 @@
                 return;
             }
             this.logDebug('[BotsManager] 📡 Auto Bot response status:', autoBotResponse.status);
-            const autoBotData = await autoBotResponse.json();
+            let autoBotData = {};
+            try {
+                autoBotData = await autoBotResponse.json();
+            } catch (_) {
+                if (autoBotResponse.status === 503 || autoBotResponse.status === 504) return;
+                autoBotData = { success: false, error: 'Ответ не JSON' };
+            }
             this.logDebug('[BotsManager] 🤖 Auto Bot data:', autoBotData);
             
             this.logDebug('[BotsManager] 🌐 Запрос системных настроек...');
@@ -2414,12 +2420,24 @@
             console.log('[BotsManager] 🔧 Устанавливаем обработчик события...');
             globalAutoBotToggleEl.setAttribute('data-initialized', 'true');
             
-            // КРИТИЧЕСКИ ВАЖНО: Загружаем текущее состояние Auto Bot с сервера (при 503 — повтор до 2 раз через 5 сек)
+            // Загружаем текущее состояние Auto Bot с сервера (при 503 — до 5 повторов через 3 сек, т.к. бэкенд может быть занят блокировкой)
             const fetchAutoBotState = async (attempt = 0) => {
-                const MAX_RETRIES = 2;
-                const RETRY_DELAY_MS = 5000;
+                const MAX_RETRIES = 5;
+                const RETRY_DELAY_MS = 3000;
                 const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/auto-bot`);
-                const data = await response.json();
+                let data = {};
+                try {
+                    data = await response.json();
+                } catch (_) {
+                    if (response.status === 503 || response.status === 504) {
+                        if (attempt < MAX_RETRIES) {
+                            this.logDebug(`[BotsManager] ⏳ Auto Bot: сервер занят (${response.status}), повтор через ${RETRY_DELAY_MS / 1000} сек (${attempt + 1}/${MAX_RETRIES})`);
+                            await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+                            return fetchAutoBotState(attempt + 1);
+                        }
+                    }
+                    return { ok: false, status: response.status, data: {} };
+                }
                 if (data.success && data.config) {
                     return { ok: true, config: data.config };
                 }
@@ -2475,22 +2493,26 @@
                 
                 try {
                     const url = `${this.BOTS_SERVICE_URL}/api/bots/auto-bot`;
-                    console.log(`[BotsManager] 📡 Отправка запроса на ${isEnabled ? 'включение' : 'выключение'} автобота...`);
-                    console.log(`[BotsManager] 🌐 URL: ${url}`);
-                    console.log(`[BotsManager] 📦 Данные: ${JSON.stringify({ enabled: isEnabled })}`);
-                    // Сохраняем изменение через API
-                    const response = await fetch(url, {
+                    this.logDebug(`[BotsManager] 📡 Отправка запроса на ${isEnabled ? 'включение' : 'выключение'} автобота...`);
+                    let response = await fetch(url, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ enabled: isEnabled })
                     });
-                    console.log('[BotsManager] 📡 Ответ получен:', response.status);
-                    
-                    const result = await response.json();
-                    console.log('[BotsManager] 📦 Результат от сервера:', result);
-                    console.log('[BotsManager] 📊 Состояние enabled в ответе:', result.config?.enabled);
+                    for (let retry = 0; retry < 2 && (response.status === 503 || response.status === 504); retry++) {
+                        await new Promise(r => setTimeout(r, 3000));
+                        response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ enabled: isEnabled })
+                        });
+                    }
+                    let result = {};
+                    try {
+                        result = await response.json();
+                    } catch (_) {
+                        result = { success: false, error: 'Ответ сервера не JSON' };
+                    }
                     
                     if (result.success) {
                         this.showNotification(
