@@ -546,6 +546,10 @@ class BotsManager {
         const selectedCoin = this.dataManager.getSelectedCoin();
         if (!selectedCoin) return;
 
+        const currentTimeframe = document.getElementById('systemTimeframe')?.value || '6h';
+        const rsiKey = `rsi${currentTimeframe}`;
+        const trendKey = `trend${currentTimeframe}`;
+
         const coinInfoElement = document.getElementById('selectedCoinInfo');
         if (coinInfoElement) {
             coinInfoElement.innerHTML = `

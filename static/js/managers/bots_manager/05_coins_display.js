@@ -763,6 +763,7 @@
         if (!this.selectedCoin) return;
 
         const coin = this.selectedCoin;
+        const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
         console.log('[BotsManager] 🔄 Обновление информации о монете:', coin);
         
         // Обновляем основную информацию
@@ -810,7 +811,6 @@
         }
         
         if (rsiElement) {
-            const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
             const enhancedRsiKey = `rsi_${currentTimeframe.replace('h', 'H')}`;
             const rsi = coin.enhanced_rsi?.[enhancedRsiKey] ?? this.getRsiValueForDisplay(coin);
             const rsiDisplay = (rsi != null && rsi !== '') ? rsi : '-';
