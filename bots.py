@@ -576,6 +576,21 @@ def cleanup_bot_service():
         logger.info("Сохранение хранилища зрелых монет...")
         save_mature_coins_storage()
 
+        try:
+            from bots_modules.sync_and_cache import trim_memory_caches
+            trim_memory_caches()
+        except Exception:
+            pass
+        try:
+            from utils.cleanup_utils import cleanup_temp_files, cleanup_build_temp
+            _root = os.path.dirname(os.path.abspath(__file__))
+            _r = cleanup_temp_files(_root, max_age_seconds=0)
+            if _r > 0:
+                logger.info("🧹 При остановке удалено .tmp файлов: %s", _r)
+            if cleanup_build_temp(_root, min_age_seconds=0):
+                logger.info("🧹 При остановке удалена папка build_temp")
+        except Exception:
+            pass
         from utils.memory_utils import force_collect_full
         force_collect_full()
         logger.info("Система остановлена")
@@ -624,17 +639,47 @@ def run_bots_service():
             server_thread = threading.Thread(target=run_server, daemon=True)
             server_thread.start()
 
-            # Ждем завершения или сигнала (периодическая сборка мусора раз в ~60 с)
+            # Ждем завершения или сигнала. Очистка ОЗУ: GC каждые ~30 с, подрезка кэшей и темп-файлы каждые ~90 с
             try:
                 _gc_ticks = 0
+                _build_temp_cleanup_accum = 0
                 while server_thread.is_alive() and not graceful_shutdown:
                     try:
                         time.sleep(0.1)
                         _gc_ticks += 1
-                        if _gc_ticks >= 600:
+                        # Каждые ~30 с — принудительная сборка мусора (снижение роста ОЗУ)
+                        if _gc_ticks >= 300:
                             from utils.memory_utils import force_collect_full
                             force_collect_full()
-                            _gc_ticks = 0
+                            # Каждые ~90 с — подрезка кэшей, очистка темп-файлов, освобождение ОЗУ
+                            if _gc_ticks >= 900:
+                                try:
+                                    from bots_modules.sync_and_cache import trim_memory_caches
+                                    trim_memory_caches()
+                                except Exception as trim_err:
+                                    import logging
+                                    logging.getLogger('BotsService').debug("trim_memory_caches: %s", trim_err)
+                                try:
+                                    from utils.cleanup_utils import cleanup_temp_files
+                                    _root = os.path.dirname(os.path.abspath(__file__))
+                                    _removed = cleanup_temp_files(_root)
+                                    if _removed > 0:
+                                        logger.info("🧹 Очистка: удалено %s устаревших .tmp файлов", _removed)
+                                except Exception as cleanup_err:
+                                    import logging
+                                    logging.getLogger('BotsService').debug("cleanup_temp_files: %s", cleanup_err)
+                                _build_temp_cleanup_accum += 900
+                                if _build_temp_cleanup_accum >= 6000:
+                                    try:
+                                        from utils.cleanup_utils import cleanup_build_temp
+                                        _root = os.path.dirname(os.path.abspath(__file__))
+                                        if cleanup_build_temp(_root):
+                                            logger.info("🧹 Очистка: удалена устаревшая папка build_temp")
+                                    except Exception:
+                                        pass
+                                    _build_temp_cleanup_accum = 0
+                                _gc_ticks = 0
+                            # при 300 тиках не сбрасываем счётчик, чтобы через 900 сработала подрезка кэшей
                     except Exception as loop_err:
                         import logging
                         logging.getLogger('BotsService').error(f"Ошибка в главном цикле (продолжаем работу): {loop_err}")

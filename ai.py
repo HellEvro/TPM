@@ -84,5 +84,27 @@ for _key, _value in _protected_module.__dict__.items():
 del _globals, _skip, _key, _value
 
 
+def _ai_periodic_cleanup():
+    """Периодическая очистка темп-файлов и памяти (GC + PyTorch/CUDA)."""
+    import time
+    _root = os.path.dirname(os.path.abspath(__file__))
+    while True:
+        try:
+            time.sleep(90)
+            from utils.cleanup_utils import cleanup_temp_files, cleanup_build_temp
+            cleanup_temp_files(_root)
+            cleanup_build_temp(_root)
+        except Exception:
+            pass
+        try:
+            from utils.memory_utils import force_collect_full
+            force_collect_full()
+        except Exception:
+            pass
+
+
 if __name__ == '__main__':
+    import threading
+    _cleanup_thread = threading.Thread(target=_ai_periodic_cleanup, daemon=True, name='AICleanup')
+    _cleanup_thread.start()
     _protected_module.main()

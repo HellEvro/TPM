@@ -1901,10 +1901,25 @@ def clear_old_cache():
         del candles_cache[symbol]
 
 def background_cache_cleanup():
-    """Фоновая очистка кэша и памяти (GC + PyTorch/CUDA при наличии)."""
+    """Фоновая очистка кэша, темп-файлов и памяти (GC + PyTorch/CUDA при наличии)."""
+    _build_temp_iters = 0
     while True:
         try:
             clear_old_cache()
+        except Exception:
+            pass
+        try:
+            from utils.cleanup_utils import cleanup_temp_files, cleanup_build_temp
+            _removed = cleanup_temp_files(str(_PROJECT_ROOT))
+            if _removed > 0:
+                app_logger = logging.getLogger('app')
+                app_logger.info("🧹 [APP] Очистка: удалено %s устаревших .tmp файлов", _removed)
+            _build_temp_iters += 1
+            if _build_temp_iters >= 10:
+                if cleanup_build_temp(str(_PROJECT_ROOT)):
+                    app_logger = logging.getLogger('app')
+                    app_logger.info("🧹 [APP] Очистка: удалена устаревшая папка build_temp")
+                _build_temp_iters = 0
         except Exception:
             pass
         try:

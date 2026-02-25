@@ -564,6 +564,45 @@ def load_rsi_cache():
         logger.error(f" Ошибка загрузки RSI кэша из БД: {str(e)}")
         return False
 
+
+# Лимит свечей на символ/ТФ в кэше (снижение ОЗУ при длительной работе)
+CANDLES_TRIM_MAX_PER_SYMBOL = 500
+
+
+def trim_memory_caches():
+    """
+    Периодическая очистка ОЗУ: подрезка кэша свечей и принудительная сборка мусора.
+    Вызывать из главного цикла bots.py каждые 1–2 минуты для предотвращения роста памяти.
+    """
+    import gc
+    trimmed = 0
+    try:
+        with rsi_data_lock:
+            cache = coins_rsi_data.get('candles_cache') or {}
+            if not cache:
+                return 0
+            for sym, tf_data in list(cache.items()):
+                if not isinstance(tf_data, dict):
+                    continue
+                for tf, data in list(tf_data.items()):
+                    if isinstance(data, dict) and isinstance(data.get('candles'), list):
+                        cand = data['candles']
+                        if len(cand) > CANDLES_TRIM_MAX_PER_SYMBOL:
+                            data['candles'] = cand[-CANDLES_TRIM_MAX_PER_SYMBOL:]
+                            trimmed += 1
+        if trimmed > 0:
+            logger.debug(f"🧹 ОЗУ: подрезано свечей в {trimmed} ячейках кэша (макс {CANDLES_TRIM_MAX_PER_SYMBOL} на символ/ТФ)")
+        collected = gc.collect(2)
+        return trimmed
+    except Exception as e:
+        logger.debug("trim_memory_caches: %s", e)
+        try:
+            gc.collect(2)
+        except Exception:
+            pass
+        return 0
+
+
 def save_default_config():
     """Дефолты хранятся в configs/bot_config.py (DEFAULT_AUTO_BOT_CONFIG). JSON не используется."""
     return True
