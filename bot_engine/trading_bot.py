@@ -75,7 +75,18 @@ class TradingBot:
         self.trailing_step_usdt = float(self.config.get('trailing_step_usdt', 0.0) or 0.0)
         self.trailing_step_price = float(self.config.get('trailing_step_price', 0.0) or 0.0)
         self.trailing_steps = int(self.config.get('trailing_steps', 0) or 0)
+        self.trailing_reference_price = self.config.get('trailing_reference_price')
+        self.trailing_last_update_ts = float(self.config.get('trailing_last_update_ts', 0.0) or 0.0)
+        self.trailing_take_profit_price = self.config.get('trailing_take_profit_price')
         self.break_even_activated = self.config.get('break_even_activated', False)
+        self.break_even_stop_price = self.config.get('break_even_stop_price')
+        self.break_even_stop_set = bool(self.config.get('break_even_stop_set', False))
+        self.stop_loss = self.config.get('stop_loss')
+        self.take_profit = self.config.get('take_profit')
+        self.entry_trend = self.config.get('entry_trend')
+        self.entry_timeframe = self.config.get('entry_timeframe') or get_current_timeframe()
+        self.entry_timestamp = self.config.get('entry_timestamp')
+        self.opened_by_autobot = self.config.get('opened_by_autobot', False)
         self.order_id = self.config.get('order_id')
         self.current_price = self.config.get('current_price')
         created = self.config.get('created_at')
@@ -155,7 +166,18 @@ class TradingBot:
             'trailing_step_usdt': self.trailing_step_usdt,
             'trailing_step_price': self.trailing_step_price,
             'trailing_steps': self.trailing_steps,
+            'trailing_reference_price': getattr(self, 'trailing_reference_price', None),
+            'trailing_last_update_ts': getattr(self, 'trailing_last_update_ts', 0.0),
+            'trailing_take_profit_price': getattr(self, 'trailing_take_profit_price', None),
             'break_even_activated': self.break_even_activated,
+            'break_even_stop_price': getattr(self, 'break_even_stop_price', None),
+            'break_even_stop_set': getattr(self, 'break_even_stop_set', False),
+            'stop_loss': getattr(self, 'stop_loss', None),
+            'take_profit': getattr(self, 'take_profit', None),
+            'entry_trend': getattr(self, 'entry_trend', None),
+            'entry_timeframe': getattr(self, 'entry_timeframe', None),
+            'entry_timestamp': getattr(self, 'entry_timestamp', None),
+            'opened_by_autobot': getattr(self, 'opened_by_autobot', False),
             'order_id': self.order_id,
             'current_price': self.current_price,
             'last_price': self.last_price,

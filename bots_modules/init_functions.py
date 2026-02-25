@@ -234,8 +234,8 @@ def init_bot_service():
                     trading_bot.stop_loss = bot_data.get('stop_loss')
                     trading_bot.break_even_stop_price = bot_data.get('break_even_stop_price')
                     trading_bot.break_even_stop_set = bool(bot_data.get('break_even_stop_set', False))
-                    trading_bot.trailing_reference_price = bot_data.get('trailing_reference_price') or trading_bot.trailing_reference_price
-                    trading_bot.trailing_take_profit_price = bot_data.get('trailing_take_profit_price') or trading_bot.trailing_take_profit_price
+                    trading_bot.trailing_reference_price = bot_data.get('trailing_reference_price') or getattr(trading_bot, 'trailing_reference_price', None)
+                    trading_bot.trailing_take_profit_price = bot_data.get('trailing_take_profit_price') or getattr(trading_bot, 'trailing_take_profit_price', None)
                     trading_bot.entry_trend = bot_data.get('entry_trend')
                     if bot_data.get('entry_timeframe'):
                         trading_bot.entry_timeframe = bot_data.get('entry_timeframe')
