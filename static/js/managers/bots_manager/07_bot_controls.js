@@ -970,10 +970,12 @@
             this.logDebug('[BotsManager] loadActiveBotsData: пропуск тика (предыдущий запрос ещё выполняется)');
             return;
         }
-        // Не чаще раза в 10 сек, чтобы не перегружать браузер и сервер
-        const minInterval = 10000;
+        // Обновление как у живых ботов: при виртуальных или реальных позициях — чаще (3 сек)
+        const hasVirtual = Array.isArray(this.activeVirtualPositions) && this.activeVirtualPositions.length > 0;
+        const hasBotsInPosition = Array.isArray(this.activeBots) && this.activeBots.some(b => b.status === 'in_position_long' || b.status === 'in_position_short');
+        const minInterval = (hasVirtual || hasBotsInPosition) ? 3000 : 10000;
         if (this._lastLoadActiveBotsDataRun && (Date.now() - this._lastLoadActiveBotsDataRun) < minInterval) {
-            this.logDebug('[BotsManager] loadActiveBotsData: пропуск тика (интервал < 10 сек)');
+            this.logDebug('[BotsManager] loadActiveBotsData: пропуск тика (интервал < ' + (minInterval / 1000) + ' сек)');
             return;
         }
         this._loadActiveBotsDataInProgress = true;

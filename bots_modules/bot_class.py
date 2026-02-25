@@ -552,20 +552,39 @@ class NewTradingBot:
                                 self._set_decision_source('AI', decision)
                                 return True
                             if action == 'virtual_open':
+                                try:
+                                    from bots_modules.filters import verify_coin_realtime_before_entry
+                                    verify_ok, verify_reason, rsi_now, _ = verify_coin_realtime_before_entry(self.symbol, 'ENTER_LONG', self.exchange)
+                                    if not verify_ok:
+                                        logger.warning(f"[NEW_BOT_{self.symbol}] 🚫 Виртуальный LONG отменён — верификация RSI: {verify_reason}")
+                                        return False
+                                except Exception as v_err:
+                                    logger.warning(f"[NEW_BOT_{self.symbol}] Виртуальный LONG: верификация не выполнена: {v_err}")
+                                    return False
                                 record_virtual_open(self.symbol, 'LONG', current_price)
-                                logger.info(f"[NEW_BOT_{self.symbol}] 🧠 FullAI Adaptive: виртуальный LONG (уверенность: {decision.get('confidence', 0):.2%})")
+                                rsi_log = f", RSI={rsi_now:.1f}" if rsi_now is not None else ""
+                                logger.info(f"[NEW_BOT_{self.symbol}] 🧠 FullAI Adaptive: виртуальный LONG (уверенность: {decision.get('confidence', 0):.2%}{rsi_log})")
                                 return False
                         except ImportError:
                             pass
                         logger.info(f"[NEW_BOT_{self.symbol}] 🧠 FullAI: вход LONG (уверенность: {decision.get('confidence', 0):.2%})")
                         self._set_decision_source('AI', decision)
                         return True
-                    # FullAI Adaptive: при отказе (WAIT/low conf) — виртуальный вход для обучения
+                    # FullAI Adaptive: при отказе (WAIT/low conf) — виртуальный вход для обучения (с верификацией RSI как у живой сделки)
                     try:
                         from bots_modules.fullai_adaptive import is_adaptive_enabled, record_virtual_open
                         if is_adaptive_enabled():
-                            record_virtual_open(self.symbol, 'LONG', current_price)
-                            logger.info(f"[NEW_BOT_{self.symbol}] 🧠 FullAI Adaptive: виртуальный LONG при WAIT (уверенность: {decision.get('confidence', 0):.2%}) — {decision.get('reason', '')}")
+                            try:
+                                from bots_modules.filters import verify_coin_realtime_before_entry
+                                verify_ok, verify_reason, rsi_now, _ = verify_coin_realtime_before_entry(self.symbol, 'ENTER_LONG', self.exchange)
+                                if not verify_ok:
+                                    logger.info(f"[NEW_BOT_{self.symbol}] 🧠 FullAI: виртуальный LONG при WAIT отменён — верификация: {verify_reason}")
+                                else:
+                                    record_virtual_open(self.symbol, 'LONG', current_price)
+                                    rsi_str = f"RSI={rsi_now:.1f}" if rsi_now is not None else "RSI=?"
+                                    logger.info(f"[NEW_BOT_{self.symbol}] 🧠 FullAI Adaptive: виртуальный LONG при WAIT ({rsi_str}) — {decision.get('reason', '')}")
+                            except Exception as v_err:
+                                logger.debug(f"[NEW_BOT_{self.symbol}] Виртуальный LONG при WAIT: {v_err}")
                         else:
                             from bot_engine.fullai_analytics import append_event, EVENT_REFUSED
                             append_event(symbol=self.symbol, event_type=EVENT_REFUSED, direction='LONG', reason=decision.get('reason', ''), extra={'price': current_price, 'confidence': decision.get('confidence')})
@@ -740,20 +759,39 @@ class NewTradingBot:
                                 self._set_decision_source('AI', decision)
                                 return True
                             if action == 'virtual_open':
+                                try:
+                                    from bots_modules.filters import verify_coin_realtime_before_entry
+                                    verify_ok, verify_reason, rsi_now, _ = verify_coin_realtime_before_entry(self.symbol, 'ENTER_SHORT', self.exchange)
+                                    if not verify_ok:
+                                        logger.warning(f"[NEW_BOT_{self.symbol}] 🚫 Виртуальный SHORT отменён — верификация RSI: {verify_reason}")
+                                        return False
+                                except Exception as v_err:
+                                    logger.warning(f"[NEW_BOT_{self.symbol}] Виртуальный SHORT: верификация не выполнена: {v_err}")
+                                    return False
                                 record_virtual_open(self.symbol, 'SHORT', current_price)
-                                logger.info(f"[NEW_BOT_{self.symbol}] 🧠 FullAI Adaptive: виртуальный SHORT (уверенность: {decision.get('confidence', 0):.2%})")
+                                rsi_log = f", RSI={rsi_now:.1f}" if rsi_now is not None else ""
+                                logger.info(f"[NEW_BOT_{self.symbol}] 🧠 FullAI Adaptive: виртуальный SHORT (уверенность: {decision.get('confidence', 0):.2%}{rsi_log})")
                                 return False
                         except ImportError:
                             pass
                         logger.info(f"[NEW_BOT_{self.symbol}] 🧠 FullAI: вход SHORT (уверенность: {decision.get('confidence', 0):.2%})")
                         self._set_decision_source('AI', decision)
                         return True
-                    # FullAI Adaptive: при отказе (WAIT/low conf) — виртуальный вход для обучения
+                    # FullAI Adaptive: при отказе (WAIT/low conf) — виртуальный вход для обучения (с верификацией RSI как у живой сделки)
                     try:
                         from bots_modules.fullai_adaptive import is_adaptive_enabled, record_virtual_open
                         if is_adaptive_enabled():
-                            record_virtual_open(self.symbol, 'SHORT', current_price)
-                            logger.info(f"[NEW_BOT_{self.symbol}] 🧠 FullAI Adaptive: виртуальный SHORT при WAIT (уверенность: {decision.get('confidence', 0):.2%}) — {decision.get('reason', '')}")
+                            try:
+                                from bots_modules.filters import verify_coin_realtime_before_entry
+                                verify_ok, verify_reason, rsi_now, _ = verify_coin_realtime_before_entry(self.symbol, 'ENTER_SHORT', self.exchange)
+                                if not verify_ok:
+                                    logger.info(f"[NEW_BOT_{self.symbol}] 🧠 FullAI: виртуальный SHORT при WAIT отменён — верификация: {verify_reason}")
+                                else:
+                                    record_virtual_open(self.symbol, 'SHORT', current_price)
+                                    rsi_str = f"RSI={rsi_now:.1f}" if rsi_now is not None else "RSI=?"
+                                    logger.info(f"[NEW_BOT_{self.symbol}] 🧠 FullAI Adaptive: виртуальный SHORT при WAIT ({rsi_str}) — {decision.get('reason', '')}")
+                            except Exception as v_err:
+                                logger.debug(f"[NEW_BOT_{self.symbol}] Виртуальный SHORT при WAIT: {v_err}")
                         else:
                             from bot_engine.fullai_analytics import append_event, EVENT_REFUSED
                             append_event(symbol=self.symbol, event_type=EVENT_REFUSED, direction='SHORT', reason=decision.get('reason', ''), extra={'price': current_price, 'confidence': decision.get('confidence')})

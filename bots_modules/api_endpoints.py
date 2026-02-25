@@ -1237,24 +1237,41 @@ def get_bots_list():
                     vp_list = get_virtual_positions_for_api()
                     # Виртуальный объём для отображения (из конфига автобота или по умолчанию 10 USDT)
                     default_volume_usdt = float(ac.get('default_position_size') or ac.get('default_position_size_usdt') or 10)
-                    with rsi_data_lock:
-                        coins = coins_rsi_data.get('coins') or {}
-                        candles_cache = coins_rsi_data.get('candles_cache') or {}
-                        for pos in vp_list:
-                            sym = pos.get('symbol') or ''
-                            # Текущая цена: пробуем символ как в coins (могут быть ключи "ICP" или "ICPUSDT")
-                            price_val = None
-                            if sym in coins:
-                                price_val = coins[sym].get('price')
-                            if price_val is None and (sym + 'USDT') in coins:
-                                price_val = coins[sym + 'USDT'].get('price')
-                            if price_val is None and sym.endswith('USDT') and (sym.replace('USDT', '')) in coins:
-                                price_val = coins[sym.replace('USDT', '')].get('price')
-                            if price_val is not None:
-                                pos['current_price'] = price_val
-                            else:
-                                # Fallback: последняя цена из candles_cache (текущий ТФ)
-                                try:
+                    # Символ для биржи: без суффикса USDT (Bybit и др. добавляют его сами)
+                    def _symbol_for_exchange(s):
+                        return (s or '').replace('USDT', '') if (s or '').endswith('USDT') else (s or '')
+                    for pos in vp_list:
+                        sym = pos.get('symbol') or ''
+                        pos['volume_usdt'] = default_volume_usdt
+                        price_val = None
+                        # 1) Актуальная цена с биржи при каждом запросе — для обновления в реальном времени
+                        try:
+                            if ensure_exchange_initialized():
+                                ex = get_exchange()
+                                if hasattr(ex, 'get_ticker'):
+                                    sym_ex = _symbol_for_exchange(sym) or sym
+                                    t = ex.get_ticker(sym_ex)
+                                    if t:
+                                        price_val = t.get('last') or t.get('lastPrice') or t.get('last_price') or t.get('markPrice') or t.get('mark')
+                                        if price_val is not None:
+                                            price_val = float(price_val)
+                        except Exception:
+                            pass
+                        # 2) Fallback: RSI-кэш
+                        if price_val is None:
+                            with rsi_data_lock:
+                                coins = coins_rsi_data.get('coins') or {}
+                                if sym in coins:
+                                    price_val = coins[sym].get('price')
+                                if price_val is None and (sym + 'USDT') in coins:
+                                    price_val = coins[sym + 'USDT'].get('price')
+                                if price_val is None and sym.endswith('USDT') and (sym.replace('USDT', '')) in coins:
+                                    price_val = coins[sym.replace('USDT', '')].get('price')
+                        # 3) Fallback: последняя свеча из candles_cache
+                        if price_val is None:
+                            try:
+                                with rsi_data_lock:
+                                    candles_cache = coins_rsi_data.get('candles_cache') or {}
                                     from bot_engine.config_loader import get_current_timeframe
                                     tf = get_current_timeframe()
                                     for key in (sym, sym + 'USDT', sym.replace('USDT', '')):
@@ -1265,13 +1282,14 @@ def get_bots_list():
                                                 close_val = candles[-1].get('close')
                                                 if close_val is not None:
                                                     try:
-                                                        pos['current_price'] = float(close_val)
+                                                        price_val = float(close_val)
                                                     except (TypeError, ValueError):
-                                                        pos['current_price'] = close_val
+                                                        price_val = close_val
                                                 break
-                                except Exception:
-                                    pass
-                            pos['volume_usdt'] = default_volume_usdt
+                            except Exception:
+                                pass
+                        if price_val is not None:
+                            pos['current_price'] = price_val
                     response_data['virtual_positions'] = vp_list
                 else:
                     response_data['virtual_positions'] = []
