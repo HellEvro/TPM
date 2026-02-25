@@ -172,14 +172,17 @@
         try {
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/coins-with-rsi`);
             
-            if (response.status === 503) {
-                let retryAfterSec = 5;
-                try {
-                    const body = await response.json();
-                    if (body && typeof body.retry_after === 'number') retryAfterSec = Math.max(2, body.retry_after);
-                } catch (_) {}
-                this.logDebug('[BotsManager] ⏳ coins-with-rsi: сервер занят (503), повтор через ' + retryAfterSec + ' сек');
-                this.updateServiceStatus('online', (window.languageUtils && window.languageUtils.translate('rsi_update_wait')) ? window.languageUtils.translate('rsi_update_wait') : 'Обновление RSI… повтор через ' + retryAfterSec + ' сек');
+            if (response.status === 503 || response.status === 504) {
+                let retryAfterSec = response.status === 504 ? 8 : 5;
+                if (response.status === 503) {
+                    try {
+                        const body = await response.json();
+                        if (body && typeof body.retry_after === 'number') retryAfterSec = Math.max(2, body.retry_after);
+                    } catch (_) {}
+                }
+                const reason = response.status === 504 ? 'таймаут (504)' : 'сервер занят (503)';
+                this.logDebug('[BotsManager] ⏳ coins-with-rsi: ' + reason + ', повтор через ' + retryAfterSec + ' сек');
+                this.updateServiceStatus('online', (response.status === 504 ? 'Таймаут загрузки. Повтор через ' + retryAfterSec + ' сек…' : ((window.languageUtils && window.languageUtils.translate('rsi_update_wait')) ? window.languageUtils.translate('rsi_update_wait') : 'Обновление RSI… повтор через ' + retryAfterSec + ' сек')));
                 if (!this._coinsRetryTimer) {
                     this._coinsRetryTimer = setTimeout(() => {
                         this._coinsRetryTimer = null;
@@ -240,6 +243,10 @@
                     // Обновляем интерфейс
                     this.renderCoinsList();
                     this.updateCoinsCounter();
+                    // После успешной загрузки монет подтягиваем активных ботов (правая панель «Нет активных ботов»)
+                    if (typeof this.loadActiveBotsData === 'function') {
+                        this.loadActiveBotsData().catch(() => {});
+                    }
                     // Повторно применяем текущий фильтр к новому списку (чтобы после обновления RSI/фильтров отображалась правильная выборка)
                     if (this.currentRsiFilter && this.currentRsiFilter !== 'all') {
                         this.applyRsiFilter(this.currentRsiFilter);

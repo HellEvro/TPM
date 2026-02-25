@@ -2126,7 +2126,7 @@ def call_bots_service(endpoint, method='GET', data=None, timeout=10, params=None
 @app.route('/api/bots/list', methods=['GET'])
 def get_bots_list():
     """Получение списка всех ботов (прокси к сервису ботов)"""
-    result = call_bots_service('/api/bots/list', timeout=30)
+    result = call_bots_service('/api/bots/list', timeout=60)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
@@ -2281,7 +2281,8 @@ def refresh_manual_positions():
 @app.route('/api/bots/coins-with-rsi', methods=['GET'])
 def get_coins_with_rsi():
     """Получить монеты с RSI данными (прокси к сервису ботов). Передаём query-параметры (refresh_symbol и т.д.)."""
-    result = call_bots_service('/api/bots/coins-with-rsi', timeout=90, params=request.args)
+    # После перезапуска app/bots сервис может долго считать RSI — даём до 180 сек
+    result = call_bots_service('/api/bots/coins-with-rsi', timeout=180, params=request.args)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
