@@ -607,6 +607,24 @@
                                 <label data-translate="rsi_short_entry_label">RSI для входа в SHORT:</label>
                                 <input type="number" id="rsiShortThresholdDup" value="71" min="50" max="99" />
                         </div>
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="avoidDownTrendDup" checked />
+                                    <span data-translate="avoid_down_trend_label">Избегать нисходящий тренд когда RSI &lt; 29</span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="avoidUpTrendDup" checked />
+                                    <span data-translate="avoid_up_trend_label">Избегать восходящий тренд когда RSI &gt; 71</span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="enhancedRsiDivergenceConfirmDup" />
+                                    <span data-translate="divergence_confirmation_label">Строгий режим (дивергенции):</span>
+                                </label>
+                            </div>
                             
                         <div class="setting-item">
                                 <label data-translate="rsi_long_exit_with_trend_label">🟢📈 RSI выход из LONG (по тренду):</label>

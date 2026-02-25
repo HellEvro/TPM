@@ -2368,6 +2368,11 @@
         
         const avoidUpTrendDupEl = document.getElementById('avoidUpTrendDup');
         if (avoidUpTrendDupEl) avoidUpTrendDupEl.checked = config.avoid_up_trend !== false;
+
+        const enhancedRsiDivergenceConfirmDupEl = document.getElementById('enhancedRsiDivergenceConfirmDup');
+        if (enhancedRsiDivergenceConfirmDupEl) {
+            enhancedRsiDivergenceConfirmDupEl.checked = config.enhanced_rsi_require_divergence_confirmation === true;
+        }
         
         const enableMaturityCheckDupEl = document.getElementById('enableMaturityCheckDup');
         if (enableMaturityCheckDupEl) enableMaturityCheckDupEl.checked = config.enable_maturity_check !== false;

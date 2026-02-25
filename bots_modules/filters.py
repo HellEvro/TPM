@@ -261,6 +261,16 @@ except ImportError:
         RSI_EXIT_SHORT_WITH_TREND = 35
         RSI_EXIT_SHORT_AGAINST_TREND = 40
 
+
+def _calm_candles_phrase(n):
+    """Склонение для фразы «прошло N спокойных свечей»: 1 свеча, 2-4 свечи, 5+ свечей."""
+    if n % 10 == 1 and n % 100 != 11:
+        return f"{n} спокойная свеча"
+    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+        return f"{n} спокойные свечи"
+    return f"{n} спокойных свечей"
+
+
 def _legacy_check_rsi_time_filter(candles, rsi, signal, symbol=None, individual_settings=None):
     """
     ГИБРИДНЫЙ ВРЕМЕННОЙ ФИЛЬТР RSI
@@ -396,10 +406,10 @@ def _legacy_check_rsi_time_filter(candles, rsi, signal, symbol=None, individual_
                     'calm_candles': candles_since_peak
                 }
             
-            # Все проверки пройдены!
+            # Все проверки пройдены! (префикс «Разрешено:» добавляет фронт)
             return {
                 'allowed': True,
-                'reason': f'Разрешено: с отправной точки (свеча -{candles_since_peak}) прошло {candles_since_peak} спокойных свечей >= {rsi_time_filter_upper}',
+                'reason': f'с отправной точки прошло {_calm_candles_phrase(candles_since_peak)} >= {rsi_time_filter_upper}',
                 'last_extreme_candles_ago': candles_since_peak - 1,
                 'calm_candles': candles_since_peak
             }
@@ -460,10 +470,10 @@ def _legacy_check_rsi_time_filter(candles, rsi, signal, symbol=None, individual_
                     'calm_candles': candles_since_low
                 }
             
-            # Все проверки пройдены!
+            # Все проверки пройдены! (префикс «Разрешено:» добавляет фронт)
             return {
                 'allowed': True,
-                'reason': f'Разрешено: с отправной точки (свеча -{candles_since_low}) прошло {candles_since_low} спокойных свечей <= {rsi_time_filter_lower}',
+                'reason': f'с отправной точки прошло {_calm_candles_phrase(candles_since_low)} <= {rsi_time_filter_lower}',
                 'last_extreme_candles_ago': candles_since_low - 1,
                 'calm_candles': candles_since_low
             }
@@ -1456,8 +1466,8 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         if candles_6h and len(candles_6h) >= 5:
             closes_6h = [c['close'] for c in candles_6h]
             change_24h = round(((closes_6h[-1] - closes_6h[-5]) / closes_6h[-5]) * 100, 2)
-        elif current_timeframe not in MINUTE_TF_24H_FROM_6H:
-            # Fallback только для 1h, 2h, 4h, 6h, 8h, 12h, 1d — по текущему ТФ
+        else:
+            # Fallback: считаем по текущему ТФ (для 5m, 1m и т.д. когда 6h нет в кэше, и для 1h+)
             timeframe_hours = {'1m': 1/60, '3m': 3/60, '5m': 5/60, '15m': 15/60, '30m': 30/60,
                               '1h': 1, '2h': 2, '4h': 4, '6h': 6, '8h': 8, '12h': 12, '1d': 24}
             hours_per_candle = timeframe_hours.get(current_timeframe, 6)

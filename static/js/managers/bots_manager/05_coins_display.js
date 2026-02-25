@@ -281,7 +281,7 @@
         }
         
         const isBlocked = timeFilterInfo.blocked;
-        const reason = timeFilterInfo.reason || '';
+        const reason = (timeFilterInfo.reason || '').replace(/^Разрешено:\s*/i, '').trim();
         const lastExtremeCandlesAgo = timeFilterInfo.last_extreme_candles_ago;
         const calmCandles = timeFilterInfo.calm_candles;
         
@@ -1891,7 +1891,8 @@
         if (coin.time_filter_info) {
             const timeFilter = coin.time_filter_info;
             const isBlocked = timeFilter.blocked;
-            const reason = timeFilter.reason || '';
+            // Бэкенд больше не добавляет «Разрешено:» в reason; убираем дубль для старых ответов
+            let reason = (timeFilter.reason || '').replace(/^Разрешено:\s*/i, '').trim();
             const calmCandles = timeFilter.calm_candles || 0;
             
             realFilters.push({

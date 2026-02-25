@@ -10,6 +10,16 @@ from .utils.rsi_utils import calculate_rsi_history
 
 logger = logging.getLogger('Filters')
 
+
+def _calm_candles_phrase(n):
+    """Склонение для фразы «прошло N спокойных свечей»: 1 свеча, 2-4 свечи, 5+ свечей."""
+    if n % 10 == 1 and n % 100 != 11:
+        return f"{n} спокойная свеча"
+    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+        return f"{n} спокойные свечи"
+    return f"{n} спокойных свечей"
+
+
 def check_rsi_time_filter(candles, rsi, signal, config, calculate_rsi_history_func=None):
     """
     ГИБРИДНЫЙ ВРЕМЕННОЙ ФИЛЬТР RSI
@@ -119,10 +129,10 @@ def check_rsi_time_filter(candles, rsi, signal, config, calculate_rsi_history_fu
                     'calm_candles': candles_since_peak
                 }
 
-            # Все проверки пройдены!
+            # Все проверки пройдены! (префикс «Разрешено:» добавляет фронт)
             return {
                 'allowed': True,
-                'reason': f'Разрешено: с отправной точки (свеча -{candles_since_peak}) прошло {candles_since_peak} спокойных свечей >= {rsi_time_filter_upper}',
+                'reason': f'с отправной точки прошло {_calm_candles_phrase(candles_since_peak)} >= {rsi_time_filter_upper}',
                 'last_extreme_candles_ago': candles_since_peak - 1,
                 'calm_candles': candles_since_peak
             }
@@ -183,10 +193,10 @@ def check_rsi_time_filter(candles, rsi, signal, config, calculate_rsi_history_fu
                     'calm_candles': candles_since_low
                 }
 
-            # Все проверки пройдены!
+            # Все проверки пройдены! (префикс «Разрешено:» добавляет фронт)
             return {
                 'allowed': True,
-                'reason': f'Разрешено: с отправной точки (свеча -{candles_since_low}) прошло {candles_since_low} спокойных свечей <= {rsi_time_filter_lower}',
+                'reason': f'с отправной точки прошло {_calm_candles_phrase(candles_since_low)} <= {rsi_time_filter_lower}',
                 'last_extreme_candles_ago': candles_since_low - 1,
                 'calm_candles': candles_since_low
             }
