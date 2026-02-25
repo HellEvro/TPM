@@ -160,12 +160,16 @@
             console.warn('[BotsManager] ⚠️ Сервис не онлайн, пропускаем загрузку');
             return;
         }
+        // Не запускаем повторно, пока предыдущий запрос не завершён (частый интервал 1 сек и медленный ответ = гонка)
+        if (this._loadCoinsRsiInProgress) {
+            this.logDebug('[BotsManager] ⏳ loadCoinsRsiData: предыдущий запрос ещё выполняется, пропуск');
+            return;
+        }
+        this._loadCoinsRsiInProgress = true;
 
-        // Получаем текущий таймфрейм для логирования
         const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
         this.logDebug(`[BotsManager] 📊 Загрузка данных RSI ${currentTimeframe.toUpperCase()}...`);
         
-        // Сохраняем текущее состояние поиска
         const searchInput = document.getElementById('coinSearchInput');
         const currentSearchTerm = searchInput ? searchInput.value : '';
         
@@ -306,6 +310,8 @@
             const message = (error && error.message) ? error.message : 'Ошибка загрузки данных';
             console.error('[BotsManager] ❌ Ошибка загрузки RSI данных:', error);
             this.updateServiceStatus('offline', message);
+        } finally {
+            this._loadCoinsRsiInProgress = false;
         }
     },
             async loadDelistedCoins() {

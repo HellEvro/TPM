@@ -39,18 +39,13 @@
             return;
         }
         
-        // Получаем текущий таймфрейм для отображения данных
-        const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
-        const rsiKey = `rsi${currentTimeframe}`;
-        const trendKey = `trend${currentTimeframe}`;
-        
         const coinsHtml = (this.coinsRsiData || []).filter(coin => coin && (coin.symbol != null && coin.symbol !== '')).map(coin => {
-            const rsiValue = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
-            const trendValue = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
+            try {
+            const rsiValue = this.getRsiValueForDisplay(coin);
+            const trendValue = this.getTrendValueForDisplay(coin);
             const rsiClass = this.getRsiZoneClass(rsiValue);
             const trendClass = trendValue ? `trend-${trendValue.toLowerCase()}` : 'trend-none';
             
-            // Используем универсальную функцию для определения сигнала
             const effectiveSignal = this.getEffectiveSignal(coin);
             const signalClass = effectiveSignal === 'ENTER_LONG' ? 'enter-long' : 
                                effectiveSignal === 'ENTER_SHORT' ? 'enter-short' : '';
@@ -89,9 +84,7 @@
                                 ${isNewCoin ? '<span class="new-coin-indicator" title="Новая монета (включение в листинг)">🆕</span>' : ''}
                                 ${this.generateWarningIndicator(coin)}
                                 ${(() => {
-                                    const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
-                                    const rsiKey = `rsi${currentTimeframe}`;
-                                    const rsiValue = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
+                                    const rsiValue = this.getRsiValueForDisplay(coin);
                                     return `<span class="coin-rsi ${this.getRsiZoneClass(rsiValue)}">${rsiValue}</span>`;
                                 })()}
                                 <a href="${this.createTickerLink(coin.symbol)}" 
@@ -109,9 +102,7 @@
                         </div>
                         <div class="coin-details">
                             ${(() => {
-                                const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
-                                const trendKey = `trend${currentTimeframe}`;
-                                const trendValue = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
+                                const trendValue = this.getTrendValueForDisplay(coin);
                                 return `<span class="coin-trend ${trendValue}">${trendValue}</span>`;
                             })()}
                             <span class="coin-price">$${coin.price?.toFixed(6) || '0'}</span>
@@ -125,6 +116,10 @@
                     </div>
                 </li>
             `;
+            } catch (err) {
+                console.warn('[BotsManager] renderCoinsList: ошибка для монеты', coin?.symbol, err);
+                return `<li class="coin-item" data-symbol="${(coin && coin.symbol) || '?'}"><div class="coin-item-content"><span class="coin-symbol">${(coin && coin.symbol) || '?'}</span> <small>(ошибка отображения)</small></div></li>`;
+            }
         }).join('');
 
         coinsListElement.innerHTML = coinsHtml;
@@ -361,6 +356,30 @@
             generateAntiPumpFilterInfo(coin) {
         return this.generateExitScamFilterInfo(coin);
     },
+            /** Надёжное чтение RSI для отображения: проверяет ключи текущего ТФ, rsi, rsi6h и т.д. */
+            getRsiValueForDisplay(coin) {
+                if (!coin || typeof coin !== 'object') return 50;
+                const tf = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
+                const key = `rsi${tf}`;
+                const keys = [key, 'rsi5m', 'rsi5M', 'rsi6h', 'rsi'];
+                for (const k of keys) {
+                    const v = coin[k];
+                    if (v != null && typeof v === 'number' && !Number.isNaN(v)) return v;
+                }
+                return 50;
+            },
+            /** Надёжное чтение тренда для отображения. */
+            getTrendValueForDisplay(coin) {
+                if (!coin || typeof coin !== 'object') return 'NEUTRAL';
+                const tf = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
+                const key = `trend${tf}`;
+                const keys = [key, 'trend5m', 'trend5M', 'trend6h', 'trend'];
+                for (const k of keys) {
+                    const v = coin[k];
+                    if (v != null && String(v).length) return String(v);
+                }
+                return 'NEUTRAL';
+            },
             getRsiZoneClass(rsi) {
         if (rsi <= this.rsiLongThreshold) return 'buy-zone';
         if (rsi >= this.rsiShortThreshold) return 'sell-zone';
@@ -488,12 +507,8 @@
         const autoConfig = this.cachedAutoBotConfig || {};
         const avoidDownTrend = autoConfig.avoid_down_trend === true;
         const avoidUpTrend = autoConfig.avoid_up_trend === true;
-        // Получаем RSI и тренд с учетом текущего таймфрейма
-        const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
-        const rsiKey = `rsi${currentTimeframe}`;
-        const trendKey = `trend${currentTimeframe}`;
-        const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
-        const trend = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
+        const rsi = this.getRsiValueForDisplay(coin);
+        const trend = this.getTrendValueForDisplay(coin);
         const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
         const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
         
@@ -531,11 +546,8 @@
         if (coin.enhanced_rsi && coin.enhanced_rsi.enabled && coin.enhanced_rsi.enhanced_signal === 'WAIT' && baseSignal !== 'WAIT') {
             return 'Enhanced RSI';
         }
-        const tf = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
-        const rsiKey = `rsi${tf}`;
-        const trendKey = `trend${tf}`;
-        const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
-        const trend = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
+        const rsi = this.getRsiValueForDisplay(coin);
+        const trend = this.getTrendValueForDisplay(coin);
         const rsiLong = autoConfig.rsi_long_threshold || 29;
         const rsiShort = autoConfig.rsi_short_threshold || 71;
         if (baseSignal === 'ENTER_LONG' && autoConfig.avoid_down_trend && rsi <= rsiLong && trend === 'DOWN') return 'DOWN тренд';
@@ -553,27 +565,16 @@
         const allCount = this.coinsRsiData.length;
         const longCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'ENTER_LONG').length;
         const shortCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'ENTER_SHORT').length;
-        // Получаем текущий таймфрейм для подсчета
-        const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
-        const rsiKey = `rsi${currentTimeframe}`;
         const buyZoneCount = this.coinsRsiData.filter(coin => {
-            const rsi = coin[rsiKey] ?? coin.rsi6h ?? coin.rsi;
+            const rsi = this.getRsiValueForDisplay(coin);
             return rsi != null && rsi !== '' && Number(rsi) <= this.rsiLongThreshold;
         }).length;
         const sellZoneCount = this.coinsRsiData.filter(coin => {
-            const rsi = coin[rsiKey] ?? coin.rsi6h ?? coin.rsi;
+            const rsi = this.getRsiValueForDisplay(coin);
             return rsi != null && rsi !== '' && Number(rsi) >= this.rsiShortThreshold;
         }).length;
-        // Используем тот же currentTimeframe для подсчета трендов
-        const trendKey = `trend${currentTimeframe}`;
-        const trendUpCount = this.coinsRsiData.filter(coin => {
-            const trend = coin[trendKey] || coin.trend6h || coin.trend;
-            return trend === 'UP';
-        }).length;
-        const trendDownCount = this.coinsRsiData.filter(coin => {
-            const trend = coin[trendKey] || coin.trend6h || coin.trend;
-            return trend === 'DOWN';
-        }).length;
+        const trendUpCount = this.coinsRsiData.filter(coin => this.getTrendValueForDisplay(coin) === 'UP').length;
+        const trendDownCount = this.coinsRsiData.filter(coin => this.getTrendValueForDisplay(coin) === 'DOWN').length;
         const manualPositionCount = this.coinsRsiData.filter(coin => coin.manual_position === true).length;
         const unavailableCount = this.coinsRsiData.filter(coin => this.getEffectiveSignal(coin) === 'UNAVAILABLE').length;
         const delistedCount = this.coinsRsiData.filter(coin =>
@@ -767,11 +768,6 @@
         // Обновляем основную информацию
         const symbolElement = document.getElementById('selectedCoinSymbol');
         const priceElement = document.getElementById('selectedCoinPrice');
-        // Получаем текущий таймфрейм для отображения
-        const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
-        const rsiKey = `rsi${currentTimeframe}`;
-        const trendKey = `trend${currentTimeframe}`;
-        
         const rsiElement = document.getElementById('selectedCoinRSI');
         const trendElement = document.getElementById('selectedCoinTrend');
         const zoneElement = document.getElementById('selectedCoinZone');
@@ -815,16 +811,16 @@
         
         if (rsiElement) {
             const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
-            const rsiKey = `rsi${currentTimeframe}`;
             const enhancedRsiKey = `rsi_${currentTimeframe.replace('h', 'H')}`;
-            const rsi = coin.enhanced_rsi?.[enhancedRsiKey] || coin[rsiKey] || coin.rsi6h || coin.rsi || '-';
-            rsiElement.textContent = rsi;
-            rsiElement.className = `value rsi-indicator ${this.getRsiZoneClass(rsi)}`;
-            console.log('[BotsManager] ✅ RSI обновлен:', rsi);
+            const rsi = coin.enhanced_rsi?.[enhancedRsiKey] ?? this.getRsiValueForDisplay(coin);
+            const rsiDisplay = (rsi != null && rsi !== '') ? rsi : '-';
+            rsiElement.textContent = rsiDisplay;
+            rsiElement.className = `value rsi-indicator ${this.getRsiZoneClass(Number(rsi) || 50)}`;
+            console.log('[BotsManager] ✅ RSI обновлен:', rsiDisplay);
         }
         
         if (trendElement) {
-            const trend = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
+            const trend = this.getTrendValueForDisplay(coin);
             trendElement.textContent = trend;
             trendElement.className = `value trend-indicator ${trend}`;
             console.log('[BotsManager] ✅ Тренд обновлен:', trend);
@@ -1226,12 +1222,8 @@
             const blockReasons = [];
             const autoConfig = this.cachedAutoBotConfig || {};
             const baseSignal = coin.signal || 'WAIT';
-            // Получаем RSI с учетом текущего таймфрейма
-            const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
-            const rsiKey = `rsi${currentTimeframe}`;
-            const trendKey = `trend${currentTimeframe}`;
-            const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
-            const trend = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
+            const rsi = this.getRsiValueForDisplay(coin);
+            const trend = this.getTrendValueForDisplay(coin);
             const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
             const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
             
@@ -1340,13 +1332,9 @@
                 activeStatusData.signal_block_reason = `Базовый сигнал ${baseSignal} изменен на WAIT (причина не определена)`;
             }
         } else if (effectiveSignal === 'WAIT' && baseSignal === 'WAIT') {
-            // Базовый сигнал уже WAIT - проверяем ВСЕ фильтры
             const filterCheck = checkAllBlockingFilters(coin);
             const autoConfig = this.cachedAutoBotConfig || {};
-            // Получаем RSI с учетом текущего таймфрейма
-            const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
-            const rsiKey = `rsi${currentTimeframe}`;
-            const rsi = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
+            const rsi = this.getRsiValueForDisplay(coin);
             const rsiLongThreshold = autoConfig.rsi_long_threshold || 29;
             const rsiShortThreshold = autoConfig.rsi_short_threshold || 71;
             

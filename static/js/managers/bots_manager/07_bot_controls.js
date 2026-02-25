@@ -109,20 +109,23 @@
                 console.log('[BotsManager] 🎮 Обновление кнопок управления...');
                 this.updateBotControlButtons();
                 
-                // Обновляем список монет (coins-with-rsi) — чтобы монета ушла из «Ручные позиции» и обновился счётчик
-                if (typeof this.loadCoinsRsiData === 'function') {
-                    this.loadCoinsRsiData(true).catch(() => {});
+                // Оптимистично убираем монету из «Ручные позиции» без тяжёлого перезапроса списка
+                const createdSymbol = this.selectedCoin.symbol;
+                const coinInList = this.coinsRsiData && this.coinsRsiData.find(c => c.symbol === createdSymbol);
+                if (coinInList && coinInList.manual_position) {
+                    coinInList.manual_position = false;
+                    if (typeof this.renderCoinsList === 'function') this.renderCoinsList();
+                    if (typeof this.updateCoinsCounter === 'function') this.updateCoinsCounter();
                 }
-                // Правая панель и индикаторы ботов
+                // Правая панель — в фоне, не блокируем
                 this.loadActiveBotsData().then(() => {
                     this.updateCoinsListWithBotStatus();
                     this.updateActiveBotsTab();
                 }).catch(() => {});
-                
                 this.updateCoinsListWithBotStatus();
                 this.updateActiveBotsTab();
                 
-                console.log('[BotsManager] ✅ Бот создан, список монет и ручных позиций обновляются');
+                console.log('[BotsManager] ✅ Бот создан, UI обновлён');
                 
                 const manualButtons = document.getElementById('manualBotButtons');
                 if (manualButtons) manualButtons.style.display = 'none';

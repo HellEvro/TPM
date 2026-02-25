@@ -1221,23 +1221,71 @@ def get_bots_list():
 def create_bot_endpoint():
     """Создать нового бота"""
     try:
-        # Проверяем что биржа инициализирована
-        if not ensure_exchange_initialized():
-            return jsonify({
-                'success': False, 
-                'error': 'Биржа не инициализирована. Попробуйте позже.'
-            }), 503
-        
         data = request.get_json()
         if not data or not data.get('symbol'):
             return jsonify({'success': False, 'error': 'Symbol required'}), 400
         
         symbol = data['symbol']
         client_config = data.get('config', {}) or {}
-        skip_maturity_check = data.get('skip_maturity_check', False)
         force_manual_entry = data.get('force_manual_entry', False) or data.get('ignore_filters', False)
+        manual_direction = None
+        if data.get('signal'):
+            sig = str(data.get('signal')).upper()
+            if 'SHORT' in sig:
+                manual_direction = 'SHORT'
+            elif 'LONG' in sig:
+                manual_direction = 'LONG'
+        
+        # ✅ МГНОВЕННЫЙ ПУТЬ: ручная кнопка LONG/SHORT — только запись в БД, без биржи и без тяжёлых вызовов
+        if force_manual_entry and manual_direction:
+            status_val = BOT_STATUS['IN_POSITION_LONG'] if manual_direction == 'LONG' else BOT_STATUS['IN_POSITION_SHORT']
+            with bots_data_lock:
+                ab = bots_data.get('auto_bot_config', {})
+                minimal_bot = {
+                    'id': f"{symbol}_{int(__import__('time').time())}",
+                    'symbol': symbol,
+                    'status': status_val,
+                    'position_side': manual_direction,
+                    'entry_price': None,
+                    'unrealized_pnl': 0.0,
+                    'unrealized_pnl_usdt': 0.0,
+                    'volume_mode': client_config.get('volume_mode', ab.get('default_position_mode', 'usdt')),
+                    'volume_value': client_config.get('volume_value', ab.get('default_position_size', 10)),
+                    'leverage': client_config.get('leverage', ab.get('leverage', 10)),
+                    'created_at': datetime.now().isoformat(),
+                    'last_update': datetime.now().isoformat(),
+                }
+                bots_data['bots'][symbol] = minimal_bot
+            try:
+                save_bots_state()
+            except Exception as e:
+                logger.warning(f" ⚠️ Сохранение состояния ботов: {e}")
+            def _sync_later():
+                try:
+                    from bots_modules.sync_and_cache import sync_bots_with_exchange
+                    sync_bots_with_exchange()
+                except Exception:
+                    pass
+            t = threading.Thread(target=_sync_later, daemon=True)
+            t.start()
+            logger.info(f" ✅ Бот для {symbol} прописан в БД (ручная {manual_direction}), мгновенный ответ")
+            return jsonify({
+                'success': True,
+                'message': f'Бот для {symbol} создан успешно',
+                'bot': minimal_bot,
+                'existing_position': True
+            })
+        
+        # Проверяем что биржа инициализирована (для полного пути)
+        if not ensure_exchange_initialized():
+            return jsonify({
+                'success': False,
+                'error': 'Биржа не инициализирована. Попробуйте позже.'
+            }), 503
+        
+        skip_maturity_check = data.get('skip_maturity_check', False)
         if force_manual_entry:
-            skip_maturity_check = True  # принудительно отключаем зрелость для ручного запуска
+            skip_maturity_check = True
         
         logger.info(f" Запрос на создание бота для {symbol}")
         logger.info(f" Клиентские overrides: {client_config}")
@@ -1327,34 +1375,11 @@ def create_bot_endpoint():
         elif has_manual_position:
             logger.info(f" ✋ {symbol}: Ручная позиция обнаружена - проверка зрелости пропущена")
         
-        # Создаем бота
+        # Создаем бота полным путём (ручная кнопка уже вернула ответ выше)
         bot_state = create_bot(symbol, bot_runtime_config, exchange_obj=get_exchange())
         
-        manual_signal = data.get('signal')
-        manual_direction = None
-        if manual_signal:
-            signal_upper = str(manual_signal).upper()
-            if 'SHORT' in signal_upper:
-                manual_direction = 'SHORT'
-            elif 'LONG' in signal_upper:
-                manual_direction = 'LONG'
-        
-        # ✅ Для ручных монет: не вызываем биржу — сразу считаем позицию существующей, пишем в БД и отвечаем
-        if force_manual_entry and manual_direction:
-            has_existing_position = True
-            with bots_data_lock:
-                if symbol in bots_data.get('bots', {}):
-                    bots_data['bots'][symbol]['position_side'] = manual_direction
-                    bots_data['bots'][symbol]['status'] = (
-                        BOT_STATUS['IN_POSITION_LONG'] if manual_direction == 'LONG' else BOT_STATUS['IN_POSITION_SHORT']
-                    )
-                    bot_state = bots_data['bots'][symbol].copy()
-            try:
-                save_bots_state()
-            except Exception as e:
-                logger.warning(f" ⚠️ Сохранение состояния ботов после ручного создания: {e}")
-            logger.info(f" ✅ Бот для {symbol} прописан в БД (ручная позиция {manual_direction}), ответ без вызова биржи")
-        else:
+        has_existing_position = False
+        if not (force_manual_entry and manual_direction):
             # Проверяем биржу только когда не ручная кнопка
             has_existing_position = False
             try:
