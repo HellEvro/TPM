@@ -164,7 +164,6 @@ class ContinuousDataLoader:
                     )
                     self.error_count += 1
 
-                logger.debug("✅ ЭТАП 1 (свечи) ЗАВЕРШЁН. Запуск ЭТАП 2 (расчёт RSI)...")
                 success_rsi = self._calculate_rsi(
                     required_timeframes=required_timeframes,
                     reduced_mode=reduced_mode,
@@ -193,8 +192,6 @@ class ContinuousDataLoader:
                         if auto_bot_enabled:
                             self._set_filtered_coins_for_autobot(filtered_coins)
                         else:
-                            logger.debug("⏹️ Этап 7 пропущен (автобот выключен)")
-                        logger.debug("✅ ЭТАПЫ 3–7 ЗАВЕРШЕНЫ УСПЕШНО")
                     except Exception as e:
                         logger.error(f"❌ Ошибка в этапах 3–7: {e}")
                         logger.error(f"❌ Traceback: {traceback.format_exc()}")
@@ -275,7 +272,6 @@ class ContinuousDataLoader:
     def _load_candles(self):
         """📦 Загружает свечи всех монет"""
         try:
-            logger.debug("📦 Этап 1/7: Загружаем свечи...")
             start = time.time()
             from bots_modules.filters import load_all_coins_candles_fast
             success = load_all_coins_candles_fast()
@@ -287,7 +283,6 @@ class ContinuousDataLoader:
             except Exception:
                 pass
             if success:
-                logger.debug(f"✅ Этап 1/7: Свечи: {n} монет за {duration:.1f}с")
                 return True
             else:
                 logger.error(f"❌ Этап 1/7: Не удалось загрузить свечи")
@@ -302,7 +297,6 @@ class ContinuousDataLoader:
     def _load_candles_non_blocking(self):
         """📦 Загружает свечи всех монет в отдельном потоке (НЕБЛОКИРУЮЩИЙ)"""
         try:
-            logger.debug("📦 Этап 1/7: Загружаем свечи (неблокирующий)...")
             start = time.time()
 
             # Проверяем, есть ли уже свечи в кэше с ПРАВИЛЬНЫМ таймфреймом
@@ -362,7 +356,6 @@ class ContinuousDataLoader:
     def _calculate_rsi(self, required_timeframes=None, reduced_mode=None, position_symbols_to_tf=None):
         """📊 Рассчитывает RSI для всех монет. Данные из загрузчика передаются без блокировки в load_all_coins_rsi."""
         try:
-            logger.debug("📊 Этап 2/7: Рассчитываем RSI...")
             start = time.time()
             from bots_modules.filters import load_all_coins_rsi
             success = load_all_coins_rsi(
@@ -379,7 +372,6 @@ class ContinuousDataLoader:
             except Exception:
                 pass
             if success:
-                logger.debug(f"✅ Этап 2/7: RSI: {n} монет за {duration:.1f}с")
                 return True
             else:
                 logger.error(f"❌ Этап 2/7: Не удалось рассчитать RSI")
@@ -394,7 +386,6 @@ class ContinuousDataLoader:
     def _calculate_rsi_non_blocking(self):
         """📊 Рассчитывает RSI для всех монет в отдельном потоке (НЕБЛОКИРУЮЩИЙ)"""
         try:
-            logger.debug("📊 Этап 2/7: Рассчитываем RSI (неблокирующий)...")
             start = time.time()
 
             # Проверяем, есть ли уже RSI данные в кэше
@@ -443,7 +434,6 @@ class ContinuousDataLoader:
     def _calculate_maturity(self):
         """🧮 Рассчитывает зрелость монет (только незрелые)"""
         try:
-            logger.debug("🧮 Этап 3/7: Рассчитываем зрелость...")
             start = time.time()
 
             # Простой таймаут через threading (работает в Windows)
@@ -476,7 +466,6 @@ class ContinuousDataLoader:
                 raise exception[0]
 
             duration = time.time() - start
-            logger.debug(f"✅ Этап 3/7: Зрелость за {duration:.1f}с")
 
         except Exception as e:
             logger.error(f"✅ Этап 3/7: Ошибка зрелости — {e}")
@@ -485,14 +474,12 @@ class ContinuousDataLoader:
     def _analyze_trends(self):
         """📈 Определяет тренд для сигнальных монет"""
         try:
-            logger.debug("📈 Этап 4/7: Анализируем тренды...")
             start = time.time()
 
             from bots_modules.filters import analyze_trends_for_signal_coins
             analyze_trends_for_signal_coins()
 
             duration = time.time() - start
-            logger.debug(f"✅ Этап 4/7: Тренды за {duration:.1f}с")
 
         except Exception as e:
             logger.error(f"✅ Этап 4/7: Ошибка трендов — {e}")
@@ -500,24 +487,20 @@ class ContinuousDataLoader:
     def _apply_heavy_filters(self):
         """🔍 Этап 5/7: Применяет тяжёлые фильтры (time_filter, exit_scam, loss_reentry) — для UI и автобота"""
         try:
-            logger.debug("🔍 Этап 5/7: Начинаем тяжёлые фильтры...")
             start = time.time()
             from bots_modules.filters import apply_heavy_filters_to_coins
             apply_heavy_filters_to_coins()
             duration = time.time() - start
-            logger.debug(f"✅ Этап 5/7: Тяжёлые фильтры за {duration:.1f}с")
         except Exception as e:
             logger.error(f"✅ Этап 5/7: Ошибка тяжёлых фильтров — {e}")
 
     def _process_filters(self):
         """🔍 Этап 6/7: Обрабатывает лонг/шорт монеты фильтрами"""
         try:
-            logger.debug("🔍 Этап 6/7: Обрабатываем фильтры...")
             start = time.time()
             from bots_modules.filters import process_long_short_coins_with_filters
             filtered_coins = process_long_short_coins_with_filters()
             duration = time.time() - start
-            logger.debug(f"✅ Этап 6/7: {len(filtered_coins)} монет для автобота за {duration:.1f}с")
             return filtered_coins
         except Exception as e:
             logger.error(f"✅ Этап 6/7: Ошибка фильтров — {e}")
@@ -526,14 +509,12 @@ class ContinuousDataLoader:
     def _set_filtered_coins_for_autobot(self, filtered_coins):
         """✅ Этап 7/7: Передаёт отфильтрованные монеты автоботу"""
         try:
-            logger.debug("✅ Этап 7/7: Передаем монеты автоботу...")
             start = time.time()
 
             from bots_modules.filters import set_filtered_coins_for_autobot
             set_filtered_coins_for_autobot(filtered_coins)
 
             duration = time.time() - start
-            logger.debug(f"✅ Этап 7/7: Передано автоботу {len(filtered_coins)} монет за {duration:.2f}с")
 
         except Exception as e:
             logger.error(f"✅ Этап 7/7: Ошибка передачи автоботу — {e}")

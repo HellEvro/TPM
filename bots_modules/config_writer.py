@@ -204,6 +204,7 @@ CONFIG_KEY_ALIASES: Dict[str, str] = {
 
 # При сохранении: ключ в config (API) -> имя атрибута в bot_config.py (чтобы не дублировать строки).
 CONFIG_KEY_TO_FILE_ATTR: Dict[str, str] = {
+    'full_ai_control': 'FULL_AI_CONTROL',
     'fullai_adaptive_virtual_success_count': 'FULLAI_ADAPTIVE_VIRTUAL_SUCCESS',
     'fullai_adaptive_real_loss_to_retry': 'FULLAI_ADAPTIVE_REAL_LOSS',
     'fullai_adaptive_virtual_round_size': 'FULLAI_ADAPTIVE_ROUND_SIZE',

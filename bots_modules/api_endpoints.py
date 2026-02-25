@@ -886,15 +886,6 @@ def get_coins_with_rsi():
                 logger.warning(f"⚠️ Ошибка обработки монеты {symbol}: {e}, пропускаем")
                 continue
         
-        # Диагностика: что реально уходит в UI (чтобы понять «везде 50»)
-        try:
-            sample = list(cleaned_coins.items())[:5]
-            sample_rsi = [(s, c.get('rsi6h'), c.get('signal')) for s, c in sample]
-            non_50 = sum(1 for c in cleaned_coins.values() if c.get('rsi6h') is not None and c.get('rsi6h') != 50)
-            logger.debug(f"coins-with-rsi: версия={coins_rsi_data.get('data_version')}, монет={len(cleaned_coins)}, с RSI≠50: {non_50}, примеры: {sample_rsi}")
-        except Exception as _e:
-            pass
-        
         # Получаем список монет с ручными позициями на бирже (позиции БЕЗ ботов)
         try:
             # Получаем exchange объект
@@ -1160,7 +1151,7 @@ def get_bots_list():
                     bot['current_price'] = None
                     bot['rsi_data'] = None
         except Exception as e:
-            logger.debug("rsi_data для списка ботов: %s", e)
+            pass  # logger.debug("rsi_data для списка ботов: %s", e)
             for bot in bots_list:
                 if 'current_price' not in bot:
                     bot['current_price'] = None
@@ -1463,7 +1454,7 @@ def create_bot_endpoint():
                                     extra=extra,
                                 )
                             except Exception as _fa_err:
-                                logger.debug("FullAI analytics real_open (API): %s", _fa_err)
+                                pass  # logger.debug("FullAI analytics real_open (API): %s", _fa_err)
                         else:
                             error_msg = (result or {}).get('error', 'unknown')
                             if 'MIN_NOTIONAL' in error_msg or '110007' in error_msg or 'меньше минимального ордера' in error_msg or 'Недостаточно доступного остатка' in error_msg:
@@ -1952,7 +1943,7 @@ def close_position_endpoint():
                         }
                         record_real_close(symbol, roi_pct, reason='MANUAL_CLOSE_UI', extra=extra)
                     except Exception as fa_err:
-                        logger.debug("FullAI analytics real_close UI: %s", fa_err)
+                        pass  # logger.debug("FullAI analytics real_close UI: %s", fa_err)
             except Exception as save_err:
                 logger.warning(f" ⚠️ Ошибка сохранения сделки в bot_trades_history: {save_err}")
 
@@ -3446,7 +3437,7 @@ def fullai_config_get_post():
                 if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_MAX_FAILURES', None) is not None:
                     cfg['fullai_adaptive_virtual_max_failures'] = int(AutoBotConfig.FULLAI_ADAPTIVE_MAX_FAILURES)
             except Exception as _fullai_err:
-                logger.debug("FullAI из AutoBotConfig в fullai-config: %s", _fullai_err)
+                pass  # logger.debug("FullAI из AutoBotConfig в fullai-config: %s", _fullai_err)
             return jsonify({'success': True, 'config': cfg})
         if request.method == 'POST':
             payload = request.get_json(silent=True)
@@ -3480,7 +3471,7 @@ def fullai_config_get_post():
                                     ac[key] = cfg[key]
                         save_auto_bot_config()
                 except Exception as sync_err:
-                    logger.debug("FullAI: синхронизация в bot_config.py: %s", sync_err)
+                    pass  # logger.debug("FullAI: синхронизация в bot_config.py: %s", sync_err)
                 return jsonify({'success': True, 'config': cfg})
             return jsonify({'success': False, 'error': 'Save failed'}), 500
     except Exception as e:
@@ -3750,7 +3741,7 @@ def learn_exit_scam_for_all_coins():
                         'exit_scam_candles': params.get('exit_scam_candles'),
                     })
             except Exception as e:
-                logger.debug(f"learn-exit-scam-all {symbol}: {e}")
+                pass  # logger.debug(f"learn-exit-scam-all {symbol}: {e}")
                 failed_count += 1
 
         # Если ни по одной монете нет свечей в БД/кэше — явная ошибка
@@ -3891,7 +3882,7 @@ def _patch_ai_config_after_auto_bot_save(data):
             f.writelines(new_lines)
         from bot_engine.config_loader import reload_config
         reload_config()
-        logger.debug("[API] AI-настройки синхронизированы в RiskConfig/AIConfig")
+        pass  # logger.debug("[API] AI-настройки синхронизированы в RiskConfig/AIConfig")
     except Exception as e:
         logger.warning("[API] Синхронизация AI в configs/bot_config: %s", e)
 
@@ -3900,10 +3891,6 @@ def _patch_ai_config_after_auto_bot_save(data):
 def auto_bot_config():
     """Получить или обновить конфигурацию Auto Bot"""
     try:
-        # ✅ Логируем только POST (изменения)
-        if request.method == 'POST':
-            logger.info(" 📝 POST /api/bots/auto-bot — изменение конфигурации")
-        
         if request.method == 'GET':
             # ✅ При ?refresh=1 перечитываем конфиг из файла (источник истины).
             do_refresh = request.args.get('refresh', '').lower() in ('1', 'true', 'yes')
@@ -3961,7 +3948,7 @@ def auto_bot_config():
                 config['log_anomalies'] = getattr(AIConfig, 'AI_LOG_ANOMALIES', config.get('log_anomalies', False))
                 config['log_patterns'] = getattr(AIConfig, 'AI_LOG_PATTERNS', config.get('log_patterns', False))
             except Exception as _ai_merge_err:
-                logger.debug(f" AI-merge в auto-bot: {_ai_merge_err}")
+                pass  # logger.debug(f" AI-merge в auto-bot: {_ai_merge_err}")
             try:
                 from bot_engine.config_loader import AutoBotConfig
                 if getattr(AutoBotConfig, 'FULL_AI_CONTROL', None) is not None:
@@ -3987,7 +3974,7 @@ def auto_bot_config():
                 if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_MAX_FAILURES', None) is not None:
                     config['fullai_adaptive_virtual_max_failures'] = int(AutoBotConfig.FULLAI_ADAPTIVE_MAX_FAILURES)
             except Exception as _fullai_merge_err:
-                logger.debug("FullAI merge в auto-bot: %s", _fullai_merge_err)
+                pass  # logger.debug("FullAI merge в auto-bot: %s", _fullai_merge_err)
             
             if 'whitelist' not in config:
                 config['whitelist'] = []
@@ -4050,12 +4037,8 @@ def auto_bot_config():
                     'changed_params': []
                 }), 200
             
-            # ✅ Диагностика: переключатель автобота — видно в консоли bots.py
-            if 'enabled' in data:
-                logger.info(f" 🤖 Переключатель Auto Bot: enabled={data['enabled']} (запрос от фронта)")
-            # FullAI: явное логирование при получении переключателя из UI (для отладки «не включается»)
             if 'full_ai_control' in data:
-                logger.info(f"[API] [FullAI] Получен full_ai_control = {data['full_ai_control']!r} (из UI)")
+                pass  # logger.debug(f"[API] [FullAI] Получен full_ai_control = {data['full_ai_control']!r} (из UI)")
             
             # Проверяем изменение критериев зрелости
             maturity_params_changed = False
@@ -4081,9 +4064,7 @@ def auto_bot_config():
             # changes_count уже инициализирован выше, не сбрасываем
             
             with bots_data_lock:
-                # ✅ КРИТИЧЕСКИ ВАЖНО: Логируем enabled до обновления
                 enabled_before = bots_data['auto_bot_config'].get('enabled')
-                logger.info(f"[API] 🔍 enabled ДО обновления: {enabled_before}, enabled в data: {data.get('enabled', 'НЕ ПЕРЕДАН')}")
                 
                 for key, value in data.items():
                     old_value = bots_data['auto_bot_config'].get(key)
@@ -4141,18 +4122,11 @@ def auto_bot_config():
                             display_name = CONFIG_NAMES.get(key, key)
                             changed_params_list.append(f"{display_name}: {old_value} → {value}")
                 
-                # ✅ КРИТИЧЕСКИ ВАЖНО: Логируем enabled после обновления
                 enabled_after = bots_data['auto_bot_config'].get('enabled')
-                logger.info(f"[API] 🔍 enabled ПОСЛЕ обновления: {enabled_after}")
-                logger.info(f"[API] 🔍 Изменено параметров: {len(changed_data)} из {len(data)}")
                 
-                # ✅ Логируем только ИЗМЕНЕННЫЕ параметры
                 if len(changed_data) > 0:
-                    logger.info(f"[API] 📋 Измененные параметры: {', '.join(changed_params_list[:10])}{'...' if len(changed_params_list) > 10 else ''}")
                     if 'full_ai_control' in changed_data:
-                        logger.info(f"[API] [FullAI] full_ai_control применён в конфиг → {changed_data['full_ai_control']!r}, будет сохранён в файл")
-                else:
-                    logger.info(f"[API] ⏭️ Нет изменений: все {len(data)} параметров без изменений")
+                        pass  # logger.debug(f"[API] [FullAI] full_ai_control применён в конфиг → {changed_data['full_ai_control']!r}")
             
             # FullAI: при включении — авто-включение ИИ (если лицензия валидна); при выключении — восстановление настроек
             old_fullai = old_config.get('full_ai_control', False)
@@ -4190,7 +4164,7 @@ def auto_bot_config():
                             changed_params_list.append('ai_enabled: False → True (FullAI)')
                             logger.info("[FullAI] ИИ автоматически включён при включении FullAI (лицензия валидна)")
                 except Exception as e:
-                    logger.debug(f"[FullAI] Авто-включение ИИ / инициализация конфига: {e}")
+                    pass  # logger.debug(f"[FullAI] Авто-включение ИИ / инициализация конфига: {e}")
             elif not new_fullai and old_fullai:
                 try:
                     from bots_modules.imports_and_globals import load_full_ai_config_from_db, save_full_ai_config_to_db
@@ -4206,7 +4180,17 @@ def auto_bot_config():
                         save_full_ai_config_to_db(fullai_cfg)
                         logger.info("[FullAI] Восстановлены настройки до включения FullAI: %s", list(snapshot.keys()))
                 except Exception as e:
-                    logger.debug(f"[FullAI] Восстановление настроек: {e}")
+                    pass  # logger.debug(f"[FullAI] Восстановление настроек: {e}")
+            
+            # ✅ FullAI: при любом изменении full_ai_control синхронизируем в конфиг FullAI (файл+БД), чтобы после перезапуска значение восстанавливалось
+            if 'full_ai_control' in changed_data:
+                try:
+                    from bots_modules.imports_and_globals import load_full_ai_config_from_db, save_full_ai_config_to_db
+                    fullai_cfg = load_full_ai_config_from_db() or {}
+                    fullai_cfg['full_ai_control'] = bots_data['auto_bot_config'].get('full_ai_control', False)
+                    save_full_ai_config_to_db(fullai_cfg)
+                except Exception as e:
+                    pass  # logger.debug(f"[FullAI] Синхронизация full_ai_control в конфиг: {e}")
             
             # ✅ КРИТИЧЕСКИ ВАЖНО: Сохраняем фильтры (whitelist, blacklist, scope) в БД
             # И ВАЖНО: scope также должен быть в bots_data['auto_bot_config'] для сохранения в файл!
@@ -4229,19 +4213,12 @@ def auto_bot_config():
             
             # ✅ КРИТИЧЕСКИ ВАЖНО: Сохраняем в файл ТОЛЬКО если есть изменения!
             # Если changed_data пустой, не сохраняем и возвращаем сообщение "Нет изменений"
-            logger.info(f"[API] 🔍 Проверка changed_data: длина={len(changed_data)}, ключи={list(changed_data.keys())}")
             if len(changed_data) > 0:
-                # КРИТИЧЕСКИ ВАЖНО: Сохраняем конфигурацию в файл (с перезагрузкой модуля)
-                logger.info(f"[API] ✅ Есть изменения, вызываем save_auto_bot_config()")
                 save_result = save_auto_bot_config(changed_data=changed_data)
-                logger.info(f"✅ Auto Bot: изменено параметров: {changes_count}, конфигурация сохранена и перезагружена")
-                # Синхронизация AI-настроек в RiskConfig/AIConfig (они пишутся в DEFAULT_AUTO_BOT_CONFIG, но UI читает из RiskConfig/AIConfig)
+                logger.info(f"✅ Auto Bot: сохранено {changes_count} параметров")
                 _patch_ai_config_after_auto_bot_save(data)
             else:
-                # Нет изменений - не сохраняем и не перезагружаем
-                logger.info(f"[API] ⏭️ Нет изменений, НЕ вызываем save_auto_bot_config()")
-                save_result = True  # Успех, но без сохранения
-                logger.info("ℹ️  Auto Bot: изменений не обнаружено")
+                save_result = True
             
             # ✅ АВТОМАТИЧЕСКАЯ ОЧИСТКА при изменении критериев зрелости
             if maturity_params_changed:
@@ -6217,7 +6194,7 @@ def _compute_bot_trades_stats(symbol=None, from_ts=None, to_ts=None):
             'total_pnl_usdt': round(total_pnl, 2),
         }
     except Exception as e:
-        logger.debug("bot_trades_stats: %s", e)
+        pass  # logger.debug("bot_trades_stats: %s", e)
         return {'total': 0, 'wins': 0, 'losses': 0, 'win_rate_pct': None, 'total_pnl_usdt': 0.0}
 
 

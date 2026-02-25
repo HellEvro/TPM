@@ -788,6 +788,15 @@ def load_auto_bot_config():
             if 'scope' not in merged_config:
                 merged_config['scope'] = 'all'
         
+        # ✅ FullAI: переключатель full_ai_control восстанавливаем из конфига FullAI (файл/БД),
+        # чтобы после перезапуска bots.py он не сбрасывался (источник истины — fullai_config.json и БД)
+        try:
+            fullai_cfg = load_full_ai_config_from_db() or {}
+            if 'full_ai_control' in fullai_cfg:
+                merged_config['full_ai_control'] = bool(fullai_cfg['full_ai_control'])
+        except Exception as _e:
+            logger.debug("[FullAI] Восстановление full_ai_control из конфига при загрузке: %s", _e)
+        
         # ✅ Логируем подробности ТОЛЬКО при первом вызове или при реальном изменении файла
         # (не логируем при принудительной перезагрузке модуля из API, чтобы не спамить)
         should_log_verbose = (reloaded and load_auto_bot_config._last_mtime != 0) or not getattr(load_auto_bot_config, '_logged_once', False)
