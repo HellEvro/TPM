@@ -1432,7 +1432,8 @@ def get_coin_rsi_data(symbol, exchange_obj=None):
         trend_analysis = None
         try:
             from bots_modules.calculations import analyze_trend
-            trend_analysis = analyze_trend(symbol, exchange_obj=exchange_obj, candles_data=candles, timeframe=current_timeframe)
+            _auto = bots_data.get('auto_bot_config', {})
+            trend_analysis = analyze_trend(symbol, exchange_obj=exchange_obj, candles_data=candles, timeframe=current_timeframe, config=_auto)
             if trend_analysis:
                 trend = trend_analysis['trend']  # ТОЛЬКО рассчитанное значение!
             # НЕ устанавливаем дефолт если анализ не удался - оставляем None

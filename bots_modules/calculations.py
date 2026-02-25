@@ -337,21 +337,20 @@ def analyze_trend(symbol, exchange_obj=None, candles_data=None, timeframe=None, 
         # Считаем % изменения
         price_change_pct = ((end_price - start_price) / start_price) * 100
 
-        # Считаем растущие/падающие свечи
+        # Считаем растущие/падающие переходы (между соседними свечами: period свечей → period-1 переходов)
         rising_candles = sum(1 for i in range(1, len(recent_closes)) if recent_closes[i] > recent_closes[i-1])
         falling_candles = sum(1 for i in range(1, len(recent_closes)) if recent_closes[i] < recent_closes[i-1])
 
-        # ✅ ОПРЕДЕЛЕНИЕ ТРЕНДА (используем пороги из конфига):
-        # UP: если цена выросла > price_threshold% ИЛИ больше candles_threshold% свечей растут
-        # DOWN: если цена упала > price_threshold% ИЛИ больше candles_threshold% свечей падают
-        # NEUTRAL: иначе
+        # ✅ ОПРЕДЕЛЕНИЕ ТРЕНДА: порог по доле переходов (period-1, не period) и >= для ровно 70%
+        # Раньше: period*0.7=21 и условие >21 требовало 22+ переходов (76%) — почти везде NEUTRAL
+        num_transitions = period - 1
+        candles_threshold_pct = candles_threshold / 100.0
+        threshold_count = num_transitions * candles_threshold_pct  # 29*0.7=20.3 → 21 переходов достаточно
+
         trend = 'NEUTRAL'
-
-        candles_threshold_pct = candles_threshold / 100.0  # Конвертируем в десятичную дробь
-
-        if price_change_pct > price_threshold or rising_candles > (period * candles_threshold_pct):
+        if price_change_pct > price_threshold or rising_candles >= threshold_count:
             trend = 'UP'
-        elif price_change_pct < -price_threshold or falling_candles > (period * candles_threshold_pct):
+        elif price_change_pct < -price_threshold or falling_candles >= threshold_count:
             trend = 'DOWN'
 
         return {
