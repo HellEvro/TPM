@@ -984,7 +984,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
 
     _dbg = symbol in _debug_rsi_symbols
     if _dbg:
-        logger.info(f"[DEBUG_RSI] {symbol}: candles ok, len={len(candles)}")
+        logger.debug(f"[DEBUG_RSI] {symbol}: candles ok, len={len(candles)}")
 
     from bot_engine.config_loader import get_rsi_key, get_trend_key
     rsi_key = get_rsi_key(timeframe)
@@ -995,7 +995,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
     if rsi is None:
         return None
     if _dbg:
-        logger.info(f"[DEBUG_RSI] {symbol}: rsi ok")
+        logger.debug(f"[DEBUG_RSI] {symbol}: rsi ok")
 
     trend = None
     try:
@@ -1008,7 +1008,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
     except Exception as e:
         pass
     if _dbg:
-        logger.info(f"[DEBUG_RSI] {symbol}: trend ok")
+        logger.debug(f"[DEBUG_RSI] {symbol}: trend ok")
     base_data = coins_rsi_data.get('coins', {}).get(symbol, {})
     
     # Объединяем с новыми данными для указанного таймфрейма
@@ -1028,7 +1028,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
 
     if is_system_tf:
         if _dbg:
-            logger.info(f"[DEBUG_RSI] {symbol}: before maturity block")
+            logger.debug(f"[DEBUG_RSI] {symbol}: before maturity block")
         try:
             from bot_engine.config_loader import SystemConfig, get_config_value
             from bots_modules.imports_and_globals import bots_data
@@ -1083,7 +1083,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
                 result['is_mature'] = True
                 result['maturity_reason'] = None
             if _dbg:
-                logger.info(f"[DEBUG_RSI] {symbol}: maturity done")
+                logger.debug(f"[DEBUG_RSI] {symbol}: maturity done")
             result['has_existing_position'] = base_data.get('has_existing_position', False) if base_data else False
 
             # Scope: черный список ВСЕГДА исключает монету из торговли (при любом scope)
@@ -1114,19 +1114,19 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
 
             if potential_signal is None:
                 if _dbg:
-                    logger.info(f"[DEBUG_RSI] {symbol}: skip filters (no signal)")
+                    logger.debug(f"[DEBUG_RSI] {symbol}: skip filters (no signal)")
                 time_filter_info = {'blocked': False, 'reason': 'RSI вне зоны входа в сделку', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
                 exit_scam_info = {'blocked': False, 'reason': 'ExitScam: RSI вне зоны входа', 'filter_type': 'exit_scam'}
                 loss_reentry_info = {'blocked': False, 'reason': 'Защита от повторных входов: RSI вне зоны входа', 'filter_type': 'loss_reentry_protection'}
             elif _defer_filters:
                 if _dbg:
-                    logger.info(f"[DEBUG_RSI] {symbol}: defer filters (batch mode)")
+                    logger.debug(f"[DEBUG_RSI] {symbol}: defer filters (batch mode)")
                 time_filter_info = {**_deferred, 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
                 exit_scam_info = {**_deferred, 'filter_type': 'exit_scam'}
                 loss_reentry_info = {**_deferred, 'filter_type': 'loss_reentry_protection'}
             else:
                 if _dbg:
-                    logger.info(f"[DEBUG_RSI] {symbol}: before time_filter")
+                    logger.debug(f"[DEBUG_RSI] {symbol}: before time_filter")
                 time_filter_info = None
                 exit_scam_info = None
                 loss_reentry_info = None
@@ -1207,7 +1207,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
             result['blocked_by_rsi_time'] = time_filter_info.get('blocked', False) if time_filter_info else False
             result['blocked_by_loss_reentry'] = loss_reentry_info.get('blocked', False) if loss_reentry_info else False
             if _dbg:
-                logger.info(f"[DEBUG_RSI] {symbol}: filters done, returning")
+                logger.debug(f"[DEBUG_RSI] {symbol}: filters done, returning")
         except Exception as e:
             pass
             result['time_filter_info'] = {'blocked': False, 'reason': f'Ошибка: {e}', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
@@ -2220,8 +2220,7 @@ def load_all_coins_candles_fast():
                             f.cancel()
                         break
                     
-                    # Лог в начале батча — пользователь видит прогресс, не кажется что зависло
-                    logger.info(f"📦 Свечи {timeframe}: батч {batch_num}/{total_batches} — загрузка {len(batch)} монет...")
+                    logger.debug(f"📦 Свечи {timeframe}: батч {batch_num}/{total_batches} — загрузка {len(batch)} монет...")
                     # Ждём завершения с проверкой shutdown каждые 2 сек — Ctrl+C срабатывает быстрее
                     all_futs = list(future_to_symbol.keys())
                     remaining_futures = set(all_futs)
@@ -2255,7 +2254,7 @@ def load_all_coins_candles_fast():
                     loaded = len(candles_cache)
                     total_pairs = len(pairs_for_tf)
                     pct = (loaded * 100) // total_pairs if total_pairs else 0
-                    logger.info(f"📦 Свечи {timeframe}: батч {batch_num}/{total_batches} — {loaded}/{total_pairs} монет ({pct}%)")
+                    logger.debug(f"📦 Свечи {timeframe}: батч {batch_num}/{total_batches} — {loaded}/{total_pairs} монет ({pct}%)")
                     
                     if not_done:
                         unfinished_symbols = [future_to_symbol.get(f) for f in not_done if f in future_to_symbol]
@@ -2284,7 +2283,7 @@ def load_all_coins_candles_fast():
             
             # ✅ Сохраняем свечи для текущего таймфрейма
             all_candles_cache[timeframe] = candles_cache
-            logger.info(f"✅ Загружено {len(candles_cache)} монет для таймфрейма {timeframe}")
+            logger.debug(f"✅ Загружено {len(candles_cache)} монет для таймфрейма {timeframe}")
 
         if shutdown_requested:
             logger.warning("⏹️ Загрузка свечей прервана из-за остановки системы")
@@ -2299,10 +2298,10 @@ def load_all_coins_candles_fast():
                     merged_candles_cache[symbol] = {}
                 merged_candles_cache[symbol][timeframe] = candle_data
         
-        logger.info(f"✅ Загрузка завершена: {len(merged_candles_cache)} монет для {len(required_timeframes)} таймфреймов")
+        logger.debug(f"✅ Загрузка завершена: {len(merged_candles_cache)} монет для {len(required_timeframes)} таймфреймов")
 
         # Ограничение размера кэша в памяти (снижение потребления ОЗУ при 552 монетах × 30d)
-        CANDLES_CACHE_MAX_PER_SYMBOL = 1000  # храним последние N свечей на символ/ТФ
+        CANDLES_CACHE_MAX_PER_SYMBOL = 500  # храним последние N свечей на символ/ТФ (уменьшено с 1000 для стабильного ОЗУ)
         def _trim_candles(cache_dict):
             for sym, tf_data in cache_dict.items():
                 if not isinstance(tf_data, dict):
@@ -2442,7 +2441,7 @@ def load_all_coins_candles_fast():
                 
                 # Просто сохраняем текущие свечи - save_candles_cache() сам ограничит до 1000 и удалит старые
                 if save_candles_cache(flat_candles_cache):
-                    logger.info(f"💾 Кэш свечей сохранен в bots_data.db: {len(flat_candles_cache)} монет (процесс bots.py, ТФ={system_tf})")
+                    logger.debug(f"💾 Кэш свечей сохранен в bots_data.db: {len(flat_candles_cache)} монет (процесс bots.py, ТФ={system_tf})")
                 else:
                     logger.error(f"❌ Не удалось сохранить свечи в bots_data.db!")
             
@@ -2453,7 +2452,7 @@ def load_all_coins_candles_fast():
         try:
             if current_exchange and hasattr(current_exchange, 'reset_request_delay'):
                 if current_exchange.reset_request_delay():
-                    logger.info(f"🔄 Задержка запросов сброшена к базовому значению")
+                    logger.debug(f"🔄 Задержка запросов сброшена к базовому значению")
         except Exception as reset_error:
             logger.warning(f"⚠️ Ошибка сброса задержки: {reset_error}")
         
@@ -2669,10 +2668,9 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                 batch_success = 0
                 batch_fail = 0
 
-                # Лог в начале батча — видно, что RSI считается, не кажется что зависло
                 loaded_so_far = len(temp_coins_data)
                 pct = (loaded_so_far * 100) // len(pairs_for_tf) if pairs_for_tf else 0
-                logger.info(f"📊 RSI {timeframe}: батч {batch_num}/{total_batches} — расчёт {len(batch)} монет ({loaded_so_far}/{len(pairs_for_tf)}, {pct}%)")
+                logger.debug(f"📊 RSI {timeframe}: батч {batch_num}/{total_batches} — расчёт {len(batch)} монет ({loaded_so_far}/{len(pairs_for_tf)}, {pct}%)")
 
                 with ThreadPoolExecutor(max_workers=rsi_max_workers) as executor:
                     future_to_symbol = {
@@ -2712,9 +2710,8 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             return_when=concurrent.futures.FIRST_COMPLETED
                         )
                         done_set |= partial_done
-                        # Лог прогресса каждые 10 сек — видно что не зависло
                         if time.time() - last_progress_log >= 10:
-                            logger.info(f"📊 RSI батч {batch_num}: готово {len(done_set)}/{len(batch)}, осталось {len(remaining)}")
+                            logger.debug(f"📊 RSI батч {batch_num}: готово {len(done_set)}/{len(batch)}, осталось {len(remaining)}")
                             last_progress_log = time.time()
                     for future in done_set:
                         if shutdown_flag.is_set():
@@ -2755,7 +2752,7 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             f"{batch_num} (ТФ={timeframe}) "
                             f"(не завершено {len(pending)} из {len(batch)}, примеры: {pending[:5]})"
                         )
-                        logger.info(f"[DEBUG_RSI] Добавлены в трассировку: {list(_debug_rsi_symbols)}")
+                        logger.debug(f"[DEBUG_RSI] Добавлены в трассировку: {list(_debug_rsi_symbols)}")
                         coins_rsi_data["failed_coins"] += len(remaining)
                         batch_fail += len(remaining)
 
@@ -2768,17 +2765,15 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                 if shutdown_requested:
                     break
 
-                # Прогресс после каждого батча
                 loaded_now = len(temp_coins_data)
                 pct_now = (loaded_now * 100) // len(pairs_for_tf) if pairs_for_tf else 0
-                logger.info(f"📊 RSI {timeframe}: батч {batch_num}/{total_batches} — {loaded_now}/{len(pairs_for_tf)} монет ({pct_now}%)")
+                logger.debug(f"📊 RSI {timeframe}: батч {batch_num}/{total_batches} — {loaded_now}/{len(pairs_for_tf)} монет ({pct_now}%)")
 
             if shutdown_requested:
                 break
 
-            logger.info(
-                "✅ RSI рассчитан для таймфрейма "
-                f"{timeframe}: {len(list(temp_coins_data.keys()))} монет с данными"
+            logger.debug(
+                f"✅ RSI рассчитан для таймфрейма {timeframe}: {len(list(temp_coins_data.keys()))} монет с данными"
             )
 
         if shutdown_requested:
@@ -3753,7 +3748,7 @@ def apply_heavy_filters_to_coins():
         if not to_process:
             return True
 
-        logger.info(f" 🔍 Этап 5/7: Применяем тяжёлые фильтры к {len(to_process)} монет...")
+        logger.debug(f"🔍 Этап 5/7: Применяем тяжёлые фильтры к {len(to_process)} монет...")
         updated = 0
         for symbol, coin_data in to_process:
             try:

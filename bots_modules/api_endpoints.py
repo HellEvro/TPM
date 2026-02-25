@@ -891,7 +891,7 @@ def get_coins_with_rsi():
             sample = list(cleaned_coins.items())[:5]
             sample_rsi = [(s, c.get('rsi6h'), c.get('signal')) for s, c in sample]
             non_50 = sum(1 for c in cleaned_coins.values() if c.get('rsi6h') is not None and c.get('rsi6h') != 50)
-            logger.info(f"coins-with-rsi: версия={coins_rsi_data.get('data_version')}, монет={len(cleaned_coins)}, с RSI≠50: {non_50}, примеры: {sample_rsi}")
+            logger.debug(f"coins-with-rsi: версия={coins_rsi_data.get('data_version')}, монет={len(cleaned_coins)}, с RSI≠50: {non_50}, примеры: {sample_rsi}")
         except Exception as _e:
             pass
         
