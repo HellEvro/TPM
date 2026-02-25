@@ -131,34 +131,46 @@
             })
             .map((v, i) => {
                 const entry = parseFloat(v.entry_price) || 0;
-                const current = parseFloat(v.current_price) || 0;
+                const current = parseFloat(v.current_price) || entry;
                 const isLong = (v.direction || '').toUpperCase() === 'LONG';
                 const pnlPct = entry ? (isLong ? (current - entry) / entry : (entry - current) / entry) * 100 : 0;
-                const pnlUsdt = 0; // виртуальная позиция без объёма в USDT
+                const volumeUsdt = parseFloat(v.volume_usdt) || 10;
+                const pnlUsdt = volumeUsdt * (pnlPct / 100);
                 return {
                     symbol: v.symbol,
                     is_virtual: true,
                     _virtualIndex: i,
-                    position_side: isLong ? 'Long' : 'Short',
+                    position_side: isLong ? 'LONG' : 'SHORT',
                     status: isLong ? 'virtual_long' : 'virtual_short',
                     entry_price: v.entry_price,
-                    current_price: v.current_price,
+                    current_price: v.current_price != null ? v.current_price : (entry || undefined),
                     unrealized_pnl_usdt: pnlUsdt,
                     unrealized_pnl: pnlPct,
                     config: {},
-                    volume_value: 0,
+                    volume_value: volumeUsdt,
                     position_size: 0
                 };
             });
     },
             updateActiveBotsFilterCounts() {
         const bots = Array.isArray(this.activeBots) ? this.activeBots : [];
+        const vList = Array.isArray(this.activeVirtualPositions) ? this.activeVirtualPositions : [];
+        const virtualLong = vList.filter(v => (v.direction || '').toUpperCase() === 'LONG').length;
+        const virtualShort = vList.filter(v => (v.direction || '').toUpperCase() === 'SHORT').length;
+        const virtualPnl = vList.map(v => {
+            const entry = parseFloat(v.entry_price) || 0;
+            const current = parseFloat(v.current_price) || entry;
+            const isLong = (v.direction || '').toUpperCase() === 'LONG';
+            return entry ? (isLong ? (current - entry) / entry : (entry - current) / entry) * 100 : 0;
+        });
+        const virtualProfitable = virtualPnl.filter(p => p >= 0).length;
+        const virtualLoss = virtualPnl.filter(p => p < 0).length;
         const counts = {
-            all: bots.length,
-            long: bots.filter(b => b.status === 'in_position_long').length,
-            short: bots.filter(b => b.status === 'in_position_short').length,
-            profitable: bots.filter(b => ((b.unrealized_pnl_usdt ?? b.unrealized_pnl ?? 0) || 0) >= 0).length,
-            loss: bots.filter(b => ((b.unrealized_pnl_usdt ?? b.unrealized_pnl ?? 0) || 0) < 0).length
+            all: bots.length + vList.length,
+            long: bots.filter(b => b.status === 'in_position_long').length + virtualLong,
+            short: bots.filter(b => b.status === 'in_position_short').length + virtualShort,
+            profitable: bots.filter(b => ((b.unrealized_pnl_usdt ?? b.unrealized_pnl ?? 0) || 0) >= 0).length + virtualProfitable,
+            loss: bots.filter(b => ((b.unrealized_pnl_usdt ?? b.unrealized_pnl ?? 0) || 0) < 0).length + virtualLoss
         };
         const idMap = { all: 'All', long: 'Long', short: 'Short', profitable: 'Profitable', loss: 'Loss' };
         Object.keys(counts).forEach(key => {

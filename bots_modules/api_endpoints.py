@@ -1235,13 +1235,43 @@ def get_bots_list():
                 from bots_modules.fullai_adaptive import get_virtual_positions_for_api, is_adaptive_enabled
                 if is_adaptive_enabled():
                     vp_list = get_virtual_positions_for_api()
-                    # Подмешиваем текущую цену из RSI-кэша для отображения в карточке
+                    # Виртуальный объём для отображения (из конфига автобота или по умолчанию 10 USDT)
+                    default_volume_usdt = float(ac.get('default_position_size') or ac.get('default_position_size_usdt') or 10)
                     with rsi_data_lock:
                         coins = coins_rsi_data.get('coins') or {}
+                        candles_cache = coins_rsi_data.get('candles_cache') or {}
                         for pos in vp_list:
-                            sym = pos.get('symbol')
-                            if sym and sym in coins:
-                                pos['current_price'] = coins[sym].get('price')
+                            sym = pos.get('symbol') or ''
+                            # Текущая цена: пробуем символ как в coins (могут быть ключи "ICP" или "ICPUSDT")
+                            price_val = None
+                            if sym in coins:
+                                price_val = coins[sym].get('price')
+                            if price_val is None and (sym + 'USDT') in coins:
+                                price_val = coins[sym + 'USDT'].get('price')
+                            if price_val is None and sym.endswith('USDT') and (sym.replace('USDT', '')) in coins:
+                                price_val = coins[sym.replace('USDT', '')].get('price')
+                            if price_val is not None:
+                                pos['current_price'] = price_val
+                            else:
+                                # Fallback: последняя цена из candles_cache (текущий ТФ)
+                                try:
+                                    from bot_engine.config_loader import get_current_timeframe
+                                    tf = get_current_timeframe()
+                                    for key in (sym, sym + 'USDT', sym.replace('USDT', '')):
+                                        if key in candles_cache:
+                                            tf_data = candles_cache[key].get(tf, {})
+                                            candles = tf_data.get('candles', [])
+                                            if candles:
+                                                close_val = candles[-1].get('close')
+                                                if close_val is not None:
+                                                    try:
+                                                        pos['current_price'] = float(close_val)
+                                                    except (TypeError, ValueError):
+                                                        pos['current_price'] = close_val
+                                                break
+                                except Exception:
+                                    pass
+                            pos['volume_usdt'] = default_volume_usdt
                     response_data['virtual_positions'] = vp_list
                 else:
                     response_data['virtual_positions'] = []
