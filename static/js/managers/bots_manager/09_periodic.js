@@ -134,12 +134,16 @@
             clearInterval(this.monitoringTimer);
         }
         
-        // Запускаем мониторинг с единым интервалом
+        // Счётчик тиков: active-detailed вызываем каждый 2-й тик, чтобы снизить нагрузку и избежать ERR_INSUFFICIENT_RESOURCES
+        this._monitoringTickCount = 0;
         this.monitoringTimer = setInterval(() => {
-            this.updateActiveBotsDetailed();
+            this._monitoringTickCount = (this._monitoringTickCount || 0) + 1;
+            if (this._monitoringTickCount % 2 === 0) {
+                this.updateActiveBotsDetailed();
+            }
         }, this.refreshInterval);
         
-        console.log(`[BotsManager] ✅ Мониторинг активных ботов запущен (интервал: ${this.refreshInterval}мс)`);
+        console.log('[BotsManager] ✅ Мониторинг активных ботов запущен (интервал: ' + this.refreshInterval + 'мс, active-detailed каждый 2-й тик)');
     },
             stopBotMonitoring() {
         if (this.monitoringTimer) {

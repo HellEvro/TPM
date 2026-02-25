@@ -964,9 +964,21 @@
         this.logDebug('[BotsManager] ✅ Активные боты отрисованы успешно');
     },
             async loadActiveBotsData() {
-        this.logDebug('[BotsManager] 🤖 Загрузка данных активных ботов...');
-        
         if (!this.serviceOnline) return;
+        // Защита от ERR_INSUFFICIENT_RESOURCES: не запускать новый запрос, пока предыдущий не завершён
+        if (this._loadActiveBotsDataInProgress) {
+            this.logDebug('[BotsManager] loadActiveBotsData: пропуск тика (предыдущий запрос ещё выполняется)');
+            return;
+        }
+        // Не чаще раза в 10 сек, чтобы не перегружать браузер и сервер
+        const minInterval = 10000;
+        if (this._lastLoadActiveBotsDataRun && (Date.now() - this._lastLoadActiveBotsDataRun) < minInterval) {
+            this.logDebug('[BotsManager] loadActiveBotsData: пропуск тика (интервал < 10 сек)');
+            return;
+        }
+        this._loadActiveBotsDataInProgress = true;
+        this._lastLoadActiveBotsDataRun = Date.now();
+        this.logDebug('[BotsManager] 🤖 Загрузка данных активных ботов...');
         
         try {
             // ⚡ УБРАНО: Синхронизация позиций теперь выполняется только автоматически воркерами
@@ -1047,11 +1059,18 @@
             
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка загрузки активных ботов:', error);
+        } finally {
+            this._loadActiveBotsDataInProgress = false;
         }
     },
             async updateActiveBotsDetailed() {
         if (!this.serviceOnline) return;
-        
+        // Защита от ERR_INSUFFICIENT_RESOURCES: не запускать новый запрос, пока предыдущий не завершён
+        if (this._updateActiveBotsDetailedInProgress) {
+            this.logDebug('[BotsManager] updateActiveBotsDetailed: пропуск тика (предыдущий запрос ещё выполняется)');
+            return;
+        }
+        this._updateActiveBotsDetailedInProgress = true;
         try {
             this.logDebug('[BotsManager] 📊 Обновление детальной информации о ботах...');
             
@@ -1077,6 +1096,8 @@
                 return;
             }
             console.error('[BotsManager] ❌ Ошибка обновления детальной информации о ботах:', error);
+        } finally {
+            this._updateActiveBotsDetailedInProgress = false;
         }
     }
     });

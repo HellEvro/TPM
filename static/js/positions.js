@@ -97,12 +97,15 @@ class PositionsManager {
         try {
             const response = await fetch('/api/bots/system-config');
             if (response.status === 503 || response.status === 0) {
-                this.botsAvailableForCharts = false;
-                console.log('[PositionsManager] ⚠️ Bots недоступен — миниграфики RSI отключены, позиции отображаются без них');
-                if (this.lastData) this.updatePositionsDisplay();
+                this._setBotsUnavailableAndRetry();
                 return;
             }
             if (response.ok) {
+                this.botsAvailableForCharts = true;
+                if (this._botsRetryTimer) {
+                    clearTimeout(this._botsRetryTimer);
+                    this._botsRetryTimer = null;
+                }
                 const data = await response.json();
                 // Интервал RSI/миниграфиков = только из конфига «Синхронизация позиций»
                 const intervalSec = data.config?.position_sync_interval ?? data.config?.mini_chart_update_interval;
@@ -123,15 +126,24 @@ class PositionsManager {
                     console.warn('[PositionsManager] ⚠️ position_sync_interval не найден в SystemConfig, используем дефолт:', this.updateInterval / 1000, 'сек');
                 }
             } else {
-                this.botsAvailableForCharts = false;
-                console.warn('[PositionsManager] ⚠️ Bots недоступен — позиции без миниграфиков');
-                if (this.lastData) this.updatePositionsDisplay();
+                this._setBotsUnavailableAndRetry();
             }
         } catch (error) {
-            this.botsAvailableForCharts = false;
-            console.warn('[PositionsManager] ⚠️ Bots недоступен — позиции без миниграфиков:', error?.message || error);
-            if (this.lastData) this.updatePositionsDisplay();
+            // Failed to fetch / ERR_INSUFFICIENT_RESOURCES — повторная проверка через 30 сек
+            this._setBotsUnavailableAndRetry(error?.message || error);
         }
+    }
+
+    _setBotsUnavailableAndRetry(reason) {
+        this.botsAvailableForCharts = false;
+        console.warn('[PositionsManager] ⚠️ Bots недоступен — позиции без миниграфиков' + (reason ? ': ' + reason : ''));
+        if (this.lastData) this.updatePositionsDisplay();
+        // Повторная проверка через 30 сек, чтобы после восстановления ресурсов снова показать миниграфики
+        if (this._botsRetryTimer) clearTimeout(this._botsRetryTimer);
+        this._botsRetryTimer = setTimeout(() => {
+            this._botsRetryTimer = null;
+            this.loadChartUpdateInterval();
+        }, 30000);
     }
 
     initializeDataUpdater() {
