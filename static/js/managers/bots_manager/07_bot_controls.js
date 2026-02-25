@@ -925,8 +925,8 @@
                         });
                     });
                 } else {
-                    // Обновляем только данные в существующих карточках (только реальные боты; виртуальные обновляются при полной перерисовке)
-                    console.log(`[DEBUG] Обновление данных в "Боты в работе" без перерисовки`);
+                    // Обновляем данные в существующих карточках: реальные боты и виртуальные позиции (текущая цена, PnL в реальном времени)
+                    this.logDebug('[BotsManager] Обновление данных в "Боты в работе" без перерисовки');
                     filteredBots.forEach(bot => {
                         const botItem = detailsElement.querySelector(`.active-bot-item[data-symbol="${bot.symbol}"]:not([data-is-virtual="true"])`);
                         if (botItem) {
@@ -952,6 +952,32 @@
                             }
                             const cardControls = botItem.querySelector('.bot-card-controls');
                             if (cardControls) cardControls.innerHTML = this.getBotDetailButtonsHtml(bot);
+                        }
+                    });
+                    virtualAsBots.forEach(bot => {
+                        const idx = bot._virtualIndex != null ? bot._virtualIndex : 0;
+                        const botItem = detailsElement.querySelector(`.active-bot-item[data-symbol="${bot.symbol}"][data-is-virtual="true"][data-virtual-index="${idx}"]`);
+                        if (botItem) {
+                            const pnlVal = bot.unrealized_pnl != null ? `${(bot.unrealized_pnl || 0).toFixed(2)}%` : '-';
+                            const pnlElement = botItem.querySelector('.bot-header > div:last-child');
+                            if (pnlElement) {
+                                pnlElement.textContent = pnlVal;
+                                pnlElement.style.color = (bot.unrealized_pnl != null ? bot.unrealized_pnl : 0) >= 0 ? 'var(--green-color)' : 'var(--red-color)';
+                            }
+                            const d = this.getCompactCardData(bot);
+                            const dirEl = botItem.querySelector('.bot-direction');
+                            if (dirEl) {
+                                dirEl.textContent = d.position;
+                                dirEl.style.color = d.positionColor;
+                            }
+                            const rows = botItem.querySelectorAll('.compact-row');
+                            if (rows.length >= 5) {
+                                rows[0].querySelector('.compact-val').textContent = d.volume;
+                                rows[1].querySelector('.compact-val').textContent = d.entry;
+                                rows[2].querySelector('.compact-val').textContent = d.takeProfit;
+                                rows[3].querySelector('.compact-val').textContent = d.currentPrice;
+                                rows[4].querySelector('.compact-val').textContent = d.stopLoss;
+                            }
                         }
                     });
                 }
