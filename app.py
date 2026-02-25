@@ -2188,9 +2188,9 @@ def get_bot_status(symbol):
 
 @app.route('/api/bots/create', methods=['POST'])
 def create_bot():
-    """Создать бота (прокси к сервису ботов)"""
+    """Создать бота (прокси к сервису ботов). Таймаут 90с — создание + вход на бирже могут занимать время."""
     data = request.get_json()
-    result = call_bots_service('/api/bots/create', method='POST', data=data)
+    result = call_bots_service('/api/bots/create', method='POST', data=data, timeout=90)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 

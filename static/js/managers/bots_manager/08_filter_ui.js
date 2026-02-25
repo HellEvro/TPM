@@ -327,8 +327,11 @@
         return key;
     },
             showNotification(message, type = 'info') {
-        // Простое уведомление в консоли, можно заменить на toast
         console.log(`[${type.toUpperCase()}] ${message}`);
+        // Неблокирующий toast вместо alert — не мешает работе с интерфейсом
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, type, type === 'error' ? 6000 : 4000);
+        }
     }
 
     // ==================== ИСТОРИЯ БОТОВ ====================

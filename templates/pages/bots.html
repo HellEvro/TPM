@@ -3460,44 +3460,6 @@ function getStatusDescription(statusType, statusValue) {
     return descriptionMap[statusType]?.[statusValue] || 'Неизвестный статус';
 }
 
-// Функция для включения бота для текущей монеты
-function enableBotForCurrentCoin(direction) {
-    if (window.botsManager && window.botsManager.selectedCoin) {
-        const coin = window.botsManager.selectedCoin;
-        console.log('[EnableBot] Включение бота для монеты:', coin.symbol);
-        const normalizedDirection = (direction === 'SHORT') ? 'ENTER_SHORT' : 'ENTER_LONG';
-        
-        // Отправляем запрос на создание бота
-        fetch('/api/bots/create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                symbol: coin.symbol,
-                signal: normalizedDirection,
-                skip_maturity_check: true,
-                force_manual_entry: true
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                console.log('[EnableBot] Бот успешно создан:', data);
-                // Обновляем интерфейс
-                window.botsManager.updateCoinInfo(coin);
-                // Скрываем кнопку
-                const manualButtons = document.getElementById('manualBotButtons');
-                if (manualButtons) manualButtons.style.display = 'none';
-            } else {
-                console.error('[EnableBot] Ошибка создания бота:', data.error);
-                alert('Ошибка создания бота: ' + data.error);
-            }
-        })
-        .catch(error => {
-            console.error('[EnableBot] Ошибка:', error);
-            alert('Ошибка создания бота: ' + error.message);
-        });
-    }
-}
+// enableBotForCurrentCoin(direction) определена в static/js/managers/bots_manager/index.js
+// и вызывает window.botsManager.createBot(direction) с полным конфигом и обновлением UI.
 </script>

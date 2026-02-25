@@ -12,15 +12,21 @@
             this.showNotification('⚠️ ' + this.translate('select_coin_to_create_bot'), 'warning');
             return null;
         }
+        if (this._createBotInProgress) {
+            console.log('[BotsManager] ⏳ Создание бота уже выполняется, пропуск повторного запроса');
+            this.showNotification('⏳ Подождите, запрос на создание бота уже выполняется', 'warning');
+            return null;
+        }
         
-        console.log(`[BotsManager] 🤖 Создание бота для ${this.selectedCoin.symbol}`);
+        const symbol = this.selectedCoin.symbol;
+        console.log(`[BotsManager] 🤖 Создание бота для ${symbol}`);
         const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
         const rsiKey = `rsi${currentTimeframe}`;
         const rsiValue = this.selectedCoin[rsiKey] || this.selectedCoin.rsi6h || this.selectedCoin.rsi || 'неизвестно';
         console.log(`[BotsManager] 📊 RSI текущий (${currentTimeframe}): ${rsiValue}`);
         
-        // Показываем уведомление о начале процесса
-        this.showNotification(`🔄 ${this.translate('creating_bot_for')} ${this.selectedCoin.symbol}...`, 'info');
+        this._createBotInProgress = true;
+        this.showNotification(`🔄 ${this.translate('creating_bot_for')} ${symbol}...`, 'info');
         
         try {
             const config = {
@@ -32,23 +38,36 @@
             console.log('[BotsManager] 📊 Параметры запуска бота (overrides):', config);
             console.log('[BotsManager] 🌐 Отправка запроса на создание бота...');
             
+            const controller = new AbortController();
+            const timeoutMs = 90000; // 90 сек — создание бота + вход на бирже могут занять время
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    symbol: this.selectedCoin.symbol,
+                    symbol: symbol,
                     config: config,
                     signal: manualDirection ? (manualDirection === 'SHORT' ? 'ENTER_SHORT' : 'ENTER_LONG') : (this.selectedCoin.signal || 'ENTER_LONG'),
                     skip_maturity_check: true,
                     force_manual_entry: true
-                })
+                }),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             
             console.log(`[BotsManager] 📡 Ответ сервера: статус ${response.status}`);
-            const data = await response.json();
+            const text = await response.text();
+            let data;
+            try {
+                data = text ? JSON.parse(text) : {};
+            } catch (_) {
+                this.showNotification('❌ Сервис ботов недоступен или вернул некорректный ответ. Запустите bots.py.', 'error');
+                return null;
+            }
             console.log('[BotsManager] 📥 Данные ответа:', data);
             
-            if (data.success) {
+            if (data && data.success) {
                 console.log('[BotsManager] ✅ Бот создан успешно:', data);
                 console.log(`[BotsManager] 🎯 ID бота: ${data.bot?.id || 'неизвестно'}`);
                 console.log(`[BotsManager] 📈 Статус бота: ${data.bot?.status || 'неизвестно'}`);
@@ -117,8 +136,14 @@
             return data;
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка создания бота:', error);
-            this.showNotification('❌ ' + this.translate('connection_error_bot_service'), 'error');
+            if (error && error.name === 'AbortError') {
+                this.showNotification('❌ Таймаут запроса создания бота (90 сек). Сервер не ответил — проверьте bots.py и сеть.', 'error');
+            } else {
+                this.showNotification('❌ ' + this.translate('connection_error_bot_service'), 'error');
+            }
             return null;
+        } finally {
+            this._createBotInProgress = false;
         }
     },
             async startBot(symbol) {

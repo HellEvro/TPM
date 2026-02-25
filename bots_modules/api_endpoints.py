@@ -1091,6 +1091,13 @@ def get_bots_list():
             else:
                 bot['work_time'] = "0с"
             
+            # Фронт показывает PnL из unrealized_pnl_usdt; дублируем из unrealized_pnl если нет
+            if bot.get('unrealized_pnl_usdt') is None and bot.get('unrealized_pnl') is not None:
+                try:
+                    bot['unrealized_pnl_usdt'] = float(bot.get('unrealized_pnl', 0) or 0)
+                except (TypeError, ValueError):
+                    bot['unrealized_pnl_usdt'] = 0
+            
             # Добавляем last_update для каждого бота
             bot_last_update = bot.get('last_update')
             if bot_last_update:
@@ -1266,28 +1273,28 @@ def create_bot_endpoint():
         if snapshot.get('individual'):
             logger.info(f" 🔍 Individual settings содержат avoid_up_trend: {'avoid_up_trend' in snapshot.get('individual', {})}")
         
-        # ✅ Проверяем, есть ли ручная позиция для этой монеты
+        # ✅ Для ручных монет (LONG/SHORT из UI) — не дергаем биржу в цикле ответа: только запись в БД
         has_manual_position = False
-        try:
-            current_exchange = get_exchange()
-            if current_exchange:
-                positions_response = current_exchange.get_positions()
-                if isinstance(positions_response, tuple):
-                    positions_list = positions_response[0] if positions_response else []
-                else:
-                    positions_list = positions_response if positions_response else []
-                
-                # Проверяем, есть ли позиция для этой монеты без бота в системе
-                for pos in positions_list:
-                    pos_symbol = pos.get('symbol', '').replace('USDT', '')
-                    if pos_symbol == symbol and abs(float(pos.get('size', 0))) > 0:
-                        # Проверяем, нет ли уже бота для этой монеты
-                        if symbol not in bots_data.get('bots', {}):
-                            has_manual_position = True
-                            logger.info(f" ✋ {symbol}: Обнаружена ручная позиция - пропускаем проверку зрелости")
-                            break
-        except Exception as e:
-            pass
+        if not force_manual_entry:
+            try:
+                current_exchange = get_exchange()
+                if current_exchange:
+                    positions_response = current_exchange.get_positions()
+                    if isinstance(positions_response, tuple):
+                        positions_list = positions_response[0] if positions_response else []
+                    else:
+                        positions_list = positions_response if positions_response else []
+                    for pos in positions_list:
+                        pos_symbol = pos.get('symbol', '').replace('USDT', '')
+                        if pos_symbol == symbol and abs(float(pos.get('size', 0))) > 0:
+                            if symbol not in bots_data.get('bots', {}):
+                                has_manual_position = True
+                                logger.info(f" ✋ {symbol}: Обнаружена ручная позиция - пропускаем проверку зрелости")
+                                break
+            except Exception as e:
+                pass
+        else:
+            has_manual_position = True  # Ручная кнопка = позиция уже есть, не проверяем биржу
         
         # Проверяем зрелость монеты (если включена проверка для этой монеты И нет ручной позиции)
         enable_maturity_check_coin = bot_runtime_config.get('enable_maturity_check', True)
@@ -1318,31 +1325,6 @@ def create_bot_endpoint():
         # Создаем бота
         bot_state = create_bot(symbol, bot_runtime_config, exchange_obj=get_exchange())
         
-        # ✅ Проверяем: есть ли уже позиция на бирже для этой монеты?
-        has_existing_position = False
-        try:
-            # Проверяем через exchange напрямую (более надежно)
-            current_exchange = get_exchange()
-            if current_exchange:
-                positions_response = current_exchange.get_positions()
-                if isinstance(positions_response, tuple):
-                    positions_list = positions_response[0] if positions_response else []
-                else:
-                    positions_list = positions_response if positions_response else []
-                
-                # Ищем позицию для этой монеты
-                for pos in positions_list:
-                    pos_symbol = pos.get('symbol', '').replace('USDT', '')
-                    if pos_symbol == symbol and abs(float(pos.get('size', 0))) > 0:
-                        has_existing_position = True
-                        logger.info(f" 🔍 {symbol}: Обнаружена существующая позиция на бирже (размер: {pos.get('size')})")
-                        break
-        except Exception as e:
-            pass
-        
-        # ✅ Возвращаем ответ БЫСТРО
-        logger.info(f" ✅ Бот для {symbol} создан")
-        
         manual_signal = data.get('signal')
         manual_direction = None
         if manual_signal:
@@ -1351,6 +1333,43 @@ def create_bot_endpoint():
                 manual_direction = 'SHORT'
             elif 'LONG' in signal_upper:
                 manual_direction = 'LONG'
+        
+        # ✅ Для ручных монет: не вызываем биржу — сразу считаем позицию существующей, пишем в БД и отвечаем
+        if force_manual_entry and manual_direction:
+            has_existing_position = True
+            with bots_data_lock:
+                if symbol in bots_data.get('bots', {}):
+                    bots_data['bots'][symbol]['position_side'] = manual_direction
+                    bots_data['bots'][symbol]['status'] = (
+                        BOT_STATUS['IN_POSITION_LONG'] if manual_direction == 'LONG' else BOT_STATUS['IN_POSITION_SHORT']
+                    )
+                    bot_state = bots_data['bots'][symbol].copy()
+            try:
+                save_bots_state()
+            except Exception as e:
+                logger.warning(f" ⚠️ Сохранение состояния ботов после ручного создания: {e}")
+            logger.info(f" ✅ Бот для {symbol} прописан в БД (ручная позиция {manual_direction}), ответ без вызова биржи")
+        else:
+            # Проверяем биржу только когда не ручная кнопка
+            has_existing_position = False
+            try:
+                current_exchange = get_exchange()
+                if current_exchange:
+                    positions_response = current_exchange.get_positions()
+                    if isinstance(positions_response, tuple):
+                        positions_list = positions_response[0] if positions_response else []
+                    else:
+                        positions_list = positions_response if positions_response else []
+                    for pos in positions_list:
+                        pos_symbol = pos.get('symbol', '').replace('USDT', '')
+                        if pos_symbol == symbol and abs(float(pos.get('size', 0))) > 0:
+                            has_existing_position = True
+                            logger.info(f" 🔍 {symbol}: Обнаружена существующая позиция на бирже (размер: {pos.get('size')})")
+                            break
+            except Exception as e:
+                pass
+        
+        logger.info(f" ✅ Бот для {symbol} создан")
 
         # ✅ Запускаем вход в позицию АСИНХРОННО (только если НЕТ существующей позиции!)
         # Бот в списке = проверки пройдены → обязан по рынку зайти в сделку, без ожидания сигнала.
@@ -5140,11 +5159,14 @@ def get_active_bots_detailed():
                         else:
                             stop_loss_price = entry_price * (1 + max_loss_percent / 100)
                             stop_loss_pnl = (entry_price - stop_loss_price) / entry_price * 100
+                    pnl_usdt = bot_data.get('unrealized_pnl_usdt') if bot_data.get('unrealized_pnl_usdt') is not None else bot_data.get('unrealized_pnl', 0)
                     active_bots.append({
                         'symbol': symbol,
                         'status': bot_data.get('status', 'unknown'),
                         'position_size': bot_data.get('position_size', 0),
-                        'pnl': bot_data.get('pnl', 0),
+                        'pnl': pnl_usdt,
+                        'unrealized_pnl_usdt': pnl_usdt,
+                        'unrealized_pnl': bot_data.get('unrealized_pnl', 0),
                         'current_price': current_price,
                         'position_side': position_side,
                         'entry_price': bot_data.get('entry_price'),

@@ -170,7 +170,7 @@
         const currentSearchTerm = searchInput ? searchInput.value : '';
         
         try {
-            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/coins-with-rsi`);
+            const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/coins-with-rsi`, { cache: 'no-store' });
             
             if (response.status === 503 || response.status === 504) {
                 let retryAfterSec = response.status === 504 ? 8 : 5;
@@ -198,6 +198,22 @@
                 this._coinsRetryTimer = null;
             }
             if (data.success) {
+                    const coinsObj = data.coins || {};
+                    const coinsCount = Object.keys(coinsObj).length;
+                    // Если сервер вернул успех, но монет 0 — данные ещё формируются (после перезапуска). Один повтор через 10 сек.
+                    if (coinsCount === 0 && !this._coinsEmptyRetryDone) {
+                        this._coinsEmptyRetryDone = true;
+                        this.logDebug('[BotsManager] ⏳ coins-with-rsi: успех, но монет 0 — данные формируются, повтор через 10 сек');
+                        this.updateServiceStatus('online', 'Данные RSI формируются… повтор через 10 сек');
+                        if (!this._coinsRetryTimer) {
+                            this._coinsRetryTimer = setTimeout(() => {
+                                this._coinsRetryTimer = null;
+                                this.loadCoinsRsiData(forceUpdate);
+                            }, 10000);
+                        }
+                        return;
+                    }
+                    if (coinsCount > 0) this._coinsEmptyRetryDone = false;
                     // Всегда обновляем UI по ответу сервера — RSI и цены меняются, пользователь должен видеть актуальные данные
                     const currentDataVersion = data.data_version || 0;
                     this.lastDataVersion = currentDataVersion;
@@ -208,8 +224,7 @@
                     
                     // Преобразуем словарь в массив для совместимости с UI; гарантируем symbol у каждой монеты (ключ = symbol)
                     this.logDebug('[BotsManager] 🔍 Данные от API:', data);
-                    this.logDebug('[BotsManager] 🔍 Ключи coins:', Object.keys(data.coins));
-                    const coinsObj = data.coins || {};
+                    this.logDebug('[BotsManager] 🔍 Ключи coins:', Object.keys(coinsObj));
                     this.coinsRsiData = Object.entries(coinsObj).map(([sym, coin]) => ({
                         ...coin,
                         symbol: (coin && coin.symbol) ? coin.symbol : sym

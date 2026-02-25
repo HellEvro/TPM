@@ -3206,8 +3206,10 @@ def sync_bots_with_exchange():
                                 is_paused = old_status == BOT_STATUS['PAUSED']
                                 
                                 bot_data['entry_price'] = exchange_pos['avg_price']
-                                bot_data['unrealized_pnl'] = exchange_pos['unrealized_pnl']
-                                bot_data['position_side'] = 'LONG' if exchange_pos['side'] == 'Buy' else 'SHORT'
+                                pnl_usdt = float(exchange_pos.get('unrealized_pnl', 0) or 0)
+                                bot_data['unrealized_pnl'] = pnl_usdt
+                                bot_data['unrealized_pnl_usdt'] = pnl_usdt  # Фронт показывает в первую очередь unrealized_pnl_usdt
+                                bot_data['position_side'] = 'LONG' if exchange_pos.get('side') == 'Buy' else 'SHORT'
                                 
                                 # Сохраняем стопы и тейки из биржи
                                 if exchange_pos.get('stop_loss'):
