@@ -179,15 +179,20 @@ def init_bot_service():
                         auto_bot_config = bots_data['auto_bot_config']
                     
                     default_volume_mode = auto_bot_config.get('default_position_mode', 'usdt')
-                    bot_config = {
-                        'volume_mode': bot_data.get('volume_mode', default_volume_mode),
-                        # ВАЖНО: если в БД volume_value=None, dict.get вернёт None и сломает логику сравнений (None > 0).
-                        # Поэтому используем default_position_size как fallback не только при отсутствии ключа, но и при None.
-                        'volume_value': (bot_data.get('volume_value') if bot_data.get('volume_value') is not None else auto_bot_config['default_position_size']),
-                        'status': bot_data.get('status', 'paused'),
-                        'leverage': bot_data.get('leverage', auto_bot_config.get('leverage', 10))  # ✅ Добавляем leverage
-                    }
-                    bot_config.setdefault('volume_mode', default_volume_mode)
+                    # ✅ КРИТИЧНО: Используем ПОЛНЫЙ bot_data как конфиг при восстановлении!
+                    # Иначе теряются stop_loss, break_even_stop_price, max_loss_percent, rsi_exit_* и т.д.,
+                    # что приводит к закрытию сделок после перезапуска (другие стопы/пороги).
+                    bot_config = dict(bot_data)
+                    # Дополняем недостающие ключи из auto_bot_config (пороги RSI, стопы, защита)
+                    for k, v in auto_bot_config.items():
+                        if k not in bot_config or bot_config[k] is None:
+                            bot_config[k] = v
+                    # Обязательные поля с fallback на auto_bot_config
+                    bot_config.setdefault('volume_mode', bot_data.get('volume_mode', default_volume_mode))
+                    if bot_config.get('volume_value') is None:
+                        bot_config['volume_value'] = auto_bot_config.get('default_position_size')
+                    bot_config.setdefault('status', bot_data.get('status', 'paused'))
+                    bot_config.setdefault('leverage', bot_data.get('leverage', auto_bot_config.get('leverage', 10)))
                     
                     trading_bot = RealTradingBot(
                         symbol=bot_data['symbol'],
@@ -195,7 +200,7 @@ def init_bot_service():
                         config=bot_config
                     )
                     
-                    # Восстанавливаем состояние бота
+                    # Восстанавливаем состояние бота (явно, на случай разных форматов в БД)
                     trading_bot.status = bot_data.get('status', 'paused')
                     trading_bot.created_at = bot_data.get('created_at', datetime.now().isoformat())
                     trading_bot.entry_price = bot_data.get('entry_price', '')
@@ -224,6 +229,16 @@ def init_bot_service():
                     trading_bot.trailing_steps = bot_data.get('trailing_steps', 0)
                     trading_bot.break_even_activated = bot_data.get('break_even_activated', False)
                     trading_bot.rsi_data = bot_data.get('rsi_data', {})
+                    # ✅ КРИТИЧНО: Восстанавливаем стопы и защитные уровни (иначе после перезапуска
+                    # check_missing_stop_losses пересчитывает стоп по max_loss_percent и может закрыть сделку)
+                    trading_bot.stop_loss = bot_data.get('stop_loss')
+                    trading_bot.break_even_stop_price = bot_data.get('break_even_stop_price')
+                    trading_bot.break_even_stop_set = bool(bot_data.get('break_even_stop_set', False))
+                    trading_bot.trailing_reference_price = bot_data.get('trailing_reference_price') or trading_bot.trailing_reference_price
+                    trading_bot.trailing_take_profit_price = bot_data.get('trailing_take_profit_price') or trading_bot.trailing_take_profit_price
+                    trading_bot.entry_trend = bot_data.get('entry_trend')
+                    if bot_data.get('entry_timeframe'):
+                        trading_bot.entry_timeframe = bot_data.get('entry_timeframe')
                     
                     # Обновляем данные в bots_data
                     with bots_data_lock:

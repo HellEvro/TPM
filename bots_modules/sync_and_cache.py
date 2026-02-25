@@ -263,10 +263,16 @@ def _select_stop_loss_price(position_side, entry_price, current_price, config, b
     if (position_side or '').upper() == 'LONG':
         candidate = max(stops)
         if current_price is not None:
+            # Не ставить стоп выше текущей цены (для LONG стоп ниже = закрытие при падении)
+            if candidate >= current_price:
+                # Стоп бы сработал сразу — не обновляем (сохраняем текущий на бирже или не трогаем)
+                return None
             candidate = min(candidate, current_price)
     else:
         candidate = min(stops)
         if current_price is not None:
+            if candidate <= current_price:
+                return None
             candidate = max(candidate, current_price)
     return candidate
 
