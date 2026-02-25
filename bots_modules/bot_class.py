@@ -397,7 +397,7 @@ class NewTradingBot:
                     source=decision_source or "BOT",
                 )
             except Exception as _ai_open_err:
-                logger.debug(f"[NEW_BOT_{self.symbol}] ai_analytics log_trade_open: {_ai_open_err}")
+                pass
             # Помечаем, что логирование выполнено (для предотвращения дублирования)
             self._position_logged = True
         except Exception as log_error:
@@ -1064,7 +1064,7 @@ class NewTradingBot:
                                     'reason': f'Недавнее закрытие: прошло {candles_passed} свечей (требуется {loss_reentry_candles_int})'
                                 }
                         except (ValueError, TypeError) as e:
-                            logger.debug(f"[NEW_BOT_{self.symbol}] Ошибка проверки last_close_timestamp: {e}")
+                            pass
                     logger.warning(f"[NEW_BOT_{self.symbol}] ⚠️ Защита от повторных входов: недостаточно закрытых сделок ({len(closed_trades) if closed_trades else 0} < {n_count}) - РАЗРЕШАЕМ вход")
                     return {'allowed': True, 'reason': f'Not enough closed trades ({len(closed_trades) if closed_trades else 0} < {n_count})'}
                 
@@ -1466,9 +1466,8 @@ class NewTradingBot:
                             if current_price is None and candles:
                                 current_price = candles[-1].get('close')
                             if current_rsi is not None:
-                                logger.debug(f"[NEW_BOT_{self.symbol}] RSI для выхода посчитан по свечам: {current_rsi:.1f}")
                 except Exception as e:
-                    logger.debug(f"[NEW_BOT_{self.symbol}] Fallback RSI по свечам: {e}")
+                    pass
             
             if current_rsi is None or current_price is None:
                 logger.warning(f"[NEW_BOT_{self.symbol}] ❌ Нет RSI данных")
@@ -1657,7 +1656,7 @@ class NewTradingBot:
                 if self.symbol in bots_data.get('bots', {}):
                     bots_data['bots'][self.symbol]['exit_waiting_breakeven'] = True
         except Exception as e:
-            logger.debug(f"[NEW_BOT_{self.symbol}] _set_exit_waiting_breakeven: {e}")
+            pass
 
     def _clear_exit_waiting_breakeven(self):
         """Сбрасывает флаг ожидания безубытка."""
@@ -1666,7 +1665,7 @@ class NewTradingBot:
                 if self.symbol in bots_data.get('bots', {}):
                     bots_data['bots'][self.symbol]['exit_waiting_breakeven'] = False
         except Exception as e:
-            logger.debug(f"[NEW_BOT_{self.symbol}] _clear_exit_waiting_breakeven: {e}")
+            pass
 
     @staticmethod
     def check_exit_with_breakeven_wait(symbol, bot_data, current_price, position_side, rsi_should_close, rsi_reason):
@@ -1716,7 +1715,7 @@ class NewTradingBot:
             )
             return False, None
         except Exception as e:
-            logger.debug(f"check_exit_with_breakeven_wait {symbol}: {e}")
+            pass
             if rsi_should_close:
                 return True, rsi_reason
             return False, None
@@ -1738,7 +1737,7 @@ class NewTradingBot:
                 if market_price and market_price > 0:
                     price = market_price
                 else:
-                    logger.debug(f"[NEW_BOT_{self.symbol}] exit_waiting: нет свежей цены с биржи — не закрываем по безубытку")
+                    pass
                     market_price = None
             else:
                 market_price = self._get_market_price(price)
@@ -1782,7 +1781,7 @@ class NewTradingBot:
                 try:
                     self._update_protection_mechanisms(price)
                 except Exception as _e:
-                    logger.debug(f"[NEW_BOT_{self.symbol}] Обновление защитных механизмов (full_ai): {_e}")
+                    pass
 
             # 2. Проверяем условия закрытия: FullAI или RSI
             # Адаптивно: мин. свечи ИЛИ мин. минуты (по ТФ) ИЛИ ранний выход, если цена уже сдвинулась на X%
@@ -1863,7 +1862,7 @@ class NewTradingBot:
                                 from bots_modules.fullai_trades_learner import run_fullai_trades_analysis_after_close
                                 run_fullai_trades_analysis_after_close(self.symbol)
                             except Exception as _lerr:
-                                logger.debug(f"[NEW_BOT_{self.symbol}] FullAI learner после закрытия: {_lerr}")
+                                pass
                             return {'success': True, 'action': f"CLOSE_{self.position_side}", 'reason': reason_exit}
                         try:
                             from bot_engine.fullai_analytics import append_event, EVENT_EXIT_HOLD
@@ -1930,9 +1929,6 @@ class NewTradingBot:
                                 reason_part.append(f"движение {roi:.2f}%<{min_move_percent}%")
                             except (TypeError, ValueError, ZeroDivisionError):
                                 reason_part.append(f"движение<{min_move_percent}%")
-                        logger.debug(
-                            f"[NEW_BOT_{self.symbol}] RSI выход отложен: {'; '.join(reason_part) or 'условия не выполнены'}"
-                        )
                     else:
                         should_close, reason = self.should_close_position(rsi, price, self.position_side)
                         if should_close:
@@ -3051,7 +3047,7 @@ class NewTradingBot:
                     source=_source,
                 )
             except Exception as _ai_anal_err:
-                logger.debug(f"[NEW_BOT_{self.symbol}] ai_analytics log_trade_close: {_ai_anal_err}")
+                pass
 
             # FullAI: всегда записываем каждое закрытие в аналитику (FullAI/RSI/SL/безубыток/ручное) — для полноты журнала
             try:
@@ -3079,7 +3075,7 @@ class NewTradingBot:
                     fullai_extra['delay_sec'] = round(datetime.now().timestamp() - float(ts_placed), 2)
                 record_real_close(self.symbol, pnl_pct, reason=reason, extra=fullai_extra)
             except Exception as fullai_log_err:
-                logger.debug(f"[NEW_BOT_{self.symbol}] FullAI analytics при закрытии: {fullai_log_err}")
+                pass
             
             # ✅ КРИТИЧНО: Сохраняем timestamp последнего закрытия для задержки перед следующим входом
             try:
@@ -3133,7 +3129,7 @@ class NewTradingBot:
                     }
                     process_trade_for_self_learning(trade_result)
                 except Exception as sl_err:
-                    logger.debug(f"[NEW_BOT_{self.symbol}] Self-learning: {sl_err}")
+                    pass
 
         except Exception as e:
             pass

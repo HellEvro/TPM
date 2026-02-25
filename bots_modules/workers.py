@@ -281,7 +281,7 @@ def auto_bot_worker():
                 try:
                     sync_positions_with_exchange()
                 except Exception as sync_err:
-                    logger.debug(f" Синхронизация позиций: {sync_err}")
+                    pass
                 last_position_sync = current_time
 
             # ✅ ПРОВЕРКА ДЕЛИСТИНГА: Каждые 10 минут проверяем делистинг и закрываем позиции
@@ -470,7 +470,7 @@ def positions_monitor_worker():
                                                 current_rsi = calculate_rsi(closes, 14)
                                                 current_price = candles[-1].get('close') if candles else None
                                     except Exception as fetch_err:
-                                        logger.debug(f" Монитор позиций: RSI для {symbol} по свечам: {fetch_err}")
+                                        pass
 
                                 if current_rsi is None or current_price is None:
                                     continue

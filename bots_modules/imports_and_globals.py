@@ -795,7 +795,7 @@ def load_auto_bot_config():
             if 'full_ai_control' in fullai_cfg:
                 merged_config['full_ai_control'] = bool(fullai_cfg['full_ai_control'])
         except Exception as _e:
-            logger.debug("[FullAI] Восстановление full_ai_control из конфига при загрузке: %s", _e)
+            pass
         
         # ✅ Логируем подробности ТОЛЬКО при первом вызове или при реальном изменении файла
         # (не логируем при принудительной перезагрузке модуля из API, чтобы не спамить)
@@ -833,7 +833,7 @@ def load_auto_bot_config():
                         save_auto_bot_config()
                         logger.info("[FullAI] ИИ автоматически включён при загрузке конфига с FullAI (лицензия валидна)")
             except Exception as _e:
-                logger.debug("[FullAI] Проверка лицензии при загрузке конфига: %s", _e)
+                pass
         
         # ✅ RSI пороги — логируем не чаще раза в 5 минут (при каждом цикле конфиг перезагружается → без throttle спам)
         _now = time.time()
@@ -896,7 +896,7 @@ def _ensure_fullai_config_file_exists(fullai_path: str, current_cfg: dict) -> No
             json.dump(to_file, f, ensure_ascii=False, indent=2)
         logger.info("[FullAI] Создан configs/fullai_config.json из fullai_config.example.json (файл отсутствовал)")
     except Exception as _e:
-        logger.debug(f"FullAI: не удалось создать fullai_config.json из примера: {_e}")
+        pass
 
 
 def load_full_ai_config_from_db():
@@ -917,7 +917,7 @@ def load_full_ai_config_from_db():
                     file_was_read = True
                     break
                 except Exception as _e:
-                    logger.debug(f"FullAI: не удалось загрузить из {path}: {_e}")
+                    pass
         if cfg is None:
             from bot_engine.storage import _get_bots_database
             db = _get_bots_database()
@@ -934,12 +934,12 @@ def load_full_ai_config_from_db():
                         from bot_engine.storage import _get_bots_database
                         _get_bots_database().save_full_ai_config(cfg)
                 except Exception as _e:
-                    logger.debug(f"FullAI: перечитать созданный fullai_config.json: {_e}")
+                    pass
         with bots_data_lock:
             bots_data['full_ai_config'] = cfg if cfg is not None else {}
         return bots_data.get('full_ai_config')
     except Exception as e:
-        logger.debug(f"Загрузка конфига FullAI: {e}")
+        pass
         with bots_data_lock:
             bots_data['full_ai_config'] = {}
         return {}
@@ -961,7 +961,7 @@ def save_full_ai_config_to_db(config):
                 with open(fullai_path, 'w', encoding='utf-8') as f:
                     json.dump(to_file, f, ensure_ascii=False, indent=2)
             except Exception as _e:
-                logger.debug(f"FullAI: запись в configs/fullai_config.json: {_e}")
+                pass
         return ok
     except Exception as e:
         logger.error(f"Сохранение конфига FullAI: {e}")

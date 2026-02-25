@@ -2652,11 +2652,15 @@
             const data = await response.json();
             
             if (data.success && (data.total_wallet_balance !== undefined || data.total_available_balance !== undefined)) {
+                // total_pnl = сумма PnL по позициям (как на странице Позиции); иначе total_unrealized_pnl с биржи
+                const pnl = (data.total_pnl != null && data.total_pnl !== undefined)
+                    ? data.total_pnl
+                    : (data.total_unrealized_pnl ?? 0);
                 const accountData = {
                     success: true,
                     total_wallet_balance: data.total_wallet_balance,
                     total_available_balance: data.total_available_balance,
-                    total_unrealized_pnl: data.total_unrealized_pnl,
+                    total_unrealized_pnl: pnl,
                     active_positions: data.active_positions ?? 0,
                     active_bots: data.active_bots ?? this.activeBots?.length ?? 0,
                     insufficient_funds: !!data.insufficient_funds
@@ -2664,12 +2668,13 @@
                 this.updateAccountDisplay(accountData);
                 this.logDebug('[BotsManager] ✅ Информация о счете загружена:', accountData);
             } else if (data.wallet_data) {
-                // Fallback: ответ в формате /api/positions
+                // Fallback: ответ в формате /api/positions — PnL из stats.total_pnl (как на странице Позиции)
+                const pnl = (data.stats && data.stats.total_pnl != null) ? data.stats.total_pnl : (data.wallet_data.realized_pnl ?? 0);
                 const accountData = {
                     success: true,
                     total_wallet_balance: data.wallet_data.total_balance,
                     total_available_balance: data.wallet_data.available_balance,
-                    total_unrealized_pnl: data.wallet_data.realized_pnl,
+                    total_unrealized_pnl: pnl,
                     active_positions: data.stats?.total_trades || 0,
                     active_bots: this.activeBots?.length || 0,
                     insufficient_funds: !!data.insufficient_funds

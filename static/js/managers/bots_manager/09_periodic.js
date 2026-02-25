@@ -100,7 +100,7 @@
                     this.loadConfigurationData();
                 }
                 this.loadDelistedCoins();    // Делистинговые монеты
-                this.loadAccountInfo();
+                // Баланс/PnL обновляются только в accountUpdateInterval (не дублируем — меньше моргания)
                 
                 // КРИТИЧЕСКИ ВАЖНО: Всегда обновляем состояние автобота и ботов
                 this.loadActiveBotsData();

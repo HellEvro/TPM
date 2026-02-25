@@ -2417,6 +2417,7 @@ class BybitExchange(BaseExchange):
             # Получаем ВСЕ открытые позиции используя ту же логику что и в get_positions()
             active_positions = 0
             total_position_value = 0.0
+            total_pnl = 0.0  # Сумма PnL по позициям (как на странице «Позиции»)
             cursor = None
             
             try:
@@ -2436,12 +2437,13 @@ class BybitExchange(BaseExchange):
                     
                     positions = response['result']['list']
                     
-                    # Считаем активные позиции на этой странице
+                    # Считаем активные позиции и сумму PnL (как на странице Позиции)
                     for position in positions:
                         position_size = float(position.get("size", 0))
                         if abs(position_size) > 0:  # Любые открытые позиции
                             active_positions += 1
                             total_position_value += abs(float(position.get("positionValue", 0)))
+                            total_pnl += float(position.get("unrealisedPnl", 0) or 0)
                     
                     # Проверяем следующую страницу
                     cursor = response['result'].get('nextPageCursor')
@@ -2449,10 +2451,12 @@ class BybitExchange(BaseExchange):
                         break
                 account_info["active_positions"] = active_positions
                 account_info["total_position_value"] = total_position_value
+                account_info["total_pnl"] = round(total_pnl, 4)  # PnL как на странице Позиции
                 
             except Exception as pos_error:
                 account_info["active_positions"] = 0
                 account_info["total_position_value"] = 0.0
+                account_info["total_pnl"] = 0.0
             
             account_info["success"] = True
             return account_info

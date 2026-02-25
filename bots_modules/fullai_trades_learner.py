@@ -78,7 +78,7 @@ def _get_ai_param_recommendation(
                     )
                     return (new_params, reason)
     except Exception as e:
-        logger.debug("[FullAI learner] ParameterQualityPredictor не применим: %s", e)
+        pass
 
     # 2) AIContinuousLearning: база знаний по сделкам (кешируем — не создавать каждый раз)
     try:
@@ -119,7 +119,7 @@ def _get_ai_param_recommendation(
                 )
                 return (new_params, reason)
     except Exception as e:
-        logger.debug("[FullAI learner] AIContinuousLearning не применим: %s", e)
+        pass
 
     return None
 
@@ -201,7 +201,7 @@ def run_fullai_trades_analysis(
     Пишет только в full_ai_config (БД) и full_ai_coin_params.
     """
     if not _is_fullai_enabled():
-        logger.debug("[FullAI learner] Пропуск: full_ai_control выключен")
+        pass
         return {'success': True, 'skipped': True, 'reason': 'FullAI disabled'}
     try:
         from bot_engine.bots_database import get_bots_database

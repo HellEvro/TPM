@@ -502,7 +502,7 @@ def _maybe_auto_learn_exit_scam(symbol: str, candles: list) -> None:
         set_individual_coin_settings(symbol, merged, persist=True)
         logger.info(f" ExitScam автоподбор для {symbol}: single={params.get('exit_scam_single_candle_percent')}%, multi N={params.get('exit_scam_multi_candle_count')} {params.get('exit_scam_multi_candle_percent')}%")
     except Exception as e:
-        pass  # logger.debug ExitScam
+        pass
 
 def get_coin_candles_only(symbol, exchange_obj=None, timeframe=None, bulk_mode=False, bulk_limit=None):
     """⚡ БЫСТРАЯ загрузка ТОЛЬКО свечей БЕЗ расчетов
@@ -2735,7 +2735,6 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                             f"{batch_num} (ТФ={timeframe}) "
                             f"(не завершено {len(pending)} из {len(batch)}, примеры: {pending[:5]})"
                         )
-                        logger.debug(f"[DEBUG_RSI] Добавлены в трассировку: {list(_debug_rsi_symbols)}")
                         coins_rsi_data["failed_coins"] += len(remaining)
                         batch_fail += len(remaining)
 
@@ -2750,7 +2749,6 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
 
                 loaded_now = len(temp_coins_data)
                 pct_now = (loaded_now * 100) // len(pairs_for_tf) if pairs_for_tf else 0
-                logger.debug(f"📊 RSI {timeframe}: батч {batch_num}/{total_batches} — {loaded_now}/{len(pairs_for_tf)} монет ({pct_now}%)")
 
             if shutdown_requested:
                 break
@@ -3018,7 +3016,6 @@ def process_auto_bot_signals(exchange_obj=None):
         
         # ✅ Ранний выход: без RSI данных проверка сигналов бессмысленна (загрузка ~50+ сек после старта)
         if not coins_rsi_data.get('coins') or len(coins_rsi_data['coins']) == 0:
-            logger.debug(" Пропуск проверки сигналов: RSI данные ещё не загружены")
             return
         
         logger.info(" ✅ Автобот включен, начинаем проверку сигналов")
@@ -3311,7 +3308,7 @@ def process_auto_bot_signals(exchange_obj=None):
                     record_virtual_open(symbol, direction, price)
                     logger.info(f" 🧪 {symbol}: виртуальный вход {direction} (AI WAIT → обучение)")
                 except Exception as v_err:
-                    logger.debug("virtual_only record_virtual_open: %s", v_err)
+                    pass
                 continue
 
             # Создаём бота в памяти, входим по рынку, в список добавляем только после успешного входа
@@ -3728,7 +3725,6 @@ def apply_heavy_filters_to_coins():
         if not to_process:
             return True
 
-        logger.debug(f"🔍 Этап 5/7: Применяем тяжёлые фильтры к {len(to_process)} монет...")
         updated = 0
         for symbol, coin_data in to_process:
             try:
@@ -3833,7 +3829,7 @@ def apply_heavy_filters_to_coins():
                 coin_data['blocked_by_loss_reentry'] = loss_reentry_info.get('blocked', False)
                 updated += 1
             except Exception as e:
-                logger.debug(f" {symbol}: ошибка применения фильтров: {e}")
+                pass
 
         logger.info(f" ✅ Тяжёлые фильтры применены к {updated} монет")
         return True

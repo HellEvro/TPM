@@ -591,11 +591,10 @@ def trim_memory_caches():
                             data['candles'] = cand[-CANDLES_TRIM_MAX_PER_SYMBOL:]
                             trimmed += 1
         if trimmed > 0:
-            logger.debug(f"🧹 ОЗУ: подрезано свечей в {trimmed} ячейках кэша (макс {CANDLES_TRIM_MAX_PER_SYMBOL} на символ/ТФ)")
         collected = gc.collect(2)
         return trimmed
     except Exception as e:
-        logger.debug("trim_memory_caches: %s", e)
+        pass
         try:
             gc.collect(2)
         except Exception:
@@ -1911,9 +1910,9 @@ def _refresh_rsi_for_bots_in_position(exchange_obj, exchange_positions):
                         coins_rsi_data['coins'] = {}
                     coins_rsi_data['coins'][symbol] = coin_data
             except Exception as e:
-                logger.debug(f"[POSITION_SYNC] RSI для {symbol}: {e}")
+                pass
     except Exception as e:
-        logger.debug(f"[POSITION_SYNC] refresh_rsi: {e}")
+        pass
 
 
 def sync_positions_with_exchange():
@@ -2394,7 +2393,6 @@ def check_trading_rules_activation():
             # Сохраняем обновленные данные зрелых монет
             save_mature_coins_storage()
         else:
-            logger.debug(" Нет зрелых монет для обновления времени проверки")
         
         return activated_count > 0
         
@@ -3541,7 +3539,7 @@ def sync_bots_with_exchange():
                                             }
                                             record_real_close(symbol, roi_percent, reason=close_source, extra=extra)
                                         except Exception as fa_err:
-                                            logger.debug("[SYNC_EXCHANGE] FullAI analytics real_close: %s", fa_err)
+                                            pass
                                     logger.info(
                                         f"[SYNC_EXCHANGE] 📤 {symbol}: позиция закрыта на бирже вне бота "
                                         f"(entry={entry_price:.6f}, exit={exit_price:.6f}, pnl={pnl_usdt:.2f} USDT)"

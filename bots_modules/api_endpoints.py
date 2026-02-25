@@ -6162,8 +6162,6 @@ def _get_closed_trades_for_table(symbol=None, from_ts=None, to_ts=None, limit=50
         out.sort(key=lambda x: int(x.get('ts') or 0), reverse=True)
         return out[:limit]
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).debug("closed_trades_for_table: %s", e)
         return []
 
 

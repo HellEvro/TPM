@@ -394,7 +394,7 @@ def patch_system_config_add_bybit_margin_mode(config_file: Optional[str] = None)
             if in_system_config and 'TREND_REQUIRE_CANDLES' in line and '=' in line:
                 insert_idx = i + 1
         if insert_idx is None:
-            logger.debug("[CONFIG_WRITER] Патч BYBIT_MARGIN_MODE: не найдена строка TREND_REQUIRE_CANDLES в SystemConfig")
+            pass
             return False
         new_line = "    BYBIT_MARGIN_MODE = 'auto'  # Bybit: auto | cross | isolated\n"
         lines.insert(insert_idx, new_line)

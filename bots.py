@@ -372,6 +372,7 @@ for handler in tensorflow_core_logger.handlers[:]:
     tensorflow_core_logger.removeHandler(handler)
 
 logger = logging.getLogger('BotsService')
+logger.setLevel(logging.INFO)  # Не выводить DEBUG в лог BOTS (coins-with-rsi и др.)
 
 try:
     from bot_engine.bot_history import (

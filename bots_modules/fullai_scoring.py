@@ -67,7 +67,7 @@ def get_effective_params_for_symbol(symbol: str) -> Dict[str, Any]:
             _position_params[norm] = dict(base)
         return dict(base)
     except Exception as e:
-        logger.debug("[FullAI Scoring] get_effective_params %s: %s", symbol, e)
+        pass
         try:
             from bot_engine.storage import _get_bots_database
             params = _get_bots_database().load_full_ai_coin_params(norm)

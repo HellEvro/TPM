@@ -492,7 +492,7 @@ def process_virtual_positions(
                     size=0,
                 )
             except Exception as _e:
-                logger.debug("Сохранение виртуальной сделки в БД: %s", _e)
+                pass
     with _state_lock:
         if norm in _virtual_positions:
             for idx in reversed(to_remove):
