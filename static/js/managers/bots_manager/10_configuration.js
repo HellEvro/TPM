@@ -89,6 +89,7 @@
             }
             
         } catch (error) {
+            if (this._shouldThrottleNetworkError('loadConfigurationData', error)) return;
             console.error('[BotsManager] ❌ Ошибка запроса конфигурации:', error);
         }
     },
@@ -2711,7 +2712,9 @@
             console.warn('[BotsManager] ⚠️ Нет данных аккаунта в ответе');
             this.updateAccountDisplay(null);
         } catch (error) {
-            console.error('[BotsManager] ❌ Ошибка запроса информации о счете:', error);
+            if (!this._shouldThrottleNetworkError('loadAccountInfo', error)) {
+                console.error('[BotsManager] ❌ Ошибка запроса информации о счете:', error);
+            }
             this.updateAccountDisplay(null);
         }
     },

@@ -4,6 +4,15 @@
 (function() {
     if (typeof BotsManager === 'undefined') return;
     Object.assign(BotsManager.prototype, {
+            _shouldThrottleNetworkError(key, error) {
+                const isNetwork = !!(error && (error.message === 'Failed to fetch' || (error.name === 'TypeError' && String(error.message).toLowerCase().includes('fetch'))));
+                if (!isNetwork) return false;
+                this._networkErrorLogLast = this._networkErrorLogLast || {};
+                const now = Date.now();
+                if (this._networkErrorLogLast[key] && now - this._networkErrorLogLast[key] < 60000) return true;
+                this._networkErrorLogLast[key] = now;
+                return false;
+            },
             initializeBotControls() {
         console.log('[BotsManager] Инициализация кнопок управления ботом...');
         
@@ -308,7 +317,9 @@
             
         } catch (error) {
             const message = (error && error.message) ? error.message : 'Ошибка загрузки данных';
-            console.error('[BotsManager] ❌ Ошибка загрузки RSI данных:', error);
+            if (!this._shouldThrottleNetworkError('loadCoinsRsiData', error)) {
+                console.error('[BotsManager] ❌ Ошибка загрузки RSI данных:', error);
+            }
             this.updateServiceStatus('offline', message);
         } finally {
             this._loadCoinsRsiInProgress = false;
@@ -346,6 +357,7 @@
             }
             
         } catch (error) {
+            if (this._shouldThrottleNetworkError('loadDelistedCoins', error)) return;
             console.error('[BotsManager] ❌ Ошибка загрузки делистинговых монет:', error);
         }
     },

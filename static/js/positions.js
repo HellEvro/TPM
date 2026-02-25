@@ -292,11 +292,14 @@ class PositionsManager {
     }
 
     async updateAllData() {
-        if (this.reduceLoad) return; // Не обновляем данные если включено снижение нагрузки
-        if (!this.botsAvailableForCharts) return; // Bots недоступен — миниграфики не загружаем, позиции уже показаны
+        if (this.reduceLoad) return;
+        if (!this.botsAvailableForCharts) return;
         if (!this.lastData) return;
         if (this.isUpdatingData) {
-            console.log('[PositionsManager] updateAllData skipped: previous run still in progress');
+            if (!this._lastSkippedLog || Date.now() - this._lastSkippedLog > 5000) {
+                this._lastSkippedLog = Date.now();
+                console.log('[PositionsManager] updateAllData skipped: previous run still in progress');
+            }
             return;
         }
         const now = Date.now();
@@ -304,7 +307,6 @@ class PositionsManager {
             return;
         }
         const symbols = new Set();
-        // Собираем все уникальные символы с проверкой на undefined
         Object.values(this.lastData).forEach(positions => {
             if (Array.isArray(positions)) {
                 positions.forEach(pos => {
@@ -314,26 +316,27 @@ class PositionsManager {
                 });
             }
         });
-        // Не спамим в консоль при 0 позициях и не тратим тик на пустой цикл
         if (symbols.size === 0) {
             return;
         }
         this.lastUpdateAllDataStart = now;
         this.isUpdatingData = true;
+        const timeoutMs = 45000;
+        const timeoutId = setTimeout(() => {
+            if (this.isUpdatingData) {
+                console.warn('[PositionsManager] updateAllData: сброс по таймауту', timeoutMs, 'мс');
+                this.isUpdatingData = false;
+            }
+        }, timeoutMs);
         try {
-            console.log(`Starting data update for ${symbols.size} symbols:`, [...symbols]);
-
-            // Обновляем данные для каждого символа последовательно (с паузой между запросами)
             for (const symbol of symbols) {
                 await this.updateTickerData(symbol);
-                // Небольшая пауза между запросами, чтобы не перегружать браузер/сервер
                 if (symbols.size > 1) {
                     await new Promise(r => setTimeout(r, 150));
                 }
             }
-
-            console.log('All data updates completed');
         } finally {
+            clearTimeout(timeoutId);
             this.isUpdatingData = false;
         }
     }

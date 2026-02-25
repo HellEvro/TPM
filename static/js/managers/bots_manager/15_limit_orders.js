@@ -93,16 +93,17 @@
                     addBtn.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        if (this._addLimitOrderRowDebounce) return;
+                        this._addLimitOrderRowDebounce = true;
+                        setTimeout(() => { this._addLimitOrderRowDebounce = false; }, 400);
                         try {
-                            console.log('[BotsManager] ➕ Клик по кнопке добавления ордера');
+                            this.logDebug('[BotsManager] ➕ Клик по кнопке добавления ордера');
                             this.addLimitOrderRow();
-                            // ✅ Триггерим автосохранение при добавлении строки
                             if (!this.isProgrammaticChange) {
                                 this.updateFloatingSaveButtonVisibility();
                             }
                         } catch (error) {
                             console.error('[BotsManager] ❌ Ошибка добавления строки лимитного ордера:', error);
-                            console.error('[BotsManager] Stack trace:', error.stack);
                         }
                     });
                     addBtn.setAttribute('data-handler-attached', 'true');
@@ -117,42 +118,19 @@
             // Пытаемся установить обработчик сразу
             setupAddButtonHandler();
             
-            // ✅ Дополнительно: делегирование событий на родительском контейнере для надежности
-            // Это работает даже если кнопка находится в скрытом контейнере
-            if (configDiv) {
-                configDiv.addEventListener('click', (e) => {
-                    // Проверяем, был ли клик по кнопке добавления
-                    if (e.target && (e.target.id === 'addLimitOrderBtn' || e.target.closest('#addLimitOrderBtn'))) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        try {
-                            console.log('[BotsManager] ➕ Клик по кнопке добавления ордера (через делегирование)');
-                            this.addLimitOrderRow();
-                            // ✅ Триггерим автосохранение при добавлении строки
-                            if (!this.isProgrammaticChange) {
-                                this.updateFloatingSaveButtonVisibility();
-                            }
-                        } catch (error) {
-                            console.error('[BotsManager] ❌ Ошибка добавления строки лимитного ордера (делегирование):', error);
-                            console.error('[BotsManager] Stack trace:', error.stack);
-                        }
-                    }
-                });
-                console.log('[BotsManager] ✅ Делегирование событий для кнопки добавления установлено');
-            }
+            // Не вешаем делегирование на ту же кнопку — иначе один клик срабатывает дважды (прямой + делегированный)
             
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка инициализации UI лимитных ордеров:', error);
         }
     },
             addLimitOrderRow(percent = 0, margin = 0) {
-        console.log('[BotsManager] ➕ addLimitOrderRow вызван с параметрами:', { percent, margin });
         const listEl = document.getElementById('limitOrdersList');
         if (!listEl) {
             console.error('[BotsManager] ❌ Элемент limitOrdersList не найден!');
             return;
         }
-        console.log('[BotsManager] ✅ Элемент limitOrdersList найден, текущее количество строк:', listEl.children.length);
+        this.logDebug('[BotsManager] ➕ addLimitOrderRow, строк:', listEl.children.length);
         
         const row = document.createElement('div');
         row.className = 'limit-order-row';
@@ -198,7 +176,7 @@
         });
         
         listEl.appendChild(row);
-        console.log('[BotsManager] ✅ Строка добавлена в DOM, новое количество строк:', listEl.children.length);
+        this.logDebug('[BotsManager] ✅ Строка лимитного ордера добавлена, всего:', listEl.children.length);
         
         // ✅ ДОБАВЛЯЕМ АВТОСОХРАНЕНИЕ ДЛЯ ДИНАМИЧЕСКИХ ПОЛЕЙ
         // Находим новые поля и добавляем обработчики автосохранения

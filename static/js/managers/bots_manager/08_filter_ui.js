@@ -36,6 +36,7 @@
                 this.initializeFilterControls();
             }
         } catch (error) {
+            if (this._shouldThrottleNetworkError('loadFiltersData', error)) return;
             console.error('[BotsManager] ❌ Ошибка загрузки фильтров:', error);
         }
     },
