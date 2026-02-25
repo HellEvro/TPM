@@ -173,12 +173,27 @@
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/coins-with-rsi`);
             
             if (response.status === 503) {
-                this.logDebug('[BotsManager] ⏳ coins-with-rsi: сервер занят (503), повтор при следующем тике');
+                let retryAfterSec = 5;
+                try {
+                    const body = await response.json();
+                    if (body && typeof body.retry_after === 'number') retryAfterSec = Math.max(2, body.retry_after);
+                } catch (_) {}
+                this.logDebug('[BotsManager] ⏳ coins-with-rsi: сервер занят (503), повтор через ' + retryAfterSec + ' сек');
+                this.updateServiceStatus('online', (window.languageUtils && window.languageUtils.translate('rsi_update_wait')) ? window.languageUtils.translate('rsi_update_wait') : 'Обновление RSI… повтор через ' + retryAfterSec + ' сек');
+                if (!this._coinsRetryTimer) {
+                    this._coinsRetryTimer = setTimeout(() => {
+                        this._coinsRetryTimer = null;
+                        this.loadCoinsRsiData(forceUpdate);
+                    }, retryAfterSec * 1000);
+                }
                 return;
             }
             if (response.ok) {
             const data = await response.json();
-            
+            if (this._coinsRetryTimer) {
+                clearTimeout(this._coinsRetryTimer);
+                this._coinsRetryTimer = null;
+            }
             if (data.success) {
                     // Всегда обновляем UI по ответу сервера — RSI и цены меняются, пользователь должен видеть актуальные данные
                     const currentDataVersion = data.data_version || 0;

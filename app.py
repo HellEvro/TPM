@@ -2280,8 +2280,8 @@ def refresh_manual_positions():
 
 @app.route('/api/bots/coins-with-rsi', methods=['GET'])
 def get_coins_with_rsi():
-    """Получить монеты с RSI данными (прокси к сервису ботов)"""
-    result = call_bots_service('/api/bots/coins-with-rsi', timeout=90)
+    """Получить монеты с RSI данными (прокси к сервису ботов). Передаём query-параметры (refresh_symbol и т.д.)."""
+    result = call_bots_service('/api/bots/coins-with-rsi', timeout=90, params=request.args)
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
