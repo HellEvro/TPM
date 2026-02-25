@@ -1242,18 +1242,7 @@ def create_bot_endpoint():
         logger.info(f" Запрос на создание бота для {symbol}")
         logger.info(f" Клиентские overrides: {client_config}")
         
-        # 🔄 Получаем актуальные настройки из бэкенда (global + individual)
-        merged_server_config = {}
-        try:
-            snapshot = get_config_snapshot(symbol)
-            merged_server_config = deepcopy(snapshot.get('merged') or snapshot.get('global') or {})
-        except Exception as snapshot_error:
-            logger.warning(f" ⚠️ Не удалось получить config snapshot для {symbol}: {snapshot_error}")
-        
-        if not merged_server_config:
-            with bots_data_lock:
-                merged_server_config = deepcopy(bots_data.get('auto_bot_config', {}))
-        
+        # 🔄 Для ручных монет — только память, без get_config_snapshot (моментальный ответ)
         allowed_manual_overrides = {
             'volume_mode', 'volume_value', 'leverage',
             'status', 'auto_managed', 'margin_usdt'
@@ -1264,14 +1253,30 @@ def create_bot_endpoint():
             if key in client_config
         }
         
-        bot_runtime_config = merged_server_config.copy()
-        bot_runtime_config.update(manual_overrides)
-        
-        logger.info(f" 🧠 Серверный конфиг для {symbol}: avoid_up_trend={bot_runtime_config.get('avoid_up_trend')} / avoid_down_trend={bot_runtime_config.get('avoid_down_trend')}")
-        logger.info(f" 🔍 Размер merged конфига: {len(merged_server_config)} ключей, размер итогового конфига: {len(bot_runtime_config)} ключей")
-        logger.info(f" 🔍 Individual settings для {symbol}: {snapshot.get('individual') is not None}")
-        if snapshot.get('individual'):
-            logger.info(f" 🔍 Individual settings содержат avoid_up_trend: {'avoid_up_trend' in snapshot.get('individual', {})}")
+        if force_manual_entry:
+            with bots_data_lock:
+                merged_server_config = deepcopy(bots_data.get('auto_bot_config', {}))
+            try:
+                individual = get_individual_coin_settings(symbol)
+                if individual:
+                    merged_server_config.update(individual)
+            except Exception:
+                pass
+            bot_runtime_config = merged_server_config.copy()
+            bot_runtime_config.update(manual_overrides)
+        else:
+            merged_server_config = {}
+            try:
+                snapshot = get_config_snapshot(symbol)
+                merged_server_config = deepcopy(snapshot.get('merged') or snapshot.get('global') or {})
+            except Exception as snapshot_error:
+                logger.warning(f" ⚠️ Не удалось получить config snapshot для {symbol}: {snapshot_error}")
+            if not merged_server_config:
+                with bots_data_lock:
+                    merged_server_config = deepcopy(bots_data.get('auto_bot_config', {}))
+            bot_runtime_config = merged_server_config.copy()
+            bot_runtime_config.update(manual_overrides)
+            logger.info(f" 🧠 Серверный конфиг для {symbol}: avoid_up_trend={bot_runtime_config.get('avoid_up_trend')} / avoid_down_trend={bot_runtime_config.get('avoid_down_trend')}")
         
         # ✅ Для ручных монет (LONG/SHORT из UI) — не дергаем биржу в цикле ответа: только запись в БД
         has_manual_position = False

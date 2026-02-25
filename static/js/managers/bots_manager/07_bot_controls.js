@@ -12,20 +12,22 @@
             this.showNotification('⚠️ ' + this.translate('select_coin_to_create_bot'), 'warning');
             return null;
         }
-        if (this._createBotInProgress) {
-            console.log('[BotsManager] ⏳ Создание бота уже выполняется, пропуск повторного запроса');
-            this.showNotification('⏳ Подождите, запрос на создание бота уже выполняется', 'warning');
+        const symbol = this.selectedCoin.symbol;
+        // Блокируем только повторное создание для той же монеты — разные монеты можно создавать подряд
+        if (!this._createBotInProgressSet) this._createBotInProgressSet = new Set();
+        if (this._createBotInProgressSet.has(symbol)) {
+            console.log('[BotsManager] ⏳ Создание бота для ' + symbol + ' уже выполняется');
+            this.showNotification('⏳ Подождите, создание бота для ' + symbol + ' уже выполняется', 'warning');
             return null;
         }
+        this._createBotInProgressSet.add(symbol);
         
-        const symbol = this.selectedCoin.symbol;
         console.log(`[BotsManager] 🤖 Создание бота для ${symbol}`);
         const currentTimeframe = this.currentTimeframe || document.getElementById('systemTimeframe')?.value || '6h';
         const rsiKey = `rsi${currentTimeframe}`;
         const rsiValue = this.selectedCoin[rsiKey] || this.selectedCoin.rsi6h || this.selectedCoin.rsi || 'неизвестно';
         console.log(`[BotsManager] 📊 RSI текущий (${currentTimeframe}): ${rsiValue}`);
         
-        this._createBotInProgress = true;
         this.showNotification(`🔄 ${this.translate('creating_bot_for')} ${symbol}...`, 'info');
         
         try {
@@ -107,19 +109,20 @@
                 console.log('[BotsManager] 🎮 Обновление кнопок управления...');
                 this.updateBotControlButtons();
                 
-                // Обновляем данные активных ботов
-                console.log('[BotsManager] 📊 Загрузка списка активных ботов...');
-                await this.loadActiveBotsData();
+                // Обновляем список монет (coins-with-rsi) — чтобы монета ушла из «Ручные позиции» и обновился счётчик
+                if (typeof this.loadCoinsRsiData === 'function') {
+                    this.loadCoinsRsiData(true).catch(() => {});
+                }
+                // Правая панель и индикаторы ботов
+                this.loadActiveBotsData().then(() => {
+                    this.updateCoinsListWithBotStatus();
+                    this.updateActiveBotsTab();
+                }).catch(() => {});
                 
-                // Обновляем список монет с пометками о ботах
-                this.logDebug('[BotsManager] 💰 Обновление списка монет с пометками...');
                 this.updateCoinsListWithBotStatus();
-                
-                // Обновляем список на вкладке "Боты в работе"
-                console.log('[BotsManager] 🚀 Обновление вкладки "Боты в работе"...');
                 this.updateActiveBotsTab();
                 
-                console.log('[BotsManager] ✅ Все обновления интерфейса завершены!');
+                console.log('[BotsManager] ✅ Бот создан, список монет и ручных позиций обновляются');
                 
                 const manualButtons = document.getElementById('manualBotButtons');
                 if (manualButtons) manualButtons.style.display = 'none';
@@ -143,7 +146,7 @@
             }
             return null;
         } finally {
-            this._createBotInProgress = false;
+            if (this._createBotInProgressSet) this._createBotInProgressSet.delete(symbol);
         }
     },
             async startBot(symbol) {
