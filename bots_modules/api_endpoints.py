@@ -696,6 +696,51 @@ def refresh_manual_positions():
         logger.error(f" ❌ Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+@bots_app.route('/api/bots/manual-positions', methods=['GET'])
+def get_manual_positions_with_sides():
+    """Список ручных позиций (позиции на бирже без бота) с направлением LONG/SHORT из биржи."""
+    try:
+        result = []
+        try:
+            exchange = get_exchange()
+        except Exception:
+            exchange = None
+        if not exchange:
+            return jsonify({'success': True, 'positions': []})
+        positions_list = exchange.get_positions()
+        if isinstance(positions_list, tuple):
+            positions_list = positions_list[0] if positions_list else []
+        positions_list = positions_list or []
+        with bots_data_lock:
+            active_bot_symbols = set(bots_data.get('bots', {}).keys())
+        saved_bot_symbols = set()
+        try:
+            bots_state_file = 'data/bots_state.json'
+            if os.path.exists(bots_state_file):
+                with open(bots_state_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    if content.strip():
+                        import json
+                        data = json.loads(content)
+                        saved_bot_symbols = set(data.get('bots', {}).keys())
+        except Exception:
+            pass
+        system_bot_symbols = active_bot_symbols | saved_bot_symbols
+        for pos in positions_list:
+            if abs(float(pos.get('size', 0))) <= 0:
+                continue
+            symbol = (pos.get('symbol') or '').replace('USDT', '')
+            if not symbol or symbol in system_bot_symbols:
+                continue
+            side = 'LONG' if (pos.get('side') or '').lower() == 'buy' else 'SHORT'
+            result.append({'symbol': symbol, 'side': side})
+        return jsonify({'success': True, 'positions': result})
+    except Exception as e:
+        logger.exception("get_manual_positions_with_sides: %s", e)
+        return jsonify({'success': False, 'error': str(e), 'positions': []}), 500
+
+
 @bots_app.route('/api/bots/coins-with-rsi', methods=['GET'])
 def get_coins_with_rsi():
     """Получить все монеты с RSI данными (по текущему таймфрейму).

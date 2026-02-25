@@ -2220,6 +2220,13 @@ def get_active_detailed_proxy():
     status_code = result.get('status_code', 200 if result.get('success') else 500)
     return jsonify(result), status_code
 
+@app.route('/api/bots/manual-positions', methods=['GET'])
+def get_manual_positions_proxy():
+    """Ручные позиции с направлением (LONG/SHORT) с биржи"""
+    result = call_bots_service('/api/bots/manual-positions', params=request.args)
+    status_code = result.get('status_code', 200 if result.get('success') else 500)
+    return jsonify(result), status_code
+
 @app.route('/api/bots/delisted-coins', methods=['GET'])
 def get_delisted_coins_proxy():
     """Делистинговые монеты для фильтра"""
