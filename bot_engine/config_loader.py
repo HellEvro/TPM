@@ -24,6 +24,8 @@ def _patch_system_config():
         SystemConfig.LOW_RESOURCE_MODE = False
     if not hasattr(SystemConfig, 'RSI_AGGRESSIVE_LOW_RESOURCE'):
         SystemConfig.RSI_AGGRESSIVE_LOW_RESOURCE = False
+    if not hasattr(SystemConfig, 'PARALLEL_RSI_MAX_WORKERS'):
+        SystemConfig.PARALLEL_RSI_MAX_WORKERS = None  # None = авто по cpu_count; число = явно задать воркеры RSI (для free-threaded Python)
     # Слабый ПК (AI_MEMORY_LIMIT_MB <= 4096) → принудительно включить RSI aggressive (2 воркера, батч 200, timeout 90с)
     limit_mb = getattr(SystemConfig, 'AI_MEMORY_LIMIT_MB', 0) or 0
     if limit_mb > 0 and limit_mb <= 4096:

@@ -2627,15 +2627,23 @@ def load_all_coins_rsi(required_timeframes=None, reduced_mode=None, position_sym
                 if not pairs_for_tf:
                     continue
 
-            # RSI — локальный расчёт. RSI_AGGRESSIVE_LOW_RESOURCE = 2 воркера, батч 200 (фильтры отложены — быстрый расчёт)
+            # RSI — локальный расчёт. PARALLEL_RSI_MAX_WORKERS задаёт воркеры явно (для free-threaded Python)
             _cpu_count = os.cpu_count() or 4
             _aggressive_rsi = False
+            _explicit_workers = None
             try:
                 from bot_engine.config_loader import SystemConfig
                 _aggressive_rsi = getattr(SystemConfig, 'RSI_AGGRESSIVE_LOW_RESOURCE', False)
+                _explicit_workers = getattr(SystemConfig, 'PARALLEL_RSI_MAX_WORKERS', None)
+                if _explicit_workers is not None and (not isinstance(_explicit_workers, int) or _explicit_workers < 1):
+                    _explicit_workers = None
             except Exception:
                 pass
-            if _aggressive_rsi:
+            if _explicit_workers is not None:
+                rsi_max_workers = min(64, _explicit_workers)
+                batch_size = 200 if rsi_max_workers > 4 else 100
+                logger.info(f"📊 RSI: {rsi_max_workers} воркеров (конфиг PARALLEL_RSI_MAX_WORKERS), батч {batch_size}")
+            elif _aggressive_rsi:
                 rsi_max_workers = 2
                 batch_size = 200
                 logger.info(f"📊 RSI: aggressive — {rsi_max_workers} воркера, батч {batch_size}, timeout 90с")

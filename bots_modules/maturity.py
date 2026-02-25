@@ -313,9 +313,10 @@ def remove_mature_coin_from_storage(symbol):
 #     """Обновляет данные об оптимальных EMA из внешнего источника"""
 #     return False
 
-def check_coin_maturity_with_storage(symbol, candles, config=None):
+def check_coin_maturity_with_storage(symbol, candles, config=None, auto_save=True):
     """Проверяет зрелость монеты с использованием постоянного хранилища.
-    config: при передаче — не берём bots_data_lock (для RSI воркеров)."""
+    config: при передаче — не берём bots_data_lock (для RSI воркеров).
+    auto_save: при False не вызываем save после каждого добавления (для батчевого/параллельного расчёта)."""
     if is_coin_mature_stored(symbol):
         return {
             'is_mature': True,
@@ -323,9 +324,8 @@ def check_coin_maturity_with_storage(symbol, candles, config=None):
         }
     maturity_result = check_coin_maturity(symbol, candles, config=config)
     
-    # Если монета зрелая, добавляем в постоянное хранилище (с автосохранением)
     if maturity_result['is_mature']:
-        add_mature_coin_to_storage(symbol, maturity_result, auto_save=True)
+        add_mature_coin_to_storage(symbol, maturity_result, auto_save=auto_save)
     
     return maturity_result
 
@@ -425,6 +425,26 @@ def _get_candles_from_cache(candles_cache, symbol, timeframe):
     return None
 
 
+def _check_maturity_chunk(coins_chunk, candles_cache, maturity_tf, config):
+    """Обрабатывает чанк символов для зрелости (без автосохранения). Возвращает (mature_count, immature_count, skipped)."""
+    mature_count = immature_count = skipped = 0
+    for symbol in coins_chunk:
+        try:
+            candles = _get_candles_from_cache(candles_cache, symbol, maturity_tf)
+            if not candles:
+                skipped += 1
+                immature_count += 1
+                continue
+            result = check_coin_maturity_with_storage(symbol, candles, config=config, auto_save=False)
+            if result['is_mature']:
+                mature_count += 1
+            else:
+                immature_count += 1
+        except Exception:
+            immature_count += 1
+    return (mature_count, immature_count, skipped)
+
+
 def calculate_all_coins_maturity():
     """🧮 Расчёт зрелости ТОЛЬКО по уже загруженным свечам (candles_cache после загрузки RSI).
     API не вызывается — все зрелые монеты заносятся в БД из данных загрузки RSI."""
@@ -481,35 +501,51 @@ def calculate_all_coins_maturity():
         mature_count = 0
         immature_count = 0
         skipped_no_candles = 0
-        
-        for i, symbol in enumerate(coins_to_check, 1):
-            try:
-                if i == 1 or i % 10 == 0 or i == len(coins_to_check):
-                    logger.info(f"📊 Прогресс: {i}/{len(coins_to_check)} монет ({round(i/len(coins_to_check)*100)}%)")
-                
-                candles = _get_candles_from_cache(candles_cache, symbol, maturity_tf)
-                if not candles:
-                    # Fallback: загружаем свечи по СИСТЕМНОМУ ТФ с API (кэш может быть пуст)
+        chunk_size = 50
+        use_parallel = len(coins_to_check) >= 30
+        max_workers = min(4, (os.cpu_count() or 2))
+
+        if use_parallel and max_workers > 1:
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            chunks = [coins_to_check[i:i + chunk_size] for i in range(0, len(coins_to_check), chunk_size)]
+            logger.info(f"📊 Зрелость: параллельный расчёт {len(chunks)} чанков по до {chunk_size} монет ({max_workers} воркеров)")
+            with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="MaturityChunk") as ex:
+                futs = {ex.submit(_check_maturity_chunk, ch, candles_cache, maturity_tf, config): ch for ch in chunks}
+                for future in as_completed(futs):
                     try:
-                        from bots_modules.filters import get_coin_candles_only
-                        res = get_coin_candles_only(symbol, None, maturity_tf, bulk_mode=True, bulk_limit=1000)
-                        candles = (res or {}).get('candles')
-                    except Exception:
-                        pass
-                if not candles:
-                    skipped_no_candles += 1
+                        m, im, sk = future.result()
+                        mature_count += m
+                        immature_count += im
+                        skipped_no_candles += sk
+                    except Exception as e:
+                        logger.error(f"❌ Чанк зрелости: {e}")
+                        immature_count += len(futs[future])
+            save_mature_coins_storage()
+        else:
+            for i, symbol in enumerate(coins_to_check, 1):
+                try:
+                    if i == 1 or i % 10 == 0 or i == len(coins_to_check):
+                        logger.info(f"📊 Прогресс: {i}/{len(coins_to_check)} монет ({round(i/len(coins_to_check)*100)}%)")
+                    candles = _get_candles_from_cache(candles_cache, symbol, maturity_tf)
+                    if not candles:
+                        try:
+                            from bots_modules.filters import get_coin_candles_only
+                            res = get_coin_candles_only(symbol, None, maturity_tf, bulk_mode=True, bulk_limit=1000)
+                            candles = (res or {}).get('candles')
+                        except Exception:
+                            pass
+                    if not candles:
+                        skipped_no_candles += 1
+                        immature_count += 1
+                        continue
+                    maturity_result = check_coin_maturity_with_storage(symbol, candles, auto_save=True)
+                    if maturity_result['is_mature']:
+                        mature_count += 1
+                    else:
+                        immature_count += 1
+                except Exception as e:
+                    logger.error(f"❌ {symbol}: Ошибка проверки зрелости: {e}")
                     immature_count += 1
-                    continue
-                
-                maturity_result = check_coin_maturity_with_storage(symbol, candles)
-                if maturity_result['is_mature']:
-                    mature_count += 1
-                else:
-                    immature_count += 1
-                
-            except Exception as e:
-                logger.error(f"❌ {symbol}: Ошибка проверки зрелости: {e}")
-                immature_count += 1
         
         if skipped_no_candles:
             logger.info(f"📊 Без свечей в кэше по ТФ {maturity_tf} (остались незрелыми): {skipped_no_candles}")

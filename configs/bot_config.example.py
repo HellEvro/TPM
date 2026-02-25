@@ -473,6 +473,8 @@ def _patch_system_config_ai_memory():
         SystemConfig.LOW_RESOURCE_MODE = False
     if not hasattr(SystemConfig, 'RSI_AGGRESSIVE_LOW_RESOURCE'):
         SystemConfig.RSI_AGGRESSIVE_LOW_RESOURCE = False
+    if not hasattr(SystemConfig, 'PARALLEL_RSI_MAX_WORKERS'):
+        SystemConfig.PARALLEL_RSI_MAX_WORKERS = None
     if not hasattr(SystemConfig, 'AI_MEMORY_PCT'):
         SystemConfig.AI_MEMORY_PCT = 30
     if not hasattr(SystemConfig, 'AI_MEMORY_LIMIT_MB'):
