@@ -49,6 +49,14 @@
         // Инициализируем фильтры вкладки "Боты в работе"
         this.initActiveBotsFilters();
         
+        // Кнопка «Обновить» в блоке баланса (делегирование, т.к. блок перерисовывается)
+        if (!this._accountRefreshBound) {
+            this._accountRefreshBound = true;
+            document.body.addEventListener('click', (e) => {
+                if (e.target.closest('.account-refresh-btn')) this.loadAccountInfo();
+            });
+        }
+        
         console.log('[BotsManager] ✅ Интерфейс инициализирован');
     },
             applyReadabilityStyles() {

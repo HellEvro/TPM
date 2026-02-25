@@ -267,6 +267,7 @@ data/ai/models/signal_predictor.pkl
 data/ai/models/signal_predictor_metadata.json
 app/config.py
 app/keys.py
+app/keys.example.py
 # Ключи и рабочие конфиги — только локально, не коммитить
 configs/keys.py
 configs/app_config.py

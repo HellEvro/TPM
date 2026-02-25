@@ -1375,14 +1375,15 @@ def update_bots_cache_data():
                         }
                         
                         # ✅ КРИТИЧНО: Синхронизируем ВСЕ данные позиции с биржей
-                        exchange_stop_loss = pos.get('stopLoss', '')
-                        exchange_take_profit = pos.get('takeProfit', '')
-                        exchange_entry_price = float(pos.get('avgPrice', 0))  # ❌ НЕТ в данных биржи
+                        # Поддержка обоих форматов: camelCase (API) и snake_case (processed position_info от Bybit)
+                        exchange_stop_loss = pos.get('stopLoss') or pos.get('stop_loss') or ''
+                        exchange_take_profit = pos.get('takeProfit') or pos.get('take_profit') or ''
+                        exchange_entry_price = float(pos.get('avgPrice') or pos.get('avg_price') or 0)
                         exchange_size = abs(float(pos.get('size', 0)))
-                        exchange_unrealized_pnl = float(pos.get('pnl', 0))  # ✅ Используем правильное поле 'pnl'
-                        exchange_mark_price = float(pos.get('markPrice', 0))  # ❌ НЕТ в данных биржи
-                        exchange_roi = float(pos.get('roi', 0))  # ✅ ROI есть в данных
-                        exchange_realized_pnl = float(pos.get('realized_pnl', 0))
+                        exchange_unrealized_pnl = float(pos.get('pnl', 0))
+                        exchange_mark_price = float(pos.get('markPrice') or pos.get('mark_price') or 0)
+                        exchange_roi = float(pos.get('roi', 0))
+                        exchange_realized_pnl = float(pos.get('realized_pnl') or pos.get('realizedPnl') or 0)
                         exchange_leverage = float(pos.get('leverage', 1) or 1)
                         
                         # ✅ КРИТИЧНО: Обновляем данные бота актуальными данными с биржи

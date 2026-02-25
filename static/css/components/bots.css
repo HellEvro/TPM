@@ -2435,6 +2435,28 @@ body .bots-page .config-input {
     color: var(--text-color);
 }
 
+.account-updated-at {
+    color: var(--muted-color, #888);
+    font-size: 11px;
+}
+
+.account-refresh-btn {
+    margin-top: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    background: var(--border-color, #404040);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.account-refresh-btn:hover {
+    background: var(--blue-color, #4facfe);
+    color: #fff;
+    border-color: var(--blue-color);
+}
+
 .insufficient-funds-alert {
     margin: 8px 16px 0;
     padding: 8px 12px;

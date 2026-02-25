@@ -2652,7 +2652,7 @@
             const data = await response.json();
             
             if (data.success && (data.total_wallet_balance !== undefined || data.total_available_balance !== undefined)) {
-                // total_pnl = сумма PnL по позициям (как на странице Позиции); иначе total_unrealized_pnl с биржи
+                // total_pnl = сумма нереализованного PnL по позициям (как на странице Позиции); иначе total_unrealized_pnl с биржи
                 const pnl = (data.total_pnl != null && data.total_pnl !== undefined)
                     ? data.total_pnl
                     : (data.total_unrealized_pnl ?? 0);
@@ -2660,10 +2660,12 @@
                     success: true,
                     total_wallet_balance: data.total_wallet_balance,
                     total_available_balance: data.total_available_balance,
+                    total_equity: data.total_equity,
                     total_unrealized_pnl: pnl,
                     active_positions: data.active_positions ?? 0,
                     active_bots: data.active_bots ?? this.activeBots?.length ?? 0,
-                    insufficient_funds: !!data.insufficient_funds
+                    insufficient_funds: !!data.insufficient_funds,
+                    _fetchedAt: Date.now()
                 };
                 this.updateAccountDisplay(accountData);
                 this.logDebug('[BotsManager] ✅ Информация о счете загружена:', accountData);
@@ -2693,34 +2695,35 @@
             updateAccountDisplay(accountData) {
         const balance = accountData && accountData.success ? parseFloat(accountData.total_wallet_balance || 0) : null;
         const available = accountData && accountData.success ? parseFloat(accountData.total_available_balance || 0) : null;
+        const equity = accountData && accountData.success && (accountData.total_equity != null && accountData.total_equity !== '') ? parseFloat(accountData.total_equity) : null;
         const pnl = accountData && accountData.success ? parseFloat(accountData.total_unrealized_pnl || 0) : null;
         const positions = accountData && accountData.success ? parseInt(accountData.active_positions || 0) : null;
         const insufficient_funds = !!(accountData && accountData.insufficient_funds);
-        const key = [balance, available, pnl, positions, insufficient_funds].join('|');
+        const key = [balance, available, equity, pnl, positions, insufficient_funds].join('|');
         if (this._lastAccountDisplay === key) {
             return;
         }
         this._lastAccountDisplay = key;
         
-        const activeBotsHeader = document.querySelector('.active-bots-header h3');
+        const activeBotsHeader = document.querySelector('.active-bots-sidebar .active-bots-header h3');
         if (!activeBotsHeader) return;
         
+        const balanceText = (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[document.documentElement.lang || 'ru'] && TRANSLATIONS[document.documentElement.lang || 'ru']['balance']) ? TRANSLATIONS[document.documentElement.lang || 'ru']['balance'] : 'Баланс';
+        const remainderText = (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[document.documentElement.lang || 'ru'] && TRANSLATIONS[document.documentElement.lang || 'ru']['remainder']) ? TRANSLATIONS[document.documentElement.lang || 'ru']['remainder'] : 'Остаток';
+        const openPositionsText = (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[document.documentElement.lang || 'ru'] && TRANSLATIONS[document.documentElement.lang || 'ru']['open_positions']) ? TRANSLATIONS[document.documentElement.lang || 'ru']['open_positions'] : 'Открытых позиций';
+        
         if (accountData && accountData.success) {
-            const balanceText = (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[document.documentElement.lang || 'ru'] && TRANSLATIONS[document.documentElement.lang || 'ru']['balance']) ? TRANSLATIONS[document.documentElement.lang || 'ru']['balance'] : 'Баланс';
-            const remainderText = (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[document.documentElement.lang || 'ru'] && TRANSLATIONS[document.documentElement.lang || 'ru']['remainder']) ? TRANSLATIONS[document.documentElement.lang || 'ru']['remainder'] : 'Остаток';
-            const openPositionsText = (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[document.documentElement.lang || 'ru'] && TRANSLATIONS[document.documentElement.lang || 'ru']['open_positions']) ? TRANSLATIONS[document.documentElement.lang || 'ru']['open_positions'] : 'Открытых позиций';
-            
+            const equityLine = (equity != null && !Number.isNaN(equity)) ? `<br>Эквити  $${equity.toFixed(2)}` : '';
+            const updatedAt = accountData._fetchedAt ? new Date(accountData._fetchedAt).toLocaleTimeString() : '';
+            const updatedLine = updatedAt ? `<br><small class="account-updated-at" title="Данные с биржи">Обновлено: ${updatedAt}</small>` : '';
             activeBotsHeader.innerHTML = `
                 ${balanceText}  $${balance.toFixed(2)}<br>
-                ${remainderText}  $${available.toFixed(2)}<br>
-                PnL  ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}<br>
-                ${openPositionsText}  ${positions}
+                ${remainderText}  $${available.toFixed(2)}${equityLine}<br>
+                PnL (нереализ.)  ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}<br>
+                ${openPositionsText}  ${positions}${updatedLine}
+                <br><button type="button" class="account-refresh-btn" title="Обновить данные с биржи">🔄 Обновить</button>
             `;
         } else {
-            const balanceText = (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[document.documentElement.lang || 'ru'] && TRANSLATIONS[document.documentElement.lang || 'ru']['balance']) ? TRANSLATIONS[document.documentElement.lang || 'ru']['balance'] : 'Баланс';
-            const remainderText = (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[document.documentElement.lang || 'ru'] && TRANSLATIONS[document.documentElement.lang || 'ru']['remainder']) ? TRANSLATIONS[document.documentElement.lang || 'ru']['remainder'] : 'Остаток';
-            const openPositionsText = (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[document.documentElement.lang || 'ru'] && TRANSLATIONS[document.documentElement.lang || 'ru']['open_positions']) ? TRANSLATIONS[document.documentElement.lang || 'ru']['open_positions'] : 'Открытых позиций';
-            
             activeBotsHeader.innerHTML = `
                 ${balanceText}  -<br>
                 ${remainderText}  -<br>
