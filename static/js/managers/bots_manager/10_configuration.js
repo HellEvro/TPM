@@ -2640,17 +2640,18 @@
             async loadAccountInfo() {
         this.logDebug('[BotsManager] 💰 Загрузка информации о едином торговом счете...');
         
+        let accountData = null;
         try {
             // Используем account-info сервиса ботов (баланс + флаг недостатка средств)
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/account-info`);
             const data = await response.json();
             
-            if (data.success && (data.total_wallet_balance !== undefined || data.total_available_balance !== undefined)) {
+            if (data && data.success && (data.total_wallet_balance !== undefined || data.total_available_balance !== undefined)) {
                 // total_pnl = сумма нереализованного PnL по позициям (как на странице Позиции); иначе total_unrealized_pnl с биржи
                 const pnl = (data.total_pnl != null && data.total_pnl !== undefined)
                     ? data.total_pnl
                     : (data.total_unrealized_pnl ?? 0);
-                const accountData = {
+                accountData = {
                     success: true,
                     total_wallet_balance: data.total_wallet_balance,
                     total_available_balance: data.total_available_balance,
@@ -2663,24 +2664,52 @@
                 };
                 this.updateAccountDisplay(accountData);
                 this.logDebug('[BotsManager] ✅ Информация о счете загружена:', accountData);
-            } else if (data.wallet_data) {
+                return;
+            }
+            if (data && data.wallet_data) {
                 // Fallback: ответ в формате /api/positions — PnL из stats.total_pnl (как на странице Позиции)
                 const pnl = (data.stats && data.stats.total_pnl != null) ? data.stats.total_pnl : (data.wallet_data.realized_pnl ?? 0);
-                const accountData = {
+                accountData = {
                     success: true,
                     total_wallet_balance: data.wallet_data.total_balance,
                     total_available_balance: data.wallet_data.available_balance,
                     total_unrealized_pnl: pnl,
                     active_positions: data.stats?.total_trades || 0,
                     active_bots: this.activeBots?.length || 0,
-                    insufficient_funds: !!data.insufficient_funds
+                    insufficient_funds: !!data.insufficient_funds,
+                    _fetchedAt: Date.now()
                 };
                 this.updateAccountDisplay(accountData);
-            } else {
-                console.warn('[BotsManager] ⚠️ Нет данных аккаунта в ответе');
-                this.updateAccountDisplay(null);
+                return;
             }
-            
+            // Fallback: запрос к /api/positions (app.py или тот же origin) — баланс и PnL из позиций
+            try {
+                const posResponse = await fetch(`${this.BOTS_SERVICE_URL}/api/positions`);
+                if (posResponse.ok) {
+                    const posData = await posResponse.json();
+                    if (posData && posData.wallet_data) {
+                        const w = posData.wallet_data;
+                        const st = posData.stats || {};
+                        accountData = {
+                            success: true,
+                            total_wallet_balance: w.total_balance,
+                            total_available_balance: w.available_balance,
+                            total_unrealized_pnl: (st.total_pnl != null) ? st.total_pnl : (w.realized_pnl ?? 0),
+                            active_positions: st.total_trades ?? 0,
+                            active_bots: this.activeBots?.length ?? 0,
+                            insufficient_funds: false,
+                            _fetchedAt: Date.now()
+                        };
+                        this.updateAccountDisplay(accountData);
+                        this.logDebug('[BotsManager] ✅ Баланс загружен из /api/positions');
+                        return;
+                    }
+                }
+            } catch (posErr) {
+                this.logDebug('[BotsManager] Fallback /api/positions не удался:', posErr);
+            }
+            console.warn('[BotsManager] ⚠️ Нет данных аккаунта в ответе');
+            this.updateAccountDisplay(null);
         } catch (error) {
             console.error('[BotsManager] ❌ Ошибка запроса информации о счете:', error);
             this.updateAccountDisplay(null);
@@ -2717,13 +2746,32 @@
                 ${openPositionsText}  ${positions}${updatedLine}
                 <br><button type="button" class="account-refresh-btn" title="Обновить данные с биржи">🔄 Обновить</button>
             `;
+            // Синхронизация мобильного блока баланса (Управление — верхний блок)
+            const fmt = (v) => (v >= 0 ? '+' : '') + '$' + Number(v).toFixed(2);
+            const mobileBalance = document.getElementById('mobileAccountBalance');
+            const mobileRemaining = document.getElementById('mobileAccountRemaining');
+            const mobilePnL = document.getElementById('mobileAccountPnL');
+            const mobilePositions = document.getElementById('mobileAccountPositions');
+            if (mobileBalance) mobileBalance.textContent = '$' + balance.toFixed(2);
+            if (mobileRemaining) mobileRemaining.textContent = '$' + available.toFixed(2);
+            if (mobilePnL) mobilePnL.textContent = fmt(pnl);
+            if (mobilePositions) mobilePositions.textContent = String(positions);
         } else {
             activeBotsHeader.innerHTML = `
-                ${balanceText}  -<br>
-                ${remainderText}  -<br>
-                PnL  -<br>
-                ${openPositionsText}  -
+                ${balanceText}  —<br>
+                ${remainderText}  —<br>
+                PnL  —<br>
+                ${openPositionsText}  —
+                <br><button type="button" class="account-refresh-btn" title="Обновить данные с биржи">🔄 Обновить</button>
             `;
+            const mobileBalance = document.getElementById('mobileAccountBalance');
+            const mobileRemaining = document.getElementById('mobileAccountRemaining');
+            const mobilePnL = document.getElementById('mobileAccountPnL');
+            const mobilePositions = document.getElementById('mobileAccountPositions');
+            if (mobileBalance) mobileBalance.textContent = '—';
+            if (mobileRemaining) mobileRemaining.textContent = '—';
+            if (mobilePnL) mobilePnL.textContent = '—';
+            if (mobilePositions) mobilePositions.textContent = '—';
         }
         
         const showInsufficient = insufficient_funds;
