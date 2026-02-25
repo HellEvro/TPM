@@ -984,6 +984,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
 
     _dbg = symbol in _debug_rsi_symbols
     if _dbg:
+        pass
 
     from bot_engine.config_loader import get_rsi_key, get_trend_key
     rsi_key = get_rsi_key(timeframe)
@@ -994,6 +995,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
     if rsi is None:
         return None
     if _dbg:
+        pass
 
     trend = None
     try:
@@ -1006,6 +1008,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
     except Exception as e:
         pass
     if _dbg:
+        pass
     base_data = coins_rsi_data.get('coins', {}).get(symbol, {})
     
     # Объединяем с новыми данными для указанного таймфрейма
@@ -1025,6 +1028,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
 
     if is_system_tf:
         if _dbg:
+            pass
         try:
             from bot_engine.config_loader import SystemConfig, get_config_value
             from bots_modules.imports_and_globals import bots_data
@@ -1079,6 +1083,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
                 result['is_mature'] = True
                 result['maturity_reason'] = None
             if _dbg:
+                pass
             result['has_existing_position'] = base_data.get('has_existing_position', False) if base_data else False
 
             # Scope: черный список ВСЕГДА исключает монету из торговли (при любом scope)
@@ -1109,16 +1114,19 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
 
             if potential_signal is None:
                 if _dbg:
+                    pass
                 time_filter_info = {'blocked': False, 'reason': 'RSI вне зоны входа в сделку', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
                 exit_scam_info = {'blocked': False, 'reason': 'ExitScam: RSI вне зоны входа', 'filter_type': 'exit_scam'}
                 loss_reentry_info = {'blocked': False, 'reason': 'Защита от повторных входов: RSI вне зоны входа', 'filter_type': 'loss_reentry_protection'}
             elif _defer_filters:
                 if _dbg:
+                    pass
                 time_filter_info = {**_deferred, 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
                 exit_scam_info = {**_deferred, 'filter_type': 'exit_scam'}
                 loss_reentry_info = {**_deferred, 'filter_type': 'loss_reentry_protection'}
             else:
                 if _dbg:
+                    pass
                 time_filter_info = None
                 exit_scam_info = None
                 loss_reentry_info = None
@@ -1199,6 +1207,7 @@ def get_coin_rsi_data_for_timeframe(symbol, exchange_obj=None, timeframe=None, _
             result['blocked_by_rsi_time'] = time_filter_info.get('blocked', False) if time_filter_info else False
             result['blocked_by_loss_reentry'] = loss_reentry_info.get('blocked', False) if loss_reentry_info else False
             if _dbg:
+                pass
         except Exception as e:
             pass
             result['time_filter_info'] = {'blocked': False, 'reason': f'Ошибка: {e}', 'filter_type': 'time_filter', 'last_extreme_candles_ago': None, 'calm_candles': None}
@@ -2428,6 +2437,7 @@ def load_all_coins_candles_fast():
                 
                 # Просто сохраняем текущие свечи - save_candles_cache() сам ограничит до 1000 и удалит старые
                 if save_candles_cache(flat_candles_cache):
+                    pass
                 else:
                     logger.error(f"❌ Не удалось сохранить свечи в bots_data.db!")
             
@@ -2438,6 +2448,7 @@ def load_all_coins_candles_fast():
         try:
             if current_exchange and hasattr(current_exchange, 'reset_request_delay'):
                 if current_exchange.reset_request_delay():
+                    pass
         except Exception as reset_error:
             logger.warning(f"⚠️ Ошибка сброса задержки: {reset_error}")
         

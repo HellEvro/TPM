@@ -179,10 +179,14 @@
                     this.lastUpdateInProgress = !!data.update_in_progress;
                     this.lastRsiStats = data.stats || null;
                     
-                    // Преобразуем словарь в массив для совместимости с UI
+                    // Преобразуем словарь в массив для совместимости с UI; гарантируем symbol у каждой монеты (ключ = symbol)
                     this.logDebug('[BotsManager] 🔍 Данные от API:', data);
                     this.logDebug('[BotsManager] 🔍 Ключи coins:', Object.keys(data.coins));
-                    this.coinsRsiData = Object.values(data.coins);
+                    const coinsObj = data.coins || {};
+                    this.coinsRsiData = Object.entries(coinsObj).map(([sym, coin]) => ({
+                        ...coin,
+                        symbol: (coin && coin.symbol) ? coin.symbol : sym
+                    }));
                     
                     // Лог уровня info: видно без включения debug (чтобы понимать, что данные пришли)
                     console.log('[BotsManager] ✅ Загружено', this.coinsRsiData.length, 'монет с RSI');

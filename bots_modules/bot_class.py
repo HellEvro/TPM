@@ -1466,6 +1466,7 @@ class NewTradingBot:
                             if current_price is None and candles:
                                 current_price = candles[-1].get('close')
                             if current_rsi is not None:
+                                pass
                 except Exception as e:
                     pass
             

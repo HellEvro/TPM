@@ -192,6 +192,7 @@ class ContinuousDataLoader:
                         if auto_bot_enabled:
                             self._set_filtered_coins_for_autobot(filtered_coins)
                         else:
+                            pass
                     except Exception as e:
                         logger.error(f"❌ Ошибка в этапах 3–7: {e}")
                         logger.error(f"❌ Traceback: {traceback.format_exc()}")

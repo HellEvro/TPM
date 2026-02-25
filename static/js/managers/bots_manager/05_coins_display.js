@@ -44,7 +44,7 @@
         const rsiKey = `rsi${currentTimeframe}`;
         const trendKey = `trend${currentTimeframe}`;
         
-        const coinsHtml = this.coinsRsiData.map(coin => {
+        const coinsHtml = (this.coinsRsiData || []).filter(coin => coin && (coin.symbol != null && coin.symbol !== '')).map(coin => {
             const rsiValue = coin[rsiKey] || coin.rsi6h || coin.rsi || 50;
             const trendValue = coin[trendKey] || coin.trend6h || coin.trend || 'NEUTRAL';
             const rsiClass = this.getRsiZoneClass(rsiValue);
@@ -384,11 +384,15 @@
         }
     },
             getExchangeLink(symbol, exchange = 'bybit') {
+        if (symbol == null || typeof symbol !== 'string') {
+            return '#';
+        }
         // Удаляем USDT из символа для корректной ссылки
-        const cleanSymbol = symbol.replace('USDT', '');
+        const cleanSymbol = String(symbol).replace('USDT', '');
         
         // Создаем ссылки в зависимости от биржи
-        switch (exchange.toLowerCase()) {
+        const ex = (exchange != null && typeof exchange === 'string') ? exchange : 'bybit';
+        switch (ex.toLowerCase()) {
             case 'binance':
                 return `https://www.binance.com/ru/futures/${cleanSymbol}USDT`;
             case 'bybit':

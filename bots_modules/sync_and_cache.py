@@ -591,10 +591,10 @@ def trim_memory_caches():
                             data['candles'] = cand[-CANDLES_TRIM_MAX_PER_SYMBOL:]
                             trimmed += 1
         if trimmed > 0:
+            pass
         collected = gc.collect(2)
         return trimmed
     except Exception as e:
-        pass
         try:
             gc.collect(2)
         except Exception:
@@ -2393,7 +2393,8 @@ def check_trading_rules_activation():
             # Сохраняем обновленные данные зрелых монет
             save_mature_coins_storage()
         else:
-        
+            pass
+
         return activated_count > 0
         
     except Exception as e:

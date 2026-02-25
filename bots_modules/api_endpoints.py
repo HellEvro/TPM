@@ -777,7 +777,10 @@ def get_coins_with_rsi():
                 for field in essential_fields:
                     if field in coin_data:
                         cleaned_coin[field] = coin_data[field]
-                
+                # Гарантируем наличие symbol (ключ словаря), чтобы фронт не падал на .replace
+                if 'symbol' not in cleaned_coin or not cleaned_coin.get('symbol'):
+                    cleaned_coin['symbol'] = symbol
+
                 # Копируем структурированные данные только если они есть
                 if 'time_filter_info' in coin_data and coin_data['time_filter_info']:
                     cleaned_coin['time_filter_info'] = coin_data['time_filter_info']
