@@ -44,9 +44,7 @@
             const autoBotResponse = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/auto-bot`);
             if (autoBotResponse.status === 503) {
                 this._service503Until = Date.now() + 30000;
-                this.serviceOnline = false;
-                this.updateServiceStatus('offline', 'Сервис ботов недоступен (503). Повтор через 30 сек.');
-                console.warn('[BotsManager] ⚠️ Сервис ботов недоступен (503). Повтор через 30 сек.');
+                this.logDebug('[BotsManager] ⏳ auto-bot 503 (сервер занят), бэкофф 30 сек. Список монет не сбрасываем.');
                 return;
             }
             this.logDebug('[BotsManager] 📡 Auto Bot response status:', autoBotResponse.status);
@@ -64,9 +62,7 @@
             const systemResponse = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/system-config`);
             if (systemResponse.status === 503) {
                 this._service503Until = Date.now() + 30000;
-                this.serviceOnline = false;
-                this.updateServiceStatus('offline', 'Сервис ботов недоступен (503). Повтор через 30 сек.');
-                console.warn('[BotsManager] ⚠️ Сервис ботов недоступен (503). Повтор через 30 сек.');
+                this.logDebug('[BotsManager] ⏳ system-config 503 (сервер занят), бэкофф 30 сек.');
                 return;
             }
             this.logDebug('[BotsManager] 📡 System response status:', systemResponse.status);
@@ -2545,12 +2541,7 @@
                             ? (window.languageUtils?.translate?.('bot_service_unavailable') || 'Сервис ботов недоступен. Запустите bots.py.')
                             : (result.error || result.message || 'Ошибка сохранения');
                         console.error('[BotsManager] ❌ Ошибка сохранения Auto Bot:', msg);
-                        if (response.status === 503) {
-                            this._service503Until = Date.now() + 30000;
-                            this.serviceOnline = false;
-                            globalAutoBotToggleEl.checked = false;
-                            if (toggleLabel) toggleLabel.textContent = '🤖 Auto Bot (ВЫКЛ)';
-                        }
+                        if (response.status === 503) this._service503Until = Date.now() + 30000;
                         this.showNotification('❌ ' + msg, 'error');
                     }
                     
@@ -2864,40 +2855,29 @@
             console.log('[BotsManager] ✅ Кнопка "Сохранить основные настройки" инициализирована');
         }
         
-        const applyFullAiControl = async (value) => {
-            try {
-                await this.sendConfigUpdate('auto-bot', { full_ai_control: value }, value ? 'Полный Режим ИИ включён' : 'Полный Режим ИИ выключен', { forceSend: true });
-                const autoBot = this.collectConfigurationData().autoBot || {};
-                this.syncDuplicateSettings({ ...autoBot, full_ai_control: value });
-                // Один переключатель управляет и Adaptive: синхронизируем fullai_config
-                await this.saveFullaiAdaptiveConfig();
-            } catch (e) {
-                console.error('[BotsManager] Ошибка сохранения FullAI:', e);
-                this.showNotification('Ошибка сохранения переключателя FullAI', 'error');
-            }
-        };
-        // Тумблер «Полный Режим ИИ» на вкладке Управление и дубль на Конфигурации — синхронизируем при изменении любого
-        const fullAiToggleEl = document.getElementById('fullAiControlToggle');
-        const fullAiToggleConfigEl = document.getElementById('fullAiControlToggleConfig');
-        const syncFullAiToggles = (sourceEl, value) => {
-            if (fullAiToggleEl && fullAiToggleEl !== sourceEl) fullAiToggleEl.checked = value;
-            if (fullAiToggleConfigEl && fullAiToggleConfigEl !== sourceEl) fullAiToggleConfigEl.checked = value;
-        };
-        if (fullAiToggleEl && !fullAiToggleEl.hasAttribute('data-fullai-listener')) {
-            fullAiToggleEl.setAttribute('data-fullai-listener', 'true');
-            fullAiToggleEl.addEventListener('change', () => {
-                const value = fullAiToggleEl.checked;
-                syncFullAiToggles(fullAiToggleEl, value);
-                applyFullAiControl(value);
+        // Тумблер FullAI: делегирование на document, чтобы срабатывало при любом порядке загрузки вкладок/DOM
+        if (!this._fullAiDelegationBound) {
+            this._fullAiDelegationBound = true;
+            document.body.addEventListener('change', (e) => {
+                if (e.target.id !== 'fullAiControlToggle' && e.target.id !== 'fullAiControlToggleConfig') return;
+                const value = !!e.target.checked;
+                const fullAiToggleEl = document.getElementById('fullAiControlToggle');
+                const fullAiToggleConfigEl = document.getElementById('fullAiControlToggleConfig');
+                if (fullAiToggleEl && fullAiToggleEl !== e.target) fullAiToggleEl.checked = value;
+                if (fullAiToggleConfigEl && fullAiToggleConfigEl !== e.target) fullAiToggleConfigEl.checked = value;
+                (async () => {
+                    try {
+                        await this.sendConfigUpdate('auto-bot', { full_ai_control: value }, value ? 'Полный Режим ИИ включён' : 'Полный Режим ИИ выключен', { forceSend: true });
+                        const autoBot = this.collectConfigurationData().autoBot || {};
+                        this.syncDuplicateSettings({ ...autoBot, full_ai_control: value });
+                        await this.saveFullaiAdaptiveConfig();
+                    } catch (err) {
+                        console.error('[BotsManager] Ошибка сохранения FullAI:', err);
+                        this.showNotification('Ошибка сохранения переключателя FullAI', 'error');
+                    }
+                })();
             });
-        }
-        if (fullAiToggleConfigEl && !fullAiToggleConfigEl.hasAttribute('data-fullai-listener')) {
-            fullAiToggleConfigEl.setAttribute('data-fullai-listener', 'true');
-            fullAiToggleConfigEl.addEventListener('change', () => {
-                const value = fullAiToggleConfigEl.checked;
-                syncFullAiToggles(fullAiToggleConfigEl, value);
-                applyFullAiControl(value);
-            });
+            console.log('[BotsManager] ✅ Обработчик FullAI (делегирование) установлен');
         }
         
         let fullaiAdaptiveSaveTimer = null;

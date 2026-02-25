@@ -1027,12 +1027,7 @@
             const response = await fetch(`${this.BOTS_SERVICE_URL}/api/bots/active-detailed`);
             if (!response.ok) {
                 if (response.status === 504 || response.status === 503) {
-                    if (response.status === 503) {
-                        this._service503Until = Date.now() + 30000;
-                        this.serviceOnline = false;
-                        this.updateServiceStatus('offline', 'Сервис ботов недоступен (503). Повтор через 30 сек.');
-                        console.warn('[BotsManager] ⚠️ Сервис ботов недоступен (503). Повтор через 30 сек.');
-                    }
+                    if (response.status === 503) this._service503Until = Date.now() + 30000;
                     this.logDebug('[BotsManager] ⏳ active-detailed: сервер занят (504/503), пропускаем тик');
                     return;
                 }

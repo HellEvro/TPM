@@ -58,6 +58,7 @@
             
             if (response.ok) {
                 const data = await response.json();
+                this._serviceCheckFailures = 0; // Сброс счётчика при успехе
                 console.log('[BotsManager] 📊 Ответ сервиса:', data);
                 // bots_available: false — app.py работает, но Bots на 5001 не запущен
                 this.serviceOnline = data.status === 'online' && data.bots_available !== false;
@@ -74,9 +75,13 @@
             } else {
                 console.error('[BotsManager] ❌ HTTP ошибка:', response.status, response.statusText);
                 this._service503Until = response.status === 503 ? Date.now() + 30000 : 0;
-                this.serviceOnline = false;
-                this.updateServiceStatus('offline', 'Сервис ботов недоступен');
-                this.updateCoinsCounter(); // чтобы счётчики (Все, Зрелые и т.д.) не показывали устаревшие значения
+                this._serviceCheckFailures = (this._serviceCheckFailures || 0) + 1;
+                if (this._serviceCheckFailures >= 2) {
+                    this.serviceOnline = false;
+                    this.updateServiceStatus('offline', 'Сервис ботов недоступен');
+                    this.updateCoinsCounter();
+                    this.showServiceUnavailable();
+                }
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
@@ -86,6 +91,7 @@
                 await new Promise(r => setTimeout(r, 2000));
                 return this.checkBotsService(retryCount + 1);
             }
+            this._serviceCheckFailures = (this._serviceCheckFailures || 0) + 1;
             if (error.name === 'AbortError') {
                 console.error('[BotsManager] ❌ Таймаут при проверке сервиса ботов (15 секунд)');
             } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
@@ -97,10 +103,13 @@
             } else {
                 console.error('[BotsManager] ❌ Ошибка при проверке сервиса ботов:', error);
             }
-            this.serviceOnline = false;
-            this.updateServiceStatus('offline', 'Сервис ботов недоступен');
-            this.updateCoinsCounter(); // чтобы счётчики не показывали устаревшие значения при ошибке сети/таймауте
-            this.showServiceUnavailable();
+            // Показываем «недоступен» и сбрасываем список только после 2 подряд неудач (убираем мигание)
+            if (this._serviceCheckFailures >= 2) {
+                this.serviceOnline = false;
+                this.updateServiceStatus('offline', 'Сервис ботов недоступен');
+                this.updateCoinsCounter();
+                this.showServiceUnavailable();
+            }
         }
     },
         _is503Backoff() {

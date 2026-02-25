@@ -3422,11 +3422,12 @@ def fullai_config_get_post():
                 cfg['fullai_adaptive_virtual_max_failures'] = auto['fullai_adaptive_virtual_max_failures']
             elif auto.get('fullai_adaptive_max_failures') is not None:
                 cfg['fullai_adaptive_virtual_max_failures'] = auto['fullai_adaptive_max_failures']
-            # Источник истины для UI: класс AutoBotConfig из bot_config.py (гарантирует совпадение с файлом)
+            # full_ai_control: приоритет у конфига FullAI (файл/БД), чтобы переключатель сохранялся после перезапуска
             try:
                 from bot_engine.config_loader import AutoBotConfig
-                if getattr(AutoBotConfig, 'FULL_AI_CONTROL', None) is not None:
-                    cfg['full_ai_control'] = bool(AutoBotConfig.FULL_AI_CONTROL)
+                if 'full_ai_control' not in cfg or cfg.get('full_ai_control') is None:
+                    if getattr(AutoBotConfig, 'FULL_AI_CONTROL', None) is not None:
+                        cfg['full_ai_control'] = bool(AutoBotConfig.FULL_AI_CONTROL)
                 if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_ENABLED', None) is not None:
                     cfg['fullai_adaptive_enabled'] = bool(AutoBotConfig.FULLAI_ADAPTIVE_ENABLED)
                 if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_DEAD_CANDLES', None) is not None:
@@ -3448,7 +3449,7 @@ def fullai_config_get_post():
                 return jsonify({'success': False, 'error': 'Invalid payload'}), 400
             cfg = load_full_ai_config_from_db() or {}
             for key in (
-                'fullai_scoring_enabled',
+                'full_ai_control', 'fullai_scoring_enabled',
                 'fullai_adaptive_enabled', 'fullai_adaptive_dead_candles',
                 'fullai_adaptive_virtual_success_count', 'fullai_adaptive_real_loss_to_retry',
                 'fullai_adaptive_virtual_round_size', 'fullai_adaptive_virtual_max_failures',
@@ -3953,17 +3954,14 @@ def auto_bot_config():
             except Exception as _ai_merge_err:
                 pass  # logger.debug(f" AI-merge в auto-bot: {_ai_merge_err}")
             try:
+                from bots_modules.imports_and_globals import load_full_ai_config_from_db
                 from bot_engine.config_loader import AutoBotConfig
-                if getattr(AutoBotConfig, 'FULL_AI_CONTROL', None) is not None:
+                # full_ai_control: приоритет у конфига FullAI (файл/БД), иначе из bot_config.py
+                fc = load_full_ai_config_from_db() or {}
+                if fc and 'full_ai_control' in fc:
+                    config['full_ai_control'] = bool(fc['full_ai_control'])
+                elif getattr(AutoBotConfig, 'FULL_AI_CONTROL', None) is not None:
                     config['full_ai_control'] = bool(AutoBotConfig.FULL_AI_CONTROL)
-                if not config.get('full_ai_control'):
-                    try:
-                        from bots_modules.imports_and_globals import load_full_ai_config_from_db
-                        fc = load_full_ai_config_from_db()
-                        if fc and fc.get('full_ai_control'):
-                            config['full_ai_control'] = True
-                    except Exception:
-                        pass
                 if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_ENABLED', None) is not None:
                     config['fullai_adaptive_enabled'] = bool(AutoBotConfig.FULLAI_ADAPTIVE_ENABLED)
                 if getattr(AutoBotConfig, 'FULLAI_ADAPTIVE_DEAD_CANDLES', None) is not None:
@@ -4095,8 +4093,10 @@ def auto_bot_config():
                     normalized_old = normalize_value(old_value)
                     normalized_new = normalize_value(value)
                     
-                    # ✅ КРИТИЧЕСКИ ВАЖНО: Добавляем в changed_data только если значение РЕАЛЬНО изменилось
-                    if normalized_old != normalized_new:
+                    # full_ai_control: всегда применяем и сохраняем при передаче из UI (переключатель должен срабатывать гарантированно)
+                    force_apply = key == 'full_ai_control'
+                    # ✅ КРИТИЧЕСКИ ВАЖНО: Добавляем в changed_data только если значение РЕАЛЬНО изменилось (или force для full_ai_control)
+                    if force_apply or normalized_old != normalized_new:
                         changed_data[key] = value
                         bots_data['auto_bot_config'][key] = value
                         # ✅ Синхронизация break_even_trigger: при изменении break_even_trigger_percent обновляем оба ключа

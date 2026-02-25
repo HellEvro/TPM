@@ -19,10 +19,7 @@
             
             if (response.status === 503) {
                 this._service503Until = Date.now() + 30000;
-                this.serviceOnline = false;
-                this.updateServiceStatus('offline', 'Сервис ботов недоступен (503). Повтор через 30 сек.');
-                console.warn('[BotsManager] ⚠️ Сервис ботов недоступен (503). Повтор через 30 сек.');
-                this.updateCoinsCounter(); // сброс счётчиков при 503
+                this.logDebug('[BotsManager] ⏳ Фильтры 503 (сервер занят), бэкофф 30 сек. Список монет не сбрасываем.');
                 return;
             }
             

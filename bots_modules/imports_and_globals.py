@@ -794,8 +794,9 @@ def load_auto_bot_config():
             fullai_cfg = load_full_ai_config_from_db() or {}
             if 'full_ai_control' in fullai_cfg:
                 merged_config['full_ai_control'] = bool(fullai_cfg['full_ai_control'])
+                logger.debug("[FullAI] Восстановлен full_ai_control = %s из конфига", merged_config['full_ai_control'])
         except Exception as _e:
-            pass
+            logger.debug("[FullAI] Восстановление full_ai_control из конфига при загрузке: %s", _e)
         
         # ✅ Логируем подробности ТОЛЬКО при первом вызове или при реальном изменении файла
         # (не логируем при принудительной перезагрузке модуля из API, чтобы не спамить)
