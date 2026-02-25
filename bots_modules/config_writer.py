@@ -315,40 +315,52 @@ def save_auto_bot_config_current_to_py(config: Dict[str, Any]) -> bool:
         if not os.path.exists(config_file):
             logger.error(f"[CONFIG_WRITER] ❌ Файл {config_file} не найден")
             return False
-        with open(config_file, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-        start_idx, end_idx = _find_class_block(lines, 'AutoBotConfig')
-        if start_idx is None or end_idx is None:
-            logger.error(f"[CONFIG_WRITER] ❌ Не найден класс AutoBotConfig в {config_file}")
-            return False
-        # Защита от перезаписи повреждённого конфига: если после AutoBotConfig нет других классов — не трогать
-        content_after = ''.join(lines[end_idx:]) if end_idx < len(lines) else ''
-        if end_idx >= len(lines) or not re.search(r'\bclass\s+(SystemConfig|DefaultBotConfig|RiskConfig)\b', content_after):
-            logger.error(
-                "[CONFIG_WRITER] ❌ Файл конфига повреждён (нет класса SystemConfig/DefaultBotConfig после AutoBotConfig). "
-                "Восстановите configs/bot_config.py из configs/bot_config.example.py вручную."
-            )
-            return False
-        updated_lines = list(lines)
-        keys_not_found: list = []  # (attr_upper, value) для вставки
-        for key, value in config.items():
-            key_str = key.lower() if isinstance(key, str) else key
-            attr_upper = CONFIG_KEY_TO_FILE_ATTR.get(key_str, key.upper() if isinstance(key, str) else key)
-            found = False
-            for i in range(start_idx + 1, end_idx):
-                new_line = _update_attr_value_in_line(updated_lines[i], attr_upper, value)
-                if new_line is not None:
-                    updated_lines[i] = new_line
-                    found = True
-                    break
-            if not found:
-                keys_not_found.append((attr_upper, value))
-        # Добавляем отсутствующие ключи в конец тела класса (обратная совместимость: файл мог быть старым)
-        for attr_upper, value in keys_not_found:
-            new_line = f'    {attr_upper} = {_format_python_value(value)}  # настройка\n'
-            updated_lines.insert(end_idx, new_line)
-            end_idx += 1
+        # Читаем и пишем под одной блокировкой, чтобы при смене ТФ не читать половинно записанный файл
         with _config_write_lock:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            start_idx, end_idx = _find_class_block(lines, 'AutoBotConfig')
+            if start_idx is None or end_idx is None:
+                logger.error(f"[CONFIG_WRITER] ❌ Не найден класс AutoBotConfig в {config_file}")
+                return False
+            # Защита от перезаписи повреждённого конфига: если после AutoBotConfig нет других классов — не трогать
+            content_after = ''.join(lines[end_idx:]) if end_idx < len(lines) else ''
+            has_required_class = (
+                end_idx < len(lines)
+                and (
+                    re.search(r'\bclass\s+(SystemConfig|DefaultBotConfig|RiskConfig)\b', content_after)
+                    or 'class SystemConfig' in content_after
+                    or 'class DefaultBotConfig' in content_after
+                    or 'class RiskConfig' in content_after
+                )
+            )
+            if not has_required_class:
+                logger.error(
+                    "[CONFIG_WRITER] ❌ Файл конфига повреждён (нет класса SystemConfig/DefaultBotConfig после AutoBotConfig). "
+                    "Восстановите configs/bot_config.py из configs/bot_config.example.py вручную."
+                )
+                if content_after:
+                    logger.debug("[CONFIG_WRITER] Начало content_after (первые 400 символов): %s", content_after[:400])
+                return False
+            updated_lines = list(lines)
+            keys_not_found: list = []  # (attr_upper, value) для вставки
+            for key, value in config.items():
+                key_str = key.lower() if isinstance(key, str) else key
+                attr_upper = CONFIG_KEY_TO_FILE_ATTR.get(key_str, key.upper() if isinstance(key, str) else key)
+                found = False
+                for i in range(start_idx + 1, end_idx):
+                    new_line = _update_attr_value_in_line(updated_lines[i], attr_upper, value)
+                    if new_line is not None:
+                        updated_lines[i] = new_line
+                        found = True
+                        break
+                if not found:
+                    keys_not_found.append((attr_upper, value))
+            # Добавляем отсутствующие ключи в конец тела класса (обратная совместимость: файл мог быть старым)
+            for attr_upper, value in keys_not_found:
+                new_line = f'    {attr_upper} = {_format_python_value(value)}  # настройка\n'
+                updated_lines.insert(end_idx, new_line)
+                end_idx += 1
             with open(config_file, 'w', encoding='utf-8') as f:
                 f.writelines(updated_lines)
                 f.flush()
@@ -433,62 +445,56 @@ def save_system_config_to_py(config: Dict[str, Any]) -> bool:
                 else:
                     logger.error(f"[CONFIG_WRITER] ❌ Файл configs/bot_config.py не найден и не удалось создать из примера")
                     return False
-        with open(config_file, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
+        # Читаем и пишем под одной блокировкой (как в save_auto_bot_config), чтобы не ломать конфиг при смене ТФ
+        with _config_write_lock:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
 
-        start_idx = None
-        end_idx = None
-        for i, line in enumerate(lines):
-            # ✅ Ищем класс SystemConfig (может быть с комментарием или наследованием)
-            if 'class SystemConfig' in line or line.strip().startswith('class SystemConfig'):
-                start_idx = i
-                pass
-                break
-
-        if start_idx is None:
-            logger.error(f"[CONFIG_WRITER] ❌ Не найден класс SystemConfig в файле {config_file}")
-            pass
-            for i, line in enumerate(lines[:20]):
-                pass
-            return False
-
-        for j in range(start_idx + 1, len(lines)):
-            line = lines[j]
-            if line.startswith('class ') and not line.startswith('class SystemConfig'):
-                end_idx = j
-                break
-        if end_idx is None:
-            end_idx = len(lines)
-
-        updated_lines = lines[:start_idx + 1]
-
-        for i in range(start_idx + 1, end_idx):
-            line = lines[i]
-            match = re.match(r"^(\s+)([A-Z0-9_]+)\s*=\s*([^#\n]+)(.*)$", line)
-            if match:
-                indent, attr_name, old_value, comment = match.groups()
-                attr_name = attr_name.strip()
-                if attr_name in config:
-                    new_value = _format_python_value(config[attr_name])
-                    if old_value.strip() != new_value:
-                        comment_fragment = comment or ''
-                        if comment_fragment and not comment_fragment.startswith(' '):
-                            comment_fragment = f' {comment_fragment}'
-                        line = f"{indent}{attr_name} = {new_value}{comment_fragment}\n"
-                        pass
-            updated_lines.append(line)
-
-        updated_lines.extend(lines[end_idx:])
-
-        # ✅ При сохранении SYSTEM_TIMEFRAME также обновляем модульную константу TIMEFRAME (fallback после перезапуска)
-        if 'SYSTEM_TIMEFRAME' in config:
-            new_tf = _format_python_value(config['SYSTEM_TIMEFRAME']).strip("'\"")
-            for i, line in enumerate(updated_lines):
-                if re.match(r"^TIMEFRAME\s*=\s*['\"]", line.strip()) and not line.strip().startswith('#'):
-                    updated_lines[i] = f"TIMEFRAME = {repr(new_tf)}\n"
+            start_idx = None
+            end_idx = None
+            for i, line in enumerate(lines):
+                if 'class SystemConfig' in line or line.strip().startswith('class SystemConfig'):
+                    start_idx = i
                     break
 
-        with _config_write_lock:
+            if start_idx is None:
+                logger.error(f"[CONFIG_WRITER] ❌ Не найден класс SystemConfig в файле {config_file}")
+                return False
+
+            for j in range(start_idx + 1, len(lines)):
+                line = lines[j]
+                if line.startswith('class ') and not line.startswith('class SystemConfig'):
+                    end_idx = j
+                    break
+            if end_idx is None:
+                end_idx = len(lines)
+
+            updated_lines = lines[:start_idx + 1]
+
+            for i in range(start_idx + 1, end_idx):
+                line = lines[i]
+                match = re.match(r"^(\s+)([A-Z0-9_]+)\s*=\s*([^#\n]+)(.*)$", line)
+                if match:
+                    indent, attr_name, old_value, comment = match.groups()
+                    attr_name = attr_name.strip()
+                    if attr_name in config:
+                        new_value = _format_python_value(config[attr_name])
+                        if old_value.strip() != new_value:
+                            comment_fragment = comment or ''
+                            if comment_fragment and not comment_fragment.startswith(' '):
+                                comment_fragment = f' {comment_fragment}'
+                            line = f"{indent}{attr_name} = {new_value}{comment_fragment}\n"
+                updated_lines.append(line)
+
+            updated_lines.extend(lines[end_idx:])
+
+            if 'SYSTEM_TIMEFRAME' in config:
+                new_tf = _format_python_value(config['SYSTEM_TIMEFRAME']).strip("'\"")
+                for i, line in enumerate(updated_lines):
+                    if re.match(r"^TIMEFRAME\s*=\s*['\"]", line.strip()) and not line.strip().startswith('#'):
+                        updated_lines[i] = f"TIMEFRAME = {repr(new_tf)}\n"
+                        break
+
             with open(config_file, 'w', encoding='utf-8') as f:
                 f.writelines(updated_lines)
                 f.flush()

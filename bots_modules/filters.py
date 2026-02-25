@@ -4430,18 +4430,22 @@ def verify_coin_realtime_before_entry(symbol, signal, exchange_obj=None):
         if not exchange_to_use:
             return (False, 'Биржа недоступна', None, None)
         
+        # Защита при остановке системы: bots_data/coins_rsi_data могут быть None или очищены
+        _bots_data = bots_data if bots_data is not None else {}
+        _coins_rsi_data = coins_rsi_data if coins_rsi_data is not None else {}
+        
         current_tf = get_current_timeframe()
         if not current_tf:
             return (False, 'Таймфрейм не задан', None, None)
         
         # 1. Загружаем свежие свечи с биржи (обход кэша)
         fresh = get_coin_candles_only(symbol, exchange_to_use, current_tf, bulk_mode=False)
-        if not fresh or not fresh.get('candles') or len(fresh['candles']) < 50:
-            return (False, f'Не удалось загрузить свечи ({len(fresh.get("candles") or [])} шт)', None, None)
+        if not fresh or not isinstance(fresh, dict) or not fresh.get('candles') or len(fresh['candles']) < 50:
+            return (False, f'Не удалось загрузить свечи ({len((fresh or {}).get("candles") or [])} шт)', None, None)
         
         candles = fresh['candles']
         # 2. Обновляем кэш свечами в реальном времени
-        candles_cache = coins_rsi_data.get('candles_cache', {})
+        candles_cache = _coins_rsi_data.get('candles_cache', {})
         if symbol not in candles_cache:
             candles_cache[symbol] = {}
         candles_cache[symbol][current_tf] = {
@@ -4450,17 +4454,18 @@ def verify_coin_realtime_before_entry(symbol, signal, exchange_obj=None):
             'timeframe': current_tf,
             'last_update': datetime.now().isoformat()
         }
-        coins_rsi_data['candles_cache'] = candles_cache
+        if coins_rsi_data is not None:
+            coins_rsi_data['candles_cache'] = candles_cache
         
         # 3. Получаем полные RSI-данные с пересчётом по свежим свечам (включая все фильтры)
         coin_data = get_coin_rsi_data(symbol, exchange_to_use)
-        if not coin_data:
+        if not coin_data or not isinstance(coin_data, dict):
             return (False, 'Не удалось рассчитать RSI по свежим данным', None, None)
         
         rsi = get_rsi_from_coin_data(coin_data, timeframe=current_tf)
         effective_signal = coin_data.get('signal', 'WAIT')
         
-        auto_cfg = bots_data.get('auto_bot_config', {})
+        auto_cfg = _bots_data.get('auto_bot_config', {}) or {}
         long_th = get_config_value(auto_cfg, 'rsi_long_threshold')
         short_th = get_config_value(auto_cfg, 'rsi_short_threshold')
         

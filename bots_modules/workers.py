@@ -199,9 +199,14 @@ def auto_bot_worker():
             cycle_count += 1
 
             # Получаем интервал проверки из конфигурации (в секундах)
-            # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает чтение атомарным
-            check_interval_seconds = bots_data['auto_bot_config']['check_interval']
-            auto_bot_enabled = bots_data['auto_bot_config']['enabled']
+            # ⚡ БЕЗ БЛОКИРОВКИ: GIL делает чтение атомарным. Защита при переключении ТФ/перезагрузке конфига.
+            auto_cfg = (bots_data or {}).get('auto_bot_config') or {}
+            try:
+                from bot_engine.config_loader import get_config_value
+                check_interval_seconds = get_config_value(auto_cfg, 'check_interval') or 5
+            except Exception:
+                check_interval_seconds = auto_cfg.get('check_interval', 5) or 5
+            auto_bot_enabled = auto_cfg.get('enabled', True)
 
             # Логируем статус раз в 5 минут с важной информацией
             if cycle_count % 300 == 1:
@@ -222,7 +227,7 @@ def auto_bot_worker():
             if auto_bot_enabled and time_since_auto_bot_check >= check_interval_seconds:
                 from bots_modules.imports_and_globals import get_exchange, coins_rsi_data
                 # ✅ Блокировка только до первой загрузки: после first_round_complete ожидание не используется
-                if not coins_rsi_data.get('first_round_complete'):
+                if not (coins_rsi_data or {}).get('first_round_complete'):
                     last_auto_bot_check = current_time
                     if cycle_count % 30 == 0:  # раз в ~30 сек
                         logger.info(" ⏳ Ожидание первой загрузки свечей и расчёта RSI — автобот запустится после этого...")
