@@ -1914,10 +1914,13 @@
                 }
                 
                 // ✅ ПЕРЕЗАГРУЖАЕМ КОНФИГУРАЦИЮ ДЛЯ ОБНОВЛЕНИЯ UI (особенно важно для Enhanced RSI)
+                // Не перезагружаем конфиг после сохранения только full_ai_control — иначе ответ сервера может вернуть старое значение и перезаписать переключатель
+                const onlyFullAi = configType === 'autoBot' && Object.keys(filteredData).length === 1 && filteredData.full_ai_control !== undefined;
                 setTimeout(() => {
-                    console.log(`[BotsManager] 🔄 Перезагрузка конфигурации после сохранения ${sectionName}...`);
-                    this.loadConfigurationData();
-                    
+                    if (!onlyFullAi) {
+                        console.log(`[BotsManager] 🔄 Перезагрузка конфигурации после сохранения ${sectionName}...`);
+                        this.loadConfigurationData();
+                    }
                     // Если сохраняли Enhanced RSI - перезагружаем данные монет для применения новых фильтров
                     if (sectionName === 'Enhanced RSI' || (configType === 'system' && filteredData.enhanced_rsi_enabled !== undefined)) {
                         console.log('[BotsManager] 🔄 Перезагрузка RSI данных для применения Enhanced RSI настроек...');
@@ -2855,7 +2858,7 @@
             console.log('[BotsManager] ✅ Кнопка "Сохранить основные настройки" инициализирована');
         }
         
-        // Тумблер FullAI: делегирование на document, чтобы срабатывало при любом порядке загрузки вкладок/DOM
+        // Тумблер FullAI: делегирование на document; обновляем UI сразу при клике, запрос — в фоне
         if (!this._fullAiDelegationBound) {
             this._fullAiDelegationBound = true;
             document.body.addEventListener('change', (e) => {
@@ -2865,6 +2868,19 @@
                 const fullAiToggleConfigEl = document.getElementById('fullAiControlToggleConfig');
                 if (fullAiToggleEl && fullAiToggleEl !== e.target) fullAiToggleEl.checked = value;
                 if (fullAiToggleConfigEl && fullAiToggleConfigEl !== e.target) fullAiToggleConfigEl.checked = value;
+                // Сразу обновляем подписи и бейджи (без ожидания ответа сервера)
+                const fullAiLabel = fullAiToggleEl?.closest('.full-ai-control-toggle')?.querySelector('.toggle-label');
+                if (fullAiLabel) fullAiLabel.textContent = value ? '🧠 Полный Режим ИИ (ВКЛ)' : '🧠 Полный Режим ИИ';
+                const fullAiModeBadge = document.getElementById('fullAiModeBadge');
+                if (fullAiModeBadge) {
+                    fullAiModeBadge.textContent = value ? (window.languageUtils?.translate?.('fullai_mode_full_ai') || 'Режим: FullAI') : (window.languageUtils?.translate?.('fullai_mode_standard') || 'Режим: Стандартный');
+                    fullAiModeBadge.className = 'full-ai-mode-badge ' + (value ? 'mode-full-ai' : 'mode-standard');
+                }
+                const fullAiModeBadgeConfig = document.getElementById('fullAiModeBadgeConfig');
+                if (fullAiModeBadgeConfig) {
+                    fullAiModeBadgeConfig.textContent = value ? (window.languageUtils?.translate?.('fullai_mode_full_ai') || 'Режим: FullAI') : (window.languageUtils?.translate?.('fullai_mode_standard') || 'Режим: Стандартный');
+                    fullAiModeBadgeConfig.className = 'full-ai-mode-badge ' + (value ? 'mode-full-ai' : 'mode-standard');
+                }
                 (async () => {
                     try {
                         await this.sendConfigUpdate('auto-bot', { full_ai_control: value }, value ? 'Полный Режим ИИ включён' : 'Полный Режим ИИ выключен', { forceSend: true });
