@@ -445,12 +445,13 @@ logger = logging.getLogger('BotsService')
 werkzeug_logger = logging.getLogger('werkzeug')
 werkzeug_logger.setLevel(logging.WARNING)  # Показывать только warnings и errors
 
-# Отключаем DEBUG логи от внешних библиотек, которые шумят неформатированными сообщениями
-# urllib3 (используется requests) - логирует "%s://%s:%s "%s %s %s" %s %s"
+# urllib3 (requests/pybit): при обрывах сети спамит Retrying/Incremented Retry — показываем только ERROR
 urllib3_logger = logging.getLogger('urllib3')
-urllib3_logger.setLevel(logging.WARNING)
+urllib3_logger.setLevel(logging.ERROR)
 urllib3_connectionpool_logger = logging.getLogger('urllib3.connectionpool')
-urllib3_connectionpool_logger.setLevel(logging.WARNING)
+urllib3_connectionpool_logger.setLevel(logging.ERROR)
+urllib3_util_retry_logger = logging.getLogger('urllib3.util.retry')
+urllib3_util_retry_logger.setLevel(logging.ERROR)
 
 # flask-cors - логирует "Configuring CORS with resources: %s"
 flask_cors_logger = logging.getLogger('flask_cors')

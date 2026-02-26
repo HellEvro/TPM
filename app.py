@@ -3039,11 +3039,12 @@ if __name__ == '__main__':
     werkzeug_logger.disabled = True  # Полностью отключаем
     
     # Отключаем DEBUG логи от внешних библиотек, которые шумят неформатированными сообщениями
-    # urllib3 (используется requests) - логирует "%s://%s:%s "%s %s %s" %s %s"
+    # urllib3 (requests): при обрывах сети спамит Retrying/Incremented Retry — только ERROR
     urllib3_logger = logging.getLogger('urllib3')
-    urllib3_logger.setLevel(logging.WARNING)
+    urllib3_logger.setLevel(logging.ERROR)
     urllib3_connectionpool_logger = logging.getLogger('urllib3.connectionpool')
-    urllib3_connectionpool_logger.setLevel(logging.WARNING)
+    urllib3_connectionpool_logger.setLevel(logging.ERROR)
+    logging.getLogger('urllib3.util.retry').setLevel(logging.ERROR)
     
     # flask-cors - логирует неформатированные сообщения типа "Settings CORS headers: %s"
     flask_cors_logger = logging.getLogger('flask_cors')

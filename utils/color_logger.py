@@ -417,17 +417,8 @@ class ColorFormatter(logging.Formatter):
         # Получаем цвет для уровня логирования
         level_color = self.COLORS.get(record.levelname, Colors.WHITE)
         
-        # Получаем исходное сообщение (до форматирования)
-        # Важно: работаем с record.msg напрямую, чтобы удалить префикс ДО форматирования
-        if hasattr(record, 'msg'):
-            if isinstance(record.msg, str):
-                message = record.msg
-            else:
-                # Если record.msg - это не строка (например, объект форматирования),
-                # получаем отформатированное сообщение
-                message = record.getMessage()
-        else:
-            message = record.getMessage()
+        # Получаем итоговое сообщение (с подстановкой %s/%r из record.args — иначе urllib3/requests показывают сырые "Retrying (%r) after..."
+        message = record.getMessage()
         
         # Определяем имя логгера заранее (используется и ниже)
         logger_name = record.name if hasattr(record, 'name') else 'ROOT'
