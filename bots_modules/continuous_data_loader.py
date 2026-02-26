@@ -45,6 +45,7 @@ class ContinuousDataLoader:
         self.update_interval = update_interval
         self.is_running = False
         self.thread = None
+        self._stages_thread = None  # Этапы 3–7: не запускать новый, если предыдущий ещё выполняется (предотвращение накопления)
         self.last_update_time = None
         self.update_count = 0
         self.error_count = 0
@@ -187,9 +188,12 @@ class ContinuousDataLoader:
                     logger.info("✅ ПЕРВАЯ ЗАГРУЗКА ЗАВЕРШЕНА: свечи + RSI готовы → запуск системы")
 
                 # Этапы 3–7 в ФОНЕ — не блокируем следующий раунд 1→2
-                # Этапы 3–6 выполняются ВСЕГДА (зрелость, тренды, фильтры нужны для UI).
-                # Этап 7 (передача автоботу) — только при включённом автоботе.
-                # Важно: 3 и 4 последовательно — оба работают с coins_rsi_data['coins'] (гонка при параллельном запуске).
+                # Защита от накопления потоков: не запускать новый, пока предыдущий этапов 3–7 жив (ждать до 60с)
+                if self._stages_thread and self._stages_thread.is_alive():
+                    wait_done = self._stages_thread.join(timeout=60)
+                    if not wait_done:
+                        logger.warning("⚠️ Этапы 3–7 предыдущего раунда ещё выполняются — пропускаем их в этом раунде для стабильности")
+
                 def _run_stages_3_to_7():
                     import traceback
                     try:
@@ -202,7 +206,9 @@ class ContinuousDataLoader:
                     except Exception as e:
                         logger.error(f"❌ Ошибка в этапах 3–7: {e}")
                         logger.error(f"❌ Traceback: {traceback.format_exc()}")
-                threading.Thread(target=_run_stages_3_to_7, daemon=True, name="Stages3to7").start()
+
+                self._stages_thread = threading.Thread(target=_run_stages_3_to_7, daemon=True, name="Stages3to7")
+                self._stages_thread.start()
 
                 cycle_duration = time.time() - cycle_start
                 self.last_update_time = datetime.now()
@@ -222,8 +228,12 @@ class ContinuousDataLoader:
                 # 🚀 После полного цикла 1–6 запускаем следующий раунд (1 → 2 → 3–6)
                 logger.info(f"🚀 Цикл 1–7 завершён — запускаем следующий раунд (загрузка свечей)...")
 
-                # Минимальная пауза 0.05 сек только чтобы не крутить CPU впустую; при необходимости выхода — выходим
-                if shutdown_flag.wait(0.05):
+                # Минимальная пауза между раундами — update_interval (RSI_UPDATE_INTERVAL) для предотвращения перегрузки
+                # При агрессивном интервале (10 сек) не крутить раунды чаще — это вызывает деградацию и таймауты
+                min_interval = max(60, int(self.update_interval) if self.update_interval else 60)
+                cycle_duration_actual = time.time() - cycle_start
+                sleep_remaining = max(1, min_interval - int(cycle_duration_actual))
+                if shutdown_flag.wait(sleep_remaining):
                     break
 
             except Exception as e:

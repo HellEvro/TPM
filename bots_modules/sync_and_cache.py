@@ -739,9 +739,20 @@ def load_system_config():
         bot_config_module = reload_config()
         file_system_config = bot_config_module.SystemConfig
 
+        # Интервалы с защитой от перегрузки (мин. значения)
+        _SAFE_MIN = {'RSI_UPDATE_INTERVAL': 60, 'POSITION_SYNC_INTERVAL': 30}
         for attr in SYSTEM_CONFIG_FIELD_MAP.values():
             if hasattr(file_system_config, attr):
-                setattr(SystemConfig, attr, getattr(file_system_config, attr))
+                val = getattr(file_system_config, attr)
+                if attr in _SAFE_MIN and val is not None:
+                    try:
+                        n = int(val)
+                        if n < _SAFE_MIN[attr]:
+                            logger.warning(f"[SYSTEM_CONFIG] ⚠️ {attr}={n} слишком мал — применён минимум {_SAFE_MIN[attr]}с")
+                            val = _SAFE_MIN[attr]
+                    except (TypeError, ValueError):
+                        pass
+                setattr(SystemConfig, attr, val)
 
         # Таймфрейм читаем из конфига (после reload — из AutoBotConfig/SystemConfig в файле)
         try:

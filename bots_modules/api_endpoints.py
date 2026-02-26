@@ -2521,7 +2521,11 @@ def system_config():
             # Обновляем настройки
             if 'rsi_update_interval' in data:
                 old_value = SystemConfig.RSI_UPDATE_INTERVAL
-                new_value = int(data['rsi_update_interval'])
+                raw_value = int(data['rsi_update_interval'])
+                # Защита от деградации: мин. 60 сек (рекомендуется 1800), иначе перегрузка бэкенда
+                new_value = max(60, raw_value)
+                if raw_value < 60:
+                    logger.warning(f"⚠️ rsi_update_interval {raw_value}с слишком мал — применён минимум 60с (рекомендуется 1800)")
                 if log_config_change('rsi_update_interval', old_value, new_value):
                     SystemConfig.RSI_UPDATE_INTERVAL = new_value
                     changes_count += 1
@@ -2561,7 +2565,11 @@ def system_config():
             
             if 'position_sync_interval' in data:
                 old_value = SystemConfig.POSITION_SYNC_INTERVAL
-                new_value = int(data['position_sync_interval'])
+                raw_value = int(data['position_sync_interval'])
+                # Защита от деградации: мин. 30 сек (рекомендуется 600), иначе перегрузка API и фронта
+                new_value = max(30, raw_value)
+                if raw_value < 30:
+                    logger.warning(f"⚠️ position_sync_interval {raw_value}с слишком мал — применён минимум 30с (рекомендуется 600)")
                 if log_config_change('position_sync_interval', old_value, new_value):
                     SystemConfig.POSITION_SYNC_INTERVAL = new_value
                     system_changes_count += 1

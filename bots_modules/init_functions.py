@@ -362,11 +362,13 @@ def init_bot_service():
         try:
             from bots_modules.continuous_data_loader import start_continuous_loader
             
-            # Запускаем воркер с интервалом 180 сек (3 минуты)
-            continuous_loader = start_continuous_loader(exchange_obj=exchange, update_interval=180)
+            # Запускаем воркер с интервалом из SystemConfig (мин. 60 сек для стабильности)
+            from bot_engine.config_loader import SystemConfig
+            rsi_interval = max(60, getattr(SystemConfig, 'RSI_UPDATE_INTERVAL', 180) or 180)
+            continuous_loader = start_continuous_loader(exchange_obj=exchange, update_interval=rsi_interval)
             
             if continuous_loader:
-                logger.info(" ✅ Непрерывный загрузчик данных запущен (интервал: 180с)")
+                logger.info(f" ✅ Непрерывный загрузчик данных запущен (интервал: {rsi_interval}с)")
                 logger.info(" 💡 Все данные будут обновляться автоматически по кругу")
                 logger.info(" 💡 Автобот и API будут использовать актуальные данные из хранилища")
             else:
