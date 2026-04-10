@@ -217,10 +217,12 @@ def _check_if_trade_already_closed(bot_id, symbol, entry_price, entry_time_str):
         return False
 
 
-def _persist_exchange_sync_close(symbol, bot_data, exchange_evidence):
+def _persist_exchange_sync_close(symbol, bot_data, exchange_evidence, db_source='position_sync'):
     """
     После подтверждённого отсутствия позиции на бирже — пишем CLOSED_ON_EXCHANGE
     в JSON-историю и bots_data.db (с exchange_confirmed и сырой evidence).
+
+    db_source: значение колонки source (position_sync | stop_loss_sync | …) для отчётов.
     """
     if not bot_data:
         return
@@ -370,7 +372,7 @@ def _persist_exchange_sync_close(symbol, bot_data, exchange_evidence):
                 'entry_volume_ratio': None,
                 'is_successful': pnl_usdt > 0 if pnl_usdt else False,
                 'is_simulated': False,
-                'source': 'position_sync',
+                'source': db_source,
                 'order_id': None,
                 'exchange_confirmed': True,
                 'exchange_evidence': exchange_evidence or {},
@@ -2129,7 +2131,9 @@ def sync_positions_with_exchange():
                                     f"grace={int(now_ts - first_seen)}/{POSITION_MISS_GRACE_SECONDS}s"
                                 )
                         if removed_snapshot is not None and sync_evidence is not None:
-                            _persist_exchange_sync_close(symbol, removed_snapshot, sync_evidence)
+                            _persist_exchange_sync_close(
+                                symbol, removed_snapshot, sync_evidence, db_source='position_sync'
+                            )
                         if should_delete:
                             logger.info(f"[POSITION_SYNC] 🗑️ Удален бот {symbol} - позиция подтвержденно закрыта на бирже")
                     else:
@@ -2686,6 +2690,19 @@ def check_missing_stop_losses():
                                         logger.info(f" ✅ Бот {symbol} удален из системы")
                                         bot_removed = True
                                 if bot_removed:
+                                    _persist_exchange_sync_close(
+                                        symbol,
+                                        bot_snapshot,
+                                        {
+                                            'sync_path': 'check_missing_stop_losses',
+                                            'subpath': 'absent_or_zero_after_raw_list',
+                                            'registry_order_id': order_id,
+                                            'exchange_open_positions_count': len(exchange_positions),
+                                            'symbol_had_zero_size_row': bool(symbol_on_exchange_with_zero),
+                                            'checked_at_utc': datetime.now(timezone.utc).isoformat(),
+                                        },
+                                        db_source='stop_loss_sync',
+                                    )
                                     save_bots_state()
                             except Exception as cleanup_error:
                                 logger.error(f" ❌ Ошибка удаления бота {symbol}: {cleanup_error}")
@@ -2730,6 +2747,24 @@ def check_missing_stop_losses():
                                 bot_removed = True
                         # Сохраняем состояние после освобождения блокировки
                         if bot_removed:
+                            try:
+                                raw_sz = pos.get('size') if pos else None
+                            except Exception:
+                                raw_sz = None
+                            _persist_exchange_sync_close(
+                                symbol,
+                                bot_snapshot,
+                                {
+                                    'sync_path': 'check_missing_stop_losses',
+                                    'subpath': 'zero_size_in_exchange_positions',
+                                    'registry_order_id': order_id,
+                                    'exchange_open_positions_count': len(exchange_positions),
+                                    'exchange_row_size': raw_sz,
+                                    'exchange_row_symbol': (pos.get('symbol') if pos else None),
+                                    'checked_at_utc': datetime.now(timezone.utc).isoformat(),
+                                },
+                                db_source='stop_loss_sync',
+                            )
                             save_bots_state()
                     except Exception as cleanup_error:
                         logger.error(f" ❌ Ошибка удаления бота {symbol}: {cleanup_error}")

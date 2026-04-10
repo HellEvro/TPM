@@ -257,6 +257,11 @@ def build_report(trades: list, cfg: dict, timeframe: str, days: int, output_path
         for t in trades
         if (t.get("source") or "") == "bot" and t.get("exchange_confirmed")
     ]
+    src_stop_loss_sync = sum(1 for t in trades if (t.get("source") or "") == "stop_loss_sync")
+    src_position_sync = sum(1 for t in trades if (t.get("source") or "") == "position_sync")
+    src_exchange_sync_close = sum(
+        1 for t in trades if (t.get("source") or "") == "exchange_sync_close"
+    )
 
     lines.extend(
         [
@@ -273,6 +278,9 @@ def build_report(trades: list, cfg: dict, timeframe: str, days: int, output_path
             f"| Любая сделка с `exchange_confirmed=True` | {len(with_exch_flag)} |",
             f"| `CLOSED_ON_EXCHANGE`, но без флага подтверждения (аномалия для новых данных) | {len(unflagged_exchange_reason)} |",
             f"| Закрытия из кода бота (`source=bot`) с подтверждённым ордером | {len(bot_orders_confirmed)} |",
+            f"| `source=exchange_sync_close` (sync_bots_with_exchange) | {src_exchange_sync_close} |",
+            f"| `source=position_sync` (sync_positions + антифлап) | {src_position_sync} |",
+            f"| `source=stop_loss_sync` (check_missing_stop_losses) | {src_stop_loss_sync} |",
             "",
         ]
     )
