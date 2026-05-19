@@ -1,23 +1,26 @@
 # 📦 Описание модулей Bots Service
 
-Подробное описание всех 10 модулей после разбиения `bots.py`.
+Подробное описание модулей после разбиения `bots.py` (актуально на 2026).
 
 ---
 
 ## 📊 Обзор модулей
 
-| Модуль | Строк | Описание |
-|--------|-------|----------|
-| `imports_and_globals.py` | 554 | Импорты, константы, Flask app, GlobalState |
-| `calculations.py` | 723 | Расчеты RSI/EMA/trend |
-| `maturity.py` | 364 | Проверка зрелости монет |
-| `optimal_ema.py` | 78 | Оптимальные EMA периоды |
-| `filters.py` | 1207 | Фильтры сигналов, загрузка RSI |
-| `bot_class.py` | 501 | Класс NewTradingBot |
-| `sync_and_cache.py` | 1750 | Кэш, синхронизация, состояние |
-| `workers.py` | 250 | Фоновые воркеры |
-| `init_functions.py` | 646 | Инициализация системы |
-| `api_endpoints.py` | 2620 | Flask API (60+ endpoints) |
+| Модуль | Описание |
+|--------|----------|
+| `imports_and_globals.py` | Импорты, константы, Flask app, GlobalState |
+| `calculations.py` | Расчеты RSI/EMA/trend |
+| `maturity.py` | Зрелость монет (БД `bots_data.db`, JSON fallback) |
+| `filters.py` | Фильтры, RSI, autobot, delisting cache |
+| `bot_class.py` | Класс NewTradingBot |
+| `sync_and_cache.py` | Кэш, синхронизация позиций, сохранение в БД |
+| `workers.py` | Auto Save, Auto Bot, Smart RSI |
+| `init_functions.py` | Инициализация сервиса |
+| `api_endpoints.py` | REST API (включая `/api/bots/resume`) |
+| `config_writer.py` | Запись конфига в `configs/bot_config.py` |
+| `continuous_data_loader.py` | Непрерывное обновление RSI/зрелости |
+
+> Optimal EMA Worker удалён из runtime. Персистентность ботов — `data/bots_data.db`, не `bots_state.json`.
 
 ---
 
@@ -181,7 +184,7 @@ rsi = calculate_rsi(prices, 14)  # 52.3
     'ema_long': 49876.32,
     'current_close': 50200.00,
     'ema_long_slope': 5.67,
-    'accuracy': 72.5  # из optimal_ema_data
+    'accuracy': 72.5  # из расчетного EMA-кэша
 }
 ```
 
@@ -287,7 +290,7 @@ rsi = calculate_rsi(prices, 14)  # 52.3
 
 ---
 
-## 4️⃣ optimal_ema.py
+## 4️⃣ Исторический EMA модуль (удален)
 
 ### Назначение:
 Управление оптимальными EMA периодами для каждой монеты.
@@ -298,8 +301,7 @@ rsi = calculate_rsi(prices, 14)  # 52.3
 
 ### Функции:
 
-#### `get_optimal_ema_periods(symbol)`
-Получает оптимальные EMA для монеты.
+Исторический EMA-модуль удален и больше не используется в runtime.
 
 **Возвращает:**
 ```python
@@ -315,13 +317,7 @@ rsi = calculate_rsi(prices, 14)  # 52.3
 
 **По умолчанию** (если нет данных): `{ema_short: 50, ema_long: 200}`
 
-#### `load_optimal_ema_data()`
-Загружает данные из `data/optimal_ema.json`.
-
-#### `update_optimal_ema_data(new_data)`
-Обновляет данные (вызывается из внешних воркеров).
-
-**Файл:** `data/optimal_ema.json`
+Данные и воркеры этого модуля удалены.
 
 **Структура:**
 ```json

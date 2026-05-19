@@ -43,7 +43,7 @@
 🔒 **Корректная синхронизация**: Auto Bot не перевключается автоматически
 🧪 **Фильтры зрелости**: RSI диапазон (35-65) + 200 свечей (50 дней)
 📊 **История ботов**: логирование действий, статистика Win Rate и PnL
-📈 **Optimal EMA Worker**: индивидуальные EMA для каждой монеты
+📈 ~~Optimal EMA Worker~~: **удалён** (deprecated); сигналы только по RSI и порогам конфига
 🏗️ **Модульная архитектура**: 10 модулей для легкой поддержки
 
 ## 2. Глоссарий
@@ -299,7 +299,7 @@ data/
 ├── system_config.json           # Системные настройки
 ├── rsi_cache.json               # Кэш RSI данных
 ├── mature_coins.json            # Зрелые монеты (постоянное хранилище)
-├── optimal_ema.json             # Оптимальные EMA периоды
+├── ema_legacy_removed.json      # Исторический артефакт (не используется)
 ├── bot_history.json             # История ботов ⭐ НОВОЕ
 ├── process_state.json           # Состояние процессов
 └── default_auto_bot_config.json # Дефолтная конфигурация
@@ -848,7 +848,7 @@ python bots.py  # Порт 5001
 - **system_config.json**: Системные настройки
 - **rsi_cache.json**: Кэш RSI данных
 - **mature_coins.json**: Постоянное хранилище зрелых монет (долгосрочное хранение)
-- **optimal_ema.json**: Оптимальные EMA периоды для определения тренда каждой монеты
+- Исторический EMA-файл удален из активной архитектуры
 
 ### 21. Оптимальные EMA периоды
 
@@ -861,22 +861,22 @@ python bots.py  # Порт 5001
   - RSI ≥ 71 → EMA НЕ должен показывать UP тренд (избегаем сильного роста для SHORT)
 - **Алгоритм**: Перебор всех комбинаций EMA 5-200/50-500 для поиска лучшей
 
-#### 21.2. Скрипт optimal_ema.py
+#### 21.2. Исторический EMA-скрипт (удален)
 ```bash
 # Поиск для всех новых монет (только тех, которых нет в файле)
-python optimal_ema.py --all
+python legacy_ema_removed.py --all
 
 # Поиск для конкретной монеты (принудительно)
-python optimal_ema.py --coin BTCUSDT --force
+python legacy_ema_removed.py --coin BTCUSDT --force
 
 # Поиск для списка монет
-python optimal_ema.py --coins BTCUSDT,ETHUSDT,ADAUSDT
+python legacy_ema_removed.py --coins BTCUSDT,ETHUSDT,ADAUSDT
 
 # Принудительное пересканирование всех монет
-python optimal_ema.py --force
+python legacy_ema_removed.py --force
 
 # Показать список монет с оптимальными EMA
-python optimal_ema.py --list
+python legacy_ema_removed.py --list
 ```
 
 #### 21.3. Структура данных
@@ -1079,7 +1079,7 @@ class BotHistoryManager:
 1. **imports_and_globals.py** (554 строки) - Импорты, константы, Flask app
 2. **calculations.py** (723 строки) - RSI, EMA расчеты
 3. **maturity.py** (364 строки) - Проверка зрелости монет  
-4. **optimal_ema.py** (78 строк) - Оптимальные EMA периоды
+4. **legacy_ema_removed** - модуль удален
 5. **filters.py** (1207 строк) - Фильтры сигналов
 6. **bot_class.py** (501 строка) - Класс NewTradingBot
 7. **sync_and_cache.py** (1750 строк) - Синхронизация, кэш
@@ -1168,8 +1168,7 @@ class BotHistoryManager:
 - **Алгоритм поиска**: перебор всех комбинаций EMA 5-200/50-500
 - **Критерий**: избегание сильного тренда против входа при RSI сигналах
 - **Логика**: RSI ≤ 29 → EMA НЕ DOWN, RSI ≥ 71 → EMA НЕ UP
-- **Скрипт**: `optimal_ema.py` с мультипроцессорностью и платформо-специфичной логикой
-- **Хранение**: `data/optimal_ema.json` - база данных оптимальных EMA
+- Исторический EMA-скрипт и файл хранения удалены из проекта
 - **Интеграция**: автоматическое использование в анализе тренда
 - **Производительность**: 89.8% точность для BTCUSDT с EMA(5,50)
 - **Интеграция**: проверка зрелости в `get_coin_rsi_data()` и `create_bot_endpoint()`

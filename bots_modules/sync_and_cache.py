@@ -2310,8 +2310,15 @@ def cleanup_inactive_bots():
                                 logger.warning(f" ⏰ Бот {symbol} неактивен {time_since_update//60:.0f} мин (статус: {bot_status})")
                                 bots_to_remove.append(symbol)
                                 
-                                # Логируем удаление неактивного бота в историю
-                                # log_bot_stop(symbol, f"Неактивен {time_since_update//60:.0f} мин (статус: {bot_status})")  # TODO: Функция не определена
+                                try:
+                                    from bot_engine.bot_history import log_bot_stop
+                                    log_bot_stop(
+                                        symbol,
+                                        symbol,
+                                        f"Неактивен {time_since_update//60:.0f} мин (статус: {bot_status})",
+                                    )
+                                except Exception:
+                                    pass
                             else:
                                 pass
                                 continue  # Бот активен - пропускаем удаление

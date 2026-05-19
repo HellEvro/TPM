@@ -30,7 +30,7 @@ utils/log_rotation.py
 
 | Файл | Логгер | Описание |
 |------|--------|----------|
-| `scripts/sync/optimal_ema.py` | OptimalEMA | Оптимальные EMA параметры |
+| `scripts/sync/ema_legacy_removed.py` | OptimalEMA | Исторический EMA-модуль (legacy) |
 | `protector.py` | Protector | Мониторинг системы |
 | `app/telegram_notifier.py` | TelegramNotifier | Уведомления Telegram |
 | `bots_modules/imports_and_globals.py` | Bots | Основная система ботов |
@@ -61,15 +61,15 @@ logger.error("Ошибка!")
 
 ```python
 from utils.log_rotation import (
-    get_optimal_ema_logger,
+    get_ema_legacy_logger,
     get_protector_logger,
     get_telegram_logger,
     get_bots_logger,
     get_app_logger
 )
 
-logger = get_optimal_ema_logger()
-logger.info("Расчет оптимальных EMA параметров...")
+logger = get_ema_legacy_logger()
+logger.info("Запуск legacy EMA логгера...")
 ```
 
 ## Параметры
@@ -145,7 +145,7 @@ def doRollover(self):
 ```python
 from utils.log_rotation import get_log_file_size
 
-size = get_log_file_size('logs/optimal_ema.log')
+size = get_log_file_size('logs/ema_legacy.log')
 print(f"Размер файла: {size} байт ({size / 1024 / 1024:.2f} MB)")
 ```
 
@@ -160,7 +160,7 @@ cleanup_old_logs(logs_dir='logs', max_age_days=7)
 
 ## Примеры интеграции
 
-### optimal_ema.py
+### legacy_ema_removed.py
 
 ```python
 from utils.log_rotation import setup_logger_with_rotation
@@ -168,7 +168,7 @@ from utils.log_rotation import setup_logger_with_rotation
 def setup_logging():
     logger = setup_logger_with_rotation(
         name='OptimalEMA',
-        log_file='logs/optimal_ema.log',
+        log_file='logs/ema_legacy.log',
         level=logging.INFO,
         max_bytes=10 * 1024 * 1024,
         format_string='%(asctime)s - %(levelname)s - %(message)s'

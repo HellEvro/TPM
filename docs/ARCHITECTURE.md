@@ -36,10 +36,9 @@ InfoBot Project
 │   └── ...
 │
 └── data/                   ← Персистентные данные
-    ├── bots_state.json
-    ├── auto_bot_config.json
-    ├── mature_coins.json
-    └── optimal_ema.json
+    ├── bots_data.db        ← основное хранилище ботов (SQLite)
+    ├── bot_history.json    ← история действий/сделок
+    └── mature_coins.json   ← fallback при сбое БД
 ```
 
 ---
@@ -78,8 +77,7 @@ bots_modules/
 │
 ├── 🧮 Слой вычислений
 │   ├── calculations.py         ← RSI/EMA расчеты
-│   ├── maturity.py            ← Проверка зрелости монет
-│   └── optimal_ema.py         ← Оптимальные EMA периоды
+│   └── maturity.py            ← Проверка зрелости монет
 │
 ├── 🎯 Слой бизнес-логики
 │   ├── filters.py             ← Фильтры сигналов
@@ -110,18 +108,16 @@ bots.py
   │
   ├→ calculations.py
   │    ├─ Использует: TREND_CONFIRMATION_BARS (из imports_and_globals)
-  │    └─ Использует: get_optimal_ema_periods (из optimal_ema)
+  │    └─ Использует: стандартные EMA параметры из конфигурации
   │
   ├→ maturity.py
   │    ├─ Использует: bots_data_lock, bots_data (из imports_and_globals)
   │    └─ Использует: calculate_rsi_history (из calculations)
   │
-  ├→ optimal_ema.py (независимый)
-  │
   ├→ filters.py
   │    ├─ Использует: calculate_rsi, analyze_trend (из calculations)
   │    ├─ Использует: check_coin_maturity (из maturity)
-  │    ├─ Использует: get_optimal_ema_periods (из optimal_ema)
+  │    ├─ Использует: стандартные EMA параметры
   │    └─ Использует: RSI_OVERSOLD, BOT_STATUS (из imports_and_globals)
   │
   ├→ bot_class.py
@@ -256,7 +252,7 @@ data/
 ├── mature_coins.json        ← Зрелые монеты (постоянное хранилище)
 │   └─ {symbol: {maturity_data, timestamp}}
 │
-├── optimal_ema.json         ← Оптимальные EMA периоды
+├── ema_legacy_removed.json  ← Исторический артефакт (не используется)
 │   └─ {symbol: {ema_short, ema_long, accuracy}}
 │
 ├── rsi_cache.json           ← Кэш RSI данных

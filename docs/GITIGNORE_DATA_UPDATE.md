@@ -62,7 +62,7 @@
 - ✅ `data/async_state.json`
 - ✅ `data/bots_state.json`
 - ✅ `data/default_auto_bot_config.json`
-- ✅ `data/optimal_ema.json`
+- `data/ema_legacy_removed.json` (исторический артефакт, не используется)
 - ✅ `data/process_state.json`
 
 ### Исторические данные

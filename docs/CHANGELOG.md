@@ -1,5 +1,12 @@
 # История изменений InfoBot
 
+## Документация ↔ код (май 2026)
+
+- Состояние ботов: `data/bots_data.db` (не `bots_state.json`).
+- Вход в позицию: `check_entry_allowed()` в `bot_engine/ai/filter_utils.py` (RSI + фильтры), лог `ENTRY_CHECK`.
+- Optimal EMA Worker: удалён из runtime.
+- Аудит сделок: `scripts/analyze_trades_rsi_exit.py` с классификацией bot/manual.
+
 ## v1.2 (17 января 2026)
 
 ### 🤖 Система Самообучения AI в Реальном Времени
@@ -124,7 +131,7 @@
   - `imports_and_globals.py` - глобальные переменные
   - `calculations.py` - RSI/EMA расчеты
   - `maturity.py` - проверка зрелости монет
-  - `optimal_ema.py` - оптимальные EMA периоды
+  - удален legacy EMA-модуль
   - `filters.py` - фильтры и сигналы
   - `bot_class.py` - класс бота
   - `sync_and_cache.py` - синхронизация

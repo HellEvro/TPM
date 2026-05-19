@@ -20,10 +20,9 @@
 │  ЭТАП 2: Расчет RSI (load_all_coins_rsi)                    │
 │  ├─ Для каждой монеты:                                       │
 │  │  ├─ get_coin_rsi_data(symbol)                            │
-│  │  │  ├─ Рассчитывает RSI 6H                               │
-│  │  │  ├─ Получает Optimal EMA периоды                      │
+│  │  │  ├─ Рассчитывает RSI по текущему ТФ (configs/bot_config) │
 │  │  │  ├─ Определяет базовый сигнал (ENTER_LONG/SHORT/WAIT) │
-│  │  │  │  └─ На основе Optimal EMA периодов!                │
+│  │  │  │  └─ По порогам RSI (≤ long / ≥ short)               │
 │  │  │  ├─ Применяет Enhanced RSI анализ                     │
 │  │  │  │  ├─ Volatility (волатильность)                     │
 │  │  │  │  ├─ Divergence (дивергенции)                       │

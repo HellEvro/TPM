@@ -24,13 +24,13 @@
 1. `SmartRSIManager` в `bots_modules/workers.py` обновляет RSI и кеширует монеты.  
 2. `bots_modules/filters.py` в `get_coin_rsi_data()` проверяет зрелость монет (для UI, НЕ блокирует).  
 3. Auto Bot (если включён) вызывает `process_auto_bot_signals()` и создаёт ботов через `bots_modules/bot_class.py`.  
-4. **При входе в позицию** (`bot_engine/trading_bot.py::_enter_position()`): все блокирующие фильтры проверяются через `apply_entry_filters()`:
-   - Global switches, Scope (whitelist/blacklist), Trend, Maturity, RSI Time Filter, ExitScam
+4. **При входе в позицию** (`bot_engine/trading_bot.py::_enter_position()`): единая проверка `check_entry_allowed()` (пороги RSI + `apply_entry_filters()`), в т.ч. для autobot (`force_market_entry`):
+   - Пороги RSI (LONG ≤ порог, SHORT ≥ порог), Global switches, Scope, Trend, Maturity, RSI Time Filter, ExitScam
    - 🤖 AI Anomaly Detection (внутри ExitScam)
    - 🤖 AI Optimal Entry Detection
    - 🤖 AI Risk Management (размер позиции и стоп-лосс)
 5. **После закрытия позиции**: AISelfLearning автоматически обучается на результате для улучшения будущих решений
-5. Статусы и действия пишутся в `bots_data` (в памяти) и `data/bots_state.json`.  
+5. Статусы и действия пишутся в `bots_data` (в памяти) и SQLite `data/bots_data.db` (таблица `bots_state`, autosave ~30 с).  
 6. История сделок/действий уходит в `bot_engine/bot_history.py` → REST `/api/bots/history|trades|statistics`. Подробности — `docs/BOT_SIGNAL_PROCESSING_FLOW.md` и `docs/BOT_HISTORY.md`.
 
 **⚠️ ВАЖНО:** ExitScam и RSI Time Filter НЕ проверяются в `get_coin_rsi_data()` для всех монет. Они проверяются только при входе в позицию для оптимизации производительности.
@@ -45,7 +45,7 @@
 4. **Файл** (`bot_engine/bot_config.py`): блок `DEFAULT_AUTO_BOT_CONFIG` перезаписывается, затем модуль принудительно перезагружается.  
 5. **Перезагрузка UI**: `bots_manager.js` перезагружает конфиг через API и обновляет DOM.
 
-Ключевые артефакты: `bots_data`, `data/bots_state.json`, `bot_engine/bot_config.py`. Этот раздел полностью покрывает информацию из старого `CONFIG_DATA_FLOW.md`.
+Ключевые артефакты: `bots_data`, `data/bots_data.db`, `configs/bot_config.py` (экспорт UI). Этот раздел полностью покрывает информацию из старого `CONFIG_DATA_FLOW.md`.
 
 ---
 
@@ -53,9 +53,9 @@
 
 | Файл / директория | Что хранит | Когда обновляется |
 | --- | --- | --- |
-| `data/bots_state.json` | Боты, auto_bot_config, глобальные статусы | каждые 30 секунд (Auto Save worker) |
-| `data/mature_coins.json` | Статус зрелости монет | по окончании цикла анализа зрелости |
-| `data/optimal_ema.json` | Индивидуальные EMA и точность | после работы `bots_modules/optimal_ema.py` |
+| `data/bots_data.db` | Боты, RSI cache, mature coins, process_state, delisted | Auto Save worker (~30 с) |
+| `data/mature_coins.json` | Fallback при сбое записи в БД (не основной путь) | редко |
+| `data/ema_legacy_removed.json` | Исторический артефакт (удален из runtime) | не используется |
 | `data/bot_history.json` | История действий, сделок и статистика | при каждом событии в `bot_engine/bot_history.py` |
 | `logs/*.log` | `bots.log`, `ai.log`, `app.log` | непрерывно |
 
